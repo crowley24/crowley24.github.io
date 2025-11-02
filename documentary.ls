@@ -1,7 +1,7 @@
 (function() {
     if (!window.Lampa) return;
 
-    const CATEGORY_NAME = 'Документальні';
+    const CATEGORY_NAME = 'Документалки';
 
     const DocumentaryPlugin = {
         name: 'DocumentaryPlugin',
