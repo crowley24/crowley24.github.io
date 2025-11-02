@@ -1,58 +1,67 @@
-(function() {    // РџРѕС‡Р°С‚РѕРє Р°РЅРѕРЅС–РјРЅРѕС— С„СѓРЅРєС†С–С—-РѕР±РіРѕСЂС‚РєРё
-    'use strict';
+(function() {
+    'use strict'; // Р’РёРєРѕСЂРёСЃС‚Р°РЅРЅСЏ СЃСѓРІРѕСЂРѕРіРѕ СЂРµР¶РёРјСѓ РґР»СЏ Р·Р°РїРѕР±С–РіР°РЅРЅСЏ РїРѕРјРёР»РѕРє
 
-// ===================== LQE_CONFIG =====================
+    // ===================== РљРћРќР¤Р†Р“РЈР РђР¦Р†РЇ =====================
     var LQE_CONFIG = {
-        CACHE_VERSION: 2,
-        LOGGING_GENERAL: false,
-        LOGGING_QUALITY: true,
-        LOGGING_CARDLIST: false,
-        CACHE_VALID_TIME_MS: 24 * 60 * 60 * 1000, // 24 РіРѕРґРёРЅРё
-        CACHE_REFRESH_THRESHOLD_MS: 12 * 60 * 60 * 1000, // 12 РіРѕРґРёРЅ РґР»СЏ С„РѕРЅРѕРІРѕРіРѕ РѕРЅРѕРІР»РµРЅРЅСЏ
-        CACHE_KEY: 'lampa_quality_cache',
-        JACRED_PROTOCOL: 'http://',
-        JACRED_URL: 'jacred.xyz',
-        JACRED_API_KEY: '',
-        PROXY_LIST: [
+        CACHE_VERSION: 2, // Р’РµСЂСЃС–СЏ РєРµС€Сѓ РґР»СЏ С–РЅРІР°Р»С–РґР°С†С–С— СЃС‚Р°СЂРёС… РґР°РЅРёС…
+        LOGGING_GENERAL: false, // Р—Р°РіР°Р»СЊРЅРµ Р»РѕРіСѓРІР°РЅРЅСЏ РґР»СЏ РЅР°Р»Р°РіРѕРґР¶РµРЅРЅСЏ
+        LOGGING_QUALITY: false, // Р›РѕРіСѓРІР°РЅРЅСЏ РїСЂРѕС†РµСЃСѓ РІРёР·РЅР°С‡РµРЅРЅСЏ СЏРєРѕСЃС‚С–
+        LOGGING_CARDLIST: false, // Р›РѕРіСѓРІР°РЅРЅСЏ РґР»СЏ СЃРїРёСЃРєРѕРІРёС… РєР°СЂС‚РѕРє
+        CACHE_VALID_TIME_MS: 24 * 60 * 60 * 1000, // Р§Р°СЃ Р¶РёС‚С‚СЏ РєРµС€Сѓ (24 РіРѕРґРёРЅРё)
+        CACHE_REFRESH_THRESHOLD_MS: 12 * 60 * 60 * 1000, // Р§Р°СЃ РґР»СЏ С„РѕРЅРѕРІРѕРіРѕ РѕРЅРѕРІР»РµРЅРЅСЏ РєРµС€Сѓ (12 РіРѕРґРёРЅ)
+        CACHE_KEY: 'lampa_quality_cache', // РљР»СЋС‡ РґР»СЏ Р·Р±РµСЂС–РіР°РЅРЅСЏ РєРµС€Сѓ РІ LocalStorage
+        JACRED_PROTOCOL: 'http://', // РџСЂРѕС‚РѕРєРѕР» РґР»СЏ API JacRed
+        JACRED_URL: 'jacred.xyz', // Р”РѕРјРµРЅ API JacRed
+        JACRED_API_KEY: '', // РљР»СЋС‡ API (РЅРµ РІРёРєРѕСЂРёСЃС‚РѕРІСѓС”С‚СЊСЃСЏ РІ РґР°РЅС–Р№ РІРµСЂСЃС–С—)
+        PROXY_LIST: [ // РЎРїРёСЃРѕРє РїСЂРѕРєСЃС– СЃРµСЂРІРµСЂС–РІ РґР»СЏ РѕР±С…РѕРґСѓ CORS РѕР±РјРµР¶РµРЅСЊ
             'http://api.allorigins.win/raw?url=',
             'http://cors.bwa.workers.dev/'
         ],
-        PROXY_TIMEOUT_MS: 5000,
-        SHOW_QUALITY_FOR_TV_SERIES: true,
-        MAX_PARALLEL_REQUESTS: 12, // Lite-С‡РµСЂРіР°: СЂРµРіСѓР»СЊРѕРІР°РЅРµ С‡РёСЃР»Рѕ РїР°СЂР°Р»РµР»СЊРЅРёС… РїРѕС€СѓРєС–РІ (10-15 СЂРµРєРѕРјРµРЅРґРѕРІР°РЅРѕ)
+        PROXY_TIMEOUT_MS: 4000, // РўР°Р№РјР°СѓС‚ РґР»СЏ РїСЂРѕРєСЃС– Р·Р°РїРёС‚С–РІ (4 СЃРµРєСѓРЅРґРё)
+        SHOW_QUALITY_FOR_TV_SERIES: true, // вњ… РџРѕРєР°Р·СѓРІР°С‚Рё СЏРєС–СЃС‚СЊ РґР»СЏ СЃРµСЂС–Р°Р»С–РІ
+        MAX_PARALLEL_REQUESTS: 12, // РњР°РєСЃРёРјР°Р»СЊРЅР° РєС–Р»СЊРєС–СЃС‚СЊ РїР°СЂР°Р»РµР»СЊРЅРёС… Р·Р°РїРёС‚С–РІ
+        
+        USE_SIMPLE_QUALITY_LABELS: true, // вњ… Р’РёРєРѕСЂРёСЃС‚РѕРІСѓРІР°С‚Рё СЃРїСЂРѕС‰РµРЅС– РјС–С‚РєРё СЏРєРѕСЃС‚С– (4K, FHD, TS, TC С‚РѕС‰Рѕ) "true" - С‚Р°Рє /  "false" - РЅС–
+        
+        // РЎС‚РёР»С– РґР»СЏ РІС–РґРѕР±СЂР°Р¶РµРЅРЅСЏ СЏРєРѕСЃС‚С– РЅР° РїРѕРІРЅС–Р№ РєР°СЂС‚С†С–
         FULL_CARD_LABEL_BORDER_COLOR: '#FFFFFF',
         FULL_CARD_LABEL_TEXT_COLOR: '#FFFFFF',
         FULL_CARD_LABEL_FONT_WEIGHT: 'normal',
         FULL_CARD_LABEL_FONT_SIZE: '1.2em',
         FULL_CARD_LABEL_FONT_STYLE: 'normal',
+        
+        // РЎС‚РёР»С– РґР»СЏ РІС–РґРѕР±СЂР°Р¶РµРЅРЅСЏ СЏРєРѕСЃС‚С– РЅР° СЃРїРёСЃРєРѕРІРёС… РєР°СЂС‚РєР°С…
         LIST_CARD_LABEL_BORDER_COLOR: '#3DA18D',
-        LIST_CARD_LABEL_BACKGROUND_COLOR: 'rgba(61, 161, 141, 0.8)',
+        LIST_CARD_LABEL_BACKGROUND_COLOR: 'rgba(61, 161, 141, 0.9)', //РЎС‚Р°РЅРґР°СЂС‚РЅР° РїСЂРѕР·РѕСЂС–СЃС‚СЊ С„РѕРЅСѓ 0.8 (1 - С„РѕРЅ РЅРµ РїСЂРѕР·РѕСЂРёР№)
         LIST_CARD_LABEL_BACKGROUND_TRANSPARENT: false,
         LIST_CARD_LABEL_TEXT_COLOR: '#FFFFFF',
         LIST_CARD_LABEL_FONT_WEIGHT: '600',
-        LIST_CARD_LABEL_FONT_SIZE: '1.3em',
+        LIST_CARD_LABEL_FONT_SIZE: '1.1em',
         LIST_CARD_LABEL_FONT_STYLE: 'normal',
+        
+        // Р СѓС‡РЅС– РїРµСЂРµРІРёР·РЅР°С‡РµРЅРЅСЏ СЏРєРѕСЃС‚С– РґР»СЏ РєРѕРЅРєСЂРµС‚РЅРёС… ID РєРѕРЅС‚РµРЅС‚Сѓ
         MANUAL_OVERRIDES: {
-            '90802': { quality_code: 2160, full_label: '4K Web-DLRip' },
-            '20873': { quality_code: 2160, full_label: '4K BDRip' },
-            '1128655': { quality_code: 2160, full_label: '4K Web-DL' },
-            '46010': { quality_code: 1080, full_label: '1080p Web-DLRip' },
-            '9564': { quality_code: 1080, full_label: '1080p BDRemux' },
-            '32334': { quality_code: 1080, full_label: '1080p Web-DLRip' },
-            '21028': { quality_code: 1080, full_label: '1080p BDRemux' },
-            '20932': { quality_code: 1080, full_label: '1080p HDTVRip' },
-            '57778': { quality_code: 2160, full_label: '4K Web-DL' },
-            '20977': { quality_code: 1080, full_label: 'HDTVRip-AVC' },
-            '33645': { quality_code: 720, full_label: '720p HDTVRip' }
+            /*'90802': { quality_code: 2160, full_label: '4K WEB-DLRip' },*/
+            /*'20873': { quality_code: 2160, full_label: '4K BDRip' },*/
+            /*'1128655': { quality_code: 2160, full_label: '4K Web-DL' },*/
+            /*'46010': { quality_code: 1080, full_label: '1080p WEB-DLRip' },*/
+            /*'9564': { quality_code: 1080, full_label: '1080p BDRemux' },*/
+            /*'32334': { quality_code: 1080, full_label: '1080p WEB-DLRip' },*/
+            /*'21028': { quality_code: 1080, full_label: '1080p BDRemux' },*/
+            /*'20932': { quality_code: 1080, full_label: '1080p HDTVRip' },*/
+            /*'57778': { quality_code: 2160, full_label: '4K Web-DL' },*/
+            /*'20977': { quality_code: 1080, full_label: 'HDTVRip-AVC' },*/
+            /*'33645': { quality_code: 720, full_label: '720p HDTVRip' }*/
         }
     };
+    var currentGlobalMovieId = null; // Р—РјС–РЅРЅР° РґР»СЏ РІС–РґСЃС‚РµР¶РµРЅРЅСЏ РїРѕС‚РѕС‡РЅРѕРіРѕ ID С„С–Р»СЊРјСѓ
 
-    var currentGlobalMovieId = null;
-
-// ===================== QUALITY_DISPLAY_MAP (РѕСЂРёРіС–РЅР°Р»СЊРЅС– РІР°СЂС–Р°РЅС‚Рё СЏРє fallback) =====================
+    // ===================== РњРђРџР Р”Р›РЇ РџРђР РЎРРќР“РЈ РЇРљРћРЎРўР† =====================
+    
+    // РњР°РїР° РґР»СЏ РїСЂСЏРјРёС… РІС–РґРїРѕРІС–РґРЅРѕСЃС‚РµР№ РЅР°Р·РІ СЏРєРѕСЃС‚С– (fallback)
     var QUALITY_DISPLAY_MAP = {
         "WEBRip 1080p | AVC @ Р·РІСѓРє СЃ TS": "1080P WEBRip/TS",
-        "TeleSynch 1080P": "TS",
+        "TeleSynch 1080P": "1080P TS",
         "4K Web-DL 10bit HDR P81 HEVC": "4K WEB-DL",
         "Telecine [H.264/1080P] [Р·РІСѓРє СЃ TS] [AD]": "1080P TS",
         "WEB-DLRip @ РЎРёРЅРµРјР° РЈРЎ": "WEB-DLRip",
@@ -60,7 +69,7 @@
         "Blu-ray disc 1080P]": "1080P Blu-ray",
         "Blu-Ray Remux (1080P)": "1080P BDRemux",
         "BDRemux 1080P] [РљСЂСѓРїРЅРёР№ РїР»Р°РЅ]": "1080P BDRemux",
-        "Blu-ray disc (custom) 1080P]": "1080P WEB-DLRip",
+        "Blu-ray disc (custom) 1080P]": "1080P BDRip",
         "DVDRip [AV1/2160p] [4K, SDR, 10-bit] [hand made Upscale AI]": "4K Upscale AI",
         "Hybrid (2160p)": "4K Hybrid",
         "Blu-ray disc] [Mastered in 4K] [Extended Cut]": "4K Blu-ray",
@@ -73,976 +82,227 @@
         "Blu-ray disc (custom) 1080P] [StudioCanal]": "1080P BDRip",
         "HDTVRip [H.264/720p]": "720p HDTVRip",
         "HDTVRip 720p": "720p HDTVRip",
-        "2025 / Р›Рњ / TC": "Telecine",
-
-        "2160p": "4K",
-        "4k": "4K",
-        "4Рљ": "4K",
-        "1080p": "1080p",
-        "1080": "1080p",
-        "1080i": "1080p",
-        "hdtv 1080i": "1080i FHDTV",
-        "blu-ray remux (2160p)": "4K BDRemux",
-        "hdtvrip 2160p": "4K HDTVRip",
-        "hybrid 2160p": "4K Hybrid",
-        "480p": "SD",
-        "480": "SD",
-        "web-dl": "WEB-DL",
-        "webrip": "WEBRip",
+        "2025 / Р›Рњ / TC": "TC", // Telecine
+      
+        // РЎС‚Р°РЅРґР°СЂС‚РЅС– РІР°СЂС–Р°РЅС‚Рё СЏРєРѕСЃС‚С–
+        "2160p": "4K", "4k": "4K", "4Рљ": "4K", "1080p": "1080p", "1080": "1080p", 
+        "1080i": "1080p", "hdtv 1080i": "1080i FHDTV", "480p": "SD", "480": "SD",
+        "web-dl": "WEB-DL", "webrip": "WEBRip", "web-dlrip": "WEB-DLRip",
+        "bluray": "BluRay", "bdrip": "BDRip", "bdremux": "BDRemux",
+        "hdtvrip": "HDTVRip", "dvdrip": "DVDRip", "ts": "TS", "camrip": "CAMRip",
+  	  
+        "blu-ray remux (2160p)": "4K BDRemux", "hdtvrip 2160p": "4K HDTVRip", "hybrid 2160p": "4K Hybrid",
         "web-dlrip (2160p)": "4K WEB-DLRip",
-        "web-dlrip": "WEB-DLRip",
-        "1080p web-dlrip": "1080p WEB-DLRip",
-        "webdlrip": "WEB-DLRip",
-        "hdtvrip-avc": "HDTVRip-AVC",
-        "bluray": "BluRay",
-        "bdrip": "BDRip",
-        "bdremux": "BDRemux",
-        "HDTVRip (1080p)": "1080p FHDTVRip",
-        "hdrip": "HDRip",
+        "1080p web-dlrip": "1080p WEB-DLRip", "webdlrip": "WEB-DLRip", "hdtvrip-avc": "HDTVRip-AVC",
+        "HDTVRip (1080p)": "1080p FHDTVRip", "hdrip": "HDRip",
         "hdtvrip (720p)": "720p HDTVRip",
-        "dvdrip": "DVDRip",
-        "hdtv": "HDTV",
-        "dsrip": "DSRip",
-        "satrip": "SATRip",
-        "ts": "TS",
-        "camrip": "CAMRip",
-        "telecine": "Telecine",
-        "tc": "Telecine",
-        "ts": "TeleSync"
+        "dvdrip": "DVDRip", "hdtv": "HDTV", "dsrip": "DSRip", "satrip": "SATRip",
+		"telecine": "TC", "tc": "TC", "ts": "TS"
+      
     };
 
-// ===================== RESOLUTION_MAP & SOURCE_MAP (РЅРѕРІС– РјР°РїРё) =====================
+    // РњР°РїР° РґР»СЏ РІРёР·РЅР°С‡РµРЅРЅСЏ СЂРѕР·РґС–Р»СЊРЅРѕСЃС‚С– Р· РЅР°Р·РІРё
     var RESOLUTION_MAP = {
-    "2160p":"4K", "4k":"4K", "4Рє":"4K", "uhd":"4K", "ultra hd":"4K", "ultrahd":"4K", "dci 4k":"4K",
-    "1440p":"1440p", "2k":"1440p", "qhd":"1440p",
-    "1080p":"1080p", "1080":"1080p", "1080i":"1080i", "full hd":"1080p", "fhd":"1080p",
-    "720p":"720p", "720":"720p", "hd":"720p", "hd ready":"720p",
-    "576p":"576p", "576":"576p", "pal":"576p",
-    "480p":"480p", "480":"480p", "sd":"480p", "standard definition":"480p", "ntsc":"480p",
-    "360p":"360p", "360":"360p", "low":"360p"
+        "2160p":"4K", "2160":"4K", "4k":"4K", "4Рє":"4K", "uhd":"4K", "ultra hd":"4K", "ultrahd":"4K", "dci 4k":"4K",
+        "1440p":"QHD", "1440":"QHD", "2k":"QHD", "qhd":"QHD",
+        "1080p":"1080p", "1080":"1080p", "1080i":"1080i", "full hd":"1080p", "fhd":"1080p",
+        "720p":"720p", "720":"720p", "hd":"720p", "hd ready":"720p",
+        "576p":"576p", "576":"576p", "pal":"576p", 
+        "480p":"480p", "480":"480p", "sd":"480p", "standard definition":"480p", "ntsc":"480p",
+        "360p":"360p", "360":"360p", "low":"360p"
     };
-
+    // РњР°РїР° РґР»СЏ РІРёР·РЅР°С‡РµРЅРЅСЏ РґР¶РµСЂРµР»Р° РІС–РґРµРѕ
     var SOURCE_MAP = {
-    "blu-ray remux":"BDRemux", "uhd bdremux":"4K BDRemux", "bdremux":"BDRemux", "remux":"BDRemux",
-    "blu-ray disc":"Blu-ray", "bluray":"Blu-ray", "blu-ray":"Blu-ray", "bdrip":"BDRip", "brrip":"BDRip",
-    "uhd blu-ray":"4K Blu-ray", "4k blu-ray":"4K Blu-ray",
-    "web-dl":"WEB-DL", "webdl":"WEB-DL", "web dl":"WEB-DL",
-    "web-dlrip":"WEB-DLRip", "webdlrip":"WEB-DLRip", "web dlrip":"WEB-DLRip",
-    "webrip":"WEBRip", "web rip":"WEBRip",
-    "hdtvrip":"HDTVRip", "hdtv":"HDTVRip", "hdrip":"HDRip",
-    "dvdrip":"DVDRip", "dvd rip":"DVDRip", "dvd":"DVD",
-    "dvdscr":"DVDSCR", "scr":"SCR", "bdscr":"BDSCR",
-    "r5":"R5",
-    "telecine":"TC", "tc":"TC", "hdtc":"TC",
-    "telesync":"TS", "ts":"TS", "hdts":"TS",
-    "camrip":"CAMRip", "cam":"CAMRip", "hdcam":"CAMRip",
-    "vhsrip":"VHSRip", "vcdrip":"VCDRip",
-    "dcp":"DCP", "workprint":"Workprint", "preair":"Preair", "tv":"TVRip",
-    "line":"Line Audio",
-    "hybrid":"Hybrid", "uhd hybrid":"4K Hybrid",
-    "upscale":"Upscale", "ai upscale":"AI Upscale",
-    "bd3d":"3D Blu-ray", "3d blu-ray":"3D Blu-ray"
+        "blu-ray remux":"BDRemux", "uhd bdremux":"4K BDRemux", "bdremux":"BDRemux", 
+        "remux":"BDRemux", "blu-ray disc":"Blu-ray", "bluray":"Blu-ray", 
+        "blu-ray":"Blu-ray", "bdrip":"BDRip", "brrip":"BDRip",
+        "uhd blu-ray":"4K Blu-ray", "4k blu-ray":"4K Blu-ray",
+        "web-dl":"WEB-DL", "webdl":"WEB-DL", "web dl":"WEB-DL",
+        "web-dlrip":"WEB-DLRip", "webdlrip":"WEB-DLRip", "web dlrip":"WEB-DLRip",
+        "webrip":"WEBRip", "web rip":"WEBRip", "hdtvrip":"HDTVRip", 
+        "hdtv":"HDTVRip", "hdrip":"HDRip", "dvdrip":"DVDRip", "dvd rip":"DVDRip", 
+        "dvd":"DVD", "dvdscr":"DVDSCR", "scr":"SCR", "bdscr":"BDSCR", "r5":"R5",
+        "hdrip": "HDRip",
+        "screener": "SCR",
+        "telecine":"TC", "tc":"TC", "hdtc":"TC", "telesync":"TS", "ts":"TS", 
+        "hdts":"TS", "camrip":"CAMRip", "cam":"CAMRip", "hdcam":"CAMRip",
+        "vhsrip":"VHSRip", "vcdrip":"VCDRip", "dcp":"DCP", "workprint":"Workprint", 
+        "preair":"Preair", "tv":"TVRip", "line":"Line Audio", "hybrid":"Hybrid", 
+        "uhd hybrid":"4K Hybrid", "upscale":"Upscale", "ai upscale":"AI Upscale",
+        "bd3d":"3D Blu-ray", "3d blu-ray":"3D Blu-ray"
     };
+    // РњР°РїР° РґР»СЏ СЃРїСЂРѕС‰РµРЅРЅСЏ РїРѕРІРЅРёС… РЅР°Р·РІ СЏРєРѕСЃС‚С– РґРѕ РєРѕСЂРѕС‚РєРёС… С„РѕСЂРјР°С‚С–РІ
+    var QUALITY_SIMPLIFIER_MAP = {
+    // РЇРєС–СЃС‚СЊ (СЂРѕР·РґС–Р»СЊРЅС–СЃС‚СЊ)
+    "2160p": "4K", "2160": "4K", "4k": "4K", "4Рє": "4K", "uhd": "4K", "ultra hd": "4K", "dci 4k": "4K", "ultrahd": "4K",
+    "1440p": "QHD", "1440": "QHD", "2k": "QHD", "qhd": "QHD",
+    "1080p": "FHD", "1080": "FHD", "1080i": "FHD", "full hd": "FHD", "fhd": "FHD",
+    "720p": "HD", "720": "HD", "hd ready": "HD", "hd": "HD",
+    "480p": "SD", "480": "SD", "sd": "SD", "pal": "SD", "ntsc": "SD", "576p": "SD", "576": "SD",
+    "360p": "LQ", "360": "LQ",
 
-// ===================== РЎРўРР›Р† =====================
-var styleLQE = "<style id=\"lampa_quality_styles\">" +
-    ".full-start-new__rate-line {" +
-    "visibility: hidden;" +
-    "flex-wrap: wrap;" +
-    "gap: 0.4em 0;" +
-    "}" +
-    ".full-start-new__rate-line > * {" +
-    "margin-right: 0.5em;" +
-    "flex-shrink: 0;" +
-    "flex-grow: 0;" +
-    "}" +
-    ".lqe-quality {" +
-    "min-width: 2.8em;" +
-    "text-align: center;" +
-    "text-transform: none;" +
-    "border: 1px solid " + LQE_CONFIG.FULL_CARD_LABEL_BORDER_COLOR + " !important;" +
-    "color: " + LQE_CONFIG.FULL_CARD_LABEL_TEXT_COLOR + " !important;" +
-    "font-weight: " + LQE_CONFIG.FULL_CARD_LABEL_FONT_WEIGHT + " !important;" +
-    "font-size: " + LQE_CONFIG.FULL_CARD_LABEL_FONT_SIZE + " !important;" +
-    "font-style: " + LQE_CONFIG.FULL_CARD_LABEL_FONT_STYLE + " !important;" +
-    "border-radius: 0.2em;" +
-    "padding: 0.3em;" +
-    "height: 1.72em;" +
-    "display: flex;" +
-    "align-items: center;" +
-    "justify-content: center;" +
-    "box-sizing: border-box;" +
-    "}" +
-    ".card__view {" +
-    " position: relative; " +
-    "}" +
-    ".card__quality {" +
-    " position: absolute; " +
-    " bottom: 0.50em; " +
-    " left: 0; " +
-    " background-color: " + (LQE_CONFIG.LIST_CARD_LABEL_BACKGROUND_TRANSPARENT ? "transparent" : LQE_CONFIG.LIST_CARD_LABEL_BACKGROUND_COLOR) + " !important;" +
-    " z-index: 10;" +
-    " width: fit-content; " +
-    " max-width: calc(100% - 1em); " +
-    " border-radius: 0 0.8em 0.8em 0.3em; " +
-    " overflow: hidden;" +
-    "}" +
-    ".card__quality div {" +
-    " text-transform: uppercase; " +
-    " font-family: 'Roboto Condensed', 'Arial Narrow', Arial, sans-serif; " +
-    " font-weight: 700; " +
-    " letter-spacing: 0.1px; " +
-    " font-size: 1.30em; " +
-    " color: " + LQE_CONFIG.LIST_CARD_LABEL_TEXT_COLOR + " !important;" +
-    " padding: 0.1em 0.1em 0.08em 0.1em; " +
-    " white-space: nowrap;" +
-    " text-shadow: 0.5px 0.5px 1px rgba(0,0,0,0.3); " +
-    "}" +
-    "</style>";
+    // РџРѕРіР°РЅР° СЏРєС–СЃС‚СЊ (РґР¶РµСЂРµР»Рѕ) - РјР°СЋС‚СЊ РїСЂС–РѕСЂРёС‚РµС‚ РЅР°Рґ СЂРѕР·РґС–Р»СЊРЅС–СЃС‚СЋ РїСЂРё РІС–РґРѕР±СЂР°Р¶РµРЅРЅС–
+    "camrip": "CamRip", "cam": "CamRip", "hdcam": "CamRip", "РєР°РјСЂРёРї": "CamRip",
+    "telesync": "TS", "ts": "TS", "hdts": "TS", "С‚РµР»РµСЃРёРЅРє": "TS",
+    "telecine": "TC", "tc": "TC", "hdtc": "TC", "С‚РµР»РµСЃРёРЅ": "TC",
+    "dvdscr": "SCR", "scr": "SCR", "bdscr": "SCR", "screener": "SCR",
 
+    // РЇРєС–СЃРЅС– РґР¶РµСЂРµР»Р°
+    "remux": "Remux", "bdremux": "Remux", "blu-ray remux": "Remux",
+    "bluray": "BR", "blu-ray": "BR", "bdrip": "BRip", "brrip": "BRip",
+    "web-dl": "WebDL", "webdl": "WebDL",
+    "webrip": "WebRip", "web-dlrip": "WebDLRip", "webdlrip": "WebDLRip",
+    "hdtv": "HDTV", "hdtvrip": "HDTV",
+    "hdrip": "HDRip",
+    "dvdrip": "DVDRip", "dvd": "DVD"
+    };
+    // ===================== РЎРўРР›Р† CSS =====================
+    
+    // РћСЃРЅРѕРІРЅС– СЃС‚РёР»С– РґР»СЏ РІС–РґРѕР±СЂР°Р¶РµРЅРЅСЏ СЏРєРѕСЃС‚С–
+    var styleLQE = "<style id=\"lampa_quality_styles\">" +
+        ".full-start-new__rate-line {" + // РљРѕРЅС‚РµР№РЅРµСЂ РґР»СЏ Р»С–РЅС–С— СЂРµР№С‚РёРЅРіСѓ РїРѕРІРЅРѕС— РєР°СЂС‚РєРё
+        "visibility: hidden;" + // РџСЂРёС…РѕРІР°РЅРѕ РїС–Рґ С‡Р°СЃ Р·Р°РІР°РЅС‚Р°Р¶РµРЅРЅСЏ
+        "flex-wrap: wrap;" + // Р”РѕР·РІРѕР»РёС‚Рё РїРµСЂРµРЅРѕСЃ РµР»РµРјРµРЅС‚С–РІ
+        "gap: 0.4em 0;" + // Р’С–РґСЃС‚СѓРїРё РјС–Р¶ РµР»РµРјРµРЅС‚Р°РјРё
+        "}" +
+        ".full-start-new__rate-line > * {" + // РЎС‚РёР»С– РґР»СЏ РІСЃС–С… РґС–С‚РµР№ Р»С–РЅС–С— СЂРµР№С‚РёРЅРіСѓ
+        "margin-right: 0.5em;" + // Р’С–РґСЃС‚СѓРї РїСЂР°РІРѕСЂСѓС‡
+        "flex-shrink: 0;" + // Р—Р°Р±РѕСЂРѕРЅРёС‚Рё СЃС‚РёСЃРєР°РЅРЅСЏ
+        "flex-grow: 0;" + // Р—Р°Р±РѕСЂРѕРЅРёС‚Рё СЂРѕР·С‚СЏРіСѓРІР°РЅРЅСЏ
+        "}" +
+        ".lqe-quality {" + // РЎС‚РёР»С– РґР»СЏ РјС–С‚РєРё СЏРєРѕСЃС‚С– РЅР° РїРѕРІРЅС–Р№ РєР°СЂС‚С†С–
+        "min-width: 2.8em;" + // РњС–РЅС–РјР°Р»СЊРЅР° С€РёСЂРёРЅР°
+        "text-align: center;" + // Р’РёСЂС–РІРЅСЋРІР°РЅРЅСЏ С‚РµРєСЃС‚Сѓ РїРѕ С†РµРЅС‚СЂСѓ
+        "text-transform: none;" + // Р‘РµР· С‚СЂР°РЅСЃС„РѕСЂРјР°С†С–С— С‚РµРєСЃС‚Сѓ
+        "border: 1px solid " + LQE_CONFIG.FULL_CARD_LABEL_BORDER_COLOR + " !important;" + // РљРѕР»С–СЂ СЂР°РјРєРё Р· РєРѕРЅС„С–РіСѓСЂР°С†С–С—
+        "color: " + LQE_CONFIG.FULL_CARD_LABEL_TEXT_COLOR + " !important;" + // РљРѕР»С–СЂ С‚РµРєСЃС‚Сѓ
+        "font-weight: " + LQE_CONFIG.FULL_CARD_LABEL_FONT_WEIGHT + " !important;" + // РўРѕРІС‰РёРЅР° С€СЂРёС„С‚Сѓ
+        "font-size: " + LQE_CONFIG.FULL_CARD_LABEL_FONT_SIZE + " !important;" + // Р РѕР·РјС–СЂ С€СЂРёС„С‚Сѓ
+        "font-style: " + LQE_CONFIG.FULL_CARD_LABEL_FONT_STYLE + " !important;" + // РЎС‚РёР»СЊ С€СЂРёС„С‚Сѓ
+        "border-radius: 0.2em;" + // Р—Р°РєСЂСѓРіР»РµРЅРЅСЏ РєСѓС‚С–РІ
+        "padding: 0.3em;" + // Р’РЅСѓС‚СЂС–С€РЅС– РІС–РґСЃС‚СѓРїРё
+        "height: 1.72em;" + // Р¤С–РєСЃРѕРІР°РЅР° РІРёСЃРѕС‚Р°
+        "display: flex;" + // Flexbox РґР»СЏ С†РµРЅС‚СЂСѓРІР°РЅРЅСЏ
+        "align-items: center;" + // Р’РµСЂС‚РёРєР°Р»СЊРЅРµ С†РµРЅС‚СЂСѓРІР°РЅРЅСЏ
+        "justify-content: center;" + // Р“РѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅРµ С†РµРЅС‚СЂСѓРІР°РЅРЅСЏ
+        "box-sizing: border-box;" + // Box-model
+        "}" +
+        ".card__view {" + // РљРѕРЅС‚РµР№РЅРµСЂ РґР»СЏ РєР°СЂС‚РєРё Сѓ СЃРїРёСЃРєСѓ
+        " position: relative; " + // Р’С–РґРЅРѕСЃРЅРµ РїРѕР·РёС†С–РѕРЅСѓРІР°РЅРЅСЏ
+        "}" +
+        ".card__quality {" + // РЎС‚РёР»С– РґР»СЏ РјС–С‚РєРё СЏРєРѕСЃС‚С– РЅР° СЃРїРёСЃРєРѕРІС–Р№ РєР°СЂС‚С†С–
+        " position: absolute; " + // РђР±СЃРѕР»СЋС‚РЅРµ РїРѕР·РёС†С–РѕРЅСѓРІР°РЅРЅСЏ
+        " bottom: 0.50em; " + // Р’С–РґСЃС‚СѓРї РІС–Рґ РЅРёР·Сѓ
+        " left: 0; " + // Р’РёСЂС–РІРЅСЋРІР°РЅРЅСЏ РїРѕ Р»С–РІРѕРјСѓ РєСЂР°СЋ
+		" margin-left: -0.78em; " + //Р’Р†Р”РЎРўРЈРџ Р·Р° Р»С–РІРёР№ РєСЂР°Р№ 
+        " background-color: " + (LQE_CONFIG.LIST_CARD_LABEL_BACKGROUND_TRANSPARENT ? "transparent" : LQE_CONFIG.LIST_CARD_LABEL_BACKGROUND_COLOR) + " !important;" + // РљРѕР»С–СЂ С„РѕРЅСѓ
+        " z-index: 10;" + // Z-index РґР»СЏ РїРѕРІРµСЂС… С–РЅС€РёС… РµР»РµРјРµРЅС‚С–РІ
+        " width: fit-content; " + // РЁРёСЂРёРЅР° РїРѕ РІРјС–СЃС‚Сѓ
+        " max-width: calc(100% - 1em); " + // РњР°РєСЃРёРјР°Р»СЊРЅР° С€РёСЂРёРЅР°
+        " border-radius: 0.3em 0.3em 0.3em 0.3em; " + // Р—Р°РєСЂСѓРіР»РµРЅРЅСЏ РєСѓС‚С–РІ
+        " overflow: hidden;" + // РћР±СЂС–Р·Р°РЅРЅСЏ РїРµСЂРµРїРѕРІРЅРµРЅРЅСЏ
+        "}" +
+        ".card__quality div {" + // РЎС‚РёР»С– РґР»СЏ С‚РµРєСЃС‚Сѓ РІСЃРµСЂРµРґРёРЅС– РјС–С‚РєРё СЏРєРѕСЃС‚С–
+        " text-transform: uppercase; " + // Р’РµР»РёРєС– Р»С–С‚РµСЂРё
+        " font-family: 'Roboto Condensed', 'Arial Narrow', Arial, sans-serif; " + // РЁСЂРёС„С‚
+        " font-weight: 700; " + // Р–РёСЂРЅРёР№ С€СЂРёС„С‚
+        " letter-spacing: 0.1px; " + // Р’С–РґСЃС‚Р°РЅСЊ РјС–Р¶ Р»С–С‚РµСЂР°РјРё
+        " font-size: 1.10em; " + // Р РѕР·РјС–СЂ С€СЂРёС„С‚Сѓ
+        " color: " + LQE_CONFIG.LIST_CARD_LABEL_TEXT_COLOR + " !important;" + // РљРѕР»С–СЂ С‚РµРєСЃС‚Сѓ
+        " padding: 0.1em 0.1em 0.08em 0.1em; " + // Р’РЅСѓС‚СЂС–С€РЅС– РІС–РґСЃС‚СѓРїРё
+        " white-space: nowrap;" + // Р—Р°Р±РѕСЂРѕРЅРёС‚Рё РїРµСЂРµРЅРѕСЃ С‚РµРєСЃС‚Сѓ
+        " text-shadow: 0.5px 0.5px 1px rgba(0,0,0,0.3); " + // РўС–РЅСЊ С‚РµРєСЃС‚Сѓ
+        "}" +
+        "</style>";
+    // Р”РѕРґР°С”РјРѕ СЃС‚РёР»С– РґРѕ DOM
     Lampa.Template.add('lampa_quality_css', styleLQE);
     $('body').append(Lampa.Template.get('lampa_quality_css', {}, true));
+    // РЎС‚РёР»С– РґР»СЏ РїР»Р°РІРЅРѕРіРѕ Р·'СЏРІР»РµРЅРЅСЏ РјС–С‚РѕРє СЏРєРѕСЃС‚С–
+	var fadeStyles = "<style id='lampa_quality_fade'>" +
+   		".card__quality, .full-start__status.lqe-quality {" + // Р•Р»РµРјРµРЅС‚Рё РґР»СЏ Р°РЅС–РјР°С†С–С—
+        "opacity: 0;" + // РџРѕС‡Р°С‚РєРѕРІРѕ РїСЂРѕР·РѕСЂС–
+        "transition: opacity 0.22s ease-in-out;" + // РџР»Р°РІРЅР° Р·РјС–РЅР° РїСЂРѕР·РѕСЂРѕСЃС‚С–
+    	"}" +
+    	".card__quality.show, .full-start__status.lqe-quality.show {" + // РљР»Р°СЃ РґР»СЏ РїРѕРєР°Р·Сѓ
+        "opacity: 1;" + // РџРѕРІРЅС–СЃС‚СЋ РІРёРґРёРјС–
+    	"}" +
+    	".card__quality.show.fast, .full-start__status.lqe-quality.show.fast {" + // Р’РёРјРєРЅРµРЅРЅСЏ РїРµСЂРµС…РѕРґСѓ
+        "transition: none !important;" +
+    	"}" +
+		"</style>";
 
-// ===================== OPTIONAL FADE-IN (РјРѕР¶РЅР° РІРёРјРєРЅСѓС‚Рё РІРёРґР°Р»РµРЅРЅСЏРј Р±Р»РѕРєСѓ) =====================
-/* === OPTIONAL FADE-IN START === */
-var fadeStyles = "<style id='lampa_quality_fade'>" +
-    ".card__quality, .full-start__status.lqe-quality {" +
-    "opacity: 0;" +
-    "transition: opacity 0.22s ease-in-out;" +
-    "}" +
-    ".card__quality.show, .full-start__status.lqe-quality.show {" +
-    "opacity: 1;" +
-    "}" +
-    "</style>";
-Lampa.Template.add('lampa_quality_fade', fadeStyles);
-$('body').append(Lampa.Template.get('lampa_quality_fade', {}, true));
-/* === OPTIONAL FADE-IN END === */
+    Lampa.Template.add('lampa_quality_fade', fadeStyles);
+    $('body').append(Lampa.Template.get('lampa_quality_fade', {}, true));
 
-
-// ===================== loading animation styles =====================
+    // РЎС‚РёР»С– РґР»СЏ Р°РЅС–РјР°С†С–С— Р·Р°РІР°РЅС‚Р°Р¶РµРЅРЅСЏ (РєСЂР°РїРєРё)
     var loadingStylesLQE = "<style id=\"lampa_quality_loading_animation\">" +
-        ".loading-dots-container {" +
-        "    position: absolute;" +
-        "    top: 50%;" +
-        "    left: 0;" +
-        "    right: 0;" +
-        "    text-align: left;" +
-        "    transform: translateY(-50%);" +
-        "    z-index: 10;" +
+        ".loading-dots-container {" + // РљРѕРЅС‚РµР№РЅРµСЂ РґР»СЏ Р°РЅС–РјР°С†С–С— Р·Р°РІР°РЅС‚Р°Р¶РµРЅРЅСЏ
+        "    position: absolute;" + // РђР±СЃРѕР»СЋС‚РЅРµ РїРѕР·РёС†С–РѕРЅСѓРІР°РЅРЅСЏ
+        "    top: 50%;" + // РџРѕ С†РµРЅС‚СЂСѓ РІРµСЂС‚РёРєР°Р»С–
+        "    left: 0;" + // Р›С–РІРёР№ РєСЂР°Р№
+        "    right: 0;" + // РџСЂР°РІРёР№ РєСЂР°Р№
+        "    text-align: left;" + // Р’РёСЂС–РІРЅСЋРІР°РЅРЅСЏ С‚РµРєСЃС‚Сѓ Р»С–РІРѕСЂСѓС‡
+        "    transform: translateY(-50%);" + // Р¦РµРЅС‚СЂСѓРІР°РЅРЅСЏ РїРѕ РІРµСЂС‚РёРєР°Р»С–
+        "    z-index: 10;" + // РџРѕРІРµСЂС… С–РЅС€РёС… РµР»РµРјРµРЅС‚С–РІ
         "}" +
-        ".full-start-new__rate-line {" +
-        "    position: relative;" +
+        ".full-start-new__rate-line {" + // Р›С–РЅС–СЏ СЂРµР№С‚РёРЅРіСѓ
+        "    position: relative;" + // Р’С–РґРЅРѕСЃРЅРµ РїРѕР·РёС†С–РѕРЅСѓРІР°РЅРЅСЏ РґР»СЏ Р°Р±СЃРѕР»СЋС‚РЅРёС… РґС–С‚РµР№
         "}" +
-        ".loading-dots {" +
-        "    display: inline-flex;" +
-        "    align-items: center;" +
-        "    gap: 0.4em;" +
-        "    color: #ffffff;" +
-        "    font-size: 0.7em;" +
-        "    background: rgba(0, 0, 0, 0.3);" +
-        "    padding: 0.6em 1em;" +
-        "    border-radius: 0.5em;" +
+        ".loading-dots {" + // РљРѕРЅС‚РµР№РЅРµСЂ РєСЂР°РїРѕРє Р·Р°РІР°РЅС‚Р°Р¶РµРЅРЅСЏ
+        "    display: inline-flex;" + // Inline-flex РґР»СЏ РІРёСЂС–РІРЅСЋРІР°РЅРЅСЏ
+        "    align-items: center;" + // Р¦РµРЅС‚СЂСѓРІР°РЅРЅСЏ РїРѕ РІРµСЂС‚РёРєР°Р»С–
+        "    gap: 0.4em;" + // Р’С–РґСЃС‚СѓРїРё РјС–Р¶ РµР»РµРјРµРЅС‚Р°РјРё
+        "    color: #ffffff;" + // РљРѕР»С–СЂ С‚РµРєСЃС‚Сѓ
+        "    font-size: 0.7em;" + // Р РѕР·РјС–СЂ С€СЂРёС„С‚Сѓ
+        "    background: rgba(0, 0, 0, 0.3);" + // РќР°РїС–РІРїСЂРѕР·РѕСЂРёР№ С„РѕРЅ
+        "    padding: 0.6em 1em;" + // Р’РЅСѓС‚СЂС–С€РЅС– РІС–РґСЃС‚СѓРїРё
+        "    border-radius: 0.5em;" + // Р—Р°РєСЂСѓРіР»РµРЅРЅСЏ РєСѓС‚С–РІ
         "}" +
-        ".loading-dots__text {" +
-        "    margin-right: 1em;" +
+        ".loading-dots__text {" + // РўРµРєСЃС‚ "РџРѕС€СѓРє..."
+        "    margin-right: 1em;" + // Р’С–РґСЃС‚СѓРї РїСЂР°РІРѕСЂСѓС‡
         "}" +
-        ".loading-dots__dot {" +
-        "    width: 0.5em;" +
-        "    height: 0.5em;" +
-        "    border-radius: 50%;" +
-        "    background-color: currentColor;" +
-        "    opacity: 0.3;" +
-        "    animation: loading-dots-fade 1.5s infinite both;" +
+        ".loading-dots__dot {" + // РћРєСЂРµРјС– РєСЂР°РїРєРё
+        "    width: 0.5em;" + // РЁРёСЂРёРЅР° РєСЂР°РїРєРё
+        "    height: 0.5em;" + // Р’РёСЃРѕС‚Р° РєСЂР°РїРєРё
+        "    border-radius: 50%;" + // РљСЂСѓРіР»Р° С„РѕСЂРјР°
+        "    background-color: currentColor;" + // РљРѕР»С–СЂ СЏРє Сѓ С‚РµРєСЃС‚Сѓ
+        "    opacity: 0.3;" + // РќР°РїС–РІРїСЂРѕР·РѕСЂС–СЃС‚СЊ
+        "    animation: loading-dots-fade 1.5s infinite both;" + // РђРЅС–РјР°С†С–СЏ
         "}" +
-        ".loading-dots__dot:nth-child(1) {" +
-        "    animation-delay: 0s;" +
+        ".loading-dots__dot:nth-child(1) {" + // РџРµСЂС€Р° РєСЂР°РїРєР°
+        "    animation-delay: 0s;" + // Р‘РµР· Р·Р°С‚СЂРёРјРєРё
         "}" +
-        ".loading-dots__dot:nth-child(2) {" +
-        "    animation-delay: 0.5s;" +
+        ".loading-dots__dot:nth-child(2) {" + // Р”СЂСѓРіР° РєСЂР°РїРєР°
+        "    animation-delay: 0.5s;" + // Р—Р°С‚СЂРёРјРєР° 0.5СЃ
         "}" +
-        ".loading-dots__dot:nth-child(3) {" +
-        "    animation-delay: 1s;" +
+        ".loading-dots__dot:nth-child(3) {" + // РўСЂРµС‚СЏ РєСЂР°РїРєР°
+        "    animation-delay: 1s;" + // Р—Р°С‚СЂРёРјРєР° 1СЃ
         "}" +
-        "@keyframes loading-dots-fade {" +
-        "    0%, 90%, 100% { opacity: 0.3; }" +
-        "    35% { opacity: 1; }" +
+        "@keyframes loading-dots-fade {" + // РђРЅС–РјР°С†С–СЏ РјРёРіРѕС‚С–РЅРЅСЏ РєСЂР°РїРѕРє
+        "    0%, 90%, 100% { opacity: 0.3; }" + // РќРёР·СЊРєР° РїСЂРѕР·РѕСЂС–СЃС‚СЊ
+        "    35% { opacity: 1; }" + // РџС–Рє РІРёРґРёРјРѕСЃС‚С–
         "}" +
-        "@media screen and (max-width: 480px) { .loading-dots-container { -webkit-justify-content: center; justify-content: center; text-align: center; max-width: 100%; }}" +
+        "@media screen and (max-width: 480px) { .loading-dots-container { -webkit-justify-content: center; justify-content: center; text-align: center; max-width: 100%; }}" + // РђРґР°РїС‚Р°С†С–СЏ РґР»СЏ РјРѕР±С–Р»СЊРЅРёС…
         "</style>";
 
     Lampa.Template.add('lampa_quality_loading_animation_css', loadingStylesLQE);
     $('body').append(Lampa.Template.get('lampa_quality_loading_animation_css', {}, true));
 
-
-// ===================== network helper with proxy and timeouts =====================
+    // ===================== РњР•Р Р•Р–Р•Р’Р† Р¤РЈРќРљР¦Р†Р‡ =====================
+    
+    /**
+     * Р’РёРєРѕРЅСѓС” Р·Р°РїРёС‚ С‡РµСЂРµР· РїСЂРѕРєСЃС– Р· РѕР±СЂРѕР±РєРѕСЋ РїРѕРјРёР»РѕРє
+     * @param {string} url - URL РґР»СЏ Р·Р°РїРёС‚Сѓ
+     * @param {string} cardId - ID РєР°СЂС‚РєРё РґР»СЏ Р»РѕРіСѓРІР°РЅРЅСЏ
+     * @param {function} callback - Callback С„СѓРЅРєС†С–СЏ
+     */
     function fetchWithProxy(url, cardId, callback) {
-        var currentProxyIndex = 0;
-        var callbackCalled = false;
+        var currentProxyIndex = 0; // РџРѕС‚РѕС‡РЅРёР№ С–РЅРґРµРєСЃ РїСЂРѕРєСЃС– РІ СЃРїРёСЃРєСѓ
+        var callbackCalled = false; // РџСЂР°РїРѕСЂРµС†СЊ РІРёРєР»РёРєСѓ callback
 
+        // Р РµРєСѓСЂСЃРёРІРЅР° С„СѓРЅРєС†С–СЏ СЃРїСЂРѕР± С‡РµСЂРµР· СЂС–Р·РЅС– РїСЂРѕРєСЃС–
         function tryNextProxy() {
+            // РџРµСЂРµРІС–СЂСЏС”РјРѕ, С‡Рё РЅРµ РІРёС‡РµСЂРїР°РЅРѕ РІСЃС– РїСЂРѕРєСЃС–
             if (currentProxyIndex >= LQE_CONFIG.PROXY_LIST.length) {
-                if (!callbackCalled) {
-                    callbackCalled = true;
-                    callback(new Error('All proxies failed for ' + url));
-                }
-                return;
-            }
-            var proxyUrl = LQE_CONFIG.PROXY_LIST[currentProxyIndex] + encodeURIComponent(url);
-            if (LQE_CONFIG.LOGGING_GENERAL) console.log("LQE-LOG", "card: " + cardId + ", Fetch with proxy: " + proxyUrl);
-            var timeoutId = setTimeout(function() {
-                if (!callbackCalled) {
-                    currentProxyIndex++;
-                    tryNextProxy();
-                }
-            }, LQE_CONFIG.PROXY_TIMEOUT_MS);
-            fetch(proxyUrl)
-                .then(function(response) {
-                    clearTimeout(timeoutId);
-                    if (!response.ok) throw new Error('Proxy error: ' + response.status);
-                    return response.text();
-                })
-                .then(function(data) {
-                    if (!callbackCalled) {
-                        callbackCalled = true;
-                        clearTimeout(timeoutId);
-                        callback(null, data);
-                    }
-                })
-                .catch(function(error) {
-                    console.error("LQE-LOG", "card: " + cardId + ", Proxy fetch error for " + proxyUrl + ":", error);
-                    clearTimeout(timeoutId);
-                    if (!callbackCalled) {
-                        currentProxyIndex++;
-                        tryNextProxy();
-                    }
-                });
-        }
-        tryNextProxy();
-    }
-
-// ===================== loading animation helpers =====================
-    function addLoadingAnimation(cardId, renderElement) {
-        if (!renderElement) return;
-        if (LQE_CONFIG.LOGGING_GENERAL) console.log("LQE-LOG", "card: " + cardId + ", Add loading animation");
-        var rateLine = $('.full-start-new__rate-line', renderElement);
-        if (!rateLine.length || $('.loading-dots-container', rateLine).length) return;
-        rateLine.append(
-            '<div class="loading-dots-container">' +
-            '<div class="loading-dots">' +
-            '<span class="loading-dots__text">Р—Р°РіСЂСѓР·РєР°...</span>' +
-            '<span class="loading-dots__dot"></span>' +
-            '<span class="loading-dots__dot"></span>' +
-            '<span class="loading-dots__dot"></span>' +
-            '</div>' +
-            '</div>'
-        );
-        $('.loading-dots-container', rateLine).css({
-            'opacity': '1',
-            'visibility': 'visible'
-        });
-    }
-
-    function removeLoadingAnimation(cardId, renderElement) {
-        if (!renderElement) return;
-        if (LQE_CONFIG.LOGGING_GENERAL) console.log("LQE-LOG", "card: " + cardId + ", Remove loading animation");
-        $('.loading-dots-container', renderElement).remove();
-    }
-
-// ===================== utilities =====================
-    function getCardType(cardData) {
-        var type = cardData.media_type || cardData.type;
-        if (type === 'movie' || type === 'tv') return type;
-        return cardData.name || cardData.original_name ? 'tv' : 'movie';
-    }
-
-    function sanitizeTitle(title) {
-        if (!title) return '';
-        // lower, replace various separators with spaces, remove extra spaces
-        return title.toString().toLowerCase().replace(/[\._\-\[\]\(\),]+/g, ' ').replace(/\s+/g, ' ').trim();
-    }
-
-// ===================== translateQualityLabel (РЅРѕРІРёР№ РїР°СЂСЃРµСЂ Р· mapР°РјРё) =====================
-
-function translateQualityLabel(qualityCode, fullTorrentTitle) {
-    // РќРѕРІРёР№ РїС–РґС…С–Рґ: resolution + source -> final label.
-    // DV/HDR/РєРѕРґРµРєРё С–РіРЅРѕСЂСѓС”РјРѕ РїРѕРІРЅС–СЃС‚СЋ, РІРѕРЅРё РЅРµ РІРїР»РёРІР°СЋС‚СЊ РЅР° СЏСЂР»РёРє.
-    if (LQE_CONFIG.LOGGING_QUALITY) console.log("LQE-QUALITY", "translateQualityLabel (clean):", qualityCode, fullTorrentTitle);
-
-    var title = sanitizeTitle(fullTorrentTitle || '');
-    var titleForSearch = ' ' + title + ' ';
-
-    // 1) Р·РЅР°Р№С‚Рё СЂРѕР·РґС–Р»СЊРЅС–СЃС‚СЊ
-    var resolution = '';
-    var bestResKey = '';
-    var bestResLen = 0;
-    for (var rKey in RESOLUTION_MAP) {
-        if (!RESOLUTION_MAP.hasOwnProperty(rKey)) continue;
-        var lk = rKey.toString().toLowerCase();
-        if (titleForSearch.indexOf(' ' + lk + ' ') !== -1 || title.indexOf(lk) !== -1) {
-            if (lk.length > bestResLen) {
-                bestResLen = lk.length;
-                bestResKey = rKey;
-            }
-        }
-    }
-    if (bestResKey) resolution = RESOLUTION_MAP[bestResKey];
-
-    // 2) Р·РЅР°Р№С‚Рё РґР¶РµСЂРµР»Рѕ (source)
-    var source = '';
-    var bestSrcKey = '';
-    var bestSrcLen = 0;
-    for (var sKey in SOURCE_MAP) {
-        if (!SOURCE_MAP.hasOwnProperty(sKey)) continue;
-        var lk2 = sKey.toString().toLowerCase();
-        if (titleForSearch.indexOf(' ' + lk2 + ' ') !== -1 || title.indexOf(lk2) !== -1) {
-            if (lk2.length > bestSrcLen) {
-                bestSrcLen = lk2.length;
-                bestSrcKey = sKey;
-            }
-        }
-    }
-    if (bestSrcKey) source = SOURCE_MAP[bestSrcKey];
-
-    // 3) Р¤РѕСЂРјСѓС”РјРѕ С„С–РЅР°Р»СЊРЅРёР№ Р»РµР№Р±Р»: resolution + source (Р±РµР· РґСѓР±Р»СЏ)
-    var finalLabel = '';
-    if (resolution && source) {
-        if (source.toLowerCase().includes(resolution.toLowerCase())) {
-            finalLabel = source;
-        } else {
-            finalLabel = resolution + ' ' + source;
-        }
-    } else if (resolution) {
-        finalLabel = resolution;
-    } else if (source) {
-        finalLabel = source;
-    }
-
-    // 4) РЇРєС‰Рѕ РЅРµ Р·РЅР°Р№С€Р»Рё РЅС– resolution, РЅС– source - fallback РЅР° QUALITY_DISPLAY_MAP
-    if (!finalLabel || finalLabel.trim() === '') {
-        var bestDirectKey = '';
-        var maxDirectLen = 0;
-        for (var qk in QUALITY_DISPLAY_MAP) {
-            if (!QUALITY_DISPLAY_MAP.hasOwnProperty(qk)) continue;
-            var lkq = qk.toString().toLowerCase();
-            if (title.indexOf(lkq) !== -1) {
-                if (lkq.length > maxDirectLen) {
-                    maxDirectLen = lkq.length;
-                    bestDirectKey = qk;
-                }
-            }
-        }
-        if (bestDirectKey) {
-            finalLabel = QUALITY_DISPLAY_MAP[bestDirectKey];
-        }
-    }
-
-    // 5) РћСЃС‚Р°РЅРЅС–Р№ fallback вЂ” raw code Р°Р±Рѕ РїРѕРІРЅР° РЅР°Р·РІР°
-    if (!finalLabel || finalLabel.trim() === '') {
-        if (qualityCode) {
-            var qc = String(qualityCode).toLowerCase();
-            finalLabel = QUALITY_DISPLAY_MAP[qc] || qualityCode;
-        } else {
-            finalLabel = fullTorrentTitle || '';
-        }
-    }
-
-    if (LQE_CONFIG.LOGGING_QUALITY) console.log("LQE-QUALITY", "translateQualityLabel (clean): Final:", finalLabel);
-    return finalLabel;
-}
-
-// ============================== Request queue (Lite-С‡РµСЂРіР°) ===============================
-    var requestQueue = [];
-    var activeRequests = 0;
-
-    function enqueueTask(fn) {
-        requestQueue.push(fn);
-        processQueue();
-    }
-
-    function processQueue() {
-        if (activeRequests >= LQE_CONFIG.MAX_PARALLEL_REQUESTS) return;
-        var task = requestQueue.shift();
-        if (!task) return;
-        activeRequests++;
-        try {
-            task(function onTaskDone() {
-                activeRequests--;
-                // process next in next tick to avoid recursion
-                setTimeout(processQueue, 0);
-            });
-        } catch (e) {
-            activeRequests--;
-            setTimeout(processQueue, 0);
-        }
-    }
-
-// getBestReleaseFromJacred (Р±РµР· Р·РјС–РЅ Р»РѕРіС–РєРё, Р°Р»Рµ С‡РµСЂРµР· С‡РµСЂРіСѓ)     
-
-// ===================== FIXED getBestReleaseFromJacred (РѕРЅРѕРІР»РµРЅР°) =====================
-
-// ===================== getBestReleaseFromJacred (РѕРЅРѕРІР»РµРЅР°) =====================
-function getBestReleaseFromJacred(normalizedCard, cardId, callback) {
-    enqueueTask(function (done) {
-
-        // --- Р‘Р›РћРљ 0: РњР°Р№Р±СѓС‚РЅС–Р№ СЂРµР»С–Р· ---
-        var relDate = normalizedCard.release_date ? new Date(normalizedCard.release_date) : null;
-        if (relDate && relDate.getTime() > Date.now()) {
-            // РЅРµ С€СѓРєР°С”РјРѕ JacRed РґР»СЏ РјР°Р№Р±СѓС‚РЅСЊРѕРіРѕ СЂРµР»С–Р·Сѓ
-            callback(null);
-            done();
-            return;
-        }
-
-        if (!LQE_CONFIG.JACRED_URL) {
-            callback(null);
-            done();
-            return;
-        }
-
-        // --- Р‘Р›РћРљ 1: Р С–Рє СЂРµР»С–Р·Сѓ ---
-        var year = '';
-        if (normalizedCard.release_date && normalizedCard.release_date.length >= 4) {
-            year = normalizedCard.release_date.substring(0, 4);
-        }
-        if (!year || isNaN(year)) {
-            callback(null);
-            done();
-            return;
-        }
-        var searchYearNum = parseInt(year, 10);
-        var currentYear = new Date().getFullYear();
-
-        // --- Р‘Р›РћРљ 2: Р”РѕРїРѕРјС–Р¶РЅС– С„СѓРЅРєС†С–С— ---
-        function extractNumericQualityFromTitle(title) {
-            var lower = (title || '').toLowerCase();
-            if (/2160p|4k/.test(lower)) return 2160;
-            if (/1080p/.test(lower)) return 1080;
-            if (/720p/.test(lower)) return 720;
-            if (/480p/.test(lower)) return 480;
-            if (/ts|telesync/.test(lower)) return 1;
-            if (/camrip|РєР°РјСЂРёРї/.test(lower)) return 2;
-            return 0;
-        }
-
-        function extractYearFromTitle(title) {
-            var regex = /(?:^|[^\d])(\d{4})(?:[^\d]|$)/g;
-            var match, lastYear = 0;
-            while ((match = regex.exec(title)) !== null) {
-                var extractedYear = parseInt(match[1], 10);
-                if (extractedYear >= 1900 && extractedYear <= currentYear + 1) {
-                    lastYear = extractedYear;
-                }
-            }
-            return lastYear;
-        }
-
-        // РїРµСЂРµРІС–СЂРєР° РїРѕРІРЅРѕРіРѕ СЃР»РѕРІР° Сѓ РЅР°Р·РІС–
-        function containsWholeWord(haystack, needle) {
-            if (!needle) return false;
-            var regex = new RegExp("\\b" + needle.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + "\\b", "i");
-            return regex.test(haystack.toLowerCase());
-        }
-
-        // --- Р‘Р›РћРљ 3: API Р·Р°РїРёС‚ ---
-        function searchJacredApi(searchTitle, searchYear, exactMatch, contentType, apiCallback) {
-            var userId = Lampa.Storage.get('lampac_unic_id', '');
-            var apiUrl = LQE_CONFIG.JACRED_PROTOCOL + LQE_CONFIG.JACRED_URL + '/api/v1.0/torrents?search=' +
-                encodeURIComponent(searchTitle) +
-                '&year=' + searchYear +
-                (exactMatch ? '&exact=true' : '');
-            if (contentType) {
-                var jacredType = contentType === 'movie' ? 'movie' : 'serial';
-                apiUrl += '&type=' + jacredType;
-            }
-            apiUrl += '&uid=' + userId;
-
-            var timeoutId = setTimeout(function () {
-                apiCallback(null);
-            }, LQE_CONFIG.PROXY_TIMEOUT_MS * LQE_CONFIG.PROXY_LIST.length + 1000);
-
-            fetchWithProxy(apiUrl, cardId, function (error, responseText) {
-                clearTimeout(timeoutId);
-                if (error || !responseText) {
-                    apiCallback(null);
-                    return;
-                }
-                try {
-                    var torrents = JSON.parse(responseText);
-                    if (!Array.isArray(torrents) || torrents.length === 0) {
-                        apiCallback(null);
-                        return;
-                    }
-
-                    var bestScore = -1;
-                    var bestTorrent = null;
-
-                    for (var i = 0; i < torrents.length; i++) {
-                        var t = torrents[i];
-                        var qualityNum = t.quality;
-                        if (typeof qualityNum !== 'number' || qualityNum === 0) {
-                            var q = extractNumericQualityFromTitle(t.title);
-                            if (q > 0) qualityNum = q; else continue;
-                        }
-
-                        // С„С–Р»СЊС‚СЂР°С†С–СЏ С‚РёРїСѓ
-                        if (contentType) {
-                            var torrentType = String(t.type || '').toLowerCase();
-                            var okType = contentType === 'movie'
-                                ? torrentType.includes('movie') || torrentType.includes('С„С–Р»СЊРј')
-                                : torrentType.includes('serial') || torrentType.includes('СЃРµСЂС–Р°Р»');
-                            if (!okType) continue;
-                        }
-
-                        // РџРµСЂРµРІС–СЂРєР° СЂРѕРєСѓ В±1
-                        var parsedYear = parseInt(t.relased, 10);
-                        if (!parsedYear || isNaN(parsedYear)) parsedYear = extractYearFromTitle(t.title);
-                        var yearDiff = Math.abs(parsedYear - searchYearNum);
-                        if (yearDiff > 1) continue;
-
-                        // РђРЅР°Р»С–Р· РЅР°Р·РІ
-                        var titleBonus = 0;
-                        if (containsWholeWord(t.title, normalizedCard.original_title)) {
-                            titleBonus = 500; // РІРµР»РёРєРёР№ Р±РѕРЅСѓСЃ РѕСЂРёРіС–РЅР°Р»
-                        } else if (containsWholeWord(t.title, normalizedCard.title)) {
-                            titleBonus = 50; // РјР°Р»РµРЅСЊРєРёР№ Р±РѕРЅСѓСЃ Р»РѕРєР°Р»С–Р·РѕРІР°РЅР°
-                        }
-
-                        // Р±РѕРЅСѓСЃ СЂРѕРєСѓ
-                        var yearBonus = 0;
-                        if (parsedYear === searchYearNum) yearBonus = 200;
-                        else if (yearDiff === 1) yearBonus = 50;
-
-                        var score = qualityNum + titleBonus + yearBonus;
-                        if (score > bestScore) {
-                            bestScore = score;
-                            bestTorrent = t;
-                        }
-                    }
-
-                    if (bestTorrent) {
-                        apiCallback({
-                            quality: bestTorrent.quality || extractNumericQualityFromTitle(bestTorrent.title),
-                            full_label: bestTorrent.title
-                        });
-                    } else {
-                        apiCallback(null);
-                    }
-
-                } catch (e) {
-                    apiCallback(null);
-                }
-            });
-        }
-
-        // --- Р‘Р›РћРљ 4: РЎС‚СЂР°С‚РµРіС–С— РїРѕС€СѓРєСѓ ---
-        var searchStrategies = [];
-        var isTvSeries = (normalizedCard.type === 'tv');
-
-        // 1. РћСЂРёРіС–РЅР°Р»СЊРЅР° + С‚РёРї
-        if (normalizedCard.original_title && normalizedCard.original_title.trim()) {
-            searchStrategies.push({
-                title: normalizedCard.original_title.trim(),
-                year: year,
-                exact: true,
-                contentType: isTvSeries ? 'tv' : 'movie'
-            });
-        }
-
-        // 2. РћСЂРёРіС–РЅР°Р»СЊРЅР° Р±РµР· С‚РёРїСѓ
-        if (normalizedCard.original_title && normalizedCard.original_title.trim()) {
-            searchStrategies.push({
-                title: normalizedCard.original_title.trim(),
-                year: year,
-                exact: true,
-                contentType: null
-            });
-        }
-
-        // 3. Р›РѕРєР°Р»С–Р·РѕРІР°РЅР° (СЂРµР·РµСЂРІ)
-        if (normalizedCard.title && normalizedCard.title.trim() &&
-            normalizedCard.title !== normalizedCard.original_title) {
-            searchStrategies.push({
-                title: normalizedCard.title.trim(),
-                year: year,
-                exact: true,
-                contentType: isTvSeries ? 'tv' : 'movie'
-            });
-        }
-
-        // --- Р‘Р›РћРљ 5: Р’РёРєРѕРЅР°РЅРЅСЏ ---
-        function executeNextStrategy(index) {
-            if (index >= searchStrategies.length) {
-                callback(null);
-                done();
-                return;
-            }
-            var s = searchStrategies[index];
-            searchJacredApi(s.title, s.year, s.exact, s.contentType, function (result) {
-                if (result !== null) {
-                    callback(result);
-                    done();
-                } else {
-                    executeNextStrategy(index + 1);
-                }
-            });
-        }
-
-        if (searchStrategies.length > 0) executeNextStrategy(0);
-        else {
-            callback(null);
-            done();
-        }
-    });
-}
-
-                    
-// ===================== /getBestReleaseFromJacred =====================
-// ===================== CACHE HELPERS =====================
-    function getQualityCache(key) {
-        var cache = Lampa.Storage.get(LQE_CONFIG.CACHE_KEY) || {};
-        var item = cache[key];
-        var isCacheValid = item && (Date.now() - item.timestamp < LQE_CONFIG.CACHE_VALID_TIME_MS);
-        if (LQE_CONFIG.LOGGING_QUALITY) {
-            console.log("LQE-QUALITY", "Cache: Checking quality cache for key:", key, "Found:", !!item, "Valid:", isCacheValid);
-        }
-        return isCacheValid ? item : null;
-    }
-
-    function saveQualityCache(key, data, cardId) {
-        if (LQE_CONFIG.LOGGING_QUALITY) console.log("LQE-QUALITY", "Cache: Saving quality cache for key:", key, "Data:", data);
-        var cache = Lampa.Storage.get(LQE_CONFIG.CACHE_KEY) || {};
-        cache[key] = {
-            quality_code: data.quality_code,
-            full_label: data.full_label,
-            timestamp: Date.now()
-        };
-        Lampa.Storage.set(LQE_CONFIG.CACHE_KEY, cache);
-    }
-
-    function removeExpiredCacheEntries() {
-        var cache = Lampa.Storage.get(LQE_CONFIG.CACHE_KEY) || {};
-        var changed = false;
-        var now = Date.now();
-        for (var k in cache) {
-            if (!cache.hasOwnProperty(k)) continue;
-            var item = cache[k];
-            if (!item || !item.timestamp || (now - item.timestamp) > LQE_CONFIG.CACHE_VALID_TIME_MS) {
-                delete cache[k];
-                changed = true;
-            }
-        }
-        if (changed) Lampa.Storage.set(LQE_CONFIG.CACHE_KEY, cache);
-    }
-
-    // РІС‹Р·С‹РІР°РµРј РїСЂРё РёРЅРёС†РёР°Р»РёР·Р°С†РёРё
-    removeExpiredCacheEntries();
-
-// ===================== UI helpers =====================
-    function clearFullCardQualityElements(cardId, renderElement) {
-        if (renderElement) {
-            var existingElements = $('.full-start__status.lqe-quality', renderElement);
-            if (existingElements.length > 0) {
-                if (LQE_CONFIG.LOGGING_QUALITY) console.log("LQE-QUALITY", "card: " + cardId + ", Clearing existing quality elements on full card.");
-                existingElements.remove();
-            }
-        }
-    }
-
-    function showFullCardQualityPlaceholder(cardId, renderElement) {
-        if (!renderElement) return;
-        var rateLine = $('.full-start-new__rate-line', renderElement);
-        if (!rateLine.length) {
-            if (LQE_CONFIG.LOGGING_QUALITY) console.log("LQE-QUALITY", "card: " + cardId + ", Cannot show placeholder, .full-start-new__rate-line not found.");
-            return;
-        }
-        if (!$('.full-start__status.lqe-quality', rateLine).length) {
-            if (LQE_CONFIG.LOGGING_QUALITY) console.log("LQE-QUALITY", "card: " + cardId + ", Adding quality placeholder on full card.");
-            var placeholder = document.createElement('div');
-            placeholder.className = 'full-start__status lqe-quality';
-            placeholder.textContent = 'Р—Р°РіСЂСѓР·РєР°...';
-            placeholder.style.opacity = '0.7';
-            rateLine.append(placeholder);
-        } else {
-            if (LQE_CONFIG.LOGGING_QUALITY) console.log("LQE-QUALITY", "card: " + cardId + ", Placeholder already exists on full card, skipping.");
-        }
-    }
-
-    function updateFullCardQualityElement(qualityCode, fullTorrentTitle, cardId, renderElement, bypassTranslation) {
-        if (!renderElement) return;
-        var element = $('.full-start__status.lqe-quality', renderElement);
-        var rateLine = $('.full-start-new__rate-line', renderElement);
-        if (!rateLine.length) return;
-
-        var displayQuality = bypassTranslation ? fullTorrentTitle : translateQualityLabel(qualityCode, fullTorrentTitle);
-
-        if (element.length) {
-            if (LQE_CONFIG.LOGGING_QUALITY) console.log('LQE-QUALITY', 'card: ' + cardId + ', Updating existing element with quality "' + displayQuality + '" on full card.');
-            element.text(displayQuality).css('opacity', '1').addClass('show');
-        } else {
-            if (LQE_CONFIG.LOGGING_QUALITY) console.log("LQE-QUALITY", "card: " + cardId + ", Creating new element with quality '" + displayQuality + "' on full card.");
-            var div = document.createElement('div');
-            div.className = 'full-start__status lqe-quality';
-            div.textContent = displayQuality;
-            rateLine.append(div);
-            // slight delay to allow fade-in CSS to apply
-            setTimeout(function(){ $('.full-start__status.lqe-quality', renderElement).addClass('show'); }, 20);
-        }
-    }
-
-    function updateCardListQualityElement(cardView, qualityCode, fullTorrentTitle, bypassTranslation) {
-        var displayQuality = bypassTranslation ? fullTorrentTitle : translateQualityLabel(qualityCode, fullTorrentTitle);
-
-        var existingQualityElements = cardView.getElementsByClassName('card__quality');
-        Array.from(existingQualityElements).forEach(el => el.parentNode.removeChild(el));
-
-        var qualityDiv = document.createElement('div');
-        qualityDiv.className = 'card__quality';
-        var innerElement = document.createElement('div');
-        innerElement.textContent = displayQuality;
-        qualityDiv.appendChild(innerElement);
-        cardView.appendChild(qualityDiv);
-        // fade-in
-        setTimeout(function(){ qualityDiv.classList.add('show'); }, 20);
-    }
-
-// ===================== processFullCardQuality (Р»РѕРіС–РєР° РїРѕРІРЅРѕС— РєР°СЂС‚РєРё) =====================
-    function processFullCardQuality(cardData, renderElement) {
-        if (!renderElement) {
-            console.error("LQE-LOG", "Render element is null in processFullCardQuality. Aborting.");
-            return;
-        }
-        var cardId = cardData.id;
-        if (LQE_CONFIG.LOGGING_GENERAL) console.log("LQE-LOG", "card: " + cardId + ", Processing full card. Data: ", cardData);
-        var normalizedCard = {
-            id: cardData.id,
-            title: cardData.title || cardData.name || '',
-            original_title: cardData.original_title || cardData.original_name || '',
-            type: getCardType(cardData),
-            release_date: cardData.release_date || cardData.first_air_date || ''
-        };
-        if (LQE_CONFIG.LOGGING_GENERAL) console.log("LQE-LOG", "card: " + cardId + ", Normalized full card data: ", normalizedCard);
-        var rateLine = $('.full-start-new__rate-line', renderElement);
-        if (rateLine.length) {
-            rateLine.css('visibility', 'hidden');
-            rateLine.addClass('done');
-            addLoadingAnimation(cardId, renderElement);
-        } else {
-            if (LQE_CONFIG.LOGGING_GENERAL) console.log("LQE-LOG", "card: " + cardId + ", .full-start-new__rate-line not found, skipping loading animation.");
-        }
-        var isTvSeries = (normalizedCard.type === 'tv' || normalizedCard.name);
-        var cacheKey = LQE_CONFIG.CACHE_VERSION + '_' + (isTvSeries ? 'tv_' : 'movie_') + normalizedCard.id;
-
-        var manualOverrideData = LQE_CONFIG.MANUAL_OVERRIDES[cardId];
-        if (manualOverrideData) {
-            if (LQE_CONFIG.LOGGING_QUALITY) console.log("LQE-QUALITY", "card: " + cardId + ", Found manual override:", manualOverrideData);
-            updateFullCardQualityElement(null, manualOverrideData.full_label, cardId, renderElement, true);
-            removeLoadingAnimation(cardId, renderElement);
-            rateLine.css('visibility', 'visible');
-            return;
-        }
-
-        var cachedQualityData = getQualityCache(cacheKey);
-        if (!(isTvSeries && LQE_CONFIG.SHOW_QUALITY_FOR_TV_SERIES === false)) {
-            if (LQE_CONFIG.LOGGING_QUALITY) console.log('LQE-QUALITY', 'card: ' + cardId + ', Quality feature enabled for this content, starting processing.');
-            if (cachedQualityData) {
-                if (LQE_CONFIG.LOGGING_QUALITY) console.log("LQE-QUALITY", "card: " + cardId + ", Quality data found in cache:", cachedQualityData);
-                updateFullCardQualityElement(cachedQualityData.quality_code, cachedQualityData.full_label, cardId, renderElement);
-
-                if (Date.now() - cachedQualityData.timestamp > LQE_CONFIG.CACHE_REFRESH_THRESHOLD_MS) {
-                    if (LQE_CONFIG.LOGGING_QUALITY) console.log("LQE-QUALITY", "card: " + cardId + ", Cache is old, scheduling background refresh AND UI update.");
-                    getBestReleaseFromJacred(normalizedCard, cardId, function(jrResult) {
-                        if (jrResult && jrResult.quality && jrResult.quality !== 'NO') {
-                            saveQualityCache(cacheKey, {
-                                quality_code: jrResult.quality,
-                                full_label: jrResult.full_label
-                            }, cardId);
-                            updateFullCardQualityElement(jrResult.quality, jrResult.full_label, cardId, renderElement);
-                            if (LQE_CONFIG.LOGGING_QUALITY) console.log("LQE-QUALITY", "card: " + cardId + ", Background cache and UI refresh completed.");
-                        }
-                    });
-                }
-
-                removeLoadingAnimation(cardId, renderElement);
-                rateLine.css('visibility', 'visible');
-            } else {
-                clearFullCardQualityElements(cardId, renderElement);
-                showFullCardQualityPlaceholder(cardId, renderElement);
-                getBestReleaseFromJacred(normalizedCard, cardId, function(jrResult) {
-                    if (LQE_CONFIG.LOGGING_QUALITY) console.log('LQE-QUALITY', 'card: ' + cardId + ', JacRed callback received for full card. Result:', jrResult);
-                    var qualityCode = (jrResult && jrResult.quality) || null;
-                    var fullTorrentTitle = (jrResult && jrResult.full_label) || null;
-                    if (LQE_CONFIG.LOGGING_QUALITY) console.log("LQE-QUALITY", "JacRed returned - qualityCode:", qualityCode, "full label:", fullTorrentTitle);
-                    if (qualityCode && qualityCode !== 'NO') {
-                        if (LQE_CONFIG.LOGGING_QUALITY) console.log('LQE-QUALITY', 'card: ' + cardId + ', JacRed found quality code: ' + qualityCode + ', full label: ' + fullTorrentTitle);
-                        saveQualityCache(cacheKey, {
-                            quality_code: qualityCode,
-                            full_label: fullTorrentTitle
-                        }, cardId);
-                        updateFullCardQualityElement(qualityCode, fullTorrentTitle, cardId, renderElement);
-                    } else {
-                        if (LQE_CONFIG.LOGGING_QUALITY) console.log("LQE-QUALITY", 'card: ' + cardId + ', No quality found from JacRed or it was "NO". Clearing quality elements.');
-                        clearFullCardQualityElements(cardId, renderElement);
-                    }
-                    removeLoadingAnimation(cardId, renderElement);
-                    rateLine.css('visibility', 'visible');
-                });
-            }
-        } else {
-            if (LQE_CONFIG.LOGGING_QUALITY) console.log('LQE-QUALITY', 'card: ' + cardId + ', Quality feature disabled for TV series (as configured), skipping quality fetch.');
-            clearFullCardQualityElements(cardId, renderElement);
-            removeLoadingAnimation(cardId, renderElement);
-            rateLine.css('visibility', 'visible');
-        }
-        if (LQE_CONFIG.LOGGING_GENERAL) console.log("LQE-LOG", "card: " + cardId + ", Full card quality processing initiated.");
-    }
-
-// ===================== updateCardListQuality (СЃРїРёСЃРєРѕРІС– РєР°СЂС‚РєРё) =====================
-    function updateCardListQuality(cardElement) {
-        if (LQE_CONFIG.LOGGING_CARDLIST) console.log("LQE-CARDLIST", "updateCardListQuality called for card.");
-        if (cardElement.hasAttribute('data-lqe-quality-processed')) {
-            if (LQE_CONFIG.LOGGING_CARDLIST) console.log("LQE-CARDLIST", "Card already processed, skipping:", cardElement.card_data ? cardElement.card_data.id : 'N/A');
-            return;
-        }
-        var cardView = cardElement.querySelector('.card__view');
-        var cardData = cardElement.card_data;
-        if (!cardData || !cardView) {
-            if (LQE_CONFIG.LOGGING_CARDLIST) console.log("LQE-CARDLIST", "cardData or cardView is null for card, skipping quality fetch.");
-            return;
-        }
-        var isTvSeries = (getCardType(cardData) === 'tv');
-        if (isTvSeries && LQE_CONFIG.SHOW_QUALITY_FOR_TV_SERIES === false) {
-            if (LQE_CONFIG.LOGGING_CARDLIST) console.log("LQE-CARDLIST", "Skipping TV series for quality update (as configured). Card:", cardData.id);
-            return;
-        }
-        var normalizedCard = {
-            id: cardData.id || '',
-            title: cardData.title || cardData.name || '',
-            original_title: cardData.original_title || cardData.original_name || '',
-            type: getCardType(cardData),
-            release_date: cardData.release_date || cardData.first_air_date || ''
-        };
-        var cardId = normalizedCard.id;
-        var cacheKey = LQE_CONFIG.CACHE_VERSION + '_' + normalizedCard.type + '_' + cardId;
-        cardElement.setAttribute('data-lqe-quality-processed', 'true');
-
-        var manualOverrideData = LQE_CONFIG.MANUAL_OVERRIDES[cardId];
-        if (manualOverrideData) {
-            if (LQE_CONFIG.LOGGING_QUALITY) console.log("LQE-QUALITY", "card: " + cardId + ", Found manual override for card list:", manualOverrideData);
-            updateCardListQualityElement(cardView, null, manualOverrideData.full_label, true);
-            return;
-        }
-
-        var cachedQualityData = getQualityCache(cacheKey);
-        if (cachedQualityData) {
-            if (LQE_CONFIG.LOGGING_CARDLIST) console.log('LQE-CARDLIST', 'card: ' + cardId + ', Quality data found in cache for card list:', cachedQualityData);
-            updateCardListQualityElement(cardView, cachedQualityData.quality_code, cachedQualityData.full_label);
-
-            if (Date.now() - cachedQualityData.timestamp > LQE_CONFIG.CACHE_REFRESH_THRESHOLD_MS) {
-                if (LQE_CONFIG.LOGGING_QUALITY) console.log("LQE-QUALITY", "card: " + cardId + ", Cache is old, scheduling background refresh.");
-                getBestReleaseFromJacred(normalizedCard, cardId, function(jrResult) {
-                    if (jrResult && jrResult.quality && jrResult.quality !== 'NO') {
-                        saveQualityCache(cacheKey, {
-                            quality_code: jrResult.quality,
-                            full_label: jrResult.full_label
-                        }, cardId);
-                        if (document.body.contains(cardElement)) {
-                            updateCardListQualityElement(cardView, jrResult.quality, jrResult.full_label);
-                            if (LQE_CONFIG.LOGGING_QUALITY) console.log("LQE-QUALITY", "card: " + cardId + ", Background cache and UI refresh completed for list card.");
-                        }
-                    }
-                });
-            }
-            return;
-        }
-
-        // No cache -> run search (queued)
-        getBestReleaseFromJacred(normalizedCard, cardId, function(jrResult) {
-            if (LQE_CONFIG.LOGGING_CARDLIST) console.log('LQE-CARDLIST', 'card: ' + cardId + ', JacRed callback received for card list. Result:', jrResult);
-            if (!document.body.contains(cardElement)) {
-                if (LQE_CONFIG.LOGGING_CARDLIST) console.log('LQE-CARDLIST', 'Card removed from DOM during quality fetch:', cardId);
-                return;
-            }
-            var qualityCode = (jrResult && jrResult.quality) || null;
-            var fullTorrentTitle = (jrResult && jrResult.full_label) || null;
-            if (LQE_CONFIG.LOGGING_CARDLIST) console.log("LQE-CARDLIST: JacRed returned - qualityCode:", qualityCode, "full label:", fullTorrentTitle);
-            if (qualityCode && qualityCode !== 'NO') {
-                if (LQE_CONFIG.LOGGING_CARDLIST) console.log('LQE-CARDLIST', 'card: ' + cardId + ', JacRed found quality code: ' + qualityCode + ', full label: ' + fullTorrentTitle);
-                saveQualityCache(cacheKey, {
-                    quality_code: qualityCode,
-                    full_label: fullTorrentTitle
-                }, cardId);
-                updateCardListQualityElement(cardView, qualityCode, fullTorrentTitle);
-                if (LQE_CONFIG.LOGGING_CARDLIST) console.log('LQE-CARDLIST', 'card: ' + cardId + ', Added new quality element to card list.');
-            } else {
-                if (LQE_CONFIG.LOGGING_CARDLIST) console.log('LQE-CARDLIST', 'card: ' + cardId + ', No quality found from JacRed or it was "NO" for card list.');
-            }
-        });
-    }
-
-// ===================== MutationObserver optimization =====================
-    var observer = new MutationObserver(function(mutations) {
-        var newCards = [];
-        for (var m = 0; m < mutations.length; m++) {
-            var mutation = mutations[m];
-            if (mutation.addedNodes) {
-                for (var j = 0; j < mutation.addedNodes.length; j++) {
-                    var node = mutation.addedNodes[j];
-                    if (node.nodeType !== 1) continue;
-                    if (node.classList && node.classList.contains('card')) {
-                        newCards.push(node);
-                    }
-                    // also consider nodes that contain cards
-                    try {
-                        var nestedCards = node.querySelectorAll && node.querySelectorAll('.card');
-                        if (nestedCards && nestedCards.length) {
-                            for (var k = 0; k < nestedCards.length; k++) {
-                                newCards.push(nestedCards[k]);
-                            }
-                        }
-                    } catch (e) {}
-                }
-            }
-        }
-        if (newCards.length) {
-            if (LQE_CONFIG.LOGGING_CARDLIST) console.log("LQE-CARDLIST", "Observer detected new cards. Total new cards:", newCards.length);
-            newCards.forEach(updateCardListQuality);
-        }
-    });
-
-    function attachObserver() {
-        // try to observe known card containers to reduce noise
-        var containers = document.querySelectorAll('.cards, .card-list, .content, .main, .cards-list, .preview__list');
-        if (containers && containers.length) {
-            for (var i = 0; i < containers.length; i++) {
-                try {
-                    observer.observe(containers[i], { childList: true, subtree: true });
-                } catch (e) {
-                    // fallback to body if any errors
-                }
-            }
-        } else {
-            observer.observe(document.body, { childList: true, subtree: true });
-        }
-    }
-
-// ===================== Initialization =====================
-    function initializeLampaQualityPlugin() {
-        if (LQE_CONFIG.LOGGING_GENERAL) console.log("LQE-LOG", "Lampa Quality Enhancer: Plugin Initialization Started!");
-        window.lampaQualityPlugin = true;
-        attachObserver();
-        if (LQE_CONFIG.LOGGING_GENERAL) console.log('LQE-LOG: Initial observer for card lists started.');
-        Lampa.Listener.follow('full', function(event) {
-            if (event.type == 'complite') {
-                var renderElement = event.object.activity.render();
-                currentGlobalMovieId = event.data.movie.id;
-                if (LQE_CONFIG.LOGGING_GENERAL) console.log("LQE-LOG", "Full card event 'complite' for ID:", currentGlobalMovieId);
-                processFullCardQuality(event.data.movie, renderElement);
-            }
-        });
-    }
-
-    if (!window.lampaQualityPlugin) {
-        initializeLampaQualityPlugin();
-    }
-
-})();
+                if (!callbackCalled) { // РЇРєС‰Рѕ callback С‰Рµ РЅРµ РІРёРєР»РёРєР°РЅРѕ
+                    callbackCa
