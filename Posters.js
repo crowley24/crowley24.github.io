@@ -4,20 +4,20 @@
   // Налаштування  
   var STORAGE_KEY = 'poster_orientation';  
     
-  function injectStyles(){  
-    if (document.getElementById('poster-orientation-style')) return;  
-    var css = ""  
-    // Горизонтальний режим  
-    + ".poster-horizontal .card{width:100%!important;max-width:none!important}"  
-    + ".poster-horizontal .card__img{width:200px!important;height:112px!important;float:left;margin-right:15px}"  
-    + ".poster-horizontal .card__view{display:flex;align-items:center}"  
-    + ".poster-horizontal .card__title{font-size:16px}"  
-    // Вертикальний режим (стандартний)  
-    + ".poster-vertical .card{width:auto!important}"  
-    + ".poster-vertical .card__img{width:100%!important;height:auto!important;float:none;margin-right:0}"  
-    + ".poster-vertical .card__view{display:block}";  
-    var s=document.createElement('style'); s.id='poster-orientation-style'; s.textContent=css; document.head.appendChild(s);  
-  }  
+ function injectStyles(){      
+  if (document.getElementById('poster-orientation-style')) return;      
+  var css = ""      
+  // Горизонтальний режим      
+  + ".poster-horizontal .card{width:100%!important;max-width:none!important}"      
+  + ".poster-horizontal .card__img{width:200px!important;aspect-ratio:16/9!important;float:left;margin-right:15px;object-fit:cover!important}"      
+  + ".poster-horizontal .card__view{display:flex;align-items:center}"      
+  + ".poster-horizontal .card__title{font-size:16px}"      
+  // Вертикальний режим (стандартний)      
+  + ".poster-vertical .card{width:auto!important}"      
+  + ".poster-vertical .card__img{width:100%!important;aspect-ratio:2/3!important;object-fit:cover!important;float:none;margin-right:0}"      
+  + ".poster-vertical .card__view{display:block}";      
+  var s=document.createElement('style'); s.id='poster-orientation-style'; s.textContent=css; document.head.appendChild(s);      
+}
     
   function toggleOrientation(){  
     var current = Lampa.Storage.get(STORAGE_KEY, 'vertical');  
