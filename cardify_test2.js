@@ -1110,7 +1110,7 @@ function modifyCardifyStyles() {
   const style = document.createElement('style');    
   style.id = 'cardify-compact-style';    
   style.textContent = `    
-    /* Трейлер у правому верхньому куті */  
+    /* Трейлер у правому верхньому куті з прозорістю */  
     .cardify-trailer__youtube {    
       position: fixed !important;    
       top: 2em !important;    
@@ -1127,67 +1127,70 @@ function modifyCardifyStyles() {
       transform: none !important;  
       left: auto !important;  
       bottom: auto !important;  
+      background: transparent !important;  
+      opacity: 0.85 !important;  /* ДОДАНО: 85% прозорості */  
     }    
       
-    /* Видаляємо темний оверлей, щоб бачити фон картки */  
+    /* Видалено чорний оверлей */  
     .cardify-trailer__youtube::before {    
       display: none !important;  
     }  
       
-    /* Iframe займає весь контейнер */  
-    .cardify-trailer__youtube iframe {  
-      width: 100% !important;  
-      height: 100% !important;  
-      position: absolute !important;  
-      top: 0 !important;  
+    /* Iframe також напівпрозорий */  
+    .cardify-trailer__youtube iframe {    
+      width: 100% !important;    
+      height: 100% !important;    
+      position: absolute !important;    
+      top: 0 !important;    
       left: 0 !important;  
-    }  
-      
-    /* Контроли трейлера також у правому верхньому куті */  
-    .cardify-trailer__controlls {  
-      position: fixed !important;  
-      top: auto !important;  
-      bottom: 2em !important;  
-      right: 2em !important;  
-      left: auto !important;  
-      width: 35% !important;  
-      max-width: 600px !important;  
-    }  
-      
-    /* Анімація появи */  
-    @keyframes cardify-fadein {    
-      from {    
-        opacity: 0;    
-        transform: translateY(-20px);  
-      }    
-      to {    
-        opacity: 1;    
-        transform: translateY(0);  
-      }    
     }    
         
-    .cardify-trailer__youtube {    
-      animation: cardify-fadein 0.3s ease-out !important;    
-    }  
-      
-    /* Адаптивність для мобільних */  
-    @media (max-width: 768px) {  
-      .cardify-trailer__youtube {  
-        width: 90% !important;  
-        top: 1em !important;  
-        right: 5% !important;  
-        max-width: none !important;  
-      }  
+    /* Контроли трейлера також у правому верхньому куті */    
+    .cardify-trailer__controlls {    
+      position: fixed !important;    
+      top: auto !important;    
+      bottom: 2em !important;    
+      right: 2em !important;    
+      left: auto !important;    
+      width: 35% !important;    
+      max-width: 600px !important;  
+      opacity: 0.9 !important;  /* ДОДАНО: контроли трохи менш прозорі */  
+    }    
         
-      .cardify-trailer__controlls {  
-        width: 90% !important;  
-        right: 5% !important;  
-      }  
-    }  
-  `;    
-      
-  document.head.appendChild(style);    
-  console.log('[Cardify Compact] Стилі застосовано (правий верхній кут)');    
+    /* Анімація появи */    
+    @keyframes cardify-fadein {      
+      from {      
+        opacity: 0;      
+        transform: translateY(-20px);    
+      }      
+      to {      
+        opacity: 0.85;  /* ЗМІНЕНО: кінцева прозорість 85% */  
+        transform: translateY(0);    
+      }      
+    }      
+          
+    .cardify-trailer__youtube {      
+      animation: cardify-fadein 0.3s ease-out !important;      
+    }    
+        
+    /* Адаптивність для мобільних */    
+    @media (max-width: 768px) {    
+      .cardify-trailer__youtube {    
+        width: 90% !important;    
+        top: 1em !important;    
+        right: 5% !important;    
+        max-width: none !important;    
+      }    
+          
+      .cardify-trailer__controlls {    
+        width: 90% !important;    
+        right: 5% !important;    
+      }    
+    }    
+  `;      
+        
+  document.head.appendChild(style);      
+  console.log('[Cardify Compact] Стилі застосовано з прозорістю');      
 } 
   
 if (window.appready) {  
