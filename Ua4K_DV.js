@@ -115,7 +115,7 @@
   var orig  = String(m.original_title||m.original_name||title).trim();  
   var year  = String(m.release_date||'0000').slice(0,4);  
   if(!title) throw new Error('Не визначена назва фільму');  
-  var poster = tmdbImg(m.poster_path, 'w342');  
+  var poster = a(m.poster_path, 'w342');  
   return { title:title, orig:orig, year:year, poster:poster, full:m };
   }
   function getShowPayload(data){
@@ -835,13 +835,21 @@ var aDV = /dolby\s*vision|dovi|\bDV\b/i.test(a.title);
   bar.prepend(btn);  
     
   try {  
+    // Спочатку оновлюємо колекцію  
     Lampa.Controller.collectionSet(bar);  
-    // Перемикаємо контролер на панель кнопок і фокусуємо першу  
+      
+    // Потім примусово встановлюємо фокус через Controller  
     setTimeout(function(){  
       try {  
-        var controller = Lampa.Controller.enabled();  
-        if (controller && controller.name === 'full') {  
-          Lampa.Controller.collectionFocus(btn[0], bar);  
+        // Видаляємо всі фокуси вручну  
+        bar.find('.selector').each(function(){  
+          $(this).removeClass('focus');  
+        });  
+          
+        // Встановлюємо фокус на першу кнопку (UaDV)  
+        var firstBtn = bar.find('.selector').first();  
+        if (firstBtn.length) {  
+          firstBtn.addClass('focus').trigger('hover:focus');  
         }  
       } catch(e) {}  
     }, 100);  
