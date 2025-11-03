@@ -1131,13 +1131,6 @@ function modifyCardifyStyles() {
       opacity: 0.85 !important;  
     }    
       
-    /* ДОДАНО: Приховати контроли плеєра */  
-    .cardify-trailer__controlls {    
-      display: none !important;  
-      visibility: hidden !important;  
-      opacity: 0 !important;  
-    }  
-      
     /* Видалено чорний оверлей */  
     .cardify-trailer__youtube::before {    
       display: none !important;  
@@ -1145,33 +1138,40 @@ function modifyCardifyStyles() {
       
     /* Iframe також напівпрозорий */  
     .cardify-trailer__youtube iframe {    
-      width: 100% !important;  
-      height: 100% !important;  
-      opacity: inherit !important;  
+      opacity: 1 !important;  
+    }  
+      
+    /* ПОСИЛЕНЕ ПРИХОВУВАННЯ КОНТРОЛІВ - множинні селектори */  
+    .cardify-trailer__controlls,  
+    .cardify-trailer__controlls *,  
+    .cardify__controlls,  
+    .cardify__controlls *,  
+    .cardify-preview__loader,  
+    .cardify-preview__line,  
+    [class*="cardify"][class*="controll"],  
+    [class*="cardify"][class*="button"],  
+    [class*="trailer"][class*="controll"] {    
+      display: none !important;  
+      visibility: hidden !important;  
+      opacity: 0 !important;  
+      pointer-events: none !important;  
+      width: 0 !important;  
+      height: 0 !important;  
     }  
       
     /* Картка фільму залишається видимою */  
     .full-start-new,  
     .full-start-new__body,  
+    .full-start-new__right,  
     .cardify__left,  
-    .cardify__right,  
     .full-start-new__poster,  
-    .full-start-new__title,  
-    .full-start-new__details,  
-    .full-start-new__buttons {  
+    .cardify__background {    
       display: block !important;  
       visibility: visible !important;  
       opacity: 1 !important;  
     }  
       
-    /* Перевизначення класу nodisplay */  
-    .nodisplay {  
-      display: block !important;  
-      visibility: visible !important;  
-      opacity: 1 !important;  
-    }  
-      
-    /* Анімація появи */  
+    /* Анімація появи */    
     @keyframes cardify-fadein {      
       from {      
         opacity: 0;      
@@ -1198,9 +1198,71 @@ function modifyCardifyStyles() {
     }    
   `;      
         
-  document.head.appendChild(style);      
-  console.log('[Cardify Compact] Стилі застосовано (контроли приховані)');      
-}    
+  document.head.appendChild(style);    
+    
+  // ДОДАНО: JavaScript приховування контролів  
+  setTimeout(function() {  
+    // Знайти всі можливі контроли  
+    var controlSelectors = [  
+      '.cardify-trailer__controlls',  
+      '.cardify__controlls',  
+      '.cardify-preview__loader',  
+      '.cardify-preview__line',  
+      '[class*="cardify"][class*="controll"]',  
+      '[class*="cardify"][class*="button"]',  
+      '[class*="trailer"][class*="controll"]'  
+    ];  
+      
+    controlSelectors.forEach(function(selector) {  
+      var elements = document.querySelectorAll(selector);  
+      elements.forEach(function(el) {  
+        el.style.display = 'none';  
+        el.style.visibility = 'hidden';  
+        el.style.opacity = '0';  
+        el.style.pointerEvents = 'none';  
+      });  
+    });  
+  }, 100);  
+    
+  // ДОДАНО: MutationObserver для постійного приховування  
+  var observer = new MutationObserver(function(mutations) {  
+    mutations.forEach(function(mutation) {  
+      mutation.addedNodes.forEach(function(node) {  
+        if (node.nodeType === 1) { // Element node  
+          // Перевірити, чи це контроли  
+          var isControl = node.className && (  
+            node.className.includes('cardify') &&   
+            (node.className.includes('controll') || node.className.includes('button'))  
+          );  
+            
+          if (isControl) {  
+            node.style.display = 'none';  
+            node.style.visibility = 'hidden';  
+            node.style.opacity = '0';  
+          }  
+        }  
+      });  
+    });  
+  });  
+    
+  observer.observe(document.body, {  
+    childList: true,  
+    subtree: true  
+  });  
+    
+  console.log('[Cardify Compact] Стилі застосовано з посиленим приховуванням контролів');      
+}  
+  
+if (window.appready) {    
+  setTimeout(modifyCardifyStyles, 1000);    
+} else {    
+  Lampa.Listener.follow('app', function(e) {    
+    if (e.type === 'ready') {    
+      setTimeout(modifyCardifyStyles, 1000);    
+    }    
+  });    
+}
+    
         
     /* Анімація появи */    
     @keyframes cardify-fadein {      
