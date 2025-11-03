@@ -1104,5 +1104,68 @@
       if (Type.re(e)) startPlugin();
     });
   }
-
-})();
+function modifyCardifyStyles() {  
+  const oldStyle = document.getElementById('cardify-compact-style');  
+  if (oldStyle) oldStyle.remove();  
+    
+  const style = document.createElement('style');  
+  style.id = 'cardify-compact-style';  
+  style.textContent = `  
+    .cardify-trailer__youtube {  
+      position: fixed !important;  
+      top: 50% !important;  
+      left: 50% !important;  
+      transform: translate(-50%, -50%) !important;  
+      width: 70% !important;  
+      height: 60% !important;  
+      max-width: 1200px !important;  
+      max-height: 700px !important;  
+      border-radius: 12px !important;  
+      overflow: hidden !important;  
+      box-shadow: 0 20px 60px rgba(0,0,0,0.8) !important;  
+      z-index: 9999 !important;  
+    }  
+      
+    .cardify-trailer__youtube::before {  
+      content: '';  
+      position: fixed;  
+      top: 0;  
+      left: 0;  
+      right: 0;  
+      bottom: 0;  
+      background: rgba(0,0,0,0.7);  
+      z-index: -1;  
+    }  
+      
+    @keyframes cardify-fadein {  
+      from {  
+        opacity: 0;  
+        transform: translate(-50%, -50%) scale(0.95);  
+      }  
+      to {  
+        opacity: 1;  
+        transform: translate(-50%, -50%) scale(1);  
+      }  
+    }  
+      
+    .cardify-trailer__youtube {  
+      animation: cardify-fadein 0.3s ease-out !important;  
+    }  
+  `;  
+    
+  document.head.appendChild(style);  
+  console.log('[Cardify Compact] Стилі застосовано');  
+}  
+  
+if (window.appready) {  
+  setTimeout(modifyCardifyStyles, 1000);  
+} else {  
+  Lampa.Listener.follow('app', function(e) {  
+    if (e.type === 'ready') {  
+      setTimeout(modifyCardifyStyles, 1000);  
+    }  
+  });  
+}  
+// ===== КІНЕЦЬ МОДИФІКАЦІЇ =====  
+  
+})(); // <-- Закриваюча дужка IIFE залишається в самому кінці
