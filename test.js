@@ -449,7 +449,7 @@
 // ЗАКОМЕНТОВАНО: Не приховуємо картку фільму  
     // _this4.background.addClass('nodisplay');  
     // _this4.startblock.addClass('nodisplay');  
-    // _this4.head.addClass('nodisplay');
+       _this4.head.addClass('nodisplay');
 
             _this4.controll();
           }, 500);
