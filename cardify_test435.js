@@ -1106,3 +1106,96 @@
   }
 
 })();
+
+function modifyCardifyStyles() {    
+  const oldStyle = document.getElementById('cardify-compact-style');    
+  if (oldStyle) oldStyle.remove();    
+      
+  const style = document.createElement('style');    
+  style.id = 'cardify-compact-style';    
+  style.textContent = `    
+    /* Трейлер на половину екрану з 40% прозорістю */  
+    .cardify-trailer__youtube {    
+      position: fixed !important;    
+      top: 2em !important;    
+      right: 2em !important;    
+      width: 50% !important;  /* Половина екрану */  
+      height: auto !important;    
+      aspect-ratio: 16/9 !important;  
+      max-width: 800px !important;    
+      max-height: 450px !important;    
+      border-radius: 12px !important;    
+      overflow: hidden !important;    
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6) !important;    
+      z-index: 100 !important;  
+      transform: none !important;  
+      left: auto !important;  
+      bottom: auto !important;  
+      opacity: 0.6 !important;  /* 40% прозорість (60% непрозорості) */  
+      transition: opacity 0.3s ease !important;  
+    }  
+      
+    /* Приховати чорний фон */  
+    .cardify-trailer__youtube::before {    
+      display: none !important;  
+    }  
+      
+    /* Приховати контроли плеєра */  
+    .cardify-trailer__controlls {    
+      display: none !important;  
+      visibility: hidden !important;  
+      opacity: 0 !important;  
+      pointer-events: none !important;  
+      width: 0 !important;  
+      height: 0 !important;  
+    }  
+      
+    /* Гарантувати видимість картки фільму */  
+    .full-start-new,  
+    .full-start-new__body,  
+    .full-start-new__right,  
+    .full-start-new__left,  
+    .full-start-new__poster,  
+    .full-start__background,  
+    .cardify__background {  
+      display: block !important;  
+      visibility: visible !important;  
+      opacity: 1 !important;  
+    }  
+      
+    .cardify__background.nodisplay {  
+      display: block !important;  
+      opacity: 1 !important;  
+      visibility: visible !important;  
+    }  
+      
+    /* Анімація появи */  
+    @keyframes cardify-fadein {    
+      from {    
+        opacity: 0;    
+        transform: translateY(-20px);  
+      }    
+      to {    
+        opacity: 0.6;  /* Кінцева прозорість 40% */  
+        transform: translateY(0);  
+      }    
+    }    
+        
+    .cardify-trailer__youtube {    
+      animation: cardify-fadein 0.3s ease-out !important;    
+    }  
+      
+    /* Адаптивність для мобільних */  
+    @media (max-width: 768px) {  
+      .cardify-trailer__youtube {  
+        width: 70% !important;  
+        top: 1em !important;  
+        right: 15% !important;  
+        max-width: none !important;  
+      }  
+    }  
+  `;    
+      
+  document.head.appendChild(style);    
+  console.log('[Cardify Compact] Стилі застосовано (половина екрану, 40% прозорість)');    
+}
