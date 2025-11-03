@@ -830,6 +830,15 @@ var aDV = /dolby\s*vision|dovi|\bDV\b/i.test(a.title);
     return true;
   }
   function mountTVNative(){
+function injectUAStyles(){  
+  if (document.getElementById('playua-ua-style')) return;  
+  var css = ""  
+  + ".full-start__button.playua-btn{background:#333!important;color:#fff!important;border:0!important;outline:0!important;box-shadow:0 2px 8px rgba(0,0,0,.28)!important;order:-9999!important}"  
+  + ".full-start__buttons,.full-start-new__buttons{display:flex!important}"  
+  + ".full-start__button.playua-btn.selector.focus,.full-start__button.playua-btn:hover{filter:brightness(1.06) contrast(1.02);transform:translateY(-1px)}"  
+  + ".full-start__button.playua-btn svg{color:currentColor}";  
+  var s=document.createElement('style'); s.id='playua-ua-style'; s.textContent=css; document.head.appendChild(s);  
+}
     injectUAStyles();
     try{
       Lampa.Listener.follow('full', function(ev){
