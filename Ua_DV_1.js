@@ -816,18 +816,29 @@ var aDV = /dolby\s*vision|dovi|\bDV\b/i.test(a.title);
     +'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="28" height="28" aria-hidden="true"><path d="M20 15l20 10-20 10V15z" fill="currentColor"/></svg>'  
     +'<span>UaDV</span></div>');  
 }
-  function attachButtonOnce(root, ev){
-    var m = ev && ev.data && ev.data.movie; if (!m) return true;
-    var bar = findButtonsBar(root); if (!bar || !bar.length) return false;
-    if (bar.find('[data-playua-icon="1"]').length) return true;
-    var btn = makeButton();
-    var click = function(){ runPlay(ev.data); };
-    btn.on('hover:enter', click);
-    btn.on('click', click);
-    btn.on('keydown', function(e){ if(e.key==='Enter'||e.keyCode===13) click(); });
-    bar.prepend(btn);
-    try { Lampa.Controller.collectionSet(bar); } catch(e) {}
-    return true;
+  function attachButtonOnce(root, ev) {  
+  var $ = window.$ || window.jQuery;  
+  if (!$) return false;  
+    
+  var container = $('.full-start__buttons', root);  
+  if (!container.length) return false;  
+    
+  // Перевірка, чи кнопка вже існує  
+  if (container.find('.playua-btn').length) return true;  
+    
+  // Створення кнопки  
+  var btn = $('<div class="full-start__button selector playua-btn">PlayUa</div>');  
+    
+  // Додати обробники подій  
+  btn.on('hover:enter', function(){ /* ваша логіка відкриття модального вікна */ });  
+    
+  // ✅ ЗМІНЕНО: prepend() замість append()  
+  container.prepend(btn);  
+    
+  // Оновити контролер Lampa  
+  try{ Lampa.Controller.enable('content'); }catch(e){}  
+    
+  return true;  
   }
   function mountTVNative(){
     injectUAStyles();
