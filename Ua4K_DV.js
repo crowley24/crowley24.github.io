@@ -834,31 +834,32 @@ var aDV = /dolby\s*vision|dovi|\bDV\b/i.test(a.title);
     
   bar.prepend(btn);  
     
-  // ДОДАНО: Примусово встановлюємо фокус на UaDV кнопку  
   try {  
     Lampa.Controller.collectionSet(bar);  
-    // Затримка, щоб Lampa встигла обробити колекцію  
+    // Перемикаємо контролер на панель кнопок і фокусуємо першу  
     setTimeout(function(){  
       try {  
-        btn.addClass('focus');  
-        btn.trigger('hover:focus');  
-        // Альтернативно, якщо не спрацює:  
-        // Lampa.Controller.focus(btn[0]);  
+        var controller = Lampa.Controller.enabled();  
+        if (controller && controller.name === 'full') {  
+          Lampa.Controller.collectionFocus(btn[0], bar);  
+        }  
       } catch(e) {}  
-    }, 50);  
+    }, 100);  
   } catch(e) {}  
     
   return true;  
 }
   function mountTVNative(){
-function injectUAStyles(){  
-  if (document.getElementById('playua-ua-style')) return;  
-  var css = ""  
-  + ".full-start__button.playua-btn{background:#333!important;color:#fff!important;border:0!important;outline:0!important;box-shadow:0 2px 8px rgba(0,0,0,.28)!important;order:-9999!important}"  
-  + ".full-start__buttons,.full-start-new__buttons{display:flex!important}"  
-  + ".full-start__button.playua-btn.selector.focus,.full-start__button.playua-btn:hover{filter:brightness(1.06) contrast(1.02);transform:translateY(-1px)}"  
-  + ".full-start__button.playua-btn svg{color:currentColor}";  
-  var s=document.createElement('style'); s.id='playua-ua-style'; s.textContent=css; document.head.appendChild(s);  
+function injectUAStyles(){    
+  if (document.getElementById('playua-ua-style')) return;    
+  var css = ""    
+  + ".full-start__button.playua-btn{background:#333!important;color:#fff!important;border:0!important;outline:0!important;box-shadow:0 2px 8px rgba(0,0,0,.28)!important;order:-9999!important}"    
+  + ".full-start__buttons,.full-start-new__buttons{display:flex!important}"    
+  // ДОДАНО: Автофокус на першу кнопку  
+  + ".full-start__button.playua-btn:first-child{order:-10000!important}"  
+  + ".full-start__button.playua-btn.selector.focus,.full-start__button.playua-btn:hover{filter:brightness(1.06) contrast(1.02);transform:translateY(-1px)}"    
+  + ".full-start__button.playua-btn svg{color:currentColor}";    
+  var s=document.createElement('style'); s.id='playua-ua-style'; s.textContent=css; document.head.appendChild(s);    
 }
     injectUAStyles();
     try{
