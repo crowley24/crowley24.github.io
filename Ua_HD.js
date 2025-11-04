@@ -10,13 +10,13 @@
   // ===============================================  
   
   // ---------- Mobile-optimized constants ----------  
-  var MIN_SEEDERS   = 3;                    // Знижено для мобільних  
-  var MAX_MOVIE_SIZE = 30 * 1024 * 1024 * 1024; // 30 GB для Full HD  
-  var MAX_BITRATE   = 30;                   // 30 Mbps для Full HD  
+  var MIN_SEEDERS   = 3;  
+  var MAX_MOVIE_SIZE = 30 * 1024 * 1024 * 1024; // 30 GB  
+  var MAX_BITRATE   = 30; // 30 Mbps  
   var MOVIE_CATS    = '2000,2010,2020,2030,2040';  
   var SERIES_CATS   = '5000,5030,5040,5050,5060,5070';  
   var VIDEO_EXT     = /(\.(mkv|mp4|avi|ts|m2ts|mpg|mpeg|mov|wmv))$/i;  
-  var MIN_EP_BYTES  = 500 * 1024 * 1024; // 300 MB для мобільних  
+  var MIN_EP_BYTES  = 500 * 1024 * 1024;  
   
   var PACK_COLORS = ['#60A5FA','#A78BFA','#34D399','#F59E0B','#F472B6'];  
   
@@ -27,22 +27,17 @@
     var v=(s||'video').replace(/[^\w\d]+/g,'.').replace(/\.+/g,'.').replace(/^\.+|\.+$/g,'');  
     return v || 'video';  
   }  
-  function isSerial(m){  
-    return !!(m && m.first_air_date && !m.release_date);  
-  }  
+  function isSerial(m){ return !!(m && m.first_air_date && !m.release_date); }  
   function looksLikeVideo(path){ return VIDEO_EXT.test(String(path||'')); }  
-  
-  function tmdbLang(){  
-    try{ return String((Lampa.Storage.get('language')||'uk')).toLowerCase(); }catch(e){ return 'uk'; }  
-  }  
-  
+  function tmdbLang(){ try{ return String((Lampa.Storage.get('language')||'uk')).toLowerCase(); }catch(e){ return 'uk'; } }  
+    
   function tmdbImg(path, size){  
     if (!path) return '';  
     var p = String(path);  
     if (/^https?:\/\//i.test(p)) return p;  
     return 'https://image.tmdb.org/t/p/' + (size || 'w300') + p;  
   }  
-  
+    
   function tmdbUrl(path, params){  
     var qp = new URLSearchParams(params||{});  
     try{  
@@ -57,7 +52,7 @@
     return base + path + (path.indexOf('?')>=0?'&':'?') + qp.toString();  
   }  
   
-  // ---------- Jackett base (Toloka only) ----------  
+  // ---------- Jackett ----------  
   function jackettBase(){  
     var raw='', key='';  
     try{ raw = Lampa.Storage.field('jackett_url')||''; key = Lampa.Storage.field('jackett_key')||''; }catch(e){}  
@@ -66,13 +61,14 @@
     return { base: trimEnd(base), key: key };  
   }  
   
-  // ---------- TorrServer base + auth ----------  
+  // ---------- TorrServer ----------  
   function tsBase(){  
     var raw='';  
     try{ raw = Lampa.Storage.field('torrserver_url')||''; }catch(e){}  
     if(!raw) throw new Error('Вкажи torrserver_url у Налаштуваннях');  
     return trimEnd(ensureScheme(raw));  
   }  
+    
   function tsAuthHeaders(){  
     var token = '', user='', pass='';  
     try{  
@@ -90,6 +86,7 @@
     }  
     return headers;  
   }  
+    
   function tsBaseForStream(){  
     var base = tsBase();  
     var user='', pass='';  
@@ -100,6 +97,7 @@
     }catch(e){}  
     return base;  
   }  
+    
   function tsStreamAuthQuery(){  
     var token=''; try{ token = Lampa.Storage.field('torrserver_token')||''; }catch(e){}  
     return token ? '&authorization=' + encodeURIComponent('Bearer '+token) : '';  
@@ -114,20 +112,23 @@
     var year  = String(m.release_date||'0000').slice(0,4);  
     var runtime = m.runtime || 0;  
     if(!title) throw new Error('Не визначена назва фільму');  
-    var poster = tmdbImg(m.poster_path, 'w342');  
-    return { title:title, orig:orig, year:year, poster:poster, full:m, runtime:runtime };  
+    var poster = tmdbImg(m.poster_path,'w500');  
+    return { title:title, orig:orig, year:year, runtime:runtime, poster:poster, full:m };  
   }  
+  
   function getShowPayload(data){  
     var m = data && data.movie; if(!m) throw new Error('Немає data.movie');  
     if(!isSerial(m)) throw new Error('skip-movie');  
     var title = String(m.name||m.title||'').trim();  
     var orig  = String(m.original_name||m.original_title||title).trim();  
-    var tvId  = m.id;  
-    var poster= tmdbImg(m.poster_path, 'w342');  
-    return { title:title, orig:orig, tvId:tvId, poster:poster, full:m };  
+    var year  = String(m.first_air_date||'0000').slice(0,4);  
+    if(!title) throw new Error('Не визначена назва серіалу');  
+    var poster = tmdbImg(m.poster_path,'w500');  
+    var tmdbId = m.id;  
+    return { title:title, orig:orig, year:year, poster:poster, tmdbId:tmdbId, full:m };  
   }  
   
-  // ---------- Jackett search (TOLOKA ONLY + 1080p max) ----------  
+  // ---------- Jackett search ----------  
   function parseTorznabXML(text){  
     var xml; try{ xml = new DOMParser().parseFromString(text,'application/xml'); }catch(e){ return []; }  
     var items = [].slice.call(xml.querySelectorAll('item')).map(function(it){  
@@ -145,17 +146,13 @@
       var trackerId= String(xa('jackettindexerid')||'').toLowerCase();  
       var title = xt('title');  
         
-      // ФІЛЬТР: тільки Toloka  
       if (tracker.indexOf('toloka')<0 && trackerId.indexOf('toloka')<0) return null;  
-        
-      // ФІЛЬТР: тільки 1080p або нижче (виключити 4K/2160p)  
       if (title.indexOf('2160p')>=0 || title.indexOf('4K')>=0 || /\b4k\b/i.test(title)) return null;  
         
       return { title:title, link:link, magnet:magnet, dl:enc||'', size:size, seed:seed, tracker:tracker, trackerId:trackerId };  
     }).filter(function(x){ return x && x.link && x.size>0 && x.seed>=MIN_SEEDERS; });  
       
     items.sort(function(a,b){   
-      // Пріоритет 1080p  
       var a1080 = a.title.indexOf('1080p')>=0 ? 1 : 0;  
       var b1080 = b.title.indexOf('1080p')>=0 ? 1 : 0;  
       if (a1080 !== b1080) return b1080 - a1080;  
@@ -164,9 +161,7 @@
     return items;  
   }  
   
-  function catsToParams(csv){  
-    return csv.split(',').map(function(s){return s.trim();}).filter(Boolean);  
-  }  
+  function catsToParams(csv){ return csv.split(',').map(function(s){return s.trim();}).filter(Boolean); }  
     
   async function jSearchTorznab(query, catsCSV){  
     var jb = jackettBase();  
@@ -181,78 +176,75 @@
       return parseTorznabXML(txt);  
     }catch(e){ return []; }  
   }  
-    // ---------- TorrServer ----------    
-  async function tsAdd(base, addLink, metaTitle, metaPoster, metaFull){    
-    var url = base + '/torrents';    
-    var body = { action:'add', link:addLink, title:('[LAMPA] '+(metaTitle||'')).trim(), poster: metaPoster||'', data: JSON.stringify({lampa:true,movie:metaFull||{}}), save_to_db:false };    
-    var r = await fetch(url,{ method:'POST', headers: tsAuthHeaders(), body: JSON.stringify(body) });    
-    var j={}; try{ j=await r.json(); }catch(e){}    
-    var hash = j.hash || j.id || j.link || j.data || j.result || '';    
-    return { hash:hash, id:hash, raw:j };    
-  }    
-      
-  function pickFileStats(j){    
-    if (!j) return [];    
-    if (Array.isArray(j)) return j;    
-    if (Array.isArray(j.file_stats)) return j.file_stats;    
-    if (Array.isArray(j.FileStats)) return j.FileStats;    
-    if (Array.isArray(j.files)) return j.files;    
-    if (Array.isArray(j.Files)) return j.Files;    
-    if (j.stats && Array.isArray(j.stats.file_stats)) return j.stats.file_stats;    
-    return [];    
-  }    
-      
-  async function tsFiles(base, linkOrHash){    
-    var headers = tsAuthHeaders();    
-    try{    
-      var body = { action:'get' };    
-      if (/^(magnet:|https?:)/i.test(linkOrHash)) body.link = linkOrHash; else body.hash = linkOrHash;    
-      var r1 = await fetch(base+'/torrents', { method:'POST', headers: headers, body: JSON.stringify(body) });    
-      if (r1.ok){    
-        var j1 = await r1.json(); var fs1 = pickFileStats(j1);    
-        if (fs1.length) return { files:fs1, raw:j1 };    
-      }    
-    }catch(e){}    
-    try{    
-      var r2 = await fetch(base+'/stream/files?link='+encodeURIComponent(linkOrHash), { method:'GET', headers: headers });    
-      if (r2.ok){    
-        var j2 = await r2.json(); var fs2 = pickFileStats(j2);    
-        if (fs2.length) return { files:fs2, raw:j2 };    
-      }    
-    }catch(e){}    
-    return { files: [], raw: null };    
-  }    
+  
+  // ---------- TorrServer API ----------  
+  async function tsAdd(base, addLink, metaTitle, metaPoster, metaFull){  
+    var url = base + '/torrents';  
+    var body = { action:'add', link:addLink, title:('[LAMPA] '+(metaTitle||'')).trim(), poster: metaPoster||'', data: JSON.stringify({lampa:true,movie:metaFull||{}}), save_to_db:false };  
+    var r = await fetch(url,{ method:'POST', headers: tsAuthHeaders(), body: JSON.stringify(body) });  
+    var j={}; try{ j=await r.json(); }catch(e){}  
+    var hash = j.hash || j.id || j.link || j.data || j.result || '';  
+    return { hash:hash, id:hash, raw:j };  
+  }  
     
-  function closeAllPlayUaModals(){    
-    try{ var els=document.querySelectorAll('.playua-modal'); for (var i=0;i<els.length;i++) els[i].remove(); }catch(e){}    
-    try{ if (window.Lampa && Lampa.Modal && typeof Lampa.Modal.close==='function') Lampa.Modal.close(); }catch(e){}    
-  }    
-      
-  function tsPlayById(hash, file, title){        
-    closeAllPlayUaModals();        
-    var baseForStream = tsBaseForStream();        
-    var fname = safeName((String(file.path||'').split('/').pop()||title||'video')) + '.mkv';        
-    var idx = 1;        
-    if (file && typeof file.id!=='undefined'){        
-      var n = Number(file.id);        
-      idx = isNaN(n) ? 1 : (n + 1);        
-    }        
-    var url = baseForStream + '/stream/' + encodeURIComponent(fname) + '?link=' + encodeURIComponent(hash) + '&index=' + idx + '&play=1';        
-    var qAuth = tsStreamAuthQuery();         
-    if (qAuth) url += qAuth;        
-            
-    try{        
-      if (window.Lampa && Lampa.Player && typeof Lampa.Player.play==='function'){        
-        Lampa.Player.play({ url:url, title: title||fname, timeline:0 });        
-      } else {        
-        location.href = url;        
-      }        
-    }catch(e){         
-      location.href = url;         
-    }        
-  }  // <-- Закриваюча дужка для tsPlayById()  
+  function pickFileStats(j){  
+    if (!j) return [];  
+    if (Array.isArray(j)) return j;  
+    if (Array.isArray(j.file_stats)) return j.file_stats;  
+    if (Array.isArray(j.FileStats)) return j.FileStats;  
+    if (Array.isArray(j.files)) return j.files;  
+    if (Array.isArray(j.Files)) return j.Files;  
+    if (j.stats && Array.isArray(j.stats.file_stats)) return j.stats.file_stats;  
+    return [];  
+  }  
+    
+  async function tsFiles(base, linkOrHash){  
+    var headers = tsAuthHeaders();  
+    try{  
+      var body = { action:'get' };  
+      if (/^(magnet:|https?:)/i.test(linkOrHash)) body.link = linkOrHash; else body.hash = linkOrHash;  
+      var r1 = await fetch(base+'/torrents', { method:'POST', headers: headers, body: JSON.stringify(body) });  
+      if (r1.ok){  
+        var j1 = await r1.json(); var fs1 = pickFileStats(j1);  
+        if (fs1.length) return { files:fs1, raw:j1 };  
+      }  
+    }catch(e){}  
+    try{  
+      var r2 = await fetch(base+'/stream/files?link='+encodeURIComponent(linkOrHash), { method:'GET', headers: headers });  
+      if (r2.ok){  
+        var j2 = await r2.json(); var fs2 = pickFileStats(j2);  
+        if (fs2.length) return { files:fs2, raw:j2 };  
+      }  
+    }catch(e){}  
+    return { files: [], raw: null };  
+  }  
   
-  // Тут має бути решта коду плагіна (runMovie, showSeasons, makeButton, mountTVNative тощо)  
-  // Якщо це кінець плагіна, додайте:  
-  
-})(); 
+  function closeAllPlayUaModals(){  
+    try{ var els=document.querySelectorAll('.playua-modal'); for (var i=0;i<els.length;i++) els[i].remove(); }catch(e){}  
+    try{ if (window.Lampa && Lampa.Modal && typeof Lampa.Modal.close==='function') Lampa.Modal.close(); }catch(e){}  
+  }  
+    
+  function tsPlayById(hash, file, title){    
+    closeAllPlayUaModals();    
+    var baseForStream = tsBaseForStream();    
+    var fname = safeName((String(file.path||'').split('/').pop()||title||'video')) + '.mkv';    
+    var idx = 1;    
+    if (file && typeof file.id!=='undefined'){    
+      var n = Number(file.id);    
+      idx = isNaN(n) ? 1 : (n + 1);    
+    }    
+    var url = baseForStream + '/stream/' + encodeURIComponent(fname) + '?link=' + encodeURIComponent(hash) + '&index=' + idx + '&play=1';    
+    var qAuth = tsStreamAuthQuery();    
+    if (qAuth) url += qAuth;    
+        
+    try{    
+      if (window.Lampa && Lampa.Player && typeof Lampa.Player.play==='function'){    
+        Lampa.Player.play({ url:url, title: title||fname, timeline:0 });    
+      } else {    
+        location.href = url;    
+      }    
+    }catch(e){    
+      location.href = url;    
+    }    
+  }
+  })();
