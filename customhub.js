@@ -262,66 +262,70 @@
     }    
         
     // Функція для створення карток з підтримкою режиму відображення  
-    function createCards(items, category, displayMode) {    
-      if (!items || !Array.isArray(items) || items.length === 0) {    
-        console.warn('[CustomHub] Немає даних для категорії:', category.id);    
-        return [];    
-      }    
+    function createCards(items, category, displayMode) {      
+  if (!items || !Array.isArray(items) || items.length === 0) {      
+    console.warn('[CustomHub] Немає даних для категорії:', category.id);      
+    return [];      
+  }      
+        
+  var cards = [];      
+  var imageBase = 'https://image.tmdb.org/t/p/';  
+        
+  items.forEach(function(item) {      
+    if (!item || !item.id) {      
+      console.warn('[CustomHub] Пропущено елемент без ID:', item);      
+      return;      
+    }      
           
-      var cards = [];    
-          
-      items.forEach(function(item) {    
-        if (!item || !item.id) {    
-          console.warn('[CustomHub] Пропущено елемент без ID:', item);    
-          return;    
-        }    
+    try {      
+      if (!Lampa.Template || typeof Lampa.Template.js !== 'function') {      
+        console.error('[CustomHub] Lampa.Template.js недоступний');      
+        return;      
+      }      
             
-        try {    
-          if (!Lampa.Template || typeof Lampa.Template.js !== 'function') {    
-            console.error('[CustomHub] Lampa.Template.js недоступний');    
-            return;    
-          }    
-              
-          var card = Lampa.Template.js(displayMode === 'line' ? 'line' : 'card');    
-              
-          if (!card || typeof card.create !== 'function') {    
-            console.error('[CustomHub] Template.js повернув некоректний об\'єкт');    
-            return;    
-          }    
-              
-          var cardData = {    
-            id: item.id,    
-            title: item.title || item.name || 'Unknown',    
-            original_title: item.original_title || item.original_name,    
-            poster_path: item.poster_path,    
-            backdrop_path: item.backdrop_path,    
-            release_date: item.release_date || item.first_air_date,    
-            vote_average: item.vote_average || 0,    
-            media_type: category.id.indexOf('tv') >= 0 ? 'tv' : 'movie'    
-          };    
-              
-          card.create(cardData);    
-              
-          card.onEnter = function() {    
-            Lampa.Activity.push({    
-              url: '',    
-              title: cardData.title,    
-              component: 'full',    
-              id: cardData.id,    
-              method: cardData.media_type === 'tv' ? 'tv' : 'movie',    
-              card: cardData    
-            });    
-          };    
-              
-          cards.push(card.render());    
-              
-        } catch(e) {    
-          console.error('[CustomHub] Помилка створення картки:', e, item);    
-        }    
-      });    
-          
-      return cards;    
-    }    
+      var card = Lampa.Template.js(displayMode === 'line' ? 'line' : 'card');      
+            
+      if (!card || typeof card.create !== 'function') {      
+        console.error('[CustomHub] Template.js повернув некоректний об\'єкт');      
+        return;      
+      }      
+            
+      var cardData = {      
+        id: item.id,      
+        title: item.title || item.name || 'Unknown',      
+        original_title: item.original_title || item.original_name,      
+        img: item.poster_path ? imageBase + 'w300' + item.poster_path : '',  
+        poster: item.poster_path ? imageBase + 'w500' + item.poster_path : '',  
+        background_image: item.backdrop_path ? imageBase + 'original' + item.backdrop_path : '',  
+        release_date: item.release_date || item.first_air_date || '',  
+        vote_average: item.vote_average || 0,  
+        number_of_seasons: item.number_of_seasons,  
+        first_air_date: item.first_air_date,  
+        media_type: category.id.indexOf('tv') >= 0 ? 'tv' : 'movie'      
+      };      
+            
+      card.create(cardData);      
+            
+      card.onEnter = function() {      
+        Lampa.Activity.push({      
+          url: '',      
+          title: cardData.title,      
+          component: 'full',      
+          id: cardData.id,      
+          method: cardData.media_type === 'tv' ? 'tv' : 'movie',      
+          card: cardData      
+        });      
+      };      
+            
+      cards.push(card.render());      
+            
+    } catch(e) {      
+      console.error('[CustomHub] Помилка створення картки:', e, item);      
+    }      
+  });      
+        
+  return cards;      
+    }
         
     
   // Функція для ініціалізації головної сторінки  
