@@ -1107,7 +1107,7 @@
 
 })();
 
-function() {    
+(function() {    
   'use strict';    
       
   function modifyCardifyStyles() {    
@@ -1117,7 +1117,7 @@ function() {
     const style = document.createElement('style');    
     style.id = 'cardify-compact-style';    
     style.textContent = `    
-      /* Трейлер на фоні справа з 40% прозорістю */    
+      /* Трейлер на фоні справа з 60% прозорістю */    
       .cardify-trailer__youtube {    
         position: fixed !important;    
         top: 2em !important;    
@@ -1194,7 +1194,7 @@ function() {
     `;    
         
     document.head.appendChild(style);    
-    console.log('[Cardify Compact] Стилі застосовано: трейлер на фоні справа з 40% прозорістю');    
+    console.log('[Cardify Compact] Стилі застосовано: трейлер на фоні справа з 60% прозорістю');    
   }    
       
   // Запускаємо після завантаження Cardify    
