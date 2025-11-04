@@ -1041,21 +1041,8 @@
         name: Lampa.Lang.translate('cardify_enable_trailer')
       }
     });
-    // НОВИЙ: Параметр затримки запуску трейлера  
-Lampa.SettingsApi.addParam({  
-  component: 'cardify',  
-  param: {  
-    name: 'cardify_trailer_delay',  
-    type: 'input',  
-    "default": '800'  // мілісекунди  
-  },  
-  field: {  
-    name: 'Затримка запуску (мс)',  
-    placeholder: '800'  
-  }  
-});  
-  
-// НОВИЙ: Параметр розміру трейлера  
+
+    // НОВИЙ: Параметр розміру трейлера  
 Lampa.SettingsApi.addParam({  
   component: 'cardify',  
   param: {  
@@ -1146,8 +1133,8 @@ Lampa.SettingsApi.addParam({
     const oldStyle = document.getElementById('cardify-compact-style');      
     if (oldStyle) oldStyle.remove();      
 
-     // Отримати розмір з налаштувань  
-  const trailerSize = Lampa.Storage.field('cardify_trailer_size') || '45';
+    // Отримати розмір з налаштувань  
+  const trailerSize = Lampa.Storage.field('cardify_trailer_size') || '45';  
     
     const style = document.createElement('style');      
     style.id = 'cardify-compact-style';      
@@ -1159,7 +1146,7 @@ Lampa.SettingsApi.addParam({
         right: 2em !important;      
         bottom: auto !important;      
         left: auto !important;      
-        width: ${trailerSize}% !important;  /* Динамічний розмір */      
+        width: ${trailerSize}% !important;  /* Динамічний розмір */  
         height: auto !important;      
         aspect-ratio: 16/9 !important;      
         max-width: 700px !important;      
