@@ -323,72 +323,34 @@
       return cards;    
     }    
         
-    // Функція для рендерингу категорії    
-    function renderCategory(cat, container) {    
-      var enabled = Lampa.Storage.get('customhub_' + cat.id + '_enable', true);    
-      if (!enabled) return;    
-          
-      var shuffle = Lampa.Storage.get('customhub_' + cat.id + '_shuffle', false);    
-      var displayMode = Lampa.Storage.get('customhub_display_mode', 'poster');  
-          
-      var section = $('<div class="customhub-section"></div>');    
-      var title = $('<div class="customhub-section__title">' + Lampa.Lang.translate(cat.name) + '</div>');    
-      var content = $('<div class="customhub-section__content"></div>');  
-        
-      if (displayMode === 'line') {  
-        content.addClass('line-mode');  
-      }  
-          
-      section.append(title);    
-      section.append(content);    
-      container.append(section);    
-          
-      loadTMDB(cat.endpoint, function(items) {    
-        if (shuffle) {    
-          items = shuffleArray(items);    
-        }    
-            
-        var cards = createCards(items.slice(0, 20), cat, displayMode);    
-            
-        if (cards.length === 0) {  
-          section.remove();  
-          return;  
-        }  
-            
-        cards.forEach(function(card) {    
-          content.append(card);    
-        });    
-            
-        Lampa.Controller.collectionSet(content);    
-      });    
-    }    
-        
-    function initHomePage() {      
-  Lampa.Listener.follow('activity', function(e) {      
-    if (e.component === 'main') {      
-      var container = $('.main__content');      
-      if (!container.length) return;      
-            
-      container.find('.customhub-section').remove();      
-            
-      var activeCategories = categories.filter(function(cat) {      
-        return Lampa.Storage.get('customhub_' + cat.id + '_enable', true);      
-      }).sort(function(a, b) {      
-        var orderA = parseInt(Lampa.Storage.get('customhub_' + a.id + '_order', a.defaultOrder));      
-        var orderB = parseInt(Lampa.Storage.get('customhub_' + b.id + '_order', b.defaultOrder));      
-        return orderA - orderB;      
-      });      
-            
-      // Рендерити категорії      
-      activeCategories.forEach(function(cat) {      
-        renderCategory(cat, container);      
-      });      
-    }      
-  });      
-}  
+    
+  // Функція для ініціалізації головної сторінки  
+    function initHomePage() {        
+      Lampa.Listener.follow('activity', function(e) {        
+        if (e.component === 'main') {        
+          var container = $('.main__content');        
+          if (!container.length) return;        
+                  
+          container.find('.customhub-section').remove();        
+                  
+          var activeCategories = categories.filter(function(cat) {        
+            return Lampa.Storage.get('customhub_' + cat.id + '_enable', true);        
+          }).sort(function(a, b) {        
+            var orderA = parseInt(Lampa.Storage.get('customhub_' + a.id + '_order', a.defaultOrder));        
+            var orderB = parseInt(Lampa.Storage.get('customhub_' + b.id + '_order', b.defaultOrder));        
+            return orderA - orderB;        
+          });        
+                  
+          // Рендерити категорії        
+          activeCategories.forEach(function(cat) {        
+            renderCategory(cat, container);        
+          });        
+        }        
+      });        
+    }  
+      
+    // ВАЖЛИВО: Викликати функцію в кінці    
+    initHomePage();  
   
-// ВАЖЛИВО: Викликати функцію в кінці  
-initHomePage();
-
-      });  // Закриває waitForLampa callback  
+  });  // Закриває waitForLampa callback    
 })();  // Закриває головну IIFE
