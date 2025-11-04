@@ -3,12 +3,11 @@
     
     // Конфігурація    
     const PLUGIN_NAME = 'BackgroundTrailer';    
-    const TMDB_API_KEY = '4045c616742d57a88740bd49b7ed31d7';  
-    let DEBOUNCE_DELAY = 800;  
+    let DEBOUNCE_DELAY = 800;    
         
     let currentPlayer = null;    
     let debounceTimer = null;    
-    let trailerCache = {};  
+    let trailerCache = {};    
     
     // CSS стилі для фонового відео    
     function injectStyles() {    
@@ -82,7 +81,7 @@
         });    
     }    
     
-    // Отримання трейлера через Lampac proxy  
+    // Отримання трейлера через Lampac TMDB proxy  
     async function fetchTrailer(tmdbId, mediaType = 'movie') {    
         const cacheKey = `${mediaType}_${tmdbId}`;    
         if (trailerCache[cacheKey]) {    
@@ -90,7 +89,6 @@
         }    
     
         try {  
-            // Використовуємо Lampac TMDB proxy замість прямого запиту  
             const url = `{localhost}/tmdb/api/3/${mediaType}/${tmdbId}/videos`;  
             const response = await fetch(url);    
             const data = await response.json();    
@@ -130,7 +128,7 @@
                     showinfo: 0,    
                     modestbranding: 1,    
                     loop: 1,    
-                    playlist: videoId,  
+                    playlist: videoId,    
                     rel: 0,    
                     fs: 0,    
                     playsinline: 1    
@@ -157,7 +155,7 @@
     
             const cardData = $(cardElement).data('card') || {};    
             const tmdbId = cardData.id;    
-            const mediaType = cardData.name ? 'tv' : 'movie';  
+            const mediaType = cardData.name ? 'tv' : 'movie';    
     
             if (!tmdbId) return;    
     
@@ -176,7 +174,7 @@
     
             await loadYouTubeAPI();    
     
-            overlay.innerHTML = '';  
+            overlay.innerHTML = '';    
             const player = await createPlayer(overlay, trailerKey);    
                 
             if (player) {    
@@ -296,8 +294,9 @@
             }    
         });    
     }    
-})(); // <-- ВАЖЛИВО: Закриваюча дужка першої IIFE  
+})();  
   
+// Модифікація стилів Cardify  
 (function() {    
     'use strict';    
         
@@ -407,14 +406,17 @@
         console.log('[Cardify Compact] Стилі застосовано');    
     }    
         
-    // Запускаємо після завантаження Cardify    
     if (window.appready) {    
         setTimeout(modifyCardifyStyles, 1000);    
     } else {    
-        Lampa.Listener.follow('app', function(e) {    
-            if (e.type === 'ready') {    
-                setTimeout(modifyCardifyStyles, 1000);    
-            }    
-        });    
-    }    
+        Lampa.Listener.follow('app  
+                              if (window.appready) {      
+        setTimeout(modifyCardifyStyles, 1000);      
+    } else {      
+        Lampa.Listener.follow('app', function(e) {      
+            if (e.type === 'ready') {      
+                setTimeout(modifyCardifyStyles, 1000);      
+            }      
+        });      
+    }      
 })();
