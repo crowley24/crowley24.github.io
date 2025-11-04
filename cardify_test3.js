@@ -1139,14 +1139,17 @@
         pointer-events: none !important;    
       }    
         
-      /* КРИТИЧНО: Приховати чорні полоси через масштабування iframe */  
-      .cardify-trailer__youtube iframe {  
-        width: 100% !important;  
-        height: 100% !important;  
-        object-fit: cover !important;  /* Заповнити контейнер без чорних полос */  
-        transform: scale(1.1) !important;  /* Трохи збільшити для обрізання країв */  
-        transform-origin: center !important;  
-      }  
+     /* КРИТИЧНО: Приховати чорні полоси через агресивне масштабування */    
+.cardify-trailer__youtube iframe {    
+  width: 130% !important;  /* Збільшено з 100% до 130% */  
+  height: 130% !important;  /* Збільшено з 100% до 130% */  
+  position: absolute !important;    
+  top: 50% !important;    
+  left: 50% !important;    
+  transform: translate(-50%, -50%) scale(1.2) !important;  /* Збільшено з 1.1 до 1.2 */  
+  transform-origin: center !important;    
+  object-fit: cover !important;    
+}
         
       /* Приховати чорні смуги YouTube */    
       .cardify-trailer__youtube-line {    
