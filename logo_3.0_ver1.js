@@ -300,57 +300,63 @@
                 titleText: titleText  
             });  
               
-            var titleElement = card.find('.full-start-new__title, .full-start__title');  
-            if (titleElement.length) {  
-                var containerStyle = 'display: flex; align-items: center; justify-content: flex-start; max-height: ' + logoHeight + 'px; height: auto; max-width: 100%;';  
-                var imgStyle = 'height: 100%; width: auto; object-fit: contain; display: block; margin-bottom: 0em;';  
-                  
-                var logoHtml = '<div style="height: auto !important; overflow: visible !important;"><div style="' + containerStyle + '"><img style="' + imgStyle + '" src="' + Lampa.TMDB.image('/t/p/w300' + logoPath.replace('.svg', '.png')) + '" /></div>';  
-                  
-                if (titleText) {  
-                    logoHtml += '<span style="display: block; line-height: normal; margin-top: 0.5em;">' + titleText + '</span>';  
-                }  
-                  
-                logoHtml += '</div>';  
-                  
-                card.find('.full-start__title-original').remove();  
-                titleElement.css({  
-                    'height': 'auto !important',  
-                    'max-height': 'none !important',  
-                    'overflow': 'visible !important'  
-                }).html(logoHtml);  
-            }  
-        }  
-          
-        // Підписка на подію активності для обробки повноекранного режиму  
-        Lampa.Listener.follow('full', function (event) {  
-            if ((event.type === 'complite' || event.type === 'movie') && Lampa.Storage.get('logo_main') !== '1') {  
-                var item = event.data.movie;  
-                if (!item || !item.id) return;  
-                  
-                var card = event.object.activity.render();  
-                  
-                // Спробувати одразу    
-                var titleElement = card.find('.full-start-new__title, .full-start__title');    
-                if (titleElement.length) {    
-                    loadAndRenderLogo(item, card);    
-                } else {    
-                    // Використати MutationObserver для відстеження появи елемента    
-                    var observer = new MutationObserver(function() {    
-                        var titleElement = card.find('.full-start-new__title, .full-start__title');    
-                        if (titleElement.length) {    
-                            observer.disconnect();    
-                            loadAndRenderLogo(item, card);    
-                        }    
-                    });    
-                        
-                    var target = card[0] || card;    
-                    observer.observe(target, {childList: true, subtree: true});    
-                        
-                    // Таймаут для запобігання витоку пам'яті    
-                    setTimeout(function() {    
-                        observer.disconnect();    
-                    }, 5000);    
+            var titleElement = card.find('.full-start-new__title, .full-start__title');    
+            if (titleElement.length) {    
+                var containerStyle = 'display: flex; align-items: center; justify-content: flex-start; max-height: ' + logoHeight + 'px; height: auto; max-width: 100%;';    
+                var imgStyle = 'height: 100%; width: auto; object-fit: contain; display: block; margin-bottom: 0em;';    
+                    
+                var logoHtml = '<div style="height: auto !important; overflow: visible !important;"><div style="' + containerStyle + '"><img style="' + imgStyle + '" src="' + Lampa.TMDB.image('/t/p/w300' + logoPath.replace('.svg', '.png')) + '" /></div>';    
+                    
+                if (titleText) {    
+                    logoHtml += '<span style="display: block; line-height: normal; margin-top: 0.5em;">' + titleText + '</span>';    
                 }    
+                    
+                logoHtml += '</div>';    
+                    
+                card.find('.full-start__title-original').remove();    
+                titleElement.css({    
+                    'height': 'auto !important',    
+                    'max-height': 'none !important',    
+                    'overflow': 'visible !important'    
+                }).html(logoHtml);    
             }    
-        });
+        }    
+            
+        // Підписка на подію активності для обробки повноекранного режиму    
+        Lampa.Listener.follow('full', function (event) {    
+            if ((event.type === 'complite' || event.type === 'movie') && Lampa.Storage.get('logo_main') !== '1') {    
+                var item = event.data.movie;    
+                if (!item || !item.id) return;    
+                    
+                var card = event.object.activity.render();    
+                    
+                // Спробувати одразу      
+                var titleElement = card.find('.full-start-new__title, .full-start__title');      
+                if (titleElement.length) {      
+                    loadAndRenderLogo(item, card);      
+                } else {      
+                    // Використати MutationObserver для відстеження появи елемента      
+                    var observer = new MutationObserver(function() {      
+                        var titleElement = card.find('.full-start-new__title, .full-start__title');      
+                        if (titleElement.length) {      
+                            observer.disconnect();      
+                            loadAndRenderLogo(item, card);      
+                        }      
+                    });      
+                          
+                    var target = card[0] || card;      
+                    observer.observe(target, {childList: true, subtree: true});      
+                          
+                    // Таймаут для запобігання витоку пам'яті      
+                    setTimeout(function() {      
+                        observer.disconnect();      
+                    }, 5000);      
+                }      
+            }      
+        });  
+          
+        // ВАЖЛИВО: Викликати ініціалізацію налаштувань  
+        initSettings();  
+          
+    })(); // <-- Закриття другої IIFE  
+})(); // <-- Закриття першої IIFE
