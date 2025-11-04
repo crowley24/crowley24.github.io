@@ -297,126 +297,122 @@
 })();  
   
 // Модифікація стилів Cardify  
-(function() {    
-    'use strict';    
-        
-    function modifyCardifyStyles() {    
-        const oldStyle = document.getElementById('cardify-compact-style');    
-        if (oldStyle) oldStyle.remove();    
-            
-        const style = document.createElement('style');    
-        style.id = 'cardify-compact-style';    
-        style.textContent = `    
-            .cardify {    
-                position: fixed !important;    
-                top: 50% !important;    
-                left: 50% !important;    
-                transform: translate(-50%, -50%) !important;    
-                width: 70% !important;    
-                height: 60% !important;    
-                max-width: 1200px !important;    
-                max-height: 700px !important;    
-                z-index: 1000 !important;    
-                border-radius: 12px !important;    
-                overflow: hidden !important;    
-                box-shadow: 0 20px 60px rgba(0,0,0,0.8) !important;    
-            }    
-                
-            .cardify::before {    
-                content: '' !important;    
-                position: fixed !important;    
-                top: 0 !important;    
-                left: 0 !important;    
-                right: 0 !important;    
-                bottom: 0 !important;    
-                background: rgba(0,0,0,0.7) !important;    
-                z-index: -1 !important;    
-                backdrop-filter: blur(8px) !important;    
-                -webkit-backdrop-filter: blur(8px) !important;    
-            }    
-                
-            .cardify iframe {    
-                width: 100% !important;    
-                height: 100% !important;    
-                border: none !important;    
-            }    
-                
-            .cardify__close {    
-                position: absolute !important;    
-                top: 20px !important;    
-                right: 20px !important;    
-                width: 40px !important;    
-                height: 40px !important;    
-                background: rgba(0,0,0,0.8) !important;    
-                border-radius: 50% !important;    
-                cursor: pointer !important;    
-                z-index: 10 !important;    
-                display: flex !important;    
-                align-items: center !important;    
-                justify-content: center !important;    
-                transition: all 0.3s ease !important;    
-            }    
-                
-            .cardify__close:hover {    
-                background: rgba(255,255,255,0.2) !important;    
-                transform: scale(1.1) !important;    
-            }    
-                
-            .cardify__close::before,    
-            .cardify__close::after {    
-                content: '' !important;    
-                position: absolute !important;    
-                width: 20px !important;    
-                height: 2px !important;    
-                background: white !important;    
-            }    
-                
-            .cardify__close::before {    
-                transform: rotate(45deg) !important;    
-            }    
-                
-            .cardify__close::after {    
-                transform: rotate(-45deg) !important;    
-            }    
-                
-            @media (max-width: 768px) {    
-                .cardify {    
-                    width: 90% !important;    
-                    height: 50% !important;    
-                }    
-            }    
-                
-            @keyframes cardify-fadein {    
-                from {    
-                    opacity: 0;    
-                    transform: translate(-50%, -50%) scale(0.9);    
-                }    
-                to {    
-                    opacity: 1;    
-                    transform: translate(-50%, -50%) scale(1);    
-                }    
-            }    
-                
-            .cardify {    
-                animation: cardify-fadein 0.3s ease-out !important;    
-            }    
-        `;    
-            
-        document.head.appendChild(style);    
-        console.log('[Cardify Compact] Стилі застосовано');    
-    }    
-        
-    if (window.appready) {    
-        setTimeout(modifyCardifyStyles, 1000);    
-    } else {    
-        Lampa.Listener.follow('app  
-                              if (window.appready) {      
-        setTimeout(modifyCardifyStyles, 1000);      
-    } else {      
-        Lampa.Listener.follow('app', function(e) {      
-            if (e.type === 'ready') {      
-                setTimeout(modifyCardifyStyles, 1000);      
-            }      
-        });      
-    }      
+(function() {  
+    'use strict';  
+      
+    function modifyCardifyStyles() {  
+        const oldStyle = document.getElementById('cardify-compact-style');  
+        if (oldStyle) oldStyle.remove();  
+          
+        const style = document.createElement('style');  
+        style.id = 'cardify-compact-style';  
+        style.textContent = `  
+            .cardify {  
+                position: fixed !important;  
+                top: 50% !important;  
+                left: 50% !important;  
+                transform: translate(-50%, -50%) !important;  
+                width: 70% !important;  
+                height: 60% !important;  
+                max-width: 1200px !important;  
+                max-height: 700px !important;  
+                z-index: 1000 !important;  
+                border-radius: 12px !important;  
+                overflow: hidden !important;  
+                box-shadow: 0 20px 60px rgba(0,0,0,0.8) !important;  
+            }  
+              
+            .cardify::before {  
+                content: '' !important;  
+                position: fixed !important;  
+                top: 0 !important;  
+                left: 0 !important;  
+                right: 0 !important;  
+                bottom: 0 !important;  
+                background: rgba(0,0,0,0.7) !important;  
+                z-index: -1 !important;  
+                backdrop-filter: blur(8px) !important;  
+                -webkit-backdrop-filter: blur(8px) !important;  
+            }  
+              
+            .cardify iframe {  
+                width: 100% !important;  
+                height: 100% !important;  
+                border: none !important;  
+            }  
+              
+            .cardify__close {  
+                position: absolute !important;  
+                top: 20px !important;  
+                right: 20px !important;  
+                width: 40px !important;  
+                height: 40px !important;  
+                background: rgba(0,0,0,0.8) !important;  
+                border-radius: 50% !important;  
+                cursor: pointer !important;  
+                z-index: 10 !important;  
+                display: flex !important;  
+                align-items: center !important;  
+                justify-content: center !important;  
+                transition: all 0.3s ease !important;  
+            }  
+              
+            .cardify__close:hover {  
+                background: rgba(255,255,255,0.2) !important;  
+                transform: scale(1.1) !important;  
+            }  
+              
+            .cardify__close::before,  
+            .cardify__close::after {  
+                content: '' !important;  
+                position: absolute !important;  
+                width: 20px !important;  
+                height: 2px !important;  
+                background: white !important;  
+            }  
+              
+            .cardify__close::before {  
+                transform: rotate(45deg) !important;  
+            }  
+              
+            .cardify__close::after {  
+                transform: rotate(-45deg) !important;  
+            }  
+              
+            @media (max-width: 768px) {  
+                .cardify {  
+                    width: 90% !important;  
+                    height: 50% !important;  
+                }  
+            }  
+              
+            @keyframes cardify-fadein {  
+                from {  
+                    opacity: 0;  
+                    transform: translate(-50%, -50%) scale(0.9);  
+                }  
+                to {  
+                    opacity: 1;  
+                    transform: translate(-50%, -50%) scale(1);  
+                }  
+            }  
+              
+            .cardify {  
+                animation: cardify-fadein 0.3s ease-out !important;  
+            }  
+        `;  
+          
+        document.head.appendChild(style);  
+        console.log('[Cardify Compact] Стилі застосовано');  
+    }  
+      
+    if (window.appready) {  
+        setTimeout(modifyCardifyStyles, 1000);  
+    } else {  
+        Lampa.Listener.follow('app', function(e) {  
+            if (e.type === 'ready') {  
+                setTimeout(modifyCardifyStyles, 1000);  
+            }  
+        });  
+    }  
 })();
