@@ -1159,13 +1159,45 @@ function() {
         display: none !important;    
       }  
         
-      /* ... решта вашого CSS коду ... */  
+       /* Анімація появи трейлера */    
+      @keyframes cardify-trailer-fadein {    
+        from {    
+          opacity: 0;    
+          transform: translateX(50px);    
+        }    
+        to {    
+          opacity: 0.6;    
+          transform: translateX(0);    
+        }    
+      }    
+          
+      .cardify-trailer__youtube {    
+        animation: cardify-trailer-fadein 0.5s ease-out !important;    
+      }    
+          
+      /* Адаптивність для мобільних */    
+      @media (max-width: 768px) {    
+        .cardify-trailer__youtube {    
+          width: 60% !important;    
+          top: 1em !important;    
+          right: 1em !important;    
+          max-width: none !important;    
+        }    
+      }    
+          
+      /* Для планшетів */    
+      @media (min-width: 769px) and (max-width: 1024px) {    
+        .cardify-trailer__youtube {    
+          width: 50% !important;    
+        }    
+      }    
     `;    
         
     document.head.appendChild(style);    
-    console.log('[Cardify Compact] Стилі застосовано: трейлер без чорних полос');    
+    console.log('[Cardify Compact] Стилі застосовано: трейлер на фоні справа з 40% прозорістю');    
   }    
       
+  // Запускаємо після завантаження Cardify    
   if (window.appready) {    
     setTimeout(modifyCardifyStyles, 1000);    
   } else {    
