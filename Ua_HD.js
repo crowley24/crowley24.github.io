@@ -247,4 +247,3 @@
       location.href = url;    
     }    
   }
-  })();
