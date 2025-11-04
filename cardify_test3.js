@@ -1195,14 +1195,7 @@
         z-index: 100 !important;  
       }    
           
-      /* Фон картки залишається видимим */    
-      .cardify__background {    
-        display: block !important;    
-        visibility: visible !important;    
-        opacity: 1 !important;    
-        z-index: 1 !important;    
-      }    
-          
+               
       .cardify__background.nodisplay {    
         display: block !important;    
         opacity: 1 !important;    
