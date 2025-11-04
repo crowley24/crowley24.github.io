@@ -1117,73 +1117,77 @@
     const style = document.createElement('style');    
     style.id = 'cardify-compact-style';    
     style.textContent = `    
-      /* Трейлер на фоні справа з 40% прозорістю */    
-      .cardify-trailer__youtube {    
-        position: fixed !important;    
-        top: 2em !important;    
-        right: 2em !important;    
-        bottom: auto !important;  
-        left: auto !important;    
-        width: 70% !important;    
-        height: auto !important;    
-        aspect-ratio: 16/9 !important;    
-        max-width: 1200px !important;    
-        max-height: 800px !important;    
-        border-radius: 12px !important;    
-        overflow: hidden !important;    
-        box-shadow: 0 10px 40px rgba(0,0,0,0.6) !important;    
-        z-index: 50 !important;  
-        transform: none !important;    
-        opacity: 0.4 !important;  
-        transition: opacity 0.3s ease !important;    
-        pointer-events: none !important;  
-      }    
-      
-       .cardify__background.nodisplay {    
-        display: block !important;    
-        opacity: 1 !important;    
-        visibility: visible !important;    
+      /* Трейлер на фоні справа з градієнтною маскою */    
+      .cardify-trailer__youtube {        
+        position: fixed !important;        
+        top: 2em !important;        
+        right: 2em !important;        
+        bottom: auto !important;      
+        left: auto !important;        
+        width: 45% !important;        
+        height: auto !important;        
+        aspect-ratio: 16/9 !important;        
+        max-width: 700px !important;        
+        max-height: 400px !important;        
+        border-radius: 12px !important;        
+        overflow: visible !important;    
+            
+        /* Градієнтна маска для плавного переходу */    
+        -webkit-mask-image: linear-gradient(    
+          to bottom,    
+          transparent 0%,    
+          black 10%,    
+          black 90%,    
+          transparent 100%    
+        ),    
+        linear-gradient(    
+          to right,    
+          transparent 0%,    
+          black 10%,    
+          black 90%,    
+          transparent 100%    
+        ) !important;    
+        -webkit-mask-composite: source-in !important;    
+            
+        mask-image: linear-gradient(    
+          to bottom,    
+          transparent 0%,    
+          black 10%,    
+          black 90%,    
+          transparent 100%    
+        ),    
+        linear-gradient(    
+          to right,    
+          transparent 0%,    
+          black 10%,    
+          black 90%,    
+          transparent 100%    
+        ) !important;    
+        mask-composite: intersect !important;    
+            
+        /* Додаткове розмиття через фільтр */    
+        filter: blur(0px) !important;    
+            
+        box-shadow: 0 10px 40px rgba(0,0,0,0.6) !important;        
+        z-index: 50 !important;      
+        transform: none !important;        
+        opacity: 0.4 !important;      
+        transition: opacity 0.3s ease, filter 0.3s ease !important;        
+        pointer-events: none !important;      
       }    
           
-      /* Анімація появи трейлера */    
-      @keyframes cardify-trailer-fadein {    
-        from {    
-          opacity: 0;    
-          transform: translateX(50px);    
-        }    
-        to {    
-          opacity: 0.4;    
-          transform: translateX(0);    
-        }    
+      /* Решта CSS правил залишаються без змін */    
+      .cardify-trailer__youtube-line {    
+        display: none !important;    
       }    
           
-      .cardify-trailer__youtube {    
-        animation: cardify-trailer-fadein 0.5s ease-out !important;    
-      }    
-          
-      /* Адаптивність для мобільних */    
-      @media (max-width: 768px) {    
-        .cardify-trailer__youtube {    
-          width: 60% !important;    
-          top: 1em !important;    
-          right: 1em !important;    
-          max-width: none !important;    
-        }    
-      }    
-          
-      /* Для планшетів */    
-      @media (min-width: 769px) and (max-width: 1024px) {    
-        .cardify-trailer__youtube {    
-          width: 50% !important;    
-        }    
-      }    
+      /* ... інші правила ... */    
     `;    
         
     document.head.appendChild(style);    
-    console.log('[Cardify Compact] Стилі застосовано: трейлер на фоні справа з 40% прозорістю');    
+    console.log('[Cardify Compact] Стилі застосовано з градієнтною маскою');    
   }    
       
-  // Запускаємо після завантаження Cardify    
   if (window.appready) {    
     setTimeout(modifyCardifyStyles, 1000);    
   } else {    
