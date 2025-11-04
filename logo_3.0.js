@@ -263,10 +263,12 @@
                     observer.observe(target, {childList: true, subtree: true});    
                         
                     // Таймаут для запобігання витоку пам'яті  
-                  setTimeout(function() {  
-                observer.disconnect();  
-            }, 5000);  
-        }  
-    }  
-});
+                  setTimeout(function() {    
+    observer.disconnect();    
+}, 5000);    
+                }  // ← закриває else блок  
+            }  // ← закриває if ((event.type === 'complite'...  
+        });  // ← закриває Lampa.Listener.follow('full'...  
+    })();  // ← закриває внутрішню IIFE  
+})();
   
