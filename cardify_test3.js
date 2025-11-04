@@ -1124,11 +1124,11 @@
         right: 2em !important;    
         bottom: auto !important;  
         left: auto !important;    
-        width: 60% !important;    
+        width: 70% !important;    
         height: auto !important;    
         aspect-ratio: 16/9 !important;    
-        max-width: 1000px !important;    
-        max-height: 600px !important;    
+        max-width: 1200px !important;    
+        max-height: 800px !important;    
         border-radius: 12px !important;    
         overflow: hidden !important;    
         box-shadow: 0 10px 40px rgba(0,0,0,0.6) !important;    
