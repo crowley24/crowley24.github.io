@@ -446,11 +446,11 @@
           _this4.timer_show = setTimeout(function () {
             _this4.player.show();
 
-            _this4.background.addClass('nodisplay');
+           // _this4.background.addClass('nodisplay');
 
-            _this4.startblock.addClass('nodisplay');
+           // _this4.startblock.addClass('nodisplay');
 
-            _this4.head.addClass('nodisplay');
+           // _this4.head.addClass('nodisplay');
 
             _this4.controll();
           }, 500);
