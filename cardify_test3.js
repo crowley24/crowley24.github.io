@@ -1042,21 +1042,21 @@
       }
     });
 
-    // НОВИЙ: Параметр розміру трейлера  
-Lampa.SettingsApi.addParam({  
-  component: 'cardify',  
-  param: {  
-    name: 'cardify_trailer_size',  
-    type: 'select',  
-    "default": '45',  
-    values: {  
-      '35': '35% (малий)',  
-      '45': '45% (середній)',  
-      '55': '55% (великий)',  
-      '65': '65% (дуже великий)'  
-    }  
+   // НОВИЙ: Параметр розміру трейлера    
+Lampa.SettingsApi.addParam({    
+  component: 'cardify',    
+  param: {    
+    name: 'cardify_trailer_size',    
+    type: 'select',    
+    "default": '45',    
+    values: {    
+      '35': '35% (малий)',    
+      '45': '45% (середній)',    
+      '55': '55% (великий)',    
+      '65': '65% (дуже великий)'    
+    }    
   },  
-  field: {  
+  field: {  // <-- ДОДАЙТЕ ЦЕ ПОЛЕ  
     name: 'Розмір трейлера'  
   }  
 });
