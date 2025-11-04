@@ -1145,7 +1145,10 @@ Lampa.SettingsApi.addParam({
   function modifyCardifyStyles() {      
     const oldStyle = document.getElementById('cardify-compact-style');      
     if (oldStyle) oldStyle.remove();      
-          
+
+     // Отримати розмір з налаштувань  
+  const trailerSize = Lampa.Storage.field('cardify_trailer_size') || '45';
+    
     const style = document.createElement('style');      
     style.id = 'cardify-compact-style';      
     style.textContent = `      
@@ -1156,7 +1159,7 @@ Lampa.SettingsApi.addParam({
         right: 2em !important;      
         bottom: auto !important;      
         left: auto !important;      
-        width: 45% !important;      
+        width: ${trailerSize}% !important;  /* Динамічний розмір */      
         height: auto !important;      
         aspect-ratio: 16/9 !important;      
         max-width: 700px !important;      
