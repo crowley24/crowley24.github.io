@@ -1138,10 +1138,8 @@
         transition: opacity 0.3s ease !important;    
         pointer-events: none !important;  
       }    
-          
-             
-               
-      .cardify__background.nodisplay {    
+      
+       .cardify__background.nodisplay {    
         display: block !important;    
         opacity: 1 !important;    
         visibility: visible !important;    
