@@ -229,26 +229,26 @@
     try{ if (window.Lampa && Lampa.Modal && typeof Lampa.Modal.close==='function') Lampa.Modal.close(); }catch(e){}  
   }  
     
-  function tsPlayById(hash, file, title){    
-    closeAllPlayUaModals();    
-    var baseForStream = tsBaseForStream();    
-    var fname = safeName((String(file.path||'').split('/').pop()||title||'video')) + '.mkv';    
-    var idx = 1;    
-    if (file && typeof file.id!=='undefined'){    
-      var n = Number(file.id);    
-      idx = isNaN(n) ? 1 : (n + 1);    
-    }    
-    var url = baseForStream + '/stream/' + encodeURIComponent(fname) + '?link=' + encodeURIComponent(hash) + '&index=' + idx + '&play=1';    
-    var qAuth = tsStreamAuthQuery();     
-    if (qAuth) url += qAuth;    
-        
-    try{    
-      if (window.Lampa && Lampa.Player && typeof Lampa.Player.play==='function'){    
-        Lampa.Player.play({ url:url, title: title||fname, timeline:0 });    
-      } else {    
-        location.href = url;    
-      }    
-    }catch(e){     
-      location.href = url;     
-    }    
-}
+  function tsPlayById(hash, file, title){      
+    closeAllPlayUaModals();      
+    var baseForStream = tsBaseForStream();      
+    var fname = safeName((String(file.path||'').split('/').pop()||title||'video')) + '.mkv';      
+    var idx = 1;      
+    if (file && typeof file.id!=='undefined'){      
+      var n = Number(file.id);      
+      idx = isNaN(n) ? 1 : (n + 1);      
+    }      
+    var url = baseForStream + '/stream/' + encodeURIComponent(fname) + '?link=' + encodeURIComponent(hash) + '&index=' + idx + '&play=1';      
+    var qAuth = tsStreamAuthQuery();       
+    if (qAuth) url += qAuth;      
+          
+    try{      
+      if (window.Lampa && Lampa.Player && typeof Lampa.Player.play==='function'){      
+        Lampa.Player.play({ url:url, title: title||fname, timeline:0 });      
+      } else {      
+        location.href = url;      
+      }      
+    }catch(e){       
+      location.href = url;       
+    }      
+}  
