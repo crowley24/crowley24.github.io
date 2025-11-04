@@ -1134,7 +1134,7 @@ function() {
         box-shadow: 0 10px 40px rgba(0,0,0,0.6) !important;    
         z-index: 50 !important;    
         transform: none !important;    
-        opacity: 0.4 !important;    
+        opacity: 0.6 !important;    
         transition: opacity 0.3s ease !important;    
         pointer-events: none !important;    
       }    
