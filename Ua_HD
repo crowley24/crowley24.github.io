@@ -181,74 +181,78 @@
       return parseTorznabXML(txt);  
     }catch(e){ return []; }  
   }  
+    // ---------- TorrServer ----------    
+  async function tsAdd(base, addLink, metaTitle, metaPoster, metaFull){    
+    var url = base + '/torrents';    
+    var body = { action:'add', link:addLink, title:('[LAMPA] '+(metaTitle||'')).trim(), poster: metaPoster||'', data: JSON.stringify({lampa:true,movie:metaFull||{}}), save_to_db:false };    
+    var r = await fetch(url,{ method:'POST', headers: tsAuthHeaders(), body: JSON.stringify(body) });    
+    var j={}; try{ j=await r.json(); }catch(e){}    
+    var hash = j.hash || j.id || j.link || j.data || j.result || '';    
+    return { hash:hash, id:hash, raw:j };    
+  }    
+      
+  function pickFileStats(j){    
+    if (!j) return [];    
+    if (Array.isArray(j)) return j;    
+    if (Array.isArray(j.file_stats)) return j.file_stats;    
+    if (Array.isArray(j.FileStats)) return j.FileStats;    
+    if (Array.isArray(j.files)) return j.files;    
+    if (Array.isArray(j.Files)) return j.Files;    
+    if (j.stats && Array.isArray(j.stats.file_stats)) return j.stats.file_stats;    
+    return [];    
+  }    
+      
+  async function tsFiles(base, linkOrHash){    
+    var headers = tsAuthHeaders();    
+    try{    
+      var body = { action:'get' };    
+      if (/^(magnet:|https?:)/i.test(linkOrHash)) body.link = linkOrHash; else body.hash = linkOrHash;    
+      var r1 = await fetch(base+'/torrents', { method:'POST', headers: headers, body: JSON.stringify(body) });    
+      if (r1.ok){    
+        var j1 = await r1.json(); var fs1 = pickFileStats(j1);    
+        if (fs1.length) return { files:fs1, raw:j1 };    
+      }    
+    }catch(e){}    
+    try{    
+      var r2 = await fetch(base+'/stream/files?link='+encodeURIComponent(linkOrHash), { method:'GET', headers: headers });    
+      if (r2.ok){    
+        var j2 = await r2.json(); var fs2 = pickFileStats(j2);    
+        if (fs2.length) return { files:fs2, raw:j2 };    
+      }    
+    }catch(e){}    
+    return { files: [], raw: null };    
+  }    
+    
+  function closeAllPlayUaModals(){    
+    try{ var els=document.querySelectorAll('.playua-modal'); for (var i=0;i<els.length;i++) els[i].remove(); }catch(e){}    
+    try{ if (window.Lampa && Lampa.Modal && typeof Lampa.Modal.close==='function') Lampa.Modal.close(); }catch(e){}    
+  }    
+      
+  function tsPlayById(hash, file, title){        
+    closeAllPlayUaModals();        
+    var baseForStream = tsBaseForStream();        
+    var fname = safeName((String(file.path||'').split('/').pop()||title||'video')) + '.mkv';        
+    var idx = 1;        
+    if (file && typeof file.id!=='undefined'){        
+      var n = Number(file.id);        
+      idx = isNaN(n) ? 1 : (n + 1);        
+    }        
+    var url = baseForStream + '/stream/' + encodeURIComponent(fname) + '?link=' + encodeURIComponent(hash) + '&index=' + idx + '&play=1';        
+    var qAuth = tsStreamAuthQuery();         
+    if (qAuth) url += qAuth;        
+            
+    try{        
+      if (window.Lampa && Lampa.Player && typeof Lampa.Player.play==='function'){        
+        Lampa.Player.play({ url:url, title: title||fname, timeline:0 });        
+      } else {        
+        location.href = url;        
+      }        
+    }catch(e){         
+      location.href = url;         
+    }        
+  }  // <-- Закриваюча дужка для tsPlayById()  
   
-  // ---------- TorrServer ----------  
-  async function tsAdd(base, addLink, metaTitle, metaPoster, metaFull){  
-    var url = base + '/torrents';  
-    var body = { action:'add', link:addLink, title:('[LAMPA] '+(metaTitle||'')).trim(), poster: metaPoster||'', data: JSON.stringify({lampa:true,movie:metaFull||{}}), save_to_db:false };  
-    var r = await fetch(url,{ method:'POST', headers: tsAuthHeaders(), body: JSON.stringify(body) });  
-    var j={}; try{ j=await r.json(); }catch(e){}  
-    var hash = j.hash || j.id || j.link || j.data || j.result || '';  
-    return { hash:hash, id:hash, raw:j };  
-  }  
-    
-  function pickFileStats(j){  
-    if (!j) return [];  
-    if (Array.isArray(j)) return j;  
-    if (Array.isArray(j.file_stats)) return j.file_stats;  
-    if (Array.isArray(j.FileStats)) return j.FileStats;  
-    if (Array.isArray(j.files)) return j.files;  
-    if (Array.isArray(j.Files)) return j.Files;  
-    if (j.stats && Array.isArray(j.stats.file_stats)) return j.stats.file_stats;  
-    return [];  
-  }  
-    
-  async function tsFiles(base, linkOrHash){  
-    var headers = tsAuthHeaders();  
-    try{  
-      var body = { action:'get' };  
-      if (/^(magnet:|https?:)/i.test(linkOrHash)) body.link = linkOrHash; else body.hash = linkOrHash;  
-      var r1 = await fetch(base+'/torrents', { method:'POST', headers: headers, body: JSON.stringify(body) });  
-      if (r1.ok){  
-        var j1 = await r1.json(); var fs1 = pickFileStats(j1);  
-        if (fs1.length) return { files:fs1, raw:j1 };  
-      }  
-    }catch(e){}  
-    try{  
-      var r2 = await fetch(base+'/stream/files?link='+encodeURIComponent(linkOrHash), { method:'GET', headers: headers });  
-      if (r2.ok){  
-        var j2 = await r2.json(); var fs2 = pickFileStats(j2);  
-        if (fs2.length) return { files:fs2, raw:j2 };  
-      }  
-    }catch(e){}  
-    return { files: [], raw: null };  
-  }  
+  // Тут має бути решта коду плагіна (runMovie, showSeasons, makeButton, mountTVNative тощо)  
+  // Якщо це кінець плагіна, додайте:  
   
-  function closeAllPlayUaModals(){  
-    try{ var els=document.querySelectorAll('.playua-modal'); for (var i=0;i<els.length;i++) els[i].remove(); }catch(e){}  
-    try{ if (window.Lampa && Lampa.Modal && typeof Lampa.Modal.close==='function') Lampa.Modal.close(); }catch(e){}  
-  }  
-    
-  function tsPlayById(hash, file, title){      
-    closeAllPlayUaModals();      
-    var baseForStream = tsBaseForStream();      
-    var fname = safeName((String(file.path||'').split('/').pop()||title||'video')) + '.mkv';      
-    var idx = 1;      
-    if (file && typeof file.id!=='undefined'){      
-      var n = Number(file.id);      
-      idx = isNaN(n) ? 1 : (n + 1);      
-    }      
-    var url = baseForStream + '/stream/' + encodeURIComponent(fname) + '?link=' + encodeURIComponent(hash) + '&index=' + idx + '&play=1';      
-    var qAuth = tsStreamAuthQuery();       
-    if (qAuth) url += qAuth;      
-          
-    try{      
-      if (window.Lampa && Lampa.Player && typeof Lampa.Player.play==='function'){      
-        Lampa.Player.play({ url:url, title: title||fname, timeline:0 });      
-      } else {      
-        location.href = url;      
-      }      
-    }catch(e){       
-      location.href = url;       
-    }      
-}  
+})(); 
