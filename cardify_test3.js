@@ -1139,62 +1139,7 @@
         pointer-events: none !important;  
       }    
           
-      /* КРИТИЧНО: Гарантувати повну непрозорість всіх елементів картки */  
-      .full-start-new,  
-      .full-start-new *,  
-      .full-start-new__body,  
-      .full-start-new__body *,  
-      .full-start-new__right,  
-      .full-start-new__right *,  
-      .full-start-new__left,  
-      .full-start-new__left *,  
-      .full-start-new__poster,  
-      .full-start-new__poster *,  
-      .full-start-new__img,  
-      .full--poster,  
-      .cardify__left,  
-      .cardify__left *,  
-      .cardify__right,  
-      .cardify__right *,  
-      .full-start-new__title,  
-      .full-start-new__head,  
-      .full-start-new__details,  
-      .cardify__details,  
-      .full-start-new__buttons {  
-        opacity: 1 !important;  
-        filter: none !important;  
-      }  
-        
-      /* Виключити трейлер з правила непрозорості */  
-      .cardify-trailer__youtube,  
-      .cardify-trailer__youtube * {  
-        /* Дозволити власну прозорість трейлера */  
-      }  
-          
-      /* Приховати чорні смуги */    
-      .cardify-trailer__youtube-line {    
-        display: none !important;    
-      }    
-          
-      /* Приховати контроли плеєра */    
-      .cardify-trailer__controlls {    
-        display: none !important;    
-        visibility: hidden !important;    
-        opacity: 0 !important;    
-        pointer-events: none !important;    
-      }    
-          
-      /* Гарантувати видимість картки фільму */    
-      .full-start-new,    
-      .full-start-new__body,    
-      .full-start-new__right,    
-      .full-start-new__left,    
-      .cardify__left,    
-      .cardify__right {    
-        position: relative !important;    
-        z-index: 100 !important;  
-      }    
-          
+             
                
       .cardify__background.nodisplay {    
         display: block !important;    
