@@ -1,251 +1,252 @@
-(function() {  
-    'use strict';  
-      
-    // Конфігурація  
-    const PLUGIN_NAME = 'OpenCardify';  
-    let currentTrailer = null;  
-      
-    // CSS стилі (скорочена версія для прикладу)  
-    const style = `  
-        <style>  
-            .cardify-trailer {  
-                position: fixed;  
-                top: 0;  
-                left: 0;  
-                width: 100%;  
-                height: 100%;  
-                background: rgba(0,0,0,0.9);  
-                z-index: 10000;  
-                display: none;  
-            }  
-              
-            .cardify-trailer.active {  
-                display: flex;  
-                align-items: center;  
-                justify-content: center;  
-            }  
-              
-            .cardify-trailer__player {  
-                width: 80%;  
-                height: 80%;  
-                max-width: 1200px;  
-                max-height: 700px;  
-            }  
-              
-            .cardify-trailer__close {  
-                position: absolute;  
-                top: 20px;  
-                right: 20px;  
-                width: 40px;  
-                height: 40px;  
-                background: rgba(255,255,255,0.2);  
-                border-radius: 50%;  
-                cursor: pointer;  
-                display: flex;  
-                align-items: center;  
-                justify-content: center;  
-            }  
-              
-            .cardify-trailer__close:hover {  
-                background: rgba(255,255,255,0.3);  
-            }  
-        </style>  
-    `;  
-      
-    // Додаємо стилі  
-    Lampa.Template.add('opencardify_css', style);  
-    $('body').append(Lampa.Template.get('opencardify_css', {}, true));  
-      
-    // Іконка для налаштувань  
-    const icon = `<svg width="36" height="28" viewBox="0 0 36 28" fill="none" xmlns="http://www.w3.org/2000/svg">  
-        <rect x="1.5" y="1.5" width="33" height="25" rx="3.5" stroke="white" stroke-width="3"/>  
-        <rect x="5" y="14" width="17" height="4" rx="2" fill="white"/>  
-        <rect x="5" y="20" width="10" height="3" rx="1.5" fill="white"/>  
-        <rect x="25" y="20" width="6" height="3" rx="1.5" fill="white"/>  
-    </svg>`;  
-      
-    // Додаємо компонент налаштувань  
-    Lampa.SettingsApi.addComponent({  
-        component: 'opencardify',  
-        icon: icon,  
-        name: 'Open Cardify'  
-    });  
-      
-    Lampa.SettingsApi.addParam({  
-        component: 'opencardify',  
-        param: {  
-            name: 'opencardify_run_trailers',  
-            type: 'trigger',  
-            default: false  
-        },  
-        field: {  
-            name: 'Увімкнути автоматичні трейлери'  
-        }  
-    });  
-      
-    // Функція для вибору трейлера  
-    function selectTrailer(data) {  
-        if (!data.videos || !data.videos.results || !data.videos.results.length) {  
-            return null;  
-        }  
-          
-        const items = [];  
-          
-        // Збираємо всі трейлери  
-        data.videos.results.forEach(function(element) {  
-            items.push({  
-                title: Lampa.Utils.shortText(element.name, 50),  
-                id: element.key,  
-                code: element.iso_639_1,  
-                time: new Date(element.published_at).getTime(),  
-                url: 'https://www.youtube.com/watch?v=' + element.key,  
-                img: 'https://img.youtube.com/vi/' + element.key + '/default.jpg'  
-            });  
-        });  
-          
-        // Сортуємо за датою (новіші спочатку)  
-        items.sort(function(a, b) {  
-            return a.time > b.time ? -1 : a.time < b.time ? 1 : 0;  
-        });  
-          
-        // Фільтруємо за мовою користувача  
-        const userLang = Lampa.Storage.field('tmdb_lang');  
-        const myLangTrailers = items.filter(function(n) {  
-            return n.code === userLang;  
-        });  
-          
-        // Фільтруємо англійські трейлери  
-        const enLangTrailers = items.filter(function(n) {  
-            return n.code === 'en' && myLangTrailers.indexOf(n) === -1;  
-        });  
-          
-        // Пріоритет: мова користувача → англійська → будь-яка  
-        let allTrailers = [];  
-          
-        if (myLangTrailers.length) {  
-            allTrailers = allTrailers.concat(myLangTrailers);  
-        }  
-          
-        allTrailers = allTrailers.concat(enLangTrailers);  
-          
-        if (allTrailers.length) {  
-            return allTrailers[0];  
-        }  
-          
-        // Якщо нічого не знайдено, повертаємо перший доступний  
-        return items.length ? items[0] : null;  
-    }  
-      
-    // Клас для керування трейлером  
-    class TrailerPlayer {  
-        constructor(activity, trailer) {  
-            this.activity = activity;  
-            this.trailer = trailer;  
-            this.player = null;  
-            this.container = null;  
-              
-            this.init();  
-        }  
-          
-        init() {  
-            // Перевіряємо чи увімкнено функцію  
-            if (!Lampa.Storage.field('opencardify_run_trailers')) {  
-                return;  
-            }  
-              
-            // Створюємо контейнер  
-            this.container = $('<div class="cardify-trailer"></div>');  
-              
-            // Кнопка закриття  
-            const closeBtn = $('<div class="cardify-trailer__close">×</div>');  
-            closeBtn.on('click', () => this.hide());  
-              
-            // YouTube плеєр  
-            const playerDiv = $('<div class="cardify-trailer__player"></div>');  
-            const iframe = $(`<iframe   
-                src="https://www.youtube.com/embed/${this.trailer.id}?autoplay=1&mute=1&controls=1&rel=0"   
-                frameborder="0"   
-                allow="autoplay; encrypted-media"   
-                allowfullscreen  
-            ></iframe>`);  
-              
-            playerDiv.append(iframe);  
-            this.container.append(closeBtn);  
-            this.container.append(playerDiv);  
-              
-            $('body').append(this.container);  
-              
-            // Показуємо через 1 секунду  
-            setTimeout(() => this.show(), 1000);  
-              
-            // Позначаємо що трейлер готовий  
-            this.activity.trailer_ready = true;  
-        }  
-          
-        show() {  
-            this.container.addClass('active');  
-        }  
-          
-        hide() {  
-            this.container.removeClass('active');  
-            setTimeout(() => {  
-                this.container.remove();  
-                this.activity.trailer_ready = false;  
-            }, 300);  
-        }  
-    }  
-      
-    // Ініціалізація плагіна  
-    function startPlugin() {  
-        console.log('[OpenCardify] Plugin initialized');  
-          
-        // Слухаємо подію "full" (відкриття повної інформації про фільм/серіал)  
-        Lampa.Listener.follow('full', function(event) {  
-            if (event.type === 'complite' && event.data) {  
-                // Перевіряємо чи увімкнено функцію  
-                if (!Lampa.Storage.field('opencardify_run_trailers')) {  
-                    return;  
-                }  
-                  
-                // Вибираємо трейлер  
-                const trailer = selectTrailer(event.data);  
-                  
-                if (!trailer) {  
-                    return;  
-                }  
-                  
-                // Перевіряємо версію Lampa  
-                if (Lampa.Manifest.app_digital >= 220) {  
-                    // Якщо активність вже відкрита  
-                    if (Lampa.Activity.active().activity === event.object.activity) {  
-                        new TrailerPlayer(event.object, trailer);  
-                    } else {  
-                        // Чекаємо на старт активності  
-                        const activityListener = function(activityEvent) {  
-                            if (activityEvent.type === 'start' &&   
-                                activityEvent.object.activity === event.object.activity &&   
-                                !event.object.activity.trailer_ready) {  
-                                  
-                                Lampa.Listener.remove('activity', activityListener);  
-                                new TrailerPlayer(event.object, trailer);  
-                            }  
-                        };  
-                          
-                        Lampa.Listener.follow('activity', activityListener);  
-                    }  
-                }  
-            }  
-        });  
-    }  
-      
-    // Запускаємо плагін  
-    if (window.appready) {  
-        startPlugin();  
-    } else {  
-        Lampa.Listener.follow('app', function(event) {  
-            if (event.type === 'ready') {  
-                startPlugin();  
-            }  
-        });  
-    }  
+(function() {    
+    'use strict';    
+    
+    const PLUGIN_NAME = 'BackgroundTrailer';    
+    const TMDB_API_KEY = '4045c616742d57a88740bd49b7ed31d7';  
+    let DEBOUNCE_DELAY = 800;    
+        
+    let currentPlayer = null;    
+    let debounceTimer = null;    
+    let trailerCache = {};    
+    
+    function injectStyles() {    
+        if (document.getElementById('bg-trailer-styles')) return;    
+            
+        const css = `    
+            .card__view { position: relative; overflow: hidden; }    
+            .card__trailer-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; opacity: 0; transition: opacity 0.5s ease; pointer-events: none; }    
+            .card__trailer-overlay.active { opacity: 1; }    
+            .card__trailer-overlay iframe { width: 100%; height: 100%; border: none; }    
+            .card__img { position: relative; z-index: 2; transition: opacity 0.5s ease; }    
+            .card.has-trailer-playing .card__img { opacity: 0; }    
+        `;    
+            
+        const style = document.createElement('style');    
+        style.id = 'bg-trailer-styles';    
+        style.textContent = css;    
+        document.head.appendChild(style);    
+    }    
+    
+    function loadYouTubeAPI() {    
+        if (window.YT && window.YT.Player) return Promise.resolve();    
+            
+        return new Promise((resolve) => {    
+            if (window.onYouTubeIframeAPIReady) {    
+                const oldCallback = window.onYouTubeIframeAPIReady;    
+                window.onYouTubeIframeAPIReady = function() {    
+                    oldCallback();    
+                    resolve();    
+                };    
+            } else {    
+                window.onYouTubeIframeAPIReady = resolve;    
+            }    
+                
+            if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {    
+                const tag = document.createElement('script');    
+                tag.src = 'https://www.youtube.com/iframe_api';    
+                document.head.appendChild(tag);    
+            }    
+        });    
+    }    
+    
+    async function fetchTrailer(tmdbId, mediaType = 'movie') {    
+        const cacheKey = `${mediaType}_${tmdbId}`;    
+        if (trailerCache[cacheKey]) return trailerCache[cacheKey];    
+    
+        try {    
+            const url = `https://api.themoviedb.org/3/${mediaType}/${tmdbId}/videos?api_key=${TMDB_API_KEY}`;  
+            const response = await fetch(url);    
+            const data = await response.json();    
+                
+            if (data.results && data.results.length > 0) {    
+                const trailer = data.results.find(v => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser')) || data.results.find(v => v.site === 'YouTube');    
+                    
+                if (trailer) {    
+                    trailerCache[cacheKey] = trailer.key;    
+                    return trailer.key;    
+                }    
+            }    
+        } catch (error) {    
+            console.error('[BackgroundTrailer] Error fetching trailer:', error);    
+        }    
+            
+        return null;    
+    }    
+    
+    function createPlayer(container, videoId) {    
+        return new Promise((resolve) => {    
+            const playerId = 'bg-trailer-' + Date.now();    
+            const iframe = document.createElement('div');    
+            iframe.id = playerId;    
+            container.appendChild(iframe);    
+                
+            const player = new YT.Player(playerId, {    
+                videoId: videoId,    
+                playerVars: { autoplay: 1, mute: 1, controls: 0, showinfo: 0, modestbranding: 1, loop: 1, playlist: videoId, rel: 0, fs: 0, playsinline: 1 },    
+                events: {    
+                    onReady: () => resolve(player),    
+                    onError: () => { console.error('[BackgroundTrailer] Player error'); resolve(null); }    
+                }    
+            });    
+        });    
+    }    
+    
+    async function handleCardFocus(cardElement) {    
+        if (debounceTimer) clearTimeout(debounceTimer);    
+    
+        debounceTimer = setTimeout(async () => {    
+            if (!Lampa.Storage.get('bg_trailer_enabled', true)) return;    
+    
+            const cardData = $(cardElement).data('card') || {};    
+            const tmdbId = cardData.id;    
+            const mediaType = cardData.name ? 'tv' : 'movie';    
+    
+            if (!tmdbId) return;    
+    
+            const cardView = cardElement.querySelector('.card__view');    
+            if (!cardView) return;    
+    
+            let overlay = cardView.querySelector('.card__trailer-overlay');    
+            if (!overlay) {    
+                overlay = document.createElement('div');    
+                overlay.className = 'card__trailer-overlay';    
+                cardView.insertBefore(overlay, cardView.firstChild);    
+            }    
+    
+            const trailerKey = await fetchTrailer(tmdbId, mediaType);    
+            if (!trailerKey) return;    
+    
+            await loadYouTubeAPI();    
+            overlay.innerHTML = '';    
+            const player = await createPlayer(overlay, trailerKey);    
+    
+            if (player) {    
+                currentPlayer = { player, cardElement, overlay };    
+                overlay.classList.add('active');    
+                cardElement.classList.add('has-trailer-playing');    
+            }    
+        }, DEBOUNCE_DELAY);    
+    }    
+    
+    function handleCardBlur(cardElement) {    
+        if (debounceTimer) {    
+            clearTimeout(debounceTimer);    
+            debounceTimer = null;    
+        }    
+    
+        if (currentPlayer && currentPlayer.cardElement === cardElement) {    
+            try {    
+                if (currentPlayer.player && currentPlayer.player.destroy) {    
+                    currentPlayer.player.destroy();    
+                }    
+                if (currentPlayer.overlay) {    
+                    currentPlayer.overlay.classList.remove('active');    
+                    currentPlayer.overlay.innerHTML = '';    
+                }    
+                cardElement.classList.remove('has-trailer-playing');    
+            } catch (error) {    
+                console.error('[BackgroundTrailer] Error stopping player:', error);    
+            }    
+            currentPlayer = null;    
+        }    
+    }    
+    
+    function attachCardListeners() {    
+        $(document).on('mouseenter', '.card', function() {    
+            handleCardFocus(this);    
+        });    
+    
+        $(document).on('mouseleave', '.card', function() {    
+            handleCardBlur(this);    
+        });    
+    
+        Lampa.Listener.follow('card', function(e) {    
+            if (e.type === 'focus') {    
+                handleCardFocus(e.card);    
+            } else if (e.type === 'blur') {    
+                handleCardBlur(e.card);    
+            }    
+        });    
+    }    
+    
+    function addSettings() {    
+        Lampa.SettingsApi.addComponent({    
+            component: 'bg_trailer',    
+            icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>',    
+            name: 'Фонові трейлери'    
+        });    
+    
+        Lampa.SettingsApi.addParam({    
+            component: 'bg_trailer',    
+            param: { name: 'bg_trailer_enabled', type: 'trigger', default: true },    
+            field: { name: 'Увімкнути фонові трейлери при наведенні' }    
+        });    
+    
+        Lampa.SettingsApi.addParam({    
+            component: 'bg_trailer',    
+            param: {    
+                name: 'bg_trailer_delay',    
+                type: 'select',    
+                values: { 500: '0.5 секунди', 800: '0.8 секунди', 1000: '1 секунда', 1500: '1.5 секунди' },    
+                default: 800    
+            },    
+            field: { name: 'Затримка перед запуском' },    
+            onChange: function(value) { DEBOUNCE_DELAY = parseInt(value); }    
+        });    
+    }    
+    
+    function init() {    
+        if (window.bg_trailer_ready) return;    
+        window.bg_trailer_ready = true;    
+    
+        console.log('[BackgroundTrailer] Initializing...');    
+        injectStyles();    
+        addSettings();    
+        attachCardListeners();    
+        console.log('[BackgroundTrailer] Ready!');    
+    }    
+    
+    if (window.appready) {    
+        init();    
+    } else {    
+        Lampa.Listener.follow('app', function(e) {    
+            if (e.type === 'ready') init();    
+        });    
+    }    
+})();    
+  
+(function() {    
+    'use strict';    
+        
+    function modifyCardifyStyles() {    
+        const oldStyle = document.getElementById('cardify-compact-style');    
+        if (oldStyle) oldStyle.remove();    
+            
+        const style = document.createElement('style');    
+        style.id = 'cardify-compact-style';    
+        style.textContent = `    
+            .cardify { position: fixed !important; top: 50% !important; left: 50% !important; transform: translate(-50%, -50%) !important; width: 70% !important; height: 60% !important; max-width: 1200px !important; max-height: 700px !important; z-index: 1000 !important; border-radius: 12px !important; overflow: hidden !important; box-shadow: 0 20px 60px rgba(0,0,0,0.8) !important; }    
+            .cardify::before { content: '' !important; position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; background: rgba(0,0,0,0.7) !important; z-index: -1 !important; backdrop-filter: blur(8px) !important; -webkit-backdrop-filter: blur(8px) !important; }    
+            .cardify iframe { width: 100% !important; height: 100% !important; border: none !important; }    
+            .cardify__close { position: absolute !important; top: 20px !important; right: 20px !important; width: 40px !important; height: 40px !important; background: rgba(0,0,0,0.8) !important; border-radius: 50% !important; cursor: pointer !important; z-index: 10 !important; display: flex !important; align-items: center !important; justify-content: center !important; transition: all 0.3s ease !important; }    
+            .cardify__close:hover { background: rgba(255,255,255,0.2) !important; transform: scale(1.1) !important; }    
+            .cardify__close::before, .cardify__close::after { content: '' !important; position: absolute !important; width: 20px !important; height: 2px !important; background: white !important; }    
+            .cardify__close::before { transform: rotate(45deg) !important; }    
+            .cardify__close::after { transform: rotate(-45deg) !important; }    
+            @media (max-width: 768px) { .cardify { width: 90% !important; height: 50% !important; } }    
+            @keyframes cardify-fadein { from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }    
+            .cardify { animation: cardify-fadein 0.3s ease-out !important; }    
+        `;    
+            
+        document.head.appendChild(style);    
+        console.log('[Cardify Compact] Стилі застосовано');    
+    }    
+        
+    if (window.appready) {    
+        setTimeout(modifyCardifyStyles, 1000);    
+    } else {    
+        Lampa.Listener.follow('app', function(e) {    
+            if (e.type === 'ready') setTimeout(modifyCardifyStyles, 1000);    
+        });    
+    }    
 })();
