@@ -1,7 +1,6 @@
 (function() {  
   'use strict';  
     
-  // Перевірка доступності Lampa API  
   function waitForLampa(callback) {  
     if (window.Lampa && Lampa.Storage && Lampa.TMDB && Lampa.Lang && Lampa.SettingsApi && Lampa.Template) {  
       callback();  
@@ -151,7 +150,6 @@
       
     // Налаштування для кожної категорії  
     categories.forEach(function(cat) {  
-      // Увімкнути/вимкнути  
       Lampa.SettingsApi.addParam({  
         component: 'customhub',  
         param: {  
@@ -164,7 +162,6 @@
         }  
       });  
         
-      // Порядок відображення  
       Lampa.SettingsApi.addParam({  
         component: 'customhub',  
         param: {  
@@ -177,7 +174,6 @@
         }  
       });  
         
-      // Перемішування  
       Lampa.SettingsApi.addParam({  
         component: 'customhub',  
         param: {  
@@ -202,147 +198,91 @@
       }  
       return shuffled;  
     }  
-    
-      function loadTMDB(endpoint, callback) {  
-  console.log('[CustomHub] Завантаження:', endpoint);  
-    
-  Lampa.TMDB.get(endpoint, function(data) {  
-    if (!data) {  
-      console.error('[CustomHub] TMDB повернув null для:', endpoint);  
-      callback([]);  
-      return;  
-    }  
       
-    var items = data.results || [];  
-      
-    if (!Array.isArray(items)) {  
-      console.error('[CustomHub] TMDB повернув некоректний формат:', data);  
-      callback([]);  
-      return;  
-    }  
-      
-    console.log('[CustomHub] Отримано елементів:', items.length);  
-    callback(items);  
-  }, function(error) {  
-    console.error('[CustomHub] Помилка TMDB API:', error);  
-    callback([]);  
-  });  
-}
-    // Функція для завантаження даних з TMDB  
+    // Функція для завантаження даних з TMDB (ТІЛЬКИ ОДНА ВЕРСІЯ)  
     function loadTMDB(endpoint, callback) {  
-      var url = Lampa.TMDB.api(endpoint);  
+      console.log('[CustomHub] Завантаження:', endpoint);  
         
       Lampa.TMDB.get(endpoint, function(data) {  
-        if (data && data.results) {  
-          callback(data.results);  
-        } else {  
+        if (!data) {  
+          console.error('[CustomHub] TMDB повернув null для:', endpoint);  
           callback([]);  
+          return;  
         }  
-      }, function() {  
+          
+        var items = data.results || [];  
+          
+        if (!Array.isArray(items)) {  
+          console.error('[CustomHub] TMDB повернув некоректний формат:', data);  
+          callback([]);  
+          return;  
+        }  
+          
+        console.log('[CustomHub] Отримано елементів:', items.length);  
+        callback(items);  
+      }, function(error) {  
+        console.error('[CustomHub] Помилка TMDB API:', error);  
         callback([]);  
       });  
     }  
       
-    // Функція для завантаження даних з CUB  
-    function loadCUB(endpoint, callback) {  
-      // CUB використовує той же TMDB API через проксі  
-      loadTMDB(endpoint, callback);  
-    }  
-    
-      function createCards(items, category) {  
-  if (!items || !Array.isArray(items) || items.length === 0) {  
-    console.warn('[CustomHub] Немає даних для категорії:', category.id);  
-    return [];  
-  }  
-    
-  var cards = [];  
-    
-  items.forEach(function(item) {  
-    // Критична перевірка: item має існувати та мати ID  
-    if (!item || !item.id) {  
-      console.warn('[CustomHub] Пропущено елемент без ID:', item);  
-      return;  
-    }  
-      
-    try {  
-      // Перевірка Template API  
-      if (!Lampa.Template || typeof Lampa.Template.js !== 'function') {  
-        console.error('[CustomHub] Lampa.Template.js недоступний');  
-        return;  
+    // Функція для створення карток (ТІЛЬКИ ОДНА ВЕРСІЯ)  
+    function createCards(items, category) {  
+      if (!items || !Array.isArray(items) || items.length === 0) {  
+        console.warn('[CustomHub] Немає даних для категорії:', category.id);  
+        return [];  
       }  
         
-      var card = Lampa.Template.js('card');  
-        
-      // Перевірка результату Template  
-      if (!card || typeof card.create !== 'function') {  
-        console.error('[CustomHub] Template.js("card") повернув некоректний об\'єкт');  
-        return;  
-      }  
-        
-      // Переконайтеся, що item має всі необхідні поля  
-      var cardData = {  
-        id: item.id,  
-        title: item.title || item.name || 'Unknown',  
-        original_title: item.original_title || item.original_name,  
-        poster_path: item.poster_path,  
-        backdrop_path: item.backdrop_path,  
-        release_date: item.release_date || item.first_air_date,  
-        vote_average: item.vote_average || 0,  
-        media_type: category.id.indexOf('tv') >= 0 ? 'tv' : 'movie'  
-      };  
-        
-      card.create(cardData);  
-        
-      card.onEnter = function() {  
-        Lampa.Activity.push({  
-          url: '',  
-          title: cardData.title,  
-          component: 'full',  
-          id: cardData.id,  
-          method: cardData.media_type === 'tv' ? 'tv' : 'movie',  
-          card: cardData  
-        });  
-      };  
-        
-      cards.push(card.render());  
-        
-    } catch(e) {  
-      console.error('[CustomHub] Помилка створення картки:', e, item);  
-    }  
-  });  
-    
-  return cards;  
-}
-    // Функція для створення карток  
-    function createCards(items, displayMode) {  
       var cards = [];  
         
       items.forEach(function(item) {  
-        var card = Lampa.Template.js('card');  
-          
-        card.find('.card__img').attr('src', Lampa.TMDB.image('w300' + (item.poster_path || item.backdrop_path)));  
-        card.find('.card__title').text(item.title || item.name);  
-          
-        if (item.vote_average) {  
-          card.find('.card__vote').text(item.vote_average.toFixed(1));  
+        if (!item || !item.id) {  
+          console.warn('[CustomHub] Пропущено елемент без ID:', item);  
+          return;  
         }  
           
-        if (displayMode === 'line') {  
-          card.addClass('card--line');  
-        }  
-          
-        card.on('hover:enter', function() {  
-          Lampa.Activity.push({  
-            url: '',  
-            title: item.title || item.name,  
-            component: 'full',  
+        try {  
+          if (!Lampa.Template || typeof Lampa.Template.js !== 'function') {  
+            console.error('[CustomHub] Lampa.Template.js недоступний');  
+            return;  
+          }  
+            
+          var card = Lampa.Template.js('card');  
+            
+          if (!card || typeof card.create !== 'function') {  
+            console.error('[CustomHub] Template.js("card") повернув некоректний об\'єкт');  
+            return;  
+          }  
+            
+          var cardData = {  
             id: item.id,  
-            method: item.first_air_date ? 'tv' : 'movie',  
-            card: item  
-          });  
-        });  
-          
-        cards.push(card);  
+            title: item.title || item.name || 'Unknown',  
+            original_title: item.original_title || item.original_name,  
+            poster_path: item.poster_path,  
+            backdrop_path: item.backdrop_path,  
+            release_date: item.release_date || item.first_air_date,  
+            vote_average: item.vote_average || 0,  
+            media_type: category.id.indexOf('tv') >= 0 ? 'tv' : 'movie'  
+          };  
+            
+          card.create(cardData);  
+            
+          card.onEnter = function() {  
+            Lampa.Activity.push({  
+              url: '',  
+              title: cardData.title,  
+              component: 'full',  
+              id: cardData.id,  
+              method: cardData.media_type === 'tv' ? 'tv' : 'movie',  
+              card: cardData  
+            });  
+          };  
+            
+          cards.push(card.render());  
+            
+        } catch(e) {  
+          console.error('[CustomHub] Помилка створення картки:', e, item);  
+        }  
       });  
         
       return cards;  
@@ -354,7 +294,6 @@
       if (!enabled) return;  
         
       var shuffle = Lampa.Storage.get('customhub_' + cat.id + '_shuffle', false);  
-      var displayMode = Lampa.Storage.get('customhub_display_mode', 'poster');  
         
       var section = $('<div class="customhub-section"></div>');  
       var title = $('<div class="customhub-section__title">' + Lampa.Lang.translate(cat.name) + '</div>');  
@@ -369,7 +308,8 @@
           items = shuffleArray(items);  
         }  
           
-        var cards = createCards(items.slice(0, 20), displayMode);  
+        // ВИПРАВЛЕНО: передаємо category, а не displayMode  
+        var cards = createCards(items.slice(0, 20), cat);  
           
         cards.forEach(function(card) {  
           content.append(card);  
@@ -379,71 +319,27 @@
       });  
     }  
       
-    // Інтеграція з головною сторінкою  
-    function initHomePage() {  
-      Lampa.Listener.follow('activity', function(e) {  
-        if (e.component === 'main') {  
-          var container = $('.main__content');  
-          if (!container.length) return;  
-            
-          // Видалити попередні категорії  
-          container.find('.customhub-section').remove();  
-            
-          // Отримати активні категорії та відсортувати  
-          var activeCategories = categories.filter(function(cat) {  
-            return Lampa.Storage.get('customhub_' + cat.id + '_enable', true);  
-          }).sort(function(a, b) {  
-            var orderA = parseInt(Lampa.Storage.get('customhub_' + a.id + '_order', a.defaultOrder));  
-            var orderB = parseInt(Lampa.Storage.get('customhub_' + b.id + '_order', b.defaultOrder));  
-            return orderA - orderB;  
-          });  
-            
-          // Рендерити категорії  
-          activeCategories.forEach(function(cat) {  
-            renderCategory(cat, container);  
-          });  
-        }  
-      });  
-    }  
-      
-    // Додати стилі  
-    function injectStyles() {  
-      if (document.getElementById('customhub-styles')) return;  
-        
-      var css = `  
-        .customhub-section {  
-          margin-bottom: 2em;  
-        }  
+    // Інтеграція з головною сторінкою    
+function initHomePage() {    
+  Lampa.Listener.follow('activity', function(e) {    
+    if (e.component === 'main') {    
+      var container = $('.main__content');    
+      if (!container.length) return;    
           
-        .customhub-section__title {  
-          font-size: 1.5em;  
-          font-weight: bold;  
-          margin-bottom: 1em;  
-          padding: 0 1em;  
-        }  
+      container.find('.customhub-section').remove();    
           
-        .customhub-section__content {  
-          display: flex;  
-          overflow-x: auto;  
-          padding: 0 1em;  
-          gap: 1em;  
-        }  
+      var activeCategories = categories.filter(function(cat) {    
+        return Lampa.Storage.get('customhub_' + cat.id + '_enable', true);    
+      }).sort(function(a, b) {    
+        var orderA = parseInt(Lampa.Storage.get('customhub_' + a.id + '_order', a.defaultOrder));    
+        var orderB = parseInt(Lampa.Storage.get('customhub_' + b.id + '_order', b.defaultOrder));    
+        return orderA - orderB;    
+      });    
           
-        .customhub-section__content .card {  
-          flex-shrink: 0;  
-        }  
-      `;  
-        
-      var style = document.createElement('style');  
-      style.id = 'customhub-styles';  
-      style.textContent = css;  
-      document.head.appendChild(style);  
-    }  
-      
-    // Ініціалізація  
-    injectStyles();  
-    initHomePage();  
-      
-    console.log('[CustomHub] Плагін успішно завантажено');  
-  });  
-})();
+      // Рендерити категорії    
+      activeCategories.forEach(function(cat) {    
+        renderCategory(cat, container);    
+      });    
+    }    
+  });    
+}
