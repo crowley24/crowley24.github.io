@@ -1231,5 +1231,12 @@ Lampa.SettingsApi.addParam({
         setTimeout(modifyCardifyStyles, 1000);      
       }      
     });      
-  }      
+  }   
+    // ПРАВИЛЬНО: Слухач події всередині IIFE  
+  Lampa.Listener.follow('storage', function(e) {    
+    if (e.name === 'cardify_trailer_size') {    
+      console.log('[Cardify] Розмір змінено на:', e.value);    
+      modifyCardifyStyles();  // Тепер має доступ до функції  
+    }    
+  });  
 })();
