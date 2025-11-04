@@ -1128,11 +1128,6 @@ Lampa.SettingsApi.addParam({
 
 (function() {        
   'use strict';        
-    
-  // Змінні для контролю запуску  
-  let downPressCount = 0;  
-  let lastKeyTime = 0;  
-  const KEY_RESET_DELAY = 2000; // Скинути лічильник через 2 секунди  
           
   function modifyCardifyStyles() {        
     const oldStyle = document.getElementById('cardify-compact-style');        
@@ -1141,13 +1136,24 @@ Lampa.SettingsApi.addParam({
     const style = document.createElement('style');        
     style.id = 'cardify-compact-style';        
     style.textContent = `        
-      /* Трейлер на фоні справа з 60% прозорістю */        
+      /* Батьківський контейнер має бути position: relative */  
+      .full-start-new,  
+      .full-start-new__body {  
+        position: relative !important;  
+      }  
+        
+      /* Трейлер позиціонується відносно батьківського контейнера */        
       .cardify-trailer__youtube {        
-        position: fixed !important;        
-        top: 10% !important;        
+        position: absolute !important;  /* <-- ЗМІНЕНО з fixed на absolute */  
+        top: auto !important;  /* <-- Скасовано фіксований top */  
         right: 2em !important;        
         bottom: auto !important;        
         left: auto !important;        
+          
+        /* Позиціонування відносно секції режисера */  
+        /* Припускаємо, що режисер знаходиться приблизно на 40-50% висоти картки */  
+        margin-top: 40% !important;  /* <-- Регулюйте це значення */  
+          
         width: 45% !important;        
         height: auto !important;        
         aspect-ratio: 16/9 !important;        
@@ -1158,15 +1164,10 @@ Lampa.SettingsApi.addParam({
         box-shadow: 0 10px 40px rgba(0,0,0,0.6) !important;        
         z-index: 50 !important;        
         transform: none !important;        
-        opacity: 0 !important; /* Початково прихований */  
+        opacity: 0.6 !important;        
         transition: opacity 0.3s ease !important;        
         pointer-events: none !important;        
       }        
-        
-      /* Показати трейлер після натискання вниз */  
-      body.trailer-activated .cardify-trailer__youtube {  
-        opacity: 0.6 !important;  
-      }  
             
       /* КРИТИЧНО: Агресивне масштабування для приховування чорних полос */      
       .cardify-trailer__youtube iframe {      
@@ -1203,7 +1204,7 @@ Lampa.SettingsApi.addParam({
         }        
       }        
               
-      body.trailer-activated .cardify-trailer__youtube {        
+      .cardify-trailer__youtube {        
         animation: cardify-trailer-fadein 0.5s ease-out !important;        
       }        
               
@@ -1211,7 +1212,7 @@ Lampa.SettingsApi.addParam({
       @media (max-width: 768px) {        
         .cardify-trailer__youtube {        
           width: 60% !important;        
-          top: 1em !important;        
+          margin-top: 30% !important;  
           right: 1em !important;        
           max-width: none !important;        
         }        
@@ -1221,73 +1222,22 @@ Lampa.SettingsApi.addParam({
       @media (min-width: 769px) and (max-width: 1024px) {        
         .cardify-trailer__youtube {        
           width: 50% !important;        
+          margin-top: 35% !important;  
         }        
       }        
     `;        
             
     document.head.appendChild(style);        
-    console.log('[Cardify Compact] Стилі застосовано: трейлер з контролем через кнопку вниз');        
-  }  
-    
-  // Функція для показу трейлера  
-  function showTrailer() {  
-    document.body.classList.add('trailer-activated');  
-    console.log('[Cardify] Трейлер активовано');  
-  }  
-    
-  // Функція для приховування трейлера  
-  function hideTrailer() {  
-    document.body.classList.remove('trailer-activated');  
-    console.log('[Cardify] Трейлер деактивовано');  
-  }  
-    
-  // Слухач подій клавіатури  
-  function initKeyboardControl() {  
-    document.addEventListener('keydown', function(e) {  
-      const now = Date.now();  
-        
-      // Скинути лічильник, якщо минуло багато часу  
-      if (now - lastKeyTime > KEY_RESET_DELAY) {  
-        downPressCount = 0;  
-      }  
-        
-      lastKeyTime = now;  
-        
-      // Кнопка вниз: ArrowDown (40), S (83), або D-pad вниз на TV  
-      if (e.keyCode === 40 || e.keyCode === 83) {  
-        downPressCount++;  
-        console.log('[Cardify] Натискання вниз:', downPressCount);  
-          
-        // Показати трейлер після 2 натискань  
-        if (downPressCount >= 2) {  
-          showTrailer();  
-        }  
-      }  
-        
-      // Кнопка вгору: ArrowUp (38), W (87), або D-pad вгору на TV  
-      if (e.keyCode === 38 || e.keyCode === 87) {  
-        hideTrailer();  
-        downPressCount = 0;  
-        console.log('[Cardify] Натискання вгору - трейлер приховано');  
-      }  
-    });  
-      
-    console.log('[Cardify] Контроль клавіатури ініціалізовано');  
-  }  
+    console.log('[Cardify Compact] Стилі застосовано: трейлер навпроти режисера з 60% прозорістю');        
+  }        
           
   // Запускаємо після завантаження Cardify        
   if (window.appready) {        
-    setTimeout(function() {  
-      modifyCardifyStyles();  
-      initKeyboardControl();  
-    }, 1000);        
+    setTimeout(modifyCardifyStyles, 1000);        
   } else {        
     Lampa.Listener.follow('app', function(e) {        
       if (e.type === 'ready') {        
-        setTimeout(function() {  
-          modifyCardifyStyles();  
-          initKeyboardControl();  
-        }, 1000);        
+        setTimeout(modifyCardifyStyles, 1000);        
       }        
     });        
   }        
