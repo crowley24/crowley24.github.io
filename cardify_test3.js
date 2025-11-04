@@ -1041,6 +1041,38 @@
         name: Lampa.Lang.translate('cardify_enable_trailer')
       }
     });
+    // НОВИЙ: Параметр затримки запуску трейлера  
+Lampa.SettingsApi.addParam({  
+  component: 'cardify',  
+  param: {  
+    name: 'cardify_trailer_delay',  
+    type: 'input',  
+    "default": '800'  // мілісекунди  
+  },  
+  field: {  
+    name: 'Затримка запуску (мс)',  
+    placeholder: '800'  
+  }  
+});  
+  
+// НОВИЙ: Параметр розміру трейлера  
+Lampa.SettingsApi.addParam({  
+  component: 'cardify',  
+  param: {  
+    name: 'cardify_trailer_size',  
+    type: 'select',  
+    "default": '45',  
+    values: {  
+      '35': '35% (малий)',  
+      '45': '45% (середній)',  
+      '55': '55% (великий)',  
+      '65': '65% (дуже великий)'  
+    }  
+  },  
+  field: {  
+    name: 'Розмір трейлера'  
+  }  
+});
 
     function video(data) {
       if (data.videos && data.videos.results.length) {
