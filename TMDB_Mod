@@ -150,68 +150,68 @@
         });  
     }  
   
-    function addSettings() {  
-        loadSettings();   
+   function addSettings() {    
+    loadSettings();     
   
-        if (!Lampa.SettingsApi) return;  
-          
-        Lampa.SettingsApi.addComponent({  
-            component: 'tmdb_mod',  
-            name: Lampa.Lang.translate('tmdb_mod_plugin_name'),  
-            icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>'  
-        });  
+    if (!Lampa.SettingsApi) return;    
+        
+    Lampa.SettingsApi.addComponent({    
+        component: 'tmdb_mod',    
+        name: Lampa.Lang.translate('tmdb_mod_plugin_name'),    
+        icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>'    
+    });    
   
-        Lampa.SettingsApi.addParam({  
-            component: 'tmdb_mod',  
-            param: { name: 'tmdb_mod_enabled', type: 'trigger', default: true },  
-            field: { name: Lampa.Lang.translate('tmdb_mod_toggle_name'), description: Lampa.Lang.translate('tmdb_mod_toggle_desc') },  
-            onChange: function (value) {  
-                pluginSettings.enabled = value;  
-                saveSettings();  
-                  
-                if (!value && Lampa.Api.sources.tmdb_mod) {  
-                    delete Lampa.Api.sources.tmdb_mod;  
-                }  
-                  
-                Lampa.Noty.show(Lampa.Lang.translate('tmdb_mod_noty_reload'));  
+    Lampa.SettingsApi.addParam({    
+        component: 'tmdb_mod',    
+        param: { name: 'tmdb_mod_enabled', type: 'trigger', default: true },    
+        field: { name: Lampa.Lang.translate('tmdb_mod_toggle_name'), description: Lampa.Lang.translate('tmdb_mod_toggle_desc') },    
+        onChange: function (value) {    
+            pluginSettings.enabled = value;    
+            saveSettings();    
+                
+            if (!value && Lampa.Api.sources.tmdb_mod) {    
+                delete Lampa.Api.sources.tmdb_mod;    
+            }    
+                
+            Lampa.Noty.show(Lampa.Lang.translate('tmdb_mod_noty_reload'));    
+        }    
+    });  // <-- Правильно закриваємо addParam  
+  
+    collectionsConfig.forEach(function(cfg) {    
+        var translatedName = Lampa.Lang.translate(cfg.name_key);    
+        var fullDisplayName = cfg.emoji ? cfg.emoji + ' ' + translatedName : translatedName;    
+            
+        Lampa.SettingsApi.addParam({    
+            component: 'tmdb_mod',    
+            param: { name: 'tmdb_mod_collection_' + cfg.id, type: 'trigger', default: true },    
+            field: {     
+                name: fullDisplayName,     
+                description: Lampa.Lang.translate('tmdb_mod_show_collection') + ' "' + translatedName + '"'     
+            },    
+            onChange: function (value) {    
+                pluginSettings.collections[cfg.id] = value;    
+                saveSettings();    
+                Lampa.Noty.show(Lampa.Lang.translate('tmdb_mod_noty_reload'));    
             }  
-        });  
-  });
-        collectionsConfig.forEach(function(cfg) {  
-            var translatedName = Lampa.Lang.translate(cfg.name_key);  
-            var fullDisplayName = cfg.emoji ? cfg.emoji + ' ' + translatedName : translatedName;  
-              
-            Lampa.SettingsApi.addParam({  
-                component: 'tmdb_mod',  
-                param: { name: 'tmdb_mod_collection_' + cfg.id, type: 'trigger', default: true },  
-                field: {   
-                    name: fullDisplayName,   
-                    description: Lampa.Lang.translate('tmdb_mod_show_collection') + ' "' + translatedName + '"'   
-                },  
-                onChange: function (value) {  
-                    pluginSettings.collections[cfg.id] = value;  
-                    saveSettings();  
-                    Lampa.Noty.show(Lampa.Lang.translate('tmdb_mod_noty_reload'));  
-                }
-           });  
-        });  
+        });  // <-- Правильно закриваємо addParam  
+    });  // <-- Закриваємо forEach  
   
-        // Видаляємо старий слухач перед додаванням нового (запобігання витоку пам'яті)  
-        if (settingsListener && Lampa.Settings.listener.remove) {  
-            Lampa.Settings.listener.remove('open', settingsListener);  
-        }  
+    // Видаляємо старий слухач перед додаванням нового (запобігання витоку пам'яті)    
+    if (settingsListener && Lampa.Settings.listener.remove) {    
+        Lampa.Settings.listener.remove('open', settingsListener);    
+    }    
   
-        // Створюємо новий слухач для синхронізації чекбоксів  
-        settingsListener = function (e) {  
-            if (e.name === 'tmdb_mod') {  
-                syncCheckboxes();  
-            }  
-        };  
+    // Створюємо новий слухач для синхронізації чекбоксів    
+    settingsListener = function (e) {    
+        if (e.name === 'tmdb_mod') {    
+            syncCheckboxes();    
+        }    
+    };    
   
-        if (Lampa.Settings && Lampa.Settings.listener) {  
-            Lampa.Settings.listener.follow('open', settingsListener);  
-        }  
-    }  
+    if (Lampa.Settings && Lampa.Settings.listener) {    
+        Lampa.Settings.listener.follow('open', settingsListener);    
+    }    
+} 
   
     function initPlugin() {  
         try {  
