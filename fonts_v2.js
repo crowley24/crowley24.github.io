@@ -32,11 +32,6 @@
         uk: 'За замовчуванням (Roboto)',    
         ru: 'По умолчанию (Roboto)'    
       },    
-      fontchanger_netflix: {    
-        en: 'Netflix Sans',    
-        uk: 'Netflix Sans',    
-        ru: 'Netflix Sans'    
-      },    
       fontchanger_sfpro: {    
         en: 'SF Pro Display',    
         uk: 'SF Pro Display',    
@@ -110,16 +105,11 @@
         name: 'fontchanger_default',    
         family: 'Roboto, Arial, sans-serif',    
         url: null    
-      },    
-      netflix: {    
-        name: 'fontchanger_netflix',    
-        family: '"Netflix Sans", Arial, sans-serif',    
-        url: 'https://assets.nflxext.com/ffe/siteui/fonts/netflix-sans/v3/NetflixSans_W_Rg.woff2'    
-      },    
+      },  
       sfpro: {    
         name: 'fontchanger_sfpro',    
-        family: '"SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif',    
-        url: null  // Використовуємо системний шрифт  
+        family: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',    
+        url: null  
       },    
       inter: {    
         name: 'fontchanger_inter',    
