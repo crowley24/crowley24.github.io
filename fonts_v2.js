@@ -32,85 +32,35 @@
         uk: 'За замовчуванням (Roboto)',    
         ru: 'По умолчанию (Roboto)'    
       },    
-      fontchanger_inter: {    
-        en: 'Inter',    
-        uk: 'Inter',    
-        ru: 'Inter'    
+      fontchanger_netflix: {    
+        en: 'Netflix Sans',    
+        uk: 'Netflix Sans',    
+        ru: 'Netflix Sans'    
       },    
-      fontchanger_poppins: {    
-        en: 'Poppins',    
-        uk: 'Poppins',    
-        ru: 'Poppins'    
-      },  
-      fontchanger_montserrat: {  
-        en: 'Montserrat',  
-        uk: 'Montserrat',  
-        ru: 'Montserrat'  
-      },  
-      fontchanger_opensans: {  
-        en: 'Open Sans',  
-        uk: 'Open Sans',  
-        ru: 'Open Sans'  
-      },  
-      fontchanger_lato: {  
-        en: 'Lato',  
-        uk: 'Lato',  
-        ru: 'Lato'  
-      },  
-      fontchanger_nunito: {  
-        en: 'Nunito',  
-        uk: 'Nunito',  
-        ru: 'Nunito'  
-      },  
-      fontchanger_ubuntu: {  
-        en: 'Ubuntu',  
-        uk: 'Ubuntu',  
-        ru: 'Ubuntu'  
-      }  
+      fontchanger_montserrat: {    
+        en: 'Montserrat',    
+        uk: 'Montserrat',    
+        ru: 'Montserrat'    
+      }    
     });    
         
-    // Конфігурація шрифтів (ТІЛЬКИ РОБОЧІ)  
+    // Конфігурація шрифтів (ТІЛЬКИ NETFLIX ТА MONTSERRAT)  
     var fonts = {    
       default: {    
         name: 'fontchanger_default',    
         family: 'Roboto, Arial, sans-serif',    
         url: null    
-      },  
-      inter: {    
-        name: 'fontchanger_inter',    
-        family: '"Inter", sans-serif',    
-        url: 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap'    
       },    
-      poppins: {    
-        name: 'fontchanger_poppins',    
-        family: '"Poppins", sans-serif',    
-        url: 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap'    
-      },  
-      montserrat: {  
-        name: 'fontchanger_montserrat',  
-        family: '"Montserrat", sans-serif',  
-        url: 'https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap'  
-      },  
-      opensans: {  
-        name: 'fontchanger_opensans',  
-        family: '"Open Sans", sans-serif',  
-        url: 'https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&display=swap'  
-      },  
-      lato: {  
-        name: 'fontchanger_lato',  
-        family: '"Lato", sans-serif',  
-        url: 'https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap'  
-      },  
-      nunito: {  
-        name: 'fontchanger_nunito',  
-        family: '"Nunito", sans-serif',  
-        url: 'https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700&display=swap'  
-      },  
-      ubuntu: {  
-        name: 'fontchanger_ubuntu',  
-        family: '"Ubuntu", sans-serif',  
-        url: 'https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap'  
-      }  
+      netflix: {    
+        name: 'fontchanger_netflix',    
+        family: '"Netflix Sans", Arial, sans-serif',    
+        url: 'https://assets.nflxext.com/ffe/siteui/fonts/netflix-sans/v3/NetflixSans_W_Rg.woff2'    
+      },    
+      montserrat: {    
+        name: 'fontchanger_montserrat',    
+        family: '"Montserrat", sans-serif',    
+        url: 'https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap'    
+      }    
     };    
         
     // Додавання компонента налаштувань    
@@ -158,11 +108,20 @@
       if (font.url) {    
         var fontFaceStyle = document.createElement('style');    
         fontFaceStyle.id = 'fontchanger-fontface';    
-        fontFaceStyle.textContent = '@import url("' + font.url + '");';    
+            
+        if (font.url.includes('googleapis.com')) {    
+          // Google Fonts - імпортувати через @import    
+          fontFaceStyle.textContent = '@import url("' + font.url + '");';    
+        } else {    
+          // Кастомний шрифт - використати @font-face    
+          var fontName = font.family.split(',')[0].replace(/"/g, '');    
+          fontFaceStyle.textContent = '@font-face { font-family: ' + fontName + '; src: url("' + font.url + '") format("woff2"); font-weight: 400; font-style: normal; }';    
+        }    
+            
         document.head.appendChild(fontFaceStyle);    
       }    
           
-      // Застосувати шрифт до ВСЬОГО інтерфейсу (включно з меню, підменю, налаштуваннями)  
+      // Застосувати шрифт до всього інтерфейсу    
       var style = document.createElement('style');    
       style.id = 'fontchanger-style';    
       style.textContent = `    
@@ -170,60 +129,18 @@
           font-family: ${font.family} !important;    
         }    
             
-        /* Головне меню */  
-        .menu,  
-        .menu__item,  
-        .menu__item-name,  
-        .menu__item-title,  
-          
-        /* Підменю та фільтри */  
-        .filter,  
-        .filter__item,  
-        .filter__item-label,  
-        .filter__title,  
-          
-        /* Налаштування */  
-        .settings,  
-        .settings__title,  
-        .settings__label,  
-        .settings-param,  
-        .settings-param__name,  
-        .settings-param__value,  
-          
-        /* Картки контенту */  
-        .card,  
-        .card__title,  
-        .card__view,  
-        .card__description,  
-          
-        /* Сторінка фільму */  
-        .full-start__title,  
-        .full-start__tagline,  
-        .full-start__details,  
-        .full-start__description,  
-          
-        /* Кнопки та селектори */  
-        .button,  
-        .selector,  
-        .selector__item,  
-          
-        /* Скролл та заголовки */  
-        .scroll,  
-        .scroll__title,  
-          
-        /* Модальні вікна */  
-        .modal,  
-        .modal__title,  
-        .modal__content,  
-          
-        /* Пошук */  
-        .search,  
-        .search__input,  
-          
-        /* Інші елементи */  
-        .notice,  
-        .info,  
-        .player {    
+        /* Перевизначити специфічні класи Lampa */    
+        .full-start__title,    
+        .full-start__tagline,    
+        .card__title,    
+        .card__view,    
+        .menu__item,    
+        .settings__title,    
+        .settings__label,    
+        .button,    
+        .selector,    
+        .filter__item,    
+        .scroll__title {    
           font-family: ${font.family} !important;    
         }    
       `;    
@@ -237,5 +154,5 @@
     var savedFont = Lampa.Storage.get('fontchanger_selected', 'default');    
     applyFont(savedFont);    
         
-  });  // Закриває waitForLampa callback  
+  });
 })();
