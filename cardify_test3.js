@@ -1159,7 +1159,7 @@
       .cardify-trailer__youtube {        
         position: fixed !important;        
         top: 45% !important;        
-        right: 0em !important;        
+        right: 0.5em !important;        
         bottom: auto !important;        
         left: auto !important;        
         width: ${trailerSize}% !important;  /* <-- ДИНАМІЧНИЙ РОЗМІР */  
