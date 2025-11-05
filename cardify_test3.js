@@ -1142,144 +1142,94 @@
 
 })();
 
-(function() {          
-  'use strict';          
-            
-  function modifyCardifyStyles() {          
-    const oldStyle = document.getElementById('cardify-compact-style');          
-    if (oldStyle) {  
-      console.log('[Cardify] Видалення старого стилю');  
-      oldStyle.remove();  
-    }  
+(function() {  
+  'use strict';  
+    
+  function modifyCardifyStyles() {  
+    const oldStyle = document.getElementById('cardify-compact-style');  
+    if (oldStyle) oldStyle.remove();  
       
-    // Примусово очистити кеш стилів  
-    document.querySelectorAll('.cardify-trailer__youtube').forEach(el => {  
-      el.style.cssText = '';  
-    });  
-        
     const trailerSize = Lampa.Storage.field('cardify_trailer_size') || '45';  
-    console.log('[Cardify] Застосування розміру:', trailerSize + '%');  
-              
-    const style = document.createElement('style');          
+      
+    const style = document.createElement('style');  
     style.id = 'cardify-compact-style';  
       
-    // КРИТИЧНО: Використовуємо подвійний селектор для збільшення специфічності  
-    style.textContent = `          
-      body .cardify-trailer .cardify-trailer__youtube,  
-      .cardify-trailer .cardify-trailer__youtube {          
-        position: fixed !important;          
-        top: 45% !important;          
-        right: 0.5em !important;          
-        bottom: auto !important;          
-        left: auto !important;          
-        width: ${trailerSize}% !important;  
-        height: auto !important;          
-        aspect-ratio: 16/9 !important;          
-        max-width: 700px !important;          
-        max-height: 400px !important;          
-        border-radius: 12px !important;          
-        overflow: hidden !important;    
-        box-shadow: 0 10px 40px rgba(0,0,0,0.6) !important;          
-        z-index: 50 !important;          
-        transform: none !important;          
-        opacity: 0.9 !important;          
-        transition: opacity 0.3s ease !important;          
-        pointer-events: none !important;          
-      }          
-              
-      body .cardify-trailer .cardify-trailer__youtube iframe,  
-      .cardify-trailer .cardify-trailer__youtube iframe {        
-        width: 130% !important;        
-        height: 130% !important;        
-        position: absolute !important;        
-        top: 50% !important;        
-        left: 50% !important;        
-        transform: translate(-50%, -50%) scale(1.2) !important;        
-        transform-origin: center !important;        
-        object-fit: cover !important;        
-      }        
-              
-      .cardify-trailer__youtube-line {          
-        display: none !important;          
-        visibility: hidden !important;        
-      }          
-                
-      .cardify-trailer__controlls {          
-        display: none !important;          
-      }        
-              
-      @keyframes cardify-trailer-fadein {          
-        from {          
-          opacity: 0;          
-          transform: translateX(50px);          
-        }          
-        to {          
-          opacity: 0.9;          
-          transform: translateX(0);          
-        }          
-      }          
-                
-      body .cardify-trailer .cardify-trailer__youtube {          
-        animation: cardify-trailer-fadein 0.5s ease-out !important;          
-      }          
-                
-      @media (max-width: 768px) {          
-        body .cardify-trailer .cardify-trailer__youtube {          
-          width: 60% !important;          
-          top: 1em !important;          
-          right: 1em !important;          
-          max-width: none !important;          
-        }          
-      }          
-                
-      @media (min-width: 769px) and (max-width: 1024px) {          
-        body .cardify-trailer .cardify-trailer__youtube {          
-          width: 50% !important;          
-        }          
-      }          
-    `;          
-              
+    // Створюємо окремі класи для кожного розміру  
+    style.textContent = `  
+      .cardify-trailer__youtube.size-35 { width: 35% !important; }  
+      .cardify-trailer__youtube.size-45 { width: 45% !important; }  
+      .cardify-trailer__youtube.size-55 { width: 55% !important; }  
+      .cardify-trailer__youtube.size-65 { width: 65% !important; }  
+        
+      .cardify-trailer__youtube {  
+        position: fixed !important;  
+        top: 45% !important;  
+        right: 0.5em !important;  
+        bottom: auto !important;  
+        left: auto !important;  
+        height: auto !important;  
+        aspect-ratio: 16/9 !important;  
+        max-width: 700px !important;  
+        max-height: 400px !important;  
+        border-radius: 12px !important;  
+        overflow: hidden !important;  
+        box-shadow: 0 10px 40px rgba(0,0,0,0.6) !important;  
+        z-index: 50 !important;  
+        transform: none !important;  
+        opacity: 0.9 !important;  
+        transition: opacity 0.3s ease !important;  
+        pointer-events: none !important;  
+      }  
+        
+      .cardify-trailer__youtube iframe {  
+        width: 130% !important;  
+        height: 130% !important;  
+        position: absolute !important;  
+        top: 50% !important;  
+        left: 50% !important;  
+        transform: translate(-50%, -50%) scale(1.2) !important;  
+        transform-origin: center !important;  
+        object-fit: cover !important;  
+      }  
+        
+      .cardify-trailer__youtube-line {  
+        display: none !important;  
+        visibility: hidden !important;  
+      }  
+        
+      .cardify-trailer__controlls {  
+        display: none !important;  
+      }  
+    `;  
+      
     document.head.appendChild(style);  
       
-    // Примусово оновити через inline-стилі (найвищий пріоритет)  
+    // Додаємо клас до трейлера  
     setTimeout(() => {  
-      const trailers = document.querySelectorAll('.cardify-trailer__youtube');  
-      trailers.forEach(el => {  
-        el.style.setProperty('width', trailerSize + '%', 'important');  
-        el.style.setProperty('position', 'fixed', 'important');  
-        el.style.setProperty('top', '45%', 'important');  
-        el.style.setProperty('right', '0.5em', 'important');  
-        console.log('[Cardify] Примусово встановлено inline-стилі для елемента');  
+      document.querySelectorAll('.cardify-trailer__youtube').forEach(el => {  
+        el.className = el.className.replace(/size-\d+/g, '');  
+        el.classList.add('size-' + trailerSize);  
+        console.log('[Cardify] Додано клас size-' + trailerSize);  
       });  
     }, 100);  
-              
-    console.log('[Cardify Compact] Стилі застосовано з підвищеною специфічністю');          
-  }          
-            
-  if (window.appready) {          
-    setTimeout(modifyCardifyStyles, 1000);          
-  } else {          
-    Lampa.Listener.follow('app', function(e) {          
-      if (e.type === 'ready') {          
-        setTimeout(modifyCardifyStyles, 1000);          
-      }          
-    });          
-  }    
-      
-  Lampa.Listener.follow('storage', function(e) {          
-    if (e.name === 'cardify_trailer_size') {          
-      console.log('[Cardify] Розмір змінено на:', e.value);          
+  }  
+    
+  // Запускаємо після завантаження Cardify  
+  if (window.appready) {  
+    setTimeout(modifyCardifyStyles, 1000);  
+  } else {  
+    Lampa.Listener.follow('app', function(e) {  
+      if (e.type === 'ready') {  
+        setTimeout(modifyCardifyStyles, 1000);  
+      }  
+    });  
+  }  
+    
+  // Слухач події storage для динамічного оновлення розміру  
+  Lampa.Listener.follow('storage', function(e) {  
+    if (e.name === 'cardify_trailer_size') {  
+      console.log('[Cardify] Розмір змінено на:', e.value);  
       modifyCardifyStyles();  
-        
-      // Додатковий reflow з затримкою для телевізорів  
-      setTimeout(() => {  
-        const trailer = document.querySelector('.cardify-trailer__youtube');  
-        if (trailer) {  
-          trailer.style.display = 'none';  
-          trailer.offsetHeight;  
-          trailer.style.display = '';  
-        }  
-      }, 200);  
-    }          
-  });    
+    }  
+  });  
 })();
