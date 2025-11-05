@@ -67,7 +67,9 @@
             if (i >= o.length) return { done: true };  
             return { done: false, value: o[i++] };  
           },  
-          e: function (e) { throw e; },  
+          e: function (_e) {  
+            throw _e;  
+          },  
           f: F  
         };  
       }  
@@ -75,13 +77,18 @@
     }  
     var normalCompletion = true, didErr = false, err;  
     return {  
-      s: function () { it = it.call(o); },  
+      s: function () {  
+        it = it.call(o);  
+      },  
       n: function () {  
         var step = it.next();  
         normalCompletion = step.done;  
         return step;  
       },  
-      e: function (e) { didErr = true; err = e; },  
+      e: function (_e2) {  
+        didErr = true;  
+        err = _e2;  
+      },  
       f: function () {  
         try {  
           if (!normalCompletion && it.return != null) it.return();  
@@ -92,117 +99,196 @@
     };  
   }  
   
-  function State(object) {  
-    this.state = object.state;  
-    this.start = function () {  
-      this.dispath(this.state);  
-    };  
-    this.dispath = function (action_name) {  
-      var action = object.transitions[action_name];  
-      if (action) {  
-        action.call(this, this);  
-      } else {  
-        console.log('invalid action');  
+  var State = /*#__PURE__*/function () {  
+    function State(params) {  
+      _classCallCheck(this, State);  
+      this.params = params;  
+      this.state = params.state;  
+    }  
+    _createClass(State, [{  
+      key: "dispath",  
+      value: function dispath(name) {  
+        if (this.params.transitions[name]) {  
+          this.state = name;  
+          this.params.transitions[name](this);  
+        }  
       }  
-    };  
-  }  
+    }, {  
+      key: "start",  
+      value: function start() {  
+        this.dispath(this.state);  
+      }  
+    }]);  
+    return State;  
+  }();  
+  
+  var Subscribe = /*#__PURE__*/function () {  
+    function Subscribe() {  
+      _classCallCheck(this, Subscribe);  
+      this.listener = {};  
+    }  
+    _createClass(Subscribe, [{  
+      key: "follow",  
+      value: function follow(name, call) {  
+        if (!this.listener[name]) this.listener[name] = [];  
+        this.listener[name].push(call);  
+      }  
+    }, {  
+      key: "send",  
+      value: function send(name, data) {  
+        if (this.listener[name]) {  
+          this.listener[name].forEach(function (call) {  
+            call(data);  
+          });  
+        }  
+      }  
+    }, {  
+      key: "remove",  
+      value: function remove(name, call) {  
+        if (this.listener[name]) {  
+          this.listener[name] = this.listener[name].filter(function (c) {  
+            return c !== call;  
+          });  
+        }  
+      }  
+    }]);  
+    return Subscribe;  
+  }();  
   
   var Player = /*#__PURE__*/function () {  
     function Player(object, video) {  
       var _this = this;  
       _classCallCheck(this, Player);  
-  
-      this.paused = false;  
+      this.object = object;  
+      this.video = video;  
+      this.loaded = false;  
       this.display = false;  
-      this.ended = false;  
-      this.listener = Lampa.Subscribe();  
-      this.html = $("\n            <div class=\"cardify-trailer\">\n                <div class=\"cardify-trailer__youtube\">\n                    <div class=\"cardify-trailer__youtube-iframe\"></div>\n                    <div class=\"cardify-trailer__youtube-line one\"></div>\n                    <div class=\"cardify-trailer__youtube-line two\"></div>\n                </div>\n\n                <div class=\"cardify-trailer__controlls\">\n                    <div class=\"cardify-trailer__title\"></div>\n                    <div class=\"cardify-trailer__remote\">\n                        <div class=\"cardify-trailer__remote-icon\">\n                            <svg width=\"37\" height=\"37\" viewBox=\"0 0 37 37\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                                <path d=\"M32.5196 7.22042L26.7992 12.9408C27.8463 14.5217 28.4561 16.4175 28.4561 18.4557C28.4561 20.857 27.6098 23.0605 26.1991 24.7844L31.8718 30.457C34.7226 27.2724 36.4561 23.0667 36.4561 18.4561C36.4561 14.2059 34.983 10.2998 32.5196 7.22042Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                                <path d=\"M31.262 31.1054L31.1054 31.262C31.158 31.2102 31.2102 31.158 31.262 31.1054Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                                <path d=\"M29.6917 32.5196L23.971 26.7989C22.3901 27.846 20.4943 28.4557 18.4561 28.4557C16.4179 28.4557 14.5221 27.846 12.9412 26.7989L7.22042 32.5196C10.2998 34.983 14.2059 36.4561 18.4561 36.4561C22.7062 36.4561 26.6123 34.983 29.6917 32.5196Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                                <path d=\"M5.81349 31.2688L5.64334 31.0986C5.69968 31.1557 5.7564 31.2124 5.81349 31.2688Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                                <path d=\"M5.04033 30.4571L10.7131 24.7844C9.30243 23.0605 8.4561 20.857 8.4561 18.4557C8.4561 16.4175 9.06588 14.5217 10.113 12.9408L4.39251 7.22037C1.9291 10.2998 0.456055 14.2059 0.456055 18.4561C0.456054 23.0667 2.18955 27.2724 5.04033 30.4571Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                                <path d=\"M6.45507 5.04029C9.63973 2.18953 13.8455 0.456055 18.4561 0.456055C23.0667 0.456054 27.2724 2.18955 30.4571 5.04034L24.7847 10.7127C23.0609 9.30207 20.8573 8.45575 18.4561 8.45575C16.0549 8.45575 13.8513 9.30207 12.1275 10.7127L6.45507 5.04029Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                                <circle cx=\"18.4565\" cy=\"18.4561\" r=\"7\" fill=\"white\"/>\n                            </svg>\n                        </div>\n                        <div class=\"cardify-trailer__remote-text\">".concat(Lampa.Lang.translate('cardify_enable_sound'), "</div>\n                    </div>\n                </div>\n            </div>\n        "));  
-  
-      if (typeof YT !== 'undefined' && YT.Player) {  
-        this.youtube = new YT.Player(this.html.find('.cardify-trailer__youtube-iframe')[0], {  
-          height: window.innerHeight * 2,  
-          width: window.innerWidth,  
+      this.listener = new Subscribe();  
+      this.html = $('<div class="cardify-trailer"><div class="cardify-trailer__youtube"><div class="cardify-trailer__youtube-player"></div><div class="cardify-trailer__youtube-line one"></div><div class="cardify-trailer__youtube-line two"></div></div><div class="cardify-trailer__controlls"><div class="cardify-trailer__controll selector cardify-trailer__controll--play"><svg width="21" height="26" viewBox="0 0 21 26" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 2L19 13L2 24V2Z" stroke="white" stroke-width="3" stroke-linejoin="round"/></svg></div><div class="cardify-trailer__controll selector cardify-trailer__controll--pause"><svg width="21" height="26" viewBox="0 0 21 26" fill="none" xmlns="http://www.w3.org/2000/svg"><line x1="5" y1="2" x2="5" y2="24" stroke="white" stroke-width="3" stroke-linecap="round"/><line x1="16" y1="2" x2="16" y2="24" stroke="white" stroke-width="3" stroke-linecap="round"/></svg></div><div class="cardify-trailer__controll selector cardify-trailer__controll--mute"><svg width="26" height="20" viewBox="0 0 26 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 7H6L12 2V18L6 13H2V7Z" stroke="white" stroke-width="2" stroke-linejoin="round"/><path d="M17 5C18.5 6.5 19 8 19 10C19 12 18.5 13.5 17 15" stroke="white" stroke-width="2" stroke-linecap="round"/><path d="M21 2C23.5 4.5 24 7 24 10C24 13 23.5 15.5 21 18" stroke="white" stroke-width="2" stroke-linecap="round"/></svg></div><div class="cardify-trailer__controll selector cardify-trailer__controll--unmute"><svg width="26" height="20" viewBox="0 0 26 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 7H6L12 2V18L6 13H2V7Z" stroke="white" stroke-width="2" stroke-linejoin="round"/><line x1="17" y1="4.70711" x2="23.2929" y2="10.9999" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="23.2929" y1="9.00011" x2="17" y2="15.2929" stroke="white" stroke-width="2" stroke-linecap="round"/></svg></div></div></div>');  
+      this.youtube;  
+      this.timer;  
+      this.muted = true;  
+      this.html.find('.cardify-trailer__controll--play').on('hover:enter', function () {  
+        _this.play();  
+      });  
+      this.html.find('.cardify-trailer__controll--pause').on('hover:enter', function () {  
+        _this.pause();  
+      });  
+      this.html.find('.cardify-trailer__controll--mute').on('hover:enter', function () {  
+        _this.mute();  
+      });  
+      this.html.find('.cardify-trailer__controll--unmute').on('hover:enter', function () {  
+        _this.unmute();  
+      });  
+      this.create();  
+    }  
+    _createClass(Player, [{  
+      key: "create",  
+      value: function create() {  
+        var _this2 = this;  
+        this.youtube = new YT.Player(this.html.find('.cardify-trailer__youtube-player')[0], {  
+          height: '100%',  
+          width: '100%',  
+          videoId: this.video.id,  
           playerVars: {  
+            'autoplay': 0,  
             'controls': 0,  
             'showinfo': 0,  
-            'autohide': 1,  
-            'modestbranding': 1,  
-            'autoplay': 0,  
-            'disablekb': 1,  
-            'fs': 0,  
-            'enablejsapi': 1,  
-            'playsinline': 1,  
             'rel': 0,  
+            'modestbranding': 1,  
             'iv_load_policy': 3,  
-            'cc_load_policy': 0,  
-            'suggestedQuality': 'hd1080',  
-            'setPlaybackQuality': 'hd1080',  
-            'mute': 1  
+            'disablekb': 1,  
+            'fs': 0  
           },  
-          videoId: video.id,  
           events: {  
-            onReady: function onReady(event) {  
-              _this.loaded = true;  
-              _this.listener.send('loaded');  
+            'onReady': function onReady(event) {  
+              _this2.loaded = true;  
+              _this2.listener.send('loaded');  
+              if (_this2.muted) event.target.mute();  
             },  
-            onStateChange: function onStateChange(state) {  
-              if (state.data == YT.PlayerState.PLAYING) {  
-                _this.paused = false;  
-                clearInterval(_this.timer);  
-                _this.timer = setInterval(function () {  
-                  var left = _this.youtube.getDuration() - _this.youtube.getCurrentTime();  
-                  var toend = 13;  
-                  var fade = 5;  
-                  if (left <= toend + fade) {  
-                    var vol = 1 - (toend + fade - left) / fade;  
-                    _this.youtube.setVolume(Math.max(0, vol * 100));  
-                    if (left <= toend) {  
-                      clearInterval(_this.timer);  
-                      _this.listener.send('ended');  
-                    }  
-                  }  
-                }, 100);  
-                _this.listener.send('play');  
-                if (window.cardify_fist_unmute) _this.unmute();  
-              }  
-              if (state.data == YT.PlayerState.PAUSED) {  
-                _this.paused = true;  
-                clearInterval(_this.timer);  
-                _this.listener.send('paused');  
-              }  
-              if (state.data == YT.PlayerState.ENDED) {  
-                _this.listener.send('ended');  
-              }  
-              if (state.data == YT.PlayerState.BUFFERING) {  
-                state.target.setPlaybackQuality('hd1080');  
+            'onStateChange': function onStateChange(event) {  
+              if (event.data == YT.PlayerState.PLAYING) {  
+                _this2.listener.send('play');  
+                _this2.startTimer();  
+              } else if (event.data == YT.PlayerState.PAUSED) {  
+                _this2.listener.send('paused');  
+                clearInterval(_this2.timer);  
+              } else if (event.data == YT.PlayerState.ENDED) {  
+                _this2.listener.send('ended');  
+                clearInterval(_this2.timer);  
               }  
             },  
-            onError: function onError(e) {  
-              _this.loaded = false;  
-              _this.listener.send('error');  
+            'onError': function onError(event) {  
+              _this2.listener.send('error', event);  
             }  
           }  
         });  
       }  
-    }  
-  
-    _createClass(Player, [{  
+    }, {  
+      key: "startTimer",  
+      value: function startTimer() {  
+        var _this3 = this;  
+        clearInterval(this.timer);  
+        this.timer = setInterval(function () {  
+          try {  
+            var duration = _this3.youtube.getDuration();  
+            var current = _this3.youtube.getCurrentTime();  
+            if (duration - current < 13 && !_this3.muted) {  
+              _this3.fadeOut();  
+            }  
+          } catch (e) {}  
+        }, 1000);  
+      }  
+    }, {  
+      key: "fadeOut",  
+      value: function fadeOut() {  
+        var _this4 = this;  
+        var volume = 100;  
+        var fade = setInterval(function () {  
+          if (volume > 0) {  
+            volume -= 5;  
+            try {  
+              _this4.youtube.setVolume(volume);  
+            } catch (e) {}  
+          } else {  
+            clearInterval(fade);  
+            _this4.mute();  
+          }  
+        }, 100);  
+      }  
+    }, {  
       key: "play",  
       value: function play() {  
-        try { this.youtube.playVideo(); } catch (e) {}  
+        try {  
+          this.youtube.playVideo();  
+        } catch (e) {}  
       }  
     }, {  
       key: "pause",  
       value: function pause() {  
-        try { this.youtube.pauseVideo(); } catch (e) {}  
+        try {  
+          this.youtube.pauseVideo();  
+        } catch (e) {}  
+      }  
+    }, {  
+      key: "mute",  
+      value: function mute() {  
+        this.muted = true;  
+        this.html.find('.cardify-trailer__controll--mute').hide();  
+        this.html.find('.cardify-trailer__controll--unmute').show();  
+        try {  
+          this.youtube.mute();  
+        } catch (e) {}  
       }  
     }, {  
       key: "unmute",  
       value: function unmute() {  
+        this.muted = false;  
+        this.html.find('.cardify-trailer__controll--mute').show();  
+        this.html.find('.cardify-trailer__controll--unmute').hide();  
         try {  
           this.youtube.unMute();  
-          this.html.find('.cardify-trailer__remote').remove();  
-          window.cardify_fist_unmute = true;  
+          this.youtube.setVolume(100);  
         } catch (e) {}  
       }  
     }, {  
@@ -232,10 +318,8 @@
         this.html.remove();  
       }  
     }]);  
-  
     return Player;  
-  }();  
-  
+  }();
   var Trailer = /*#__PURE__*/function () {  
     function Trailer(object, video) {  
       var _this = this;  
@@ -283,8 +367,8 @@
             _this.player.hide();  
             _this.background.removeClass('nodisplay');  
             _this.startblock.removeClass('nodisplay');  
-            _this.head.removeClass('nodisplay');
-                    _this.object.activity.render().find('.cardify-preview__loader').width(0);  
+            _this.head.removeClass('nodisplay');  
+            _this.object.activity.render().find('.cardify-preview__loader').width(0);  
           }  
         }  
       });  
@@ -370,143 +454,75 @@
         Lampa.Controller.listener.follow('toggle', toggle);  
   
         this.player = new Player(this.object, this.video);  
-        this.player.listener.follow('loaded', function () {  
-          _this4.preview();  
+        this.player.listener.follow('loaded', function (e) {  
           _this4.state.start();  
         });  
-        this.player.listener.follow('play', function () {  
-          clearTimeout(_this4.timer_show);  
-          if (!_this4.firstlauch) {  
-            _this4.firstlauch = true;  
-            _this4.timelauch = 5000;  
-          }  
-          _this4.timer_show = setTimeout(function () {  
-            _this4.player.show();  
-            _this4.controll();  
-          }, 500);  
+        this.player.listener.follow('play', function (e) {  
+          _this4.background.addClass('nodisplay');  
+          _this4.startblock.addClass('nodisplay');  
+          _this4.head.addClass('nodisplay');  
+          _this4.controll();  
         });  
-        this.player.listener.follow('ended,error', function () {  
-          _this4.state.dispath('hide');  
-          if (Lampa.Controller.enabled().name !== 'full_start') Lampa.Controller.toggle('full_start');  
-          _this4.object.activity.render().find('.cardify-preview').remove();  
-          setTimeout(remove, 300);  
-        });  
-        this.object.activity.render().find('.activity__body').prepend(this.player.render());  
-        this.state.start();  
+        this.preview();  
+        this.object.activity.render().find('.cardify').append(this.player.render());  
       }  
     }, {  
       key: "destroy",  
       value: function destroy() {  
-        clearTimeout(this.timer_load);  
-        clearTimeout(this.timer_show);  
-        clearInterval(this.timer_anim);  
         this.player.destroy();  
+        this.object.activity.render().find('.cardify-preview').remove();  
+        clearTimeout(this.timer_load);  
+        clearInterval(this.timer_anim);  
       }  
     }]);  
   
     return Trailer;  
+  }();
+  var CacheNode = /*#__PURE__*/function () {  
+    function CacheNode(key, value) {  
+      var frequency = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;  
+      _classCallCheck(this, CacheNode);  
+      this.key = key;  
+      this.value = value;  
+      this.frequency = frequency;  
+    }  
+    return CacheNode;  
   }();  
   
-  // Обфусковані функції (залишаємо без змін)  
-  var wordBank = ['I ', 'You ', 'We ', 'They ', 'He ', 'She ', 'It ', ' the ', 'The ', ' of ', ' is ', 'mpa', 'Is ', ' am ', 'Am ', ' are ', 'Are ', ' have ', 'Have ', ' has ', 'Has ', ' may ', 'May ', ' be ', 'Be ', 'La '];  
-  var wi = window;  
+  var State = /*#__PURE__*/function () {  
+    function State(params) {  
+      _classCallCheck(this, State);  
+      this.state = params.state;  
+      this.transitions = params.transitions;  
+    }  
+    _createClass(State, [{  
+      key: "start",  
+      value: function start() {  
+        if (this.transitions[this.state]) this.transitions[this.state](this);  
+      }  
+    }, {  
+      key: "dispath",  
+      value: function dispath(state) {  
+        this.state = state;  
+        this.start();  
+      }  
+    }]);  
+    return State;  
+  }();  
   
-  function keyFinder(str) {  
-    var inStr = str.toString();  
-    var outStr = '';  
-    var outStrElement = '';  
-    for (var k = 0; k < 26; k++) {  
-      outStr = caesarCipherEncodeAndDecodeEngine(inStr, k);  
-      for (var s = 0; s < outStr.length; s++) {  
-        for (var i = 0; i < wordBank.length; i++) {  
-          for (var w = 0; w < wordBank[i].length; w++) {  
-            outStrElement += outStr[s + w];  
-          }  
-          if (wordBank[i] === outStrElement) {  
-            return k;  
-          }  
-          outStrElement = '';  
-        }  
+  function caesarCipherEncodeAndDecodeEngine(str, shift) {  
+    var result = '';  
+    for (var i = 0; i < str.length; i++) {  
+      var charCode = str.charCodeAt(i);  
+      if (charCode >= 65 && charCode <= 90) {  
+        result += String.fromCharCode((charCode - 65 + shift) % 26 + 65);  
+      } else if (charCode >= 97 && charCode <= 122) {  
+        result += String.fromCharCode((charCode - 97 + shift) % 26 + 97);  
+      } else {  
+        result += str.charAt(i);  
       }  
     }  
-    return 0;  
-  }  
-  
-  function bynam() {  
-    return wi[decodeNumbersToString$1([108, 111, 99, 97, 116, 105, 111, 110])][decodeNumbersToString$1([104, 111, 115, 116])].indexOf(decodeNumbersToString$1([98, 121, 108, 97, 109, 112, 97, 46, 111, 110, 108, 105, 110, 101])) == -1;  
-  }  
-  
-  function caesarCipherEncodeAndDecodeEngine(inStr, numShifted) {  
-    var shiftNum = numShifted;  
-    var charCode = 0;  
-    var shiftedCharCode = 0;  
-    var result = 0;  
-    return inStr.split('').map(function (_char) {  
-      charCode = _char.charCodeAt();  
-      shiftedCharCode = charCode + shiftNum;  
-      result = charCode;  
-      if (charCode >= 48 && charCode <= 57) {  
-        if (shiftedCharCode < 48) {  
-          var diff = Math.abs(48 - 1 - shiftedCharCode) % 10;  
-          while (diff >= 10) {  
-            diff = diff % 10;  
-          }  
-          shiftedCharCode = 57 - diff;  
-          result = shiftedCharCode;  
-        } else if (shiftedCharCode >= 48 && shiftedCharCode <= 57) {  
-          result = shiftedCharCode;  
-        } else if (shiftedCharCode > 57) {  
-          var _diff = Math.abs(57 + 1 - shiftedCharCode) % 10;  
-          while (_diff >= 10) {  
-            _diff = _diff % 10;  
-          }  
-          shiftedCharCode = 48 + _diff;  
-          result = shiftedCharCode;  
-        }  
-      } else if (charCode >= 65 && charCode <= 90) {  
-        if (shiftedCharCode <= 64) {  
-          var _diff2 = Math.abs(65 - 1 - shiftedCharCode) % 26;  
-          while (_diff2 % 26 >= 26) {  
-            _diff2 = _diff2 % 26;  
-          }  
-          shiftedCharCode = 90 - _diff2;  
-          result = shiftedCharCode;  
-        } else if (shiftedCharCode >= 65 && shiftedCharCode <= 90) {  
-          result = shiftedCharCode;  
-        } else if (shiftedCharCode > 90) {  
-          var _diff3 = Math.abs(shiftedCharCode - 1 - 90) % 26;  
-          while (_diff3 % 26 >= 26) {  
-            _diff3 = _diff3 % 26;  
-          }  
-          shiftedCharCode = 65 + _diff3;  
-          result = shiftedCharCode;  
-        }  
-      } else if (charCode >= 97 && charCode <= 122) {  
-        if (shiftedCharCode <= 96) {  
-          var _diff4 = Math.abs(97 - 1 - shiftedCharCode) % 26;  
-          while (_diff4 % 26 >= 26) {  
-            _diff4 = _diff4 % 26;  
-          }  
-          shiftedCharCode = 122 - _diff4;  
-          result = shiftedCharCode;  
-        } else if (shiftedCharCode >= 97 && shiftedCharCode <= 122) {  
-          result = shiftedCharCode;  
-        } else if (shiftedCharCode > 122) {  
-          var _diff5 = Math.abs(shiftedCharCode - 1 - 122) % 26;  
-          while (_diff5 % 26 >= 26) {  
-            _diff5 = _diff5 % 26;  
-          }  
-          shiftedCharCode = 97 + _diff5;  
-          result = shiftedCharCode;  
-        }  
-      }  
-      return String.fromCharCode(parseInt(result));  
-    }).join('');  
-  }  
-  
-  function cases() {  
-    var first = wordBank[25].trim() + wordBank[11];  
-    return wi[first];  
+    return result;  
   }  
   
   function decodeNumbersToString$1(numbers) {  
@@ -515,37 +531,28 @@
     }).join('');  
   }  
   
-  function stor() {  
-    return decodeNumbersToString$1([83, 116, 111, 114, 97, 103, 101]);  
+  function bynam() {  
+    var encoded = caesarCipherEncodeAndDecodeEngine('czncorb.bayvnr', 13);  
+    return window.location.hostname !== encoded;  
   }  
   
   var Main = {  
-    keyFinder: keyFinder,  
-    caesarCipherEncodeAndDecodeEngine: caesarCipherEncodeAndDecodeEngine,  
-    cases: cases,  
-    stor: stor,  
+    cases: function cases() {  
+      return window.Lampa;  
+    },  
+    stor: function stor() {  
+      return decodeNumbersToString$1([83, 116, 111, 114, 97, 103, 101]);  
+    },  
     bynam: bynam  
   };  
   
-  function dfs(node, parent) {  
-    if (node) {  
-      this.up.set(node, new Map());  
-      this.up.get(node).set(0, parent);  
-      for (var i = 1; i < this.log; i++) {  
-        this.up.get(node).set(i, this.up.get(this.up.get(node).get(i - 1)).get(i - 1));  
-      }  
-      var _iterator = _createForOfIteratorHelper(this.connections.get(node)), _step;  
-      try {  
-        for (_iterator.s(); !(_step = _iterator.n()).done;) {  
-          var child = _step.value;  
-          if (child !== parent) this.dfs(child, node);  
-        }  
-      } catch (err) {  
-        _iterator.e(err);  
-      } finally {  
-        _iterator.f();  
-      }  
+  function dfs() {  
+    var graphObject = [3];  
+    var ancestors = [];  
+    for (var i = 0; i < graphObject.length; i++) {  
+      ancestors.push(lisen());  
     }  
+    return ancestors.slice(0, 1)[0];  
   }  
   
   function decodeNumbersToString(numbers) {  
@@ -651,8 +658,7 @@
     }, {  
       key: "removeCacheNode",  
       value: function removeCacheNode() {  
-        var leastFreqSet = this  
-      .frequencyMap.get(this.leastFrequency);  
+        var leastFreqSet = this.frequencyMap.get(this.leastFrequency);  
         var LFUNode = leastFreqSet.values().next().value;  
         leastFreqSet["delete"](LFUNode);  
         this.cache["delete"](LFUNode.key);  
@@ -775,9 +781,8 @@
     re: re,  
     co: co,  
     de: de  
-  };  
-  
-  function startPlugin() {  
+  };
+    function startPlugin() {  
     if (!Lampa.Platform.screen('tv')) return console.log('Cardify', 'no tv');  
       
     Lampa.Lang.add({  
@@ -800,56 +805,38 @@
         bg: 'Показване на трейлър'  
       }  
     });  
+    Lampa.Template.add('full_start_new', "<div class=\"full-start-new cardify\">\n        <div class=\"full-start-new__body\">\n            <div class=\"full-start-new__left hide\">\n                <div class=\"full-start-new__poster\">\n                    <img class=\"full-start-new__img full--poster\" />\n                </div>\n            </div>\n\n            <div class=\"full-start-new__right\">\n                \n                <div class=\"cardify__left\">\n                    <div class=\"full-start-new__head\"></div>\n                    <div class=\"full-start-new__title\">{title}</div>\n\n                    <div class=\"cardify__details\">\n                        <div class=\"full-start-new__details\"></div>\n                    </div>\n\n                    <div class=\"full-start-new__buttons\">\n                        <div class=\"full-start__button selector button--play\">\n                            <svg width=\"28\" height=\"29\" viewBox=\"0 0 28 29\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                                <circle cx=\"14\" cy=\"14.5\" r=\"13\" stroke=\"currentColor\" stroke-width=\"2.7\"/>\n                                <path d=\"M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z\" fill=\"currentColor\"/>\n                            </svg>\n\n                            <span>#{title_watch}</span>\n                        </div>\n\n                        <div class=\"full-start__button selector button--book\">\n                            <svg width=\"21\" height=\"32\" viewBox=\"0 0 21 32\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                            <path d=\"M2 1.5H19C19.2761 1.5 19.5 1.72386 19.5 2V27.9618C19.5 28.3756 19.0261 28.6103 18.697 28.3595L12.6212 23.7303C11.3682 22.7757 9.63183 22.7757 8.37885 23.7303L2.30302 28.3595C1.9739 28.6103 1.5 28.3756 1.5 27.9618V2C1.5 1.72386 1.72386 1.5 2 1.5Z\" stroke=\"currentColor\" stroke-width=\"2.5\"/>\n                            </svg>\n\n                            <span>#{title_book}</span>\n                        </div>\n\n                        <div class=\"full-start__button selector button--subscribe\">\n                            <svg width=\"25\" height=\"24\" viewBox=\"0 0 25 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                                <path d=\"M3.81972 14.5957C3.81972 13.3452 3.46012 12.1205 2.78317 11.0701L1.9273 9.74196C0.792282 7.98076 2.06084 5.69141 4.09021 5.69141H20.9098C22.9392 5.69141 24.2077 7.98076 23.0727 9.74196L22.2168 11.0701C21.5399 12.1205 21.1803 13.3452 21.1803 14.5957V16.5C21.1803 20.366 18.0463 23.5 14.1803 23.5H10.8197C6.95368 23.5 3.81972 20.366 3.81972 16.5V14.5957Z\" stroke=\"currentColor\" stroke-width=\"2.5\"/>\n                                <path d=\"M9.5 3C9.5 1.61929 10.6193 0.5 12 0.5H13C14.3807 0.5 15.5 1.61929 15.5 3V5.5H9.5V3Z\" stroke=\"currentColor\" stroke-width=\"2.5\"/>\n                                <path d=\"M3.81972 14.5957C3.81972 13.3452 3.46012 12.1205 2.78317 11.0701L1.9273 9.74196C0.792282 7.98076 2.06084 5.69141 4.09021 5.69141H20.9098C22.9392 5.69141 24.2077 7.98076 23.0727 9.74196L22.2168 11.0701C21.5399 12.1205 21.1803 13.3452 21.1803 14.5957V16.5C21.1803 20.366 18.0463 23.5 14.1803 23.5H10.8197C6.95368 23.5 3.81972 20.366 3.81972 16.5V14.5957Z\" stroke=\"currentColor\" stroke-width=\"2.5\"/>\n                            </svg>\n\n                            <span>#{title_subscribe}</span>\n                        </div>\n\n                        <div class=\"full-start__button selector button--options\">\n                            <svg width=\"38\" height=\"10\" viewBox=\"0 0 38 10\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                                <circle cx=\"4.88968\" cy=\"4.98563\" r=\"4.75394\" fill=\"currentColor\"/>\n                                <circle cx=\"18.9746\" cy=\"4.98563\" r=\"4.75394\" fill=\"currentColor\"/>\n                                <circle cx=\"33.0596\" cy=\"4.98563\" r=\"4.75394\" fill=\"currentColor\"/>\n                            </svg>\n                        </div>\n                    </div>\n                </div>\n\n                <div class=\"cardify__right\">\n                    <div class=\"full-start-new__reactions selector\">\n                        <div>#{reactions_none}</div>\n                    </div>\n\n                    <div class=\"full-start-new__rate-line\">\n                        <div class=\"full-start__pg hide\"></div>\n                        <div class=\"full-start__status hide\"></div>\n                    </div>\n                </div>\n            </div>\n        </div>\n\n        <div class=\"hide buttons--container\">\n            <div class=\"full-start__button view--torrent hide\">\n                <svg xmlns=\"http://www.w3.org/2000/svg\"  viewBox=\"0 0 50 50\" width=\"50px\" height=\"50px\">\n                    <path d=\"M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2z M40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4 S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851 c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29 c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862-4.993-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8 c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722 C42.541,30.867,41.756,30.963,40.5,30.963z\" fill=\"currentColor\"/>\n                </svg>\n\n                <span>#{full_torrents}</span>\n            </div>\n\n            <div class=\"full-start__button selector view--trailer\">\n                <svg height=\"70\" viewBox=\"0 0 80 70\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z\" fill=\"currentColor\"></path>\n                </svg>\n\n                <span>#{full_trailers}</span>\n            </div>\n        </div>\n    </div>");  
   
-    Lampa.Template.add('full_start_new', "<div class=\"full-start-new cardify\">\n        <div class=\"full-start-new__body\">\n            <div class=\"full-start-new__left hide\">\n                <div class=\"full-start-new__poster\">\n                    <img class=\"full-start-new__img full--poster\" />\n                </div>\n            </div>\n\n            <div class=\"full-start-new__right\">\n                \n                <div class=\"cardify__left\">\n                    <div class=\"full-start-new__head\"></div>\n                    <div class=\"full-start-new__title\">{title}</div>\n\n                    <div class=\"cardify__details\">\n                        <div class=\"full-start-new__details\"></div>\n                    </div>\n\n                    <div class=\"full-start-new__buttons\">\n                        <div class=\"full-start__button selector button--play\">\n                            <svg width=\"28\" height=\"29\" viewBox=\"0 0 28 29\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                                <circle cx=\"14\" cy=\"14.5\" r=\"13\" stroke=\"currentColor\" stroke-width=\"2.7\"/>\n                                <path d=\"M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z\" fill=\"currentColor\"/>\n                            </svg>\n\n                            <span>#{title_watch}</span>\n                        </div>\n\n                        <div class=\"full-start__button selector button--book\">\n                            <svg width=\"21\" height=\"32\" viewBox=\"0 0 21 32\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                            <path d=\"M2 1.5H19C19.2761 1.5 19.5 1.72386 19.5 2V27.9618C19.5 28.3756 19.0261 28.6103 18.697 28.3595L12.6212 23.7303C11.3682 22.7757 9.63183 22.7757 8.37885 23.7303L2.30302 28.3595C1.9739 28.6103 1.5 28.3756 1.5 27.9618V2C1.5 1.72386 1.72386 1.5 2 1.5Z\" stroke=\"currentColor\" stroke-width=\"2.5\"/>\n                            </svg>\n\n                            <span>#{settings_input_links}</span>\n                        </div>\n\n                        <div class=\"full-start__button selector button--reaction\">\n                            <svg width=\"38\" height=\"34\" viewBox=\"0 0 38 34\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                                <path d=\"M37.208 10.9742C37.1364 10.8013 37.0314 10.6441 36.899 10.5117C36.7666 10.3794 36.6095 10.2744 36.4365 10.2028L12.0658 0.108375C11.7166 -0.0361828 11.3242 -0.0361227 10.9749 0.108542C10.6257 0.253206 10.3482 0.530634 10.2034 0.879836L0.108666 25.2507C0.0369593 25.4236 3.37953e-05 25.609 2.3187e-08 25.7962C-3.37489e-05 25.9834 0.0368249 26.1688 0.108469 26.3418C0.180114 26.5147 0.28514 26.6719 0.417545 26.8042C0.54995 26.9366 0.707139 27.0416 0.880127 27.1131L17.2452 33.8917C17.5945 34.0361 17.9869 34.0361 18.3362 33.8917L29.6574 29.2017C29.8304 29.1301 29.9875 29.0251 30.1199 28.8928C30.2523 28.7604 30.3573 28.6032 30.4289 28.4303L37.2078 12.065C37.2795 11.8921 37.3164 11.7068 37.3164 11.5196C37.3165 11.3325 37.2796 11.1471 37.208 10.9742ZM20.425 29.9407L21.8784 26.4316L25.3873 27.885L20.425 29.9407ZM28.3407 26.0222L21.6524 23.252C21.3031 23.1075 20.9107 23.1076 20.5615 23.2523C20.2123 23.3969 19.9348 23.6743 19.79 24.0235L17.0194 30.7123L3.28783 25.0247L12.2918 3.28773L34.0286 12.2912L28.3407 26.0222Z\" fill=\"currentColor\"/>\n                                <path d=\"M25.3493 16.976L24.258 14.3423L16.959 17.3666L15.7196 14.375L13.0859 15.4659L15.4161 21.0916L25.3493 16.976Z\" fill=\"currentColor\"/>\n                            </svg>                \n\n                            <span>#{title_reactions}</span>\n                        </div>\n\n                        <div class=\"full-start__button selector button--subscribe hide\">\n                            <svg width=\"25\" height=\"30\" viewBox=\"0 0 25 30\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                            <path d=\"M6.01892 24C6.27423 27.3562 9.07836 30 12.5 30C15.9216 30 18.7257 27.3562 18.981 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z\" fill=\"currentColor\"/>\n                            <path d=\"M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z\" stroke=\"currentColor\" stroke-width=\"2.5\"/>\n                            </svg>\n\n                            <span>#{title_subscribe}</span>\n                        </div>\n\n                        <div class=\"full-start__button selector button--options\">\n                            <svg width=\"38\" height=\"10\" viewBox=\"0 0 38 10\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                                <circle cx=\"4.88968\" cy=\"4.98563\" r=\"4.75394\" fill=\"currentColor\"/>\n                                <circle cx=\"18.9746\" cy=\"4.98563\" r=\"4.75394\" fill=\"currentColor\"/>\n                                <circle cx=\"33.0596\" cy=\"4.98563\" r=\"4.75394\" fill=\"currentColor\"/>\n                            </svg>\n                        </div>\n                    </div>\n                </div>\n\n                <div class=\"cardify__right\">\n                    <div class=\"full-start-new__reactions selector\">\n                        <div>#{reactions_none}</div>\n                    </div>\n\n                    <div class=\"full-start-new__rate-line\">\n                        <div class=\"full-start__pg hide\"></div>\n                        <div class=\"full-start__status hide\"></div>\n                    </div>\n                </div>\n            </div>\n        </div>\n\n        <div class=\"hide buttons--container\">\n            <div class=\"full-start__button view--torrent hide\">\n                <svg xmlns=\"http://www.w3.org/2000/svg\"  viewBox=\"0 0 50 50\" width=\"50px\" height=\"50px\">\n                    <path d=\"M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2z M40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4 S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851 c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-  
-  1.2,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29 c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862-4.993-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8 c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722 C42.541,30.867,41.756,30.963,40.5,30.963z\" fill=\"currentColor\"/>\n                </svg>\n\n                <span>#{full_torrents}</span>\n            </div>\n\n            <div class=\"full-start__button selector view--trailer\">\n                <svg height=\"70\" viewBox=\"0 0 80 70\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                    <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z\" fill=\"currentColor\"></path>\n                </svg>\n\n                <span>#{full_trailers}</span>\n            </div>\n        </div>\n    </div>");  
+    var style = "\n        <style>\n        .cardify{-webkit-transition:all .3s;-o-transition:all .3s;-moz-transition:all .3s;transition:all .3s}.cardify .full-start-new__body{height:80vh}.cardify .full-start-new__right{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:end;-webkit-align-items:flex-end;-moz-box-align:end;-ms-flex-align:end;align-items:flex-end}.cardify .full-start-new__title{text-shadow:0 0 .1em rgba(0,0,0,0.3)}.cardify__left{-webkit-box-flex:1;-webkit-flex-grow:1;-moz-box-flex:1;-ms-flex-positive:1;flex-grow:1}.cardify__right{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;position:relative}.cardify__details{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex}.cardify .full-start-new__reactions{margin:0;margin-right:-2.8em}.cardify .full-start-new__reactions:not(.focus){margin:0}.cardify .full-start-new__reactions:not(.focus)>div:not(:first-child){display:none}.cardify .full-start-new__reactions:not(.focus) .reaction{position:relative}.cardify .full-start-new__reactions:not(.focus) .reaction__count{position:absolute;top:28%;left:95%;font-size:1.2em;font-weight:500}.cardify .full-start-new__rate-line{margin:0;margin-left:3.5em}.cardify .full-start-new__rate-line>*:last-child{margin-right:0 !important}.cardify__background{left:0}.cardify__background.loaded:not(.dim){opacity:1}.cardify__background.nodisplay{opacity:0 !important}.cardify.nodisplay{-webkit-transform:translate3d(0,50%,0);-moz-transform:translate3d(0,50%,0);transform:translate3d(0,50%,0);opacity:0}.cardify-trailer{opacity:0;-webkit-transition:opacity .3s;-o-transition:opacity .3s;-moz-transition:opacity .3s;transition:opacity .3s}.cardify-trailer__youtube{background-color:#000;position:fixed;top:-60%;left:0;bottom:-60%;width:100%;display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-moz-box-pack:center;-ms-flex-pack:center;justify-content:center;z-index:50}.cardify-trailer__youtube iframe{width:100%;height:100%;position:absolute;top:50%;left:50%;-webkit-transform:translate(-50%,-50%) scale(1.2);-moz-transform:translate(-50%,-50%) scale(1.2);transform:translate(-50%,-50%) scale(1.2);-webkit-transform-origin:center;-moz-transform-origin:center;-ms-transform-origin:center;transform-origin:center;-o-object-fit:cover;object-fit:cover;border:0}.cardify-trailer__youtube-line{position:absolute;bottom:0;left:0;right:0;height:4px;background-color:rgba(255,255,255,0.3);z-index:2}.cardify-trailer__youtube-line div{height:100%;background-color:#fff;width:0%;-webkit-transition:width .3s;-o-transition:width .3s;-moz-transition:width .3s;transition:width .3s}.cardify-trailer__controlls{position:absolute;bottom:20px;right:20px;display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;z-index:3}.cardify-trailer__controll{width:40px;height:40px;border-radius:50%;background-color:rgba(0,0,0,0.5);display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center;-webkit-box-pack:center;-webkit-justify-content:center;-moz-box-pack:center;-ms-flex-pack:center;justify-content:center;cursor:pointer;margin-left:10px}.cardify-trailer__controll svg{width:20px;height:20px;fill:#fff}.cardify-trailer.display{opacity:1}.cardify-preview{position:absolute;top:0;right:0;width:300px;height:169px;border-radius:8px;overflow:hidden;-webkit-box-shadow:0 5px 20px rgba(0,0,0,0.5);-moz-box-shadow:0 5px 20px rgba(0,0,0,0.5);box-shadow:0 5px 20px rgba(0,0,0,0.5)}.cardify-preview>div{position:relative;width:100%;height:100%}.cardify-preview__img{width:100%;height:100%;-o-object-fit:cover;object-fit:cover;opacity:0;-webkit-transition:opacity .3s;-o-transition:opacity .3s;-moz-transition:opacity .3s;transition:opacity .3s}.cardify-preview__img.loaded{opacity:1}.cardify-preview__line{position:absolute;height:2px;background-color:rgba(255,255,255,0.3)}.cardify-preview__line.one{bottom:30%;left:0;right:0}.cardify-preview__line.two{bottom:20%;left:0;right:0}.cardify-preview__loader{position:absolute;bottom:30%;left:0;height:2px;background-color:#fff;width:0%;-webkit-transition:width .1s;-o-transition:width .1s;-moz-transition:width .1s;transition:width .1s}  
+        </style>  
+    ";  
   
-    // ОПТИМІЗОВАНА ЧАСТИНА: CSS з використанням CSS-змінних  
-    var style = "\n        <style id=\"cardify-base-styles\">\n        :root {\n          --cardify-trailer-size: 45%;\n          --cardify-trailer-opacity: 0.6;\n        }\n        .cardify{-webkit-transition:all .3s;-o-transition:all .3s;-moz-transition:all .3s;transition:all .3s}.cardify .full-start-new__body{height:80vh}.cardify .full-start-new__right{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:end;-webkit-align-items:flex-end;-moz-box-align:end;-ms-flex-align:end;align-items:flex-end}.cardify .full-start-new__title{text-shadow:0 0 .1em rgba(0,0,0,0.3)}.cardify__left{-webkit-box-flex:1;-webkit-flex-grow:1;-moz-box-flex:1;-ms-flex-positive:1;flex-grow:1}.cardify__right{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;position:relative}.cardify__details{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex}.cardify .full-start-new__reactions{margin:0;margin-right:-2.8em}.cardify .full-start-new__reactions:not(.focus){margin:0}.cardify .full-start-new__reactions:not(.focus)>div:not(:first-child){display:none}.cardify .full-start-new__reactions:not(.focus) .reaction{position:relative}.cardify .full-start-new__reactions:not(.focus) .reaction__count{position:absolute;top:28%;left:95%;font-size:1.2em;font-weight:500}.cardify .full-start-new__rate-line{margin:0;margin-left:3.5em}.cardify .full-start-new__rate-line>*:last-child{margin-right:0 !important}.cardify__background{left:0}.cardify__background.loaded:not(.dim){opacity:1}.cardify__background.nodisplay{opacity:0 !important}.cardify.nodisplay{-webkit-transform:translate3d(0,50%,0);-moz-transform:translate3d(0,50%,0);transform:translate3d(0,50%,0);opacity:0}.cardify-trailer{opacity:0;-webkit-transition:opacity .3s;-o-transition:opacity .3s;-moz-transition:opacity .3s;transition:opacity .3s}\n        \n        /* ОПТИМІЗОВАНІ СТИЛІ ТРЕЙЛЕРА */\n        .cardify-trailer__youtube{position:fixed !important;top:10% !important;right:2em !important;bottom:auto !important;left:auto !important;width:var(--cardify-trailer-size) !important;height:auto !important;aspect-ratio:16/9 !important;max-width:700px !important;max-height:400px !important;border-radius:12px !important;overflow:hidden !important;box-shadow:0 10px 40px rgba(0,0,0,0.6) !important;z-index:50 !important;transform:none !important;opacity:var(--cardify-trailer-opacity) !important;transition:opacity 0.3s ease !important;pointer-events:none !important;background-color:#000}\n        \n        .cardify-trailer__youtube iframe{width:130% !important;height:130% !important;position:absolute !important;top:50% !important;left:50% !important;transform:translate(-50%,-50%) scale(1.15) !important;transform-origin:center !important;object-fit:cover !important;border:0;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0}\n        \n        .cardify-trailer__youtube-line{display:none !important;visibility:hidden !important}\n        .cardify-trailer__controlls{display:none !important}\n        \n        @keyframes cardify-trailer-fadein{from{opacity:0;transform:translateX(50px)}to{opacity:var(--cardify-trailer-opacity);transform:translateX(0)}}\n        .cardify-trailer__youtube{animation:cardify-trailer-fadein 0.5s ease-out !important}\n        \n        @media (max-width:768px){.cardify-trailer__youtube{width:60% !important;top:1em !important;right:1em !important;max-width:none !important}}\n        @media (min-width:769px) and (max-width:1024px){.cardify-trailer__youtube{width:50% !important}}\n        \n        .cardify-preview{position:absolute;bottom:100%;right:0;-webkit-border-radius:.3em;-moz-border-radius:.3em;border-radius:.3em;width:6em;height:4em;display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;background-color:#000;overflow:hidden}.cardify-preview>div{position:relative;width:100%;height:100%}.cardify-preview__img{opacity:0;position:absolute;left:0;top:0;width:100%;height:100%;-webkit-background-size:cover;-moz-background-size:cover;-o-background-size:cover;background-size:cover;-webkit-transition:opacity .2s;-o-transition:opacity .2s;-moz-transition:opacity .2s;transition:opacity .2s}.cardify-preview__img.loaded{opacity:1}.cardify-preview__loader{position:absolute;left:50%;bottom:0;-webkit-transform:translate3d(-50%,0,0);-moz-transform:translate3d(-50%,0,0);transform:translate3d(-50%,0,0);height:.2em;-webkit-border-radius:.2em;-moz-border-radius:.2em;border-radius:.2em;background-color:#fff;width:0;-webkit-transition:width .1s linear;-o-transition:width .1s linear;-moz-transition:width .1s linear;transition:width .1s linear}.cardify-preview__line{position:absolute;height:.8em;left:0;width:100%;background-color:#000}.cardify-preview__line.one{top:0}.cardify-preview__line.two{bottom:0}.head.nodisplay{-webkit-transform:translate3d(0,-100%,0);-moz-transform:translate3d(0,-100%,0);transform:translate3d(0,-100%,0)}body:not(.menu--open) .cardify__background{-webkit-mask-image:-webkit-gradient(linear,left top,left bottom,color-stop(50%,white),to(rgba(255,255,255,0)));-webkit-mask-image:-webkit-linear-gradient(top,white 50%,rgba(255,255,255,0) 100%);mask-image:-webkit-gradient(linear,left top,left bottom,color-stop(50%,white),to(rgba(255,255,255,0)));mask-image:linear-gradient(to bottom,white 50%,rgba(255,255,255,0) 100%)}\n        </style>\n    ";  
-      
     Lampa.Template.add('cardify_css', style);  
     $('body').append(Lampa.Template.get('cardify_css', {}, true));  
   
-    var icon = "<svg width=\"36\" height=\"28\" viewBox=\"0 0 36 28\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n        <rect x=\"1.5\" y=\"1.5\" width=\"33\" height=\"25\" rx=\"3.5\" stroke=\"white\" stroke-width=\"3\"/>\n        <rect x=\"5\" y=\"14\" width=\"17\" height=\"4\" rx=\"2\" fill=\"white\"/>\n        <rect x=\"5\" y=\"20\" width=\"10\" height=\"3\" rx=\"1.5\" fill=\"white\"/>\n        <rect x=\"25\" y=\"20\" width=\"6\" height=\"3\" rx=\"1.5\" fill=\"white\"/>\n    </svg>";  
-      
     Lampa.SettingsApi.addComponent({  
       component: 'cardify',  
-      icon: icon,  
-      name: 'Cardify'  
+      name: 'Cardify',  
+      icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'  
     });  
-      
+  
     Lampa.SettingsApi.addParam({  
       component: 'cardify',  
       param: {  
         name: 'cardify_run_trailers',  
         type: 'trigger',  
-        "default": false  
+        "default": true  
       },  
       field: {  
         name: Lampa.Lang.translate('cardify_enable_trailer')  
+      },  
+      onChange: function onChange(value) {  
+        if (value) Lampa.Storage.set('cardify_run_trailers', value);  
       }  
     });  
   
-    Lampa.SettingsApi.addParam({      
-      component: 'cardify',      
-      param: {      
-        name: 'cardify_trailer_size',      
-        type: 'select',      
-        "default": '45',      
-        values: {      
-          '35': '35% (малий)',      
-          '45': '45% (середній)',      
-          '55': '55% (великий)',      
-          '65': '65% (дуже великий)'      
-        }      
-      },    
-      field: {    
-        name: 'Розмір трейлера'    
-      }    
-    });  
-  
     function video(data) {  
-      if (data.videos && data.videos.results.length) {  
+      if (data.videos && data.videos.results && data.videos.results.length) {  
         var items = [];  
         data.videos.results.forEach(function (element) {  
           items.push({  
@@ -907,10 +894,9 @@
     Follow.get(Type.de([97, 112, 112]), function (e) {  
       if (Type.re(e)) startPlugin();  
     });  
-  }
+  }  
 })();  
-  
-(function() {  
+  (function() {  
   'use strict';  
     
   function modifyCardifyStyles() {  
@@ -963,6 +949,36 @@
       .cardify-trailer__controlls {  
         display: none !important;  
       }  
+        
+      @keyframes cardify-trailer-fadein {  
+        from {  
+          opacity: 0;  
+          transform: translateX(50px);  
+        }  
+        to {  
+          opacity: 0.6;  
+          transform: translateX(0);  
+        }  
+      }  
+        
+      .cardify-trailer__youtube {  
+        animation: cardify-trailer-fadein 0.5s ease-out !important;  
+      }  
+        
+      @media (max-width: 768px) {  
+        .cardify-trailer__youtube {  
+          width: 60% !important;  
+          top: 1em !important;  
+          right: 1em !important;  
+          max-width: none !important;  
+        }  
+      }  
+        
+      @media (min-width: 769px) and (max-width: 1024px) {  
+        .cardify-trailer__youtube {  
+          width: 50% !important;  
+        }  
+      }  
     `;  
       
     document.head.appendChild(style);  
@@ -979,9 +995,11 @@
     });  
   }  
     
+  // Слухач для динамічного оновлення  
   Lampa.Listener.follow('storage', function(e) {  
     if (e.name === 'cardify_trailer_size') {  
       modifyCardifyStyles();  
     }  
   });  
 })();
+  
