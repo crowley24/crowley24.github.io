@@ -1165,7 +1165,7 @@
         position: fixed !important;  
         top: auto !important;  
         right: 0.5em !important;  
-        bottom: 10% !important;  
+        bottom: 3% !important;  
         left: auto !important;  
         height: auto !important;  
         aspect-ratio: 16/9 !important;  
