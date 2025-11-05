@@ -316,15 +316,22 @@
           play: function play() {
             _this.player.play();
           },
-          toggle: function toggle(state) {
-            clearTimeout(_this.timer_load);
-
-            if (Lampa.Controller.enabled().name == 'cardify_trailer') ; else if (Lampa.Controller.enabled().name == 'full_start' && _this.same()) {
-              state.start();
-            } else if (_this.player.display) {
-              state.dispath('hide');
-            }
-          },
+          toggle: function toggle(state) {  
+  clearTimeout(_this.timer_load);  
+    
+  // Видаліть або закоментуйте цей блок:  
+  // if (Lampa.Controller.enabled().name == 'cardify_trailer') ;   
+  // else if (Lampa.Controller.enabled().name == 'full_start' && _this.same()) {  
+  //   state.start();  
+  // } else if (_this.player.display) {  
+  //   state.dispath('hide');  
+  // }  
+    
+  // Замініть на:  
+  if (Lampa.Controller.enabled().name == 'full_start' && _this.same()) {  
+    state.start();  
+  }  
+  },
           hide: function hide() {
             _this.player.pause();
 
@@ -382,25 +389,35 @@
           Lampa.Controller.toggle('full_start');
         };
 
-        Lampa.Controller.add('cardify_trailer', {
-          toggle: function toggle() {
-            Lampa.Controller.clear();
-          },
-          enter: function enter() {
-            _this3.player.unmute();
-          },
-          left: out.bind(this),
-          up: out.bind(this),
-          down: out.bind(this),
-          right: out.bind(this),
-          back: function back() {
-            _this3.player.destroy();
-
-            _this3.object.activity.render().find('.cardify-preview').remove();
-
-            out();
-          }
-        });
+        Lampa.Controller.add('cardify_trailer', {  
+  toggle: function toggle() {  
+    Lampa.Controller.clear();  
+  },  
+  enter: function enter() {  
+    _this3.player.unmute();  
+  },  
+  left: function() {  
+    Lampa.Controller.toggle('full_start');  
+    Lampa.Controller.trigger('left');  
+  },  
+  up: function() {  
+    Lampa.Controller.toggle('full_start');  
+    Lampa.Controller.trigger('up');  
+  },  
+  down: function() {  
+    Lampa.Controller.toggle('full_start');  
+    Lampa.Controller.trigger('down');  
+  },  
+  right: function() {  
+    Lampa.Controller.toggle('full_start');  
+    Lampa.Controller.trigger('right');  
+  },  
+  back: function back() {  
+    _this3.player.destroy();  
+    _this3.object.activity.render().find('.cardify-preview').remove();  
+    out();  
+  }  
+});
         Lampa.Controller.toggle('cardify_trailer');
       }
     }, {
@@ -1127,121 +1144,116 @@
 
 (function() {        
   'use strict';        
-
-  // Перевірка наявності Lampa API  
-  if (typeof Lampa === 'undefined') {  
-    console.error('[Cardify] Lampa API не знайдено');  
-    return;  
+          
+  function modifyCardifyStyles() {        
+    const oldStyle = document.getElementById('cardify-compact-style');        
+    if (oldStyle) oldStyle.remove();        
+      
+    // Отримати розмір з налаштувань  
+    const trailerSize = Lampa.Storage.field('cardify_trailer_size') || '45';  
+            
+    const style = document.createElement('style');        
+    style.id = 'cardify-compact-style';        
+    style.textContent = `        
+      /* Трейлер на фоні справа з 60% прозорістю */        
+      .cardify-trailer__youtube {        
+        position: fixed !important;        
+        top: 10% !important;        
+        right: 2em !important;        
+        bottom: auto !important;        
+        left: auto !important;        
+        width: ${trailerSize}% !important;  /* <-- ДИНАМІЧНИЙ РОЗМІР */  
+        height: auto !important;        
+        aspect-ratio: 16/9 !important;        
+        max-width: 700px !important;        
+        max-height: 400px !important;        
+        border-radius: 12px !important;        
+        overflow: hidden !important;  
+        box-shadow: 0 10px 40px rgba(0,0,0,0.6) !important;        
+        z-index: 50 !important;        
+        transform: none !important;        
+        opacity: 0.6 !important;        
+        transition: opacity 0.3s ease !important;        
+        pointer-events: none !important;        
+      }        
+            
+      /* КРИТИЧНО: Агресивне масштабування для приховування чорних полос */      
+      .cardify-trailer__youtube iframe {      
+        width: 130% !important;      
+        height: 130% !important;      
+        position: absolute !important;      
+        top: 50% !important;      
+        left: 50% !important;      
+        transform: translate(-50%, -50%) scale(1.2) !important;      
+        transform-origin: center !important;      
+        object-fit: cover !important;      
+      }      
+            
+      /* Приховати чорні смуги YouTube */        
+      .cardify-trailer__youtube-line {        
+        display: none !important;        
+        visibility: hidden !important;      
+      }        
+              
+      /* Приховати контроли плеєра */        
+      .cardify-trailer__controlls {        
+        display: none !important;        
+      }      
+            
+      /* Анімація появи трейлера */        
+      @keyframes cardify-trailer-fadein {        
+        from {        
+          opacity: 0;        
+          transform: translateX(50px);        
+        }        
+        to {        
+          opacity: 0.6;        
+          transform: translateX(0);        
+        }        
+      }        
+              
+      .cardify-trailer__youtube {        
+        animation: cardify-trailer-fadein 0.5s ease-out !important;        
+      }        
+              
+      /* Адаптивність для мобільних */        
+      @media (max-width: 768px) {        
+        .cardify-trailer__youtube {        
+          width: 60% !important;        
+          top: 1em !important;        
+          right: 1em !important;        
+          max-width: none !important;        
+        }        
+      }        
+              
+      /* Для планшетів */        
+      @media (min-width: 769px) and (max-width: 1024px) {        
+        .cardify-trailer__youtube {        
+          width: 50% !important;        
+        }        
+      }        
+    `;        
+            
+    document.head.appendChild(style);        
+    console.log('[Cardify Compact] Стилі застосовано: трейлер на фоні справа з 60% прозорістю');        
+  }        
+          
+  // Запускаємо після завантаження Cardify        
+  if (window.appready) {        
+    setTimeout(modifyCardifyStyles, 1000);        
+  } else {        
+    Lampa.Listener.follow('app', function(e) {        
+      if (e.type === 'ready') {        
+        setTimeout(modifyCardifyStyles, 1000);        
+      }        
+    });        
   }  
     
-  let styleElement = null;  
-  let debounceTimer = null; 
-  
-function modifyCardifyStyles() {  
-    let trailerSize = parseInt(Lampa.Storage.field('cardify_trailer_size')) || 45;  
-      
-    // Валідація  
-    if (trailerSize < 20 || trailerSize > 80) {  
-      console.warn('[Cardify] Некоректний розмір:', trailerSize);  
-      trailerSize = 45;  
-    }  
-      
-    if (!styleElement) {  
-      styleElement = document.createElement('style');  
-      styleElement.id = 'cardify-compact-style';  
-      document.head.appendChild(styleElement);  
-    }  
-      
-    styleElement.textContent = `  
-      .cardify-trailer__youtube {  
-        position: fixed;  
-        top: 10%;  
-        right: 2em;  
-        width: ${trailerSize}%;  
-        max-width: 700px;  
-        max-height: 400px;  
-        aspect-ratio: 16/9;  
-        border-radius: 12px;  
-        overflow: hidden;  
-        box-shadow: 0 10px 40px rgba(0,0,0,0.6);  
-        z-index: 50;  
-        opacity: 0.6;  
-        transition: opacity 0.3s ease;  
-        pointer-events: none;  
-        animation: cardify-trailer-fadein 0.5s ease-out;  
-      }  
-        
-      .cardify-trailer__youtube iframe {  
-        width: 130%;  
-        height: 130%;  
-        position: absolute;  
-        top: 50%;  
-        left: 50%;  
-        transform: translate(-50%, -50%) scale(1.2);  
-        object-fit: cover;  
-      }  
-        
-      .cardify-trailer__youtube-line,  
-      .cardify-trailer__controlls {  
-        display: none;  
-      }  
-        
-      @keyframes cardify-trailer-fadein {  
-        from { opacity: 0; transform: translateX(50px); }  
-        to { opacity: 0.6; transform: translateX(0); }  
-      }  
-        
-      @media (max-width: 768px) {  
-        .cardify-trailer__youtube {  
-          width: 60%;  
-          top: 1em;  
-          right: 1em;  
-          max-width: none;  
-        }  
-      }  
-        
-      @media (min-width: 769px) and (max-width: 1024px) {  
-        .cardify-trailer__youtube { width: 50%; }  
-      }  
-    `;  
-      
-    console.log('[Cardify Compact] Стилі застосовано: трейлер з розміром', trailerSize + '%');  
-  }  
-    
-  function init() {  
-    modifyCardifyStyles();  
-      
-    // Слухач події storage з debounce  
-    Lampa.Listener.follow('storage', function(e) {  
-      if (e.name === 'cardify_trailer_size') {  
-        clearTimeout(debounceTimer);  
-        debounceTimer = setTimeout(function() {  
-          console.log('[Cardify] Розмір змінено на:', e.value);  
-          modifyCardifyStyles();  
-        }, 300);  
-      }  
-    });  
-  }  
-    
-  function cleanup() {  
-    if (styleElement) {  
-      styleElement.remove();  
-      styleElement = null;  
-    }  
-    clearTimeout(debounceTimer);  
-  }  
-    
-  // Ініціалізація  
-  if (window.appready) {  
-    setTimeout(init, 1000);  
-  } else {  
-    Lampa.Listener.follow('app', function(e) {  
-      if (e.type === 'ready') {  
-        setTimeout(init, 1000);  
-      }  
-    });  
-  }  
-    
-  // Очищення при вивантаженні  
-  window.addEventListener('beforeunload', cleanup);  
+  // Слухач події storage для динамічного оновлення розміру  
+  Lampa.Listener.follow('storage', function(e) {        
+    if (e.name === 'cardify_trailer_size') {        
+      console.log('[Cardify] Розмір змінено на:', e.value);        
+      modifyCardifyStyles();  // Перезастосувати стилі  
+    }        
+  });  
 })();
