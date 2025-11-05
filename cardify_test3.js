@@ -1163,9 +1163,9 @@
         
       .cardify-trailer__youtube {  
         position: fixed !important;  
-        top: 45% !important;  
+        top: auto !important;  
         right: 0.5em !important;  
-        bottom: auto !important;  
+        bottom: 10% !important;  
         left: auto !important;  
         height: auto !important;  
         aspect-ratio: 16/9 !important;  
