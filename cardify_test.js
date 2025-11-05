@@ -910,39 +910,42 @@
   }
 })();  
   
-// ОПТИМІЗОВАНА ЧАСТИНА: Динамічне оновлення розміру  
 (function() {  
   'use strict';  
     
-  // Функція оновлення CSS-змінних  
-  function updateTrailerSize() {  
+  function modifyCardifyStyles() {  
+    const oldStyle = document.getElementById('cardify-compact-style');  
+    if (oldStyle) oldStyle.remove();  
+      
     const trailerSize = Lampa.Storage.field('cardify_trailer_size') || '45';  
-    document.documentElement.style.setProperty('--cardify-trailer-size', trailerSize + '%');  
+      
+    const style = document.createElement('style');  
+    style.id = 'cardify-compact-style';  
+    style.textContent = `  
+      .cardify-trailer__youtube {  
+        position: fixed !important;  
+        width: ${trailerSize}% !important;  
+        /* ... інші стилі ... */  
+      }  
+    `;  
+      
+    document.head.appendChild(style);  
   }  
     
-  // Ініціалізація при завантаженні  
-  function init() {  
-    updateTrailerSize();  
-  }  
-    
-  // Слухач подій для зміни налаштувань  
-  var storageListener = function(e) {  
-    if (e.name === 'cardify_trailer_size') {  
-      console.log('[Cardify] Розмір змінено на:', e.value);  
-      updateTrailerSize();  
-    }  
-  };  
-    
-  // Запуск  
+  // Запуск БЕЗ затримки  
   if (window.appready) {  
-    init();  
+    modifyCardifyStyles();  
   } else {  
     Lampa.Listener.follow('app', function(e) {  
       if (e.type === 'ready') {  
-        init();  
+        modifyCardifyStyles();  
       }  
     });  
   }  
     
-  Lampa.Listener.follow('storage', storageListener);  
+  Lampa.Listener.follow('storage', function(e) {  
+    if (e.name === 'cardify_trailer_size') {  
+      modifyCardifyStyles();  
+    }  
+  });  
 })();
