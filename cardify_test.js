@@ -924,15 +924,42 @@
     style.textContent = `  
       .cardify-trailer__youtube {  
         position: fixed !important;  
+        top: 10% !important;  
+        right: 2em !important;  
+        bottom: auto !important;  
+        left: auto !important;  
         width: ${trailerSize}% !important;  
-        /* ... інші стилі ... */  
+        height: auto !important;  
+        aspect-ratio: 16/9 !important;  
+        max-width: 700px !important;  
+        max-height: 400px !important;  
+        border-radius: 12px !important;  
+        overflow: hidden !important;  
+        box-shadow: 0 10px 40px rgba(0,0,0,0.6) !important;  
+        z-index: 50 !important;  
+        transform: none !important;  
+        opacity: 0.6 !important;  
+        transition: opacity 0.3s ease !important;  
+        pointer-events: none !important;  
+        background-color: #000;  
+      }  
+        
+      .cardify-trailer__youtube iframe {  
+        width: 130% !important;  
+        height: 130% !important;  
+        position: absolute !important;  
+        top: 50% !important;  
+        left: 50% !important;  
+        transform: translate(-50%, -50%) scale(1.15) !important;  
+        transform-origin: center !important;  
+        object-fit: cover !important;  
+        border: 0;  
       }  
     `;  
       
     document.head.appendChild(style);  
   }  
     
-  // Запуск БЕЗ затримки  
   if (window.appready) {  
     modifyCardifyStyles();  
   } else {  
