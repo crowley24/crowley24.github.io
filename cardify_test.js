@@ -955,11 +955,20 @@
         object-fit: cover !important;  
         border: 0;  
       }  
+        
+      .cardify-trailer__youtube-line {  
+        display: none !important;  
+      }  
+        
+      .cardify-trailer__controlls {  
+        display: none !important;  
+      }  
     `;  
       
     document.head.appendChild(style);  
   }  
     
+  // Запуск БЕЗ затримки  
   if (window.appready) {  
     modifyCardifyStyles();  
   } else {  
