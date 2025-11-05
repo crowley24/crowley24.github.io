@@ -908,3 +908,41 @@
       if (Type.re(e)) startPlugin();  
     });  
   }
+})();  
+  
+// ОПТИМІЗОВАНА ЧАСТИНА: Динамічне оновлення розміру  
+(function() {  
+  'use strict';  
+    
+  // Функція оновлення CSS-змінних  
+  function updateTrailerSize() {  
+    const trailerSize = Lampa.Storage.field('cardify_trailer_size') || '45';  
+    document.documentElement.style.setProperty('--cardify-trailer-size', trailerSize + '%');  
+  }  
+    
+  // Ініціалізація при завантаженні  
+  function init() {  
+    updateTrailerSize();  
+  }  
+    
+  // Слухач подій для зміни налаштувань  
+  var storageListener = function(e) {  
+    if (e.name === 'cardify_trailer_size') {  
+      console.log('[Cardify] Розмір змінено на:', e.value);  
+      updateTrailerSize();  
+    }  
+  };  
+    
+  // Запуск  
+  if (window.appready) {  
+    init();  
+  } else {  
+    Lampa.Listener.follow('app', function(e) {  
+      if (e.type === 'ready') {  
+        init();  
+      }  
+    });  
+  }  
+    
+  Lampa.Listener.follow('storage', storageListener);  
+})();
