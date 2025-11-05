@@ -1158,8 +1158,8 @@
       /* Трейлер на фоні справа з 10% прозорістю */        
       .cardify-trailer__youtube {        
         position: fixed !important;        
-        top: 50% !important;        
-        right: 5em !important;        
+        top: 45% !important;        
+        right: 0em !important;        
         bottom: auto !important;        
         left: auto !important;        
         width: ${trailerSize}% !important;  /* <-- ДИНАМІЧНИЙ РОЗМІР */  
