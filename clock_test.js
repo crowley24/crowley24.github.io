@@ -123,10 +123,10 @@
         css: `      
           .custom-clock {      
             background: rgba(255, 255, 255, 0.1) !important;      
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;      
             border-radius: 12px !important;      
-            padding: 8px 16px !important;      
-            backdrop-filter: blur(10px) !important;      
+            padding: 8px 18px !important;      
+            backdrop-filter: blur(20px) !important;      
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;      
             font-size: 1em !important;      
             color: #fff !important;      
             margin-left: 10px !important;  
@@ -138,13 +138,13 @@
         css: `      
           .custom-clock {      
             background: #000 !important;      
-            border: 2px solid #0f0 !important;      
-            border-radius: 4px !important;      
-            padding: 8px 16px !important;      
+            border-radius: 6px !important;      
+            padding: 10px 20px !important;      
             font-family: 'Courier New', monospace !important;      
             font-size: 1.2em !important;      
             color: #0f0 !important;      
             text-shadow: 0 0 10px #0f0 !important;      
+            border: 2px solid #0f0 !important;      
             margin-left: 10px !important;  
           }      
         `      
@@ -153,97 +153,53 @@
         name: 'clockchanger_neon',      
         css: `      
           .custom-clock {      
-            background: transparent !important;      
-            border: 2px solid #ff006e !important;      
+            background: rgba(0, 0, 0, 0.8) !important;      
             border-radius: 8px !important;      
-            padding: 8px 16px !important;      
+            padding: 10px 20px !important;      
             font-size: 1.1em !important;      
             color: #ff006e !important;      
-            text-shadow: 0 0 10px #ff006e, 0 0 20px #ff006e !important;      
-            box-shadow: 0 0 10px #ff006e, inset 0 0 10px rgba(255, 0, 110, 0.2) !important;      
-            animation: neon-flicker 2s infinite !important;      
+            text-shadow: 0 0 10px #ff006e, 0 0 20px #ff006e, 0 0 30px #ff006e !important;      
+            border: 2px solid #ff006e !important;      
+            animation: neon-flicker 1.5s infinite alternate !important;      
             margin-left: 10px !important;  
           }      
           @keyframes neon-flicker {      
-            0%, 100% { opacity: 1; }      
-            50% { opacity: 0.8; }      
+            0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {      
+              text-shadow: 0 0 10px #ff006e, 0 0 20px #ff006e, 0 0 30px #ff006e;      
+            }      
+            20%, 24%, 55% {      
+              text-shadow: none;      
+            }      
           }      
         `      
       }      
     };      
           
-    // Створення власного елемента годинника      
     var clockElement = null;      
     var clockInterval = null;      
           
-    function createClock() {      
-      // Видалити старий годинник якщо існує      
-      if (clockElement) {      
-        clockElement.remove();      
-      }      
-            
-      // Створити новий елемент      
-      clockElement = document.createElement('div');      
-      clockElement.className = 'custom-clock';      
-      clockElement.style.cssText = `      
-        display: inline-flex;  
-        align-items: center;  
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;      
-        user-select: none;      
-      `;      
-            
-      // Оновлювати час      
-      function updateTime() {      
-        var now = new Date();      
-        var hours = String(now.getHours()).padStart(2, '0');      
-        var minutes = String(now.getMinutes()).padStart(2, '0');      
-        clockElement.textContent = hours + ':' + minutes;      
-      }      
-            
-      updateTime();      
-            
-      // Оновлювати кожну секунду      
-      if (clockInterval) {      
-        clearInterval(clockInterval);      
-      }      
-      clockInterval = setInterval(updateTime, 1000);      
-            
-      // Знайти header та вставити годинник  
+    // Функція для створення годинника      
+    function createClock() {  
       function insertClock() {  
-        // Спробувати знайти header з класом 'head'  
-        var header = document.querySelector('.head');  
-          
-        if (!header) {  
-          // Якщо не знайдено, спробувати альтернативні селектори  
-          header = document.querySelector('header') ||   
-                   document.querySelector('.header') ||  
-                   document.querySelector('[class*="head"]');  
-        }  
+        var header = document.querySelector('.head') ||   
+                     document.querySelector('.header') ||   
+                     document.querySelector('[class*="head"]');  
           
         if (header) {  
-          // Знайти контейнер з кнопками (пошук, акаунт, меню)  
-          var buttonsContainer = header.querySelector('.head__actions') ||   
-                                 header.querySelector('.actions') ||  
-                                 header.querySelector('[class*="action"]');  
+          var buttonsContainer = header.querySelector('[class*="buttons"]') ||   
+                                header.querySelector('[class*="right"]') ||   
+                                header.querySelector('[class*="action"]');  
             
           if (buttonsContainer) {  
-            // Вставити годинник після індикаторів (три крапки)  
-            var menuButton = buttonsContainer.querySelector('[class*="menu"]') ||  
-                            buttonsContainer.querySelector('[class*="dots"]') ||  
-                            buttonsContainer.lastElementChild;  
-              
-            if (menuButton && menuButton.nextSibling) {  
-              buttonsContainer.insertBefore(clockElement, menuButton.nextSibling);  
-            } else {  
-              buttonsContainer.appendChild(clockElement);  
-            }  
+            // ВИПРАВЛЕННЯ: просто додати в кінець контейнера (після трьох крапок)  
+            buttonsContainer.appendChild(clockElement);  
               
             console.log('[ClockChanger] Годинник додано до header');  
             return true;  
           }  
         }  
           
-        // Якщо не вдалося знайти header, використати fallback  
+        // Fallback  
         console.warn('[ClockChanger] Header не знайдено, використовую fallback позицію');  
         document.body.appendChild(clockElement);  
         clockElement.style.cssText += `  
@@ -255,7 +211,36 @@
         return false;  
       }  
         
-      // Спробувати вставити годинник з затримкою (чекати на DOM)  
+      // Створити елемент годинника  
+      if (clockInterval) {  
+        clearInterval(clockInterval);  
+      }  
+        
+      if (clockElement) {  
+        clockElement.remove();  
+      }  
+        
+      clockElement = document.createElement('div');  
+      clockElement.className = 'custom-clock';  
+      clockElement.style.cssText = `  
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;  
+        user-select: none;  
+        pointer-events: none;  
+        display: inline-flex;  
+        align-items: center;  
+      `;  
+        
+      function updateTime() {  
+        var now = new Date();  
+        var hours = String(now.getHours()).padStart(2, '0');  
+        var minutes = String(now.getMinutes()).padStart(2, '0');  
+        clockElement.textContent = hours + ':' + minutes;  
+      }  
+        
+      updateTime();  
+      clockInterval = setInterval(updateTime, 1000);  
+        
+      // Спробувати вставити з затримкою  
       var retries = 0;  
       var maxRetries = 20;  
         
@@ -268,7 +253,7 @@
       }  
         
       tryInsert();  
-    }      
+    }  
           
     // Додавання компонента налаштувань (БЕЗ type: 'select')  
     Lampa.SettingsApi.addComponent({      
@@ -328,8 +313,9 @@
     // Ініціалізація при завантаженні Lampa      
     function init() {      
       // Створити годинник      
-      createClock();
-// Застосувати збережений стиль      
+      createClock();      
+            
+      // Застосувати збережений стиль      
       var savedStyle = Lampa.Storage.get('clockchanger_selected', 'bubble');      
       applyClockStyle(savedStyle);      
     }      
