@@ -8,10 +8,12 @@
     }  
   
     // Перевірка на повторний запуск  
-    if (window.plugin_interface_ready || window.plugin_interface_ready_v3) {  
+    if (window.plugin_interface_ready_v3) {  
         console.warn('[NEW_INTERFACE] Плагін вже запущено');  
         return;  
     }  
+  
+    window.plugin_interface_ready_v3 = true;  
   
     // Визначення версії Lampa  
     var isV3 = Lampa.Manifest && Lampa.Manifest.app_digital >= 300;  
@@ -19,7 +21,7 @@
     if (isV3) {  
         startPluginV3();  
     } else {  
-        startPlugin();  
+        console.warn('[NEW_INTERFACE] Lampa версії < 3.0 не підтримується цим плагіном');  
     }  
   
     // ===== ВЕРСІЯ ДЛЯ LAMPA V3.0+ =====  
@@ -28,9 +30,6 @@
             console.error('[NEW_INTERFACE] Lampa.Maker не доступний');  
             return;  
         }  
-          
-        if (window.plugin_interface_ready_v3) return;  
-        window.plugin_interface_ready_v3 = true;  
   
         console.log('[NEW_INTERFACE] Запуск версії v3');  
   
@@ -226,7 +225,8 @@
         });  
     }  
   
-    function getCardData(card, element, index = 0) {  
+    function getCardData(card, element, index) {  
+        index = index || 0;  
         if (card && card.data) return card.data;  
         if (element && Array.isArray(element.results)) return element.results[index] || element.results[0];  
         return null;  
@@ -258,7 +258,7 @@
         line.__newInterfaceLine = true;  
   
         const state = ensureState(main);  
-        const applyToCard = (card) => decorateCard(state, card);  
+        const applyToCard = function(card) { decorateCard(state, card); };  
   
         line.use({  
             onInstance(card) {  
@@ -269,7 +269,7 @@
                 if (current) state.update(current);  
             },  
             onToggle() {  
-                setTimeout(() => {  
+                setTimeout(function() {  
                     const domData = getFocusedCardData(line);  
                     if (domData) state.update(domData);  
                 }, 32);  
@@ -296,7 +296,8 @@
     function wrap(target, method, handler) {  
         if (!target) return;  
         const original = typeof target[method] === 'function' ? target[method] : null;  
-        target[method] = function (...args) {  
+        target[method] = function () {  
+            var args = Array.prototype.slice.call(arguments);  
             return handler.call(this, original, args);  
         };  
     }  
@@ -305,123 +306,124 @@
         if (addStyleV3.added) return;  
         addStyleV3.added = true;  
   
-        Lampa.Template.add('new_interface_style_v3', `<style>  
-        .new-interface {  
-            position: relative;  
-        }  
-  
-        .new-interface .card.card--wide {  
-            width: 18.3em;  
-        }  
-  
-        .new-interface-info {  
-            position: relative;  
-            padding: 1.5em;  
-            height: 24em;  
-        }  
-  
-        .new-interface-info__body {  
-            width: 80%;  
-            padding-top: 1.1em;  
-        }  
-  
-        .new-interface-info__head {  
-            color: rgba(255, 255, 255, 0.6);  
-            margin-bottom: 1em;  
-            font-size: 1.3em;  
-            min-height: 1em;  
-        }  
-  
-        .new-interface-info__head span {  
-            color: #fff;  
-        }  
-  
-        .new-interface-info__title {  
-            font-size: 4em;  
-            font-weight: 600;  
-            margin-bottom: 0.3em;  
-            overflow: hidden;  
-            -o-text-overflow: '.';  
-            text-overflow: '.';  
-            display: -webkit-box;  
-            -webkit-line-clamp: 1;  
-            line-clamp: 1;  
-            -webkit-box-orient: vertical;  
-            margin-left: -0.03em;  
-            line-height: 1.3;  
-        }  
-  
-        .new-interface-info__details {  
-            margin-bottom: 1.6em;  
-            display: flex;  
-            align-items: center;  
-            flex-wrap: wrap;  
-            min-height: 1.9em;  
-            font-size: 1.1em;  
-        }  
-  
-        .new-interface-info__split {  
-            margin: 0 1em;  
-            font-size: 0.7em;  
-        }  
-  
-        .new-interface-info__description {  
-            font-size: 1.2em;  
-            font-weight: 300;  
-            line-height: 1.5;  
-            overflow: hidden;  
-            -o-text-overflow: '.';  
-            text-overflow: '.';  
-            display: -webkit-box;  
-            -webkit-line-clamp: 4;  
-            line-clamp: 4;  
-            -webkit-box-orient: vertical;  
-            width: 70%;  
-        }  
-  
-        .new-interface .card-more__box {  
-            padding-bottom: 95%;  
-        }  
-  
-        .new-interface .full-start__background {  
-            height: 108%;  
-            top: -6em;  
-        }  
-  
-        .new-interface .full-start__rate {  
-            font-size: 1.3em;  
-            margin-right: 0;  
-        }  
-  
-        .new-interface .card__promo {  
-            display: none;  
-        }  
-  
-        .new-interface .card.card--wide + .card-more .card-more__box {  
-            padding-bottom: 95%;  
-        }  
-  
-        .new-interface .card.card--wide .card-watched {  
-            display: none !important;  
-        }  
-  
-        body.light--version .new-interface-info__body {  
-            width: 69%;  
-            padding-top: 1.5em;  
-        }  
-  
-        body.light--version .new-interface-info {  
-            height: 25.3em;  
-        }  
-  
-        body.advanced--animation:not(.no--animation) .new-interface .card.card--wide.focus .card__view {  
-            animation: animation-card-focus 0.2s;  
-        }  
-  
-        body.advanced--animation:not(.no--animation) .new-interface .card.card--wide.animate-trigger-enter .card__view {  
-            animation: animation-trigger-enter 0.2s forwards;  
-        }  
-        </style>`);  
+        Lampa.Template.add('new_interface_style_v3', '<style>\n' +  
+        '.new-interface {\n' +  
+        '    position: relative;\n' +  
+        '}\n' +  
+        '\n' +  
+        '.new-interface .card.card--wide {\n' +  
+        '    width: 18.3em;\n' +  
+        '}\n' +  
+        '\n' +  
+        '.new-interface-info {\n' +  
+        '    position: relative;\n' +  
+        '    padding: 1.5em;\n' +  
+        '    height: 24em;\n' +  
+        '}\n' +  
+        '\n' +  
+        '.new-interface-info__body {\n' +  
+        '    width: 80%;\n' +  
+        '    padding-top: 1.1em;\n' +  
+        '}\n' +  
+        '\n' +  
+        '.new-interface-info__head {\n' +  
+        '    color: rgba(255, 255, 255, 0.6);\n' +  
+        '    margin-bottom: 1em;\n' +  
+        '    font-size: 1.3em;\n' +  
+        '    min-height: 1em;\n' +  
+        '}\n' +  
+        '\n' +  
+        '.new-interface-info__head span {\n' +  
+        '    color: #fff;\n' +  
+        '}\n' +  
+        '\n' +  
+        '.new-interface-info__title {\n' +  
+        '    font-size: 4em;\n' +  
+        '    font-weight: 600;\n' +  
+        '    margin-bottom: 0.3em;\n' +  
+        '    overflow: hidden;\n' +  
+        '    -o-text-overflow: ".";\n' +  
+        '    text-overflow: ".";\n' +  
+        '    display: -webkit-box;\n' +  
+        '    -webkit-line-clamp: 1;\n' +  
+        '    line-clamp: 1;\n' +  
+        '    -webkit-box-orient: vertical;\n' +  
+        '    margin-left: -0.03em;\n' +  
+        '    line-height: 1.3;\n' +  
+        '}\n' +  
+        '\n' +  
+        '.new-interface-info__details {\n' +  
+        '    margin-bottom: 1.6em;\n' +  
+        '    display: flex;\n' +  
+        '    align-items: center;\n' +  
+        '    flex-wrap: wrap;\n' +  
+        '    min-height: 1.9em;\n' +  
+        '    font-size: 1.1em;\n' +  
+        '}\n' +  
+        '\n' +  
+        '.new-interface-info__split {\n' +  
+        '    margin: 0 1em;\n' +  
+        '    font-size: 0.7em;\n' +  
+        '}\n' +  
+        '\n' +  
+        '.new-interface-info__description {\n' +  
+        '    font-size: 1.2em;\n' +  
+        '    font-weight: 300;\n' +  
+        '    line-height: 1.5;\n' +  
+        '    overflow: hidden;\n' +  
+        '    -o-text-overflow: ".";\n' +  
+        '    text-overflow: ".";\n' +  
+        '    display: -webkit-box;\n' +  
+        '    -webkit-line-clamp: 4;\n' +  
+        '    line-clamp: 4;\n' +  
+        '    -webkit-box-orient: vertical;\n' +  
+        '    width: 70%;\n' +  
+        '}\n' +  
+        '\n' +  
+        '.new-interface .card-more__box {\n' +  
+        '    padding-bottom: 95%;\n' +  
+        '}\n' +  
+        '\n' +  
+        '.new-interface .full-start__background {\n' +  
+        '    height: 108%;\n' +  
+        '    top: -6em;\n' +  
+        '}\n' +  
+        '\n' +  
+        '.new-interface .full-start__rate {\n' +  
+        '    font-size: 1.3em;\n' +  
+        '    margin-right: 0;\n' +  
+        '}\n' +  
+        '\n' +  
+        '.new-interface .card__promo {\n' +  
+        '    display: none;\n' +  
+        '}\n' +  
+        '\n' +  
+        '.new-interface .card.card--wide + .card-more .card-more__box {\n' +  
+        '    padding-bottom: 95%;\n' +  
+        '}\n' +  
+        '\n' +  
+        '.new-interface .card.card--wide .card-watched {\n' +  
+        '    display: none !important;\n' +  
+        '}\n' +  
+        '\n' +  
+        'body.light--version .new-interface-info__body {\n' +  
+        '    width: 69%;\n' +  
+        '    padding-top: 1.5em;\n' +  
+        '}\n' +  
+        '\n' +  
+        'body.light--version .new-interface-info {\n' +  
+        'body.light--version .new-interface-info {\n' +  
+        '    height: 25.3em;\n' +  
+        '}\n' +  
+        '\n' +  
+        'body.advanced--animation:not(.no--animation) .new-interface .card.card--wide.focus .card__view {\n' +  
+        '    animation: animation-card-focus 0.2s;\n' +  
+        '}\n' +  
+        '\n' +  
+        'body.advanced--animation:not(.no--animation) .new-interface .card.card--wide.animate-trigger-enter .card__view {\n' +  
+        '    animation: animation-trigger-enter 0.2s forwards;\n' +  
+        '}\n' +  
+        '</style>');  
   
         $('body').append(Lampa.Template.get('new_interface_style_v3', {}, true));  
     }  
@@ -437,14 +439,14 @@
         create() {  
             if (this.html) return;  
   
-            this.html = $(`<div class="new-interface-info">  
-                <div class="new-interface-info__body">  
-                    <div class="new-interface-info__head"></div>  
-                    <div class="new-interface-info__title"></div>  
-                    <div class="new-interface-info__details"></div>  
-                    <div class="new-interface-info__description"></div>  
-                </div>  
-            </div>`);  
+            this.html = $('<div class="new-interface-info">' +  
+                '<div class="new-interface-info__body">' +  
+                '<div class="new-interface-info__head"></div>' +  
+                '<div class="new-interface-info__title"></div>' +  
+                '<div class="new-interface-info__details"></div>' +  
+                '<div class="new-interface-info__description"></div>' +  
+                '</div>' +  
+                '</div>');  
         }  
   
         render(js) {  
@@ -468,12 +470,8 @@
         load(data) {  
             if (!data || !data.id) return;  
   
-            const source = data.
-                load(data) {  
-            if (!data || !data.id) return;  
-  
-            const source = data.name ? 'tv' : 'movie';  
-            const url = Lampa.TMDB.api(source + '/' + data.id + '?api_key=' + Lampa.TMDB.key() + '&append_to_response=content_ratings,release_dates&language=' + Lampa.Storage.get('language'));  
+            var source = data.name ? 'tv' : 'movie';  
+            var url = Lampa.TMDB.api(source + '/' + data.id + '?api_key=' + Lampa.TMDB.key() + '&append_to_response=content_ratings,release_dates&language=' + Lampa.Storage.get('language'));  
               
             if (this.loaded[url]) {  
                 this.draw(this.loaded[url]);  
@@ -482,28 +480,29 @@
   
             clearTimeout(this.timer);  
               
-            this.timer = setTimeout(() => {  
-                this.network.clear();  
-                this.network.timeout(5000);  
-                this.network.silent(url, (movie) => {  
-                    this.loaded[url] = movie;  
-                    this.draw(movie);  
-                }, (error) => {  
+            var self = this;  
+            this.timer = setTimeout(function() {  
+                self.network.clear();  
+                self.network.timeout(5000);  
+                self.network.silent(url, function(movie) {  
+                    self.loaded[url] = movie;  
+                    self.draw(movie);  
+                }, function(error) {  
                     console.error('[NEW_INTERFACE] Помилка завантаження даних:', error);  
                 });  
             }, 300);  
         }  
   
         draw(data) {  
-            const create = ((data.release_date || data.first_air_date || '0000') + '').slice(0, 4);  
-            const vote = parseFloat((data.vote_average || 0) + '').toFixed(1);  
-            const head = [];  
-            const details = [];  
+            var create = ((data.release_date || data.first_air_date || '0000') + '').slice(0, 4);  
+            var vote = parseFloat((data.vote_average || 0) + '').toFixed(1);  
+            var head = [];  
+            var details = [];  
               
             if (create !== '0000') head.push('<span>' + create + '</span>');  
               
             if (data.production_countries && data.production_countries.length > 0) {  
-                const countries = data.production_countries.map(c => c.name).join(', ');  
+                var countries = data.production_countries.map(function(c) { return c.name; }).join(', ');  
                 head.push(countries);  
             }  
               
@@ -512,13 +511,13 @@
             }  
               
             if (data.genres && data.genres.length > 0) {  
-                const genres = data.genres.map(g => g.name).join(' | ');  
+                var genres = data.genres.map(function(g) { return g.name; }).join(' | ');  
                 details.push(genres);  
             }  
               
             if (data.runtime) {  
-                const hours = Math.floor(data.runtime / 60);  
-                const minutes = data.runtime % 60;  
+                var hours = Math.floor(data.runtime / 60);  
+                var minutes = data.runtime % 60;  
                 details.push(hours + 'г ' + minutes + 'хв');  
             }  
               
@@ -541,46 +540,6 @@
             }  
             this.loaded = {};  
         }  
-    }  
-  
-    // ===== ВЕРСІЯ ДЛЯ СТАРИХ LAMPA =====  
-    function component(object) {  
-        // ... (тут йде код для старої версії Lampa)  
-        // Цей код аналогічний до v3, але використовує старий API  
-    }  
-  
-    function startPlugin() {  
-        if (window.plugin_interface_ready) return;  
-        window.plugin_interface_ready = true;  
-  
-        console.log('[NEW_INTERFACE] Запуск версії legacy');  
-  
-        var old_interface = Lampa.InteractionMain;  
-        var new_interface = component;  
-  
-        Lampa.InteractionMain = function (object) {  
-            var use = new_interface;  
-              
-            if (window.innerWidth < 767) use = old_interface;  
-            if (Lampa.Manifest && Lampa.Manifest.app_digital < 153) use = old_interface;  
-              
-            return new use(object);  
-        };  
-  
-        // Додаємо стилі  
-        Lampa.Template.add('new_interface_style', `<style>  
-        .new-interface {  
-            position: relative;  
-        }  
-          
-        .new-interface .card--small.card--wide {  
-            width: 18.3em;  
-        }  
-          
-        /* ... решта стилів ... */  
-        </style>`);  
-          
-        $('body').append(Lampa.Template.get('new_interface_style', {}, true));  
     }  
   
 })();
