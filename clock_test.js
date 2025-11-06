@@ -22,11 +22,6 @@
         uk: 'Стиль годинника',      
         ru: 'Стиль часов'      
       },      
-      clockchanger_style: {      
-        en: 'Clock style',      
-        uk: 'Стиль годинника',      
-        ru: 'Стиль часов'      
-      },      
       clockchanger_default: {      
         en: 'Default',      
         uk: 'За замовчуванням',      
@@ -56,10 +51,30 @@
         en: 'Neon',      
         uk: 'Неон',      
         ru: 'Неон'      
-      }      
+      },  
+      clockchanger_retro: {  
+        en: 'Retro',  
+        uk: 'Ретро',  
+        ru: 'Ретро'  
+      },  
+      clockchanger_glass: {  
+        en: 'Glass',  
+        uk: 'Скло',  
+        ru: 'Стекло'  
+      },  
+      clockchanger_fire: {  
+        en: 'Fire',  
+        uk: 'Вогонь',  
+        ru: 'Огонь'  
+      },  
+      clockchanger_ice: {  
+        en: 'Ice',  
+        uk: 'Лід',  
+        ru: 'Лёд'  
+      }  
     });      
           
-    // Конфігурація стилів годинника      
+    // Конфігурація стилів годинника (10 стилів)  
     var clockStyles = {      
       default: {      
         name: 'clockchanger_default',      
@@ -112,8 +127,10 @@
             padding: 10px 20px !important;      
             font-weight: 700 !important;      
             font-size: 1.1em !important;      
-            box-shadow: 0 4px 12px rgba(229, 9, 20, 0.4) !important;      
             color: #fff !important;      
+            box-shadow: 0 4px 12px rgba(229, 9, 20, 0.4) !important;      
+            text-transform: uppercase !important;      
+            letter-spacing: 1px !important;      
             margin-left: 10px !important;  
           }      
         `      
@@ -123,12 +140,12 @@
         css: `      
           .custom-clock {      
             background: rgba(255, 255, 255, 0.1) !important;      
+            backdrop-filter: blur(20px) !important;      
             border-radius: 12px !important;      
             padding: 8px 18px !important;      
-            backdrop-filter: blur(20px) !important;      
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;      
             font-size: 1em !important;      
             color: #fff !important;      
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;      
             margin-left: 10px !important;  
           }      
         `      
@@ -138,13 +155,14 @@
         css: `      
           .custom-clock {      
             background: #000 !important;      
+            border: 2px solid #0f0 !important;      
             border-radius: 6px !important;      
             padding: 10px 20px !important;      
             font-family: 'Courier New', monospace !important;      
             font-size: 1.2em !important;      
             color: #0f0 !important;      
-            text-shadow: 0 0 10px #0f0 !important;      
-            border: 2px solid #0f0 !important;      
+            text-shadow: 0 0 10px #0f0, 0 0 20px #0f0 !important;      
+            letter-spacing: 3px !important;      
             margin-left: 10px !important;  
           }      
         `      
@@ -154,33 +172,128 @@
         css: `      
           .custom-clock {      
             background: rgba(0, 0, 0, 0.8) !important;      
-            border-radius: 8px !important;      
-            padding: 10px 20px !important;      
-            font-size: 1.1em !important;      
+            border-radius: 10px !important;      
+            padding: 12px 24px !important;      
+            font-weight: 700 !important;      
+            font-size: 1.2em !important;      
             color: #ff006e !important;      
             text-shadow: 0 0 10px #ff006e, 0 0 20px #ff006e, 0 0 30px #ff006e !important;      
+            animation: neon-flicker 2s infinite alternate !important;      
             border: 2px solid #ff006e !important;      
-            animation: neon-flicker 1.5s infinite alternate !important;      
+            box-shadow: 0 0 20px #ff006e !important;      
             margin-left: 10px !important;  
           }      
           @keyframes neon-flicker {      
-            0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {      
-              text-shadow: 0 0 10px #ff006e, 0 0 20px #ff006e, 0 0 30px #ff006e;      
-            }      
-            20%, 24%, 55% {      
-              text-shadow: none;      
-            }      
+            0%, 100% { opacity: 1; }      
+            50% { opacity: 0.8; }      
           }      
         `      
-      }      
+      },  
+      retro: {  
+        name: 'clockchanger_retro',  
+        css: `  
+          .custom-clock {  
+            background: linear-gradient(180deg, #ff6b6b 0%, #ee5a6f 100%) !important;  
+            border-radius: 20px !important;  
+            padding: 12px 28px !important;  
+            font-family: 'Comic Sans MS', cursive !important;  
+            font-weight: 900 !important;  
+            font-size: 1.3em !important;  
+            color: #fff !important;  
+            text-shadow: 3px 3px 0px #000, -1px -1px 0px #000, 1px -1px 0px #000, -1px 1px 0px #000 !important;  
+            border: 4px solid #000 !important;  
+            box-shadow: 5px 5px 0px #000 !important;  
+            transform: rotate(-2deg) !important;  
+            margin-left: 10px !important;  
+          }  
+        `  
+      },  
+      glass: {  
+        name: 'clockchanger_glass',  
+        css: `  
+          .custom-clock {  
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05)) !important;  
+            backdrop-filter: blur(30px) saturate(180%) !important;  
+            border-radius: 16px !important;  
+            padding: 10px 22px !important;  
+            font-size: 1.1em !important;  
+            color: #fff !important;  
+            border: 1px solid rgba(255, 255, 255, 0.3) !important;  
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;  
+            margin-left: 10px !important;  
+          }  
+        `  
+      },  
+      fire: {  
+        name: 'clockchanger_fire',  
+        css: `  
+          .custom-clock {  
+            background: linear-gradient(45deg, #ff0000, #ff7f00, #ffff00) !important;  
+            background-size: 200% 200% !important;  
+            animation: fire-gradient 3s ease infinite !important;  
+            border-radius: 12px !important;  
+            padding: 12px 24px !important;  
+            font-weight: 800 !important;  
+            font-size: 1.2em !important;  
+            color: #fff !important;  
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.8), 0 0 20px rgba(255, 127, 0, 0.6) !important;  
+            border: 2px solid rgba(255, 255, 0, 0.5) !important;  
+            box-shadow: 0 0 20px rgba(255, 127, 0, 0.6), inset 0 0 20px rgba(255, 0, 0, 0.3) !important;  
+            margin-left: 10px !important;  
+          }  
+          @keyframes fire-gradient {  
+            0% { background-position: 0% 50%; }  
+            50% { background-position: 100% 50%; }  
+            100% { background-position: 0% 50%; }  
+          }  
+        `  
+      },  
+      ice: {  
+        name: 'clockchanger_ice',  
+        css: `  
+          .custom-clock {  
+            background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%) !important;  
+            border-radius: 10px !important;  
+            padding: 10px 22px !important;  
+            font-weight: 700 !important;  
+            font-size: 1.1em !important;  
+            color: #fff !important;  
+            text-shadow: 0 0 10px rgba(0, 212, 255, 0.8), 0 2px 4px rgba(0, 0, 0, 0.3) !important;  
+            border: 2px solid rgba(255, 255, 255, 0.4) !important;  
+            box-shadow: 0 8px 32px rgba(0, 212, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;  
+            animation: ice-shimmer 4s ease-in-out infinite !important;  
+            margin-left: 10px !important;  
+          }  
+          @keyframes ice-shimmer {  
+            0%, 100% { filter: brightness(1); }  
+            50% { filter: brightness(1.2); }  
+          }  
+        `  
+      }  
     };      
           
     var clockElement = null;      
     var clockInterval = null;      
           
-    // Функція для створення годинника      
-    function createClock() {  
+    function createClock() {      
       function insertClock() {  
+        // ВИПРАВЛЕННЯ: Шукаємо кнопку меню (три крапки) за різними селекторами  
+        var menuButton = document.querySelector('[class*="menu"]') ||  
+                        document.querySelector('[class*="settings"]') ||  
+                        document.querySelector('[class*="dots"]') ||  
+                        document.querySelector('.head__action') ||  
+                        document.querySelector('.header__action');  
+          
+        if (menuButton) {  
+          // Вставляємо годинник ПІСЛЯ кнопки меню  
+          if (menuButton.parentNode) {  
+            menuButton.parentNode.insertBefore(clockElement, menuButton.nextSibling);  
+            console.log('[ClockChanger] Годинник додано після кнопки меню');  
+            return true;  
+          }  
+        }  
+          
+        // Fallback: шукаємо контейнер кнопок  
         var header = document.querySelector('.head') ||   
                      document.querySelector('.header') ||   
                      document.querySelector('[class*="head"]');  
@@ -191,17 +304,15 @@
                                 header.querySelector('[class*="action"]');  
             
           if (buttonsContainer) {  
-            // ВИПРАВЛЕННЯ: просто додати в кінець контейнера (після трьох крапок)  
             buttonsContainer.appendChild(clockElement);  
-              
-            console.log('[ClockChanger] Годинник додано до header');  
+            console.log('[ClockChanger] Годинник додано до контейнера кнопок');  
             return true;  
           }  
         }  
           
-        // Fallback  
+        // Останній fallback: fixed позиція  
         console.warn('[ClockChanger] Header не знайдено, використовую fallback позицію');  
-        document.body.appendChild(clockElement);  
+      document.body.appendChild(clockElement);  
         clockElement.style.cssText += `  
           position: fixed;  
           top: 20px;  
@@ -254,14 +365,14 @@
         
       tryInsert();  
     }  
-          
-    // Додавання компонента налаштувань (БЕЗ type: 'select')  
-    Lampa.SettingsApi.addComponent({      
-      component: 'clockchanger',      
-      name: Lampa.Lang.translate('clockchanger_title'),      
-      icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'      
-    });      
-          
+      
+    // Додавання компонента налаштувань  
+    Lampa.SettingsApi.addComponent({  
+      component: 'clockchanger',  
+      name: Lampa.Lang.translate('clockchanger_title'),  
+      icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'  
+    });  
+      
     // Налаштування вибору стилю (ВИКОРИСТОВУЄМО TRIGGER ЗАМІСТЬ SELECT)  
     Object.keys(clockStyles).forEach(function(styleKey) {  
       var style = clockStyles[styleKey];  
@@ -289,48 +400,48 @@
         }  
       });  
     });  
-          
-    // Функція для застосування стилю      
-    function applyClockStyle(styleKey) {      
-      var style = clockStyles[styleKey];      
-      if (!style) return;      
-            
-      // Видалити попередні стилі      
-      var oldStyle = document.getElementById('clockchanger-style');      
-      if (oldStyle) oldStyle.remove();      
-            
-      // Застосувати новий стиль      
-      if (style.css) {      
-        var styleElement = document.createElement('style');      
-        styleElement.id = 'clockchanger-style';      
-        styleElement.textContent = style.css;      
-        document.head.appendChild(styleElement);      
-      }      
-            
-      console.log('[ClockChanger] Застосовано стиль:', styleKey);      
-    }      
-          
-    // Ініціалізація при завантаженні Lampa      
-    function init() {      
-      // Створити годинник      
-      createClock();      
-            
-      // Застосувати збережений стиль      
-      var savedStyle = Lampa.Storage.get('clockchanger_selected', 'bubble');      
-      applyClockStyle(savedStyle);      
-    }      
-          
-    // Чекати поки Lampa повністю завантажиться      
-    if (Lampa.Listener) {      
-      Lampa.Listener.follow('app', function(e) {      
-        if (e.type === 'ready') {      
-          init();      
-        }      
-      });      
-    } else {      
-      // Якщо Listener недоступний, ініціалізувати через таймаут      
-      setTimeout(init, 1000);      
-    }      
-          
-  });  // Закриває waitForLampa callback    
+      
+    // Функція для застосування стилю  
+    function applyClockStyle(styleKey) {  
+      var style = clockStyles[styleKey];  
+      if (!style) return;  
+        
+      // Видалити попередні стилі  
+      var oldStyle = document.getElementById('clockchanger-style');  
+      if (oldStyle) oldStyle.remove();  
+        
+      // Застосувати новий стиль  
+      if (style.css) {  
+        var styleElement = document.createElement('style');  
+        styleElement.id = 'clockchanger-style';  
+        styleElement.textContent = style.css;  
+        document.head.appendChild(styleElement);  
+      }  
+        
+      console.log('[ClockChanger] Застосовано стиль:', styleKey);  
+    }  
+      
+    // Ініціалізація при завантаженні Lampa  
+    function init() {  
+      // Створити годинник  
+      createClock();  
+        
+      // Застосувати збережений стиль  
+      var savedStyle = Lampa.Storage.get('clockchanger_selected', 'bubble');  
+      applyClockStyle(savedStyle);  
+    }  
+      
+    // Чекати поки Lampa повністю завантажиться  
+    if (Lampa.Listener) {  
+      Lampa.Listener.follow('app', function(e) {  
+        if (e.type === 'ready') {  
+          init();  
+        }  
+      });  
+    } else {  
+      // Якщо Listener недоступний, ініціалізувати через таймаут  
+      setTimeout(init, 1000);  
+    }  
+      
+  });  // Закриває waitForLampa callback  
 })();
