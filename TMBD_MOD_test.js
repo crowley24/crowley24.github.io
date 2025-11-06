@@ -62,24 +62,8 @@
             return target;  
         };  
     }  
-      
-    if (!Array.prototype.map) {  
-        Array.prototype.map = function(callback, thisArg) {  
-            var array = this;  
-            var result = [];  
-            for (var i = 0; i < array.length; i++) {  
-                if (i in array) {  
-                    result.push(callback.call(thisArg, array[i], i, array));  
-                }  
-            }  
-            return result;  
-        };  
-    }  
   
-    // ---  
-    // 🌐 --- ЛОКАЛІЗАЦІЯ (тільки українська та англійська) ---  
-    // ---  
-      
+    // Локалізація (тільки українська та англійська)  
     Lampa.Lang.add({  
         tmdb_mod_plugin_name: {  
             en: 'TMDB Collections',  
@@ -122,47 +106,16 @@
             uk: 'Зараз у кіно'  
         },  
         tmdb_mod_on_air: {  
-            en: 'On Air Today',  
-            uk: 'Сьогодні в ефірі'  
+            en: 'On Air',  
+            uk: 'В ефірі'  
         },  
         tmdb_mod_airing_today: {  
             en: 'Airing Today',  
-            uk: 'Виходить сьогодні'  
-        },  
-        tmdb_mod_netflix: {  
-            en: 'Netflix Originals',  
-            uk: 'Оригінали Netflix'  
-        },  
-        tmdb_mod_disney: {  
-            en: 'Disney+ Originals',  
-            uk: 'Оригінали Disney+'  
-        },  
-        tmdb_mod_apple: {  
-            en: 'Apple TV+ Originals',  
-            uk: 'Оригінали Apple TV+'  
-        },  
-        tmdb_mod_hbo: {  
-            en: 'HBO Max Originals',  
-            uk: 'Оригінали HBO Max'  
-        },  
-        tmdb_mod_amazon: {  
-            en: 'Amazon Prime Originals',  
-            uk: 'Оригінали Amazon Prime'  
-        },  
-        tmdb_mod_ukrainian_movies: {  
-            en: 'Ukrainian Movies',  
-            uk: 'Українські фільми'  
-        },  
-        tmdb_mod_ukrainian_tv: {  
-            en: 'Ukrainian TV Shows',  
-            uk: 'Українські серіали'  
+            uk: 'Сьогодні в ефірі'  
         }  
     });  
   
-    // ---  
-    // 📋 --- КОНФІГУРАЦІЯ ПІДБОРОК (без російських) ---  
-    // ---  
-      
+    // Конфігурація підборок (без російських)  
     var collectionsConfig = [  
         {  
             id: 'trending_day',  
@@ -203,7 +156,7 @@
             id: 'top_rated_tv',  
             endpoint: '/tv/top_rated',  
             name_key: 'tmdb_mod_top_rated_tv',  
-            emoji: '🏆',  
+            emoji: '🌟',  
             defaultOrder: 6  
         },  
         {  
@@ -233,100 +186,27 @@
             name_key: 'tmdb_mod_airing_today',  
             emoji: '📅',  
             defaultOrder: 10  
-        },  
-        {  
-            id: 'netflix',  
-            endpoint: '/discover/tv?with_networks=213&sort_by=popularity.desc',  
-            name_key: 'tmdb_mod_netflix',  
-            emoji: '🎬',  
-            defaultOrder: 11  
-        },  
-        {  
-            id: 'disney',  
-            endpoint: '/discover/tv?with_networks=2739&sort_by=popularity.desc',  
-            name_key: 'tmdb_mod_disney',  
-            emoji: '🏰',  
-            defaultOrder: 12  
-        },  
-        {  
-            id: 'apple',  
-            endpoint: '/discover/tv?with_networks=2552&sort_by=popularity.desc',  
-            name_key: 'tmdb_mod_apple',  
-            emoji: '🍎',  
-            defaultOrder: 13  
-        },  
-        {  
-            id: 'hbo',  
-            endpoint: '/discover/tv?with_networks=3186&sort_by=popularity.desc',  
-            name_key: 'tmdb_mod_hbo',  
-            emoji: '🎭',  
-            defaultOrder: 14  
-        },  
-        {  
-            id: 'amazon',  
-            endpoint: '/discover/tv?with_networks=1024&sort_by=popularity.desc',  
-            name_key: 'tmdb_mod_amazon',  
-            emoji: '📦',  
-            defaultOrder: 15  
-        },  
-        {  
-            id: 'ukrainian_movies',  
-            endpoint: '/discover/movie?with_original_language=uk&sort_by=popularity.desc',  
-            name_key: 'tmdb_mod_ukrainian_movies',  
-            emoji: '🇺🇦',  
-            defaultOrder: 16  
-        },  
-        {  
-            id: 'ukrainian_tv',  
-            endpoint: '/discover/tv?with_original_language=uk&sort_by=popularity.desc',  
-            name_key: 'tmdb_mod_ukrainian_tv',  
-            emoji: '🇺🇦',  
-            defaultOrder: 17  
         }  
     ];  
   
-    // ---  
-    // 🔧 --- ФУНКЦІЇ ПЛАГІНА ---  
-    // ---  
-  
-    function loadSettings() {  
-        // Завантажуємо налаштування з Lampa.Storage  
-        return {  
-            enabled: Lampa.Storage.get('tmdb_mod_enable', true)  
-        };  
-    }  
-  
-    function createDiscoveryMain() {  
-        return function (params, oncomplete, onerror) {  
-            var settings = loadSettings();  
-            if (!settings.enabled) {  
-                if (onerror) onerror();  
-                return function () {};  
-            }  
-  
+    // Функція для створення Discovery Main  
+    function createDiscoveryMain(params) {  
+        return function(oncomplete, onerror) {  
             var parts_data = [];  
             var totalCount = 0;  
   
             collectionsConfig.forEach(function(cfg) {  
-                var isEnabled = Lampa.Storage.get('tmdb_mod_' + cfg.id + '_enable', true);  
-                if (!isEnabled) return;  
+                if (!Lampa.Storage.get('tmdb_mod_' + cfg.id + '_enable', true)) {  
+                    return;  
+                }  
   
                 totalCount++;  
-                  
                 parts_data.push(function(call) {  
-                    Lampa.TMDB.get(cfg.endpoint, {  
-                        language: 'uk-UA'  
-                    }, function(data) {  
+                    Lampa.TMDB.get(cfg.endpoint, {}, function(data) {  
                         var translatedName = Lampa.Lang.translate(cfg.name_key);  
                         var title = cfg.emoji ? cfg.emoji + ' ' + translatedName : translatedName;  
-                          
-                        call({   
-                            source: 'tmdb',   
-                            results: data.results || [],   
-                            title: title   
-                        });  
-                    }, function(err) {  
-                        console.error('Помилка завантаження підборки "' + cfg.id + '":', err);  
+                        call({ source: 'tmdb', results: data.results || [], title: title });  
+                    }, function() {  
                         var translatedName = Lampa.Lang.translate(cfg.name_key);  
                         var title = cfg.emoji ? cfg.emoji + ' ' + translatedName : translatedName;  
                         call({ source: 'tmdb', results: [], title: title });  
@@ -344,10 +224,9 @@
             return function () {};  
         };  
     }  
-  
+      
+    // Додавання налаштувань  
     function addSettings() {  
-        loadSettings();   
-  
         if (!Lampa.SettingsApi) return;  
           
         Lampa.SettingsApi.addComponent({  
@@ -356,7 +235,7 @@
             icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-tv"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>'  
         });  
   
-        // Головний перемикач  
+        // Головний переключатель  
         Lampa.SettingsApi.addParam({  
             component: 'tmdb_mod',  
             param: {  
@@ -409,11 +288,8 @@
         });  
     }  
   
+    // Реєстрація джерела (БЕЗ ДУБЛІКАТУ)  
     function registerSource() {  
-        if (!Lampa.Source) {  
-            console.error('[TMDB_MOD] Lampa.Source недоступний');  
-            return;  
-function registerSource() {  
         if (!Lampa.Source) {  
             console.error('[TMDB_MOD] Lampa.Source недоступний');  
             return;  
