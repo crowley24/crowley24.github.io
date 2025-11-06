@@ -107,14 +107,8 @@
             margin-left: 10px !important;  
           }      
           @keyframes bubble-pulse {      
-            0%, 100% {      
-              transform: scale(1);      
-              box-shadow: 0 10px 25px rgba(102, 126, 234, 0.5);      
-            }      
-            50% {      
-              transform: scale(1.05);      
-              box-shadow: 0 15px 35px rgba(102, 126, 234, 0.7);      
-            }      
+            0%, 100% { transform: scale(1); box-shadow: 0 10px 25px rgba(102, 126, 234, 0.5); }      
+            50% { transform: scale(1.05); box-shadow: 0 15px 35px rgba(102, 126, 234, 0.7); }      
           }      
         `      
       },      
@@ -122,15 +116,14 @@
         name: 'clockchanger_netflix',      
         css: `      
           .custom-clock {      
-            background: #E50914 !important;      
-            border-radius: 4px !important;      
+            background: linear-gradient(135deg, #e50914 0%, #b20710 100%) !important;      
+            border-radius: 6px !important;      
             padding: 10px 20px !important;      
             font-weight: 700 !important;      
             font-size: 1.1em !important;      
             color: #fff !important;      
-            box-shadow: 0 4px 12px rgba(229, 9, 20, 0.4) !important;      
-            text-transform: uppercase !important;      
-            letter-spacing: 1px !important;      
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5) !important;      
+            box-shadow: 0 4px 15px rgba(229, 9, 20, 0.4) !important;      
             margin-left: 10px !important;  
           }      
         `      
@@ -140,11 +133,11 @@
         css: `      
           .custom-clock {      
             background: rgba(255, 255, 255, 0.1) !important;      
-            backdrop-filter: blur(20px) !important;      
-            border-radius: 12px !important;      
-            padding: 8px 18px !important;      
-            font-size: 1em !important;      
-            color: #fff !important;      
+            border-radius: 4px !important;      
+            padding: 6px 14px !important;      
+            font-size: 0.95em !important;      
+            color: rgba(255, 255, 255, 0.9) !important;      
+            backdrop-filter: blur(5px) !important;      
             border: 1px solid rgba(255, 255, 255, 0.2) !important;      
             margin-left: 10px !important;  
           }      
@@ -155,14 +148,15 @@
         css: `      
           .custom-clock {      
             background: #000 !important;      
-            border: 2px solid #0f0 !important;      
-            border-radius: 6px !important;      
-            padding: 10px 20px !important;      
+            border-radius: 4px !important;      
+            padding: 8px 18px !important;      
             font-family: 'Courier New', monospace !important;      
+            font-weight: 700 !important;      
             font-size: 1.2em !important;      
             color: #0f0 !important;      
             text-shadow: 0 0 10px #0f0, 0 0 20px #0f0 !important;      
-            letter-spacing: 3px !important;      
+            border: 2px solid #0f0 !important;      
+            box-shadow: inset 0 0 10px rgba(0, 255, 0, 0.3) !important;      
             margin-left: 10px !important;  
           }      
         `      
@@ -172,15 +166,15 @@
         css: `      
           .custom-clock {      
             background: rgba(0, 0, 0, 0.8) !important;      
-            border-radius: 10px !important;      
-            padding: 12px 24px !important;      
+            border-radius: 12px !important;      
+            padding: 10px 22px !important;      
             font-weight: 700 !important;      
-            font-size: 1.2em !important;      
+            font-size: 1.15em !important;      
             color: #ff006e !important;      
             text-shadow: 0 0 10px #ff006e, 0 0 20px #ff006e, 0 0 30px #ff006e !important;      
-            animation: neon-flicker 2s infinite alternate !important;      
             border: 2px solid #ff006e !important;      
-            box-shadow: 0 0 20px #ff006e !important;      
+            box-shadow: 0 0 20px rgba(255, 0, 110, 0.5), inset 0 0 20px rgba(255, 0, 110, 0.2) !important;      
+            animation: neon-flicker 3s infinite alternate !important;      
             margin-left: 10px !important;  
           }      
           @keyframes neon-flicker {      
@@ -193,17 +187,15 @@
         name: 'clockchanger_retro',  
         css: `  
           .custom-clock {  
-            background: linear-gradient(180deg, #ff6b6b 0%, #ee5a6f 100%) !important;  
-            border-radius: 20px !important;  
-            padding: 12px 28px !important;  
-            font-family: 'Comic Sans MS', cursive !important;  
+            background: linear-gradient(135deg, #ff6b6b 0%, #feca57 50%, #48dbfb 100%) !important;  
+            border-radius: 8px !important;  
+            padding: 10px 20px !important;  
             font-weight: 900 !important;  
-            font-size: 1.3em !important;  
+            font-size: 1.1em !important;  
             color: #fff !important;  
-            text-shadow: 3px 3px 0px #000, -1px -1px 0px #000, 1px -1px 0px #000, -1px 1px 0px #000 !important;  
-            border: 4px solid #000 !important;  
-            box-shadow: 5px 5px 0px #000 !important;  
-            transform: rotate(-2deg) !important;  
+            text-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3) !important;  
+            box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.2) !important;  
+            border: 3px solid #fff !important;  
             margin-left: 10px !important;  
           }  
         `  
@@ -212,14 +204,15 @@
         name: 'clockchanger_glass',  
         css: `  
           .custom-clock {  
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05)) !important;  
-            backdrop-filter: blur(30px) saturate(180%) !important;  
-            border-radius: 16px !important;  
+            background: rgba(255, 255, 255, 0.15) !important;  
+            border-radius: 15px !important;  
             padding: 10px 22px !important;  
-            font-size: 1.1em !important;  
+            font-weight: 600 !important;  
+            font-size: 1.05em !important;  
             color: #fff !important;  
+            backdrop-filter: blur(15px) saturate(180%) !important;  
             border: 1px solid rgba(255, 255, 255, 0.3) !important;  
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;  
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;  
             margin-left: 10px !important;  
           }  
         `  
@@ -228,23 +221,20 @@
         name: 'clockchanger_fire',  
         css: `  
           .custom-clock {  
-            background: linear-gradient(45deg, #ff0000, #ff7f00, #ffff00) !important;  
-            background-size: 200% 200% !important;  
-            animation: fire-gradient 3s ease infinite !important;  
-            border-radius: 12px !important;  
-            padding: 12px 24px !important;  
-            font-weight: 800 !important;  
-            font-size: 1.2em !important;  
+            background: linear-gradient(135deg, #ff0000 0%, #ff7f00 50%, #ffff00 100%) !important;  
+            border-radius: 10px !important;  
+            padding: 10px 22px !important;  
+            font-weight: 700 !important;  
+            font-size: 1.1em !important;  
             color: #fff !important;  
-            text-shadow: 0 0 10px rgba(255, 0, 0, 0.8), 0 0 20px rgba(255, 127, 0, 0.6) !important;  
-            border: 2px solid rgba(255, 255, 0, 0.5) !important;  
-            box-shadow: 0 0 20px rgba(255, 127, 0, 0.6), inset 0 0 20px rgba(255, 0, 0, 0.3) !important;  
+            text-shadow: 0 0 10px rgba(255, 255, 0, 0.8), 0 2px 4px rgba(0, 0, 0, 0.5) !important;  
+            box-shadow: 0 8px 32px rgba(255, 127, 0, 0.5) !important;  
+            animation: fire-glow 2s ease-in-out infinite !important;  
             margin-left: 10px !important;  
           }  
-          @keyframes fire-gradient {  
-            0% { background-position: 0% 50%; }  
+          @keyframes fire-glow {  
+            0%, 100% { background-position: 0% 50%; }  
             50% { background-position: 100% 50%; }  
-            100% { background-position: 0% 50%; }  
           }  
         `  
       },  
@@ -277,31 +267,27 @@
           
     function createClock() {      
       function insertClock() {  
-        // ВИПРАВЛЕННЯ: Шукаємо кнопку меню (три крапки) за різними селекторами  
-        var menuButton = document.querySelector('[class*="menu"]') ||  
-                        document.querySelector('[class*="settings"]') ||  
-                        document.querySelector('[class*="dots"]') ||  
-                        document.querySelector('.head__action') ||  
-                        document.querySelector('.header__action');  
+        // ВИПРАВЛЕННЯ: Шукаємо індикатор з трьома кольоровими точками  
+        var indicator = document.querySelector('.status') ||  
+                       document.querySelector('.indicator') ||  
+                       document.querySelector('[class*="status"]') ||  
+                       document.querySelector('[class*="indicator"]') ||  
+                       document.querySelector('[class*="dots"]');  
           
-        if (menuButton) {  
-          // Вставляємо годинник ПІСЛЯ кнопки меню  
-          if (menuButton.parentNode) {  
-            menuButton.parentNode.insertBefore(clockElement, menuButton.nextSibling);  
-            console.log('[ClockChanger] Годинник додано після кнопки меню');  
-            return true;  
-          }  
+        if (indicator && indicator.parentNode) {  
+          // Вставляємо годинник ПІСЛЯ індикатора  
+          indicator.parentNode.insertBefore(clockElement, indicator.nextSibling);  
+          console.log('[ClockChanger] Годинник додано після індикатора');  
+          return true;  
         }  
           
-        // Fallback: шукаємо контейнер кнопок  
+        // Fallback: шукаємо header  
         var header = document.querySelector('.head') ||   
-                     document.querySelector('.header') ||   
-                     document.querySelector('[class*="head"]');  
+                     document.querySelector('.header');  
           
         if (header) {  
           var buttonsContainer = header.querySelector('[class*="buttons"]') ||   
-                                header.querySelector('[class*="right"]') ||   
-                                header.querySelector('[class*="action"]');  
+                                header.querySelector('[class*="right"]');  
             
           if (buttonsContainer) {  
             buttonsContainer.appendChild(clockElement);  
@@ -312,7 +298,7 @@
           
         // Останній fallback: fixed позиція  
         console.warn('[ClockChanger] Header не знайдено, використовую fallback позицію');  
-      document.body.appendChild(clockElement);  
+        document.body.appendChild(clockElement);  
         clockElement.style.cssText += `  
           position: fixed;  
           top: 20px;  
@@ -444,4 +430,5 @@
     }  
       
   });  // Закриває waitForLampa callback  
-})();
+})();  
+  
