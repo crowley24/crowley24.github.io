@@ -20,11 +20,11 @@
       css += '.full-start-new__buttons, .full-start-new__rate-line, .full-start__buttons, .full-start__details { justify-content: center !important; align-items: center !important; display: flex !important; flex-direction: row !important; gap: 0.5em !important; flex-wrap: wrap !important; }';  
       css += '.full-descr__text, .full-start-new__title, .full-start-new__tagline, .full-start-new__head { text-align: center !important; }';  
         
-      // ЗМІНА: Дата релізу, бюджет, країна в один рядок  
-      css += '.full-descr__details { display: flex !important; flex-direction: row !important; justify-content: center !important; align-items: center !important; gap: 1em !important; flex-wrap: wrap !important; }';  
+      // ЗМІНА: Дата релізу, бюджет, країна в один рядок ПО ЦЕНТРУ  
+      css += '.full-descr__details { display: flex !important; flex-direction: row !important; justify-content: center !important; align-items: center !important; gap: 1em !important; flex-wrap: wrap !important; text-align: center !important; }';  
         
-      // ЗМІНА: Жанри, виробництво, теги в один рядок  
-      css += '.full-descr__tags { display: flex !important; flex-direction: row !important; justify-content: center !important; align-items: center !important; gap: 0.5em !important; flex-wrap: wrap !important; }';  
+      // ЗМІНА: Жанри, виробництво, теги в один рядок ПО ЦЕНТРУ  
+      css += '.full-descr__tags { display: flex !important; flex-direction: row !important; justify-content: center !important; align-items: center !important; gap: 0.5em !important; flex-wrap: wrap !important; text-align: center !important; }';  
         
       css += '.items-line__head { text-align: center !important; }';  
     } else {  
@@ -32,31 +32,24 @@
       if (cardInterfaceType === 'new') {  
         css += '.full-start-new__right { display: flex !important; flex-direction: column !important; justify-content: center !important; align-items: center !important; }';  
         css += '.full-start-new__buttons, .full-start-new__rate-line { justify-content: center !important; align-items: center !important; display: flex !important; flex-direction: row !important; gap: 0.5em !important; flex-wrap: wrap !important; }';  
-        css += '.full-start-new__details { display: flex !important; flex-direction: row !important; justify-content: center !important; align-items: center !important; }';  
-            
-        // Фільтрувати та центрувати специфічні елементи  
-        css += '.full-start-new__details > * { display: flex !important; justify-content: center !important; align-items: center !important; width: 100% !important; }';  
-          
-        // ЗМІНА: Дата релізу, бюджет, країна в один рядок  
-        css += '.full-descr__details { display: flex !important; flex-direction: row !important; justify-content: center !important; align-items: center !important; gap: 1em !important; flex-wrap: wrap !important; }';  
-          
-        // ЗМІНА: Жанри, виробництво, теги в один рядок  
-        css += '.full-descr__tags { display: flex !important; flex-direction: row !important; justify-content: center !important; align-items: center !important; gap: 0.5em !important; flex-wrap: wrap !important; }';  
-          
         css += '.full-descr__text, .full-start-new__title, .full-start-new__tagline, .full-start-new__head { text-align: center !important; }';  
+          
+        // ЗМІНА: Дата релізу, бюджет, країна в один рядок ПО ЦЕНТРУ  
+        css += '.full-descr__details { display: flex !important; flex-direction: row !important; justify-content: center !important; align-items: center !important; gap: 1em !important; flex-wrap: wrap !important; text-align: center !important; }';  
+          
+        // ЗМІНА: Жанри, виробництво, теги в один рядок ПО ЦЕНТРУ  
+        css += '.full-descr__tags { display: flex !important; flex-direction: row !important; justify-content: center !important; align-items: center !important; gap: 0.5em !important; flex-wrap: wrap !important; text-align: center !important; }';  
+          
+        css += '.items-line__head { text-align: center !important; }';  
       } else {  
         css += '.full-start__left { display: flex !important; flex-direction: column !important; justify-content: center !important; align-items: center !important; }';  
         css += '.full-start__buttons, .full-start__details { justify-content: center !important; align-items: center !important; display: flex !important; flex-direction: row !important; gap: 0.5em !important; flex-wrap: wrap !important; }';  
-        css += '.full-start__tags { display: flex !important; flex-direction: row !important; justify-content: center !important; align-items: center !important; flex-wrap: wrap !important; }';  
-            
-        // Фільтрувати специфічні теги  
-        css += '.full-start__tags > * { display: flex !important; justify-content: center !important; align-items: center !important; width: 100% !important; }';  
           
-        // ЗМІНА: Дата релізу, бюджет, країна в один рядок  
-        css += '.full-descr__details { display: flex !important; flex-direction: row !important; justify-content: center !important; align-items: center !important; gap: 1em !important; flex-wrap: wrap !important; }';  
+        // ЗМІНА: Дата релізу, бюджет, країна в один рядок ПО ЦЕНТРУ  
+        css += '.full-descr__details { display: flex !important; flex-direction: row !important; justify-content: center !important; align-items: center !important; gap: 1em !important; flex-wrap: wrap !important; text-align: center !important; }';  
           
-        // ЗМІНА: Жанри, виробництво, теги в один рядок  
-        css += '.full-descr__tags { display: flex !important; flex-direction: row !important; justify-content: center !important; align-items: center !important; gap: 0.5em !important; flex-wrap: wrap !important; }';  
+        // ЗМІНА: Жанри, виробництво, теги в один рядок ПО ЦЕНТРУ  
+        css += '.full-descr__tags { display: flex !important; flex-direction: row !important; justify-content: center !important; align-items: center !important; gap: 0.5em !important; flex-wrap: wrap !important; text-align: center !important; }';  
           
         css += '.full-descr__text, .full-start__title, .full-start__title-original { text-align: center !important; }';  
       }  
