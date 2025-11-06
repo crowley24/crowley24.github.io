@@ -60,8 +60,6 @@
             tmdb_mod_toggle_desc: { ru: "Показувати кастомні підбірки на головній сторінці", uk: "Показувати кастомні підбірки на головній сторінці" },    
             tmdb_mod_noty_reload: { ru: "Зміни набудуть чинності після перезавантаження головної сторінки", uk: "Зміни набудуть чинності після перезавантаження головної сторінки" },    
             tmdb_mod_show_collection: { ru: "Показувати підбірку", uk: "Показувати підбірку" },    
-            tmdb_mod_order_label: { ru: "Порядок відображення", uk: "Порядок відображення" },    
-            tmdb_mod_shuffle_label: { ru: "Перемішувати картки", uk: "Перемішувати картки" },    
             tmdb_mod_c_hot_new: { ru: "Найсвіжіші прем'єри", uk: "Найсвіжіші прем'єри" },    
             tmdb_mod_c_trend_movie: { ru: "Топ фільмів тижня", uk: "Топ фільмів тижня" },    
             tmdb_mod_c_watching_now: { ru: "Зараз дивляться", uk: "Зараз дивляться" },    
@@ -86,7 +84,7 @@
             if (!hasSequentials && !hasPartNext) { if (onerror) onerror(); return; }    
             var settings = loadSettings(), parts_data = [];    
             var sortedConfig = collectionsConfig.slice().sort(function(a, b) {    
-                return Lampa.Storage.get('tmdb_mod_' + a.id + '_order', a.defaultOrder) - Lampa.Storage.get('tmdb_mod_' + b.id + '_order', b.defaultOrder);    
+                return (Lampa.Storage.get('tmdb_mod_' + a.id + '_order', a.defaultOrder) || a.defaultOrder) - (Lampa.Storage.get('tmdb_mod_' + b.id + '_order', b.defaultOrder) || b.defaultOrder);    
             });    
             sortedConfig.forEach(function(cfg) {    
                 if (settings.collections[cfg.id]) {    
@@ -139,7 +137,7 @@
     
         Lampa.SettingsApi.addParam({    
             component: 'tmdb_mod',    
-            param: { name: 'tmdb_mod_enabled', type: 'trigger', default: true },    
+            param: { name: 'tmdb_mod_enabled', type:  'trigger', default: true },    
             field: { name: Lampa.Lang.translate('tmdb_mod_toggle_name'), description: Lampa.Lang.translate('tmdb_mod_toggle_desc') },    
             onChange: function (value) {    
                 pluginSettings.enabled = value;    
@@ -162,37 +160,6 @@
                 onChange: function (value) {    
                     pluginSettings.collections[cfg.id] = value;    
                     saveSettings();    
-                    Lampa.Noty.show(Lampa.Lang.translate('tmdb_mod_noty_reload'));    
-                }    
-            });    
-    
-            Lampa.SettingsApi.addParam({    
-                component: 'tmdb_mod',    
-                param: { name: 'tmdb_mod_' + cfg.id + '_order', type: 'input', default: cfg.defaultOrder.toString() },    
-                field: { name: Lampa.Lang.translate('tmdb_mod_order_label') + ': ' + translatedName, description: 'Введіть число для порядку відображення (менше число = вище)' },    
-                onChange: function (value) {    
-                    var orderValue = parseInt(value) || cfg.defaultOrder;    
-                    Lampa.Storage.set('tmdb_mod_' + cfg.id + '_order', orderValue);    
-                    Lampa.Noty.show(Lampa.Lang.translate('tmdb_mod_noty_reload'));    
-                }    
-            });    
-    
-            Lampa.SettingsApi.addParam({    
-                component: 'tmdb_mod',    
-                param: { name: 'tmdb_mod_' + cfg.id + '_view_horizontal', type: 'trigger', default: false },    
-                field: { name: 'Горизонтальні постери: ' + translatedName, description: 'Увімкнути горизонтальне відображення для цієї добірки' },    
-                onChange: function (value) {    
-                    Lampa.Storage.set('tmdb_mod_' + cfg.id + '_view', value ? 'horizontal' : 'vertical');    
-                    Lampa.Noty.show(Lampa.Lang.translate('tmdb_mod_noty_reload'));    
-                }    
-            });    
-    
-            Lampa.SettingsApi.addParam({    
-                component: 'tmdb_mod',    
-                param: { name: 'tmdb_mod_' + cfg.id + '_shuffle', type: 'trigger', default: false },    
-                field: { name: 'Перемішувати: ' + translatedName, description: 'Рандомізувати порядок карток при кожному завантаженні' },    
-                onChange: function (value) {    
-                    Lampa.Storage.set('tmdb_mod_' + cfg.id + '_shuffle', value);    
                     Lampa.Noty.show(Lampa.Lang.translate('tmdb_mod_noty_reload'));    
                 }    
             });    
@@ -254,7 +221,7 @@
                 }    
             }    
     
-            console.log('[TMDB_MOD] Плагін успішно ініціалізовано (без type:select)');    
+            console.log('[TMDB_MOD] Плагін успішно ініціалізовано (спрощена версія)');    
             return true;    
         } catch (e) {    
             console.error('[TMDB_MOD] Критична помилка ініціалізації:', e);    
@@ -298,4 +265,5 @@
     waitForApp();    
     
 })();
-                                          
+
+        
