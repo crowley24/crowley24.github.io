@@ -1156,44 +1156,44 @@
     const style = document.createElement('style');        
     style.id = 'cardify-compact-style';        
             
-    style.textContent = `        
-      .cardify-trailer__youtube.size-30 { width: 30% !important; }        
-      .cardify-trailer__youtube.size-35 { width: 35% !important; }        
-      .cardify-trailer__youtube.size-40 { width: 40% !important; }        
-      .cardify-trailer__youtube.size-45 { width: 45% !important; }        
-      .cardify-trailer__youtube.size-50 { width: 50% !important; }        
-              
-      .cardify-trailer__youtube {        
-        position: fixed !important;        
-        top: auto !important;        
-        right: 0.3em !important;        
-        bottom: 10% !important;        
-        left: auto !important;        
-        height: auto !important;        
-        aspect-ratio: 16/9 !important;        
-        max-width: 700px !important;        
-        max-height: 400px !important;        
-        border-radius: 12px !important;        
-        overflow: hidden !important;        
-        z-index: 9999 !important;  
-          
-        /* ДОДАНО: П'ятишарове розмиття для плавного переходу */  
-        box-shadow:   
-          0 0 60px 30px rgba(0,0,0,0.95),  
-          0 0 120px 60px rgba(0,0,0,0.8),  
-          0 0 180px 90px rgba(0,0,0,0.6),  
-          0 0 240px 120px rgba(0,0,0,0.4),  
-          0 0 300px 150px rgba(0,0,0,0.2) !important;  
-      }        
-              
-      .cardify-trailer__youtube iframe {        
-        width: 100% !important;        
-        height: 100% !important;        
-        border: none !important;        
-        position: relative !important;  
-        z-index: 1 !important;  
-      }        
-    `;        
+    style.textContent = `          
+  .cardify-trailer__youtube.size-30 { width: 30% !important; }          
+  .cardify-trailer__youtube.size-35 { width: 35% !important; }          
+  .cardify-trailer__youtube.size-40 { width: 40% !important; }          
+  .cardify-trailer__youtube.size-45 { width: 45% !important; }          
+  .cardify-trailer__youtube.size-50 { width: 50% !important; }          
+            
+  div.cardify-trailer__youtube {          
+    position: fixed !important;          
+    top: auto !important;          
+    right: 0.3em !important;          
+    bottom: 10% !important;          
+    left: auto !important;          
+    height: auto !important;          
+    aspect-ratio: 16/9 !important;          
+    max-width: 700px !important;          
+    max-height: 400px !important;          
+    border-radius: 12px !important;          
+    overflow: hidden !important;          
+    z-index: 9999 !important;    
+      
+    /* П'ятишарове розмиття */    
+    box-shadow:     
+      0 0 60px 30px rgba(0,0,0,0.95) !important,    
+      0 0 120px 60px rgba(0,0,0,0.8) !important,    
+      0 0 180px 90px rgba(0,0,0,0.6) !important,    
+      0 0 240px 120px rgba(0,0,0,0.4) !important,    
+      0 0 300px 150px rgba(0,0,0,0.2) !important;    
+  }          
+            
+  div.cardify-trailer__youtube iframe {          
+    width: 100% !important;          
+    height: 100% !important;          
+    border: none !important;          
+    position: relative !important;    
+    z-index: 1 !important;    
+  }          
+`;   
             
     document.head.appendChild(style);        
     console.log('[Cardify] Стилі застосовано');        
