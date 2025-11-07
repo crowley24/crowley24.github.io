@@ -1174,67 +1174,35 @@
         max-width: 700px !important;        
         max-height: 400px !important;        
         border-radius: 12px !important;        
-        overflow: visible !important;        
+        overflow: visible !important;  
         z-index: 50 !important;        
         transform: none !important;        
         opacity: 0.9 !important;        
         transition: opacity 0.3s ease !important;        
-        pointer-events: none !important;        
+        pointer-events: none !important;  
+          
+        /* Багатошарове розмиття для плавного переходу */  
+        box-shadow:   
+          0 0 40px 20px rgba(0,0,0,0.9),  
+          0 0 80px 40px rgba(0,0,0,0.7),  
+          0 0 120px 60px rgba(0,0,0,0.5),  
+          0 0 160px 80px rgba(0,0,0,0.3),  
+          0 0 200px 100px rgba(0,0,0,0.1) !important;  
+          
+        /* Додатковий фільтр для м'якості */  
+        filter: drop-shadow(0 0 30px rgba(0,0,0,0.8)) !important;  
       }        
-        
-      /* Зовнішня розмита зона */  
-      .cardify-trailer__youtube::before {  
-        content: '';  
-        position: absolute;  
-        top: -60px;  
-        left: -60px;  
-        right: -60px;  
-        bottom: -60px;  
-        background: radial-gradient(  
-          ellipse at center,  
-          rgba(0, 0, 0, 0.4) 0%,  
-          rgba(0, 0, 0, 0.6) 30%,  
-          rgba(0, 0, 0, 0.8) 60%,  
-          transparent 100%  
-        );  
-        filter: blur(40px);  
-        z-index: -1;  
-        border-radius: 12px;  
-        pointer-events: none;  
-      }  
-        
-      /* Внутрішня розмита зона для плавного переходу */  
-      .cardify-trailer__youtube::after {  
-        content: '';  
-        position: absolute;  
-        top: -30px;  
-        left: -30px;  
-        right: -30px;  
-        bottom: -30px;  
-        background: radial-gradient(  
-          ellipse at center,  
-          transparent 40%,  
-          rgba(0, 0, 0, 0.3) 60%,  
-          rgba(0, 0, 0, 0.6) 80%,  
-          rgba(0, 0, 0, 0.9) 100%  
-        );  
-        filter: blur(20px);  
-        z-index: -1;  
-        border-radius: 12px;  
-        pointer-events: none;  
-      }  
               
       .cardify-trailer__youtube iframe {        
-        width: 130% !important;        
-        height: 130% !important;        
+        width: 100% !important;        
+        height: 100% !important;        
         position: absolute !important;        
-        top: 50% !important;        
-        left: 50% !important;        
-        transform: translate(-50%, -50%) scale(1.2) !important;        
-        transform-origin: center !important;        
-        object-fit: cover !important;  
+        top: 0 !important;        
+        left: 0 !important;        
         border-radius: 12px !important;  
-        z-index: 1;  
+        transform: none !important;  
+        object-fit: cover !important;  
+        z-index: 1 !important;  
       }        
               
       .cardify-trailer__youtube-line {        
