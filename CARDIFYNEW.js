@@ -1059,23 +1059,21 @@
       }
     });
 
-    Lampa.SettingsApi.addParam({      
-  component: 'cardify',      
-  param: {      
-    name: 'cardify_trailer_size',      
-    type: 'select',      
-    "default": '45',      
-    values: { 
-      '35': '35% (дуже малий)',
-      '40': '40% (малий)',      
-      '45': '45% (середній)',      
-      '50': '50% (великий)',      
-      '55': '55% (дуже великий)'        
-    }      
-  },    
-  field: {    
-    name: 'Розмір трейлера'    
-  }    
+    Lampa.SettingsApi.addParam({        
+  component: 'cardify',        
+  param: {        
+    name: 'cardify_trailer_size',        
+    type: 'select',        
+    "default": '40',      
+    values: {        
+      '35': '35% (малий)',        
+      '40': '40% (середній)',        
+      '45': '45% (великий)'        
+    }        
+  },      
+  field: {      
+    name: 'Розмір трейлера'      
+  }      
 });
 
     function video(data) {
@@ -1156,12 +1154,9 @@
     const style = document.createElement('style');        
     style.id = 'cardify-compact-style';        
             
-    style.textContent = `          
-      .cardify-trailer__youtube.size-30 { width: 35% !important; }          
       .cardify-trailer__youtube.size-35 { width: 40% !important; }          
       .cardify-trailer__youtube.size-40 { width: 45% !important; }          
       .cardify-trailer__youtube.size-45 { width: 50% !important; }          
-      .cardify-trailer__youtube.size-50 { width: 55% !important; }          
            
       .cardify-trailer__youtube {          
     position: fixed !important;          
