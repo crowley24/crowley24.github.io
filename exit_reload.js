@@ -350,15 +350,10 @@
         },  
           
         destroy: function() {  
-            if (this.elements.button && this.elements.button.parentNode) {  
-                this.elements.button.parentNode.removeChild(this.elements.button);  
-            }  
             if (this.elements.menu && this.elements.menu.parentNode) {  
                 this.elements.menu.parentNode.removeChild(this.elements.menu);  
             }  
               
-            var style = document.getElementById('utilities-button-styles');  
-            if (style) style.remove();
             var style = document.getElementById('utilities-button-styles');  
             if (style) style.remove();  
               
