@@ -1171,40 +1171,41 @@
         aspect-ratio: 16/9 !important;    
         max-width: 700px !important;    
         max-height: 400px !important;    
-        border-radius: 16px !important;    
+        border-radius: 20px !important;    
         overflow: visible !important;    
           
-        /* Товста напівпрозора рамка з градієнтом */  
-        border: 40px solid transparent !important;  
+        /* Товста рамка з градієнтом для плавного переходу */  
+        border: 60px solid transparent !important;  
         border-image: linear-gradient(  
-          to bottom,  
-          rgba(0, 0, 0, 0.1) 0%,  
-          rgba(0, 0, 0, 0.3) 25%,  
-          rgba(0, 0, 0, 0.5) 50%,  
-          rgba(0, 0, 0, 0.7) 75%,  
-          rgba(0, 0, 0, 0.9) 100%  
+          to bottom right,  
+          rgba(0,0,0,0) 0%,  
+          rgba(0,0,0,0.1) 20%,  
+          rgba(0,0,0,0.3) 40%,  
+          rgba(0,0,0,0.5) 60%,  
+          rgba(0,0,0,0.7) 80%,  
+          rgba(0,0,0,0.9) 100%  
         ) 1 !important;  
           
-        /* Додаткове розмиття навколо */  
+        /* Додатковий box-shadow для розмиття */  
         box-shadow:   
           0 0 80px 40px rgba(0,0,0,0.8),  
           0 0 160px 80px rgba(0,0,0,0.6),  
           0 0 240px 120px rgba(0,0,0,0.4) !important;  
-          
-        filter: drop-shadow(0 0 60px rgba(0,0,0,0.9)) !important;  
       }    
-        
+          
       .cardify-trailer__youtube iframe {    
-        position: relative !important;    
-        width: calc(100% + 80px) !important;    
-        height: calc(100% + 80px) !important;    
-        margin: -40px !important;  
+        position: absolute !important;    
+        top: -60px !important;  
+        left: -60px !important;  
+        width: calc(100% + 120px) !important;  
+        height: calc(100% + 120px) !important;  
         border: none !important;    
       }    
     `;    
         
     document.head.appendChild(style);    
         
+    // Застосувати клас розміру до існуючих трейлерів    
     const existingTrailers = document.querySelectorAll('.cardify-trailer__youtube');    
     existingTrailers.forEach(el => {    
       el.className = el.className.replace(/size-\d+/g, '');    
@@ -1212,9 +1213,9 @@
     });    
   }    
       
+  // MutationObserver для нових трейлерів    
   const observer = new MutationObserver(function(mutations) {    
     const trailerSize = Lampa.Storage.field('cardify_trailer_size') || '45';    
-        
     mutations.forEach(function(mutation) {    
       mutation.addedNodes.forEach(function(node) {    
         if (node.nodeType === 1) {    
