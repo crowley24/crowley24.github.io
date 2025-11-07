@@ -1,7 +1,7 @@
 (function() {  
     'use strict';  
       
-    // Перевірка версії Lampa  
+    // Перевірка наявності Lampa  
     if (typeof Lampa === 'undefined') {  
         console.error('[UTILITIES] Lampa не знайдено');  
         return;  
@@ -21,16 +21,14 @@
         },  
           
         state: {  
-            isMenuOpen: false,  
-            isEnabled: false,  
-            lastToggleAt: 0  
+            isMenuOpen: false  
         },  
           
         icons: {  
-            utilities: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',  
-            reload: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>',  
-            console: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>',  
-            exit: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>'  
+            utilities: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 88" fill="currentColor"><path d="m0,12.402,35.687-4.8602,0.0156,34.423-35.67,0.20313zm35.67,33.529,0.0277,34.453-35.67-4.9041-0.002-29.78zm4.3261-39.025,47.318-6.906,0,41.527-47.318,0.37565zm47.329,39.349-0.0111,41.34-47.318-6.6784-0.0663-34.739z"/></svg>',  
+            reload: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>',  
+            console: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>',  
+            exit: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>'  
         },  
           
         actions: {  
@@ -49,43 +47,41 @@
             exit: function() {  
                 console.log('[UTILITIES] Вихід...');  
                   
-                // Спроба закрити через Lampa.Activity  
+                // Спочатку викликаємо Lampa.Activity.out()  
                 if (Lampa.Activity && typeof Lampa.Activity.out === 'function') {  
                     Lampa.Activity.out();  
                 }  
                   
                 // Платформо-специфічні методи виходу  
                 try {  
-                    // Tizen (Samsung TV)  
+                    // Tizen (Samsung)  
                     if (typeof tizen !== 'undefined' && tizen.application) {  
                         tizen.application.getCurrentApplication().exit();  
-                        return;  
                     }  
-                      
-                    // WebOS (LG TV)  
-                    if (typeof webOS !== 'undefined' && webOS.platformBack) {  
+                    // WebOS (LG)  
+                    else if (typeof webOS !== 'undefined' && webOS.platformBack) {  
                         webOS.platformBack();  
-                        return;  
                     }  
-                      
-                    // Android TV  
-                    if (typeof Android !== 'undefined' && Android.exit) {  
+                    // Android  
+                    else if (typeof Android !== 'undefined' && Android.exit) {  
                         Android.exit();  
-                        return;  
                     }  
-                      
-                    // Orsay (старі Samsung TV)  
-                    if (typeof window.NetCastBack !== 'undefined') {  
+                    // Orsay (старі Samsung)  
+                    else if (typeof window.NetCastBack !== 'undefined') {  
                         window.NetCastBack();  
-                        return;  
                     }  
-                      
-                    // Fallback - закриття вікна  
-                    window.close();  
                 } catch (e) {  
                     console.error('[UTILITIES] Помилка виходу:', e);  
                 }  
             }  
+        },  
+          
+        init: function() {  
+            this.addStyles();  
+            this.createButton();  
+            this.createMenu();  
+            this.bindEvents();  
+            console.log('[UTILITIES] Плагін успішно ініціалізовано');  
         },  
           
         addStyles: function() {  
@@ -93,70 +89,53 @@
             style.id = 'utilities-button-styles';  
             style.textContent = `  
                 .utilities-button {  
-                    display: flex;  
-                    align-items: center;  
-                    justify-content: center;  
-                    width: 3em;  
-                    height: 3em;  
                     cursor: pointer;  
-                    transition: all 0.3s ease;  
-                    background: rgba(255, 255, 255, 0.1);  
-                    border-radius: 0.3em;  
-                    margin-left: 0.5em;  
+                    transition: all 0.2s ease;  
                 }  
                   
                 .utilities-button:hover,  
-                .utilities-button.focus,  
-                .utilities-button.selector.focus {  
-                    background: rgba(255, 255, 255, 0.2);  
-                    outline: 2px solid rgba(255, 255, 255, 0.8);  
-                    outline-offset: 2px;  
+                .utilities-button.focus {  
+                    background: rgba(255, 255, 255, 0.1) !important;  
                 }  
                   
                 .utilities-button svg {  
                     width: 1.5em;  
                     height: 1.5em;  
-                    fill: none;  
-                    stroke: currentColor;  
                 }  
                   
                 .utilities-menu {  
-                    position: fixed;  
-                    top: 4em;  
-                    right: 1em;  
-                    background: rgba(0, 0, 0, 0.95);  
-                    border: 1px solid rgba(255, 255, 255, 0.2);  
+                    position: absolute;  
+                    top: 100%;  
+                    right: 0;  
+                    margin-top: 0.5em;  
+                    background: rgba(20, 20, 20, 0.95);  
+                    border: 1px solid rgba(255, 255, 255, 0.1);  
                     border-radius: 0.5em;  
-                    padding: 0.5em;  
+                    padding: 0.5em 0;  
                     min-width: 200px;  
                     z-index: 10000;  
-                    display: none;  
-                }  
-                  
-                .utilities-menu.active {  
-                    display: block;  
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);  
                 }  
                   
                 .utilities-menu__item {  
                     display: flex;  
                     align-items: center;  
-                    padding: 0.8em 1em;  
+                    gap: 0.8em;  
+                    padding: 0.8em 1.2em;  
                     cursor: pointer;  
                     transition: all 0.2s ease;  
-                    border-radius: 0.3em;  
-                    margin: 0.2em 0;  
+                    color: rgba(255, 255, 255, 0.8);  
                 }  
                   
                 .utilities-menu__item:hover,  
-                .utilities-menu__item.focus,  
-                .utilities-menu__item.selector.focus {  
-                    background: rgba(255, 255, 255, 0.2);  
-                    outline: 2px solid rgba(255, 255, 255, 0.8);  
-                    outline-offset: -2px;  
+                .utilities-menu__item.focus {  
+                    background: rgba(255, 255, 255, 0.1);  
+                    color: rgba(255, 255, 255, 1);  
                 }  
                   
                 .utilities-menu__item svg {  
-                    margin-right: 0.8em;  
+                    width: 1.2em;  
+                    height: 1.2em;  
                     flex-shrink: 0;  
                 }  
                   
@@ -169,54 +148,35 @@
           
         createButton: function() {  
             var self = this;  
+            var headActions = document.querySelector('.head__actions');  
+            if (!headActions) {  
+                console.error('[UTILITIES] .head__actions не знайдено');  
+                return;  
+            }  
               
             this.elements.button = document.createElement('div');  
-            this.elements.button.className = 'utilities-button selector';  
+            this.elements.button.className = 'head__action utilities-button selector';  
             this.elements.button.innerHTML = this.icons.utilities;  
+            this.elements.button.setAttribute('title', 'Утиліти');  
             this.elements.button.setAttribute('tabindex', '0');  
               
-            // Обробник кліку мишею  
+            headActions.appendChild(this.elements.button);  
+              
+            // Обробник кліку  
             this.elements.button.addEventListener('click', function(e) {  
                 e.preventDefault();  
                 e.stopPropagation();  
                 self.toggleMenu();  
             });  
               
-            // Обробник клавіатури для Enter  
+            // Обробник Enter для пульта  
             this.elements.button.addEventListener('keydown', function(e) {  
-                if (e.keyCode === 13 || e.key === 'Enter') {  
+                if (e.keyCode === 13) { // Enter  
                     e.preventDefault();  
                     e.stopPropagation();  
                     self.toggleMenu();  
                 }  
             });  
-              
-            var headActions = document.querySelector('.head__actions');  
-            if (headActions) {  
-                headActions.appendChild(this.elements.button);  
-            }  
-              
-            // Реєстрація в Lampa.Controller для навігації пультом  
-            if (Lampa.Controller && typeof Lampa.Controller.add === 'function') {  
-                Lampa.Controller.add('utilities_button', {  
-                    toggle: function() {  
-                        if (self.elements.button) {  
-                            Lampa.Controller.collectionSet(self.elements.button);  
-                            Lampa.Controller.collectionFocus(false, self.elements.button);  
-                        }  
-                    },  
-                    enter: function() {  
-                        // Викликаємо toggleMenu при натисканні OK на пульті  
-                        self.toggleMenu();  
-                    },  
-                    back: function() {  
-                        if (self.state.isMenuOpen) {  
-                            self.closeMenu();  
-                            return false;  
-                        }  
-                    }  
-                });  
-            }  
         },  
           
         createMenu: function() {  
@@ -224,6 +184,7 @@
               
             this.elements.menu = document.createElement('div');  
             this.elements.menu.className = 'utilities-menu';  
+            this.elements.menu.style.display = 'none';  
               
             var items = [  
                 { action: 'reload', icon: this.icons.reload, text: 'Перезагрузка' },  
@@ -231,32 +192,38 @@
                 { action: 'exit', icon: this.icons.exit, text: 'Вихід' }  
             ];  
               
-            items.forEach(function(item, index) {  
+            items.forEach(function(item) {  
                 var menuItem = document.createElement('div');  
                 menuItem.className = 'utilities-menu__item selector';  
                 menuItem.setAttribute('data-action', item.action);  
                 menuItem.setAttribute('tabindex', '0');  
                 menuItem.innerHTML = item.icon + '<span>' + item.text + '</span>';  
                   
-                // Обробник кліку мишею  
+                // Обробник кліку  
                 menuItem.addEventListener('click', function(e) {  
                     e.preventDefault();  
                     e.stopPropagation();  
+                    var action = this.getAttribute('data-action');  
                     self.closeMenu();  
-                    setTimeout(function() {  
-                        self.actions[item.action]();  
-                    }, 100);  
+                    if (action && self.actions[action]) {  
+                        setTimeout(function() {  
+                            self.actions[action]();  
+                        }, 100);  
+                    }  
                 });  
                   
-                // Обробник клавіатури для Enter  
+                // Обробник Enter для пульта  
                 menuItem.addEventListener('keydown', function(e) {  
-                    if (e.keyCode === 13 || e.key === 'Enter') {  
+                    if (e.keyCode === 13) { // Enter  
                         e.preventDefault();  
                         e.stopPropagation();  
+                        var action = this.getAttribute('data-action');  
                         self.closeMenu();  
-                        setTimeout(function() {  
-                            self.actions[item.action]();  
-                        }, 100);  
+                        if (action && self.actions[action]) {  
+                            setTimeout(function() {  
+                                self.actions[action]();  
+                            }, 100);  
+                        }  
                     }  
                 });  
                   
@@ -264,36 +231,9 @@
             });  
               
             document.body.appendChild(this.elements.menu);  
-              
-            // Реєстрація меню в Lampa.Controller  
-            if (Lampa.Controller && typeof Lampa.Controller.add === 'function') {  
-                Lampa.Controller.add('utilities_menu', {  
-                    toggle: function() {  
-                        var items = self.elements.menu.querySelectorAll('.utilities-menu__item');  
-                        if (items.length > 0) {  
-                            Lampa.Controller.collectionSet(self.elements.menu);  
-                            Lampa.Controller.collectionFocus(false, items[0]);  
-                        }  
-                    },  
-                    up: function() {  
-                        Lampa.Controller.move('up');  
-                    },  
-                    down: function() {  
-                        Lampa.Controller.move('down');  
-                    },  
-                    back: function() {  
-                        self.closeMenu();  
-                        return false;  
-                    }  
-                });  
-            }  
         },  
           
         toggleMenu: function() {  
-            var now = Date.now();  
-            if (now - this.state.lastToggleAt < 300) return;  
-            this.state.lastToggleAt = now;  
-              
             if (this.state.isMenuOpen) {  
                 this.closeMenu();  
             } else {  
@@ -302,15 +242,20 @@
         },  
           
         openMenu: function() {  
-            if (!this.elements.menu) return;  
+            if (!this.elements.menu || !this.elements.button) return;  
               
-            this.elements.menu.classList.add('active');  
+            var buttonRect = this.elements.button.getBoundingClientRect();  
+            this.elements.menu.style.top = (buttonRect.bottom + 8) + 'px';  
+            this.elements.menu.style.right = (window.innerWidth - buttonRect.right) + 'px';  
+            this.elements.menu.style.display = 'block';  
+              
             this.state.isMenuOpen = true;  
               
-            // Активуємо контролер меню  
-            if (Lampa.Controller && typeof Lampa.Controller.toggle === 'function') {  
+            // Фокус на першому пункті меню  
+            var firstItem = this.elements.menu.querySelector('.utilities-menu__item');  
+            if (firstItem) {  
                 setTimeout(function() {  
-                    Lampa.Controller.toggle('utilities_menu');  
+                    firstItem.focus();  
                 }, 50);  
             }  
         },  
@@ -318,25 +263,20 @@
         closeMenu: function() {  
             if (!this.elements.menu) return;  
               
-            this.elements.menu.classList.remove('active');  
+            this.elements.menu.style.display = 'none';  
             this.state.isMenuOpen = false;  
               
-            // Повертаємо фокус на кнопку  
-            if (Lampa.Controller && typeof Lampa.Controller.toggle === 'function') {  
-                Lampa.Controller.toggle('utilities_button');  
+            // Повернути фокус на кнопку  
+            if (this.elements.button) {  
+                this.elements.button.focus();  
             }  
         },  
           
-        init: function() {  
-            if (this.state.isEnabled) return;  
-              
-            this.addStyles();  
-            this.createButton();  
-            this.createMenu();  
-              
-            // Обробка кнопки "Назад" через Lampa.Listener  
+        bindEvents: function() {  
             var self = this;  
-            if (Lampa.Listener && typeof Lampa.Listener.follow === 'function') {  
+              
+            // Обробка кнопки "Назад"  
+            if (window.Lampa && window.Lampa.Listener) {  
                 Lampa.Listener.follow('back', function() {  
                     if (self.state.isMenuOpen) {  
                         self.closeMenu();  
@@ -345,24 +285,14 @@
                 });  
             }  
               
-            this.state.isEnabled = true;  
-            console.log('[UTILITIES] Плагін успішно ініціалізовано');  
-        },  
-          
-        destroy: function() {  
-            if (this.elements.menu && this.elements.menu.parentNode) {  
-                this.elements.menu.parentNode.removeChild(this.elements.menu);  
-            }  
-              
-            var style = document.getElementById('utilities-button-styles');  
-            if (style) style.remove();  
-              
-            if (Lampa.Controller && typeof Lampa.Controller.remove === 'function') {  
-                Lampa.Controller.remove('utilities_button');  
-                Lampa.Controller.remove('utilities_menu');  
-            }  
-              
-            this.state.isEnabled = false;  
+            // Закриття меню при кліку поза ним  
+            document.addEventListener('click', function(e) {  
+                if (self.state.isMenuOpen &&   
+                    !self.elements.menu.contains(e.target) &&   
+                    !self.elements.button.contains(e.target)) {  
+                    self.closeMenu();  
+                }  
+            });  
         }  
     };  
       
