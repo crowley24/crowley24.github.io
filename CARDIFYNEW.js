@@ -1153,7 +1153,8 @@
             
     const style = document.createElement('style');        
     style.id = 'cardify-compact-style';        
-            
+
+    style.textContent = `
       .cardify-trailer__youtube.size-35 { width: 40% !important; }          
       .cardify-trailer__youtube.size-40 { width: 45% !important; }          
       .cardify-trailer__youtube.size-45 { width: 50% !important; }          
