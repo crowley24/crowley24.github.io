@@ -27,11 +27,6 @@
         uk: 'Перезагрузка',    
         ru: 'Перезагрузка'    
       },  
-      console_button: {    
-        en: 'Console',    
-        uk: 'Консоль',    
-        ru: 'Консоль'    
-      },  
       logout_button: {    
         en: 'Exit',    
         uk: 'Вихід',    
@@ -42,19 +37,6 @@
     // Функції дій  
     function doReload() {  
       window.location.reload();  
-    }  
-      
-    function doConsole() {  
-      if (window.Lampa && Lampa.Noty) {  
-        Lampa.Noty.show('Натисніть F12 або Ctrl+Shift+I для відкриття консолі');  
-      }  
-        
-      try {  
-        if (typeof console !== 'undefined') {  
-          console.log('%c[Console] Консоль активована', 'color: #00ff00; font-size: 16px; font-weight: bold;');  
-          console.log('%cВикористовуйте F12 або Ctrl+Shift+I для відкриття DevTools', 'color: #ffaa00; font-size: 14px;');  
-        }  
-      } catch(e) {}  
     }  
       
     function doLogout() {  
@@ -77,10 +59,6 @@
             reload: true  
           },  
           {  
-            title: Lampa.Lang.translate('console_button'),  
-            console: true  
-          },  
-          {  
             title: Lampa.Lang.translate('logout_button'),  
             logout: true  
           }  
@@ -88,9 +66,6 @@
         onSelect: function(item) {  
           if (item.reload) {  
             doReload();  
-          } else if (item.console) {  
-            doConsole();  
-            Lampa.Controller.toggle('head');  
           } else if (item.logout) {  
             doLogout();  
           }  
@@ -101,15 +76,14 @@
       });  
     }  
         
-    // Створення основної кнопки меню (тільки іконка)  
+    // Створення основної кнопки меню з іконкою power/reload  
     function createActionButton() {    
       var button = document.createElement('div');    
       button.className = 'head__action action-menu-button selector';    
       button.innerHTML = `    
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">    
-          <circle cx="12" cy="12" r="1" stroke="currentColor" stroke-width="2" fill="currentColor"/>  
-          <circle cx="12" cy="5" r="1" stroke="currentColor" stroke-width="2" fill="currentColor"/>  
-          <circle cx="12" cy="19" r="1" stroke="currentColor" stroke-width="2" fill="currentColor"/>  
+          <path d="M18.36 6.64a9 9 0 1 1-12.73 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>  
+          <line x1="12" y1="2" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>  
         </svg>    
       `;    
           
