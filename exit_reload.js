@@ -21,12 +21,11 @@
         },  
           
         state: {  
-            isMenuOpen: false,  
-            isEnabled: false  
+            isMenuOpen: false  
         },  
           
         icons: {  
-            utilities: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m8.66-15.66l-4.24 4.24m-4.24 4.24l-4.24 4.24m15.66-8.66l-6 0m-6 0l-6 0m15.66 8.66l-4.24-4.24m-4.24-4.24l-4.24-4.24"/></svg>',  
+            utilities: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>',  
             reload: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>',  
             console: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>',  
             exit: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>'  
@@ -46,7 +45,7 @@
             },  
               
             exit: function() {  
-                console.log('[UTILITIES] Вихід з застосунку...');  
+                console.log('[UTILITIES] Вихід...');  
                   
                 // Спроба закрити через Lampa.Activity  
                 if (Lampa.Activity && typeof Lampa.Activity.out === 'function') {  
@@ -55,21 +54,21 @@
                   
                 // Платформо-специфічні методи виходу  
                 try {  
-                    // Tizen (Samsung TV)  
+                    // Tizen (Samsung Smart TV)  
                     if (typeof tizen !== 'undefined' && tizen.application) {  
                         tizen.application.getCurrentApplication().exit();  
                         return;  
                     }  
                       
-                    // WebOS (LG TV)  
+                    // WebOS (LG Smart TV)  
                     if (typeof webOS !== 'undefined' && webOS.platformBack) {  
                         webOS.platformBack();  
                         return;  
                     }  
                       
-                    // Android TV  
-                    if (typeof Android !== 'undefined' && Android.finish) {  
-                        Android.finish();  
+                    // Android WebView  
+                    if (typeof Android !== 'undefined' && Android.exit) {  
+                        Android.exit();  
                         return;  
                     }  
                       
@@ -103,10 +102,14 @@
                     border-radius: 0.3em;  
                 }  
                   
-                .utilities-button.selector {  
-                    outline: none;  
+                .utilities-button svg {  
+                    width: 1.5em;  
+                    height: 1.5em;  
+                    fill: none;  
+                    stroke: currentColor;  
                 }  
                   
+                .utilities-button:hover,  
                 .utilities-button.focus,  
                 .utilities-button:focus {  
                     background: rgba(255, 255, 255, 0.1);  
@@ -114,55 +117,47 @@
                     outline-offset: 2px;  
                 }  
                   
-                .utilities-button svg {  
-                    width: 1.5em;  
-                    height: 1.5em;  
-                    color: #fff;  
-                }  
-                  
                 .utilities-menu {  
                     position: absolute;  
-                    top: 100%;  
+                    top: calc(100% + 0.5em);  
                     right: 0;  
-                    margin-top: 0.5em;  
                     background: rgba(0, 0, 0, 0.95);  
                     border: 1px solid rgba(255, 255, 255, 0.2);  
                     border-radius: 0.5em;  
-                    padding: 0.5em 0;  
+                    padding: 0.5em;  
                     min-width: 12em;  
                     z-index: 10000;  
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);  
+                    display: none;  
+                }  
+                  
+                .utilities-menu.active {  
+                    display: block;  
                 }  
                   
                 .utilities-menu__item {  
                     display: flex;  
                     align-items: center;  
-                    padding: 0.8em 1.2em;  
+                    padding: 0.8em 1em;  
                     cursor: pointer;  
                     transition: all 0.2s ease;  
-                    color: #fff;  
-                }  
-                  
-                .utilities-menu__item.selector {  
-                    outline: none;  
-                }  
-                  
-                .utilities-menu__item.focus,  
-                .utilities-menu__item:focus {  
-                    background: rgba(255, 255, 255, 0.2);  
-                    outline: 2px solid rgba(255, 255, 255, 0.8);  
-                    outline-offset: -2px;  
+                    border-radius: 0.3em;  
+                    margin: 0.2em 0;  
                 }  
                   
                 .utilities-menu__item svg {  
                     width: 1.2em;  
                     height: 1.2em;  
                     margin-right: 0.8em;  
-                    flex-shrink: 0;  
+                    fill: none;  
+                    stroke: currentColor;  
                 }  
                   
-                .utilities-menu__item span {  
-                    flex: 1;  
+                .utilities-menu__item:hover,  
+                .utilities-menu__item.focus,  
+                .utilities-menu__item:focus {  
+                    background: rgba(255, 255, 255, 0.2);  
+                    outline: 2px solid rgba(255, 255, 255, 0.8);  
+                    outline-offset: -2px;  
                 }  
             `;  
             document.head.appendChild(style);  
@@ -171,17 +166,20 @@
         createButton: function() {  
             var self = this;  
               
+            // Створюємо кнопку  
             this.elements.button = document.createElement('div');  
-            this.elements.button.className = 'utilities-button selector';  
+            this.elements.button.className = 'head__action utilities-button selector';  
             this.elements.button.innerHTML = this.icons.utilities;  
-            this.elements.button.setAttribute('tabindex', '0');  
+            this.elements.button.setAttribute('tabindex', '0'); // КРИТИЧНО для фокусу  
               
-            // Обробник кліку мишею  
-            this.elements.button.addEventListener('click', function() {  
+            // Обробник кліку мишкою  
+            this.elements.button.addEventListener('click', function(e) {  
+                e.preventDefault();  
+                e.stopPropagation();  
                 self.toggleMenu();  
             });  
               
-            // Обробник Enter для пульта  
+            // Обробник клавіатури для Enter/OK  
             this.elements.button.addEventListener('keydown', function(e) {  
                 if (e.keyCode === 13) { // Enter  
                     e.preventDefault();  
@@ -190,6 +188,7 @@
                 }  
             });  
               
+            // Додаємо до верхньої панелі  
             var headActions = document.querySelector('.head__actions');  
             if (headActions) {  
                 headActions.appendChild(this.elements.button);  
@@ -199,46 +198,55 @@
         createMenu: function() {  
             var self = this;  
               
+            // Створюємо меню  
             this.elements.menu = document.createElement('div');  
             this.elements.menu.className = 'utilities-menu';  
-            this.elements.menu.style.display = 'none';  
               
-            var items = [  
+            var menuItems = [  
                 { action: 'reload', icon: this.icons.reload, text: 'Перезагрузка' },  
                 { action: 'console', icon: this.icons.console, text: 'Консоль' },  
                 { action: 'exit', icon: this.icons.exit, text: 'Вихід' }  
             ];  
               
-            items.forEach(function(item) {  
+            menuItems.forEach(function(item, index) {  
                 var menuItem = document.createElement('div');  
                 menuItem.className = 'utilities-menu__item selector';  
-                menuItem.setAttribute('data-action', item.action);  
-                menuItem.setAttribute('tabindex', '0');  
                 menuItem.innerHTML = item.icon + '<span>' + item.text + '</span>';  
+                menuItem.setAttribute('data-action', item.action);  
+                menuItem.setAttribute('tabindex', '0'); // КРИТИЧНО для фокусу  
                   
-                // Обробник кліку мишею  
-                menuItem.addEventListener('click', function() {  
-                    self.closeMenu();  
-                    setTimeout(function() {  
-                        self.actions[item.action]();  
-                    }, 100);  
+                // Обробник кліку мишкою  
+                menuItem.addEventListener('click', function(e) {  
+                    e.preventDefault();  
+                    e.stopPropagation();  
+                    self.executeAction(item.action);  
                 });  
                   
-                // Обробник Enter для пульта  
+                // Обробник клавіатури для Enter/OK  
                 menuItem.addEventListener('keydown', function(e) {  
                     if (e.keyCode === 13) { // Enter  
                         e.preventDefault();  
                         e.stopPropagation();  
-                        self.closeMenu();  
-                        setTimeout(function() {  
-                            self.actions[item.action]();  
-                        }, 100);  
+                        self.executeAction(item.action);  
+                    } else if (e.keyCode === 38) { // Up  
+                        e.preventDefault();  
+                        var prev = this.previousElementSibling;  
+                        if (prev && prev.classList.contains('utilities-menu__item')) {  
+                            prev.focus();  
+                        }  
+                    } else if (e.keyCode === 40) { // Down  
+                        e.preventDefault();  
+                        var next = this.nextElementSibling;  
+                        if (next && next.classList.contains('utilities-menu__item')) {  
+                            next.focus();  
+                        }  
                     }  
                 });  
                   
                 self.elements.menu.appendChild(menuItem);  
             });  
               
+            // Додаємо меню до кнопки  
             this.elements.button.appendChild(this.elements.menu);  
         },  
           
@@ -253,34 +261,37 @@
         openMenu: function() {  
             if (!this.elements.menu) return;  
               
-            this.elements.menu.style.display = 'block';  
+            this.elements.menu.classList.add('active');  
             this.state.isMenuOpen = true;  
               
-            // Автоматичний фокус на першому пункті  
+            // Фокус на першому пункті меню  
             var firstItem = this.elements.menu.querySelector('.utilities-menu__item');  
             if (firstItem) {  
                 setTimeout(function() {  
-                    firstItem.classList.add('focus');  
                     firstItem.focus();  
-                }, 50);  
+                }, 100);  
             }  
         },  
           
         closeMenu: function() {  
             if (!this.elements.menu) return;  
               
-            this.elements.menu.style.display = 'none';  
+            this.elements.menu.classList.remove('active');  
             this.state.isMenuOpen = false;  
               
-            // Видалити фокус з пунктів меню  
-            var items = this.elements.menu.querySelectorAll('.utilities-menu__item');  
-            items.forEach(function(item) {  
-                item.classList.remove('focus');  
-            });  
-              
-            // Повернути фокус на кнопку  
+            // Повертаємо фокус на кнопку  
             if (this.elements.button) {  
                 this.elements.button.focus();  
+            }  
+        },  
+          
+        executeAction: function(action) {  
+            this.closeMenu();  
+              
+            if (this.actions[action]) {  
+                setTimeout(function() {  
+                    this.actions[action]();  
+                }.bind(this), 100);  
             }  
         },  
           
@@ -313,7 +324,6 @@
             this.createMenu();  
             this.bindEvents();  
               
-            this.state.isEnabled = true;  
             console.log('[UTILITIES] Плагін успішно ініціалізовано');  
         },  
           
@@ -324,8 +334,6 @@
               
             var style = document.getElementById('utilities-button-styles');  
             if (style) style.remove();  
-              
-            this.state.isEnabled = false;  
         }  
     };  
       
