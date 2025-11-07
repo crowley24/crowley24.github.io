@@ -27,41 +27,61 @@
         },  
           
         icons: {  
-            utilities: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 88" fill="currentColor"><path d="M0,12.402,35.687,7.23,72.75,0,58.6,12.032,46.537,22.75,44.2,24.07,1.591,23.119,0,12.402ZM.525,27.1,43.792,28.1,16.812,50.525,7.907,42.025.525,27.1ZM52.93,6.945l-4.15,3.88L77.512,65.488l9.012,1.065L52.93,6.945ZM89.806,72.032,80.65,71.03,66.556,83.588,62.268,78.05l-2.74,2.56L73.787,95.2,89.806,72.032Z"/></svg>',  
-            reload: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>',  
-            console: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>',  
-            exit: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>'  
+            utilities: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',  
+            reload: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>',  
+            console: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>',  
+            exit: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>'  
         },  
           
         actions: {  
             reload: function() {  
+                console.log('[UTILITIES] Перезагрузка...');  
                 location.reload();  
             },  
               
             console: function() {  
+                console.log('[UTILITIES] Відкриття консолі...');  
                 if (Lampa.Controller && typeof Lampa.Controller.toggle === 'function') {  
                     Lampa.Controller.toggle('console');  
                 }  
             },  
               
             exit: function() {  
+                console.log('[UTILITIES] Вихід...');  
+                  
+                // Спроба закрити через Lampa.Activity  
                 if (Lampa.Activity && typeof Lampa.Activity.out === 'function') {  
                     Lampa.Activity.out();  
                 }  
                   
                 // Платформо-специфічні методи виходу  
                 try {  
+                    // Tizen (Samsung TV)  
                     if (typeof tizen !== 'undefined' && tizen.application) {  
                         tizen.application.getCurrentApplication().exit();  
-                    } else if (typeof webOS !== 'undefined' && webOS.platformBack) {  
-                        webOS.platformBack();  
-                    } else if (typeof Android !== 'undefined' && Android.exit) {  
-                        Android.exit();  
-                    } else if (typeof window.PalmSystem !== 'undefined') {  
-                        window.PalmSystem.platformBack();  
-                    } else if (typeof Common !== 'undefined' && Common.API && Common.API.Widget) {  
-                        Common.API.Widget.sendExitEvent();  
+                        return;  
                     }  
+                      
+                    // WebOS (LG TV)  
+                    if (typeof webOS !== 'undefined' && webOS.platformBack) {  
+                        webOS.platformBack();  
+                        return;  
+                    }  
+                      
+                    // Android TV  
+                    if (typeof Android !== 'undefined' && Android.exit) {  
+                        Android.exit();  
+                        return;  
+                    }  
+                      
+                    // Orsay (старі Samsung TV)  
+                    if (typeof window.NetCastBack !== 'undefined') {  
+                        window.NetCastBack();  
+                        return;  
+                    }  
+                      
+                    // Fallback - закриття вікна  
+                    window.close();  
                 } catch (e) {  
                     console.error('[UTILITIES] Помилка виходу:', e);  
                 }  
@@ -76,33 +96,35 @@
                     display: flex;  
                     align-items: center;  
                     justify-content: center;  
-                    width: 2.5em;  
-                    height: 2.5em;  
+                    width: 3em;  
+                    height: 3em;  
                     cursor: pointer;  
-                    transition: all 0.2s ease;  
-                    border-radius: 0.3em;  
+                    transition: all 0.3s ease;  
                     background: rgba(255, 255, 255, 0.1);  
-                }  
-                  
-                .utilities-button svg {  
-                    width: 1.5em;  
-                    height: 1.5em;  
-                    fill: currentColor;  
+                    border-radius: 0.3em;  
+                    margin-left: 0.5em;  
                 }  
                   
                 .utilities-button:hover,  
-                .utilities-button.focus {  
+                .utilities-button.focus,  
+                .utilities-button.selector.focus {  
                     background: rgba(255, 255, 255, 0.2);  
                     outline: 2px solid rgba(255, 255, 255, 0.8);  
                     outline-offset: 2px;  
                 }  
                   
+                .utilities-button svg {  
+                    width: 1.5em;  
+                    height: 1.5em;  
+                    fill: none;  
+                    stroke: currentColor;  
+                }  
+                  
                 .utilities-menu {  
-                    position: absolute;  
-                    top: 100%;  
-                    right: 0;  
-                    margin-top: 0.5em;  
-                    background: rgba(20, 20, 20, 0.95);  
+                    position: fixed;  
+                    top: 4em;  
+                    right: 1em;  
+                    background: rgba(0, 0, 0, 0.95);  
                     border: 1px solid rgba(255, 255, 255, 0.2);  
                     border-radius: 0.5em;  
                     padding: 0.5em;  
@@ -125,18 +147,21 @@
                     margin: 0.2em 0;  
                 }  
                   
-                .utilities-menu__item svg {  
-                    width: 1.2em;  
-                    height: 1.2em;  
-                    margin-right: 0.8em;  
-                    stroke: currentColor;  
-                }  
-                  
                 .utilities-menu__item:hover,  
-                .utilities-menu__item.focus {  
+                .utilities-menu__item.focus,  
+                .utilities-menu__item.selector.focus {  
                     background: rgba(255, 255, 255, 0.2);  
                     outline: 2px solid rgba(255, 255, 255, 0.8);  
                     outline-offset: -2px;  
+                }  
+                  
+                .utilities-menu__item svg {  
+                    margin-right: 0.8em;  
+                    flex-shrink: 0;  
+                }  
+                  
+                .utilities-menu__item span {  
+                    flex: 1;  
                 }  
             `;  
             document.head.appendChild(style);  
@@ -146,16 +171,18 @@
             var self = this;  
               
             this.elements.button = document.createElement('div');  
-            this.elements.button.className = 'head__action utilities-button selector';  
+            this.elements.button.className = 'utilities-button selector';  
             this.elements.button.innerHTML = this.icons.utilities;  
             this.elements.button.setAttribute('tabindex', '0');  
               
-            // Обробник кліку для миші  
-            this.elements.button.addEventListener('click', function() {  
+            // Обробник кліку мишею  
+            this.elements.button.addEventListener('click', function(e) {  
+                e.preventDefault();  
+                e.stopPropagation();  
                 self.toggleMenu();  
             });  
               
-            // Обробник keydown для Enter (OK на пульті)  
+            // Обробник клавіатури для Enter  
             this.elements.button.addEventListener('keydown', function(e) {  
                 if (e.keyCode === 13 || e.key === 'Enter') {  
                     e.preventDefault();  
@@ -168,6 +195,28 @@
             if (headActions) {  
                 headActions.appendChild(this.elements.button);  
             }  
+              
+            // Реєстрація в Lampa.Controller для навігації пультом  
+            if (Lampa.Controller && typeof Lampa.Controller.add === 'function') {  
+                Lampa.Controller.add('utilities_button', {  
+                    toggle: function() {  
+                        if (self.elements.button) {  
+                            Lampa.Controller.collectionSet(self.elements.button);  
+                            Lampa.Controller.collectionFocus(false, self.elements.button);  
+                        }  
+                    },  
+                    enter: function() {  
+                        // Викликаємо toggleMenu при натисканні OK на пульті  
+                        self.toggleMenu();  
+                    },  
+                    back: function() {  
+                        if (self.state.isMenuOpen) {  
+                            self.closeMenu();  
+                            return false;  
+                        }  
+                    }  
+                });  
+            }  
         },  
           
         createMenu: function() {  
@@ -176,50 +225,67 @@
             this.elements.menu = document.createElement('div');  
             this.elements.menu.className = 'utilities-menu';  
               
-            var menuItems = [  
+            var items = [  
                 { action: 'reload', icon: this.icons.reload, text: 'Перезагрузка' },  
                 { action: 'console', icon: this.icons.console, text: 'Консоль' },  
                 { action: 'exit', icon: this.icons.exit, text: 'Вихід' }  
             ];  
               
-            menuItems.forEach(function(item) {  
+            items.forEach(function(item, index) {  
                 var menuItem = document.createElement('div');  
                 menuItem.className = 'utilities-menu__item selector';  
                 menuItem.setAttribute('data-action', item.action);  
                 menuItem.setAttribute('tabindex', '0');  
                 menuItem.innerHTML = item.icon + '<span>' + item.text + '</span>';  
                   
-                // Обробник кліку для миші  
+                // Обробник кліку мишею  
                 menuItem.addEventListener('click', function(e) {  
+                    e.preventDefault();  
                     e.stopPropagation();  
                     self.closeMenu();  
-                    if (self.actions[item.action]) {  
-                        setTimeout(function() {   
-                            self.actions[item.action]();   
-                        }, 100);  
-                    }  
+                    setTimeout(function() {  
+                        self.actions[item.action]();  
+                    }, 100);  
                 });  
                   
-                // Обробник keydown для Enter (OK на пульті)  
+                // Обробник клавіатури для Enter  
                 menuItem.addEventListener('keydown', function(e) {  
                     if (e.keyCode === 13 || e.key === 'Enter') {  
                         e.preventDefault();  
                         e.stopPropagation();  
                         self.closeMenu();  
-                        if (self.actions[item.action]) {  
-                            setTimeout(function() {   
-                                self.actions[item.action]();   
-                            }, 100);  
-                        }  
+                        setTimeout(function() {  
+                            self.actions[item.action]();  
+                        }, 100);  
                     }  
                 });  
                   
                 self.elements.menu.appendChild(menuItem);  
             });  
               
-            if (this.elements.button && this.elements.button.parentNode) {  
-                this.elements.button.parentNode.style.position = 'relative';  
-                this.elements.button.parentNode.appendChild(this.elements.menu);  
+            document.body.appendChild(this.elements.menu);  
+              
+            // Реєстрація меню в Lampa.Controller  
+            if (Lampa.Controller && typeof Lampa.Controller.add === 'function') {  
+                Lampa.Controller.add('utilities_menu', {  
+                    toggle: function() {  
+                        var items = self.elements.menu.querySelectorAll('.utilities-menu__item');  
+                        if (items.length > 0) {  
+                            Lampa.Controller.collectionSet(self.elements.menu);  
+                            Lampa.Controller.collectionFocus(false, items[0]);  
+                        }  
+                    },  
+                    up: function() {  
+                        Lampa.Controller.move('up');  
+                    },  
+                    down: function() {  
+                        Lampa.Controller.move('down');  
+                    },  
+                    back: function() {  
+                        self.closeMenu();  
+                        return false;  
+                    }  
+                });  
             }  
         },  
           
@@ -241,11 +307,10 @@
             this.elements.menu.classList.add('active');  
             this.state.isMenuOpen = true;  
               
-            // Фокус на першому пункті меню  
-            var firstItem = this.elements.menu.querySelector('.utilities-menu__item');  
-            if (firstItem) {  
+            // Активуємо контролер меню  
+            if (Lampa.Controller && typeof Lampa.Controller.toggle === 'function') {  
                 setTimeout(function() {  
-                    firstItem.focus();  
+                    Lampa.Controller.toggle('utilities_menu');  
                 }, 50);  
             }  
         },  
@@ -257,81 +322,21 @@
             this.state.isMenuOpen = false;  
               
             // Повертаємо фокус на кнопку  
-            if (this.elements.button) {  
-                this.elements.button.focus();  
+            if (Lampa.Controller && typeof Lampa.Controller.toggle === 'function') {  
+                Lampa.Controller.toggle('utilities_button');  
             }  
         },  
           
-        bindEvents: function() {  
+        init: function() {  
+            if (this.state.isEnabled) return;  
+              
+            this.addStyles();  
+            this.createButton();  
+            this.createMenu();  
+              
+            // Обробка кнопки "Назад" через Lampa.Listener  
             var self = this;  
-              
-            // Закриття меню при кліку поза ним  
-            document.addEventListener('click', function(e) {  
-                if (self.state.isMenuOpen &&   
-                    !self.elements.menu.contains(e.target) &&   
-                    !self.elements.button.contains(e.target)) {  
-                    self.closeMenu();  
-                }  
-            });  
-              
-            // Інтеграція з Lampa.Controller для кнопки  
-            if (Lampa.Controller && typeof Lampa.Controller.add === 'function') {  
-                Lampa.Controller.add('utilities_button', {  
-                    toggle: function() {  
-                        if (self.elements.button) {  
-                            $(self.elements.button).toggleClass('focus');  
-                        }  
-                    },  
-                    enter: function() {  
-                        // Цей метод викликається при натисканні OK на пульті  
-                        self.toggleMenu();  
-                    },  
-                    back: function() {  
-                        if (self.state.isMenuOpen) {  
-                            self.closeMenu();  
-                            return false;  
-                        }  
-                    }  
-                });  
-            }  
-              
-            // Інтеграція з Lampa.Controller для меню  
-            if (Lampa.Controller && typeof Lampa.Controller.add === 'function') {  
-                Lampa.Controller.add('utilities_menu', {  
-                    toggle: function() {  
-                        var items = self.elements.menu.querySelectorAll('.utilities-menu__item');  
-                        items.forEach(function(item) {  
-                            $(item).removeClass('focus');  
-                        });  
-                          
-                        var focused = document.activeElement;  
-                        if (focused && focused.classList.contains('utilities-menu__item')) {  
-                            $(focused).addClass('focus');  
-                        }  
-                    },  
-                    enter: function() {  
-                        var focused = document.activeElement;  
-                        if (focused && focused.classList.contains('utilities-menu__item')) {  
-                            var action = focused.getAttribute('data-action');  
-                            self.closeMenu();  
-                            if (action && self.actions[action]) {  
-                                setTimeout(function() {   
-                                    self.actions[action]();   
-                                }, 100);  
-                            }  
-                        }  
-                    },  
-                    back: function() {  
-                        if (self.state.isMenuOpen) {  
-                            self.closeMenu();  
-                            return false;  
-                        }  
-                    }  
-                });  
-            }  
-              
-            // Обробка кнопки "Назад"  
-            if (window.Lampa && window.Lampa.Listener) {  
+            if (Lampa.Listener && typeof Lampa.Listener.follow === 'function') {  
                 Lampa.Listener.follow('back', function() {  
                     if (self.state.isMenuOpen) {  
                         self.closeMenu();  
@@ -339,13 +344,6 @@
                     }  
                 });  
             }  
-        },  
-          
-        init: function() {  
-            this.addStyles();  
-            this.createButton();  
-            this.createMenu();  
-            this.bindEvents();  
               
             this.state.isEnabled = true;  
             console.log('[UTILITIES] Плагін успішно ініціалізовано');  
@@ -360,9 +358,11 @@
             }  
               
             var style = document.getElementById('utilities-button-styles');  
+            if (style) style.remove();
+            var style = document.getElementById('utilities-button-styles');  
             if (style) style.remove();  
               
-           if (Lampa.Controller && typeof Lampa.Controller.remove === 'function') {  
+            if (Lampa.Controller && typeof Lampa.Controller.remove === 'function') {  
                 Lampa.Controller.remove('utilities_button');  
                 Lampa.Controller.remove('utilities_menu');  
             }  
