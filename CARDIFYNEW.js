@@ -1174,7 +1174,8 @@
         max-width: 700px !important;        
         max-height: 400px !important;        
         border-radius: 12px !important;        
-        overflow: visible !important;  
+        overflow: visible !important;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.6) !important;
         z-index: 50 !important;        
         transform: none !important;        
         opacity: 0.9 !important;        
@@ -1194,13 +1195,14 @@
       }        
               
       .cardify-trailer__youtube iframe {        
-        width: 100% !important;        
-        height: 100% !important;        
+        width: 130% !important;        
+        height: 130% !important;        
         position: absolute !important;        
-        top: 0 !important;        
-        left: 0 !important;        
+        top: 50% !important;        
+        left: 50% !important;        
         border-radius: 12px !important;  
-        transform: none !important;  
+        transform: translate(-50%, -50%) scale(1.2) !important;  
+        transform-origin: center !important;  
         object-fit: cover !important;  
         z-index: 1 !important;  
       }        
