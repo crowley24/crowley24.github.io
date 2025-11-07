@@ -1173,113 +1173,84 @@
         max-height: 400px !important;    
         border-radius: 12px !important;    
         overflow: visible !important;  
-        z-index: 100 !important;  
+        border: none !important;  
+        box-shadow: none !important;  
       }  
         
-      /* Широка розмита рамка через ::before */  
-      .cardify-trailer__youtube::before {  
-        content: '';  
-        position: absolute;  
-        top: -80px;  
-        left: -80px;  
-        right: -80px;  
-        bottom: -80px;  
-        background: linear-gradient(  
-          135deg,  
-          rgba(0, 0, 0, 0.9) 0%,  
-          rgba(0, 0, 0, 0.7) 20%,  
-          rgba(0, 0, 0, 0.5) 40%,  
-          rgba(0, 0, 0, 0.3) 60%,  
-          rgba(0, 0, 0, 0.1) 80%,  
-          transparent 100%  
-        );  
-        border-radius: 20px;  
-        filter: blur(60px);  
-        z-index: -1;  
-        pointer-events: none;  
-      }  
-        
-      /* Додатковий шар розмиття через ::after */  
+      /* Псевдоелемент для плавного fade-out */  
       .cardify-trailer__youtube::after {  
         content: '';  
         position: absolute;  
-        top: -120px;  
-        left: -120px;  
-        right: -120px;  
-        bottom: -120px;  
-        background: radial-gradient(  
-          ellipse 100% 100% at center,  
-          rgba(0, 0, 0, 0.6) 0%,  
-          rgba(0, 0, 0, 0.4) 30%,  
-          rgba(0, 0, 0, 0.2) 50%,  
-          rgba(0, 0, 0, 0.1) 70%,  
-          transparent 100%  
+        top: -40px;  
+        left: -40px;  
+        right: -40px;  
+        bottom: -40px;  
+        background: radial-gradient(ellipse 100% 100% at center,  
+          transparent 0%,  
+          transparent 40%,  
+          rgba(0,0,0,0.1) 50%,  
+          rgba(0,0,0,0.3) 60%,  
+          rgba(0,0,0,0.5) 70%,  
+          rgba(0,0,0,0.7) 80%,  
+          rgba(0,0,0,0.9) 90%,  
+          rgba(0,0,0,1) 100%  
         );  
-        border-radius: 30px;  
-        filter: blur(80px);  
-        z-index: -2;  
         pointer-events: none;  
+        z-index: 1;  
       }  
         
-      .cardify-trailer__youtube iframe {    
-        position: relative !important;    
-        width: 100% !important;    
-        height: 100% !important;    
-        border: none !important;  
-        border-radius: 12px !important;  
-        z-index: 1;  
-      }    
-    `;  
-      
-    document.head.appendChild(style);  
-      
-    const trailers = document.querySelectorAll('.cardify-trailer__youtube');  
-    trailers.forEach(el => {  
-      el.className = el.className.replace(/size-\d+/g, '');  
-      el.classList.add('size-' + trailerSize);  
-    });  
-  }  
-    
-  const observer = new MutationObserver(function(mutations) {  
-    const trailerSize = Lampa.Storage.field('cardify_trailer_size') || '45';  
-      
-    mutations.forEach(function(mutation) {  
-      mutation.addedNodes.forEach(function(node) {  
-        if (node.nodeType === 1) {  
-          if (node.classList && node.classList.contains('cardify-trailer__youtube')) {  
-            node.className = node.className.replace(/size-\d+/g, '');  
-            node.classList.add('size-' + trailerSize);  
-          }  
-            
-          const trailers = node.querySelectorAll('.cardify-trailer__youtube');  
-          trailers.forEach(el => {  
-            el.className = el.className.replace(/size-\d+/g, '');  
-            el.classList.add('size-' + trailerSize);  
-          });  
-        }  
-      });  
-    });  
-  });  
-    
-  observer.observe(document.body, {  
-    childList: true,  
-    subtree: true  
-  });  
-    
-  if (window.appready) {  
-    setTimeout(modifyCardifyStyles, 1000);  
-  } else {  
-    Lampa.Listener.follow('app', function(e) {  
-      if (e.type === 'ready') {  
-        setTimeout(modifyCardifyStyles, 1000);  
+      /* YouTube iframe має бути під псевдоелементом */  
+      .cardify-trailer__youtube iframe {  
+        position: relative;  
+        z-index: 0;  
+        border-radius: 12px;  
       }  
-    });  
-  }  
-    
-  Lampa.Listener.follow('storage', function(e) {  
-    if (e.name === 'cardify_trailer_size') {  
-      console.log('[Cardify] Розмір змінено на:', e.value);  
-      modifyCardifyStyles();  
-    }  
-  });  
+    `;    
+        
+    document.head.appendChild(style);    
+  }    
+        
+  const observer = new MutationObserver(function(mutations) {    
+    mutations.forEach(function(mutation) {    
+      mutation.addedNodes.forEach(function(node) {    
+        if (node.nodeType === 1) {    
+          if (node.classList && node.classList.contains('cardify-trailer__youtube')) {    
+            const trailerSize = Lampa.Storage.field('cardify_trailer_size') || '45';  
+            node.className = node.className.replace(/size-\d+/g, '');    
+            node.classList.add('size-' + trailerSize);    
+            console.log('[Cardify] Додано клас size-' + trailerSize + ' до нового трейлера');    
+          }    
+                
+          const trailers = node.querySelectorAll('.cardify-trailer__youtube');    
+          trailers.forEach(el => {    
+            const trailerSize = Lampa.Storage.field('cardify_trailer_size') || '45';  
+            el.className = el.className.replace(/size-\d+/g, '');    
+            el.classList.add('size-' + trailerSize);    
+          });    
+        }    
+      });    
+    });    
+  });    
+        
+  observer.observe(document.body, {    
+    childList: true,    
+    subtree: true    
+  });    
+        
+  if (window.appready) {    
+    setTimeout(modifyCardifyStyles, 1000);    
+  } else {    
+    Lampa.Listener.follow('app', function(e) {    
+      if (e.type === 'ready') {    
+        setTimeout(modifyCardifyStyles, 1000);    
+      }    
+    });    
+  }    
+        
+  Lampa.Listener.follow('storage', function(e) {    
+    if (e.name === 'cardify_trailer_size') {    
+      console.log('[Cardify] Розмір змінено на:', e.value);    
+      modifyCardifyStyles();    
+    }    
+  });    
 })();
