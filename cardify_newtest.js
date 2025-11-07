@@ -1165,7 +1165,7 @@ function modifyCardifyStyles() {
         
     .cardify-trailer__youtube {    
       position: fixed !important;    
-      top: auto% !important;    
+      top: auto !important;    
       right: 0.3em !important;    
       bottom: 10% !important;    
       left: auto !important;    
