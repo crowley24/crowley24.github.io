@@ -21,14 +21,15 @@
         },  
           
         state: {  
-            isMenuOpen: false  
+            isMenuOpen: false,  
+            isEnabled: false  
         },  
           
         icons: {  
-            utilities: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 88 88" fill="currentColor"><path d="m0,12.402,35.687-4.8602,0.0156,34.423-35.67,0.20313zm35.67,33.529,0.0277,34.453-35.67-4.9041-0.002-29.78zm4.3261-39.025,47.318-6.906,0,41.527-47.318,0.37565zm47.329,39.349-0.0111,41.34-47.318-6.6784-0.0663-34.739z"/></svg>',  
-            reload: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>',  
-            console: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>',  
-            exit: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>'  
+            utilities: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m8.66-15.66l-4.24 4.24m-4.24 4.24l-4.24 4.24m15.66-8.66l-6 0m-6 0l-6 0m15.66 8.66l-4.24-4.24m-4.24-4.24l-4.24-4.24"/></svg>',  
+            reload: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>',  
+            console: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>',  
+            exit: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>'  
         },  
           
         actions: {  
@@ -45,43 +46,45 @@
             },  
               
             exit: function() {  
-                console.log('[UTILITIES] Вихід...');  
+                console.log('[UTILITIES] Вихід з застосунку...');  
                   
-                // Спочатку викликаємо Lampa.Activity.out()  
+                // Спроба закрити через Lampa.Activity  
                 if (Lampa.Activity && typeof Lampa.Activity.out === 'function') {  
                     Lampa.Activity.out();  
                 }  
                   
                 // Платформо-специфічні методи виходу  
                 try {  
-                    // Tizen (Samsung)  
+                    // Tizen (Samsung TV)  
                     if (typeof tizen !== 'undefined' && tizen.application) {  
                         tizen.application.getCurrentApplication().exit();  
+                        return;  
                     }  
-                    // WebOS (LG)  
-                    else if (typeof webOS !== 'undefined' && webOS.platformBack) {  
+                      
+                    // WebOS (LG TV)  
+                    if (typeof webOS !== 'undefined' && webOS.platformBack) {  
                         webOS.platformBack();  
+                        return;  
                     }  
-                    // Android  
-                    else if (typeof Android !== 'undefined' && Android.exit) {  
-                        Android.exit();  
+                      
+                    // Android TV  
+                    if (typeof Android !== 'undefined' && Android.finish) {  
+                        Android.finish();  
+                        return;  
                     }  
-                    // Orsay (старі Samsung)  
-                    else if (typeof window.NetCastBack !== 'undefined') {  
+                      
+                    // Orsay (старі Samsung TV)  
+                    if (typeof window.NetCastBack !== 'undefined') {  
                         window.NetCastBack();  
+                        return;  
                     }  
+                      
+                    // Fallback - закриття вікна  
+                    window.close();  
                 } catch (e) {  
                     console.error('[UTILITIES] Помилка виходу:', e);  
                 }  
             }  
-        },  
-          
-        init: function() {  
-            this.addStyles();  
-            this.createButton();  
-            this.createMenu();  
-            this.bindEvents();  
-            console.log('[UTILITIES] Плагін успішно ініціалізовано');  
         },  
           
         addStyles: function() {  
@@ -89,18 +92,32 @@
             style.id = 'utilities-button-styles';  
             style.textContent = `  
                 .utilities-button {  
+                    position: relative;  
+                    display: flex;  
+                    align-items: center;  
+                    justify-content: center;  
+                    width: 3em;  
+                    height: 3em;  
                     cursor: pointer;  
-                    transition: all 0.2s ease;  
+                    transition: all 0.3s ease;  
+                    border-radius: 0.3em;  
                 }  
                   
-                .utilities-button:hover,  
-                .utilities-button.focus {  
-                    background: rgba(255, 255, 255, 0.1) !important;  
+                .utilities-button.selector {  
+                    outline: none;  
+                }  
+                  
+                .utilities-button.focus,  
+                .utilities-button:focus {  
+                    background: rgba(255, 255, 255, 0.1);  
+                    outline: 2px solid rgba(255, 255, 255, 0.8);  
+                    outline-offset: 2px;  
                 }  
                   
                 .utilities-button svg {  
                     width: 1.5em;  
                     height: 1.5em;  
+                    color: #fff;  
                 }  
                   
                 .utilities-menu {  
@@ -108,11 +125,11 @@
                     top: 100%;  
                     right: 0;  
                     margin-top: 0.5em;  
-                    background: rgba(20, 20, 20, 0.95);  
-                    border: 1px solid rgba(255, 255, 255, 0.1);  
+                    background: rgba(0, 0, 0, 0.95);  
+                    border: 1px solid rgba(255, 255, 255, 0.2);  
                     border-radius: 0.5em;  
                     padding: 0.5em 0;  
-                    min-width: 200px;  
+                    min-width: 12em;  
                     z-index: 10000;  
                     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);  
                 }  
@@ -120,22 +137,27 @@
                 .utilities-menu__item {  
                     display: flex;  
                     align-items: center;  
-                    gap: 0.8em;  
                     padding: 0.8em 1.2em;  
                     cursor: pointer;  
                     transition: all 0.2s ease;  
-                    color: rgba(255, 255, 255, 0.8);  
+                    color: #fff;  
                 }  
                   
-                .utilities-menu__item:hover,  
-                .utilities-menu__item.focus {  
-                    background: rgba(255, 255, 255, 0.1);  
-                    color: rgba(255, 255, 255, 1);  
+                .utilities-menu__item.selector {  
+                    outline: none;  
+                }  
+                  
+                .utilities-menu__item.focus,  
+                .utilities-menu__item:focus {  
+                    background: rgba(255, 255, 255, 0.2);  
+                    outline: 2px solid rgba(255, 255, 255, 0.8);  
+                    outline-offset: -2px;  
                 }  
                   
                 .utilities-menu__item svg {  
                     width: 1.2em;  
                     height: 1.2em;  
+                    margin-right: 0.8em;  
                     flex-shrink: 0;  
                 }  
                   
@@ -148,24 +170,14 @@
           
         createButton: function() {  
             var self = this;  
-            var headActions = document.querySelector('.head__actions');  
-            if (!headActions) {  
-                console.error('[UTILITIES] .head__actions не знайдено');  
-                return;  
-            }  
               
             this.elements.button = document.createElement('div');  
-            this.elements.button.className = 'head__action utilities-button selector';  
+            this.elements.button.className = 'utilities-button selector';  
             this.elements.button.innerHTML = this.icons.utilities;  
-            this.elements.button.setAttribute('title', 'Утиліти');  
             this.elements.button.setAttribute('tabindex', '0');  
               
-            headActions.appendChild(this.elements.button);  
-              
-            // Обробник кліку  
-            this.elements.button.addEventListener('click', function(e) {  
-                e.preventDefault();  
-                e.stopPropagation();  
+            // Обробник кліку мишею  
+            this.elements.button.addEventListener('click', function() {  
                 self.toggleMenu();  
             });  
               
@@ -177,6 +189,11 @@
                     self.toggleMenu();  
                 }  
             });  
+              
+            var headActions = document.querySelector('.head__actions');  
+            if (headActions) {  
+                headActions.appendChild(this.elements.button);  
+            }  
         },  
           
         createMenu: function() {  
@@ -199,17 +216,12 @@
                 menuItem.setAttribute('tabindex', '0');  
                 menuItem.innerHTML = item.icon + '<span>' + item.text + '</span>';  
                   
-                // Обробник кліку  
-                menuItem.addEventListener('click', function(e) {  
-                    e.preventDefault();  
-                    e.stopPropagation();  
-                    var action = this.getAttribute('data-action');  
+                // Обробник кліку мишею  
+                menuItem.addEventListener('click', function() {  
                     self.closeMenu();  
-                    if (action && self.actions[action]) {  
-                        setTimeout(function() {  
-                            self.actions[action]();  
-                        }, 100);  
-                    }  
+                    setTimeout(function() {  
+                        self.actions[item.action]();  
+                    }, 100);  
                 });  
                   
                 // Обробник Enter для пульта  
@@ -217,20 +229,17 @@
                     if (e.keyCode === 13) { // Enter  
                         e.preventDefault();  
                         e.stopPropagation();  
-                        var action = this.getAttribute('data-action');  
                         self.closeMenu();  
-                        if (action && self.actions[action]) {  
-                            setTimeout(function() {  
-                                self.actions[action]();  
-                            }, 100);  
-                        }  
+                        setTimeout(function() {  
+                            self.actions[item.action]();  
+                        }, 100);  
                     }  
                 });  
                   
                 self.elements.menu.appendChild(menuItem);  
             });  
               
-            document.body.appendChild(this.elements.menu);  
+            this.elements.button.appendChild(this.elements.menu);  
         },  
           
         toggleMenu: function() {  
@@ -242,19 +251,16 @@
         },  
           
         openMenu: function() {  
-            if (!this.elements.menu || !this.elements.button) return;  
+            if (!this.elements.menu) return;  
               
-            var buttonRect = this.elements.button.getBoundingClientRect();  
-            this.elements.menu.style.top = (buttonRect.bottom + 8) + 'px';  
-            this.elements.menu.style.right = (window.innerWidth - buttonRect.right) + 'px';  
             this.elements.menu.style.display = 'block';  
-              
             this.state.isMenuOpen = true;  
               
-            // Фокус на першому пункті меню  
+            // Автоматичний фокус на першому пункті  
             var firstItem = this.elements.menu.querySelector('.utilities-menu__item');  
             if (firstItem) {  
                 setTimeout(function() {  
+                    firstItem.classList.add('focus');  
                     firstItem.focus();  
                 }, 50);  
             }  
@@ -266,6 +272,12 @@
             this.elements.menu.style.display = 'none';  
             this.state.isMenuOpen = false;  
               
+            // Видалити фокус з пунктів меню  
+            var items = this.elements.menu.querySelectorAll('.utilities-menu__item');  
+            items.forEach(function(item) {  
+                item.classList.remove('focus');  
+            });  
+              
             // Повернути фокус на кнопку  
             if (this.elements.button) {  
                 this.elements.button.focus();  
@@ -276,7 +288,7 @@
             var self = this;  
               
             // Обробка кнопки "Назад"  
-            if (window.Lampa && window.Lampa.Listener) {  
+            if (Lampa.Listener && typeof Lampa.Listener.follow === 'function') {  
                 Lampa.Listener.follow('back', function() {  
                     if (self.state.isMenuOpen) {  
                         self.closeMenu();  
@@ -293,6 +305,27 @@
                     self.closeMenu();  
                 }  
             });  
+        },  
+          
+        init: function() {  
+            this.addStyles();  
+            this.createButton();  
+            this.createMenu();  
+            this.bindEvents();  
+              
+            this.state.isEnabled = true;  
+            console.log('[UTILITIES] Плагін успішно ініціалізовано');  
+        },  
+          
+        destroy: function() {  
+            if (this.elements.button && this.elements.button.parentNode) {  
+                this.elements.button.parentNode.removeChild(this.elements.button);  
+            }  
+              
+            var style = document.getElementById('utilities-button-styles');  
+            if (style) style.remove();  
+              
+            this.state.isEnabled = false;  
         }  
     };  
       
