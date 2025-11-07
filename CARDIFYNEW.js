@@ -1162,7 +1162,7 @@
       .cardify-trailer__youtube {          
     position: fixed !important;          
     top: auto !important;          
-    right: 0.8em !important;          
+    right: 1.3em !important;          
     bottom: 3% !important;          
     left: auto !important;          
     height: auto !important;          
