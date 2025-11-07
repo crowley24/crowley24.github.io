@@ -1066,11 +1066,10 @@
     type: 'select',      
     "default": '45',      
     values: {      
-      '35': '35% (дуже малий)',      
-      '45': '45% (малий)',      
-      '50': '50% (середній)',      
-      '55': '55% (великий)',      
-      '60': '60% (дуже великий)'      
+      '50': '50% (малий)',      
+      '55': '55% (середній)',      
+      '60': '60% (великий)',      
+      '65': '65% (дуже великий)'        
     }      
   },    
   field: {    
@@ -1157,11 +1156,10 @@
     style.id = 'cardify-compact-style';        
             
     style.textContent = `          
-  .cardify-trailer__youtube.size-35 { width: 37% !important; }          
-  .cardify-trailer__youtube.size-45 { width: 47% !important; }          
-  .cardify-trailer__youtube.size-50 { width: 52% !important; }          
-  .cardify-trailer__youtube.size-55 { width: 57% !important; }          
-  .cardify-trailer__youtube.size-60 { width: 62% !important; }          
+  .cardify-trailer__youtube.size-50 { width: 38% !important; }          
+  .cardify-trailer__youtube.size-55 { width: 42% !important; }         
+  .cardify-trailer__youtube.size-60 { width: 46% !important; }          
+  .cardify-trailer__youtube.size-65 { width: 50% !important; }          
             
   .cardify-trailer__youtube {          
     position: fixed !important;          
