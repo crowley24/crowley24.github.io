@@ -1064,12 +1064,12 @@
   param: {    
     name: 'cardify_trailer_size',    
     type: 'select',    
-    "default": '45',    
+    "default": '35',    
     values: {    
-      '35': '35% (малий)',    
-      '45': '45% (середній)',    
-      '55': '55% (великий)',    
-      '65': '65% (дуже великий)'    
+      '30': '30% (малий)',    
+      '35': '35% (середній)',    
+      '40': '40% (великий)',    
+      '45': '45% (дуже великий)'    
     }    
   },  
   field: {  
@@ -1149,7 +1149,7 @@
     const oldStyle = document.getElementById('cardify-compact-style');  
     if (oldStyle) oldStyle.remove();  
       
-    const trailerSize = Lampa.Storage.field('cardify_trailer_size') || '45';  
+    const trailerSize = Lampa.Storage.field('cardify_trailer_size') || '35';  
     console.log('[Cardify] Застосування розміру:', trailerSize + '%');  
       
     const style = document.createElement('style');  
@@ -1163,9 +1163,9 @@
         
       .cardify-trailer__youtube {  
         position: fixed !important;  
-        top: 45% !important;  
-        right: 0.5em !important;  
-        bottom: auto !important;  
+        top: auto !important;  
+        right: 0.3em !important;  
+        bottom: 10% !important;  
         left: auto !important;  
         height: auto !important;  
         aspect-ratio: 16/9 !important;  
