@@ -101,7 +101,7 @@
       });  
     }  
         
-    // Створення основної кнопки меню  
+    // Створення основної кнопки меню (тільки іконка)  
     function createActionButton() {    
       var button = document.createElement('div');    
       button.className = 'head__action action-menu-button selector';    
@@ -111,17 +111,19 @@
           <circle cx="12" cy="5" r="1" stroke="currentColor" stroke-width="2" fill="currentColor"/>  
           <circle cx="12" cy="19" r="1" stroke="currentColor" stroke-width="2" fill="currentColor"/>  
         </svg>    
-        <span style="margin-left: 0.5em;">${Lampa.Lang.translate('action_menu')}</span>    
       `;    
           
       button.style.cssText = `    
         display: inline-flex;    
         align-items: center;    
-        padding: 0.5em 1em;    
+        justify-content: center;  
+        padding: 0.5em;    
         margin-left: 1em;    
         cursor: pointer;    
         border-radius: 8px;    
-        transition: background 0.2s;    
+        transition: background 0.2s;  
+        width: 2.5em;  
+        height: 2.5em;  
       `;    
           
       // Обробник для пульта  
