@@ -26,8 +26,49 @@
         en: 'Are you sure you want to exit?',  
         uk: 'Ви впевнені, що хочете вийти?',  
         ru: 'Вы уверены, что хотите выйти?'  
+      },  
+      cancel: {  
+        en: 'Cancel',  
+        uk: 'Скасувати',  
+        ru: 'Отмена'  
       }  
     });  
+      
+    // Функція діалогу виходу  
+    function showLogoutDialog() {  
+      Lampa.Select.show({  
+        title: Lampa.Lang.translate('logout_button'),  
+        items: [  
+          {  
+            title: Lampa.Lang.translate('logout_confirm'),  
+            yes: true  
+          },  
+          {  
+            title: Lampa.Lang.translate('cancel'),  
+            cancel: true  
+          }  
+        ],  
+        onSelect: function(item) {  
+          if (item.yes) {  
+            // Очистити дані користувача  
+            if (Lampa.Account && typeof Lampa.Account.logout === 'function') {  
+              Lampa.Account.logout();  
+            }  
+              
+            Lampa.Storage.set('account', {});  
+            Lampa.Storage.set('account_user', null);  
+              
+            // Перезавантажити сторінку  
+            window.location.reload();  
+          }  
+            
+          Lampa.Controller.toggle('head');  
+        },  
+        onBack: function() {  
+          Lampa.Controller.toggle('head');  
+        }  
+      });  
+    }  
       
     // Створення кнопки виходу  
     function createLogoutButton() {  
@@ -52,50 +93,36 @@
         transition: background 0.2s;  
       `;  
         
-      // Hover ефект  
+      // Обробник для пульта (jQuery події)  
+      $(button).on('hover:enter', function() {  
+        showLogoutDialog();  
+      });  
+        
+      // Обробник для миші  
+      button.addEventListener('click', function() {  
+        showLogoutDialog();  
+      });  
+        
+      // Hover ефекти для пульта  
+      $(button).on('hover:focus', function() {  
+        button.style.background = 'rgba(255, 255, 255, 0.1)';  
+      });  
+        
+      $(button).on('hover:hover', function() {  
+        button.style.background = 'rgba(255, 255, 255, 0.1)';  
+      });  
+        
+      $(button).on('hover:blur', function() {  
+        button.style.background = 'transparent';  
+      });  
+        
+      // Hover ефекти для миші  
       button.addEventListener('mouseenter', function() {  
         button.style.background = 'rgba(255, 255, 255, 0.1)';  
       });  
         
       button.addEventListener('mouseleave', function() {  
         button.style.background = 'transparent';  
-      });  
-        
-      // Обробник кліку  
-      button.addEventListener('click', function() {  
-        Lampa.Select.show({  
-          title: Lampa.Lang.translate('logout_button'),  
-          items: [  
-            {  
-              title: Lampa.Lang.translate('logout_confirm'),  
-              yes: true  
-            },  
-            {  
-              title: Lampa.Lang.translate('cancel'),  
-              cancel: true  
-            }  
-          ],  
-          onSelect: function(item) {  
-            if (item.yes) {  
-              // Очистити дані користувача  
-              if (Lampa.Account && typeof Lampa.Account.logout === 'function') {  
-                Lampa.Account.logout();  
-              }  
-                
-              // Очистити Storage  
-              Lampa.Storage.set('account', {});  
-              Lampa.Storage.set('account_user', null);  
-                
-              // Перезавантажити сторінку  
-              window.location.reload();  
-            }  
-              
-            Lampa.Controller.toggle('content');  
-          },  
-          onBack: function() {  
-            Lampa.Controller.toggle('content');  
-          }  
-        });  
       });  
         
       return button;  
