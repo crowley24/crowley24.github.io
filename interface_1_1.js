@@ -1,45 +1,75 @@
 (function () {  
     'use strict';  
   
-    if (typeof Lampa === 'undefined') return;  
+    if (typeof Lampa === 'undefined') {  
+        console.error('[NEW_INTERFACE] Lampa не знайдено');  
+        return;  
+    }  
   
     function startPluginV3() {  
-        if (!Lampa.Maker || !Lampa.Maker.map || !Lampa.Utils) return;  
-        if (window.plugin_interface_ready_v3) return;  
+        console.log('[NEW_INTERFACE] startPluginV3() викликано');  
+          
+        if (!Lampa.Maker || !Lampa.Maker.map || !Lampa.Utils) {  
+            console.error('[NEW_INTERFACE] API недоступний:', {  
+                Maker: !!Lampa.Maker,  
+                map: !!Lampa.Maker?.map,  
+                Utils: !!Lampa.Utils  
+            });  
+            return;  
+        }  
+          
+        if (window.plugin_interface_ready_v3) {  
+            console.warn('[NEW_INTERFACE] Плагін вже запущено');  
+            return;  
+        }  
         window.plugin_interface_ready_v3 = true;  
   
+        console.log('[NEW_INTERFACE] Додаємо стилі...');  
         addStyleV3();  
   
         const mainMap = Lampa.Maker.map('Main');  
-        if (!mainMap || !mainMap.Items || !mainMap.Create) return;  
+        console.log('[NEW_INTERFACE] mainMap:', mainMap);  
+          
+        if (!mainMap || !mainMap.Items || !mainMap.Create) {  
+            console.error('[NEW_INTERFACE] mainMap недоступний або не має Items/Create');  
+            return;  
+        }  
+  
+        console.log('[NEW_INTERFACE] Починаємо wrap методів...');  
   
         // Завжди використовуємо новий інтерфейс - БЕЗ УМОВ  
         wrap(mainMap.Items, 'onInit', function (original, args) {  
+            console.log('[NEW_INTERFACE] Items.onInit викликано');  
             if (original) original.apply(this, args);  
-            this.__newInterfaceEnabled = true; // Завжди true  
+            this.__newInterfaceEnabled = true;  
         });  
   
         wrap(mainMap.Create, 'onCreate', function (original, args) {  
+            console.log('[NEW_INTERFACE] Create.onCreate викликано');  
             if (original) original.apply(this, args);  
               
-            // Завжди додаємо клас new-interface  
             if (this.container) {  
+                console.log('[NEW_INTERFACE] Додаємо клас new-interface до контейнера');  
                 this.container.classList.add('new-interface');  
+            } else {  
+                console.warn('[NEW_INTERFACE] Контейнер не знайдено');  
             }  
         });  
   
         wrap(mainMap.Create, 'onRender', function (original, args) {  
+            console.log('[NEW_INTERFACE] Create.onRender викликано');  
             if (original) original.apply(this, args);  
               
-            // Завжди створюємо інформаційну панель для карток  
             if (this.card && this.card.classList.contains('card--small') && this.card.classList.contains('card--wide')) {  
+                console.log('[NEW_INTERFACE] Створюємо інформаційну панель для картки');  
                 const info = new InterfaceInfo(this.card, this.data);  
                 info.create();  
             }  
         });  
+  
+        console.log('[NEW_INTERFACE] Плагін успішно ініціалізовано');  
     }  
   
-    // Клас InterfaceInfo залишається без змін  
     class InterfaceInfo {  
         constructor(card, data) {  
             this.card = card;  
@@ -120,7 +150,11 @@
     }  
   
     function wrap(obj, method, wrapper) {  
-        if (!obj || !obj[method]) return;  
+        if (!obj || !obj[method]) {  
+            console.warn('[NEW_INTERFACE] Метод не знайдено:', method);  
+            return;  
+        }  
+        console.log('[NEW_INTERFACE] Wrap метод:', method);  
         const original = obj[method];  
         obj[method] = function(...args) {  
             return wrapper.call(this, original.bind(this), args);  
@@ -128,7 +162,10 @@
     }  
   
     function addStyleV3() {  
-        if (document.getElementById('new-interface-style-v3')) return;  
+        if (document.getElementById('new-interface-style-v3')) {  
+            console.log('[NEW_INTERFACE] Стилі вже додано');  
+            return;  
+        }  
           
         const style = document.createElement('style');  
         style.id = 'new-interface-style-v3';  
@@ -188,13 +225,29 @@
         `;  
           
         document.head.appendChild(style);  
+        console.log('[NEW_INTERFACE] Стилі успішно додано');  
     }  
   
     // Перевірка версії Lampa  
     const isV3 = Lampa.Manifest && Lampa.Manifest.app_digital >= 300;  
+    console.log('[NEW_INTERFACE] Версія Lampa:', Lampa.Manifest?.app_digital, 'isV3:', isV3);  
       
     if (isV3) {  
-        startPluginV3();  
+        if (window.appready) {  
+            console.log('[NEW_INTERFACE] App ready, запускаємо плагін');  
+            startPluginV3();  
+        } else if (Lampa.Listener && typeof Lampa.Listener.follow === 'function') {  
+            console.log('[NEW_INTERFACE] Очікуємо події app.ready');  
+            Lampa.Listener.follow('app', function(e) {  
+                if (e.type === 'ready') {  
+                    console.log('[NEW_INTERFACE] Отримано подію app.ready');  
+                    startPluginV3();  
+                }  
+            });  
+        } else {  
+            console.log('[NEW_INTERFACE] Використовуємо setTimeout');  
+            setTimeout(startPluginV3, 1000);  
+        }  
     } else {  
         console.warn('[NEW_INTERFACE] Потрібна Lampa версії 3.0+');  
     }  
