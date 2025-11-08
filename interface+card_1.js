@@ -318,147 +318,149 @@
         };  
     }  
   
-    function addStyleV3() {  
-        if (addStyleV3.added) return;  
-        addStyleV3.added = true;  
-  
-        Lampa.Template.add('new_interface_style_v3', `<style>  
-        .new-interface {  
-            position: relative;  
-        }  
-  
-        .new-interface .card.card--wide {  
-            width: 18.3em;  
-        }  
-  
-        .new-interface-info {  
-            position: relative;  
-            padding: 1.5em;  
-            height: 24em;  
-        }  
-  
-        .new-interface-info__body {  
-            width: 80%;  
-            padding-top: 1.1em;  
-        }  
-  
-        .new-interface-info__head {  
-            color: rgba(255, 255, 255, 0.6);  
-            margin-bottom: 1em;  
-            font-size: 1.3em;  
-            min-height: 1em;  
-        }  
-  
-        .new-interface-info__head span {  
-            color: #fff;  
-        }  
-  
-        .new-interface-info__title {  
-            font-size: 4em;  
-            font-weight: 600;  
-            margin-bottom: 0.3em;  
-            overflow: hidden;  
-            -o-text-overflow: '.';  
-            text-overflow: '.';  
-            display: -webkit-box;  
-            -webkit-line-clamp: 1;  
-            line-clamp: 1;  
-            -webkit-box-orient: vertical;  
-            margin-left: -0.03em;  
-            line-height: 1.3;  
-        }  
-  
-        .new-interface-info__details {  
-            margin-bottom: 1.6em;  
-            display: flex;  
-            align-items: center;  
-            flex-wrap: wrap;  
-            min-height: 1.9em;  
-            font-size: 1.1em;  
-        }  
-  
-        .new-interface-info__split {  
-            margin: 0 1em;  
-            font-size: 0.7em;  
-        }  
-  
-        .new-interface-info__description {  
-            font-size: 1.2em;  
-            font-weight: 300;  
-            line-height: 1.5;  
-            overflow: hidden;  
-            -o-text-overflow: '.';  
-            text-overflow: '.';  
-            display: -webkit-box;  
-            -webkit-line-clamp: 4;  
-            line-clamp: 4;  
-            -webkit-box-orient: vertical;  
-            width: 70%;  
-        }  
-  
-        .new-interface .card-more__box {  
-            padding-bottom: 95%;  
-        }  
-  
-        .new-interface .full-start__background {  
-            height: 108%;  
-            top: -6em;  
-        }  
-  
-        .new-interface .full-start__rate {  
-            font-size: 1.3em;  
-            margin-right: 0;  
-        }  
-  
-        .new-interface .card__promo {  
-            display: none;  
-        }  
-  
-        .new-interface .card.card--wide + .card-more .card-more__box {  
-            padding-bottom: 95%;  
-        }  
-  
-        .new-interface .card.card--wide .card-watched {  
-            display: none !important;  
-        }  
-  
-        .new-interface-card-title {  
-            margin-top: 0.6em;  
-            font-size: 1.05em;  
-            font-weight: 500;  
-            color: #fff;  
-            display: block;  
-            text-align: left;  
-            max-width: 100%;  
-            overflow: hidden;  
-            text-overflow: ellipsis;  
-            white-space: nowrap;  
-            pointer-events: none;  
-        }  
-  
-        body.light--version .new-interface-card-title {  
-            color: #111;  
-        }  
-  
-        body.light--version .new-interface-info__body {  
-            width: 69%;  
-            padding-top: 1.5em;  
+    function addStyleV3() {    
+    if (addStyleV3.added) return;    
+    addStyleV3.added = true;    
+    
+    const style = document.createElement('style');  
+    style.textContent = `  
+        .new-interface {    
+            position: relative;    
+        }    
+    
+        .new-interface .card.card--wide {    
+            width: 18.3em;    
+        }    
+    
+        .new-interface-info {    
+            position: relative;    
+            padding: 1.5em;    
+            height: 24em;    
+        }    
+    
+        .new-interface-info__body {    
+            width: 80%;    
+            padding-top: 1.1em;    
+        }    
+    
+        .new-interface-info__head {    
+            color: rgba(255, 255, 255, 0.6);    
+            margin-bottom: 1em;    
+            font-size: 1.3em;    
+            min-height: 1em;    
+        }    
+    
+        .new-interface-info__head span {    
+            color: #fff;    
+        }    
+    
+        .new-interface-info__title {    
+            font-size: 4em;    
+            font-weight: 600;    
+            margin-bottom: 0.3em;    
+            overflow: hidden;    
+            -o-text-overflow: '.';    
+            text-overflow: '.';    
+            display: -webkit-box;    
+            -webkit-line-clamp: 1;    
+            line-clamp: 1;    
+            -webkit-box-orient: vertical;    
+            margin-left: -0.03em;    
+            line-height: 1.3;    
+        }    
+    
+        .new-interface-info__details {    
+            margin-bottom: 1.6em;    
+            display: flex;    
+            align-items: center;    
+            flex-wrap: wrap;    
+            min-height: 1.9em;    
+            font-size: 1.1em;    
+        }    
+    
+        .new-interface-info__split {    
+            margin: 0 1em;    
+            font-size: 0.7em;    
+        }    
+    
+        .new-interface-info__description {    
+            font-size: 1.2em;    
+            font-weight: 300;    
+            line-height: 1.5;    
+            overflow: hidden;    
+            -o-text-overflow: '.';    
+            text-overflow: '.';    
+            display: -webkit-box;    
+            -webkit-line-clamp: 4;    
+            line-clamp: 4;    
+            -webkit-box-orient: vertical;    
+            width: 70%;    
+        }    
+    
+        .new-interface .card-more__box {    
+            padding-bottom: 95%;    
+        }    
+    
+        .new-interface .full-start__background {    
+            height: 108%;    
+            top: -6em;    
+        }    
+    
+        .new-interface .full-start__rate {    
+            font-size: 1.3em;    
+            margin-right: 0;    
+        }    
+    
+        .new-interface .card__promo {    
+            display: none;    
+        }    
+    
+        .new-interface .card.card--wide + .card-more .card-more__box {    
+            padding-bottom: 95%;    
+        }    
+    
+        .new-interface .card.card--wide .card-watched {    
+            display: none !important;    
+        }    
+    
+        .new-interface-card-title {    
+            margin-top: 0.6em;    
+            font-size: 1.05em;    
+            font-weight: 500;    
+            color: #fff;    
+            display: block;    
+            text-align: left;    
+            max-width: 100%;    
+            overflow: hidden;    
+            text-overflow: ellipsis;    
+            white-space: nowrap;    
+            pointer-events: none;    
+        }    
+    
+        body.light--version .new-interface-card-title {    
+            color: #111;    
+        }    
+    
+        body.light--version .new-interface-info__body {    
+            width: 69%;    
+            padding-top: 1.5em;    
+        }    
+            
+        body.light--version .new-interface-info {    
+            height: 25.3em;    
+        }    
+    
+        body.advanced--animation:not(.no--animation) .new-interface .card--small.card--wide.focus .card__view {    
+            animation: animation-card-focus 0.2s;  
         }  
           
-        body.light--version .new-interface-info {  
-            height: 25.3em;  
+        body.advanced--animation:not(.no--animation) .new-interface .card--small.card--wide.animate-trigger-enter .card__view {    
+            animation: animation-trigger-enter 0.2s forwards;  
         }  
-  
-        body.advanced--animation:not(.no--animation) .new-interface .card--small.card--wide.focus .card__view{  
-            animation: animation-card-focus 0.2s  
-        }  
-        body.advanced--animation:not(.no--animation) .new-interface .card--small.card--wide.animate-trigger-enter .card__view{  
-            animation: animation-trigger-enter 0.2s forwards  
-        }  
-        `;  
-          
-        document.head.appendChild(style);  
-    }  
+    `;  
+        
+    document.head.appendChild(style);  
+}
       
     // Перевірка версії Lampa  
     const isV3 = Lampa.Manifest && Lampa.Manifest.app_digital >= 300;  
