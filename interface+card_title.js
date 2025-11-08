@@ -52,17 +52,6 @@
         });
     }
 
-    function shouldUseNewInterface(object) {
-        if (!object) return false;
-        if (!(object.source === 'tmdb' || object.source === 'cub')) return false;
-        if (window.innerWidth < 767) return false;
-        if (typeof Lampa.Account !== 'undefined' && typeof Lampa.Account.hasPremium === 'function') {
-            if (!Lampa.Account.hasPremium()) return false;
-        }
-
-        return true;
-    }
-
     function ensureState(main) {
         if (main.__newInterfaceState) return main.__newInterfaceState;
         const state = createInterfaceState(main);
@@ -894,7 +883,6 @@
         var use = new_interface;
         if (!(object.source == 'tmdb' || object.source == 'cub')) use = old_interface;
         if (window.innerWidth < 767) use = old_interface;
-        if (!Lampa.Account.hasPremium()) use = old_interface;
         if (Lampa.Manifest.app_digital < 153) use = old_interface;
         return new use(object);
       };
