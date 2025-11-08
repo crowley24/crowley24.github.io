@@ -4,88 +4,88 @@
     if (typeof Lampa === 'undefined') return;  
 
     class InterfaceInfo {  
-    constructor(object) {  
-        this.object = object;  
-        this.element = null;  
-    }  
-      
-    create() {  
-        if (!this.object) return;  
-          
-        this.element = document.createElement('div');  
-        this.element.className = 'new-interface-info';  
-          
-        this.render();  
-          
-        return this.element;  
-    }  
-      
-    render() {  
-        if (!this.element) return;  
-          
-        var html = '<div class="new-interface-info__poster"></div>';  
-        html += '<div class="new-interface-info__body">';  
-        html += '<div class="new-interface-info__title"></div>';  
-        html += '<div class="new-interface-info__details"></div>';  
-        html += '<div class="new-interface-info__description"></div>';  
-        html += '</div>';  
-          
-        this.element.innerHTML = html;  
-          
-        this.update();  
-    }  
-      
-    update() {  
-        if (!this.element || !this.object) return;  
-          
-        var title = this.element.querySelector('.new-interface-info__title');  
-        var details = this.element.querySelector('.new-interface-info__details');  
-        var description = this.element.querySelector('.new-interface-info__description');  
-        var poster = this.element.querySelector('.new-interface-info__poster');  
-          
-        if (title && this.object.title) {  
-            title.textContent = this.object.title;  
+        constructor(object) {  
+            this.object = object;  
+            this.element = null;  
         }  
           
-        if (details) {  
-            var detailsHtml = '';  
+        create() {  
+            if (!this.object) return;  
               
-            if (this.object.year) {  
-                detailsHtml += '<div>' + this.object.year + '</div>';  
+            this.element = document.createElement('div');  
+            this.element.className = 'new-interface-info';  
+              
+            this.render();  
+              
+            return this.element;  
+        }  
+          
+        render() {  
+            if (!this.element) return;  
+              
+            var html = '<div class="new-interface-info__poster"></div>';  
+            html += '<div class="new-interface-info__body">';  
+            html += '<div class="new-interface-info__title"></div>';  
+            html += '<div class="new-interface-info__details"></div>';  
+            html += '<div class="new-interface-info__description"></div>';  
+            html += '</div>';  
+              
+            this.element.innerHTML = html;  
+              
+            this.update();  
+        }  
+          
+        update() {  
+            if (!this.element || !this.object) return;  
+              
+            var title = this.element.querySelector('.new-interface-info__title');  
+            var details = this.element.querySelector('.new-interface-info__details');  
+            var description = this.element.querySelector('.new-interface-info__description');  
+            var poster = this.element.querySelector('.new-interface-info__poster');  
+              
+            if (title && this.object.title) {  
+                title.textContent = this.object.title;  
             }  
               
-            if (this.object.countries && this.object.countries.length > 0) {  
-                detailsHtml += '<div>' + this.object.countries.join(', ') + '</div>';  
+            if (details) {  
+                var detailsHtml = '';  
+                  
+                if (this.object.year) {  
+                    detailsHtml += '<div>' + this.object.year + '</div>';  
+                }  
+                  
+                if (this.object.countries && this.object.countries.length > 0) {  
+                    detailsHtml += '<div>' + this.object.countries.join(', ') + '</div>';  
+                }  
+                  
+                if (this.object.genres && this.object.genres.length > 0) {  
+                    detailsHtml += '<div>' + this.object.genres.join(', ') + '</div>';  
+                }  
+                  
+                if (this.object.rating) {  
+                    detailsHtml += '<div class="new-interface-info__rating">★ ' + this.object.rating + '</div>';  
+                }  
+                  
+                details.innerHTML = detailsHtml;  
             }  
               
-            if (this.object.genres && this.object.genres.length > 0) {  
-                detailsHtml += '<div>' + this.object.genres.join(', ') + '</div>';  
+            if (description && this.object.overview) {  
+                description.textContent = this.object.overview;  
             }  
               
-            if (this.object.rating) {  
-                detailsHtml += '<div class="new-interface-info__rating">★ ' + this.object.rating + '</div>';  
+            if (poster && this.object.poster) {  
+                poster.style.backgroundImage = 'url(' + this.object.poster + ')';  
             }  
-              
-            details.innerHTML = detailsHtml;  
         }  
           
-        if (description && this.object.overview) {  
-            description.textContent = this.object.overview;  
+        destroy() {  
+            if (this.element && this.element.parentNode) {  
+                this.element.parentNode.removeChild(this.element);  
+            }  
+            this.element = null;  
+            this.object = null;  
         }  
-          
-        if (poster && this.object.poster) {  
-            poster.style.backgroundImage = 'url(' + this.object.poster + ')';  
-        }  
-    }  
-      
-    destroy() {  
-        if (this.element && this.element.parentNode) {  
-            this.element.parentNode.removeChild(this.element);  
-        }  
-        this.element = null;  
-        this.object = null;  
-    }  
-}
+    } 
   
     function startPluginV3() {  
         if (!Lampa.Maker || !Lampa.Maker.map || !Lampa.Utils) return;  
