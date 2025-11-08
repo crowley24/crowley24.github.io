@@ -1,231 +1,183 @@
 (function () {  
     'use strict';  
   
-    if (typeof Lampa === 'undefined') {  
-        console.error('[NEW_INTERFACE] Lampa не знайдено');  
-        return;  
-    }  
+    if (typeof Lampa === 'undefined') return;  
   
     function startPluginV3() {  
         console.log('[NEW_INTERFACE] startPluginV3() викликано');  
           
         if (!Lampa.Maker || !Lampa.Maker.map || !Lampa.Utils) {  
-            console.error('[NEW_INTERFACE] API недоступний:', {  
-                Maker: !!Lampa.Maker,  
-                map: !!Lampa.Maker?.map,  
-                Utils: !!Lampa.Utils  
-            });  
+            console.log('[NEW_INTERFACE] API недоступний');  
             return;  
         }  
           
         if (window.plugin_interface_ready_v3) {  
-            console.warn('[NEW_INTERFACE] Плагін вже запущено');  
+            console.log('[NEW_INTERFACE] Плагін вже запущено');  
             return;  
         }  
+          
         window.plugin_interface_ready_v3 = true;  
   
-        console.log('[NEW_INTERFACE] Додаємо стилі...');  
         addStyleV3();  
   
         const mainMap = Lampa.Maker.map('Main');  
         console.log('[NEW_INTERFACE] mainMap:', mainMap);  
           
-        if (!mainMap || !mainMap.Items || !mainMap.Create) {  
-            console.error('[NEW_INTERFACE] mainMap недоступний або не має Items/Create');  
+        if (!mainMap || !mainMap.Items) {  
+            console.log('[NEW_INTERFACE] mainMap.Items недоступний');  
             return;  
         }  
   
-        console.log('[NEW_INTERFACE] Починаємо wrap методів...');  
-  
-        // Завжди використовуємо новий інтерфейс - БЕЗ УМОВ  
-        wrap(mainMap.Items, 'onInit', function (original, args) {  
+        // Обгортка для Items.onInit  
+        const originalOnInit = mainMap.Items.onInit;  
+        mainMap.Items.onInit = function() {  
             console.log('[NEW_INTERFACE] Items.onInit викликано');  
-            if (original) original.apply(this, args);  
-            this.__newInterfaceEnabled = true;  
-        });  
-  
-        wrap(mainMap.Create, 'onCreate', function (original, args) {  
-            console.log('[NEW_INTERFACE] Create.onCreate викликано');  
-            if (original) original.apply(this, args);  
               
-            if (this.container) {  
-                console.log('[NEW_INTERFACE] Додаємо клас new-interface до контейнера');  
-                this.container.classList.add('new-interface');  
-            } else {  
-                console.warn('[NEW_INTERFACE] Контейнер не знайдено');  
+            if (originalOnInit) {  
+                originalOnInit.apply(this, arguments);  
             }  
-        });  
-  
-        wrap(mainMap.Create, 'onRender', function (original, args) {  
-            console.log('[NEW_INTERFACE] Create.onRender викликано');  
-            if (original) original.apply(this, args);  
               
-            if (this.card && this.card.classList.contains('card--small') && this.card.classList.contains('card--wide')) {  
-                console.log('[NEW_INTERFACE] Створюємо інформаційну панель для картки');  
-                const info = new InterfaceInfo(this.card, this.data);  
+            // Додаємо клас для нового інтерфейсу  
+            if (this.object && this.object.card) {  
+                $(this.object.card).addClass('card--wide');  
+                console.log('[NEW_INTERFACE] Додано клас card--wide');  
+            }  
+              
+            // Створюємо інформаційну панель  
+            try {  
+                const info = new InterfaceInfo(this.object);  
                 info.create();  
+                console.log('[NEW_INTERFACE] Інформаційна панель створена');  
+            } catch (e) {  
+                console.error('[NEW_INTERFACE] Помилка створення інфо-панелі:', e);  
             }  
-        });  
+        };  
   
         console.log('[NEW_INTERFACE] Плагін успішно ініціалізовано');  
     }  
   
+    // Клас для інформаційної панелі  
     class InterfaceInfo {  
-        constructor(card, data) {  
-            this.card = card;  
-            this.data = data || {};  
+        constructor(object) {  
+            this.object = object;  
             this.element = null;  
         }  
   
         create() {  
-            if (!this.card || this.card.querySelector('.new-interface-info')) return;  
+            if (!this.object) return;  
               
-            this.element = document.createElement('div');  
-            this.element.className = 'new-interface-info';  
-            this.card.appendChild(this.element);  
+            this.element = $('<div class="new-interface-info"></div>');  
               
-            this.render();  
-            this.load();  
-        }  
-  
-        render() {  
-            if (!this.element) return;  
+            // Додаємо постер  
+            if (this.object.img) {  
+                const poster = $('<img class="new-interface-info__poster">');  
+                poster.attr('src', this.object.img);  
+                this.element.append(poster);  
+            }  
               
-            const title = this.data.title || this.data.name || '';  
-            const year = this.data.release_date ? this.data.release_date.split('-')[0] :   
-                        (this.data.first_air_date ? this.data.first_air_date.split('-')[0] : '');  
+            // Додаємо деталі  
+            const details = $('<div class="new-interface-info__details"></div>');  
               
-            this.element.innerHTML = `  
-                <div class="new-interface-info__title">${title}</div>  
-                ${year ? `<div class="new-interface-info__year">${year}</div>` : ''}  
-                <div class="new-interface-info__details"></div>  
-            `;  
-        }  
-  
-        load() {  
-            if (!this.data.id) return;  
+            if (this.object.title) {  
+                details.append(`<div class="new-interface-info__title">${this.object.title}</div>`);  
+            }  
               
-            const type = this.data.media_type || (this.data.first_air_date ? 'tv' : 'movie');  
-            const url = `https://api.themoviedb.org/3/${type}/${this.data.id}?api_key=c87a543116135a4120443155bf680876&language=uk`;  
+            if (this.object.year) {  
+                details.append(`<div class="new-interface-info__year">${this.object.year}</div>`);  
+            }  
               
-            fetch(url)  
-                .then(response => response.json())  
-                .then(data => this.draw(data))  
-                .catch(() => {});  
-        }  
-  
-        draw(data) {  
-            if (!this.element) return;  
+            if (this.object.vote_average) {  
+                details.append(`<div class="new-interface-info__rating">★ ${this.object.vote_average}</div>`);  
+            }  
               
-            const details = this.element.querySelector('.new-interface-info__details');  
-            if (!details) return;  
+            if (this.object.overview) {  
+                details.append(`<div class="new-interface-info__overview">${this.object.overview}</div>`);  
+            }  
               
-            const countries = data.production_countries?.map(c => c.name).join(', ') || '';  
-            const genres = data.genres?.map(g => g.name).join(', ') || '';  
-            const rating = data.vote_average ? data.vote_average.toFixed(1) : '';  
-            const runtime = data.runtime ? `${data.runtime} хв` :   
-                          (data.episode_run_time?.[0] ? `${data.episode_run_time[0]} хв` : '');  
+            this.element.append(details);  
               
-            let html = '';  
-            if (countries) html += `<div>${countries}</div>`;  
-            if (genres) html += `<div>${genres}</div>`;  
-            if (runtime) html += `<div>${runtime}</div>`;  
-            if (rating) html += `<div class="new-interface-info__rating">⭐ ${rating}</div>`;  
-              
-            details.innerHTML = html;  
-        }  
-  
-        update(data) {  
-            this.data = data;  
-            this.render();  
-            this.load();  
+            // Додаємо до DOM  
+            if (this.object.card) {  
+                $(this.object.card).append(this.element);  
+            }  
         }  
   
         destroy() {  
-            if (this.element && this.element.parentNode) {  
-                this.element.parentNode.removeChild(this.element);  
+            if (this.element) {  
+                this.element.remove();  
             }  
-            this.element = null;  
         }  
-    }  
-  
-    function wrap(obj, method, wrapper) {  
-        if (!obj || !obj[method]) {  
-            console.warn('[NEW_INTERFACE] Метод не знайдено:', method);  
-            return;  
-        }  
-        console.log('[NEW_INTERFACE] Wrap метод:', method);  
-        const original = obj[method];  
-        obj[method] = function(...args) {  
-            return wrapper.call(this, original.bind(this), args);  
-        };  
     }  
   
     function addStyleV3() {  
-        if (document.getElementById('new-interface-style-v3')) {  
-            console.log('[NEW_INTERFACE] Стилі вже додано');  
-            return;  
-        }  
-          
         const style = document.createElement('style');  
-        style.id = 'new-interface-style-v3';  
+        style.id = 'new-interface-styles';  
         style.textContent = `  
-            .new-interface .card--small.card--wide {  
+            /* Широкі картки */  
+            .card--wide {  
+                width: 100% !important;  
                 aspect-ratio: 16/9 !important;  
-                height: auto !important;  
             }  
               
-            .new-interface .card--small.card--wide .card__img {  
-                aspect-ratio: 16/9 !important;  
+            .card--wide .card__img {  
+                width: 100% !important;  
                 height: 100% !important;  
+                object-fit: cover !important;  
             }  
               
+            /* Інформаційна панель */  
             .new-interface-info {  
                 position: absolute;  
                 bottom: 0;  
                 left: 0;  
                 right: 0;  
-                padding: 1em;  
                 background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);  
-                color: white;  
-                font-size: 0.9em;  
-                opacity: 0;  
-                transition: opacity 0.3s;  
+                padding: 2em;  
+                display: flex;  
+                gap: 1em;  
             }  
               
-            .new-interface .card--small.card--wide:hover .new-interface-info,  
-            .new-interface .card--small.card--wide.focus .new-interface-info {  
-                opacity: 1;  
-            }  
-              
-            .new-interface-info__title {  
-                font-weight: bold;  
-                margin-bottom: 0.3em;  
-                font-size: 1.1em;  
-            }  
-              
-            .new-interface-info__year {  
-                opacity: 0.7;  
-                margin-bottom: 0.5em;  
+            .new-interface-info__poster {  
+                width: 100px;  
+                height: 150px;  
+                object-fit: cover;  
+                border-radius: 0.5em;  
             }  
               
             .new-interface-info__details {  
-                font-size: 0.85em;  
-                opacity: 0.8;  
+                flex: 1;  
+                color: white;  
             }  
               
-            .new-interface-info__details > div {  
-                margin-bottom: 0.2em;  
+            .new-interface-info__title {  
+                font-size: 1.5em;  
+                font-weight: bold;  
+                margin-bottom: 0.5em;  
+            }  
+              
+            .new-interface-info__year,  
+            .new-interface-info__rating {  
+                font-size: 0.9em;  
+                opacity: 0.8;  
+                margin-bottom: 0.3em;  
             }  
               
             .new-interface-info__rating {  
                 color: #ffd700;  
-                font-weight: bold;  
+            }  
+              
+            .new-interface-info__overview {  
+                font-size: 0.85em;  
+                opacity: 0.7;  
+                margin-top: 0.5em;  
+                max-height: 3em;  
+                overflow: hidden;  
+                text-overflow: ellipsis;  
             }  
         `;  
           
         document.head.appendChild(style);  
-        console.log('[NEW_INTERFACE] Стилі успішно додано');  
+        console.log('[NEW_INTERFACE] Стилі додано');  
     }  
   
     // Перевірка версії Lampa  
@@ -233,23 +185,19 @@
     console.log('[NEW_INTERFACE] Версія Lampa:', Lampa.Manifest?.app_digital, 'isV3:', isV3);  
       
     if (isV3) {  
+        // Запускаємо після готовності Lampa  
         if (window.appready) {  
-            console.log('[NEW_INTERFACE] App ready, запускаємо плагін');  
             startPluginV3();  
         } else if (Lampa.Listener && typeof Lampa.Listener.follow === 'function') {  
-            console.log('[NEW_INTERFACE] Очікуємо події app.ready');  
             Lampa.Listener.follow('app', function(e) {  
                 if (e.type === 'ready') {  
-                    console.log('[NEW_INTERFACE] Отримано подію app.ready');  
                     startPluginV3();  
                 }  
             });  
         } else {  
-            console.log('[NEW_INTERFACE] Використовуємо setTimeout');  
             setTimeout(startPluginV3, 1000);  
         }  
     } else {  
         console.warn('[NEW_INTERFACE] Потрібна Lampa версії 3.0+');  
     }  
-  
 })();
