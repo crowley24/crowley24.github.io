@@ -111,53 +111,64 @@
         }  
     });  
   
-    // Додавання CSS для відображення годинника на мобільних  
-    function injectMobileClockCSS() {  
-        var styleId = 'custom-clock-mobile-style';  
-        var existingStyle = document.getElementById(styleId);  
+    // Функція створення мобільного годинника  
+    function createMobileClock() {  
+        if ($('.custom-mobile-clock').length) return;  
           
-        if (Lampa.Storage.get('clock_show_mobile') === '1') {  
-            if (!existingStyle) {  
-                var style = document.createElement('style');  
-                style.id = styleId;  
-                // Використовуємо більш специфічний селектор з !important  
-                style.textContent = `  
-                    @media screen and (max-width: 767px) {   
-                        .head .head__body .head__time {   
-                            display: -webkit-box !important;  
-                            display: -webkit-flex !important;  
-                            display: -moz-box !important;  
-                            display: -ms-flexbox !important;  
-                            display: flex !important;  
-                            visibility: visible !important;  
-                            opacity: 1 !important;  
-                        }  
-                    }  
-                `;  
-                document.head.appendChild(style);  
-                console.log('[ClockPlugin] CSS для мобільних додано');  
-            }  
-        } else {  
-            if (existingStyle) {  
-                existingStyle.remove();  
-                console.log('[ClockPlugin] CSS для мобільних видалено');  
+        var clockHtml = '<div class="custom-mobile-clock" style="position: fixed; top: 10px; right: 10px; z-index: 20; font-size: 1.5em; color: #fff;"></div>';  
+        $('body').append(clockHtml);  
+          
+        function updateClock() {  
+            var now = new Date();  
+            var hours = String(now.getHours()).padStart(2, '0');  
+            var minutes = String(now.getMinutes()).padStart(2, '0');  
+              
+            var style = Lampa.Storage.get('clock_style', 'gold_minutes');  
+              
+            switch (style) {  
+                case 'gold_minutes':  
+                    $('.custom-mobile-clock').html(  
+                        '<span style="color: #fff;">' + hours + '</span>' +  
+                        '<span style="color: #fff;">:</span>' +  
+                        '<span style="color: #FFD700;">' + minutes + '</span>'  
+                    );  
+                    break;  
+                      
+                case 'gradient':  
+                    $('.custom-mobile-clock').html(  
+                        '<span style="background: linear-gradient(90deg, #fff 0%, #FFD700 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">' +  
+                        hours + ':' + minutes +  
+                        '</span>'  
+                    );  
+                    break;  
+                      
+                case 'neon':  
+                    $('.custom-mobile-clock').html(  
+                        '<span style="color: #0ff; text-shadow: 0 0 10px #0ff, 0 0 20px #0ff, 0 0 30px #0ff;">' +  
+                        hours + ':' + minutes +  
+                        '</span>'  
+                    );  
+                    break;  
+                      
+                default:  
+                    $('.custom-mobile-clock').html(hours + ':' + minutes);  
+                    break;  
             }  
         }  
+          
+        updateClock();  
+        setInterval(updateClock, 1000);  
     }  
   
-    // Функція застосування стилів  
+    // Функція застосування стилів для десктопу  
     function applyClockStyle() {  
         if (Lampa.Storage.get('clock_custom_enable') !== '1') return;  
   
         var style = Lampa.Storage.get('clock_style', 'gold_minutes');  
         var timeElement = $('.head__time-now');  
           
-        if (!timeElement.length) {  
-            console.log('[ClockPlugin] Елемент .head__time-now не знайдено');  
-            return;  
-        }  
+        if (!timeElement.length) return;  
   
-        // Очищення попередніх стилів  
         timeElement.removeAttr('style');  
         timeElement.find('span').remove();  
   
@@ -196,7 +207,6 @@
   
             case 'default':  
             default:  
-                // Залишити стандартний стиль  
                 break;  
         }  
     }  
@@ -205,17 +215,23 @@
     function init() {  
         console.log('[ClockPlugin] Ініціалізація плагіна');  
           
-        // Додати CSS одразу  
-        injectMobileClockCSS();  
+        if (Lampa.Storage.get('clock_custom_enable') !== '1') return;  
           
-        // Застосувати стилі з затримкою  
-        setTimeout(function() {  
-            applyClockStyle();  
-            console.log('[ClockPlugin] Стилі застосовано');  
-        }, 1000);  
+        // Перевірка чи це мобільний пристрій  
+        var isMobile = window.innerWidth <= 767;  
+          
+        if (isMobile && Lampa.Storage.get('clock_show_mobile') === '1') {  
+            // Створити власний годинник для мобільних  
+            createMobileClock();  
+        } else {  
+            // Застосувати стилі до існуючого годинника  
+            setTimeout(function() {  
+                applyClockStyle();  
+                console.log('[ClockPlugin] Стилі застосовано');  
+            }, 1000);  
   
-        // Оновлювати стилі кожну секунду  
-        setInterval(applyClockStyle, 1000);  
+            setInterval(applyClockStyle, 1000);  
+        }  
     }  
   
     // Застосування стилів при завантаженні  
@@ -227,11 +243,11 @@
   
     // Застосувати стилі при зміні налаштувань  
     Lampa.Storage.listener.follow('change', function (e) {  
-        if (e.name === 'clock_custom_enable' || e.name === 'clock_style') {  
-            applyClockStyle();  
-        }  
-        if (e.name === 'clock_show_mobile') {  
-            injectMobileClockCSS();  
+        if (e.name === 'clock_custom_enable' || e.name === 'clock_style' || e.name === 'clock_show_mobile') {  
+            // Видалити старий мобільний годинник якщо є  
+            $('.custom-mobile-clock').remove();  
+            // Переініціалізувати  
+            init();  
         }  
     });  
   
