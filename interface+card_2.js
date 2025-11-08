@@ -99,31 +99,9 @@
         if (!mainMap || !mainMap.Items || !mainMap.Create) return;  
   
         // Завжди використовуємо новий інтерфейс - БЕЗ УМОВ  
-        wrap(mainMap.Items, 'onInit', function (original, args) {  
+         wrap(mainMap.Items, 'onInit', function (original, args) {  
             if (original) original.apply(this, args);  
-            this.__newInterfaceEnabled = true; // ✅ Завжди true
-            wrap(mainMap.Items, 'onInit', function (original, args) {  
-    if (original) original.apply(this, args);  
-    this.__newInterfaceEnabled = true;  
-      
-    // ДОДАЙТЕ ЦЕЙ БЛОК  
-    if (this.object && this.object.card) {  
-        // Додати клас для широких карток  
-        $(this.object.card).addClass('card--wide');  
-          
-        // Створити інформаційну панель  
-        var info = new InterfaceInfo(this.object);  
-        var infoElement = info.create();  
-          
-        // Додати панель до картки  
-        if (infoElement) {  
-            $(this.object.card).append(infoElement);  
-              
-            // Оновити дані панелі  
-            info.update();  
-        }  
-    }  
-
+            this.__newInterfaceEnabled = true;  
         });  
   
         wrap(mainMap.Create, 'onCreate', function (original, args) {  
@@ -167,7 +145,7 @@
     }  
   
     function createInterfaceState(main) {  
-        const info = new InterfaceInfo();  
+        const info = new InterfaceInfo({});  
         info.create();  
   
         const background = document.createElement('img');  
@@ -193,7 +171,8 @@
                     container.insertBefore(background, container.firstChild || null);  
                 }  
   
-                const infoNode = info.render(true);  
+                // ✅ Виправлено: info.element замість info.render(true)  
+                const infoNode = info.element;  
                 this.infoElement = infoNode;  
   
                 if (infoNode && infoNode.parentNode !== container) {  
@@ -234,7 +213,7 @@
                 }, 1000);  
             },  
             reset() {  
-                info.empty();  
+                info.empty(); // ✅ Тепер метод існує  
             },  
             destroy() {  
                 clearTimeout(this.backgroundTimer);  
@@ -256,7 +235,7 @@
         };  
   
         return state;  
-    }  
+    }   
   
     function prepareLineData(element) {  
         if (!element) return;  
