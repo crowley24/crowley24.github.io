@@ -34,26 +34,34 @@
             this.element.innerHTML = html;    
         }    
         
-        load() {    
-            if (!this.object || !this.object.id) return;    
-                
-            var self = this;    
-            var type = this.object.is_serial ? 'tv' : 'movie';    
-                
-            Lampa.TMDB.get(type, this.object.id, function(data) {    
-                if (data) {    
-                    self.object.title = data.title || data.name;    
-                    self.object.year = (data.release_date || data.first_air_date || '').split('-')[0];    
-                    self.object.countries = data.production_countries?.map(c => c.name).join(', ');    
-                    self.object.genres = data.genres?.map(g => g.name).join(', ');    
-                    self.object.rating = data.vote_average;    
-                    self.object.overview = data.overview;    
-                    self.object.poster = data.poster_path ? 'https://image.tmdb.org/t/p/w500' + data.poster_path : null;    
-                        
-                    self.update();    
-                }    
-            });    
-        }    
+        load() {  
+    console.log('[InterfaceInfo] load() викликано, object:', this.object);  
+      
+    if (!this.object || !this.object.id) {  
+        console.warn('[InterfaceInfo] Немає id, вихід з load()');  
+        return;  
+    }  
+      
+    var type = this.object.is_serial ? 'tv' : 'movie';  
+    var self = this;  
+      
+    console.log('[InterfaceInfo] Завантаження даних з TMDB, type:', type, 'id:', this.object.id);  
+      
+    Lampa.TMDB.get(type, this.object.id, function(data) {  
+        console.log('[InterfaceInfo] Дані отримано з TMDB:', data);  
+          
+        self.object.title = data.title || data.name;  
+        self.object.year = (data.release_date || data.first_air_date || '').split('-')[0];  
+        self.object.countries = data.production_countries?.map(c => c.name).join(', ');  
+        self.object.genres = data.genres?.map(g => g.name).join(', ');  
+        self.object.rating = data.vote_average;  
+        self.object.overview = data.overview;  
+        self.object.poster = data.poster_path ? `https://image.tmdb.org/t/p/w500${data.poster_path}` : null;  
+          
+        console.log('[InterfaceInfo] Оновлення відображення');  
+        self.update();  
+    });  
+}
         
         update() {    
             if (!this.element) return;    
@@ -120,9 +128,25 @@
   
         // Завжди використовуємо новий інтерфейс - БЕЗ УМОВ  
          wrap(mainMap.Items, 'onInit', function (original, args) {  
-            if (original) original.apply(this, args);  
-            this.__newInterfaceEnabled = true;  
-        });  
+    if (original) original.apply(this, args);  
+    this.__newInterfaceEnabled = true;  
+      
+    // Додати клас для широких карток  
+    if (this.object && this.object.card) {  
+        $(this.object.card).addClass('card--wide');  
+    }  
+      
+    // Створити інформаційну панель ТІЛЬКИ якщо є id  
+    if (this.object && this.object.id) {  
+        var info = new InterfaceInfo(this.object);  
+        var infoElement = info.create();  
+          
+        if (infoElement) {  
+            $('.full__body').prepend(infoElement);  
+            // Метод load() викличеться автоматично в create()  
+        }  
+    }  
+});
   
         wrap(mainMap.Create, 'onCreate', function (original, args) {  
             if (original) original.apply(this, args);  
