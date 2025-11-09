@@ -50,8 +50,7 @@
     html.find('.new-interface-info__poster').css('background-image', 'url(' + posterUrl + ')');  
   }  
 };
-      };
-
+  
       this.load = function (data) {
         var _this = this;
 
