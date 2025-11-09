@@ -326,7 +326,37 @@
         
   return cards;      
     }
-        
+     function renderCategory(cat, container) {  
+    var displayMode = Lampa.Storage.get('customhub_display_mode', 'poster');  
+    var shuffle = Lampa.Storage.get('customhub_' + cat.id + '_shuffle', false);  
+      
+    loadTMDB(cat.endpoint, function(items) {  
+        if (items.length === 0) return;  
+          
+        if (shuffle) {  
+            items = shuffleArray(items);  
+        }  
+          
+        var cards = createCards(items, cat, displayMode);  
+        if (cards.length === 0) return;  
+          
+        var section = $('<div class="customhub-section"></div>');  
+        var title = $('<div class="customhub-section__title"></div>').text(Lampa.Lang.translate(cat.name));  
+        var content = $('<div class="customhub-section__content"></div>');  
+          
+        if (displayMode === 'line') {  
+            content.addClass('line-mode');  
+        }  
+          
+        cards.forEach(function(card) {  
+            content.append(card);  
+        });  
+          
+        section.append(title);  
+        section.append(content);  
+        container.append(section);  
+    });  
+}   
     
   // Функція для ініціалізації головної сторінки  
     function initHomePage() {        
