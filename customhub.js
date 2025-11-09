@@ -326,37 +326,49 @@
         
   return cards;      
     }
-     function renderCategory(cat, container) {  
-    var displayMode = Lampa.Storage.get('customhub_display_mode', 'poster');  
-    var shuffle = Lampa.Storage.get('customhub_' + cat.id + '_shuffle', false);  
+     // ✅ Додати цю функцію перед initHomePage()  
+function renderCategory(category, container) {  
+    console.log('[CustomHub] Рендеринг категорії:', category.id);  
       
-    loadTMDB(cat.endpoint, function(items) {  
-        if (items.length === 0) return;  
-          
-        if (shuffle) {  
-            items = shuffleArray(items);  
+    var section = document.createElement('div');  
+    section.className = 'customhub-section';  
+      
+    var title = document.createElement('h2');  
+    title.className = 'customhub-title';  
+    title.textContent = Lampa.Lang.translate('customhub_' + category.id);  
+    section.appendChild(title);  
+      
+    var cardsContainer = document.createElement('div');  
+    cardsContainer.className = 'customhub-cards';  
+      
+    // Завантажити дані з TMDB  
+    var endpoint = category.endpoint;  
+    var type = category.type || 'movie';  
+      
+    Lampa.TMDB.get(type, endpoint, function(data) {  
+        if (!data || !data.results) {  
+            console.warn('[CustomHub] Немає даних для категорії:', category.id);  
+            return;  
         }  
           
-        var cards = createCards(items, cat, displayMode);  
-        if (cards.length === 0) return;  
+        var results = data.results;  
           
-        var section = $('<div class="customhub-section"></div>');  
-        var title = $('<div class="customhub-section__title"></div>').text(Lampa.Lang.translate(cat.name));  
-        var content = $('<div class="customhub-section__content"></div>');  
-          
-        if (displayMode === 'line') {  
-            content.addClass('line-mode');  
+        // Перемішати якщо потрібно  
+        if (Lampa.Storage.get('customhub_' + category.id + '_shuffle', false)) {  
+            results = results.sort(function() { return 0.5 - Math.random(); });  
         }  
           
-        cards.forEach(function(card) {  
-            content.append(card);  
+        // Створити картки  
+        results.forEach(function(item) {  
+            var card = Lampa.Template.js('card');  
+            card.create(item);  
+            cardsContainer.appendChild(card.render());  
         });  
-          
-        section.append(title);  
-        section.append(content);  
-        container.append(section);  
     });  
-}   
+      
+    section.appendChild(cardsContainer);  
+    container.appendChild(section);  
+}    
     
   // Функція для ініціалізації головної сторінки  
     function initHomePage() {        
