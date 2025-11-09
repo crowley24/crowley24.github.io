@@ -16,8 +16,7 @@
             this.element = document.createElement('div');    
             this.element.className = 'new-interface-info';    
     
-            this.render();    
-            this.load();    
+            this.render();      
     
             return this.element;    
         }    
@@ -64,48 +63,43 @@
             });    
         }    
     
-        update() {    
-            if (!this.element) return;    
-    
-            var title = this.element.querySelector('.new-interface-info__title');    
-            var details = this.element.querySelector('.new-interface-info__details');    
-            var description = this.element.querySelector('.new-interface-info__description');    
-            var poster = this.element.querySelector('.new-interface-info__poster');    
-    
-            if (title && this.object.title) {    
-                title.textContent = this.object.title;    
-            }    
-    
-            if (details) {    
-                var detailsHtml = '';    
-    
-                if (this.object.year) {    
-                    detailsHtml += '<div>' + this.object.year + '</div>';    
-                }    
-    
-                if (this.object.countries) {    
-                    detailsHtml += '<div>' + this.object.countries + '</div>';    
-                }    
-    
-                if (this.object.genres) {    
-                    detailsHtml += '<div>' + this.object.genres + '</div>';    
-                }    
-    
-                if (this.object.rating) {    
-                    detailsHtml += '<div class="new-interface-info__rating">★ ' + this.object.rating + '</div>';    
-                }    
-    
-                details.innerHTML = detailsHtml;    
-            }    
-    
-            if (description && this.object.overview) {    
-                description.textContent = this.object.overview;    
-            }    
-    
-            if (poster && this.object.poster) {    
-                poster.style.backgroundImage = 'url(' + this.object.poster + ')';    
-            }    
-        }    
+        update() {  
+    if (!this.element) return;  
+      
+    var title = this.element.querySelector('.new-interface-info__title');  
+    var details = this.element.querySelector('.new-interface-info__details');  
+    var description = this.element.querySelector('.new-interface-info__description');  
+    var poster = this.element.querySelector('.new-interface-info__poster');  
+      
+    // Використовуємо наявні дані з this.object  
+    if (title) {  
+        title.textContent = this.object.title || this.object.name || '';  
+    }  
+      
+    if (description) {  
+        description.textContent = this.object.overview || this.object.description || '';  
+    }  
+      
+    if (poster && (this.object.poster || this.object.img)) {  
+        var posterUrl = this.object.poster || this.object.img;  
+        poster.style.backgroundImage = 'url(' + posterUrl + ')';  
+    }  
+      
+    if (details) {  
+        var detailsHtml = '';  
+          
+        if (this.object.year) {  
+            detailsHtml += '<div>' + this.object.year + '</div>';  
+        }  
+          
+        if (this.object.rating || this.object.vote_average) {  
+            var rating = this.object.rating || this.object.vote_average;  
+            detailsHtml += '<div class="new-interface-info__rating">★ ' + rating + '</div>';  
+        }  
+          
+        details.innerHTML = detailsHtml;  
+    }  
+}    
     
         empty() {    
             if (!this.element) return;    
