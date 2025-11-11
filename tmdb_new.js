@@ -33,7 +33,7 @@
     var pluginSettings = {    
         enabled: true,    
         collections: collectionsConfig.reduce(function(acc, c) { acc[c.id] = true; return acc; }, {}),  
-        showContinueWatching: true  // Нова опція  
+        showContinueWatching: true  
     };    
     
     var settingsListener = null;    
@@ -164,7 +164,7 @@
   
             // Додаємо "Продовжити перегляд" на початок, якщо увімкнено  
             if (settings.showContinueWatching) {  
-                parts_data.push(function (completeCallback) {  
+                parts_data.push(function (completeCallback, partEmpty) {  
                     var continueItems = getContinueWatchingItems();  
                       
                     if (continueItems.length > 0) {  
@@ -173,7 +173,12 @@
                             results: continueItems  
                         });  
                     } else {  
-                        completeCallback(null);  
+                        // Використовуємо partEmpty() для порожніх результатів  
+                        if (typeof partEmpty === 'function') {  
+                            partEmpty();  
+                        } else {  
+                            completeCallback(null);  
+                        }  
                     }  
                 });  
             }  
@@ -181,7 +186,7 @@
             collectionsConfig.forEach(function(cfg) {    
                 if (!settings.collections[cfg.id]) return;    
                     
-                parts_data.push(function (completeCallback) {    
+                parts_data.push(function (completeCallback, partEmpty) {    
                     var translatedName = Lampa.Lang.translate(cfg.name_key);    
                     var fullDisplayName = cfg.emoji ? cfg.emoji + ' ' + translatedName : translatedName;    
                         
@@ -190,17 +195,31 @@
                     parent.network.silent(    
                         Lampa.TMDB.api(cfg.request),    
                         function (data) {    
-                            completeCallback({    
-                                title: fullDisplayName,    
-                                results: data.results || []    
-                            });    
+                            if (data.results && data.results.length > 0) {  
+                                completeCallback({    
+                                    title: fullDisplayName,    
+                                    results: data.results  
+                                });  
+                            } else {  
+                                // Використовуємо partEmpty() для порожніх результатів  
+                                if (typeof partEmpty === 'function') {  
+                                    partEmpty();  
+                                } else {  
+                                    completeCallback(null);  
+                                }  
+                            }  
                         },    
                         function () {    
-                            completeCallback(null);    
+                            // Помилка мережі - також викликаємо partEmpty()  
+                            if (typeof partEmpty === 'function') {  
+                                partEmpty();  
+                            } else {  
+                                completeCallback(null);  
+                            }  
                         }    
                     );    
                 });    
-            });    
+            });  
     
             if (hasSequentials) {    
                 Lampa.Api.sequentials(parts_data, oncomplete, onerror);    
@@ -264,8 +283,8 @@
             component: 'tmdb_mod',  
             param: { name: 'tmdb_mod_show_continue', type: 'trigger', default: true },  
             field: {   
-                name: Lampa.Lang.translate('tmdb_mod_continue_watching'),   
-                description: Lampa.Lang.translate('tmdb_mod_continue_watching_desc')   
+                name: Lampa.Lang.translate('tmdb_mod_show_continue_title'),   
+                description: Lampa.Lang.translate('tmdb_mod_show_continue_descr')   
             },  
             onChange: function (value) {  
                 pluginSettings.showContinueWatching = value;  
@@ -290,9 +309,10 @@
                     saveSettings();      
                     Lampa.Noty.show(Lampa.Lang.translate('tmdb_mod_noty_reload'));      
                 }    
-            });    
-        });    
+            });  
+        });  
     
+        // Видаляємо старий слухач перед додаванням нового  
         if (settingsListener && Lampa.Settings.listener.remove) {      
             Lampa.Settings.listener.remove('open', settingsListener);      
         }      
@@ -389,6 +409,4 @@
     
     waitForApp();    
     
-})();  
-                                
-  
+})();
