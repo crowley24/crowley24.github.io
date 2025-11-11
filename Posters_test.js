@@ -129,29 +129,59 @@
             // Горизонтальні постери  
             if (size === 'small') {  
                 css = `  
-                    .card:not(.card--collection):not(.card--category):not(.card--explorer) {  
+                    .items-line .card:not(.card--collection):not(.card--category):not(.card--explorer) {  
                         width: 24em !important;  
+                        min-width: 24em !important;  
+                        max-width: 24em !important;  
                     }  
-                    .card:not(.card--collection):not(.card--category):not(.card--explorer) .card__view {  
+                    .items-line .card:not(.card--collection):not(.card--category):not(.card--explorer) .card__view {  
                         padding-bottom: 56% !important;  
+                        height: 0 !important;  
+                    }  
+                    .items-line .card:not(.card--collection):not(.card--category):not(.card--explorer) .card__img {  
+                        position: absolute !important;  
+                        top: 0 !important;  
+                        left: 0 !important;  
+                        width: 100% !important;  
+                        height: 100% !important;  
                     }  
                 `;  
             } else if (size === 'medium') {  
                 css = `  
-                    .card:not(.card--collection):not(.card--category):not(.card--explorer) {  
+                    .items-line .card:not(.card--collection):not(.card--category):not(.card--explorer) {  
                         width: 34.3em !important;  
+                        min-width: 34.3em !important;  
+                        max-width: 34.3em !important;  
                     }  
-                    .card:not(.card--collection):not(.card--category):not(.card--explorer) .card__view {  
+                    .items-line .card:not(.card--collection):not(.card--category):not(.card--explorer) .card__view {  
                         padding-bottom: 56% !important;  
+                        height: 0 !important;  
+                    }  
+                    .items-line .card:not(.card--collection):not(.card--category):not(.card--explorer) .card__img {  
+                        position: absolute !important;  
+                        top: 0 !important;  
+                        left: 0 !important;  
+                        width: 100% !important;  
+                        height: 100% !important;  
                     }  
                 `;  
             } else if (size === 'large') {  
                 css = `  
-                    .card:not(.card--collection):not(.card--category):not(.card--explorer) {  
+                    .items-line .card:not(.card--collection):not(.card--category):not(.card--explorer) {  
                         width: 44em !important;  
+                        min-width: 44em !important;  
+                        max-width: 44em !important;  
                     }  
-                    .card:not(.card--collection):not(.card--category):not(.card--explorer) .card__view {  
+                    .items-line .card:not(.card--collection):not(.card--category):not(.card--explorer) .card__view {  
                         padding-bottom: 56% !important;  
+                        height: 0 !important;  
+                    }  
+                    .items-line .card:not(.card--collection):not(.card--category):not(.card--explorer) .card__img {  
+                        position: absolute !important;  
+                        top: 0 !important;  
+                        left: 0 !important;  
+                        width: 100% !important;  
+                        height: 100% !important;  
                     }  
                 `;  
             }  
@@ -159,29 +189,59 @@
             // Вертикальні постери  
             if (size === 'small') {  
                 css = `  
-                    .card:not(.card--collection):not(.card--category):not(.card--explorer) {  
+                    .items-line .card:not(.card--collection):not(.card--category):not(.card--explorer) {  
                         width: 10.8em !important;  
+                        min-width: 10.8em !important;  
+                        max-width: 10.8em !important;  
                     }  
-                    .card:not(.card--collection):not(.card--category):not(.card--explorer) .card__view {  
+                    .items-line .card:not(.card--collection):not(.card--category):not(.card--explorer) .card__view {  
                         padding-bottom: 150% !important;  
+                        height: 0 !important;  
+                    }  
+                    .items-line .card:not(.card--collection):not(.card--category):not(.card--explorer) .card__img {  
+                        position: absolute !important;  
+                        top: 0 !important;  
+                        left: 0 !important;  
+                        width: 100% !important;  
+                        height: 100% !important;  
                     }  
                 `;  
             } else if (size === 'medium') {  
                 css = `  
-                    .card:not(.card--collection):not(.card--category):not(.card--explorer) {  
+                    .items-line .card:not(.card--collection):not(.card--category):not(.card--explorer) {  
                         width: 12.75em !important;  
+                        min-width: 12.75em !important;  
+                        max-width: 12.75em !important;  
                     }  
-                    .card:not(.card--collection):not(.card--category):not(.card--explorer) .card__view {  
+                    .items-line .card:not(.card--collection):not(.card--category):not(.card--explorer) .card__view {  
                         padding-bottom: 150% !important;  
+                        height: 0 !important;  
+                    }  
+                    .items-line .card:not(.card--collection):not(.card--category):not(.card--explorer) .card__img {  
+                        position: absolute !important;  
+                        top: 0 !important;  
+                        left: 0 !important;  
+                        width: 100% !important;  
+                        height: 100% !important;  
                     }  
                 `;  
             } else if (size === 'large') {  
                 css = `  
-                    .card:not(.card--collection):not(.card--category):not(.card--explorer) {  
+                    .items-line .card:not(.card--collection):not(.card--category):not(.card--explorer) {  
                         width: 16em !important;  
+                        min-width: 16em !important;  
+                        max-width: 16em !important;  
                     }  
-                    .card:not(.card--collection):not(.card--category):not(.card--explorer) .card__view {  
+                    .items-line .card:not(.card--collection):not(.card--category):not(.card--explorer) .card__view {  
                         padding-bottom: 150% !important;  
+                        height: 0 !important;  
+                    }  
+                    .items-line .card:not(.card--collection):not(.card--category):not(.card--explorer) .card__img {  
+                        position: absolute !important;  
+                        top: 0 !important;  
+                        left: 0 !important;  
+                        width: 100% !important;  
+                        height: 100% !important;  
                     }  
                 `;  
             }  
@@ -191,6 +251,7 @@
         document.head.appendChild(style);  
           
         console.log('[PosterPlugin] Стилі застосовано:', viewMode, size);  
+        console.log('[PosterPlugin] CSS:', css);  
     }  
   
     // Функція видалення стилів  
@@ -207,9 +268,15 @@
     // Застосування стилів при завантаженні  
     Lampa.Listener.follow('app', function (e) {  
         if (e.type === 'ready') {  
+            // Застосувати стилі з більшою затримкою  
             setTimeout(function() {  
                 applyPosterStyles();  
-            }, 1000);  
+            }, 2000);  
+              
+            // Також застосувати при зміні активності  
+            Lampa.Activity.listener.follow('activity', function(activity) {  
+                setTimeout(applyPosterStyles, 500);  
+            });  
         }  
     });  
   
