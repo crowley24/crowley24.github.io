@@ -22,7 +22,7 @@
         clock.style.alignItems = 'center';  
         clock.style.fontFamily = 'Segoe UI, Roboto, sans-serif';  
         clock.style.fontWeight = '600';  
-        clock.style.fontSize = '1.8em';  
+        clock.style.fontSize = '2.5em';  
         clock.style.whiteSpace = 'nowrap';  
   
         // Створюємо елемент для часу  
