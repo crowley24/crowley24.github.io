@@ -4,14 +4,6 @@
     const PLUGIN_ID = 'poster_customizer';  
     const STORAGE_KEY = 'poster_customizer_settings';  
   
-    const defaults = {  
-        posterType: 'vertical', // 'vertical' або 'horizontal'  
-        posterSize: 'medium'    // 'small', 'medium', 'large'  
-    };  
-  
-    // Завантаження налаштувань  
-    let settings = Object.assign({}, defaults, Lampa.Storage.get(STORAGE_KEY, {}));  
-  
     // Додавання локалізації  
     Lampa.Lang.add({  
         poster_customizer_title: {  
@@ -53,6 +45,33 @@
             en: 'Large',  
             uk: 'Великі',  
             ru: 'Большие'  
+        },  
+        poster_row_position_title: {  
+            en: 'Row position (1-20)',  
+            uk: 'Позиція рядка (1-20)',  
+            ru: 'Позиция строки (1-20)'  
+        },  
+        poster_row_position_descr: {  
+            en: 'Set the position of the row on the main screen',  
+            uk: 'Встановіть позицію рядка на головному екрані',  
+            ru: 'Установите позицию строки на главном экране'  
+        }  
+    });  
+  
+    // Налаштування увімкнення плагіна  
+    Lampa.SettingsApi.addParam({  
+        component: 'interface',  
+        param: {  
+            name: 'poster_customizer_enable',  
+            type: 'select',  
+            values: {  
+                '0': Lampa.Lang.translate('settings_param_no'),  
+                '1': Lampa.Lang.translate('settings_param_yes')  
+            },  
+            default: '0'  
+        },  
+        field: {  
+            name: Lampa.Lang.translate('poster_customizer_title')  
         }  
     });  
   
@@ -69,12 +88,10 @@
             default: 'vertical'  
         },  
         field: {  
-            name: Lampa.Lang.translate('poster_type_title')  
-        },  
-        onChange: function(value) {  
-            settings.posterType = value;  
-            Lampa.Storage.set(STORAGE_KEY, settings);  
-            applyPosterStyles();  
+            name: Lampa.Lang.translate('poster_type_title'),  
+            show: function() {  
+                return Lampa.Storage.get('poster_customizer_enable') === '1';  
+            }  
         }  
     });  
   
@@ -92,92 +109,115 @@
             default: 'medium'  
         },  
         field: {  
-            name: Lampa.Lang.translate('poster_size_title')  
+            name: Lampa.Lang.translate('poster_size_title'),  
+            show: function() {  
+                return Lampa.Storage.get('poster_customizer_enable') === '1';  
+            }  
+        }  
+    });  
+  
+    // Налаштування позиції рядка (приклад для першої стрічки)  
+    Lampa.SettingsApi.addParam({  
+        component: 'interface',  
+        param: {  
+            name: 'poster_row_position_1',  
+            type: 'input',  
+            default: '1'  
         },  
-        onChange: function(value) {  
-            settings.posterSize = value;  
-            Lampa.Storage.set(STORAGE_KEY, settings);  
-            applyPosterStyles();  
+        field: {  
+            name: Lampa.Lang.translate('poster_row_position_title') + ' #1',  
+            description: Lampa.Lang.translate('poster_row_position_descr'),  
+            show: function() {  
+                return Lampa.Storage.get('poster_customizer_enable') === '1';  
+            }  
+        },  
+        onRender: function(item) {  
+            // Валідація введення - тільки цифри від 1 до 20  
+            item.on('change', function() {  
+                var value = parseInt(item.val());  
+                if (isNaN(value) || value < 1 || value > 20) {  
+                    item.val('1');  
+                }  
+            });  
         }  
     });  
   
     // Функція застосування стилів постерів  
     function applyPosterStyles() {  
+        if (Lampa.Storage.get('poster_customizer_enable') !== '1') {  
+            removePosterStyles();  
+            return;  
+        }  
+  
         var posterType = Lampa.Storage.get('poster_customizer_type', 'vertical');  
         var posterSize = Lampa.Storage.get('poster_customizer_size', 'medium');  
   
         console.log('[PosterCustomizer] Застосування стилів:', posterType, posterSize);  
   
         // Видаляємо старі стилі  
-        var existingStyle = document.getElementById('poster-customizer-styles');  
-        if (existingStyle) {  
-            existingStyle.remove();  
-        }  
+        removePosterStyles();  
   
-        // Створюємо новий style елемент  
+        var styleId = 'custom-poster-styles';  
         var style = document.createElement('style');  
-        style.id = 'poster-customizer-styles';  
+        style.id = styleId;  
   
         var css = '';  
   
         // Розміри для вертикальних постерів (співвідношення 2:3)  
         var verticalSizes = {  
-            small: '10.8em',  
-            medium: '12.75em',  
-            large: '16em'  
+            small: { width: '10.8em', paddingBottom: '150%' },  
+            medium: { width: '12.75em', paddingBottom: '150%' },  
+            large: { width: '16em', paddingBottom: '150%' }  
         };  
   
         // Розміри для горизонтальних постерів (співвідношення 16:9)  
         var horizontalSizes = {  
-            small: '24em',  
-            medium: '34.3em',  
-            large: '44em'  
+            small: { width: '24em', paddingBottom: '56.25%' },  
+            medium: { width: '34.3em', paddingBottom: '56.25%' },  
+            large: { width: '44em', paddingBottom: '56.25%' }  
         };  
   
-        if (posterType === 'horizontal') {  
-            var width = horizontalSizes[posterSize];  
-            css = `  
-                .card:not(.card--collection):not(.card--category):not(.card--explorer) {  
-                    width: ${width} !important;  
-                    min-width: ${width} !important;  
-                    max-width: ${width} !important;  
-                }  
-                .card:not(.card--collection):not(.card--category):not(.card--explorer) .card__view {  
-                    padding-bottom: 56% !important;  
-                }  
-                .card:not(.card--collection):not(.card--category):not(.card--explorer) .card__img {  
-                    position: absolute !important;  
-                    top: 0 !important;  
-                    left: 0 !important;  
-                    width: 100% !important;  
-                    height: 100% !important;  
-                }  
-            `;  
-        } else {  
-            var width = verticalSizes[posterSize];  
-            css = `  
-                .card:not(.card--collection):not(.card--category):not(.card--explorer) {  
-                    width: ${width} !important;  
-                    min-width: ${width} !important;  
-                    max-width: ${width} !important;  
-                }  
-                .card:not(.card--collection):not(.card--category):not(.card--explorer) .card__view {  
-                    padding-bottom: 150% !important;  
-                }  
-                .card:not(.card--collection):not(.card--category):not(.card--explorer) .card__img {  
-                    position: absolute !important;  
-                    top: 0 !important;  
-                    left: 0 !important;  
-                    width: 100% !important;  
-                    height: 100% !important;  
-                }  
-            `;  
-        }  
+        var sizes = posterType === 'horizontal' ? horizontalSizes : verticalSizes;  
+        var currentSize = sizes[posterSize];  
+  
+        // Базові стилі для всіх карток  
+        css += '.items-line .card:not(.card--collection):not(.card--category):not(.card--explorer) {';  
+        css += '  width: ' + currentSize.width + ' !important;';  
+        css += '  min-width: ' + currentSize.width + ' !important;';  
+        css += '  max-width: ' + currentSize.width + ' !important;';  
+        css += '}';  
+  
+        // Стилі для card__view (контейнер зображення)  
+        css += '.items-line .card:not(.card--collection):not(.card--category):not(.card--explorer) .card__view {';  
+        css += '  padding-bottom: ' + currentSize.paddingBottom + ' !important;';  
+        css += '  position: relative !important;';  
+        css += '}';  
+  
+        // Стилі для card__img  
+        css += '.items-line .card:not(.card--collection):not(.card--category):not(.card--explorer) .card__img {';  
+        css += '  position: absolute !important;';  
+        css += '  top: 0 !important;';  
+        css += '  left: 0 !important;';  
+        css += '  width: 100% !important;';  
+        css += '  height: 100% !important;';  
+        css += '  object-fit: cover !important;';  
+        css += '}';  
   
         style.textContent = css;  
         document.head.appendChild(style);  
   
         console.log('[PosterCustomizer] Стилі застосовано');  
+    }  
+  
+    // Функція видалення стилів  
+    function removePosterStyles() {  
+        var styleId = 'custom-poster-styles';  
+        var existingStyle = document.getElementById(styleId);  
+          
+        if (existingStyle) {  
+            existingStyle.remove();  
+            console.log('[PosterCustomizer] Стилі видалено');  
+        }  
     }  
   
     // Застосування стилів при завантаженні  
@@ -191,7 +231,9 @@
   
     // Застосування стилів при зміні налаштувань  
     Lampa.Storage.listener.follow('change', function(e) {  
-        if (e.name === 'poster_customizer_type' || e.name === 'poster_customizer_size') {  
+        if (e.name === 'poster_customizer_enable' ||   
+            e.name === 'poster_customizer_type' ||   
+            e.name === 'poster_customizer_size') {  
             applyPosterStyles();  
         }  
     });  
