@@ -2,7 +2,7 @@
     'use strict';  
   
     // == Lampac Clock Style Plugin ==  
-    // Годинник поруч з індикаторами статусу  
+    // Заміна стандартного годинника Lampa на кастомний стиль  
   
     function createClock() {  
         // Знаходимо стандартний годинник  
@@ -20,41 +20,17 @@
         clock.id = 'custom-clock';  
         clock.style.display = 'flex';  
         clock.style.alignItems = 'center';  
-        clock.style.gap = '0.8em';  
         clock.style.fontFamily = 'Segoe UI, Roboto, sans-serif';  
         clock.style.fontWeight = '600';  
         clock.style.fontSize = '1.8em';  
         clock.style.whiteSpace = 'nowrap';  
-        clock.style.marginLeft = '1.5em';  
-  
-        // Створюємо індикатори (зелений, жовтий, червоний)  
-        const indicators = document.createElement('div');  
-        indicators.style.display = 'flex';  
-        indicators.style.gap = '0.5em';  
-        indicators.style.alignItems = 'center';  
-  
-        // Функція створення індикатора  
-        function createIndicator(color) {  
-            const dot = document.createElement('div');  
-            dot.style.width = '0.6em';  
-            dot.style.height = '0.6em';  
-            dot.style.borderRadius = '100%';  
-            dot.style.backgroundColor = color;  
-            return dot;  
-        }  
-  
-        // Додаємо три індикатори  
-        indicators.appendChild(createIndicator('#93d46d')); // зелений  
-        indicators.appendChild(createIndicator('#FFD028')); // жовтий  
-        indicators.appendChild(createIndicator('#f53f32')); // червоний  
   
         // Створюємо елемент для часу  
         const timeDisplay = document.createElement('div');  
         timeDisplay.style.display = 'flex';  
         timeDisplay.style.alignItems = 'baseline';  
   
-        // Додаємо індикатори та час до контейнера  
-        clock.appendChild(indicators);  
+        // Додаємо тільки час до контейнера (без індикаторів)  
         clock.appendChild(timeDisplay);  
   
         // Вставляємо годинник замість стандартного  
