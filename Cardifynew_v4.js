@@ -1178,14 +1178,16 @@
     pointer-events: none !important;       
   
     /* Багатошарове розмиття для плавного переходу */      
-    box-shadow:         
-  0 0 40px 15px rgba(0,0,0,0.98),      // було 80px 30px  
-  0 0 80px 30px rgba(0,0,0,0.9),       // було 160px 60px  
-  0 0 120px 45px rgba(0,0,0,0.75),     // було 240px 90px  
-  0 0 160px 60px rgba(0,0,0,0.6) !important;  
+    box-shadow:           
+  0 0 60px 25px rgba(0,0,0,0.95),  
+  0 0 120px 50px rgba(0,0,0,0.85),  
+  0 0 180px 75px rgba(0,0,0,0.7),  
+  0 0 240px 100px rgba(0,0,0,0.55),  
+  0 0 300px 125px rgba(0,0,0,0.4),  
+  0 0 360px 150px rgba(0,0,0,0.25) !important;
           
     /* Додатковий фільтр для м'якості */      
-    filter: drop-shadow(0 0 30px rgba(0,0,0,0.8)) !important;      
+    filter: drop-shadow(0 0 50px rgba(0,0,0,0.9)) !important;      
   }          
             
   .cardify-trailer__youtube iframe {          
