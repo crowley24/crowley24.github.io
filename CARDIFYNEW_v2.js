@@ -1178,13 +1178,11 @@
     pointer-events: none !important;       
   
     /* Багатошарове розмиття для плавного переходу */      
-    box-shadow:       
-      0 0 80px 30px rgba(0,0,0,0.98),      
-      0 0 160px 60px rgba(0,0,0,0.9),      
-      0 0 240px 90px rgba(0,0,0,0.75),      
-      0 0 320px 120px rgba(0,0,0,0.6),      
-      0 0 400px 150px rgba(0,0,0,0.4),  
-      0 0 500px 250px rgba(0,0,0,0.2) !important;  
+    box-shadow:         
+  0 0 40px 15px rgba(0,0,0,0.98),      // було 80px 30px  
+  0 0 80px 30px rgba(0,0,0,0.9),       // було 160px 60px  
+  0 0 120px 45px rgba(0,0,0,0.75),     // було 240px 90px  
+  0 0 160px 60px rgba(0,0,0,0.6) !important;  
           
     /* Додатковий фільтр для м'якості */      
     filter: drop-shadow(0 0 30px rgba(0,0,0,0.8)) !important;      
