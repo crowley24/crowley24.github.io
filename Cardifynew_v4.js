@@ -1372,9 +1372,7 @@
       modifyCardifyStyles();        
     }        
   });        
-})();
         
-      
 function setupTrailerControls() {  
   const trailers = document.querySelectorAll('.cardify-trailer__youtube iframe');  
     
