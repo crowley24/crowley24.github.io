@@ -1265,4 +1265,55 @@
       modifyCardifyStyles();      
     }      
   });      
+function setupTrailerControls() {  
+  const trailers = document.querySelectorAll('.cardify-trailer__youtube iframe');  
+    
+  trailers.forEach(iframe => {  
+    // Додаємо параметри для автовідтворення зі звуком  
+    const src = iframe.src;  
+    if (src && !src.includes('autoplay=1')) {  
+      const separator = src.includes('?') ? '&' : '?';  
+      iframe.src = src + separator + 'autoplay=1&mute=0';  
+    }  
+  });  
+}  
+  
+// Обробка кнопки "Назад"  
+let trailerMuted = false;  
+  
+Lampa.Listener.follow('keydown', function(e) {  
+  if (e.code === 'Back' || e.code === 'Backspace') {  
+    const trailer = document.querySelector('.cardify-trailer__youtube iframe');  
+      
+    if (trailer && !trailerMuted) {  
+      // Перше натискання - вимкнути звук  
+      e.preventDefault();  
+      e.stopPropagation();  
+        
+      const src = trailer.src;  
+      if (src.includes('mute=0')) {  
+        trailer.src = src.replace('mute=0', 'mute=1');  
+      }  
+      trailerMuted = true;  
+        
+      console.log('[Cardify] Звук трейлера вимкнено');  
+      return false;  
+    } else if (trailer && trailerMuted) {  
+      // Друге натискання - дозволити вихід з картки  
+      trailerMuted = false;  
+      console.log('[Cardify] Вихід з картки фільму');  
+    }  
+  }  
+});  
+  
+// Скидання стану при зміні трейлера  
+const trailerObserver = new MutationObserver(() => {  
+  trailerMuted = false;  
+  setupTrailerControls();  
+});  
+  
+trailerObserver.observe(document.body, {  
+  childList: true,  
+  subtree: true  
+});
 })();
