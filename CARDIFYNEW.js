@@ -1066,9 +1066,9 @@
     type: 'select',        
     "default": '40',      
     values: {        
-      '35': '35% (малий)',        
-      '40': '40% (середній)',        
-      '45': '45% (великий)'        
+      '35': 'малий',        
+      '40': 'середній',        
+      '45': 'великий'        
     }        
   },      
   field: {      
@@ -1173,14 +1173,24 @@
     overflow: hidden !important;          
     z-index: 50 !important;          
     transform: none !important;          
-    opacity: 0.9 !important;          
+    opacity: 1 !important;          
     transition: opacity 0.3s ease !important;          
     pointer-events: none !important;       
   
     /* Багатошарове розмиття для плавного переходу */      
-    border: 20px solid rgba(0, 0, 0, 0.3);  
-backdrop-filter: blur(10px);  
--webkit-backdrop-filter: blur(10px);
+  
+.cardify-trailer__youtube::before {  
+  content: "";  
+  position: absolute;  
+  top: -25px;  
+  left: -25px;  
+  right: -25px;  
+  bottom: -25px;  
+  background: rgba(0, 0, 0, 0.6);  
+  filter: blur(20px);  
+  z-index: -1;  
+  border-radius: 12px;  
+}
             
   .cardify-trailer__youtube iframe {          
     width: 130% !important;          
