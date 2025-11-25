@@ -1154,30 +1154,262 @@
     const style = document.createElement('style');        
     style.id = 'cardify-compact-style';        
 
-    style.textContent = `
-      .cardify-trailer__youtube.size-35 { width: 30% !important; }          
-      .cardify-trailer__youtube.size-40 { width: 40% !important; }          
-      .cardify-trailer__youtube.size-45 { width: 50% !important; }          
-           
-      .cardify-trailer__youtube {          
-    position: fixed !important;          
-    top: auto !important;          
-    right: 1.3em !important;          
-    bottom: 5% !important;          
-    left: auto !important;          
-    height: auto !important;          
-    aspect-ratio: 16/9 !important;          
-    max-width: 700px !important;          
-    max-height: 400px !important;          
-    border-radius: 12px !important;          
-    overflow: hidden !important;          
-    z-index: 50 !important;          
-    transform: none !important;          
-    opacity: 1 !important;          
-    transition: opacity 0.3s ease !important;          
-    pointer-events: none !important;       
+    Wiki
+
+Share
+
+yumata/lampa
+cd /home && \ echo "const express = require('express'); const app = require('express')(); const PORT = process.env.PORT || 3000; app.get('/', (req,res)=>res.send('Server is running!')); app.listen(POR...
+Show full text
+Fast
+Це питання не стосується кодової бази Lampa, яку я аналізую.
+
+Ви надіслали bash-скрипт, який виконує наступні дії:
+
+Переходить до директорії /home і створює файл index.js з простим Express.js сервером
+Оновлює пакети системи (apt-get update) та встановлює необхідні інструменти (curl, build-essential)
+Встановлює Node.js версії 20 через офіційний репозиторій NodeSource
+Встановлює npm пакет express для веб-сервера
+Запускає сервер на порту 3000 (або з змінної оточення PORT)
+Це типовий скрипт налаштування для розгортання простого Node.js веб-сервера на Linux системі (ймовірно Debian/Ubuntu).
+
+Примітка: Я спеціалізуюся на відповідях про кодову базу Lampa (додаток для перегляду фільмів та серіалів). Наданий вами код є загальним скриптом налаштування Node.js сервера і не має відношення до репозиторію Lampa. Якщо у вас є питання про сам проект Lampa, його інтернаціоналізацію (lang/uk.js тощо) або інші компоненти - я з радістю допоможу!
+
+Wiki pages you might want to explore:
+
+Internationalization (yumata/lampa)
+
+
+
+Scanned uk.js
+
+Scanned ru.js
+
+Scanned pt.js
+yumata/lampa
+(function() { 'use strict'; function modifyCardifyStyles() { const oldStyle = document.getElementById('cardify-compact-style'); if (oldStyle) oldStyle...
+Show full text
+Fast
+Це JavaScript код для розширення (плагіна) Lampa, який модифікує відображення YouTube трейлерів у додатку.
+
+Основна функціональність
+Цей скрипт створює кастомні стилі для трейлерів з плагіна "Cardify", розміщуючи їх у правому нижньому куті екрану з ефектом розмиття.
+
+Ключові компоненти:
+1. Функція modifyCardifyStyles() - створює динамічні CSS стилі для елементів .cardify-trailer__youtube:
+
+Позиціонує трейлер у правому нижньому куті (position: fixed, right: 1.3em, bottom: 5%)
+Застосовує співвідношення сторін 16:9 (aspect-ratio: 16/9)
+Додає багатошарове розмиття через box-shadow з 6 шарами різної інтенсивності
+Встановлює напівпрозорість (opacity: 0.9)
+Приховує елементи керування (pointer-events: none)
+2. Функція applyClassToTrailers() - додає класи розміру до існуючих трейлерів на сторінці, використовуючи document.querySelectorAll('.cardify-trailer__youtube').
+
+3. MutationObserver - відстежує додавання нових елементів трейлерів до DOM і автоматично застосовує до них відповідні класи розміру.
+
+4. Інтеграція з Lampa API:
+
+Lampa.Storage.field('cardify_trailer_size') - отримує збережений розмір трейлера (за замовчуванням '45')
+Lampa.Listener.follow('app', ...) - чекає готовності додатку перед застосуванням стилів
+Lampa.Listener.follow('storage', ...) - реагує на зміну налаштування розміру трейлера
+Розміри трейлерів
+Скрипт підтримує три розміри:
+
+size-35: 30% ширини екрану
+size-40: 40% ширини екрану
+size-45: 50% ширини екрану
+Notes
+Цей код є розширенням для Lampa і не є частиною основної кодової бази yumata/lampa, яку я аналізую. Він використовує публічний API Lampa (Lampa.Storage, Lampa.Listener) для інтеграції з додатком. Скрипт написаний українською мовою (коментарі та console.log повідомлення), що видно з фраз "Застосування розміру", "Додано клас", "Розмір змінено на".
+
+Wiki pages you might want to explore:
+
+Overview (yumata/lampa)
+Internationalization (yumata/lampa)
+
+
+
+Scanned index.html
+
+Scanned he.js
+
+Scanned uk.js
+
+Scanned jquery.js
+
+Scanned pt.js
+yumata/lampa
+Де редагувати чорну рбводау навколо трейлера, щоб зробити її меншою та не такою темною
+Fast
+Ви запитуєте про редагування чорної рамки (тіні) навколо трейлера у вашому коді плагіна Cardify для Lampa.
+
+Відповідь
+Чорна рамка навколо трейлера створюється властивістю box-shadow у CSS стилях для .cardify-trailer__youtube. Ця тінь складається з 6 шарів різної інтенсивності та розміру.
+
+Щоб зробити рамку меншою та світлішою, вам потрібно відредагувати наступний фрагмент у вашому коді:
+
+box-shadow:         
+  0 0 80px 30px rgba(0,0,0,0.98),        
+  0 0 160px 60px rgba(0,0,0,0.9),        
+  0 0 240px 90px rgba(0,0,0,0.75),        
+  0 0 320px 120px rgba(0,0,0,0.6),        
+  0 0 400px 150px rgba(0,0,0,0.4),    
+  0 0 500px 250px rgba(0,0,0,0.2) !important;
+Як змінити:
+Для меншої рамки - зменшіть значення розмиття (перші два числа у кожному рядку):
+
+box-shadow:         
+  0 0 40px 15px rgba(0,0,0,0.98),      // було 80px 30px  
+  0 0 80px 30px rgba(0,0,0,0.9),       // було 160px 60px  
+  0 0 120px 45px rgba(0,0,0,0.75),     // було 240px 90px  
+  0 0 160px 60px rgba(0,0,0,0.6) !important;  // видалено останні 2 шари
+Для світлішої рамки - зменшіть значення прозорості (останнє число у rgba):
+
+box-shadow:         
+  0 0 80px 30px rgba(0,0,0,0.5),       // було 0.98  
+  0 0 160px 60px rgba(0,0,0,0.4),      // було 0.9  
+  0 0 240px 90px rgba(0,0,0,0.3),      // було 0.75  
+  0 0 320px 120px rgba(0,0,0,0.2) !important;  // було 0.6
+Також можете зменшити інтенсивність додаткового фільтру:
+
+filter: drop-shadow(0 0 15px rgba(0,0,0,0.4)) !important;  // було 30px та 0.8
+Notes
+Цей код не є частиною основної кодової бази Lampa (yumata/lampa), а є кастомним плагіном. Наведені фрагменти CSS знаходяться всередині функції modifyCardifyStyles() у вашому скрипті, в рядках де визначається style.textContent. Значення rgba(0,0,0,X) означають: перші три числа - колір (0,0,0 = чорний), останнє число (X) - прозорість від 0 (повністю прозорий) до 1 (повністю непрозорий).
+
+Wiki pages you might want to explore:
+
+Overview (yumata/lampa)
+
+
+
+Scanned app.css
+yumata/lampa
+А як зробити прозорість трейлера 95%
+Fast
+Ви запитуєте про зміну прозорості самого трейлера у вашому плагіні Cardify для Lampa.
+
+Відповідь
+Прозорість трейлера контролюється властивістю opacity у CSS стилях для .cardify-trailer__youtube. Зараз у вашому коді встановлено значення 0.9 (90% непрозорості).
+
+Щоб зробити трейлер 95% прозорим (тобто 5% непрозорим), змініть наступний рядок у вашому коді:
+
+opacity: 0.05 !important;  // було 0.9
+Або якщо ви маєте на увазі 95% непрозорим (5% прозорим), тоді:
+
+opacity: 0.95 !important;  // було 0.9
+Пояснення значень opacity:
+opacity: 0 = повністю прозорий (0% непрозорості)
+opacity: 0.05 = 5% непрозорості (95% прозорості)
+opacity: 0.5 = 50% непрозорості
+opacity: 0.9 = 90% непрозорості (поточне значення)
+opacity: 0.95 = 95% непрозорості
+opacity: 1 = повністю непрозорий (100% непрозорості)
+Цей рядок знаходиться всередині CSS стилів для .cardify-trailer__youtube у функції modifyCardifyStyles(), де визначається style.textContent.
+
+Notes
+Зверніть увагу, що термінологія може бути неоднозначною: "95% прозорості" зазвичай означає майже невидимий елемент (opacity: 0.05), тоді як "95% непрозорості" означає майже повністю видимий елемент (opacity: 0.95). Виходячи з контексту вашого попереднього питання про зменшення темної рамки, ймовірно ви хочете зробити трейлер більш видимим, тому opacity: 0.95 буде правильним вибором.
+
+Wiki pages you might want to explore:
+
+Overview (yumata/lampa)
+
+
+
+Scanned index.html
+
+Scanned app.css
+
+Scanned LICENSE
+yumata/lampa
+А чи можна відновити робити замість такої рамки box-shadow: 0 0 80px 30px rgba(0,0,0,0.98), 0 0 160px 60px rgba(0,0,0,0.9), 0 0 240px 90px rgba(0,0,0,0.75), 0 ...
+Show full text
+Fast
+Ви запитуєте про можливість замінити поточну box-shadow (багатошарову тінь) на розмиту рамку навколо трейлера у вашому плагіні Cardify для Lampa.
+
+Відповідь
+Так, ви можете замінити box-shadow на розмиту рамку, використовуючи CSS властивість backdrop-filter або комбінацію border з filter: blur(). Ось кілька варіантів:
+
+Варіант 1: Використання backdrop-filter (найкращий для розмиття)
+/* Замість box-shadow використайте: */  
+border: 20px solid rgba(0, 0, 0, 0.3);  
+backdrop-filter: blur(10px);  
+-webkit-backdrop-filter: blur(10px);
+Це створить напівпрозору рамку з ефектом розмиття фону. app.css:368-371
+
+Варіант 2: Псевдоелемент з розмиттям
+/* Додайте до .cardify-trailer__youtube: */  
+position: relative;  
   
-    /* Багатошарове розмиття для плавного переходу */      
+/* І додайте новий стиль: */  
+.cardify-trailer__youtube::before {  
+  content: "";  
+  position: absolute;  
+  top: -20px;  
+  left: -20px;  
+  right: -20px;  
+  bottom: -20px;  
+  background: rgba(0, 0, 0, 0.5);  
+  filter: blur(15px);  
+  z-index: -1;  
+  border-radius: 12px;  
+}
+Варіант 3: Проста розмита рамка
+/* Замість box-shadow: */  
+outline: 15px solid rgba(0, 0, 0, 0.4);  
+outline-offset: -15px;  
+filter: blur(5px);
+Рекомендація
+Найкращий варіант - Варіант 1 з backdrop-filter, оскільки він створює сучасний ефект розмиття, схожий на той, що використовується в Lampa для інших елементів інтерфейсу. app.css:2016-2018 Просто замініть весь блок box-shadow та filter: drop-shadow() на код з Варіанту 1.
+
+Notes
+Властивість backdrop-filter підтримується більшістю сучасних браузерів, але для старіших версій Safari потрібен префікс -webkit-. Якщо вам потрібна підтримка старіших браузерів, використовуйте Варіант 2 з псевдоелементом. Значення blur(10px) можна змінювати - більше число = сильніше розмиття (наприклад, blur(20px) для дуже розмитої рамки).
+
+Wiki pages you might want to explore:
+
+Overview (yumata/lampa)
+
+
+
+yumata/lampa
+css/app.css
+
+
+  margin-top: -1.5em;
+}
+body.platform--browser .normalization {
+  -webkit-backdrop-filter: blur(5px);
+          backdrop-filter: blur(5px);
+}
+
+body.platform--apple .normalization,
+body.selectbox--open .normalization,
+
+
+}
+@media screen and (max-width: 480px) {
+  .settings__layer {
+    -webkit-backdrop-filter: blur(1em);
+            backdrop-filter: blur(1em);
+  }
+}
+.settings__content {
+  position: fixed;
+
+yumata/lampa
+border: 20px solid rgba(0, 0, 0, 0.3); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); при цьому варіанті з'явилась просто чорна рамка, не забоюрена/розмита
+Fast
+Розумію вашу проблему з backdrop-filter. Ви намагаєтеся застосувати розмиття до рамки трейлера, але замість розмитого ефекту отримуєте просто чорну рамку.
+
+Проблема
+backdrop-filter: blur() розмиває фон за елементом, а не саму рамку. Тому ви бачите чорну рамку без розмиття - властивість border: 20px solid rgba(0, 0, 0, 0.3) створює суцільну напівпрозору рамку, а backdrop-filter намагається розмити те, що знаходиться за цією рамкою, а не саму рамку.
+
+Рішення
+Для створення розмитої рамки вам потрібен інший підхід - використання псевдоелемента з filter: blur():
+
+.cardify-trailer__youtube {  
+  position: fixed !important;  
+  /* ... інші стилі ... */  
+  /* ВИДАЛІТЬ border, backdrop-filter та box-shadow */  
+}  
   
 .cardify-trailer__youtube::before {  
   content: "";  
@@ -1191,27 +1423,102 @@
   z-index: -1;  
   border-radius: 12px;  
 }
-            
-  .cardify-trailer__youtube iframe {          
-    width: 130% !important;          
-    height: 130% !important;          
-    position: absolute !important;          
-    top: 50% !important;          
-    left: 50% !important;          
-    transform: translate(-50%, -50%) scale(1.2) !important;          
-    transform-origin: center !important;          
-    object-fit: cover !important;          
-  }          
-            
-  .cardify-trailer__youtube-line {          
-    display: none !important;          
-    visibility: hidden !important;          
-  }          
-            
-  .cardify-trailer__controlls {          
-    display: none !important;          
-  }          
-`;        
+Як це працює:
+::before псевдоелемент створює додатковий шар за трейлером
+top/left/right/bottom: -25px розширює цей шар за межі трейлера (створює "рамку")
+filter: blur(20px) розмиває сам псевдоелемент, а не фон
+z-index: -1 розміщує розмитий шар позаду трейлера
+Налаштування інтенсивності:
+Товщина рамки: змініть значення -25px (більше = товща рамка)
+Сила розмиття: змініть blur(20px) (більше = сильніше розмиття)
+Темнота: змініть rgba(0, 0, 0, 0.6) (останнє число від 0 до 1)
+Notes
+Різниця між backdrop-filter та filter: backdrop-filter розмиває фон за елементом (як у Lampa для деяких панелей app.css:2015-2017 ), тоді як filter: blur() розмиває сам елемент. Для вашого випадку потрібен саме filter: blur() на псевдоелементі.
+
+Wiki pages you might want to explore:
+
+Overview (yumata/lampa)
+Internationalization (yumata/lampa)
+
+
+
+yumata/lampa
+css/app.css
+
+
+  display: none;
+}
+@media screen and (max-width: 480px) {
+  .settings__layer {
+    -webkit-backdrop-filter: blur(1em);
+            backdrop-filter: blur(1em);
+  }
+}
+.settings__content {
+
+yumata/lampa
+(function() { 'use strict'; function modifyCardifyStyles() { const oldStyle = document.getElementById('cardify-compact-style'); if (oldStyle) oldStyle....
+Show full text
+Fast
+View as codemap
+Проблема
+Ви намагаєтеся створити розмиту рамку навколо трейлера, але вона не відображається. Проблема полягає в тому, що псевдоелемент ::before не можна додати через JavaScript у вигляді текстового CSS всередині style.textContent таким чином, як ви це зробили.
+
+Рішення
+У вашому коді псевдоелемент ::before написаний всередині блоку стилів для .cardify-trailer__youtube, що є синтаксично неправильним. CSS псевдоелементи повинні бути визначені як окремі селектори.
+
+Виправте ваш код так:
+
+style.textContent = `  
+  .cardify-trailer__youtube.size-35 { width: 30% !important; }            
+  .cardify-trailer__youtube.size-40 { width: 40% !important; }            
+  .cardify-trailer__youtube.size-45 { width: 50% !important; }            
+         
+  .cardify-trailer__youtube {            
+    position: fixed !important;            
+    top: auto !important;            
+    right: 1.3em !important;            
+    bottom: 5% !important;            
+    left: auto !important;            
+    height: auto !important;            
+    aspect-ratio: 16/9 !important;            
+    max-width: 700px !important;            
+    max-height: 400px !important;            
+    border-radius: 12px !important;            
+    overflow: visible !important;  /* ЗМІНЕНО з hidden на visible */  
+    z-index: 50 !important;            
+    transform: none !important;            
+    opacity: 1 !important;            
+    transition: opacity 0.3s ease !important;            
+    pointer-events: none !important;         
+  }  
+  
+  /* Псевдоелемент як ОКРЕМИЙ селектор */  
+  .cardify-trailer__youtube::before {    
+    content: "";    
+    position: absolute;    
+    top: -25px;    
+    left: -25px;    
+    right: -25px;    
+    bottom: -25px;    
+    background: rgba(0, 0, 0, 0.6);    
+    filter: blur(20px);    
+    z-index: -1;    
+    border-radius: 12px;    
+  }  
+          
+  .cardify-trailer__youtube iframe {            
+    width: 130% !important;            
+    height: 130% !important;            
+    position: absolute !important;            
+    top: 50% !important;            
+    left: 50% !important;            
+    transform: translate(-50%, -50%) scale(1.2) !important;            
+    transform-origin: center !important;            
+    object-fit: cover !important;    
+    z-index: 1 !important;  /* Додано для правильного порядку шарів */  
+  }            
+`;
             
     document.head.appendChild(style);        
     applyClassToTrailers(trailerSize);        
