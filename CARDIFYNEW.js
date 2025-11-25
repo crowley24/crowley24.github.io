@@ -1154,60 +1154,56 @@
     const style = document.createElement('style');        
     style.id = 'cardify-compact-style';        
 
-    style.textContent = `
-      .cardify-trailer__youtube.size-35 { width: 30% !important; }          
-      .cardify-trailer__youtube.size-40 { width: 40% !important; }          
-      .cardify-trailer__youtube.size-45 { width: 50% !important; }          
-           
-      .cardify-trailer__youtube {          
-    position: fixed !important;          
-    top: auto !important;          
-    right: 1.3em !important;          
-    bottom: 5% !important;          
-    left: auto !important;          
-    height: auto !important;          
-    aspect-ratio: 16/9 !important;          
-    max-width: 700px !important;          
-    max-height: 400px !important;          
-    border-radius: 12px !important;          
-    overflow: hidden !important;          
-    z-index: 50 !important;          
-    transform: none !important;          
-    opacity: 1 !important;          
-    transition: opacity 0.3s ease !important;          
-    pointer-events: none !important;       
+    style.textContent = `  
+  .cardify-trailer__youtube.size-35 { width: 30% !important; }            
+  .cardify-trailer__youtube.size-40 { width: 40% !important; }            
+  .cardify-trailer__youtube.size-45 { width: 50% !important; }            
+         
+  .cardify-trailer__youtube {            
+    position: fixed !important;            
+    top: auto !important;            
+    right: 1.3em !important;            
+    bottom: 5% !important;            
+    left: auto !important;            
+    height: auto !important;            
+    aspect-ratio: 16/9 !important;            
+    max-width: 700px !important;            
+    max-height: 400px !important;            
+    border-radius: 12px !important;            
+    overflow: visible !important;  /* ЗМІНЕНО з hidden на visible */  
+    z-index: 50 !important;            
+    transform: none !important;            
+    opacity: 1 !important;            
+    transition: opacity 0.3s ease !important;            
+    pointer-events: none !important;         
+  }  
   
-    /* Багатошарове розмиття для плавного переходу */      
-    box-shadow:         
-  0 0 40px 15px rgba(0,0,0,0.98),      // було 80px 30px  
-  0 0 80px 30px rgba(0,0,0,0.9),       // було 160px 60px  
-  0 0 120px 45px rgba(0,0,0,0.75),     // було 240px 90px  
-  0 0 160px 60px rgba(0,0,0,0.6) !important;  
+  /* Псевдоелемент як ОКРЕМИЙ селектор */  
+  .cardify-trailer__youtube::before {    
+    content: "";    
+    position: absolute;    
+    top: -25px;    
+    left: -25px;    
+    right: -25px;    
+    bottom: -25px;    
+    background: rgba(0, 0, 0, 0.6);    
+    filter: blur(20px);    
+    z-index: -1;    
+    border-radius: 12px;    
+  }  
           
-    /* Додатковий фільтр для м'якості */      
-    filter: drop-shadow(0 0 30px rgba(0,0,0,0.8)) !important;      
-  }          
-            
-  .cardify-trailer__youtube iframe {          
-    width: 130% !important;          
-    height: 130% !important;          
-    position: absolute !important;          
-    top: 50% !important;          
-    left: 50% !important;          
-    transform: translate(-50%, -50%) scale(1.2) !important;          
-    transform-origin: center !important;          
-    object-fit: cover !important;          
-  }          
-            
-  .cardify-trailer__youtube-line {          
-    display: none !important;          
-    visibility: hidden !important;          
-  }          
-            
-  .cardify-trailer__controlls {          
-    display: none !important;          
-  }          
-`;        
+  .cardify-trailer__youtube iframe {            
+    width: 130% !important;            
+    height: 130% !important;            
+    position: absolute !important;            
+    top: 50% !important;            
+    left: 50% !important;            
+    transform: translate(-50%, -50%) scale(1.2) !important;            
+    transform-origin: center !important;            
+    object-fit: cover !important;    
+    z-index: 1 !important;  /* Додано для правильного порядку шарів */  
+  }            
+`;             
             
     document.head.appendChild(style);        
     applyClassToTrailers(trailerSize);        
