@@ -1066,9 +1066,9 @@
     type: 'select',        
     "default": '40',      
     values: {        
-      '35': '35% (малий)',        
-      '40': '40% (середній)',        
-      '45': '45% (великий)'        
+      '35': 'малий',        
+      '40': 'середній',        
+      '45': 'великий'        
     }        
   },      
   field: {      
@@ -1173,7 +1173,7 @@
     overflow: hidden !important;          
     z-index: 50 !important;          
     transform: none !important;          
-    opacity: 0.9 !important;          
+    opacity: 1 !important;          
     transition: opacity 0.3s ease !important;          
     pointer-events: none !important;       
   
