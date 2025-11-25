@@ -1178,17 +1178,9 @@
     pointer-events: none !important;       
   
     /* Багатошарове розмиття для плавного переходу */      
-    box-shadow:       
-      0 0 80px 30px rgba(0,0,0,0.98),      
-      0 0 160px 60px rgba(0,0,0,0.9),      
-      0 0 240px 90px rgba(0,0,0,0.75),      
-      0 0 320px 120px rgba(0,0,0,0.6),      
-      0 0 400px 150px rgba(0,0,0,0.4),  
-      0 0 500px 250px rgba(0,0,0,0.2) !important;  
-          
-    /* Додатковий фільтр для м'якості */      
-    filter: drop-shadow(0 0 30px rgba(0,0,0,0.8)) !important;      
-  }          
+    border: 20px solid rgba(0, 0, 0, 0.3);  
+backdrop-filter: blur(10px);  
+-webkit-backdrop-filter: blur(10px);
             
   .cardify-trailer__youtube iframe {          
     width: 130% !important;          
