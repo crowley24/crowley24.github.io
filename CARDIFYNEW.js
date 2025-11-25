@@ -1203,7 +1203,15 @@
     object-fit: cover !important;    
     z-index: 1 !important;  /* Додано для правильного порядку шарів */  
   }            
-`;             
+    .cardify-trailer__youtube-line {          
+    display: none !important;          
+    visibility: hidden !important;          
+  }          
+            
+  .cardify-trailer__controlls {          
+    display: none !important;          
+  }          
+`;        
             
     document.head.appendChild(style);        
     applyClassToTrailers(trailerSize);        
