@@ -2,65 +2,22 @@
     'use strict';  
       
     function initBadges() {  
-        Lampa.Listener.follow('card_build',(event)=>{  
-            try {  
-                let card = event.card;  
-                let data = event.data;  
-  
-                if(!card) return;  
-  
-                console.log('Processing card:', data);  
-                  
-                let text = JSON.stringify(data).toLowerCase();  
-                let tags = [];  
-  
-                if(text.includes("dolby vision") || text.includes("dovi") || text.includes("dv"))  
-                    tags.push('dv');  
-  
-                if(text.includes("hdr10+"))  
-                    tags.push('hdr10plus');  
-  
-                if(text.includes("hdr"))  
-                    tags.push('hdr');  
-  
-                if(text.includes("atmos"))  
-                    tags.push('atmos');  
-  
-                console.log('Found tags:', tags);  
-  
-                if(tags.length){  
-                    let container = $(card).find('.card__quality');  
-                      
-                    if (container.length === 0) {  
-                        console.log('Quality container not found, searching...');  
-                        container = $(card).find('[class*="quality"], [class*="vote"], [class*="icons"]');  
-                    }  
-                      
-                    if (container.length > 0) {  
-                        tags.forEach(t=>{  
-                            container.append(`<div class="badge-${t}"></div>`);  
-                        });  
-                        console.log('Badges added successfully:', tags);  
-                    } else {  
-                        console.log('No container found for badges');  
-                    }  
-                }  
-            } catch(e) {  
-                console.error('Badge processing error:', e);  
-            }  
-        });  
-    }  
-      
-    // Додавання стилів  
-    let style = `  
+        console.log('[Badges] Initializing badge system...');  
+          
+        // Спочатку перевіримо доступність jQuery  
+        if (typeof $ === 'undefined') {  
+            console.error('[Badges] jQuery not available');  
+            return;  
+        }  
+          
+        // Додамо стилі  
+        let style = `  
 <style>  
 .card__quality .badge-dv,  
 .card__quality .badge-hdr,  
 .card__quality .badge-hdr10plus,  
 .card__quality .badge-atmos{  
-    display:inline-flex !important;  
-    align-items:center !important;  
-    justify-content:center !important;  
+    display:inline-block !important;  
     padding:2px 6px !important;  
     font-size:10px !important;  
     font-weight:700 !important;  
@@ -78,15 +35,78 @@
 .badge-atmos::after{ content:"ATMOS"; color:#4ba3ff; }  
 </style>  
 `;  
-    $('head').append(style);  
+        $('head').append(style);  
+        console.log('[Badges] Styles added');  
+          
+        // Обробник події  
+        Lampa.Listener.follow('card_build', function(event) {  
+            try {  
+                console.log('[Badges] Card build event received');  
+                console.log('[Badges] Event data:', event);  
+                  
+                let card = event.card;  
+                let data = event.data;  
+                  
+                if (!card) {  
+                    console.log('[Badges] No card element');  
+                    return;  
+                }  
+                  
+                console.log('[Badges] Card data:', data);  
+                  
+                let text = JSON.stringify(data).toLowerCase();  
+                console.log('[Badges] Analyzed text:', text);  
+                  
+                let tags = [];  
+                  
+                if (text.includes("dolby vision") || text.includes("dovi") || text.includes("dv"))  
+                    tags.push('dv');  
+                if (text.includes("hdr10+"))  
+                    tags.push('hdr10plus');  
+                if (text.includes("hdr"))  
+                    tags.push('hdr');  
+                if (text.includes("atmos"))  
+                    tags.push('atmos');  
+                  
+                console.log('[Badges] Found tags:', tags);  
+                  
+                if (tags.length) {  
+                    let container = $(card).find('.card__quality');  
+                    console.log('[Badges] Container found:', container.length > 0);  
+                      
+                    if (container.length > 0) {  
+                        tags.forEach(tag => {  
+                            let badge = $('<div class="badge-' + tag + '"></div>');  
+                            container.append(badge);  
+                            console.log('[Badges] Added badge:', tag);  
+                        });  
+                    } else {  
+                        console.log('[Badges] .card__quality container not found');  
+                        // Спробуємо альтернативні контейнери  
+                        let altContainer = $(card).find('.card__vote, .card__icons').first();  
+                        if (altContainer.length > 0) {  
+                            console.log('[Badges] Using alternative container');  
+                            tags.forEach(tag => {  
+                                altContainer.append('<div class="badge-' + tag + '" style="margin-left:4px;"></div>');  
+                            });  
+                        }  
+                    }  
+                }  
+            } catch (e) {  
+                console.error('[Badges] Error:', e);  
+            }  
+        });  
+          
+        console.log('[Badges] Badge system initialized');  
+    }  
       
-    // Запуск після готовності додатку  
+    // Перевірка готовності Lampa  
     if (window.appready) {  
         initBadges();  
     } else {  
         Lampa.Listener.follow('app', function(e) {  
             if (e.type === 'ready') {  
-                setTimeout(initBadges, 1000);  
+                setTimeout(initBadges, 2000);  
             }  
         });  
     }  
