@@ -1,11 +1,11 @@
 (function () {  
     'use strict';  
       
-    console.log("ORIGINAL DV/HDR PLUGIN: Starting");  
+    console.log("BRANDED DV/HDR PLUGIN: Starting");  
       
-    // Використовуємо оригінальні стилі Lampa з кольоровими варіаціями  
+    // Оригінальні стилі Lampa з брендованими лейблами  
     var style = document.createElement('style');  
-    style.id = 'original_dv_hdr_style';  
+    style.id = 'branded_dv_hdr_style';  
     style.textContent = `  
         .card__quality {  
             position: absolute !important;  
@@ -21,61 +21,72 @@
             z-index: 10 !important;  
         }  
           
-        /* Dolby Vision - фіолетовий */  
-        .card__quality.dv {  
-            background: #6B46C1 !important;  
+        /* Dolby Vision - оригінальний брендинг */  
+        .card__quality.dv::before {  
+            content: "DOLBY VISION";  
+            background: linear-gradient(45deg, #6B46C1, #553C9A) !important;  
             color: #FFFFFF !important;  
+            padding: 0.3em 0.5em !important;  
+            border-radius: 0.2em !important;  
+            font-size: 0.65em !important;  
+            letter-spacing: 0.5px !important;  
         }  
           
-        /* HDR - золотий */  
-        .card__quality.hdr {  
-            background: #FFD700 !important;  
+        /* HDR - оригінальний брендинг */  
+        .card__quality.hdr::before {  
+            content: "HDR";  
+            background: linear-gradient(45deg, #FFD700, #FFA500) !important;  
             color: #000000 !important;  
+            padding: 0.3em 0.5em !important;  
+            border-radius: 0.2em !important;  
+            font-weight: 900 !important;  
         }  
           
-        /* Оригінальний жовтий для інших якостей */  
-        .card__quality.default {  
-            background: #ffe216 !important;  
-            color: #000 !important;  
+        /* HDR10+ - розширений брендинг */  
+        .card__quality.hdr10plus::before {  
+            content: "HDR10+";  
+            background: linear-gradient(45deg, #FF8C00, #FF6347) !important;  
+            color: #FFFFFF !important;  
+            padding: 0.3em 0.5em !important;  
+            border-radius: 0.2em !important;  
+            font-size: 0.7em !important;  
+        }  
+          
+        /* Приховуємо оригінальний текст */  
+        .card__quality.dv,  
+        .card__quality.hdr,  
+        .card__quality.hdr10plus {  
+            background: transparent !important;  
+            color: transparent !important;  
         }  
     `;  
     document.head.appendChild(style);  
       
-    // Функція додавання оригінальних бейджів  
-    function addOriginalBadges() {  
-        var cards = document.querySelectorAll('.card:not([data-original-dv-hdr])');  
+    // Функція додавання брендованих бейджів  
+    function addBrandedBadges() {  
+        var cards = document.querySelectorAll('.card:not([data-branded-processed])');  
         console.log("Processing", cards.length, "cards");  
           
         for (var i = 0; i < cards.length; i++) {  
             var card = cards[i];  
-            card.setAttribute('data-original-dv-hdr', 'true');  
+            card.setAttribute('data-branded-processed', 'true');  
               
-            // Симуляція для тестування - чергуємо DV, HDR та default  
+            // Симуляція для тестування - чергуємо брендовані бейджі  
             var badge = document.createElement('div');  
-            var badgeType = i % 3;  
-              
-            if (badgeType === 0) {  
-                badge.className = 'card__quality dv';  
-                badge.textContent = 'DV';  
-            } else if (badgeType === 1) {  
-                badge.className = 'card__quality hdr';  
-                badge.textContent = 'HDR';  
-            } else {  
-                badge.className = 'card__quality default';  
-                badge.textContent = '4K';  
-            }  
-              
+            badge.className = 'card__quality ' + (i % 3 === 0 ? 'dv' : (i % 3 === 1 ? 'hdr' : 'hdr10plus'));  
+            badge.textContent = ''; // Порожній текст, використовуємо ::before  
             card.appendChild(badge);  
-            console.log("Added", badge.textContent, "badge to card", i);  
+              
+            console.log("Added branded badge to card", i);  
         }  
     }  
       
     // Запуск  
-    addOriginalBadges();  
+    addBrandedBadges();  
       
     // Спостерігач для нових карток  
     var observer = new MutationObserver(function() {  
-        setTimeout(addOriginalBadges, 1000);  
+        setTimeout(addBrandedBadges, 1000);  
     });  
       
     observer.observe(document.body, {  
@@ -83,5 +94,5 @@
         subtree: true  
     });  
       
-    console.log("ORIGINAL DV/HDR PLUGIN: Started successfully");  
+    console.log("BRANDED DV/HDR PLUGIN: Started successfully");  
 })();
