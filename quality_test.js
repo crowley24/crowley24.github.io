@@ -5,11 +5,10 @@
     // I. КОНФІГУРАЦІЯ
     // =======================================================
     const DEBUG = false;
-    const QUALITY_CACHE = 'dv_quality_cache_v3'; // Оновлений ключ кешу
+    const QUALITY_CACHE = 'dv_quality_cache_v4'; // Оновлений ключ кешу
     const CACHE_TIME = 24 * 60 * 60 * 1000; // 24 години
     
-    // Пріоритети для визначення найкращої якості (чим вище індекс, тим вищий пріоритет)
-    // Додано Full HD, HD, SD та TS
+    // Пріоритети для визначення найкращої якості 
     const QUALITY_PRIORITY = ['TS', 'SD', 'HD', 'FHD', '4K', 'HDR', 'HDR10+', 'DV'];
 
     // =======================================================
@@ -18,16 +17,18 @@
     const style = document.createElement('style');
     style.id = 'dv_quality_style';
     style.textContent = `
-        /* Контейнер бейджів перенесено у ЛІВИЙ НИЖНІЙ КУТ */
+        /* Контейнер бейджів перенесено у ВЕРХНІЙ ЛІВИЙ КУТ */
         .card__quality-badge {
             position: absolute !important;
-            bottom: 10px !important; /* Відступ від низу */
+            top: 10px !important;    /* Відступ від верху */
             left: 10px !important;   /* Відступ від лівого краю */
-            right: auto !important; /* Скидаємо 'right' */
-            top: auto !important;   /* Скидаємо 'top' */
+            right: auto !important; 
+            bottom: auto !important; 
             display: flex !important;
             gap: 4px !important;
             z-index: 9999 !important;
+            /* ВАЖЛИВО: Реверсивний порядок для відображення ЗЛІВА ВІД РЕЙТИНГУ */
+            flex-direction: row-reverse !important; 
         }
         
         /* Базовий стиль тега */
@@ -39,7 +40,6 @@
             letter-spacing: 0.5px !important;
             text-transform: uppercase !important;
             line-height: 1;
-            /* Стилі за замовчуванням */
             background: rgba(0,0,0,0.8) !important;
             color: #fff !important;
             border: 1px solid rgba(255,255,255,0.2) !important;
@@ -47,53 +47,14 @@
 
         /* КОЛЬОРОВЕ КОДУВАННЯ (за рівнем якості) */
         
-        /* Dolby Vision (найвищий пріоритет) */
-        .quality-tag.dv {
-            background: #8A2BE2 !important; /* Blue Violet */
-            border-color: #A968FF !important;
-        }
-
-        /* HDR10+ */
-        .quality-tag.hdr10-plus {
-            background: #FFA500 !important; /* Orange */
-            border-color: #FFC064 !important;
-        }
-        
-        /* HDR */
-        .quality-tag.hdr {
-            background: #FFD700 !important; /* Gold */
-            color: #333 !important;
-            border-color: #FFE890 !important;
-        }
-
-        /* 4K */
-        .quality-tag.4k {
-            background: #1E90FF !important; /* Dodger Blue */
-            border-color: #5BAFFF !important;
-        }
-
-        /* Full HD (1080p) */
-        .quality-tag.fhd {
-            background: #008000 !important; /* Green */
-            border-color: #00A000 !important;
-        }
-
-        /* HD (720p) */
-        .quality-tag.hd {
-            background: #3CB371 !important; /* Medium Sea Green */
-            border-color: #6BE39F !important;
-        }
-
-        /* SD (Стандартна якість) */
-        .quality-tag.sd {
-            background: #A9A9A9 !important; /* Dark Gray */
-        }
-        
-        /* TS (Низька якість - Телесинк) */
-        .quality-tag.ts {
-            background: #B22222 !important; /* Firebrick (попередження) */
-            border-color: #D24242 !important;
-        }
+        .quality-tag.dv { background: #8A2BE2 !important; border-color: #A968FF !important; }
+        .quality-tag.hdr10-plus { background: #FFA500 !important; border-color: #FFC064 !important; }
+        .quality-tag.hdr { background: #FFD700 !important; color: #333 !important; border-color: #FFE890 !important; }
+        .quality-tag.4k { background: #1E90FF !important; border-color: #5BAFFF !important; }
+        .quality-tag.fhd { background: #008000 !important; border-color: #00A000 !important; }
+        .quality-tag.hd { background: #3CB371 !important; border-color: #6BE39F !important; }
+        .quality-tag.sd { background: #A9A9A9 !important; }
+        .quality-tag.ts { background: #B22222 !important; border-color: #D24242 !important; }
     `;
     document.head.appendChild(style);
 
@@ -102,16 +63,14 @@
     // =======================================================
 
     /**
-     * Визначає найкращу якість за назвою торрента, включаючи нові типи.
-     * @param {string} torrentTitle Назва торрента.
-     * @returns {string | null} Рядок якості ('DV', 'HDR10+', 'HDR', '4K', 'FHD', 'HD', 'SD', 'TS') або null.
+     * Визначає найкращу якість за назвою торрента.
      */
     function detectQuality(torrentTitle) {
         if (!torrentTitle) return null;
         
         const title = torrentTitle.toLowerCase();
 
-        // 1. Найвища якість
+        // 1. Найвища якість (кодування)
         if (/\b(dolby\s*vision|dolbyvision|dv|dovi)\b/i.test(title)) return 'DV';
         if (/\b(hdr10\+)\b/i.test(title)) return 'HDR10+';
         if (/\b(hdr|hdr10)\b/i.test(title)) return 'HDR';
@@ -122,14 +81,16 @@
         if (/\b(hd|720p)\b/i.test(title)) return 'HD';
         
         // 3. Низька якість та тип ріпа
-        if (/\b(sd|480p|360p)\b/i.test(title)) return 'SD';
-        if (/\b(ts|telesync|cam)\b/i.test(title)) return 'TS';
+        // Додаємо більше поширених позначень для охоплення більшої кількості релізів
+        if (/\b(sd|480p|360p|webrip|web-dl|dvdrip)\b/i.test(title)) return 'SD';
+        if (/\b(ts|telesync|cam|hdcam|hdts)\b/i.test(title)) return 'TS';
         
         return null;
     }
 
-    // (getCardData, getTorrents, cleanupCache залишаються без змін)
-
+    /**
+     * Витягує необхідні дані з картки Lampa.
+     */
     function getCardData(card) {
         const data = card.card_data;
         if (!data) return null;
@@ -141,6 +102,9 @@
         };
     }
 
+    /**
+     * Запит до API для отримання торрентів.
+     */
     async function getTorrents(movieData) {
         if (!movieData || !movieData.title) {
             return [];
@@ -165,6 +129,9 @@
         }
     }
 
+    /**
+     * Очищає застарілі записи в кеші.
+     */
     function cleanupCache(cache) {
         const now = Date.now();
         const cleanedCache = {};
@@ -185,9 +152,6 @@
 
     /**
      * Додає значок якості до картки.
-     * Логіка відображення змінена: завжди відображаємо лише один, найкращий знайдений бейдж.
-     * @param {HTMLElement} card Елемент картки.
-     * @param {string} bestQuality Визначена найкраща якість.
      */
     function addQualityBadge(card, bestQuality) {
         if (!card || !bestQuality) return;
@@ -201,8 +165,7 @@
         // Додаємо лише один, найкращий знайдений тег
         const tag = document.createElement('div');
         
-        // Перетворюємо якість на коректний CSS-клас: 
-        // 'HDR10+' -> 'hdr10-plus', 'FHD' -> 'fhd', '4K' -> '4k' і т.д.
+        // Перетворюємо якість на коректний CSS-клас
         const tagClass = bestQuality.toLowerCase().replace('+', '-plus'); 
         
         tag.className = 'quality-tag ' + tagClass;
@@ -210,11 +173,21 @@
         box.appendChild(tag);
 
         card.appendChild(box);
+        
+        // ПІСЛЯ додавання бейджа, зміщуємо рейтинг, щоб уникнути накладання.
+        // Це єдина зміна, яка гарантує, що бейдж буде ЗЛІВА ВІД РЕЙТИНГУ.
+        const rating = card.querySelector('.card__vote');
+        if (rating) {
+            // Визначаємо ширину доданого бейджа (і контейнера)
+            const badgeWidth = box.offsetWidth + 4; // 4px - це gap між елементами
+            // Зміщуємо рейтинг на ширину нашого бейджа.
+            // Рейтинг має position: absolute; left: 10px;
+            rating.style.left = `${10 + badgeWidth}px`;
+        }
     }
     
     /**
      * Обробляє одну картку: перевіряє кеш або робить API-запит.
-     * @param {HTMLElement} card Елемент картки.
      */
     async function processCard(card) {
         if (card.hasAttribute('data-dv-processed')) return;
@@ -241,14 +214,14 @@
             const q = detectQuality(t.title);
             if (!q) return;
 
-            // Логіка пріоритетів: вибираємо якість з вищим індексом у масиві QUALITY_PRIORITY
+            // Логіка пріоритетів: вибираємо якість з вищим індексом
             if (!bestQuality || 
                 QUALITY_PRIORITY.indexOf(q) > QUALITY_PRIORITY.indexOf(bestQuality)) {
                 bestQuality = q;
             }
         });
 
-        // Оновлення кешу (включаючи очищення)
+        // Оновлення кешу 
         cache = cleanupCache(cache);
         cache[movieData.id] = {
             quality: bestQuality,
@@ -258,8 +231,6 @@
 
         if (bestQuality) addQualityBadge(card, bestQuality);
     }
-
-    // (processAllCards, observer, init залишаються без змін)
 
     function processAllCards() {
         const cards = document.querySelectorAll('.card:not([data-dv-processed])');
