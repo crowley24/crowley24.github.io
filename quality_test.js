@@ -1,11 +1,11 @@
-(function () {  
+function () {  
     'use strict';  
       
     var DEBUG = true;  
     var QUALITY_CACHE = 'dv_quality_cache';  
-    var CACHE_TIME = 24 * 60 * 60 * 1000;  
+    var CACHE_TIME = 24 * 60 * 60 * 1000; // 24 години  
       
-    // Кольорові стилі для різних типів якості  
+    // Стилі для бейджів якості з різними кольорами  
     var style = document.createElement('style');  
     style.id = 'dv_quality_style';  
     style.textContent = `  
@@ -21,18 +21,26 @@
             text-transform: uppercase !important;  
             box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;  
         }  
+          
+        /* Dolby Vision - фіолетовий */  
         .card__quality-badge.dv {  
             background: linear-gradient(45deg, #6B46C1, #553C9A) !important;  
             color: #FFFFFF !important;  
         }  
+          
+        /* HDR - золотий */  
         .card__quality-badge.hdr {  
             background: linear-gradient(45deg, #FFD700, #FFA500) !important;  
             color: #000000 !important;  
         }  
+          
+        /* HDR10+ - помаранчевий */  
         .card__quality-badge.hdr10plus {  
             background: linear-gradient(45deg, #FF8C00, #FF6347) !important;  
             color: #FFFFFF !important;  
         }  
+          
+        /* 4K - синій */  
         .card__quality-badge.uhd {  
             background: linear-gradient(45deg, #0066CC, #004499) !important;  
             color: #FFFFFF !important;  
@@ -40,28 +48,28 @@
     `;  
     document.head.appendChild(style);  
       
-    // Покращена функція виявлення якості  
+    // Функція виявлення якості з назви торренту  
     function detectQuality(torrentTitle) {  
         if (!torrentTitle) return null;  
           
         var title = torrentTitle.toLowerCase();  
           
-        // Dolby Vision - розширені шаблони  
+        // Перевіряємо Dolby Vision  
         if (/\b(dolby\s*vision|dolbyvision|dv|dovi)\b/i.test(title)) {  
             return { type: 'dv', text: 'DV' };  
         }  
           
-        // HDR10+ - перевіряємо перед звичайним HDR  
+        // Перевіряємо HDR10+  
         if (/\b(hdr10\+|hdr10plus)\b/i.test(title)) {  
             return { type: 'hdr10plus', text: 'HDR10+' };  
         }  
           
-        // HDR - включаючи HDR10  
+        // Перевіряємо HDR  
         if (/\b(hdr|hdr10)\b/i.test(title)) {  
             return { type: 'hdr', text: 'HDR' };  
         }  
           
-        // 4K/UHD/2160p  
+        // Перевіряємо 4K  
         if (/\b(4k|2160p|uhd)\b/i.test(title)) {  
             return { type: 'uhd', text: '4K' };  
         }  
@@ -81,7 +89,7 @@
         };  
     }  
       
-    // Функція запиту до API з покращеною обробкою помилок  
+    // Функція запиту до API за торрентами  
     function getTorrents(movieData, callback) {  
         if (!movieData || !movieData.title) {  
             callback([]);  
@@ -96,39 +104,42 @@
           
         fetch(apiUrl)  
             .then(function(response) {  
-                if (!response.ok) throw new Error('API error: ' + response.status);  
+                if (!response.ok) throw new Error('API error');  
                 return response.json();  
             })  
-            .then(function(data) {  
-                if (DEBUG) console.log('DV Plugin: API response:', data);  
-                var torrents = data.torrents || data || [];  
-                callback(Array.isArray(torrents) ? torrents : []);  
+            .then(function(torrents) {  
+                if (DEBUG) console.log('DV Plugin: Got torrents:', torrents.length);  
+                callback(torrents || []);  
             })  
             .catch(function(error) {  
-                if (DEBUG) console.log('DV Plugin: API error:', error);  
+                console.error('DV Plugin: API error:', error);  
                 callback([]);  
             });  
     }  
       
-    // Функція додавання бейджа якості  
+    // Функція додавання бейджа якості до картки  
     function addQualityBadge(card, quality) {  
         if (!card || !quality) return;  
           
-        var existingBadge = card.querySelector('.card__quality-badge');  
-        if (existingBadge) existingBadge.remove();  
+        var cardView = card.querySelector('.card__view');  
+        if (!cardView) return;  
           
-        var badge = document.createElement('div');  
-        badge.className = 'card__quality-badge ' + quality.type;  
-        badge.textContent = quality.text;  
-        card.appendChild(badge);  
-          
-        if (DEBUG) {  
-            var movieData = getCardData(card);  
-            console.log('DV Plugin: Added', quality.text, 'badge to', movieData.title);  
+        // Перевіряємо чи вже є бейдж  
+        var existingBadge = cardView.querySelector('.card__quality-badge');  
+        if (existingBadge) {  
+            existingBadge.className = 'card__quality-badge ' + quality.type;  
+            existingBadge.textContent = quality.text;  
+        } else {  
+            var badge = document.createElement('div');  
+            badge.className = 'card__quality-badge ' + quality.type;  
+            badge.textContent = quality.text;  
+            cardView.appendChild(badge);  
         }  
+          
+        if (DEBUG) console.log('DV Plugin: Added', quality.text, 'badge to card');  
     }  
       
-    // Функція обробки картки з покращеною логікою  
+    // Основна функція обробки картки  
     function processCard(card) {  
         if (card.hasAttribute('data-dv-processed')) return;  
           
@@ -150,17 +161,10 @@
           
         // Запитуємо дані з API  
         getTorrents(movieData, function(torrents) {  
-            if (DEBUG) console.log('DV Plugin: Processing', torrents.length, 'torrents for', movieData.title);  
-              
             var bestQuality = null;  
               
             for (var i = 0; i < torrents.length; i++) {  
-                var torrent = torrents[i];  
-                var title = torrent.title || torrent.name || '';  
-                var quality = detectQuality(title);  
-                  
-                if (DEBUG) console.log('DV Plugin: Torrent:', title, '→ Quality:', quality);  
-                  
+                var quality = detectQuality(torrents[i].title);  
                 if (quality) {  
                     // Пріоритет: DV > HDR10+ > HDR > 4K  
                     if (!bestQuality ||   
@@ -183,8 +187,6 @@
             // Додаємо бейдж  
             if (bestQuality) {  
                 addQualityBadge(card, bestQuality);  
-            } else if (DEBUG) {  
-                console.log('DV Plugin: No quality found for', movieData.title);  
             }  
         });  
     }  
@@ -206,7 +208,7 @@
       
     // Ініціалізація  
     function init() {  
-        if (DEBUG) console.log('DV Plugin: Starting with improved quality detection');  
+        if (DEBUG) console.log('DV Plugin: Starting automatic quality detection');  
           
         observer.observe(document.body, {  
             childList: true,  
