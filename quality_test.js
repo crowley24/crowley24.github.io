@@ -2,209 +2,164 @@
     'use strict';
 
     const DEBUG = false;
-    const QUALITY_CACHE = 'quality_cache_v2';
+    const CACHE_KEY = 'quality_cache_v2';
     const CACHE_TIME = 24 * 60 * 60 * 1000;
 
-    // Добавляем CSS стиля премиум-бейджа
-    Lampa.Utils.injectStyle(`
-        .premium-quality-badge {
-            display: inline-flex;
-            align-items: center;
-            border-radius: 10px;
-            overflow: hidden;
-            margin-top: 14px;
-            box-shadow: 0 3px 8px rgba(0,0,0,0.35);
-            font-weight: 700;
-            font-size: 13px;
-            letter-spacing: 0.4px;
-            border: 1px solid rgba(255,255,255,0.12);
-        }
+    /* === CSS Premium Badge === */
+    const style = document.createElement('style');
+    style.textContent = `
+    .premium-quality-badge {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        display: inline-flex;
+        align-items: center;
+        border-radius: 10px;
+        overflow: hidden;
+        font-weight: 700;
+        font-size: 12px;
+        letter-spacing: 0.3px;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.35);
+        border: 1px solid rgba(255,255,255,0.12);
+        z-index: 50;
+    }
+    .premium-quality-badge .left {
+        background: #000;
+        color: #fff;
+        padding: 4px 10px;
+    }
+    .premium-quality-badge .right {
+        padding: 4px 10px;
+        color: #000;
+    }
+    .premium-quality-badge .right.hdr {
+        background: #ffd900;
+    }
+    .premium-quality-badge .right.dv {
+        background: #00e66b;
+    }
+    `;
+    document.head.appendChild(style);
 
-        .premium-quality-badge .left {
-            background: #000;
-            color: #fff;
-            padding: 6px 12px;
-        }
+    /* === Detect quality in torrent names === */
+    function detectQuality(t) {
+        if (!t) return null;
 
-        .premium-quality-badge .right {
-            padding: 6px 12px;
-            color: #000;
-        }
-
-        .premium-quality-badge .right.hdr {
-            background: #ffd900;
-        }
-
-        .premium-quality-badge .right.dv {
-            background: #00e66b;
-        }
-
-        .card__quality-badge {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            transform: scale(0.9);
-        }
-    `);
-
-    // Качество по названию торрент-файла
-    function detectQuality(title) {
-        if (!title) return {};
-
-        title = title.toLowerCase();
-
-        const result = {
-            fourk: false,
-            hdr: false,
-            dv: false
+        const q = {
+            is4K: /\b(4k|2160p|uhd)\b/i.test(t),
+            isHDR: /\b(hdr|hdr10|hdr10\+)\b/i.test(t),
+            isDV: /\b(dolby\s*vision|dolbyvision|dv|dovi)\b/i.test(t),
         };
 
-        if (/4k|2160p|uhd/.test(title)) result.fourk = true;
-        if (/hdr10\+|hdr10|hdr/.test(title)) result.hdr = true;
-        if (/dolby.?vision|dovi|dv/.test(title)) result.dv = true;
+        if (!q.is4K) return null;
 
-        return result;
+        if (q.isDV) return { q: "4K", h: "Dolby Vision" };
+        if (q.isHDR) return { q: "4K", h: "HDR" };
+
+        return null;
     }
 
-    // Загружаем торренты
-    function loadTorrents(query, year) {
-        const url = `http://${Lampa.Storage.get('jacred.xyz') || 'jacred.xyz'}/api/v1.0/torrents?search=${encodeURIComponent(query)}&year=${year}&exact=true`;
+    /* === API Request === */
+    function fetchTorrents(info, cb) {
+        const api = 'http://' + (Lampa.Storage.get('jacred.xyz') || 'jacred.xyz') +
+            '/api/v1.0/torrents?search=' +
+            encodeURIComponent(info.title) +
+            '&year=' + info.year + '&exact=true';
 
-        return fetch(url)
+        if (DEBUG) console.log('API →', api);
+
+        fetch(api)
             .then(r => r.json())
-            .catch(() => []);
+            .then(j => cb(j || []))
+            .catch(() => cb([]));
     }
 
-    // Создаем премиум-бейдж
-    function createBadge(is4k, hdr, dv) {
-        if (!is4k) return null;
+    /* === Add badge to card === */
+    function addBadge(card, data) {
+        if (!data) return;
+
+        const old = card.querySelector('.premium-quality-badge');
+        if (old) old.remove();
 
         const badge = document.createElement('div');
         badge.className = 'premium-quality-badge';
 
-        const left = document.createElement('div');
-        left.className = 'left';
-        left.textContent = '4K';
+        badge.innerHTML = `
+            <div class="left">${data.q}</div>
+            <div class="right ${data.h === "HDR" ? "hdr" : "dv"}">${data.h}</div>
+        `;
 
-        const right = document.createElement('div');
-        right.className = 'right ' + (dv ? 'dv' : 'hdr');
-        right.textContent = dv ? 'Dolby Vision' : 'HDR';
-
-        badge.appendChild(left);
-        badge.appendChild(right);
-
-        return badge;
+        card.appendChild(badge);
     }
 
-    // Вставка бейджа в карточку и fullscreen
-    function addBadgeToCard(card, is4k, hdr, dv) {
-        const badge = createBadge(is4k, hdr, dv);
-        if (!badge) return;
+    /* === Extract card info === */
+    function getCardInfo(card) {
+        const d = card.card_data;
+        if (!d) return null;
 
-        card.appendChild(badge.cloneNode(true));
+        return {
+            id: d.id,
+            title: d.title || d.name || '',
+            year: d.release_date ? d.release_date.slice(0, 4) : '',
+        };
     }
 
-    function addBadgeToFull(info, is4k, hdr, dv) {
-        const badge = createBadge(is4k, hdr, dv);
-        if (!badge) return;
-
-        const block = document.querySelector('.fullscreen-info');
-        if (!block) return;
-
-        const old = block.querySelector('.premium-quality-badge');
-        if (old) old.remove();
-
-        block.appendChild(badge);
+    /* === Cache read/write === */
+    function loadCache() {
+        return JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
     }
 
-    // Основная обработка карточки
+    function saveCache(cache) {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+    }
+
+    /* === Process card === */
     function processCard(card) {
-        if (card.dataset.qualityLoaded) return;
-        card.dataset.qualityLoaded = "1";
+        if (card.hasAttribute('premium-badge-ready')) return;
+        card.setAttribute('premium-badge-ready', '1');
 
-        const data = card.card_data;
-        if (!data) return;
+        const info = getCardInfo(card);
+        if (!info || !info.id) return;
 
-        const cache = JSON.parse(localStorage.getItem(QUALITY_CACHE) || "{}");
-        const cached = cache[data.id];
+        const cache = loadCache();
+        const item = cache[info.id];
 
-        if (cached && Date.now() - cached.time < CACHE_TIME) {
-            addBadgeToCard(card, cached.fourk, cached.hdr, cached.dv);
+        if (item && Date.now() - item.time < CACHE_TIME) {
+            if (item.data) addBadge(card, item.data);
             return;
         }
 
-        loadTorrents(data.title, data.release_date?.slice(0, 4)).then(list => {
-            let best = { fourk: false, hdr: false, dv: false };
+        fetchTorrents(info, torrents => {
+            let best = null;
 
-            list.forEach(t => {
-                const q = detectQuality(t.title);
-
-                if (q.fourk) {
-                    best.fourk = true;
-                    if (q.dv) best.dv = true;
-                    if (q.hdr && !best.dv) best.hdr = true;
+            for (const t of torrents) {
+                const detected = detectQuality(t.title || '');
+                if (detected) {
+                    best = detected;
+                    break;
                 }
-            });
+            }
 
-            cache[data.id] = {
-                fourk: best.fourk,
-                hdr: best.hdr,
-                dv: best.dv,
-                time: Date.now()
-            };
+            cache[info.id] = { time: Date.now(), data: best };
+            saveCache(cache);
 
-            localStorage.setItem(QUALITY_CACHE, JSON.stringify(cache));
-
-            addBadgeToCard(card, best.fourk, best.hdr, best.dv);
+            if (best) addBadge(card, best);
         });
     }
 
-    // Обрабатываем fullscreen
-    Lampa.Listener.follow('full', function (e) {
-        if (e.type !== 'complite') return;
+    /* === Process all cards === */
+    function scanCards() {
+        document.querySelectorAll('.card:not([premium-badge-ready])')
+            .forEach(processCard);
+    }
 
-        const data = e.data;
-        if (!data || !data.id) return;
-
-        const cache = JSON.parse(localStorage.getItem(QUALITY_CACHE) || "{}");
-        const cached = cache[data.id];
-
-        if (cached) {
-            addBadgeToFull(data, cached.fourk, cached.hdr, cached.dv);
-            return;
-        }
-
-        loadTorrents(data.title, data.release_date?.slice(0, 4)).then(list => {
-            let best = { fourk: false, hdr: false, dv: false };
-
-            list.forEach(t => {
-                const q = detectQuality(t.title);
-
-                if (q.fourk) {
-                    best.fourk = true;
-                    if (q.dv) best.dv = true;
-                    if (q.hdr && !best.dv) best.hdr = true;
-                }
-            });
-
-            cache[data.id] = {
-                fourk: best.fourk,
-                hdr: best.hdr,
-                dv: best.dv,
-                time: Date.now()
-            };
-
-            localStorage.setItem(QUALITY_CACHE, JSON.stringify(cache));
-
-            addBadgeToFull(data, best.fourk, best.hdr, best.dv);
-        });
-    });
-
-    // Наблюдаем за карточками (DOM)
+    /* === Mutation observer === */
     const observer = new MutationObserver(() => {
-        document.querySelectorAll('.card').forEach(processCard);
+        setTimeout(scanCards, 300);
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
 
+    /* === Init === */
+    scanCards();
 })();
