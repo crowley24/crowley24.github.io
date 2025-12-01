@@ -1,382 +1,210 @@
 (function () {
     'use strict';
-    
-    // =======================================================
-    // I. КОНФІГУРАЦІЯ
-    // =======================================================
-    var Q_LOGGING = false; 
-    var Q_CACHE_TIME = 24 * 60 * 60 * 1000;
-    var QUALITY_CACHE = 'maxsm_ratings_quality_cache';
-    var JACRED_PROTOCOL = 'http://'; 
-    var JACRED_URL = Lampa.Storage.get('jacred.xyz') || 'jacred.xyz';
-    var NO_RESULT_MARKER = 'NOT_FOUND'; 
-    
-    // =======================================================
-    // II. СТИЛІ ТА CSS КОД
-    // =======================================================
-    var styleContent = 
-        ".card__view {position: relative !important;}" +
-        ".card__quality { " +
-        "   position: absolute !important; " +
-        "   bottom: 0.5em !important; " +
-        "   left: -0.8em !important; " +
-        "   background-color: transparent !important; " +
-        "   z-index: 10; " +
-        "   width: fit-content !important; " +
-        "   max-width: calc(100% - 1em) !important; " +
-        "   display: flex; " +
-        "   gap: 4px; " +
-        "}" +
-        ".card__quality div { " +
-        "   text-transform: none !important; " +
-        "   border: 1px solid #FFFFFF !important; " +
-        "   background-color: rgba(0, 0, 0, 0.7) !important; " + 
-        "   color: #FFFFFF !important; " + 
-        "   font-weight: bold !important; " + 
-        "   font-style: normal !important; " + 
-        "   font-size: 1.2em !important; " +
-        "   border-radius: 3px !important; " +
-        "   padding: 0.2em 0.4em !important; " +
-        "   white-space: nowrap; " +
-        "}" +
-        ".card__quality .dv-tag { background-color: #8A2BE2 !important; border-color: #A968FF !important; }" + 
-        ".card__quality .hdr-tag { background-color: #FFA500 !important; border-color: #FFC064 !important; }";
 
-    function injectStyles() {
-        var styleEl = document.createElement('style');
-        styleEl.id = 'maxsm_ratings_quality';
-        styleEl.textContent = styleContent;
-        document.head.appendChild(styleEl); 
-    }
+    const DEBUG = false;
+    const QUALITY_CACHE = 'quality_cache_v2';
+    const CACHE_TIME = 24 * 60 * 60 * 1000;
 
-    // =======================================================
-    // III. ФУНКЦІОНАЛЬНІСТЬ
-    // =======================================================
-    
-    function getCardType(card) {
-        var type = card.media_type || card.type;
-        if (type === 'movie' || type === 'tv') return type;
-        return card.name || card.original_name ? 'tv' : 'movie';
-    }
-
-    function getDisplayQuality(numericQuality, torrentTitle) {
-        var result = { quality: null, hdr: null };
-        var title = (torrentTitle || '').toLowerCase();
-
-        // 1. Визначення HDR/DV
-        if (/\b(dolby\s*vision|dolbyvision|dovi|dv)\b/i.test(title)) {
-            result.hdr = 'DV';
-        } else if (/\b(hdr10\+|hdr10|hdr)\b/i.test(title)) {
-            result.hdr = 'HDR';
+    // Добавляем CSS стиля премиум-бейджа
+    Lampa.Utils.injectStyle(`
+        .premium-quality-badge {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 14px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.35);
+            font-weight: 700;
+            font-size: 13px;
+            letter-spacing: 0.4px;
+            border: 1px solid rgba(255,255,255,0.12);
         }
 
-        // 2. Визначення роздільної здатності
-        if (typeof numericQuality === 'number' && numericQuality > 0) {
-            if (numericQuality >= 2160) {
-                result.quality = '4K';
-            } else if (numericQuality >= 1080) {
-                result.quality = 'FHD';
-            } else if (numericQuality >= 720) {
-                result.quality = 'HD';
-            } else {
-                result.quality = 'SD';
-            }
-        } else {
-            if (/\b(4k|2160p|uhd)\b/i.test(title)) result.quality = '4K';
-            else if (/\b(fullhd|1080p)\b/i.test(title)) result.quality = 'FHD';
-            else if (/\b(hd|720p)\b/i.test(title)) result.quality = 'HD';
+        .premium-quality-badge .left {
+            background: #000;
+            color: #fff;
+            padding: 6px 12px;
         }
 
-        if (result.hdr && !result.quality) {
-            result.quality = '4K';
+        .premium-quality-badge .right {
+            padding: 6px 12px;
+            color: #000;
         }
-        
-        if (result.hdr && result.quality === 'HD') {
-             result.hdr = null;
+
+        .premium-quality-badge .right.hdr {
+            background: #ffd900;
         }
+
+        .premium-quality-badge .right.dv {
+            background: #00e66b;
+        }
+
+        .card__quality-badge {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            transform: scale(0.9);
+        }
+    `);
+
+    // Качество по названию торрент-файла
+    function detectQuality(title) {
+        if (!title) return {};
+
+        title = title.toLowerCase();
+
+        const result = {
+            fourk: false,
+            hdr: false,
+            dv: false
+        };
+
+        if (/4k|2160p|uhd/.test(title)) result.fourk = true;
+        if (/hdr10\+|hdr10|hdr/.test(title)) result.hdr = true;
+        if (/dolby.?vision|dovi|dv/.test(title)) result.dv = true;
 
         return result;
     }
 
-    function getBestReleaseFromJacred(normalizedCard, cardId, callback) {
-        if (!JACRED_URL) {
-            callback(null);
+    // Загружаем торренты
+    function loadTorrents(query, year) {
+        const url = `http://${Lampa.Storage.get('jacred.xyz') || 'jacred.xyz'}/api/v1.0/torrents?search=${encodeURIComponent(query)}&year=${year}&exact=true`;
+
+        return fetch(url)
+            .then(r => r.json())
+            .catch(() => []);
+    }
+
+    // Создаем премиум-бейдж
+    function createBadge(is4k, hdr, dv) {
+        if (!is4k) return null;
+
+        const badge = document.createElement('div');
+        badge.className = 'premium-quality-badge';
+
+        const left = document.createElement('div');
+        left.className = 'left';
+        left.textContent = '4K';
+
+        const right = document.createElement('div');
+        right.className = 'right ' + (dv ? 'dv' : 'hdr');
+        right.textContent = dv ? 'Dolby Vision' : 'HDR';
+
+        badge.appendChild(left);
+        badge.appendChild(right);
+
+        return badge;
+    }
+
+    // Вставка бейджа в карточку и fullscreen
+    function addBadgeToCard(card, is4k, hdr, dv) {
+        const badge = createBadge(is4k, hdr, dv);
+        if (!badge) return;
+
+        card.appendChild(badge.cloneNode(true));
+    }
+
+    function addBadgeToFull(info, is4k, hdr, dv) {
+        const badge = createBadge(is4k, hdr, dv);
+        if (!badge) return;
+
+        const block = document.querySelector('.fullscreen-info');
+        if (!block) return;
+
+        const old = block.querySelector('.premium-quality-badge');
+        if (old) old.remove();
+
+        block.appendChild(badge);
+    }
+
+    // Основная обработка карточки
+    function processCard(card) {
+        if (card.dataset.qualityLoaded) return;
+        card.dataset.qualityLoaded = "1";
+
+        const data = card.card_data;
+        if (!data) return;
+
+        const cache = JSON.parse(localStorage.getItem(QUALITY_CACHE) || "{}");
+        const cached = cache[data.id];
+
+        if (cached && Date.now() - cached.time < CACHE_TIME) {
+            addBadgeToCard(card, cached.fourk, cached.hdr, cached.dv);
             return;
         }
 
-        var year = '';
-        var dateStr = normalizedCard.release_date || '';
-        if (dateStr.length >= 4) {
-            year = dateStr.substring(0, 4);
-        }
-        if (!year || isNaN(year)) {
-            callback(null);
+        loadTorrents(data.title, data.release_date?.slice(0, 4)).then(list => {
+            let best = { fourk: false, hdr: false, dv: false };
+
+            list.forEach(t => {
+                const q = detectQuality(t.title);
+
+                if (q.fourk) {
+                    best.fourk = true;
+                    if (q.dv) best.dv = true;
+                    if (q.hdr && !best.dv) best.hdr = true;
+                }
+            });
+
+            cache[data.id] = {
+                fourk: best.fourk,
+                hdr: best.hdr,
+                dv: best.dv,
+                time: Date.now()
+            };
+
+            localStorage.setItem(QUALITY_CACHE, JSON.stringify(cache));
+
+            addBadgeToCard(card, best.fourk, best.hdr, best.dv);
+        });
+    }
+
+    // Обрабатываем fullscreen
+    Lampa.Listener.follow('full', function (e) {
+        if (e.type !== 'complite') return;
+
+        const data = e.data;
+        if (!data || !data.id) return;
+
+        const cache = JSON.parse(localStorage.getItem(QUALITY_CACHE) || "{}");
+        const cached = cache[data.id];
+
+        if (cached) {
+            addBadgeToFull(data, cached.fourk, cached.hdr, cached.dv);
             return;
         }
 
-        function searchJacredApi(searchTitle, searchYear, exactMatch, strategyName, apiCallback) {
-            var userId = Lampa.Storage.get('lampac_unic_id', '');
-            var apiUrl = JACRED_PROTOCOL + JACRED_URL + '/api/v1.0/torrents?search=' +
-                encodeURIComponent(searchTitle) +
-                '&year=' + searchYear +
-                (exactMatch ? '&exact=true' : '') +
-                '&uid=' + userId;
+        loadTorrents(data.title, data.release_date?.slice(0, 4)).then(list => {
+            let best = { fourk: false, hdr: false, dv: false };
 
-            fetch(apiUrl)
-                .then(function(response) {
-                    if (!response.ok) throw new Error('JacRed API error: ' + response.status);
-                    return response.json();
-                })
-                .then(function(torrents) {
-                    if (!Array.isArray(torrents) || torrents.length === 0) {
-                        apiCallback(null);
-                        return;
-                    }
+            list.forEach(t => {
+                const q = detectQuality(t.title);
 
-                    // *** НОВА СИСТЕМА СКОРИНГУ ДЛЯ DV/HDR ***
-                    var bestScore = -1;
-                    var bestFoundTorrent = null;
-
-                    for (var i = 0; i < torrents.length; i++) {
-                        var currentTorrent = torrents[i];
-                        var currentNumericQuality = currentTorrent.quality;
-                        var lowerTitle = (currentTorrent.title || '').toLowerCase();
-                        
-                        var score = 0;
-
-                        // 1. Базова якість (роздільна здатність)
-                        if (typeof currentNumericQuality === 'number' && currentNumericQuality > 0) {
-                            score += currentNumericQuality; 
-                        } else {
-                            if (/\b(4k|2160p|uhd)\b/i.test(lowerTitle)) score += 2160;
-                            else if (/\b(fullhd|1080p)\b/i.test(lowerTitle)) score += 1080;
-                            else if (/\b(hd|720p)\b/i.test(lowerTitle)) score += 720;
-                        }
-
-                        // 2. ДОДАТКОВИЙ БОНУС за DV/HDR
-                        if (/\b(dolby\s*vision|dolbyvision|dovi|dv)\b/i.test(lowerTitle)) {
-                            score += 5000;
-                        } else if (/\b(hdr10\+|hdr10|hdr)\b/i.test(lowerTitle)) {
-                            score += 2500; 
-                        }
-
-                        if (score > 0 && score > bestScore) {
-                            bestScore = score;
-                            bestFoundTorrent = currentTorrent;
-                        }
-                    }
-
-                    if (bestFoundTorrent) {
-                        // Використовуємо оригінальну якість торрента для відображення роздільної здатності
-                        var display = getDisplayQuality(bestFoundTorrent.quality || 0, bestFoundTorrent.title);
-                        apiCallback({
-                            quality: display.quality,
-                            hdr: display.hdr,
-                            title: bestFoundTorrent.title
-                        });
-                    } else {
-                        apiCallback(null);
-                    }
-                })
-                .catch(function(error) {
-                    apiCallback(null);
-                });
-        }
-
-        var searchStrategies = [];
-        if (normalizedCard.original_title && /[a-zа-яё0-9]/i.test(normalizedCard.original_title)) {
-            searchStrategies.push({
-                title: normalizedCard.original_title.trim(),
-                year: year,
-                exact: true,
-                name: "OriginalTitle Exact Year"
-            });
-        }
-        if (normalizedCard.title && /[a-zа-яё0-9]/i.test(normalizedCard.title)) {
-            searchStrategies.push({
-                title: normalizedCard.title.trim(),
-                year: year,
-                exact: true,
-                name: "Title Exact Year"
-            });
-        }
-
-        function executeNextStrategy(index) {
-            if (index >= searchStrategies.length) {
-                callback(null);
-                return;
-            }
-            var strategy = searchStrategies[index];
-            searchJacredApi(strategy.title, strategy.year, strategy.exact, strategy.name, function(result) {
-                if (result !== null) {
-                    callback(result);
-                } else {
-                    executeNextStrategy(index + 1);
+                if (q.fourk) {
+                    best.fourk = true;
+                    if (q.dv) best.dv = true;
+                    if (q.hdr && !best.dv) best.hdr = true;
                 }
             });
-        }
 
-        if (searchStrategies.length > 0) {
-            executeNextStrategy(0);
-        } else {
-            callback(null);
-        }
-    }
+            cache[data.id] = {
+                fourk: best.fourk,
+                hdr: best.hdr,
+                dv: best.dv,
+                time: Date.now()
+            };
 
-    function getQualityCache(key) {
-        var cache = Lampa.Storage.get(QUALITY_CACHE) || {};
-        var item = cache[key];
-        return item && (Date.now() - item.timestamp < Q_CACHE_TIME) ? item : null;
-    }
+            localStorage.setItem(QUALITY_CACHE, JSON.stringify(cache));
 
-    function saveQualityCache(key, data, localCurrentCard) {
-        var cache = Lampa.Storage.get(QUALITY_CACHE) || {};
-        cache[key] = {
-            quality: data.quality || NO_RESULT_MARKER,
-            hdr: data.hdr || null, 
-            timestamp: Date.now()
-        };
-        Lampa.Storage.set(QUALITY_CACHE, cache);
-    }
-
-    function applyQualityToCard(card, quality, hdr, source, qCacheKey) {
-        if (!document.body.contains(card)) return;
-        
-        if (quality === NO_RESULT_MARKER) {
-             if (source === 'JacRed') {
-                 saveQualityCache(qCacheKey, { quality: NO_RESULT_MARKER, hdr: null }, card.card_data ? card.card_data.id : 'unknown');
-             }
-             return;
-        }
-
-        card.setAttribute('data-quality-added', 'true');
-        var cardView = card.querySelector('.card__view');
-        if (!cardView) return;
-
-        var existingQualityElements = cardView.getElementsByClassName('card__quality');
-        while(existingQualityElements.length > 0){
-            existingQualityElements[0].parentNode.removeChild(existingQualityElements[0]);
-        }
-
-        if (source === 'JacRed' && (quality || hdr)) {
-            var cardId = card.card_data ? card.card_data.id : 'unknown';
-            saveQualityCache(qCacheKey, { quality: quality, hdr: hdr }, cardId);
-        }
-
-        if (quality || hdr) {
-            var qualityDiv = document.createElement('div');
-            qualityDiv.className = 'card__quality';
-            
-            if (hdr) {
-                var hdrInner = document.createElement('div');
-                hdrInner.textContent = hdr;
-                hdrInner.className = hdr.toLowerCase() + '-tag';
-                qualityDiv.appendChild(hdrInner);
-            }
-
-            if (quality) {
-                var qualityInner = document.createElement('div');
-                qualityInner.textContent = quality;
-                qualityDiv.appendChild(qualityInner);
-            }
-
-            if (qualityDiv.children.length > 0) {
-                cardView.appendChild(qualityDiv);
-            }
-        }
-    }
-
-    function updateCards(cards) {
-        for (var i = 0; i < cards.length; i++) {
-            var card = cards[i];
-            if (card.hasAttribute('data-quality-added')) continue;
-            
-            var data = card.card_data;
-            if (!data) continue;
-            
-            (function (currentCard) {
-                var normalizedCard = {
-                    id: data.id || '',
-                    title: data.title || data.name || '',
-                    original_title: data.original_title || data.original_name || '',
-                    release_date: data.release_date || data.first_air_date || '',
-                    type: getCardType(data)
-                };
-
-                if (localStorage.getItem('maxsm_ratings_quality_tv') === 'false' && normalizedCard.type === 'tv') return;
-
-                var qCacheKey = normalizedCard.type + '_' + normalizedCard.id;
-                var cacheQualityData = getQualityCache(qCacheKey);
-                
-                if (cacheQualityData) {
-                    applyQualityToCard(currentCard, cacheQualityData.quality, cacheQualityData.hdr, 'Cache', qCacheKey);
-                }
-                else {
-                    getBestReleaseFromJacred(normalizedCard, normalizedCard.id, function (jrResult) {
-                        var quality = (jrResult && jrResult.quality) || null;
-                        var hdr = (jrResult && jrResult.hdr) || null;
-                        
-                        if (!quality && !hdr) {
-                            quality = NO_RESULT_MARKER;
-                        }
-
-                        applyQualityToCard(currentCard, quality, hdr, 'JacRed', qCacheKey);
-                    });
-                }
-            })(card);
-        }
-    }
-
-    var observer = new MutationObserver(function (mutations) {
-        var newCards = [];
-        for (var m = 0; m < mutations.length; m++) {
-            var mutation = mutations[m];
-            if (mutation.addedNodes) {
-                for (var j = 0; j < mutation.addedNodes.length; j++) {
-                    var node = mutation.addedNodes[j];
-                    if (node.nodeType !== 1) continue;
-                    
-                    if (node.classList && node.classList.contains('card')) {
-                        newCards.push(node);
-                    }
-                    
-                    var nestedCards = node.querySelectorAll('.card');
-                    for (var k = 0; k < nestedCards.length; k++) {
-                        newCards.push(nestedCards[k]);
-                    }
-                }
-            }
-        }
-        if (newCards.length) updateCards(newCards);
+            addBadgeToFull(data, best.fourk, best.hdr, best.dv);
+        });
     });
 
-    function startPlugin() {
-        try {
-            injectStyles();
+    // Наблюдаем за карточками (DOM)
+    const observer = new MutationObserver(() => {
+        document.querySelectorAll('.card').forEach(processCard);
+    });
 
-            if (!localStorage.getItem('maxsm_ratings_quality')) {
-                localStorage.setItem('maxsm_ratings_quality', 'true');
-            }
-            if (!localStorage.getItem('maxsm_ratings_quality_inlist')) {
-                localStorage.setItem('maxsm_ratings_quality_inlist', 'true');
-            }
-            if (!localStorage.getItem('maxsm_ratings_quality_tv')) {
-                localStorage.setItem('maxsm_ratings_quality_tv', 'false');
-            }
+    observer.observe(document.body, { childList: true, subtree: true });
 
-            if (localStorage.getItem('maxsm_ratings_quality_inlist') === 'true') {
-                observer.observe(document.body, { childList: true, subtree: true });
-                
-                var existingCards = document.querySelectorAll('.card');
-                if (existingCards.length) updateCards(existingCards);
-            }
-        } catch (e) {
-            console.error('MAXSM-RATINGS: Fatal initialization error caught.', e);
-        }
-    }
-
-    if (!window.maxsmRatingsQualityPlugin) {
-        window.maxsmRatingsQualityPlugin = true;
-        startPlugin();
-    }
 })();
