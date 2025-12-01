@@ -6,30 +6,25 @@
     var CACHE_TIME = 24 * 60 * 60 * 1000; // 24 години  
       
     // Стилі для бейджа якості  
-    var style = "<style id=\"dv_quality_style\">" +  
-        ".card__quality-badge { " +  
-        "   position: absolute !important; " +  
-        "   top: 0.5em !important; " +  
-        "   right: 0.5em !important; " +  
-        "   background: linear-gradient(45deg, #0066CC, #004499) !important; " +  
-        "   color: #FFFFFF !important; " +  
-        "   font-size: 0.7em !important; " +  
-        "   font-weight: bold !important; " +  
-        "   padding: 0.3em 0.5em !important; " +  
-        "   border-radius: 0.5em !important; " +  
-        "   z-index: 15 !important; " +  
-        "   text-transform: uppercase !important; " +  
-        "   box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important; " +  
-        "}" +  
-        "</style>";  
-      
-    // Додаємо стилі  
-    if (!document.getElementById('dv_quality_style')) {  
-        var styleElement = document.createElement('style');  
-        styleElement.id = 'dv_quality_style';  
-        styleElement.textContent = style.replace(/<style[^>]*>|<\/style>/g, '');  
-        document.head.appendChild(styleElement);  
-    }  
+    var style = document.createElement('style');  
+    style.id = 'dv_quality_style';  
+    style.textContent = `  
+        .card__quality-badge {  
+            position: absolute !important;  
+            top: 10px !important;  
+            right: 10px !important;  
+            background: linear-gradient(45deg, #0066CC, #004499) !important;  
+            color: #FFFFFF !important;  
+            font-size: 0.7em !important;  
+            font-weight: bold !important;  
+            padding: 5px 10px !important;  
+            border-radius: 5px !important;  
+            z-index: 9999 !important;  
+            text-transform: uppercase !important;  
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;  
+        }  
+    `;  
+    document.head.appendChild(style);  
       
     // Функція виявлення якості з назви торренту  
     function detectQuality(torrentTitle) {  
@@ -74,10 +69,11 @@
             return;  
         }  
           
-        // Використовуємо існуючий API JacRed для отримання торрентів  
         var apiUrl = 'http://' + (Lampa.Storage.get('jacred.xyz') || 'jacred.xyz') +   
                     '/api/v1.0/torrents?search=' + encodeURIComponent(movieData.title) +   
                     '&year=' + movieData.year + '&exact=true';  
+          
+        if (DEBUG) console.log('DV Plugin: API URL:', apiUrl);  
           
         fetch(apiUrl)  
             .then(function(response) {  
@@ -85,6 +81,7 @@
                 return response.json();  
             })  
             .then(function(torrents) {  
+                if (DEBUG) console.log('DV Plugin: Got torrents:', torrents.length);  
                 callback(torrents || []);  
             })  
             .catch(function(error) {  
@@ -97,11 +94,8 @@
     function addQualityBadge(card, quality) {  
         if (!card || !quality) return;  
           
-        var cardView = card.querySelector('.card__view');  
-        if (!cardView) return;  
-          
         // Видаляємо існуючий бейдж  
-        var existingBadge = cardView.querySelector('.card__quality-badge');  
+        var existingBadge = card.querySelector('.card__quality-badge');  
         if (existingBadge) {  
             existingBadge.remove();  
         }  
@@ -111,7 +105,7 @@
         badge.className = 'card__quality-badge';  
         badge.textContent = quality;  
           
-        cardView.appendChild(badge);  
+        card.appendChild(badge);  
           
         if (DEBUG) {  
             var movieData = getCardData(card);  
@@ -129,7 +123,7 @@
         card.setAttribute('data-dv-processed', 'true');  
           
         // Перевіряємо кеш  
-        var cache = Lampa.Storage.get(QUALITY_CACHE) || {};  
+        var cache = JSON.parse(localStorage.getItem(QUALITY_CACHE) || '{}');  
         var cached = cache[movieData.id];  
           
         if (cached && (Date.now() - cached.timestamp < CACHE_TIME)) {  
@@ -161,7 +155,7 @@
                 quality: bestQuality,  
                 timestamp: Date.now()  
             };  
-            Lampa.Storage.set(QUALITY_CACHE, cache);  
+            localStorage.setItem(QUALITY_CACHE, JSON.stringify(cache));  
               
             // Додаємо бейдж  
             if (bestQuality) {  
