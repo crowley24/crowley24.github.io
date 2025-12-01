@@ -1,99 +1,108 @@
 (function () {
     'use strict';
 
-    const DEBUG = false;
-    const CACHE_KEY = 'quality_cache_v2';
+    const CACHE_KEY = 'quality_cache_glass_v1';
     const CACHE_TIME = 24 * 60 * 60 * 1000;
 
-    /* === CSS Premium Badge === */
+    /* === GLASS + GRADIENT BADGE CSS === */
     const style = document.createElement('style');
     style.textContent = `
     .premium-quality-badge {
         position: absolute;
-        top: 8px;
-        right: 8px;
+        left: 6px;
+        bottom: 6px;
         display: inline-flex;
         align-items: center;
-        border-radius: 10px;
+        border-radius: 12px;
         overflow: hidden;
-        font-weight: 700;
-        font-size: 12px;
+        font-weight: 600;
+        font-size: 11px;
         letter-spacing: 0.3px;
-        box-shadow: 0 3px 8px rgba(0,0,0,0.35);
-        border: 1px solid rgba(255,255,255,0.12);
         z-index: 50;
+
+        /* Glassmorphism */
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        background: rgba(255,255,255,0.12);
+        border: 1px solid rgba(255,255,255,0.18);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.25);
     }
+
     .premium-quality-badge .left {
-        background: #000;
+        padding: 3px 8px;
         color: #fff;
-        padding: 4px 10px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #0A0A0A, #2A2A2A);
     }
+
     .premium-quality-badge .right {
-        padding: 4px 10px;
+        padding: 3px 10px;
         color: #000;
+        font-weight: 700;
     }
+
+    /* Gradient HDR */
     .premium-quality-badge .right.hdr {
-        background: #ffd900;
+        background: linear-gradient(135deg, #FFD900, #FFB800);
     }
+
+    /* Gradient Dolby Vision */
     .premium-quality-badge .right.dv {
-        background: #00e66b;
+        background: linear-gradient(135deg, #00e66b, #00c655);
     }
     `;
     document.head.appendChild(style);
 
-    /* === Detect quality in torrent names === */
+    /* === Detect quality === */
     function detectQuality(t) {
         if (!t) return null;
 
-        const q = {
-            is4K: /\b(4k|2160p|uhd)\b/i.test(t),
-            isHDR: /\b(hdr|hdr10|hdr10\+)\b/i.test(t),
-            isDV: /\b(dolby\s*vision|dolbyvision|dv|dovi)\b/i.test(t),
-        };
+        const text = t.toLowerCase();
 
-        if (!q.is4K) return null;
+        const is4k = /4k|2160p|uhd/.test(text);
+        const isDV = /dolby\s*vision|dolbyvision|dv|dovi/.test(text);
+        const isHDR = /hdr|hdr10|hdr10\+/.test(text);
 
-        if (q.isDV) return { q: "4K", h: "Dolby Vision" };
-        if (q.isHDR) return { q: "4K", h: "HDR" };
+        if (!is4k) return null;
+
+        if (isDV) return { q: "4K", h: "Dolby Vision" };
+        if (isHDR) return { q: "4K", h: "HDR" };
 
         return null;
     }
 
-    /* === API Request === */
+    /* === API === */
     function fetchTorrents(info, cb) {
-        const api = 'http://' + (Lampa.Storage.get('jacred.xyz') || 'jacred.xyz') +
+        const url = 'http://' + (Lampa.Storage.get('jacred.xyz') || 'jacred.xyz') +
             '/api/v1.0/torrents?search=' +
             encodeURIComponent(info.title) +
-            '&year=' + info.year + '&exact=true';
+            '&year=' + info.year +
+            '&exact=true';
 
-        if (DEBUG) console.log('API →', api);
-
-        fetch(api)
+        fetch(url)
             .then(r => r.json())
             .then(j => cb(j || []))
             .catch(() => cb([]));
     }
 
     /* === Add badge to card === */
-    function addBadge(card, data) {
-        if (!data) return;
-
+    function addBadge(card, q) {
         const old = card.querySelector('.premium-quality-badge');
         if (old) old.remove();
 
-        const badge = document.createElement('div');
-        badge.className = 'premium-quality-badge';
+        const box = document.createElement('div');
+        box.className = 'premium-quality-badge';
 
-        badge.innerHTML = `
-            <div class="left">${data.q}</div>
-            <div class="right ${data.h === "HDR" ? "hdr" : "dv"}">${data.h}</div>
+        box.innerHTML = `
+            <div class="left">${q.q}</div>
+            <div class="right ${q.h === "HDR" ? "hdr" : "dv"}">${q.h}</div>
         `;
 
-        card.appendChild(badge);
+        card.appendChild(box);
     }
 
     /* === Extract card info === */
-    function getCardInfo(card) {
+    function getInfo(card) {
         const d = card.card_data;
         if (!d) return null;
 
@@ -108,34 +117,33 @@
     function loadCache() {
         return JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
     }
-
-    function saveCache(cache) {
-        localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+    function saveCache(c) {
+        localStorage.setItem(CACHE_KEY, JSON.stringify(c));
     }
 
     /* === Process card === */
     function processCard(card) {
-        if (card.hasAttribute('premium-badge-ready')) return;
-        card.setAttribute('premium-badge-ready', '1');
+        if (card.hasAttribute('glass-badge-ready')) return;
+        card.setAttribute('glass-badge-ready', '1');
 
-        const info = getCardInfo(card);
+        const info = getInfo(card);
         if (!info || !info.id) return;
 
         const cache = loadCache();
-        const item = cache[info.id];
+        const record = cache[info.id];
 
-        if (item && Date.now() - item.time < CACHE_TIME) {
-            if (item.data) addBadge(card, item.data);
+        if (record && Date.now() - record.time < CACHE_TIME) {
+            if (record.data) addBadge(card, record.data);
             return;
         }
 
-        fetchTorrents(info, torrents => {
+        fetchTorrents(info, list => {
             let best = null;
 
-            for (const t of torrents) {
-                const detected = detectQuality(t.title || '');
-                if (detected) {
-                    best = detected;
+            for (const t of list) {
+                const q = detectQuality(t.title || '');
+                if (q) {
+                    best = q;
                     break;
                 }
             }
@@ -147,19 +155,15 @@
         });
     }
 
-    /* === Process all cards === */
-    function scanCards() {
-        document.querySelectorAll('.card:not([premium-badge-ready])')
+    /* === Scan all cards === */
+    function scan() {
+        document.querySelectorAll('.card:not([glass-badge-ready])')
             .forEach(processCard);
     }
 
-    /* === Mutation observer === */
-    const observer = new MutationObserver(() => {
-        setTimeout(scanCards, 300);
-    });
+    /* === Watch for new cards === */
+    new MutationObserver(() => setTimeout(scan, 300))
+        .observe(document.body, { childList: true, subtree: true });
 
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    /* === Init === */
-    scanCards();
+    scan();
 })();
