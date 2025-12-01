@@ -13,28 +13,29 @@
         'http://cors.bwa.workers.dev/'  
     ];  
   
-    // Стилі для відображення якості - ЧОРНА підложка, БІЛИЙ текст  
+    // Оновлені стилі для кращого позиціонування  
     var style = "<style id=\"maxsm_ratings_quality\">" +  
         ".card__view {position: relative !important;}" +  
         ".card__quality { " +  
         "   position: absolute !important; " +  
-        "   bottom: 0.5em !important; " +  
+        "   bottom: 3em !important; " + // Змінено для уникнення накладень  
         "   left: -0.8em !important; " +  
         "   background-color: transparent !important; " +  
-        "   z-index: 10; " +  
+        "   z-index: 10 !important; " +  
         "   width: fit-content !important; " +  
         "   max-width: calc(100% - 1em) !important; " +  
         "}" +  
         ".card__quality div { " +  
         "   text-transform: none !important; " +  
         "   border: 1px solid #FFFFFF !important; " +  
-        "   background-color: rgba(0, 0, 0, 0.7) !important; " + // Чорна напівпрозора підложка  
-        "   color: #FFFFFF !important; " + // Білий текст  
-        "   font-weight: bold !important; " + // Жирний шрифт  
-        "   font-style: normal !important; " + // Не курсив  
-        "   font-size: 1.2em !important; " +  
+        "   background-color: rgba(0, 0, 0, 0.7) !important; " +  
+        "   color: #FFFFFF !important; " +  
+        "   font-weight: bold !important; " +  
+        "   font-style: normal !important; " +  
+        "   font-size: 1.1em !important; " +  
         "   border-radius: 3px !important; " +  
         "   padding: 0.2em 0.4em !important; " +  
+        "   white-space: nowrap !important; " + // Запобігає переносу  
         "}" +  
         "</style>";  
   
@@ -175,9 +176,9 @@
                           
                         var lowerTitle = (currentTorrent.title || '').toLowerCase();  
                           
-                        // Виявлення HDR та Dolby Vision  
-                        var hasHDR = /\b(hdr)\b/i.test(lowerTitle);  
-                        var hasDV = /\b(dolby\s*vision|dv)\b/i.test(lowerTitle);  
+                        // Розширене виявлення HDR та Dolby Vision  
+                        var hasHDR = /\b(hdr|hdr10|hdr10\+)\b/i.test(lowerTitle);  
+                        var hasDV = /\b(dolby\s*vision|dolbyvision|dv|dovi)\b/i.test(lowerTitle);  
                           
                         // Зберігаємо інформацію про формати  
                         currentTorrent.hasHDR = hasHDR;  
@@ -381,9 +382,8 @@
                       
                     if (node.classList && node.classList.contains('card')) {  
                         newCards.push(node);  
-                    }  
-                    
-                    var nestedCards = node.querySelectorAll('.card');  
+                    } 
+                var nestedCards = node.querySelectorAll('.card');  
                     for (var k = 0; k < nestedCards.length; k++) {  
                         newCards.push(nestedCards[k]);  
                     }  
