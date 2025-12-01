@@ -1,7 +1,7 @@
 (function () {  
     'use strict';  
       
-    console.log("DV Test Plugin: Starting");  
+    console.log("DV Full Test Plugin: Starting");  
       
     // Стилі для тестового бейджа  
     var style = document.createElement('style');  
@@ -20,19 +20,19 @@
     `;  
     document.head.appendChild(style);  
       
-    // Функція додавання тестового бейджа  
+    // Функція додавання тестового бейджа до ВСІХ карток  
     function addTestBadge() {  
         var cards = document.querySelectorAll('.card');  
-        console.log("DV Test Plugin: Found cards:", cards.length);  
+        console.log("DV Full Test Plugin: Found cards:", cards.length);  
           
-        for (var i = 0; i < Math.min(3, cards.length); i++) {  
+        for (var i = 0; i < cards.length; i++) {  
             var card = cards[i];  
             if (!card.querySelector('.card__dv-test')) {  
                 var badge = document.createElement('div');  
                 badge.className = 'card__dv-test';  
                 badge.textContent = 'TEST DV';  
                 card.appendChild(badge);  
-                console.log("DV Test Plugin: Added badge to card", i);  
+                console.log("DV Full Test Plugin: Added badge to card", i);  
             }  
         }  
     }  
@@ -50,5 +50,5 @@
         subtree: true  
     });  
       
-    console.log("DV Test Plugin: Started");  
+    console.log("DV Full Test Plugin: Started");  
 })();
