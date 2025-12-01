@@ -5,7 +5,7 @@
     var QUALITY_CACHE = 'dv_quality_cache';  
     var CACHE_TIME = 24 * 60 * 60 * 1000; // 24 години  
       
-    // Стилі для бейджа якості  
+    // Стилі для бейджів якості з різними кольорами  
     var style = document.createElement('style');  
     style.id = 'dv_quality_style';  
     style.textContent = `  
@@ -13,8 +13,6 @@
             position: absolute !important;  
             top: 10px !important;  
             right: 10px !important;  
-            background: linear-gradient(45deg, #0066CC, #004499) !important;  
-            color: #FFFFFF !important;  
             font-size: 0.7em !important;  
             font-weight: bold !important;  
             padding: 5px 10px !important;  
@@ -22,6 +20,30 @@
             z-index: 9999 !important;  
             text-transform: uppercase !important;  
             box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;  
+        }  
+          
+        /* Dolby Vision - фіолетовий */  
+        .card__quality-badge.dv {  
+            background: linear-gradient(45deg, #6B46C1, #553C9A) !important;  
+            color: #FFFFFF !important;  
+        }  
+          
+        /* HDR - золотий */  
+        .card__quality-badge.hdr {  
+            background: linear-gradient(45deg, #FFD700, #FFA500) !important;  
+            color: #000000 !important;  
+        }  
+          
+        /* HDR10+ - помаранчевий */  
+        .card__quality-badge.hdr10plus {  
+            background: linear-gradient(45deg, #FF8C00, #FF6347) !important;  
+            color: #FFFFFF !important;  
+        }  
+          
+        /* 4K - синій */  
+        .card__quality-badge.uhd {  
+            background: linear-gradient(45deg, #0066CC, #004499) !important;  
+            color: #FFFFFF !important;  
         }  
     `;  
     document.head.appendChild(style);  
@@ -34,17 +56,22 @@
           
         // Перевіряємо Dolby Vision  
         if (/\b(dolby\s*vision|dolbyvision|dv|dovi)\b/i.test(title)) {  
-            return 'DV';  
+            return { type: 'dv', text: 'DV' };  
+        }  
+          
+        // Перевіряємо HDR10+  
+        if (/\b(hdr10\+|hdr10plus)\b/i.test(title)) {  
+            return { type: 'hdr10plus', text: 'HDR10+' };  
         }  
           
         // Перевіряємо HDR  
-        if (/\b(hdr|hdr10|hdr10\+)\b/i.test(title)) {  
-            return 'HDR';  
+        if (/\b(hdr|hdr10)\b/i.test(title)) {  
+            return { type: 'hdr', text: 'HDR' };  
         }  
           
         // Перевіряємо 4K  
         if (/\b(4k|2160p|uhd)\b/i.test(title)) {  
-            return '4K';  
+            return { type: 'uhd', text: '4K' };  
         }  
           
         return null;  
@@ -100,16 +127,16 @@
             existingBadge.remove();  
         }  
           
-        // Створюємо новий бейдж  
+        // Створюємо новий бейдж з відповідним класом  
         var badge = document.createElement('div');  
-        badge.className = 'card__quality-badge';  
-        badge.textContent = quality;  
+        badge.className = 'card__quality-badge ' + quality.type;  
+        badge.textContent = quality.text;  
           
         card.appendChild(badge);  
           
         if (DEBUG) {  
             var movieData = getCardData(card);  
-            console.log('DV Plugin: Added', quality, 'badge to', movieData.title);  
+            console.log('DV Plugin: Added', quality.text, 'badge to', movieData.title);  
         }  
     }  
       
@@ -140,11 +167,12 @@
             for (var i = 0; i < torrents.length; i++) {  
                 var quality = detectQuality(torrents[i].title);  
                 if (quality) {  
-                    // Пріоритет: DV > HDR > 4K  
+                    // Пріоритет: DV > HDR10+ > HDR > 4K  
                     if (!bestQuality ||   
-                        (quality === 'DV') ||  
-                        (quality === 'HDR' && bestQuality !== 'DV') ||  
-                        (quality === '4K' && bestQuality !== 'DV' && bestQuality !== 'HDR')) {  
+                        (quality.type === 'dv') ||  
+                        (quality.type === 'hdr10plus' && bestQuality.type !== 'dv') ||  
+                        (quality.type === 'hdr' && bestQuality.type !== 'dv' && bestQuality.type !== 'hdr10plus') ||  
+                        (quality.type === 'uhd' && bestQuality.type !== 'dv' && bestQuality.type !== 'hdr10plus' && bestQuality.type !== 'hdr')) {  
                         bestQuality = quality;  
                     }  
                 }  
