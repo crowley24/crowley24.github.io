@@ -12,7 +12,7 @@
     var NO_RESULT_MARKER = 'NOT_FOUND'; 
     
     // =======================================================
-    // II. СТИЛІ ТА CSS КОД (ЗМІНЕНО: Використовуємо нативні методи)
+    // II. СТИЛІ ТА CSS КОД
     // =======================================================
     var styleContent = 
         ".card__view {position: relative !important;}" +
@@ -46,7 +46,6 @@
         var styleEl = document.createElement('style');
         styleEl.id = 'maxsm_ratings_quality';
         styleEl.textContent = styleContent;
-        // На відміну від 'body', 'head' завжди існує
         document.head.appendChild(styleEl); 
     }
 
@@ -54,28 +53,24 @@
     // III. ФУНКЦІОНАЛЬНІСТЬ
     // =======================================================
     
-    // ... (getCardType без змін) ...
-
     function getCardType(card) {
         var type = card.media_type || card.type;
         if (type === 'movie' || type === 'tv') return type;
         return card.name || card.original_name ? 'tv' : 'movie';
     }
 
-    /**
-     * Комбінує числову якість та маркери DV/HDR.
-     * (Логіка DV/HDR збережена та посилена)
-     */
     function getDisplayQuality(numericQuality, torrentTitle) {
         var result = { quality: null, hdr: null };
         var title = (torrentTitle || '').toLowerCase();
 
+        // 1. Визначення HDR/DV
         if (/\b(dolby\s*vision|dolbyvision|dovi|dv)\b/i.test(title)) {
             result.hdr = 'DV';
         } else if (/\b(hdr10\+|hdr10|hdr)\b/i.test(title)) {
             result.hdr = 'HDR';
         }
 
+        // 2. Визначення роздільної здатності
         if (typeof numericQuality === 'number' && numericQuality > 0) {
             if (numericQuality >= 2160) {
                 result.quality = '4K';
@@ -103,7 +98,6 @@
         return result;
     }
 
-    // ... (getBestReleaseFromJacred - без змін, оскільки він стабільний) ...
     function getBestReleaseFromJacred(normalizedCard, cardId, callback) {
         if (!JACRED_URL) {
             callback(null);
@@ -139,7 +133,8 @@
                         return;
                     }
 
-                    var bestNumericQuality = -1;
+                    // *** НОВА СИСТЕМА СКОРИНГУ ДЛЯ DV/HDR ***
+                    var bestScore = -1;
                     var bestFoundTorrent = null;
 
                     for (var i = 0; i < torrents.length; i++) {
@@ -147,22 +142,33 @@
                         var currentNumericQuality = currentTorrent.quality;
                         var lowerTitle = (currentTorrent.title || '').toLowerCase();
                         
-                        if (typeof currentNumericQuality !== 'number' || currentNumericQuality === 0) {
-                           if (/\b(dolby\s*vision|dv|hdr)\b/i.test(lowerTitle)) {
-                               currentNumericQuality = 2160; 
-                           } else {
-                               continue;
-                           }
+                        var score = 0;
+
+                        // 1. Базова якість (роздільна здатність)
+                        if (typeof currentNumericQuality === 'number' && currentNumericQuality > 0) {
+                            score += currentNumericQuality; 
+                        } else {
+                            if (/\b(4k|2160p|uhd)\b/i.test(lowerTitle)) score += 2160;
+                            else if (/\b(fullhd|1080p)\b/i.test(lowerTitle)) score += 1080;
+                            else if (/\b(hd|720p)\b/i.test(lowerTitle)) score += 720;
                         }
 
-                        if (currentNumericQuality > bestNumericQuality) {
-                            bestNumericQuality = currentNumericQuality;
+                        // 2. ДОДАТКОВИЙ БОНУС за DV/HDR
+                        if (/\b(dolby\s*vision|dolbyvision|dovi|dv)\b/i.test(lowerTitle)) {
+                            score += 5000;
+                        } else if (/\b(hdr10\+|hdr10|hdr)\b/i.test(lowerTitle)) {
+                            score += 2500; 
+                        }
+
+                        if (score > 0 && score > bestScore) {
+                            bestScore = score;
                             bestFoundTorrent = currentTorrent;
                         }
                     }
 
                     if (bestFoundTorrent) {
-                        var display = getDisplayQuality(bestFoundTorrent.quality || bestNumericQuality, bestFoundTorrent.title);
+                        // Використовуємо оригінальну якість торрента для відображення роздільної здатності
+                        var display = getDisplayQuality(bestFoundTorrent.quality || 0, bestFoundTorrent.title);
                         apiCallback({
                             quality: display.quality,
                             hdr: display.hdr,
@@ -216,8 +222,7 @@
             callback(null);
         }
     }
-    // ... (Функції кешування та застосування якості - без змін, оскільки вони були виправлені) ...
-    
+
     function getQualityCache(key) {
         var cache = Lampa.Storage.get(QUALITY_CACHE) || {};
         var item = cache[key];
@@ -345,16 +350,10 @@
         if (newCards.length) updateCards(newCards);
     });
 
-    /**
-     * Ініціалізація плагіна.
-     * ОГОГНУТА try...catch для надійності.
-     */
     function startPlugin() {
         try {
-            // 1. Введення стилів (використовуємо нативні методи)
             injectStyles();
 
-            // 2. Налаштування за замовчуванням
             if (!localStorage.getItem('maxsm_ratings_quality')) {
                 localStorage.setItem('maxsm_ratings_quality', 'true');
             }
@@ -365,7 +364,6 @@
                 localStorage.setItem('maxsm_ratings_quality_tv', 'false');
             }
 
-            // 3. Запуск observer
             if (localStorage.getItem('maxsm_ratings_quality_inlist') === 'true') {
                 observer.observe(document.body, { childList: true, subtree: true });
                 
@@ -373,7 +371,6 @@
                 if (existingCards.length) updateCards(existingCards);
             }
         } catch (e) {
-            // Якщо є помилка на цьому етапі, ми її ловимо і не даємо їй спричинити "script error"
             console.error('MAXSM-RATINGS: Fatal initialization error caught.', e);
         }
     }
