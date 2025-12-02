@@ -3,15 +3,21 @@
       
     // Інформація про плагін  
     var plugin_info = {  
-        name: 'FoxStudio Interface',  
+        name: 'Plugin Manager',  
         version: '1.0.0',  
-        author: 'FoxStudio24'  
+        author: 'Your Name'  
     };  
       
     // Налаштування за замовчуванням  
     var default_settings = {  
-        foxstudio_interface_enabled: true,  
-        visual_enhancements_enabled: false  
+        logo_plugin_enabled: false,  
+        quality_plugin_enabled: false  
+    };  
+      
+    // Ваші посилання на плагіни  
+    var plugin_urls = {  
+        logo: 'https://your-url.com/logo-plugin.js',    // замініть на ваше посилання  
+        quality: 'https://your-url.com/quality-plugin.js' // замініть на ваше посилання  
     };  
       
     // Функція завантаження зовнішнього скрипту  
@@ -26,87 +32,108 @@
         document.head.appendChild(script);  
     }  
       
+    // Функція створення елемента налаштування  
+    function createPluginSetting(key, title, defaultValue, scriptUrl) {  
+        var setting = $('<div class="settings-param selector" data-type="toggle" data-name="' + key + '">');  
+        setting.append('<div class="settings-param__name">' + title + '</div>');  
+        setting.append('<div class="settings-param__value"></div>');  
+          
+        setting.on('hover:enter', function() {  
+            var newValue = !Lampa.Storage.get(key, defaultValue);  
+            Lampa.Storage.set(key, newValue);  
+              
+            if (newValue && scriptUrl) {  
+                loadScript(scriptUrl);  
+            }  
+              
+            setting.find('.settings-param__value').text(newValue ? 'Вкл' : 'Выкл');  
+        });  
+          
+        // Встановлюємо початкове значення  
+        var currentValue = Lampa.Storage.get(key, defaultValue);  
+        setting.find('.settings-param__value').text(currentValue ? 'Вкл' : 'Выкл');  
+          
+        return setting;  
+    }  
+      
     // Функція ініціалізації плагіну  
     function init() {  
-        // Додаємо переклади  
-        Lampa.Lang.add({  
-            foxstudio_interface_title: {  
-                ru: 'Новый интерфейс для тв и пк',  
-                en: 'New interface for TV and PC',  
-                uk: 'Новий інтерфейс для тв та пк'  
-            },  
-            visual_enhancements_title: {  
-                ru: 'Визуальные улучшения',  
-                en: 'Visual enhancements',  
-                uk: 'Візуальні покращення'  
+        try {  
+            // Перевірка доступності Lampa  
+            if (!window.Lampa || !Lampa.Settings || !Lampa.Lang || !Lampa.Storage) {  
+                console.error('Lampa API не доступний');  
+                return;  
             }  
-        });  
-          
-        // Додаємо налаштування в інтерфейс  
-        Lampa.Settings.listener.follow('open', function(e) {  
-            if (e.name === 'interface') {  
-                // Основне налаштування інтерфейсу  
-                var foxstudio_interface = $('<div class="settings-param selector" data-type="toggle" data-name="foxstudio_interface_enabled">');  
-                foxstudio_interface.append('<div class="settings-param__name">' + Lampa.Lang.translate('foxstudio_interface_title') + '</div>');  
-                foxstudio_interface.append('<div class="settings-param__value"></div>');  
-                  
-                // Об'єднане налаштування візуальних покращень  
-                var visual_enhancements = $('<div class="settings-param selector" data-type="toggle" data-name="visual_enhancements_enabled">');  
-                visual_enhancements.append('<div class="settings-param__name">🎨 ' + Lampa.Lang.translate('visual_enhancements_title') + '</div>');  
-                visual_enhancements.append('<div class="settings-param__value"></div>');  
-                  
-                // Додаємо елементи  
-                e.body.append(foxstudio_interface);  
-                e.body.append(visual_enhancements);  
-                  
-                // Обробник основного налаштування  
-                foxstudio_interface.on('hover:enter', function() {  
-                    var current = Lampa.Storage.get('foxstudio_interface_enabled', true);  
-                    Lampa.Storage.set('foxstudio_interface_enabled', !current);  
-                    updateSettingsDisplay();  
-                });  
-                  
-                // Обробник візуальних покращень  
-                visual_enhancements.on('hover:enter', function() {  
-                    var current = Lampa.Storage.get('visual_enhancements_enabled', false);  
-                    var newValue = !current;  
-                    Lampa.Storage.set('visual_enhancements_enabled', newValue);  
+              
+            // Додаємо переклади  
+            Lampa.Lang.add({  
+                plugin_manager_title: {  
+                    ru: 'Менеджер плагинов',  
+                    uk: 'Менеджер плагінів',  
+                    en: 'Plugin Manager'  
+                },  
+                logo_plugin_title: {  
+                    ru: 'Логотипы фильмов',  
+                    uk: 'Логотипи фільмів',  
+                    en: 'Movie Logos'  
+                },  
+                quality_plugin_title: {  
+                    ru: 'Качество на постерах',  
+                    uk: 'Якість на постерах',  
+                    en: 'Quality on Posters'  
+                }  
+            });  
+              
+            // Додаємо пункт меню в головні налаштування  
+            Lampa.Settings.listener.follow('open', function(e) {  
+                if (e.name === 'main') {  
+                    // Створюємо пункт меню для нашого менеджера плагінів  
+                    var plugin_manager_item = $('<div class="settings-param selector" data-name="plugin_manager">');  
+                    plugin_manager_item.append('<div class="settings-param__name">' + Lampa.Lang.translate('plugin_manager_title') + '</div>');  
+                    plugin_manager_item.append('<div class="settings-param__value">➤</div>');  
                       
-                    // Синхронно вмикаємо/вимикаємо всі візуальні налаштування  
-                    Lampa.Storage.set('logo_enabled', newValue);  
-                    Lampa.Storage.set('necardify_enabled', newValue);  
+                    // Вставляємо пункт в меню  
+                    e.body.append(plugin_manager_item);  
                       
-                    if (newValue) {  
-                        // Завантажуємо обидва скрипти  
-                        loadScript('https://foxstudio24.github.io/lampa/logo.js');  
-                        loadScript('https://foxstudio24.github.io/lampa/necardify.js');  
-                    }  
-                      
-                    updateSettingsDisplay();  
-                });  
+                    // Обробник кліку для відкриття нашого підменю  
+                    plugin_manager_item.on('hover:enter', function() {  
+                        Lampa.Settings.open('plugin_manager');  
+                    });  
+                }  
                   
-                updateSettingsDisplay();  
-            }  
-        });  
-          
-        // Функція оновлення відображення налаштувань  
-        function updateSettingsDisplay() {  
-            $('[data-name="foxstudio_interface_enabled"] .settings-param__value').text(  
-                Lampa.Storage.get('foxstudio_interface_enabled', true) ? 'Вкл' : 'Выкл'  
-            );  
-            $('[data-name="visual_enhancements_enabled"] .settings-param__value').text(  
-                Lampa.Storage.get('visual_enhancements_enabled', false) ? 'Вкл' : 'Выкл'  
-            );  
+                // Відображаємо налаштування у вкладці менеджера плагінів  
+                if (e.name === 'plugin_manager') {  
+                    // Додаємо налаштування плагіна логотипів  
+                    var logo_setting = createPluginSetting(  
+                        'logo_plugin_enabled',   
+                        Lampa.Lang.translate('logo_plugin_title'),   
+                        false,   
+                        plugin_urls.logo  
+                    );  
+                    e.body.append(logo_setting);  
+                      
+                    // Додаємо налаштування плагіна якості  
+                    var quality_setting = createPluginSetting(  
+                        'quality_plugin_enabled',   
+                        Lampa.Lang.translate('quality_plugin_title'),   
+                        false,   
+                        plugin_urls.quality  
+                    );  
+                    e.body.append(quality_setting);  
+                }  
+            });  
+              
+            // Ініціалізація налаштувань за замовчуванням  
+            Object.keys(default_settings).forEach(function(key) {  
+                if (Lampa.Storage.get(key) === null) {  
+                    Lampa.Storage.set(key, default_settings[key]);  
+                }  
+            });  
+              
+            console.log('Plugin Manager завантажено');  
+        } catch (error) {  
+            console.error('Помилка ініціалізації плагіна:', error);  
         }  
-          
-        // Ініціалізація налаштувань за замовчуванням  
-        Object.keys(default_settings).forEach(function(key) {  
-            if (Lampa.Storage.get(key) === null) {  
-                Lampa.Storage.set(key, default_settings[key]);  
-            }  
-        });  
-          
-        console.log('FoxStudio Interface Plugin завантажено');  
     }  
       
     // Запуск плагіну  
