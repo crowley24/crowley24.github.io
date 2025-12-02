@@ -1,16 +1,19 @@
 !function() {    
     "use strict";    
         
-    // Додаємо CSS стилі    
+    // Додаємо CSS стилі з діагностикою    
     var style = document.createElement('style');    
     style.textContent = `    
-        .cardify .full-start-new__title {    
-            text-shadow: none !important;    
-        }    
+        /* Діагностика - робимо всі логотипи видимими */  
         .full-start-new__title img {    
-            max-width: none !important;    
-            width: auto !important;    
-            height: auto !important;    
+            border: 2px solid red !important;  /* Червона рамка для діагностики */  
+            background: yellow !important;     /* Жовтий фон для видимості */  
+            display: block !important;        /* Примусово показуємо */  
+            visibility: visible !important;   /* Примусова видимість */  
+            opacity: 1 !important;           /* Повна непрозорість */  
+            max-width: none !important;        
+            width: auto !important;            
+            height: auto !important;            
             object-fit: contain !important;    
         }    
             
@@ -40,78 +43,68 @@
     `;    
     document.head.appendChild(style);    
         
+    // Діагностика - перевіряємо наявність логотипів    
+    setTimeout(function() {    
+        var logos = document.querySelectorAll('.full-start-new__title img');    
+        console.log('[LogoPlugin] Знайдено логотипів:', logos.length);    
+          
+        if (logos.length === 0) {    
+            console.log('[LogoPlugin] Логотипи не знайдено. Шукаємо інші селектори...');    
+            var allImages = document.querySelectorAll('.full-start-new__title img, .cardify--logo img, .full-start-new img');    
+            console.log('[LogoPlugin] Всі зображення в title:', allImages.length);    
+        } else {    
+            logos.forEach(function(img, index) {    
+                console.log('[LogoPlugin] Логотип', index + 1, ':', {    
+                    src: img.src,    
+                    width: img.offsetWidth,    
+                    height: img.offsetHeight,    
+                    display: window.getComputedStyle(img).display,    
+                    visibility: window.getComputedStyle(img).visibility    
+                });    
+            });    
+        }    
+    }, 2000);    
+        
     // Ключ для збереження стану плагіна    
     const ENABLED_KEY = "simple_logo_enabled";    
         
     window.logoplugin || (window.logoplugin = !0, Lampa.Listener.follow("full", (function(a) {    
         if ("complite" == a.type) {    
-                
-            // Перевіряємо, чи увімкнено плагін    
-            var enabled = Lampa.Storage.get(ENABLED_KEY, !0);    
-            if (!enabled) return;    
-                
-            var contentContainer = $(".full-start-new__title");    
-            if (contentContainer.length === 0) return;    
-                
-            // Отримуємо дані фільму/серіалу    
-            var card = a.data.card;    
-            if (!card) return;    
-                
-            var title = card.title || card.name;    
-            var originalTitle = card.original_title || card.original_name;    
-            var year = card.release_date ? card.release_date.split("-")[0] : (card.first_air_date ? card.first_air_date.split("-")[0] : "");    
-            var kpId = card.kinopoisk_id;    
-                
-            // Визначаємо мову запиту    
-            var lang = Lampa.Storage.get("language", "uk");    
-                
-            // Запит до API для отримання логотипів    
-            var apiUrl = "https://api.kinopoisk.dev/v1.4/logo?token=YOUR_TOKEN&page=1&limit=10";    
-                
-            if (kpId) {    
-                apiUrl += "&kinopoiskId=" + kpId;    
-            } else if (originalTitle && year) {    
-                apiUrl += "&title=" + encodeURIComponent(originalTitle) + "&year=" + year;    
-            } else if (title && year) {    
-                apiUrl += "&title=" + encodeURIComponent(title) + "&year=" + year;    
-            } else {    
-                console.log("Недостатньо даних для пошуку логотипа");    
-                contentContainer.css("opacity", "1");    
-                return;    
-            }    
-                
-            // Робимо контейнер напівпрозорим на час завантаження    
-            contentContainer.css("opacity", "0.3");    
-                
-            // Виконуємо запит    
-            Lampa.Api.ajax({    
-                url: apiUrl,    
-                type: "GET",    
-                dataType: "json"    
-            }, (function(data) {    
-                if (data && data.docs && data.docs.length > 0) {    
-                    var logos = data.docs[0].logos;    
-                    if (logos && logos.length > 0) {    
-                        var logoUrl = logos[0].url;    
-                        if (logoUrl) {    
-                            // Створюємо елемент логотипа    
-                            var logoImg = $("<img>").attr("src", logoUrl).attr("alt", "Logo");    
-                                
-                            // Додаємо логотип перед назвою    
-                            contentContainer.prepend(logoImg);    
-                                
-                            // Показуємо контейнер з логотипом    
-                            contentContainer.css("opacity", "1");    
+            var contentContainer = $('.full-start-new__title');    
+            if (contentContainer.length > 0) {    
+                contentContainer.css("opacity", "0.5");  /* Змінено для діагностики */    
+                    
+                var originalTitle = contentContainer.text().trim();    
+                if (originalTitle && !contentContainer.data('logos-processed')) {    
+                    contentContainer.data('logos-processed', true);    
+                        
+                    var apiUrl = "https://v2.sg.media-imdb.com/suggests/" + originalTitle[0].toLowerCase() + "/" + originalTitle.toLowerCase().replace(/[^a-z0-9]/g, "_") + ".json";    
+                        
+                    $.getJSON(apiUrl).done(function(data) {    
+                        if (data.d && data.d.length > 0) {    
+                            var logoUrl = data.d[0].i && data.d[0].i.imageUrl;    
+                            if (logoUrl) {    
+                                var logoImg = $('<img>').attr('src', logoUrl).css({    
+                                    'max-width': 'none',    
+                                    'width': 'auto',    
+                                    'height': 'auto',    
+                                    'margin-right': '10px',    
+                                    'vertical-align': 'middle'    
+                                });    
+                                contentContainer.empty().append(logoImg).append(originalTitle);    
+                                console.log('[LogoPlugin] Логотип додано:', logoUrl);    
+                            }    
                         }    
-                    } else {    
-                        console.log("Логотипи відсутні");    
                         contentContainer.css("opacity", "1");    
-                    }    
+                    }).fail(function() {    
+                        console.log('[LogoPlugin] Помилка запиту логотипів');    
+                        contentContainer.css("opacity", "1");    
+                    });    
+                } else {    
+                    console.log('[LogoPlugin] Логотипи відсутні');    
+                    contentContainer.css("opacity", "1");    
                 }    
-            })).fail(function() {    
-                console.log("Помилка запиту логотипів");    
-                contentContainer.css("opacity", "1");    
-            });    
+            }    
         }    
     })))    
 }();
