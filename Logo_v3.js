@@ -1,325 +1,286 @@
 (function () {  
-    'use strict';  
-      
-    // Перевірка доступності Lampa API  
-    function waitForLampa(callback) {  
-        if (window.Lampa && Lampa.Listener && Lampa.Storage && Lampa.TMDB && Lampa.Lang && Lampa.SettingsApi) {  
-            callback();  
-        } else {  
-            setTimeout(function() { waitForLampa(callback); }, 100);  
+    "use strict";  
+  
+    // =======================================================  
+    // I. НАЛАШТУВАННЯ ПЛАГІНА (Lampa.SettingsApi)  
+    // =======================================================  
+  
+    // 1. Приховати/Відобразити логотипи  
+    Lampa.SettingsApi.addParam({  
+        component: "interface",  
+        param: {  
+            name: "logo_glav",  
+            type: "select",  
+            values: { 1: "Сховати", 0: "Відображати" },  
+            default: "0"  
+        },  
+        field: {  
+            name: "Логотипи замість назв",  
+            description: "Відображає логотипи фільмів замість тексту"  
+        }  
+    });  
+  
+    // 2. Мова логотипу  
+    Lampa.SettingsApi.addParam({  
+        component: "interface",  
+        param: {  
+            name: "logo_lang",  
+            type: "select",  
+            values: {  
+                "": "Як в Lampa",  
+                ru: "Російська",  
+                en: "English",  
+                uk: "Українська",  
+                be: "Білоруська",  
+                kz: "Казахська",  
+                pt: "Португальська",  
+                es: "Іспанська",  
+                fr: "Французька",  
+                de: "Німецька",  
+                it: "Італійська"  
+            },  
+            default: ""  
+        },  
+        field: {  
+            name: "Мова логотипа",  
+            description: "Пріоритетна мова для пошуку логотипа"  
+        }  
+    });  
+  
+    // 3. Розмір логотипа  
+    Lampa.SettingsApi.addParam({  
+        component: "interface",  
+        param: {  
+            name: "logo_size",  
+            type: "select",  
+            values: { w300: "w300", w500: "w500", w780: "w780", original: "Оригінал" },  
+            default: "original"  
+        },  
+        field: {  
+            name: "Розмір логотипа",  
+            description: "Розширення завантажуваного зображення"  
+        }  
+    });  
+  
+    // 4. Очищення кешу логотипів  
+    Lampa.SettingsApi.addParam({  
+        component: "interface",  
+        param: {  
+            name: "logo_clear_cache",  
+            type: "button",  
+            action: function () {  
+                localStorage.removeItem('logo_cache');  
+                Lampa.Noty.show('Кеш логотипів очищено');  
+            }  
+        },  
+        field: {  
+            name: "Очистити кеш логотипів",  
+            description: "Видаляє всі збережені логотипи"  
+        }  
+    });  
+  
+    // =======================================================  
+    // II. ОСНОВНИЙ КОД ПЛАГІНА  
+    // =======================================================  
+  
+    // Конфігурація  
+    const CONFIG = {  
+        baseUrl: "https://api.themoviedb.org/3",  
+        apiKey: "4ef0d7355d9ffb5151e9877647082a3d",  
+        imageBaseUrl: "https://image.tmdb.org/t/p/",  
+        cacheKey: 'logo_cache',  
+        cacheExpiry: 7 * 24 * 60 * 60 * 1000 // 7 днів  
+    };  
+  
+    // Отримання налаштувань  
+    function getSettings() {  
+        return {  
+            enabled: Lampa.Storage.get('logo_glav') !== '1',  
+            language: Lampa.Storage.get('logo_lang') || '',  
+            size: Lampa.Storage.get('logo_size') || 'original'  
+        };  
+    }  
+  
+    // Отримання кешованих логотипів  
+    function getCachedLogos() {  
+        try {  
+            const cached = localStorage.getItem(CONFIG.cacheKey);  
+            return cached ? JSON.parse(cached) : {};  
+        } catch (e) {  
+            return {};  
         }  
     }  
-      
-    waitForLampa(function() {  
-        if (window.logoplugin) return;  
-        window.logoplugin = true;  
+  
+    // Збереження логотипів в кеш  
+    function cacheLogos(logos) {  
+        try {  
+            localStorage.setItem(CONFIG.cacheKey, JSON.stringify({  
+                data: logos,  
+                timestamp: Date.now()  
+            }));  
+        } catch (e) {  
+            console.warn('Не вдалося зберегти кеш логотипів:', e);  
+        }  
+    }  
+  
+    // Перевірка актуальності кешу  
+    function isCacheValid() {  
+        try {  
+            const cached = localStorage.getItem(CONFIG.cacheKey);  
+            if (!cached) return false;  
+              
+            const parsed = JSON.parse(cached);  
+            return Date.now() - parsed.timestamp < CONFIG.cacheExpiry;  
+        } catch (e) {  
+            return false;  
+        }  
+    }  
+  
+    // Запит логотипів з TMDB  
+    async function fetchLogos(movieId, type = 'movie') {  
+        const settings = getSettings();  
+        const languages = settings.language ? [settings.language] : ['uk', 'ru', 'en'];  
           
-        // Кешування логотипів  
-        var logoCache = {};  
-          
-        function getCachedLogo(itemId, language) {  
-            var cacheKey = itemId + '_' + language;  
-            if (logoCache[cacheKey]) {  
-                return logoCache[cacheKey];  
-            }  
+        for (const lang of languages) {  
             try {  
-                var cached = localStorage.getItem('logo_cache_' + cacheKey);  
-                if (cached) {  
-                    var parsed = JSON.parse(cached);  
-                    var now = Date.now();  
-                    if (now - parsed.timestamp < 7 * 24 * 60 * 60 * 1000) {  
-                        logoCache[cacheKey] = parsed.data;  
-                        return parsed.data;  
-                    }  
-                }  
-            } catch(e) {  
-                console.error('[LogoPlugin] Помилка читання з localStorage:', e);  
-            }  
-            return null;  
-        }  
-          
-        function setCachedLogo(itemId, language, logoPath) {  
-            var cacheKey = itemId + '_' + language;  
-            logoCache[cacheKey] = logoPath;  
-            try {  
-                localStorage.setItem('logo_cache_' + cacheKey, JSON.stringify({  
-                    data: logoPath,  
-                    timestamp: Date.now()  
-                }));  
-            } catch(e) {  
-                console.error('[LogoPlugin] Помилка запису в localStorage:', e);  
-            }  
-        }  
-          
-        // Локалізація  
-        Lampa.Lang.add({  
-            logo_main_title: {  
-                en: 'Logos instead of titles',  
-                uk: 'Логотипи замість назв',  
-                ru: 'Логотипы вместо названий'  
-            },  
-            logo_main_description: {  
-                en: 'Displays movie logos instead of text',  
-                uk: 'Відображає логотипи фільмів замість тексту',  
-                ru: 'Отображает логотипы фильмов вместо текста'  
-            },  
-            logo_main_show: {  
-                en: 'Show',  
-                uk: 'Показати',  
-                ru: 'Отображать'  
-            },  
-            logo_main_hide: {  
-                en: 'Hide',  
-                uk: 'Приховати',  
-                ru: 'Скрыть'  
-            },  
-            logo_display_mode_title: {  
-                en: 'Display mode',  
-                uk: 'Режим відображення',  
-                ru: 'Режим отображения'  
-            },  
-            logo_display_mode_logo_only: {  
-                en: 'Logo only',  
-                uk: 'Тільки логотип',  
-                ru: 'Только логотип'  
-            },  
-            logo_display_mode_logo_and_text: {  
-                en: 'Logo and text',  
-                uk: 'Логотип і текст',  
-                ru: 'Логотип и текст'  
-            },  
-            logo_size_title: {  
-                en: 'Logo size',  
-                uk: 'Розмір логотипа',  
-                ru: 'Размер логотипа'  
-            },  
-            logo_size_description: {  
-                en: 'TMDB image size',  
-                uk: 'Розмір зображення TMDB',  
-                ru: 'Размер изображения TMDB'  
-            }  
-        });  
-          
-        // Основний параметр  
-        Lampa.SettingsApi.addParam({  
-            component: 'interface',  
-            param: {  
-                name: 'logo_main',  
-                type: 'select',  
-                values: {  
-                    '1': Lampa.Lang.translate('logo_main_hide'),  
-                    '0': Lampa.Lang.translate('logo_main_show')  
-                },  
-                default: '0'  
-            },  
-            field: {  
-                name: Lampa.Lang.translate('logo_main_title'),  
-                description: Lampa.Lang.translate('logo_main_description')  
-            }  
-        });  
-          
-        // Режим відображення  
-        Lampa.SettingsApi.addParam({  
-            component: 'interface',  
-            param: {  
-                name: 'logo_display_mode',  
-                type: 'select',  
-                values: {  
-                    'logo_only': Lampa.Lang.translate('logo_display_mode_logo_only'),  
-                    'logo_and_text': Lampa.Lang.translate('logo_display_mode_logo_and_text')  
-                },  
-                default: 'logo_only'  
-            },  
-            field: {  
-                name: Lampa.Lang.translate('logo_display_mode_title'),  
-                description: Lampa.Lang.translate('logo_main_description'),  
-                show: function () {  
-                    return Lampa.Storage.get('logo_main') === '0';  
-                }  
-            }  
-        });  
-          
-        // Оновлений параметр розміру логотипа у стилі TMDB  
-        Lampa.SettingsApi.addParam({  
-            component: 'interface',  
-            param: {  
-                name: 'logo_size',  
-                type: 'select',  
-                values: {  
-                    'w300': 'w300',  
-                    'w500': 'w500',  
-                    'w780': 'w780',  
-                    'original': 'Оригінал'  
-                },  
-                default: 'w500'  
-            },  
-            field: {  
-                name: Lampa.Lang.translate('logo_size_title'),  
-                description: Lampa.Lang.translate('logo_size_description'),  
-                show: function () {  
-                    return Lampa.Storage.get('logo_main') === '0';  
-                }  
-            }  
-        });  
-          
-        // Функція завантаження та рендерингу логотипу  
-        function loadAndRenderLogo(item, card) {  
-            var $ = window.$ || window.jQuery;  
-            if (!$) {  
-                console.error('[LogoPlugin] jQuery не знайдено');  
-                return;  
-            }  
-              
-            var apiKey = Lampa.TMDB.key();  
-            if (!apiKey) {  
-                console.error('[LogoPlugin] TMDB API key не знайдено');  
-                return;  
-            }  
-              
-            var mediaType = item.first_air_date && !item.release_date ? 'tv' : 'movie';  
-            var currentLang = Lampa.Storage.get('language');  
-              
-            var cachedLogo = getCachedLogo(item.id, currentLang);  
-            if (cachedLogo) {  
-                console.log('[LogoPlugin] Використання кешу для', item.id);  
-                renderLogo(cachedLogo, card, item, false);  
-                return;  
-            }  
-              
-            var url = Lampa.TMDB.api(mediaType + '/' + item.id + '/images?api_key=' + apiKey + '&language=' + currentLang);  
-              
-            function tryEnglishLogos() {  
-                if (currentLang === 'en') return;  
+                const response = await fetch(  
+                    `${CONFIG.baseUrl}/${type}/${movieId}/images?api_key=${CONFIG.apiKey}&include_image_language=${lang},null`  
+                );  
                   
-                var enUrl = Lampa.TMDB.api(mediaType + '/' + item.id + '/images?api_key=' + apiKey + '&language=en');  
-                $.get(enUrl, function (enResponse) {  
-                    if (enResponse.logos && enResponse.logos.length > 0) {  
-                        var pngLogo = enResponse.logos.find(function(logo) {  
-                            return !logo.file_path.endsWith('.svg');  
-                        });  
-                        var logoPath = pngLogo ? pngLogo.file_path : enResponse.logos[0].file_path;  
-                          
-                        setCachedLogo(item.id, 'en', logoPath);  
-                        renderLogo(logoPath, card, item, true);  
-                    } else {  
-                        console.log('[LogoPlugin] Логотипи не знайдено навіть англійською');  
-                    }  
-                }).fail(function () {  
-                    console.log('[LogoPlugin] Не вдалося завантажити англійські логотипи');  
-                });  
-            }  
-              
-            $.get(url, function (response) {  
-                if (response.logos && response.logos.length > 0) {  
-                    var pngLogo = response.logos.find(function(logo) {  
-                        return !logo.file_path.endsWith('.svg');  
-                    });  
-                    var logoPath = pngLogo ? pngLogo.file_path : response.logos[0].file_path;  
-                      
-                    setCachedLogo(item.id, currentLang, logoPath);  
-                    renderLogo(logoPath, card, item, false);  
-                } else {  
-                    tryEnglishLogos();  
-                }  
-            }).fail(function () {  
-                tryEnglishLogos();  
-            });  
-        }  
-          
-        function renderLogo(logoPath, card, item, isEnglishLogo) {  
-            if (!logoPath) return;  
-              
-            var displayMode = Lampa.Storage.get('logo_display_mode', 'logo_only');  
-            var showTitle = displayMode === 'logo_and_text' || (isEnglishLogo && displayMode === 'logo_only');  
-              
-            var titleElement = card.find('.full-start-new__title');  
-            if (!titleElement.length) {  
-                titleElement = card.find('.full-start__title');  
-            }  
-              
-            if (!titleElement.length) {  
-                console.log('[LogoPlugin] Елемент заголовка не знайдено');  
-                return;  
-            }  
-              
-            var titleText = showTitle ? (titleElement.text() || item.title || item.name) : '';  
-              
-            // Отримуємо вибраний розмір TMDB  
-            var tmdbSize = Lampa.Storage.get('logo_size', 'w500');  
-              
-            // Розміри для відображення на екрані (залишаємо логіку)  
-            var displaySize = 80; // базовий розмір для відображення  
-            var largerSize = Math.floor(displaySize * 1.4);  
-            var mobileSize = Math.floor(displaySize * 0.6);  
-              
-            var isMobile = window.innerWidth <= 585;  
-            var isNewInterface = Lampa.Storage.get('card_interfice_type') === 'new';  
-            var hasCover = card.find('div[data-name="card_interfice_cover"]').length > 0;  
-              
-            var currentDisplaySize = displaySize;  
-            if (isMobile) {  
-                currentDisplaySize = mobileSize;  
-            } else if (isNewInterface && hasCover) {  
-                currentDisplaySize = largerSize;  
-            }  
-              
-            var containerStyle = 'display: inline-block; height: ' + currentDisplaySize + 'px; width: auto; max-width: 100%;';  
-            var imgStyle = 'height: 100%; width: auto; object-fit: contain; display: block; margin-bottom: 0.2em;';  
-              
-            // Використовуємо вибраний розмір TMDB для URL  
-            var imgUrl = Lampa.TMDB.image('/t/p/' + tmdbSize + logoPath.replace('.svg', '.png'));  
-              
-            var fallbackTitle = (item.title || item.name).replace(/'/g, "\\'");  
-            var logoHtml = '<div style="' + containerStyle + '"><img style="' + imgStyle + '" src="' + imgUrl + '" alt="' + (item.title || item.name) + '" onerror="this.parentElement.parentElement.innerHTML=\'' + fallbackTitle + '\'" /></div>';  
-              
-            if (titleText) {  
-                logoHtml += '<span style="display: block;">' + titleText + '</span>';  
-            }  
-              
-            if (isNewInterface) {  
-                card.find('.full-start-new__tagline').remove();  
-                titleElement.html(logoHtml);  
-            } else {  
-                card.find('.full-start__title-original').remove();  
-                titleElement.css({  
-                    'height': 'auto !important',  
-                    'max-height': 'none !important',  
-                    'overflow': 'visible !important'  
-                }).html(logoHtml);  
-            }  
-        }  
-          
-        Lampa.Listener.follow('full', function (event) {  
-            if ((event.type === 'complite' || event.type === 'movie') && Lampa.Storage.get('logo_main') !== '1') {  
-                var item = event.data.movie;  
-                if (!item || !item.id) return;  
+                if (!response.ok) continue;  
                   
-                setTimeout(function() {  
-                    var card = event.object.activity.render();  
-                      
-                    var titleElement = card.find('.full-start-new__title, .full-start__title');  
-                    if (titleElement.length) {  
-                        loadAndRenderLogo(item, card);  
-                    } else {  
-                        var observer = new MutationObserver(function() {  
-                            var titleElement = card.find('.full-start-new__title, .full-start__title');  
-                            if (titleElement.length) {  
-                                observer.disconnect();  
-                                loadAndRenderLogo(item, card);  
-                            }  
-                        });  
-                          
-                        var target = card[0] || card;  
-                        observer.observe(target, {childList: true, subtree: true});  
-                          
-                        setTimeout(function() {  
-                            observer.disconnect();  
-                        }, 5000);  
-                    }  
-                }, 150);  
+                const data = await response.json();  
+                const logos = data.logos || [];  
+                  
+                if (logos.length > 0) {  
+                    return logos.filter(logo => logo.file_path).map(logo => ({  
+                        ...logo,  
+                        url: `${CONFIG.imageBaseUrl}${settings.size}${logo.file_path}`  
+                    }));  
+                }  
+            } catch (e) {  
+                console.warn(`Помилка завантаження логотипів для мови ${lang}:`, e);  
             }  
-        });  
+        }  
           
-        console.log('[LogoPlugin] Плагін успішно ініціалізовано');  
+        return [];  
+    }  
+  
+    // Створення елемента логотипа  
+    function createLogoElement(logo) {  
+        const img = document.createElement('img');  
+        img.src = logo.url;  
+        img.alt = 'Логотип';  
+        img.style.cssText = `  
+            max-width: 100%;  
+            max-height: 80px;  
+            width: auto;  
+            height: auto;  
+            object-fit: contain;  
+        `;  
+          
+        return img;  
+    }  
+  
+    // Відображення логотипа  
+    function displayLogo(card, logo) {  
+        const titleElement = card.querySelector('.full-start-new__title, .full-start__title, .card__title');  
+        if (!titleElement) return;  
+  
+        const logoElement = createLogoElement(logo);  
+        const container = document.createElement('div');  
+        container.style.cssText = `  
+            display: flex;  
+            align-items: center;  
+            justify-content: center;  
+            min-height: 80px;  
+            margin: 10px 0;  
+        `;  
+        container.appendChild(logoElement);  
+  
+        // Заміна назви на логотип  
+        titleElement.style.display = 'none';  
+        titleElement.parentNode.insertBefore(container, titleElement.nextSibling);  
+    }  
+  
+    // Обробка однієї картки  
+    async function processCard(card) {  
+        const settings = getSettings();  
+        if (!settings.enabled) return;  
+  
+        // Перевірка чи вже оброблено  
+        if (card.hasAttribute('data-logo-processed')) return;  
+        card.setAttribute('data-logo-processed', 'true');  
+  
+        // Отримання ID фільму/серіалу  
+        const movieData = card.movie_data || card.card_data;  
+        if (!movieData || !movieData.id) return;  
+  
+        const movieId = movieData.id;  
+        const type = movieData.number_of_seasons ? 'tv' : 'movie';  
+  
+        try {  
+            // Перевірка кешу  
+            let logos = [];  
+            if (isCacheValid()) {  
+                const cached = getCachedLogos();  
+                logos = cached.data[`${type}_${movieId}`] || [];  
+            }  
+  
+            // Якщо в кеші немає, завантажуємо  
+            if (logos.length === 0) {  
+                logos = await fetchLogos(movieId, type);  
+                  
+                // Оновлення кешу  
+                const cached = getCachedLogos();  
+                cached.data[`${type}_${movieId}`] = logos;  
+                cacheLogos(cached.data);  
+            }  
+  
+            // Відображення першого логотипа  
+            if (logos.length > 0) {  
+                displayLogo(card, logos[0]);  
+            }  
+  
+        } catch (e) {  
+            console.warn('Помилка обробки картки:', e);  
+        }  
+    }  
+  
+    // Обробка всіх карток  
+    function processAllCards() {  
+        const cards = document.querySelectorAll('.card:not([data-logo-processed]), .full-start-new:not([data-logo-processed])');  
+        cards.forEach(processCard);  
+    }  
+  
+    // Спостерігач за новими картками  
+    const observer = new MutationObserver(function(mutations) {  
+        setTimeout(processAllCards, 500);  
     });  
+  
+    // Ініціалізація плагіна  
+    function init() {  
+        console.log('Плагін логотипів завантажено (без анімації)');  
+          
+        // Обробка існуючих карток  
+        processAllCards();  
+          
+        // Спостереження за новими картками  
+        observer.observe(document.body, {  
+            childList: true,  
+            subtree: true  
+        });  
+    }  
+  
+    // Запуск  
+    if (typeof Lampa !== 'undefined') {  
+        init();  
+    } else {  
+        const checkInterval = setInterval(function() {  
+            if (typeof Lampa !== 'undefined') {  
+                clearInterval(checkInterval);  
+                init();  
+            }  
+        }, 500);  
+    }  
 })();
