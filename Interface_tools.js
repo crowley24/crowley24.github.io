@@ -1,11 +1,5 @@
-(function() {
+(function () {
     'use strict';
-
-    var plugin_info = {
-        name: 'FoxStudio Interface',
-        version: '2.0.0',
-        author: 'FoxStudio24'
-    };
 
     var default_settings = {
         foxstudio_interface_enabled: true,
@@ -13,30 +7,22 @@
         logo_enabled: false
     };
 
-    function loadScript(url, callback) {
-        var script = document.createElement('script');
-        script.type = 'text/javascript';
-        script.src = url;
-        script.onload = callback;
-        script.onerror = function () {
-            console.error('FoxStudio: ошибка загрузки скрипта:', url);
-        };
-        document.head.appendChild(script);
+    function loadScript(url) {
+        var s = document.createElement('script');
+        s.src = url;
+        s.onerror = () => console.error('Ошибка загрузки:', url);
+        document.head.appendChild(s);
     }
 
     function init() {
 
-        // Переводы
+        // === Переводы ===
         Lampa.Lang.add({
-            foxstudio_menu_title: {
-                ru: 'FoxStudio',
-                en: 'FoxStudio',
-                uk: 'FoxStudio'
-            },
+            foxstudio_title: { ru: 'FoxStudio', en: 'FoxStudio', uk: 'FoxStudio' },
             foxstudio_interface_title: {
-                ru: 'Новый интерфейс для ТВ и ПК',
-                en: 'New interface for TV and PC',
-                uk: 'Новий інтерфейс для ТВ та ПК'
+                ru: 'Новый интерфейс',
+                en: 'New interface',
+                uk: 'Новий інтерфейс'
             },
             foxstudio_necardify_title: {
                 ru: 'Плагин Necardify',
@@ -50,55 +36,46 @@
             }
         });
 
-        // Регистрируем новую вкладку
+        // === Додаємо кнопку вкладки у основне меню ===
         Lampa.SettingsApi.addComponent({
-            name: 'foxstudio_settings',
-            icon: 'magic',
-            title: 'foxstudio_menu_title'
+            name: 'foxstudio',
+            title: 'foxstudio_title',
+            icon: 'magic'
         });
 
-        // Формируем содержимое вкладки
-        Lampa.SettingsApi.addParam({
-            component: 'foxstudio_settings',
-            param: {
-                name: 'foxstudio_interface_enabled',
-                type: 'toggle',
-                default: default_settings.foxstudio_interface_enabled,
-                title: 'foxstudio_interface_title'
+        // === Відмалювання контенту вкладки ===
+        Lampa.SettingsApi.addRenderer('foxstudio', function (body) {
+
+            body.empty();
+
+            function addToggle(name, title_key, script_url) {
+                let value = Lampa.Storage.get(name, default_settings[name]);
+
+                let item = $(`
+                    <div class="settings-param selector" data-name="${name}">
+                        <div class="settings-param__name">${Lampa.Lang.translate(title_key)}</div>
+                        <div class="settings-param__value">${value ? 'Вкл' : 'Выкл'}</div>
+                    </div>
+                `);
+
+                item.on('hover:enter', function () {
+                    value = !value;
+                    Lampa.Storage.set(name, value);
+                    item.find('.settings-param__value').text(value ? 'Вкл' : 'Выкл');
+
+                    if (value && script_url) loadScript(script_url);
+                });
+
+                body.append(item);
             }
+
+            // === Елементи у вкладці ===
+            addToggle('foxstudio_interface_enabled', 'foxstudio_interface_title', null);
+            addToggle('necardify_enabled', 'foxstudio_necardify_title', 'https://foxstudio24.github.io/lampa/necardify.js');
+            addToggle('logo_enabled', 'foxstudio_logo_title', 'https://foxstudio24.github.io/lampa/logo.js');
         });
 
-        Lampa.SettingsApi.addParam({
-            component: 'foxstudio_settings',
-            param: {
-                name: 'necardify_enabled',
-                type: 'toggle',
-                default: default_settings.necardify_enabled,
-                title: 'foxstudio_necardify_title',
-                onChange: function(value) {
-                    if (value) {
-                        loadScript('https://foxstudio24.github.io/lampa/necardify.js');
-                    }
-                }
-            }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'foxstudio_settings',
-            param: {
-                name: 'logo_enabled',
-                type: 'toggle',
-                default: default_settings.logo_enabled,
-                title: 'foxstudio_logo_title',
-                onChange: function(value) {
-                    if (value) {
-                        loadScript('https://foxstudio24.github.io/lampa/logo.js');
-                    }
-                }
-            }
-        });
-
-        console.log('FoxStudio Settings: вкладка успешно добавлена');
+        console.log('FoxStudio вкладка загружена');
     }
 
     if (window.Lampa) init();
