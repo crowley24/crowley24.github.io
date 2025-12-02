@@ -1,163 +1,108 @@
-(function() {  
-    'use strict';  
-      
-    // Інформація про плагін  
-    var plugin_info = {  
-        name: 'FoxStudio Interface',  
-        version: '1.0.0',  
-        author: 'FoxStudio24'  
-    };  
-      
-    // Налаштування за замовчуванням  
-    var default_settings = {  
-        foxstudio_interface_enabled: true,  
-        necardify_enabled: false,  
-        logo_enabled: false  
-    };  
-      
-    // Функція завантаження зовнішнього скрипту  
-    function loadScript(url, callback) {  
-        var script = document.createElement('script');  
-        script.type = 'text/javascript';  
-        script.src = url;  
-        script.onload = callback;  
-        script.onerror = function() {  
-            console.error('Помилка завантаження скрипту:', url);  
-        };  
-        document.head.appendChild(script);  
-    }  
-      
-    // Функція ініціалізації плагіну  
-    function init() {  
-        // Додаємо переклади  
-        Lampa.Lang.add({  
-            foxstudio_interface_title: {  
-                ru: 'Новый интерфейс для тв и пк',  
-                en: 'New interface for TV and PC',  
-                uk: 'Новий інтерфейс для тв та пк'  
-            },  
-            foxstudio_necardify_title: {  
-                ru: 'Necardify плагин',  
-                en: 'Necardify plugin',  
-                uk: 'Necardify плагін'  
-            },  
-            foxstudio_logo_title: {  
-                ru: 'Logo плагин',  
-                en: 'Logo plugin',  
-                uk: 'Logo плагін'  
-            },  
-            interface_tools_title: {  
-                ru: 'Interface tools',  
-                en: 'Interface tools',  
-                uk: 'Interface tools'  
-            }  
-        });  
-          
-        // Додаємо пункт меню Interface tools після пункту Інтерфейс  
-        Lampa.Settings.listener.follow('open', function(e) {  
-            if (e.name === 'main') {  
-                // Знаходимо пункт "Інтерфейс" і додаємо наш пункт після нього  
-                var interface_item = e.body.find('[data-name="interface"]');  
-                var interface_tools_item = $('<div class="settings-param selector" data-name="interface_tools">');  
-                interface_tools_item.append('<div class="settings-param__name">' + Lampa.Lang.translate('interface_tools_title') + '</div>');  
-                interface_tools_item.append('<div class="settings-param__value">➤</div>');  
-                  
-                // Вставляємо після пункту Інтерфейс, або в кінець якщо не знайдено  
-                if (interface_item.length > 0) {  
-                    interface_item.after(interface_tools_item);  
-                } else {  
-                    e.body.append(interface_tools_item);  
-                }  
-                  
-                // Обробник кліку для відкриття нашого підменю  
-                interface_tools_item.on('hover:enter', function() {  
-                    Lampa.Settings.open('interface_tools');  
-                });  
-            }  
-              
-            // Відображаємо налаштування у вкладці Interface tools  
-            if (e.name === 'interface_tools') {  
-                // Основне налаштування інтерфейсу  
-                var foxstudio_interface = $('<div class="settings-param selector" data-type="toggle" data-name="foxstudio_interface_enabled">');  
-                foxstudio_interface.append('<div class="settings-param__name">' + Lampa.Lang.translate('foxstudio_interface_title') + '</div>');  
-                foxstudio_interface.append('<div class="settings-param__value"></div>');  
-                  
-                // Налаштування Necardify  
-                var necardify_setting = $('<div class="settings-param selector" data-type="toggle" data-name="necardify_enabled">');  
-                necardify_setting.append('<div class="settings-param__name">' + Lampa.Lang.translate('foxstudio_necardify_title') + '</div>');  
-                necardify_setting.append('<div class="settings-param__value"></div>');  
-                  
-                // Налаштування Logo  
-                var logo_setting = $('<div class="settings-param selector" data-type="toggle" data-name="logo_enabled">');  
-                logo_setting.append('<div class="settings-param__name">' + Lampa.Lang.translate('foxstudio_logo_title') + '</div>');  
-                logo_setting.append('<div class="settings-param__value"></div>');  
-                  
-                // Додаємо елементи  
-                e.body.append(foxstudio_interface);  
-                e.body.append(necardify_setting);  
-                e.body.append(logo_setting);  
-                  
-                // Обробники зміни налаштувань  
-                foxstudio_interface.on('hover:enter', function() {  
-                    var current = Lampa.Storage.get('foxstudio_interface_enabled', true);  
-                    Lampa.Storage.set('foxstudio_interface_enabled', !current);  
-                    updateSettingsDisplay();  
-                });  
-                  
-                necardify_setting.on('hover:enter', function() {  
-                    var current = Lampa.Storage.get('necardify_enabled', false);  
-                    var new_value = !current;  
-                    Lampa.Storage.set('necardify_enabled', new_value);  
-                      
-                    if (new_value) {  
-                        loadScript('https://foxstudio24.github.io/lampa/necardify.js');  
-                    }  
-                    updateSettingsDisplay();  
-                });  
-                  
-                logo_setting.on('hover:enter', function() {  
-                    var current = Lampa.Storage.get('logo_enabled', false);  
-                    var new_value = !current;  
-                    Lampa.Storage.set('logo_enabled', new_value);  
-                      
-                    if (new_value) {  
-                        loadScript('https://foxstudio24.github.io/lampa/logo.js');  
-                    }  
-                    updateSettingsDisplay();  
-                });  
-                  
-                updateSettingsDisplay();  
-            }  
-        });  
-          
-        // Функція оновлення відображення налаштувань  
-        function updateSettingsDisplay() {  
-            $('[data-name="foxstudio_interface_enabled"] .settings-param__value').text(  
-                Lampa.Storage.get('foxstudio_interface_enabled', true) ? 'Вкл' : 'Выкл'  
-            );  
-            $('[data-name="necardify_enabled"] .settings-param__value').text(  
-                Lampa.Storage.get('necardify_enabled', false) ? 'Вкл' : 'Выкл'  
-            );  
-            $('[data-name="logo_enabled"] .settings-param__value').text(  
-                Lampa.Storage.get('logo_enabled', false) ? 'Вкл' : 'Выкл'  
-            );  
-        }  
-          
-        // Ініціалізація налаштувань за замовчуванням  
-        Object.keys(default_settings).forEach(function(key) {  
-            if (Lampa.Storage.get(key) === null) {  
-                Lampa.Storage.set(key, default_settings[key]);  
-            }  
-        });  
-          
-        console.log('FoxStudio Interface Plugin завантажено');  
-    }  
-      
-    // Запуск плагіну  
-    if (window.Lampa) {  
-        init();  
-    } else {  
-        document.addEventListener('DOMContentLoaded', init);  
-    }  
-      
+(function () {
+    'use strict';
+
+    // --- ГЛОБАЛЬНІ КОНСТАНТИ ---
+    const COMPONENT_NAME = 'interface_tools_plugin';
+    const SETTINGS_TAB_NAME = 'interface_tools';
+    const SETTINGS_TAB_TITLE = 'Interface Tools';
+    const SETTINGS_STORAGE_KEY = 'plugin_interface_tools_settings'; // Ключ для збереження налаштувань
+
+    // --- ФУНКЦІЯ ВІДМАЛЬОВУВАННЯ ВМІСТУ ВКЛАДКИ ---
+
+    /**
+     * @brief Функція, яка відмальовує вміст нашої нової сторінки налаштувань.
+     * @param {object} component - Об'єкт компонента, який надає Lampa.
+     */
+    function renderSettingsPage(component) {
+        // Отримуємо поточні збережені налаштування
+        let user_settings = Lampa.Storage.get(SETTINGS_STORAGE_KEY, { 
+            test_option_enabled: false 
+        });
+
+        // Створюємо контейнер для налаштувань
+        let container = document.createElement('div');
+        container.innerHTML = `
+            <div class="settings-block">
+                <div class="settings-block__title">Налаштування Інструментів Інтерфейсу</div>
+                <div class="settings-block__description">Тут ви можете керувати власними інструментами інтерфейсу.</div>
+                
+                <div class="settings-block__item" data-name="test_option_enabled">
+                    <div class="settings-block__name">Увімкнути Тестовий Інструмент</div>
+                    <div class="settings-block__value"></div> </div>
+                
+            </div>
+        `;
+        
+        // 1. Додаємо HTML-контейнер до компонента Lampa
+        component.element.append(container);
+
+        // 2. Створюємо інтерактивний перемикач (Toggle)
+        const toggle_container = component.element.querySelector('[data-name="test_option_enabled"] .settings-block__value');
+        
+        // Створюємо новий компонент Toggle Lampa
+        let toggle = new Lampa.Toggle({
+            on: user_settings.test_option_enabled, // Початковий стан згідно зі сховищем
+            callback: function (value) {
+                // Ця функція викликається щоразу, коли користувач змінює стан перемикача
+                
+                // Оновлюємо налаштування
+                user_settings.test_option_enabled = value;
+                
+                // Зберігаємо оновлені налаштування в Lampa.Storage
+                Lampa.Storage.set(SETTINGS_STORAGE_KEY, user_settings);
+                
+                // Тут можна додати код, що виконує дію (наприклад, змінює вигляд інтерфейсу)
+                console.log(`[${COMPONENT_NAME}] Стан опції змінено на: ${value}`);
+            }
+        });
+
+        // Додаємо Toggle до його контейнера в HTML
+        toggle_container.append(toggle.render());
+
+        // Опціонально: фокусування для навігації
+        component.listener.follow(toggle_container);
+    }
+
+    // --- ФУНКЦІЯ ІНІЦІАЛІЗАЦІЇ ПЛАГІНА ---
+
+    /**
+     * @brief Запускається при ініціалізації плагіна
+     */
+    function init() {
+        console.log(`[${COMPONENT_NAME}] Плагін ініціалізовано. Версія: 1.0.0`);
+
+        if (window.Lampa && Lampa.Settings) {
+            
+            // Об'єкт, що описує нашу нову вкладку
+            let new_tab_page = {
+                title: SETTINGS_TAB_TITLE, 
+                component: COMPONENT_NAME, 
+                onRender: renderSettingsPage 
+            };
+
+            // Додаємо вкладку в налаштування
+            Lampa.Settings.add(new_tab_page, { 
+                // Вставляємо після вкладки 'interface'
+                after: 'interface' 
+            });
+
+            console.log(`[${COMPONENT_NAME}] Вкладку "${SETTINGS_TAB_TITLE}" додано.`);
+        } else {
+            console.error(`[${COMPONENT_NAME}] Lampa.Settings не доступний! Перевірте версію Lampa.`);
+        }
+    }
+
+
+    // --- РЕЄСТРАЦІЯ КОМПОНЕНТА В LAMPА ---
+    
+    Lampa.Component.add({
+        component: COMPONENT_NAME,
+        version: '1.0.0',
+        author: 'Generated by Gemini',
+        passive: true, 
+        methods: {
+            init: init 
+        }
+    });
+
 })();
