@@ -1,144 +1,150 @@
 (function () {
     "use strict";
 
-    const CACHE_NAME = 'lampa_logo_cache_v1';
-    const LOGO_SELECTOR = '.card__poster';
-    const TEXT_SELECTOR = '.card__title';
+    // Перевіряємо, чи плагін вже завантажено
+    if (window.simpleLogoPlugin) return;
+    window.simpleLogoPlugin = true;
 
-    // =============================
-    //  SETTINGS
-    // =============================
-    Lampa.SettingsApi.addParam({
-        component: 'interface',
-        param: {
-            name: 'logo_enable',
-            type: 'select',
-            values: { 1: 'Увімкнено', 0: 'Вимкнено' },
-            default: 1
-        },
-        field: 'Відображення логотипів'
-    });
+    // --- КОНСТАНТИ ТА НАЛАШТУВАННЯ ---
+    const CACHE_PREFIX = "simple_logo_cache_v1_";
+    const FADE_DURATION = 400; // мс
+    const SETTINGS_KEY = "simple_logo_enabled"; // Ключ для зберігання налаштування
 
-    Lampa.SettingsApi.addParam({
-        component: 'interface',
-        param: {
-            name: 'logo_text',
-            type: 'select',
-            values: { 1: 'Показувати', 0: 'Приховати' },
-            default: 1
-        },
-        field: 'Опис під логотипом'
-    });
-
-    Lampa.SettingsApi.addParam({
-        component: 'interface',
-        param: {
-            name: 'logo_size',
-            type: 'select',
-            values: { small: 'Маленькі', normal: 'Стандартні', large: 'Великі' },
-            default: 'normal'
-        },
-        field: 'Розмір логотипів'
-    });
-
-    Lampa.SettingsApi.addParam({
-        component: 'interface',
-        param: {
-            name: 'logo_clear',
-            type: 'trigger',
-        },
-        field: 'Очистити кеш логотипів'
-    });
-
-    // =============================
-    //  CLEAR CACHE
-    // =============================
-    Lampa.SettingsApi.listener.follow('interface', function (name) {
-        if (name === 'logo_clear') {
-            caches.delete(CACHE_NAME).then(() => {
-                Lampa.Noty.show('Кеш логотипів очищено');
-            });
-        }
-    });
-
-    // =============================
-    //  LOAD WITH CACHE
-    // =============================
-    function loadWithCache(url) {
-        return caches.open(CACHE_NAME).then(cache =>
-            cache.match(url).then(cached => {
-                if (cached) return cached.clone();
-
-                return fetch(url).then(response => {
-                    cache.put(url, response.clone());
-                    return response;
-                });
-            })
-        );
+    // Встановлення значення за замовчуванням (увімкнено)
+    if (Lampa.Storage.get(SETTINGS_KEY) === null) {
+        Lampa.Storage.set(SETTINGS_KEY, true);
     }
 
-    // =============================
-    //  APPLY EFFECTS + SETTINGS
-    // =============================
-    function applyLogo(item, url) {
-        const enable = Lampa.SettingsApi.get('logo_enable', 1);
-        const size = Lampa.SettingsApi.get('logo_size', 'normal');
-        const showText = Lampa.SettingsApi.get('logo_text', 1);
+    // Функція для отримання поточного стану
+    function isEnabled() {
+        return Lampa.Storage.get(SETTINGS_KEY);
+    }
 
-        const img = $(item).find(LOGO_SELECTOR);
-        const text = $(item).find(TEXT_SELECTOR);
+    // --- ФУНКЦІЇ ДОПОМОГИ ---
+    
+    function fadeIn(el, duration = FADE_DURATION) {
+        // ... (функція fadeIn залишається без змін)
+        el.style.opacity = 0;
+        el.style.transition = `opacity ${duration}ms ease`;
+        requestAnimationFrame(() => {
+            el.style.opacity = 1;
+        });
+    }
 
-        // hide logos
-        if (!enable) {
-            img.hide();
+    function styleLogo(img) {
+        // ... (функція styleLogo залишається без змін)
+        // ❗ Без зміни розміру — тільки базові стилі
+        img.style.height = "auto";
+        img.style.objectFit = "contain";
+        img.style.display = "block";
+    }
+
+    // --- ОБРОБНИК ПОДІЙ ---
+
+    Lampa.Listener.follow("full", function (event) {
+        // ❗ Додано перевірку налаштування
+        if (!isEnabled()) return;
+
+        if (event.type !== "complite") return;
+
+        const movie = event.data.movie;
+        const type = movie.name ? "tv" : "movie";
+        const box = event.object.activity.render().find(".full-start-new__title");
+        if (!box.length) return;
+
+        const lang = Lampa.Storage.get("language") || "en";
+        const container = box[0];
+
+        const cacheKey = `${CACHE_PREFIX}${type}_${movie.id}_${lang}`;
+        const cached = Lampa.Storage.get(cacheKey);
+
+        // ------------ КЕШ ------------
+        if (cached && cached !== "none") {
+            const img = new Image();
+            img.src = cached;
+            styleLogo(img);
+            box.empty().append(img);
+            fadeIn(img);
             return;
-        } else img.show();
+        }
 
-        // hide text
-        if (!showText) text.hide();
-        else text.show();
+        // ------------ TMDB ЗАПИТ ------------
+        const url = Lampa.TMDB.api(
+            `${type}/${movie.id}/images?api_key=${Lampa.TMDB.key()}&include_image_language=${lang},en,null`
+        );
 
-        // sizes
-        if (size === 'small') img.css({ transform: 'scale(0.75)' });
-        else if (size === 'large') img.css({ transform: 'scale(1.25)' });
-        else img.css({ transform: 'scale(1)' });
+        $.get(url, function (res) {
+            if (!res.logos || !res.logos.length) {
+                Lampa.Storage.set(cacheKey, "none");
+                return;
+            }
 
-        // fade-in
-        img.css({
-            opacity: 0,
-            transition: 'opacity 0.4s ease'
+            let path =
+                res.logos.find(l => l.iso_639_1 === lang)?.file_path ||
+                res.logos.find(l => l.iso_639_1 === "en")?.file_path ||
+                res.logos[0].file_path;
+
+            const finalUrl = Lampa.TMDB.image("/t/p/original" + path.replace(".svg", ".png"));
+            Lampa.Storage.set(cacheKey, finalUrl);
+
+            const img = new Image();
+            img.src = finalUrl;
+            img.onload = () => {
+                styleLogo(img);
+                box.empty().append(img);
+                fadeIn(img);
+            };
         });
 
-        // load logo
-        loadWithCache(url)
-            .then(resp => resp.blob())
-            .then(blob => {
-                const local = URL.createObjectURL(blob);
-                img.attr('src', local);
-
-                requestAnimationFrame(() => {
-                    img.css({ opacity: 1 });
-                });
-            });
-    }
-
-    // =============================
-    //  OBSERVER — APPLY TO ALL CARDS
-    // =============================
-    const observer = new MutationObserver(m => {
-        m.forEach(rec => {
-            rec.addedNodes.forEach(node => {
-                if ($(node).hasClass('card')) {
-                    const logoUrl = $(node).data('logo');
-
-                    if (logoUrl) applyLogo(node, logoUrl);
-                }
-            });
-        });
     });
 
-    observer.observe(document.body, { childList: true, subtree: true });
+    // --- СТВОРЕННЯ МЕНЮ НАЛАШТУВАНЬ ---
 
-    console.log('%c[Plugin] Logo Enhancer loaded', 'color: #0f0');
+    // Чекаємо готовності Lampa.Settings для додавання налаштувань
+    if (window.Lampa && Lampa.Settings) {
+        let button_logo; // Зберігаємо кнопку для оновлення тексту
+
+        // Додаємо новий розділ в меню Інтерфейс
+        Lampa.Settings.listener.follow("open", function (e) {
+            if (e.name == 'interface') {
+                e.body.find('[data-name="interface_poster_size"]').after(`
+                    <div class="settings-item selector" data-name="simple_logo_settings">
+                        <div class="settings-item__name">Логотипи фільмів</div>
+                        <div class="settings-item__value" data-value="true">${isEnabled() ? 'Увімкнено' : 'Вимкнено'}</div>
+                        <div class="settings-item__descr">Показувати логотипи замість текстової назви фільму.</div>
+                    </div>
+                `);
+
+                button_logo = e.body.find('[data-name="simple_logo_settings"]');
+                button_logo.on('hover:enter', function () {
+                    Lampa.Select.show({
+                        title: 'Логотипи фільмів',
+                        items: [
+                            {
+                                title: 'Увімкнути',
+                                value: true,
+                            },
+                            {
+                                title: 'Вимкнути',
+                                value: false,
+                            }
+                        ],
+                        selected: isEnabled(),
+                        onSelect: function (a) {
+                            Lampa.Storage.set(SETTINGS_KEY, a.value);
+                            button_logo.find('.settings-item__value').text(a.value ? 'Увімкнено' : 'Вимкнено');
+                            Lampa.Select.close();
+                            // Можна додати перезавантаження сторінки full, якщо потрібно,
+                            // але для простоти краще покластися на наступне відкриття.
+                        },
+                        onBack: function () {
+                            Lampa.Select.close();
+                            Lampa.Controller.toggle('settings_component');
+                        }
+                    });
+                });
+            }
+        });
+    }
 
 })();
