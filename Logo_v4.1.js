@@ -23,7 +23,6 @@
     // --- ФУНКЦІЇ ДОПОМОГИ ---
     
     function fadeIn(el, duration = FADE_DURATION) {
-        // ... (функція fadeIn залишається без змін)
         el.style.opacity = 0;
         el.style.transition = `opacity ${duration}ms ease`;
         requestAnimationFrame(() => {
@@ -32,8 +31,6 @@
     }
 
     function styleLogo(img) {
-        // ... (функція styleLogo залишається без змін)
-        // ❗ Без зміни розміру — тільки базові стилі
         img.style.height = "auto";
         img.style.objectFit = "contain";
         img.style.display = "block";
@@ -42,7 +39,7 @@
     // --- ОБРОБНИК ПОДІЙ ---
 
     Lampa.Listener.follow("full", function (event) {
-        // ❗ Додано перевірку налаштування
+        // Перевірка налаштування: якщо вимкнено, то виходимо
         if (!isEnabled()) return;
 
         if (event.type !== "complite") return;
@@ -53,7 +50,7 @@
         if (!box.length) return;
 
         const lang = Lampa.Storage.get("language") || "en";
-        const container = box[0];
+        // const container = box[0]; // не використовується, можна видалити
 
         const cacheKey = `${CACHE_PREFIX}${type}_${movie.id}_${lang}`;
         const cached = Lampa.Storage.get(cacheKey);
@@ -84,7 +81,10 @@
                 res.logos.find(l => l.iso_639_1 === "en")?.file_path ||
                 res.logos[0].file_path;
 
-            const finalUrl = Lampa.TMDB.image("/t/p/original" + path.replace(".svg", ".png"));
+            // Використовуємо .replace(".svg", ".png") лише для TMDB,
+            // оскільки Lampa.TMDB.image сам додає шлях /t/p/original
+            const finalUrl = Lampa.TMDB.image(path.replace(".svg", ".png")); 
+            
             Lampa.Storage.set(cacheKey, finalUrl);
 
             const img = new Image();
@@ -98,53 +98,71 @@
 
     });
 
-    // --- СТВОРЕННЯ МЕНЮ НАЛАШТУВАНЬ ---
+    // --- СТВОРЕННЯ МЕНЮ НАЛАШТУВАНЬ (Виправлено) ---
+    
+    // Додаємо новий компонент налаштувань
+    Lampa.Component.add('settings_component', {
+        name: 'logo_settings_select',
+        mount: function(data) {
+            const component = this;
 
-    // Чекаємо готовності Lampa.Settings для додавання налаштувань
-    if (window.Lampa && Lampa.Settings) {
-        let button_logo; // Зберігаємо кнопку для оновлення тексту
+            // Створення елементів меню
+            const items = [
+                {
+                    title: 'Логотипи фільмів',
+                    subtitle: 'Показувати логотипи замість текстової назви фільму.',
+                    right: true,
+                    type: 'title'
+                },
+                {
+                    title: 'Увімкнути',
+                    value: true,
+                },
+                {
+                    title: 'Вимкнути',
+                    value: false,
+                }
+            ];
+            
+            // Створення компонента Select
+            Lampa.Select.show({
+                title: 'Логотипи фільмів',
+                items: items,
+                selected: isEnabled(),
+                onSelect: function (a) {
+                    Lampa.Storage.set(SETTINGS_KEY, a.value);
+                    Lampa.Controller.select('settings_component', component.parent) // Повертаємо фокус
+                },
+                onBack: function() {
+                    Lampa.Controller.select('settings_component', component.parent) // Повертаємо фокус
+                }
+            });
+        },
+        // Не обов'язково, але для безпеки:
+        render: () => $('<div></div>') 
+    })
 
-        // Додаємо новий розділ в меню Інтерфейс
-        Lampa.Settings.listener.follow("open", function (e) {
-            if (e.name == 'interface') {
-                e.body.find('[data-name="interface_poster_size"]').after(`
-                    <div class="settings-item selector" data-name="simple_logo_settings">
-                        <div class="settings-item__name">Логотипи фільмів</div>
-                        <div class="settings-item__value" data-value="true">${isEnabled() ? 'Увімкнено' : 'Вимкнено'}</div>
-                        <div class="settings-item__descr">Показувати логотипи замість текстової назви фільму.</div>
-                    </div>
-                `);
-
-                button_logo = e.body.find('[data-name="simple_logo_settings"]');
-                button_logo.on('hover:enter', function () {
-                    Lampa.Select.show({
-                        title: 'Логотипи фільмів',
-                        items: [
-                            {
-                                title: 'Увімкнути',
-                                value: true,
-                            },
-                            {
-                                title: 'Вимкнути',
-                                value: false,
-                            }
-                        ],
-                        selected: isEnabled(),
-                        onSelect: function (a) {
-                            Lampa.Storage.set(SETTINGS_KEY, a.value);
-                            button_logo.find('.settings-item__value').text(a.value ? 'Увімкнено' : 'Вимкнено');
-                            Lampa.Select.close();
-                            // Можна додати перезавантаження сторінки full, якщо потрібно,
-                            // але для простоти краще покластися на наступне відкриття.
-                        },
-                        onBack: function () {
-                            Lampa.Select.close();
-                            Lampa.Controller.toggle('settings_component');
-                        }
-                    });
-                });
-            }
-        });
-    }
+    // Додаємо кнопку, яка відкриватиме підменю в розділ "Інтерфейс"
+    Lampa.Settings.listener.follow("open", function (e) {
+        if (e.name == 'interface') {
+            e.body.find('[data-name="interface_poster_size"]').after(`
+                <div class="settings-item selector" data-component="logo_settings_select" data-name="logo_settings">
+                    <div class="settings-item__name">Логотипи фільмів</div>
+                    <div class="settings-item__value">${isEnabled() ? 'Увімкнено' : 'Вимкнено'}</div>
+                    <div class="settings-item__descr">Налаштування відображення логотипів фільмів.</div>
+                </div>
+            `);
+            
+            // Оновлення тексту при відкритті
+            e.body.find('[data-name="logo_settings"]').find('.settings-item__value').text(isEnabled() ? 'Увімкнено' : 'Вимкнено');
+        }
+    });
+    
+    // Оновлення тексту після зміни налаштувань (для відображення одразу)
+    Lampa.Settings.listener.follow("update", function (e) {
+        if (e.name == 'interface') {
+             e.body.find('[data-name="logo_settings"]').find('.settings-item__value').text(isEnabled() ? 'Увімкнено' : 'Вимкнено');
+        }
+    });
 
 })();
