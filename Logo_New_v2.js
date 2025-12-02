@@ -1,17 +1,16 @@
 !function() {  
     "use strict";  
       
-    // =======================================================  
-    // I. НАЛАШТУВАННЯ ПЛАГІНА (Lampa.SettingsApi)  
-    // =======================================================  
-      
-    // 1. Приховати/Відобразити логотипи  
+    // Add settings parameters for logo functionality  
     Lampa.SettingsApi.addParam({  
         component: "interface",  
         param: {  
             name: "logo_glav",  
             type: "select",  
-            values: { 1: "Скрыть", 0: "Отображать" },  
+            values: {  
+                1: "Скрыть",  
+                0: "Отображать"  
+            },  
             default: "0"  
         },  
         field: {  
@@ -20,7 +19,6 @@
         }  
     });  
       
-    // 2. Мова логотипу  
     Lampa.SettingsApi.addParam({  
         component: "interface",  
         param: {  
@@ -47,7 +45,6 @@
         }  
     });  
       
-    // 3. Розмір логотипу  
     Lampa.SettingsApi.addParam({  
         component: "interface",  
         param: {  
@@ -67,165 +64,256 @@
         }  
     });  
       
-    // 4. Анімація  
     Lampa.SettingsApi.addParam({  
         component: "interface",  
         param: {  
-            name: "logo_animation",  
+            name: "logo_animation_type",  
             type: "select",  
             values: {  
-                "": "Без анимации",  
-                fade: "Fade",  
-                slide: "Slide",  
-                zoom: "Zoom"  
+                js: "JavaScript",  
+                css: "CSS"  
             },  
-            default: ""  
+            default: "css"  
         },  
         field: {  
-            name: "Анимация логотипа",  
-            description: "Эффект появления логотипа"  
+            name: "Тип анимации логотипов",  
+            description: "Способ анимации логотипов"  
         }  
     });  
       
-    // 5. Висота тексту  
-    Lampa.SettingsApi.addParam({  
-        component: "interface",  
-        param: {  
-            name: "logo_use_text_height",  
-            type: "trigger",  
-            default: false  
-        },  
-        field: {  
-            name: "Использовать высоту текста",  
-            description: "Адаптировать размер логотипа под высоту текста"  
-        }  
-    });  
-      
-    // 6. Приховати рік  
     Lampa.SettingsApi.addParam({  
         component: "interface",  
         param: {  
             name: "logo_hide_year",  
             type: "trigger",  
-            default: false  
+            default: !0  
         },  
         field: {  
-            name: "Скрыть год",  
-            description: "Скрывать год при отображении логотипа"  
+            name: "Скрывать год и страну",  
+            description: "Скрывает информацию над логотипом"  
         }  
     });  
       
-    // =======================================================  
-    // II. ОСНОВНА ФУНКЦІЯ ПЛАГІНА  
-    // =======================================================  
+    Lampa.SettingsApi.addParam({  
+        component: "interface",  
+        param: {  
+            name: "logo_use_text_height",  
+            type: "trigger",  
+            default: !1  
+        },  
+        field: {  
+            name: "Логотип по высоте текста",  
+            description: "Размер логотипа равен высоте текста"  
+        }  
+    });  
       
-    window.logoplugin || (window.logoplugin = !0, Lampa.Listener.follow("full", (function(a) {  
-        if ("complite" == a.type) {  
-            var t = a.data.movie;  
-            if (t && t.title && (!Lampa.Storage.get("logo_glav", !1) || "none" === Lampa.Storage.get("logo_glav", !1))) {  
-                var e = $(".full-start-new__title"),  
-                    n = e.find("span"),  
-                    r = e.parent(),  
-                    i = parseInt(r.css("font-size")),  
-                    o = Lampa.Storage.get("logo_animation", ""),  
-                    s = Lampa.Storage.get("logo_hide_year", !1),  
-                    l = Lampa.Storage.get("logo_lang", ""),  
-                    d = Lampa.Storage.get("logo_size", "original"),  
-                    c = Lampa.Storage.get("logo_use_text_height", !1),  
-                    u = function() {  
-                        var a = l || Lampa.Storage.get("language", "ru");  
-                        return "uk" === a ? "ua" : a  
-                    }(),  
-                    h = "logo_" + t.title + "_" + u + "_" + d,  
-                    p = Lampa.Storage.get(h, "none");  
-                  
-                if ("none" !== p) {  
-                    if ("loading" === p) return void setTimeout(u, 200);  
-                      
-                    var f = function() {  
-                        var a = new Image;  
-                        a.onload = function() {  
-                            var t = document.createElement("img");  
-                            t.src = p, t.style.cssText = "max-width:100%;height:auto;vertical-align:middle;";  
-                            var f = Lampa.Storage.get("logo_use_text_height", !1) && i;  
-                            f ? (t.style.height = i + "px", t.style.width = "auto") : window.innerWidth < 768 ? (t.style.width = "100%", t.style.height = "auto") : (t.style.width = "7em", t.style.height = "auto");  
-                              
-                            var g = document.createElement("div");  
-                            g.style.cssText = "display:inline-block;vertical-align:middle;margin-right:10px;";  
-                            var m = document.createElement("div");  
-                            m.style.cssText = "display:inline-block;vertical-align:middle;";  
-                              
-                            if (s) {  
-                                var v = r.find(".full-start-new__data");  
-                                v.length && v.find("span").each((function() {  
-                                    var a = $(this).text();  
-                                    a.match(/^\d{4}$/) && $(this).hide()  
-                                }))  
-                            }  
-                              
-                            switch (o) {  
-                                case "fade":  
-                                    g.style.opacity = "0", g.style.transition = "opacity 0.5s ease", m.appendChild(t), g.appendChild(m), e.empty().append(g), setTimeout((function() {  
-                                        g.style.opacity = "1"  
-                                    }), 100);  
-                                    break;  
-                                case "slide":  
-                                    g.style.transform = "translateX(-100%)", g.style.transition = "transform 0.5s ease", m.appendChild(t), g.appendChild(m), e.empty().append(g), setTimeout((function() {  
-                                        g.style.transform = "translateX(0)"  
-                                    }), 100);  
-                                    break;  
-                                case "zoom":  
-                                    g.style.transform = "scale(0)", g.style.transition = "transform 0.5s ease", m.appendChild(t), g.appendChild(m), e.empty().append(g), setTimeout((function() {  
-                                        g.style.transform = "scale(1)"  
-                                    }), 100);  
-                                    break;  
-                                default:  
-                                    m.appendChild(t), e.empty().append(m)  
-                            }  
-                        }, a.onerror = function() {  
-                            Lampa.Storage.set(h, "none"), r.css({  
-                                opacity: "1",  
+    Lampa.SettingsApi.addParam({  
+        component: "interface",  
+        param: {  
+            name: "logo_clear_cache",  
+            type: "button"  
+        },  
+        field: {  
+            name: "Сбросить кеш логотипов",  
+            description: "Нажмите для очистки кеша изображений"  
+        },  
+        onChange: function() {  
+            Lampa.Select.show({  
+                title: "Сбросить кеш?",  
+                items: [{  
+                    title: "Да",  
+                    confirm: !0  
+                }, {  
+                    title: "Нет"  
+                }],  
+                onSelect: function(e) {  
+                    if (e.confirm) {  
+                        for (var t = [], n = 0; n < localStorage.length; n++) {  
+                            var a = localStorage.key(n);  
+                            -1 !== a.indexOf("logo_cache_width_based_v1_") && t.push(a)  
+                        }  
+                        t.forEach((function(e) {  
+                            localStorage.removeItem(e)  
+                        })), window.location.reload()  
+                    } else Lampa.Controller.toggle("settings_component")  
+                },  
+                onBack: function() {  
+                    Lampa.Controller.toggle("settings_component")  
+                }  
+            })  
+        }  
+    });  
+      
+    // Initialize logo plugin if not already loaded  
+    window.logoplugin || function() {  
+        var e = 300,  
+            t = 400,  
+            n = 400,  
+            a = Lampa.Storage.get("logo_hide_year", !0) ? 0 : .3;  
+  
+        // Animation function for opacity transitions  
+        function i(e, t, n, a, i) {  
+            var o = null;  
+            requestAnimationFrame((function s(l) {  
+                o || (o = l);  
+                var r = l - o,  
+                    g = Math.min(r / a, 1),  
+                    c = 1 - Math.pow(1 - g, 3);  
+                e.style.opacity = t + (n - t) * c, r < a ? requestAnimationFrame(s) : i && i()  
+            }))  
+        }  
+  
+        // Function to style logo image  
+        function o(e, t, n, i) {  
+            t && (t.style.height = "", t.style.overflow = "", t.style.display = "", t.style.transition = "none", t.style.boxSizing = ""), e.style.marginTop = "0", e.style.marginLeft = "0", e.style.paddingTop = a + "em";  
+            var o = .2;  
+            window.innerWidth < 768 && n && (o = .5), e.style.paddingBottom = o + "em", Lampa.Storage.get("logo_use_text_height", !1) && i ? (e.style.height = i + "px", e.style.width = "auto", e.style.maxWidth = "100%", e.style.maxHeight = "none") : window.innerWidth < 768 ? (e.style.width = "100%", e.style.height = "auto", e.style.maxWidth = "100%", e.style.maxHeight = "none") : (e.style.width = "7em", e.style.height = "auto", e.style.maxHeight = "none", e.style.maxWidth = "100%"), e.style.boxSizing = "border-box", e.style.display = "block", e.style.objectFit = "contain", e.style.objectPosition = "left bottom", e.style.opacity = "1", e.style.transition = "none"  
+        }  
+  
+        window.logoplugin = !0, Lampa.Listener.follow("full", (function(a) {  
+            if ("complite" == a.type && "1" != Lampa.Storage.get("logo_glav")) {  
+                var s = a.data.movie,  
+                    l = s.name ? "tv" : "movie",  
+                    r = a.object.activity.render().find(".full-start-new__title"),  
+                    g = a.object.activity.render().find(".full-start-new__head"),  
+                    c = a.object.activity.render().find(".full-start-new__details"),  
+                    p = a.object.activity.render().find(".full-start-new__tagline"),  
+                    m = p.length > 0 && "" !== p.text().trim(),  
+                    d = r[0],  
+                    f = Lampa.Storage.get("logo_lang", ""),  
+                    y = f || Lampa.Storage.get("language"),  
+                    u = Lampa.Storage.get("logo_size", "original"),  
+                    h = function(e, t, n) {  
+                        return "logo_cache_width_based_v1_" + e + "_" + t + "_" + n  
+                    }(l, s.id, y);  
+  
+                // Function to move head information  
+                function L(t, a) {  
+                    if (g.length && c.length && !(c.find(".logo-moved-head").length > 0) && Lampa.Storage.get("logo_hide_year", !0)) {  
+                        var o = g.html();  
+                        if (o) {  
+                            var s = $('<span class="logo-moved-head">' + o + "</span>"),  
+                                l = $('<span class="full-start-new__split logo-moved-separator">●</span>');  
+                            t ? (s.css({  
+                                opacity: 0,  
+                                marginLeft: "0.6em",  
                                 transition: "none"  
-                            })  
-                        }, a.src = p  
-                    };  
-                      
-                    if ("loading" === Lampa.Storage.get(h + "_year", "none")) {  
-                        var g = setInterval((function() {  
-                            "none" !== Lampa.Storage.get(h + "_year", "none") && (clearInterval(g), f())  
-                        }), 200)  
-                    } else f()  
-                } else {  
-                    Lampa.Storage.set(h, "loading");  
-                    var m = "https://api.themoviedb.org/3/" + (t.tv ? "tv" : "movie") + "/" + (t.tv ? t.tv.id : t.id) + "/images?api_key=4ef0d7355d9ffb5151e987764708ce75&include_image_language=" + u + ",null,en";  
-                    $.ajax({  
-                        url: m,  
-                        type: "GET",  
-                        dataType: "json",  
-                        success: function(a) {  
-                            if (a.logos && a.logos.length) {  
-                                for (var e = function(a) {  
-                                        return "original" === d ? a.file_path : a.file_path.replace(/original/, d)  
-                                    }, n = function(a) {  
-                                        return a.iso_639_1 === u  
-                                    }, r = a.logos.filter(n).sort((function(a, n) {  
-                                        return a.vote_average - n.vote_average  
-                                    })), i = 0; i < r.length; i++) {  
-                                    var o = r[i];  
-                                    if (o.file_path) {  
-                                        var s = "https://image.tmdb.org/t/p/" + e(o);  
-                                        Lampa.Storage.set(h, s), Lampa.Storage.set(h + "_year", "loaded"), f();  
+                            }), l.css({  
+                                opacity: 0,  
+                                transition: "none"  
+                            }), c.children().length > 0 && c.append(l), c.append(s), "js" === a ? (g.css("transition", "none"), i(g[0], 1, 0, e, (function() {  
+                                i(s[0], 0, 1, n), i(l[0], 0, 1, n)  
+                            }))) : (g.css({  
+                                transition: "opacity 0.3s ease",  
+                                opacity: "0"  
+                            }), setTimeout((function() {  
+                                s.css({  
+                                    transition: "opacity 0.4s ease",  
+                                    opacity: "1"  
+                                }), l.css({  
+                                    transition: "opacity 0.4s ease",  
+                                    opacity: "1"  
+                                })  
+                            }), e))) : (g.css("opacity", "0"), c.children().length > 0 && c.append(l), c.append(s))  
+                        }  
+                    }  
+                }  
+  
+                // Check cache for existing logo  
+                var _ = Lampa.Storage.get(h);  
+                if (_ && "none" !== _) {  
+                    var v = new Image;  
+                    v.src = _;  
+                    var w = 0;  
+                    return d && (w = d.getBoundingClientRect().height), o(v, null, m, w), r.empty().append(v), r.css({  
+                        opacity: "1",  
+                        transition: "none"  
+                    }), void L(!1)  
+                }  
+  
+                // Fetch logo from TMDB if not cached  
+                if (r.css({  
+                        opacity: "1",  
+                        transition: "none"  
+                    }), "" != s.id) {  
+                    w = 0;  
+                    requestAnimationFrame((function() {  
+                        d && (w = d.getBoundingClientRect().height)  
+                    }));  
+                    var S = Lampa.TMDB.api(l + "/" + s.id + "/images?api_key=" + Lampa.TMDB.key() + "&include_image_language=" + y + ",en", null);  
+                    $.get(S, (function(a) {  
+                        var s = null;  
+                        if (d && (w = d.getBoundingClientRect().height), a.logos && a.logos.length > 0) {  
+                            for (var l = 0; l < a.logos.length; l++)  
+                                if (a.logos[l].iso_639_1 == y) {  
+                                    s = a.logos[l].file_path;  
+                                    break  
+                                }  
+                            if (!s)  
+                                for (var g = 0; g < a.logos.length; g++)  
+                                    if ("en" == a.logos[g].iso_639_1) {  
+                                        s = a.logos[g].file_path;  
                                         break  
                                     }  
-                                }  
-                            } else Lampa.Storage.set(h, "none")  
-                        },  
-                        error: function() {  
-                            Lampa.Storage.set(h, "none")  
+                            s || (s = a.logos[0].file_path)  
                         }  
-                    })  
+                        if (s) {  
+                            var c = Lampa.TMDB.image("/t/p/" + u + s.replace(".svg", ".png"));  
+                            Lampa.Storage.set(h, c);  
+                            var p = new Image;  
+                            p.src = c, o(p, null, m, w), p.style.opacity = "0", p.onload = function() {  
+                                setTimeout((function() {  
+                                    d && (w = d.getBoundingClientRect().height);  
+                                    var a = Lampa.Storage.get("logo_animation_type", "css");  
+                                    L(!0, a), "js" === a ? (r.css({  
+                                        transition: "none"  
+                                    }), i(d, 1, 0, e, (function() {  
+                                        r.empty(), r.append(p), r.css({  
+                                            opacity: "1",  
+                                            transition: "none"  
+                                        });  
+                                        var e, a, s, l, g, c, f = d.getBoundingClientRect().height;  
+                                        d.style.height = w + "px", d.style.display = "block", d.style.overflow = "hidden", d.style.boxSizing = "border-box", d.offsetHeight, d.style.transition = "none", e = d, a = w, s = f, l = t, g = function() {  
+                                            setTimeout((function() {  
+                                                o(p, d, m, w)  
+                                            }), 450)  
+                                        }, c = null, requestAnimationFrame((function t(n) {  
+                                            c || (c = n);  
+                                            var i = n - c,  
+                                                o = Math.min(i / l, 1),  
+                                                r = 1 - Math.pow(1 - o, 3);  
+                                            e.style.height = a + (s - a) * r + "px", i < l ? requestAnimationFrame(t) : g && g()  
+                                        })), setTimeout((function() {  
+                                            p.style.transition = "none", i(p, 0, 1, n)  
+                                        }), Math.max(0, 300))  
+                                    }))) : (r.css({  
+                                        transition: "opacity 0.3s ease",  
+                                        opacity: "0"  
+                                    }), setTimeout((function() {  
+                                        r.empty(), r.append(p), r.css({  
+                                            opacity: "1",  
+                                            transition: "none"  
+                                        });  
+                                        var e = d.getBoundingClientRect().height;  
+                                        d.style.height = w + "px", d.style.display = "block", d.style.overflow = "hidden", d.style.boxSizing = "border-box", d.offsetHeight, d.style.transition = "height 0.4s cubic-bezier(0.4, 0, 0.2, 1)", requestAnimationFrame((function() {  
+                                            d.style.height = e + "px", setTimeout((function() {  
+                                                p.style.transition = "opacity 0.4s ease", p.style.opacity = "1"  
+                                            }), Math.max(0, 300)), setTimeout((function() {  
+                                                o(p, d, m, w)  
+                                            }), 850)  
+                                        }))  
+                                    }), e))  
+                                }), 200)  
+                            }, p.onerror = function() {  
+                                Lampa.Storage.set(h, "none"), r.css({  
+                                    opacity: "1",  
+                                    transition: "none"  
+                                })  
+                            }  
+                        } else Lampa.Storage.set(h, "none")  
+                    })).fail((function() {}))  
                 }  
             }  
-        }  
-    })))  
+        }))  
+    }()  
 }();
