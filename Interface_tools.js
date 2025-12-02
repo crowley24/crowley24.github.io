@@ -53,15 +53,21 @@
             }  
         });  
   
-        // Створюємо нову вкладку в налаштуваннях  
-        Lampa.Settings.submenu({  
-            name: Lampa.Lang.translate('interface_tools_title'),  
-            submenu: 'interface_tools'  
-        });  
-  
-        // Додаємо налаштування в інтерфейс  
+        // Додаємо пункт меню для нашої вкладки  
         Lampa.Settings.listener.follow('open', function(e) {  
-            // Перевіряємо, чи відкриваємо нашу вкладку Interface tools  
+            // Додаємо наш пункт в головне меню налаштувань  
+            if (e.name === 'main') {  
+                var interface_tools_item = $('<div class="settings-param selector" data-name="interface_tools">');  
+                interface_tools_item.append('<div class="settings-param__name">' + Lampa.Lang.translate('interface_tools_title') + '</div>');  
+                interface_tools_item.append('<div class="settings-param__value">➤</div>');  
+                e.body.append(interface_tools_item);  
+                  
+                interface_tools_item.on('hover:enter', function() {  
+                    Lampa.Settings.open('interface_tools');  
+                });  
+            }  
+              
+            // Відображаємо налаштування у нашій вкладці  
             if (e.name === 'interface_tools') {  
                 // Основне налаштування інтерфейсу  
                 var foxstudio_interface = $('<div class="settings-param selector" data-type="toggle" data-name="foxstudio_interface_enabled">');  
@@ -121,10 +127,10 @@
             $('[data-name="foxstudio_interface_enabled"] .settings-param__value').text(  
                 Lampa.Storage.get('foxstudio_interface_enabled', true) ? 'Вкл' : 'Выкл'  
             );  
-            $('[data-name="necardify_enabled"] .settings-param__value"]').text(  
+            $('[data-name="necardify_enabled"] .settings-param__value').text(  
                 Lampa.Storage.get('necardify_enabled', false) ? 'Вкл' : 'Выкл'  
             );  
-            $('[data-name="logo_enabled"] .settings-param__value"]').text(  
+            $('[data-name="logo_enabled"] .settings-param__value').text(  
                 Lampa.Storage.get('logo_enabled', false) ? 'Вкл' : 'Выкл'  
             );  
         }  
