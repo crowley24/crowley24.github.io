@@ -20,7 +20,7 @@
         /* Контейнер бейджів */  
         .card__quality-badge {  
             position: absolute !important;  
-            bottom: 90px !important;  
+            top: 10px !important;  
             left: 7px !important;  
             display: flex !important;  
             gap: 4px !important;  
