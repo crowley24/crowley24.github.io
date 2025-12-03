@@ -29,7 +29,7 @@
         
         /* Базовий стиль тега */
         .quality-tag {
-            font-size: 0.75em !important;
+            font-size: 0.9em !important;
             font-weight: 700 !important;
             padding: 5px 10px !important;
             border-radius: 4px !important;
