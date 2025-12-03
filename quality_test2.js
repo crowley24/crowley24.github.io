@@ -1,185 +1,287 @@
-(function() {      
-  'use strict';      
-        
-  function waitForLampa(callback) {      
-    if (window.Lampa && Lampa.Storage && Lampa.TMDB && Lampa.Lang && Lampa.SettingsApi && Lampa.Template) {      
-      callback();      
-    } else {      
-      setTimeout(function() { waitForLampa(callback); }, 100);      
-    }      
-  }      
-        
-  waitForLampa(function() {      
-    if (window.customhub_plugin) return;      
-    window.customhub_plugin = true;      
-          
-    console.log('[CustomHub] Ініціалізація плагіна');      
-          
-    // Додавання CSS стилів    
-    var style = document.createElement('style');    
-    style.textContent = `    
-      .customhub-section {    
-        margin: 2em 0;    
-        padding: 0 2em;    
-      }    
-      .customhub-section__title {    
-        font-size: 1.3em;    
-        font-weight: bold;    
-        margin-bottom: 1em;    
-        color: #fff;    
-      }    
-      .customhub-cards {    
-        display: grid;    
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));    
-        gap: 1em;    
-      }    
-      .customhub-card {    
-        position: relative;    
-        background-size: cover;    
-        background-position: center;    
-        border-radius: 0.5em;    
-        overflow: hidden;    
-      }    
-      .customhub-card__overlay {    
-        position: absolute;    
-        bottom: 0;    
-        left: 0;    
-        right: 0;    
-        background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);    
-        padding: 1em;    
-      }    
-      .customhub-card__title {    
-        color: #fff;    
-        font-size: 0.9em;    
-        font-weight: bold;    
-        margin: 0;    
-      }    
-      .customhub-card__year {    
-        color: #ccc;    
-        font-size: 0.8em;    
-        margin-top: 0.2em;    
-      }    
-      // ✅ Додати стилі для відображення якості    
-      .full-start__status.surs_quality {    
-        color: #ff6b6b !important;    
-        font-size: 0.8em;    
-        font-weight: bold;    
-        padding: 0.2em 0.5em;    
-        background: rgba(0,0,0,0.7);    
-        border-radius: 0.3em;    
-        margin-left: 0.5em;    
-      }    
-    `;    
-    document.head.appendChild(style);    
-          
-    // Локалізація    
-    Lampa.Lang.add({    
-      customhub: {    
-        en: 'Custom Hub',    
-        uk: 'Custom Hub',    
-        ru: 'Custom Hub'    
-      }    
-    });    
-          
-    // Налаштування    
-    var categories = [    
-      { id: 'trending', name: 'Trending', endpoint: 'trending/movie/day', defaultOrder: 1 },    
-      { id: 'popular', name: 'Popular', endpoint: 'movie/popular', defaultOrder: 2 },    
-      { id: 'top_rated', name: 'Top Rated', endpoint: 'movie/top_rated', defaultOrder: 3 },    
-      { id: 'upcoming', name: 'Upcoming', endpoint: 'movie/upcoming', defaultOrder: 4 }    
-    ];    
-          
-    // Функція завантаження даних з TMDB    
-    function loadTMDB(endpoint, callback) {    
-      Lampa.TMDB.get(endpoint, function(data) {    
-        if (data && data.results) {    
-          callback(data.results);    
-        } else {    
-          callback([]);    
-        }    
-      });    
-    }    
-          
-    // Функція створення карток    
-    function createCards(movies, container) {    
-      var cardsContainer = document.createElement('div');    
-      cardsContainer.className = 'customhub-cards';    
-          
-      movies.forEach(function(movie) {    
-        var card = Lampa.Template.js('card');    
-        card.create({    
-          title: movie.title,    
-          poster: movie.poster_path ? 'https://image.tmdb.org/t/p/w500' + movie.poster_path : null,    
-          year: movie.release_date ? movie.release_date.split('-')[0] : null    
-        });    
-          
-        var cardElement = card.render();    
-          
-        // ✅ Додати відображення якості    
-        var qualityElement = document.createElement('div');    
-        qualityElement.className = 'full-start__status surs_quality';    
-        qualityElement.textContent = 'HD'; // Можна динамічно визначати якість    
-          
-        // Знайти область рейтингу та додати якість    
-        var rateLine = cardElement.querySelector('.full-start-new__rate-line');    
-        if (rateLine) {    
-          rateLine.appendChild(qualityElement);    
-        }    
-          
-        cardsContainer.appendChild(cardElement);    
-      });    
-          
-      container.appendChild(cardsContainer);    
-    }    
-          
-    // Функція рендерингу категорії    
-    function renderCategory(category, container) {    
-      var section = document.createElement('div');    
-      section.className = 'customhub-section';    
-          
-      var title = document.createElement('div');    
-      title.className = 'customhub-section__title';    
-      title.textContent = category.name;    
-      section.appendChild(title);    
-          
-      loadTMDB(category.endpoint, function(movies) {    
-        createCards(movies.slice(0, 10), section); // Обмежити до 10 фільмів    
-      });    
-          
-      container.appendChild(section);    
-    }    
-          
-    // Ініціалізація головної сторінки    
-    function initHomePage() {    
-      Lampa.Listener.follow('app', function(e) {    
-        if (e.type === 'ready') {    
-          var mainContainer = document.querySelector('.full-start-new');    
-          if (mainContainer) {    
-            var customContainer = document.createElement('div');    
-            customContainer.className = 'customhub-container';    
-              
-            // Сортування категорій    
-            var activeCategories = categories.filter(function(cat) {    
-              return Lampa.Storage.get('customhub_' + cat.id + '_enabled', true);    
-            }).sort(function(a, b) {    
-              var orderA = parseInt(Lampa.Storage.get('customhub_' + a.id + '_order', a.defaultOrder));    
-              var orderB = parseInt(Lampa.Storage.get('customhub_' + b.id + '_order', b.defaultOrder));    
-              return orderA - orderB;    
-            });    
-                    
-            // Рендерити категорії    
-            activeCategories.forEach(function(cat) {    
-              renderCategory(cat, customContainer);    
-            });    
-              
-            mainContainer.appendChild(customContainer);    
-          }    
-        }    
-      });    
-    }    
-        
-    // ВАЖЛИВО: Викликати функцію в кінці      
-    initHomePage();    
+(function () {
+    'use strict';
+
+    // =======================================================
+    // I. КОНФІГУРАЦІЯ
+    // =======================================================
+    const DEBUG = false;
+    const QUALITY_CACHE = 'dv_quality_cache_v2'; // Оновлений ключ кешу
+    const CACHE_TIME = 24 * 60 * 60 * 1000; // 24 години
     
-  });  // Закриває waitForLampa callback      
-})(
+    // Пріоритети для визначення найкращої якості (чим вище індекс, тим вищий пріоритет)
+    const QUALITY_PRIORITY = ['4K', 'HDR', 'HDR10+', 'DV'];
+
+    // =======================================================
+    // II. СТИЛІ ТА CSS КОД
+    // =======================================================
+    const style = document.createElement('style');  
+style.id = 'dv_quality_style';  
+style.textContent = `  
+    /* Контейнер бейджів */  
+    .card__quality-badge {  
+        position: absolute !important;  
+        top: 5px !important;       /* ✅ Змінено на верхній правий кут */  
+        right: 5px !important;     /* ✅ Справа як рейтинг */  
+        display: flex !important;  
+        gap: 4px !important;  
+        z-index: 9999 !important;  
+    }  
+      
+    /* Решта стилів залишається без змін */  
+    .quality-tag {  
+        font-size: 0.55em !important;  
+        font-weight: 700 !important;  
+        padding: 3px 6px !important;  
+        border-radius: 4px !important;  
+        letter-spacing: 0.5px !important;  
+        text-transform: uppercase !important;  
+        line-height: 1;  
+        background: rgba(0,0,0,0.8) !important;  
+        color: #fff !important;  
+        border: 1px solid rgba(255,255,255,0.2) !important;  
+    }  
+  
+    .quality-tag.dv {  
+        background: #8A2BE2 !important;  
+        border-color: #A968FF !important;  
+    }  
+  
+    .quality-tag.hdr10-plus {  
+        background: #FFA500 !important;  
+        border-color: #FFC064 !important;  
+    }  
+      
+    .quality-tag.hdr {  
+        background: #FFD700 !important;  
+        color: #333 !important;  
+        border-color: #FFE890 !important;  
+    }  
+  
+    .quality-tag.4k {  
+        background: #333333 !important;  
+        border-color: #555555 !important;  
+        }
+    `;
+    document.head.appendChild(style);
+
+    // =======================================================
+    // III. ФУНКЦІОНАЛЬНІСТЬ
+    // =======================================================
+
+    /**
+     * Визначає найкращу якість за назвою торрента.
+     * @param {string} torrentTitle Назва торрента.
+     * @returns {string | null} Рядок якості ('DV', 'HDR10+', 'HDR', '4K') або null.
+     */
+    function detectQuality(torrentTitle) {
+        if (!torrentTitle) return null;
+        
+        const title = torrentTitle.toLowerCase();
+
+        if (/\b(dolby\s*vision|dolbyvision|dv|dovi)\b/i.test(title)) return 'DV';
+        if (/\b(hdr10\+)\b/i.test(title)) return 'HDR10+';
+        if (/\b(hdr|hdr10)\b/i.test(title)) return 'HDR';
+        if (/\b(4k|2160p|uhd)\b/i.test(title)) return '4K';
+        
+        return null;
+    }
+
+    /**
+     * Витягує необхідні дані з картки Lampa.
+     * @param {HTMLElement} card Елемент картки.
+     * @returns {{id: string, title: string, year: string} | null} Дані фільму/серіалу.
+     */
+    function getCardData(card) {
+        const data = card.card_data;
+        if (!data) return null;
+        
+        return {
+            id: String(data.id || ''), // Усі ID мають бути рядками
+            title: data.title || data.name || '',
+            year: data.release_date ? data.release_date.substring(0, 4) : ''
+        };
+    }
+
+    /**
+     * Запит до API для отримання торрентів.
+     * @param {{title: string, year: string}} movieData Дані для пошуку.
+     * @returns {Promise<Array<{title: string}>>} Масив торрентів.
+     */
+    async function getTorrents(movieData) {
+        if (!movieData || !movieData.title) {
+            return [];
+        }
+        
+        const apiHost = Lampa.Storage.get('jacred.xyz') || 'jacred.xyz';
+        const apiUrl = 'http://' + apiHost + 
+                       '/api/v1.0/torrents?search=' + encodeURIComponent(movieData.title) + 
+                       '&year=' + movieData.year + '&exact=true';
+
+        try {
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+                if (DEBUG) console.error('DV Quality: API error', response.status);
+                return [];
+            }
+            const torrents = await response.json();
+            return Array.isArray(torrents) ? torrents : [];
+        } catch (error) {
+            if (DEBUG) console.error('DV Quality: Fetch failed', error);
+            return [];
+        }
+    }
+
+    /**
+     * Додає значок якості до картки.
+     * @param {HTMLElement} card Елемент картки.
+     * @param {string} bestQuality Визначена найкраща якість ('DV', 'HDR', '4K' і т.д.).
+     */
+    function addQualityBadge(card, bestQuality) {
+        if (!card || !bestQuality) return;
+
+        let existing = card.querySelector('.card__quality-badge');
+        if (existing) existing.remove();
+
+        const box = document.createElement('div');
+        box.className = 'card__quality-badge';
+
+        // 1. Спочатку додаємо 4K, якщо це не 4K-реліз (але DV/HDR)
+        if (bestQuality !== '4K' && (bestQuality.includes('DV') || bestQuality.includes('HDR'))) {
+            const tag4k = document.createElement('div');
+            tag4k.className = 'quality-tag 4k';
+            tag4k.textContent = '4K';
+            box.appendChild(tag4k);
+        } else if (bestQuality === '4K') {
+            // Якщо знайдено тільки 4K, додаємо його першим
+            const tag = document.createElement('div');
+            tag.className = 'quality-tag 4k';
+            tag.textContent = '4K';
+            box.appendChild(tag);
+            return; // Завершуємо, бо немає сенсу додавати 4K двічі
+        }
+
+        // 2. Додаємо основний тег якості
+        const tag = document.createElement('div');
+        // Перетворюємо 'HDR10+' на 'hdr10-plus' для CSS-класу
+        const tagClass = bestQuality.toLowerCase().replace('+', '-plus'); 
+        
+        tag.className = 'quality-tag ' + tagClass;
+        tag.textContent = bestQuality;
+        box.appendChild(tag);
+
+        card.appendChild(box);
+    }
+    
+    /**
+     * Очищає застарілі записи в кеші.
+     * @param {Object} cache Поточний об'єкт кешу.
+     * @returns {Object} Очищений об'єкт кешу.
+     */
+    function cleanupCache(cache) {
+        const now = Date.now();
+        const cleanedCache = {};
+        let cleaned = 0;
+        
+        for (const id in cache) {
+            if (cache.hasOwnProperty(id)) {
+                if (now - cache[id].timestamp < CACHE_TIME) {
+                    cleanedCache[id] = cache[id];
+                } else {
+                    cleaned++;
+                }
+            }
+        }
+        if (DEBUG && cleaned > 0) console.log(`DV Quality: Cleaned ${cleaned} expired cache entries.`);
+        return cleanedCache;
+    }
+
+
+    /**
+     * Обробляє одну картку: перевіряє кеш або робить API-запит.
+     * @param {HTMLElement} card Елемент картки.
+     */
+    async function processCard(card) {
+        if (card.hasAttribute('data-dv-processed')) return;
+        
+        const movieData = getCardData(card);
+        if (!movieData || !movieData.id) return;
+        
+        card.setAttribute('data-dv-processed', 'true');
+
+        // Кеш
+        let cache = JSON.parse(localStorage.getItem(QUALITY_CACHE) || '{}');
+        const cached = cache[movieData.id];
+
+        if (cached && (Date.now() - cached.timestamp < CACHE_TIME)) {
+            if (cached.quality) addQualityBadge(card, cached.quality);
+            return;
+        }
+
+        // API
+        const torrents = await getTorrents(movieData);
+        let bestQuality = null;
+
+        torrents.forEach(t => {
+            const q = detectQuality(t.title);
+            if (!q) return;
+
+            // Логіка пріоритетів: вибираємо якість з вищим індексом у масиві QUALITY_PRIORITY
+            if (!bestQuality || 
+                QUALITY_PRIORITY.indexOf(q) > QUALITY_PRIORITY.indexOf(bestQuality)) {
+                bestQuality = q;
+            }
+        });
+
+        // Оновлення кешу (включаючи очищення)
+        cache = cleanupCache(cache);
+        cache[movieData.id] = {
+            quality: bestQuality,
+            timestamp: Date.now()
+        };
+        localStorage.setItem(QUALITY_CACHE, JSON.stringify(cache));
+
+        if (bestQuality) addQualityBadge(card, bestQuality);
+    }
+
+    /**
+     * Обробляє всі необроблені картки в DOM.
+     */
+    function processAllCards() {
+        // Вибираємо картки, які є видимими в поточному ряду, щоб уникнути затримок
+        const cards = document.querySelectorAll('.card:not([data-dv-processed])');
+        cards.forEach(card => processCard(card));
+    }
+
+    // =======================================================
+    // IV. ІНІЦІАЛІЗАЦІЯ
+    // =======================================================
+    
+    // Використовуємо MutationObserver для відстеження нових елементів
+    const observer = new MutationObserver(() => {
+        // Невелика затримка, щоб DOM мав час стабілізуватися
+        setTimeout(processAllCards, 500);
+    });
+
+    function init() {
+        if (DEBUG) console.log('DV Quality: Initialized and observing body changes.');
+        // Починаємо спостереження за додаванням нових карток
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+        // Початкова обробка
+        processAllCards();
+    }
+
+    // Запуск: чекаємо, поки Lampa буде готова
+    if (typeof Lampa !== 'undefined') {
+        init();
+    } else {
+        const wait = setInterval(() => {
+            if (typeof Lampa !== 'undefined') {
+                clearInterval(wait);
+                init();
+            }
+        }, 500);
+    }
+})();
