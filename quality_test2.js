@@ -4,11 +4,11 @@
     // =======================================================  
     // I. КОНФІГУРАЦІЯ  
     // =======================================================  
-    const DEBUG = false;  
-    const QUALITY_CACHE = 'dv_quality_cache_v2'; // Оновлений ключ кешу  
+    const DEBUG = true; // Увімкнено для діагностики  
+    const QUALITY_CACHE = 'dv_quality_cache_v2';  
     const CACHE_TIME = 24 * 60 * 60 * 1000; // 24 години  
       
-    // Пріоритети для визначення найкращої якості (чим вище індекс, тим вищий пріоритет)  
+    // Пріоритети для визначення найкращої якості  
     const QUALITY_PRIORITY = ['4K', '2K', 'FHD', 'HDR', 'HDR10+', 'DV'];  
   
     // =======================================================  
@@ -20,7 +20,7 @@
         /* Контейнер бейджів */  
         .card__quality-badge {  
             position: absolute !important;  
-            bottom: 10px !important;  /* Змінено на лівий нижній кут */  
+            bottom: 10px !important;  
             left: 10px !important;  
             display: flex !important;  
             gap: 4px !important;  
@@ -29,62 +29,53 @@
           
         /* Базовий стиль тега */  
         .quality-tag {  
-            font-size: 0.9em !important;  /* Збільшено розмір */  
+            font-size: 0.9em !important;  
             font-weight: 700 !important;  
-            padding: 5px 10px !important;  /* Збільшено відступи */  
+            padding: 5px 10px !important;  
             border-radius: 4px !important;  
             letter-spacing: 0.5px !important;  
             text-transform: uppercase !important;  
             line-height: 1;  
-            /* Стилі за замовчуванням */  
             background: rgba(0,0,0,0.8) !important;  
             color: #fff !important;  
             border: 1px solid rgba(255,255,255,0.2) !important;  
         }  
   
-        /* КОЛЬОРОВЕ КОДУВАННЯ (для кращої ідентифікації) */  
-          
-        /* Dolby Vision (найвищий пріоритет) */  
+        /* КОЛЬОРОВЕ КОДУВАННЯ */  
         .quality-tag.dv {  
-            background: #8A2BE2 !important; /* Blue Violet */  
+            background: #8A2BE2 !important;  
             border-color: #A968FF !important;  
         }  
   
-        /* HDR10+ */  
         .quality-tag.hdr10-plus {  
-            background: #FFA500 !important; /* Orange */  
+            background: #FFA500 !important;  
             border-color: #FFC064 !important;  
         }  
           
-        /* HDR */  
         .quality-tag.hdr {  
-            background: #FFD700 !important; /* Gold */  
+            background: #FFD700 !important;  
             color: #333 !important;  
             border-color: #FFE890 !important;  
         }  
   
-        /* 4K */  
         .quality-tag.4k {  
-            background: #333333 !important; /* Dark Grey */  
+            background: #333333 !important;  
             border-color: #555555 !important;  
         }  
   
-        /* 2K */  
         .quality-tag.qhd {  
-            background: #4169E1 !important; /* Royal Blue */  
+            background: #4169E1 !important;  
             border-color: #6495ED !important;  
         }  
   
-        /* FHD */  
         .quality-tag.fhd {  
-            background: #32CD32 !important; /* Lime Green */  
+            background: #32CD32 !important;  
             color: #333 !important;  
             border-color: #90EE90 !important;  
         }  
   
-        /* HD */  
         .quality-tag.hd {  
-            background: #808080 !important; /* Gray */  
+            background: #808080 !important;  
             border-color: #A9A9A9 !important;  
         }  
     `;  
@@ -95,75 +86,88 @@
     // =======================================================  
   
     /**  
-     * Визначає найкращу якість за назвою торрента.  
-     * @param {string} torrentTitle Назва торрента.  
-     * @returns {string | null} Рядок якості ('DV', 'HDR10+', 'HDR', '4K', '2K', 'FHD', 'HD') або null.  
+     * Визначає найкращу якість за назвою торрента з розширеними патернами.  
      */  
     function detectQuality(torrentTitle) {  
         if (!torrentTitle) return null;  
           
         const title = torrentTitle.toLowerCase();  
   
-        if (/\b(dolby\s*vision|dolbyvision|dv|dovi)\b/i.test(title)) return 'DV';  
-        if (/\b(hdr10\+)\b/i.test(title)) return 'HDR10+';  
-        if (/\b(hdr|hdr10)\b/i.test(title)) return 'HDR';  
-        if (/\b(4k|2160p|uhd)\b/i.test(title)) return '4K';  
-        if (/\b(2k|1440p|qhd)\b/i.test(title)) return '2K';  
-        if (/\b(fhd|1080p|fullhd)\b/i.test(title)) return 'FHD';  
-        if (/\b(hd|720p)\b/i.test(title)) return 'HD';  
+        // Dolby Vision - розширені патерни  
+        if (/\b(dolby\s*vision|dolbyvision|dv|dovi|dolby\s*vision\s*hdr)\b/i.test(title)) return 'DV';  
+          
+        // HDR10+ - розширені патерни  
+        if (/\b(hdr10\+|hdr\s*10\+|hdr10plus)\b/i.test(title)) return 'HDR10+';  
+          
+        // HDR - розширені патерни  
+        if (/\b(hdr|hdr10|high\s*dynamic\s*range)\b/i.test(title)) return 'HDR';  
+          
+        // 4K/UHD - розширені патерни  
+        if (/\b(4k|2160p|uhd|ultra\s*hd|3840x2160)\b/i.test(title)) return '4K';  
+          
+        // 2K/QHD - розширені патерни  
+        if (/\b(2k|1440p|qhd|quad\s*hd|2560x1440)\b/i.test(title)) return '2K';  
+          
+        // FHD/1080p - розширені патерни  
+        if (/\b(fhd|1080p|full\s*hd|1920x1080|bluray|bd|bdrip)\b/i.test(title)) return 'FHD';  
+          
+        // HD/720p - розширені патерни  
+        if (/\b(hd|720p|1280x720|hdtv|web-dl|webrip)\b/i.test(title)) return 'HD';  
+          
+        // SD/480p - додано для повноти  
+        if (/\b(sd|480p|854x480|dvd|dvdrip|dvdscr)\b/i.test(title)) return 'SD';  
           
         return null;  
     }  
   
     /**  
      * Витягує необхідні дані з картки Lampa.  
-     * @param {HTMLElement} card Елемент картки.  
-     * @returns {{id: string, title: string, year: string} | null} Дані фільму/серіалу.  
      */  
     function getCardData(card) {  
         const data = card.card_data;  
         if (!data) return null;  
           
         return {  
-            id: String(data.id || ''), // Усі ID мають бути рядками  
+            id: String(data.id || ''),  
             title: data.title || data.name || '',  
             year: data.release_date ? data.release_date.substring(0, 4) : ''  
         };  
     }  
   
     /**  
-     * Запит до API для отримання торрентів.  
-     * @param {{title: string, year: string}} movieData Дані для пошуку.  
-     * @returns {Promise<Array<{title: string}>>} Масив торрентів.  
+     * Запит до API для отримання торрентів (без exact=true).  
      */  
     async function getTorrents(movieData) {  
         if (!movieData || !movieData.title) {  
+            if (DEBUG) console.log('DV Quality: No title for search', movieData);  
             return [];  
         }  
           
         const apiHost = Lampa.Storage.get('jacred.xyz') || 'jacred.xyz';  
+        // Видалено exact=true для менш строгого пошуку  
         const apiUrl = 'http://' + apiHost +   
                        '/api/v1.0/torrents?search=' + encodeURIComponent(movieData.title) +   
-                       '&year=' + movieData.year + '&exact=true';  
+                       '&year=' + movieData.year;  
+  
+        if (DEBUG) console.log('DV Quality: API URL:', apiUrl);  
   
         try {  
             const response = await fetch(apiUrl);  
             if (!response.ok) {  
-                if (DEBUG) console.error('DV Quality: API error', response.status);  
+                if (DEBUG) console.error('DV Quality: API error', response.status, response.statusText);  
                 return [];  
             }  
             const torrents = await response.json();  
+            if (DEBUG) console.log('DV Quality: API response for', movieData.title, ':', torrents);  
             return Array.isArray(torrents) ? torrents : [];  
         } catch (error) {  
-            if (DEBUG) console.error('DV Quality: Fetch failed', error);  
+            if (DEBUG) console.error('DV Quality: Fetch failed for', movieData.title, ':', error);  
             return [];  
         }  
     }  
   
     /**  
      * Додає значок якості до картки.  
-     * @param {HTMLElement} card Елемент картки.  
-     * @param {string} bestQuality Визначена найкраща якість.  
      */  
     function addQualityBadge(card, bestQuality) {  
         if (!card || !bestQuality) return;  
@@ -174,24 +178,22 @@
         const box = document.createElement('div');  
         box.className = 'card__quality-badge';  
   
-        // 1. Спочатку додаємо 4K, якщо це не 4K-реліз (але DV/HDR)  
+        // Логіка для відображення 4K разом з DV/HDR  
         if (bestQuality !== '4K' && (bestQuality.includes('DV') || bestQuality.includes('HDR'))) {  
             const tag4k = document.createElement('div');  
             tag4k.className = 'quality-tag 4k';  
             tag4k.textContent = '4K';  
             box.appendChild(tag4k);  
         } else if (bestQuality === '4K') {  
-            // Якщо знайдено тільки 4K, додаємо його першим  
             const tag = document.createElement('div');  
             tag.className = 'quality-tag 4k';  
             tag.textContent = '4K';  
             box.appendChild(tag);  
-            return; // Завершуємо, бо немає сенсу додавати 4K двічі  
+            return;  
         }  
   
-        // 2. Додаємо основний тег якості  
+        // Основний тег якості  
         const tag = document.createElement('div');  
-        // Перетворюємо 'HDR10+' на 'hdr10-plus' для CSS-класу  
         const tagClass = bestQuality.toLowerCase().replace('+', '-plus');   
           
         tag.className = 'quality-tag ' + tagClass;  
@@ -203,8 +205,6 @@
       
     /**  
      * Очищає застарілі записи в кеші.  
-     * @param {Object} cache Поточний об'єкт кешу.  
-     * @returns {Object} Очищений об'єкт кешу.  
      */  
     function cleanupCache(cache) {  
         const now = Date.now();  
@@ -225,42 +225,59 @@
     }  
   
     /**  
-     * Обробляє одну картку: перевіряє кеш або робить API-запит.  
-     * @param {HTMLElement} card Елемент картки.  
+     * Обробляє одну картку з розширеним логуванням.  
      */  
     async function processCard(card) {  
         if (card.hasAttribute('data-dv-processed')) return;  
           
         const movieData = getCardData(card);  
-        if (!movieData || !movieData.id) return;  
+        if (!movieData || !movieData.id) {  
+            if (DEBUG) console.log('DV Quality: No movie data for card', card);  
+            return;  
+        }  
           
         card.setAttribute('data-dv-processed', 'true');  
+  
+        if (DEBUG) console.log('DV Quality: Processing card:', movieData);  
   
         // Кеш  
         let cache = JSON.parse(localStorage.getItem(QUALITY_CACHE) || '{}');  
         const cached = cache[movieData.id];  
   
         if (cached && (Date.now() - cached.timestamp < CACHE_TIME)) {  
+            if (DEBUG) console.log('DV Quality: Using cached quality for', movieData.title, ':', cached.quality);  
             if (cached.quality) addQualityBadge(card, cached.quality);  
             return;  
         }  
   
-        // API  
+        // API запит  
+        if (DEBUG) console.log('DV Quality: Fetching torrents for', movieData);  
         const torrents = await getTorrents(movieData);  
+          
+        if (DEBUG) console.log('DV Quality: Found', torrents.length, 'torrents for', movieData.title);  
+          
         let bestQuality = null;  
+        const detectedQualities = [];  
   
         torrents.forEach(t => {  
             const q = detectQuality(t.title);  
-            if (!q) return;  
+            if (q) {  
+                detectedQualities.push({ quality: q, title: t.title });  
+                if (DEBUG) console.log('DV Quality: Detected quality', q, 'in:', t.title);  
+            }  
   
-            // Логіка пріоритетів: вибираємо якість з вищим індексом у масиві QUALITY_PRIORITY  
             if (!bestQuality ||   
                 QUALITY_PRIORITY.indexOf(q) > QUALITY_PRIORITY.indexOf(bestQuality)) {  
                 bestQuality = q;  
             }  
         });  
   
-        // Оновлення кешу (включаючи очищення)  
+        if (DEBUG) {  
+            console.log('DV Quality: All detected qualities for', movieData.title, ':', detectedQualities);  
+            console.log('DV Quality: Best quality selected:', bestQuality);  
+        }  
+  
+        // Оновлення кешу  
         cache = cleanupCache(cache);  
         cache[movieData.id] = {  
             quality: bestQuality,  
@@ -268,15 +285,19 @@
         };  
         localStorage.setItem(QUALITY_CACHE, JSON.stringify(cache));  
   
-        if (bestQuality) addQualityBadge(card, bestQuality);  
+        if (bestQuality) {  
+            addQualityBadge(card, bestQuality);  
+        } else {  
+            if (DEBUG) console.log('DV Quality: No quality detected for', movieData.title);  
+        }  
     }  
   
     /**  
      * Обробляє всі необроблені картки в DOM.  
      */  
     function processAllCards() {  
-        // Вибираємо картки, які є видимими в поточному ряду, щоб уникнути затримок  
         const cards = document.querySelectorAll('.card:not([data-dv-processed])');  
+        if (DEBUG) console.log('DV Quality: Found', cards.length, 'unprocessed cards');  
         cards.forEach(card => processCard(card));  
     }  
   
@@ -284,24 +305,20 @@
     // IV. ІНІЦІАЛІЗАЦІЯ  
     // =======================================================  
       
-    // Використовуємо MutationObserver для відстеження нових елементів  
     const observer = new MutationObserver(() => {  
-        // Невелика затримка, щоб DOM мав час стабілізуватися  
         setTimeout(processAllCards, 500);  
     });  
   
     function init() {  
         if (DEBUG) console.log('DV Quality: Initialized and observing body changes.');  
-        // Починаємо спостереження за додаванням нових карток  
         observer.observe(document.body, {  
             childList: true,  
             subtree: true  
         });  
-        // Початкова обробка  
         processAllCards();  
     }  
   
-    // Запуск: чекаємо, поки Lampa буде готова  
+    // Запуск  
     if (typeof Lampa !== 'undefined') {  
         init();  
     } else {  
