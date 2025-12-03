@@ -45,44 +45,70 @@
         }  
     }  
   
-    // Функція показу налаштувань FoxStudio  
+    // Функція показу налаштувань FoxStudio (вирішення проблеми з шаблоном)  
     function showFoxStudioSettings() {  
-        Lampa.Settings.create({  
+        // Створюємо новий екран налаштувань вручну  
+        var settingsScreen = Lampa.Activity.push({  
+            url: '',  
             title: Lampa.Lang.translate('foxstudio_title'),  
-            items: [  
-                {  
-                    name: 'foxstudio_interface_enabled',  
-                    title: Lampa.Lang.translate('foxstudio_interface_title'),  
-                    type: 'toggle',  
-                    default: true  
-                },  
-                {  
-                    name: 'necardify_enabled',  
-                    title: Lampa.Lang.translate('foxstudio_necardify_title'),  
-                    type: 'toggle',  
-                    default: false,  
-                    onChange: function(value) {  
-                        if (value) {  
-                            loadScript('https://foxstudio24.github.io/lampa/necardify.js');  
-                        }  
+            component: 'settings',  
+            page: 1,  
+            nocache: true  
+        });  
+  
+        // Додаємо наші налаштування до екрану  
+        Lampa.Settings.listener.follow('open', function(e) {  
+            if (e.name === 'foxstudio_custom') {  
+                // Основна настройка інтерфейсу  
+                var foxstudio_interface = $('<div class="settings-param selector" data-type="toggle" data-name="foxstudio_interface_enabled">');  
+                foxstudio_interface.append('<div class="settings-param__name">' + Lampa.Lang.translate('foxstudio_interface_title') + '</div>');  
+                foxstudio_interface.append('<div class="settings-param__value">' + (Lampa.Storage.get('foxstudio_interface_enabled', true) ? 'Вкл' : 'Выкл') + '</div>');  
+  
+                // Налаштування Necardify  
+                var necardify_setting = $('<div class="settings-param selector" data-type="toggle" data-name="necardify_enabled">');  
+                necardify_setting.append('<div class="settings-param__name">' + Lampa.Lang.translate('foxstudio_necardify_title') + '</div>');  
+                necardify_setting.append('<div class="settings-param__value">' + (Lampa.Storage.get('necardify_enabled', false) ? 'Вкл' : 'Выкл') + '</div>');  
+  
+                // Налаштування Logo  
+                var logo_setting = $('<div class="settings-param selector" data-type="toggle" data-name="logo_enabled">');  
+                logo_setting.append('<div class="settings-param__name">' + Lampa.Lang.translate('foxstudio_logo_title') + '</div>');  
+                logo_setting.append('<div class="settings-param__value">' + (Lampa.Storage.get('logo_enabled', false) ? 'Вкл' : 'Выкл') + '</div>');  
+  
+                // Додаємо елементи в розділ  
+                e.body.append(foxstudio_interface);  
+                e.body.append(necardify_setting);  
+                e.body.append(logo_setting);  
+  
+                // Обробники зміни налаштувань  
+                foxstudio_interface.on('hover:enter', function() {  
+                    var current = Lampa.Storage.get('foxstudio_interface_enabled', true);  
+                    Lampa.Storage.set('foxstudio_interface_enabled', !current);  
+                    $(this).find('.settings-param__value').text(!current ? 'Вкл' : 'Выкл');  
+                });  
+  
+                necardify_setting.on('hover:enter', function() {  
+                    var current = Lampa.Storage.get('necardify_enabled', false);  
+                    var new_value = !current;  
+                    Lampa.Storage.set('necardify_enabled', new_value);  
+                    $(this).find('.settings-param__value').text(new_value ? 'Вкл' : 'Выкл');  
+                      
+                    if (new_value) {  
+                        loadScript('https://foxstudio24.github.io/lampa/necardify.js');  
                     }  
-                },  
-                {  
-                    name: 'logo_enabled',  
-                    title: Lampa.Lang.translate('foxstudio_logo_title'),  
-                    type: 'toggle',  
-                    default: false,  
-                    onChange: function(value) {  
-                        if (value) {  
-                            loadScript('https://foxstudio24.github.io/lampa/logo.js');  
-                        }  
+                });  
+  
+                logo_setting.on('hover:enter', function() {  
+                    var current = Lampa.Storage.get('logo_enabled', false);  
+                    var new_value = !current;  
+                    Lampa.Storage.set('logo_enabled', new_value);  
+                    $(this).find('.settings-param__value').text(new_value ? 'Вкл' : 'Выкл');  
+                      
+                    if (new_value) {  
+                        loadScript('https://foxstudio24.github.io/lampa/logo.js');  
                     }  
-                }  
-            ],  
-            onSave: function() {  
-                Lampa.Settings.update();  
+                });  
             }  
-        }).render();  
+        });  
     }  
   
     // Функція ініціалізації плагіна  
