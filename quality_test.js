@@ -29,9 +29,9 @@
         
         /* Базовий стиль тега */
         .quality-tag {
-            font-size: 0.55em !important;
+            font-size: 0.75em !important;
             font-weight: 700 !important;
-            padding: 3px 6px !important;
+            padding: 5px 10px !important;
             border-radius: 4px !important;
             letter-spacing: 0.5px !important;
             text-transform: uppercase !important;
