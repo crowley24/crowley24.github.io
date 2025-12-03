@@ -23,72 +23,7 @@
     return Constructor;  
   }  
   
-  function _inherits(subClass, superClass) {  
-    if (typeof superClass !== "function" && superClass !== null) {  
-      throw new TypeError("Super expression must either be null or a function");  
-    }  
-    subClass.prototype = Object.create(superClass && superClass.prototype, {  
-      constructor: { value: subClass, writable: true, configurable: true }  
-    });  
-    if (superClass) _setPrototypeOf(subClass, superClass);  
-  }  
-  
-  function _setPrototypeOf(o, p) {  
-    _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) {  
-      o.__proto__ = p;  
-      return o;  
-    };  
-    return _setPrototypeOf(o, p);  
-  }  
-  
-  function _createSuper(Derived) {  
-    var hasNativeReflectConstruct = _isNativeReflectConstruct();  
-    return function _createSuperInternal() {  
-      var Super = _getPrototypeOf(Derived),  
-          result;  
-      if (hasNativeReflectConstruct) {  
-        var NewTarget = _getPrototypeOf(this).constructor;  
-        result = Reflect.construct(Super, arguments, NewTarget);  
-      } else {  
-        result = Super.apply(this, arguments);  
-      }  
-      return _possibleConstructorReturn(this, result);  
-    };  
-  }  
-  
-  function _possibleConstructorReturn(self, call) {  
-    if (call && (typeof call === "object" || typeof call === "function")) {  
-      return call;  
-    }  
-    return _assertThisInitialized(self);  
-  }  
-  
-  function _assertThisInitialized(self) {  
-    if (self === void 0) {  
-      throw new ReferenceError("this hasn't been initialised - super() hasn't been called");  
-    }  
-    return self;  
-  }  
-  
-  function _isNativeReflectConstruct() {  
-    if (typeof Reflect === "undefined" || !Reflect.construct) return false;  
-    if (Reflect.construct.sham) return false;  
-    if (typeof Proxy === "function") return true;  
-    try {  
-      Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {}));  
-      return true;  
-    } catch (e) {  
-      return false;  
-    }  
-  }  
-  
-  function _getPrototypeOf(o) {  
-    _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) {  
-      return o.__proto__ || Object.getPrototypeOf(o);  
-    };  
-    return _getPrototypeOf(o);  
-  }  
-  
+  // Babel polyfills for arrays  
   function _toConsumableArray(arr) {  
     return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread();  
   }  
@@ -112,9 +47,7 @@
   
   function _arrayLikeToArray(arr, len) {  
     if (len == null || len > arr.length) len = arr.length;  
-    for (var i = 0, arr2 = new Array(len); i < len; i++) {  
-      arr2[i] = arr[i];  
-    }  
+    for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i];  
     return arr2;  
   }  
   
@@ -122,31 +55,7 @@
     throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");  
   }  
   
-  var Type = {  
-    re: function re(e) {  
-      return e.type == 'ready';  
-    },  
-    co: function co(e) {  
-      return e.type == 'complete';  
-    },  
-    de: function de(n) {  
-      return String.fromCharCode.apply(String, _toConsumableArray(n));  
-    }  
-  };  
-  
-  var Main = {  
-    stor: function stor() {  
-      return 'storage';  
-    },  
-    cases: function cases() {  
-      return window['Lampa'];  
-    },  
-    bynam: function bynam() {  
-      var hostname = window.location.hostname;  
-      return hostname.indexOf('bylampa.online') === -1;  
-    }  
-  };  
-  
+  // LFU Cache implementation  
   var LFUCache = /*#__PURE__*/function () {  
     function LFUCache(capacity) {  
       _classCallCheck(this, LFUCache);  
@@ -159,61 +68,95 @@
     _createClass(LFUCache, [{  
       key: "get",  
       value: function get(key) {  
-        if (this.cache.has(key)) {  
-          var value = this.cache.get(key);  
-          this.updateFrequency(key);  
-          return value;  
-        }  
-        return null;  
+        if (!this.cache.has(key)) return null;  
+        var value = this.cache.get(key);  
+        this._updateFrequency(key);  
+        return value;  
       }  
     }, {  
       key: "put",  
       value: function put(key, value) {  
+        if (this.capacity === 0) return;  
         if (this.cache.has(key)) {  
           this.cache.set(key, value);  
-          this.updateFrequency(key);  
-        } else {  
-          if (this.cache.size >= this.capacity) {  
-            this.evict();  
-          }  
-          this.cache.set(key, value);  
-          this.addToFrequencyMap(key);  
+          this._updateFrequency(key);  
+          return;  
         }  
+        if (this.cache.size >= this.capacity) {  
+          this._evict();  
+        }  
+        this.cache.set(key, value);  
+        this.frequencyMap.set(key, 1);  
+        this.minFrequency = 1;  
       }  
     }, {  
-      key: "updateFrequency",  
-      value: function updateFrequency(key) {  
+      key: "_updateFrequency",  
+      value: function _updateFrequency(key) {  
         var frequency = this.frequencyMap.get(key);  
-        this.frequencyMap.get(frequency).delete(key);  
-        if (this.frequencyMap.get(frequency).size === 0 && frequency === this.minFrequency) {  
+        this.frequencyMap.set(key, frequency + 1);  
+        if (frequency === this.minFrequency && this._getFrequencyCount(frequency) === 0) {  
           this.minFrequency++;  
         }  
-        this.addToFrequencyMap(key, frequency + 1);  
       }  
     }, {  
-      key: "addToFrequencyMap",  
-      value: function addToFrequencyMap(key) {  
-        var frequency = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 1;  
-        if (!this.frequencyMap.has(frequency)) {  
-          this.frequencyMap.set(frequency, new Set());  
-        }  
-        this.frequencyMap.get(frequency).add(key);  
-        this.minFrequency = Math.min(this.minFrequency, frequency);  
+      key: "_evict",  
+      value: function _evict() {  
+        var _this = this;  
+        var keys = Array.from(this.frequencyMap.keys()).filter(function (key) {  
+          return _this.frequencyMap.get(key) === _this.minFrequency;  
+        });  
+        var evictKey = keys[0];  
+        this.cache.delete(evictKey);  
+        this.frequencyMap.delete(evictKey);  
       }  
     }, {  
-      key: "evict",  
-      value: function evict() {  
-        var key = this.frequencyMap.get(this.minFrequency).keys().next().value;  
-        this.cache.delete(key);  
-        this.frequencyMap.get(this.minFrequency).delete(key);  
+      key: "_getFrequencyCount",  
+      value: function _getFrequencyCount(frequency) {  
+        var count = 0;  
+        this.frequencyMap.forEach(function (freq) {  
+          if (freq === frequency) count++;  
+        });  
+        return count;  
       }  
     }]);  
   
     return LFUCache;  
   }();  
   
-  var Follow = new LFUCache(100);  
+  // State Machine  
+  var State = /*#__PURE__*/function () {  
+    function State() {  
+      _classCallCheck(this, State);  
+      this.transitions = {};  
+      this.currentState = null;  
+    }  
   
+    _createClass(State, [{  
+      key: "addTransition",  
+      value: function addTransition(state, action, nextState) {  
+        if (!this.transitions[state]) this.transitions[state] = {};  
+        this.transitions[state][action] = nextState;  
+      }  
+    }, {  
+      key: "start",  
+      value: function start(initialState) {  
+        this.currentState = initialState;  
+      }  
+    }, {  
+      key: "dispatch",  
+      value: function dispatch(action) {  
+        if (this.currentState && this.transitions[this.currentState] && this.transitions[this.currentState][action]) {  
+          this.currentState = this.transitions[this.currentState][action];  
+          return true;  
+        }  
+        return false;  
+      }  
+    }]);  
+  
+    return State;  
+  }();  
+  
+  // YouTube Player class  
   var Player = /*#__PURE__*/function () {  
     function Player(element, options) {  
       _classCallCheck(this, Player);  
@@ -234,123 +177,164 @@
           playerVars: {  
             autoplay: 1,  
             controls: 0,  
+            disablekb: 1,  
+            enablejsapi: 1,  
+            fs: 0,  
+            loop: 1,  
+            modestbranding: 1,  
             rel: 0,  
             showinfo: 0,  
-            modestbranding: 1,  
             iv_load_policy: 3,  
-            fs: 0,  
             cc_load_policy: 0,  
-            hl: 'uk'  
+            playsinline: 1,  
+            mute: Lampa.Storage.field('cardify_enable_sound') ? 0 : 1,  
+            start: this.options.start || 0,  
+            end: this.options.end || 0  
           },  
           events: {  
             onReady: function onReady() {  
               _this.ready = true;  
-              _this.state = 'PLAYING';  
-              _this.fadeOut();  
+              _this.player.setPlaybackQuality('hd1080');  
+              _this.player.playVideo();  
+              _this.startFadeOut();  
             },  
             onStateChange: function onStateChange(event) {  
-              _this.state = event.data;  
               if (event.data === YT.PlayerState.ENDED) {  
-                _this.destroy();  
+                _this.player.playVideo();  
               }  
             }  
           }  
         });  
       }  
     }, {  
-      key: "fadeOut",  
-      value: function fadeOut() {  
+      key: "startFadeOut",  
+      value: function startFadeOut() {  
         var _this2 = this;  
+        var duration = this.player.getDuration();  
+        var fadeOutTime = duration - 5;  
         this.fadeInterval = setInterval(function () {  
-          if (_this2.player.getVolume() > 0) {  
-            _this2.player.setVolume(_this2.player.getVolume() - 10);  
-          } else {  
+          var currentTime = _this2.player.getCurrentTime();  
+          if (currentTime >= fadeOutTime) {  
+            _this2.fadeOut();  
             clearInterval(_this2.fadeInterval);  
           }  
-        }, 500);  
+        }, 1000);  
       }  
     }, {  
-      key: "play",  
-      value: function play() {  
-        if (this.ready) {  
-          this.player.playVideo();  
-        }  
-      }  
-    }, {  
-      key: "pause",  
-      value: function pause() {  
-        if (this.ready) {  
-          this.player.pauseVideo();  
-        }  
+      key: "fadeOut",  
+      value: function fadeOut() {  
+        var _this3 = this;  
+        var fadeSteps = 50;  
+        var currentStep = 0;  
+        var fadeInterval = setInterval(function () {  
+          if (currentStep >= fadeSteps) {  
+            clearInterval(fadeInterval);  
+            _this3.player.destroy();  
+            return;  
+          }  
+          _this3.player.setVolume(Math.max(0, 100 - currentStep * 2));  
+          currentStep++;  
+        }, 100);  
       }  
     }, {  
       key: "destroy",  
       value: function destroy() {  
-        if (this.fadeInterval) {  
-          clearInterval(this.fadeInterval);  
-        }  
-        if (this.player) {  
-          this.player.destroy();  
-        }  
+        if (this.fadeInterval) clearInterval(this.fadeInterval);  
+        if (this.player) this.player.destroy();  
       }  
     }]);  
   
     return Player;  
   }();  
   
+  // Trailer class  
   var Trailer = /*#__PURE__*/function () {  
-    function Trailer(activity, trailer) {  
+    function Trailer(activity, data) {  
       _classCallCheck(this, Trailer);  
       this.activity = activity;  
-      this.trailer = trailer;  
+      this.data = data;  
       this.player = null;  
-      this.container = null;  
+      this.state = new State();  
+      this.setupStates();  
       this.create();  
     }  
   
     _createClass(Trailer, [{  
+      key: "setupStates",  
+      value: function setupStates() {  
+        this.state.addTransition('loading', 'ready', 'playing');  
+        this.state.addTransition('playing', 'complete', 'finished');  
+        this.state.start('loading');  
+      }  
+    }, {  
       key: "create",  
       value: function create() {  
-        var _this = this;  
-        this.container = $('<div class="cardify-trailer__youtube"></div>');  
-        this.container.css({  
-          position: 'fixed',  
-          bottom: '10%',  
-          right: '0.3em',  
-          width: '45%',  
-          height: 'auto',  
-          'z-index': 9999,  
-          'pointer-events': 'none'  
+        var _this4 = this;  
+        var container = Lampa.Template.get('cardify_trailer');  
+        var youtube = container.find('.cardify-trailer__youtube');  
+          
+        youtube.attr('id', 'cardify-trailer-' + Date.now());  
+        this.player = new Player(youtube[0], {  
+          videoId: this.data.id,  
+          start: this.data.start || 0,  
+          end: this.data.end || 0  
         });  
-        var iframe = $('<iframe></iframe>');  
-        iframe.attr({  
-          src: 'https://www.youtube.com/embed/' + this.trailer.id + '?autoplay=1&mute=1&controls=0&rel=0&showinfo=0&modestbranding=1&iv_load_policy=3&fs=0&cc_load_policy=0',  
-          frameborder: 0,  
-          allow: 'autoplay; encrypted-media',  
-          allowfullscreen: false  
-        });  
-        iframe.css({  
-          width: '100%',  
-          height: '100%'  
-        });  
-        this.container.append(iframe);  
-        $('body').append(this.container);  
+          
+        this.player.create();  
+          
         setTimeout(function () {  
-          _this.destroy();  
-        }, 30000);  
+          _this4.state.dispatch('ready');  
+        }, 1000);  
       }  
     }, {  
       key: "destroy",  
       value: function destroy() {  
-        if (this.container) {  
-          this.container.remove();  
-        }  
+        if (this.player) this.player.destroy();  
       }  
     }]);  
   
     return Trailer;  
   }();  
   
+  // Utility functions  
+  var Main = {  
+    stor: function stor() {  
+      return 'Storage';  
+    },  
+    cases: function cases() {  
+      return window['Lampa'];  
+    },  
+    bynam: function bynam() {  
+      var hostname = window.location.hostname;  
+      return hostname.indexOf('bylampa.online') === -1;  
+    }  
+  };  
+  
+  var Type = {  
+    re: function re(e) {  
+      return e.type == 'ready';  
+    },  
+    co: function co(e) {  
+      return e.type == 'complete';  
+    },  
+    de: function de(n) {  
+      return String.fromCharCode.apply(null, n);  
+    }  
+  };  
+  
+  // Add trailer button function  
+  function addTrailerButton(activityObject, trailerData) {  
+    var buttonContainer = $('.full-start__buttons');  
+    var trailerButton = Lampa.Template.get('cardify_button');  
+      
+    trailerButton.on('hover:enter', function() {  
+      new Trailer(activityObject, trailerData);  
+    });  
+      
+    buttonContainer.append(trailerButton);  
+  }  
+  
+  // Video function to get trailer data  
   function video(data) {  
     if (data.videos && data.videos.results.length) {  
       var items = [];  
@@ -368,26 +352,15 @@
         return a.time > b.time ? -1 : a.time < b.time ? 1 : 0;  
       });  
       var my_lang = items.filter(function (n) {  
-        return n.code === 'uk' || n.code === 'ru';  
+        return n.code === Lampa.Storage.get('language') || n.code === 'uk';  
       });  
-      if (my_lang.length) {  
-        items = my_lang;  
-      }  
+      if (my_lang.length) items = my_lang;  
       return items[0];  
     }  
     return null;  
   }  
   
-  function addTrailerButton(activityObject, trailerData) {  
-    var button = $('<div class="full-start__button selector cardify-trailer-button" data-subtitle="Відтворити трейлер">\n        <svg xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 392.697 392.697" xml:space="preserve">\n            <path d="M21.837,83.419l36.496,16.678L227.72,19.886c1.229-0.592,2.002-1.846,1.98-3.209c-0.021-1.365-0.834-2.592-2.082-3.145\n                L197.766,0.3c-0.903-0.4-1.933-0.4-2.837,0L21.873,77.036c-1.259,0.559-2.073,1.803-2.081,3.18\n                C19.784,81.593,20.584,82.847,21.837,83.419z" fill="currentColor"></path>\n            <path d="M185.689,177.261l-64.988-30.01v91.617c0,0.856-0.44,1.655-1.167,2.114c-0.447,0.281-0.959,0.423-1.473,0.423\n                c-0.322,0-0.646-0.062-0.956-0.188l-96.265-38.506c-0.912-0.365-1.508-1.247-1.508-2.233V98.617c0-0.856,0.44-1.655,1.167-2.114\n                c0.727-0.459,1.642-0.508,2.413-0.131l36.496,16.678V19.886c0-1.365,0.834-2.592,2.082-3.145l28.852-12.732\n                c0.903-0.4,1.933-0.4,2.837,0l173.056,76.736c1.259,0.559,2.073,1.803,2.081,3.18c0.008,1.377-0.792,2.631-2.045,3.203\n                l-36.496,16.678v91.617c0,1.365-0.834,2.592-2.082,3.145l-28.852,12.732c-0.452,0.2-0.933,0.3-1.418,0.3\n                C185.896,178.917,185.291,178.163,185.689,177.261z" fill="currentColor"></path>\n        </svg>\n        <span>Трейлер</span>\n    </div>');  
-      
-    button.on('hover:enter', function() {  
-      new Trailer(activityObject, trailerData);  
-    });  
-      
-    $('.full-start__buttons').append(button);  
-  }  
-  
+  // Start plugin function  
   function startPlugin() {  
     if (!Lampa.Platform.screen('tv')) return console.log('Cardify', 'no tv');  
       
@@ -410,255 +383,130 @@
         pt: 'Mostrar trailer',  
         bg: 'Показване на трейлър'  
       }  
-    });
-    Lampa.Template.add('cardify_button', "<div class=\"full-start__button selector view--online cardify--button\" data-subtitle=\"Відтворити трейлер\">\n        <svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" viewBox=\"0 0 392.697 392.697\" xml:space=\"preserve\">\n            <path d=\"M21.837,83.419l36.496,16.678L227.72,19.886c1.229-0.592,2.002-1.846,1.98-3.209c-0.021-1.365-0.834-2.592-2.082-3.145\n                L197.766,0.3c-0.903-0.4-1.933-0.4-2.837,0L21.873,77.036c-1.259,0.559-2.073,1.803-2.081,3.18\n                C19.784,81.593,20.584,82.847,21.837,83.419z\" fill=\"currentColor\"></path>\n            <path d=\"M185.689,177.261l-64.988-30.01v91.617c0,0.856-0.44,1.655-1.167,2.114c-0.447,0.279-0.959,0.419-1.473,0.419\n                c-0.311,0-0.623-0.058-0.921-0.174l-97.432-37.979c-0.905-0.353-1.5-1.221-1.5-2.197V75.418c0-0.856,0.44-1.655,1.167-2.114\n                c0.727-0.459,1.639-0.511,2.412-0.139l64.988,30.01V11.5c0-1.312,1.063-2.375,2.375-2.375h30.011\n                c1.312,0,2.375,1.063,2.375,2.375v91.617l64.988-30.01c0.773-0.372,1.685-0.32,2.412,0.139c0.727,0.459,1.167,1.258,1.167,2.114v123.618\n                C191.189,176.04,190.594,176.908,185.689,177.261z\" fill=\"currentColor\"></path>\n        </svg>\n        <span>Відтворити трейлер</span>\n    </div>");  
-  
-    // Функція додавання кнопки трейлера  
-    function addTrailerButton(activityObject, trailerData) {  
-      var buttonContainer = activityObject.render().find('.full-start__buttons');  
-      var trailerButton = Lampa.Template.get('cardify_button');  
-        
-      trailerButton.on('hover:enter', function() {  
-        new Trailer(activityObject, trailerData);  
-      });  
-        
-      buttonContainer.append(trailerButton);  
-    }  
-  
-    // Модифікована функція video() - зберігає дані трейлера  
-    function video(data) {  
-      if (data.videos && data.videos.results.length) {  
-        var items = [];  
-        data.videos.results.forEach(function (element) {  
-          items.push({  
-            title: Lampa.Utils.shortText(element.name, 50),  
-            id: element.key,  
-            code: element.iso_639_1,  
-            time: new Date(element.published_at).getTime(),  
-            url: 'https://www.youtube.com/watch?v=' + element.key,  
-            img: 'https://img.youtube.com/vi/' + element.key + '/default.jpg'  
-          });  
-        });  
-          
-        items.sort(function (a, b) {  
-          return a.time > b.time ? -1 : a.time < b.time ? 1 : 0;  
-        });  
-          
-        var my_lang = items.filter(function (n) {  
-          return n.code === Lampa.Storage.get('language') || n.code === 'uk';  
-        });  
-          
-        if (my_lang.length) items = my_lang;  
-        if (items.length > 10) items = items.slice(0, 10);  
-          
-        return items[0];  
+    });  
+      
+    Lampa.Template.add('cardify_button', "<div class=\"full-start__button selector view--online cardify--button\" data-subtitle=\"Відтворити трейлер\">\n        <svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" viewBox=\"0 0 392.697 392.697\" xml:space=\"preserve\">\n            <path d=\"M21.837,83.419l36.496,16.678L227.72,19.886c1.229-0.592,2.002-1.846,1.98-3.209c-0.021-1.365-0.834-2.592-2.082-3.145\n                L197.766,0.3c-0.903-0.4-1.933-0.4-2.837,0L21.873,77.036c-1.259,0.559-2.073,1.803-2.081,3.18\n                C19.784,81.593,20.584,82.847,21.837,83.419z\" fill=\"currentColor\"></path>\n            <path d=\"M185.689,177.261l-64.988-30.01v91.617c0,0.856-0.44,1.655-1.167,2.114c-0.4,0.247-0.856,0.373-1.313,0.373\n                c-0.381,0-0.764-0.087-1.115-0.265l-36.496-18.248c-0.816-0.408-1.332-1.24-1.332-2.158V75.466c0-0.856,0.44-1.655,1.167-2.114\n                c0.727-0.459,1.642-0.506,2.413-0.123l138.437,69.218c0.816,0.408,1.332,1.24,1.332,2.158v30.456H185.689z\" fill=\"currentColor\"></path>\n        </svg>\n\n        <span>Відтворити трейлер</span>\n    </div>");  
+      
+    Lampa.Template.add('cardify_trailer', "<div class=\"cardify-trailer__youtube size-40\"></div>");  
+      
+    Lampa.SettingsApi.addParam({  
+      component: 'cardify',  
+      param: {  
+        name: 'cardify_enable_sound',  
+        type: 'trigger',  
+        "default": false  
+      },  
+      field: {  
+        name: Lampa.Lang.translate('cardify_enable_sound')  
       }  
-      return null;  
-    }  
+    });  
+      
+    Lampa.SettingsApi.addParam({  
+      component: 'cardify',  
+      param: {  
+        name: 'cardify_run_trailers',  
+        type: 'trigger',  
+        "default": false  
+      },  
+      field: {  
+        name: Lampa.Lang.translate('cardify_enable_trailer')  
+      }  
+    });  
   
-    // Запуск плагіна  
-    function startPlugin() {  
-      if (!Lampa.Platform.screen('tv')) return console.log('Cardify', 'no tv');  
-        
-      Lampa.Listener.follow('full', function (e) {  
-        if (e.type === 'complite') {  
-          var trailerData = video(e.data);  
+    Lampa.SettingsApi.addParam({          
+      component: 'cardify',          
+      param: {          
+        name: 'cardify_trailer_size',          
+        type: 'select',          
+        "default": '40',        
+        values: {          
+          '35': 'малий',          
+          '40': 'середній',          
+          '45': 'великий'          
+        }          
+      },        
+      field: {        
+        name: 'Розмір трейлера'        
+      }        
+    });  
+  
+    // Modified Follow.get to add button instead of auto-play  
+    Lampa.Listener.follow('full', function (e) {  
+      if (e.type === 'complite') {  
+        var trailer = video(e.data);  
+        if (trailer) {  
+          // Store trailer data for button use  
+          e.data.cardify_trailer = trailer;  
             
-          if (trailerData) {  
-            // Зберігаємо дані трейлера в об'єкті активності  
-            e.data.cardify_trailer = trailerData;  
-              
-            // Додаємо кнопку після рендерингу  
-            setTimeout(function() {  
-              addTrailerButton(e.object, trailerData);  
-            }, 1000);  
+          // Add trailer button  
+          addTrailerButton(e.object, trailer);  
+        }  
+      }  
+    });  
+  }  
+ // Initialize plugin  
+  if (window.Lampa && Lampa.Listener) {  
+    startPlugin();  
+  } else {  
+    setTimeout(startPlugin, 1000);  
+  }  
+})();  
+  
+// Додатковий блок для керування трейлером  
+(function() {  
+  'use strict';  
+    
+  let trailerMuted = false;  
+    
+  function setupTrailerControls() {  
+    const trailers = document.querySelectorAll('.cardify-trailer__youtube iframe');  
+      
+    trailers.forEach(trailer => {  
+      if (trailer.dataset.controlsSetup) return;  
+      trailer.dataset.controlsSetup = 'true';  
+        
+      // Обробник кліку для вимкнення звуку  
+      trailer.addEventListener('click', function(e) {  
+        e.stopPropagation();  
+          
+        if (trailer && !trailerMuted) {  
+          // Перше натискання - вимкнути звук  
+          const src = trailer.src;  
+          if (src.includes('mute=0')) {  
+            trailer.src = src.replace('mute=0', 'mute=1');  
           }  
+          trailerMuted = true;  
+            
+          console.log('[Cardify] Звук трейлера вимкнено');  
+          return false;  
+        } else if (trailer && trailerMuted) {  
+          // Друге натискання - дозволити вихід з картки  
+          trailerMuted = false;  
+          console.log('[Cardify] Вихід з картки фільму');  
         }  
       });  
-    }  
-  
-    // Ініціалізація  
-    if (Follow.go) {  
-      startPlugin();  
-    } else {  
-      Follow.get(Type.de([97, 112, 112]), function (e) {  
-        if (Type.re(e)) startPlugin();  
-      });  
-    }  
-})();
-(function() {      
-  'use strict';      
-        
-  function modifyCardifyStyles() {        
-    const oldStyle = document.getElementById('cardify-compact-style');        
-    if (oldStyle) oldStyle.remove();        
-            
-    const trailerSize = Lampa.Storage.field('cardify_trailer_size') || '45';        
-    console.log('[Cardify] Застосування розміру:', trailerSize + '%');        
-            
-    const style = document.createElement('style');        
-    style.id = 'cardify-compact-style';        
-
-    style.textContent = `
-      .cardify-trailer__youtube.size-35 { width: 30% !important; }          
-      .cardify-trailer__youtube.size-40 { width: 40% !important; }          
-      .cardify-trailer__youtube.size-45 { width: 50% !important; }          
-           
-      .cardify-trailer__youtube {          
-    position: fixed !important;          
-    top: auto !important;          
-    right: 1.3em !important;          
-    bottom: 3% !important;          
-    left: auto !important;          
-    height: auto !important;          
-    aspect-ratio: 16/9 !important;          
-    max-width: 700px !important;          
-    max-height: 400px !important;          
-    border-radius: 12px !important;          
-    overflow: hidden !important;          
-    z-index: 50 !important;          
-    transform: none !important;          
-    opacity: 1 !important;          
-    transition: opacity 0.3s ease !important;          
-    pointer-events: none !important;       
-  
-    /* Багатошарове розмиття для плавного переходу */      
-    box-shadow:         
-  0 0 40px 15px rgba(0,0,0,0.98),      // було 80px 30px  
-  0 0 80px 30px rgba(0,0,0,0.9),       // було 160px 60px  
-  0 0 120px 45px rgba(0,0,0,0.75),     // було 240px 90px  
-  0 0 160px 60px rgba(0,0,0,0.6) !important;  
-          
-    /* Додатковий фільтр для м'якості */      
-    filter: drop-shadow(0 0 30px rgba(0,0,0,0.8)) !important;      
-  }          
-            
-  .cardify-trailer__youtube iframe {          
-    width: 130% !important;          
-    height: 130% !important;          
-    position: absolute !important;          
-    top: 50% !important;          
-    left: 50% !important;          
-    transform: translate(-50%, -50%) scale(1.2) !important;          
-    transform-origin: center !important;          
-    object-fit: cover !important;          
-  }          
-            
-  .cardify-trailer__youtube-line {          
-    display: none !important;          
-    visibility: hidden !important;          
-  }          
-            
-  .cardify-trailer__controlls {          
-    display: none !important;          
-  }          
-`;        
-            
-    document.head.appendChild(style);        
-    applyClassToTrailers(trailerSize);        
-  }      
-        
-  function applyClassToTrailers(trailerSize) {      
-    document.querySelectorAll('.cardify-trailer__youtube').forEach(el => {      
-      el.className = el.className.replace(/size-\d+/g, '');      
-      el.classList.add('size-' + trailerSize);      
-      console.log('[Cardify] Додано клас size-' + trailerSize + ' до існуючого трейлера');      
-    });      
-  }      
-        
-  const observer = new MutationObserver((mutations) => {      
-    const trailerSize = Lampa.Storage.field('cardify_trailer_size') || '45';      
-          
-    mutations.forEach((mutation) => {      
-      mutation.addedNodes.forEach((node) => {      
-        if (node.nodeType === 1) {      
-          if (node.classList && node.classList.contains('cardify-trailer__youtube')) {      
-            node.className = node.className.replace(/size-\d+/g, '');      
-            node.classList.add('size-' + trailerSize);      
-            console.log('[Cardify] Додано клас size-' + trailerSize + ' до нового трейлера (сам елемент)');      
-          }      
-                
-          const trailers = node.querySelectorAll('.cardify-trailer__youtube');      
-          trailers.forEach(el => {      
-            el.className = el.className.replace(/size-\d+/g, '');      
-            el.classList.add('size-' + trailerSize);      
-            console.log('[Cardify] Додано клас size-' + trailerSize + ' до нового трейлера (дочірній елемент)');      
-          });      
-        }      
-      });      
-    });      
-  });      
-        
-  observer.observe(document.body, {      
-    childList: true,      
-    subtree: true      
-  });      
-        
-  if (window.appready) {      
-    setTimeout(modifyCardifyStyles, 1000);      
-  } else {      
-    Lampa.Listener.follow('app', function(e) {      
-      if (e.type === 'ready') {      
-        setTimeout(modifyCardifyStyles, 1000);      
-      }      
-    });      
-  }      
-        
-  Lampa.Listener.follow('storage', function(e) {      
-    if (e.name === 'cardify_trailer_size') {      
-      console.log('[Cardify] Розмір змінено на:', e.value);      
-      modifyCardifyStyles();      
-    }      
-  });      
-function setupTrailerControls() {  
-  const trailers = document.querySelectorAll('.cardify-trailer__youtube iframe');  
-    
-  trailers.forEach(iframe => {  
-    // Додаємо параметри для автовідтворення зі звуком  
-    const src = iframe.src;  
-    if (src && !src.includes('autoplay=1')) {  
-      const separator = src.includes('?') ? '&' : '?';  
-      iframe.src = src + separator + 'autoplay=1&mute=0';  
-    }  
-  });  
-}  
-  
-// Обробка кнопки "Назад"  
-let trailerMuted = false;  
-  
-Lampa.Listener.follow('keydown', function(e) {  
-  if (e.code === 'Back' || e.code === 'Backspace') {  
-    const trailer = document.querySelector('.cardify-trailer__youtube iframe');  
-      
-    if (trailer && !trailerMuted) {  
-      // Перше натискання - вимкнути звук  
-      e.preventDefault();  
-      e.stopPropagation();  
-        
-      const src = trailer.src;  
-      if (src.includes('mute=0')) {  
-        trailer.src = src.replace('mute=0', 'mute=1');  
-      }  
-      trailerMuted = true;  
-        
-      console.log('[Cardify] Звук трейлера вимкнено');  
-      return false;  
-    } else if (trailer && trailerMuted) {  
-      // Друге натискання - дозволити вихід з картки  
-      trailerMuted = false;  
-      console.log('[Cardify] Вихід з картки фільму');  
-    }  
+    });  
   }  
-});  
-  
-// Скидання стану при зміні трейлера  
-const trailerObserver = new MutationObserver(() => {  
-  trailerMuted = false;  
-  setupTrailerControls();  
-});  
-  
-trailerObserver.observe(document.body, {  
-  childList: true,  
-  subtree: true  
-});
+    
+  // Спостерігач за змінами DOM  
+  const trailerObserver = new MutationObserver(() => {  
+    trailerMuted = false;  
+    setupTrailerControls();  
+  });  
+    
+  trailerObserver.observe(document.body, {  
+    childList: true,  
+    subtree: true  
+  });  
+    
+  // Ініціалізація при завантаженні  
+  if (window.appready) {  
+    setTimeout(setupTrailerControls, 1500);  
+  } else {  
+    Lampa.Listener.follow('app', function(e) {  
+      if (e.type === 'ready') {  
+        setTimeout(setupTrailerControls, 1500);  
+      }  
+    });  
+  }  
 })();
