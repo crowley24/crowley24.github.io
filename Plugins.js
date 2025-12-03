@@ -86,19 +86,30 @@
         });  
     }  
       
-    Lampa.Settings.listener.follow('open', function(e) {  
-        if (e.name === 'main') {  
+    // Функція додавання пункту меню з перевіркою на дублювання  
+    function addPluginsManagerItem() {  
+        // Перевіряємо чи пункт вже існує  
+        if (!$('[data-name="plugins_switcher"]').length) {  
             const plugin_item = $('<div class="settings-param selector" data-name="plugins_switcher">');  
             plugin_item.append('<div class="settings-param__name">Plugins Manager</div>');  
             plugin_item.append('<div class="settings-param__value">➤</div>');  
               
-            e.body.append(plugin_item);  
+            $('.settings__body').append(plugin_item);  
               
             plugin_item.on('hover:enter', function() {  
                 showPluginsManagerSettings();  
             });  
         }  
+    }  
+      
+    // Слідкуємо за відкриттям головних налаштувань  
+    Lampa.Settings.listener.follow('open', function(e) {  
+        if (e.name === 'main') {  
+            // Використовуємо setTimeout для забезпечення завантаження DOM  
+            setTimeout(addPluginsManagerItem, 100);  
+        }  
     });  
       
+    // Застосовуємо плагіни при старті  
     applyPlugins(loadSettings());  
 })();
