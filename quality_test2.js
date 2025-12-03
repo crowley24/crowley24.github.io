@@ -1,287 +1,244 @@
-(function () {
-    'use strict';
-
-    // =======================================================
-    // I. КОНФІГУРАЦІЯ
-    // =======================================================
-    const DEBUG = false;
-    const QUALITY_CACHE = 'dv_quality_cache_v2'; // Оновлений ключ кешу
-    const CACHE_TIME = 24 * 60 * 60 * 1000; // 24 години
-    
-    // Пріоритети для визначення найкращої якості (чим вище індекс, тим вищий пріоритет)
-    const QUALITY_PRIORITY = ['4K', 'HDR', 'HDR10+', 'DV'];
-
-    // =======================================================
-    // II. СТИЛІ ТА CSS КОД
-    // =======================================================
-    const style = document.createElement('style');  
-style.id = 'dv_quality_style';  
-style.textContent = `  
-    /* Контейнер бейджів */  
-    .card__quality-badge {  
-        position: absolute !important;  
-        top: 5px !important;       /* ✅ Змінено на верхній правий кут */  
-        right: 5px !important;     /* ✅ Справа як рейтинг */  
-        display: flex !important;  
-        gap: 4px !important;  
-        z-index: 9999 !important;  
-    }  
-      
-    /* Решта стилів залишається без змін */  
-    .quality-tag {  
-        font-size: 0.55em !important;  
-        font-weight: 700 !important;  
-        padding: 3px 6px !important;  
-        border-radius: 4px !important;  
-        letter-spacing: 0.5px !important;  
-        text-transform: uppercase !important;  
-        line-height: 1;  
-        background: rgba(0,0,0,0.8) !important;  
-        color: #fff !important;  
-        border: 1px solid rgba(255,255,255,0.2) !important;  
+(function () {  
+    'use strict';  
+  
+    // Polyfill for AbortController and AbortSignal  
+    if (typeof AbortController === 'undefined') {  
+        window.AbortController = function () {  
+            this.signal = {  
+                aborted: false,  
+                addEventListener: function (event, callback) {  
+                    if (event === 'abort') {  
+                        this._onabort = callback;  
+                    }  
+                }  
+            };  
+            this.abort = function () {  
+                this.signal.aborted = true;  
+                if (typeof this.signal._onabort === 'function') {  
+                    this.signal._onabort();  
+                }  
+            };  
+        };  
     }  
   
-    .quality-tag.dv {  
-        background: #8A2BE2 !important;  
-        border-color: #A968FF !important;  
+    // Polyfill for performance.now  
+    if (!window.performance || !window.performance.now) {  
+        window.performance = {  
+            now: function () {  
+                return Date.now();  
+            }  
+        };  
     }  
   
-    .quality-tag.hdr10-plus {  
-        background: #FFA500 !important;  
-        border-color: #FFC064 !important;  
-    }  
-      
-    .quality-tag.hdr {  
-        background: #FFD700 !important;  
-        color: #333 !important;  
-        border-color: #FFE890 !important;  
+    // Головний об'єкт плагіна  
+    const SURS_QUALITY = {  
+        name: 'sursQuality',  
+        version: '1.0.0',  
+        log: function (message) {  
+            console.log('[SURS Quality]', message);  
+        }  
+    };  
+  
+    // Функція для логування виконання  
+    function logExecution(functionName, startTime, message) {  
+        const endTime = performance.now();  
+        const duration = (endTime - startTime).toFixed(2);  
+        SURS_QUALITY.log(`${message} - ${functionName} виконано за ${duration}ms`);  
     }  
   
-    .quality-tag.4k {  
-        background: #333333 !important;  
-        border-color: #555555 !important;  
-        }
-    `;
-    document.head.appendChild(style);
-
-    // =======================================================
-    // III. ФУНКЦІОНАЛЬНІСТЬ
-    // =======================================================
-
-    /**
-     * Визначає найкращу якість за назвою торрента.
-     * @param {string} torrentTitle Назва торрента.
-     * @returns {string | null} Рядок якості ('DV', 'HDR10+', 'HDR', '4K') або null.
-     */
-    function detectQuality(torrentTitle) {
-        if (!torrentTitle) return null;
-        
-        const title = torrentTitle.toLowerCase();
-
-        if (/\b(dolby\s*vision|dolbyvision|dv|dovi)\b/i.test(title)) return 'DV';
-        if (/\b(hdr10\+)\b/i.test(title)) return 'HDR10+';
-        if (/\b(hdr|hdr10)\b/i.test(title)) return 'HDR';
-        if (/\b(4k|2160p|uhd)\b/i.test(title)) return '4K';
-        
-        return null;
-    }
-
-    /**
-     * Витягує необхідні дані з картки Lampa.
-     * @param {HTMLElement} card Елемент картки.
-     * @returns {{id: string, title: string, year: string} | null} Дані фільму/серіалу.
-     */
-    function getCardData(card) {
-        const data = card.card_data;
-        if (!data) return null;
-        
-        return {
-            id: String(data.id || ''), // Усі ID мають бути рядками
-            title: data.title || data.name || '',
-            year: data.release_date ? data.release_date.substring(0, 4) : ''
-        };
-    }
-
-    /**
-     * Запит до API для отримання торрентів.
-     * @param {{title: string, year: string}} movieData Дані для пошуку.
-     * @returns {Promise<Array<{title: string}>>} Масив торрентів.
-     */
-    async function getTorrents(movieData) {
-        if (!movieData || !movieData.title) {
-            return [];
-        }
-        
-        const apiHost = Lampa.Storage.get('jacred.xyz') || 'jacred.xyz';
-        const apiUrl = 'http://' + apiHost + 
-                       '/api/v1.0/torrents?search=' + encodeURIComponent(movieData.title) + 
-                       '&year=' + movieData.year + '&exact=true';
-
-        try {
-            const response = await fetch(apiUrl);
-            if (!response.ok) {
-                if (DEBUG) console.error('DV Quality: API error', response.status);
-                return [];
-            }
-            const torrents = await response.json();
-            return Array.isArray(torrents) ? torrents : [];
-        } catch (error) {
-            if (DEBUG) console.error('DV Quality: Fetch failed', error);
-            return [];
-        }
-    }
-
-    /**
-     * Додає значок якості до картки.
-     * @param {HTMLElement} card Елемент картки.
-     * @param {string} bestQuality Визначена найкраща якість ('DV', 'HDR', '4K' і т.д.).
-     */
-    function addQualityBadge(card, bestQuality) {
-        if (!card || !bestQuality) return;
-
-        let existing = card.querySelector('.card__quality-badge');
-        if (existing) existing.remove();
-
-        const box = document.createElement('div');
-        box.className = 'card__quality-badge';
-
-        // 1. Спочатку додаємо 4K, якщо це не 4K-реліз (але DV/HDR)
-        if (bestQuality !== '4K' && (bestQuality.includes('DV') || bestQuality.includes('HDR'))) {
-            const tag4k = document.createElement('div');
-            tag4k.className = 'quality-tag 4k';
-            tag4k.textContent = '4K';
-            box.appendChild(tag4k);
-        } else if (bestQuality === '4K') {
-            // Якщо знайдено тільки 4K, додаємо його першим
-            const tag = document.createElement('div');
-            tag.className = 'quality-tag 4k';
-            tag.textContent = '4K';
-            box.appendChild(tag);
-            return; // Завершуємо, бо немає сенсу додавати 4K двічі
-        }
-
-        // 2. Додаємо основний тег якості
-        const tag = document.createElement('div');
-        // Перетворюємо 'HDR10+' на 'hdr10-plus' для CSS-класу
-        const tagClass = bestQuality.toLowerCase().replace('+', '-plus'); 
-        
-        tag.className = 'quality-tag ' + tagClass;
-        tag.textContent = bestQuality;
-        box.appendChild(tag);
-
-        card.appendChild(box);
-    }
-    
-    /**
-     * Очищає застарілі записи в кеші.
-     * @param {Object} cache Поточний об'єкт кешу.
-     * @returns {Object} Очищений об'єкт кешу.
-     */
-    function cleanupCache(cache) {
-        const now = Date.now();
-        const cleanedCache = {};
-        let cleaned = 0;
-        
-        for (const id in cache) {
-            if (cache.hasOwnProperty(id)) {
-                if (now - cache[id].timestamp < CACHE_TIME) {
-                    cleanedCache[id] = cache[id];
-                } else {
-                    cleaned++;
-                }
-            }
-        }
-        if (DEBUG && cleaned > 0) console.log(`DV Quality: Cleaned ${cleaned} expired cache entries.`);
-        return cleanedCache;
-    }
-
-
-    /**
-     * Обробляє одну картку: перевіряє кеш або робить API-запит.
-     * @param {HTMLElement} card Елемент картки.
-     */
-    async function processCard(card) {
-        if (card.hasAttribute('data-dv-processed')) return;
-        
-        const movieData = getCardData(card);
-        if (!movieData || !movieData.id) return;
-        
-        card.setAttribute('data-dv-processed', 'true');
-
-        // Кеш
-        let cache = JSON.parse(localStorage.getItem(QUALITY_CACHE) || '{}');
-        const cached = cache[movieData.id];
-
-        if (cached && (Date.now() - cached.timestamp < CACHE_TIME)) {
-            if (cached.quality) addQualityBadge(card, cached.quality);
-            return;
-        }
-
-        // API
-        const torrents = await getTorrents(movieData);
-        let bestQuality = null;
-
-        torrents.forEach(t => {
-            const q = detectQuality(t.title);
-            if (!q) return;
-
-            // Логіка пріоритетів: вибираємо якість з вищим індексом у масиві QUALITY_PRIORITY
-            if (!bestQuality || 
-                QUALITY_PRIORITY.indexOf(q) > QUALITY_PRIORITY.indexOf(bestQuality)) {
-                bestQuality = q;
-            }
-        });
-
-        // Оновлення кешу (включаючи очищення)
-        cache = cleanupCache(cache);
-        cache[movieData.id] = {
-            quality: bestQuality,
-            timestamp: Date.now()
-        };
-        localStorage.setItem(QUALITY_CACHE, JSON.stringify(cache));
-
-        if (bestQuality) addQualityBadge(card, bestQuality);
-    }
-
-    /**
-     * Обробляє всі необроблені картки в DOM.
-     */
-    function processAllCards() {
-        // Вибираємо картки, які є видимими в поточному ряду, щоб уникнути затримок
-        const cards = document.querySelectorAll('.card:not([data-dv-processed])');
-        cards.forEach(card => processCard(card));
-    }
-
-    // =======================================================
-    // IV. ІНІЦІАЛІЗАЦІЯ
-    // =======================================================
-    
-    // Використовуємо MutationObserver для відстеження нових елементів
-    const observer = new MutationObserver(() => {
-        // Невелика затримка, щоб DOM мав час стабілізуватися
-        setTimeout(processAllCards, 500);
-    });
-
-    function init() {
-        if (DEBUG) console.log('DV Quality: Initialized and observing body changes.');
-        // Починаємо спостереження за додаванням нових карток
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-        // Початкова обробка
-        processAllCards();
-    }
-
-    // Запуск: чекаємо, поки Lampa буде готова
-    if (typeof Lampa !== 'undefined') {
-        init();
-    } else {
-        const wait = setInterval(() => {
-            if (typeof Lampa !== 'undefined') {
-                clearInterval(wait);
-                init();
-            }
-        }, 500);
-    }
+    // Функція перекладу якості з підтримкою Dolby Vision та HDR  
+    function translateQuality(quality, isCamrip, title) {  
+        if (isCamrip) {  
+            return 'Екранка';  
+        }  
+          
+        const lowerTitle = (title || '').toLowerCase();  
+          
+        // Перевірка на Dolby Vision  
+        if (/\b(dolby\s*vision|dov|dv)\b/i.test(lowerTitle)) {  
+            if (typeof quality === 'number' && quality >= 2160) {  
+                return '4K DV';  
+            } else if (typeof quality === 'number' && quality >= 1080) {  
+                return 'FHD DV';  
+            } else {  
+                return 'DV';  
+            }  
+        }  
+          
+        // Перевірка на HDR  
+        if (/\b(hdr|hdr10|hdr10\+|hlg)\b/i.test(lowerTitle)) {  
+            if (typeof quality === 'number' && quality >= 2160) {  
+                return '4K HDR';  
+            } else if (typeof quality === 'number' && quality >= 1080) {  
+                return 'FHD HDR';  
+            } else {  
+                return 'HDR';  
+            }  
+        }  
+          
+        // Стандартна логіка якості  
+        if (typeof quality === 'number') {  
+            if (quality >= 2160) return '4K';  
+            if (quality >= 1080) return 'FHD';  
+            if (quality >= 720) return 'HD';  
+            if (quality >= 480) return 'SD';  
+        }  
+          
+        return quality || 'Невідомо';  
+    }  
+  
+    // Функція отримання якості з назви  
+    function extractQualityFromTitle(title) {  
+        const lowerTitle = title.toLowerCase();  
+          
+        // Dolby Vision пріоритет  
+        if (/\b(dolby\s*vision|dov|dv)\b/i.test(lowerTitle)) {  
+            if (lowerTitle.includes('2160p') || lowerTitle.includes('4k')) return 2160;  
+            if (lowerTitle.includes('1080p')) return 1080;  
+            return 1080;  
+        }  
+          
+        // HDR другий пріоритет  
+        if (/\b(hdr|hdr10|hdr10\+|hlg)\b/i.test(lowerTitle)) {  
+            if (lowerTitle.includes('2160p') || lowerTitle.includes('4k')) return 2160;  
+            if (lowerTitle.includes('1080p')) return 1080;  
+            return 1080;  
+        }  
+          
+        // Стандартна якість  
+        if (lowerTitle.includes('2160p') || lowerTitle.includes('4k')) return 2160;  
+        if (lowerTitle.includes('1080p')) return 1080;  
+        if (lowerTitle.includes('720p')) return 720;  
+        if (lowerTitle.includes('480p')) return 480;  
+          
+        return 0;  
+    }  
+  
+    // Функція для отримання якості торрента  
+    async function fetchQualityForCard(movieData, renderElement) {  
+        const startTime = performance.now();  
+        SURS_QUALITY.log('Аналіз якості для:', movieData.title);  
+          
+        try {  
+            // Симуляція аналізу торрентів (замініть на реальний API виклик)  
+            const torrents = await analyzeTorrents(movieData);  
+              
+            if (torrents.length > 0) {  
+                const bestTorrent = torrents[0];  
+                const quality = translateQuality(  
+                    bestTorrent.quality,  
+                    bestTorrent.isCamrip,  
+                    bestTorrent.title  
+                );  
+                  
+                // Оновлення інтерфейсу  
+                updateQualityDisplay(renderElement, quality, bestTorrent);  
+                  
+                SURS_QUALITY.log(`Знайдено якість: ${quality}`);  
+            } else {  
+                SURS_QUALITY.log('Торренти не знайдені');  
+            }  
+        } catch (error) {  
+            SURS_QUALITY.log('Помилка аналізу:', error.message);  
+        }  
+          
+        logExecution('fetchQualityForCard', startTime, 'Аналіз якості завершено');  
+    }  
+  
+    // Функція аналізу торрентів (заглушка)  
+    async function analyzeTorrents(movieData) {  
+        // Тут має бути реальний API виклик до JacRed або іншого джерела  
+        // Повертаємо тестові дані для демонстрації  
+        return [  
+            {  
+                title: movieData.title + ' 2160p DV BluRay',  
+                quality: 2160,  
+                isCamrip: false,  
+                size: '50 GB',  
+                seeders: 15  
+            },  
+            {  
+                title: movieData.title + ' 1080p HDR10+ WEB-DL',  
+                quality: 1080,  
+                isCamrip: false,  
+                size: '15 GB',  
+                seeders: 25  
+            },  
+            {  
+                title: movieData.title + ' 1080p BluRay',  
+                quality: 1080,  
+                isCamrip: false,  
+                size: '12 GB',  
+                seeders: 30  
+            }  
+        ];  
+    }  
+  
+    // Функція оновлення відображення якості  
+    function updateQualityDisplay(renderElement, quality, torrent) {  
+        if (!renderElement) return;  
+          
+        // Створення елемента якості  
+        const qualityElement = document.createElement('div');  
+        qualityElement.className = 'surs-quality-badge';  
+        qualityElement.innerHTML = `  
+            <span class="quality-text">${quality}</span>  
+            <span class="quality-info">${torrent.size} / ${torrent.seeders} роздач</span>  
+        `;  
+          
+        // Стилі для значка якості  
+        const style = document.createElement('style');  
+        style.textContent = `  
+            .surs-quality-badge {  
+                position: absolute;  
+                top: 10px;  
+                right: 10px;  
+                background: linear-gradient(135deg, #ff6b6b, #4ecdc4);  
+                color: white;  
+                padding: 4px 8px;  
+                border-radius: 4px;  
+                font-size: 12px;  
+                font-weight: bold;  
+                z-index: 10;  
+                box-shadow: 0 2px 4px rgba(0,0,0,0.3);  
+            }  
+            .quality-text {  
+                display: block;  
+                font-size: 14px;  
+            }  
+            .quality-info {  
+                display: block;  
+                font-size: 10px;  
+                opacity: 0.8;  
+            }  
+        `;  
+          
+        if (!document.getElementById('surs-quality-styles')) {  
+            style.id = 'surs-quality-styles';  
+            document.head.appendChild(style);  
+        }  
+          
+        // Додавання значка до елемента  
+        renderElement.style.position = 'relative';  
+        renderElement.appendChild(qualityElement);  
+    }  
+  
+    // Ініціалізація плагіна  
+    function startPlugin() {  
+        const startTime = performance.now();  
+        SURS_QUALITY.log('Запуск плагіна якості!');  
+        window.sursQualityPlugin = true;  
+  
+        Lampa.Listener.follow('full', function (e) {  
+            if (e.type === 'complite') {  
+                var render = e.object.activity.render();  
+                fetchQualityForCard(e.data.movie, render);  
+            }  
+        });  
+        logExecution('startPlugin', startTime, 'Плагін запущено');  
+    }  
+  
+    if (!window.sursQualityPlugin) {  
+        startPlugin();  
+    }  
 })();
