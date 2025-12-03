@@ -1,159 +1,153 @@
-(function () {
+(function(){
     'use strict';
 
-    const SETTINGS_COMPONENT = 'external_plugins_manager';
-    const STORAGE_KEY = 'external_plugins_manager_settings';
+    var PLUGIN_NAME = 'plugins_tab_manager';
+    var STORAGE_KEY = 'plugins_tab_manager_settings';
 
-    // ------------------------------
-    // ⚙️ Налаштування за замовчуванням
-    // ------------------------------
-    const defaultSettings = {
+    var defaults = {
         plugin1_enabled: true,
         plugin2_enabled: true,
         plugin1_url: 'https://crowley24.github.io/NewLogo.js',
-        plugin2_url: 'https://tvigl.info/plugins/quality.js',
-
-        foxstudio_interface_enabled: true,
-        necardify_enabled: false,
-        logo_enabled: false
+        plugin2_url: 'https://tvigl.info/plugins/quality.js'
     };
 
-    // ------------------------------
-    // 📌 LOAD / SAVE
-    // ------------------------------
-    function loadSettings() {
-        const saved = Lampa.Storage.get(STORAGE_KEY);
-        return Object.assign({}, defaultSettings, saved || {});
-    }
-
-    function saveSettings(newSet) {
-        Lampa.Storage.set(STORAGE_KEY, newSet);
-    }
-
-    // ------------------------------
-    // 📌 Завантаження зовнішнього JS
-    // ------------------------------
-    function injectScript(url) {
-        try {
-            const script = document.createElement('script');
-            script.src = url;
-            script.async = true;
-            document.body.appendChild(script);
-        } catch (e) {
-            console.error('Plugin loading error:', e);
+    function readStorage(){
+        try{
+            var s = Lampa.Storage.get(STORAGE_KEY);
+            if(!s) return Object.assign({}, defaults);
+            return Object.assign({}, defaults, s);
+        }catch(e){
+            console.error(PLUGIN_NAME + ' readStorage error', e);
+            return Object.assign({}, defaults);
         }
     }
 
-    // ------------------------------
-    // ▶️ Ініціалізація сторонніх плагінів
-    // ------------------------------
-    function initPlugins() {
-        const s = loadSettings();
-
-        if (s.plugin1_enabled) injectScript(s.plugin1_url);
-        if (s.plugin2_enabled) injectScript(s.plugin2_url);
-
-        if (s.necardify_enabled)
-            injectScript('https://foxstudio24.github.io/lampa/necardify.js');
-
-        if (s.logo_enabled)
-            injectScript('https://foxstudio24.github.io/lampa/logo.js');
-
-        // FoxStudio Interface — просто перемикач, якщо потрібно щось робити — тут
-        if (s.foxstudio_interface_enabled) {
-            console.log('FoxStudio Interface active');
+    function saveStorage(payload){
+        try{
+            Lampa.Storage.set(STORAGE_KEY, payload);
+        }catch(e){
+            console.error(PLUGIN_NAME + ' saveStorage error', e);
         }
     }
 
-    // ------------------------------
-    // 🧩 Вкладка External Plugins Manager
-    // ------------------------------
-    Lampa.SettingsApi.addComponent({
-        name: SETTINGS_COMPONENT,
-        icon: 'ti ti-plug',
-        title: 'External Plugins Manager',
-        onRender: function (elem) {
+    function loadScript(url){
+        return new Promise(function(resolve, reject){
+            if(!url) return reject(new Error('Empty URL'));
 
-            let s = loadSettings();
-            let box = $('<div></div>');
-
-            // ------------------------------
-            // 🔹 Плагін 1: Logo by NewLogo.js
-            // ------------------------------
-            box.append(Lampa.SettingsApi.addSwitch({
-                title: 'Plugin Logo (NewLogo)',
-                description: 'Увімкнути / вимкнути заміну назв на логотипи',
-                name: 'plugin1_enabled',
-                default: s.plugin1_enabled,
-                onchange: (val) => {
-                    s.plugin1_enabled = val;
-                    saveSettings(s);
+            var scripts = document.querySelectorAll('script[data-plugins-tab-src]');
+            for(var i=0;i<scripts.length;i++){
+                if(scripts[i].getAttribute('data-plugins-tab-src') === url){
+                    return resolve();
                 }
-            }));
+            }
 
-            // ------------------------------
-            // 🔹 Плагін 2: Quality Badges
-            // ------------------------------
-            box.append(Lampa.SettingsApi.addSwitch({
-                title: 'Plugin Quality Badges',
-                description: 'Показувати якість на постерах',
-                name: 'plugin2_enabled',
-                default: s.plugin2_enabled,
-                onchange: (val) => {
-                    s.plugin2_enabled = val;
-                    saveSettings(s);
-                }
-            }));
+            var s = document.createElement('script');
+            s.setAttribute('data-plugins-tab-src', url);
+            s.src = url;
+            s.async = true;
+            s.onload = () => resolve();
+            s.onerror = () => reject(new Error('Failed to load script: ' + url));
+            document.head.appendChild(s);
+        });
+    }
 
-            // ------------------------------
-            // ⭐ FoxStudio Interface
-            // ------------------------------
-            box.append(Lampa.SettingsApi.addSwitch({
-                title: 'FoxStudio — Новий інтерфейс',
-                description: 'Вмикає новий UI від FoxStudio',
-                name: 'foxstudio_interface_enabled',
-                default: s.foxstudio_interface_enabled,
-                onchange: (val) => {
-                    s.foxstudio_interface_enabled = val;
-                    saveSettings(s);
-                }
-            }));
+    function unloadScript(url){
+        var scripts = document.querySelectorAll('script[data-plugins-tab-src]');
+        scripts.forEach(s => {
+            if(!url || s.getAttribute('data-plugins-tab-src') === url){
+                s.parentNode.removeChild(s);
+            }
+        });
+    }
 
-            // ------------------------------
-            // ⭐ Necardify
-            // ------------------------------
-            box.append(Lampa.SettingsApi.addSwitch({
-                title: 'FoxStudio — Necardify',
-                description: 'Змінює стиль карток',
-                name: 'necardify_enabled',
-                default: s.necardify_enabled,
-                onchange: (val) => {
-                    s.necardify_enabled = val;
-                    saveSettings(s);
-                }
-            }));
+    function initPluginsOnStart(){
+        var s = readStorage();
+        if(s.plugin1_enabled) loadScript(s.plugin1_url);
+        if(s.plugin2_enabled) loadScript(s.plugin2_url);
+    }
 
-            // ------------------------------
-            // ⭐ Logo.js (FoxStudio)
-            // ------------------------------
-            box.append(Lampa.SettingsApi.addSwitch({
-                title: 'FoxStudio — Logo Plugin',
-                description: 'Відображає логотипи через FoxStudio Logo.js',
-                name: 'logo_enabled',
-                default: s.logo_enabled,
-                onchange: (val) => {
-                    s.logo_enabled = val;
-                    saveSettings(s);
-                }
-            }));
+    function createSettingsTab(e){
+        if(e.name !== 'interface') return;
 
-            elem.append(box);
+        var settings = readStorage();
+
+        var wrap = $('<div class="settings-param" style="padding:8px 12px;">');
+        wrap.append('<div class="settings-param__name" style="font-weight:700;margin-bottom:6px;">Plugins (FoxStudio)</div>');
+
+        var p1url = $('<div class="settings-param selector"><div class="settings-param__name">Plugin 1 — URL</div></div>');
+        var input1 = $('<input type="text" style="width:100%;padding:6px;margin:6px 0;">');
+        input1.val(settings.plugin1_url);
+
+        var p1toggle = $('<div class="settings-param selector" data-name="plugin1_enabled"><div class="settings-param__name">Включити Plugin 1</div><div class="settings-param__value"></div></div>');
+
+        var p2url = $('<div class="settings-param selector"><div class="settings-param__name">Plugin 2 — URL</div></div>');
+        var input2 = $('<input type="text" style="width:100%;padding:6px;margin:6px 0;">');
+        input2.val(settings.plugin2_url);
+
+        var p2toggle = $('<div class="settings-param selector" data-name="plugin2_enabled"><div class="settings-param__name">Включити Plugin 2</div><div class="settings-param__value"></div></div>');
+
+        var buttons = $('<div style="margin-top:10px;display:flex;gap:8px;">');
+        var btnSave = $('<div class="button">Зберегти URL</div>');
+        var btnReload = $('<div class="button">Перезавантажити плагіни</div>');
+        var btnUnload = $('<div class="button">Вимкнути всі</div>');
+
+        buttons.append(btnSave, btnReload, btnUnload);
+
+        wrap.append(p1url, input1, p1toggle, '<hr>', p2url, input2, p2toggle, buttons);
+
+        e.body.append(wrap);
+
+        function update(){
+            $('[data-name="plugin1_enabled"] .settings-param__value').text(settings.plugin1_enabled ? 'Вкл' : 'Викл');
+            $('[data-name="plugin2_enabled"] .settings-param__value').text(settings.plugin2_enabled ? 'Вкл' : 'Викл');
         }
-    });
+        update();
 
-    // ------------------------------
-    // ▶️ AUTO START
-    // ------------------------------
-    initPlugins();
+        p1toggle.on('hover:enter', function(){
+            settings.plugin1_enabled = !settings.plugin1_enabled;
+            saveStorage(settings);
+            update();
+
+            if(settings.plugin1_enabled) loadScript(settings.plugin1_url);
+            else unloadScript(settings.plugin1_url);
+        });
+
+        p2toggle.on('hover:enter', function(){
+            settings.plugin2_enabled = !settings.plugin2_enabled;
+            saveStorage(settings);
+            update();
+
+            if(settings.plugin2_enabled) loadScript(settings.plugin2_url);
+            else unloadScript(settings.plugin2_url);
+        });
+
+        btnSave.on('hover:enter', function(){
+            settings.plugin1_url = input1.val().trim();
+            settings.plugin2_url = input2.val().trim();
+            saveStorage(settings);
+            Lampa.Noty.show('URL збережено');
+        });
+
+        btnReload.on('hover:enter', function(){
+            unloadScript();
+            if(settings.plugin1_enabled) loadScript(settings.plugin1_url);
+            if(settings.plugin2_enabled) loadScript(settings.plugin2_url);
+            Lampa.Noty.show('Перезавантажено');
+        });
+
+        btnUnload.on('hover:enter', function(){
+            unloadScript();
+            Lampa.Noty.show('Усі скрипти вимкнено');
+        });
+    }
+
+    function init(){
+        Lampa.Settings.listener.follow('open', createSettingsTab);
+        initPluginsOnStart();
+        console.log('Plugins Tab Manager Loaded');
+    }
+
+    if(window.Lampa) init();
+    else document.addEventListener('DOMContentLoaded', init);
 
 })();
