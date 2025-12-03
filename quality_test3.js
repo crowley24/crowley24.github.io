@@ -22,7 +22,7 @@
     }  
   
     // Polyfill for performance.now  
-    if (typeof performance === 'undefined' || !performance.now) {  
+    if (!window.performance || !window.performance.now) {  
         window.performance = {  
             now: function () {  
                 return Date.now();  
@@ -30,7 +30,7 @@
         };  
     }  
   
-    // Конфігурація плагіна  
+    // Конфігурація  
     var Q_LOGGING = true;  
     var Q_CACHE_TIME = 24 * 60 * 60 * 1000;  
     var QUALITY_CACHE = 'maxsm_ratings_quality_cache';  
@@ -43,10 +43,10 @@
         'http://cors.bwa.workers.dev/'  
     ];  
   
-    // Стилі для відображення якості  
+    // CSS стилі для відображення якості  
     var style = document.createElement('style');  
     style.textContent = `  
-        .maxsm-quality {  
+        .quality-badge {  
             position: absolute;  
             top: 5px;  
             right: 5px;  
@@ -59,68 +59,60 @@
             z-index: 10;  
             text-transform: uppercase;  
         }  
-        .maxsm-quality.dolby-vision {  
-            background: linear-gradient(45deg, #0099ff, #66ccff);  
-            color: white;  
+        .quality-badge.dolby-vision {  
+            background: linear-gradient(45deg, #0066cc, #00ccff);  
+            box-shadow: 0 0 10px rgba(0, 204, 255, 0.5);  
         }  
-        .maxsm-quality.hdr {  
+        .quality-badge.hdr {  
             background: linear-gradient(45deg, #ff6600, #ffcc00);  
-            color: black;  
+            box-shadow: 0 0 10px rgba(255, 204, 0, 0.5);  
+        }  
+        .quality-badge.uhd {  
+            background: linear-gradient(45deg, #9b59b6, #e74c3c);  
+            box-shadow: 0 0 10px rgba(155, 89, 182, 0.5);  
         }  
     `;  
     document.head.appendChild(style);  
   
     // Функція логування  
     function log(message) {  
-        if (Q_LOGGING && console && console.log) {  
-            console.log('[MAXSM-Quality]', message);  
+        if (Q_LOGGING) {  
+            console.log('[QUALITY]', message);  
         }  
     }  
   
-    // Функція вимірювання часу виконання  
-    function logExecution(functionName, startTime, message) {  
-        if (Q_LOGGING && console && console.log) {  
-            var endTime = performance.now();  
-            var duration = (endTime - startTime).toFixed(2);  
-            console.log('[MAXSM-Quality]', functionName + ' виконано за ' + duration + 'ms - ' + message);  
-        }  
-    }  
-  
-    // Функція перекладу якості з підтримкою Dolby Vision та HDR  
-    function translateQuality(quality, isCamrip, title) {  
-        if (isCamrip) {  
-            return 'Екранка';  
-        }  
+    // Функція визначення якості з назви торрента  
+    function translateQuality(title) {  
+        if (!title) return '';  
           
-        var lowerTitle = (title || '').toLowerCase();  
+        var lowerTitle = title.toLowerCase();  
           
-        // Перевірка на Dolby Vision для 4K  
-        if (typeof quality === 'number' && quality >= 2160) {  
-            if (/\b(dolby\s*vision|dov|dv)\b/i.test(lowerTitle)) {  
+        // Перевірка на Dolby Vision  
+        if (/\b(dolby\s*vision|dov|dv)\b/i.test(lowerTitle)) {  
+            if (/\b(4k|uhd|2160p)\b/i.test(lowerTitle)) {  
                 return '4K DV';  
-            } else if (/\bhdr\b/i.test(lowerTitle)) {  
-                return '4K HDR';  
-            } else {  
-                return '4K';  
-            }  
-        }  
-          
-        // Перевірка на HDR для інших якостей  
-        if (typeof quality === 'number' && quality >= 1080) {  
-            if (/\b(dolby\s*vision|dov|dv)\b/i.test(lowerTitle)) {  
+            } else if (/\b(1080p|fhd)\b/i.test(lowerTitle)) {  
                 return 'FHD DV';  
-            } else if (/\bhdr\b/i.test(lowerTitle)) {  
-                return 'FHD HDR';  
-            } else {  
-                return 'FHD';  
             }  
         }  
           
-        if (typeof quality === 'number' && quality >= 720) {  
-            return 'HD';  
+        // Перевірка на HDR  
+        if (/\b(hdr10|hdr)\b/i.test(lowerTitle)) {  
+            if (/\b(4k|uhd|2160p)\b/i.test(lowerTitle)) {  
+                return '4K HDR';  
+            } else if (/\b(1080p|fhd)\b/i.test(lowerTitle)) {  
+                return 'FHD HDR';  
+            }  
         }  
           
-        if (typeof quality === 'number' && quality >= 480) {  
+        // Стандартна якість  
+        if (/\b(4k|uhd|2160p)\b/i.test(lowerTitle)) {  
+            return '4K';  
+        } else if (/\b(1080p|fhd)\b/i.test(lowerTitle)) {  
+            return 'FHD';  
+        } else if (/\b(720p|hd)\b/i.test(lowerTitle)) {  
+            return 'HD';  
+        } else if (/\b(480p|sd)\b/i.test(lowerTitle)) {  
             return 'SD';  
         }  
           
@@ -129,200 +121,318 @@
   
     // Функція отримання CSS класу для якості  
     function getQualityClass(quality) {  
+        if (!quality) return '';  
+          
         if (quality.includes('DV')) {  
             return 'dolby-vision';  
         } else if (quality.includes('HDR')) {  
             return 'hdr';  
+        } else if (quality.includes('4K')) {  
+            return 'uhd';  
         }  
+          
         return '';  
     }  
   
-    // Функція аналізу торрентів  
-    function analyzeTorrents(movieData) {  
-        var startTime = performance.now();  
-        log('Початок аналізу торрентів для: ' + (movieData.title || movieData.original_title));  
-          
+    // Функція запиту до JacRed API  
+    function fetchQualityFromJacRed(title, year) {  
         return new Promise(function(resolve, reject) {  
-            var cacheKey = QUALITY_CACHE + ':' + (movieData.title || movieData.original_title) + ':' + movieData.year;  
-              
-            // Перевірка кешу  
-            var cached = localStorage.getItem(cacheKey);  
-            if (cached) {  
-                try {  
-                    var cachedData = JSON.parse(cached);  
-                    if (Date.now() - cachedData.timestamp < Q_CACHE_TIME) {  
-                        log('Використано кешовані дані');  
-                        logExecution('analyzeTorrents', startTime, 'з кешу');  
-                        resolve(cachedData.quality);  
-                        return;  
-                    }  
-                } catch (e) {  
-                    log('Помилка розбору кешу: ' + e.message);  
-                }  
-            }  
-              
-            // Запит до JacRed API  
             var apiUrl = JACRED_PROTOCOL + JACRED_URL + '/api/v1.0/torrents?search=' +   
-                encodeURIComponent(movieData.title || movieData.original_title) +   
-                '&year=' + movieData.year +   
-                '&apikey=' + JACRED_API_KEY;  
+                         encodeURIComponent(title) + '&year=' + year + '&apikey=' + JACRED_API_KEY;  
               
+            // Спроба прямого запиту  
             fetch(apiUrl)  
                 .then(function(response) {  
-                    if (!response.ok) {  
-                        throw new Error('HTTP ' + response.status);  
+                    if (response.ok) {  
+                        return response.json();  
                     }  
-                    return response.json();  
+                    throw new Error('Direct request failed');  
                 })  
                 .then(function(data) {  
-                    if (!data || !Array.isArray(data) || data.length === 0) {  
-                        log('Торренти не знайдено');  
-                        resolve(null);  
-                        return;  
+                    if (data && data.results && data.results.length > 0) {  
+                        var bestQuality = findBestQuality(data.results);  
+                        resolve(bestQuality);  
+                    } else {  
+                        resolve('');  
                     }  
-                      
-                    // Пошук найкращої якості  
-                    var bestQuality = null;  
-                    var bestTorrent = null;  
-                      
-                    for (var i = 0; i < data.length; i++) {  
-                        var torrent = data[i];  
-                        var currentQuality = translateQuality(torrent.quality, false, torrent.title || torrent.name);  
-                          
-                        if (!bestQuality || torrent.quality > bestTorrent.quality) {  
-                            bestQuality = currentQuality;  
-                            bestTorrent = torrent;  
-                        }  
-                    }  
-                      
-                    // Збереження в кеш  
-                    var cacheData = {  
-                        quality: bestQuality,  
-                        timestamp: Date.now()  
-                    };  
-                    localStorage.setItem(cacheKey, JSON.stringify(cacheData));  
-                      
-                    log('Найкраща якість: ' + bestQuality);  
-                    logExecution('analyzeTorrents', startTime, 'з API');  
-                    resolve(bestQuality);  
                 })  
-                .catch(function(error) {  
-                    log('Помилка запиту: ' + error.message);  
-                    reject(error);  
+                .catch(function() {  
+                    // Спроба через проксі  
+                    tryProxyRequest(apiUrl)  
+                        .then(resolve)  
+                        .catch(reject);  
                 });  
         });  
     }  
   
-    // Функція оновлення карток  
-    function updateCards(cards) {  
-        var startTime = performance.now();  
-        log('Оновлення ' + cards.length + ' карток');  
-          
-        var promises = [];  
-          
-        for (var i = 0; i < cards.length; i++) {  
-            var card = cards[i];  
-            var movieData = extractMovieData(card);  
+    // Функція запиту через проксі  
+    function tryProxyRequest(url) {  
+        return new Promise(function(resolve, reject) {  
+            var proxyIndex = 0;  
               
-            if (movieData) {  
-                promises.push(  
-                    analyzeTorrents(movieData)  
-                        .then(function(quality) {  
-                            if (quality) {  
-                                updateCardQuality(this.card, quality);  
-                            }  
-                        }.bind({ card: card }))  
-                        .catch(function(error) {  
-                            log('Помилка аналізу картки: ' + error.message);  
-                        })  
-                );  
+            function tryNextProxy() {  
+                if (proxyIndex >= PROXY_LIST.length) {  
+                    reject(new Error('All proxies failed'));  
+                    return;  
+                }  
+                  
+                var proxyUrl = PROXY_LIST[proxyIndex] + encodeURIComponent(url);  
+                  
+                fetch(proxyUrl)  
+                    .then(function(response) {  
+                        if (response.ok) {  
+                            return response.json();  
+                        }  
+                        throw new Error('Proxy request failed');  
+                    })  
+                    .then(function(data) {  
+                        if (data && data.results && data.results.length > 0) {  
+                            var bestQuality = findBestQuality(data.results);  
+                            resolve(bestQuality);  
+                        } else {  
+                            resolve('');  
+                        }  
+                    })  
+                    .catch(function() {  
+                        proxyIndex++;  
+                        tryNextProxy();  
+                    });  
             }  
-        }  
-          
-        Promise.all(promises).then(function() {  
-            logExecution('updateCards', startTime, 'всі картки оновлено');  
+              
+            tryNextProxy();  
         });  
     }  
   
-    // Функція отримання даних про фільм з картки  
-    function extractMovieData(card) {  
-        try {  
-            var titleElement = card.querySelector('.card__title') ||   
-                              card.querySelector('[data-title]') ||   
-                              card.querySelector('.title');  
+    // Функція пошуку найкращої якості  
+    function findBestQuality(torrents) {  
+        var bestQuality = '';  
+        var bestScore = -1;  
+          
+        torrents.forEach(function(torrent) {  
+            var quality = translateQuality(torrent.title || torrent.name);  
+            var score = getQualityScore(quality);  
               
-            var yearElement = card.querySelector('.card__year') ||   
-                             card.querySelector('[data-year]') ||   
-                             card.querySelector('.year');  
-              
-            if (!titleElement) {  
-                return null;  
+            if (score > bestScore) {  
+                bestScore = score;  
+                bestQuality = quality;  
             }  
+        });  
+          
+        return bestQuality;  
+    }  
+  
+    // Функція оцінки якості  
+    function getQualityScore(quality) {  
+        if (!quality) return 0;  
+          
+        if (quality.includes('DV')) return 100;  
+        if (quality.includes('HDR')) return 90;  
+        if (quality.includes('4K')) return 80;  
+        if (quality.includes('FHD')) return 70;  
+        if (quality.includes('HD')) return 60;  
+        if (quality.includes('SD')) return 50;  
+          
+        return 0;  
+    }  
+  
+    // Функція отримання якості з кешу  
+    function getQualityFromCache(title, year) {  
+        try {  
+            var cacheKey = title + '_' + year;  
+            var cached = localStorage.getItem(QUALITY_CACHE);  
               
-            return {  
-                title: titleElement.textContent || titleElement.getAttribute('data-title'),  
-                year: parseInt(yearElement.textContent || yearElement.getAttribute('data-year')) || 0,  
-                original_title: titleElement.getAttribute('data-original-title')  
+            if (cached) {  
+                var cache = JSON.parse(cached);  
+                var item = cache[cacheKey];  
+                  
+                if (item && (Date.now() - item.timestamp) < Q_CACHE_TIME) {  
+                    return item.quality;  
+                }  
+            }  
+        } catch (e) {  
+            log('Cache read error: ' + e.message);  
+        }  
+          
+        return null;  
+    }  
+  
+    // Функція збереження якості в кеш  
+    function saveQualityToCache(title, year, quality) {  
+        try {  
+            var cacheKey = title + '_' + year;  
+            var cached = localStorage.getItem(QUALITY_CACHE);  
+            var cache = cached ? JSON.parse(cached) : {};  
+              
+            cache[cacheKey] = {  
+                quality: quality,  
+                timestamp: Date.now()  
             };  
+              
+            localStorage.setItem(QUALITY_CACHE, JSON.stringify(cache));  
         } catch (e) {  
-            log('Помилка отримання даних з картки: ' + e.message);  
-            return null;  
+            log('Cache write error: ' + e.message);  
         }  
     }  
   
-    // Функція оновлення якості на картці  
-    function updateCardQuality(card, quality) {  
-        try {  
-            var existingQuality = card.querySelector('.maxsm-quality');  
-            if (existingQuality) {  
-                existingQuality.remove();  
-            }  
-              
-            var qualityElement = document.createElement('div');  
-            qualityElement.className = 'maxsm-quality ' + getQualityClass(quality);  
-            qualityElement.textContent = quality;  
-              
-            card.style.position = 'relative';  
-            card.appendChild(qualityElement);  
-              
-            log('Якість оновлено: ' + quality);  
-        } catch (e) {  
-            log('Помилка оновлення якості: ' + e.message);  
-        }  
-    }  
-  
-    // Основна функція плагіна  
-    function startPlugin() {  
-        var startTime = performance.now();  
-        log('Запуск плагіна якості!');  
-        window.sursQualityPlugin = true;  
-  
-        Lampa.Listener.follow('full', function (e) {  
-            if (e.type === 'complite') {  
-                var render = e.object.activity.render();  
-                fetchQualityForCard(e.data.movie, render);  
-            }  
-        });  
-        logExecution('startPlugin', startTime, 'Плагін запущено');  
-    }  
-  
-    // Функція для повного екрану  
-    function fetchQualityForCard(movieData, renderElement) {  
-        if (!movieData) return;  
+    // Функція отримання інформації про фільм з картки  
+    function getMovieInfoFromCard(card) {  
+        var titleElement = card.querySelector('.card__title') ||   
+                          card.querySelector('[data-title]') ||  
+                          card.querySelector('h3') ||  
+                          card.querySelector('.title');  
           
-        analyzeTorrents(movieData)  
+        var yearElement = card.querySelector('.card__year') ||   
+                         card.querySelector('[data-year]') ||  
+                         card.querySelector('.year');  
+          
+        var title = titleElement ? titleElement.textContent.trim() : '';  
+        var year = yearElement ? parseInt(yearElement.textContent.trim()) : new Date().getFullYear();  
+          
+        return { title: title, year: year };  
+    }  
+  
+    // Функція створення бейджа якості  
+    function createQualityBadge(quality) {  
+        if (!quality) return null;  
+          
+        var badge = document.createElement('div');  
+        badge.className = 'quality-badge ' + getQualityClass(quality);  
+        badge.textContent = quality;  
+          
+        return badge;  
+    }  
+  
+    // Функція оновлення картки  
+    function updateCard(card) {  
+        var movieInfo = getMovieInfoFromCard(card);  
+          
+        if (!movieInfo.title) {  
+            log('No title found for card');  
+            return;  
+        }  
+          
+        // Перевірка кешу  
+        var cachedQuality = getQualityFromCache(movieInfo.title, movieInfo.year);  
+        if (cachedQuality) {  
+            addQualityToCard(card, cachedQuality);  
+            return;  
+        }  
+          
+        // Запит до API  
+        fetchQualityFromJacRed(movieInfo.title, movieInfo.year)  
             .then(function(quality) {  
-                if (quality && renderElement) {  
-                    updateCardQuality(renderElement, quality);  
+                if (quality) {  
+                    saveQualityToCache(movieInfo.title, movieInfo.year, quality);  
+                    addQualityToCard(card, quality);  
                 }  
             })  
             .catch(function(error) {  
-                log('Помилка отримання якості: ' + error.message);  
+                log('Error fetching quality: ' + error.message);  
             });  
     }  
   
+    // Функція додавання якості до картки  
+    function addQualityToCard(card, quality) {  
+        // Перевірка чи вже є бейдж  
+        var existingBadge = card.querySelector('.quality-badge');  
+        if (existingBadge) {  
+            existingBadge.remove();  
+        }  
+          
+        var badge = createQualityBadge(quality);  
+        if (badge) {  
+            // Пошук контейнера для постера  
+            var posterContainer = card.querySelector('.card__img') ||  
+                               card.querySelector('.card__poster') ||  
+                               card.querySelector('img') ||  
+                               card;  
+              
+            posterContainer.style.position = 'relative';  
+            posterContainer.appendChild(badge);  
+              
+            log('Added quality badge: ' + quality);  
+        }  
+    }  
+  
+    // Функція оновлення всіх карток  
+    function updateAllCards() {  
+        var cards = document.querySelectorAll('.card, .movie-card, [data-movie-id]');  
+        log('Found ' + cards.length + ' cards');  
+          
+        cards.forEach(function(card) {  
+            updateCard(card);  
+        });  
+    }  
+  
+    // Функція спостереження за змінами DOM  
+    function setupMutationObserver() {  
+        var observer = new MutationObserver(function(mutations) {  
+            var shouldUpdate = false;  
+              
+            mutations.forEach(function(mutation) {  
+                if (mutation.type === 'childList') {  
+                    mutation.addedNodes.forEach(function(node) {  
+                        if (node.nodeType === Node.ELEMENT_NODE) {  
+                            if (node.classList &&   
+                                (node.classList.contains('card') ||   
+                                 node.classList.contains('movie-card') ||  
+                                 node.hasAttribute('data-movie-id'))) {  
+                                shouldUpdate = true;  
+                            } else if (node.querySelector) {  
+                                var cards = node.querySelectorAll('.card, .movie-card, [data-movie-id]');  
+                                if (cards.length > 0) {  
+                                    shouldUpdate = true;  
+                                }  
+                            }  
+                        }  
+                    });  
+                }  
+            });  
+              
+            if (shouldUpdate) {  
+                setTimeout(updateAllCards, 1000);  
+            }  
+        });  
+          
+        observer.observe(document.body, {  
+            childList: true,  
+            subtree: true  
+        });  
+          
+        return observer;  
+    }  
+  
+    // Основна функція запуску плагіна  
+    function startPlugin() {  
+        log('Starting quality plugin');  
+          
+        // Перевірка наявності необхідних елементів  
+        if (!document.body) {  
+            log('Document body not ready');  
+            setTimeout(startPlugin, 1000);  
+            return;  
+        }  
+          
+        // Налаштування спостерігача  
+        var observer = setupMutationObserver();  
+          
+        // Початкове оновлення карток  
+        setTimeout(updateAllCards, 2000);  
+          
+        // Періодичне оновлення  
+        setInterval(updateAllCards, 30000);  
+          
+        log('Quality plugin started successfully');  
+    }  
+  
     // Запуск плагіна  
-    if (!window.sursQualityPlugin) {  
-        startPlugin();  
+    if (!window.qualityPluginLoaded) {  
+        window.qualityPluginLoaded = true;  
+          
+        if (document.readyState === 'loading') {  
+            document.addEventListener('DOMContentLoaded', startPlugin);  
+        } else {  
+            startPlugin();  
+        }  
     }  
 })();
