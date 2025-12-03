@@ -4,29 +4,24 @@
     Lampa.Settings.listener.follow('open', function(e) {  
         if (e.name === 'main') {  
             // Створюємо пункт меню  
-            const menu_item = $('<div class="settings-param selector" data-name="interface_tools">');  
-            menu_item.append('<div class="settings-param__name">Interface Tools</div>');  
+            const menu_item = $('<div class="settings-param selector" data-name="new_menu_item">');  
+            menu_item.append('<div class="settings-param__name">Новий пункт</div>');  
             menu_item.append('<div class="settings-param__value">➤</div>');  
               
-            // Знаходимо пункт "Інтерфейс" і вставляємо після нього  
-            const interface_item = e.body.find('[data-name="interface"]');  
-            if (interface_item.length > 0) {  
-                interface_item.after(menu_item);  
-            } else {  
-                e.body.append(menu_item);  
-            }  
+            // Додаємо в основний список  
+            e.body.append(menu_item);  
               
             // Обробник кліку  
             menu_item.on('hover:enter', function() {  
-                Lampa.Settings.open('interface_tools');  
+                Lampa.Settings.open('new_menu_item');  
             });  
         }  
           
-        // Порожня сторінка  
-        if (e.name === 'interface_tools') {  
-            e.body.append('<div style="padding: 20px; text-align: center;">Сторінка Interface Tools</div>');  
+        // Порожня сторінка при відкритті  
+        if (e.name === 'new_menu_item') {  
+            e.body.append('<div style="padding: 20px; text-align: center;">Сторінка нового пункту</div>');  
         }  
     });  
       
-    console.log('Interface Tools menu item added');  
+    console.log('Новий пункт меню додано');  
 })();
