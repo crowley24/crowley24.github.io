@@ -8,14 +8,21 @@
             menu_item.append('<div class="settings-param__name">Interface Tools</div>');  
             menu_item.append('<div class="settings-param__value">➤</div>');  
               
+            // Знаходимо пункт "Інтерфейс" і вставляємо після нього  
+            const interface_item = e.body.find('[data-name="interface"]');  
+            if (interface_item.length > 0) {  
+                interface_item.after(menu_item);  
+            } else {  
+                e.body.append(menu_item);  
+            }  
               
-            // Обробник кліку - відкриває порожню сторінку  
+            // Обробник кліку  
             menu_item.on('hover:enter', function() {  
                 Lampa.Settings.open('interface_tools');  
             });  
         }  
           
-        // Відображення порожньої сторінки  
+        // Порожня сторінка  
         if (e.name === 'interface_tools') {  
             e.body.append('<div style="padding: 20px; text-align: center;">Сторінка Interface Tools</div>');  
         }  
