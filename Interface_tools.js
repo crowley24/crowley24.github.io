@@ -1,133 +1,225 @@
-(function () {  
-    'use strict';  
-  
-    const STORAGE_KEY = 'external_plugins_manager_settings';  
-  
-    // Налаштування за замовчуванням  
-    const defaultSettings = {  
-        plugin1_enabled: true,  
-        plugin2_enabled: true,  
-        plugin1_url: 'https://crowley24.github.io/NewLogo.js',  
-        plugin2_url: 'https://tvigl.info/plugins/quality.js'  
-    };  
-  
-    // Функції роботи з налаштуваннями  
-    function loadSettings() {  
-        const saved = Lampa.Storage.get(STORAGE_KEY);  
-        return Object.assign({}, defaultSettings, saved || {});  
-    }  
-  
-    function saveSettings(newSet) {  
-        Lampa.Storage.set(STORAGE_KEY, newSet);  
-    }  
-  
-    // Завантаження скриптів  
-    function loadScript(url) {  
-        try {  
-            const script = document.createElement('script');  
-            script.src = url;  
-            script.async = true;  
-            document.body.appendChild(script);  
-        } catch (e) {  
-            console.error('Помилка завантаження скрипту:', e);  
-        }  
-    }  
-  
-    // Створення меню налаштувань  
-    Lampa.Settings.listener.follow('open', function(e) {  
-        if (e.name === 'main') {  
-            // Створюємо пункт меню  
-            const plugin_manager_item = $('<div class="settings-param selector" data-name="external_plugins_manager">');  
-            plugin_manager_item.append('<div class="settings-param__name">External Plugins Manager</div>');  
-            plugin_manager_item.append('<div class="settings-param__value">➤</div>');  
-              
-            // Знаходимо пункт "Інтерфейс" і вставляємо наш пункт після нього  
-            const interface_item = e.body.find('[data-name="interface"]');  
-            if (interface_item.length > 0) {  
-                interface_item.after(plugin_manager_item);  
-            } else {  
-                // Якщо не знайдено, додаємо в кінець  
-                e.body.append(plugin_manager_item);  
-            }  
-              
-            // Обробник кліку  
-            plugin_manager_item.on('hover:enter', function() {  
-                Lampa.Settings.open('external_plugins_manager');  
-            });  
-        }  
-          
-        // Відображення налаштувань  
-        if (e.name === 'external_plugins_manager') {  
-            let settings = loadSettings();  
-              
-            // Плагін 1  
-            const plugin1_toggle = $('<div class="settings-param selector" data-type="toggle" data-name="plugin1_enabled">');  
-            plugin1_toggle.append('<div class="settings-param__name">Plugin Logo</div>');  
-            plugin1_toggle.append('<div class="settings-param__value"></div>');  
-              
-            const plugin1_url = $('<div class="settings-param selector"><div class="settings-param__name">URL плагіна логотипів</div></div>');  
-            const input1 = $('<input type="text" style="width:100%;padding:6px;margin:6px 0;">');  
-            input1.val(settings.plugin1_url);  
-            plugin1_url.append(input1);  
-              
-            // Плагін 2  
-            const plugin2_toggle = $('<div class="settings-param selector" data-type="toggle" data-name="plugin2_enabled">');  
-            plugin2_toggle.append('<div class="settings-param__name">Plugin Quality Badges</div>');  
-            plugin2_toggle.append('<div class="settings-param__value"></div>');  
-              
-            const plugin2_url = $('<div class="settings-param selector"><div class="settings-param__name">URL плагіна якості</div></div>');  
-            const input2 = $('<input type="text" style="width:100%;padding:6px;margin:6px 0;">');  
-            input2.val(settings.plugin2_url);  
-            plugin2_url.append(input2);  
-              
-            // Кнопка перезавантаження  
-            const reload_btn = $('<div class="settings-param selector"><div class="settings-param__name">Перезавантажити плагіни</div></div>');  
-              
-            // Додаємо елементи  
-            e.body.append(plugin1_toggle, plugin1_url, plugin2_toggle, plugin2_url, reload_btn);  
-              
-            // Встановлюємо початкові значення  
-            plugin1_toggle.find('.settings-param__value').text(settings.plugin1_enabled ? 'Вкл' : 'Викл');  
-            plugin2_toggle.find('.settings-param__value').text(settings.plugin2_enabled ? 'Вкл' : 'Викл');  
-              
-            // Обробники  
-            plugin1_toggle.on('hover:enter', function() {  
-                settings.plugin1_enabled = !settings.plugin1_enabled;  
-                saveSettings(settings);  
-                plugin1_toggle.find('.settings-param__value').text(settings.plugin1_enabled ? 'Вкл' : 'Викл');  
-                  
-                if (settings.plugin1_enabled) {  
-                    loadScript(settings.plugin1_url);  
-                }  
-            });  
-              
-            plugin2_toggle.on('hover:enter', function() {  
-                settings.plugin2_enabled = !settings.plugin2_enabled;  
-                saveSettings(settings);  
-                plugin2_toggle.find('.settings-param__value').text(settings.plugin2_enabled ? 'Вкл' : 'Викл');  
-                  
-                if (settings.plugin2_enabled) {  
-                    loadScript(settings.plugin2_url);  
-                }  
-            });  
-              
-            reload_btn.on('hover:enter', function() {  
-                settings.plugin1_url = input1.val().trim();  
-                settings.plugin2_url = input2.val().trim();  
-                saveSettings(settings);  
-                  
-                if (settings.plugin1_enabled) loadScript(settings.plugin1_url);  
-                if (settings.plugin2_enabled) loadScript(settings.plugin2_url);  
-                  
-                Lampa.Noty.show('Плагіни перезавантажені');  
-            });  
-        }  
-    });  
-  
-    // Ініціалізація плагінів при старті  
-    const initSettings = loadSettings();  
-    if (initSettings.plugin1_enabled) loadScript(initSettings.plugin1_url);  
-    if (initSettings.plugin2_enabled) loadScript(initSettings.plugin2_url);  
-  
-    console.log('External Plugins Manager loaded');  
+(function () {
+    'use strict';
+
+    const COMPONENT = 'plugin_manager_settings';
+    const MENU_ITEM_NAME = 'plugin_manager_menu_item';
+    const STORAGE_KEY = 'plugin_manager_settings_v2';
+
+    const defaults = {
+        logo_enabled: true,
+        quality_enabled: true,
+        logo_url: 'https://crowley24.github.io/NewLogo.js',
+        quality_url: 'https://tvigl.info/plugins/quality.js'
+    };
+
+    // --- Storage helpers
+    function loadSettings() {
+        try {
+            const s = Lampa.Storage.get(STORAGE_KEY);
+            return Object.assign({}, defaults, s || {});
+        } catch (e) {
+            console.error('plugin_manager loadSettings', e);
+            return Object.assign({}, defaults);
+        }
+    }
+
+    function saveSettings(obj) {
+        try {
+            Lampa.Storage.set(STORAGE_KEY, obj);
+        } catch (e) {
+            console.error('plugin_manager saveSettings', e);
+        }
+    }
+
+    // --- Script loader (prevents duplicate)
+    function loadScript(url) {
+        if (!url) return;
+        if (document.querySelector('script[data-plugin-src="' + url + '"]')) return;
+        const s = document.createElement('script');
+        s.setAttribute('data-plugin-src', url);
+        s.src = url;
+        s.async = true;
+        s.onload = function () { console.log('Loaded plugin:', url); };
+        s.onerror = function () { console.warn('Failed load plugin:', url); };
+        document.head.appendChild(s);
+    }
+
+    // --- Unload (only scripts loaded by this manager)
+    function unloadScript(url) {
+        const selector = url ? 'script[data-plugin-src="' + url + '"]' : 'script[data-plugin-src]';
+        document.querySelectorAll(selector).forEach(function (el) { el.remove(); });
+    }
+
+    // --- Autoload on start
+    (function autoload() {
+        const s = loadSettings();
+        if (s.logo_enabled) loadScript(s.logo_url);
+        if (s.quality_enabled) loadScript(s.quality_url);
+    })();
+
+    // --- Add menu item into Extensions
+    Lampa.Settings.listener.follow('open', function (e) {
+        if (e.name !== 'extensions') return;
+
+        // avoid duplicate insertion on repeated opens
+        if (e.body.find('[data-name="' + MENU_ITEM_NAME + '"]').length) return;
+
+        const item = $(
+            '<div class="settings-param selector" data-name="' + MENU_ITEM_NAME + '">' +
+                '<div class="settings-param__name">🔌 Менеджер Плагінів</div>' +
+                '<div class="settings-param__value">➤</div>' +
+            '</div>'
+        );
+
+        // insert near the end of the extensions list
+        e.body.append(item);
+
+        item.on('hover:enter', function () {
+            Lampa.Settings.open(COMPONENT);
+        });
+    });
+
+    // --- Register component + settings block (modern, compatible)
+    // If SettingsApi is available
+    if (Lampa.SettingsApi && Lampa.SettingsApi.addComponent && Lampa.SettingsApi.addBlock) {
+        Lampa.SettingsApi.addComponent({
+            component: COMPONENT,
+            name: 'Менеджер Плагінів',
+            icon: '<svg width="20" height="20"><rect rx="3" width="20" height="20" fill="#ffffff22"/></svg>'
+        });
+
+        Lampa.SettingsApi.addBlock({
+            component: COMPONENT,
+            group: true,
+            name: 'manager',
+            title: 'Менеджер Плагінів',
+            description: 'Увімкнення/вимкнення NewLogo та Quality, налаштування URL',
+            params: [
+                { name: 'logo_enabled', type: 'toggle', default: defaults.logo_enabled, title: 'Увімкнути NewLogo' },
+                { name: 'logo_url', type: 'input', default: defaults.logo_url, title: 'URL NewLogo' },
+                { name: 'quality_enabled', type: 'toggle', default: defaults.quality_enabled, title: 'Увімкнути Quality' },
+                { name: 'quality_url', type: 'input', default: defaults.quality_url, title: 'URL Quality' },
+                {
+                    name: 'reload_plugins',
+                    type: 'button',
+                    title: 'Перезавантажити плагіни',
+                    onChange: function () {
+                        const s = loadSettings();
+                        // reload: remove manager scripts then load from URLs
+                        unloadScript(); 
+                        if (s.logo_enabled) loadScript(s.logo_url);
+                        if (s.quality_enabled) loadScript(s.quality_url);
+                        Lampa.Noty.show('Плагіни перезавантажено');
+                    }
+                }
+            ]
+        });
+
+        // Listen changes from SettingsApi
+        Lampa.SettingsApi.listener.follow('change', function (event) {
+            if (event.component !== COMPONENT) return;
+            const s = loadSettings();
+            s[event.name] = event.value;
+            saveSettings(s);
+
+            // If toggled on — load immediately
+            if (event.name === 'logo_enabled' && event.value) loadScript(s.logo_url);
+            if (event.name === 'quality_enabled' && event.value) loadScript(s.quality_url);
+
+            // If url changed and plugin is enabled — reload that plugin
+            if (event.name === 'logo_url' && s.logo_enabled) {
+                unloadScript(s.logo_url); // remove old by selector (we remove all then load)
+                loadScript(event.value);
+            }
+            if (event.name === 'quality_url' && s.quality_enabled) {
+                unloadScript(s.quality_url);
+                loadScript(event.value);
+            }
+        });
+
+    } else {
+        // Fallback: older Lampa without SettingsApi — register simple component manually
+        Lampa.Component.add(COMPONENT, function () {
+            const self = this;
+            this.element = Lampa.Template.js('settings_main');
+
+            this.start = function () {
+                const settings = loadSettings();
+
+                Lampa.Background.set(Lampa.Utils.img('img/background.jpg'));
+                Lampa.Controller.add(COMPONENT, {
+                    toggle: true,
+                    shift: true,
+                    up: Lampa.Navigator.move('up'),
+                    down: Lampa.Navigator.move('down'),
+                    back: self.back
+                });
+                Lampa.Controller.toggle(COMPONENT);
+
+                const list = [];
+
+                list.push({
+                    title: 'NewLogo.js',
+                    subtitle: settings.logo_enabled ? 'Увімкнено' : 'Вимкнено',
+                    value: settings.logo_enabled,
+                    render: 'toggle',
+                    onSelect: function () {
+                        const v = !loadSettings().logo_enabled;
+                        const s = loadSettings();
+                        s.logo_enabled = v;
+                        saveSettings(s);
+                        if (v) loadScript(s.logo_url);
+                        Lampa.Noty.show('Збережено. Для повного застосування може знадобитись перезапуск.');
+                        self.start();
+                    }
+                });
+
+                list.push({
+                    title: 'URL NewLogo',
+                    subtitle: settings.logo_url,
+                    render: 'info',
+                    onSelect: function () {
+                        Lampa.Noty.show('Щоб змінити URL, відкрийте цей пункт у новій версії або через SettingsApi.');
+                    }
+                });
+
+                list.push({
+                    title: 'Quality.js',
+                    subtitle: settings.quality_enabled ? 'Увімкнено' : 'Вимкнено',
+                    value: settings.quality_enabled,
+                    render: 'toggle',
+                    onSelect: function () {
+                        const v = !loadSettings().quality_enabled;
+                        const s = loadSettings();
+                        s.quality_enabled = v;
+                        saveSettings(s);
+                        if (v) loadScript(s.quality_url);
+                        Lampa.Noty.show('Збережено. Для повного застосування може знадобитись перезапуск.');
+                        self.start();
+                    }
+                });
+
+                list.push({
+                    title: 'URL Quality',
+                    subtitle: settings.quality_url,
+                    render: 'info'
+                });
+
+                list.push({ title: 'Перезавантажити плагіни', onSelect: function () {
+                    const s = loadSettings();
+                    unloadScript();
+                    if (s.logo_enabled) loadScript(s.logo_url);
+                    if (s.quality_enabled) loadScript(s.quality_url);
+                    Lampa.Noty.show('Плагіни перезавантажено');
+                }});
+
+                Lampa.Settings.render(list, { title: 'Менеджер Плагінів', parent: self.element });
+            };
+
+            this.back = function () { Lampa.Settings.back(); };
+            this.render = function () { return this.element; };
+        });
+    }
+
+    console.log('Plugin Manager v2 loaded');
 })();
