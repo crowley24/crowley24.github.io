@@ -1,96 +1,88 @@
-(function () {
-    // --- Параметри Плагіна ---
-    const PLUGIN_NAME = 'interface_manager';
-    const COMPONENT_PAGE_NAME = 'interface_manager_page';
-    const LABEL_TEXT = '🛠️ Менеджер інтерфейсу';
-    const TITLE_TEXT = 'Менеджер інтерфейсу Lampa';
-
-    /**
-     * Крок 1: Реєстрація компонента сторінки.
-     * Цей компонент буде завантажуватися при натисканні на пункт у налаштуваннях.
-     */
-    Lampa.Component.add(COMPONENT_PAGE_NAME, function (object, data) {
-        let component = new Lampa.Component(object, data);
-        let html = document.createElement('div');
-        
-        // Встановлюємо клас для коректного відображення в інтерфейсі Lampa
-        html.classList.add('settings-page', 'layer--wheight'); 
-        
-        component.start = function () {
-            // Заголовок сторінки
-            Lampa.Noty.title(TITLE_TEXT); 
-            
-            // Вміст сторінки
-            html.innerHTML = `
-                <div class="settings-item selector" data-type="title">
-                    <div class="settings-item__name">Вітаємо у Менеджері Інтерфейсу!</div>
-                    <div class="settings-item__descr">Це ваша нова сторінка плагіна.</div>
-                </div>
-                
-                <div class="settings-item selector">
-                    <div class="settings-item__name">Налаштування 1</div>
-                    <div class="settings-item__value">Увімкнено</div>
-                    <div class="settings-item__descr">Тут можна розмістити логіку вашого плагіна.</div>
-                </div>
-
-                <div class="settings-item selector">
-                    <div class="settings-item__name">Налаштування 2</div>
-                    <div class="settings-item__value">Вимкнено</div>
-                    <div class="settings-item__descr">Використовуйте Lampa.Arrays.getSettings() для створення елементів.</div>
-                </div>
-            `;
-            
-            object.append(html); // Додаємо HTML до об'єкта компонента
-            
-            // Забезпечуємо фокусування на першому елементі
-            Lampa.Controller.add('content', {
-                toggle: () => {
-                    Lampa.Controller.collection = html.querySelectorAll('.selector');
-                    Lampa.Controller.index = 0;
-                },
-                right: () => Lampa.Controller.down(), // Приклад навігації
-                left: () => Lampa.Controller.up(),
-                enter: (target) => {
-                    // Логіка при натисканні на елемент
-                    Lampa.Console.log('Натиснуто на елемент:', target);
-                },
-                back: () => Lampa.Api.exit() // Повернутися назад
-            });
-            Lampa.Controller.toggle('content');
-        };
-
-        component.destroy = function () {
-            html.remove();
-            Lampa.Controller.remove('content');
-        };
-
-        return component;
-    });
-
-    /**
-     * Крок 2: Додавання пункту в меню Налаштувань.
-     * Запускається при ініціалізації налаштувань.
-     */
-    Lampa.Settings.listener.follow(function (e) {
-        // Перевіряємо, чи ми працюємо з головним меню налаштувань
-        if (e.type === 'settings' && e.component === 'main') {
-            
-            Lampa.Settings.add({
-                component: 'main', // Додати на головну сторінку налаштувань
-                name: PLUGIN_NAME,
-                label: LABEL_TEXT, // Текст, який побачить користувач
-                type: 'button',
-                onChange: function () {
-                    // Дія при натисканні: відкрити наш зареєстрований компонент
-                    Lampa.Navigate.push({
-                        component: COMPONENT_PAGE_NAME,
-                        title: TITLE_TEXT
-                    });
-                }
-            });
-        }
-    });
-
-    // Фінальне повідомлення про завантаження плагіна
-    Lampa.Console.log(`Плагін "${LABEL_TEXT}" успішно завантажено.`);
+(function () {  
+    'use strict';  
+  
+    const STORAGE_KEY = 'interface_manager_settings';  
+  
+    // Налаштування за замовчуванням  
+    const defaultSettings = {  
+        setting1_enabled: false,  
+        setting2_enabled: false  
+    };  
+  
+    // Функції роботи з налаштуваннями  
+    function loadSettings() {  
+        const saved = Lampa.Storage.get(STORAGE_KEY);  
+        return Object.assign({}, defaultSettings, saved || {});  
+    }  
+  
+    function saveSettings(data) {  
+        Lampa.Storage.set(STORAGE_KEY, data);  
+    }  
+  
+    // Створення меню налаштувань  
+    Lampa.Settings.listener.follow('open', function(e) {  
+        if (e.name === 'main') {  
+            // Створюємо пункт меню  
+            const interface_manager_item = $('<div class="settings-param selector" data-name="interface_manager">');  
+            interface_manager_item.append('<div class="settings-param__name">🛠️ Менеджер інтерфейсу</div>');  
+            interface_manager_item.append('<div class="settings-param__value">➤</div>');  
+              
+            // Знаходимо пункт "Інтерфейс" і вставляємо наш пункт після нього  
+            const interface_item = e.body.find('[data-name="interface"]');  
+            if (interface_item.length > 0) {  
+                interface_item.after(interface_manager_item);  
+            } else {  
+                e.body.append(interface_manager_item);  
+            }  
+              
+            // Обробник кліку  
+            interface_manager_item.on('hover:enter', function() {  
+                Lampa.Settings.open('interface_manager');  
+            });  
+        }  
+          
+        // Відображення налаштувань  
+        if (e.name === 'interface_manager') {  
+            let settings = loadSettings();  
+              
+            // Заголовок  
+            const header = $('<div class="settings-param selector" style="pointer-events: none; opacity: 0.7;">');  
+            header.append('<div class="settings-param__name">Менеджер інтерфейсу Lampa</div>');  
+              
+            // Налаштування 1  
+            const setting1_toggle = $('<div class="settings-param selector" data-type="toggle" data-name="setting1_enabled">');  
+            setting1_toggle.append('<div class="settings-param__name">Налаштування 1</div>');  
+            setting1_toggle.append('<div class="settings-param__value"></div>');  
+              
+            // Налаштування 2  
+            const setting2_toggle = $('<div class="settings-param selector" data-type="toggle" data-name="setting2_enabled">');  
+            setting2_toggle.append('<div class="settings-param__name">Налаштування 2</div>');  
+            setting2_toggle.append('<div class="settings-param__value"></div>');  
+              
+            e.body.append(header);  
+            e.body.append(setting1_toggle);  
+            e.body.append(setting2_toggle);  
+              
+            // Встановлюємо початкові значення  
+            setting1_toggle.find('.settings-param__value').text(settings.setting1_enabled ? 'Вкл' : 'Викл');  
+            setting2_toggle.find('.settings-param__value').text(settings.setting2_enabled ? 'Вкл' : 'Викл');  
+              
+            // Обробники  
+            setting1_toggle.on('hover:enter', function() {  
+                const newState = !settings.setting1_enabled;  
+                settings.setting1_enabled = newState;  
+                saveSettings(settings);  
+                setting1_toggle.find('.settings-param__value').text(newState ? 'Вкл' : 'Викл');  
+            });  
+              
+            setting2_toggle.on('hover:enter', function() {  
+                const newState = !settings.setting2_enabled;  
+                settings.setting2_enabled = newState;  
+                saveSettings(settings);  
+                setting2_toggle.find('.settings-param__value').text(newState ? 'Вкл' : 'Викл');  
+            });  
+        }  
+    });  
+  
+    console.log('🛠️ Менеджер інтерфейсу успішно завантажено');  
 })();
