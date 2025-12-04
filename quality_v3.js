@@ -416,21 +416,24 @@ initStyles: function() {
             box-shadow: 0 4px 12px rgba(0,0,0,0.7) !important;      
         }      
         /* Градієнтні схеми */      
-        .card__quality div[data-quality*="4K"][data-quality*="DV"] {      
-            border-color: #8A2BE2 !important;      
-            background: linear-gradient(135deg, #8A2BE2 0%, #4B0082 50%, #6A0DAD 100%) !important;      
+.card__quality div[data-quality*="4K"][data-quality*="DV"] {  
+    border-color: #8A2BE2 !important;  
+    background: linear-gradient(135deg, #8A2BE2 0%, #4B0082 50%, #6A0DAD 100%) !important;  
+    color: #000000 !important;
         }      
         .card__quality div[data-quality*="4K"][data-quality*="HDR"] {      
             border-color: #FFD700 !important;      
             background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%) !important;      
         }      
-        .card__quality div[data-quality*="4K"]:not([data-quality*="DV"]):not([data-quality*="HDR"]) {      
-            border-color: #FF6B6B !important;      
-            background: linear-gradient(135deg, #FF6B6B 0%, #DC143C 50%, #B22222 100%) !important;      
+        .card__quality div[data-quality*="4K"]:not([data-quality*="DV"]):not([data-quality*="HDR"]) {  
+    border-color: #FF6B6B !important;  
+    background: linear-gradient(135deg, #FF6B6B 0%, #DC143C 50%, #B22222 100%) !important;  
+    color: #000000 !important;     
         }      
         .card__quality div[data-quality*="FHD"] {          
             border-color: #00FF00 !important;          
-            background: linear-gradient(135deg, #00FF00 0%, #32CD32 50%, #228B22 100%) !important;          
+            background: linear-gradient(135deg, #00FF00 0%, #32CD32 50%, #228B22 100%) !important;  
+            color: #000000 !important;
         }                 
         .card__quality div[data-quality*="2K"] {      
             border-color: #4169E1 !important;      
@@ -444,7 +447,12 @@ initStyles: function() {
         .card__quality div:not([data-quality*="4K"]):not([data-quality*="FHD"]):not([data-quality*="2K"]):not([data-quality*="HD"]) {      
             border-color: #FFFFFF !important;      
             background: linear-gradient(135deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 50%, rgba(0,0,0,0.5) 100%) !important;      
-        }      
+        }   
+        .card__quality div[data-quality*="FHD"] {  
+    border-color: #00FF00 !important;  
+    background: linear-gradient(135deg, #00FF00 0%, #32CD32 50%, #228B22 100%) !important;  
+        }
+        
         @keyframes fadeIn {      
             from { opacity: 0; transform: scale(0.8); }      
             to { opacity: 1; transform: scale(1); }      
