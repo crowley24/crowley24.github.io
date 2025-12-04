@@ -420,13 +420,14 @@ initStyles: function() {
             border-color: #8A2BE2 !important;      
             background: linear-gradient(135deg, #8A2BE2 0%, #4B0082 50%, #6A0DAD 100%) !important;      
         }      
-        .card__quality div[data-quality*="4K"][data-quality*="HDR"] {      
-            border-color: #FFD700 !important;      
-            background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%) !important;      
-        }      
-        .card__quality div[data-quality*="4K"]:not([data-quality*="DV"]):not([data-quality*="HDR"]) {      
-            border-color: #FF6B6B !important;      
-            background: linear-gradient(135deg, #FF6B6B 0%, #DC143C 50%, #B22222 100%) !important;      
+        .card__quality div[data-quality*="4K"][data-quality*="HDR"] {        
+            border-color: #FF8C00 !important;        
+            background: linear-gradient(135deg, #FFA500 0%, #FF8C00 50%, #FF6347 100%) !important;        
+        }        
+  
+           .card__quality div[data-quality*="4K"]:not([data-quality*="DV"]):not([data-quality*="HDR"]) {        
+            border-color: #FF7F50 !important;        
+            background: linear-gradient(135deg, #FFB347 0%, #FF8C00 50%, #FF6347 100%) !important;              
         }      
         .card__quality div[data-quality*="FHD"] {          
             border-color: #00FF00 !important;          
