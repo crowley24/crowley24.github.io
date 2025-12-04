@@ -430,8 +430,8 @@ initStyles: function() {
         }      
         .card__quality div[data-quality*="FHD"] {          
             border-color: #00FF00 !important;          
-            background: linear-gradient(135deg, #00FF00 0%, #32CD32 50%, #228B22 100%) !important;            
-        }      
+            background: linear-gradient(135deg, #00FF00 0%, #32CD32 50%, #228B22 100%) !important;          
+        }                 
         .card__quality div[data-quality*="2K"] {      
             border-color: #4169E1 !important;      
             background: linear-gradient(135deg, #4169E1 0%, #1E90FF 50%, #000080 100%) !important;      
