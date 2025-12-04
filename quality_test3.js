@@ -1,438 +1,410 @@
 (function () {  
     'use strict';  
-  
-    // Polyfill for AbortController and AbortSignal  
-    if (typeof AbortController === 'undefined') {  
-        window.AbortController = function () {  
-            this.signal = {  
-                aborted: false,  
-                addEventListener: function (event, callback) {  
-                    if (event === 'abort') {  
-                        this._onabort = callback;  
-                    }  
-                }  
-            };  
-            this.abort = function () {  
-                this.signal.aborted = true;  
-                if (typeof this.signal._onabort === 'function') {  
-                    this.signal._onabort();  
-                }  
-            };  
-        };  
-    }  
-  
-    // Polyfill for performance.now  
-    if (!window.performance || !window.performance.now) {  
-        window.performance = {  
-            now: function () {  
-                return Date.now();  
-            }  
-        };  
-    }  
-  
-    // Конфігурація  
-    var Q_LOGGING = true;  
-    var Q_CACHE_TIME = 24 * 60 * 60 * 1000;  
+      
+    var Q_LOGGING = true; // Логгинг качества  
+    var Q_CACHE_TIME = 24 * 60 * 60 * 1000; // Время кеширования качества  
     var QUALITY_CACHE = 'maxsm_ratings_quality_cache';  
-    var JACRED_PROTOCOL = 'http://';  
-    var JACRED_URL = Lampa.Storage.get('jacred.xyz') || 'jacred.xyz';  
-    var JACRED_API_KEY = Lampa.Storage.get('');  
-    var PROXY_TIMEOUT = 5000;  
+    var JACRED_PROTOCOL = 'http://'; // Протокол JacRed  
+    var JACRED_URL = Lampa.Storage.get('jacred.xyz') || 'jacred.xyz'; // Адрес JacRed  
+    var JACRED_API_KEY = Lampa.Storage.get(''); // api ключ JacRed  
+    var PROXY_TIMEOUT = 5000; // Таймаут прокси  
     var PROXY_LIST = [  
         'http://api.allorigins.win/raw?url=',  
         'http://cors.bwa.workers.dev/'  
     ];  
   
-    // CSS стилі для відображення якості  
-    var style = document.createElement('style');  
-    style.textContent = `  
-        .quality-badge {  
-            position: absolute;  
-            top: 5px;  
-            right: 5px;  
-            background: rgba(0, 0, 0, 0.8);  
-            color: white;  
-            padding: 2px 6px;  
-            border-radius: 3px;  
-            font-size: 11px;  
-            font-weight: bold;  
-            z-index: 10;  
-            text-transform: uppercase;  
-        }  
-        .quality-badge.dolby-vision {  
-            background: linear-gradient(45deg, #0066cc, #00ccff);  
-            box-shadow: 0 0 10px rgba(0, 204, 255, 0.5);  
-        }  
-        .quality-badge.hdr {  
-            background: linear-gradient(45deg, #ff6600, #ffcc00);  
-            box-shadow: 0 0 10px rgba(255, 204, 0, 0.5);  
-        }  
-        .quality-badge.uhd {  
-            background: linear-gradient(45deg, #9b59b6, #e74c3c);  
-            box-shadow: 0 0 10px rgba(155, 89, 182, 0.5);  
-        }  
-    `;  
-    document.head.appendChild(style);  
+    // Стили для отображения качества - ЧЕРНАЯ подложка, БЕЛЫЙ текст  
+    var style = "<style id=\"maxsm_ratings_quality\">" +  
+        ".card__view {position: relative !important;}" +  
+        ".card__quality { " +  
+        "   position: absolute !important; " +  
+        "   bottom: 0.5em !important; " +  
+        "   left: -0.8em !important; " +  
+        "   background-color: transparent !important; " +  
+        "   z-index: 10; " +  
+        "   width: fit-content !important; " +  
+        "   min-width: 3em !important; " +  
+        "   max-width: calc(100% - 1em) !important; " +  
+        "}" +  
+        ".card__quality div { " +  
+        "   text-transform: none !important; " +  
+        "   border: 1px solid #FFFFFF !important; " +  
+        "   background-color: rgba(0, 0, 0, 0.7) !important; " + // Черная полупрозрачная подложка  
+        "   color: #FFFFFF !important; " + // Белый текст  
+        "   font-weight: bold !important; " + // Жирный шрифт  
+        "   font-style: normal !important; " + // Не курсив  
+        "   font-size: 1.2em !important; " +  
+        "   border-radius: 3px !important; " +  
+        "   padding: 0.2em 0.4em !important; " +  
+        "}" +  
+        "</style>";  
   
-    // Функція логування  
-    function log(message) {  
-        if (Q_LOGGING) {  
-            console.log('[QUALITY]', message);  
-        }  
+    Lampa.Template.add('maxsm_ratings_quality_css', style);  
+    $('body').append(Lampa.Template.get('maxsm_ratings_quality_css', {}, true));  
+  
+    // Функция для получения типа карточки  
+    function getCardType(card) {  
+        var type = card.media_type || card.type;  
+        if (type === 'movie' || type === 'tv') return type;  
+        return card.name || card.original_name ? 'tv' : 'movie';  
     }  
   
-    // Функція визначення якості з назви торрента  
-    function translateQuality(title) {  
-        if (!title) return '';  
-          
-        var lowerTitle = title.toLowerCase();  
-          
-        // Перевірка на Dolby Vision  
-        if (/\b(dolby\s*vision|dov|dv)\b/i.test(lowerTitle)) {  
-            if (/\b(4k|uhd|2160p)\b/i.test(lowerTitle)) {  
-                return '4K DV';  
-            } else if (/\b(1080p|fhd)\b/i.test(lowerTitle)) {  
-                return 'FHD DV';  
+    // Функция для работы с прокси  
+    function fetchWithProxy(url, cardId, callback) {  
+        var currentProxyIndex = 0;  
+        var callbackCalled = false;  
+  
+        function tryNextProxy() {  
+            if (currentProxyIndex >= PROXY_LIST.length) {  
+                if (!callbackCalled) {  
+                    callbackCalled = true;  
+                    callback(new Error('All proxies failed for ' + url));  
+                }  
+                return;  
             }  
-        }  
-          
-        // Перевірка на HDR  
-        if (/\b(hdr10|hdr)\b/i.test(lowerTitle)) {  
-            if (/\b(4k|uhd|2160p)\b/i.test(lowerTitle)) {  
-                return '4K HDR';  
-            } else if (/\b(1080p|fhd)\b/i.test(lowerTitle)) {  
-                return 'FHD HDR';  
-            }  
-        }  
-          
-        // Стандартна якість  
-        if (/\b(4k|uhd|2160p)\b/i.test(lowerTitle)) {  
-            return '4K';  
-        } else if (/\b(1080p|fhd)\b/i.test(lowerTitle)) {  
-            return 'FHD';  
-        } else if (/\b(720p|hd)\b/i.test(lowerTitle)) {  
-            return 'HD';  
-        } else if (/\b(480p|sd)\b/i.test(lowerTitle)) {  
-            return 'SD';  
-        }  
-          
-        return '';  
-    }  
-  
-    // Функція отримання CSS класу для якості  
-    function getQualityClass(quality) {  
-        if (!quality) return '';  
-          
-        if (quality.includes('DV')) {  
-            return 'dolby-vision';  
-        } else if (quality.includes('HDR')) {  
-            return 'hdr';  
-        } else if (quality.includes('4K')) {  
-            return 'uhd';  
-        }  
-          
-        return '';  
-    }  
-  
-    // Функція запиту до JacRed API  
-    function fetchQualityFromJacRed(title, year) {  
-        return new Promise(function(resolve, reject) {  
-            var apiUrl = JACRED_PROTOCOL + JACRED_URL + '/api/v1.0/torrents?search=' +   
-                         encodeURIComponent(title) + '&year=' + year + '&apikey=' + JACRED_API_KEY;  
-              
-            // Спроба прямого запиту  
-            fetch(apiUrl)  
+            var proxyUrl = PROXY_LIST[currentProxyIndex] + encodeURIComponent(url);  
+            if (Q_LOGGING) console.log("MAXSM-RATINGS", "card: " + cardId + ", Fetch with proxy: " + proxyUrl);  
+            var timeoutId = setTimeout(function() {  
+                if (!callbackCalled) {  
+                    currentProxyIndex++;  
+                    tryNextProxy();  
+                }  
+            }, PROXY_TIMEOUT);  
+            fetch(proxyUrl)  
                 .then(function(response) {  
-                    if (response.ok) {  
-                        return response.json();  
-                    }  
-                    throw new Error('Direct request failed');  
+                    clearTimeout(timeoutId);  
+                    if (!response.ok) throw new Error('Proxy error: ' + response.status);  
+                    return response.text();  
                 })  
                 .then(function(data) {  
-                    if (data && data.results && data.results.length > 0) {  
-                        var bestQuality = findBestQuality(data.results);  
-                        resolve(bestQuality);  
-                    } else {  
-                        resolve('');  
+                    if (!callbackCalled) {  
+                        callbackCalled = true;  
+                        clearTimeout(timeoutId);  
+                        callback(null, data);  
                     }  
                 })  
-                .catch(function() {  
-                    // Спроба через проксі  
-                    tryProxyRequest(apiUrl)  
-                        .then(resolve)  
-                        .catch(reject);  
+                .catch(function(error) {  
+                    console.error("MAXSM-RATINGS", "card: " + cardId + ", Proxy fetch error for " + proxyUrl + ":", error);  
+                    clearTimeout(timeoutId);  
+                    if (!callbackCalled) {  
+                        currentProxyIndex++;  
+                        tryNextProxy();  
+                    }  
                 });  
-        });  
+        }  
+        tryNextProxy();  
     }  
   
-    // Функція запиту через проксі  
-    function tryProxyRequest(url) {  
-        return new Promise(function(resolve, reject) {  
-            var proxyIndex = 0;  
+    // Функция получения качества из JacRed  
+    function getBestReleaseFromJacred(normalizedCard, cardId, callback) {  
+        if (!JACRED_URL) {  
+            if (Q_LOGGING) console.log("MAXSM-RATINGS", "card: " + cardId + ", quality: JacRed: JACRED_URL is not set.");  
+            callback(null);  
+            return;  
+        }  
+  
+        function translateQuality(quality, hasDolbyVision) {  
+            if (typeof quality !== 'number') return quality;  
               
-            function tryNextProxy() {  
-                if (proxyIndex >= PROXY_LIST.length) {  
-                    reject(new Error('All proxies failed'));  
+            var qualityLabel = '';  
+            if (quality >= 2160) {  
+                qualityLabel = '4K';  
+                if (hasDolbyVision) {  
+                    qualityLabel += ' DV'; // или ' Dolby Vision'  
+                }  
+            }  
+            else if (quality >= 1080) return 'FHD';  
+            else if (quality >= 720) return 'HD';  
+            else if (quality > 0) return 'SD';  
+            else return null;  
+              
+            return qualityLabel;  
+        }  
+  
+        if (Q_LOGGING) console.log("MAXSM-RATINGS", "card: " + cardId + ", quality: JacRed: Search initiated.");  
+        var year = '';  
+        var dateStr = normalizedCard.release_date || '';  
+        if (dateStr.length >= 4) {  
+            year = dateStr.substring(0, 4);  
+        }  
+        if (!year || isNaN(year)) {  
+            if (Q_LOGGING) console.log("MAXSM-RATINGS", "card: " + cardId + ", quality: JacRed: Missing/invalid year.");  
+            callback(null);  
+            return;  
+        }  
+  
+        function searchJacredApi(searchTitle, searchYear, exactMatch, strategyName, apiCallback) {  
+            var userId = Lampa.Storage.get('lampac_unic_id', '');  
+            var apiUrl = JACRED_PROTOCOL + JACRED_URL + '/api/v1.0/torrents?search=' +  
+                encodeURIComponent(searchTitle) +  
+                '&year=' + searchYear +  
+                (exactMatch ? '&exact=true' : '') +  
+                '&uid=' + userId;  
+  
+            if (Q_LOGGING) console.log("MAXSM-RATINGS", "card: " + cardId + ", quality: JacRed: " + strategyName + " URL: " + apiUrl);  
+  
+            var timeoutId = setTimeout(function() {  
+                if (Q_LOGGING) console.log("MAXSM-RATINGS", "card: " + cardId + ", quality: JacRed: " + strategyName + " request timed out.");  
+                apiCallback(null);  
+            }, PROXY_TIMEOUT * PROXY_LIST.length + 1000);  
+  
+            fetchWithProxy(apiUrl, cardId, function(error, responseText) {  
+                clearTimeout(timeoutId);  
+                if (error) {  
+                    console.error("MAXSM-RATINGS", "card: " + cardId + ", quality: JacRed: " + strategyName + " request failed:", error);  
+                    apiCallback(null);  
                     return;  
                 }  
-                  
-                var proxyUrl = PROXY_LIST[proxyIndex] + encodeURIComponent(url);  
-                  
-                fetch(proxyUrl)  
-                    .then(function(response) {  
-                        if (response.ok) {  
-                            return response.json();  
-                        }  
-                        throw new Error('Proxy request failed');  
-                    })  
-                    .then(function(data) {  
-                        if (data && data.results && data.results.length > 0) {  
-                            var bestQuality = findBestQuality(data.results);  
-                            resolve(bestQuality);  
-                        } else {  
-                            resolve('');  
-                        }  
-                    })  
-                    .catch(function() {  
-                        proxyIndex++;  
-                        tryNextProxy();  
-                    });  
-            }  
-              
-            tryNextProxy();  
-        });  
-    }  
-  
-    // Функція пошуку найкращої якості  
-    function findBestQuality(torrents) {  
-        var bestQuality = '';  
-        var bestScore = -1;  
-          
-        torrents.forEach(function(torrent) {  
-            var quality = translateQuality(torrent.title || torrent.name);  
-            var score = getQualityScore(quality);  
-              
-            if (score > bestScore) {  
-                bestScore = score;  
-                bestQuality = quality;  
-            }  
-        });  
-          
-        return bestQuality;  
-    }  
-  
-    // Функція оцінки якості  
-    function getQualityScore(quality) {  
-        if (!quality) return 0;  
-          
-        if (quality.includes('DV')) return 100;  
-        if (quality.includes('HDR')) return 90;  
-        if (quality.includes('4K')) return 80;  
-        if (quality.includes('FHD')) return 70;  
-        if (quality.includes('HD')) return 60;  
-        if (quality.includes('SD')) return 50;  
-          
-        return 0;  
-    }  
-  
-    // Функція отримання якості з кешу  
-    function getQualityFromCache(title, year) {  
-        try {  
-            var cacheKey = title + '_' + year;  
-            var cached = localStorage.getItem(QUALITY_CACHE);  
-              
-            if (cached) {  
-                var cache = JSON.parse(cached);  
-                var item = cache[cacheKey];  
-                  
-                if (item && (Date.now() - item.timestamp) < Q_CACHE_TIME) {  
-                    return item.quality;  
+                if (!responseText) {  
+                    if (Q_LOGGING) console.log("MAXSM-RATINGS", "card: " + cardId + ", quality: JacRed: " + strategyName + " failed or empty response.");  
+                    apiCallback(null);  
+                    return;  
                 }  
-            }  
-        } catch (e) {  
-            log('Cache read error: ' + e.message);  
-        }  
-          
-        return null;  
-    }  
+                try {  
+                    var torrents = JSON.parse(responseText);  
+                    if (!Array.isArray(torrents) || torrents.length === 0) {  
+                        if (Q_LOGGING) console.log("MAXSM-RATINGS", "card: " + cardId + ", quality: JacRed: " + strategyName + " received no torrents.");  
+                        apiCallback(null);  
+                        return;  
+                    }  
+                    var bestNumericQuality = -1;  
+                    var bestFoundTorrent = null;  
   
-    // Функція збереження якості в кеш  
-    function saveQualityToCache(title, year, quality) {  
-        try {  
-            var cacheKey = title + '_' + year;  
-            var cached = localStorage.getItem(QUALITY_CACHE);  
-            var cache = cached ? JSON.parse(cached) : {};  
-              
-            cache[cacheKey] = {  
-                quality: quality,  
-                timestamp: Date.now()  
-            };  
-              
-            localStorage.setItem(QUALITY_CACHE, JSON.stringify(cache));  
-        } catch (e) {  
-            log('Cache write error: ' + e.message);  
-        }  
-    }  
-  
-    // Функція отримання інформації про фільм з картки  
-    function getMovieInfoFromCard(card) {  
-        var titleElement = card.querySelector('.card__title') ||   
-                          card.querySelector('[data-title]') ||  
-                          card.querySelector('h3') ||  
-                          card.querySelector('.title');  
-          
-        var yearElement = card.querySelector('.card__year') ||   
-                         card.querySelector('[data-year]') ||  
-                         card.querySelector('.year');  
-          
-        var title = titleElement ? titleElement.textContent.trim() : '';  
-        var year = yearElement ? parseInt(yearElement.textContent.trim()) : new Date().getFullYear();  
-          
-        return { title: title, year: year };  
-    }  
-  
-    // Функція створення бейджа якості  
-    function createQualityBadge(quality) {  
-        if (!quality) return null;  
-          
-        var badge = document.createElement('div');  
-        badge.className = 'quality-badge ' + getQualityClass(quality);  
-        badge.textContent = quality;  
-          
-        return badge;  
-    }  
-  
-    // Функція оновлення картки  
-    function updateCard(card) {  
-        var movieInfo = getMovieInfoFromCard(card);  
-          
-        if (!movieInfo.title) {  
-            log('No title found for card');  
-            return;  
-        }  
-          
-        // Перевірка кешу  
-        var cachedQuality = getQualityFromCache(movieInfo.title, movieInfo.year);  
-        if (cachedQuality) {  
-            addQualityToCard(card, cachedQuality);  
-            return;  
-        }  
-          
-        // Запит до API  
-        fetchQualityFromJacRed(movieInfo.title, movieInfo.year)  
-            .then(function(quality) {  
-                if (quality) {  
-                    saveQualityToCache(movieInfo.title, movieInfo.year, quality);  
-                    addQualityToCard(card, quality);  
-                }  
-            })  
-            .catch(function(error) {  
-                log('Error fetching quality: ' + error.message);  
-            });  
-    }  
-  
-    // Функція додавання якості до картки  
-    function addQualityToCard(card, quality) {  
-        // Перевірка чи вже є бейдж  
-        var existingBadge = card.querySelector('.quality-badge');  
-        if (existingBadge) {  
-            existingBadge.remove();  
-        }  
-          
-        var badge = createQualityBadge(quality);  
-        if (badge) {  
-            // Пошук контейнера для постера  
-            var posterContainer = card.querySelector('.card__img') ||  
-                               card.querySelector('.card__poster') ||  
-                               card.querySelector('img') ||  
-                               card;  
-              
-            posterContainer.style.position = 'relative';  
-            posterContainer.appendChild(badge);  
-              
-            log('Added quality badge: ' + quality);  
-        }  
-    }  
-  
-    // Функція оновлення всіх карток  
-    function updateAllCards() {  
-        var cards = document.querySelectorAll('.card, .movie-card, [data-movie-id]');  
-        log('Found ' + cards.length + ' cards');  
-          
-        cards.forEach(function(card) {  
-            updateCard(card);  
-        });  
-    }  
-  
-    // Функція спостереження за змінами DOM  
-    function setupMutationObserver() {  
-        var observer = new MutationObserver(function(mutations) {  
-            var shouldUpdate = false;  
-              
-            mutations.forEach(function(mutation) {  
-                if (mutation.type === 'childList') {  
-                    mutation.addedNodes.forEach(function(node) {  
-                        if (node.nodeType === Node.ELEMENT_NODE) {  
-                            if (node.classList &&   
-                                (node.classList.contains('card') ||   
-                                 node.classList.contains('movie-card') ||  
-                                 node.hasAttribute('data-movie-id'))) {  
-                                shouldUpdate = true;  
-                            } else if (node.querySelector) {  
-                                var cards = node.querySelectorAll('.card, .movie-card, [data-movie-id]');  
-                                if (cards.length > 0) {  
-                                    shouldUpdate = true;  
-                                }  
-                            }  
+                    for (var i = 0; i < torrents.length; i++) {  
+                        var currentTorrent = torrents[i];  
+                        var currentNumericQuality = currentTorrent.quality;  
+                          
+                        var lowerTitle = (currentTorrent.title || '').toLowerCase();  
+                          
+                        // Добавить определение Dolby Vision  
+                        var hasDolbyVision = /\b(dv|dolby\s*vision)\b/i.test(lowerTitle);  
+                          
+                        if (/\b(ts|telesync|camrip|cam)\b/i.test(lowerTitle)) {  
+                           if (currentNumericQuality < 720) continue;  
                         }  
-                    });  
+  
+                        if (typeof currentNumericQuality !== 'number' || currentNumericQuality === 0) {  
+                           continue;  
+                        }  
+  
+                        if (Q_LOGGING) {  
+                            console.log("MAXSM-RATINGS", "card: " + cardId + ", Torrent: " + currentTorrent.title + " | Quality: " + currentNumericQuality + "p" + (hasDolbyVision ? " [DV]" : ""));  
+                        }  
+                          
+                        // Сохраняем информацию о качестве и DV  
+                        if (currentNumericQuality > bestNumericQuality) {  
+                            bestNumericQuality = currentNumericQuality;  
+                            bestFoundTorrent = currentTorrent;  
+                            bestFoundTorrent.hasDolbyVision = hasDolbyVision;  
+                        }  
+                    }  
+                    if (bestFoundTorrent) {  
+                        if (Q_LOGGING) console.log("MAXSM-RATINGS", "card: " + cardId + ", quality: JacRed: Found best torrent: \"" + bestFoundTorrent.title + "\" with quality: " + bestNumericQuality + "p" + (bestFoundTorrent.hasDolbyVision ? " [DV]" : ""));  
+                        apiCallback({  
+                            quality: translateQuality(bestFoundTorrent.quality || bestNumericQuality, bestFoundTorrent.hasDolbyVision),  
+                            title: bestFoundTorrent.title,  
+                            hasDolbyVision: bestFoundTorrent.hasDolbyVision  
+                        });  
+                    } else {  
+                        if (Q_LOGGING) console.log("MAXSM-RATINGS", "card: " + cardId + ", quality: JacRed: No suitable torrents found.");  
+                        apiCallback(null);  
+                    }  
+                } catch (e) {  
+                    console.error("MAXSM-RATINGS", "card: " + cardId + ", quality: JacRed: " + strategyName + " error parsing response:", e);  
+                    apiCallback(null);  
                 }  
             });  
-              
-            if (shouldUpdate) {  
-                setTimeout(updateAllCards, 1000);  
-            }  
-        });  
-          
-        observer.observe(document.body, {  
-            childList: true,  
-            subtree: true  
-        });  
-          
-        return observer;  
-    }  
-  
-    // Основна функція запуску плагіна  
-    function startPlugin() {  
-        log('Starting quality plugin');  
-          
-        // Перевірка наявності необхідних елементів  
-        if (!document.body) {  
-            log('Document body not ready');  
-            setTimeout(startPlugin, 1000);  
-            return;  
         }  
-          
-        // Налаштування спостерігача  
-        var observer = setupMutationObserver();  
-          
-        // Початкове оновлення карток  
-        setTimeout(updateAllCards, 2000);  
-          
-        // Періодичне оновлення  
-        setInterval(updateAllCards, 30000);  
-          
-        log('Quality plugin started successfully');  
-    }  
   
-    // Запуск плагіна  
-    if (!window.qualityPluginLoaded) {  
-        window.qualityPluginLoaded = true;  
-          
-        if (document.readyState === 'loading') {  
-            document.addEventListener('DOMContentLoaded', startPlugin);  
+        var searchStrategies = [];  
+        if (normalizedCard.original_title && /[a-zа-яё0-9]/i.test(normalizedCard.original_title)) {  
+            searchStrategies.push({  
+                title: normalizedCard.original_title.trim(),  
+                year: year,  
+                exact: true,  
+                name: "OriginalTitle Exact Year"  
+            });  
+        }  
+        if (normalizedCard.title && /[a-zа-яё0-9]/i.test(normalizedCard.title)) {  
+            searchStrategies.push({  
+                title: normalizedCard.title.trim(),  
+                year: year,  
+                exact: true,  
+                name: "Title Exact Year"  
+            });  
+        }  
+  
+        function executeNextStrategy(index) {  
+            if (index >= searchStrategies.length) {  
+                if (Q_LOGGING) console.log("MAXSM-RATINGS", "card: " + cardId + ", quality: JacRed: All strategies failed.");  
+                callback(null);  
+                return;  
+            }  
+            var strategy = searchStrategies[index];  
+            if (Q_LOGGING) console.log("MAXSM-RATINGS", "card: " + cardId + ", quality: JacRed: Trying strategy: " + strategy.name);  
+            searchJacredApi(strategy.title, strategy.year, strategy.exact, strategy.name, function(result) {  
+                if (result !== null) {  
+                    if (Q_LOGGING) console.log("MAXSM-RATINGS", "card: " + cardId + ", quality: JacRed: Successfully found quality: " + result.quality);  
+                    callback(result);  
+                } else {  
+                    executeNextStrategy(index + 1);  
+                }  
+            });  
+        }  
+  
+        if (searchStrategies.length > 0) {  
+            executeNextStrategy(0);  
         } else {  
-            startPlugin();  
+            if (Q_LOGGING) console.log("MAXSM-RATINGS", "card: " + cardId + ", quality: JacRed: No valid search titles.");  
+            callback(null);  
         }  
+    }  
+  
+    // Функции для работы с кешем качества  
+    function getQualityCache(key) {  
+        var cache = Lampa.Storage.get(QUALITY_CACHE) || {};  
+        var item = cache[key];  
+        return item && (Date.now() - item.timestamp < Q_CACHE_TIME) ? item : null;  
+    }  
+  
+    function saveQualityCache(key, data, localCurrentCard) {  
+        if (Q_LOGGING) console.log("MAXSM-RATINGS", "card: " + localCurrentCard + ", quality: Save quality cache");  
+        var cache = Lampa.Storage.get(QUALITY_CACHE) || {};  
+        cache[key] = {  
+            quality: data.quality || null,  
+            timestamp: Date.now()  
+        };  
+        Lampa.Storage.set(QUALITY_CACHE, cache);  
+    }  
+  
+    // Функция применения качества к карточке  
+    function applyQualityToCard(card, quality, source, qCacheKey) {  
+        if (!document.body.contains(card)) return;  
+          
+        card.setAttribute('data-quality-added', 'true');  
+        var cardView = card.querySelector('.card__view');  
+        if (!cardView) return;  
+  
+        // Удаляем существующие элементы качества  
+        var existingQualityElements = cardView.getElementsByClassName('card__quality');  
+        while(existingQualityElements.length > 0){  
+            existingQualityElements[0].parentNode.removeChild(existingQualityElements[0]);  
+        }  
+  
+        // Сохраняем в кеш если данные от JacRed  
+        if (source === 'JacRed' && quality && quality !== 'NO') {  
+            var cardId = card.card_data ? card.card_data.id : 'unknown';  
+            saveQualityCache(qCacheKey, { quality: quality }, cardId);  
+        }  
+  
+        if (quality && quality !== 'NO') {  
+            var qualityDiv = document.createElement('div');  
+            qualityDiv.className = 'card__quality';  
+            var qualityInner = document.createElement('div');  
+            qualityInner.textContent = quality;  
+            qualityDiv.appendChild(qualityInner);  
+            cardView.appendChild(qualityDiv);  
+        }  
+    }  
+  
+    // Основная функция обновления карточек  
+    function updateCards(cards) {  
+        for (var i = 0; i < cards.length; i++) {  
+            var card = cards[i];  
+            if (card.hasAttribute('data-quality-added')) continue;  
+              
+            var cardView = card.querySelector('.card__view');  
+            if (localStorage.getItem('maxsm_ratings_quality_tv') === 'false') {  
+                if (cardView) {  
+                    var typeElements = cardView.getElementsByClassName('card__type');  
+                    if (typeElements.length > 0) continue;  
+                }  
+            }  
+  
+            (function (currentCard) {  
+                var data = currentCard.card_data;  
+                if (!data) return;  
+                  
+                var normalizedCard = {  
+                    id: data.id || '',  
+                    title: data.title || data.name || '',  
+                    original_title: data.original_title || data.original_name || '',  
+                    release_date: data.release_date || data.first_air_date || '',  
+                    type: getCardType(data)  
+                };  
+                  
+                var localCurrentCard = normalizedCard.id;  
+                var qCacheKey = normalizedCard.type + '_' + normalizedCard.id;  
+                var cacheQualityData = getQualityCache(qCacheKey);  
+                  
+                // Если есть кеш - сразу применяем  
+                if (cacheQualityData) {  
+                    if (Q_LOGGING) console.log("MAXSM-RATINGS", "card: " + localCurrentCard + ", quality: Get Quality data from cache");  
+                    applyQualityToCard(currentCard, cacheQualityData.quality, 'Cache', qCacheKey);  
+                }  
+                // Если нет кеша - запрашиваем у JacRed  
+                else {  
+                    getBestReleaseFromJacred(normalizedCard, localCurrentCard, function (jrResult) {  
+                        var quality = (jrResult && jrResult.quality) || null;  
+                        applyQualityToCard(currentCard, quality, 'JacRed', qCacheKey);  
+                    });  
+                }  
+            })(card);  
+        }  
+    }  
+  
+    // Observer для отслеживания новых карточек  
+    var observer = new MutationObserver(function (mutations) {  
+        var newCards = [];  
+        for (var m = 0; m < mutations.length; m++) {  
+            var mutation = mutations[m];  
+            if (mutation.addedNodes) {  
+                for (var j = 0; j < mutation.addedNodes.length; j++) {  
+                    var node = mutation.addedNodes[j];  
+                    if (node.nodeType !== 1) continue;  
+                      
+                    if (node.classList && node.classList.contains('card')) {  
+                        newCards.push(node);  
+                    }  
+                      
+                    var nestedCards = node.querySelectorAll('.card');  
+                    for (var k = 0; k < nestedCards.length; k++) {  
+                        newCards.push(nestedCards[k]);  
+                    }  
+                }  
+            }  
+        }  
+        if (newCards.length) updateCards(newCards);  
+    });  
+  
+    // Инициализация плагина  
+    function startPlugin() {  
+        console.log("MAXSM-RATINGS-QUALITY", "Plugin started!");  
+          
+        // Настройки по умолчанию  
+        if (!localStorage.getItem('maxsm_ratings_quality')) {  
+            localStorage.setItem('maxsm_ratings_quality', 'true');  
+        }  
+        if (!localStorage.getItem('maxsm_ratings_quality_inlist')) {  
+            localStorage.setItem('maxsm_ratings_quality_inlist', 'true');  
+        }  
+        if (!localStorage.getItem('maxsm_ratings_quality_tv')) {  
+            localStorage.setItem('maxsm_ratings_quality_tv', 'false');  
+        }  
+  
+        // Запуск observer якщо включено відображення якості в списках  
+        if (localStorage.getItem('maxsm_ratings_quality_inlist') === 'true') {  
+            observer.observe(document.body, { childList: true, subtree: true });  
+            console.log('MAXSM-RATINGS: observer Start');  
+              
+            // Обробка вже існуючих карток  
+            var existingCards = document.querySelectorAll('.card');  
+            if (existingCards.length) updateCards(existingCards);  
+        }  
+    }  
+  
+    if (!window.maxsmRatingsQualityPlugin) {  
+        window.maxsmRatingsQualityPlugin = true;  
+        startPlugin();  
     }  
 })();
