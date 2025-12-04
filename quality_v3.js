@@ -416,24 +416,22 @@ initStyles: function() {
             box-shadow: 0 4px 12px rgba(0,0,0,0.7) !important;      
         }      
         /* Градієнтні схеми */      
-.card__quality div[data-quality*="4K"][data-quality*="DV"] {  
-    border-color: #8A2BE2 !important;  
-    background: linear-gradient(135deg, #8A2BE2 0%, #4B0082 50%, #6A0DAD 100%) !important;  
-    color: #000000 !important;
+        .card__quality div[data-quality*="4K"][data-quality*="DV"] {      
+            border-color: #8A2BE2 !important;      
+            background: linear-gradient(135deg, #8A2BE2 0%, #4B0082 50%, #6A0DAD 100%) !important;      
         }      
-        .card__quality div[data-quality*="4K"][data-quality*="HDR"] {      
-            border-color: #FFD700 !important;      
-            background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%) !important;      
-        }      
-        .card__quality div[data-quality*="4K"]:not([data-quality*="DV"]):not([data-quality*="HDR"]) {  
-    border-color: #FF6B6B !important;  
-    background: linear-gradient(135deg, #FF6B6B 0%, #DC143C 50%, #B22222 100%) !important;  
-    color: #000000 !important;     
+        .card__quality div[data-quality*="4K"][data-quality*="HDR"] {        
+            border-color: #FF8C00 !important;        
+            background: linear-gradient(135deg, #FFA500 0%, #FF8C00 50%, #FF6347 100%) !important;        
+        }        
+  
+        .card__quality div[data-quality*="4K"] { 
+        border-color: #FF6B6B !important; 
+        background: linear-gradient(135deg, #FF6B6B 0%, #DC143C 50%, #B22222 100%) !important;              
         }      
         .card__quality div[data-quality*="FHD"] {          
             border-color: #00FF00 !important;          
-            background: linear-gradient(135deg, #00FF00 0%, #32CD32 50%, #228B22 100%) !important;  
-            color: #000000 !important;
+            background: linear-gradient(135deg, #00FF00 0%, #32CD32 50%, #228B22 100%) !important;          
         }                 
         .card__quality div[data-quality*="2K"] {      
             border-color: #4169E1 !important;      
