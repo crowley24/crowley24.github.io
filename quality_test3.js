@@ -383,70 +383,80 @@
         /**  
          * Ініціалізація стилів з CSP сумісністю та анімаціями  
          */  
-        initStyles: function() {  
-            var styleElement = document.createElement('style');  
-            styleElement.id = 'maxsm_ratings_quality';  
-            styleElement.textContent = `  
-                .card__view {position: relative !important;}  
-                .card__quality {  
-                    position: absolute !important;  
-                    bottom: 0.5em !important;  
-                    left: -0.8em !important;  
-                    background-color: transparent !important;  
-                    z-index: 10;  
-                    width: fit-content !important;  
-                    min-width: 3em !important;  
-                    max-width: calc(100% - 1em) !important;  
-                }  
-                .card__quality div {  
-                    text-transform: none !important;  
-                    border: 1px solid #FFFFFF !important;  
-                    background-color: rgba(0, 0, 0, 0.7) !important;  
-                    color: #FFFFFF !important;  
-                    font-weight: bold !important;  
-                    font-style: normal !important;  
-                    font-size: 1.2em !important;  
-                    border-radius: 3px !important;  
-                    padding: 0.2em 0.4em !important;  
-                    transition: all 0.3s ease !important;  
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;  
-                }  
-                .card__quality div:hover {  
-                    transform: scale(1.1) !important;  
-                    box-shadow: 0 4px 8px rgba(0,0,0,0.5) !important;  
-                }  
-                /* Кольорові схеми для різних якостей */  
-                .card__quality div[data-quality*="4K"] {  
-                    border-color: #FF6B6B !important;  
-                    background-color: rgba(255, 107, 107, 0.2) !important;  
-                }  
-                .card__quality div[data-quality*="DV"] {  
-                    border-color: #8A2BE2 !important;  
-                    background-color: rgba(138, 43, 226, 0.2) !important;  
-                }  
-                .card__quality div[data-quality*="HDR"] {  
-                    border-color: #FFD700 !important;  
-                    background-color: rgba(255, 215, 0, 0.2) !important;  
-                }  
-                .card__quality div[data-quality*="2K"] {  
-                    border-color: #4169E1 !important;  
-                    background-color: rgba(65, 105, 225, 0.2) !important;  
-                }  
-                .card__quality .card__quality div[data-quality*="FHD"] {  
-                    border-color: #00FF00 !important;  
-                    background: linear-gradient(135deg, #00FF00 0%, #32CD32 50%, #228B22 100%) !important;  
-                }
-                .card__quality div[data-quality*="HD"] {  
-                    border-color: #808080 !important;  
-                    background-color: rgba(128, 128, 128, 0.2) !important;  
-                }  
-                @keyframes fadeIn {  
-                    from { opacity: 0; transform: scale(0.8); }  
-                    to { opacity: 1; transform: scale(1); }  
-                }  
-                .card__quality {  
-                    animation: fadeIn 0.3s ease-out;  
-                }  
+initStyles: function() {      
+    var styleElement = document.createElement('style');      
+    styleElement.id = 'maxsm_ratings_quality';      
+    styleElement.textContent = `      
+        .card__view {position: relative !important;}      
+        .card__quality {      
+            position: absolute !important;      
+            bottom: 0.5em !important;      
+            left: -0.8em !important;      
+            background-color: transparent !important;      
+            z-index: 10;      
+            width: fit-content !important;      
+            min-width: 3em !important;      
+            max-width: calc(100% - 1em) !important;      
+        }      
+        .card__quality div {      
+            text-transform: none !important;      
+            border: 2px solid #FFFFFF !important;      
+            color: #FFFFFF !important;      
+            font-weight: bold !important;      
+            font-style: normal !important;      
+            font-size: 1.3em !important;  /* Збільшено з 1.2em */      
+            border-radius: 3px !important;      
+            padding: 0.25em 0.5em !important;  /* Збільшено з 0.2em 0.4em */      
+            transition: all 0.3s ease !important;      
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5) !important;      
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8) !important;      
+        }      
+        .card__quality div:hover {      
+            transform: scale(1.1) !important;      
+            box-shadow: 0 4px 12px rgba(0,0,0,0.7) !important;      
+        }      
+        /* Градієнтні схеми */      
+        .card__quality div[data-quality*="4K"][data-quality*="DV"] {      
+            border-color: #8A2BE2 !important;      
+            background: linear-gradient(135deg, #8A2BE2 0%, #4B0082 50%, #6A0DAD 100%) !important;      
+        }      
+        .card__quality div[data-quality*="4K"][data-quality*="HDR"] {      
+            border-color: #FFD700 !important;      
+            background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%) !important;      
+        }      
+        .card__quality div[data-quality*="4K"]:not([data-quality*="DV"]):not([data-quality*="HDR"]) {      
+            border-color: #FF6B6B !important;      
+            background: linear-gradient(135deg, #FF6B6B 0%, #DC143C 50%, #B22222 100%) !important;      
+        }      
+        .card__quality div[data-quality*="FHD"] {          
+            border-color: #00FF00 !important;          
+            background: linear-gradient(135deg, #00FF00 0%, #32CD32 50%, #228B22 100%) !important;          
+        }                 
+        .card__quality div[data-quality*="2K"] {      
+            border-color: #4169E1 !important;      
+            background: linear-gradient(135deg, #4169E1 0%, #1E90FF 50%, #000080 100%) !important;      
+        }      
+        .card__quality div[data-quality*="HD"] {      
+            border-color: #808080 !important;      
+            background: linear-gradient(135deg, #808080 0%, #696969 50%, #2F4F4F 100%) !important;      
+        }      
+        /* Усі інші - градієнтний чорний */      
+        .card__quality div:not([data-quality*="4K"]):not([data-quality*="FHD"]):not([data-quality*="2K"]):not([data-quality*="HD"]) {      
+            border-color: #FFFFFF !important;      
+            background: linear-gradient(135deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 50%, rgba(0,0,0,0.5) 100%) !important;      
+        }   
+        .card__quality div[data-quality*="FHD"] {  
+    border-color: #00FF00 !important;  
+    background: linear-gradient(135deg, #00FF00 0%, #32CD32 50%, #228B22 100%) !important;  
+        }
+        
+        @keyframes fadeIn {      
+            from { opacity: 0; transform: scale(0.8); }      
+            to { opacity: 1; transform: scale(1); }      
+        }      
+        .card__quality {      
+            animation: fadeIn 0.3s ease-out;      
+        }
                 /* Адаптивність для різних розмірів екрану */  
                 @media (max-width: 768px) {  
                     .card__quality div {  
