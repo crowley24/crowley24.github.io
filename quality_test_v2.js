@@ -1,6 +1,6 @@
 (function () {  
     'use strict';  
-  
+      
     // =======================================================  
     // I. КОНФІГУРАЦІЯ  
     // =======================================================  
@@ -16,11 +16,11 @@
     const BATCH_SIZE = 5;  
     const RETRY_ATTEMPTS = 3;  
     const RETRY_DELAY = 1000;  
-  
+      
     // =======================================================  
     // II. МОДУЛІ  
     // =======================================================  
-  
+      
     /**  
      * Модуль утиліт  
      */  
@@ -39,7 +39,7 @@
                 timeout = setTimeout(later, wait);  
             };  
         },  
-  
+      
         /**  
          * Санітизація HTML  
          */  
@@ -48,14 +48,14 @@
             div.textContent = text;  
             return div.innerHTML;  
         },  
-  
+      
         /**  
          * Затримка з експоненційним backoff  
          */  
         delay(ms) {  
             return new Promise(resolve => setTimeout(resolve, ms));  
         },  
-  
+      
         /**  
          * Покращене логування помилок  
          */  
@@ -70,7 +70,7 @@
             }  
         }  
     };  
-  
+      
     /**  
      * Модуль API  
      */  
@@ -99,14 +99,14 @@
                 }  
             }  
         },  
-  
+      
         /**  
          * Fallback дані коли API недоступне  
          */  
         getFallbackData() {  
             return [];  
         },  
-  
+      
         /**  
          * Обробка пакетних запитів  
          */  
@@ -122,7 +122,7 @@
             return results;  
         }  
     };  
-  
+      
     /**  
      * Модуль визначення якості  
      */  
@@ -134,12 +134,12 @@
             if (!torrentTitle) return null;  
               
             const title = torrentTitle.toLowerCase();  
-  
+      
             // Комбіновані формати  
             if (/\b(4k.*dolby\s*vision|2160p.*dv|uhd.*dolby\s*vision)\b/i.test(title)) return '4K DV';  
             if (/\b(4k.*hdr10\+|2160p.*hdr10\+|uhd.*hdr10\+)\b/i.test(title)) return '4K HDR10+';  
             if (/\b(4k.*hdr|2160p.*hdr|uhd.*hdr)\b/i.test(title)) return '4K HDR';  
-  
+      
             // Dolby Vision  
             if (/\b(dolby\s*vision|dolbyvision|dv|dovi|dolby\s*vision\s*hdr)\b/i.test(title)) return 'DV';  
               
@@ -156,33 +156,38 @@
             if (/\b(2k|1440p|qhd|quad\s*hd|2560x1440)\b/i.test(title)) return '2K';  
               
             // FHD/1080p  
-            if (/\b(fhd|1080p|full\s*hd|1920x1080|bluray|bd|bdrip|web-dl|webrip)\b/i.test(title)) return 'FHD';  
+            if (/\b(fhd|1080p|full\s*hd|1920x1080|bluray|bd|bdrip)\b/i.test(title)) return 'FHD';  
               
             // HD/720p  
-            if (/\b(hd|720p|1280x720|hdtv)\b/i.test(title)) return 'HD';  
+            if (/\b(hd|720p|1280x720|hdtv|web-dl|webrip)\b/i.test(title)) return 'HD';  
               
             // SD/480p  
             if (/\b(sd|480p|854x480|dvd|dvdrip|dvdscr)\b/i.test(title)) return 'SD';  
               
             return null;  
         },  
-  
+      
         /**  
-         * Визначення найкращої якості з масиву  
+         * Визначення найкращої якості на основі пріоритетів  
          */  
         getBestQuality(qualities) {  
-            return qualities.reduce((best, current) => {  
-                if (!current) return best;  
-                if (!best) return current;  
-                  
-                const bestIndex = QUALITY_PRIORITY.indexOf(best);  
-                const currentIndex = QUALITY_PRIORITY.indexOf(current);  
-                  
-                return currentIndex > bestIndex ? current : best;  
-            }, null);  
+            if (!qualities || qualities.length === 0) return null;  
+              
+            let best = null;  
+            let bestIndex = -1;  
+              
+            for (const quality of qualities) {  
+                const index = QUALITY_PRIORITY.indexOf(quality);  
+                if (index > bestIndex) {  
+                    best = quality;  
+                    bestIndex = index;  
+                }  
+            }  
+              
+            return best;  
         }  
     };  
-  
+      
     /**  
      * Модуль кешування  
      */  
@@ -197,7 +202,7 @@
                 return null;  
             }  
         },  
-  
+      
         set(key, data) {  
             try {  
                 const cache = JSON.parse(localStorage.getItem(QUALITY_CACHE) || '{}');  
@@ -210,42 +215,46 @@
                 Utils.logError('Cache write error', error);  
             }  
         },  
-  
+      
+        clear() {  
+            try {  
+                localStorage.removeItem(QUALITY_CACHE);  
+            } catch (error) {  
+                Utils.logError('Cache clear error', error);  
+            }  
+        },  
+      
         cleanup() {  
             try {  
                 const cache = JSON.parse(localStorage.getItem(QUALITY_CACHE) || '{}');  
                 const cleanedCache = {};  
+                const now = Date.now();  
                 let cleaned = 0;  
                   
-                for (const id in cache) {  
-                    if (cache.hasOwnProperty(id)) {  
-                        if (Date.now() - cache[id].timestamp < CACHE_TIME) {  
-                            cleanedCache[id] = cache[id];  
+                for (const key in cache) {  
+                    if (cache.hasOwnProperty(key)) {  
+                        if (now - cache[key].timestamp < CACHE_TIME) {  
+                            cleanedCache[key] = cache[key];  
                         } else {  
                             cleaned++;  
                         }  
                     }  
                 }  
                   
-                if (DEBUG && cleaned > 0) {  
-                    console.log(`DV Quality: Cleaned ${cleaned} expired cache entries.`);  
-                }  
-                  
                 localStorage.setItem(QUALITY_CACHE, JSON.stringify(cleanedCache));  
-                return cleanedCache;  
+                if (DEBUG && cleaned > 0) console.log(`DV Quality: Cleaned ${cleaned} expired cache entries.`);  
             } catch (error) {  
                 Utils.logError('Cache cleanup error', error);  
-                return {};  
             }  
         }  
     };  
-  
+      
     /**  
-     * Модуль UI  
+     * Модуль UI з оновленими кольорами  
      */  
     const UI = {  
         /**  
-         * Ініціалізація стилів з CSP сумісністю  
+         * Ініціалізація стилів з новими кольорами DV та HDR  
          */  
         initStyles() {  
             const style = document.createElement('style');  
@@ -274,56 +283,82 @@
                     color: #fff !important;  
                     border: 1px solid rgba(255,255,255,0.2) !important;  
                 }  
-  
-                /* Комбіновані стилі */  
+      
+                /* Оновлені кольори для DV та HDR */  
                 .quality-tag.dv {  
-                    background: #8A2BE2 !important;  
-                    border-color: #A968FF !important;  
+                    background: linear-gradient(135deg, #FF6B6B, #C92A2A) !important;  
+                    border-color: #FF6B6B !important;  
+                    color: #FFFFFF !important;  
+                    box-shadow: 0 0 8px rgba(255, 107, 107, 0.5) !important;  
                 }  
-  
+      
                 .quality-tag.hdr10-plus {  
-                    background: #FFA500 !important;  
-                    border-color: #FFC064 !important;  
+                    background: linear-gradient(135deg, #4ECDC4, #0B7285) !important;  
+                    border-color: #4ECDC4 !important;  
+                    color: #FFFFFF !important;  
+                    box-shadow: 0 0 8px rgba(78, 205, 196, 0.5) !important;  
                 }  
                   
                 .quality-tag.hdr {  
-                    background: #FFD700 !important;  
-                    color: #333 !important;  
-                    border-color: #FFE890 !important;  
+                    background: linear-gradient(135deg, #FFD43B, #FAB005) !important;  
+                    border-color: #FFD43B !important;  
+                    color: #212529 !important;  
+                    box-shadow: 0 0 8px rgba(255, 212, 59, 0.5) !important;  
                 }  
-  
-                .quality-tag.4k {  
+      
+                .quality-tag["4k-dv"] {  
+                    background: linear-gradient(135deg, #FF6B6B, #C92A2A) !important;  
+                    border-color: #FF6B6B !important;  
+                    color: #FFFFFF !important;  
+                    box-shadow: 0 0 8px rgba(255, 107, 107, 0.5) !important;  
+                }  
+      
+                .quality-tag["4k-hdr10-plus"] {  
+                    background: linear-gradient(135deg, #4ECDC4, #0B7285) !important;  
+                    border-color: #4ECDC4 !important;  
+                    color: #FFFFFF !important;  
+                    box-shadow: 0 0 8px rgba(78, 205, 196, 0.5) !important;  
+                }  
+      
+                .quality-tag["4k-hdr"] {  
+                    background: linear-gradient(135deg, #FFD43B, #FAB005) !important;  
+                    border-color: #FFD43B !important;  
+                    color: #212529 !important;  
+                    box-shadow: 0 0 8px rgba(255, 212, 59, 0.5) !important;  
+                }  
+      
+                .quality-tag["4k"] {  
                     background: #333333 !important;  
                     border-color: #555555 !important;  
                 }  
-  
+      
                 .quality-tag.qhd {  
                     background: #4169E1 !important;  
                     border-color: #6495ED !important;  
                 }  
-  
+      
                 .quality-tag.fhd {  
                     background: #32CD32 !important;  
                     color: #333 !important;  
                     border-color: #90EE90 !important;  
                 }  
-  
+      
                 .quality-tag.hd {  
                     background: #808080 !important;  
                     border-color: #A9A9A9 !important;  
                 }  
-  
+      
                 .quality-tag.sd {  
                     background: #666666 !important;  
                     border-color: #888888 !important;  
                 }  
-  
+      
                 /* Анімації */  
                 @keyframes fadeIn {  
                     from { opacity: 0; transform: scale(0.8); }  
                     to { opacity: 1; transform: scale(1); }  
                 }  
-  
+      
                 .card__quality-badge {  
                     animation: fadeIn 0.3s ease-out;  
                 }  
@@ -332,44 +367,44 @@
             // CSP сумісність - використовуємо textContent замість innerHTML  
             document.head.appendChild(style);  
         },  
-  
+      
         /**  
-         * Додавання бейджа якості з санітизацією  
+         * Додавання бейджа якості до картки  
          */  
         addQualityBadge(card, bestQuality) {  
             if (!card || !bestQuality) return;  
-  
-            let existing = card.querySelector('.card__quality-badge');  
-            if (existing) existing.remove();  
-  
+              
+            // Видалення існуючих бейджів  
+            const existingBadge = card.querySelector('.card__quality-badge');  
+            if (existingBadge) existingBadge.remove();  
+              
             const box = document.createElement('div');  
             box.className = 'card__quality-badge';  
-  
-            // Логіка для відображення комбінованих якостей  
-            if (bestQuality.includes(' ')) {  
-                const parts = bestQuality.split(' ');  
-                parts.forEach(part => {  
-                    const tag = document.createElement('div');  
-                    tag.className = `quality-tag ${part.toLowerCase().replace('+', '-plus')}`;  
-                    tag.textContent = Utils.escapeHtml(part);  
-                    box.appendChild(tag);  
-                });  
+              
+            // Логіка для відображення 4K разом з DV/HDR  
+            if (bestQuality.includes('4K') && (bestQuality.includes('DV') || bestQuality.includes('HDR'))) {  
+                const tag = document.createElement('div');  
+                const tagClass = bestQuality.toLowerCase().replace('+', '-plus');  
+                tag.className = 'quality-tag ' + tagClass;  
+                tag.textContent = Utils.escapeHtml(bestQuality);  
+                box.appendChild(tag);  
             } else {  
+                // Основний тег якості (обробляє всі якості включно з 4K, FHD, HD)  
                 const tag = document.createElement('div');  
                 const tagClass = bestQuality.toLowerCase().replace('+', '-plus');  
                 tag.className = 'quality-tag ' + tagClass;  
                 tag.textContent = Utils.escapeHtml(bestQuality);  
                 box.appendChild(tag);  
             }  
-  
+      
             card.appendChild(box);  
         }  
     };  
-  
+      
     // =======================================================  
     // III. ОСНОВНА ФУНКЦІОНАЛЬНІСТЬ  
     // =======================================================  
-  
+      
     /**  
      * Витягує дані з картки Lampa  
      */  
@@ -383,7 +418,7 @@
             year: data.release_date ? data.release_date.substring(0, 4) : ''  
         };  
     }  
-  
+      
     /**  
      * Запит до API з пакетною обробкою  
      */  
@@ -397,9 +432,9 @@
         const apiUrl = 'http://' + apiHost +   
                        '/api/v1.0/torrents?search=' + encodeURIComponent(movieData.title) +   
                        '&year=' + movieData.year;  
-  
+      
         if (DEBUG) console.log('DV Quality: API URL:', apiUrl);  
-  
+      
         try {  
             return await API.fetchWithRetry(apiUrl);  
         } catch (error) {  
@@ -407,7 +442,7 @@
             return [];  
         }  
     }  
-  
+      
     /**  
      * Обробка однієї картки  
      */  
@@ -421,9 +456,9 @@
         }  
           
         card.setAttribute('data-dv-processed', 'true');  
-  
+      
         if (DEBUG) console.log('DV Quality: Processing card:', movieData);  
-  
+      
         // Перевірка кешу  
         const cached = Cache.get(movieData.id);  
         if (cached) {  
@@ -431,84 +466,84 @@
             if (cached.quality) UI.addQualityBadge(card, cached.quality);  
             return;  
         }  
-  
+      
         // API запит  
         if (DEBUG) console.log('DV Quality: Fetching torrents for', movieData);  
         const torrents = await getTorrents(movieData);  
-          
+            
         if (DEBUG) console.log('DV Quality: Found', torrents.length, 'torrents for', movieData.title);  
-          
+            
         // Визначення якостей  
-        const detectedQualities = torrents  
-            .map(t => QualityDetector.detectQuality(t.title))  
-            .filter(q => q !== null);  
-  
-        const bestQuality = QualityDetector.getBestQuality(detectedQualities);  
-  
-        if (DEBUG) {  
-            console.log('DV Quality: All detected qualities for', movieData.title, ':', detectedQualities);  
-            console.log('DV Quality: Best quality selected:', bestQuality);  
-        }  
-  
-        // Оновлення кешу  
-        Cache.set(movieData.id, { quality: bestQuality });  
-  
-        if (bestQuality) {  
-            UI.addQualityBadge(card, bestQuality);  
-        } else {  
-            if (DEBUG) console.log('DV Quality: No quality detected for', movieData.title);  
-        }  
-    }  
-  
-    /**  
-     * Пакетна обробка карток  
-     */  
-    async function processCardsBatch(cards) {  
-        for (let i = 0; i < cards.length; i += BATCH_SIZE) {  
-            const batch = cards.slice(i, i + BATCH_SIZE);  
-            await Promise.all(batch.map(card => processCard(card)));  
-        }  
-    }  
-  
-    /**  
-     * Обробка всіх карток з дебаунсінгом  
-     */  
-    const debouncedProcessAll = Utils.debounce(() => {  
-        const cards = document.querySelectorAll('.card:not([data-dv-processed])');  
-        if (DEBUG) console.log('DV Quality: Found', cards.length, 'unprocessed cards');  
-        processCardsBatch(Array.from(cards));  
-    }, 300);  
-  
-    // =======================================================  
-    // IV. ІНІЦІАЛІЗАЦІЯ  
-    // =======================================================  
-      
-    const observer = new MutationObserver(() => {  
-        setTimeout(debouncedProcessAll, 500);  
-    });  
-  
-    function init() {  
-        if (DEBUG) console.log('DV Quality: Initialized and observing body changes.');  
-          
-        UI.initStyles();  
-          
-        observer.observe(document.body, {  
-            childList: true,  
-            subtree: true  
-        });  
-          
-        debouncedProcessAll();  
-    }  
-  
-    // Запуск  
-    if (typeof Lampa !== 'undefined') {  
-        init();  
-    } else {  
-        const wait = setInterval(() => {  
-            if (typeof Lampa !== 'undefined') {  
-                clearInterval(wait);  
-                init();  
-            }  
-        }, 500);  
-    }  
-})();
+        const detectedQualities = torrents    
+            .map(t => QualityDetector.detectQuality(t.title))    
+            .filter(q => q !== null);    
+    
+        const bestQuality = QualityDetector.getBestQuality(detectedQualities);    
+    
+        if (DEBUG) {    
+            console.log('DV Quality: All detected qualities for', movieData.title, ':', detectedQualities);    
+            console.log('DV Quality: Best quality selected:', bestQuality);    
+        }    
+    
+        // Оновлення кешу    
+        Cache.set(movieData.id, { quality: bestQuality });    
+    
+        if (bestQuality) {    
+            UI.addQualityBadge(card, bestQuality);    
+        } else {    
+            if (DEBUG) console.log('DV Quality: No quality detected for', movieData.title);    
+        }    
+    }    
+    
+    /**    
+     * Пакетна обробка карток    
+     */    
+    async function processCardsBatch(cards) {    
+        for (let i = 0; i < cards.length; i += BATCH_SIZE) {    
+            const batch = cards.slice(i, i + BATCH_SIZE);    
+            await Promise.all(batch.map(card => processCard(card)));    
+        }    
+    }    
+    
+    /**    
+     * Обробка всіх карток з дебаунсінгом    
+     */    
+    const debouncedProcessAll = Utils.debounce(() => {    
+        const cards = document.querySelectorAll('.card:not([data-dv-processed])');    
+        if (DEBUG) console.log('DV Quality: Found', cards.length, 'unprocessed cards');    
+        processCardsBatch(Array.from(cards));    
+    }, 300);    
+    
+    // =======================================================    
+    // IV. ІНІЦІАЛІЗАЦІЯ    
+    // =======================================================    
+        
+    const observer = new MutationObserver(() => {    
+        setTimeout(debouncedProcessAll, 500);    
+    });    
+    
+    function init() {    
+        if (DEBUG) console.log('DV Quality: Initialized and observing body changes.');    
+            
+        UI.initStyles();    
+            
+        observer.observe(document.body, {    
+            childList: true,    
+            subtree: true    
+        });    
+            
+        debouncedProcessAll();    
+    }    
+    
+    // Запуск    
+    if (typeof Lampa !== 'undefined') {    
+        init();    
+    } else {    
+        const wait = setInterval(() => {    
+            if (typeof Lampa !== 'undefined') {    
+                clearInterval(wait);    
+                init();    
+            }    
+        }, 500);    
+    }    
+})();  
