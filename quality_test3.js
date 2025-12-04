@@ -169,6 +169,7 @@
                     }  
                     var bestNumericQuality = -1;  
                     var bestFoundTorrent = null;  
+                    var bestFoundDolbyVision = false;  
   
                     for (var i = 0; i < torrents.length; i++) {  
                         var currentTorrent = torrents[i];  
@@ -176,7 +177,7 @@
                           
                         var lowerTitle = (currentTorrent.title || '').toLowerCase();  
                           
-                        // Добавить определение Dolby Vision  
+                        // Визначення Dolby Vision для поточного торрента  
                         var hasDolbyVision = /\b(dv|dolby\s*vision)\b/i.test(lowerTitle);  
                           
                         if (/\b(ts|telesync|camrip|cam)\b/i.test(lowerTitle)) {  
@@ -191,19 +192,20 @@
                             console.log("MAXSM-RATINGS", "card: " + cardId + ", Torrent: " + currentTorrent.title + " | Quality: " + currentNumericQuality + "p" + (hasDolbyVision ? " [DV]" : ""));  
                         }  
                           
-                        // Сохраняем информацию о качестве и DV  
+                        // Зберігаємо інформацію про якість та DV  
                         if (currentNumericQuality > bestNumericQuality) {  
                             bestNumericQuality = currentNumericQuality;  
                             bestFoundTorrent = currentTorrent;  
-                            bestFoundTorrent.hasDolbyVision = hasDolbyVision;  
+                            // Зберігаємо DV статус окремо  
+                            bestFoundDolbyVision = hasDolbyVision;  
                         }  
                     }  
                     if (bestFoundTorrent) {  
-                        if (Q_LOGGING) console.log("MAXSM-RATINGS", "card: " + cardId + ", quality: JacRed: Found best torrent: \"" + bestFoundTorrent.title + "\" with quality: " + bestNumericQuality + "p" + (bestFoundTorrent.hasDolbyVision ? " [DV]" : ""));  
+                        if (Q_LOGGING) console.log("MAXSM-RATINGS", "card: " + cardId + ", quality: JacRed: Found best torrent: \"" + bestFoundTorrent.title + "\" with quality: " + bestNumericQuality + "p" + (bestFoundDolbyVision ? " [DV]" : ""));  
                         apiCallback({  
-                            quality: translateQuality(bestFoundTorrent.quality || bestNumericQuality, bestFoundTorrent.hasDolbyVision),  
+                            quality: translateQuality(bestFoundTorrent.quality || bestNumericQuality, bestFoundDolbyVision),  
                             title: bestFoundTorrent.title,  
-                            hasDolbyVision: bestFoundTorrent.hasDolbyVision  
+                            hasDolbyVision: bestFoundDolbyVision  
                         });  
                     } else {  
                         if (Q_LOGGING) console.log("MAXSM-RATINGS", "card: " + cardId + ", quality: JacRed: No suitable torrents found.");  
