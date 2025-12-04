@@ -428,9 +428,10 @@ initStyles: function() {
             border-color: #FF6B6B !important;      
             background: linear-gradient(135deg, #FF6B6B 0%, #DC143C 50%, #B22222 100%) !important;      
         }      
-        .card__quality div[data-quality*="FHD"] {      
-            border-color: #32CD32 !important;      
-            background: linear-gradient(135deg, #32CD32 0%, #228B22 50%, #006400 100%) !important;      
+        .card__quality div[data-quality*="FHD"],        
+        .card__quality div[data-quality*="1080"] {        
+            border-color: #00FF00 !important;        
+            background: linear-gradient(135deg, #00FF00 0%, #32CD32 50%, #228B22 100%) !important;            
         }      
         .card__quality div[data-quality*="2K"] {      
             border-color: #4169E1 !important;      
