@@ -432,10 +432,10 @@
                     border-color: #4169E1 !important;  
                     background-color: rgba(65, 105, 225, 0.2) !important;  
                 }  
-                .card__quality div[data-quality*="FHD"] {  
-                    border-color: #32CD32 !important;  
-                    background-color: rgba(50, 205, 50, 0.2) !important;  
-                }  
+                .card__quality .card__quality div[data-quality*="FHD"] {  
+                    border-color: #00FF00 !important;  
+                    background: linear-gradient(135deg, #00FF00 0%, #32CD32 50%, #228B22 100%) !important;  
+                }
                 .card__quality div[data-quality*="HD"] {  
                     border-color: #808080 !important;  
                     background-color: rgba(128, 128, 128, 0.2) !important;  
