@@ -461,9 +461,13 @@ var remove = function remove() {
     _self.destroy();  
 };  
   
-// Універсальний обробник для всіх можливих кодів  
+// Детекція ТВ платформи  
+var isTV = Lampa.Platform.is('tv') || Lampa.Platform.is('android_tv') ||   
+           Lampa.Platform.is('webos') || Lampa.Platform.is('tizen');  
+  
+// Універсальний обробник з перевіркою платформи  
 var universalKeyHandler = function(e) {  
-    console.log('[Cardify] Universal key:', e.code, e.keyCode, e.which, e.key);  
+    console.log('[Cardify] Universal key:', e.code, e.keyCode, e.which, e.key, 'Platform:', isTV ? 'TV' : 'Desktop');  
       
     const backKeys = [  
         e.code === 'Back',  
@@ -481,11 +485,25 @@ var universalKeyHandler = function(e) {
     ];  
       
     if (backKeys.some(condition => condition) && _this4.player && _this4.player.display) {  
-        console.log('[Cardify] Universal back intercepted');  
-        e.preventDefault();  
-        e.stopPropagation();  
-        e.stopImmediatePropagation();  
-        _this4.state.dispath('hide');  
+        console.log('[Cardify] Universal back intercepted - Platform:', isTV ? 'TV' : 'Desktop');  
+          
+        // Для ТВ платформ - більш агресивна зупинка  
+        if (isTV) {  
+            e.preventDefault();  
+            e.stopPropagation();  
+            e.stopImmediatePropagation();  
+              
+            // Додаткова затримка для ТВ  
+            setTimeout(function() {  
+                _this4.state.dispath('hide');  
+            }, 50);  
+        } else {  
+            e.preventDefault();  
+            e.stopPropagation();  
+            e.stopImmediatePropagation();  
+            _this4.state.dispath('hide');  
+        }  
+          
         return false;  
     }  
 };  
