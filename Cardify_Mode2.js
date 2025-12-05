@@ -1,4 +1,3 @@
-//Вмикання-вимикання звуку в трейлері//
 (function () {
   'use strict';
 
@@ -262,9 +261,53 @@
       }
     }, {
       key: "render",
-      value: function render() {
-        return this.html;
-      }
+      value: function render() {  
+    var _this = this;  
+  
+    this.html = $('<div class="cardify-trailer__youtube"></div>');  
+      
+    // Додати фокусування для пульта  
+    this.html.attr('tabindex', '0').css({  
+        'outline': 'none',  
+        'cursor': 'pointer'  
+    });  
+      
+    this.html.addClass('cardify-trailer-focusable');  
+      
+    // Створити кнопку звуку як окремий фокусуваний елемент  
+    this.soundButton = $('<div class="cardify-sound-button focusable" tabindex="0">🔊</div>').css({  
+        position: 'absolute',  
+        top: '10px',  
+        left: '10px',  
+        background: 'rgba(0,0,0,0.7)',  
+        color: 'white',  
+        padding: '8px 12px',  
+        borderRadius: '5px',  
+        fontSize: '18px',  
+        cursor: 'pointer',  
+        zIndex: 1000,  
+        border: '2px solid transparent'  
+    }).on('click', function() {  
+        if (_this.player.youtube.isMuted()) {  
+            _this.player.youtube.unMute();  
+            _this.soundButton.text('🔊');  
+        } else {  
+            _this.player.youtube.mute();  
+            _this.soundButton.text('🔇');  
+        }  
+    });  
+      
+    this.html.append(this.soundButton);  
+      
+    // Створити iframe для YouTube  
+    this.iframe = $('<iframe class="cardify-trailer__youtube-iframe" frameborder="0" allowfullscreen></iframe>').attr({  
+        src: 'about:blank'  
+    });  
+      
+    this.html.append(this.iframe);  
+      
+    return this.html;  
+}
     }, {
       key: "destroy",
       value: function destroy() {
@@ -383,36 +426,10 @@
       key: "controll",
       value: function controll() {  
     var _this3 = this;  
-    var enterTimer = null;  
-    var longPressThreshold = 800; // 800ms для довгого утримання  
   
     var out = function out() {  
         _this3.state.dispath('hide');  
         Lampa.Controller.toggle('full_start');  
-    };  
-  
-    // Обробник довгого утримання для кнопки OK/Enter  
-    var handleEnterPress = function() {  
-        enterTimer = setTimeout(function() {  
-            console.log('[Cardify] Long press detected - toggling sound');  
-            if (_this3.player.youtube.isMuted()) {  
-                _this3.player.youtube.unMute();  
-                console.log('[Cardify] Sound enabled');  
-            } else {  
-                _this3.player.youtube.mute();  
-                console.log('[Cardify] Sound disabled');  
-            }  
-            enterTimer = null;  
-        }, longPressThreshold);  
-    };  
-  
-    var handleEnterRelease = function() {  
-        if (enterTimer) {  
-            clearTimeout(enterTimer);  
-            enterTimer = null;  
-            // Коротке натискання - стандартна дія (unmute)  
-            _this3.player.unmute();  
-        }  
     };  
   
     Lampa.Controller.add('cardify_trailer', {  
@@ -420,11 +437,18 @@
             Lampa.Controller.clear();  
         },  
         enter: function() {  
-            handleEnterPress();  
-        },  
-        // Додати обробник відпускання кнопки  
-        enter_release: function() {  
-            handleEnterRelease();  
+            // Перевірити чи сфокусовано кнопку звуку  
+            if ($('.cardify-sound-button').is(':focus')) {  
+                if (_this3.player.youtube.isMuted()) {  
+                    _this3.player.youtube.unMute();  
+                    $('.cardify-sound-button').text('🔊');  
+                } else {  
+                    _this3.player.youtube.mute();  
+                    $('.cardify-sound-button').text('🔇');  
+                }  
+            } else {  
+                _this3.player.unmute();  
+            }  
         },  
         left: function() {  
             Lampa.Controller.toggle('full_start');  
@@ -446,6 +470,7 @@
             _this3.state.dispath('hide');  
             Lampa.Controller.toggle('full_start');  
         },  
+        // Додати нові контролери  
         volume_up: function() {  
             const currentVolume = _this3.player.youtube.getVolume();  
             _this3.player.youtube.setVolume(Math.min(100, currentVolume + 10));  
@@ -456,111 +481,98 @@
         }  
     });  
   
-    // Додати глобальні слухачі для відстеження відпускання кнопки  
-    var globalKeyHandler = function(e) {  
-        if ((e.code === 'Enter' || e.code === 'NumpadEnter') && enterTimer) {  
-            handleEnterRelease();  
-        }  
-    };  
-  
-    document.addEventListener('keyup', globalKeyHandler, true);  
-  
-    // Оновити функцію remove для очищення  
-    var originalRemove = _this3.destroy || function() {};  
-    _this3.destroy = function() {  
-        clearTimeout(enterTimer);  
-        document.removeEventListener('keyup', globalKeyHandler, true);  
-        originalRemove.call(this);  
-    };  
-  
     Lampa.Controller.toggle('cardify_trailer');  
-}  
+}
 }, {  
     key: "start",  
     value: function start() {  
 var _this4 = this;  
-var _self = this;  
+    var _self = this;  
   
-var toggle = function toggle(e) {  
-    _self.state.dispath('toggle');  
-};  
+    var toggle = function toggle(e) {  
+        _self.state.dispath('toggle');  
+    };  
   
-var destroy = function destroy(e) {  
-    if (e.type == 'destroy' && e.object.activity === _self.object.activity) remove();  
-};  
+    var destroy = function destroy(e) {  
+        if (e.type == 'destroy' && e.object.activity === _self.object.activity) remove();  
+    };  
   
-var remove = function remove() {  
-    Lampa.Listener.remove('activity', destroy);  
-    Lampa.Controller.listener.remove('toggle', toggle);  
-      
-    // Відновити системну поведінку  
-    window.onbeforeunload = originalOnBeforeUnload;  
-    window.history.back = originalHistoryBack;  
-      
-    _self.destroy();  
-};  
-  
-// Зберегти оригінальні методи  
-var originalOnBeforeUnload = window.onbeforeunload;  
-var originalHistoryBack = window.history.back;  
-  
-// Агресивне перехоплення на рівні вікна  
-window.onbeforeunload = function(e) {  
-    if (_this4.player && _this4.player.display) {  
-        console.log('[Cardify] Window beforeunload intercepted');  
-        _this4.state.dispath('hide');  
-        e.preventDefault();  
-        e.returnValue = ''; // Для старих браузерів  
-        return ''; // Для сучасних браузерів  
-    }  
-};  
-  
-// Перевизначити history.back  
-window.history.back = function() {  
-    if (_this4.player && _this4.player.display) {  
-        console.log('[Cardify] History back intercepted');  
-        _this4.state.dispath('hide');  
-        return;  
-    }  
-    originalHistoryBack.call(this);  
-};  
-  
-// Додатковий обробник для максимальної сумісності  
-var universalHandler = function(e) {  
-    const backKeys = [  
-        e.code === 'Back',  
-        e.code === 'Backspace',   
-        e.keyCode === 10009,  // Android TV  
-        e.keyCode === 461,    // WebOS  
-        e.keyCode === 8,      // Generic BACK  
-        e.keyCode === 27,     // ESC  
-        e.key === 'Back',  
-        e.key === 'Escape'  
-    ];  
-      
-    if (backKeys.some(condition => condition) && _this4.player && _this4.player.display) {  
-        console.log('[Cardify] Universal handler intercepted:', e.code, e.keyCode);  
-        e.preventDefault();  
-        e.stopPropagation();  
-        e.stopImmediatePropagation();  
+    var remove = function remove() {  
+        Lampa.Listener.remove('activity', destroy);  
+        Lampa.Controller.listener.remove('toggle', toggle);  
           
-        // Блокувати системний діалог  
-        if (e.cancelable !== false) {  
+        // Відновити системну поведінку  
+        window.onbeforeunload = originalOnBeforeUnload;  
+        window.history.back = originalHistoryBack;  
+          
+        // Видалити універсальний обробник  
+        document.removeEventListener('keydown', universalHandler, true);  
+        window.removeEventListener('keydown', universalHandler, true);  
+        Lampa.Listener.remove('keydown', universalHandler);  
+          
+        _self.destroy();  
+    };  
+  
+    // Зберегти оригінальні методи  
+    var originalOnBeforeUnload = window.onbeforeunload;  
+    var originalHistoryBack = window.history.back;  
+  
+    // Агресивне перехоплення на рівні вікна  
+    window.onbeforeunload = function(e) {  
+        if (_this4.player && _this4.player.display) {  
+            console.log('[Cardify] Window beforeunload intercepted');  
             _this4.state.dispath('hide');  
+            e.preventDefault();  
+            e.returnValue = '';  
+            return '';  
         }  
+    };  
+  
+    // Перевизначити history.back  
+    window.history.back = function() {  
+        if (_this4.player && _this4.player.display) {  
+            console.log('[Cardify] History back intercepted');  
+            _this4.state.dispath('hide');  
+            return;  
+        }  
+        originalHistoryBack.call(this);  
+    };  
+  
+    // Універсальний обробник для максимальної сумісності  
+    var universalHandler = function(e) {  
+        const backKeys = [  
+            e.code === 'Back',  
+            e.code === 'Backspace',  
+            e.keyCode === 10009,  // Android TV  
+            e.keyCode === 461,    // WebOS  
+            e.keyCode === 8,      // Generic BACK  
+            e.keyCode === 27,     // ESC  
+            e.key === 'Back',  
+            e.key === 'Escape'  
+        ];  
           
-        return false;  
-    }  
-};  
+        if (backKeys.some(condition => condition) && _this4.player && _this4.player.display) {  
+            console.log('[Cardify] Universal handler intercepted:', e.code, e.keyCode);  
+            e.preventDefault();  
+            e.stopPropagation();  
+            e.stopImmediatePropagation();  
+              
+            if (e.cancelable !== false) {  
+                _this4.state.dispath('hide');  
+            }  
+              
+            return false;  
+        }  
+    };  
   
-// Додати всі можливі слухачі  
-document.addEventListener('keydown', universalHandler, true);  
-window.addEventListener('keydown', universalHandler, true);  
-Lampa.Listener.follow('keydown', universalHandler);  
-Lampa.Listener.follow('activity', destroy);  
-Lampa.Controller.listener.follow('toggle', toggle);  
+    // Додати всі можливі слухачі  
+    document.addEventListener('keydown', universalHandler, true);  
+    window.addEventListener('keydown', universalHandler, true);  
+    Lampa.Listener.follow('keydown', universalHandler);  
+    Lampa.Listener.follow('activity', destroy);  
+    Lampa.Controller.listener.follow('toggle', toggle);  
   
-this.player = new Player(this.object, this.video);   
+    this.player = new Player(this.object, this.video);  
     this.player.listener.follow('loaded', function () {  
         _this4.preview();  
         _this4.state.start();  
@@ -575,10 +587,6 @@ this.player = new Player(this.object, this.video);
   
         _this4.timer_show = setTimeout(function () {  
             _this4.player.show();  
-  
-            // _this4.background.addClass('nodisplay');  
-            // _this4.startblock.addClass('nodisplay');  
-            // _this4.head.addClass('nodisplay');  
   
             _this4.controll();  
         }, 500);  
@@ -595,7 +603,7 @@ this.player = new Player(this.object, this.video);
     this.object.activity.render().find('.activity__body').prepend(this.player.render());  
   
     this.state.start();  
-    }  
+}
 }, {  
     key: "destroy",  
     value: function destroy() {  
@@ -1297,7 +1305,17 @@ this.player = new Player(this.object, this.video);
           
     /* Додатковий фільтр для м'якості */      
     filter: drop-shadow(0 0 30px rgba(0,0,0,0.8)) !important;      
-  }          
+  } 
+    
+        .cardify-trailer-focusable:focus {  
+            outline: 3px solid #fff !important;  
+            outline-offset: 2px !important;  
+        }  
+          
+        .cardify-sound-button.focusable:focus {  
+            border: 2px solid #fff !important;  
+            box-shadow: 0 0 10px rgba(255,255,255,0.5) !important;  
+        } 
             
   .cardify-trailer__youtube iframe {          
     width: 130% !important;          
