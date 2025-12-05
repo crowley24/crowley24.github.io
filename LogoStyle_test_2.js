@@ -47,89 +47,135 @@
         }  
     }  
   
-    // --- СТИЛІ з покращеним позиціонуванням та розміром ---  
+    // --- СТИЛІ з покращеною специфічністю ---  
     var style = document.createElement('style');  
-    style.textContent = '\n        .cardify .full-start-new__title {\n            text-shadow: none !important;\n        }\n\n        /* Агресивні правила з вищою специфічністю */\n        .cardify .full-start-new__title img,\n        .full-start-new__title img,\n        .full-logo-wrapper img {\n            /* Примусові мінімальні розміри - збільшено */\n            min-width: 350px !important;\n            min-height: 100px !important;\n            \n            /* Примусові максимальні розміри - збільшено */\n            max-width: 45vw !important;\n            max-height: 25vh !important;\n            \n            /* Примусові базові властивості */\n            width: auto !important;\n            height: auto !important;\n            object-fit: contain !important;\n            display: block !important;\n            margin: 5px 0 0 !important;\n            \n            /* Вимкнення будь-яких трансформацій */\n            transform: none !important;\n            -webkit-transform: none !important;\n            -moz-transform: none !important;\n            -ms-transform: none !important;\n            -o-transform: none !important;\n        }\n\n        /* Контейнер з вирівнюванням зліва */\n        .full-logo-wrapper {\n            display: flex !important;\n            flex-direction: column !important;\n            align-items: flex-start !important; /* Змінено на flex-start для вирівнювання зліва */\n            justify-content: flex-start !important;\n            width: 100% !important;\n            min-height: 120px !important;\n        }\n\n        /* Додатково для мобільних */\n        @media (max-width: 768px) {\n            .cardify .full-start-new__title img,\n            .full-start-new__title img,\n            .full-logo-wrapper img {\n                min-width: 280px !important;\n                min-height: 80px !important;\n                max-width: 65vw !important;\n                max-height: 30vh !important;\n            }\n        }\n        \n        /* Для дуже великих екранів */\n        @media (min-width: 1920px) {\n            .cardify .full-start-new__title img,\n            .full-start-new__title img,\n            .full-logo-wrapper img {\n                min-width: 450px !important;\n                min-height: 130px !important;\n                max-width: 40vw !important;\n                max-height: 22vh !important;\n            }\n        }\n    ';  
+    style.textContent = `  
+        .cardify .full-start-new__title {  
+            text-shadow: none !important;  
+        }  
+  
+        /* Агресивні правила з вищою специфічністю */  
+        .cardify .full-start-new__title img,  
+        .full-start-new__title img,  
+        .full-logo-wrapper img {  
+            /* Примусові мінімальні розміри */  
+            min-width: 350px !important;  
+            min-height: 100px !important;  
+              
+            /* Примусові максимальні розміри */  
+            max-width: 40vw !important;  
+            max-height: 20vh !important;  
+              
+            /* Примусові базові властивості */  
+            width: auto !important;  
+            height: auto !important;  
+            object-fit: contain !important;  
+            display: block !important;  
+            margin: 5px auto 0 !important;  
+              
+            /* Вимкнення будь-яких трансформацій */  
+            transform: none !important;  
+            -webkit-transform: none !important;  
+            -moz-transform: none !important;  
+            -ms-transform: none !important;  
+            -o-transform: none !important;  
+        }  
+  
+        /* Контейнер з примусовою шириною */  
+        .full-logo-wrapper {  
+            display: flex !important;  
+            flex-direction: column !important;  
+            align-items: flex-start !important;  
+            justify-content: center !important;  
+            width: 100% !important;  
+            min-height: 100px !important;  
+        }  
+  
+        /* Додатково для мобільних */  
+        @media (max-width: 768px) {  
+            .cardify .full-start-new__title img,  
+            .full-start-new__title img,  
+            .full-logo-wrapper img {  
+                min-width: 250px !important;  
+                min-height: 75px !important;  
+                max-width: 60vw !important;  
+                max-height: 25vh !important;  
+            }  
+        }  
+          
+        /* Для дуже великих екранів */  
+        @media (min-width: 1920px) {  
+            .cardify .full-start-new__title img,  
+            .full-start-new__title img,  
+            .full-logo-wrapper img {  
+                min-width: 400px !important;  
+                min-height: 120px !important;  
+                max-width: 35vw !important;  
+                max-height: 18vh !important;  
+            }  
+        }  
+    `;  
     document.head.appendChild(style);  
   
     // --- Функція відображення логотипа ---  
-    function displayLogo(activity, logoPath) {  
+    function displayLogo(activityObject, logoPath) {  
         try {  
-            var img = new Image();  
-            img.onload = function() {  
-                // Примусово встановлюємо розміри через JavaScript  
-                img.style.minWidth = '350px';  
-                img.style.minHeight = '100px';  
-                img.style.maxWidth = '45vw';  
-                img.style.maxHeight = '25vh';  
-                  
-                activity.render().find('.full-start-new__title').html(  
-                    '<div class="full-logo-wrapper">' +  
-                        '<img src="' + logoPath + '" style="min-width: 350px; min-height: 100px;" />' +  
-                    '</div>'  
-                );  
-            };  
-  
-            img.onerror = function() {  
-                console.error('[Logo Plugin] Failed to load logo image:', logoPath);  
-            };  
-  
-            img.src = logoPath;  
+            var titleElement = activityObject.render().find(".full-start-new__title");  
+            titleElement.html(  
+                '<div class="full-logo-wrapper">' +  
+                    '<img src="' + logoPath + '" style="min-width: 350px; min-height: 100px;" />' +  
+                '</div>'  
+            );  
         } catch (error) {  
             console.error('[Logo Plugin] Error displaying logo:', error);  
         }  
     }  
   
-    // --- Основний плагін ---  
-    Lampa.Listener.follow('full', function(e) {  
-        if (e.type === 'complite') {  
+    // --- ОСНОВНИЙ ПЛАГІН ---  
+    Lampa.Listener.follow("full", function(event) {  
+        if (event.type === "complite") {  
             try {  
-                var movie = e.data.movie;  
+                var movie = event.data.movie;  
                 var isSerial = movie.name || movie.first_air_date;  
-                var apiPath = isSerial ? 'tv/' + movie.id : 'movie/' + movie.id;  
-                var movieId = movie.id.toString();  
+                var apiPath = isSerial ? "tv/" + movie.id : "movie/" + movie.id;  
+                var movieId = movie.id;  
   
                 // Перевірка кешу  
                 var cachedLogo = getCachedLogo(movieId);  
                 if (cachedLogo) {  
-                    displayLogo(e.object, cachedLogo);  
+                    displayLogo(event.object, cachedLogo);  
                     return;  
                 }  
   
                 // API запит логотипів  
-                var imgApi = Lampa.TMDB.api(apiPath + '/images?api_key=' + Lampa.TMDB.key());  
+                var imgApi = Lampa.TMDB.api(apiPath + "/images?api_key=" + Lampa.TMDB.key());  
   
                 $.get(imgApi, function(response) {  
                     if (response.logos && response.logos.length > 0) {  
-                        // Змінений пріоритет мов: українська → англійська → всі інші  
-                        var logoPriority = ['uk', 'en'];  
                         var selectedLogo = null;  
+                        var logoPriority = ['uk', 'en']; // Пріоритет: українська, англійська  
   
-                        // Спочатку шукаємо українську  
-                        selectedLogo = response.logos.find(function(logo) {  
-                            return logo.iso_639_1 === 'uk';  
-                        });  
-  
-                        // Потім англійську  
-                        if (!selectedLogo) {  
+                        // Пошук логотипа за пріоритетом  
+                        for (var i = 0; i < logoPriority.length; i++) {  
                             selectedLogo = response.logos.find(function(logo) {  
-                                return logo.iso_639_1 === 'en';  
+                                return logo.iso_639_1 === logoPriority[i];  
                             });  
+                            if (selectedLogo) break;  
                         }  
   
-                        // Якщо немає української чи англійської, беремо перший доступний  
+                        // Якщо не знайдено, беремо перший доступний  
                         if (!selectedLogo) {  
                             selectedLogo = response.logos[0];  
                         }  
   
                         if (selectedLogo && selectedLogo.file_path) {  
-                            var logoPath = Lampa.TMDB.image('/t/p/w300' + selectedLogo.file_path.replace('.svg', '.png'));  
+                            var logoPath = Lampa.TMDB.image("/t/p/w300" + selectedLogo.file_path.replace(".svg", ".png"));  
                               
                             // Зберігаємо в кеш  
                             cacheLogo(movieId, logoPath);  
                               
                             // Відображаємо логотип  
-                            displayLogo(e.object, logoPath);  
+                            displayLogo(event.object, logoPath);  
                         }  
                     }  
                 }).fail(function() {  
