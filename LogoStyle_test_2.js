@@ -8,10 +8,16 @@
             text-shadow: none !important;  
         }  
   
-        /* Обмеження логотипу */  
+        /* Покращене обмеження логотипу */  
         .full-start-new__title img {  
-            max-width: 25vw !important;  /* максимум 25% ширини екрану */  
-            max-height: 12vh !important; /* максимум 12% висоти екрану */  
+            /* Мінімальні розміри для запобігання занадто малим логотипам */  
+            min-width: 200px !important;  
+            min-height: 60px !important;  
+              
+            /* Максимальні розміри */  
+            max-width: 35vw !important;  /* Збільшено з 25vw */  
+            max-height: 15vh !important; /* Збільшено з 12vh */  
+              
             width: auto !important;  
             height: auto !important;  
             object-fit: contain !important;  
@@ -28,11 +34,23 @@
   
         @media (max-width: 768px) {  
             .full-start-new__title img {  
-                max-width: 40vw !important; /* більше місця на мобільних */  
-                max-height: 10vh !important;  
+                min-width: 150px !important;  /* Менший мінімум для мобільних */  
+                min-height: 45px !important;  
+                max-width: 50vw !important;   /* Більше місця на мобільних */  
+                max-height: 12vh !important;  
             }  
             .full-logo-wrapper {  
                 align-items: center !important;  
+            }  
+        }  
+          
+        /* Додатково: для дуже великих екранів */  
+        @media (min-width: 1920px) {  
+            .full-start-new__title img {  
+                min-width: 300px !important;  
+                min-height: 90px !important;  
+                max-width: 30vw !important;  
+                max-height: 18vh !important;  
             }  
         }  
     `;  
