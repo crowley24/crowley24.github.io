@@ -16,7 +16,7 @@
               
             /* Максимальні розміри */  
             max-width: 55vw !important;  
-            max-height: 45vh !important;   
+            max-height: 35vh !important;   
               
             width: auto !important;  
             height: auto !important;  
