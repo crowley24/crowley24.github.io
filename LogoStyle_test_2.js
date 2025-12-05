@@ -22,66 +22,74 @@
     function setLogoLanguage(lang) {  
         Lampa.Storage.set('logo_language', lang);  
         console.log('[Logo Plugin] Language set to:', lang);  
+        Lampa.Noty.show('Мову логотипів змінено на: ' + getLanguageName(lang));  
     }  
   
-    // --- Додавання налаштувань в меню Lampa ---  
-    function addLogoLanguageSettings() {  
-    try {  
-        // Перевіряємо різні варіанти API налаштувань  
-        if (typeof Lampa.Settings !== 'undefined' && typeof Lampa.Settings.add === 'function') {  
-            // Спробуємо використати Lampa.Settings.add  
-            Lampa.Settings.add({  
-                component: 'select',  
-                name: 'logo_language',  
-                title: 'Мова логотипів фільмів',  
-                default: 'ru',  
-                values: {  
-                    'ru': 'Російська',  
-                    'uk': 'Українська',   
-                    'en': 'Англійська',  
-                    'be': 'Білоруська',  
-                    'bg': 'Болгарська',  
-                    'zh': 'Китайська',  
-                    'pt': 'Португальська',  
-                    'he': 'Іврит',  
-                    'cs': 'Чеська'  
-                },  
-                onChange: function(value) {  
-                    setLogoLanguage(value);  
-                    Lampa.Noty.show('Мову логотипів змінено на: ' + this.values[value]);  
-                }  
-            });  
-            console.log('[Logo Plugin] Settings added with Lampa.Settings.add');  
-        } else if (typeof Lampa.Settings !== 'undefined' && typeof Lampa.Settings.select === 'function') {  
-            // Альтернативний варіант  
-            Lampa.Settings.select('logo_language', {  
-                title: 'Мова логотипів фільмів',  
-                default: 'ru',  
-                values: {  
-                    'ru': 'Російська',  
-                    'uk': 'Українська',   
-                    'en': 'Англійська',  
-                    'be': 'Білоруська',  
-                    'bg': 'Болгарська',  
-                    'zh': 'Китайська',  
-                    'pt': 'Португальська',  
-                    'he': 'Іврит',  
-                    'cs': 'Чеська'  
-                },  
-                onChange: function(value) {  
-                    setLogoLanguage(value);  
-                    Lampa.Noty.show('Мову логотипів змінено на: ' + this.values[value]);  
-                }  
-            });  
-            console.log('[Logo Plugin] Settings added with Lampa.Settings.select');  
-        } else {  
-            console.warn('[Logo Plugin] Settings API not available, using console only');  
-            // Залишаємо тільки консольний метод  
-        }  
-    } catch (error) {  
-        console.error('[Logo Plugin] Error adding settings:', error);  
+    function getLanguageName(code) {  
+        const names = {  
+            'ru': 'Російська',  
+            'uk': 'Українська',   
+            'en': 'Англійська',  
+            'be': 'Білоруська',  
+            'bg': 'Болгарська',  
+            'zh': 'Китайська',  
+            'pt': 'Португальська',  
+            'he': 'Іврит',  
+            'cs': 'Чеська'  
+        };  
+        return names[code] || code;  
     }  
-}
+  
+    // --- Додавання пункту меню ---  
+    function addLanguageMenuItem() {  
+        try {  
+            Lampa.Listener.follow('app', function(e) {  
+                if (e.type === 'ready') {  
+                    // Додаємо пункт в головне меню  
+                    Lampa.Template.add('settings_logo_language', `  
+                        <div class="settings-folder selector" data-component="logo_language">  
+                            <div class="settings-folder__icon">🌐</div>  
+                            <div class="settings-folder__name">Мова логотипів</div>  
+                        </div>  
+                    `);  
+                      
+                    // Обробник кліку  
+                    $('body').on('click', '[data-component="logo_language"]', function() {  
+                        var currentLang = getLogoLanguage();  
+                        var languages = {  
+                            'ru': 'Російська',  
+                            'uk': 'Українська',   
+                            'en': 'Англійська',  
+                            'be': 'Білоруська',  
+                            'bg': 'Болгарська',  
+                            'zh': 'Китайська',  
+                            'pt': 'Португальська',  
+                            'he': 'Іврит',  
+                            'cs': 'Чеська'  
+                        };  
+                          
+                        Lampa.Select.show({  
+                            title: 'Мова логотипів фільмів',  
+                            items: Object.keys(languages).map(function(key) {  
+                                return {  
+                                    title: languages[key],  
+                                    value: key,  
+                                    selected: key === currentLang  
+                                };  
+                            }),  
+                            onSelect: function(item) {  
+                                setLogoLanguage(item.value);  
+                            }  
+                        });  
+                    });  
+                      
+                    console.log('[Logo Plugin] Menu item added successfully');  
+                }  
+            });  
+        } catch (error) {  
+            console.error('[Logo Plugin] Error adding menu item:', error);  
+        }  
+    }  
   
     // --- СТИЛІ ---  
     try {  
@@ -132,33 +140,21 @@
           
         Lampa.Listener.follow("full", function(a) {  
             try {  
-                console.log('[Logo Plugin] Full event triggered:', a.type);  
-                  
                 if ("complite" !== a.type) return;  
                   
                 var e = a.data.movie;  
-                if (!e) {  
-                    console.error('[Logo Plugin] No movie data found');  
-                    return;  
-                }  
+                if (!e) return;  
                   
                 var isSerial = e.name || e.first_air_date;  
                 var apiPath = isSerial ? "tv/" + e.id : "movie/" + e.id;  
                   
-                if (!e.id) {  
-                    console.error('[Logo Plugin] No movie ID found');  
-                    return;  
-                }  
-  
-                var preferredLang = getLogoLanguage();  
-                console.log('[Logo Plugin] Using language:', preferredLang);  
+                if (!e.id) return;  
   
                 var contentContainer = a.object.activity.render().find(".full-start-new__body");  
-                if (!contentContainer.length) {  
-                    console.error('[Logo Plugin] Content container not found');  
-                    return;  
-                }  
+                if (!contentContainer.length) return;  
                 contentContainer.css("opacity", "0");  
+  
+                var preferredLang = getLogoLanguage();  
   
                 var translationsApi = Lampa.TMDB.api(apiPath + "/translations?api_key=" + Lampa.TMDB.key());  
   
@@ -170,63 +166,58 @@
                             var translation = translationsData.translations.find(t =>  
                                 t.iso_639_1 === preferredLang || t.iso_3166_1 === preferredLang.toUpperCase()  
                             );  
-                              
                             if (translation && translation.data) {  
                                 localizedTitle = isSerial ? translation.data.name : translation.data.title;  
                             }  
                         }  
   
-                        if (!localizedTitle) {  
-                            localizedTitle = isSerial ? e.name : e.title;  
-                        }  
+                        if (!localizedTitle) localizedTitle = isSerial ? e.name : e.title;  
   
                         var imgApi = Lampa.TMDB.api(apiPath + "/images?api_key=" + Lampa.TMDB.key());  
   
-                        $.get(imgApi).done(function(imagesData) {  
+                        $.get(imgApi).done(function(e) {  
                             try {  
-                                if (!imagesData || !imagesData.logos || imagesData.logos.length === 0) {  
-                                    contentContainer.css("opacity", "1");  
-                                    return;  
-                                }  
+                                if (e.logos && e.logos.length > 0) {  
+                                    var logo = e.logos.find(l => l.iso_639_1 === preferredLang);  
+                                    var isPreferredLogo = !!logo;  
   
-                                var logo = imagesData.logos.find(l => l.iso_639_1 === preferredLang);  
-                                var isPreferredLogo = !!logo;  
+                                    if (!logo) {  
+                                        logo = e.logos.find(l => l.iso_639_1 === "en");  
+                                    }  
+                                    if (!logo) {  
+                                        logo = e.logos[0];  
+                                    }  
   
-                                if (!logo) {  
-                                    logo = imagesData.logos.find(l => l.iso_639_1 === "en");  
-                                }  
-                                if (!logo) {  
-                                    logo = imagesData.logos[0];  
-                                }  
+                                    if (logo && logo.file_path) {  
+                                        var logoPath = Lampa.TMDB.image("/t/p/w300" + logo.file_path.replace(".svg", ".png"));  
   
-                                if (logo && logo.file_path) {  
-                                    var logoPath = Lampa.TMDB.image("/t/p/w300" + logo.file_path.replace(".svg", ".png"));  
-  
-                                    var img = new Image();  
-                                    img.onload = function() {  
-                                        try {  
-                                            var titleHtml = '<div class="full-logo-wrapper"><img src="' + logoPath + '" />';  
-                                              
-                                            if (!isPreferredLogo && localizedTitle) {  
-                                                titleHtml += '<span style="margin-top:2px;font-size:0.55em;color:#fff;">' + localizedTitle + '</span>';  
+                                        var img = new Image();  
+                                        img.onload = function() {  
+                                            try {  
+                                                var titleHtml = '<div class="full-logo-wrapper"><img src="' + logoPath + '" />';  
+                                                  
+                                                if (!isPreferredLogo && localizedTitle) {  
+                                                    titleHtml += '<span style="margin-top:2px;font-size:0.55em;color:#fff;">' + localizedTitle + '</span>';  
+                                                }  
+                                                  
+                                                titleHtml += '</div>';  
+                                                  
+                                                a.object.activity.render().find(".full-start-new__title").html(titleHtml);  
+                                                contentContainer.css("opacity", "1");  
+                                            } catch (error) {  
+                                                console.error('[Logo Plugin] Error displaying logo:', error);  
+                                                contentContainer.css("opacity", "1");  
                                             }  
-                                              
-                                            titleHtml += '</div>';  
-                                              
-                                            a.object.activity.render().find(".full-start-new__title").html(titleHtml);  
-                                            contentContainer.css("opacity", "1");  
-                                        } catch (error) {  
-                                            console.error('[Logo Plugin] Error displaying logo:', error);  
-                                            contentContainer.css("opacity", "1");  
-                                        }  
-                                    };  
+                                        };  
   
-                                    img.onerror = function() {  
-                                        console.warn('[Logo Plugin] Failed to load logo:', logoPath);  
+                                        img.onerror = function() {  
+                                            contentContainer.css("opacity", "1");  
+                                        };  
+  
+                                        img.src = logoPath;  
+                                    } else {  
                                         contentContainer.css("opacity", "1");  
-                                    };  
-  
-                                    img.src = logoPath;  
+                                    }  
                                 } else {  
                                     contentContainer.css("opacity", "1");  
                                 }  
@@ -235,7 +226,6 @@
                                 contentContainer.css("opacity", "1");  
                             }  
                         }).fail(function() {  
-                            console.error('[Logo Plugin] Failed to fetch images');  
                             contentContainer.css("opacity", "1");  
                         });  
                     } catch (error) {  
@@ -243,7 +233,6 @@
                         contentContainer.css("opacity", "1");  
                     }  
                 }).fail(function() {  
-                    console.error('[Logo Plugin] Failed to fetch translations');  
                     contentContainer.css("opacity", "1");  
                 });  
             } catch (error) {  
@@ -251,16 +240,14 @@
             }  
         });  
   
-        // Глобальні функції для зворотної сумісності  
+        // Глобальні функції  
         window.logoPlugin = {  
             setLanguage: setLogoLanguage,  
             getLanguage: getLogoLanguage  
         };  
   
-        // Додаємо налаштування з затримкою  
-        setTimeout(function() {  
-            addLogoLanguageSettings();  
-        }, 1000);  
+        // Додаємо пункт меню  
+        addLanguageMenuItem();  
   
         console.log('[Logo Plugin] Successfully initialized');  
     } catch (error) {  
