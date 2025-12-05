@@ -294,6 +294,12 @@
             _this.soundButton.text('🔇');  
         }  
     });  
+        
+        this.soundButton.on('focus', function() {  
+    console.log('[Cardify] Sound button focused');  
+}).on('blur', function() {  
+    console.log('[Cardify] Sound button blurred');  
+});
       
     this.html.append(this.soundButton);  
       
