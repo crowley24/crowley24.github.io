@@ -433,58 +433,98 @@ Lampa.Controller.toggle('cardify_trailer');
     key: "start",  
     value: function start() {  
 var _this4 = this;  
-    var _self = this;  
+var _self = this;  
   
-    var toggle = function toggle(e) {  
-        _self.state.dispath('toggle');  
-    };  
+var toggle = function toggle(e) {  
+    _self.state.dispath('toggle');  
+};  
   
-    var destroy = function destroy(e) {  
-        if (e.type == 'destroy' && e.object.activity === _self.object.activity) remove();  
-    };  
+var destroy = function destroy(e) {  
+    if (e.type == 'destroy' && e.object.activity === _self.object.activity) remove();  
+};  
   
-    var remove = function remove() {  
-        Lampa.Listener.remove('activity', destroy);  
-        Lampa.Controller.listener.remove('toggle', toggle);  
-          
-        // Видалити слухачі activity та keydown  
-        Lampa.Listener.remove('activity', activityBackHandler);  
-        Lampa.Listener.remove('keydown', tvKeydownHandler);  
-          
-        _self.destroy();  
-    };  
+var remove = function remove() {  
+    Lampa.Listener.remove('activity', destroy);  
+    Lampa.Controller.listener.remove('toggle', toggle);  
+      
+    // Видалити всі слухачі  
+    Lampa.Listener.remove('activity', activityBackHandler);  
+    Lampa.Listener.remove('keydown', universalKeyHandler);  
+    document.removeEventListener('keydown', documentKeyHandler, true);  
+    window.removeEventListener('keydown', windowKeyHandler, true);  
+      
+    // Відновити оригінальний метод якщо існує  
+    if (originalBack) {  
+        Lampa.Controller.back = originalBack;  
+    }  
+      
+    _self.destroy();  
+};  
   
-    // Обробник activity для кнопки "назад"  
-    var activityBackHandler = function(e) {  
-        if (e.type === 'back' && _this4.player && _this4.player.display) {  
-            console.log('[Cardify] Back intercepted via Activity');  
-            e.preventDefault();  
-            e.stopPropagation();  
-            _this4.state.dispath('hide');  
-            return false;  
-        }  
-    };  
+// Універсальний обробник для всіх можливих кодів  
+var universalKeyHandler = function(e) {  
+    console.log('[Cardify] Universal key:', e.code, e.keyCode, e.which, e.key);  
+      
+    const backKeys = [  
+        e.code === 'Back',  
+        e.code === 'Backspace',   
+        e.keyCode === 10009,  // Android TV  
+        e.keyCode === 461,    // WebOS  
+        e.keyCode === 8,      // Generic BACK  
+        e.keyCode === 27,     // ESC  
+        e.which === 10009,  
+        e.which === 461,  
+        e.which === 8,  
+        e.which === 27,  
+        e.key === 'Back',  
+        e.key === 'Escape'  
+    ];  
+      
+    if (backKeys.some(condition => condition) && _this4.player && _this4.player.display) {  
+        console.log('[Cardify] Universal back intercepted');  
+        e.preventDefault();  
+        e.stopPropagation();  
+        e.stopImmediatePropagation();  
+        _this4.state.dispath('hide');  
+        return false;  
+    }  
+};  
   
-    // Додатковий обробник для ТВ пультів  
-    var tvKeydownHandler = function(e) {  
-        const tvBackCodes = [10009, 461, 8, 27]; // Android TV, WebOS, Generic, ESC  
-          
-        if (tvBackCodes.includes(e.keyCode) && _this4.player && _this4.player.display) {  
-            console.log('[Cardify] TV keydown intercepted:', e.keyCode);  
-            e.preventDefault();  
-            e.stopPropagation();  
-            _this4.state.dispath('hide');  
-            return false;  
-        }  
-    };  
+// Додаткові обробники для максимальної сумісності  
+var documentKeyHandler = universalKeyHandler;  
+var windowKeyHandler = universalKeyHandler;  
   
-    // Додати слухачі  
-    Lampa.Listener.follow('activity', activityBackHandler);  
-    Lampa.Listener.follow('keydown', tvKeydownHandler);  
-    Lampa.Listener.follow('activity', destroy);  
-    Lampa.Controller.listener.follow('toggle', toggle);  
+// Activity обробник  
+var activityBackHandler = function(e) {  
+    if (e.type === 'back' && _this4.player && _this4.player.display) {  
+        console.log('[Cardify] Activity back intercepted');  
+        e.preventDefault();  
+        e.stopPropagation();  
+        _this4.state.dispath('hide');  
+        return false;  
+    }  
+};  
   
-    this.player = new Player(this.object, this.video);   
+// Перехоплення методу Controller  
+var originalBack = Lampa.Controller.back;  
+Lampa.Controller.back = function() {  
+    if (_this4.player && _this4.player.display) {  
+        console.log('[Cardify] Controller back intercepted');  
+        _this4.state.dispath('hide');  
+        return;  
+    }  
+    if (originalBack) originalBack.call(this);  
+};  
+  
+// Додати всі можливі слухачі  
+Lampa.Listener.follow('activity', activityBackHandler);  
+Lampa.Listener.follow('keydown', universalKeyHandler);  
+document.addEventListener('keydown', documentKeyHandler, true);  
+window.addEventListener('keydown', windowKeyHandler, true);  
+Lampa.Listener.follow('activity', destroy);  
+Lampa.Controller.listener.follow('toggle', toggle);  
+  
+this.player = new Player(this.object, this.video);   
     this.player.listener.follow('loaded', function () {  
         _this4.preview();  
         _this4.state.start();  
