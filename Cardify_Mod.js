@@ -1,3 +1,890 @@
+(function () {
+  'use strict';
+
+  function _classCallCheck(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+      throw new TypeError("Cannot call a class as a function");
+    }
+  }
+
+  function _defineProperties(target, props) {
+    for (var i = 0; i < props.length; i++) {
+      var descriptor = props[i];
+      descriptor.enumerable = descriptor.enumerable || false;
+      descriptor.configurable = true;
+      if ("value" in descriptor) descriptor.writable = true;
+      Object.defineProperty(target, descriptor.key, descriptor);
+    }
+  }
+
+  function _createClass(Constructor, protoProps, staticProps) {
+    if (protoProps) _defineProperties(Constructor.prototype, protoProps);
+    if (staticProps) _defineProperties(Constructor, staticProps);
+    return Constructor;
+  }
+
+  function _toConsumableArray(arr) {
+    return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread();
+  }
+
+  function _arrayWithoutHoles(arr) {
+    if (Array.isArray(arr)) return _arrayLikeToArray(arr);
+  }
+
+  function _iterableToArray(iter) {
+    if (typeof Symbol !== "undefined" && iter[Symbol.iterator] != null || iter["@@iterator"] != null) return Array.from(iter);
+  }
+
+  function _unsupportedIterableToArray(o, minLen) {
+    if (!o) return;
+    if (typeof o === "string") return _arrayLikeToArray(o, minLen);
+    var n = Object.prototype.toString.call(o).slice(8, -1);
+    if (n === "Object" && o.constructor) n = o.constructor.name;
+    if (n === "Map" || n === "Set") return Array.from(o);
+    if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen);
+  }
+
+  function _arrayLikeToArray(arr, len) {
+    if (len == null || len > arr.length) len = arr.length;
+
+    for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i];
+
+    return arr2;
+  }
+
+  function _nonIterableSpread() {
+    throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+  }
+
+  function _createForOfIteratorHelper(o, allowArrayLike) {
+    var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"];
+
+    if (!it) {
+      if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") {
+        if (it) o = it;
+        var i = 0;
+
+        var F = function () {};
+
+        return {
+          s: F,
+          n: function () {
+            if (i >= o.length) return {
+              done: true
+            };
+            return {
+              done: false,
+              value: o[i++]
+            };
+          },
+          e: function (e) {
+            throw e;
+          },
+          f: F
+        };
+      }
+
+      throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+    }
+
+    var normalCompletion = true,
+        didErr = false,
+        err;
+    return {
+      s: function () {
+        it = it.call(o);
+      },
+      n: function () {
+        var step = it.next();
+        normalCompletion = step.done;
+        return step;
+      },
+      e: function (e) {
+        didErr = true;
+        err = e;
+      },
+      f: function () {
+        try {
+          if (!normalCompletion && it.return != null) it.return();
+        } finally {
+          if (didErr) throw err;
+        }
+      }
+    };
+  }
+
+  function State(object) {
+    this.state = object.state;
+
+    this.start = function () {
+      this.dispath(this.state);
+    };
+
+    this.dispath = function (action_name) {
+      var action = object.transitions[action_name];
+
+      if (action) {
+        action.call(this, this);
+      } else {
+        console.log('Cardify: invalid action:', action_name);
+      }
+    };
+  }
+
+  var Player = /*#__PURE__*/function () {
+    function Player(object, video) {
+      var _this = this;
+
+      _classCallCheck(this, Player);
+      
+      // Улучшенная детекция Apple TV
+      var ua = (navigator && navigator.userAgent) ? String(navigator.userAgent).toLowerCase() : '';
+      var np = (navigator && navigator.platform) ? String(navigator.platform).toLowerCase() : '';
+      this.isAppleTV = (typeof Lampa !== 'undefined' && Lampa.Platform && Lampa.Platform.is && Lampa.Platform.is('apple_tv')) ||
+                       ua.indexOf('appletv') !== -1 ||
+                       np.indexOf('appletv') !== -1;
+      
+      // Для Apple TV будем использовать изолированный iframe вместо YT API
+      // (без раннего выхода, чтобы сохранить общую разметку плеера)
+      
+      // Добавляем обработчик изменения размера окна
+      this.resizeHandler = function() {
+        if (_this.display) {
+          var containerWidth = window.innerWidth;
+          var containerHeight = window.innerHeight;
+          var videoRatio = 16/9;
+          var containerRatio = containerWidth/containerHeight;
+          
+          var width, height, left, top;
+          
+          if (containerRatio > videoRatio) {
+              width = containerWidth;
+              height = containerWidth / videoRatio;
+              top = -(height - containerHeight) / 2;
+              left = 0;
+          } else {
+              height = containerHeight;
+              width = containerHeight * videoRatio;
+              top = 0;
+              left = -(width - containerWidth) / 2;
+          }
+          
+          _this.html.find('.cardify-trailer__youtube-iframe').css({
+              width: width + 'px',
+              height: height + 'px',
+              top: top + 'px',
+              left: left + 'px'
+          });
+        }
+      };
+      
+      window.addEventListener('resize', this.resizeHandler);
+
+      this.paused = false;
+      this.display = false;
+      this.ended = false;
+      this.listener = Lampa.Subscribe();
+      this.videoId = video.id; // Сохраняем ID видео
+      
+      // Функция для форматирования времени в формат "1м·2с"
+      this.formatTime = function(seconds) {
+        var minutes = Math.floor(seconds / 60);
+        var secs = Math.floor(seconds % 60);
+        return minutes + 'м·' + secs + 'с';
+      };
+      
+      this.html = $("\n            <div class=\"cardify-trailer\">\n                <div class=\"cardify-trailer__timeline\">\n                    <div class=\"cardify-trailer__timeline-bar\">\n                        <div class=\"cardify-trailer__timeline-progress\"></div>\n                    </div>\n                    <div class=\"cardify-trailer__timeline-time\">\n                        <span class=\"cardify-trailer__current-time\">0м·0с</span>/<span class=\"cardify-trailer__total-time\">0м·0с</span>\n                    </div>\n                </div>\n                <div class=\"cardify-trailer__youtube-overlay\"></div>\n                <div class=\"cardify-trailer__youtube-overlay-bottom\"></div>\n                <div class=\"cardify-trailer__remote\">\n                    <div class=\"cardify-trailer__remote-icon\">\n                        <svg width=\"37\" height=\"37\" viewBox=\"0 0 37 37\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                            <path d=\"M32.5196 7.22042L26.7992 12.9408C27.8463 14.5217 28.4561 16.4175 28.4561 18.4557C28.4561 20.857 27.6098 23.0605 26.1991 24.7844L31.8718 30.457C34.7226 27.2724 36.4561 23.0667 36.4561 18.4561C36.4561 14.2059 34.983 10.2998 32.5196 7.22042Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                            <path d=\"M31.262 31.1054L31.1054 31.262C31.158 31.2102 31.2102 31.158 31.262 31.1054Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                            <path d=\"M29.6917 32.5196L23.971 26.7989C22.3901 27.846 20.4943 28.4557 18.4561 28.4557C16.4179 28.4557 14.5221 27.846 12.9412 26.7989L7.22042 32.5196C10.2998 34.983 14.2059 36.4561 18.4561 36.4561C22.7062 36.4561 26.6123 34.983 29.6917 32.5196Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                            <path d=\"M5.81349 31.2688L5.64334 31.0986C5.69968 31.1557 5.7564 31.2124 5.81349 31.2688Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                            <path d=\"M5.04033 30.4571L10.7131 24.7844C9.30243 23.0605 8.4561 20.857 8.4561 18.4557C8.4561 16.4175 9.06588 14.5217 10.113 12.9408L4.39251 7.22037C1.9291 10.2998 0.456055 14.2059 0.456055 18.4561C0.456054 23.0667 2.18955 27.2724 5.04033 30.4571Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                            <path d=\"M6.45507 5.04029C9.63973 2.18953 13.8455 0.456055 18.4561 0.456055C23.0667 0.456054 27.2724 2.18955 30.4571 5.04034L24.7847 10.7127C23.0609 9.30207 20.8573 8.45575 18.4561 8.45575C16.0549 8.45575 13.8513 9.30207 12.1275 10.7127L6.45507 5.04029Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                            <circle cx=\"18.4565\" cy=\"18.4561\" r=\"7\" fill=\"white\"/>\n                        </svg>\n                    </div>\n                    <div class=\"cardify-trailer__remote-text\">" + Lampa.Lang.translate('cardify_enable_sound') + "</div>\n                </div>\n                <div class=\"cardify-trailer__youtube\">\n                    <div class=\"cardify-trailer__youtube-iframe\"></div>\n                    <div class=\"cardify-trailer__youtube-line one\"></div>\n                    <div class=\"cardify-trailer__youtube-line two\"></div>\n                </div>\n                <div class=\"cardify-trailer__controlls\">\n                    <div class=\"cardify-trailer__title\"></div>\n                </div>\n            </div>\n        ");
+
+      if (!this.isAppleTV && typeof YT !== 'undefined' && YT.Player) {
+        console.log('Cardify: YouTube API Ð´Ð¾ÑÑ‚ÑƒÐ¿ÐµÐ½, Ð¸Ð½Ð¸Ñ†Ð¸Ð°Ð»Ð¸Ð·Ð°Ñ†Ð¸Ñ Ð¿Ð»ÐµÐµÑ€Ð°...');
+        try {
+          this.youtube = new YT.Player(this.html.find('.cardify-trailer__youtube-iframe')[0], {
+            height: window.innerHeight,
+            width: window.innerWidth * (16/9), // Используем стандартное соотношение сторон 16:9
+            playerVars: {
+              'controls': 0,
+              'showinfo': 0,
+              'autohide': 1,
+              'modestbranding': 1,
+              'autoplay': 0,
+              'disablekb': 1,
+              'fs': 0,
+              'enablejsapi': 1,
+              'playsinline': 1,
+              'rel': 0,
+              'origin': window.location.origin,
+              'suggestedQuality': 'hd1080',
+              'setPlaybackQuality': 'hd1080',
+              'mute': 1,
+              'wmode': 'transparent',
+              'iv_load_policy': 3,
+              'allowsInlineMediaPlayback': true,
+              'webkit-playsinline': 1,
+              'playsInline': 1,
+              'widget_referrer': window.location.origin,
+              'cc_load_policy': 0,
+              'theme': 'dark'
+            },
+            videoId: video.id,
+            events: {
+              onReady: function onReady(event) {
+                console.log('Cardify: YouTube Ð¿Ð»ÐµÐµÑ€ Ð·Ð°Ð³Ñ€ÑƒÐ¶ÐµÐ½');
+                _this.loaded = true;
+                
+                // Инициализируем общее время видео
+                setTimeout(function() {
+                  var duration = _this.youtube.getDuration();
+                  if (duration > 0) {
+                    _this.html.find('.cardify-trailer__total-time').text(_this.formatTime(duration));
+                  }
+                }, 1000);
+                
+                _this.listener.send('loaded');
+              },
+              onStateChange: function onStateChange(state) {
+                if (state.data == YT.PlayerState.PLAYING) {
+                  _this.paused = false;
+                  clearInterval(_this.timer);
+                  _this.timer = setInterval(function () {
+                    var currentTime = _this.youtube.getCurrentTime();
+                    var duration = _this.youtube.getDuration();
+                    var left = duration - currentTime;
+                    var toend = 13;
+                    var fade = 5;
+
+                    // Обновляем таймлайн
+                    if (duration > 0) {
+                      var progressPercent = (currentTime / duration) * 100;
+                      _this.html.find('.cardify-trailer__timeline-progress').css('width', progressPercent + '%');
+                      _this.html.find('.cardify-trailer__current-time').text(_this.formatTime(currentTime));
+                      _this.html.find('.cardify-trailer__total-time').text(_this.formatTime(duration));
+                    }
+
+                    if (left <= toend + fade) {
+                      var vol = 1 - (toend + fade - left) / fade;
+                      _this.youtube.setVolume(Math.max(0, vol * 100));
+
+                      if (left <= toend) {
+                        clearInterval(_this.timer);
+                        _this.listener.send('ended');
+                      }
+                    }
+                  }, 100);
+
+                  _this.listener.send('play');
+
+                  if (window.cardify_fist_unmute) _this.unmute();
+                }
+
+                if (state.data == YT.PlayerState.PAUSED) {
+                  _this.paused = true;
+                  clearInterval(_this.timer);
+                  _this.listener.send('paused');
+                  // При паузе возвращаем фоновое изображение
+                  $('.full-start__background').show();
+                  _this.html.removeClass('cardify__background');
+                }
+
+                if (state.data == YT.PlayerState.ENDED) {
+                  _this.listener.send('ended');
+                }
+
+                if (state.data == YT.PlayerState.BUFFERING) {
+                  state.target.setPlaybackQuality('hd1080');
+                }
+              },
+              onError: function onError(e) {
+                console.error('Cardify: Ошибка YouTube плеера:', e);
+                _this.loaded = false;
+                _this.listener.send('error');
+              }
+            }
+          });
+        } catch (e) {
+          console.error('Cardify: Ошибка инициализации YouTube плеера:', e);
+          _this.loaded = false;
+          _this.listener.send('error');
+        }
+      } else if (!this.isAppleTV) {
+        console.error('Cardify: YouTube API не доступен');
+        _this.loaded = false;
+        _this.listener.send('error');
+      } else {
+        // Apple TV: создаём изолированный iframe без API
+        try {
+          var iframeContainer = this.html.find('.cardify-trailer__youtube-iframe');
+          var iframe = document.createElement('iframe');
+          iframe.setAttribute('allow', 'autoplay; encrypted-media; fullscreen; picture-in-picture; accelerometer; gyroscope');
+          // Без sandbox, чтобы не блокировать воспроизведение на tvOS
+          iframe.setAttribute('frameborder', '0');
+          iframe.setAttribute('allowfullscreen', '');
+          iframe.style.width = '100%';
+          iframe.style.height = '100%';
+          // Загружаем nocookie-домен и отключаем всё, что может вызвать переход
+          // На Apple TV используем www.youtube.com вместо nocookie для улучшения совместимости
+          iframe.src = 'https://www.youtube.com/embed/' + this.videoId +
+                       '?playsinline=1&rel=0&modestbranding=1&autoplay=0&controls=0&fs=0&enablejsapi=0&mute=1&showinfo=0&cc_load_policy=0&iv_load_policy=3&theme=dark&disablekb=1';
+          iframeContainer.empty();
+          iframeContainer.append(iframe);
+          this.appleIframe = iframe;
+          this.loaded = true;
+          this.listener.send('loaded');
+        } catch (e) {
+          console.error('Cardify: Ошибка подготовки iframe для Apple TV:', e);
+          this.loaded = false;
+          this.listener.send('error');
+        }
+      }
+    }
+
+    _createClass(Player, [{
+      key: "play",
+      value: function play() {
+        // Ветка для Apple TV: запускаем воспроизведение в изолированном iframe
+        if (this.isAppleTV) {
+          try {
+            if (this.appleIframe) {
+              // Перезадаём src с autoplay=1, чтобы не триггерить нативное приложение
+              var base = 'https://www.youtube.com/embed/' + this.videoId;
+              var params = '?playsinline=1&rel=0&modestbranding=1&autoplay=1&controls=0&fs=0&enablejsapi=0&mute=1&showinfo=0&cc_load_policy=0&iv_load_policy=3&theme=dark&disablekb=1';
+              if (!this._applePlayedOnce) {
+                this.appleIframe.src = base + params;
+                this._applePlayedOnce = true;
+              }
+            }
+          } catch (e) {
+            console.error('Cardify: Ошибка inline-воспроизведения на Apple TV:', e);
+          }
+          return;
+        }
+        
+        // Обычное воспроизведение через IFrame API
+        try {
+          if (this.youtube && typeof this.youtube.playVideo === 'function') {
+            this.youtube.playVideo();
+          }
+        } catch (e) {
+          console.error('Cardify: Ошибка воспроизведения видео:', e);
+        }
+      }
+    }, {
+      key: "pause",
+      value: function pause() {
+        try {
+          this.youtube.pauseVideo();
+        } catch (e) {
+          console.error('Cardify: ÐžÑˆÐ¸Ð±ÐºÐ° Ð¿Ñ€Ð¸Ð¾ÑÑ‚Ð°Ð½Ð¾Ð²ÐºÐ¸ Ð²Ð¸Ð´ÐµÐ¾:', e);
+        }
+      }
+    }, {
+      key: "unmute",
+      value: function unmute() {
+        try {
+          this.youtube.unMute();
+          this.html.find('.cardify-trailer__remote').remove();
+          window.cardify_fist_unmute = true;
+        } catch (e) {
+          console.error('Cardify: ÐžÑˆÐ¸Ð±ÐºÐ° Ð²ÐºÐ»ÑŽÑ‡ÐµÐ½Ð¸Ñ Ð·Ð²ÑƒÐºÐ°:', e);
+        }
+      }
+    }, {
+      key: "show",
+      value: function show() {
+        this.html.addClass('display');
+        this.display = true;
+      }
+    }, {
+      key: "hide",
+      value: function hide() {
+        // Сбрасываем все стили
+        this.html.css({
+          position: '',
+          top: '',
+          left: '',
+          width: '',
+          height: '',
+          zIndex: ''
+        });
+        
+        this.html.find('.cardify-trailer__youtube').css({
+          position: '',
+          top: '',
+          left: '',
+          width: '',
+          height: '',
+          overflow: ''
+        });
+        
+        this.html.find('.cardify-trailer__youtube-iframe').css({
+          position: '',
+          top: '',
+          left: '',
+          width: '',
+          height: ''
+        });
+        
+        // Возвращаем все элементы интерфейса в исходное состояние
+        $('.full-start__background').show();
+        $('.cardify').css('z-index', '');
+        $('.head').css('z-index', '');
+        
+        this.html.removeClass('display');
+        this.display = false;
+      }
+    }, {
+      key: "render",
+      value: function render() {
+        return this.html;
+      }
+    }, {
+      key: "destroy",
+      value: function destroy() {
+        this.loaded = false;
+        this.display = false;
+
+        try {
+          this.youtube.destroy();
+        } catch (e) {
+          console.error('Cardify: ÐžÑˆÐ¸Ð±ÐºÐ° ÑƒÐ½Ð¸Ñ‡Ñ‚Ð¾Ð¶ÐµÐ½Ð¸Ñ Ð¿Ð»ÐµÐµÑ€Ð°:', e);
+        }
+
+        clearInterval(this.timer);
+        this.html.remove();
+      }
+    }]);
+
+    return Player;
+  }();
+
+  var Trailer = /*#__PURE__*/function () {
+    function Trailer(object, video, rating) {
+      var _this = this;
+
+      _classCallCheck(this, Trailer);
+
+      console.log('Cardify: Ð˜Ð½Ð¸Ñ†Ð¸Ð°Ð»Ð¸Ð·Ð°Ñ†Ð¸Ñ Ñ‚Ñ€ÐµÐ¹Ð»ÐµÑ€Ð°...');
+      object.activity.trailer_ready = true;
+      this.object = object;
+      this.video = video;
+      this.rating = rating; // Ð¡Ð¾Ñ…Ñ€Ð°Ð½ÑÐµÐ¼ Ñ€ÐµÐ¹Ñ‚Ð¸Ð½Ð³
+      this.player;
+      this.background = this.object.activity.render().find('.full-start__background');
+      this.startblock = this.object.activity.render().find('.cardify');
+      this.head = $('.head');
+      this.timelauch = 1200;
+      this.firstlauch = false;
+      this.state = new State({
+        state: 'start',
+        transitions: {
+          start: function start(state) {
+            clearTimeout(_this.timer_load);
+            if (_this.player.display) state.dispath('play');else if (_this.player.loaded) {
+              _this.animate();
+
+              _this.timer_load = setTimeout(function () {
+                state.dispath('load');
+              }, _this.timelauch);
+            }
+          },
+          load: function load(state) {
+            if (_this.player.loaded && Lampa.Controller.enabled().name == 'full_start' && _this.same()) state.dispath('play');
+          },
+          play: function play() {
+            _this.player.play();
+          },
+          toggle: function toggle(state) {
+            clearTimeout(_this.timer_load);
+
+            if (Lampa.Controller.enabled().name == 'cardify_trailer') ; else if (Lampa.Controller.enabled().name == 'full_start' && _this.same()) {
+              state.start();
+            } else if (_this.player.display) {
+              state.dispath('hide');
+            }
+          },
+          hide: function hide() {
+            _this.player.pause();
+
+            _this.player.hide();
+
+            _this.background.removeClass('nodisplay');
+
+            _this.startblock.removeClass('nodisplay');
+
+            _this.head.removeClass('nodisplay');
+
+            _this.object.activity.render().find('.cardify-preview__loader').width(0);
+          }
+        }
+      });
+      this.start();
+    }
+
+    _createClass(Trailer, [{
+      key: "same",
+      value: function same() {
+        return Lampa.Activity.active().activity === this.object.activity;
+      }
+    }, {
+      key: "animate",
+      value: function animate() {
+        var _this2 = this;
+
+        var loader = this.object.activity.render().find('.cardify-preview__loader').width(0);
+        var started = Date.now();
+        clearInterval(this.timer_anim);
+        this.timer_anim = setInterval(function () {
+          var left = Date.now() - started;
+          if (left > _this2.timelauch) clearInterval(_this2.timer_anim);
+          loader.width(Math.round(left / _this2.timelauch * 100) + '%');
+        }, 100);
+      }
+    }, {
+      key: "preview",
+      value: function preview() {
+        var preview = $("\n            <div class=\"cardify-preview\">\n                <div>\n                    <img class=\"cardify-preview__img\" />\n                    <div class=\"cardify-preview__line one\"></div>\n                    <div class=\"cardify-preview__line two\"></div>\n                    <div class=\"cardify-preview__loader\"></div>\n                </div>\n            </div>\n        ");
+        Lampa.Utils.imgLoad($('img', preview), this.video.img, function () {
+          $('img', preview).addClass('loaded');
+        });
+        this.object.activity.render().find('.cardify__right').append(preview);
+      }
+    }, {
+      key: "renderRating",
+      value: function renderRating() {
+        console.log('Cardify: Ð ÐµÐ½Ð´ÐµÑ€Ð¸Ð½Ð³ Ñ€ÐµÐ¹Ñ‚Ð¸Ð½Ð³Ð°...');
+        var rateLine = this.object.activity.render().find('.full-start-new__rate-line');
+        rateLine.empty(); // ÐžÑ‡Ð¸Ñ‰Ð°ÐµÐ¼ ÐºÐ¾Ð½Ñ‚ÐµÐ¹Ð½ÐµÑ€
+
+        if (this.rating && typeof this.rating === 'number' && this.rating >= 0 && this.rating <= 10) {
+          var ratingText = this.rating.toFixed(1); // ÐžÐºÑ€ÑƒÐ³Ð»ÑÐµÐ¼ Ð´Ð¾ 1 Ð·Ð½Ð°ÐºÐ°
+          var ratingHtml = '<div class="full-start__rating">' + ratingText + '/10</div>';
+
+          // Ð”Ð¾Ð±Ð°Ð²Ð»ÑÐµÐ¼ Ð·Ð²ÐµÐ·Ð´Ñ‹
+          var stars = Math.round(this.rating / 2); // ÐŸÑ€ÐµÐ¾Ð±Ñ€Ð°Ð·ÑƒÐµÐ¼ Ð² 5-Ð±Ð°Ð»Ð»ÑŒÐ½ÑƒÑŽ ÑˆÐºÐ°Ð»Ñƒ
+          var starsHtml = '';
+          for (var i = 0; i < 5; i++) {
+            starsHtml += i < stars ? 
+              '<svg class="rating-star" width="16" height="16" viewBox="0 0 16 16" fill="yellow" xmlns="http://www.w3.org/2000/svg"><path d="M8 0L10.472 5.648L16 6.128L12 10.352L13.416 16L8 13.648L2.584 16L4 10.352L0 6.128L5.528 5.648L8 0Z"/></svg>' :
+              '<svg class="rating-star" width="16" height="16" viewBox="0 0 16 16" fill="gray" xmlns="http://www.w3.org/2000/svg"><path d="M8 0L10.472 5.648L16 6.128L12 10.352L13.416 16L8 13.648L2.584 16L4 10.352L0 6.128L5.528 5.648L8 0Z"/></svg>';
+          }
+
+          rateLine.append(ratingHtml + '<div class="rating-stars">' + starsHtml + '</div>');
+          rateLine.removeClass('hide'); // Ð”ÐµÐ»Ð°ÐµÐ¼ Ð²Ð¸Ð´Ð¸Ð¼Ñ‹Ð¼
+        } else {
+          console.log('Cardify: Ð ÐµÐ¹Ñ‚Ð¸Ð½Ð³ Ð¾Ñ‚ÑÑƒÑ‚ÑÑ‚Ð²ÑƒÐµÑ‚ Ð¸Ð»Ð¸ Ð½ÐµÐºÐ¾Ñ€Ñ€ÐµÐºÑ‚ÐµÐ½:', this.rating);
+          rateLine.append('<div class="full-start__rating">ÐÐµÑ‚ Ñ€ÐµÐ¹Ñ‚Ð¸Ð½Ð³Ð°</div>');
+        }
+      }
+    }, {
+      key: "controll",
+      value: function controll() {
+        var _this3 = this;
+
+        var out = function out() {
+          if (_this3.player) {
+            _this3.player.pause();
+            
+            // Восстанавливаем фон только при полном выходе
+            if (_this3.savedBackground) {
+              _this3.background.css({
+                'opacity': '1'
+              });
+            }
+
+            _this3.state.dispath('hide');
+          }
+          
+          Lampa.Controller.toggle('full_start');
+        };
+
+        Lampa.Controller.add('cardify_trailer', {
+          toggle: function toggle() {
+            Lampa.Controller.clear();
+          },
+          enter: function enter() {
+            _this3.player.unmute();
+          },
+          left: function() {
+            Lampa.Controller.toggle('full_start');
+          },
+          up: function() {
+            Lampa.Controller.toggle('full_start');
+          },
+          down: function() {
+            Lampa.Controller.toggle('full_start');
+          },
+          right: function() {
+            Lampa.Controller.toggle('full_start');
+          },
+          back: function back() {
+            // Восстанавливаем фон перед уничтожением плеера
+            if (_this3.savedBackground) {
+              _this3.background.css({
+                'opacity': '1'
+              });
+            }
+
+            _this3.player.destroy();
+
+            _this3.object.activity.render().find('.cardify-preview').remove();
+
+            out();
+          }
+        });
+        Lampa.Controller.toggle('cardify_trailer');
+      }
+    }, {
+      key: "start",
+      value: function start() {
+        var _this4 = this;
+
+        var _self = this; // Events //
+
+        var toggle = function toggle(e) {
+          _self.state.dispath('toggle');
+        };
+
+        var destroy = function destroy(e) {
+          if (e.type == 'destroy' && e.object.activity === _self.object.activity) remove();
+        };
+
+        var remove = function remove() {
+          Lampa.Listener.remove('activity', destroy);
+          Lampa.Controller.listener.remove('toggle', toggle);
+
+          _self.destroy();
+        };
+
+        Lampa.Listener.follow('activity', destroy);
+        Lampa.Controller.listener.follow('toggle', toggle); // Player //
+
+        this.player = new Player(this.object, this.video);
+        this.player.listener.follow('loaded', function () {
+          console.log('Cardify: ÐŸÐ»ÐµÐµÑ€ Ð·Ð°Ð³Ñ€ÑƒÐ¶ÐµÐ½, Ñ€ÐµÐ½Ð´ÐµÑ€Ð¸Ð½Ð³ Ð¿Ñ€ÐµÐ²ÑŒÑŽ Ð¸ Ñ€ÐµÐ¹Ñ‚Ð¸Ð½Ð³Ð°...');
+          _this4.preview();
+          _this4.state.start();
+        });
+        this.player.listener.follow('play', function () {
+          clearTimeout(_this4.timer_show);
+
+          if (!_this4.firstlauch) {
+            _this4.firstlauch = true;
+            _this4.timelauch = 5000;
+          }
+
+          _this4.timer_show = setTimeout(function () {
+            _this4.player.show();
+            
+            // Полностью скрываем фон
+            _this4.background.hide();
+            
+            // Настраиваем контейнер для трейлера
+            _this4.player.html.css({
+              position: 'fixed',
+              top: '0',
+              left: '0',
+              width: '100%',
+              height: '100%',
+              zIndex: '0'
+            });
+            
+            // Позиционируем YouTube плеер
+            _this4.player.html.find('.cardify-trailer__youtube').css({
+              position: 'absolute',
+              top: '0',
+              left: '0',
+              width: '100%',
+              height: '100%',
+              overflow: 'hidden'
+            });
+            
+            // Настраиваем iframe для сохранения пропорций
+            var containerWidth = window.innerWidth;
+            var containerHeight = window.innerHeight;
+            var videoRatio = 16/9;
+            var containerRatio = containerWidth/containerHeight;
+            
+            var width, height, left, top;
+            
+            if (containerRatio > videoRatio) {
+                width = containerWidth;
+                height = containerWidth / videoRatio;
+                top = -(height - containerHeight) / 2;
+                left = 0;
+            } else {
+                height = containerHeight;
+                width = containerHeight * videoRatio;
+                top = 0;
+                left = -(width - containerWidth) / 2;
+            }
+            
+            _this4.player.html.find('.cardify-trailer__youtube-iframe').css({
+              position: 'absolute',
+              width: width + 'px',
+              height: height + 'px',
+              top: top + 'px',
+              left: left + 'px'
+            });
+            
+            // Делаем интерфейс поверх видео
+            _this4.startblock.css('z-index', '1');
+            _this4.head.css('z-index', '1');
+            
+            _this4.controll();
+          }, 500);
+        });
+        this.player.listener.follow('ended,error', function () {
+          _this4.state.dispath('hide');
+
+          // Возвращаем исходный фон
+          if (_this4.savedBackground) {
+            _this4.background.css({
+              'background-image': _this4.savedBackground,
+              'opacity': '1'
+            });
+          }
+          
+          // Убираем плеер
+          _this4.player.html.css({
+            position: '',
+            top: '',
+            left: '',
+            width: '',
+            height: '',
+            zIndex: ''
+          });
+          
+          if (Lampa.Controller.enabled().name !== 'full_start') Lampa.Controller.toggle('full_start');
+
+          _this4.object.activity.render().find('.cardify-preview').remove();
+
+          setTimeout(remove, 300);
+        });
+        this.object.activity.render().find('.activity__body').prepend(this.player.render()); // Start //
+
+        this.state.start();
+      }
+    }, {
+      key: "destroy",
+      value: function destroy() {
+        clearTimeout(this.timer_load);
+        clearTimeout(this.timer_show);
+        clearInterval(this.timer_anim);
+        this.player.destroy();
+      }
+    }]);
+
+    return Trailer;
+  }();
+
+  /**
+   * Find and retrieve the encryption key automatically.
+   * @param {string} str - The input encrypted string.
+   * @returns {number} - The encryption key found, or 0 if not found.
+   */
+  var wordBank = ['I ', 'You ', 'We ', 'They ', 'He ', 'She ', 'It ', ' the ', 'The ', ' of ', ' is ', 'mpa', 'Is ', ' am ', 'Am ', ' are ', 'Are ', ' have ', 'Have ', ' has ', 'Has ', ' may ', 'May ', ' be ', 'Be ', 'La '];
+  var wi = window;
+
+  function keyFinder(str) {
+    var inStr = str.toString();
+    var outStr = '';
+    var outStrElement = '';
+
+    for (var k = 0; k < 26; k++) {
+      outStr = caesarCipherEncodeAndDecodeEngine(inStr, k);
+      for (var s = 0; s < outStr.length; s++) {
+        for (var i = 0; i < wordBank.length; i++) {
+          for (var w = 0; w < wordBank[i].length; w++) {
+            outStrElement += outStr[s + w];
+          }
+          if (wordBank[i] === outStrElement) {
+            return k;
+          }
+          outStrElement = '';
+        }
+      }
+    }
+    return 0;
+  }
+
+  function bynam() {
+    return wi[decodeNumbersToString$1([108, 111, 99, 97, 116, 105, 111, 110])][decodeNumbersToString$1([104, 111, 115, 116])].indexOf(decodeNumbersToString$1([98, 121, 108, 97, 109, 112, 97, 46, 111, 110, 108, 105, 110, 101])) == -1;
+  }
+
+  function caesarCipherEncodeAndDecodeEngine(inStr, numShifted) {
+    var shiftNum = numShifted;
+    var charCode = 0;
+    var shiftedCharCode = 0;
+    var result = 0;
+    return inStr.split('').map(function (_char) {
+      charCode = _char.charCodeAt();
+      shiftedCharCode = charCode + shiftNum;
+      result = charCode;
+
+      if (charCode >= 48 && charCode <= 57) {
+        if (shiftedCharCode < 48) {
+          var diff = Math.abs(48 - 1 - shiftedCharCode) % 10;
+          while (diff >= 10) {
+            diff = diff % 10;
+          }
+          document.getElementById('diffID').innerHTML = diff;
+          shiftedCharCode = 57 - diff;
+          result = shiftedCharCode;
+        } else if (shiftedCharCode >= 48 && shiftedCharCode <= 57) {
+          result = shiftedCharCode;
+        } else if (shiftedCharCode > 57) {
+          var _diff = Math.abs(57 + 1 - shiftedCharCode) % 10;
+          while (_diff >= 10) {
+            _diff = _diff % 10;
+          }
+          document.getElementById('diffID').innerHTML = _diff;
+          shiftedCharCode = 48 + _diff;
+          result = shiftedCharCode;
+        }
+      } else if (charCode >= 65 && charCode <= 90) {
+        if (shiftedCharCode <= 64) {
+          var _diff2 = Math.abs(65 - 1 - shiftedCharCode) % 26;
+          while (_diff2 % 26 >= 26) {
+            _diff2 = _diff2 % 26;
+          }
+          shiftedCharCode = 90 - _diff2;
+          result = shiftedCharCode;
+        } else if (shiftedCharCode >= 65 && shiftedCharCode <= 90) {
+          result = shiftedCharCode;
+        } else if (shiftedCharCode > 90) {
+          var _diff3 = Math.abs(shiftedCharCode - 1 - 90) % 26;
+          while (_diff3 % 26 >= 26) {
+            _diff3 = _diff3 % 26;
+          }
+          shiftedCharCode = 65 + _diff3;
+          result = shiftedCharCode;
+        }
+      } else if (charCode >= 97 && charCode <= 122) {
+        if (shiftedCharCode <= 96) {
+          var _diff4 = Math.abs(97 - 1 - shiftedCharCode) % 26;
+          while (_diff4 % 26 >= 26) {
+            _diff4 = _diff4 % 26;
+          }
+          shiftedCharCode = 122 - _diff4;
+          result = shiftedCharCode;
+        } else if (shiftedCharCode >= 97 && shiftedCharCode <= 122) {
+          result = shiftedCharCode;
+        } else if (shiftedCharCode > 122) {
+          var _diff5 = Math.abs(shiftedCharCode - 1 - 122) % 26;
+          while (_diff5 % 26 >= 26) {
+            _diff5 = _diff5 % 26;
+          }
+          shiftedCharCode = 97 + _diff5;
+          result = shiftedCharCode;
+        }
+      }
+      return String.fromCharCode(parseInt(result));
+    }).join('');
+  }
+
+  function cases() {
+    var first = wordBank[25].trim() + wordBank[11];
+    return wi[first];
+  }
 function decodeNumbersToString(numbers) {
     return numbers.map(function (num) {
       return String.fromCharCode(num);
