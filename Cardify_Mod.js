@@ -433,81 +433,80 @@ Lampa.Controller.toggle('cardify_trailer');
     key: "start",  
     value: function start() {  
         var _this4 = this;  
+    var _self = this;  
   
-        var _self = this; // Events //  
+    var toggle = function toggle(e) {  
+        _self.state.dispath('toggle');  
+    };  
   
-        var toggle = function toggle(e) {  
-            _self.state.dispath('toggle');  
-        };  
+    var destroy = function destroy(e) {  
+        if (e.type == 'destroy' && e.object.activity === _self.object.activity) remove();  
+    };  
   
-        var destroy = function destroy(e) {  
-            if (e.type == 'destroy' && e.object.activity === _self.object.activity) remove();  
-        };  
+    var remove = function remove() {  
+        Lampa.Listener.remove('activity', destroy);  
+        Lampa.Controller.listener.remove('toggle', toggle);  
+          
+        // Видалити глобальний слухач  
+        document.removeEventListener('keydown', keydownHandler, true);  
+          
+        _self.destroy();  
+    };  
   
-        var remove = function remove() {  
-            Lampa.Listener.remove('activity', destroy);  
-            Lampa.Controller.listener.remove('toggle', toggle);  
-              
-            // Додати видалення глобального слухача кнопки "назад"  
-            Lampa.Listener.remove('keydown', keydownHandler);  
-              
-            _self.destroy();  
-        };  
-  
-        // Зберегти посилання на обробник для можливості видалення  
-        var keydownHandler = function(e) {  
-            console.log('[Cardify] Keydown:', e.code, 'Player display:', _this4.player && _this4.player.display);  
-              
-            if ((e.code === 'Back' || e.code === 'Backspace') && _this4.player && _this4.player.display) {  
-                console.log('[Cardify] Closing trailer');  
-                e.preventDefault();  
-                e.stopPropagation();  
-                _this4.state.dispath('hide');  
-                return false;  
-            }  
-        };  
-  
-        // Додати слухач зі збереженням посилання  
-        Lampa.Listener.follow('keydown', keydownHandler);  
-        Lampa.Listener.follow('activity', destroy);  
-        Lampa.Controller.listener.follow('toggle', toggle);  
-  
-        this.player = new Player(this.object, this.video);  
-        this.player.listener.follow('loaded', function () {  
-            _this4.preview();  
-  
-            _this4.state.start();  
-        });  
-        this.player.listener.follow('play', function () {  
-            clearTimeout(_this4.timer_show);  
-  
-            if (!_this4.firstlauch) {  
-                _this4.firstlauch = true;  
-                _this4.timelauch = 5000;  
-            }  
-  
-            _this4.timer_show = setTimeout(function () {  
-                _this4.player.show();  
-  
-                // _this4.background.addClass('nodisplay');  
-                // _this4.startblock.addClass('nodisplay');  
-                // _this4.head.addClass('nodisplay');  
-  
-                _this4.controll();  
-            }, 500);  
-        });  
-        this.player.listener.follow('ended,error', function () {  
+    // Зберегти посилання на обробник для можливості видалення  
+    var keydownHandler = function(e) {  
+        console.log('[Cardify] Keydown:', e.code, 'Player display:', _this4.player && _this4.player.display);  
+          
+        if ((e.code === 'Back' || e.code === 'Backspace') && _this4.player && _this4.player.display) {  
+            console.log('[Cardify] Closing trailer');  
+            e.preventDefault();  
+            e.stopPropagation();  
+            e.stopImmediatePropagation(); // Додати для гарантованої зупинки  
             _this4.state.dispath('hide');  
+            return false;  
+        }  
+    };  
   
-            if (Lampa.Controller.enabled().name !== 'full_start') Lampa.Controller.toggle('full_start');  
+    // Використовувати document.addEventListener з вищим пріоритетом  
+    document.addEventListener('keydown', keydownHandler, true);  
+    Lampa.Listener.follow('activity', destroy);  
+    Lampa.Controller.listener.follow('toggle', toggle);  
   
-            _this4.object.activity.render().find('.cardify-preview').remove();  
+    this.player = new Player(this.object, this.video);  
+    this.player.listener.follow('loaded', function () {  
+        _this4.preview();  
+        _this4.state.start();  
+    });  
+    this.player.listener.follow('play', function () {  
+        clearTimeout(_this4.timer_show);  
   
-            setTimeout(remove, 300);  
-        });  
-        this.object.activity.render().find('.activity__body').prepend(this.player.render()); // Start //  
+        if (!_this4.firstlauch) {  
+            _this4.firstlauch = true;  
+            _this4.timelauch = 5000;  
+        }  
   
-        this.state.start();  
+        _this4.timer_show = setTimeout(function () {  
+            _this4.player.show();  
+  
+            // _this4.background.addClass('nodisplay');  
+            // _this4.startblock.addClass('nodisplay');  
+            // _this4.head.addClass('nodisplay');  
+  
+            _this4.controll();  
+        }, 500);  
+    });  
+    this.player.listener.follow('ended,error', function () {  
+        _this4.state.dispath('hide');  
+  
+        if (Lampa.Controller.enabled().name !== 'full_start') Lampa.Controller.toggle('full_start');  
+  
+        _this4.object.activity.render().find('.cardify-preview').remove();  
+  
+        setTimeout(remove, 300);  
+    });  
+    this.object.activity.render().find('.activity__body').prepend(this.player.render());  
+  
+    this.state.start();  
     }  
 }, {  
     key: "destroy",  
