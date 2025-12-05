@@ -413,9 +413,7 @@
         Lampa.Controller.trigger('right');  
     },  
     back: function back() {  
-        _this3.player.destroy();  
-        _this3.object.activity.render().find('.cardify-preview').remove();  
-        out();  
+    _this3.state.dispath('hide');   
     },  
     // Додати нові контролери  
     volume_up: function() {  
