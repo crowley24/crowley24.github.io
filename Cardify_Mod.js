@@ -1,3 +1,6 @@
+/* eslint-env es6 */  
+/* eslint esversion: 6 */ 
+
 (function () {
   'use strict';
 
@@ -143,7 +146,8 @@
       this.listener = Lampa.Subscribe();
       this.html = $("\n            <div class=\"cardify-trailer\">\n                <div class=\"cardify-trailer__youtube\">\n                    <div class=\"cardify-trailer__youtube-iframe\"></div>\n                    <div class=\"cardify-trailer__youtube-line one\"></div>\n                    <div class=\"cardify-trailer__youtube-line two\"></div>\n                </div>\n\n                <div class=\"cardify-trailer__controlls\">\n                    <div class=\"cardify-trailer__title\"></div>\n                    <div class=\"cardify-trailer__remote\">\n                        <div class=\"cardify-trailer__remote-icon\">\n                            <svg width=\"37\" height=\"37\" viewBox=\"0 0 37 37\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                                <path d=\"M32.5196 7.22042L26.7992 12.9408C27.8463 14.5217 28.4561 16.4175 28.4561 18.4557C28.4561 20.857 27.6098 23.0605 26.1991 24.7844L31.8718 30.457C34.7226 27.2724 36.4561 23.0667 36.4561 18.4561C36.4561 14.2059 34.983 10.2998 32.5196 7.22042Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                                <path d=\"M31.262 31.1054L31.1054 31.262C31.158 31.2102 31.2102 31.158 31.262 31.1054Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                                <path d=\"M29.6917 32.5196L23.971 26.7989C22.3901 27.846 20.4943 28.4557 18.4561 28.4557C16.4179 28.4557 14.5221 27.846 12.9412 26.7989L7.22042 32.5196C10.2998 34.983 14.2059 36.4561 18.4561 36.4561C22.7062 36.4561 26.6123 34.983 29.6917 32.5196Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                                <path d=\"M5.81349 31.2688L5.64334 31.0986C5.69968 31.1557 5.7564 31.2124 5.81349 31.2688Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                                <path d=\"M5.04033 30.4571L10.7131 24.7844C9.30243 23.0605 8.4561 20.857 8.4561 18.4557C8.4561 16.4175 9.06588 14.5217 10.113 12.9408L4.39251 7.22037C1.9291 10.2998 0.456055 14.2059 0.456055 18.4561C0.456054 23.0667 2.18955 27.2724 5.04033 30.4571Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                                <path d=\"M6.45507 5.04029C9.63973 2.18953 13.8455 0.456055 18.4561 0.456055C23.0667 0.456054 27.2724 2.18955 30.4571 5.04034L24.7847 10.7127C23.0609 9.30207 20.8573 8.45575 18.4561 8.45575C16.0549 8.45575 13.8513 9.30207 12.1275 10.7127L6.45507 5.04029Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                                <circle cx=\"18.4565\" cy=\"18.4561\" r=\"7\" fill=\"white\"/>\n                            </svg>\n                        </div>\n                        <div class=\"cardify-trailer__remote-text\">".concat(Lampa.Lang.translate('cardify_enable_sound'), "</div>\n                    </div>\n                </div>\n            </div>\n        "));
 
-      if (typeof YT !== 'undefined' && YT.Player) {
+      if (typeof YT !== 'undefined' && YT.Player) {  
+    try {  
         this.youtube = new YT.Player(this.html.find('.cardify-trailer__youtube-iframe')[0], {
           height: window.innerHeight * 2,
           width: window.innerWidth,
@@ -389,34 +393,43 @@
           Lampa.Controller.toggle('full_start');
         };
 
-        Lampa.Controller.add('cardify_trailer', {  
-  toggle: function toggle() {  
-    Lampa.Controller.clear();  
-  },  
-  enter: function enter() {  
-    _this3.player.unmute();  
-  },  
-  left: function() {  
-    Lampa.Controller.toggle('full_start');  
-    Lampa.Controller.trigger('left');  
-  },  
-  up: function() {  
-    Lampa.Controller.toggle('full_start');  
-    Lampa.Controller.trigger('up');  
-  },  
-  down: function() {  
-    Lampa.Controller.toggle('full_start');  
-    Lampa.Controller.trigger('down');  
-  },  
-  right: function() {  
-    Lampa.Controller.toggle('full_start');  
-    Lampa.Controller.trigger('right');  
-  },  
-  back: function back() {  
-    _this3.player.destroy();  
-    _this3.object.activity.render().find('.cardify-preview').remove();  
-    out();  
-}
+        Lampa.Controller.add('cardify_trailer', {    
+    toggle: function() {    
+        Lampa.Controller.clear();    
+    },    
+    enter: function() {    
+        _this3.player.unmute();    
+    },    
+    left: function() {    
+        Lampa.Controller.toggle('full_start');    
+        Lampa.Controller.trigger('left');    
+    },    
+    up: function() {    
+        Lampa.Controller.toggle('full_start');     
+        Lampa.Controller.trigger('up');    
+    },    
+    down: function() {    
+        Lampa.Controller.toggle('full_start');    
+        Lampa.Controller.trigger('down');    
+    },    
+    right: function() {    
+        Lampa.Controller.toggle('full_start');    
+        Lampa.Controller.trigger('right');    
+    },    
+    back: function back() {    
+        _this3.player.destroy();    
+        _this3.object.activity.render().find('.cardify-preview').remove();    
+        out();    
+    },    
+    // Додати нові контролери    
+    volume_up: function() {    
+        const currentVolume = _this3.player.youtube.getVolume();    
+        _this3.player.youtube.setVolume(Math.min(100, currentVolume + 10));    
+    },    
+    volume_down: function() {    
+        const currentVolume = _this3.player.youtube.getVolume();    
+        _this3.player.youtube.setVolume(Math.max(0, currentVolume - 10));    
+    }    
 });
         Lampa.Controller.toggle('cardify_trailer');
       }
