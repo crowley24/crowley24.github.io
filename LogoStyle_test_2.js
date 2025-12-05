@@ -1,146 +1,128 @@
-!function() {  
-    "use strict";  
-  
-    // --- СТИЛІ ДЛЯ РОЗМІРУ ЛОГО ---  
-    var style = document.createElement('style');  
-    style.textContent = `  
-        .cardify .full-start-new__title {  
-            text-shadow: none !important;  
-        }  
-  
-        /* Обмеження логотипу */  
-        .full-start-new__title img {  
-            max-width: 25vw !important;  /* максимум 25% ширини екрану */  
-            max-height: 12vh !important; /* максимум 12% висоти екрану */  
-            width: auto !important;  
-            height: auto !important;  
-            object-fit: contain !important;  
-            display: block;  
-            margin-top: 5px !important;  
-        }  
-  
-        /* Контейнер */  
-        .full-logo-wrapper {  
-            display: flex;  
-            flex-direction: column;  
-            align-items: center;  
-            justify-content: center;  
-            min-height: 60px;  
-        }  
-  
-        /* Текст під логотипом */  
-        .full-logo-text {  
-            font-size: 0.9em;  
-            color: rgba(255, 255, 255, 0.8);  
-            margin-top: 5px;  
-            text-align: center;  
-        }  
-    `;  
-    document.head.appendChild(style);  
-  
-    // --- ГОЛОВНА ФУНКЦІЯ ---  
-    Lampa.Listener.follow('full', function(e) {  
-        if (e.type === 'complite') {  
-            var data = e.data;  
-            var render = e.object.activity.render();  
-              
-            // Перевіряємо, чи це фільм/серіал  
-            if (!data.movie) return;  
-              
-            var movie = data.movie;  
-            var isSerial = movie.number_of_seasons > 0 || movie.number_of_episodes > 0;  
-              
-            // API шляхи  
-            var apiPath = isSerial ? '/tv/' + movie.id : '/movie/' + movie.id;  
-            var logosApi = Lampa.TMDB.api(apiPath + "/images?api_key=" + Lampa.TMDB.key() + "&include_image_language=uk,en,null");  
-              
-            // API перекладів  
-            var translationsApi = Lampa.TMDB.api(apiPath + "/translations?api_key=" + Lampa.TMDB.key());  
-              
-            // Отримуємо контейнер назви  
-            var titleContainer = render.find('.full-start-new__title');  
-            if (!titleContainer.length) return;  
-              
-            // Зберігаємо оригінальний текст  
-            var originalText = titleContainer.html();  
-              
-            // Показуємо індикатор завантаження  
-            titleContainer.css("opacity", "0.3");  
-              
-            // Завантажуємо логотипи  
-            $.get(logosApi, function(logosData) {  
-                if (logosData.logos && logosData.logos.length > 0) {  
-                    // Сортуємо за пріоритетом: український → англійський → оригінальний  
-                    var ukrainianLogo = logosData.logos.find(l => l.iso_639_1 === "uk");  
-                    var englishLogo = logosData.logos.find(l => l.iso_639_1 === "en");  
-                    var originalLogo = logosData.logos.find(l => l.iso_639_1 === null);  
-                      
-                    var selectedLogo = ukrainianLogo || englishLogo || originalLogo;  
-                      
-                    if (selectedLogo) {  
-                        // Завантажуємо переклади для тексту під логотипом  
-                        $.get(translationsApi, function(translationsData) {  
-                            var ukrainianTitle = null;  
-                            var englishTitle = null;  
-                            var originalTitle = isSerial ? movie.name : movie.title;  
-                              
-                            if (translationsData.translations) {  
-                                var ukTranslation = translationsData.translations.find(t => t.iso_639_1 === "uk");  
-                                var enTranslation = translationsData.translations.find(t => t.iso_639_1 === "en");  
-                                  
-                                if (ukTranslation && ukTranslation.data) {  
-                                    ukrainianTitle = isSerial ? ukTranslation.data.name : ukTranslation.data.title;  
-                                }  
-                                if (enTranslation && enTranslation.data) {  
-                                    englishTitle = isSerial ? enTranslation.data.name : enTranslation.data.title;  
-                                }  
-                            }  
-                              
-                            // Визначаємо текст для відображення  
-                            var displayText = originalTitle;  
-                            if (selectedLogo.iso_639_1 === "uk" && ukrainianTitle) {  
-                                displayText = ukrainianTitle;  
-                            } else if (selectedLogo.iso_639_1 === "en" && englishTitle) {  
-                                displayText = englishTitle;  
-                            }  
-                              
-                            // Створюємо логотип  
-                            var logoSize = Lampa.Storage.get("logo_size", "original");  
-                            var logoPath = "https://image.tmdb.org/t/p/" + logoSize + selectedLogo.file_path;  
-                              
-                            var contentContainer = $('<div class="full-logo-wrapper"></div>');  
-                            var img = $('<img class="full-logo-img" />');  
-                              
-                            img.on('load', function() {  
-                                contentContainer.append(img);  
-                                  
-                                // Додаємо текст тільки якщо логотип не український  
-                                if (selectedLogo.iso_639_1 !== "uk" && displayText !== originalTitle) {  
-                                    var textDiv = $('<div class="full-logo-text">' + displayText + '</div>');  
-                                    contentContainer.append(textDiv);  
-                                }  
-                                  
-                                titleContainer.empty().append(contentContainer);  
-                                titleContainer.css("opacity", "1");  
-                            });  
-                              
-                            img.on('error', function() {  
-                                titleContainer.css("opacity", "1");  
-                            });  
-  
-                            img.src = logoPath;  
-                        }).fail(function() {  
-                            titleContainer.css("opacity", "1");  
-                        });  
-                    } else {  
-                        titleContainer.css("opacity", "1");  
-                    }  
-                } else {  
-                    titleContainer.css("opacity", "1");  
-                }  
-            }).fail(function() {  
-                titleContainer.css("opacity", "1");  
-            });  
-        }  
-    }));  
+!function() {
+    "use strict";
+
+    // --- СТИЛІ ДЛЯ РОЗМІРУ ЛОГО ---
+    var style = document.createElement('style');
+    style.textContent = `
+        .cardify .full-start-new__title {
+            text-shadow: none !important;
+        }
+
+        /* Обмеження логотипу */
+        .full-start-new__title img {
+            max-width: 25vw !important;  /* максимум 25% ширини екрану */
+            max-height: 12vh !important; /* максимум 12% висоти екрану */
+            width: auto !important;
+            height: auto !important;
+            object-fit: contain !important;
+            display: block;
+            margin-top: 5px !important;
+        }
+
+        /* Контейнер */
+        .full-logo-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        @media (max-width: 768px) {
+            .full-start-new__title img {
+                max-width: 40vw !important; /* більше місця на мобільних */
+                max-height: 10vh !important;
+            }
+            .full-logo-wrapper {
+                align-items: center !important;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // --- ОСНОВНИЙ ПЛАГІН ---
+    window.logoplugin || (window.logoplugin = !0, Lampa.Listener.follow("full", function(a) {
+        if ("complite" == a.type) {
+            var e = a.data.movie;
+            var isSerial = e.name || e.first_air_date;
+            var apiPath = isSerial ? "tv/" + e.id : "movie/" + e.id;
+
+            // Ховаємо текст до завантаження логотипу
+            var contentContainer = a.object.activity.render().find(".full-start-new__body");
+            contentContainer.css("opacity", "0");
+
+            // API перекладів
+            var translationsApi = Lampa.TMDB.api(apiPath + "/translations?api_key=" + Lampa.TMDB.key());
+
+            $.get(translationsApi, function(translationsData) {
+                var ukrainianTitle = null;
+
+                if (translationsData.translations) {
+                    var uaTranslation = translationsData.translations.find(t =>
+                        t.iso_639_1 === "ua" || t.iso_3166_1 === "UA"
+                    );
+                    if (uaTranslation && uaTranslation.data) {
+                        ukrainianTitle = isSerial ? uaTranslation.data.name : uaTranslation.data.title;
+                    }
+                }
+
+                if (!ukrainianTitle) ukrainianTitle = isSerial ? e.name : e.title;
+
+                // API логотипів
+                var imgApi = Lampa.TMDB.api(apiPath + "/images?api_key=" + Lampa.TMDB.key());
+
+                $.get(imgApi, function(e) {
+                    if (e.logos && e.logos.length > 0) {
+                        var logo = e.logos.find(l => l.iso_639_1 === "ua");
+                        var isUkrainianLogo = !!logo;
+
+                        if (!logo) {
+                            logo = e.logos.find(l => l.iso_639_1 === "en");
+                        }
+                        if (!logo) {
+                            logo = e.logos[0];
+                        }
+
+                        if (logo && logo.file_path) {
+                            var logoPath = Lampa.TMDB.image("/t/p/w300" + logo.file_path.replace(".svg", ".png"));
+
+                            var img = new Image();
+                            img.onload = function() {
+                                // Якщо логотип НЕ український — додаємо текст
+                                if (!isUkrainianLogo && ukrainianTitle) {
+                                    a.object.activity.render().find(".full-start-new__title").html(
+                                        '<div class="full-logo-wrapper">' +
+                                            '<img src="' + logoPath + '" />' +
+                                            '<span style="margin-top:2px;font-size:0.55em;color:#fff;">' + ukrainianTitle + '</span>' +
+                                        '</div>'
+                                    );
+                                } else {
+                                    a.object.activity.render().find(".full-start-new__title").html(
+                                        '<div class="full-logo-wrapper">' +
+                                            '<img src="' + logoPath + '" />' +
+                                        '</div>'
+                                    );
+                                }
+
+                                contentContainer.css("opacity", "1");
+                            };
+
+                            img.onerror = function() {
+                                contentContainer.css("opacity", "1");
+                            };
+
+                            img.src = logoPath;
+                        } else {
+                            contentContainer.css("opacity", "1");
+                        }
+                    } else {
+                        contentContainer.css("opacity", "1");
+                    }
+                }).fail(function() {
+                    contentContainer.css("opacity", "1");
+                });
+
+            }).fail(function() {
+                contentContainer.css("opacity", "1");
+            });
+        }
+    }));
 }();
