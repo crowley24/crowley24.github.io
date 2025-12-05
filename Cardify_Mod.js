@@ -432,7 +432,7 @@ Lampa.Controller.toggle('cardify_trailer');
 }, {  
     key: "start",  
     value: function start() {  
-        var _this4 = this;  
+var _this4 = this;  
     var _self = this;  
   
     var toggle = function toggle(e) {  
@@ -447,27 +447,44 @@ Lampa.Controller.toggle('cardify_trailer');
         Lampa.Listener.remove('activity', destroy);  
         Lampa.Controller.listener.remove('toggle', toggle);  
           
-        // Відновити оригінальний метод  
-        Lampa.Controller.back = originalBack;  
+        // Видалити слухачі activity та keydown  
+        Lampa.Listener.remove('activity', activityBackHandler);  
+        Lampa.Listener.remove('keydown', tvKeydownHandler);  
           
         _self.destroy();  
     };  
   
-    // Зберегти оригінальний метод та перевизначити  
-    var originalBack = Lampa.Controller.back;  
-    Lampa.Controller.back = function() {  
-        if (_this4.player && _this4.player.display) {  
-            console.log('[Cardify] Back intercepted via Controller');  
+    // Обробник activity для кнопки "назад"  
+    var activityBackHandler = function(e) {  
+        if (e.type === 'back' && _this4.player && _this4.player.display) {  
+            console.log('[Cardify] Back intercepted via Activity');  
+            e.preventDefault();  
+            e.stopPropagation();  
             _this4.state.dispath('hide');  
-            return;  
+            return false;  
         }  
-        originalBack.call(this);  
     };  
   
+    // Додатковий обробник для ТВ пультів  
+    var tvKeydownHandler = function(e) {  
+        const tvBackCodes = [10009, 461, 8, 27]; // Android TV, WebOS, Generic, ESC  
+          
+        if (tvBackCodes.includes(e.keyCode) && _this4.player && _this4.player.display) {  
+            console.log('[Cardify] TV keydown intercepted:', e.keyCode);  
+            e.preventDefault();  
+            e.stopPropagation();  
+            _this4.state.dispath('hide');  
+            return false;  
+        }  
+    };  
+  
+    // Додати слухачі  
+    Lampa.Listener.follow('activity', activityBackHandler);  
+    Lampa.Listener.follow('keydown', tvKeydownHandler);  
     Lampa.Listener.follow('activity', destroy);  
     Lampa.Controller.listener.follow('toggle', toggle);  
   
-    this.player = new Player(this.object, this.video);  
+    this.player = new Player(this.object, this.video);   
     this.player.listener.follow('loaded', function () {  
         _this4.preview();  
         _this4.state.start();  
