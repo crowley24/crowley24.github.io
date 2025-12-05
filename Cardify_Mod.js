@@ -451,8 +451,18 @@
           _self.destroy();
         };
 
-        Lampa.Listener.follow('activity', destroy);
-        Lampa.Controller.listener.follow('toggle', toggle); // Player //
+         // Додати глобальний обробник кнопки "назад"  
+    Lampa.Listener.follow('keydown', function(e) {  
+        if ((e.code === 'Back' || e.code === 'Backspace') && _this4.player && _this4.player.display) {  
+            e.preventDefault();  
+            e.stopPropagation();  
+            _this4.state.dispath('hide');  
+            return false;  
+        }  
+    });  
+  
+    Lampa.Listener.follow('activity', destroy);  
+    Lampa.Controller.listener.follow('toggle', toggle);
 
         this.player = new Player(this.object, this.video);
         this.player.listener.follow('loaded', function () {
