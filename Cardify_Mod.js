@@ -447,28 +447,40 @@ var remove = function remove() {
     Lampa.Listener.remove('activity', destroy);  
     Lampa.Controller.listener.remove('toggle', toggle);  
       
-    // Видалити всі слухачі  
-    Lampa.Listener.remove('activity', activityBackHandler);  
-    Lampa.Listener.remove('keydown', universalKeyHandler);  
-    document.removeEventListener('keydown', documentKeyHandler, true);  
-    window.removeEventListener('keydown', windowKeyHandler, true);  
-      
-    // Відновити оригінальний метод якщо існує  
-    if (originalBack) {  
-        Lampa.Controller.back = originalBack;  
-    }  
+    // Відновити системну поведінку  
+    window.onbeforeunload = originalOnBeforeUnload;  
+    window.history.back = originalHistoryBack;  
       
     _self.destroy();  
 };  
   
-// Детекція ТВ платформи  
-var isTV = Lampa.Platform.is('tv') || Lampa.Platform.is('android_tv') ||   
-           Lampa.Platform.is('webos') || Lampa.Platform.is('tizen');  
+// Зберегти оригінальні методи  
+var originalOnBeforeUnload = window.onbeforeunload;  
+var originalHistoryBack = window.history.back;  
   
-// Універсальний обробник з перевіркою платформи  
-var universalKeyHandler = function(e) {  
-    console.log('[Cardify] Universal key:', e.code, e.keyCode, e.which, e.key, 'Platform:', isTV ? 'TV' : 'Desktop');  
-      
+// Агресивне перехоплення на рівні вікна  
+window.onbeforeunload = function(e) {  
+    if (_this4.player && _this4.player.display) {  
+        console.log('[Cardify] Window beforeunload intercepted');  
+        _this4.state.dispath('hide');  
+        e.preventDefault();  
+        e.returnValue = ''; // Для старих браузерів  
+        return ''; // Для сучасних браузерів  
+    }  
+};  
+  
+// Перевизначити history.back  
+window.history.back = function() {  
+    if (_this4.player && _this4.player.display) {  
+        console.log('[Cardify] History back intercepted');  
+        _this4.state.dispath('hide');  
+        return;  
+    }  
+    originalHistoryBack.call(this);  
+};  
+  
+// Додатковий обробник для максимальної сумісності  
+var universalHandler = function(e) {  
     const backKeys = [  
         e.code === 'Back',  
         e.code === 'Backspace',   
@@ -476,31 +488,18 @@ var universalKeyHandler = function(e) {
         e.keyCode === 461,    // WebOS  
         e.keyCode === 8,      // Generic BACK  
         e.keyCode === 27,     // ESC  
-        e.which === 10009,  
-        e.which === 461,  
-        e.which === 8,  
-        e.which === 27,  
         e.key === 'Back',  
         e.key === 'Escape'  
     ];  
       
     if (backKeys.some(condition => condition) && _this4.player && _this4.player.display) {  
-        console.log('[Cardify] Universal back intercepted - Platform:', isTV ? 'TV' : 'Desktop');  
+        console.log('[Cardify] Universal handler intercepted:', e.code, e.keyCode);  
+        e.preventDefault();  
+        e.stopPropagation();  
+        e.stopImmediatePropagation();  
           
-        // Для ТВ платформ - більш агресивна зупинка  
-        if (isTV) {  
-            e.preventDefault();  
-            e.stopPropagation();  
-            e.stopImmediatePropagation();  
-              
-            // Додаткова затримка для ТВ  
-            setTimeout(function() {  
-                _this4.state.dispath('hide');  
-            }, 50);  
-        } else {  
-            e.preventDefault();  
-            e.stopPropagation();  
-            e.stopImmediatePropagation();  
+        // Блокувати системний діалог  
+        if (e.cancelable !== false) {  
             _this4.state.dispath('hide');  
         }  
           
@@ -508,37 +507,10 @@ var universalKeyHandler = function(e) {
     }  
 };  
   
-// Додаткові обробники для максимальної сумісності  
-var documentKeyHandler = universalKeyHandler;  
-var windowKeyHandler = universalKeyHandler;  
-  
-// Activity обробник  
-var activityBackHandler = function(e) {  
-    if (e.type === 'back' && _this4.player && _this4.player.display) {  
-        console.log('[Cardify] Activity back intercepted');  
-        e.preventDefault();  
-        e.stopPropagation();  
-        _this4.state.dispath('hide');  
-        return false;  
-    }  
-};  
-  
-// Перехоплення методу Controller  
-var originalBack = Lampa.Controller.back;  
-Lampa.Controller.back = function() {  
-    if (_this4.player && _this4.player.display) {  
-        console.log('[Cardify] Controller back intercepted');  
-        _this4.state.dispath('hide');  
-        return;  
-    }  
-    if (originalBack) originalBack.call(this);  
-};  
-  
 // Додати всі можливі слухачі  
-Lampa.Listener.follow('activity', activityBackHandler);  
-Lampa.Listener.follow('keydown', universalKeyHandler);  
-document.addEventListener('keydown', documentKeyHandler, true);  
-window.addEventListener('keydown', windowKeyHandler, true);  
+document.addEventListener('keydown', universalHandler, true);  
+window.addEventListener('keydown', universalHandler, true);  
+Lampa.Listener.follow('keydown', universalHandler);  
 Lampa.Listener.follow('activity', destroy);  
 Lampa.Controller.listener.follow('toggle', toggle);  
   
