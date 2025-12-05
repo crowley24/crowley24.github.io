@@ -263,10 +263,8 @@
       key: "render",
       value: function render() {  
     var _this = this;  
-  
-    this.html = $('<div class="cardify-trailer__youtube"></div>');  
       
-    // Додати фокусування для пульта  
+    // Додати фокусування для існуючого HTML  
     this.html.attr('tabindex', '0').css({  
         'outline': 'none',  
         'cursor': 'pointer'  
@@ -274,7 +272,7 @@
       
     this.html.addClass('cardify-trailer-focusable');  
       
-    // Створити кнопку звуку як окремий фокусуваний елемент  
+    // Створити кнопку звуку  
     this.soundButton = $('<div class="cardify-sound-button focusable" tabindex="0">🔊</div>').css({  
         position: 'absolute',  
         top: '10px',  
@@ -288,23 +286,16 @@
         zIndex: 1000,  
         border: '2px solid transparent'  
     }).on('click', function() {  
-        if (_this.player.youtube.isMuted()) {  
-            _this.player.youtube.unMute();  
+        if (_this.youtube.isMuted()) {  
+            _this.youtube.unMute();  
             _this.soundButton.text('🔊');  
         } else {  
-            _this.player.youtube.mute();  
+            _this.youtube.mute();  
             _this.soundButton.text('🔇');  
         }  
     });  
       
     this.html.append(this.soundButton);  
-      
-    // Створити iframe для YouTube  
-    this.iframe = $('<iframe class="cardify-trailer__youtube-iframe" frameborder="0" allowfullscreen></iframe>').attr({  
-        src: 'about:blank'  
-    });  
-      
-    this.html.append(this.iframe);  
       
     return this.html;  
 }
