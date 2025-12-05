@@ -520,74 +520,37 @@ var _this4 = this;
         Lampa.Listener.remove('activity', destroy);  
         Lampa.Controller.listener.remove('toggle', toggle);  
           
-        // Відновити системну поведінку  
-        window.onbeforeunload = originalOnBeforeUnload;  
-        window.history.back = originalHistoryBack;  
-          
-        // Видалити універсальний обробник  
-        document.removeEventListener('keydown', universalHandler, true);  
-        window.removeEventListener('keydown', universalHandler, true);  
-        Lampa.Listener.remove('keydown', universalHandler);  
+        // Видалити глобальний обробник кнопки звуку  
+        document.removeEventListener('keydown', globalSoundHandler, true);  
           
         _self.destroy();  
     };  
   
-    // Зберегти оригінальні методи  
-    var originalOnBeforeUnload = window.onbeforeunload;  
-    var originalHistoryBack = window.history.back;  
-  
-    // Агресивне перехоплення на рівні вікна  
-    window.onbeforeunload = function(e) {  
-        if (_this4.player && _this4.player.display) {  
-            console.log('[Cardify] Window beforeunload intercepted');  
-            _this4.state.dispath('hide');  
-            e.preventDefault();  
-            e.returnValue = '';  
-            return '';  
-        }  
-    };  
-  
-    // Перевизначити history.back  
-    window.history.back = function() {  
-        if (_this4.player && _this4.player.display) {  
-            console.log('[Cardify] History back intercepted');  
-            _this4.state.dispath('hide');  
-            return;  
-        }  
-        originalHistoryBack.call(this);  
-    };  
-  
-    // Універсальний обробник для максимальної сумісності  
-    var universalHandler = function(e) {  
-        const backKeys = [  
-            e.code === 'Back',  
-            e.code === 'Backspace',  
-            e.keyCode === 10009,  // Android TV  
-            e.keyCode === 461,    // WebOS  
-            e.keyCode === 8,      // Generic BACK  
-            e.keyCode === 27,     // ESC  
-            e.key === 'Back',  
-            e.key === 'Escape'  
-        ];  
-          
-        if (backKeys.some(condition => condition) && _this4.player && _this4.player.display) {  
-            console.log('[Cardify] Universal handler intercepted:', e.code, e.keyCode);  
-            e.preventDefault();  
-            e.stopPropagation();  
-            e.stopImmediatePropagation();  
-              
-            if (e.cancelable !== false) {  
-                _this4.state.dispath('hide');  
+    // Додати глобальний обробник кнопки звуку  
+    var globalSoundHandler = function(e) {  
+        if (e.code === 'Enter' || e.code === 'NumpadEnter') {  
+            var soundButton = $('.cardify-sound-button');  
+            if (soundButton.length > 0 && soundButton.is(':visible')) {  
+                if (_this4.player && _this4.player.youtube) {  
+                    if (_this4.player.youtube.isMuted()) {  
+                        _this4.player.youtube.unMute();  
+                        soundButton.text('🔊');  
+                        console.log('[Cardify] Sound enabled globally');  
+                    } else {  
+                        _this4.player.youtube.mute();  
+                        soundButton.text('🔇');  
+                        console.log('[Cardify] Sound disabled globally');  
+                    }  
+                    e.preventDefault();  
+                    e.stopPropagation();  
+                    return false;  
+                }  
             }  
-              
-            return false;  
         }  
     };  
   
-    // Додати всі можливі слухачі  
-    document.addEventListener('keydown', universalHandler, true);  
-    window.addEventListener('keydown', universalHandler, true);  
-    Lampa.Listener.follow('keydown', universalHandler);  
+    document.addEventListener('keydown', globalSoundHandler, true);  
+      
     Lampa.Listener.follow('activity', destroy);  
     Lampa.Controller.listener.follow('toggle', toggle);  
   
