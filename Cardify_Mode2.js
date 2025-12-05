@@ -456,6 +456,7 @@
             Lampa.Controller.clear();  
         },  
         enter: function() {  
+            // Перевірити чи сфокусовано кнопку звуку  
             if ($('.cardify-sound-button').is(':focus')) {  
                 if (_this3.player.youtube.isMuted()) {  
                     _this3.player.youtube.unMute();  
@@ -481,8 +482,9 @@
             Lampa.Controller.trigger('down');  
         },  
         right: function() {  
-            // Переключитись на кнопку звуку  
+            // Перемкнутися на кнопку звуку  
             Lampa.Controller.toggle('cardify_sound');  
+            $('.cardify-sound-button').focus();  
         },  
         back: function back() {  
             _this3.state.dispath('hide');  
