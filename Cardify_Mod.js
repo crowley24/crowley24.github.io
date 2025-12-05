@@ -875,7 +875,7 @@
       return context.root;  
     }  
     for (var i = 0; i < (context ? context.log : 0); i++) {  
-      if (k & (1 << i)) {  
+        if (k & (1 << i)) {  
         node = context.up.get(node).get(i);  
       }  
     }  
