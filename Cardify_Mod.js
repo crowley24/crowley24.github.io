@@ -447,28 +447,23 @@ Lampa.Controller.toggle('cardify_trailer');
         Lampa.Listener.remove('activity', destroy);  
         Lampa.Controller.listener.remove('toggle', toggle);  
           
-        // Видалити глобальний слухач  
-        document.removeEventListener('keydown', keydownHandler, true);  
+        // Відновити оригінальний метод  
+        Lampa.Controller.back = originalBack;  
           
         _self.destroy();  
     };  
   
-    // Зберегти посилання на обробник для можливості видалення  
-    var keydownHandler = function(e) {  
-        console.log('[Cardify] Keydown:', e.code, 'Player display:', _this4.player && _this4.player.display);  
-          
-        if ((e.code === 'Back' || e.code === 'Backspace') && _this4.player && _this4.player.display) {  
-            console.log('[Cardify] Closing trailer');  
-            e.preventDefault();  
-            e.stopPropagation();  
-            e.stopImmediatePropagation(); // Додати для гарантованої зупинки  
+    // Зберегти оригінальний метод та перевизначити  
+    var originalBack = Lampa.Controller.back;  
+    Lampa.Controller.back = function() {  
+        if (_this4.player && _this4.player.display) {  
+            console.log('[Cardify] Back intercepted via Controller');  
             _this4.state.dispath('hide');  
-            return false;  
+            return;  
         }  
+        originalBack.call(this);  
     };  
   
-    // Використовувати document.addEventListener з вищим пріоритетом  
-    document.addEventListener('keydown', keydownHandler, true);  
     Lampa.Listener.follow('activity', destroy);  
     Lampa.Controller.listener.follow('toggle', toggle);  
   
