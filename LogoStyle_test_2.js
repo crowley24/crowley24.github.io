@@ -26,15 +26,11 @@
   
     // --- Додавання налаштувань в меню Lampa ---  
     function addLogoLanguageSettings() {  
-        try {  
-            // Перевіряємо, чи доступний Lampa.Settings  
-            if (typeof Lampa.Settings === 'undefined') {  
-                console.error('[Logo Plugin] Lampa.Settings is not available');  
-                return;  
-            }  
-  
-            // Додаємо пункт в налаштування інтерфейсу  
-            Lampa.Settings.addParam({  
+    try {  
+        // Перевіряємо різні варіанти API налаштувань  
+        if (typeof Lampa.Settings !== 'undefined' && typeof Lampa.Settings.add === 'function') {  
+            // Спробуємо використати Lampa.Settings.add  
+            Lampa.Settings.add({  
                 component: 'select',  
                 name: 'logo_language',  
                 title: 'Мова логотипів фільмів',  
@@ -55,12 +51,37 @@
                     Lampa.Noty.show('Мову логотипів змінено на: ' + this.values[value]);  
                 }  
             });  
-              
-            console.log('[Logo Plugin] Settings added successfully');  
-        } catch (error) {  
-            console.error('[Logo Plugin] Error adding settings:', error);  
+            console.log('[Logo Plugin] Settings added with Lampa.Settings.add');  
+        } else if (typeof Lampa.Settings !== 'undefined' && typeof Lampa.Settings.select === 'function') {  
+            // Альтернативний варіант  
+            Lampa.Settings.select('logo_language', {  
+                title: 'Мова логотипів фільмів',  
+                default: 'ru',  
+                values: {  
+                    'ru': 'Російська',  
+                    'uk': 'Українська',   
+                    'en': 'Англійська',  
+                    'be': 'Білоруська',  
+                    'bg': 'Болгарська',  
+                    'zh': 'Китайська',  
+                    'pt': 'Португальська',  
+                    'he': 'Іврит',  
+                    'cs': 'Чеська'  
+                },  
+                onChange: function(value) {  
+                    setLogoLanguage(value);  
+                    Lampa.Noty.show('Мову логотипів змінено на: ' + this.values[value]);  
+                }  
+            });  
+            console.log('[Logo Plugin] Settings added with Lampa.Settings.select');  
+        } else {  
+            console.warn('[Logo Plugin] Settings API not available, using console only');  
+            // Залишаємо тільки консольний метод  
         }  
+    } catch (error) {  
+        console.error('[Logo Plugin] Error adding settings:', error);  
     }  
+}
   
     // --- СТИЛІ ---  
     try {  
