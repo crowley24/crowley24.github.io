@@ -56,11 +56,11 @@
                 var ukrainianTitle = null;
 
                 if (translationsData.translations) {
-                    var uaTranslation = translationsData.translations.find(t =>
-                        t.iso_639_1 === "ua" || t.iso_3166_1 === "UA"
+                    var ukTranslation = translationsData.translations.find(t =>
+                        t.iso_639_1 === "uk" || t.iso_3166_1 === "UK"
                     );
-                    if (uaTranslation && uaTranslation.data) {
-                        ukrainianTitle = isSerial ? uaTranslation.data.name : uaTranslation.data.title;
+                    if (ukTranslation && ukTranslation.data) {
+                        ukrainianTitle = isSerial ? ukTranslation.data.name : ukTranslation.data.title;
                     }
                 }
 
@@ -71,7 +71,7 @@
 
                 $.get(imgApi, function(e) {
                     if (e.logos && e.logos.length > 0) {
-                        var logo = e.logos.find(l => l.iso_639_1 === "ua");
+                        var logo = e.logos.find(l => l.iso_639_1 === "uk");
                         var isUkrainianLogo = !!logo;
 
                         if (!logo) {
