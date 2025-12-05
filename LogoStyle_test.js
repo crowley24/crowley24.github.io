@@ -53,26 +53,26 @@
             var translationsApi = Lampa.TMDB.api(apiPath + "/translations?api_key=" + Lampa.TMDB.key());
 
             $.get(translationsApi, function(translationsData) {
-                var russianTitle = null;
+                var ukrainianTitle = null;
 
                 if (translationsData.translations) {
-                    var ruTranslation = translationsData.translations.find(t =>
-                        t.iso_639_1 === "ru" || t.iso_3166_1 === "RU"
+                    var ukTranslation = translationsData.translations.find(t =>
+                        t.iso_639_1 === "uk" || t.iso_3166_1 === "UK"
                     );
-                    if (ruTranslation && ruTranslation.data) {
-                        russianTitle = isSerial ? ruTranslation.data.name : ruTranslation.data.title;
+                    if (ukTranslation && ukTranslation.data) {
+                        ukrainianTitle = isSerial ? ukTranslation.data.name : ukTranslation.data.title;
                     }
                 }
 
-                if (!russianTitle) russianTitle = isSerial ? e.name : e.title;
+                if (!ukrainianTitle) ukrainianTitle = isSerial ? e.name : e.title;
 
                 // API логотипів
                 var imgApi = Lampa.TMDB.api(apiPath + "/images?api_key=" + Lampa.TMDB.key());
 
                 $.get(imgApi, function(e) {
                     if (e.logos && e.logos.length > 0) {
-                        var logo = e.logos.find(l => l.iso_639_1 === "ru");
-                        var isRussianLogo = !!logo;
+                        var logo = e.logos.find(l => l.iso_639_1 === "uk");
+                        var isUkrainianLogo = !!logo;
 
                         if (!logo) {
                             logo = e.logos.find(l => l.iso_639_1 === "en");
@@ -86,12 +86,12 @@
 
                             var img = new Image();
                             img.onload = function() {
-                                // Якщо логотип НЕ російський — додаємо текст
-                                if (!isRussianLogo && russianTitle) {
+                                // Якщо логотип НЕ український — додаємо текст
+                                if (!isUkrainianLogo && ukrainianTitle) {
                                     a.object.activity.render().find(".full-start-new__title").html(
                                         '<div class="full-logo-wrapper">' +
                                             '<img src="' + logoPath + '" />' +
-                                            '<span style="margin-top:2px;font-size:0.55em;color:#fff;">' + russianTitle + '</span>' +
+                                            '<span style="margin-top:2px;font-size:0.55em;color:#fff;">' + ukrainianTitle + '</span>' +
                                         '</div>'
                                     );
                                 } else {
