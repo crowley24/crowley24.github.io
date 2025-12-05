@@ -261,50 +261,9 @@
       }
     }, {
       key: "render",
-      value: function render() {  
-    var _this = this;  
-      
-    // Додати фокусування для існуючого HTML  
-    this.html.attr('tabindex', '0').css({  
-        'outline': 'none',  
-        'cursor': 'pointer'  
-    });  
-      
-    this.html.addClass('cardify-trailer-focusable');  
-      
-    // Створити кнопку звуку  
-    this.soundButton = $('<div class="cardify-sound-button focusable" tabindex="0">🔊</div>').css({  
-        position: 'absolute',  
-        top: '10px',  
-        left: '10px',  
-        background: 'rgba(0,0,0,0.7)',  
-        color: 'white',  
-        padding: '8px 12px',  
-        borderRadius: '5px',  
-        fontSize: '18px',  
-        cursor: 'pointer',  
-        zIndex: 1000,  
-        border: '2px solid transparent'  
-    }).on('click', function() {  
-        if (_this.youtube.isMuted()) {  
-            _this.youtube.unMute();  
-            _this.soundButton.text('🔊');  
-        } else {  
-            _this.youtube.mute();  
-            _this.soundButton.text('🔇');  
-        }  
-    });  
-        
-        this.soundButton.on('focus', function() {  
-    console.log('[Cardify] Sound button focused');  
-}).on('blur', function() {  
-    console.log('[Cardify] Sound button blurred');  
-});
-      
-    this.html.append(this.soundButton);  
-      
-    return this.html;  
-}
+      value: function render() {
+        return this.html;
+      }
     }, {
       key: "destroy",
       value: function destroy() {
@@ -421,140 +380,141 @@
       }
     }, {
       key: "controll",
-      value: function controll() {  
-    var _this3 = this;  
+      value: function controll() {
+        var _this3 = this;
+
+        var out = function out() {
+          _this3.state.dispath('hide');
+
+          Lampa.Controller.toggle('full_start');
+        };
+
+        Lampa.Controller.add('cardify_trailer', {    
+    toggle: function() {    
+        Lampa.Controller.clear();    
+    },    
+    enter: function() {    
+        _this3.player.unmute();    
+    },    
+    left: function() {    
+        Lampa.Controller.toggle('full_start');    
+        Lampa.Controller.trigger('left');    
+    },    
+    up: function() {    
+        Lampa.Controller.toggle('full_start');     
+        Lampa.Controller.trigger('up');    
+    },    
+    down: function() {    
+        Lampa.Controller.toggle('full_start');    
+        Lampa.Controller.trigger('down');    
+    },    
+    right: function() {    
+        Lampa.Controller.toggle('full_start');    
+        Lampa.Controller.trigger('right');    
+    },    
+    back: function back() {    
+        _this3.state.dispath('hide');    
+        Lampa.Controller.toggle('full_start');       
+    },    
+    // Додати нові контролери    
+    volume_up: function() {    
+        const currentVolume = _this3.player.youtube.getVolume();    
+        _this3.player.youtube.setVolume(Math.min(100, currentVolume + 10));    
+    },    
+    volume_down: function() {    
+        const currentVolume = _this3.player.youtube.getVolume();    
+        _this3.player.youtube.setVolume(Math.max(0, currentVolume - 10));    
+    }    
+});  
   
-    var out = function out() {  
-        _this3.state.dispath('hide');  
-        Lampa.Controller.toggle('full_start');  
-    };  
-  
-    // Додати кнопку звуку до системи навігації  
-    Lampa.Controller.add('cardify_sound', {  
-        toggle: function() {  
-            Lampa.Controller.clear();  
-        },  
-        enter: function() {  
-            if (_this3.player.youtube.isMuted()) {  
-                _this3.player.youtube.unMute();  
-                $('.cardify-sound-button').text('🔊');  
-            } else {  
-                _this3.player.youtube.mute();  
-                $('.cardify-sound-button').text('🔇');  
-            }  
-        },  
-        left: function() {  
-            Lampa.Controller.toggle('cardify_trailer');  
-        },  
-        back: function() {  
-            Lampa.Controller.toggle('cardify_trailer');  
-        }  
-    });  
-  
-    Lampa.Controller.add('cardify_trailer', {  
-        toggle: function() {  
-            Lampa.Controller.clear();  
-        },  
-        enter: function() {  
-            // Перевірити чи сфокусовано кнопку звуку  
-            if ($('.cardify-sound-button').is(':focus')) {  
-                if (_this3.player.youtube.isMuted()) {  
-                    _this3.player.youtube.unMute();  
-                    $('.cardify-sound-button').text('🔊');  
-                } else {  
-                    _this3.player.youtube.mute();  
-                    $('.cardify-sound-button').text('🔇');  
-                }  
-            } else {  
-                _this3.player.unmute();  
-            }  
-        },  
-        left: function() {  
-            Lampa.Controller.toggle('full_start');  
-            Lampa.Controller.trigger('left');  
-        },  
-        up: function() {  
-            Lampa.Controller.toggle('full_start');  
-            Lampa.Controller.trigger('up');  
-        },  
-        down: function() {  
-            Lampa.Controller.toggle('full_start');  
-            Lampa.Controller.trigger('down');  
-        },  
-        right: function() {  
-            // Перемкнутися на кнопку звуку  
-            Lampa.Controller.toggle('cardify_sound');  
-            $('.cardify-sound-button').focus();  
-        },  
-        back: function back() {  
-            _this3.state.dispath('hide');  
-            Lampa.Controller.toggle('full_start');  
-        },  
-        volume_up: function() {  
-            const currentVolume = _this3.player.youtube.getVolume();  
-            _this3.player.youtube.setVolume(Math.min(100, currentVolume + 10));  
-        },  
-        volume_down: function() {  
-            const currentVolume = _this3.player.youtube.getVolume();  
-            _this3.player.youtube.setVolume(Math.max(0, currentVolume - 10));  
-        }  
-    });  
-  
-    Lampa.Controller.toggle('cardify_trailer');  
-}
+Lampa.Controller.toggle('cardify_trailer');  
+}  
 }, {  
     key: "start",  
     value: function start() {  
 var _this4 = this;  
-    var _self = this;  
+var _self = this;  
   
-    var toggle = function toggle(e) {  
-        _self.state.dispath('toggle');  
-    };  
+var toggle = function toggle(e) {  
+    _self.state.dispath('toggle');  
+};  
   
-    var destroy = function destroy(e) {  
-        if (e.type == 'destroy' && e.object.activity === _self.object.activity) remove();  
-    };  
+var destroy = function destroy(e) {  
+    if (e.type == 'destroy' && e.object.activity === _self.object.activity) remove();  
+};  
   
-    var remove = function remove() {  
-        Lampa.Listener.remove('activity', destroy);  
-        Lampa.Controller.listener.remove('toggle', toggle);  
-          
-        // Видалити глобальний обробник кнопки звуку  
-        document.removeEventListener('keydown', globalSoundHandler, true);  
-          
-        _self.destroy();  
-    };  
-  
-    // Додати глобальний обробник кнопки звуку  
-    var globalSoundHandler = function(e) {  
-        if (e.code === 'Enter' || e.code === 'NumpadEnter') {  
-            var soundButton = $('.cardify-sound-button');  
-            if (soundButton.length > 0 && soundButton.is(':visible')) {  
-                if (_this4.player && _this4.player.youtube) {  
-                    if (_this4.player.youtube.isMuted()) {  
-                        _this4.player.youtube.unMute();  
-                        soundButton.text('🔊');  
-                        console.log('[Cardify] Sound enabled globally');  
-                    } else {  
-                        _this4.player.youtube.mute();  
-                        soundButton.text('🔇');  
-                        console.log('[Cardify] Sound disabled globally');  
-                    }  
-                    e.preventDefault();  
-                    e.stopPropagation();  
-                    return false;  
-                }  
-            }  
-        }  
-    };  
-  
-    document.addEventListener('keydown', globalSoundHandler, true);  
+var remove = function remove() {  
+    Lampa.Listener.remove('activity', destroy);  
+    Lampa.Controller.listener.remove('toggle', toggle);  
       
-    Lampa.Listener.follow('activity', destroy);  
-    Lampa.Controller.listener.follow('toggle', toggle);  
+    // Відновити системну поведінку  
+    window.onbeforeunload = originalOnBeforeUnload;  
+    window.history.back = originalHistoryBack;  
+      
+    _self.destroy();  
+};  
   
-    this.player = new Player(this.object, this.video);  
+// Зберегти оригінальні методи  
+var originalOnBeforeUnload = window.onbeforeunload;  
+var originalHistoryBack = window.history.back;  
+  
+// Агресивне перехоплення на рівні вікна  
+window.onbeforeunload = function(e) {  
+    if (_this4.player && _this4.player.display) {  
+        console.log('[Cardify] Window beforeunload intercepted');  
+        _this4.state.dispath('hide');  
+        e.preventDefault();  
+        e.returnValue = ''; // Для старих браузерів  
+        return ''; // Для сучасних браузерів  
+    }  
+};  
+  
+// Перевизначити history.back  
+window.history.back = function() {  
+    if (_this4.player && _this4.player.display) {  
+        console.log('[Cardify] History back intercepted');  
+        _this4.state.dispath('hide');  
+        return;  
+    }  
+    originalHistoryBack.call(this);  
+};  
+  
+// Додатковий обробник для максимальної сумісності  
+var universalHandler = function(e) {  
+    const backKeys = [  
+        e.code === 'Back',  
+        e.code === 'Backspace',   
+        e.keyCode === 10009,  // Android TV  
+        e.keyCode === 461,    // WebOS  
+        e.keyCode === 8,      // Generic BACK  
+        e.keyCode === 27,     // ESC  
+        e.key === 'Back',  
+        e.key === 'Escape'  
+    ];  
+      
+    if (backKeys.some(condition => condition) && _this4.player && _this4.player.display) {  
+        console.log('[Cardify] Universal handler intercepted:', e.code, e.keyCode);  
+        e.preventDefault();  
+        e.stopPropagation();  
+        e.stopImmediatePropagation();  
+          
+        // Блокувати системний діалог  
+        if (e.cancelable !== false) {  
+            _this4.state.dispath('hide');  
+        }  
+          
+        return false;  
+    }  
+};  
+  
+// Додати всі можливі слухачі  
+document.addEventListener('keydown', universalHandler, true);  
+window.addEventListener('keydown', universalHandler, true);  
+Lampa.Listener.follow('keydown', universalHandler);  
+Lampa.Listener.follow('activity', destroy);  
+Lampa.Controller.listener.follow('toggle', toggle);  
+  
+this.player = new Player(this.object, this.video);   
     this.player.listener.follow('loaded', function () {  
         _this4.preview();  
         _this4.state.start();  
@@ -569,6 +529,10 @@ var _this4 = this;
   
         _this4.timer_show = setTimeout(function () {  
             _this4.player.show();  
+  
+            // _this4.background.addClass('nodisplay');  
+            // _this4.startblock.addClass('nodisplay');  
+            // _this4.head.addClass('nodisplay');  
   
             _this4.controll();  
         }, 500);  
@@ -585,7 +549,7 @@ var _this4 = this;
     this.object.activity.render().find('.activity__body').prepend(this.player.render());  
   
     this.state.start();  
-}
+    }  
 }, {  
     key: "destroy",  
     value: function destroy() {  
@@ -1287,17 +1251,7 @@ var _this4 = this;
           
     /* Додатковий фільтр для м'якості */      
     filter: drop-shadow(0 0 30px rgba(0,0,0,0.8)) !important;      
-  } 
-    
-        .cardify-trailer-focusable:focus {  
-            outline: 3px solid #fff !important;  
-            outline-offset: 2px !important;  
-        }  
-          
-        .cardify-sound-button.focusable:focus {  
-            border: 2px solid #fff !important;  
-            box-shadow: 0 0 10px rgba(255,255,255,0.5) !important;  
-        } 
+  }          
             
   .cardify-trailer__youtube iframe {          
     width: 130% !important;          
