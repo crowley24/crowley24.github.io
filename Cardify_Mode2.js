@@ -423,12 +423,33 @@
         Lampa.Controller.toggle('full_start');  
     };  
   
+    // Додати кнопку звуку до системи навігації  
+    Lampa.Controller.add('cardify_sound', {  
+        toggle: function() {  
+            Lampa.Controller.clear();  
+        },  
+        enter: function() {  
+            if (_this3.player.youtube.isMuted()) {  
+                _this3.player.youtube.unMute();  
+                $('.cardify-sound-button').text('🔊');  
+            } else {  
+                _this3.player.youtube.mute();  
+                $('.cardify-sound-button').text('🔇');  
+            }  
+        },  
+        left: function() {  
+            Lampa.Controller.toggle('cardify_trailer');  
+        },  
+        back: function() {  
+            Lampa.Controller.toggle('cardify_trailer');  
+        }  
+    });  
+  
     Lampa.Controller.add('cardify_trailer', {  
         toggle: function() {  
             Lampa.Controller.clear();  
         },  
         enter: function() {  
-            // Перевірити чи сфокусовано кнопку звуку  
             if ($('.cardify-sound-button').is(':focus')) {  
                 if (_this3.player.youtube.isMuted()) {  
                     _this3.player.youtube.unMute();  
@@ -454,14 +475,13 @@
             Lampa.Controller.trigger('down');  
         },  
         right: function() {  
-            Lampa.Controller.toggle('full_start');  
-            Lampa.Controller.trigger('right');  
+            // Переключитись на кнопку звуку  
+            Lampa.Controller.toggle('cardify_sound');  
         },  
         back: function back() {  
             _this3.state.dispath('hide');  
             Lampa.Controller.toggle('full_start');  
         },  
-        // Додати нові контролери  
         volume_up: function() {  
             const currentVolume = _this3.player.youtube.getVolume();  
             _this3.player.youtube.setVolume(Math.min(100, currentVolume + 10));  
