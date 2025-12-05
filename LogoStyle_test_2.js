@@ -27,6 +27,13 @@
     // --- Додавання налаштувань в меню Lampa ---  
     function addLogoLanguageSettings() {  
         try {  
+            // Перевіряємо, чи доступний Lampa.Settings  
+            if (typeof Lampa.Settings === 'undefined') {  
+                console.error('[Logo Plugin] Lampa.Settings is not available');  
+                return;  
+            }  
+  
+            // Додаємо пункт в налаштування інтерфейсу  
             Lampa.Settings.addParam({  
                 component: 'select',  
                 name: 'logo_language',  
@@ -229,8 +236,10 @@
             getLanguage: getLogoLanguage  
         };  
   
-        // Додаємо налаштування  
-        addLogoLanguageSettings();  
+        // Додаємо налаштування з затримкою  
+        setTimeout(function() {  
+            addLogoLanguageSettings();  
+        }, 1000);  
   
         console.log('[Logo Plugin] Successfully initialized');  
     } catch (error) {  
