@@ -413,7 +413,8 @@
         Lampa.Controller.trigger('right');  
     },  
     back: function back() {  
-    _this3.state.dispath('hide');   
+        _this3.state.dispath('hide');  // ← Замість out()  
+        Lampa.Controller.toggle('full_start');     
     },  
     // Додати нові контролери  
     volume_up: function() {  
