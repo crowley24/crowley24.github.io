@@ -389,129 +389,135 @@
           Lampa.Controller.toggle('full_start');
         };
 
-        Lampa.Controller.add('cardify_trailer', {  
-    toggle: function() {  
-        Lampa.Controller.clear();  
-    },  
-    enter: function() {  
-        _this3.player.unmute();  
-    },  
-    left: function() {  
-        Lampa.Controller.toggle('full_start');  
-        Lampa.Controller.trigger('left');  
-    },  
-    up: function() {  
-        Lampa.Controller.toggle('full_start');   
-        Lampa.Controller.trigger('up');  
-    },  
-    down: function() {  
-        Lampa.Controller.toggle('full_start');  
-        Lampa.Controller.trigger('down');  
-    },  
-    right: function() {  
-        Lampa.Controller.toggle('full_start');  
-        Lampa.Controller.trigger('right');  
-    },  
-    back: function back() {  
-        _this3.state.dispath('hide');  // ← Замість out()  
+        Lampa.Controller.add('cardify_trailer', {    
+    toggle: function() {    
+        Lampa.Controller.clear();    
+    },    
+    enter: function() {    
+        _this3.player.unmute();    
+    },    
+    left: function() {    
+        Lampa.Controller.toggle('full_start');    
+        Lampa.Controller.trigger('left');    
+    },    
+    up: function() {    
         Lampa.Controller.toggle('full_start');     
-    },  
-    // Додати нові контролери  
-    volume_up: function() {  
-        const currentVolume = _this3.player.youtube.getVolume();  
-        _this3.player.youtube.setVolume(Math.min(100, currentVolume + 10));  
-    },  
-    volume_down: function() {  
-        const currentVolume = _this3.player.youtube.getVolume();  
-        _this3.player.youtube.setVolume(Math.max(0, currentVolume - 10));  
-    }  
-});
-        Lampa.Controller.toggle('cardify_trailer');
-      }
-    }, {
-      key: "start",
-      value: function start() {
-        var _this4 = this;
-
-        var _self = this; // Events //
-
-
-        var toggle = function toggle(e) {
-          _self.state.dispath('toggle');
-        };
-
-        var destroy = function destroy(e) {
-          if (e.type == 'destroy' && e.object.activity === _self.object.activity) remove();
-        };
-
-        var remove = function remove() {
-          Lampa.Listener.remove('activity', destroy);
-          Lampa.Controller.listener.remove('toggle', toggle);
-
-          _self.destroy();
-        };
-
-         // Додати глобальний обробник кнопки "назад"  
-    Lampa.Listener.follow('keydown', function(e) {  
-        if ((e.code === 'Back' || e.code === 'Backspace') && _this4.player && _this4.player.display) {  
-            e.preventDefault();  
-            e.stopPropagation();  
-            _this4.state.dispath('hide');  
-            return false;  
-        }  
-    });  
+        Lampa.Controller.trigger('up');    
+    },    
+    down: function() {    
+        Lampa.Controller.toggle('full_start');    
+        Lampa.Controller.trigger('down');    
+    },    
+    right: function() {    
+        Lampa.Controller.toggle('full_start');    
+        Lampa.Controller.trigger('right');    
+    },    
+    back: function back() {    
+        _this3.state.dispath('hide');    
+        Lampa.Controller.toggle('full_start');       
+    },    
+    // Додати нові контролери    
+    volume_up: function() {    
+        const currentVolume = _this3.player.youtube.getVolume();    
+        _this3.player.youtube.setVolume(Math.min(100, currentVolume + 10));    
+    },    
+    volume_down: function() {    
+        const currentVolume = _this3.player.youtube.getVolume();    
+        _this3.player.youtube.setVolume(Math.max(0, currentVolume - 10));    
+    }    
+});  
   
-    Lampa.Listener.follow('activity', destroy);  
-    Lampa.Controller.listener.follow('toggle', toggle);
-
-        this.player = new Player(this.object, this.video);
-        this.player.listener.follow('loaded', function () {
-          _this4.preview();
-
-          _this4.state.start();
-        });
-        this.player.listener.follow('play', function () {
-          clearTimeout(_this4.timer_show);
-
-          if (!_this4.firstlauch) {
-            _this4.firstlauch = true;
-            _this4.timelauch = 5000;
-          }
-
-          _this4.timer_show = setTimeout(function () {
-            _this4.player.show();
-
-           // _this4.background.addClass('nodisplay');
-
-           // _this4.startblock.addClass('nodisplay');
-
-           // _this4.head.addClass('nodisplay');
-
-            _this4.controll();
-          }, 500);
-        });
-        this.player.listener.follow('ended,error', function () {
-          _this4.state.dispath('hide');
-
-          if (Lampa.Controller.enabled().name !== 'full_start') Lampa.Controller.toggle('full_start');
-
-          _this4.object.activity.render().find('.cardify-preview').remove();
-
-          setTimeout(remove, 300);
-        });
-        this.object.activity.render().find('.activity__body').prepend(this.player.render()); // Start //
-
-        this.state.start();
-      }
-    }, {
-      key: "destroy",
-      value: function destroy() {
-        clearTimeout(this.timer_load);
-        clearTimeout(this.timer_show);
-        clearInterval(this.timer_anim);
-        this.player.destroy();
-      }
-    }]);
+Lampa.Controller.toggle('cardify_trailer');  
+}  
+}, {  
+    key: "start",  
+    value: function start() {  
+        var _this4 = this;  
+  
+        var _self = this; // Events //  
+  
+        var toggle = function toggle(e) {  
+            _self.state.dispath('toggle');  
+        };  
+  
+        var destroy = function destroy(e) {  
+            if (e.type == 'destroy' && e.object.activity === _self.object.activity) remove();  
+        };  
+  
+        var remove = function remove() {  
+            Lampa.Listener.remove('activity', destroy);  
+            Lampa.Controller.listener.remove('toggle', toggle);  
+              
+            // Додати видалення глобального слухача кнопки "назад"  
+            Lampa.Listener.remove('keydown', keydownHandler);  
+              
+            _self.destroy();  
+        };  
+  
+        // Зберегти посилання на обробник для можливості видалення  
+        var keydownHandler = function(e) {  
+            console.log('[Cardify] Keydown:', e.code, 'Player display:', _this4.player && _this4.player.display);  
+              
+            if ((e.code === 'Back' || e.code === 'Backspace') && _this4.player && _this4.player.display) {  
+                console.log('[Cardify] Closing trailer');  
+                e.preventDefault();  
+                e.stopPropagation();  
+                _this4.state.dispath('hide');  
+                return false;  
+            }  
+        };  
+  
+        // Додати слухач зі збереженням посилання  
+        Lampa.Listener.follow('keydown', keydownHandler);  
+        Lampa.Listener.follow('activity', destroy);  
+        Lampa.Controller.listener.follow('toggle', toggle);  
+  
+        this.player = new Player(this.object, this.video);  
+        this.player.listener.follow('loaded', function () {  
+            _this4.preview();  
+  
+            _this4.state.start();  
+        });  
+        this.player.listener.follow('play', function () {  
+            clearTimeout(_this4.timer_show);  
+  
+            if (!_this4.firstlauch) {  
+                _this4.firstlauch = true;  
+                _this4.timelauch = 5000;  
+            }  
+  
+            _this4.timer_show = setTimeout(function () {  
+                _this4.player.show();  
+  
+                // _this4.background.addClass('nodisplay');  
+                // _this4.startblock.addClass('nodisplay');  
+                // _this4.head.addClass('nodisplay');  
+  
+                _this4.controll();  
+            }, 500);  
+        });  
+        this.player.listener.follow('ended,error', function () {  
+            _this4.state.dispath('hide');  
+  
+            if (Lampa.Controller.enabled().name !== 'full_start') Lampa.Controller.toggle('full_start');  
+  
+            _this4.object.activity.render().find('.cardify-preview').remove();  
+  
+            setTimeout(remove, 300);  
+        });  
+        this.object.activity.render().find('.activity__body').prepend(this.player.render()); // Start //  
+  
+        this.state.start();  
+    }  
+}, {  
+    key: "destroy",  
+    value: function destroy() {  
+        clearTimeout(this.timer_load);  
+        clearTimeout(this.timer_show);  
+        clearInterval(this.timer_anim);  
+        this.player.destroy();  
+    }  
+}]);
 
     return Trailer;
   }();
