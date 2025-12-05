@@ -16,12 +16,43 @@
   
     // --- Функції для керування мовою логотипів ---  
     function getLogoLanguage() {  
-        return localStorage.getItem('logo_plugin_language') || 'ru';  
+        return Lampa.Storage.get('logo_language') || 'ru';  
     }  
   
     function setLogoLanguage(lang) {  
-        localStorage.setItem('logo_plugin_language', lang);  
+        Lampa.Storage.set('logo_language', lang);  
         console.log('[Logo Plugin] Language set to:', lang);  
+    }  
+  
+    // --- Додавання налаштувань в меню Lampa ---  
+    function addLogoLanguageSettings() {  
+        try {  
+            Lampa.Settings.addParam({  
+                component: 'select',  
+                name: 'logo_language',  
+                title: 'Мова логотипів фільмів',  
+                default: 'ru',  
+                values: {  
+                    'ru': 'Російська',  
+                    'uk': 'Українська',   
+                    'en': 'Англійська',  
+                    'be': 'Білоруська',  
+                    'bg': 'Болгарська',  
+                    'zh': 'Китайська',  
+                    'pt': 'Португальська',  
+                    'he': 'Іврит',  
+                    'cs': 'Чеська'  
+                },  
+                onChange: function(value) {  
+                    setLogoLanguage(value);  
+                    Lampa.Noty.show('Мову логотипів змінено на: ' + this.values[value]);  
+                }  
+            });  
+              
+            console.log('[Logo Plugin] Settings added successfully');  
+        } catch (error) {  
+            console.error('[Logo Plugin] Error adding settings:', error);  
+        }  
     }  
   
     // --- СТИЛІ ---  
@@ -91,7 +122,9 @@
                     return;  
                 }  
   
-                // Ховаємо контент до завантаження  
+                var preferredLang = getLogoLanguage();  
+                console.log('[Logo Plugin] Using language:', preferredLang);  
+  
                 var contentContainer = a.object.activity.render().find(".full-start-new__body");  
                 if (!contentContainer.length) {  
                     console.error('[Logo Plugin] Content container not found');  
@@ -99,11 +132,6 @@
                 }  
                 contentContainer.css("opacity", "0");  
   
-                // Отримуємо бажану мову  
-                var preferredLang = getLogoLanguage();  
-                console.log('[Logo Plugin] Using language:', preferredLang);  
-  
-                // API перекладів  
                 var translationsApi = Lampa.TMDB.api(apiPath + "/translations?api_key=" + Lampa.TMDB.key());  
   
                 $.get(translationsApi).done(function(translationsData) {  
@@ -124,7 +152,6 @@
                             localizedTitle = isSerial ? e.name : e.title;  
                         }  
   
-                        // API логотипів  
                         var imgApi = Lampa.TMDB.api(apiPath + "/images?api_key=" + Lampa.TMDB.key());  
   
                         $.get(imgApi).done(function(imagesData) {  
@@ -134,7 +161,6 @@
                                     return;  
                                 }  
   
-                                // Шукаємо логотип бажаною мовою  
                                 var logo = imagesData.logos.find(l => l.iso_639_1 === preferredLang);  
                                 var isPreferredLogo = !!logo;  
   
@@ -197,11 +223,14 @@
             }  
         });  
   
-        // Глобальні функції  
+        // Глобальні функції для зворотної сумісності  
         window.logoPlugin = {  
             setLanguage: setLogoLanguage,  
             getLanguage: getLogoLanguage  
         };  
+  
+        // Додаємо налаштування  
+        addLogoLanguageSettings();  
   
         console.log('[Logo Plugin] Successfully initialized');  
     } catch (error) {  
