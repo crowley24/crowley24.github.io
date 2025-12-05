@@ -15,8 +15,8 @@
             min-height: 60px !important;  
               
             /* Максимальні розміри */  
-            max-width: 35vw !important;  /* Збільшено з 25vw */  
-            max-height: 15vh !important; /* Збільшено з 12vh */  
+            max-width: 35vw !important;  
+            max-height: 30vh !important;   
               
             width: auto !important;  
             height: auto !important;  
