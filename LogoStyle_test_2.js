@@ -49,214 +49,129 @@
   
     // --- СТИЛІ з покращеною специфічністю ---  
     var style = document.createElement('style');  
-    style.textContent = `  
-        .cardify .full-start-new__title {  
-            text-shadow: none !important;  
-        }  
-  
-        /* Агресивні правила з вищою специфічністю */  
-        .cardify .full-start-new__title img,  
-        .full-start-new__title img,  
-        .full-logo-wrapper img {  
-            /* Примусові мінімальні розміри */  
-            min-width: 300px !important;  
-            min-height: 90px !important;  
-              
-            /* Примусові максимальні розміри */  
-            max-width: 40vw !important;  
-            max-height: 20vh !important;  
-              
-            /* Примусові базові властивості */  
-            width: auto !important;  
-            height: auto !important;  
-            object-fit: contain !important;  
-            display: block !important;  
-            margin: 5px auto 0 !important;  
-              
-            /* Вимкнення будь-яких трансформацій */  
-            transform: none !important;  
-            -webkit-transform: none !important;  
-            -moz-transform: none !important;  
-            -ms-transform: none !important;  
-            -o-transform: none !important;  
-        }  
-  
-        /* Контейнер з примусовою шириною */  
-        .full-logo-wrapper {  
-            display: flex !important;  
-            flex-direction: column !important;  
-            align-items: center !important;  
-            justify-content: center !important;  
-            width: 100% !important;  
-            min-height: 100px !important;  
-        }  
-  
-        /* Індикатор завантаження */  
-        .logo-loading {  
-            display: flex;  
-            align-items: center;  
-            justify-content: center;  
-            min-height: 100px;  
-            color: #fff;  
-            font-size: 14px;  
-        }  
-  
-        /* Додатково для мобільних */  
-        @media (max-width: 768px) {  
-            .cardify .full-start-new__title img,  
-            .full-start-new__title img,  
-            .full-logo-wrapper img {  
-                min-width: 250px !important;  
-                min-height: 75px !important;  
-                max-width: 60vw !important;  
-                max-height: 25vh !important;  
-            }  
-        }  
-          
-        /* Для дуже великих екранів */  
-        @media (min-width: 1920px) {  
-            .cardify .full-start-new__title img,  
-            .full-start-new__title img,  
-            .full-logo-wrapper img {  
-                min-width: 400px !important;  
-                min-height: 120px !important;  
-                max-width: 35vw !important;  
-                max-height: 18vh !important;  
-            }  
-        }  
-    `;  
+    style.textContent = '\n        .cardify .full-start-new__title {\n            text-shadow: none !important;\n        }\n\n        /* Агресивні правила з вищою специфічністю */\n        .cardify .full-start-new__title img,\n        .full-start-new__title img,\n        .full-logo-wrapper img {\n            /* Примусові мінімальні розміри */\n            min-width: 300px !important;\n            min-height: 90px !important;\n            \n            /* Примусові максимальні розміри */\n            max-width: 40vw !important;\n            max-height: 20vh !important;\n            \n            /* Примусові базові властивості */\n            width: auto !important;\n            height: auto !important;\n            object-fit: contain !important;\n            display: block !important;\n            margin: 5px auto 0 !important;\n            \n            /* Вимкнення будь-яких трансформацій */\n            transform: none !important;\n            -webkit-transform: none !important;\n            -moz-transform: none !important;\n            -ms-transform: none !important;\n            -o-transform: none !important;\n        }\n\n        /* Контейнер з примусовою шириною */\n        .full-logo-wrapper {\n            display: flex !important;\n            flex-direction: column !important;\n            align-items: center !important;\n            justify-content: center !important;\n            width: 100% !important;\n            min-height: 100px !important;\n        }\n\n        /* Додатково для мобільних */\n        @media (max-width: 768px) {\n            .cardify .full-start-new__title img,\n            .full-start-new__title img,\n            .full-logo-wrapper img {\n                min-width: 250px !important;\n                min-height: 75px !important;\n                max-width: 60vw !important;\n                max-height: 25vh !important;\n            }\n        }\n        \n        /* Для дуже великих екранів */\n        @media (min-width: 1920px) {\n            .cardify .full-start-new__title img,\n            .full-start-new__title img,\n            .full-logo-wrapper img {\n                min-width: 400px !important;\n                min-height: 120px !important;\n                max-width: 35vw !important;\n                max-height: 18vh !important;\n            }\n        }\n\n        /* Індикатор завантаження */\n        .logo-loading {\n            display: flex;\n            align-items: center;\n            justify-content: center;\n            min-height: 100px;\n            color: #fff;\n            font-size: 14px;\n        }\n    ';  
     document.head.appendChild(style);  
   
     // --- ОСНОВНИЙ ПЛАГІН ---  
-    window.logoplugin || (window.logoplugin = !0, Lampa.Listener.follow("full", function(a) {  
-        if ("complite" == a.type) {  
-            try {  
-                console.log('[Logo Plugin] Full event triggered:', a.type);  
-                  
-                var e = a.data.movie;  
-                var isSerial = e.name || e.first_air_date;  
-                var apiPath = isSerial ? "tv/" + e.id : "movie/" + e.id;  
-                var movieId = e.id;  
+    window.logoplugin = window.logoplugin || false;  
+      
+    if (!window.logoplugin) {  
+        window.logoplugin = true;  
+          
+        Lampa.Listener.follow('full', function(e) {  
+            if (e.type === 'complite') {  
+                try {  
+                    var movie = e.data.movie;  
+                    var isSerial = movie.name || movie.first_air_date;  
+                    var apiPath = isSerial ? 'tv/' + movie.id : 'movie/' + movie.id;  
+                    var movieId = movie.id.toString();  
   
-                // Перевіряємо кеш  
-                var cachedLogo = getCachedLogo(movieId);  
-                if (cachedLogo) {  
-                    var contentContainer = a.object.activity.render().find(".full-start-new__body");  
-                      
-                    var img = new Image();  
-                    img.onload = function() {  
-                        a.object.activity.render().find(".full-start-new__title").html(  
-                            '<div class="full-logo-wrapper">' +  
-                                '<img src="' + cachedLogo + '" style="min-width: 300px; min-height: 90px;" />' +  
-                            '</div>'  
-                        );  
-                        contentContainer.css("opacity", "1");  
-                    };  
-                    img.onerror = function() {  
-                        contentContainer.css("opacity", "1");  
-                    };  
-                    img.src = cachedLogo;  
-                    return;  
-                }  
-  
-                // Ховаємо текст до завантаження логотипу  
-                var contentContainer = a.object.activity.render().find(".full-start-new__body");  
-                contentContainer.css("opacity", "0");  
-  
-                // Показуємо індикатор завантаження  
-                a.object.activity.render().find(".full-start-new__title").html(  
-                    '<div class="logo-loading">Завантаження логотипа...</div>'  
-                );  
-  
-                // API логотипів  
-                var imgApi = Lampa.TMDB.api(apiPath + "/images?api_key=" + Lampa.TMDB.key());  
-  
-                $.get(imgApi, function(response) {  
-                    try {  
-                        console.log('[Logo Plugin] API response received for:', movieId);  
-                          
-                        if (response.logos && response.logos.length > 0) {  
-                            // Розширений пріоритет мов  
-                            var logoPriority = ['uk', 'ru', 'en', 'de', 'fr', 'es', 'it', 'pt'];  
-                            var selectedLogo = null;  
-  
-                            for (var i = 0; i < logoPriority.length; i++) {  
-                                selectedLogo = response.logos.find(l => l.iso_639_1 === logoPriority[i]);  
-                                if (selectedLogo) {  
-                                    console.log('[Logo Plugin] Found logo with language:', logoPriority[i]);  
-                                    break;  
-                                }  
-                            }  
-  
-                            if (!selectedLogo) {  
-                                selectedLogo = response.logos[0];  
-                                console.log('[Logo Plugin] Using first available logo');  
-                            }  
-  
-                            if (selectedLogo && selectedLogo.file_path) {  
-                                var logoPath = Lampa.TMDB.image("/t/p/w300" + selectedLogo.file_path.replace(".svg", ".png"));  
-                                  
-                                // Кешуємо логотип  
-                                cacheLogo(movieId, logoPath);  
-  
-                                var img = new Image();  
-                                img.onload = function() {  
-                                    try {  
-                                        // Примусово встановлюємо розміри через JavaScript  
-                                        img.style.minWidth = '300px';  
-                                        img.style.minHeight = '90px';  
-                                          
-                                        a.object.activity.render().find(".full-start-new__title").html(  
-                                            '<div class="full-logo-wrapper">' +  
-                                                '<img src="' + logoPath + '" style="min-width: 300px; min-height: 90px;" />' +  
-                                            '</div>'  
-                                        );  
-  
-                                        contentContainer.css("opacity", "1");  
-                                        console.log('[Logo Plugin] Logo displayed successfully for:', movieId);  
-                                    } catch (error) {  
-                                        console.error('[Logo Plugin] Error displaying logo:', error);  
-                                        contentContainer.css("opacity", "1");  
-                                    }  
-                                };  
-  
-                                img.onerror = function() {  
-                                    console.error('[Logo Plugin] Failed to load logo image:', logoPath);  
-                                    contentContainer.css("opacity", "1");  
-                                };  
-  
-                                img.src = logoPath;  
-                            } else {  
-                                console.log('[Logo Plugin] No valid logo found for:', movieId);  
-                                contentContainer.css("opacity", "1");  
-                            }  
-                        } else {  
-                            console.log('[Logo Plugin] No logos in response for:', movieId);  
-                            contentContainer.css("opacity", "1");  
-                        }  
-                    } catch (error) {  
-                        console.error('[Logo Plugin] Error processing logo response:', error);  
-                        contentContainer.css("opacity", "1");  
+                    // Перевірка кешу  
+                    var cachedLogo = getCachedLogo(movieId);  
+                    if (cachedLogo) {  
+                        displayLogo(e, cachedLogo);  
+                        return;  
                     }  
-                }).fail(function() {  
-                    console.error('[Logo Plugin] Failed to fetch logos from API');  
-                    contentContainer.css("opacity", "1");  
-                });  
-            } catch (error) {  
-                console.error('[Logo Plugin] Error in full event handler:', error);  
+  
+                    // Показуємо індикатор завантаження  
+                    var contentContainer = e.object.activity.render().find('.full-start-new__body');  
+                    contentContainer.css('opacity', '0');  
+                    e.object.activity.render().find('.full-start-new__title').html(  
+                        '<div class="logo-loading">Завантаження логотипа...</div>'  
+                    );  
+  
+                    // API логотипів  
+                    var imgApi = Lampa.TMDB.api(apiPath + '/images?api_key=' + Lampa.TMDB.key());  
+  
+                    $.get(imgApi, function(response) {  
+                        try {  
+                            if (response.logos && response.logos.length > 0) {  
+                                // Розширений пріоритет мов  
+                                var logoPriority = ['uk', 'ru', 'en', 'de', 'fr', 'es', 'it', 'pt'];  
+                                var selectedLogo = null;  
+                                  
+                                for (var i = 0; i < logoPriority.length; i++) {  
+                                    selectedLogo = response.logos.find(function(logo) {  
+                                        return logo.iso_639_1 === logoPriority[i];  
+                                    });  
+                                    if (selectedLogo) break;  
+                                }  
+  
+                                if (!selectedLogo) {  
+                                    selectedLogo = response.logos[0];  
+                                }  
+  
+                                if (selectedLogo && selectedLogo.file_path) {  
+                                    var logoPath = Lampa.TMDB.image('/t/p/w300' + selectedLogo.file_path.replace('.svg', '.png'));  
+                                      
+                                    // Зберігаємо в кеш  
+                                    cacheLogo(movieId, logoPath);  
+                                      
+                                    // Відображаємо логотип  
+                                    displayLogo(e, logoPath);  
+                                } else {  
+                                    console.log('[Logo Plugin] No valid logo found for:', movieId);  
+                                    contentContainer.css('opacity', '1');  
+                                }  
+                            } else {  
+                                console.log('[Logo Plugin] No logos in response for:', movieId);  
+                                contentContainer.css('opacity', '1');  
+                            }  
+                        } catch (error) {  
+                            console.error('[Logo Plugin] Error processing logo response:', error);  
+                            contentContainer.css('opacity', '1');  
+                        }  
+                    }).fail(function() {  
+                        console.error('[Logo Plugin] Failed to fetch logos from API');  
+                        contentContainer.css('opacity', '1');  
+                    });  
+                } catch (error) {  
+                    console.error('[Logo Plugin] Error in full event handler:', error);  
+                }  
             }  
-        }  
-    }));  
+        });  
   
-    // Глобальні функції для зворотної сумісності  
-    window.logoPlugin = {  
-        setLanguage: function(lang) {  
-            console.log('[Logo Plugin] Language setting not implemented in this version');  
-        },  
-        getLanguage: function() {  
-            return 'uk'; // Завжди українська за замовчуванням  
-        }  
-    };  
+        // Функція відображення логотипа  
+        function displayLogo(e, logoPath) {  
+            var contentContainer = e.object.activity.render().find('.full-start-new__body');  
+            var img = new Image();  
+              
+            img.onload = function() {  
+                try {  
+                    // Примусово встановлюємо розміри через JavaScript  
+                    img.style.minWidth = '300px';  
+                    img.style.minHeight = '90px';  
+                      
+                    e.object.activity.render().find('.full-start-new__title').html(  
+                        '<div class="full-logo-wrapper">' +  
+                            '<img src="' + logoPath + '" style="min-width: 300px; min-height: 90px;" />' +  
+                        '</div>'  
+                    );  
+                    contentContainer.css('opacity', '1');  
+                } catch (error) {  
+                    console.error('[Logo Plugin] Error displaying logo:', error);  
+                    contentContainer.css('opacity', '1');  
+                }  
+            };  
   
-    console.log('[Logo Plugin] Successfully initialized with all improvements');  
-})();
+            img.onerror = function() {  
+                console.error('[Logo Plugin] Failed to load logo image:', logoPath);  
+                contentContainer.css('opacity', '1');  
+            };  
+  
+            img.src = logoPath;  
+        }  
+  
+        // Глобальні функції для зворотної сумісності  
+        window.logoPlugin = {  
+            setLanguage: function(lang) {  
+                console.log('[Logo Plugin] Language setting not implemented in this version');  
+            },  
+            getLanguage: function() {  
+                return 'uk'; // Завжди українська за замовчуванням  
+            }  
+        };  
+  
+        console.log('[Logo Plugin] Successfully initialized with all improvements');  
+    }  
+}();
