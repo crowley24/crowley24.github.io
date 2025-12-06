@@ -429,10 +429,10 @@ initStyles: function() {
         border-color: #FF0000 !important;   
         background: linear-gradient(135deg, #FF0000 0%, #CC0000 50%, #990000 100%) !important;                
         }        
-        .card__quality div[data-quality*="FHD"] {            
-            border-color: #00FF00 !important;            
-            background: linear-gradient(135deg, #00FF00 0%, #32CD32 50%, #228B22 100%) !important;            
-        }                   
+        .card__quality div[data-quality*="FHD"] {  
+    border-color: #006400 !important;  
+    background: linear-gradient(135deg, #006400 0%, #228B22 50%, #2E7D32 100%) !important;  
+}          
         .card__quality div[data-quality*="2K"] {        
             border-color: #4169E1 !important;        
             background: linear-gradient(135deg, #4169E1 0%, #1E90FF 50%, #000080 100%) !important;        
@@ -440,12 +440,12 @@ initStyles: function() {
         .card__quality div[data-quality*="HD"] {        
             border-color: #8B4513 !important;        
             background: linear-gradient(135deg, #8B4513 0%, #A0522D 50%, #654321 100%) !important;        
-        }        
-        /* Усі інші - градієнтний чорний */        
-        .card__quality div:not([data-quality*="4K"]):not([data-quality*="FHD"]):not([data-quality*="2K"]):not([data-quality*="HD"]) {        
-            border-color: #FFFFFF !important;        
-            background: linear-gradient(135deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 50%, rgba(0,0,0,0.5) 100%) !important;        
-        }     
+        } 
+        .card__quality div[data-quality*="SD"] {  
+    border-color: #8B4513 !important;  
+    background: linear-gradient(135deg, #8B4513 0%, #A0522D 50%, #654321 100%) !important;  
+        }
+         
           
         @keyframes fadeIn {        
             from { opacity: 0; transform: scale(0.8); }        
