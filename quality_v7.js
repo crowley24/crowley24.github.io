@@ -325,41 +325,56 @@
     // =======================================================  
     // V. МОДУЛЬ ВИЗНАЧЕННЯ ЯКОСТІ  
     // =======================================================  
-    var QualityDetector = {      
+    
+  var QualityDetector = {      
     detectQuality: function(torrentTitle) {      
         if (!torrentTitle) return null;      
               
         var title = torrentTitle.toLowerCase();      
-              
-        // Комбіновані формати з пріоритетом      
-        if (/\b(4k.*dolby\s*vision|2160p.*dv|uhd.*dolby\s*vision|3840x2160.*dv)\b/i.test(title)) return '4K DV';      
-        if (/\b(4k.*hdr|2160p.*hdr|uhd.*hdr|3840x2160.*hdr)\b/i.test(title)) return '4K HDR';      
-              
-        // Формати релізу та якість      
-        if (/\b(web-dl|webdl|webrip|web-rip|bluray|bdrip|brrip)\b/i.test(title)) return 'FHD';      
-        if (/\b(4k|2160p|uhd|ultra\s*hd|3840x2160|4k\s*uhd|uhd\s*4k)\b/i.test(title)) return '4K';      
-        if (/\b(hdr|hdr10|high\s*dynamic\s*range|hdr\s*10|dolby\s*hdr)\b/i.test(title)) return 'HDR';      
-        if (/\b(hd|720p|1280x720|hdtv|hdrip|hd-rip)\b/i.test(title)) return 'HD';      
-        if (/\b(sd|480p|854x480|dvd|dvdrip|dvdscr|ts|telesync|cam|camrip)\b/i.test(title)) return 'SD';      
-              
+        var result = { video: null, audio: null };  
+          
+        // Визначення якості відео  
+        if (/\b(4k.*dolby\s*vision|2160p.*dv|uhd.*dolby\s*vision|3840x2160.*dv)\b/i.test(title)) result.video = '4K DV';      
+        else if (/\b(4k.*hdr|2160p.*hdr|uhd.*hdr|3840x2160.*hdr)\b/i.test(title)) result.video = '4K HDR';      
+        else if (/\b(web-dl|webdl|webrip|web-rip|bluray|bdrip|brrip)\b/i.test(title)) result.video = 'FHD';      
+        else if (/\b(4k|2160p|uhd|ultra\s*hd|3840x2160|4k\s*uhd|uhd\s*4k)\b/i.test(title)) result.video = '4K';      
+        else if (/\b(hdr|hdr10|high\s*dynamic\s*range|hdr\s*10|dolby\s*hdr)\b/i.test(title)) result.video = 'HDR';      
+        else if (/\b(hd|720p|1280x720|hdtv|hdrip|hd-rip)\b/i.test(title)) result.video = 'HD';      
+        else if (/\b(sd|480p|854x480|dvd|dvdrip|dvdscr)\b/i.test(title)) result.video = 'SD';  
+          
+        // Визначення якості аудіо  
+        if (/\b(ts|telesync|cam|camrip)\b/i.test(title)) result.audio = 'TS';  
+        else if (/\b(line|line.audio)\b/i.test(title)) result.audio = 'LINE';  
+          
+        // Повертаємо комбіновану якість  
+        if (result.video) {  
+            if (result.audio === 'TS' && result.video !== 'SD') {  
+                return result.video + ' TS'; // Показуємо TS для відео вище SD  
+            }  
+            return result.video;  
+        }  
+          
         return null;      
     },      
       
     getBestQuality: function(qualities) {      
         var priority = ['4K DV', '4K HDR', '4K', 'FHD', 'HDR', 'HD', 'SD'];      
-              
+          
         return qualities.reduce(function(best, current) {      
             if (!current) return best;      
             if (!best) return current;      
                   
-            var bestIndex = priority.indexOf(best);      
-            var currentIndex = priority.indexOf(current);      
+            var bestIndex = priority.indexOf(best.replace(' TS', ''));      
+            var currentIndex = priority.indexOf(current.replace(' TS', ''));      
+                  
+            // Якщо одна якість з TS, а інша без - пріоритет без TS  
+            if (best.includes(' TS') && !current.includes(' TS')) return current;      
+            if (!best.includes(' TS') && current.includes(' TS')) return best;      
                   
             return currentIndex > bestIndex ? current : best;      
         }, null);      
     }      
 };
-  
     // =======================================================  
     // VI. МОДУЛЬ UI  
     // =======================================================  
@@ -427,10 +442,14 @@ initStyles: function() {
             border-color: #8B0000 !important;    
             background: linear-gradient(135deg, #8B0000 0%, #660000 50%, #4D0000 100%) !important;    
         }          
-        .card__quality div[data-quality*="HDR"] {    
+        .card__quality div[data-quality*="FHD"] {    
             border-color: #006400 !important;    
             background: linear-gradient(135deg, #006400 0%, #228B22 50%, #2E7D32 100%) !important;    
-        }                   
+        }   
+        .card__quality div[data-quality*="FHD TS"] {          
+    border-color: #FFD700 !important;          
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%) !important;          
+}
         .card__quality div[data-quality*="HD"] {          
             border-color: #4169E1 !important;          
             background: linear-gradient(135deg, #4169E1 0%, #1E90FF 50%, #000080 100%) !important;          
