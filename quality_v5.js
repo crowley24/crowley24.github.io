@@ -408,8 +408,8 @@ initStyles: function() {
             
         @keyframes qualityPulse {          
             0%, 100% { transform: scale(1); }          
-            50% { transform: scale(1.05); }          
-        }            
+            50% { transform: scale(1.15); }    
+        }
             
         @keyframes fadeIn {          
             from { opacity: 0; transform: scale(0.8); }          
