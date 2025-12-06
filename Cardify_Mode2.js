@@ -1273,7 +1273,18 @@ return Trailer;
             
   .cardify-trailer__controlls {          
     display: none !important;          
-  }          
+  } 
+  /* 3D ефект з обертанням для відкриття трейлера */  
+    .cardify-trailer {    
+      opacity: 0;    
+      transform: perspective(1000px) rotateX(-20deg) scale(0.9);    
+      transition: all 0.7s ease;    
+    }    
+      
+    .cardify-trailer.display {    
+      opacity: 1;    
+      transform: perspective(1000px) rotateX(0) scale(1);    
+    }  
 `;        
             
     document.head.appendChild(style);        
