@@ -43,7 +43,31 @@
   }  
 }
 
-
+function setupTrailerControls() {  
+  const trailers = document.querySelectorAll('.cardify-trailer__youtube iframe');  
+    
+  trailers.forEach(iframe => {  
+    // Автовідтворення зі звуком  
+    const src = iframe.src;  
+    if (src && !src.includes('autoplay=1')) {  
+      const separator = src.includes('?') ? '&' : '?';  
+      iframe.src = src + separator + 'autoplay=1&mute=0';  
+    }  
+      
+    // Додайте кнопку mute  
+    const muteButton = makeMuteButton();  
+    const trailerContainer = iframe.closest('.cardify-trailer__youtube');  
+      
+    if (trailerContainer) {  
+      trailerContainer.appendChild(muteButton[0]);  
+        
+      // Обробник кліку  
+      muteButton.on('click', function() {  
+        toggleTrailerMute(muteButton, iframe);  
+      });  
+    }  
+  });  
+} 
   
   function _classCallCheck(instance, Constructor) {
     if (!(instance instanceof Constructor)) {
@@ -1398,31 +1422,7 @@ this.player = new Player(this.object, this.video);
       modifyCardifyStyles();      
     }      
   });      
-function setupTrailerControls() {  
-  const trailers = document.querySelectorAll('.cardify-trailer__youtube iframe');  
-    
-  trailers.forEach(iframe => {  
-    // Автовідтворення зі звуком  
-    const src = iframe.src;  
-    if (src && !src.includes('autoplay=1')) {  
-      const separator = src.includes('?') ? '&' : '?';  
-      iframe.src = src + separator + 'autoplay=1&mute=0';  
-    }  
-      
-    // Додайте кнопку mute  
-    const muteButton = makeMuteButton();  
-    const trailerContainer = iframe.closest('.cardify-trailer__youtube');  
-      
-    if (trailerContainer) {  
-      trailerContainer.appendChild(muteButton[0]);  
-        
-      // Обробник кліку  
-      muteButton.on('click', function() {  
-        toggleTrailerMute(muteButton, iframe);  
-      });  
-    }  
-  });  
-} 
+
   
 // Обробка кнопки "Назад"  
 let trailerMuted = false;  
