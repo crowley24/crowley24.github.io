@@ -1,6 +1,63 @@
 (function () {
   'use strict';
 
+$('<style>')  
+  .prop('type', 'text/css')  
+  .html(`  
+    .cardify-mute-btn {  
+      position: absolute;  
+      bottom: 20px;  
+      right: 20px;  
+      background: rgba(0,0,0,0.7);  
+      border: none;  
+      border-radius: 50%;  
+      width: 48px;  
+      height: 48px;  
+      display: flex;  
+      align-items: center;  
+      justify-content: center;  
+      cursor: pointer;  
+      z-index: 1000;  
+      transition: all 0.3s;  
+    }  
+    .cardify-mute-btn:hover {  
+      background: rgba(0,0,0,0.9);  
+      transform: scale(1.1);  
+    }  
+    .cardify-mute-btn svg {  
+      width: 24px;  
+      height: 24px;  
+      fill: white;  
+    }  
+  `)  
+  .appendTo('head'); 
+
+  window.toggleTrailerMute = function(button) {  
+  try {  
+    const iframe = document.querySelector('.cardify-trailer__youtube iframe');  
+    if (!iframe) return;  
+      
+    const isMuted = iframe.src.includes('mute=1');  
+    const newSrc = isMuted   
+      ? iframe.src.replace('mute=1', 'mute=0')  
+      : iframe.src.replace('mute=0', 'mute=1');  
+      
+    iframe.src = newSrc;  
+      
+    // Оновіть іконку  
+    const muteLines = button.querySelector('.mute-lines');  
+    if (isMuted) {  
+      muteLines.style.display = 'block';  
+    } else {  
+      muteLines.style.display = 'none';  
+    }  
+      
+    console.log('[Cardify] Звук ' + (isMuted ? 'увімкнено' : 'вимкнено'));  
+  } catch (e) {  
+    console.log('[Cardify] Помилка:', e);  
+  }  
+};
+  
   function _classCallCheck(instance, Constructor) {
     if (!(instance instanceof Constructor)) {
       throw new TypeError("Cannot call a class as a function");
@@ -141,9 +198,7 @@
       this.display = false;
       this.ended = false;
       this.listener = Lampa.Subscribe();
-      this.html = $("\n            <div class=\"cardify-trailer\">\n                <div class=\"cardify-trailer__youtube\">\n                    <div class=\"cardify-trailer__youtube-iframe\"></div>\n                    <div class=\"cardify-trailer__youtube-line one\"></div>\n                    <div class=\"cardify-trailer__youtube-line two\"></div>\n                </div>\n\n                <div class=\"cardify-trailer__controlls\">\n                    <div class=\"cardify-trailer__title\"></div>\n                    <div class=\"cardify-trailer__remote\">\n                        <div class=\"cardify-trailer__remote-icon\">\n                            <svg width=\"37\" height=\"37\" viewBox=\"0 0 37 37\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                                <path d=\"M32.5196 7.22042L26.7992 12.9408C27.8463 14.5217 28.4561 16.4175 28.4561 18.4557C28.4561 20.857 27.6098 23.0605 26.1991 24.7844L31.8718 30.457C34.7226 27.2724 36.4561 23.0667 36.4561 18.4561C36.4561 14.2059 34.983 10.2998 32.5196 7.22042Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                                <path d=\"M31.262 31.1054L31.1054 31.262C31.158 31.2102 31.2102 31.158 31.262 31.1054Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                                <path d=\"M29.6917 32.5196L23.971 26.7989C22.3901 27.846 20.4943 28.4557 18.4561 28.4557C16.4179 28.4557 14.5221 27.846 12.9412 26.7989L7.22042 32.5196C10.2998 34.983 14.2059 36.4561 18.4561 36.4561C22.7062 36.4561 26.6123 34.983 29.6917 32.5196Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                                <path d=\"M5.81349 31.2688L5.64334 31.0986C5.69968 31.1557 5.7564 31.2124 5.81349 31.2688Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                                <path d=\"M5.04033 30.4571L10.7131 24.7844C9.30243 23.0605 8.4561 20.857 8.4561 18.4557C8.4561 16.4175 9.06588 14.5217 10.113 12.9408L4.39251 7.22037C1.9291 10.2998 0.456055 14.2059 0.456055 18.4561C0.456054 23.0667 2.18955 27.2724 5.04033 30.4571Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                                <path d=\"M6.45507 5.04029C9.63973 2.18953 13.8455 0.456055 18.4561 0.456055C23.0667 0.456054 27.2724 2.18955 30.4571 5.04034L24.7847 10.7127C23.0609 9.30207 20.8573 8.45575 18.4561 8.45575C16.0549 8.45575 13.8513 9.30207 12.1275 10.7127L6.45507 5.04029Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                                <circle cx=\"18.4565\" cy=\"18.4561\" r=\"7\" fill=\"white\"/>\n                            </svg>\n                        </div>\n                        <div class=\"cardify-trailer__remote-text\">".concat(Lampa.Lang.translate('cardify_enable_sound'), "</div>\n                    </div>\n                </div>\n            </div>\n        "));
-
-      if (typeof YT !== 'undefined' && YT.Player) {
+     this.html = $("\n    <div class=\"cardify-trailer\">\n        <div class=\"cardify-trailer__youtube\">\n            <div class=\"cardify-trailer__youtube-iframe\"></div>\n            <div class=\"cardify-trailer__youtube-line one\"></div>\n            <div class=\"cardify-trailer__youtube-line two\"></div>\n        </div>\n\n        <div class=\"cardify-trailer__controlls\">\n            <div class=\"cardify-trailer__title\"></div>\n            <div class=\"cardify-trailer__remote\">\n                <div class=\"cardify-trailer__remote-icon\">\n                    <svg width=\"37\" height=\"37\" viewBox=\"0 0 37 37\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                        <path d=\"M32.5196 7.22042L26.7992 12.9408C27.8463 14.5217 28.4561 16.4175 28.4561 18.4557C28.4561 20.857 27.6098 23.0605 26.1991 24.7844L31.8718 30.457C34.7226 27.2724 36.4561 23.0667 36.4561 18.4561C36.4561 14.2059 34.983 10.2998 32.5196 7.22042Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                        <path d=\"M31.262 31.1054L31.1054 31.262C31.158 31.2102 31.2102 31.158 31.262 31.1054Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                        <path d=\"M29.6917 32.5196L23.971 26.7989C\"/>\n                    </svg>\n                </div>\n                <div class=\"cardify-trailer__remote-text\">".concat(Lampa.Lang.translate('cardify_enable_sound'), "</div>\n            </div>\n            <!-- Кнопка mute/unmute -->\n            <button class=\"cardify-mute-btn\" onclick=\"toggleTrailerMute(this)\">\n                <svg viewBox=\"0 0 24 24\">\n                    <path d=\"M5.889 16H2a1 1 0 01-1-1V9a1 1 0 011-1h3.889l5.294-4.332a.5.5 0 01.817.387v15.89a.5.5 0 01-.817.387L5.89 16z\"/>\n                    <path class=\"mute-lines\" d=\"M21 12a6 6 0 01-6 6M21 12a6 6 0 00-6-6\" stroke=\"white\" stroke-width=\"2\" fill=\"none\"/>\n                </svg>\n            </button>\n        </div>\n    </div>\n");      if (typeof YT !== 'undefined' && YT.Player) {
         this.youtube = new YT.Player(this.html.find('.cardify-trailer__youtube-iframe')[0], {
           height: window.innerHeight * 2,
           width: window.innerWidth,
