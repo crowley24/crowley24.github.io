@@ -1228,9 +1228,9 @@ return Trailer;
            
       .cardify-trailer__youtube {          
     position: fixed !important;          
-    top: 50% !important;          
+    top: auto !important;          
     right: 2em !important;          
-    bottom: auto !important;          
+    bottom: 20% !important;          
     left: auto !important;          
     height: auto !important;          
     aspect-ratio: 16/9 !important;          
@@ -1239,7 +1239,7 @@ return Trailer;
     border-radius: 12px !important;          
     overflow: hidden !important;          
     z-index: 1000 !important;          
-    transform: translateY(-50%) !important;      
+    transform: none !important;      
     opacity: 1 !important;          
     transition: opacity 0.3s ease !important;          
     pointer-events: none !important;       
