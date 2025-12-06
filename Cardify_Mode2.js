@@ -414,7 +414,9 @@
     _this3.player.unmute();  
   },  
   info: function() {  
-    _this3.toggleTrailerSound();  
+     const trailers = document.querySelectorAll('.cardify-trailer__youtube iframe');  
+    if (trailers.length > 0) {  
+      toggleTrailerSound();   
   },  
     left: function() {    
         Lampa.Controller.toggle('full_start');    
