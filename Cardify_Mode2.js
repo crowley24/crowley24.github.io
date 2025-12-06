@@ -1226,11 +1226,11 @@ return Trailer;
       .cardify-trailer__youtube.size-40 { width: 40% !important; }          
       .cardify-trailer__youtube.size-45 { width: 50% !important; }          
            
-      .cardify-trailer__youtube {          
+     .cardify-trailer__youtube {          
     position: fixed !important;          
     top: auto !important;          
-    right: 2em !important;          
-    bottom: 120% !important;          
+    right: 1.3em !important;          
+    bottom: 3% !important;          
     left: auto !important;          
     height: auto !important;          
     aspect-ratio: 16/9 !important;          
@@ -1238,11 +1238,11 @@ return Trailer;
     max-height: 400px !important;          
     border-radius: 12px !important;          
     overflow: hidden !important;          
-    z-index: 1000 !important;          
-    transform: none !important;      
+    z-index: 50 !important;          
+    transform: none !important;          
     opacity: 1 !important;          
     transition: opacity 0.3s ease !important;          
-    pointer-events: none !important;       
+    pointer-events: none !important;              
   
     /* Багатошарове розмиття для плавного переходу */      
     box-shadow:         
