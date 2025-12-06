@@ -325,44 +325,39 @@
     // =======================================================  
     // V. МОДУЛЬ ВИЗНАЧЕННЯ ЯКОСТІ  
     // =======================================================  
-    var QualityDetector = {    
-    /**    
-     * Спрощене визначення якості    
-     */    
-    detectQuality: function(torrentTitle) {    
-        if (!torrentTitle) return null;    
-            
-        var title = torrentTitle.toLowerCase();    
-            
-        // Комбіновані формати з пріоритетом    
-        if (/\b(4k.*dolby\s*vision|2160p.*dv|uhd.*dolby\s*vision|3840x2160.*dv)\b/i.test(title)) return '4K DV';    
-        if (/\b(4k.*hdr|2160p.*hdr|uhd.*hdr|3840x2160.*hdr)\b/i.test(title)) return '4K HDR';    
-            
-        // Роздільна здатність    
-        if (/\b(4k|2160p|uhd|ultra\s*hd|3840x2160|4k\s*uhd|uhd\s*4k)\b/i.test(title)) return '4K';    
-        if (/\b(hdr|hdr10|high\s*dynamic\s*range|hdr\s*10|dolby\s*hdr)\b/i.test(title)) return 'HDR';    
-        if (/\b(hd|720p|1280x720|hdtv|hdrip|hd-rip)\b/i.test(title)) return 'HD';    
-        if (/\b(sd|480p|854x480|dvd|dvdrip|dvdscr|ts|telesync|cam|camrip)\b/i.test(title)) return 'SD';    
-            
-        return null;    
-    },    
-    
-    /**    
-     * Визначення найкращої якості    
-     */    
-    getBestQuality: function(qualities) {    
-        var priority = ['4K DV', '4K HDR', '4K', 'HDR', 'HD', 'SD'];    
-            
-        return qualities.reduce(function(best, current) {    
-            if (!current) return best;    
-            if (!best) return current;    
-                
-            var bestIndex = priority.indexOf(best);    
-            var currentIndex = priority.indexOf(current);    
-                
-            return currentIndex > bestIndex ? current : best;    
-        }, null);    
-    }    
+    var QualityDetector = {      
+    detectQuality: function(torrentTitle) {      
+        if (!torrentTitle) return null;      
+              
+        var title = torrentTitle.toLowerCase();      
+              
+        // Комбіновані формати з пріоритетом      
+        if (/\b(4k.*dolby\s*vision|2160p.*dv|uhd.*dolby\s*vision|3840x2160.*dv)\b/i.test(title)) return '4K DV';      
+        if (/\b(4k.*hdr|2160p.*hdr|uhd.*hdr|3840x2160.*hdr)\b/i.test(title)) return '4K HDR';      
+              
+        // Формати релізу та якість      
+        if (/\b(web-dl|webdl|webrip|web-rip|bluray|bdrip|brrip)\b/i.test(title)) return 'FHD';      
+        if (/\b(4k|2160p|uhd|ultra\s*hd|3840x2160|4k\s*uhd|uhd\s*4k)\b/i.test(title)) return '4K';      
+        if (/\b(hdr|hdr10|high\s*dynamic\s*range|hdr\s*10|dolby\s*hdr)\b/i.test(title)) return 'HDR';      
+        if (/\b(hd|720p|1280x720|hdtv|hdrip|hd-rip)\b/i.test(title)) return 'HD';      
+        if (/\b(sd|480p|854x480|dvd|dvdrip|dvdscr|ts|telesync|cam|camrip)\b/i.test(title)) return 'SD';      
+              
+        return null;      
+    },      
+      
+    getBestQuality: function(qualities) {      
+        var priority = ['4K DV', '4K HDR', '4K', 'FHD', 'HDR', 'HD', 'SD'];      
+              
+        return qualities.reduce(function(best, current) {      
+            if (!current) return best;      
+            if (!best) return current;      
+                  
+            var bestIndex = priority.indexOf(best);      
+            var currentIndex = priority.indexOf(current);      
+                  
+            return currentIndex > bestIndex ? current : best;      
+        }, null);      
+    }      
 };
   
     // =======================================================  
@@ -510,25 +505,25 @@ initStyles: function() {
             return;  
         }  
   
-        function translateQuality(quality, hasDolbyVision, hasHDR) {  
-            if (typeof quality !== 'number') return quality;  
-                      
-            var qualityLabel = '';  
-            if (quality >= 2160) {  
-                qualityLabel = '4K';  
-                if (hasDolbyVision) {  
-                    qualityLabel += ' DV';  
-                } else if (hasHDR) {  
-                    qualityLabel += ' HDR';  
-                }  
-            }  
-            else if (quality >= 1080) return 'FHD';  
-            else if (quality >= 720) return 'HD';  
-            else if (quality > 0) return 'SD';  
-            else return null;  
-                      
-            return qualityLabel;  
-        }  
+        function translateQuality(quality, hasDolbyVision, hasHDR) {    
+    if (typeof quality !== 'number') return quality;    
+      
+    var qualityLabel = '';    
+    if (quality >= 2160) {    
+        qualityLabel = '4K';    
+        if (hasDolbyVision) {    
+            qualityLabel += ' DV';    
+        } else if (hasHDR) {    
+            qualityLabel += ' HDR';    
+        }    
+    }    
+    else if (quality >= 1080) return 'FHD';    
+    else if (quality >= 720) return 'HD';      
+    else if (quality > 0) return 'SD';    
+    else return null;    
+      
+    return qualityLabel;    
+        }
   
         if (Q_LOGGING) Utils.logWithContext('log', 'JacRed: Search initiated', { cardId: cardId });  
           
