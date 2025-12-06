@@ -1276,14 +1276,16 @@ return Trailer;
   } 
   .cardify-trailer {  
   opacity: 0;  
-  transform: translateX(100px) rotateY(15deg);  
-  transition: all 0.5s ease-out;  
+  transform: scale(0.8) translateY(20px);  
+  filter: blur(10px);  
+  transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);  
 }  
   
 .cardify-trailer.display {  
   opacity: 1;  
-  transform: translateX(0) rotateY(0);     
-    }  
+  transform: scale(1) translateY(0);  
+  filter: blur(0);  
+} 
 `;        
             
     document.head.appendChild(style);        
