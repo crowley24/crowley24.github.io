@@ -325,56 +325,45 @@
     // =======================================================  
     // V. МОДУЛЬ ВИЗНАЧЕННЯ ЯКОСТІ  
     // =======================================================  
-    var QualityDetector = {  
-        /**  
-         * Покращене визначення якості з розширеними патернами  
-         */  
-        detectQuality: function(torrentTitle) {  
-            if (!torrentTitle) return null;  
-              
-            var title = torrentTitle.toLowerCase();  
-              
-            // Комбіновані формати з пріоритетом  
-            if (/\b(4k.*dolby\s*vision|2160p.*dv|uhd.*dolby\s*vision|3840x2160.*dv)\b/i.test(title)) return '4K DV';  
-            if (/\b(4k.*hdr10\+|2160p.*hdr10\+|uhd.*hdr10\+|3840x2160.*hdr10\+)\b/i.test(title)) return '4K HDR10+';  
-            if (/\b(4k.*hdr|2160p.*hdr|uhd.*hdr|3840x2160.*hdr)\b/i.test(title)) return '4K HDR';  
-              
-            // Dolby Vision - розширені патерни  
-            if (/\b(dolby\s*vision|dolbyvision|dv|dovi|dolby\s*vision\s*hdr|vision\s*hdr)\b/i.test(title)) return 'DV';  
-              
-            // HDR10+ - розширені патерни  
-            if (/\b(hdr10\+|hdr\s*10\+|hdr10plus|hdr10\+|hdr\+10)\b/i.test(title)) return 'HDR10+';  
-              
-            // HDR - розширені патерни  
-            if (/\b(hdr|hdr10|high\s*dynamic\s*range|hdr\s*10|dolby\s*hdr)\b/i.test(title)) return 'HDR';  
-              
-            // Роздільна здатність - розширені патерни  
-            if (/\b(4k|2160p|uhd|ultra\s*hd|3840x2160|4k\s*uhd|uhd\s*4k)\b/i.test(title)) return '4K';  
-            if (/\b(2k|1440p|qhd|quad\s*hd|2560x1440|wqhd)\b/i.test(title)) return '2K';  
-            if (/\b(fhd|1080p|full\s*hd|1920x1080|bluray|bd|bdrip|web-dl|webrip|fullhd)\b/i.test(title)) return 'FHD';  
-            if (/\b(hd|720p|1280x720|hdtv|hdrip|hd-rip)\b/i.test(title)) return 'HD';  
-            if (/\b(sd|480p|854x480|dvd|dvdrip|dvdscr|dvdscr|ts|telesync|cam|camrip)\b/i.test(title)) return 'SD';  
-              
-            return null;  
-        },  
-  
-        /**  
-         * Визначення найкращої якості  
-         */  
-        getBestQuality: function(qualities) {  
-            var priority = ['4K DV', '4K HDR10+', '4K HDR', '4K', '2K', 'FHD', 'HDR10+', 'HDR', 'HD', 'SD'];  
-              
-            return qualities.reduce(function(best, current) {  
-                if (!current) return best;  
-                if (!best) return current;  
-                  
-                var bestIndex = priority.indexOf(best);  
-                var currentIndex = priority.indexOf(current);  
-                  
-                return currentIndex > bestIndex ? current : best;  
-            }, null);  
-        }  
-    };  
+    var QualityDetector = {    
+    /**    
+     * Спрощене визначення якості    
+     */    
+    detectQuality: function(torrentTitle) {    
+        if (!torrentTitle) return null;    
+            
+        var title = torrentTitle.toLowerCase();    
+            
+        // Комбіновані формати з пріоритетом    
+        if (/\b(4k.*dolby\s*vision|2160p.*dv|uhd.*dolby\s*vision|3840x2160.*dv)\b/i.test(title)) return '4K DV';    
+        if (/\b(4k.*hdr|2160p.*hdr|uhd.*hdr|3840x2160.*hdr)\b/i.test(title)) return '4K HDR';    
+            
+        // Роздільна здатність    
+        if (/\b(4k|2160p|uhd|ultra\s*hd|3840x2160|4k\s*uhd|uhd\s*4k)\b/i.test(title)) return '4K';    
+        if (/\b(hdr|hdr10|high\s*dynamic\s*range|hdr\s*10|dolby\s*hdr)\b/i.test(title)) return 'HDR';    
+        if (/\b(hd|720p|1280x720|hdtv|hdrip|hd-rip)\b/i.test(title)) return 'HD';    
+        if (/\b(sd|480p|854x480|dvd|dvdrip|dvdscr|ts|telesync|cam|camrip)\b/i.test(title)) return 'SD';    
+            
+        return null;    
+    },    
+    
+    /**    
+     * Визначення найкращої якості    
+     */    
+    getBestQuality: function(qualities) {    
+        var priority = ['4K DV', '4K HDR', '4K', 'HDR', 'HD', 'SD'];    
+            
+        return qualities.reduce(function(best, current) {    
+            if (!current) return best;    
+            if (!best) return current;    
+                
+            var bestIndex = priority.indexOf(best);    
+            var currentIndex = priority.indexOf(current);    
+                
+            return currentIndex > bestIndex ? current : best;    
+        }, null);    
+    }    
+};
   
     // =======================================================  
     // VI. МОДУЛЬ UI  
@@ -383,99 +372,92 @@
         /**  
          * Ініціалізація стилів з CSP сумісністю та анімаціями  
          */  
-initStyles: function() {        
-    var styleElement = document.createElement('style');        
-    styleElement.id = 'maxsm_ratings_quality';        
-    styleElement.textContent = `        
-        .card__view {position: relative !important;}        
-        .card__quality {        
-            position: absolute !important;        
-            bottom: 0.3em !important;        
-            left: -0.8em !important;        
-            background-color: transparent !important;        
-            z-index: 10;        
-            width: fit-content !important;        
-            min-width: 3em !important;        
-            max-width: calc(100% - 1em) !important;        
-        }        
-        .card__quality div {        
-            text-transform: none !important;        
-            border: 2px solid #FFFFFF !important;        
-            color: #FFFFFF !important;        
-            font-weight: bold !important;        
-            font-style: normal !important;        
-            font-size: 1.3em !important;        
-            border-radius: 3px !important;        
-            padding: 0.25em 0.5em !important;        
-            transition: all 0.3s ease !important;        
-            box-shadow: 0 2px 8px rgba(0,0,0,0.5) !important;        
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8) !important;        
-            animation: qualityPulse 2s ease-in-out infinite;        
-        }        
-        .card__quality div:hover {        
-            transform: scale(1.1) !important;        
-            box-shadow: 0 4px 12px rgba(0,0,0,0.7) !important;        
-        }        
-          
-        @keyframes qualityPulse {        
-            0%, 100% { transform: scale(1); }        
-            50% { transform: scale(1.05); }        
-        }        
-          
-        @keyframes fadeIn {        
-            from { opacity: 0; transform: scale(0.8); }        
-            to { opacity: 1; transform: scale(1); }        
-        }        
-        .card__quality {        
-            animation: fadeIn 0.3s ease-out;        
-        }  
-          
-        /* Градієнтні схеми залишаються без змін */        
-        .card__quality div[data-quality*="4K"][data-quality*="DV"] {        
-            border-color: #8A2BE2 !important;        
-            background: linear-gradient(135deg, #8A2BE2 0%, #4B0082 50%, #6A0DAD 100%) !important;        
-        }        
-        .card__quality div[data-quality*="4K"][data-quality*="HDR"] {          
-            border-color: #FF8C00 !important;          
-            background: linear-gradient(135deg, #FFA500 0%, #FF8C00 50%, #FF6347 100%) !important;          
+initStyles: function() {          
+    var styleElement = document.createElement('style');          
+    styleElement.id = 'maxsm_ratings_quality';          
+    styleElement.textContent = `          
+        .card__view {position: relative !important;}          
+        .card__quality {          
+            position: absolute !important;          
+            bottom: 0.3em !important;          
+            left: -0.8em !important;          
+            background-color: transparent !important;          
+            z-index: 10;          
+            width: fit-content !important;          
+            min-width: 3.5em !important;          
+            max-width: calc(100% - 1em) !important;          
         }          
-        .card__quality div[data-quality*="4K"] {  
-    border-color: #8B0000 !important;  
-    background: linear-gradient(135deg, #8B0000 0%, #660000 50%, #4D0000 100%) !important;  
-}
-        .card__quality div[data-quality*="FHD"] {  
-    border-color: #006400 !important;  
-    background: linear-gradient(135deg, #006400 0%, #228B22 50%, #2E7D32 100%) !important;  
-}                 
-        .card__quality div[data-quality*="2K"] {        
-            border-color: #4169E1 !important;        
-            background: linear-gradient(135deg, #4169E1 0%, #1E90FF 50%, #000080 100%) !important;        
-        }        
-        .card__quality div[data-quality*="HD"] {        
-            border-color: #808080 !important;        
-            background: linear-gradient(135deg, #808080 0%, #696969 50%, #2F4F4F 100%) !important;        
-        }        
-        .card__quality div[data-quality*="SD"] {        
-            border-color: #8B4513 !important;        
-            background: linear-gradient(135deg, #8B4513 0%, #A0522D 50%, #654321 100%) !important;        
-        }        
-        /* Усі інші - градієнтний чорний */        
-        .card__quality div:not([data-quality*="4K"]):not([data-quality*="FHD"]):not([data-quality*="2K"]):not([data-quality*="HD"]):not([data-quality*="SD"]) {        
-            border-color: #FFFFFF !important;        
-            background: linear-gradient(135deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 50%, rgba(0,0,0,0.5) 100%) !important;        
-        }     
-          
-        /* Адаптивність для різних розмірів екрану */    
-        @media (max-width: 768px) {    
-            .card__quality div {    
-                font-size: 1em !important;    
-                padding: 0.15em 0.3em !important;    
-            }    
+        .card__quality div {          
+            text-transform: none !important;          
+            border: 2px solid #FFFFFF !important;          
+            color: #FFFFFF !important;          
+            font-weight: bold !important;          
+            font-style: normal !important;          
+            font-size: 1.5em !important;          
+            border-radius: 3px !important;          
+            padding: 0.35em 0.65em !important;          
+            transition: all 0.3s ease !important;          
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5) !important;          
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8) !important;          
+            animation: qualityPulse 2s ease-in-out infinite;          
+        }          
+        .card__quality div:hover {          
+            transform: scale(1.1) !important;          
+            box-shadow: 0 4px 12px rgba(0,0,0,0.7) !important;          
+        }            
+            
+        @keyframes qualityPulse {          
+            0%, 100% { transform: scale(1); }          
+            50% { transform: scale(1.05); }          
+        }            
+            
+        @keyframes fadeIn {          
+            from { opacity: 0; transform: scale(0.8); }          
+            to { opacity: 1; transform: scale(1); }          
+        }          
+        .card__quality {          
+            animation: fadeIn 0.3s ease-out;          
         }    
-    `;    
-        
-    document.head.appendChild(styleElement);  
-        },  
+            
+        /* Градієнтні схеми для потрібних якостей */          
+        .card__quality div[data-quality*="4K"][data-quality*="DV"] {          
+            border-color: #8A2BE2 !important;          
+            background: linear-gradient(135deg, #8A2BE2 0%, #4B0082 50%, #6A0DAD 100%) !important;          
+        }          
+        .card__quality div[data-quality*="4K"][data-quality*="HDR"] {            
+            border-color: #FF8C00 !important;            
+            background: linear-gradient(135deg, #FFA500 0%, #FF8C00 50%, #FF6347 100%) !important;            
+        }            
+        .card__quality div[data-quality*="4K"] {    
+            border-color: #8B0000 !important;    
+            background: linear-gradient(135deg, #8B0000 0%, #660000 50%, #4D0000 100%) !important;    
+        }          
+        .card__quality div[data-quality*="HDR"] {    
+            border-color: #006400 !important;    
+            background: linear-gradient(135deg, #006400 0%, #228B22 50%, #2E7D32 100%) !important;    
+        }                   
+        .card__quality div[data-quality*="HD"] {          
+            border-color: #4169E1 !important;          
+            background: linear-gradient(135deg, #4169E1 0%, #1E90FF 50%, #000080 100%) !important;          
+        }          
+        .card__quality div[data-quality*="SD"] {          
+            border-color: #8B4513 !important;          
+            background: linear-gradient(135deg, #8B4513 0%, #A0522D 50%, #654321 100%) !important;          
+        }       
+            
+        /* Адаптивність для різних розмірів екрану */      
+        @media (max-width: 768px) {      
+            .card__quality div {      
+                font-size: 1.2em !important;      
+                padding: 0.25em 0.45em !important;      
+            }      
+        }      
+    `;      
+          
+    document.head.appendChild(styleElement); 
+      
+
+    },  
   
                /**  
          * Додавання бейджа якості з санітизацією  
