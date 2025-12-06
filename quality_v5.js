@@ -379,7 +379,7 @@ initStyles: function() {
         .card__view {position: relative !important;}          
         .card__quality {          
             position: absolute !important;          
-            bottom: 0.5em !important;          
+            bottom: 0.8em !important;          
             left: -0.8em !important;          
             background-color: transparent !important;          
             z-index: 10;          
