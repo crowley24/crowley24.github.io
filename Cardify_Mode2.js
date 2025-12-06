@@ -1274,16 +1274,15 @@ return Trailer;
   .cardify-trailer__controlls {          
     display: none !important;          
   } 
-  /* 3D ефект з обертанням для відкриття трейлера */  
-    .cardify-trailer {    
-      opacity: 0;    
-      transform: perspective(1000px) rotateX(-20deg) scale(0.9);    
-      transition: all 0.7s ease;    
-    }    
-      
-    .cardify-trailer.display {    
-      opacity: 1;    
-      transform: perspective(1000px) rotateX(0) scale(1);    
+  .cardify-trailer {  
+  opacity: 0;  
+  transform: translateX(100px) rotateY(15deg);  
+  transition: all 0.5s ease-out;  
+}  
+  
+.cardify-trailer.display {  
+  opacity: 1;  
+  transform: translateX(0) rotateY(0);     
     }  
 `;        
             
