@@ -26,9 +26,6 @@
     // II. МОДУЛЬ УТИЛІТ    
     // =======================================================    
     var Utils = {    
-        /**    
-         * Дебаунсінг функції    
-         */    
         debounce: function(func, wait) {    
             var timeout;    
             return function executedFunction() {    
@@ -43,50 +40,34 @@
             };    
         },    
     
-        /**    
-         * Санітизація HTML    
-         */    
         escapeHtml: function(text) {    
             var div = document.createElement('div');    
             div.textContent = text;    
             return div.innerHTML;    
         },    
     
-        /**    
-         * Затримка    
-         */    
         delay: function(ms) {    
             return new Promise(function(resolve) {    
                 setTimeout(resolve, ms);    
             });    
         },    
     
-        /**    
-         * Покращене логування    
-         */    
         logWithContext: function(level, message, context) {    
             if (!Q_LOGGING) return;    
-                
             var logEntry = {    
                 timestamp: new Date().toISOString(),    
                 level: level,    
                 message: message,    
                 context: context || {}    
             };    
-                
             console[level]('[MAXSM-RATINGS] ' + message, logEntry);    
         },    
     
-        /**    
-         * Моніторинг продуктивності    
-         */    
         performance: {    
             timers: {},    
-                
             start: function(name) {    
                 this.timers[name] = performance.now();    
             },    
-                
             end: function(name) {    
                 if (this.timers[name]) {    
                     var duration = performance.now() - this.timers[name];    
@@ -97,18 +78,13 @@
             }    
         },    
     
-        /**    
-         * Статистика виконання    
-         */    
         stats: {    
             requests: 0,    
             cacheHits: 0,    
             errors: 0,    
-                
             increment: function(type) {    
                 this[type] = (this[type] || 0) + 1;    
             },    
-                
             getStats: function() {    
                 return {    
                     requests: this.requests,    
@@ -127,17 +103,12 @@
         activeRequests: 0,    
         requestQueue: [],    
     
-        /**    
-         * Обробка черги запитів    
-         */    
         processQueue: function() {    
             if (this.activeRequests >= MAX_CONCURRENT_REQUESTS || this.requestQueue.length === 0) {    
                 return;    
             }    
-                
             this.activeRequests++;    
             var request = this.requestQueue.shift();    
-                
             this.fetchWithProxyRetry(request.url, request.cardId, function(error, responseText) {    
                 API.activeRequests--;    
                 request.callback(error, responseText);    
@@ -145,30 +116,22 @@
             });    
         },    
     
-        /**    
-         * Додавання запиту в чергу    
-         */    
         queueRequest: function(url, cardId, callback) {    
             this.requestQueue.push({ url: url, cardId: cardId, callback: callback });    
             this.processQueue();    
         },    
     
-        /**    
-         * HTTP клієнт з retry механізмом та експоненційним backoff    
-         */    
         fetchWithProxyRetry: function(url, cardId, callback, retries, attempt) {    
             attempt = attempt || 1;    
             retries = retries || RETRY_ATTEMPTS;    
-                
             this.fetchWithProxy(url, cardId, function(error, responseText) {    
                 if (error && retries > 0) {    
-                    var delay = RETRY_DELAY * Math.pow(2, attempt - 1); // Експоненційний backoff    
+                    var delay = RETRY_DELAY * Math.pow(2, attempt - 1);    
                     Utils.logWithContext('log', 'Retrying request... attempt ' + attempt + '/' + RETRY_ATTEMPTS, {     
                         url: url,     
                         cardId: cardId,     
                         delay: delay     
                     });    
-                        
                     setTimeout(function() {    
                         API.fetchWithProxyRetry(url, cardId, callback, retries - 1, attempt + 1);    
                     }, delay);    
@@ -178,32 +141,26 @@
             });    
         },    
     
-        /**    
-         * Оригінальна функція fetchWithProxy    
-         */    
         fetchWithProxy: function(url, cardId, callback) {    
             var currentProxyIndex = 0;    
             var callbackCalled = false;    
+            var timeoutId = setTimeout(function() {    
+                if (!callbackCalled) {    
+                    callbackCalled = true;    
+                    callback(new Error('Request timeout'), null);    
+                }    
+            }, PROXY_TIMEOUT);    
     
             function tryNextProxy() {    
                 if (currentProxyIndex >= PROXY_LIST.length) {    
                     if (!callbackCalled) {    
                         callbackCalled = true;    
-                        callback(new Error('All proxies failed for ' + url));    
+                        clearTimeout(timeoutId);    
+                        callback(new Error('All proxies failed'), null);    
                     }    
                     return;    
                 }    
-                    
                 var proxyUrl = PROXY_LIST[currentProxyIndex] + encodeURIComponent(url);    
-                if (Q_LOGGING) console.log("MAXSM-RATINGS", "card: " + cardId + ", Fetch with proxy: " + proxyUrl);    
-                    
-                var timeoutId = setTimeout(function() {    
-                    if (!callbackCalled) {    
-                        currentProxyIndex++;    
-                        tryNextProxy();    
-                    }    
-                }, PROXY_TIMEOUT);    
-                    
                 fetch(proxyUrl)    
                     .then(function(response) {    
                         clearTimeout(timeoutId);    
@@ -226,7 +183,6 @@
                         }    
                     });    
             }    
-                
             tryNextProxy();    
         }    
     };    
@@ -235,30 +191,23 @@
     // IV. МОДУЛЬ КАШУВАННЯ    
     // =======================================================    
     var Cache = {    
-        // Налаштування TTL для різних типів даних    
         TTL_CONFIG: {    
-            quality: 24 * 60 * 60 * 1000, // 24 години для якості    
-            error: 5 * 60 * 1000,        // 5 хвилин для помилок    
-            no_quality: 60 * 60 * 1000   // 1 година для відсутності якості    
+            quality: 24 * 60 * 60 * 1000,    
+            error: 5 * 60 * 1000,    
+            no_quality: 60 * 60 * 1000    
         },    
     
-        /**    
-         * Отримання даних з кешу    
-         */    
         get: function(key) {    
             try {    
                 var cache = Lampa.Storage.get(QUALITY_CACHE) || {};    
                 var item = cache[key];    
                 if (!item) return null;    
-                    
                 var now = Date.now();    
                 var ttl = this.TTL_CONFIG[item.type] || this.TTL_CONFIG.quality;    
-                    
                 if (now - item.timestamp < ttl) {    
                     Utils.stats.increment('cacheHits');    
                     return item;    
                 } else {    
-                    // Очищення застарілого запису    
                     delete cache[key];    
                     Lampa.Storage.set(QUALITY_CACHE, cache);    
                 }    
@@ -268,9 +217,6 @@
             return null;    
         },    
     
-        /**    
-         * Збереження даних в кеш    
-         */    
         set: function(key, data, type) {    
             type = type || 'quality';    
             try {    
@@ -286,21 +232,16 @@
             }    
         },    
     
-        /**    
-         * Очищення застарілих записів    
-         */    
         cleanup: function() {    
             try {    
                 var cache = Lampa.Storage.get(QUALITY_CACHE) || {};    
                 var now = Date.now();    
                 var cleanedCache = {};    
                 var cleaned = 0;    
-                    
                 for (var key in cache) {    
                     if (cache.hasOwnProperty(key)) {    
                         var item = cache[key];    
                         var ttl = this.TTL_CONFIG[item.type] || this.TTL_CONFIG.quality;    
-                            
                         if (now - item.timestamp < ttl) {    
                             cleanedCache[key] = item;    
                         } else {    
@@ -308,11 +249,9 @@
                         }    
                     }    
                 }    
-                    
                 if (cleaned > 0 && Q_LOGGING) {    
                     Utils.logWithContext('log', 'Cleaned expired cache entries', { count: cleaned });    
                 }    
-                    
                 Lampa.Storage.set(QUALITY_CACHE, cleanedCache);    
                 return cleanedCache;    
             } catch (error) {    
@@ -326,51 +265,28 @@
     // V. МОДУЛЬ ВИЗНАЧЕННЯ ЯКОСТІ    
     // =======================================================    
     var QualityDetector = {    
-        /**    
-         * Покращене визначення якості з розширеними патернами    
-         */    
         detectQuality: function(torrentTitle) {    
             if (!torrentTitle) return null;    
-                
             var title = torrentTitle.toLowerCase();    
-                
-            // Комбіновані формати з пріоритетом    
             if (/\b(4k.*dolby\s*vision|2160p.*dv|uhd.*dolby\s*vision|3840x2160.*dv)\b/i.test(title)) return '4K DV';    
-            if (/\b(4k.*hdr10\+|2160p.*hdr10\+|uhd.*hdr10\+|3840x2160.*hdr10\+)\b/i.test(title)) return '4K HDR10+';    
             if (/\b(4k.*hdr|2160p.*hdr|uhd.*hdr|3840x2160.*hdr)\b/i.test(title)) return '4K HDR';    
-                
-            // Dolby Vision - розширені патерни    
             if (/\b(dolby\s*vision|dolbyvision|dv|dovi|dolby\s*vision\s*hdr|vision\s*hdr)\b/i.test(title)) return 'DV';    
-                
-            // HDR10+ - розширені патерни    
-            if (/\b(hdr10\+|hdr\s*10\+|hdr10plus|hdr10\+|hdr\+10)\b/i.test(title)) return 'HDR10+';    
-                
-            // HDR - розширені патерни    
             if (/\b(hdr|hdr10|high\s*dynamic\s*range|hdr\s*10|dolby\s*hdr)\b/i.test(title)) return 'HDR';    
-                
-            // Роздільна здатність - розширені патерни    
             if (/\b(4k|2160p|uhd|ultra\s*hd|3840x2160|4k\s*uhd|uhd\s*4k)\b/i.test(title)) return '4K';    
             if (/\b(2k|1440p|qhd|quad\s*hd|2560x1440|wqhd)\b/i.test(title)) return '2K';    
             if (/\b(fhd|1080p|full\s*hd|1920x1080|bluray|bd|bdrip|web-dl|webrip|fullhd)\b/i.test(title)) return 'FHD';    
             if (/\b(hd|720p|1280x720|hdtv|hdrip|hd-rip)\b/i.test(title)) return 'HD';    
             if (/\b(sd|480p|854x480|dvd|dvdrip|dvdscr|dvdscr|ts|telesync|cam|camrip)\b/i.test(title)) return 'SD';    
-                
             return null;    
         },    
     
-        /**    
-         * Визначення найкращої якості    
-         */    
         getBestQuality: function(qualities) {    
-            var priority = ['4K DV', '4K HDR10+', '4K HDR', '4K', '2K', 'FHD', 'HDR10+', 'HDR', 'HD', 'SD'];    
-                
+            var priority = ['4K DV', '4K HDR', '4K', '2K', 'FHD', 'HDR', 'HD', 'SD'];    
             return qualities.reduce(function(best, current) {    
                 if (!current) return best;    
                 if (!best) return current;    
-                    
                 var bestIndex = priority.indexOf(best);    
                 var currentIndex = priority.indexOf(current);    
-                    
                 return currentIndex > bestIndex ? current : best;    
             }, null);    
         }    
@@ -380,9 +296,6 @@
     // VI. МОДУЛЬ UI    
     // =======================================================    
     var UI = {    
-        /**    
-         * Ініціалізація стилів з CSP сумісністю та анімаціями    
-         */    
         initStyles: function() {        
             var styleElement = document.createElement('style');        
             styleElement.id = 'maxsm_ratings_quality';        
@@ -433,16 +346,16 @@
                     background: linear-gradient(135deg, #8A2BE2 0%, #4B0082 50%, #6A0DAD 100%) !important;        
                 }        
                 .card__quality div[data-quality*="4K"][data-quality*="HDR"] {          
-                    border-color: #B22222 !important;          
-                    background: linear-gradient(135deg, #8B0000 0%, #B22222 50%, #DC143C 100%) !important;          
+                    border-color: #FFD700 !important;          
+                    background: linear-gradient(135deg, #FFD700 0%, #FFA500 50%, #FF8C00 100%) !important;          
                 }          
                 .card__quality div[data-quality*="4K"] {   
                     border-color: #8B0000 !important;   
                     background: linear-gradient(135deg, #8B0000 0%, #B22222 50%, #DC143C 100%) !important;                
                 }        
                 .card__quality div[data-quality*="FHD"] {            
-                    border-color: #006400 !important;            
-                    background: linear-gradient(135deg, #006400 0%, #228B22 50%, #2E7D32 100%) !important;            
+                    border-color: #00FF00 !important;            
+                    background: linear-gradient(135deg, #00FF00 0%, #32CD32 50%, #228B22 100%) !important;            
                 }                   
                 .card__quality div[data-quality*="2K"] {        
                     border-color: #4169E1 !important;        
@@ -599,39 +512,26 @@
     var QualityDetector = {    
         detectQuality: function(torrentTitle) {    
             if (!torrentTitle) return null;    
-                
             var title = torrentTitle.toLowerCase();    
-                
-            // Комбіновані формати з пріоритетом    
             if (/\b(4k.*dolby\s*vision|2160p.*dv|uhd.*dolby\s*vision|3840x2160.*dv)\b/i.test(title)) return '4K DV';    
             if (/\b(4k.*hdr|2160p.*hdr|uhd.*hdr|3840x2160.*hdr)\b/i.test(title)) return '4K HDR';    
-                
-            // Dolby Vision    
             if (/\b(dolby\s*vision|dolbyvision|dv|dovi|dolby\s*vision\s*hdr|vision\s*hdr)\b/i.test(title)) return 'DV';    
-                
-            // HDR    
             if (/\b(hdr|hdr10|high\s*dynamic\s*range|hdr\s*10|dolby\s*hdr)\b/i.test(title)) return 'HDR';    
-                
-            // Роздільна здатність    
             if (/\b(4k|2160p|uhd|ultra\s*hd|3840x2160|4k\s*uhd|uhd\s*4k)\b/i.test(title)) return '4K';    
             if (/\b(2k|1440p|qhd|quad\s*hd|2560x1440|wqhd)\b/i.test(title)) return '2K';    
             if (/\b(fhd|1080p|full\s*hd|1920x1080|bluray|bd|bdrip|web-dl|webrip|fullhd)\b/i.test(title)) return 'FHD';    
             if (/\b(hd|720p|1280x720|hdtv|hdrip|hd-rip)\b/i.test(title)) return 'HD';    
             if (/\b(sd|480p|854x480|dvd|dvdrip|dvdscr|dvdscr|ts|telesync|cam|camrip)\b/i.test(title)) return 'SD';    
-                
             return null;    
         },    
     
         getBestQuality: function(qualities) {    
             var priority = ['4K DV', '4K HDR', '4K', '2K', 'FHD', 'HDR', 'HD', 'SD'];    
-                
             return qualities.reduce(function(best, current) {    
                 if (!current) return best;    
                 if (!best) return current;    
-                    
                 var bestIndex = priority.indexOf(best);    
                 var currentIndex = priority.indexOf(current);    
-                    
                 return currentIndex > bestIndex ? current : best;    
             }, null);    
         }    
@@ -656,7 +556,6 @@
     
         function translateQuality(quality, hasDolbyVision, hasHDR) {    
             if (typeof quality !== 'number') return quality;    
-                        
             var qualityLabel = '';    
             if (quality >= 2160) {    
                 qualityLabel = '4K';    
@@ -671,7 +570,6 @@
             else if (quality >= 720) return 'HD';    
             else if (quality > 0) return 'SD';    
             else return null;    
-                        
             return qualityLabel;    
         }    
     
@@ -730,7 +628,6 @@
                     var bestQuality = QualityDetector.getBestQuality(qualities);    
                         
                     if (bestQuality) {    
-                        Utils.stats.recordQuality(bestQuality);    
                         apiCallback({ quality: bestQuality, source: 'JacRed' });    
                     } else {    
                         apiCallback(null);    
@@ -787,16 +684,11 @@
         }    
     }    
     
-    /**    
-     * Основна функція оновлення карток з пакетною обробкою та покращеннями    
-     */    
     function updateCards(cards) {    
         Utils.performance.start('update_cards_batch');    
             
-        // Очищення кешу при старті    
         Cache.cleanup();    
             
-        // Пакетна обробка карток    
         for (var i = 0; i < cards.length; i += BATCH_SIZE) {    
             var batch = cards.slice(i, i + BATCH_SIZE);    
                 
@@ -931,7 +823,6 @@
         window.maxsmRatingsQualityPlugin = true;    
         startPlugin();    
     }    
-})();
-  
-    
+})();  
+   
   
