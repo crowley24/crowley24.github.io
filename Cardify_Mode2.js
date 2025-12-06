@@ -1,5 +1,10 @@
 (function () {  
   'use strict';  
+
+  $('<style>')  
+  .prop('type', 'text/css')  
+  .html('.cardify-trailer__mute { position: absolute; bottom: 20px; right: 80px; display: flex; align-items: center; cursor: pointer; opacity: 0.8; transition: opacity 0.3s; } .cardify-trailer__mute:hover { opacity: 1; } .cardify-trailer__mute-icon { margin-right: 8px; } .cardify-trailer__mute-text { color: white; font-size: 14px; }')  
+  .appendTo('head');
   
   function _classCallCheck(instance, Constructor) {  
     if (!(instance instanceof Constructor)) {  
