@@ -1,517 +1,554 @@
-(function () {  
-  'use strict';  
+(function () {
+  'use strict';
 
+    // Ін'єкція CSS стилів  
   $('<style>')  
-  .prop('type', 'text/css')  
-  .html('.cardify-trailer__mute { position: absolute; bottom: 20px; right: 80px; display: flex; align-items: center; cursor: pointer; opacity: 0.8; transition: opacity 0.3s; } .cardify-trailer__mute:hover { opacity: 1; } .cardify-trailer__mute-icon { margin-right: 8px; } .cardify-trailer__mute-text { color: white; font-size: 14px; }')  
-  .appendTo('head');
-  
-  function _classCallCheck(instance, Constructor) {  
-    if (!(instance instanceof Constructor)) {  
-      throw new TypeError("Cannot call a class as a function");  
+    .prop('type', 'text/css')  
+    .html('.cardify-trailer__mute { position: absolute; bottom: 20px; right: 80px; display: flex; align-items: center; cursor: pointer; opacity: 0.8; transition: opacity 0.3s; } .cardify-trailer__mute:hover { opacity: 1; } .cardify-trailer__mute-icon { margin-right: 8px; } .cardify-trailer__mute-text { color: white; font-size: 14px; }')  
+    .appendTo('head');  
+
+  function makeMuteButton() {  
+  return $(`  
+    <div class="full-start__button selector mute-btn" data-mute-icon="1">  
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24">  
+        <path d="M5.889 16H2a1 1 0 01-1-1V9a1 1 0 011-1h3.889l5.294-4.332a.5.5 0 01.817.387v15.89a.5.5 0 01-.817.387L5.89 16z" fill="white"/>  
+        <path class="mute-path" d="M21 12a6 6 0 01-6 6M21 12a6 6 0 00-6-6" stroke="white" stroke-width="2" fill="none"/>  
+      </svg>  
+      <span>Увімкнути звук</span>  
+    </div>  
+  `);  
+}
+
+  function toggleTrailerMute(button, iframe) {  
+  try {  
+    const isMuted = iframe.src.includes('mute=1');  
+    const newSrc = isMuted   
+      ? iframe.src.replace('mute=1', 'mute=0')  
+      : iframe.src.replace('mute=0', 'mute=1');  
+      
+    iframe.src = newSrc;  
+      
+    const textElement = button.find('span');  
+    const mutePath = button.find('.mute-path');  
+      
+    if (isMuted) {  
+      textElement.text('Вимкнути звук');  
+      mutePath.show();  
+    } else {  
+      textElement.text('Увімкнути звук');  
+      mutePath.hide();  
     }  
+  } catch (e) {  
+    console.log('[Cardify] Помилка перемикання звуку:', e);  
   }  
+}
+
+
   
-  function _defineProperties(target, props) {  
-    for (var i = 0; i < props.length; i++) {  
-      var descriptor = props[i];  
-      descriptor.enumerable = descriptor.enumerable || false;  
-      descriptor.configurable = true;  
-      if ("value" in descriptor) descriptor.writable = true;  
-      Object.defineProperty(target, descriptor.key, descriptor);  
-    }  
-  }  
-  
-  function _createClass(Constructor, protoProps, staticProps) {  
-    if (protoProps) _defineProperties(Constructor.prototype, protoProps);  
-    if (staticProps) _defineProperties(Constructor, staticProps);  
-    return Constructor;  
-  }  
-  
-  function _toConsumableArray(arr) {  
-    return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread();  
-  }  
-  
-  function _arrayWithoutHoles(arr) {  
-    if (Array.isArray(arr)) return _arrayLikeToArray(arr);  
-  }  
-  
-  function _iterableToArray(iter) {  
-    if (typeof Symbol !== "undefined" && iter[Symbol.iterator] != null || iter["@@iterator"] != null) return Array.from(iter);  
-  }  
-  
-  function _unsupportedIterableToArray(o, minLen) {  
-    if (!o) return;  
-    if (typeof o === "string") return _arrayLikeToArray(o, minLen);  
-    var n = Object.prototype.toString.call(o).slice(8, -1);  
-    if (n === "Object" && o.constructor) n = o.constructor.name;  
-    if (n === "Map" || n === "Set") return Array.from(o);  
-    if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen);  
-  }  
-  
-  function _arrayLikeToArray(arr, len) {  
-    if (len == null || len > arr.length) len = arr.length;  
-  
-    for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i];  
-  
-    return arr2;  
-  }  
-  
-  function _nonIterableSpread() {  
-    throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");  
-  }  
-  
-  function _createForOfIteratorHelper(o, allowArrayLike) {  
-    var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"];  
-  
-    if (!it) {  
-      if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") {  
-        if (it) o = it;  
-        var i = 0;  
-  
-        var F = function () {};  
-  
-        return {  
-          s: F,  
-          n: function () {  
-            if (i >= o.length) return {  
-              done: true  
-            };  
-            return {  
-              done: false,  
-              value: o[i++]  
-            };  
-          },  
-          e: function (e) {  
-            throw e;  
-          },  
-          f: F  
-        };  
-      }  
-  
-      throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");  
-    }  
-  
-    var normalCompletion = true,  
-        didErr = false,  
-        err;  
-    return {  
-      s: function () {  
-        it = it.call(o);  
-      },  
-      n: function () {  
-        var step = it.next();  
-        normalCompletion = step.done;  
-        return step;  
-      },  
-      e: function (e) {  
-        didErr = true;  
-        err = e;  
-      },  
-      f: function () {  
-        try {  
-          if (!normalCompletion && it.return != null) it.return();  
-        } finally {  
-          if (didErr) throw err;  
-        }  
-      }  
-    };  
-  }  
-  
-  function State(object) {  
-    this.state = object.state;  
-  
-    this.start = function () {  
-      this.dispath(this.state);  
-    };  
-  
-    this.dispath = function (action_name) {  
-      var action = object.transitions[action_name];  
-  
-      if (action) {  
-        action.call(this, this);  
-      } else {  
-        console.log('invalid action');  
-      }  
-    };  
-  }  
-  
-  var Player = /*#__PURE__*/function () {  
-    function Player(object, video) {  
-      var _this = this;  
-  
-      _classCallCheck(this, Player);  
-  
-      this.paused = false;  
-      this.display = false;  
-      this.ended = false;  
-      this.listener = Lampa.Subscribe();  
+  function _classCallCheck(instance, Constructor) {
+    if (!(instance instanceof Constructor)) {
+      throw new TypeError("Cannot call a class as a function");
+    }
+  }
+
+  function _defineProperties(target, props) {
+    for (var i = 0; i < props.length; i++) {
+      var descriptor = props[i];
+      descriptor.enumerable = descriptor.enumerable || false;
+      descriptor.configurable = true;
+      if ("value" in descriptor) descriptor.writable = true;
+      Object.defineProperty(target, descriptor.key, descriptor);
+    }
+  }
+
+  function _createClass(Constructor, protoProps, staticProps) {
+    if (protoProps) _defineProperties(Constructor.prototype, protoProps);
+    if (staticProps) _defineProperties(Constructor, staticProps);
+    return Constructor;
+  }
+
+  function _toConsumableArray(arr) {
+    return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread();
+  }
+
+  function _arrayWithoutHoles(arr) {
+    if (Array.isArray(arr)) return _arrayLikeToArray(arr);
+  }
+
+  function _iterableToArray(iter) {
+    if (typeof Symbol !== "undefined" && iter[Symbol.iterator] != null || iter["@@iterator"] != null) return Array.from(iter);
+  }
+
+  function _unsupportedIterableToArray(o, minLen) {
+    if (!o) return;
+    if (typeof o === "string") return _arrayLikeToArray(o, minLen);
+    var n = Object.prototype.toString.call(o).slice(8, -1);
+    if (n === "Object" && o.constructor) n = o.constructor.name;
+    if (n === "Map" || n === "Set") return Array.from(o);
+    if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen);
+  }
+
+  function _arrayLikeToArray(arr, len) {
+    if (len == null || len > arr.length) len = arr.length;
+
+    for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i];
+
+    return arr2;
+  }
+
+  function _nonIterableSpread() {
+    throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+  }
+
+  function _createForOfIteratorHelper(o, allowArrayLike) {
+    var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"];
+
+    if (!it) {
+      if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") {
+        if (it) o = it;
+        var i = 0;
+
+        var F = function () {};
+
+        return {
+          s: F,
+          n: function () {
+            if (i >= o.length) return {
+              done: true
+            };
+            return {
+              done: false,
+              value: o[i++]
+            };
+          },
+          e: function (e) {
+            throw e;
+          },
+          f: F
+        };
+      }
+
+      throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+    }
+
+    var normalCompletion = true,
+        didErr = false,
+        err;
+    return {
+      s: function () {
+        it = it.call(o);
+      },
+      n: function () {
+        var step = it.next();
+        normalCompletion = step.done;
+        return step;
+      },
+      e: function (e) {
+        didErr = true;
+        err = e;
+      },
+      f: function () {
+        try {
+          if (!normalCompletion && it.return != null) it.return();
+        } finally {
+          if (didErr) throw err;
+        }
+      }
+    };
+  }
+
+  function State(object) {
+    this.state = object.state;
+
+    this.start = function () {
+      this.dispath(this.state);
+    };
+
+    this.dispath = function (action_name) {
+      var action = object.transitions[action_name];
+
+      if (action) {
+        action.call(this, this);
+      } else {
+        console.log('invalid action');
+      }
+    };
+  }
+
+  var Player = /*#__PURE__*/function () {
+    function Player(object, video) {
+      var _this = this;
+
+      _classCallCheck(this, Player);
+
+      this.paused = false;
+      this.display = false;
+      this.ended = false;
+      this.listener = Lampa.Subscribe();
       this.html = $("\n            <div class=\"cardify-trailer\">\n                <div class=\"cardify-trailer__youtube\">\n                    <div class=\"cardify-trailer__youtube-iframe\"></div>\n                    <div class=\"cardify-trailer__youtube-line one\"></div>\n                    <div class=\"cardify-trailer__youtube-line two\"></div>\n                </div>\n\n                <div class=\"cardify-trailer__controlls\">\n                    <div class=\"cardify-trailer__title\"></div>\n                    <div class=\"cardify-trailer__remote\">\n                        <div class=\"cardify-trailer__remote-icon\">\n                            <svg width=\"37\" height=\"37\" viewBox=\"0 0 37 37\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n                                <path d=\"M32.5196 7.22042L26.7992 12.9408C27.8463 14.5217 28.4561 16.4175 28.4561 18.4557C28.4561 20.857 27.6098 23.0605 26.1991 24.7844L31.8718 30.457C34.7226 27.2724 36.4561 23.0667 36.4561 18.4561C36.4561 14.2059 34.983 10.2998 32.5196 7.22042Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                                <path d=\"M31.262 31.1054L31.1054 31.262C31.158 31.2102 31.2102 31.158 31.262 31.1054Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                                <path d=\"M29.6917 32.5196L23.971 26.7989C22.3901 27.846 20.4943 28.4557 18.4561 28.4557C16.4179 28.4557 14.5221 27.846 12.9412 26.7989L7.22042 32.5196C10.2998 34.983 14.2059 36.4561 18.4561 36.4561C22.7062 36.4561 26.6123 34.983 29.6917 32.5196Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                                <path d=\"M5.81349 31.2688L5.64334 31.0986C5.69968 31.1557 5.7564 31.2124 5.81349 31.2688Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                                <path d=\"M5.04033 30.4571L10.7131 24.7844C9.30243 23.0605 8.4561 20.857 8.4561 18.4557C8.4561 16.4175 9.06588 14.5217 10.113 12.9408L4.39251 7.22037C1.9291 10.2998 0.456055 14.2059 0.456055 18.4561C0.456054 23.0667 2.18955 27.2724 5.04033 30.4571Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                                <path d=\"M6.45507 5.04029C9.63973 2.18953 13.8455 0.456055 18.4561 0.456055C23.0667 0.456054 27.2724 2.18955 30.4571 5.04034L24.7847 10.7127C23.0609 9.30207 20.8573 8.45575 18.4561 8.45575C16.0549 8.45575 13.8513 9.30207 12.1275 10.7127L6.45507 5.04029Z\" fill=\"white\" fill-opacity=\"0.28\"/>\n                                <circle cx=\"18.4565\" cy=\"18.4561\" r=\"7\" fill=\"white\"/>\n                            </svg>\n                        </div>\n                        <div class=\"cardify-trailer__remote-text\">".concat(Lampa.Lang.translate('cardify_enable_sound'), "</div>\n                    </div>\n                </div>\n            </div>\n        "));
-  
-      if (typeof YT !== 'undefined' && YT.Player) {  
-        this.youtube = new YT.Player(this.html.find('.cardify-trailer__youtube-iframe')[0], {  
-          height: window.innerHeight * 2,  
-          width: window.innerWidth,  
-          playerVars: {  
-            'controls': 1,  
-            'showinfo': 0,  
-            'autohide': 1,  
-            'modestbranding': 1,  
-            'autoplay': 0,  
-            'disablekb': 1,  
-            'fs': 0,  
-            'enablejsapi': 1,  
-            'playsinline': 1,  
-            'rel': 0,  
-            'suggestedQuality': 'hd1080',  
-            'setPlaybackQuality': 'hd1080',  
-            'mute': 1  
-          },  
-          videoId: video.id,  
-          events: {  
-            onReady: function onReady(event) {  
-              _this.loaded = true;  
-  
-              _this.listener.send('loaded');  
-            },  
-            onStateChange: function onStateChange(state) {  
-              if (state.data == YT.PlayerState.PLAYING) {  
-                _this.paused = false;  
-                clearInterval(_this.timer);  
-                _this.timer = setInterval(function () {  
-                  var left = _this.youtube.getDuration() - _this.youtube.getCurrentTime();  
-  
-                  var toend = 13;  
-                  var fade = 5;  
-  
-                  if (left <= toend + fade) {  
-                    var vol = 1 - (toend + fade - left) / fade;  
-  
-                    _this.youtube.setVolume(Math.max(0, vol * 100));  
-  
-                    if (left <= toend) {  
-                      clearInterval(_this.timer);  
-  
-                      _this.listener.send('ended');  
-                    }  
-                  }  
-                }, 100);  
-  
-                _this.listener.send('play');  
-  
-                if (window.cardify_fist_unmute) _this.unmute();  
-              }  
-  
-              if (state.data == YT.PlayerState.PAUSED) {  
-                _this.paused = true;  
-                clearInterval(_this.timer);  
-  
-                _this.listener.send('paused');  
-              }  
-  
-              if (state.data == YT.PlayerState.ENDED) {  
-                _this.listener.send('ended');  
-              }  
-  
-              if (state.data == YT.PlayerState.BUFFERING) {  
-                state.target.setPlaybackQuality('hd1080');  
-              }  
-            },  
-            onError: function onError(e) {  
-              _this.loaded = false;  
-  
-              _this.listener.send('error');  
-            }  
-          }  
-        });  
-      }  
-    }  
-  
-    _createClass(Player, [{  
-      key: "play",  
-      value: function play() {  
-        try {  
-          this.youtube.playVideo();  
-        } catch (e) {}  
-      }  
-    }, {  
-      key: "pause",  
-      value: function pause() {  
-        try {  
-          this.youtube.pauseVideo();  
-        } catch (e) {}  
-      }  
-    }, {  
-      key: "unmute",  
-      value: function unmute() {  
-        try {  
-          this.youtube.unMute();  
-          this.html.find('.cardify-trailer__remote').remove();  
-          window.cardify_fist_unmute = true;  
-        } catch (e) {}  
-      }  
-    }, {  
-      key: "show",  
-      value: function show() {  
-        this.html.addClass('display');  
-        this.display = true;  
-      }  
-    }, {  
-      key: "hide",  
-      value: function hide() {  
-        this.html.removeClass('display');  
-        this.display = false;  
-      }  
-    }, {  
-      key: "render",  
-      value: function render() {  
-        return this.html;  
-      }  
-    }, {  
-      key: "destroy",  
-      value: function destroy() {  
-        this.loaded = false;  
-        this.display = false;  
-  
-        try {  
-          this.youtube.destroy();  
-        } catch (e) {}  
-  
-        clearInterval(this.timer);  
-        this.html.remove();  
-      }  
-    }, {  
-      key: "toggleMute",  
-      value: function toggleMute() {  
-        try {  
-          if (this.youtube.isMuted()) {  
-            this.youtube.unMute();  
-            this.html.find('.cardify-trailer__mute-text').text('Вимкнути звук');  
-            this.html.find('.mute-path').show();  
-          } else {  
-            this.youtube.mute();  
-            this.html.find('.cardify-trailer__mute-text').text('Увімкнути звук');  
-            this.html.find('.mute-path').hide();  
-          }  
-        } catch (e) {}  
-      }  
-    }]);  
-  
-    return Player;  
-  }();  
-  
-  var Trailer = /*#__PURE__*/function () {  
-    function Trailer(object, video) {  
-      var _this = this;  
-  
-      _classCallCheck(this, Trailer);  
-  
-      object.activity.trailer_ready = true;  
-      this.object = object;  
-      this.video = video;  
-      this.player;  
-      this.background = this.object.activity.render().find('.full-start__background');  
-      this.startblock = this.object.activity.render().find('.cardify');  
-      this.head = $('.head');  
-      this.timelauch = 1200;  
-      this.firstlauch = false;  
-      this.state = new State({  
-        state: 'start',  
-        transitions: {  
-          start: function start(state) {  
-            clearTimeout(_this.timer_load);  
-            if (_this.player.display) state.dispath('play');else if (_this.player.loaded) {  
-              _this.animate();  
-  
-              _this.timer_load = setTimeout(function () {  
-                state.dispath('load');  
-              }, _this.timelauch);  
-            }  
-          },  
-          load: function load(state) {  
-            if (_this.player.loaded && Lampa.Controller.enabled().name == 'full_start' && _this.same()) state.dispath('play');  
-          },  
-          play: function play() {  
-            _this.player.play();  
-          },  
+
+      if (typeof YT !== 'undefined' && YT.Player) {
+        this.youtube = new YT.Player(this.html.find('.cardify-trailer__youtube-iframe')[0], {
+          height: window.innerHeight * 2,
+          width: window.innerWidth,
+          playerVars: {
+            'controls': 1,
+            'showinfo': 0,
+            'autohide': 1,
+            'modestbranding': 1,
+            'autoplay': 0,
+            'disablekb': 1,
+            'fs': 0,
+            'enablejsapi': 1,
+            'playsinline': 1,
+            'rel': 0,
+            'suggestedQuality': 'hd1080',
+            'setPlaybackQuality': 'hd1080',
+            'mute': 1
+          },
+          videoId: video.id,
+          //'zSpYWxX4JdY',//'jk7jjaFs09U',
+          //videoId: 'jk7jjaFs09U',
+          events: {
+            onReady: function onReady(event) {
+              _this.loaded = true;
+
+              _this.listener.send('loaded');
+            },
+            onStateChange: function onStateChange(state) {
+              if (state.data == YT.PlayerState.PLAYING) {
+                _this.paused = false;
+                clearInterval(_this.timer);
+                _this.timer = setInterval(function () {
+                  var left = _this.youtube.getDuration() - _this.youtube.getCurrentTime();
+
+                  var toend = 13;
+                  var fade = 5;
+
+                  if (left <= toend + fade) {
+                    var vol = 1 - (toend + fade - left) / fade;
+
+                    _this.youtube.setVolume(Math.max(0, vol * 100));
+
+                    if (left <= toend) {
+                      clearInterval(_this.timer);
+
+                      _this.listener.send('ended');
+                    }
+                  }
+                }, 100);
+
+                _this.listener.send('play');
+
+                if (window.cardify_fist_unmute) _this.unmute();
+              }
+
+              if (state.data == YT.PlayerState.PAUSED) {
+                _this.paused = true;
+                clearInterval(_this.timer);
+
+                _this.listener.send('paused');
+              }
+
+              if (state.data == YT.PlayerState.ENDED) {
+                _this.listener.send('ended');
+              }
+
+              if (state.data == YT.PlayerState.BUFFERING) {
+                state.target.setPlaybackQuality('hd1080');
+              }
+            },
+            onError: function onError(e) {
+              _this.loaded = false;
+
+              _this.listener.send('error');
+            }
+          }
+        });
+      }
+    }
+
+    _createClass(Player, [{
+      key: "play",
+      value: function play() {
+        try {
+          this.youtube.playVideo();
+        } catch (e) {}
+      }
+    }, {
+      key: "pause",
+      value: function pause() {
+        try {
+          this.youtube.pauseVideo();
+        } catch (e) {}
+      }
+    }, {
+      key: "unmute",
+      value: function unmute() {
+        try {
+          this.youtube.unMute();
+          this.html.find('.cardify-trailer__remote').remove();
+          window.cardify_fist_unmute = true;
+        } catch (e) {}
+      }
+    }, {
+      key: "show",
+      value: function show() {
+        this.html.addClass('display');
+        this.display = true;
+      }
+    }, {
+      key: "hide",
+      value: function hide() {
+        this.html.removeClass('display');
+        this.display = false;
+      }
+    }, {
+      key: "render",
+      value: function render() {
+        return this.html;
+      }
+    }, {
+      key: "destroy",
+      value: function destroy() {
+        this.loaded = false;
+        this.display = false;
+
+        try {
+          this.youtube.destroy();
+        } catch (e) {}
+
+        clearInterval(this.timer);
+        this.html.remove();
+      }
+    }]);
+
+    return Player;
+  }();
+
+  var Trailer = /*#__PURE__*/function () {
+    function Trailer(object, video) {
+      var _this = this;
+
+      _classCallCheck(this, Trailer);
+
+      object.activity.trailer_ready = true;
+      this.object = object;
+      this.video = video;
+      this.player;
+      this.background = this.object.activity.render().find('.full-start__background');
+      this.startblock = this.object.activity.render().find('.cardify');
+      this.head = $('.head');
+      this.timelauch = 1200;
+      this.firstlauch = false;
+      this.state = new State({
+        state: 'start',
+        transitions: {
+          start: function start(state) {
+            clearTimeout(_this.timer_load);
+            if (_this.player.display) state.dispath('play');else if (_this.player.loaded) {
+              _this.animate();
+
+              _this.timer_load = setTimeout(function () {
+                state.dispath('load');
+              }, _this.timelauch);
+            }
+          },
+          load: function load(state) {
+            if (_this.player.loaded && Lampa.Controller.enabled().name == 'full_start' && _this.same()) state.dispath('play');
+          },
+          play: function play() {
+            _this.player.play();
+          },
           toggle: function toggle(state) {  
-            clearTimeout(_this.timer_load);  
+  clearTimeout(_this.timer_load);  
+    
+  // Видаліть або закоментуйте цей блок:  
+  // if (Lampa.Controller.enabled().name == 'cardify_trailer') ;   
+  // else if (Lampa.Controller.enabled().name == 'full_start' && _this.same()) {  
+  //   state.start();  
+  // } else if (_this.player.display) {  
+  //   state.dispath('hide');  
+  // }  
+    
+  // Замініть на:  
+  if (Lampa.Controller.enabled().name == 'full_start' && _this.same()) {  
+    state.start();  
+  }  
+  },
+          hide: function hide() {
+            _this.player.pause();
+
+            _this.player.hide();
+
+            _this.background.removeClass('nodisplay');
+
+            _this.startblock.removeClass('nodisplay');
+
+            _this.head.removeClass('nodisplay');
+
+            _this.object.activity.render().find('.cardify-preview__loader').width(0);
+          }
+        }
+      });
+      this.start();
+    }
+
+    _createClass(Trailer, [{
+      key: "same",
+      value: function same() {
+        return Lampa.Activity.active().activity === this.object.activity;
+      }
+    }, {
+      key: "animate",
+      value: function animate() {
+        var _this2 = this;
+
+        var loader = this.object.activity.render().find('.cardify-preview__loader').width(0);
+        var started = Date.now();
+        clearInterval(this.timer_anim);
+        this.timer_anim = setInterval(function () {
+          var left = Date.now() - started;
+          if (left > _this2.timelauch) clearInterval(_this2.timer_anim);
+          loader.width(Math.round(left / _this2.timelauch * 100) + '%');
+        }, 100);
+      }
+    }, {
+      key: "preview",
+      value: function preview() {
+        var preview = $("\n            <div class=\"cardify-preview\">\n                <div>\n                    <img class=\"cardify-preview__img\" />\n                    <div class=\"cardify-preview__line one\"></div>\n                    <div class=\"cardify-preview__line two\"></div>\n                    <div class=\"cardify-preview__loader\"></div>\n                </div>\n            </div>\n        ");
+        Lampa.Utils.imgLoad($('img', preview), this.video.img, function () {
+          $('img', preview).addClass('loaded');
+        });
+        this.object.activity.render().find('.cardify__right').append(preview);
+      }
+    }, {
+      key: "controll",
+      value: function controll() {
+        var _this3 = this;
+
+        var out = function out() {
+          _this3.state.dispath('hide');
+
+          Lampa.Controller.toggle('full_start');
+        };
+
+        Lampa.Controller.add('cardify_trailer', {    
+    toggle: function() {    
+        Lampa.Controller.clear();    
+    },    
+    enter: function() {    
+        _this3.player.unmute();    
+    },    
+    left: function() {    
+        Lampa.Controller.toggle('full_start');    
+        Lampa.Controller.trigger('left');    
+    },    
+    up: function() {    
+        Lampa.Controller.toggle('full_start');     
+        Lampa.Controller.trigger('up');    
+    },    
+    down: function() {    
+        Lampa.Controller.toggle('full_start');    
+        Lampa.Controller.trigger('down');    
+    },    
+    right: function() {    
+        Lampa.Controller.toggle('full_start');    
+        Lampa.Controller.trigger('right');    
+    },    
+    back: function back() {    
+        _this3.state.dispath('hide');    
+        Lampa.Controller.toggle('full_start');       
+    },    
+    // Додати нові контролери    
+    volume_up: function() {    
+        const currentVolume = _this3.player.youtube.getVolume();    
+        _this3.player.youtube.setVolume(Math.min(100, currentVolume + 10));    
+    },    
+    volume_down: function() {    
+        const currentVolume = _this3.player.youtube.getVolume();    
+        _this3.player.youtube.setVolume(Math.max(0, currentVolume - 10));    
+    }    
+});  
   
-            if (Lampa.Controller.enabled().name == 'full_start' && _this.same()) {  
-              state.start();  
-            }  
-          },  
-          hide: function hide() {  
-            _this.player.pause();  
+Lampa.Controller.toggle('cardify_trailer');  
+}  
+}, {  
+    key: "start",  
+    value: function start() {  
+var _this4 = this;  
+var _self = this;  
   
-            _this.player.hide();  
+var toggle = function toggle(e) {  
+    _self.state.dispath('toggle');  
+};  
   
-            _this.background.removeClass('nodisplay');  
+var destroy = function destroy(e) {  
+    if (e.type == 'destroy' && e.object.activity === _self.object.activity) remove();  
+};  
   
-            _this.startblock.removeClass('nodisplay');  
+var remove = function remove() {  
+    Lampa.Listener.remove('activity', destroy);  
+    Lampa.Controller.listener.remove('toggle', toggle);  
+      
+    // Відновити системну поведінку  
+    window.onbeforeunload = originalOnBeforeUnload;  
+    window.history.back = originalHistoryBack;  
+      
+    _self.destroy();  
+};  
   
-            _this.head.removeClass('nodisplay');  
+// Зберегти оригінальні методи  
+var originalOnBeforeUnload = window.onbeforeunload;  
+var originalHistoryBack = window.history.back;  
   
-            _this.object.activity.render().find('.cardify-preview__loader').width(0);  
-          }  
-        }  
-      });  
-      this.start();  
+// Агресивне перехоплення на рівні вікна  
+window.onbeforeunload = function(e) {  
+    if (_this4.player && _this4.player.display) {  
+        console.log('[Cardify] Window beforeunload intercepted');  
+        _this4.state.dispath('hide');  
+        e.preventDefault();  
+        e.returnValue = ''; // Для старих браузерів  
+        return ''; // Для сучасних браузерів  
     }  
-  
-    _createClass(Trailer, [{  
-      key: "same",  
-      value: function same() {  
-        return Lampa.Activity.active().activity === this.object.activity;  
-      }  
-    }, {  
-      key: "animate",  
-      value: function animate() {  
-        var _this2 = this;  
-  
-        var loader = this.object.activity.render().find('.cardify-preview__loader').width(0);  
-        var started = Date.now();  
-        clearInterval(this.timer_anim);  
-        this.timer_anim = setInterval(function () {  
-          var left = Date.now() - started;  
-          if (left > _this2.timelauch) clearInterval(this.timer_anim);  
-          loader.width(Math.round(left / _this2.timelauch * 100) + '%');  
-        }, 100);  
-      }  
-    }, {  
-      key: "preview",  
-      value: function preview() {  
-        var preview = $("\n            <div class=\"cardify-preview\">\n                <div>\n                    <img class=\"cardify-preview__img\" />\n                    <div class=\"cardify-preview__line one\"></div>\n                    <div class=\"cardify-preview__line two\"></div>\n                    <div class=\"cardify-preview__loader\"></div>\n                </div>\n            </div>\n        ");  
-        Lampa.Utils.imgLoad($('img', preview), this.video.img, function () {  
-          $('img', preview).addClass('loaded');  
-        });  
-        this.object.activity.render().find('.cardify__right').append(preview);  
-      }  
-    }, {  
-      key: "controll",  
-      value: function controll() {  
-        var _this3 = this;  
-  
-        var out = function out() {  
-          _this3.state.dispath('hide');  
-  
-          Lampa.Controller.toggle('full_start');  
-        };  
-  
-        Lampa.Controller.add('cardify_trailer', {  
-          toggle: function () {  
-            Lampa.Controller.clear();  
-          },  
-          enter: function () {  
-            _this3.player.unmute();  
-          },  
-          left: function () {  
-            Lampa.Controller.toggle('full_start');  
-            Lampa.Controller.trigger('left');  
-          },  
-          up: function () {  
-            Lampa.Controller.toggle('full_start');  
-            Lampa.Controller.trigger('up');  
-          },  
-          down: function () {  
-            Lampa.Controller.toggle('full_start');  
-            Lampa.Controller.trigger('down');  
-          },  
-          right: function () {  
-            Lampa.Controller.toggle('full_start');  
-            Lampa.Controller.trigger('right');  
-          },  
-          back: function back() {  
-            _this3.state.dispath('hide');  
-            Lampa.Controller.toggle('full_start');  
-          },  
-          volume_up: function () {  
-            const currentVolume = _this3.player.youtube.getVolume();  
-            _this3.player.youtube.setVolume(Math.min(100, currentVolume + 10));  
-          },  
-          volume_down: function () {  
-            const currentVolume = _this3.player.youtube.getVolume();  
-            _this3.player.youtube.setVolume(Math.max(0, currentVolume - 10));  
-          },  
-          mute: function () {  
-            _this3.player.toggleMute();  
-          }  
-        });  
-  
-        Lampa.Controller.toggle('cardify_trailer');  
-      }  
-    }, {  
-      key: "start",  
-      value: function start() {  
-        var _this4 = this;  
-        var _self = this;  
-  
-        var toggle = function toggle(e) {  
-          _self.state.dispath('toggle');  
-        };  
-  
-        var destroy = function destroy(e) {  
-          if (e.type == 'destroy' && e.object.activity === _self.object.activity) remove();  
-        };  
-  
-        var remove = function remove() {  
-          Lampa.Listener.remove('activity', destroy);  
-          Lampa.Controller.listener.remove('toggle', toggle);  
-  
-          window.onbeforeunload = originalOnBeforeUnload;  
-          window.history.back = originalHistoryBack;  
-  
-          _self.destroy();  
-        };  
-  
-        var originalOnBeforeUnload = window.onbeforeunload;  
-        var originalHistoryBack = window.history.back;  
-  
-        window.onbeforeunload = function (e) {  
-          if (_this4.player && _this4.player.display) {  
-            console.log('[Cardify] Window beforeunload intercepted');  
-            _this4.state.dispath('hide');  
-            e.preventDefault();  
-            e.returnValue = '';  
-            return '';  
-          }  
-        };   
+};  
   
 // Перевизначити history.back  
-window.history.back = function () {  
-  if (_this4.player && _this4.player.display) {  
-    console.log('[Cardify] History back intercepted');  
-    _this4.state.dispath('hide');  
-    return;  
-  }  
-  originalHistoryBack.call(this);  
+window.history.back = function() {  
+    if (_this4.player && _this4.player.display) {  
+        console.log('[Cardify] History back intercepted');  
+        _this4.state.dispath('hide');  
+        return;  
+    }  
+    originalHistoryBack.call(this);  
 };  
   
 // Додатковий обробник для максимальної сумісності  
 var universalHandler = function(e) {  
-  const backKeys = [  
-    e.code === 'Back',  
-    e.code === 'Backspace',  
-    e.keyCode === 10009,  // Android TV  
-    e.keyCode === 461,    // WebOS  
-    e.keyCode === 8,      // Generic BACK  
-    e.keyCode === 27,     // ESC  
-    e.key === 'Back',  
-    e.key === 'Escape'  
-  ];  
-  
-  if (backKeys.some(condition => condition) && _this4.player && _this4.player.display) {  
-    console.log('[Cardify] Universal handler intercepted:', e.code, e.keyCode);  
-    e.preventDefault();  
-    e.stopPropagation();  
-    e.stopImmediatePropagation();  
-  
-    if (e.cancelable !== false) {  
-      _this4.state.dispath('hide');  
+    const backKeys = [  
+        e.code === 'Back',  
+        e.code === 'Backspace',   
+        e.keyCode === 10009,  // Android TV  
+        e.keyCode === 461,    // WebOS  
+        e.keyCode === 8,      // Generic BACK  
+        e.keyCode === 27,     // ESC  
+        e.key === 'Back',  
+        e.key === 'Escape'  
+    ];  
+      
+    if (backKeys.some(condition => condition) && _this4.player && _this4.player.display) {  
+        console.log('[Cardify] Universal handler intercepted:', e.code, e.keyCode);  
+        e.preventDefault();  
+        e.stopPropagation();  
+        e.stopImmediatePropagation();  
+          
+        // Блокувати системний діалог  
+        if (e.cancelable !== false) {  
+            _this4.state.dispath('hide');  
+        }  
+          
+        return false;  
     }  
-  
-    return false;  
-  }  
 };  
   
 // Додати всі можливі слухачі  
@@ -521,50 +558,55 @@ Lampa.Listener.follow('keydown', universalHandler);
 Lampa.Listener.follow('activity', destroy);  
 Lampa.Controller.listener.follow('toggle', toggle);  
   
-this.player = new Player(this.object, this.video);  
-this.player.listener.follow('loaded', function () {  
-  _this4.preview();  
-  _this4.state.start();  
-});  
-this.player.listener.follow('play', function () {  
-  clearTimeout(_this4.timer_show);  
+this.player = new Player(this.object, this.video);   
+    this.player.listener.follow('loaded', function () {  
+        _this4.preview();  
+        _this4.state.start();  
+    });  
+    this.player.listener.follow('play', function () {  
+        clearTimeout(_this4.timer_show);  
   
-  if (!_this4.firstlauch) {  
-    _this4.firstlauch = true;  
-    _this4.timelauch = 5000;  
-  }  
+        if (!_this4.firstlauch) {  
+            _this4.firstlauch = true;  
+            _this4.timelauch = 5000;  
+        }  
   
-  _this4.timer_show = setTimeout(function () {  
-    _this4.player.show();  
-    _this4.controll();  
-  }, 500);  
-});  
-this.player.listener.follow('ended,error', function () {  
-  _this4.state.dispath('hide');  
+        _this4.timer_show = setTimeout(function () {  
+            _this4.player.show();  
   
-  if (Lampa.Controller.enabled().name !== 'full_start') Lampa.Controller.toggle('full_start');  
+            // _this4.background.addClass('nodisplay');  
+            // _this4.startblock.addClass('nodisplay');  
+            // _this4.head.addClass('nodisplay');  
   
-  _this4.object.activity.render().find('.cardify-preview').remove();  
+            _this4.controll();  
+        }, 500);  
+    });  
+    this.player.listener.follow('ended,error', function () {  
+        _this4.state.dispath('hide');  
   
-  setTimeout(remove, 300);  
-});  
-this.object.activity.render().find('.activity__body').prepend(this.player.render());  
+        if (Lampa.Controller.enabled().name !== 'full_start') Lampa.Controller.toggle('full_start');  
   
-this.state.start();  
-}  
+        _this4.object.activity.render().find('.cardify-preview').remove();  
+  
+        setTimeout(remove, 300);  
+    });  
+    this.object.activity.render().find('.activity__body').prepend(this.player.render());  
+  
+    this.state.start();  
+    }  
 }, {  
-  key: "destroy",  
-  value: function destroy() {  
-    clearTimeout(this.timer_load);  
-    clearTimeout(this.timer_show);  
-    clearInterval(this.timer_anim);  
-    this.player.destroy();  
-  }  
-}]);  
-  
-return Trailer;  
-}();
-  
+    key: "destroy",  
+    value: function destroy() {  
+        clearTimeout(this.timer_load);  
+        clearTimeout(this.timer_show);  
+        clearInterval(this.timer_anim);  
+        this.player.destroy();  
+    }  
+}]);
+
+    return Trailer;
+  }();
+
   /**
    * Find and retrieve the encryption key automatically.
    * @param {string} str - The input encrypted string.
@@ -1226,7 +1268,7 @@ return Trailer;
       .cardify-trailer__youtube.size-40 { width: 40% !important; }          
       .cardify-trailer__youtube.size-45 { width: 50% !important; }          
            
-     .cardify-trailer__youtube {          
+      .cardify-trailer__youtube {          
     position: fixed !important;          
     top: auto !important;          
     right: 1.3em !important;          
@@ -1242,7 +1284,7 @@ return Trailer;
     transform: none !important;          
     opacity: 1 !important;          
     transition: opacity 0.3s ease !important;          
-    pointer-events: none !important;              
+    pointer-events: none !important;       
   
     /* Багатошарове розмиття для плавного переходу */      
     box-shadow:         
@@ -1269,23 +1311,35 @@ return Trailer;
   .cardify-trailer__youtube-line {          
     display: none !important;          
     visibility: hidden !important;          
-  }          
+  }  
+  .cardify-trailer__mute {  
+  position: absolute;  
+  bottom: 20px;  
+  right: 80px;  
+  display: flex;  
+  align-items: center;  
+  cursor: pointer;  
+  opacity: 0.8;  
+  transition: opacity 0.3s;  
+  z-index: 1000;  
+}  
+  
+.cardify-trailer__mute:hover {  
+  opacity: 1;  
+}  
+  
+.cardify-trailer__mute-icon {  
+  margin-right: 8px;  
+}  
+  
+.cardify-trailer__mute-text {  
+  color: white;  
+  font-size: 14px;  
+}
             
   .cardify-trailer__controlls {          
     display: none !important;          
-  } 
-  .cardify-trailer {  
-  opacity: 0;  
-  transform: scale(0.8) translateY(20px);  
-  filter: blur(10px);  
-  transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);  
-}  
-  
-.cardify-trailer.display {  
-  opacity: 1;  
-  transform: scale(1) translateY(0);  
-  filter: blur(0);  
-} 
+  }          
 `;        
             
     document.head.appendChild(style);        
@@ -1348,14 +1402,27 @@ function setupTrailerControls() {
   const trailers = document.querySelectorAll('.cardify-trailer__youtube iframe');  
     
   trailers.forEach(iframe => {  
-    // Додаємо параметри для автовідтворення зі звуком  
+    // Автовідтворення зі звуком  
     const src = iframe.src;  
     if (src && !src.includes('autoplay=1')) {  
       const separator = src.includes('?') ? '&' : '?';  
       iframe.src = src + separator + 'autoplay=1&mute=0';  
     }  
+      
+    // Додайте кнопку mute  
+    const muteButton = makeMuteButton();  
+    const trailerContainer = iframe.closest('.cardify-trailer__youtube');  
+      
+    if (trailerContainer) {  
+      trailerContainer.appendChild(muteButton[0]);  
+        
+      // Обробник кліку  
+      muteButton.on('click', function() {  
+        toggleTrailerMute(muteButton, iframe);  
+      });  
+    }  
   });  
-}  
+} 
   
 // Обробка кнопки "Назад"  
 let trailerMuted = false;  
