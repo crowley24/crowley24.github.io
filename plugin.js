@@ -1,859 +1,418 @@
-(function() {
-  'use strict';
-
-  // ==================== КОНФІГУРАЦІЯ ====================
-  const CONFIG = {
-    api: 'lampac',
-    localhost: 'https://rc.bwa.to/',
-    apn: '',
-    timeouts: {
-      default: 10000,
-      request: 8000,
-      lifeSource: 3000,
-      createSource: 15000
-    },
-    limits: {
-      maxRequests: 10,
-      requestInterval: 4000,
-      maxLifeWait: 15
-    }
-  };
-
-  // ==================== УТИЛІТИ ====================
-  const Utils = {
-    getUnicId() {
-      let id = Lampa.Storage.get('lampac_unic_id', '');
-      if (!id) {
-        id = Lampa.Utils.uid(8).toLowerCase();
-        Lampa.Storage.set('lampac_unic_id', id);
-      }
-      return id;
-    },
-
-    getAndroidVersion() {
-      if (!Lampa.Platform.is('android')) return 0;
-      try {
-        const current = AndroidJS.appVersion().split('-');
-        return parseInt(current.pop()) || 0;
-      } catch (e) {
-        return 0;
-      }
-    },
-
-    debounce(func, wait) {
-      let timeout;
-      return function(...args) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), wait);
-      };
-    },
-
-    throttle(func, limit) {
-      let inThrottle;
-      return function(...args) {
-        if (!inThrottle) {
-          func.apply(this, args);
-          inThrottle = true;
-          setTimeout(() => inThrottle = false, limit);
-        }
-      };
-    }
-  };
-
-  // ==================== КЕШУВАННЯ ====================
-  const Cache = {
-    balansers: undefined,
-    templates: new Map(),
-    
-    get(key) {
-      return this[key];
-    },
-    
-    set(key, value) {
-      this[key] = value;
-      return value;
-    }
-  };
-
-  // ==================== ІНІЦІАЛІЗАЦІЯ ====================
-  const unic_id = Utils.getUnicId();
-  const hostkey = CONFIG.localhost.replace(/^https?:\/\//, '');
-
-  // Ініціалізація RCH
-  if (!window.rch_nws) window.rch_nws = {};
+// Версія плагіну: 4.4 - Фінальна версія з іконкою для онлайн кнопки в Lampa 3.0.0+  
+// Поєднує розділення кнопок та оптимізовані SVG/стилі  
   
-  if (!window.rch_nws[hostkey]) {
-    window.rch_nws[hostkey] = {
-      type: Lampa.Platform.is('android') ? 'apk' : Lampa.Platform.is('tizen') ? 'cors' : undefined,
-      startTypeInvoke: false,
-      rchRegistry: false,
-      apkVersion: Utils.getAndroidVersion()
-    };
-  }
-
-  // ==================== RCH ФУНКЦІЇ ====================
-  window.rch_nws[hostkey].typeInvoke = function(host, callback) {
-    if (!window.rch_nws[hostkey].startTypeInvoke) {
-      window.rch_nws[hostkey].startTypeInvoke = true;
-
-      const check = (good) => {
-        window.rch_nws[hostkey].type = Lampa.Platform.is('android') ? 'apk' : good ? 'cors' : 'web';
-        callback();
-      };
-
-      if (Lampa.Platform.is('android') || Lampa.Platform.is('tizen')) {
-        check(true);
-      } else {
-        const net = new Lampa.Reguest();
-        const checkUrl = CONFIG.localhost.indexOf(location.host) >= 0 
-          ? 'https://github.com/' 
-          : `${host}/cors/check`;
-        
-        net.silent(checkUrl, 
-          () => check(true), 
-          () => check(false), 
-          false, 
-          { dataType: 'text' }
-        );
-      }
-    } else {
-      callback();
-    }
-  };
-
-  window.rch_nws[hostkey].Registry = function(client, startConnection) {
-    window.rch_nws[hostkey].typeInvoke(CONFIG.localhost, () => {
-      client.invoke("RchRegistry", JSON.stringify({
-        version: 149,
-        host: location.host,
-        rchtype: Lampa.Platform.is('android') ? 'apk' : 
-                 Lampa.Platform.is('tizen') ? 'cors' : 
-                 window.rch_nws[hostkey].type,
-        apkVersion: window.rch_nws[hostkey].apkVersion,
-        player: Lampa.Storage.field('player'),
-        account_email: Lampa.Storage.get('account_email'),
-        unic_id: Lampa.Storage.get('lampac_unic_id', ''),
-        profile_id: Lampa.Storage.get('lampac_profile_id', ''),
-        token: ''
-      }));
-
-      if (client._shouldReconnect && window.rch_nws[hostkey].rchRegistry) {
-        if (startConnection) startConnection();
-        return;
-      }
-
-      window.rch_nws[hostkey].rchRegistry = true;
-
-      client.on('RchRegistry', (clientIp) => {
-        if (startConnection) startConnection();
-      });
-
-      client.on("RchClient", (rchId, url, data, headers, returnHeaders) => {
-        const network = new Lampa.Reguest();
-
-        const result = (html) => {
-          if (Lampa.Arrays.isObject(html) || Lampa.Arrays.isArray(html)) {
-            html = JSON.stringify(html);
-          }
-
-          if (typeof CompressionStream !== 'undefined' && html?.length > 1000) {
-            compressAndSend(html, rchId, client);
-          } else {
-            client.invoke("RchResult", rchId, html);
-          }
-        };
-
-        if (url === 'eval') {
-          console.log('RCH eval:', data);
-          result(eval(data));
-        } else if (url === 'evalrun') {
-          console.log('RCH evalrun:', data);
-          eval(data);
-        } else if (url === 'ping') {
-          result('pong');
-        } else {
-          console.log('RCH request:', url);
-          network.native(url, result, () => {
-            console.log('RCH: result empty');
-            result('');
-          }, data, {
-            dataType: 'text',
-            timeout: CONFIG.timeouts.request,
-            headers,
-            returnHeaders
-          });
-        }
-      });
-
-      client.on('Connected', (connectionId) => {
-        console.log('RCH Connected:', connectionId);
-        window.rch_nws[hostkey].connectionId = connectionId;
-      });
-
-      client.on('Closed', () => console.log('RCH: Connection closed'));
-      client.on('Error', (err) => console.log('RCH error:', err));
-    });
-  };
-
-  // Допоміжна функція для стиснення
-  function compressAndSend(html, rchId, client) {
-    const compressionStream = new CompressionStream('gzip');
-    const encoder = new TextEncoder();
-    const readable = new ReadableStream({
-      start(controller) {
-        controller.enqueue(encoder.encode(html));
-        controller.close();
-      }
-    });
-
-    readable.pipeThrough(compressionStream)
-      .then(stream => new Response(stream).arrayBuffer())
-      .then(compressedBuffer => {
-        const compressedArray = new Uint8Array(compressedBuffer);
-        if (compressedArray.length > html.length) {
-          client.invoke("RchResult", rchId, html);
-        } else {
-          $.ajax({
-            url: `${CONFIG.localhost}rch/gzresult?id=${rchId}`,
-            type: 'POST',
-            data: compressedArray,
-            async: true,
-            cache: false,
-            contentType: false,
-            processData: false,
-            success: () => {},
-            error: () => client.invoke("RchResult", rchId, html)
-          });
-        }
-      })
-      .catch(() => client.invoke("RchResult", rchId, html));
-  }
-
-  window.rch_nws[hostkey].typeInvoke(CONFIG.localhost, () => {});
-
-  // ==================== RCH INVOKE ====================
-  function rchInvoke(json, callback) {
-    if (window.nwsClient?.[hostkey]?._shouldReconnect) {
-      callback();
-      return;
-    }
-
-    if (!window.nwsClient) window.nwsClient = {};
-    
-    if (window.nwsClient[hostkey]?.socket) {
-      window.nwsClient[hostkey].socket.close();
-    }
-
-    window.nwsClient[hostkey] = new NativeWsClient(json.nws, { autoReconnect: false });
-    window.nwsClient[hostkey].on('Connected', () => {
-      window.rch_nws[hostkey].Registry(window.nwsClient[hostkey], callback);
-    });
-    window.nwsClient[hostkey].connect();
-  }
-
-  function rchRun(json, callback) {
-    if (typeof NativeWsClient === 'undefined') {
-      Lampa.Utils.putScript(
-        [`${CONFIG.localhost}js/nws-client-es5.js?v18112025`],
-        () => {},
-        false,
-        () => rchInvoke(json, callback),
-        true
-      );
-    } else {
-      rchInvoke(json, callback);
-    }
-  }
-
-  // ==================== ACCOUNT ====================
-  function account(url) {
-    url = String(url);
-    const params = [];
-
-    if (!url.includes('account_email=')) {
-      const email = Lampa.Storage.get('account_email');
-      if (email) params.push(`account_email=${encodeURIComponent(email)}`);
-    }
-
-    if (!url.includes('uid=')) {
-      const uid = Lampa.Storage.get('lampac_unic_id', '');
-      if (uid) params.push(`uid=${encodeURIComponent(uid)}`);
-    }
-
-    if (!url.includes('token=')) {
-      const token = '';
-      if (token) params.push('token=');
-    }
-
-    if (!url.includes('nws_id=') && window.rch_nws?.[hostkey]?.connectionId) {
-      params.push(`nws_id=${encodeURIComponent(window.rch_nws[hostkey].connectionId)}`);
-    }
-
-    if (params.length) {
-      return params.reduce((acc, param) => Lampa.Utils.addUrlComponent(acc, param), url);
-    }
-
-    return url;
-  }
-
-  // ==================== КОМПОНЕНТ ====================
-  function component(object) {
-    const network = new Lampa.Reguest();
-    const scroll = new Lampa.Scroll({ mask: true, over: true });
-    const files = new Lampa.Explorer(object);
-    const filter = new Lampa.Filter(object);
-
-    // Стан компонента
-    const state = {
-      sources: {},
-      last: null,
-      source: null,
-      balanser: null,
-      initialized: false,
-      images: [],
-      number_of_requests: 0,
-      life_wait_times: 0,
-      filter_sources: [],
-      filter_find: { season: [], voice: [] }
-    };
-
-    // Таймери
-    const timers = {
-      balanser: null,
-      requests: null,
-      lifeWait: null,
+(function() {  
+    'use strict';  
       
-      clear() {
-        clearInterval(this.balanser);
-        clearTimeout(this.requests);
-        clearTimeout(this.lifeWait);
-      }
-    };
-
-    const filter_translate = {
-      season: Lampa.Lang.translate('torrent_serial_season'),
-      voice: Lampa.Lang.translate('torrent_parser_voice'),
-      source: Lampa.Lang.translate('settings_rest_source')
-    };
-
-    // Завантаження балансерів
-    if (Cache.balansers === undefined) {
-      network.timeout(CONFIG.timeouts.default);
-      network.silent(
-        account(`${CONFIG.localhost}lite/withsearch`),
-        (json) => Cache.set('balansers', json),
-        () => Cache.set('balansers', [])
-      );
-    }
-
-    // ==================== ДОПОМІЖНІ ФУНКЦІЇ ====================
-    const helpers = {
-      balanserName(j) {
-        return (j.balanser || j.name.split(' ')[0]).toLowerCase();
-      },
-
-      clarificationSearch: {
-        getId() {
-          return Lampa.Utils.hash(
-            object.movie.number_of_seasons 
-              ? object.movie.original_name 
-              : object.movie.original_title
-          );
-        },
-
-        add(value) {
-          const id = this.getId();
-          const all = Lampa.Storage.get('clarification_search', '{}');
-          all[id] = value;
-          Lampa.Storage.set('clarification_search', all);
-        },
-
-        delete() {
-          const id = this.getId();
-          const all = Lampa.Storage.get('clarification_search', '{}');
-          delete all[id];
-          Lampa.Storage.set('clarification_search', all);
-        },
-
-        get() {
-          const id = this.getId();
-          const all = Lampa.Storage.get('clarification_search', '{}');
-          return all[id];
-        }
-      }
-    };
-
-    // ==================== ІНІЦІАЛІЗАЦІЯ ====================
-    this.initialize = function() {
-      this.loading(true);
-
-      filter.onSearch = (value) => {
-        helpers.clarificationSearch.add(value);
-        Lampa.Activity.replace({
-          search: value,
-          clarification: true,
-          similar: true
-        });
-      };
-
-      filter.onBack = () => this.start();
-
-      filter.render().find('.selector').on('hover:enter', () => {
-        clearInterval(timers.balanser);
-      });
-
-      filter.render().find('.filter--search')
-        .appendTo(filter.render().find('.torrent-filter'));
-
-      filter.onSelect = (type, a, b) => {
-        if (type === 'filter') {
-          if (a.reset) {
-            helpers.clarificationSearch.delete();
-            this.replaceChoice({
-              season: 0,
-              voice: 0,
-              voice_url: '',
-              voice_name: ''
-            });
-            setTimeout(() => {
-              Lampa.Select.close();
-              Lampa.Activity.replace({ clarification: 0, similar: 0 });
-            }, 10);
-          } else {
-            const url = state.filter_find[a.stype][b.index].url;
-            const choice = this.getChoice();
-            
-            if (a.stype === 'voice') {
-              choice.voice_name = state.filter_find.voice[b.index].title;
-              choice.voice_url = url;
-            }
-            
-            choice[a.stype] = b.index;
-            this.saveChoice(choice);
-            this.reset();
-            this.request(url);
-            setTimeout(Lampa.Select.close, 10);
-          }
-        } else if (type === 'sort') {
-          Lampa.Select.close();
-          object.lampac_custom_select = a.source;
-          this.changeBalanser(a.source);
-        }
-      };
-
-      if (filter.addButtonBack) filter.addButtonBack();
-
-      filter.render().find('.filter--sort span')
-        .text(Lampa.Lang.translate('lampac_balanser'));
-
-      scroll.body().addClass('torrent-list');
-      files.appendFiles(scroll.render());
-      files.appendHead(filter.render());
-      scroll.minus(files.render().find('.explorer__files-head'));
-      scroll.body().append(Lampa.Template.get('lampac_content_loading'));
-
-      Lampa.Controller.enable('content');
-      this.loading(false);
-
-      if (object.balanser) {
-        files.render().find('.filter--search').remove();
-        state.sources = {};
-        state.sources[object.balanser] = { name: object.balanser };
-        state.balanser = object.balanser;
-        state.filter_sources = [];
-
-        return network.native(
-          account(object.url.replace('rjson=', 'nojson=')),
-          this.parse.bind(this),
-          () => {
-            files.render().find('.torrent-filter').remove();
-            this.empty();
-          },
-          false,
-          { dataType: 'text' }
-        );
-      }
-
-      this.externalids()
-        .then(() => this.createSource())
-        .then(() => {
-          const balansers = Cache.get('balansers') || [];
-          if (!balansers.find(b => state.balanser.slice(0, b.length) === b)) {
-            filter.render().find('.filter--search').addClass('hide');
-          }
-          this.search();
-        })
-        .catch((e) => this.noConnectToServer(e));
-    };
-
-    this.rch = function(json, noreset) {
-      rchRun(json, () => {
-        if (!noreset) this.find();
-        else noreset();
-      });
-    };
-
-    this.externalids = function() {
-      return new Promise((resolve, reject) => {
-        if (!object.movie.imdb_id || !object.movie.kinopoisk_id) {
-          const query = [
-            `id=${encodeURIComponent(object.movie.id)}`,
-            `serial=${object.movie.name ? 1 : 0}`
-          ];
-
-          if (object.movie.imdb_id) query.push(`imdb_id=${object.movie.imdb_id}`);
-          if (object.movie.kinopoisk_id) query.push(`kinopoisk_id=${object.movie.kinopoisk_id}`);
-
-          const url = `${CONFIG.localhost}externalids?${query.join('&')}`;
-          network.timeout(CONFIG.timeouts.default);
-          network.silent(
-            account(url),
-            (json) => {
-              Object.assign(object.movie, json);
-              resolve();
-            },
-            resolve
-          );
-        } else {
-          resolve();
-        }
-      });
-    };
-
-    this.updateBalanser = function(balanser_name) {
-      const last_select = Lampa.Storage.cache('online_last_balanser', 3000, {});
-      last_select[object.movie.id] = balanser_name;
-      Lampa.Storage.set('online_last_balanser', last_select);
-    };
-
-    this.changeBalanser = function(balanser_name) {
-      this.updateBalanser(balanser_name);
-      Lampa.Storage.set('online_balanser', balanser_name);
+    const PLUGIN_NAME = 'EnhancedButtonSeparator';  
+    let observer = null;  
       
-      const to = this.getChoice(balanser_name);
-      const from = this.getChoice();
-      
-      if (from.voice_name) to.voice_name = from.voice_name;
-      
-      this.saveChoice(to, balanser_name);
-      Lampa.Activity.replace();
-    };
-
-    this.requestParams = function(url) {
-      const query = [];
-      const card_source = object.movie.source || 'tmdb';
-
-      query.push(`id=${encodeURIComponent(object.movie.id)}`);
-      
-      if (object.movie.imdb_id) query.push(`imdb_id=${object.movie.imdb_id}`);
-      if (object.movie.kinopoisk_id) query.push(`kinopoisk_id=${object.movie.kinopoisk_id}`);
-      if (object.movie.tmdb_id) query.push(`tmdb_id=${object.movie.tmdb_id}`);
-
-      const title = object.clarification ? object.search : (object.movie.title || object.movie.name);
-      query.push(`title=${encodeURIComponent(title)}`);
-      query.push(`original_title=${encodeURIComponent(object.movie.original_title || object.movie.original_name)}`);
-      query.push(`serial=${object.movie.name ? 1 : 0}`);
-      query.push(`original_language=${object.movie.original_language || ''}`);
-      
-      const year = ((object.movie.release_date || object.movie.first_air_date || '0000') + '').slice(0, 4);
-      query.push(`year=${year}`);
-      query.push(`source=${card_source}`);
-      query.push(`clarification=${object.clarification ? 1 : 0}`);
-      query.push(`similar=${object.similar || false}`);
-      query.push(`rchtype=${window.rch_nws?.[hostkey]?.type || ''}`);
-
-      const email = Lampa.Storage.get('account_email', '');
-      if (email) query.push(`cub_id=${Lampa.Utils.hash(email)}`);
-
-      return url + (url.indexOf('?') >= 0 ? '&' : '?') + query.join('&');
-    };
-
-    this.getLastChoiceBalanser = function() {
-      const last_select = Lampa.Storage.cache('online_last_balanser', 3000, {});
-      return last_select[object.movie.id] || 
-             Lampa.Storage.get('online_balanser', state.filter_sources[0] || '');
-    };
-
-    this.startSource = function(json) {
-      return new Promise((resolve, reject) => {
-        json.forEach(j => {
-          const name = helpers.balanserName(j);
-          state.sources[name] = {
-            url: j.url,
-            name: j.name,
-            show: typeof j.show === 'undefined' ? true : j.show
-          };
-        });
-
-        state.filter_sources = Object.keys(state.sources);
-
-        if (state.filter_sources.length) {
-          const last_select = Lampa.Storage.cache('online_last_balanser', 3000, {});
-          state.balanser = last_select[object.movie.id] || 
-                          Lampa.Storage.get('online_balanser', state.filter_sources[0]);
-
-          if (!state.sources[state.balanser]) {
-            state.balanser = state.filter_sources[0];
-          }
-
-          if (!state.sources[state.balanser].show && !object.lampac_custom_select) {
-            state.balanser = state.filter_sources[0];
-          }
-
-          state.source = state.sources[state.balanser].url;
-          Lampa.Storage.set('active_balanser', state.balanser);
-          resolve(json);
-        } else {
-          reject();
-        }
-      });
-    };
-
-    this.lifeSource = function() {
-      return new Promise((resolve, reject) => {
-        const url = this.requestParams(`${CONFIG.localhost}lifeevents?memkey=${this.memkey || ''}`);
-        let resolved = false;
-
-        const checkAndResolve = (json, any) => {
-          if (json.accsdb) return reject(json);
-
-          const last_balanser = this.getLastChoiceBalanser();
+    function initPlugin() {  
+        // Перевірка версії Lampa 3.0.0+  
+        if (typeof Lampa === 'undefined') {  
+            setTimeout(initPlugin, 100);  
+            return;  
+        }  
           
-          if (!resolved) {
-            const filtered = json.online.filter(c => 
-              any ? c.show : c.show && c.name.toLowerCase() === last_balanser
-            );
-
-            if (filtered.length) {
-              resolved = true;
-              resolve(json.online.filter(c => c.show));
-            } else if (any) {
-              reject();
-            }
-          }
-        };
-
-        const poll = () => {
-          network.timeout(CONFIG.timeouts.lifeSource);
-          network.silent(
-            account(url),
-            (json) => {
-              state.life_wait_times++;
-              state.filter_sources = [];
-              state.sources = {};
-
-              json.online.forEach(j => {
-                const name = helpers.balanserName(j);
-                state.sources[name] = {
-                  url: j.url,
-                  name: j.name,
-                  show: typeof j.show === 'undefined' ? true : j.show
-                };
-              });
-
-              state.filter_sources = Object.keys(state.sources);
-
-              filter.set('sort', state.filter_sources.map(e => ({
-                title: state.sources[e].name,
-                source: e,
-                selected: e === state.balanser,
-                ghost: !state.sources[e].show
-              })));
-
-              filter.chosen('sort', [
-                state.sources[state.balanser] 
-                  ? state.sources[state.balanser].name 
-                  : state.balanser
-              ]);
-
-              checkAndResolve(json);
-
-              const lastb = this.getLastChoiceBalanser();
-              
-              if (state.life_wait_times > CONFIG.limits.maxLifeWait || json.ready) {
-                filter.render().find('.lampac-balanser-loader').remove();
-                checkAndResolve(json, true);
-              } else if (!resolved && state.sources[lastb]?.show) {
-                checkAndResolve(json, true);
-                timers.lifeWait = setTimeout(poll, 1000);
-              } else {
-                timers.lifeWait = setTimeout(poll, 1000);
-              }
-            },
-            () => {
-              state.life_wait_times++;
-              if (state.life_wait_times > CONFIG.limits.maxLifeWait) {
-                reject();
-              } else {
-                timers.lifeWait = setTimeout(poll, 1000);
-              }
-            }
-          );
-        };
-
-        poll();
-      });
-    };
-
-    this.createSource = function() {
-      return new Promise((resolve, reject) => {
-        const url = this.requestParams(`${CONFIG.localhost}lite/events?life=true`);
-        network.timeout(CONFIG.timeouts.createSource);
-        
-        network.silent(
-          account(url),
-          (json) => {
-            if (json.accsdb) return reject(json);
-
-            if (json.life) {
-              this.memkey = json.memkey;
-              
-              if (json.title) {
-                if (object.movie.name) object.movie.name = json.title;
-                if (object.movie.title) object.movie.title = json.title;
-              }
-
-              filter.render().find('.filter--sort').append(
-                '<span class="lampac-balanser-loader" style="width: 1.2em; height: 1.2em; margin-top: 0; background: url(./img/loader.svg) no-repeat 50% 50%; background-size: contain; margin-left: 0.5em"></span>'
-              );
-
-              this.lifeSource()
-                .then(this.startSource.bind(this))
-                .then(resolve)
-                .catch(reject);
-            } else {
-              this.startSource(json)
-                .then(resolve)
-                .catch(reject);
-            }
-          },
-          reject
-        );
-      });
-    };
-
-    this.create = function() {
-      return this.render();
-    };
-
-    this.search = function() {
-      this.filter({ source: state.filter_sources }, this.getChoice());
-      this.find();
-    };
-
-    this.find = function() {
-      this.request(this.requestParams(state.source));
-    };
-
-    this.request = function(url) {
-      state.number_of_requests++;
-
-      if (state.number_of_requests < CONFIG.limits.maxRequests) {
-        network.native(
-          account(url),
-          this.parse.bind(this),
-          this.doesNotAnswer.bind(this),
-          false,
-          { dataType: 'text' }
-        );
-
-        clearTimeout(timers.requests);
-        timers.requests = setTimeout(() => {
-          state.number_of_requests = 0;
-        }, CONFIG.limits.requestInterval);
-      } else {
-        this.empty();
-      }
-    };
-
-    this.parseJsonDate = function(str, name) {
-      try {
-        const html = $(`<div>${str}</div>`);
-        const elems = [];
-
-        html.find(name).each(function() {
-          const item = $(this);
-          const data = JSON.parse(item.attr('data-json'));
-          const season = item.attr('s');
-          const episode = item.attr('e');
-          let text = item.text();
-
-          if (!object.movie.name) {
-            if (text.match(/\d+p/i)) {
-              if (!data.quality) {
-                data.quality = {};
-                data.quality[text] = data.url;
-              }
-              text = object.movie.title;
-            }
-            if (text === 'По умолчанию') {
-              text = object.movie.title;
-            }
-          }
-
-          if (episode) data.episode = parseInt(episode);
-          if (season) data.season = parseInt(season);
-          if (text) data.text = text;
-          data.active = item.hasClass('active');
+        // Перевірка версії для сумісності  
+        if (Lampa.Manifest && Lampa.Manifest.app_digital < 300) {  
+            console.warn(`${PLUGIN_NAME}: Рекомендується Lampa 3.0.0 або вище`);  
+        }  
           
-          elems.push(data);
-        });
-
-        return elems;
-      } catch (e) {
-        console.error('Parse error:', e);
-        return [];
-      }
-    };
-
-    this.getFileUrl = function(file, callback, waiting_rch) {
-      if (Lampa.Storage.field('player') !== 'inner' && file.stream && Lampa.Platform.is('apple')) {
-        const newfile = { ...file, method: 'play', url: file.stream };
-        callback(newfile, {});
-      } else if (file.method === 'play') {
-        callback(file, {});
-      } else {
-        Lampa.Loading.start(() => {
-          Lampa.Loading.stop();
-          Lampa.Controller.toggle('content');
-          network.clear();
-        });
-
-        network.native(
-          account(file.url),
-          (json) => {
-            if (json.rch) {
-              if (waiting_rch) {
-                Lampa.Loading.stop();
-                callback(false, {});
-              } else {
-                this.rch(json, () => {
-                  Lampa.Loading.stop();
-                  this.getFileUrl(file, callback, true);
-                });
-              }
-            } else {
-              Lampa.Loading.stop();
-              callback(json, json);
-            }
-          },
-          () => {
-            Lampa.Loading.stop();
-            callback(false, {});
-          }
-        );
-      }
-    };
-
-    this.toPlayElement = function(file) {
-      return {
-        title: file.title,
-        url: file.url,
-        quality: file.qualitys,
-        timeline: file.timeline,
-        subtitles: file.subtitles,
-        segments: file.segments,
-        callback: file.mark,
-        season: file.season,
-        episode: file.episode,
-        voice_name: file.voice_name
+        // Ініціалізація CSS стилів  
+        initStyles();  
+          
+        // Підписка на події  
+        Lampa.Listener.follow('full', function(event) {  
+            if (event.type === 'complite') {  
+                setTimeout(() => {  
+                    processButtons(event);  
+                    updateButtonSVGs();  
+                    startObserver(event);  
+                }, 300);  
+            }  
+              
+            if (event.type === 'destroy') {  
+                stopObserver();  
+            }  
+        });  
+    }  
+      
+    function initStyles() {  
+        if (!document.getElementById('enhanced-buttons-style')) {  
+            const style = document.createElement('style');  
+            style.id = 'enhanced-buttons-style';  
+            style.textContent = `  
+                .full-start__button {  
+                    position: relative;  
+                    transition: transform 0.2s ease !important;  
+                }  
+                .full-start__button:active {  
+                    transform: scale(0.98) !important;  
+                }  
+                  
+                .full-start__button.view--online svg path { fill: #2196f3 !important; }  
+                .full-start__button.view--torrent svg path { fill: lime !important; }  
+                .full-start__button.view--trailer svg path { fill: #f44336 !important; }  
+                  
+                .full-start__button svg {  
+                    width: 1.5em !important;  
+                    height: 1.5em !important;  
+                }  
+                  
+                .full-start__button.loading::before {  
+                    content: '';  
+                    position: absolute;  
+                    top: 0; left: 0; right: 0;  
+                    height: 2px;  
+                    background: rgba(255,255,255,0.5);  
+                    animation: loading 1s linear infinite;  
+                }  
+                  
+                @keyframes loading {  
+                    from { transform: translateX(-100%); }  
+                    to   { transform: translateX(100%); }  
+                }  
+                  
+                @media (max-width: 767px) {  
+                    .full-start__button {  
+                        min-height: 44px !important;  
+                        padding: 10px !important;  
+                    }  
+                }  
+            `;  
+            document.head.appendChild(style);  
+        }  
+    }  
+      
+    const svgs = {  
+        torrent: `  
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50">  
+                <path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2zM40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862-4.993-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722C42.541,30.867,41.756,30.963,40.5,30.963z" fill="currentColor"/>  
+            </svg>`,  
+          
+        online: `  
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">  
+                <path d="M20.331 14.644l-13.794-13.831 17.55 10.075zM2.938 0c-0.813 0.425-1.356 1.2-1.356 2.206v27.581c0 1.006 0.544 1.781 1.356 2.206l16.038-16zM29.512 14.1l-3.681-2.131-4.106 4.031 4.106 4.031 3.756-2.131c1.125-0.893 1.125-2.906-0.075-3.8zM6.538 31.188l17.55-10.075-3.756-3.756z" fill="currentColor"/>  
+            </svg>`,  
+          
+        trailer: `  
+            <svg viewBox="0 0 80 70" xmlns="http://www.w3.org/2000/svg">  
+                <path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/>  
+            </svg>`  
+    };  
+      
+    function updateButtonSVGs() {  
+        const map = {  
+            'view--torrent': svgs.torrent,  
+            'view--online': svgs.online,  
+            'view--trailer': svgs.trailer  
+        };  
+          
+        // Додаємо обробку для кнопки .button--play якщо це онлайн кнопка (Lampa 3.0.0+)  
+        $('.full-start__button.button--play').each(function() {  
+            const button = $(this);  
+            const text = button.text().toLowerCase().trim();  
+            const classes = button.attr('class') || '';  
+              
+            // Перевіряємо чи це онлайн кнопка  
+            const isOnlineButton = text.includes('онлайн') ||   
+                                  text.includes('online') ||  
+                                  button.attr('data-subtitle')?.includes('v') ||  
+                                  button.find('span').text().toLowerCase().includes('онлайн') ||  
+                                  button.find('span').text().toLowerCase().includes('online');  
+              
+            if (isOnlineButton) {  
+                const oldSvg = button.find('svg');  
+                if (oldSvg.length > 0) {  
+                    const newSvg = $(svgs.online);  
+                    const width = oldSvg.attr('width') || '1.5em';  
+                    const height = oldSvg.attr('height') || '1.5em';  
+                      
+                    if (oldSvg.attr('class')) {  
+                        newSvg.attr('class', oldSvg.attr('class'));  
+                    }  
+                      
+                    oldSvg.html(newSvg.html());  
+                      
+                    if (newSvg.attr('viewBox')) {  
+                        oldSvg.attr('viewBox', newSvg.attr('viewBox'));  
+                    }  
+                    if (newSvg.attr('xmlns')) {  
+                        oldSvg.attr('xmlns', newSvg.attr('xmlns'));  
+                    }  
+                      
+                    oldSvg.css({  
+                        'width': width,  
+                        'height': height  
+                    });  
+                }  
+            }  
+        });  
+          
+        // Оригінальний код для інших кнопок  
+        for (const cls in map) {  
+            $(`.full-start__button.${cls}`).each(function() {  
+                const button = $(this);  
+                const oldSvg = button.find('svg');  
+                  
+                if (oldSvg.length === 0) return;  
+                  
+                const newSvg = $(map[cls]);  
+                const width = oldSvg.attr('width') || '1.5em';  
+                const height = oldSvg.attr('height') || '1.5em';  
+                  
+                if (oldSvg.attr('class')) {  
+                    newSvg.attr('class', oldSvg.attr('class'));  
+                }  
+                  
+                oldSvg.html(newSvg.html());  
+                  
+                if (newSvg.attr('viewBox')) {  
+                    oldSvg.attr('viewBox', newSvg.attr('viewBox'));  
+                }  
+                if (newSvg.attr('xmlns')) {  
+                    oldSvg.attr('xmlns', newSvg.attr('xmlns'));  
+                }  
+                  
+                oldSvg.css({  
+                    'width': width,  
+                    'height': height  
+                });  
+            });  
+        }  
+    }  
+      
+    function processButtons(event) {  
+        try {  
+            const render = event.object.activity.render();  
+            const mainContainer = render.find('.full-start-new__buttons');  
+            const hiddenContainer = render.find('.buttons--container');  
+              
+            if (!mainContainer.length) return;  
+              
+            const torrentBtn = hiddenContainer.find('.view--torrent');  
+            const trailerBtn = hiddenContainer.find('.view--trailer');  
+              
+            if (torrentBtn.length > 0) {  
+                torrentBtn.removeClass('hide').addClass('selector');  
+                mainContainer.append(torrentBtn);  
+            }  
+              
+            if (trailerBtn.length > 0) {  
+                trailerBtn.removeClass('hide').addClass('selector');  
+                mainContainer.append(trailerBtn);  
+            }  
+              
+            setTimeout(() => {  
+                removeSourcesButton(mainContainer);  
+            }, 150);  
+              
+            reorderButtons(mainContainer);  
+              
+            if (Lampa.Controller) {  
+                setTimeout(() => {  
+                    Lampa.Controller.collectionSet(mainContainer.parent());  
+                }, 200);  
+            }  
+              
+        } catch (error) {  
+            console.error(`${PLUGIN_NAME}: Помилка`, error);  
+        }  
+    }  
+      
+    function removeSourcesButton(mainContainer) {  
+        const allButtons = mainContainer.find('.full-start__button');  
+          
+        // Перевіряємо версію Lampa  
+        const isLampa3Plus = Lampa.Manifest && Lampa.Manifest.app_digital >= 300;  
+          
+        allButtons.each(function() {  
+            const button = $(this);  
+            const text = button.text().toLowerCase().trim();  
+            const classes = button.attr('class') || '';  
+              
+            // Універсальна перевірка для онлайн кнопки  
+            const isOnlineButton = classes.includes('view--online') ||   
+                                  text.includes('онлайн') ||   
+                                  text.includes('online') ||  
+                                  button.attr('data-subtitle')?.includes('v') ||  
+                                  button.find('span').text().toLowerCase().includes('онлайн') ||  
+                                  button.find('span').text().toLowerCase().includes('online');  
+              
+            // ЗАВЖДИ залишаємо онлайн кнопку  
+            if (isOnlineButton) {  
+                console.log('Знайдено онлайн кнопку, залишаємо:', classes);  
+                return;  
+            }  
+              
+            // Інші важливі кнопки  
+            const isImportantButton = classes.includes('view--torrent') ||   
+                                     classes.includes('view--trailer') ||   
+                                     classes.includes('button--book') ||   
+                                     classes.includes('button--reaction') ||   
+                                     classes.includes('button--subscribe') ||   
+                                     classes.includes('button--subs');  
+              
+            const isPlayButton = classes.includes('button--play');  
+            const isSourcesButton = text.includes('джерела') ||   
+                                   text.includes('джерело') ||   
+                                   text.includes('sources') ||   
+                                   text.includes('source') ||   
+                                   text.includes('источники') ||   
+                                   text.includes('источник');  
+              
+            const isOptionsButton = classes.includes('button--options');  
+            const isEmpty = text === '' || text.length <= 2;  
+              
+            // У Lampa 3.0.0+ НЕ видаляємо кнопку "Дивитись"  
+            if (isLampa3Plus && isPlayButton) {  
+                console.log('Lampa 3.0.0+: залишаємо кнопку Дивитись', classes);  
+                return;  
+            }  
+              
+            // Видаляємо тільки неважливі кнопки  
+            if (!isImportantButton && (isPlayButton || isSourcesButton || (isOptionsButton && isEmpty))) {  
+                console.log('Видаляємо кнопку:', classes, text);  
+                button.remove();  
+            }  
+        });  
+    }  
+      
+    function reorderButtons(container) {  
+        container.css('display', 'flex');  
+          
+        container.find('.full-start__button').each(function() {  
+            const button = $(this);  
+            const classes = button.attr('class') || '';  
+            const text = button.text().toLowerCase();  
+              
+            let order = 999;  
+              
+            // Онлайн кнопка - завжди перша (включаючи .button--play)  
+            if (classes.includes('view--online') ||   
+                text.includes('онлайн') ||   
+                text.includes('online') ||  
+                (classes.includes('button--play') && (  
+                    button.attr('data-subtitle')?.includes('v') ||  
+                    button.find('span').text().toLowerCase().includes('онлайн') ||  
+                    button.find('span').text().toLowerCase().includes('online')  
+                ))) {  
+                order = 0; // Найперший  
+            } else if (classes.includes('view--torrent') || text.includes('торрент')) {  
+                order = 1;  
+            } else if (classes.includes('view--trailer') || text.includes('трейлер')) {  
+                order = 2;  
+            }  
+              
+            button.css('order', order);  
+        });  
+    }
+    function startObserver(event) {  
+        const render = event.object.activity.render();  
+        const mainContainer = render.find('.full-start-new__buttons')[0];  
+          
+        if (!mainContainer) return;  
+          
+        // Перевіряємо версію Lampa  
+        const isLampa3Plus = Lampa.Manifest && Lampa.Manifest.app_digital >= 300;  
+          
+        observer = new MutationObserver((mutations) => {  
+            mutations.forEach((mutation) => {  
+                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {  
+                    mutation.addedNodes.forEach((node) => {  
+                        if (node.nodeType === 1 && node.classList && node.classList.contains('full-start__button')) {  
+                            const text = node.textContent.toLowerCase().trim();  
+                            const classes = node.className || '';  
+                            const $node = $(node);  
+                              
+                            // Універсальна перевірка для онлайн кнопки  
+                            const isOnlineButton = classes.includes('view--online') ||   
+                                                  text.includes('онлайн') ||   
+                                                  text.includes('online') ||  
+                                                  $node.attr('data-subtitle')?.includes('v') ||  
+                                                  $node.find('span').text().toLowerCase().includes('онлайн') ||  
+                                                  $node.find('span').text().toLowerCase().includes('online');  
+                              
+                            // ЗАВЖДИ залишаємо онлайн кнопку  
+                            if (isOnlineButton) {  
+                                console.log('Observer: знайдено онлайн кнопку, залишаємо:', classes);  
+                                return;  
+                            }  
+                              
+                            // Інші важливі кнопки  
+                            const isImportantButton = classes.includes('view--torrent') ||   
+                                                     classes.includes('view--trailer') ||   
+                                                     classes.includes('button--book') ||   
+                                                     classes.includes('button--reaction') ||   
+                                                     classes.includes('button--subscribe') ||   
+                                                     classes.includes('button--subs');  
+                              
+                            const isPlayButton = classes.includes('button--play');  
+                            const isSourcesButton = text.includes('джерела') ||   
+                                                   text.includes('джерело') ||   
+                                                   text.includes('sources') ||   
+                                                   text.includes('source') ||   
+                                                   text.includes('источники') ||   
+                                                   text.includes('источник');  
+                              
+                            const isOptionsButton = classes.includes('button--options');  
+                            const isEmpty = text === '' || text.length <= 2;  
+                              
+                            // У Lampa 3.0.0+ НЕ видаляємо кнопку "Дивитись"  
+                            if (isLampa3Plus && isPlayButton) {  
+                                console.log('Observer: Lampa 3.0.0+: залишаємо кнопку Дивитись', classes);  
+                                return;  
+                            }  
+                              
+                            // Видаляємо тільки неважливі кнопки  
+                            if (!isImportantButton && (isPlayButton || isSourcesButton || (isOptionsButton && isEmpty))) {  
+                                console.log('Observer: видаляємо кнопку:', classes, text);  
+                                $node.remove();  
+                            }  
+                        }  
+                    });  
+                      
+                    // Оновлюємо SVG після змін  
+                    setTimeout(updateButtonSVGs, 50);  
+                }  
+            });  
+        });  
+          
+        observer.observe(mainContainer, {  
+            childList: true,  
+            subtree: false  
+        });  
+    }  
+      
+    function stopObserver() {  
+        if (observer) {  
+            observer.disconnect();  
+            observer = null;  
+        }  
+    }  
+      
+    // Реєстрація плагіна  
+    if (typeof Lampa !== 'undefined') {  
+        const manifest = {  
+            type: 'component',  
+            name: 'Enhanced Button Separator',  
+            version: '4.4.0',  
+            author: 'Merged Plugin',  
+            description: 'Об\'єднаний плагін: розділення кнопок + оптимізовані SVG/стилі з іконкою для онлайн кнопки в Lampa 3.0.0+'  
+        };  
+          
+        if (window.plugin) {  
+            window.plugin('enhanced_button_separator', manifest);  
+        }  
+          
+        // Додаткова реєстрація для сумісності  
+        Lampa.Manifest.plugins = manifest;  
+    }  
+      
+    if (document.readyState === 'loading') {  
+        document.addEventListener('DOMContentLoaded', initPlugin);  
+    } else {  
+        initPlugin();  
+    }  
+})();
