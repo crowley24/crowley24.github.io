@@ -1330,193 +1330,174 @@ this.player = new Player(this.object, this.video);
       modifyCardifyStyles();      
     }      
   });      
-// Перевірка існування глобального об'єкта Lampa
-const isLampaAvailable = typeof Lampa !== 'undefined';
-
-function setupTrailerControls() {
-    const trailers = document.querySelectorAll('.cardify-trailer__youtube iframe');
-    trailers.forEach(iframe => {
-        const src = iframe.src;
-        if (src && !src.includes('autoplay=1')) {
-            const separator = src.includes('?') ? '&' : '?';
-            // Встановлюємо autoplay=1, звук mute=0 (як було у початковій логіці)
-            iframe.src = src + separator + 'autoplay=1&mute=0';
-        }
-    });
-}
-
-// --- Safe Storage Helpers (Зміни не потрібні, вони коректні) ---
-function storageGet(key, def) {
-    try {
-        if (isLampaAvailable && Lampa.Storage && typeof Lampa.Storage.get === 'function') {
-            return Lampa.Storage.get(key, def);
-        }
-        var v = localStorage.getItem(key);
-        return v === null ? def : v;
-    } catch(e){
-        return def;
-    }
-}
-
-function storageSet(key, value) {
-    try {
-        if (isLampaAvailable && Lampa.Storage && typeof Lampa.Storage.set === 'function') {
-            Lampa.Storage.set(key, value);
-        } else {
-            localStorage.setItem(key, value);
-        }
-    } catch(e){}
-}
-
-function toggleIframeMute(iframe, mute) {
-    try {
-        var src = iframe.src || '';
-        // Видалення існуючого параметра mute
-        src = src.replace(/([?&])mute=(0|1)(&|$)/, function(_, p1, p2, p3){
-            return p3 === '&' ? p1 : '';
-        });
-        var separator = src.includes('?') ? '&' : '?';
-        src = src + separator + 'mute=' + (mute ? '1' : '0');
-        iframe.src = src;
-    } catch(e){}
-}
-
-function createMuteButtonForTrailer(container) {
-    try {
-        if (!container) return;
-        if (container.querySelector('.cardify-mute-btn')) return;
-
-        var btn = document.createElement('button');
-        btn.className = 'cardify-mute-btn';
-        btn.setAttribute('aria-label','Toggle trailer sound');
-        btn.style.cssText = [
-            'position: absolute', 'right: 0.8em', 'bottom: 4.5%', 'z-index: 1000',
-            'background: rgba(0,0,0,0.6)', 'color: #fff', 'border: none',
-            'padding: 6px 8px', 'border-radius: 8px', 'font-size: 18px',
-            'backdrop-filter: blur(6px)', 'cursor: pointer', 'pointer-events: auto'
-        ].join(';');
-
-        var stored = storageGet('cardify_trailer_muted', 'false') === 'true';
-        btn.textContent = stored ? '🔈' : '🔊';
-
-        btn.addEventListener('click', function(e){
-            e.stopPropagation();
-            e.preventDefault();
-            var iframe = container.querySelector('iframe') || container.querySelector('.cardify-trailer__youtube-iframe iframe');
-            if (!iframe) return;
-
-            var muted = storageGet('cardify_trailer_muted', 'false') === 'true';
-            muted = !muted;
-            storageSet('cardify_trailer_muted', muted ? 'true' : 'false');
-            toggleIframeMute(iframe, muted);
-            btn.textContent = muted ? '🔈' : '🔊';
-        }, false);
-
-        if (!container.style.position) container.style.position = 'relative';
-        container.appendChild(btn);
-
-        // Встановлення початкового стану при створенні
-        var iframe0 = container.querySelector('iframe') || container.querySelector('.cardify-trailer__youtube-iframe iframe');
-        if (iframe0) {
-            var muted0 = storageGet('cardify_trailer_muted', 'false') === 'true';
-            toggleIframeMute(iframe0, muted0);
-            btn.textContent = muted0 ? '🔈' : '🔊';
-        }
-    } catch(e){
-        console.warn('[Cardify] createMuteButtonForTrailer error', e);
-    }
-}
-// --- Кінець Helpers ---
-
-(function(){
-    // Додавання кнопок для існуючих трейлерів
-    try {
-        document.querySelectorAll('.cardify-trailer, .cardify-trailer__youtube').forEach(function(c){
-            var container = (c.classList && c.classList.contains('cardify-trailer')) ? c : (c.closest && c.closest('.cardify-trailer')) || c;
-            createMuteButtonForTrailer(container);
-        });
-    } catch(e){
-        console.warn('[Cardify] add existing trailers error', e);
-    }
-
-    // Спостерігач DOM для нових трейлерів
-    try {
-        var mb = new MutationObserver(function(muts){
-            muts.forEach(function(m){
-                m.addedNodes.forEach(function(node){
-                    try {
-                        if (!node || node.nodeType !== 1) return;
-                        if (node.classList && (node.classList.contains('cardify-trailer') || node.classList.contains('cardify-trailer__youtube'))) {
-                            var container = node.classList.contains('cardify-trailer') ? node : (node.closest && node.closest('.cardify-trailer')) || node;
-                            createMuteButtonForTrailer(container);
-                        } else if (node.querySelector) {
-                            var found = node.querySelector('.cardify-trailer') || node.querySelector('.cardify-trailer__youtube');
-                            if (found) {
-                                var cont = (found.classList && found.classList.contains('cardify-trailer')) ? found : (found.closest && found.closest('.cardify-trailer')) || found;
-                                createMuteButtonForTrailer(cont);
-                            }
-                        }
-                    } catch(e){}
-                });
-            });
-        });
-        // Спостереження за body для всього DOM
-        mb.observe(document.body, { childList: true, subtree: true });
-    } catch(e){
-        console.warn('[Cardify] mute button observer init error', e);
-    }
-})();
-
-// --- Обробка кнопки "Назад" (Критична зміна) ---
-let trailerMuted = false;
-
-// ДОДАНО ПЕРЕВІРКУ Lampa.Listener: це запобігає "script error", якщо Lampa не завантажено
-if (isLampaAvailable && Lampa.Listener && typeof Lampa.Listener.follow === 'function') {
-    Lampa.Listener.follow('keydown', function(e) {
-        if (e.code === 'Back' || e.code === 'Backspace') {
-            const trailer = document.querySelector('.cardify-trailer__youtube iframe');
-
-            // 1. Трейлер є і звук не вимкнено (перше натискання)
-            if (trailer && !trailerMuted) {
-                e.preventDefault();
-                e.stopPropagation();
-
-                const src = trailer.src;
-                // Змінюємо mute=0 на mute=1
-                if (src.includes('mute=0')) {
-                    trailer.src = src.replace('mute=0', 'mute=1');
-                } else if (!src.includes('mute=1')) {
-                    // Якщо mute взагалі не було, додаємо його
-                    const separator = src.includes('?') ? '&' : '?';
-                    trailer.src = src + separator + 'mute=1';
-                }
-
-                trailerMuted = true;
-                console.log('[Cardify] Звук трейлера вимкнено');
-                return false;
-            }
-            // 2. Трейлер є і звук вже вимкнено (друге натискання)
-            else if (trailer && trailerMuted) {
-                trailerMuted = false;
-                console.log('[Cardify] Вихід з картки фільму');
-            }
-            // Якщо трейлера немає, дозволяємо стандартну обробку "Назад"
-        }
-    });
-} else {
-    console.warn('[Cardify] Lampa.Listener недоступний. Обробка кнопки "Назад" не активована.');
-}
-
-// --- Скидання стану при зміні трейлера ---
-// Цей обсервер спрацює при будь-якій зміні DOM, що не є оптимальним,
-// але єдиним надійним способом скинути стан без глибокого знання структури Lampa.
-const trailerObserver = new MutationObserver(() => {
-    trailerMuted = false;
-    setupTrailerControls(); // Переконаємось, що autoplay/mute=0 застосовано до нового трейлера
-});
-
-// МОЖЛИВА ОПТИМІЗАЦІЯ: Краще спостерігати не за body, а за конкретним контейнером,
-// який змінюється, коли відображається новий трейлер/картка.
-trailerObserver.observe(document.body, { childList: true, subtree: true });
-  })();
+// Додайте перевірку доступності Lampa на початку  
+const isLampaAvailable = typeof Lampa !== 'undefined';  
   
+function setupTrailerControls() {  
+    const trailers = document.querySelectorAll('.cardify-trailer__youtube iframe');  
+    trailers.forEach(iframe => {  
+        const src = iframe.src;  
+        if (src && !src.includes('autoplay=1')) {  
+            const separator = src.includes('?') ? '&' : '?';  
+            iframe.src = src + separator + 'autoplay=1&mute=0';  
+        }  
+    });  
+}  
+  
+// --- Safe Storage Helpers ---  
+function storageGet(key, def) {  
+    try {  
+        if (isLampaAvailable && Lampa.Storage && typeof Lampa.Storage.get === 'function') {  
+            return Lampa.Storage.get(key, def);  
+        }  
+        var v = localStorage.getItem(key);  
+        return v === null ? def : v;  
+    } catch(e){  
+        return def;  
+    }  
+}  
+  
+function storageSet(key, value) {  
+    try {  
+        if (isLampaAvailable && Lampa.Storage && typeof Lampa.Storage.set === 'function') {  
+            Lampa.Storage.set(key, value);  
+        } else {  
+            localStorage.setItem(key, value);  
+        }  
+    } catch(e){}  
+}  
+  
+function toggleIframeMute(iframe, mute) {  
+    try {  
+        var src = iframe.src || '';  
+        src = src.replace(/([?&])mute=(0|1)(&|$)/, function(_, p1, p2, p3){  
+            return p3 === '&' ? p1 : '';  
+        });  
+        var separator = src.includes('?') ? '&' : '?';  
+        src = src + separator + 'mute=' + (mute ? '1' : '0');  
+        iframe.src = src;  
+    } catch(e){}  
+}  
+  
+function createMuteButtonForTrailer(container) {  
+    try {  
+        if (!container) return;  
+        if (container.querySelector('.cardify-mute-btn')) return;  
+  
+        var btn = document.createElement('button');  
+        btn.className = 'cardify-mute-btn';  
+        btn.setAttribute('aria-label','Toggle trailer sound');  
+        btn.style.cssText = [  
+            'position: absolute', 'right: 0.8em', 'bottom: 4.5%', 'z-index: 1000',  
+            'background: rgba(0,0,0,0.6)', 'color: #fff', 'border: none',  
+            'padding: 6px 8px', 'border-radius: 8px', 'font-size: 18px',  
+            'backdrop-filter: blur(6px)', 'cursor: pointer', 'pointer-events: auto'  
+        ].join(';');  
+  
+        var stored = storageGet('cardify_trailer_muted', 'false') === 'true';  
+        btn.textContent = stored ? '🔈' : '🔊';  
+  
+        btn.addEventListener('click', function(e){  
+            e.stopPropagation();  
+            e.preventDefault();  
+            var iframe = container.querySelector('iframe') || container.querySelector('.cardify-trailer__youtube-iframe iframe');  
+            if (!iframe) return;  
+  
+            var muted = storageGet('cardify_trailer_muted', 'false') === 'true';  
+            muted = !muted;  
+            storageSet('cardify_trailer_muted', muted ? 'true' : 'false');  
+            toggleIframeMute(iframe, muted);  
+            btn.textContent = muted ? '🔈' : '🔊';  
+        }, false);  
+  
+        if (!container.style.position) container.style.position = 'relative';  
+        container.appendChild(btn);  
+  
+        var iframe0 = container.querySelector('iframe') || container.querySelector('.cardify-trailer__youtube-iframe iframe');  
+        if (iframe0) {  
+            var muted0 = storageGet('cardify_trailer_muted', 'false') === 'true';  
+            toggleIframeMute(iframe0, muted0);  
+            btn.textContent = muted0 ? '🔈' : '🔊';  
+        }  
+    } catch(e){  
+        console.warn('[Cardify] createMuteButtonForTrailer error', e);  
+    }  
+}  
+  
+// --- Основний блок ---  
+(function(){  
+    // Додавання кнопок для існуючих трейлерів  
+    try {  
+        document.querySelectorAll('.cardify-trailer, .cardify-trailer__youtube').forEach(function(c){  
+            var container = (c.classList && c.classList.contains('cardify-trailer')) ? c : (c.closest && c.closest('.cardify-trailer')) || c;  
+            createMuteButtonForTrailer(container);  
+        });  
+    } catch(e){  
+        console.warn('[Cardify] add existing trailers error', e);  
+    }  
+  
+    // Спостерігач DOM для нових трейлерів  
+    try {  
+        var mb = new MutationObserver(function(muts){  
+            muts.forEach(function(m){  
+                m.addedNodes.forEach(function(node){  
+                    try {  
+                        if (!node || node.nodeType !== 1) return;  
+                        if (node.classList && (node.classList.contains('cardify-trailer') || node.classList.contains('cardify-trailer__youtube'))) {  
+                            var container = node.classList.contains('cardify-trailer') ? node : (node.closest && node.closest('.cardify-trailer')) || node;  
+                            createMuteButtonForTrailer(container);  
+                        } else if (node.querySelector) {  
+                            var found = node.querySelector('.cardify-trailer') || node.querySelector('.cardify-trailer__youtube');  
+                            if (found) {  
+                                var cont = (found.classList && found.classList.contains('cardify-trailer')) ? found : (found.closest && found.closest('.cardify-trailer')) || found;  
+                                createMuteButtonForTrailer(cont);  
+                            }  
+                        }  
+                    } catch(e){}  
+                });  
+            });  
+        });  
+        mb.observe(document.body, { childList: true, subtree: true });  
+    } catch(e){  
+        console.warn('[Cardify] mute button observer init error', e);  
+    }  
+})();  
+  
+// --- Обробка кнопки "Назад" ---  
+let trailerMuted = false;  
+  
+if (isLampaAvailable && Lampa.Listener && typeof Lampa.Listener.follow === 'function') {  
+    Lampa.Listener.follow('keydown', function(e) {  
+        if (e.code === 'Back' || e.code === 'Backspace') {  
+            const trailer = document.querySelector('.cardify-trailer__youtube iframe');  
+            if (trailer && !trailerMuted) {  
+                e.preventDefault();  
+                e.stopPropagation();  
+                const src = trailer.src;  
+                if (src.includes('mute=0')) {  
+                    trailer.src = src.replace('mute=0', 'mute=1');  
+                } else if (!src.includes('mute=1')) {  
+                    const separator = src.includes('?') ? '&' : '?';  
+                    trailer.src = src + separator + 'mute=1';  
+                }  
+                trailerMuted = true;  
+                console.log('[Cardify] Звук трейлера вимкнено');  
+                return false;  
+            } else if (trailer && trailerMuted) {  
+                trailerMuted = false;  
+                console.log('[Cardify] Вихід з картки фільму');  
+            }  
+        }  
+    });  
+} else {  
+    console.warn('[Cardify] Lampa.Listener недоступний. Обробка кнопки "Назад" не активована.');  
+}  
+  
+// --- Скидання стану при зміні трейлера ---  
+const trailerObserver = new MutationObserver(() => {  
+    trailerMuted = false;  
+    setupTrailerControls();  
+});  
+  
+trailerObserver.observe(document.body, { childList: true, subtree: true });  
+// Видалимо зайву закриваючу дужку
