@@ -4,8 +4,7 @@
     const SOURCES = [
         { id: 'tmdb', title: 'TMDB' },
         { id: 'cub', title: 'CUB' },
-        { id: 'trakt', title: 'TRAKT' },
-        { id: 'kino', title: 'KinoDB' }
+        { id: 'trakt', title: 'TRAKT' }
     ];
 
     const STORAGE_KEY = 'source_switcher_selected';
@@ -18,26 +17,7 @@
         Lampa.Storage.set(STORAGE_KEY, id);
     }
 
-    // --- СТВОРЮЄМО КНОПКУ ---
-    function createButton() {
-        // Якщо кнопка вже є — не створюємо
-        if ($('.source-switcher-btn').length) return;
-
-        const btn = $('<div class="header__icon source-switcher-btn" style="margin-left: 15px;">' +
-            '<svg width="24" height="24" fill="currentColor"><path d="M4 6h16M4 12h10M4 18h7"/></svg>' +
-        '</div>');
-
-        btn.attr('title', 'Перемикач джерел (' + getSelected().toUpperCase() + ')');
-        btn.on('click', showMenu);
-
-        // Гарантовано додаємо кнопку в верхнє меню
-        const headerRight = $('.header__right');
-        if (headerRight.length) {
-            headerRight.prepend(btn);
-        }
-    }
-
-    // --- ПОКАЗАТИ МЕНЮ ---
+    // --- показати меню ---
     function showMenu() {
         const selected = getSelected();
 
@@ -51,33 +31,41 @@
             items,
             onSelect(item) {
                 setSelected(item.source_id);
-
-                $('.source-switcher-btn').attr(
-                    'title',
-                    'Перемикач джерел (' + item.source_id.toUpperCase() + ')'
-                );
-
                 Lampa.Noty.show('Джерело: ' + item.title.replace('✔️ ', ''));
             }
         });
     }
 
-    // --- ОБОВʼЯЗКОВА ЧАСТИНА: ЧЕКАЄМО НА UI ---
-    function waitForUI() {
-        if ($('.header__right').length) {
-            createButton();
-        } else {
-            setTimeout(waitForUI, 300);
-        }
+    // --- додаємо кнопку ---
+    function injectButton(headerElement) {
+        if (headerElement.querySelector('.source-switcher-btn')) return;
+
+        const btn = document.createElement('div');
+        btn.classList.add('header__icon', 'source-switcher-btn');
+        btn.style.marginLeft = '15px';
+        btn.innerHTML = `
+            <svg width="24" height="24" fill="currentColor"><path d="M4 6h16M4 12h10M4 18h7"/></svg>
+        `;
+
+        btn.addEventListener('click', showMenu);
+
+        const right = headerElement.querySelector('.header__right');
+        if (right) right.prepend(btn);
     }
 
-    // --- ДОДАТКОВО: створюємо кнопку кожен раз після зміни екранів ---
-    Lampa.Listener.follow('app', function (e) {
-        if (e.type === 'ready' || e.type === 'navigation') {
-            setTimeout(createButton, 50);
-        }
-    });
+    // --- перехоплення рендера Header ---
+    const original = Lampa.Header.create;
 
-    waitForUI();
+    Lampa.Header.create = function () {
+        const header = original.apply(this, arguments);
+
+        // DOM може зʼявитися за 0–100ms
+        setTimeout(() => {
+            const headerDom = document.querySelector('.header');
+            if (headerDom) injectButton(headerDom);
+        }, 50);
+
+        return header;
+    };
 
 })();
