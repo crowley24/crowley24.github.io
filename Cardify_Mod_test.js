@@ -972,93 +972,60 @@
   }
 
   // Обробка кнопки "Назад" з більш безпечною логікою
-  let trailerMuted = false;
-  try {
-    if (typeof Lampa !== 'undefined' && Lampa.Listener && typeof Lampa.Listener.follow === 'function') {
-      Lampa.Listener.follow('keydown', function(e) {
-        try {
-          const code = e && (e.code || e.key || e.keyCode);
-          if (code === 'Back' || code === 'Backspace' || e && (e.keyCode === 10009 || e.keyCode === 461 || e.keyCode === 8 || e.keyCode === 27)) {
-            const trailer = document.querySelector('.cardify-trailer__youtube iframe');
-            if (trailer && !trailerMuted) {
-              try {
-                if (e && e.preventDefault) e.preventDefault();
-                if (e && e.stopPropagation) e.stopPropagation();
-              } catch (err) {}
-              try {
-                const src = trailer.src || '';
-                if (src.includes('mute=0')) {
-                  trailer.src = src.replace('mute=0', 'mute=1');
-                } else if (!src.includes('mute=1')) {
-                  trailer.src = src + (src.includes('?') ? '&' : '?') + 'mute=1';
-                }
-              } catch (err) {}
-              trailerMuted = true;
-              console.log('[Cardify] Звук трейлера вимкнено');
-              return false;
-            } else if (trailer && trailerMuted) {
-              trailerMuted = false;
-              console.log('[Cardify] Вихід з картки фільму');
-            }
+let trailerMuted = false;
+try {
+  if (typeof Lampa !== 'undefined' && Lampa.Listener && typeof Lampa.Listener.follow === 'function') {
+    // Використовуємо Lampa.Listener як первинний варіант
+    Lampa.Listener.follow('keydown', function(e) {
+      try {
+        const code = e && (e.code || e.key || e.keyCode);
+        if (code === 'Back' || code === 'Backspace' || (e && (e.keyCode === 10009 || e.keyCode === 461 || e.keyCode === 8 || e.keyCode === 27))) {
+          const trailer = document.querySelector('.cardify-trailer__youtube iframe');
+          if (trailer && !trailerMuted) {
+            try { if (e && e.preventDefault) e.preventDefault(); if (e && e.stopPropagation) e.stopPropagation(); } catch (_){}
+            try {
+              const src = trailer.src || '';
+              if (src.includes('mute=0')) trailer.src = src.replace('mute=0', 'mute=1');
+              else if (!src.includes('mute=1')) trailer.src = src + (src.includes('?') ? '&' : '?') + 'mute=1';
+            } catch (_){}
+            trailerMuted = true;
+            console.log('[Cardify] Звук трейлера вимкнено');
+            return false;
+          } else if (trailer && trailerMuted) {
+            trailerMuted = false;
+            console.log('[Cardify] Вихід з картки фільму');
           }
-        } catch (err) {}
-      });
-    } else {
-      document.addEventListener('keydown', function(e) {
-        try {
-          const code = e && (e.code || e.key || e.keyCode);
-          if (code === 'Back' || code === 'Backspace' || e && (e.keyCode === 10009 || e.keyCode === 461 || e.keyCode === 8 || e.keyCode === 27)) {
-            const trailer = document.querySelector('.cardify-trailer__youtube iframe');
-            if (trailer && !trailerMuted) {
-              try { e.preventDefault(); } catch (err) {}
-              try {
-                const src = trailer.src || '';
-                if (src.includes('mute=0')) {
-                  trailer.src = src.replace('mute=0', 'mute=1');
-                } else if (!src.includes('mute=1')) {
-                  trailer.src = src + (src.includes('?') ? '&' : '?') + 'mute=1';
-                }
-              } catch (err) {}
-                            trailerMuted = true;
-              console.log('[Cardify] Звук трейлера вимкнено');
-              return false;
-            } else if (trailer && trailerMuted) {
-              trailerMuted = false;
-              console.log('[Cardify] Вихід з картки фільму');
-            }
+        }
+      } catch (err) {}
+    });
+  } else {
+    // Фолбек: звичайний document keydown (з capture=true для максимальної сумісності)
+    document.addEventListener('keydown', function(e) {
+      try {
+        const code = e && (e.code || e.key || e.keyCode);
+        if (code === 'Back' || code === 'Backspace' || (e && (e.keyCode === 10009 || e.keyCode === 461 || e.keyCode === 8 || e.keyCode === 27))) {
+          const trailer = document.querySelector('.cardify-trailer__youtube iframe');
+          if (trailer && !trailerMuted) {
+            try { if (e.preventDefault) e.preventDefault(); } catch(_) {}
+            try {
+              const src = trailer.src || '';
+              if (src.includes('mute=0')) trailer.src = src.replace('mute=0', 'mute=1');
+              else if (!src.includes('mute=1')) trailer.src = src + (src.includes('?') ? '&' : '?') + 'mute=1';
+            } catch(_) {}
+            trailerMuted = true;
+            console.log('[Cardify] Звук трейлера вимкнено (fallback)');
+            return false;
+          } else if (trailer && trailerMuted) {
+            trailerMuted = false;
+            console.log('[Cardify] Вихід з картки фільму (fallback)');
           }
-        } catch (err) {}
-      });
-    } else {
-      document.addEventListener('keydown', function(e) {
-        try {
-          const code = e && (e.code || e.key || e.keyCode);
-          if (code === 'Back' || code === 'Backspace' || e && (e.keyCode === 10009 || e.keyCode === 461 || e.keyCode === 8 || e.keyCode === 27)) {
-            const trailer = document.querySelector('.cardify-trailer__youtube iframe');
-            if (trailer && !trailerMuted) {
-              try { e.preventDefault(); } catch (err) {}
-              try {
-                const src = trailer.src || '';
-                if (src.includes('mute=0')) {
-                  trailer.src = src.replace('mute=0', 'mute=1');
-                } else if (!src.includes('mute=1')) {
-                  trailer.src = src + (src.includes('?') ? '&' : '?') + 'mute=1';
-                }
-              } catch (err) {}
-              trailerMuted = true;
-              console.log('[Cardify] Звук трейлера вимкнено (fallback)');
-              return false;
-            } else if (trailer && trailerMuted) {
-              trailerMuted = false;
-              console.log('[Cardify] Вихід з картки фільму (fallback)');
-            }
-          }
-        } catch (err) {}
-      }, true);
-    }
-  } catch (e) {
-    console.warn('[Cardify] keydown listener init error', e);
+        }
+      } catch (err) {}
+    }, true);
   }
+} catch (e) {
+  console.warn('[Cardify] keydown listener init error', e);
+}
 
   // Скидання стану при зміні трейлера та початкова ініціалізація контролів
   try {
