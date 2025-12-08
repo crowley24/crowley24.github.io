@@ -1,7 +1,6 @@
 (function () {
     'use strict';
 
-    // --- Налаштування джерел ---
     const SOURCES = [
         { id: 'tmdb', title: 'TMDB' },
         { id: 'cub', title: 'CUB' },
@@ -11,71 +10,74 @@
 
     const STORAGE_KEY = 'source_switcher_selected';
 
-    function getSelectedSource() {
+    function getSelected() {
         return Lampa.Storage.get(STORAGE_KEY, 'tmdb');
     }
 
-    function setSelectedSource(id) {
+    function setSelected(id) {
         Lampa.Storage.set(STORAGE_KEY, id);
     }
 
-    // --- UI: створити кнопку в шапці ---
-    function addTopButton() {
-        // Перевіряємо, чи вже кнопка існує
+    // --- СТВОРЮЄМО КНОПКУ ---
+    function createButton() {
+        // Якщо кнопка вже є — не створюємо
         if ($('.source-switcher-btn').length) return;
 
-        let selected = getSelectedSource();
+        const btn = $('<div class="header__icon source-switcher-btn" style="margin-left: 15px;">' +
+            '<svg width="24" height="24" fill="currentColor"><path d="M4 6h16M4 12h10M4 18h7"/></svg>' +
+        '</div>');
 
-        // HTML-кнопка
-        let btn = $('<div class="header__icon source-switcher-btn" style="margin-left: 15px;">')
-            .append(`<img src="https://img.icons8.com/fluency-systems-regular/24/sorting-options.png">`)
-            .attr('title', 'Перемикач джерел (' + selected.toUpperCase() + ')');
+        btn.attr('title', 'Перемикач джерел (' + getSelected().toUpperCase() + ')');
+        btn.on('click', showMenu);
 
-        // Подія натискання
-        btn.on('click', showSourceMenu);
-
-        // Додаємо у верхнє меню
-        $('.header__right').prepend(btn);
+        // Гарантовано додаємо кнопку в верхнє меню
+        const headerRight = $('.header__right');
+        if (headerRight.length) {
+            headerRight.prepend(btn);
+        }
     }
 
-    // --- Меню вибору джерела ---
-    function showSourceMenu() {
-        let selected = getSelectedSource();
+    // --- ПОКАЗАТИ МЕНЮ ---
+    function showMenu() {
+        const selected = getSelected();
 
-        let list = SOURCES.map(src => {
-            return {
-                title: (src.id === selected ? '✔️ ' : '') + src.title,
-                source_id: src.id
-            };
-        });
+        const items = SOURCES.map(src => ({
+            title: (src.id === selected ? '✔️ ' : '') + src.title,
+            source_id: src.id
+        }));
 
         Lampa.Select.show({
             title: 'Перемикач джерел',
-            items: list,
-            onSelect: function (item) {
-                setSelectedSource(item.source_id);
+            items,
+            onSelect(item) {
+                setSelected(item.source_id);
 
-                // Оновити іконку в шапці
                 $('.source-switcher-btn').attr(
                     'title',
                     'Перемикач джерел (' + item.source_id.toUpperCase() + ')'
                 );
 
-                Lampa.Controller.toggle('content');
-                Lampa.Noty.show('Джерело змінено на: ' + item.title.replace('✔️ ', ''));
+                Lampa.Noty.show('Джерело: ' + item.title.replace('✔️ ', ''));
             }
         });
     }
 
-    // --- Чекаємо на Lampa ---
-    function waitForHeader() {
+    // --- ОБОВʼЯЗКОВА ЧАСТИНА: ЧЕКАЄМО НА UI ---
+    function waitForUI() {
         if ($('.header__right').length) {
-            addTopButton();
+            createButton();
         } else {
-            setTimeout(waitForHeader, 500);
+            setTimeout(waitForUI, 300);
         }
     }
 
-    waitForHeader();
+    // --- ДОДАТКОВО: створюємо кнопку кожен раз після зміни екранів ---
+    Lampa.Listener.follow('app', function (e) {
+        if (e.type === 'ready' || e.type === 'navigation') {
+            setTimeout(createButton, 50);
+        }
+    });
+
+    waitForUI();
 
 })();
