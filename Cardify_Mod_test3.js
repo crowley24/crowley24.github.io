@@ -1500,4 +1500,4 @@ const trailerObserver = new MutationObserver(() => {
 });  
   
 trailerObserver.observe(document.body, { childList: true, subtree: true });  
-// Видалимо зайву закриваючу дужку
+})();
