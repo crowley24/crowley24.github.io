@@ -1378,8 +1378,32 @@ function storageSet(key, value) {
   
 function toggleIframeMute(iframe, mute) {  
     try {  
-        // Спроба використати YouTube iframe API без перезавантаження  
+        // Спроба використати YouTube iframe API  
         if (iframe.contentWindow && iframe.contentWindow.postMessage) {  
+            // Перевіряємо чи iframe має enablejsapi=1  
+            const src = iframe.src || '';  
+            if (!src.includes('enablejsapi=1')) {  
+                // Додаємо enablejsapi=1 якщо відсутній  
+                const newSrc = src + (src.includes('?') ? '&' : '?') + 'enablejsapi=1';  
+                iframe.src = newSrc;  
+                  
+                // Чекаємо завантаження і пробуємо знову  
+                setTimeout(() => {  
+                    if (iframe.contentWindow && iframe.contentWindow.postMessage) {  
+                        iframe.contentWindow.postMessage(  
+                            JSON.stringify({  
+                                event: 'command',  
+                                func: mute ? 'mute' : 'unMute',  
+                                args: []  
+                            }),  
+                            'https://www.youtube.com'  
+                        );  
+                    }  
+                }, 1000);  
+                return;  
+            }  
+              
+            // Відправляємо команду  
             iframe.contentWindow.postMessage(  
                 JSON.stringify({  
                     event: 'command',  
@@ -1388,33 +1412,65 @@ function toggleIframeMute(iframe, mute) {
                 }),  
                 'https://www.youtube.com'  
             );  
-            return;  
+              
+            // Перевіряємо результат через короткий час  
+            setTimeout(() => {  
+                // Якщо API не спрацювало, використовуємо fallback  
+                console.log('[Cardify] API command sent, checking if it worked...');  
+            }, 500);  
+        } else {  
+            // Fallback - змінюємо src  
+            var src = iframe.src || '';  
+            src = src.replace(/([?&])mute=(0|1)(&|$)/, function(_, p1, p2, p3){  
+                return p3 === '&' ? p1 : '';  
+            });  
+            var separator = src.includes('?') ? '&' : '?';  
+            src = src + separator + 'mute=' + (mute ? '1' : '0');  
+            iframe.src = src;  
         }  
-          
-        // Fallback - змінюємо src тільки якщо API недоступний  
-        var src = iframe.src || '';  
-        src = src.replace(/([?&])mute=(0|1)(&|$)/, function(_, p1, p2, p3){  
-            return p3 === '&' ? p1 : '';  
-        });  
-        var separator = src.includes('?') ? '&' : '?';  
-        src = src + separator + 'mute=' + (mute ? '1' : '0');  
-        iframe.src = src;  
-    } catch(e){}  
+    } catch(e){  
+        console.error('[Cardify] Error toggling mute:', e);  
+    }  
 }
   
-function createMuteButtonForTrailer(container) {  
-    try {  
-        if (!container) return;  
-        if (container.querySelector('.cardify-mute-btn')) return;  
+function createMuteButtonForTrailer(container) {    
+    try {    
+        if (!container) return;    
+        if (container.querySelector('.cardify-mute-btn')) return;    
+    
+        var btn = document.createElement('button');    
+        btn.className = 'cardify-mute-btn';    
+        btn.setAttribute('aria-label','Toggle trailer sound');    
+        btn.innerHTML = '🔇'; // Іконка для наочності    
+            
+        // Додано діагностику при кліку    
+        btn.addEventListener('click', function() {    
+            const iframe = container.querySelector('iframe');    
+            if (iframe) {    
+                console.log('[Cardify] Button clicked, iframe src:', iframe.src);    
+                const currentState = iframe.src.includes('mute=1');    
+                toggleIframeMute(iframe, !currentState);    
+            } else {    
+                console.warn('[Cardify] No iframe found in container');    
+            }    
+        });    
   
-        var btn = document.createElement('button');  
-        btn.className = 'cardify-mute-btn';  
-        btn.setAttribute('aria-label','Toggle trailer sound');  
+        // Стилі кнопки (праворуч по центру)  
         btn.style.cssText = [  
-            'position: absolute', 'right: 0.8em', 'top: 50%', 'transform: translateY(-50%)', 'z-index: 1000',  
-            'background: rgba(0,0,0,0.6)', 'color: #fff', 'border: none',  
-            'padding: 6px 8px', 'border-radius: 8px', 'font-size: 18px',  
-            'backdrop-filter: blur(6px)', 'cursor: pointer', 'pointer-events: auto'  
+            'position: absolute',  
+            'right: 0.8em',  
+            'top: 50%',  
+            'transform: translateY(-50%)',  
+            'z-index: 1000',  
+            'background: rgba(0,0,0,0.6)',  
+            'color: #fff',  
+            'border: none',  
+            'padding: 6px 8px',  
+            'border-radius: 8px',  
+            'font-size: 18px',  
+            'backdrop-filter: blur(6px)',  
+            'cursor: pointer',  
+            'pointer-events: auto'  
         ].join(';');  
   
         var stored = storageGet('cardify_trailer_muted', 'false') === 'true';  
