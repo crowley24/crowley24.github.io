@@ -17,7 +17,6 @@
         Lampa.Storage.set(STORAGE_KEY, id);
     }
 
-    // --- показати меню ---
     function showMenu() {
         const selected = getSelected();
 
@@ -36,36 +35,44 @@
         });
     }
 
-    // --- додаємо кнопку ---
-    function injectButton(headerElement) {
-        if (headerElement.querySelector('.source-switcher-btn')) return;
+    // ----------------------------------------
+    // ДОДАВАННЯ КНОПКИ В ШАПКУ (гарантовано)
+    // ----------------------------------------
+    function addButton() {
+        const header = document.querySelector('.header');
+        if (!header) return;
+
+        const right = header.querySelector('.header__right');
+        if (!right) return;
+
+        // Якщо кнопка вже існує — не додаємо повторно
+        if (right.querySelector('.source-switcher-btn')) return;
 
         const btn = document.createElement('div');
         btn.classList.add('header__icon', 'source-switcher-btn');
         btn.style.marginLeft = '15px';
-        btn.innerHTML = `
-            <svg width="24" height="24" fill="currentColor"><path d="M4 6h16M4 12h10M4 18h7"/></svg>
-        `;
+        btn.innerHTML =
+            `<svg width="24" height="24" fill="currentColor">
+                <path d="M4 6h16M4 12h10M4 18h7"/>
+            </svg>`;
 
         btn.addEventListener('click', showMenu);
 
-        const right = headerElement.querySelector('.header__right');
-        if (right) right.prepend(btn);
+        right.prepend(btn);
     }
 
-    // --- перехоплення рендера Header ---
-    const original = Lampa.Header.create;
+    // ----------------------------------------
+    // СЛУХАЧ ПЕРЕМАЛЮВАННЯ ІНТЕРФЕЙСУ
+    // ЦЕ ЄДИНЕ, ЩО ПРАЦЮЄ НА ВСІХ LAMPA
+    // ----------------------------------------
+    Lampa.Listener.follow('full', function (event) {
+        if (event.type === 'render') {
+            // даємо 50 ms щоб Lampa вставила DOM
+            setTimeout(addButton, 50);
+        }
+    });
 
-    Lampa.Header.create = function () {
-        const header = original.apply(this, arguments);
-
-        // DOM може зʼявитися за 0–100ms
-        setTimeout(() => {
-            const headerDom = document.querySelector('.header');
-            if (headerDom) injectButton(headerDom);
-        }, 50);
-
-        return header;
-    };
+    // спроба додати кнопку одразу (на всяк випадок)
+    setTimeout(addButton, 500);
 
 })();
