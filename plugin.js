@@ -1,114 +1,81 @@
-(function(){
-    // Список текстових замін
-    const REPLACEMENTS = {
-        'Дублированный': 'Дубльований',
-        'Ukr': '🇺🇦 Українською',
-        'Ua': '🇺🇦 Ua',
-        'Дубляж': 'Дубльований',
-        'Многоголосый': 'Багатоголосий',
-        'Украинский': '🇺🇦 Українською',
-        'Zetvideo': 'UaFlix',
-        'Нет истории просмотра': 'Історія перегляду відсутня'
-    };
+(function () {
+    'use strict';
 
-    // Конфігурація стилів
-    const STYLES = {
-        '.torrent-item__seeds span.high-seeds': {
-            color: '#00ff00',
-            'font-weight': 'bold'
-        },
-        '.torrent-item__bitrate span.high-bitrate': {
-            color: '#ff0000',
-            'font-weight': 'bold'
-        },
-        '.torrent-item__tracker.utopia': {
-            color: '#9b59b6',
-            'font-weight': 'bold'
-        },
-        '.torrent-item__tracker.toloka': {
-            color: '#2ecc71',
-            'font-weight': 'bold'
-        }
-    };
+    // --- Налаштування джерел ---
+    const SOURCES = [
+        { id: 'tmdb', title: 'TMDB' },
+        { id: 'cub', title: 'CUB' },
+        { id: 'trakt', title: 'TRAKT' },
+        { id: 'kino', title: 'KinoDB' }
+    ];
 
-    // Додаємо CSS-стилі
-    let style = document.createElement('style');
-    style.innerHTML = Object.entries(STYLES).map(([selector, props]) => {
-        return `${selector} { ${Object.entries(props).map(([prop, val]) => `${prop}: ${val} !important`).join('; ')} }`;
-    }).join('\n');
-    document.head.appendChild(style);
+    const STORAGE_KEY = 'source_switcher_selected';
 
-    // Функція для заміни текстів у вказаних контейнерах
-    function replaceTexts() {
-        // Список селекторів, де потрібно шукати тексти для заміни
-        const containers = [
-            '.online-prestige-watched__body',
-            '.online-prestige--full .online-prestige__title',
-            '.online-prestige--full .online-prestige__info'
-        ];
+    function getSelectedSource() {
+        return Lampa.Storage.get(STORAGE_KEY, 'tmdb');
+    }
 
-        containers.forEach(selector => {
-            document.querySelectorAll(selector).forEach(container => {
-                // Заміняємо текст у всіх вузлах-нащадках
-                const walker = document.createTreeWalker(
-                    container,
-                    NodeFilter.SHOW_TEXT,
-                    null,
-                    false
+    function setSelectedSource(id) {
+        Lampa.Storage.set(STORAGE_KEY, id);
+    }
+
+    // --- UI: створити кнопку в шапці ---
+    function addTopButton() {
+        // Перевіряємо, чи вже кнопка існує
+        if ($('.source-switcher-btn').length) return;
+
+        let selected = getSelectedSource();
+
+        // HTML-кнопка
+        let btn = $('<div class="header__icon source-switcher-btn" style="margin-left: 15px;">')
+            .append(`<img src="https://img.icons8.com/fluency-systems-regular/24/sorting-options.png">`)
+            .attr('title', 'Перемикач джерел (' + selected.toUpperCase() + ')');
+
+        // Подія натискання
+        btn.on('click', showSourceMenu);
+
+        // Додаємо у верхнє меню
+        $('.header__right').prepend(btn);
+    }
+
+    // --- Меню вибору джерела ---
+    function showSourceMenu() {
+        let selected = getSelectedSource();
+
+        let list = SOURCES.map(src => {
+            return {
+                title: (src.id === selected ? '✔️ ' : '') + src.title,
+                source_id: src.id
+            };
+        });
+
+        Lampa.Select.show({
+            title: 'Перемикач джерел',
+            items: list,
+            onSelect: function (item) {
+                setSelectedSource(item.source_id);
+
+                // Оновити іконку в шапці
+                $('.source-switcher-btn').attr(
+                    'title',
+                    'Перемикач джерел (' + item.source_id.toUpperCase() + ')'
                 );
 
-                let node;
-                while (node = walker.nextNode()) {
-                    let text = node.nodeValue;
-                    Object.entries(REPLACEMENTS).forEach(([original, replacement]) => {
-                        if (text.includes(original)) {
-                            text = text.replace(new RegExp(original, 'g'), replacement);
-                        }
-                    });
-                    node.nodeValue = text;
-                }
-            });
+                Lampa.Controller.toggle('content');
+                Lampa.Noty.show('Джерело змінено на: ' + item.title.replace('✔️ ', ''));
+            }
         });
     }
 
-    // Функція для оновлення стилів торентів
-    function updateTorrentStyles() {
-        // Seeds > 19
-        document.querySelectorAll('.torrent-item__seeds span').forEach(span => {
-            span.classList.toggle('high-seeds', (parseInt(span.textContent) || 0) > 19);
-        });
-
-        // Бітрейт > 50
-        document.querySelectorAll('.torrent-item__bitrate span').forEach(span => {
-            span.classList.toggle('high-bitrate', (parseFloat(span.textContent) || 0) > 50);
-        });
-
-        // Трекери
-        document.querySelectorAll('.torrent-item__tracker').forEach(tracker => {
-            const text = tracker.textContent.trim();
-            tracker.classList.remove('utopia', 'toloka');
-            
-            if (text.includes('UTOPIA (API)')) tracker.classList.add('utopia');
-            else if (text.includes('Toloka')) tracker.classList.add('toloka');
-        });
-    }
-
-    // Основна функція оновлення
-    function updateAll() {
-        replaceTexts();
-        updateTorrentStyles();
-    }
-
-    // Оптимізований спостерігач
-    const observer = new MutationObserver(mutations => {
-        if (mutations.some(m => m.addedNodes.length)) {
-            updateAll();
+    // --- Чекаємо на Lampa ---
+    function waitForHeader() {
+        if ($('.header__right').length) {
+            addTopButton();
+        } else {
+            setTimeout(waitForHeader, 500);
         }
-    });
+    }
 
-    // Ініціалізація
-    observer.observe(document.body, { childList: true, subtree: true });
-    updateAll();
+    waitForHeader();
+
 })();
-
-Lampa.Platform.tv();
