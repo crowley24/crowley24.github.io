@@ -1518,5 +1518,5 @@ const trailerObserver = new MutationObserver(() => {
 // МОЖЛИВА ОПТИМІЗАЦІЯ: Краще спостерігати не за body, а за конкретним контейнером,
 // який змінюється, коли відображається новий трейлер/картка.
 trailerObserver.observe(document.body, { childList: true, subtree: true });
-  
+  })();
   
