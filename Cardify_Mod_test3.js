@@ -1344,7 +1344,6 @@ function setupTrailerControls() {
     });  
 }  
   
-// --- Safe Storage Helpers ---  
 function storageGet(key, def) {  
     try {  
         if (isLampaAvailable && Lampa.Storage && typeof Lampa.Storage.get === 'function') {  
@@ -1355,6 +1354,16 @@ function storageGet(key, def) {
     } catch(e){  
         return def;  
     }  
+}  
+  
+function storageSet(key, value) {  
+    try {  
+        if (isLampaAvailable && Lampa.Storage && typeof Lampa.Storage.set === 'function') {  
+            Lampa.Storage.set(key, value);  
+        } else {  
+            localStorage.setItem(key, value);  
+        }  
+    } catch(e){}  
 }  
   
 function storageSet(key, value) {  
