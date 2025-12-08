@@ -1375,209 +1375,160 @@ function storageSet(key, value) {
         }  
     } catch(e){}  
 }  
+  // Додайте перевірку доступності Lampa на початку    
+const isLampaAvailable = typeof Lampa !== 'undefined';  
   
-function toggleIframeMute(iframe, mute) {  
-    try {  
-        const src = iframe.src || '';  
-          
-        // Перевіряємо чи це YouTube iframe  
-        if (src.includes('youtube.com')) {  
-            // Метод 1: Спроба YouTube API  
-            if (iframe.contentWindow && iframe.contentWindow.postMessage) {  
-                // Відправляємо команду mute/unmute  
-                iframe.contentWindow.postMessage(  
-                    JSON.stringify({  
-                        event: 'command',  
-                        func: mute ? 'mute' : 'unMute',  
-                        args: []  
-                    }),  
-                    '*'  
-                );  
-                  
-                // Перевіряємо результат через 500ms  
-                setTimeout(() => {  
-                    iframe.contentWindow.postMessage(  
-                        JSON.stringify({  
-                            event: 'command',  
-                            func: 'getVolume',  
-                            args: []  
-                        }),  
-                        '*'  
-                    );  
-                }, 500);  
-                return;  
-            }  
-              
-            // Метод 2: Модифікація URL (fallback)  
-            const newSrc = src.replace(/([?&])mute=(0|1)(&|$)/, function(_, p1, p2, p3) {  
-                return p3 === '&' ? p1 : '';  
-            });  
-              
-            const separator = newSrc.includes('?') ? '&' : '?';  
-            iframe.src = newSrc + separator + 'mute=' + (mute ? '1' : '0');  
-              
-            console.log('[Cardify] Sound toggled via URL modification');  
-        }  
-    } catch(e) {  
-        console.error('[Cardify] Error toggling mute:', e);  
-    }  
-}
-  
-function createMuteButtonForTrailer(container) {    
+function toggleIframeMute(iframe, mute) {    
     try {    
-        if (!container) return;    
-        if (container.querySelector('.cardify-mute-btn')) return;    
-    
-        var btn = document.createElement('button');    
-        btn.className = 'cardify-mute-btn';    
-        btn.setAttribute('aria-label','Toggle trailer sound');    
-        btn.innerHTML = '🔇';    
+        const src = iframe.src || '';    
             
-        btn.addEventListener('click', function() {    
-            const iframe = container.querySelector('iframe');    
-            if (iframe) {    
-                console.log('[Cardify] Button clicked, iframe src:', iframe.src);    
-                  
-                // Визначаємо поточний стан  
-                const src = iframe.src || '';  
-                const isMuted = src.includes('mute=1') || src.includes('mute=0');  
-                  
-                // Змінюємо стан  
-                const newMuteState = !src.includes('mute=1');  
-                toggleIframeMute(iframe, newMuteState);  
-                  
-                // Оновлюємо іконку  
-                btn.innerHTML = newMuteState ? '🔊' : '🔇';  
-                  
-                console.log('[Cardify] Sound toggled to:', newMuteState ? 'muted' : 'unmuted');  
-            } else {    
-                console.warn('[Cardify] No iframe found in container');    
+        if (src.includes('youtube.com')) {    
+            if (iframe.contentWindow && iframe.contentWindow.postMessage) {    
+                iframe.contentWindow.postMessage(    
+                    JSON.stringify({    
+                        event: 'command',    
+                        func: mute ? 'mute' : 'unMute',    
+                        args: []    
+                    }),    
+                    '*'    
+                );    
+                return;    
             }    
-        });  
-  
-        btn.style.cssText = [  
-            'position: absolute',  
-            'right: 0.8em',  
-            'top: 50%',  
-            'transform: translateY(-50%)',  
-            'z-index: 1000',  
-            'background: rgba(0,0,0,0.6)',  
-            'color: #fff',  
-            'border: none',  
-            'padding: 6px 8px',  
-            'border-radius: 8px',  
-            'font-size: 18px',  
-            'backdrop-filter: blur(6px)',  
-            'cursor: pointer',  
-            'pointer-events: auto'  
-        ].join(';');  
-  
-        container.appendChild(btn);  
-        console.log('[Cardify] Mute button added successfully');  
-    } catch(e){  
-        console.error('[Cardify] Error creating mute button:', e);  
-    }  
-}
-  
-        var stored = storageGet('cardify_trailer_muted', 'false') === 'true';  
-        btn.textContent = stored ? '🔈' : '🔊';  
-  
-        btn.addEventListener('click', function(e){  
-            e.stopPropagation();  
-            e.preventDefault();  
-            var iframe = container.querySelector('iframe') || container.querySelector('.cardify-trailer__youtube-iframe iframe');  
-            if (!iframe) return;  
-  
-            var muted = storageGet('cardify_trailer_muted', 'false') === 'true';  
-            muted = !muted;  
-            storageSet('cardify_trailer_muted', muted ? 'true' : 'false');  
-            toggleIframeMute(iframe, muted);  
-            btn.textContent = muted ? '🔈' : '🔊';  
-        }, false);  
-  
-        if (!container.style.position) container.style.position = 'relative';  
-        container.appendChild(btn);  
-  
-        var iframe0 = container.querySelector('iframe') || container.querySelector('.cardify-trailer__youtube-iframe iframe');  
-        if (iframe0) {  
-            var muted0 = storageGet('cardify_trailer_muted', 'false') === 'true';  
-            toggleIframeMute(iframe0, muted0);  
-            btn.textContent = muted0 ? '🔈' : '🔊';  
-        }  
-    } catch(e){  
-        console.warn('[Cardify] createMuteButtonForTrailer error', e);  
-    }  
+                
+            const newSrc = src.replace(/([?&])mute=(0|1)(&|$)/, function(_, p1, p2, p3) {    
+                return p3 === '&' ? p1 : '';    
+            });    
+                
+            const separator = newSrc.includes('?') ? '&' : '?';    
+            iframe.src = newSrc + separator + 'mute=' + (mute ? '1' : '0');    
+                
+            console.log('[Cardify] Sound toggled via URL modification');    
+        }    
+    } catch(e) {    
+        console.error('[Cardify] Error toggling mute:', e);    
+    }    
+}  
+    
+function createMuteButtonForTrailer(container) {      
+    try {      
+        if (!container) return;      
+        if (container.querySelector('.cardify-mute-btn')) return;      
+      
+        var btn = document.createElement('button');      
+        btn.className = 'cardify-mute-btn';      
+        btn.setAttribute('aria-label','Toggle trailer sound');      
+        btn.innerHTML = '🔇';      
+              
+        btn.addEventListener('click', function() {      
+            const iframe = container.querySelector('iframe');      
+            if (iframe) {      
+                console.log('[Cardify] Button clicked, iframe src:', iframe.src);      
+                    
+                const src = iframe.src || '';    
+                const newMuteState = !src.includes('mute=1');    
+                toggleIframeMute(iframe, newMuteState);    
+                    
+                btn.innerHTML = newMuteState ? '🔊' : '🔇';    
+                    
+                console.log('[Cardify] Sound toggled to:', newMuteState ? 'muted' : 'unmuted');    
+            } else {      
+                console.warn('[Cardify] No iframe found in container');      
+            }      
+        });    
+    
+        btn.style.cssText = [    
+            'position: absolute',    
+            'right: 0.8em',    
+            'top: 50%',    
+            'transform: translateY(-50%)',    
+            'z-index: 1000',    
+            'background: rgba(0,0,0,0.6)',    
+            'color: #fff',    
+            'border: none',    
+            'padding: 6px 8px',    
+            'border-radius: 8px',    
+            'font-size: 18px',    
+            'backdrop-filter: blur(6px)',    
+            'cursor: pointer',    
+            'pointer-events: auto'    
+        ].join(';');    
+    
+        container.appendChild(btn);    
+        console.log('[Cardify] Mute button added successfully');    
+    } catch(e){    
+        console.error('[Cardify] Error creating mute button:', e);    
+    }    
 }  
   
-// --- Основний блок ---  
-(function(){  
-    // Додавання кнопок для існуючих трейлерів  
-    try {  
-        document.querySelectorAll('.cardify-trailer, .cardify-trailer__youtube').forEach(function(c){  
-            var container = (c.classList && c.classList.contains('cardify-trailer')) ? c : (c.closest && c.closest('.cardify-trailer')) || c;  
-            createMuteButtonForTrailer(container);  
-        });  
-    } catch(e){  
-        console.warn('[Cardify] add existing trailers error', e);  
-    }  
-  
-    // Спостерігач DOM для нових трейлерів  
-    try {  
-        var mb = new MutationObserver(function(muts){  
-            muts.forEach(function(m){  
-                m.addedNodes.forEach(function(node){  
-                    try {  
-                        if (!node || node.nodeType !== 1) return;  
-                        if (node.classList && (node.classList.contains('cardify-trailer') || node.classList.contains('cardify-trailer__youtube'))) {  
-                            var container = node.classList.contains('cardify-trailer') ? node : (node.closest && node.closest('.cardify-trailer')) || node;  
-                            createMuteButtonForTrailer(container);  
-                        } else if (node.querySelector) {  
-                            var found = node.querySelector('.cardify-trailer') || node.querySelector('.cardify-trailer__youtube');  
-                            if (found) {  
-                                var cont = (found.classList && found.classList.contains('cardify-trailer')) ? found : (found.closest && found.closest('.cardify-trailer')) || found;  
-                                createMuteButtonForTrailer(cont);  
-                            }  
-                        }  
-                    } catch(e){}  
-                });  
-            });  
-        });  
-        mb.observe(document.body, { childList: true, subtree: true });  
-    } catch(e){  
-        console.warn('[Cardify] mute button observer init error', e);  
-    }  
+// --- Основний блок ---    
+(function(){    
+    // Додавання кнопок для існуючих трейлерів    
+    try {    
+        document.querySelectorAll('.cardify-trailer, .cardify-trailer__youtube').forEach(function(c){    
+            var container = (c.classList && c.classList.contains('cardify-trailer')) ? c : (c.closest && c.closest('.cardify-trailer')) || c;    
+            createMuteButtonForTrailer(container);    
+        });    
+    } catch(e){    
+        console.warn('[Cardify] add existing trailers error', e);    
+    }    
+    
+    // Спостерігач DOM для нових трейлерів    
+    try {    
+        var mb = new MutationObserver(function(muts){    
+            muts.forEach(function(m){    
+                m.addedNodes.forEach(function(node){    
+                    try {    
+                        if (!node || node.nodeType !== 1) return;    
+                        if (node.classList && (node.classList.contains('cardify-trailer') || node.classList.contains('cardify-trailer__youtube'))) {    
+                            var container = node.classList.contains('cardify-trailer') ? node : (node.closest && node.closest('.cardify-trailer')) || node;    
+                            createMuteButtonForTrailer(container);    
+                        } else if (node.querySelector) {    
+                            var found = node.querySelector('.cardify-trailer') || node.querySelector('.cardify-trailer__youtube');    
+                            if (found) {    
+                                var cont = (found.classList && found.classList.contains('cardify-trailer')) ? found : (found.closest && found.closest('.cardify-trailer')) || found;    
+                                createMuteButtonForTrailer(cont);    
+                            }    
+                        }    
+                    } catch(e){}    
+                });    
+            });    
+        });    
+        mb.observe(document.body, { childList: true, subtree: true });    
+    } catch(e){    
+        console.warn('[Cardify] mute button observer init error', e);    
+    }    
 })();  
   
-// --- Обробка кнопки "Назад" ---  
-let trailerMuted = false;  
-  
-if (isLampaAvailable && Lampa.Listener && typeof Lampa.Listener.follow === 'function') {  
-    Lampa.Listener.follow('keydown', function(e) {  
-        if (e.code === 'Back' || e.code === 'Backspace') {  
-            const trailer = document.querySelector('.cardify-trailer__youtube iframe');  
-            if (trailer && !trailerMuted) {  
-                e.preventDefault();  
-                e.stopPropagation();  
-                const src = trailer.src;  
-                if (src.includes('mute=0')) {  
-                    trailer.src = src.replace('mute=0', 'mute=1');  
-                } else if (!src.includes('mute=1')) {  
-                    const separator = src.includes('?') ? '&' : '?';  
-                    trailer.src = src + separator + 'mute=1';  
-                }  
-                trailerMuted = true;  
-                console.log('[Cardify] Звук трейлера вимкнено');  
-                return false;  
-            } else if (trailer && trailerMuted) {  
-                trailerMuted = false;  
-                console.log('[Cardify] Вихід з картки фільму');  
-            }  
-        }  
-    });  
-} else {  
-    console.warn('[Cardify] Lampa.Listener недоступний. Обробка кнопки "Назад" не активована.');  
-}  
-  
+// --- Обробка кнопки "Назад" ---    
+let trailerMuted = false;    
+    
+if (isLampaAvailable && Lampa.Listener && typeof Lampa.Listener.follow === 'function') {    
+    Lampa.Listener.follow('keydown', function(e) {    
+        if (e.code === 'Back' || e.code === 'Backspace') {    
+            const trailer = document.querySelector('.cardify-trailer__youtube iframe');    
+            if (trailer && !trailerMuted) {    
+                e.preventDefault();    
+                e.stopPropagation();    
+                const src = trailer.src;    
+                if (src.includes('mute=0')) {    
+                    trailer.src = src.replace('mute=0', 'mute=1');    
+                } else if (!src.includes('mute=1')) {    
+                    const separator = src.includes('?') ? '&' : '?';    
+                    trailer.src = src + separator + 'mute=1';    
+                }    
+                trailerMuted = true;    
+                console.log('[Cardify] Звук трейлера вимкнено');    
+                return false;    
+            } else if (trailer && trailerMuted) {    
+                trailerMuted = false;    
+                console.log('[Cardify] Вихід з картки фільму');    
+            }    
+        }    
+    });    
+} else {    
+    console.warn('[Cardify] Lampa.Listener недоступний. Обробка кнопки "Назад" не активована.');    
+}
+                            
 // --- Скидання стану при зміні трейлера ---  
 const trailerObserver = new MutationObserver(() => {  
     trailerMuted = false;  
