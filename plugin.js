@@ -1,17 +1,18 @@
 (function () {
   'use strict';
 
-  // Конфігурація джерел
+  // === Налаштуйте тут свої реальні джерела ===
+  // Змініть масив на ті id, які реально є у вас в Лампі
   const SOURCES = [
     { id: 'tmdb', title: 'TMDB' },
-    { id: 'cub', title: 'CUB' },
-    { id: 'trakt', title: 'TRAKT' }
+    { id: 'cub', title: 'CUB' }
+    // { id: 'trakt', title: 'TRAKT' } // видаліть, якщо у вас його немає
   ];
 
   const STORAGE_KEY = 'source_switcher_selected';
   const BUTTON_CLASS = 'source-switcher-btn';
 
-  // Безпечна робота зі сховищем (Lampa.Storage або localStorage)
+  // Безпечна робота зі сховищем
   function getSelected() {
     try {
       if (typeof Lampa !== 'undefined' && Lampa.Storage && typeof Lampa.Storage.get === 'function') {
@@ -19,9 +20,7 @@
       } else if (window.localStorage) {
         return localStorage.getItem(STORAGE_KEY) || 'tmdb';
       }
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) {}
     return 'tmdb';
   }
 
@@ -32,12 +31,33 @@
       } else if (window.localStorage) {
         localStorage.setItem(STORAGE_KEY, id);
       }
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) {}
+
+    // Повідомляємо інших про зміну — кількома шляхами (безпечно)
+    try {
+      // 1) Локальна подія (універсальна) — інші скрипти можуть слухати
+      window.dispatchEvent(new CustomEvent('source_switcher_changed', { detail: { id } }));
+    } catch (e) {}
+
+    try {
+      // 2) Якщо у Lampa є механізм повідомлень — пробуємо викликати (якщо існує)
+      if (typeof Lampa !== 'undefined') {
+        if (Lampa.Noty && typeof Lampa.Noty.show === 'function') {
+          Lampa.Noty.show('Джерело: ' + id);
+        }
+        // Якщо у Lampa.Listener є send/trigger — пробуємо
+        if (Lampa.Listener) {
+          if (typeof Lampa.Listener.send === 'function') {
+            Lampa.Listener.send('source_switcher.changed', { id });
+          } else if (typeof Lampa.Listener.trigger === 'function') {
+            Lampa.Listener.trigger('source_switcher.changed', { id });
+          }
+        }
+      }
+    } catch (e) {}
   }
 
-  // Показ меню вибору джерела (через Lampa.Select, якщо доступний)
+  // Відкриває меню вибору (Lampa.Select або fallback)
   function showMenu() {
     const selected = getSelected();
 
@@ -54,16 +74,10 @@
         onSelect(item) {
           setSelected(item.source_id);
           updateButton();
-          if (typeof Lampa !== 'undefined' && Lampa.Noty && typeof Lampa.Noty.show === 'function') {
-            Lampa.Noty.show('Джерело: ' + item.rawTitle);
-          } else {
-            // невелика fallback підказка у консоль
-            console.log('[Source Switcher] Джерело: ' + item.rawTitle);
-          }
         }
       });
     } else {
-      // fallback — простий prompt (якщо Lampa.Select немає)
+      // простий fallback (prompt)
       const names = items.map((it, i) => `${i + 1}. ${it.title}`).join('\n');
       const choice = prompt('Виберіть джерело:\n' + names);
       const idx = parseInt(choice, 10) - 1;
@@ -74,7 +88,7 @@
     }
   }
 
-  // Створює кнопку; використовує простий SVG, щоб уникнути проблем з innerHTML
+  // Створення кнопки
   function createButton() {
     const btn = document.createElement('div');
     btn.className = `head__action ${BUTTON_CLASS}`;
@@ -82,23 +96,13 @@
     btn.setAttribute('tabindex', '0');
     btn.setAttribute('aria-label', 'Перемикач джерел');
 
-    // Валідний простий SVG (круг — замініть на свій за потреби)
+    // Простий, валідний SVG
     btn.innerHTML = `
       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
         <circle cx="12" cy="12" r="9"></circle>
         <text x="12" y="16" font-size="8" text-anchor="middle" fill="#fff">SRC</text>
       </svg>
     `;
-
-    // Показ підказки з обраним джерелом
-    const setTitle = () => {
-      const sel = getSelected();
-      const found = SOURCES.find(s => s.id === sel);
-      btn.title = found ? `Джерело: ${found.title}` : 'Перемикач джерел';
-      btn.style.opacity = sel === 'tmdb' ? '1' : '0.9';
-    };
-
-    setTitle();
 
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -112,12 +116,10 @@
       }
     });
 
-    // При зміні вибору (якщо Lampa має events) можна оновлювати підказку
-    // Але ми оновлюємо кнопку при кожному відкритті меню / встановленні.
-    return { btn, setTitle };
+    return btn;
   }
 
-  // Оновлення кнопки: підказка, стиль
+  // Оновлення кнопки (підказка)
   function updateButton() {
     const el = document.querySelector(`.${BUTTON_CLASS}`);
     if (!el) return;
@@ -127,74 +129,51 @@
     el.style.opacity = sel === 'tmdb' ? '1' : '0.9';
   }
 
-  // Додавання кнопки до інтерфейсу
+  // Додає кнопку у header біля пошуку/аккаунта
   function addButton() {
     try {
-      // вже є кнопка
       if (document.querySelector(`.${BUTTON_CLASS}`)) return;
 
       const header = document.querySelector('.head');
       if (!header) return;
 
+      // шукаємо контейнер з діями (в залежності від шаблону)
       const actions = header.querySelector('.head__actions') || header.querySelector('.head__right') || header;
       if (!actions) return;
 
-      const created = createButton();
-      // вставляємо перед першою дією (біля пошуку/аккаунту)
-      actions.prepend(created.btn);
-      // оновлюємо підказку/зовнішній вигляд після додавання
-      created.setTitle();
+      const btn = createButton();
+      actions.prepend(btn);
+      updateButton();
       console.log('[Source Switcher] Кнопку додано');
     } catch (e) {
       console.error('[Source Switcher] addButton error', e);
     }
   }
 
-  // Спроби додати кнопку декілька разів + слідкування за DOM змін
+  // Запуски/наблюдатель
   function tryAddButton() {
-    // Кілька таймаутів на початку (коли інтерфейс ще завантажується)
     [0, 200, 800, 1500].forEach(delay => setTimeout(addButton, delay));
 
-    // MutationObserver: реагує на динамічне оновлення DOM (якщо Lampa рендерить заново)
     if (typeof MutationObserver !== 'undefined') {
-      const observer = new MutationObserver(() => {
-        addButton();
-      });
-      observer.observe(document.documentElement || document.body, {
-        childList: true,
-        subtree: true
-      });
-
-      // Якщо Lampa доступна та має подію 'render' — також слухаємо її, але observer лишаємо
-      setTimeout(() => {
-        // після стабільності сторінки можна відключити observer, але краще лишити, бо інтерфейс може перерендеритись
-      }, 5000);
+      const observer = new MutationObserver(() => addButton());
+      observer.observe(document.documentElement || document.body, { childList: true, subtree: true });
+      // Залишаємо observer — корисно, якщо інтерфейс перерендерюється
     }
   }
 
-  // Ініціалізація плагіна
   function init() {
-    console.log('[Source Switcher] Ініціалізація плагіна...');
-
-    // Слухаємо події Lampa, якщо вони є
+    console.log('[Source Switcher] Ініціалізація...');
     if (typeof Lampa !== 'undefined' && Lampa.Listener && typeof Lampa.Listener.follow === 'function') {
       Lampa.Listener.follow('full', function (event) {
-        if (event && event.type === 'render') {
-          setTimeout(addButton, 100);
-        }
+        if (event && event.type === 'render') setTimeout(addButton, 100);
       });
-
       Lampa.Listener.follow('app', function (event) {
-        if (event && event.type === 'ready') {
-          setTimeout(addButton, 200);
-        }
+        if (event && event.type === 'ready') setTimeout(addButton, 200);
       });
     }
 
-    // Початкові спроби та observer
     tryAddButton();
 
-    // Також при повному завантаженні DOM
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', tryAddButton);
     } else {
@@ -202,7 +181,6 @@
     }
   }
 
-  // Запуск
   init();
 
 })();
