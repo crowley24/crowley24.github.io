@@ -1390,7 +1390,7 @@ function createMuteButtonForTrailer(container) {
         btn.className = 'cardify-mute-btn';
         btn.setAttribute('aria-label','Toggle trailer sound');
         btn.style.cssText = [
-            'position: absolute', 'right: 0.8em', 'bottom: 4.5%', 'z-index: 1000',
+            'position: absolute', 'right: 0.8em', 'top: 50%', 'transform: translateY(-50%)', 'z-index: 1000',
             'background: rgba(0,0,0,0.6)', 'color: #fff', 'border: none',
             'padding: 6px 8px', 'border-radius: 8px', 'font-size: 18px',
             'backdrop-filter: blur(6px)', 'cursor: pointer', 'pointer-events: auto'
