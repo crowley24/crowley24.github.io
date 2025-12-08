@@ -1368,19 +1368,32 @@ function storageSet(key, value) {
     } catch(e){}
 }
 
-function toggleIframeMute(iframe, mute) {
-    try {
-        var src = iframe.src || '';
-        // Видалення існуючого параметра mute
-        src = src.replace(/([?&])mute=(0|1)(&|$)/, function(_, p1, p2, p3){
-            return p3 === '&' ? p1 : '';
-        });
-        var separator = src.includes('?') ? '&' : '?';
-        src = src + separator + 'mute=' + (mute ? '1' : '0');
-        iframe.src = src;
-    } catch(e){}
+function toggleIframeMute(iframe, mute) {  
+    try {  
+        // Спроба використати YouTube iframe API без перезавантаження  
+        if (iframe.contentWindow && iframe.contentWindow.postMessage) {  
+            iframe.contentWindow.postMessage(  
+                JSON.stringify({  
+                    event: 'command',  
+                    func: mute ? 'mute' : 'unMute',  
+                    args: []  
+                }),  
+                'https://www.youtube.com'  
+            );  
+            return;  
+        }  
+          
+        // Fallback - змінюємо src тільки якщо API недоступний  
+        var src = iframe.src || '';  
+        src = src.replace(/([?&])mute=(0|1)(&|$)/, function(_, p1, p2, p3){  
+            return p3 === '&' ? p1 : '';  
+        });  
+        var separator = src.includes('?') ? '&' : '?';  
+        src = src + separator + 'mute=' + (mute ? '1' : '0');  
+        iframe.src = src;  
+    } catch(e){}  
 }
-
+  
 function createMuteButtonForTrailer(container) {
     try {
         if (!container) return;
