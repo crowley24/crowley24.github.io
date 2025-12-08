@@ -1508,3 +1508,15 @@ trailerObserver.observe(document.body, {
   subtree: true  
 });
 })();
+  
+// Скидання стану при зміні трейлера  
+const trailerObserver = new MutationObserver(() => {  
+  trailerMuted = false;  
+  setupTrailerControls();  
+});  
+  
+trailerObserver.observe(document.body, {  
+  childList: true,  
+  subtree: true  
+});
+})();
