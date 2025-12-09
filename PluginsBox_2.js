@@ -324,63 +324,63 @@ Lampa.SettingsApi.addParam({
     }
 });
 
-/* TMDB */
-Lampa.SettingsApi.addParam({
-    component: 'add_interface_plugin',
-    param: {
-        name: 'TMDB',
-        type: 'select',
-        values: {
-            1: 'Встановити',
-            2: 'Видалити'
-        },
-    },
-    field: {
-        name: 'TMDB Proxy',
-        description: 'Проксування постерів для сайту TMDB'
-    },
-    onChange: function(value) {
-        if (value == '1') {
-            itemON('https://bylampa.github.io/tmdb-proxy.js', 'TMDB Proxy', '@lampa', 'TMDB');
-        }
-        if (value == '2') {
-            deletePlugin("https://bylampa.github.io/tmdb-proxy.js");
-        }
-    },
-    onRender: function (item) {
-        $('.settings-param__name', item).css('color','#f3d900');
-        hideInstall();
-
-        var myResult = checkPlugin('https://bylampa.github.io/tmdb-proxy.js');
-        var pluginsArray = Lampa.Storage.get('plugins') || [];
-
-        setTimeout(function() {
-            var container = $('div[data-name="TMDB"]');
-            if (container.length && container.find('.settings-param__status').length === 0) {
-                container.append('<div class="settings-param__status one"></div>');
-            }
-            var pluginStatus = null;
-            for (var i = 0; i < pluginsArray.length; i++) {
-                if (pluginsArray[i] && pluginsArray[i].url === 'https://bylampa.github.io/tmdb-proxy.js') {
-                    pluginStatus = pluginsArray[i].status;
-                    break;
-                }
-            }
-            var statusEl = $('div[data-name="TMDB"]').find('.settings-param__status');
-            statusEl.removeClass('active error').css('background-color','');
-            if (myResult && pluginStatus !== 0) {
-                statusEl.addClass('active');
-            } else if (pluginStatus === 0) {
-                statusEl.css('background-color', 'rgb(255, 165, 0)');
-            } else {
-                statusEl.addClass('error');
-            }
-        }, 100);
-
-        item.on("hover:enter", function (event) {
-            nthChildIndex = focus_back(event);
-        });
-    }
+/* Якість на картках */  
+Lampa.SettingsApi.addParam({  
+    component: 'add_interface_plugin',  
+    param: {  
+        name: 'QUALITY',  
+        type: 'select',  
+        values: {  
+            1: 'Встановити',  
+            2: 'Видалити'  
+        },  
+    },  
+    field: {  
+        name: 'Якість на картках',  
+        description: 'Відображення якості на постерах фільмів'  
+    },  
+    onChange: function(value) {  
+        if (value == '1') {  
+            itemON('https://crowley24.github.io/quality_v7.js', 'Якість на картках', '@lampa', 'QUALITY');  
+        }  
+        if (value == '2') {  
+            deletePlugin("https://crowley24.github.io/quality_v7.js");  
+        }  
+    },  
+    onRender: function (item) {  
+        $('.settings-param__name', item).css('color','#f3d900');  
+        hideInstall();  
+  
+        var myResult = checkPlugin('https://crowley24.github.io/quality_v7.js');  
+        var pluginsArray = Lampa.Storage.get('plugins') || [];  
+  
+        setTimeout(function() {  
+            var container = $('div[data-name="QUALITY"]');  
+            if (container.length && container.find('.settings-param__status').length === 0) {  
+                container.append('<div class="settings-param__status one"></div>');  
+            }  
+            var pluginStatus = null;  
+            for (var i = 0; i < pluginsArray.length; i++) {  
+                if (pluginsArray[i] && pluginsArray[i].url === 'https://crowley24.github.io/quality_v7.js') {  
+                    pluginStatus = pluginsArray[i].status;  
+                    break;  
+                }  
+            }  
+            var statusEl = $('div[data-name="QUALITY"]').find('.settings-param__status');  
+            statusEl.removeClass('active error').css('background-color','');  
+            if (myResult && pluginStatus !== 0) {  
+                statusEl.addClass('active');  
+            } else if (pluginStatus === 0) {  
+                statusEl.css('background-color', 'rgb(255, 165, 0)');  
+            } else {  
+                statusEl.addClass('error');  
+            }  
+        }, 100);  
+  
+        item.on("hover:enter", function (event) {  
+            nthChildIndex = focus_back(event);  
+        });  
+    }  
 });
 
 /* Tricks */
