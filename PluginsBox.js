@@ -646,6 +646,67 @@ function addonStart() {
         }  
     });  
 
+    // Colors - Додано напряму в add_plugin  
+    Lampa.SettingsApi.addParam({  
+        component: 'add_plugin',  
+        param: {  
+            name: 'COLORS',  
+            type: 'select',  
+            values: {  
+                1: 'Встановити',  
+                2: 'Видалити'  
+            },  
+        },  
+        field: {  
+            name: 'Зміна кольрів',  
+            description: 'Зміна кольорів інтерфейсу'  
+        },  
+        onChange: function(value) {  
+            if (value == '1') {  
+                itemON('https://mastermagic98.github.io/l_plugins/th3.js', 'Colors', '@lampa', 'COLORS');  
+            }  
+            if (value == '2') {  
+                deletePlugin("https://mastermagic98.github.io/l_plugins/th3.js");  
+            }  
+        },  
+        onRender: function(item) {  
+            $('.settings-param__name', item).css('color', '#f3d900');  
+            hideInstall();  
+              
+            var myResult = checkPlugin('https://mastermagic98.github.io/l_plugins/th3.js');  
+            var pluginsArray = Lampa.Storage.get('plugins') || [];  
+              
+            setTimeout(function() {  
+                var container = $('div[data-name="COLORS"]');  
+                if (container && container.length && container.find('.settings-param__status').length === 0) {  
+                    container.append('<div class="settings-param__status one"></div>');  
+                }  
+                var pluginStatus = null;  
+                for (var i = 0; i < pluginsArray.length; i++) {  
+                    if (pluginsArray[i] && pluginsArray[i].url === 'https://mastermagic98.github.io/l_plugins/th3.js') {  
+                        pluginStatus = pluginsArray[i].status;  
+                        break;  
+                    }  
+                }  
+                var statusEl = $('div[data-name="COLORS"]').find('.settings-param__status');  
+                if (statusEl && statusEl.length) {  
+                    statusEl.removeClass('active error').css('background-color', '');  
+                    if (myResult && pluginStatus !== 0) {  
+                        statusEl.addClass('active');  
+                    } else if (pluginStatus === 0) {  
+                        statusEl.css('background-color', 'rgb(255, 165, 0)');  
+                    } else {  
+                        statusEl.addClass('error');  
+                    }  
+                }  
+            }, 100);  
+              
+            item.on("hover:enter", function(event) {  
+                nthChildIndex = focus_back(event);  
+            });  
+        }  
+    });  
+
     // Bookmarks - Додано напряму в add_plugin  
     Lampa.SettingsApi.addParam({  
         component: 'add_plugin',  
