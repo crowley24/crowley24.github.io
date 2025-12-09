@@ -309,9 +309,9 @@ Lampa.SettingsApi.addParam({
     onRender: function(item) {
         item.on('hover:enter', function () {
             Lampa.Settings.create('add_interface_plugin');
-            Lampa.Controller.enabled().controller.back = function(){
-                Lampa.Settings.create('add_plugin');
-            }
+            Lampa.Controller.enabled().controller.back = function(){  
+    Lampa.Settings.create('add_plugin'); // ← Змінено на правильний компонент  
+}
         });
     }
 });
