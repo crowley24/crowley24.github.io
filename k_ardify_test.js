@@ -991,119 +991,199 @@
     });
 
     function video(data) {
-      if (data.videos && data.videos.results.length) {
+    if (data.videos && data.videos.results.length) {
         var items = [];
         data.videos.results.forEach(function (element) {
-          items.push({
-            title: Lampa.Utils.shortText(element.name, 50),
-            id: element.key,
-            code: element.iso_639_1,
-            time: new Date(element.published_at).getTime(),
-            url: 'https://www.youtube.com/watch?v=' + element.key,
-            img: 'https://img.youtube.com/vi/' + element.key + '/default.jpg'
-          });
+            items.push({
+                title: Lampa.Utils.shortText(element.name, 50),
+                id: element.key,
+                code: element.iso_639_1,
+                time: new Date(element.published_at).getTime(),
+                url: 'https://www.youtube.com/watch?v=' + element.key,
+                img: 'https://img.youtube.com/vi/' + element.key + '/default.jpg'
+            });
         });
         items.sort(function (a, b) {
-          return a.time > b.time ? -1 : a.time < b.time ? 1 : 0;
+            return a.time > b.time ? -1 : a.time < b.time ? 1 : 0;
         });
         var my_lang = items.filter(function (n) {
-          return n.code == Lampa.Storage.field('tmdb_lang');
+            return n.code == Lampa.Storage.field('tmdb_lang');
         });
         var en_lang = items.filter(function (n) {
-          return n.code == 'en' && my_lang.indexOf(n) == -1;
+            return n.code == 'en' && my_lang.indexOf(n) == -1;
         });
         var al_lang = [];
 
-        if (my_lang.length) {
-          al_lang = al_lang.concat(my_lang);
-        }
-
+        if (my_lang.length) al_lang = al_lang.concat(my_lang);
         al_lang = al_lang.concat(en_lang);
-        if (al_lang.length) return al_lang[0];
-      }
-    }
 
-    Follow.get(Type.de([102, 117, 108, 108]), function (e) {
-      if (Type.co(e)) {
+        if (al_lang.length) return al_lang[0];
+    }
+}
+
+// ==========================
+// ⚙️ Додаємо налаштування PiP
+// ==========================
+Lampa.SettingsApi.addParam({
+    component: 'cardify',
+    param: {
+        name: 'cardify_trailer_mode',
+        type: 'select',
+        values: {
+            standard: 'Стандартний трейлер',
+            pip: 'Трейлер у вікні (PiP)'
+        },
+        default: 'standard'
+    },
+    field: {
+        name: 'Режим трейлера',
+        description: 'Виберіть спосіб відтворення трейлерів'
+    }
+});
+
+// ===============
+// 🎥 CSS для PiP
+// ===============
+var style = document.createElement('style');
+style.innerHTML = `
+.pip-small {
+    position: fixed !important;
+    width: 260px !important;
+    height: 150px !important;
+    right: 20px !important;
+    bottom: 20px !important;
+    z-index: 999999 !important;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 0 15px rgba(0,0,0,0.4);
+}
+`;
+document.head.appendChild(style);
+
+
+// ============================
+// 🚀 Основна логіка трейлерів
+// ============================
+Follow.get(Type.de([102, 117, 108, 108]), function (e) {
+    if (Type.co(e)) {
         Follow.skodf(e);
 
         var $buttons = e.object.activity.render().find('.full-start-new__buttons');
         var $mute_button = $buttons.find('.cardify-mute-button');
 
-        // Перемикання фонових зображень, якщо трейлери вимкнено
-		if (!Lampa.Storage.field('cardify_run_trailers')) {    
-		  var backdrops = e.data.images?.backdrops || [];    
-			  
-		  if (backdrops.length > 1) {    
-			var current_index = 0;    
-			var timer_poster;    
-			var is_active = true;    
-			
-			var change_backdrop = function() {    
-				if (!is_active) return;  
-				  
-				current_index = (current_index + 1) % backdrops.length;    
-				var new_backdrop_url = LAMPAC_HOST + '/tmdb/img/t/p/w1280' + backdrops[current_index].file_path;    
-					
-				var $background = e.object.activity.render().find('.full-start__background');  
-				  
-				if ($background.length === 0) {  
-					console.error('Background element not found!');  
-					return;  
-				}  
-				  
-				// Видалити клас loaded перед зміною  
-				$background.removeClass('loaded');  
-				  
-				// Змінити src атрибут напряму  
-				$background.attr('src', new_backdrop_url);  
-				  
-				// Додати клас loaded після завантаження  
-				$background.on('load', function() {  
-					$(this).addClass('loaded');  
-					$(this).off('load'); // Видалити обробник після виконання  
-				});  
-			};    
-			
-			change_backdrop();    
-			timer_poster = setInterval(change_backdrop, 10000);    
-			
-			var stop_poster_timer = function(a) {    
-				if (a.type == 'destroy' && a.object.activity === e.object.activity) {    
-					clearInterval(timer_poster);    
-					is_active = false;    
-					Lampa.Listener.remove('activity', stop_poster_timer);    
-				}    
-			};    
-			
-			Lampa.Listener.follow('activity', stop_poster_timer);    
-		  }    
-		} else {
-          // Трейлери увімкнено - створюємо Trailer
-          var trailer = Follow.vjsk(video(e.data));
+        // --- Якщо трейлери вимкнені ---
+        if (!Lampa.Storage.field('cardify_run_trailers')) {
 
-          if (Lampa.Manifest.app_digital >= 220) {
-            if (Lampa.Activity.active().activity === e.object.activity) {
-              trailer && new Trailer(e.object, trailer, $mute_button);
-            } else {
-              var follow = function follow(a) {
-                if (a.type == 'start' && a.object.activity === e.object.activity && !e.object.activity.trailer_ready) {
-                  Lampa.Listener.remove('activity', follow);
-                  trailer && new Trailer(e.object, trailer, $mute_button);
-                }
-              };
-              Lampa.Listener.follow('activity', follow);
+            var backdrops = e.data.images?.backdrops || [];
+
+            if (backdrops.length > 1) {
+                var current_index = 0;
+                var timer_poster;
+                var is_active = true;
+
+                var change_backdrop = function () {
+                    if (!is_active) return;
+
+                    current_index = (current_index + 1) % backdrops.length;
+                    var new_backdrop_url = LAMPAC_HOST + '/tmdb/img/t/p/w1280' + backdrops[current_index].file_path;
+
+                    var $background = e.object.activity.render().find('.full-start__background');
+
+                    if ($background.length === 0) return;
+
+                    $background.removeClass('loaded');
+                    $background.attr('src', new_backdrop_url);
+
+                    $background.on('load', function () {
+                        $(this).addClass('loaded');
+                        $(this).off('load');
+                    });
+                };
+
+                change_backdrop();
+                timer_poster = setInterval(change_backdrop, 10000);
+
+                var stop_poster_timer = function (a) {
+                    if (a.type == 'destroy' && a.object.activity === e.object.activity) {
+                        clearInterval(timer_poster);
+                        is_active = false;
+                        Lampa.Listener.remove('activity', stop_poster_timer);
+                    }
+                };
+                Lampa.Listener.follow('activity', stop_poster_timer);
             }
-          }
-        }
-      }
-    });
-  }
 
-  if (window.appready) startPlugin();
-  else {
-    Follow.get(Type.de([97, 112, 112]), function (e) {
-      if (Type.re(e)) startPlugin();
+        } else {
+
+            // --- Трейлери увімкнені ---
+            var trailer = Follow.vjsk(video(e.data));
+            var trailer_mode = Lampa.SettingsApi.getParam('cardify_trailer_mode', 'standard');
+
+            if (trailer) {
+
+                // === PiP режим ===
+                if (trailer_mode === 'pip') {
+
+                    if (Lampa.Activity.active().activity === e.object.activity) {
+                        playPiP(trailer, e, $mute_button);
+                    } else {
+                        var wait = function wait(a) {
+                            if (a.type == 'start' && a.object.activity === e.object.activity && !e.object.activity.trailer_ready) {
+                                Lampa.Listener.remove('activity', wait);
+                                playPiP(trailer, e, $mute_button);
+                            }
+                        };
+                        Lampa.Listener.follow('activity', wait);
+                    }
+
+                } else {
+
+                    // === Стандартний режим ===
+                    if (Lampa.Activity.active().activity === e.object.activity) {
+                        new Trailer(e.object, trailer, $mute_button);
+                    } else {
+                        var follow = function follow(a) {
+                            if (a.type == 'start' && a.object.activity === e.object.activity && !e.object.activity.trailer_ready) {
+                                Lampa.Listener.remove('activity', follow);
+                                new Trailer(e.object, trailer, $mute_button);
+                            }
+                        };
+                        Lampa.Listener.follow('activity', follow);
+                    }
+                }
+            }
+        }
+    }
+});
+
+
+// ================================
+// 📌 Функція запуску трейлера у PiP
+// ================================
+function playPiP(trailer, e, $mute_button) {
+
+    Lampa.Player.play({
+        title: 'Трейлер',
+        url: trailer.url,
+        poster: e.data?.backdrop_path,
+        autoplay: true
     });
-  }
+
+    // додаємо клас маленького вікна
+    setTimeout(() => {
+        if (Lampa.Player.video) {
+            Lampa.Player.video.classList.add('pip-small');
+        }
+    }, 800);
+}
+
+
+// -------------------------
+if (window.appready) startPlugin();
+else {
+    Follow.get(Type.de([97, 112, 112]), function (e) {
+        if (Type.re(e)) startPlugin();
+    });
+}
+
 })();
