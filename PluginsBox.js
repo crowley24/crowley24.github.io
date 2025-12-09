@@ -219,7 +219,67 @@ function addonStart() {
             icon: icon_add_plugin  
         });  
     }  
-      
+    
+      // Clock - Додано напряму в add_plugin  
+    Lampa.SettingsApi.addParam({  
+        component: 'add_plugin',  
+        param: {  
+            name: 'CLOCK',  
+            type: 'select',  
+            values: {  
+                1: 'Встановити',  
+                2: 'Видалити'  
+            },  
+        },  
+        field: {  
+            name: 'Clock',  
+            description: 'Годинник для інтерфейсу'  
+        },  
+        onChange: function(value) {  
+            if (value == '1') {  
+                itemON('https://crowley24.github.io/clock.js', 'Clock', '@lampa', 'CLOCK');  
+            }  
+            if (value == '2') {  
+                deletePlugin("https://crowley24.github.io/clock.js");  
+            }  
+        },  
+        onRender: function(item) {  
+            $('.settings-param__name', item).css('color', '#f3d900');  
+            hideInstall();  
+              
+            var myResult = checkPlugin('https://crowley24.github.io/clock.js');  
+            var pluginsArray = Lampa.Storage.get('plugins') || [];  
+              
+            setTimeout(function() {  
+                var container = $('div[data-name="CLOCK"]');  
+                if (container && container.length && container.find('.settings-param__status').length === 0) {  
+                    container.append('<div class="settings-param__status one"></div>');  
+                }  
+                var pluginStatus = null;  
+                for (var i = 0; i < pluginsArray.length; i++) {  
+                    if (pluginsArray[i] && pluginsArray[i].url === 'https://crowley24.github.io/clock.js') {  
+                        pluginStatus = pluginsArray[i].status;  
+                        break;  
+                    }  
+                }  
+                var statusEl = $('div[data-name="CLOCK"]').find('.settings-param__status');  
+                if (statusEl && statusEl.length) {  
+                    statusEl.removeClass('active error').css('background-color', '');  
+                    if (myResult && pluginStatus !== 0) {  
+                        statusEl.addClass('active');  
+                    } else if (pluginStatus === 0) {  
+                        statusEl.css('background-color', 'rgb(255, 165, 0)');  
+                    } else {  
+                        statusEl.addClass('error');  
+                    }  
+                }  
+            }, 100);  
+              
+            item.on("hover:enter", function(event) {  
+                nthChildIndex = focus_back(event);  
+            });  
+        }  
+    });  
     // Якість на картках - Додано напряму в add_plugin  
     Lampa.SettingsApi.addParam({  
         component: 'add_plugin',  
