@@ -1,14 +1,6 @@
- // ==UserScript==
- // @name        Themes
- // @version     1.3
- // @description Плагін для тем
- // @author      test
- // ==/UserScript==
-
 (function() {
     'use strict';
 
-    // Стилі для різних тем (мініфіковані, з .activity__loader з вихідного коду CSS Lampa)
     var themes = {
         default: '.activity__loader{position:absolute;top:0;left:0;width:100%;height:100%;display:none;background:url("data:image/svg+xml,${svgCode}") no-repeat 50% 50%}',
         violet_stroke: ':root{--main-color:#8B29B9;--background-color:#1d1f20;--text-color:#fff;--transparent-white:rgba(255,255,255,.2)}body{background-color:#1d1f20;color:#fff}.menu__ico{color:#000;-webkit-filter:invert(1);filter:invert(1)}.activity__loader{position:absolute;top:0;left:0;width:100%;height:100%;display:none;background:url("data:image/svg+xml,${svgCode}") no-repeat 50% 50%}.modal-loading{height:6em;-webkit-background-size:contain;-moz-background-size:contain;-o-background-size:contain;background-size:contain}.console__tab.focus,.menu__item.focus,.menu__item.traverse,.menu__item.hover,.full-person.focus,.full-start__button.focus,.full-descr__tag.focus,.simple-button.focus,.head__action.focus,.head__action.hover,.player-panel .button.focus,.search-source.active{background:#8B29B9;color:#fff}.navigation-tabs__button.focus,.time-line>div,.player-panel__position,.player-panel__position>div:after{background-color:#8B29B9;color:#fff}.iptv-menu__list-item.focus,.iptv-program__timeline>div{background-color:#8B29B9!important;color:#fff!important}.radio-item.focus,.lang__selector-item.focus,.simple-keyboard .hg-button.focus,.modal__button.focus,.search-history-key.focus,.simple-keyboard-mic.focus,.torrent-serial__progress,.full-review-add.focus,.full-review.focus,.tag-count.focus,.settings-folder.focus,.settings-param.focus,.selectbox-item.focus,.selectbox-item.hover{background:#8B29B9;color:#fff}.online.focus{box-shadow:0 0 0 .2em #8B29B9}.online_modss.focus::after,.online-prestige.focus::after,.radio-item.focus .radio-item__imgbox:after,.iptv-channel.focus::before,.iptv-channel.last--focus::before{border-color:#8B29B9!important}.card-more.focus .card-more__box::after{border:.3em solid #8B29B9}.simple-button--filter>div{background-color:rgba(255,255,255,.1)}.iptv-playlist-item.focus::after,.iptv-playlist-item.hover::after{border-color:#8B29B9!important}.ad-bot.focus .ad-bot__content::after,.ad-bot.hover .ad-bot__content::after,.card-episode.focus .full-episode::after,.register.focus::after,.season-episode.focus::after,.full-episode.focus::after,.full-review-add.focus::after,.card.focus .card__view::after,.card.hover .card__view::after,.extensions__item.focus:after,.torrent-item.focus::after,.extensions__block-add.focus:after{border-color:#8B29B9}.items-line__more{background:rgba(255,255,255,.1)}.items-line__more.focus{background:#8B29B9!important;color:#fff!important}.torrent-serial__size{background-color:#fff;color:#000}.broadcast__scan>div,.broadcast__device.focus{background-color:#8B29B9;color:#fff}.card:hover .card__img,.card.focus .card__img{border-color:#8B29B9}.noty{background:#8B29B9;color:#fff}.radio-player.focus{background-color:#8B29B9;color:#fff}.explorer-card__head-img.focus::after{border:.3em solid #8B29B9}',
@@ -30,7 +22,6 @@
         violet_glow: ':root{--main-color:#8a2be2;--secondary-color:#00bfff;--background-color:rgba(15,15,40,0.95);--text-color:#e0e6f8;--transparent-accent:rgba(138,43,226,0.4)}body{background:linear-gradient(135deg,#0f0f28 0%,#004080 100%);color:var(--text-color)}.menu__ico{color:#000;-webkit-filter:invert(1);filter:invert(1)}.activity__loader{position:absolute;top:0;left:0;width:100%;height:100%;display:none;background:url("data:image/svg+xml,${svgCode}") no-repeat 50% 50%}.modal-loading{height:6em;background-size:contain}.console__tab.focus,.menu__item.focus,.menu__item.traverse,.menu__item.hover,.full-person.focus,.full-start__button.focus,.full-descr__tag.focus,.simple-button.focus,.head__action.focus,.head__action.hover,.player-panel .button.focus,.search-source.active,.navigation-tabs__button.focus,.radio-item.focus,.lang__selector-item.focus,.simple-keyboard .hg-button.focus,.modal__button.focus,.search-history-key.focus,.simple-keyboard-mic.focus,.torrent-serial__progress,.full-review-add.focus,.full-review.focus,.tag-count.focus,.settings-folder.focus,.settings-param.focus,.selectbox-item.focus,.selectbox-item.hover,.radio-player.focus,.broadcast__device.focus{background:linear-gradient(to right,var(--main-color),var(--secondary-color));color:#fff;box-shadow:0 0 20px var(--transparent-accent);text-shadow:0 0 10px rgba(224,230,248,0.8);border:none;animation:violet-glow 2.5s infinite}@keyframes violet-glow{0%{box-shadow:0 0 10px var(--transparent-accent)}50%{box-shadow:0 0 30px rgba(138,43,226,0.9),0 0 40px rgba(0,191,255,0.9)}100%{box-shadow:0 0 10px var(--transparent-accent)}}.card.focus .card__view::after,.card.hover .card__view::after{border:2px solid var(--main-color);box-shadow:0 0 25px var(--secondary-color);animation:card-pulse 2.5s infinite}@keyframes card-pulse{0%{box-shadow:0 0 10px var(--secondary-color)}50%{box-shadow:0 0 35px var(--secondary-color)}100%{box-shadow:0 0 10px var(--secondary-color)}}.settings__content,.settings-input__content,.selectbox__content,.modal__content{background:var(--background-color);border:1px solid rgba(0,64,128,0.3);box-shadow:0 0 25px rgba(0,64,128,0.2)}'
     };
 
-    // Кольори loader'у для кожної теми
     var loaderColors = {
         default: '#fff',
         violet_stroke: '#8B29B9',
@@ -51,16 +42,14 @@
         neon_mod2: '#fc00ff',
         violet_glow: '#8B29B9'
     };
-
-    // Функція для застосування теми та оновлення loader'у
+ 
     function applyTheme(theme) {
-        // Видаляємо старий стиль теми
+       
         var oldStyle = document.querySelector('#interface_theme_mod_style');
         if (oldStyle) {
             oldStyle.parentNode.removeChild(oldStyle);
         }
 
-        // Застосовуємо тему з підставленням SVG
         var style = document.createElement('style');
         style.id = 'interface_theme_mod_style';
         var color = loaderColors[theme] || loaderColors.default;
@@ -70,27 +59,22 @@
         style.textContent = themes[theme].replace('${svgCode}', svgCode);
         document.head.appendChild(style);
 
-        // Логування для відлагоджування
         console.log('Theme applied:', theme, 'Loader color:', color);
         console.log('SVG length:', decodeURIComponent(svgCode).length);
     }
 
-    // Функція ініціалізації плагину
     function initPlugin() {
-        // Встановлюємо стандартну тему за замовчуванням для всіх пристроїв
+  
         var defaultTheme = 'default';
         var savedTheme = Lampa.Storage.get('interface_theme', defaultTheme);
-
-        // Перевіряємо, чи існує збережена тема
-        if (!themes[savedTheme]) {
+     
+     if (!themes[savedTheme]) {
             savedTheme = defaultTheme;
             Lampa.Storage.set('interface_theme', defaultTheme);
         }
 
-        // Застосовуємо тему
         applyTheme(savedTheme);
 
-        // Додаємо налаштування в інтерфейс
         Lampa.SettingsApi.addParam({
             component: 'interface',
             param: {
