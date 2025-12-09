@@ -303,25 +303,32 @@ Lampa.Settings.listener.follow('open', function (e) {
 /* ---------------------------  
    Параметри: пункт-меню Інтерфейс (TMDB, Tricks)  
    --------------------------- */  
-Lampa.SettingsApi.addParam({  
-    component: 'add_plugin',  
-    param: {  
-        name: 'add_interface_plugin',  
-        type: 'static',  
-        default: true  
-    },  
-    field: {  
-        name: icon_add_interface_plugin  
-    },  
-    onRender: function(item) {  
-        item.on('hover:enter', function () {  
-            Lampa.Settings.create('add_interface_plugin');  
-            Lampa.Controller.enabled().controller.back = function(){  
-                Lampa.Settings.create('add_plugin');  
-            }  
-        });  
-    }  
-});  
+Lampa.SettingsApi.addParam({    
+    component: 'add_plugin',    
+    param: {    
+        name: 'add_interface_plugin',    
+        type: 'static',    
+        default: true    
+    },    
+    field: {    
+        name: icon_add_interface_plugin    
+    },    
+    onRender: function(item) {    
+        item.on('hover:enter', function () {    
+            // Перевірка чи існує компонент перед створенням    
+            if (Lampa.SettingsApi.getComponent('add_interface_plugin')) {    
+                Lampa.Settings.create('add_interface_plugin');    
+            } else {    
+                console.error('[PluginManager] Компонент add_interface_plugin не знайдено');    
+                Lampa.Noty.show('Помилка: компонент не знайдено');    
+            }    
+                
+            Lampa.Controller.enabled().controller.back = function(){    
+                Lampa.Settings.create('add_plugin');    
+            }    
+        });    
+    }    
+});
   
 /* Якість на картках */    
 Lampa.SettingsApi.addParam({    
