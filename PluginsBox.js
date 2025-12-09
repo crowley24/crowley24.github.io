@@ -415,7 +415,7 @@ function addonStart() {
         },  
         field: {  
             name: 'MobileLogo',  
-            description: 'Мобільні логотипи для інтерфейсу'  
+            description: 'Логотипи замість назви фільмів (мобільна версія)'  
         },  
         onChange: function(value) {  
             if (value == '1') {  
