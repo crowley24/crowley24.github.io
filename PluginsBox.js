@@ -353,7 +353,7 @@ function addonStart() {
             },  
         },  
         field: {  
-            name: 'Fonts',  
+            name: 'Шрифти',  
             description: 'Новий шрифт для інтерфейсу'  
         },  
         onChange: function(value) {  
