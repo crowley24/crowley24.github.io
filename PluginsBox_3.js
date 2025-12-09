@@ -266,15 +266,7 @@ if (!document.querySelector('div[data-component="add_plugin"]')) {
         icon: icon_add_plugin
     });
 }
-
-// Додаємо підкомпоненти один раз (перевірка на існування)
-if (!document.querySelector('div[data-component="add_interface_plugin"]')) {
-    Lampa.SettingsApi.addComponent({
-        component: 'add_interface_plugin',
-        name: 'Інтерфейс',
-        icon: icon_add_interface_plugin
-    });
-}
+    
 
 /* При відкритті налаштувань — підготуємо порядок */
 Lampa.Settings.listener.follow('open', function (e) {
