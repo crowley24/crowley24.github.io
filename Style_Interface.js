@@ -1,1005 +1,768 @@
-(function() {
-
-    'use strict';
-
-
-
-    console.log('[Style Interface DEBUG] === START PLUGIN ===');
-
-    console.log('[Style Interface DEBUG] Plugin loaded at:', new Date().toISOString());
-
-    console.log('[Style Interface DEBUG] Location:', window.location.href);
-
-    console.log('[Style Interface DEBUG] Lampa available:', typeof Lampa !== 'undefined');
-
-    
-
-    if (typeof Lampa !== 'undefined') {
-
-        console.log('[Style Interface DEBUG] Lampa version:', Lampa.version || 'unknown');
-
-        console.log('[Style Interface DEBUG] Lampa.Manifest:', Lampa.Manifest);
-
-        console.log('[Style Interface DEBUG] Lampa keys (filtered):', 
-
-            Object.keys(Lampa).filter(k => 
-
-                k.toLowerCase().includes('interaction') || 
-
-                k.toLowerCase().includes('main') || 
-
-                k.toLowerCase().includes('activity') ||
-
-                k === 'Storage' || k === 'Api' || k === 'TMDB'
-
-            )
-
-        );
-
-        
-
-        // Перевіряємо конкретно InteractionMain
-
-        console.log('[Style Interface DEBUG] Lampa.InteractionMain exists:', !!Lampa.InteractionMain);
-
-        console.log('[Style Interface DEBUG] Lampa.InteractionMain type:', typeof Lampa.InteractionMain);
-
-        if (Lampa.InteractionMain) {
-
-            console.log('[Style Interface DEBUG] InteractionMain sample:', 
-
-                Lampa.InteractionMain.toString().substring(0, 300) + '...'
-
-            );
-
-        }
-
-    }
-
-
-
-    // ==================== ДІАГНОСТИКА ====================
-
-    let debug = {
-
-        interactionCallCount: 0,
-
-        lastInteractionData: null,
-
-        interactionCalls: [],
-
-        pageChanges: []
-
-    };
-
-
-
-    // Логуємо зміни URL
-
-    let lastUrl = window.location.href;
-
-    const originalPushState = history.pushState;
-
-    const originalReplaceState = history.replaceState;
-
-    
-
-    history.pushState = function(...args) {
-
-        debug.pageChanges.push({type: 'pushState', url: args[2], time: Date.now()});
-
-        console.log('[Style Interface DEBUG] pushState:', args[2]);
-
-        return originalPushState.apply(this, args);
-
-    };
-
-    
-
-    history.replaceState = function(...args) {
-
-        debug.pageChanges.push({type: 'replaceState', url: args[2], time: Date.now()});
-
-        console.log('[Style Interface DEBUG] replaceState:', args[2]);
-
-        return originalReplaceState.apply(this, args);
-
-    };
-
-
-
-    // Логуємо зміни hash
-
-    window.addEventListener('hashchange', function() {
-
-        debug.pageChanges.push({type: 'hashchange', url: window.location.href, time: Date.now()});
-
-        console.log('[Style Interface DEBUG] hashchange:', window.location.href);
-
-    });
-
-
-
-    // Перехоплюємо InteractionMain ДУЖЕ РАННЬО
-
-    if (Lampa && Lampa.InteractionMain) {
-
-        console.log('[Style Interface DEBUG] Hooking InteractionMain...');
-
-        
-
-        const originalInteractionMain = Lampa.InteractionMain;
-
-        
-
-        Lampa.InteractionMain = function(data) {
-
-            debug.interactionCallCount++;
-
-            debug.lastInteractionData = data;
-
-            debug.interactionCalls.push({
-
-                count: debug.interactionCallCount,
-
-                data: {...data},
-
-                timestamp: Date.now(),
-
-                stack: new Error().stack
-
-            });
-
-            
-
-            console.log(`[Style Interface DEBUG] InteractionMain CALLED #${debug.interactionCallCount}`, {
-
-                source: data.source,
-
-                type: data.type,
-
-                title: data.title || data.name || 'no title',
-
-                id: data.id || 'no id',
-
-                url: window.location.href,
-
-                fullData: data
-
-            });
-
-            
-
-            // Перевіряємо, чи це те, що нам потрібно
-
-            if (data.source === 'tmdb' || data.source === 'cub') {
-
-                console.log('[Style Interface DEBUG] TMDB/CUB source detected! Should activate new interface.');
-
-                
-
-                // Тест: намагаємось створити наш інтерфейс
-
-                try {
-
-                    console.log('[Style Interface DEBUG] Testing NewInterface creation...');
-
-                    // Тимчасовий тестовий клас
-
-                    const TestInterface = class {
-
-                        constructor(data) {
-
-                            console.log('[Style Interface DEBUG] TestInterface created!', data);
-
-                            this.data = data;
-
-                        }
-
-                        render() {
-
-                            console.log('[Style Interface DEBUG] TestInterface render called');
-
-                            return $('<div style="background:red;color:white;padding:20px;">TEST INTERFACE ACTIVE</div>');
-
-                        }
-
-                    };
-
-                    
-
-                    const test = new TestInterface(data);
-
-                    console.log('[Style Interface DEBUG] Test interface created successfully');
-
-                    
-
-                } catch (e) {
-
-                    console.error('[Style Interface DEBUG] Error creating test interface:', e);
-
-                }
-
-            }
-
-            
-
-            // Викликаємо оригінальний
-
-            console.log('[Style Interface DEBUG] Calling original InteractionMain...');
-
-            const result = new originalInteractionMain(data);
-
-            console.log('[Style Interface DEBUG] Original InteractionMain returned:', result);
-
-            return result;
-
-        };
-
-        
-
-        console.log('[Style Interface DEBUG] InteractionMain hook installed');
-
-        
-
-        // Додаємо метод для примусового тестування
-
-        window.testStyleInterface = function() {
-
-            console.log('[Style Interface DEBUG] Manual test started');
-
-            const testData = {
-
-                source: 'tmdb',
-
-                type: 'movie',
-
-                title: 'Test Movie',
-
-                id: 123,
-
-                url: 'test'
-
-            };
-
-            
-
-            console.log('[Style Interface DEBUG] Creating InteractionMain with test data...');
-
-            const instance = Lampa.InteractionMain(testData);
-
-            console.log('[Style Interface DEBUG] Test instance:', instance);
-
-        };
-
-    } else {
-
-        console.error('[Style Interface DEBUG] Cannot hook InteractionMain - not found!');
-
-    }
-
-
-
-    // ==================== ОСНОВНИЙ КОД ПЛАГІНА ====================
-
-    const PLUGIN_NAME = 'style_interface';
-
-    const PLUGIN_DISPLAY_NAME = 'Стильный интерфейс';
-
-
-
-    class NewInterfaceInfo {
-
-        constructor(data) {
-
-            console.log('[Style Interface] NewInterfaceInfo created for:', data.title || data.name);
-
-            this.data = data;
-
-            this.cache = {};
-
-            this.request = new Lampa.Reguest();
-
-            this.timeout = null;
-
-            this.create();
-
-        }
-
-
-
-        create() {
-
-            this.element = $(`
-
-                <div class="new-interface-info">
-
-                    <div class="new-interface-info__body">
-
-                        <div class="new-interface-info__head"></div>
-
-                        <div class="new-interface-info__title"></div>
-
-                        <div class="new-interface-info__details"></div>
-
-                        <div class="new-interface-info__description"></div>
-
-                    </div>
-
-                </div>
-
-            `);
-
-        }
-
-
-
-        update(item) {
-
-            console.log('[Style Interface] NewInterfaceInfo update:', item.title || item.name);
-
-            // ... решта методу без змін ...
-
-        }
-
-
-
-        draw(item) {
-
-            console.log('[Style Interface] NewInterfaceInfo draw:', item.title || item.name);
-
-            // ... решта методу без змін ...
-
-        }
-
-
-
-        render() {
-
-            console.log('[Style Interface] NewInterfaceInfo render called');
-
-            return this.element;
-
-        }
-
-    }
-
-
-
-    class NewInterface {
-
-        constructor(data) {
-
-            console.log('[Style Interface] ⭐⭐⭐ NEWINTERFACE CONSTRUCTOR CALLED! ⭐⭐⭐', {
-
-                source: data.source,
-
-                title: data.title || data.name,
-
-                id: data.id
-
-            });
-
-            this.data = data;
-
-            this.request = new Lampa.Reguest();
-
-            this.scroll = new Lampa.Scroll({mask: true, over: true, scroll_by_item: true});
-
-            this.cards = [];
-
-            this.currentIndex = 0;
-
-            this.infoBlock = null;
-
-            this.items = null;
-
-            this.backgroundElement = null;
-
-            this.currentBackground = '';
-
-            this.backgroundTimeout = null;
-
-            
-
-            this.create();
-
-        }
-
-
-
-        create() {
-
-            console.log('[Style Interface] Creating NewInterface element');
-
-            this.element = $(`
-
-                <div class="new-interface">
-
-                    <img class="full-start__background">
-
-                    <div style="position:absolute;top:20px;left:20px;background:red;color:white;padding:10px;z-index:1000;">
-
-                        🎨 STYLE INTERFACE ACTIVE
-
-                    </div>
-
-                </div>
-
-            `);
-
-            this.backgroundElement = this.element.find('.full-start__background');
-
-            
-
-            // Додаємо тестовий елемент для візуальної перевірки
-
-            setTimeout(() => {
-
-                $('body').append('<div id="style-interface-test" style="position:fixed;top:10px;right:10px;background:#ff4444;color:white;padding:10px;z-index:9999;border-radius:5px;">🎨 Style Interface LOADED</div>');
-
-                setTimeout(() => $('#style-interface-test').fadeOut(), 3000);
-
-            }, 1000);
-
-        }
-
-
-
-        render(items) {
-
-            console.log('[Style Interface] ⭐⭐⭐ NEWINTERFACE RENDER CALLED! ⭐⭐⭐', {
-
-                itemsCount: items.length,
-
-                firstItem: items[0]
-
-            });
-
-            
-
-            const self = this;
-
-            this.items = items;
-
-            this.infoBlock = new NewInterfaceInfo(this.data);
-
-            this.infoBlock.create();
-
-            
-
-            this.scroll.minus(this.infoBlock.render());
-
-            
-
-            // Додаємо перші елементи
-
-            const viewType = Lampa.Storage.field('card_views_type') === 'view' || 
-
-                           Lampa.Storage.field('navigation_type') === 'static';
-
-            const itemsToShow = viewType ? items.length : Math.min(2, items.length);
-
-            items.slice(0, itemsToShow).forEach(this.append.bind(this));
-
-            
-
-            this.element.append(this.infoBlock.render());
-
-            this.element.append(this.scroll.render());
-
-            
-
-            // Завжди активуємо
-
-            Lampa.Layer.update(this.element);
-
-            Lampa.Layer.visible(this.scroll.render(true));
-
-            this.scroll.onEnd = this.loadNext.bind(this);
-
-            this.scroll.onChange = function(position) {
-
-                if (!Lampa.Controller.own(self)) {
-
-                    self.start();
-
-                }
-
-                if (position > 0) {
-
-                    self.down();
-
-                } else {
-
-                    if (self.currentIndex > 0) {
-
-                        self.up();
-
-                    }
-
-                }
-
-            };
-
-            
-
-            this.activity.loader(false);
-
-            this.activity.toggle();
-
-            
-
-            console.log('[Style Interface] NewInterface render completed');
-
-            return this;
-
-        }
-
-
-
-        append(cardData) {
-
-            console.log('[Style Interface] Appending card:', cardData.title || cardData.name);
-
-            if (cardData.rendered) return;
-
-            cardData.rendered = true;
-
-            
-
-            const self = this;
-
-            const card = new Lampa.InteractionLine(cardData, {
-
-                url: cardData.url,
-
-                card_small: true,
-
-                cardClass: cardData.cardClass,
-
-                genres: this.data.genres,
-
-                object: this.data,
-
-                card_wide: Lampa.Storage.field('wide_post') !== false,
-
-                nomore: cardData.nomore
-
-            });
-
-            
-
-            card.create();
-
-            card.onDown = this.down.bind(this);
-
-            card.onUp = this.up.bind(this);
-
-            card.onBack = this.back.bind(this);
-
-            card.onChange = function() {
-
-                self.currentIndex = self.cards.indexOf(card);
-
-            };
-
-            
-
-            card.onFocus = function(item) {
-
-                console.log('[Style Interface] Card focused:', item.title || item.name);
-
-                self.infoBlock.update(item);
-
-                self.background(item);
-
-            };
-
-            
-
-            card.onHover = function(item) {
-
-                self.infoBlock.update(item);
-
-                self.background(item);
-
-            };
-
-            
-
-            card.onToggle = self.infoBlock.clear.bind(self.infoBlock);
-
-            
-
-            this.scroll.append(card.render());
-
-            this.cards.push(card);
-
-        }
-
-
-
-        start() {
-
-            console.log('[Style Interface] NewInterface start() called');
-
-            const self = this;
-
-            Lampa.Controller.add('content', {
-
-                link: this,
-
-                toggle: function() {
-
-                    if (self.activity.canRefresh()) return false;
-
-                    self.cards.length && self.cards[self.currentIndex].toggle();
-
-                },
-
-                update: function() {},
-
-                left: function() {
-
-                    if (Navigator.canmove('left')) {
-
-                        Navigator.move('left');
-
-                    } else {
-
-                        Lampa.Controller.toggle('menu');
-
-                    }
-
-                },
-
-                right: function() {
-
-                    Navigator.move('right');
-
-                },
-
-                up: function() {
-
-                    if (Navigator.canmove('up')) {
-
-                        Navigator.move('up');
-
-                    } else {
-
-                        Lampa.Controller.toggle('head');
-
-                    }
-
-                },
-
-                down: function() {
-
-                    if (Navigator.canmove('down')) {
-
-                        Navigator.move('down');
-
-                    }
-
-                },
-
-                back: this.back.bind(this)
-
-            });
-
-            Lampa.Controller.toggle('content');
-
-        }
-
-
-
-        renderElement() {
-
-            return this.element;
-
-        }
-
-    }
-
-
-
-    function initPlugin() {
-
-        console.log('[Style Interface] Initializing plugin...');
-
-        
-
-        if (typeof Lampa === 'undefined' || typeof $ === 'undefined') {
-
-            console.error('[Style Interface] Lampa or jQuery not found');
-
-            return;
-
-        }
-
-
-
-        // Тепер перевизначаємо InteractionMain ПРАВИЛЬНО
-
-        const originalInteractionMain = Lampa.InteractionMain;
-
-        
-
-        Lampa.InteractionMain = function(data) {
-
-            console.log('[Style Interface] 🎯 InteractionMain intercepted!', {
-
-                source: data.source,
-
-                type: data.type,
-
-                title: data.title || data.name
-
-            });
-
-            
-
-            // Тільки для TMDB/CUB
-
-            if (data.source === 'tmdb' || data.source === 'cub') {
-
-                console.log('[Style Interface] 🚀 Creating NewInterface for', data.source);
-
-                try {
-
-                    const instance = new NewInterface(data);
-
-                    console.log('[Style Interface] ✅ NewInterface created successfully:', instance);
-
-                    return instance;
-
-                } catch (e) {
-
-                    console.error('[Style Interface] ❌ Error creating NewInterface:', e);
-
-                    console.log('[Style Interface] Falling back to original');
-
-                    return new originalInteractionMain(data);
-
-                }
-
-            }
-
-            
-
-            // Для інших джерел - оригінальний
-
-            console.log('[Style Interface] Using original InteractionMain for', data.source);
-
-            return new originalInteractionMain(data);
-
-        };
-
-
-
-        console.log('[Style Interface] InteractionMain override installed');
-
-
-
-        // Додаємо стилі
-
-        const css = `
-
-            .new-interface {
-
-                position: relative;
-
-                background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 100%);
-
-                min-height: 400px;
-
-                border-bottom: 2px solid #ff4444;
-
-            }
-
-            
-
-            .new-interface .card--small.card--wide {
-
-                width: 18.3em !important;
-
-                margin: 0 1em;
-
-                transform: scale(1.05);
-
-                transition: transform 0.2s;
-
-            }
-
-            
-
-            .new-interface .card--small.card--wide:hover {
-
-                transform: scale(1.1);
-
-            }
-
-            
-
-            .new-interface-info {
-
-                padding: 2em;
-
-                color: white;
-
-                text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-
-            }
-
-            
-
-            #style-interface-debug {
-
-                position: fixed;
-
-                top: 50px;
-
-                right: 10px;
-
-                background: rgba(0,0,0,0.8);
-
-                color: #0f0;
-
-                padding: 10px;
-
-                font-family: monospace;
-
-                z-index: 99999;
-
-                border: 2px solid #0f0;
-
-                border-radius: 5px;
-
-            }
-
-        `;
-
-
-
-        $('head').append(`<style id="style-interface-styles">${css}</style>`);
-
-        console.log('[Style Interface] Styles added');
-
-
-
-        // Додаємо debug панель
-
-        const debugPanel = $(`
-
-            <div id="style-interface-debug">
-
-                <div>🎨 Style Interface v1.0</div>
-
-                <div>Status: <span id="style-interface-status">ACTIVE</span></div>
-
-                <div>Calls: <span id="style-interface-calls">0</span></div>
-
-                <button onclick="window.testStyleInterface()">Test</button>
-
-            </div>
-
-        `);
-
-        $('body').append(debugPanel);
-
-
-
-        // Реєстрація налаштувань
-
-        const waitForSettings = setInterval(() => {
-
-            if (Lampa.Settings && Lampa.SettingsApi) {
-
-                clearInterval(waitForSettings);
-
-                console.log('[Style Interface] Registering settings...');
-
-                
-
-                const settings = [
-
-                    {name: 'wide_post', field: 'Широкие постеры', default: true},
-
-                    {name: 'logo_card_style', field: 'Логотип вместо названия', default: true},
-
-                    {name: 'info', field: 'Показывать описание', default: true},
-
-                    {name: 'status', field: 'Показывать статус фильма/сериала', default: false},
-
-                    {name: 'seas', field: 'Показывать количество сезонов', default: false},
-
-                    {name: 'eps', field: 'Показывать количество эпизодов', default: false},
-
-                    {name: 'year_ogr', field: 'Показывать возрастное ограничение', default: true},
-
-                    {name: 'ganr', field: 'Показывать жанр фильма', default: true},
-
-                    {name: 'vremya', field: 'Показывать время фильма', default: true},
-
-                    {name: 'rat', field: 'Показывать рейтинг фильма', default: true}
-
-                ];
-
-
-
-                // Додаємо компонент
-
-                Lampa.SettingsApi.addComponent({
-
-                    component: PLUGIN_NAME,
-
-                    name: PLUGIN_DISPLAY_NAME,
-
-                    icon: `<div style="color:#ff4444;font-weight:bold">🎨</div>`
-
-                });
-
-
-
-                // Додаємо параметри
-                settings.forEach(setting => {
-                    try {
-                        Lampa.SettingsApi.addParam({
-                            component: PLUGIN_NAME,
-                            param: {name: setting.name, type: 'trigger', default: setting.default},
-                            field: {name: setting.field}
-                        });
-                        console.log(`[Style Interface] Added setting: ${setting.field}`);
-                    } catch (e) {
-                        console.error(`[Style Interface] Error adding ${setting.field}:`, e);
-                    }
-                });
-
-                console.log('[Style Interface] Plugin fully initialized');
-                
-                // Оновлюємо debug панель
-                setInterval(() => {
-                    $('#style-interface-calls').text(debug.interactionCallCount);
-                    $('#style-interface-status').text(
-                        debug.interactionCallCount > 0 ? 'WORKING' : 'WAITING'
-                    );
-                }, 1000);
-            }
-        }, 100);
-    }
-
-    // Запускаємо
-    const waitForLampa = setInterval(() => {
-        if (typeof Lampa !== 'undefined' && typeof $ !== 'undefined') {
-            clearInterval(waitForLampa);
-            console.log('[Style Interface DEBUG] Lampa and jQuery loaded, starting init...');
-            
-            // Чекаємо трохи більше
-            setTimeout(() => {
-                try {
-                    initPlugin();
-                    
-                    // Після ініціалізації
-                    setTimeout(() => {
-                        console.log('[Style Interface DEBUG] === FINAL DIAGNOSTICS ===');
-                        console.log('[Style Interface DEBUG] Total InteractionMain calls:', debug.interactionCallCount);
-                        console.log('[Style Interface DEBUG] Page changes:', debug.pageChanges.length);
-                        console.log('[Style Interface DEBUG] Plugin state: READY');
-                        
-                        if (debug.interactionCallCount === 0) {
-                            console.warn('[Style Interface DEBUG] WARNING: No InteractionMain calls detected yet.');
-                            console.log('[Style Interface DEBUG] Try navigating to a movie/series page.');
-                        }
-                    }, 2000);
-                    
-                } catch (e) {
-                    console.error('[Style Interface DEBUG] Init error:', e);
-                }
-            }, 1500);
-        }
-    }, 100);
-
-    console.log('[Style Interface DEBUG] === PLUGIN WRAPPER EXECUTED ===');
-
-})();
+(function() {  
+    'use strict';  
+  
+    console.log('[Style Interface DEBUG] === START PLUGIN ===');  
+    console.log('[Style Interface DEBUG] Plugin loaded at:', new Date().toISOString());  
+    console.log('[Style Interface DEBUG] Location:', window.location.href);  
+    console.log('[Style Interface DEBUG] Lampa available:', typeof Lampa !== 'undefined');  
+  
+    if (typeof Lampa !== 'undefined') {  
+        console.log('[Style Interface DEBUG] Lampa version:', Lampa.version || 'unknown');  
+        console.log('[Style Interface DEBUG] Lampa.Manifest:', Lampa.Manifest);  
+  
+        // ==================== ДІАГНОСТИКА ====================  
+        let debug = {  
+            interactionCallCount: 0,  
+            lastInteractionData: null,  
+            interactionCalls: [],  
+            pageChanges: []  
+        };  
+  
+        // Логуємо зміни URL  
+        let lastUrl = window.location.href;  
+        const originalPushState = history.pushState;  
+        const originalReplaceState = history.replaceState;  
+          
+        history.pushState = function(...args) {  
+            debug.pageChanges.push({type: 'pushState', url: args[2], time: Date.now()});  
+            console.log('[Style Interface DEBUG] pushState:', args[2]);  
+            return originalPushState.apply(this, args);  
+        };  
+          
+        history.replaceState = function(...args) {  
+            debug.pageChanges.push({type: 'replaceState', url: args[2], time: Date.now()});  
+            console.log('[Style Interface DEBUG] replaceState:', args[2]);  
+            return originalReplaceState.apply(this, args);  
+        };  
+  
+        // ==================== ШАБЛОНИ ====================  
+        var full_start_new_template = `  
+        <div class="full-start-new cardify">  
+            <div class="full-start-new__body">  
+                <div class="full-start-new__left hide">  
+                    <div class="full-start-new__poster">  
+                        <img class="full-start-new__img full--poster" />  
+                    </div>  
+                </div>  
+  
+                <div class="full-start-new__right">  
+                      
+                    <div class="cardify__left">  
+                        <div class="full-start-new__title">{title}</div>  
+                        <div class="full-start-new__head"></div>  
+  
+                        <div class="cardify__details">  
+                            <div class="full-start-new__details"></div>  
+                        </div>  
+  
+                        <div class="full-start-new__buttons">  
+                            <div class="full-start__button selector button--play">  
+                                <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                                    <circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/>  
+                                    <path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/>  
+                                </svg>  
+  
+                                <span>#{title_watch}</span>  
+                            </div>  
+  
+                            <div class="full-start__button selector button--book">  
+                                <svg width="21" height="32" viewBox="0 0 21 32" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                                <path d="M2 1.5H19C19.2761 1.5 19.5 1.72386 19.5 2V27.9618C19.5 28.3756 19.0261 28.6103 18.697 28.3595L12.6212 23.7303C11.3682 22.7757 9.63183 22.7757 8.37885 23.7303L2.30302 28.3595C1.9739 28.6103 1.5 28.3756 1.5 27.9618V2C1.5 1.72386 1.72386 1.5 2 1.5Z" stroke="currentColor" stroke-width="1.5"/>  
+                                </svg>  
+  
+                                <span>#{title_bookmark}</span>  
+                            </div>  
+  
+                            <div class="full-start__button selector button--trailer">  
+                                <svg width="32" height="24" viewBox="0 0 32 24" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                                <path d="M30.9995 12.0001C30.9995 18.6275 25.627 24.0001 18.9995 24.0001H12.9995C6.37208 24.0001 0.999512 18.6275 0.999512 12.0001C0.999512 5.37266 6.37208 0.00012207 12.9995 0.00012207H18.9995C25.627 0.00012207 30.9995 5.37266 30.9995 12.0001Z" stroke="currentColor" stroke-width="1.5"/>  
+                                <path d="M13 7.5L13 16.5L20 12L13 7.5Z" fill="currentColor"/>  
+                                </svg>  
+  
+                                <span>#{title_trailer}</span>  
+                            </div>  
+                        </div>  
+                    </div>  
+  
+                    <div class="cardify__right">  
+                        <div class="full-start-new__descr">{descr}</div>  
+                    </div>  
+                </div>  
+            </div>  
+        </div>`;  
+  
+        var card_template = `  
+        <div class="card">  
+            <div class="card__img">  
+                <img />  
+            </div>  
+        </div>`;  
+  
+        // ==================== CSS СТИЛІ ====================  
+        var style = `  
+        <style>  
+        .full-start-new__head {  
+            margin-bottom: 1em;  
+        }  
+          
+        body.cardify-trailer-active .full-start__background {  
+            opacity: 0.3;  
+        }  
+          
+        .cardify {  
+            position: absolute;  
+            top: 0;  
+            left: 0;  
+            right: 0;  
+            bottom: 0;  
+            z-index: 2;  
+            background: rgba(0,0,0,0);  
+            -webkit-mask-image: -webkit-gradient(linear, left top, left bottom, color-stop(50%, white), to(rgba(255,255,255,0)));  
+            -webkit-mask-image: -webkit-linear-gradient(top, white 50%, rgba(255,255,255,0) 100%);  
+            mask-image: -webkit-gradient(linear, left top, left bottom, color-stop(50%, white), to(rgba(255,255,255,0)));  
+            mask-image: linear-gradient(to bottom, white 50%, rgba(255,255,255,0) 100%);  
+        }  
+          
+        .cardify__left {  
+            width: 50%;  
+            display: inline-block;  
+            vertical-align: top;  
+            padding-right: 2em;  
+        }  
+          
+        .cardify__right {  
+            width: 50%;  
+            display: inline-block;  
+            vertical-align: top;  
+        }  
+          
+        .cardify__details {  
+            margin: 2em 0;  
+        }  
+          
+        .cardify-trailer {  
+            position: fixed;  
+            top: 0;  
+            left: 0;  
+            width: 100%;  
+            height: 100%;  
+            background: rgba(0,0,0,0.9);  
+            z-index: 100;  
+            display: none;  
+        }  
+          
+        .cardify-trailer.display {  
+            display: block;  
+        }  
+          
+        .cardify-trailer__youtube {  
+            position: absolute;  
+            top: 50%;  
+            left: 50%;  
+            -webkit-transform: translate(-50%, -50%);  
+            transform: translate(-50%, -50%);  
+            width: 80%;  
+            height: 80%;  
+            max-width: 900px;  
+            max-height: 506px;  
+        }  
+          
+        .cardify-trailer__youtube-iframe {  
+            width: 100%;  
+            height: 100%;  
+        }  
+          
+        .cardify-trailer__controlls {  
+            position: absolute;  
+            bottom: 2em;  
+            left: 50%;  
+            -webkit-transform: translateX(-50%);  
+            transform: translateX(-50%);  
+            color: white;  
+            text-align: center;  
+        }  
+          
+        .cardify-trailer__title {  
+            font-size: 1.5em;  
+            margin-bottom: 1em;  
+        }  
+          
+        .cardify-trailer__remote {  
+            margin-top: 1em;  
+        }  
+          
+        .cardify-trailer__remote-icon {  
+            display: inline-block;  
+            cursor: pointer;  
+            padding: 1em;  
+            background: rgba(255,255,255,0.1);  
+            border-radius: 50%;  
+        }  
+          
+        .cardify-trailer__remote-icon:hover {  
+            background: rgba(255,255,255,0.2);  
+        }  
+          
+        .cardify-trailer__youtube-line {  
+            position: absolute;  
+            background: rgba(255,255,255,0.1);  
+        }  
+          
+        .cardify-trailer__youtube-line.one {  
+            top: 0;  
+            left: 0;  
+            right: 0;  
+            height: 3em;  
+        }  
+          
+        .cardify-trailer__youtube-line.two {  
+            bottom: 0;  
+            left: 0;  
+            right: 0;  
+            height: 3em;  
+        }  
+          
+        body:not(.menu--open) .cardify__background{  
+            -webkit-mask-image:-webkit-gradient(linear,left top,left bottom,color-stop(50%,white),to(rgba(255,255,255,0)));  
+            -webkit-mask-image:-webkit-linear-gradient(top,white 50%,rgba(255,255,255,0) 100%);  
+            mask-image:-webkit-gradient(linear,left top,left bottom,color-stop(50%,white),to(rgba(255,255,255,0)));  
+            mask-image:linear-gradient(to bottom,white 50%,rgba(255,255,255,0) 100%);  
+        }  
+        </style>`;  
+  
+        // Додаємо стилі до сторінки  
+        $('head').append(style);  
+  
+        // ==================== КЛАСИ ====================  
+        var NewInterfaceInfo = /*#__PURE__*/function () {  
+            function NewInterfaceInfo() {  
+                _classCallCheck(this, NewInterfaceInfo);  
+                this.info = null;  
+            }  
+  
+            _createClass(NewInterfaceInfo, [{  
+                key: "create",  
+                value: function create(data) {  
+                    this.info = $('<div class="full-start-new__info"></div>');  
+                    return this.info;  
+                }  
+            }, {  
+                key: "update",  
+                value: function update(item) {  
+                    console.log('[Style Interface] NewInterfaceInfo update:', item.title || item.name);  
+                    if (this.info) {  
+                        this.info.find('.full-start-new__title').text(item.title || item.name);  
+                        this.info.find('.full-start-new__descr').text(item.description || '');  
+                    }  
+                }  
+            }, {  
+                key: "draw",  
+                value: function draw(item) {  
+                    console.log('[Style Interface] NewInterfaceInfo draw:', item.title || item.name);  
+                    this.update(item);  
+                    return this.info;  
+                }  
+            }]);  
+  
+            return NewInterfaceInfo;  
+        }();
+var NewInterface = /*#__PURE__*/function () {  
+            function NewInterface(data) {  
+                _classCallCheck(this, NewInterface);  
+                  
+                this.data = data;  
+                this.activity = data.activity;  
+                this.selected = 0;  
+                this.scroll = new Lampa.Scrollbar({  
+                    horizontal: true  
+                });  
+                this.info = new NewInterfaceInfo();  
+                this.create();  
+            }  
+  
+            _createClass(NewInterface, [{  
+                key: "create",  
+                value: function create() {  
+                    var _this = this;  
+                      
+                    this.activity.loader(false);  
+                    this.activity.toggle();  
+                      
+                    var html = $(full_start_new_template);  
+                    this.body = html.find('.full-start-new__body');  
+                    this.left = html.find('.full-start-new__left');  
+                    this.right = html.find('.full-start-new__right');  
+                      
+                    // Створюємо картки  
+                    this.data.cards.forEach((card, index) => {  
+                        var card_html = $(card_template.replace('{title}', card.title));  
+                        card_html.on('hover:enter', () => {  
+                            this.selected = index;  
+                            this.updateSelected();  
+                        });  
+                        this.body.append(card_html);  
+                    });  
+                      
+                    this.activity.render().append(html);  
+                    this.updateSelected();  
+                }  
+            }, {  
+                key: "updateSelected",  
+                value: function updateSelected() {  
+                    this.body.find('.card').removeClass('focus');  
+                    if (this.data.cards[this.selected]) {  
+                        this.body.find('.card').eq(this.selected).addClass('focus');  
+                        this.background(this.data.cards[this.selected]);  
+                    }  
+                }  
+            }, {  
+                key: "background",  
+                value: function background(item) {  
+                    if (item && item.backdrop) {  
+                        this.activity.render().find('.full-start__background')  
+                            .attr('src', Lampa.Utils.cardImgBackground(item.backdrop));  
+                    }  
+                }  
+            }, {  
+                key: "down",  
+                value: function down() {  
+                    this.selected++;  
+                    if (this.selected >= this.data.cards.length) {  
+                        this.selected = 0;  
+                    }  
+                    this.updateSelected();  
+                }  
+            }, {  
+                key: "up",  
+                value: function up() {  
+                    this.selected--;  
+                    if (this.selected < 0) {  
+                        this.selected = this.data.cards.length - 1;  
+                    }  
+                    this.updateSelected();  
+                }  
+            }, {  
+                key: "back",  
+                value: function back() {  
+                    Lampa.Activity.backward();  
+                }  
+            }]);  
+  
+            return NewInterface;  
+        }();  
+  
+        // ==================== НАЛАШТУВАННЯ ====================  
+        function initPlugin() {  
+            // Додаємо debug панель  
+            $('body').append(`  
+                <div id="style-interface-debug" style="  
+                    position: fixed;  
+                    top: 10px;  
+                    right: 10px;  
+                    background: rgba(0,0,0,0.8);  
+                    color: white;  
+                    padding: 10px;  
+                    border-radius: 5px;  
+                    font-size: 12px;  
+                    z-index: 9999;  
+                ">  
+                    <div>Style Interface Debug</div>  
+                    <div>Calls: <span id="style-interface-calls">0</span></div>  
+                    <div>Status: <span id="style-interface-status">WAITING</span></div>  
+                </div>  
+            `);  
+  
+            // Перехоплюємо InteractionMain  
+            if (Lampa.InteractionMain) {  
+                var originalInteractionMain = Lampa.InteractionMain;  
+                  
+                Lampa.InteractionMain = function(data) {  
+                    debug.interactionCallCount++;  
+                    debug.lastInteractionData = data;  
+                    debug.interactionCalls.push({  
+                        data: data,  
+                        time: Date.now()  
+                    });  
+                      
+                    console.log('[Style Interface] InteractionMain called:', data);  
+                      
+                    // Перевіряємо чи це TMDB або CUB джерело  
+                    if (data.source && (data.source.name === 'tmdb' || data.source.name === 'cub')) {  
+                        console.log('[Style Interface] Using custom interface for:', data.source.name);  
+                          
+                        try {  
+                            var customInterface = new NewInterface(data);  
+                            return customInterface;  
+                        } catch (e) {  
+                            console.error('[Style Interface] Error creating custom interface:', e);  
+                            return originalInteractionMain.call(this, data);  
+                        }  
+                    }  
+                      
+                    return originalInteractionMain.call(this, data);  
+                };  
+                  
+                console.log('[Style Interface] Plugin fully initialized');  
+                  
+                // Оновлюємо debug панель  
+                setInterval(() => {  
+                    $('#style-interface-calls').text(debug.interactionCallCount);  
+                    $('#style-interface-status').text(  
+                        debug.interactionCallCount > 0 ? 'WORKING' : 'WAITING'  
+                    );  
+                }, 1000);  
+            }  
+        }  
+  
+        // Запускаємо  
+        const waitForLampa = setInterval(() => {  
+            if (typeof Lampa !== 'undefined' && typeof $ !== 'undefined') {  
+                clearInterval(waitForLampa);  
+                console.log('[Style Interface DEBUG] === FINAL DIAGNOSTICS ===');  
+                            console.log('[Style Interface DEBUG] Total InteractionMain calls:', debug.interactionCallCount);  
+                            console.log('[Style Interface DEBUG] Page changes:', debug.pageChanges.length);  
+                            console.log('[Style Interface DEBUG] Plugin state: READY');  
+                              
+                            if (debug.interactionCallCount === 0) {  
+                                console.warn('[Style Interface DEBUG] WARNING: No InteractionMain calls detected yet.');  
+                                console.log('[Style Interface DEBUG] Try navigating to a movie/series page.');  
+                            }  
+                        }, 2000);  
+                          
+                    } catch (e) {  
+                        console.error('[Style Interface DEBUG] Init error:', e);  
+                    }  
+                }, 1500);  
+            }  
+        }, 100);  
+    }  
+  
+    console.log('[Style Interface DEBUG] === PLUGIN WRAPPER EXECUTED ===');  
+})();  
+  
+// ==================== HTML ШАБЛОНИ ====================  
+var full_start_new_template = `  
+<div class="full-start-new cardify">  
+    <div class="full-start-new__body">  
+        <div class="full-start-new__left hide">  
+            <div class="full-start-new__poster">  
+                <img class="full-start-new__img full--poster" />  
+            </div>  
+        </div>  
+          
+        <div class="full-start-new__right">  
+            <div class="cardify__left">  
+                <div class="full-start-new__title">{title}</div>  
+                <div class="full-start-new__head"></div>  
+                  
+                <div class="cardify__details">  
+                    <div class="full-start-new__details"></div>  
+                </div>  
+                  
+                <div class="full-start-new__buttons">  
+                    <div class="full-start__button selector button--play">  
+                        <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                            <circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/>  
+                            <path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/>  
+                        </svg>  
+                        <span>#{title_watch}</span>  
+                    </div>  
+                      
+                    <div class="full-start__button selector button--book">  
+                        <svg width="21" height="32" viewBox="0 0 21 32" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                            <path d="M2 1.5H19C19.2761 1.5 19.5 1.72386 19.5 2V27.9618C19.5 28.3756 19.0261 28.6103 18.7071 28.3536L10.5 21.5L2.29289 28.3536C1.97386 28.6103 1.5 28.3756 1.5 27.9618V2C1.5 1.72386 1.72386 1.5 2 1.5Z" stroke="currentColor" stroke-width="2"/>  
+                        </svg>  
+                    </div>  
+                      
+                    <div class="full-start__button selector button--trailer">  
+                        <svg width="32" height="23" viewBox="0 0 32 23" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                            <path d="M31 3.5C31 1.5 29.5 0 27.5 0H4.5C2.5 0 1 1.5 1 3.5V19.5C1 21.5 2.5 23 4.5 23H27.5C29.5 23 31 21.5 31 19.5V3.5Z" stroke="currentColor" stroke-width="2"/>  
+                            <path d="M12 7L20 11.5L12 16V7Z" fill="currentColor"/>  
+                        </svg>  
+                    </div>  
+                </div>  
+            </div>  
+              
+            <div class="cardify__right">  
+                <div class="cardify__scroll">  
+                    <div class="cardify__items"></div>  
+                </div>  
+            </div>  
+        </div>  
+    </div>  
+</div>`;  
+  
+var card_template = `  
+<div class="card selector">  
+    <div class="card__img">  
+        <img />  
+    </div>  
+    <div class="card__title">{title}</div>  
+</div>`;  
+  
+// ==================== CSS СТИЛІ ====================  
+var style_interface_css = `  
+<style>  
+.full-start-new.cardify {  
+    position: absolute;  
+    top: 0;  
+    left: 0;  
+    right: 0;  
+    bottom: 0;  
+    background: #000;  
+    z-index: 100;  
+}  
+  
+.full-start-new__body {  
+    display: flex;  
+    height: 100%;  
+}  
+  
+.full-start-new__left {  
+    width: 30%;  
+    position: relative;  
+}  
+  
+.full-start-new__right {  
+    width: 70%;  
+    display: flex;  
+    padding: 3em;  
+}  
+  
+.cardify__left {  
+    width: 50%;  
+    padding-right: 2em;  
+}  
+  
+.cardify__right {  
+    width: 50%;  
+    position: relative;  
+}  
+  
+.full-start-new__title {  
+    font-size: 3em;  
+    font-weight: 300;  
+    margin-bottom: 1em;  
+    color: #fff;  
+}  
+  
+.full-start-new__head {  
+    margin-bottom: 2em;  
+}  
+  
+.cardify__details {  
+    margin-bottom: 2em;  
+}  
+  
+.full-start-new__buttons {  
+    display: flex;  
+    gap: 1em;  
+}  
+  
+.full-start__button {  
+    display: flex;  
+    align-items: center;  
+    padding: 1em 1.5em;  
+    background: rgba(255, 255, 255, 0.1);  
+    border-radius: 0.5em;  
+    color: #fff;  
+    cursor: pointer;  
+    transition: all 0.3s;  
+}  
+  
+.full-start__button:hover,  
+.full-start__button.focus {  
+    background: rgba(255, 255, 255, 0.2);  
+}  
+  
+.full-start__button svg {  
+    margin-right: 0.5em;  
+}  
+  
+.cardify__scroll {  
+    height: 100%;  
+    overflow: hidden;  
+    position: relative;  
+}  
+  
+.cardify__items {  
+    display: flex;  
+    gap: 1em;  
+    height: 100%;  
+    align-items: center;  
+}  
+  
+.card {  
+    flex-shrink: 0;  
+    width: 12em;  
+    cursor: pointer;  
+    transition: transform 0.3s;  
+}  
+  
+.card:hover,  
+.card.focus {  
+    transform: scale(1.05);  
+}  
+  
+.card__img {  
+    width: 100%;  
+    height: 18em;  
+    border-radius: 0.5em;  
+    overflow: hidden;  
+    position: relative;  
+}  
+  
+.card__img img {  
+    width: 100%;  
+    height: 100%;  
+    object-fit: cover;  
+}  
+  
+.card__title {  
+    margin-top: 0.5em;  
+    font-size: 1.1em;  
+    color: #fff;  
+    text-align: center;  
+}  
+  
+/* Debug панель */  
+#style-interface-debug {  
+    position: fixed;  
+    top: 10px;  
+    right: 10px;  
+    background: rgba(0, 0, 0, 0.8);  
+    color: #fff;  
+    padding: 10px;  
+    border-radius: 5px;  
+    font-size: 12px;  
+    z-index: 9999;  
+}  
+</style>`;  
+  
+// Додаємо CSS до сторінки  
+$('head').append(style_interface_css);
+// ==================== ДОДАТКОВІ УТИЛІТИ ====================  
+function createDebugPanel() {  
+    var debugHtml = `  
+        <div id="style-interface-debug">  
+            <div>Style Interface Debug</div>  
+            <div>Calls: <span id="style-interface-calls">0</span></div>  
+            <div>Status: <span id="style-interface-status">WAITING</span></div>  
+        </div>  
+    `;  
+    $('body').append(debugHtml);  
+}  
+  
+// ==================== ОБРОБНИКИ ПОДІЙ ====================  
+function setupEventListeners() {  
+    // Слухаємо зміни activity  
+    Lampa.Listener.follow('activity', function(e) {  
+        if (e.type === 'start' && e.object.activity) {  
+            debug.pageChanges.push({  
+                type: 'activity_start',  
+                object: e.object.activity.component,  
+                time: Date.now()  
+            });  
+            console.log('[Style Interface DEBUG] Activity started:', e.object.activity.component);  
+        }  
+    });  
+  
+    // Слухаємо зміни controller  
+    Lampa.Controller.listener.follow('toggle', function(e) {  
+        debug.pageChanges.push({  
+            type: 'controller_toggle',  
+            name: e.name,  
+            time: Date.now()  
+        });  
+        console.log('[Style Interface DEBUG] Controller toggle:', e.name);  
+    });  
+}  
+  
+// ==================== ІНІЦІАЛІЗАЦІЯ ПЛАГІНА ====================  
+function initPlugin() {  
+    console.log('[Style Interface DEBUG] Initializing plugin...');  
+      
+    // Створюємо debug панель  
+    createDebugPanel();  
+      
+    // Налаштовуємо слухачів подій  
+    setupEventListeners();  
+      
+    // Перевіряємо наявність InteractionMain  
+    if (typeof Lampa.InteractionMain === 'function') {  
+        console.log('[Style Interface DEBUG] InteractionMain found, setting up wrapper...');  
+          
+        var originalInteractionMain = Lampa.InteractionMain;  
+          
+        Lampa.InteractionMain = function(data) {  
+            debug.interactionCallCount++;  
+            debug.lastInteractionData = data;  
+            debug.interactionCalls.push({  
+                data: data,  
+                time: Date.now()  
+            });  
+              
+            console.log('[Style Interface] InteractionMain called:', data);  
+              
+            // Перевіряємо чи це TMDB або CUB джерело  
+            if (data.source && (data.source.name === 'tmdb' || data.source.name === 'cub')) {  
+                console.log('[Style Interface] Using custom interface for:', data.source.name);  
+                  
+                try {  
+                    var customInterface = new NewInterface(data);  
+                    return customInterface;  
+                } catch (e) {  
+                    console.error('[Style Interface] Error creating custom interface:', e);  
+                    return originalInteractionMain.call(this, data);  
+                }  
+            }  
+              
+            return originalInteractionMain.call(this, data);  
+        };  
+          
+        console.log('[Style Interface] Plugin fully initialized');  
+          
+        // Оновлюємо debug панель  
+        setInterval(() => {  
+            $('#style-interface-calls').text(debug.interactionCallCount);  
+            $('#style-interface-status').text(  
+                debug.interactionCallCount > 0 ? 'WORKING' : 'WAITING'  
+            );  
+        }, 1000);  
+    }  
+}  
+  
+// ==================== ЗАПУСК ПЛАГІНА ====================  
+// Запускаємо  
+const waitForLampa = setInterval(() => {  
+    if (typeof Lampa !== 'undefined' && typeof $ !== 'undefined') {  
+        clearInterval(waitForLampa);  
+        console.log('[Style Interface DEBUG] Lampa and jQuery loaded, starting init...');  
+          
+        // Чекаємо трохи більше  
+        setTimeout(() => {  
+            try {  
+                initPlugin();  
+                  
+                // Після ініціалізації  
+                setTimeout(() => {  
+                    console.log('[Style Interface DEBUG] === FINAL DIAGNOSTICS ===');  
+                    console.log('[Style Interface DEBUG] Total InteractionMain calls:', debug.interactionCallCount);  
+                    console.log('[Style Interface DEBUG] Page changes:', debug.pageChanges.length);  
+                    console.log('[Style Interface DEBUG] Plugin state: READY');  
+                      
+                    if (debug.interactionCallCount === 0) {  
+                        console.warn('[Style Interface DEBUG] WARNING: No InteractionMain calls detected yet.');  
+                        console.log('[Style Interface DEBUG] Try navigating to a movie/series page.');  
+                    }  
+                }, 2000);  
+                  
+            } catch (e) {  
+                console.error('[Style Interface DEBUG] Init error:', e);  
+            }  
+        }, 1500);  
+    }  
+}, 100);  
+  
+console.log('[Style Interface DEBUG] === PLUGIN WRAPPER EXECUTED ===');
+})(); // Закриття IIFE
