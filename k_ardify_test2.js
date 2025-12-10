@@ -1055,37 +1055,37 @@
         name: 'Розмір трейлера'  
       }  
     });
-    // <-- ДОДАНО ДЛЯ КНОПКИ MUTE: Обробник кліку  
-$(document).on('click', '.button--trailer-mute', function() {  
-    const trailer = document.querySelector('.cardify-trailer__youtube iframe');  
-    if (trailer) {  
-        const src = trailer.src;  
-        if (src.includes('mute=0')) {  
-            trailer.src = src.replace('mute=0', 'mute=1');  
-            $(this).addClass('muted');  
-        } else {  
-            trailer.src = src.replace('mute=1', 'mute=0');  
-            $(this).removeClass('muted');  
-        }  
-    }  
-});  
-  
-// <-- ДОДАНО ДЛЯ КНОПКИ MUTE: CSS стилі для стану muted  
-const muteStyles = `  
-    .button--trailer-mute.muted .mute-icon {  
-        display: none !important;  
-    }  
-    .button--trailer-mute.muted .unmute-icon {  
-        display: block !important;  
-    }  
-`;  
-  
-// Додаємо стилі до існуючих  
-if (typeof modifyCardifyStyles === 'function') {  
-    const originalStyle = document.getElementById('cardify-compact-style');  
-    if (originalStyle) {  
-        originalStyle.textContent += muteStyles;  
-    }  
+    // <-- ДОДАНО ДЛЯ КНОПКИ MUTE: Обробник кліку    
+$(document).on('click', '.button--trailer-mute', function() {    
+    const trailer = document.querySelector('.cardify-trailer__youtube iframe');    
+    if (trailer) {    
+        const src = trailer.src;    
+        if (src.includes('mute=0')) {    
+            trailer.src = src.replace('mute=0', 'mute=1');    
+            $(this).addClass('muted');    
+        } else {    
+            trailer.src = src.replace('mute=1', 'mute=0');    
+            $(this).removeClass('muted');    
+        }    
+    }    
+});    
+    
+// <-- ДОДАНО ДЛЯ КНОПКИ MUTE: CSS стилі для стану muted    
+const muteStyles = `    
+    .button--trailer-mute.muted .mute-icon {    
+        display: none !important;    
+    }    
+    .button--trailer-mute.muted .unmute-icon {    
+        display: block !important;    
+    }    
+`;    
+    
+// Додаємо стилі до існуючих    
+if (typeof modifyCardifyStyles === 'function') {    
+    const originalStyle = document.getElementById('cardify-compact-style');    
+    if (originalStyle) {    
+        originalStyle.textContent += muteStyles;    
+    }    
 }  
- });  
+  
 })();  // <-- Закриваємо другий IIFE
