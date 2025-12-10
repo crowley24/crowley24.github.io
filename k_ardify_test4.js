@@ -1,7 +1,5 @@
 (function () {  
   'use strict';  
-    
-  var LAMPAC_HOST = '{localhost}';  
   
   function _classCallCheck(instance, Constructor) {  
     if (!(instance instanceof Constructor)) {  
@@ -48,9 +46,7 @@
   
   function _arrayLikeToArray(arr, len) {  
     if (len == null || len > arr.length) len = arr.length;  
-  
     for (var i = 0, arr2 = new Array(len); i < len; i++) arr2[i] = arr[i];  
-  
     return arr2;  
   }  
   
@@ -58,950 +54,287 @@
     throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");  
   }  
   
-  function _createForOfIteratorHelper(o, allowArrayLike) {  
-    var it = typeof Symbol !== "undefined" && o[Symbol.iterator] || o["@@iterator"];  
-  
-    if (!it) {  
-      if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") {  
-        if (it) o = it;  
-        var i = 0;  
-  
-        var F = function () {};  
-  
-        return {  
-          s: F,  
-          n: function () {  
-            if (i >= o.length) return {  
-              done: true  
-            };  
-            return {  
-              done: false,  
-              value: o[i++]  
-            };  
-          },  
-          e: function (e) {  
-            throw e;  
-          },  
-          f: F  
-        };  
-      }  
-  
-      throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");  
-    }  
-  
-    var normalCompletion = true,  
-        didErr = false,  
-        err;  
-    return {  
-      s: function () {  
-        it = it.call(o);  
-      },  
-      n: function () {  
-        var step = it.next();  
-        normalCompletion = step.done;  
-        return step;  
-      },  
-      e: function (e) {  
-        didErr = true;  
-        err = e;  
-      },  
-      f: function () {  
-        try {  
-          if (!normalCompletion && it.return != null) it.return();  
-        } finally {  
-          if (didErr) throw err;  
-        }  
-      }  
-    };  
-  }  
-  
-  function State(object) {  
-    this.state = object.state;  
-  
-    this.start = function () {  
-      this.dispath(this.state);  
-    };  
-  
-    this.dispath = function (action_name) {  
-      var action = object.transitions[action_name];  
-  
-      if (action) {  
-        action.call(this, this);  
-      } else {  
-        console.log('invalid action');  
-      }  
-    };  
-  }  
-  
-  var Player = /*#__PURE__*/function () {  
-    function Player(object, video, mute_button) {  
-      var _this = this;  
-  
-      _classCallCheck(this, Player);  
-  
-      this.paused = false;  
-      this.display = false;  
-      this.ended = false;  
-      this.mute_button = mute_button;  
-      this.isMuted = true;  
-      this.listener = Lampa.Subscribe();  
-      this.html = $("\n            <div class=\"cardify-trailer\">\n                <div class=\"cardify-trailer__youtube\">\n                    <div class=\"cardify-trailer__youtube-iframe\"></div>\n                    <div class=\"cardify-trailer__youtube-line one\"></div>\n                    <div class=\"cardify-trailer__youtube-line two\"></div>\n                </div>\n\n                <div class=\"cardify-trailer__controlls\">\n                    <div class=\"cardify-trailer__title\"></div>\n                    <div class=\"cardify-trailer__close\">✕</div>\n                </div>\n            </div>\n        ");  
-  
-      if (typeof YT !== 'undefined' && YT.Player) {  
-        this.youtube = new YT.Player(this.html.find('.cardify-trailer__youtube-iframe')[0], {  
-          height: window.innerHeight * 2,  
-          width: window.innerWidth,  
-          playerVars: {  
-            'controls': 1,  
-            'showinfo': 0,  
-            'autohide': 1,  
-            'modestbranding': 1,  
-            'autoplay': 0,  
-            'disablekb': 1,  
-            'fs': 0,  
-            'enablejsapi': 1,  
-            'playsinline': 1,  
-            'rel': 0,  
-            'suggestedQuality': 'hd1080',  
-            'setPlaybackQuality': 'hd1080',  
-            'mute': 1  
-          },  
-          videoId: video.id,  
-          events: {  
-            onReady: function onReady(event) {  
-              _this.loaded = true;  
-              _this.listener.send('loaded');  
-            },  
-            onStateChange: function onStateChange(state) {  
-              if (state.data == YT.PlayerState.PLAYING) {  
-                _this.paused = false;  
-                clearInterval(_this.timer);  
-                _this.timer = setInterval(function () {  
-                  var left = _this.youtube.getDuration() - _this.youtube.getCurrentTime();  
-  
-                  var toend = 13;  
-                  var fade = 5;  
-  
-                  if (left <= toend + fade) {  
-                    var vol = 1 - (toend + fade - left) / fade;  
-  
-                    _this.youtube.setVolume(Math.max(0, vol * 100));  
-  
-                    if (left <= toend) {  
-                      clearInterval(_this.timer);  
-  
-                      _this.listener.send('ended');  
-                    }  
-                  }  
-                }, 100);  
-  
-                _this.listener.send('play');  
-  
-                if (window.cardify_fist_unmute) _this.unmute();  
-              }  
-  
-              if (state.data == YT.PlayerState.PAUSED) {  
-                _this.paused = true;  
-                clearInterval(_this.timer);  
-  
-                _this.listener.send('paused');  
-              }  
-  
-              if (state.data == YT.PlayerState.ENDED) {  
-                _this.listener.send('ended');  
-              }  
-  
-              if (state.data == YT.PlayerState.BUFFERING) {  
-                state.target.setPlaybackQuality('hd1080');  
-              }  
-            },  
-            onError: function onError(e) {  
-              _this.loaded = false;  
-  
-              _this.listener.send('error');  
-            }  
-          }  
-        });  
-      }  
-    }  
-  
-    _createClass(Player, [{  
-      key: "play",  
-      value: function play() {  
-        try {  
-          this.youtube.playVideo();  
-        } catch (e) {}  
-      }  
-    }, {  
-      key: "pause",  
-      value: function pause() {  
-        try {  
-          this.youtube.pauseVideo();  
-        } catch (e) {}  
-      }  
-    }, {  
-      key: "unmute",  
-      value: function unmute() {  
-        try {  
-          if (this.isMuted) {  
-            this.youtube.unMute();  
-            this.isMuted = false;  
-            this.mute_button.find('svg').html(this.getSoundOnIcon());  
-            this.mute_button.find('span').text(Lampa.Lang.translate('cardify_disable_sound'));  
-          } else {  
-            this.youtube.mute();  
-            this.isMuted = true;  
-            this.mute_button.find('svg').html(this.getSoundOffIcon());  
-            this.mute_button.find('span').text(Lampa.Lang.translate('cardify_enable_sound'));  
-          }  
-          window.cardify_fist_unmute = true;  
-        } catch (e) {}  
-      }  
-    }, {  
-      key: "getSoundOffIcon",  
-      value: function getSoundOffIcon() {  
-        return '<path d=\"M13 4L7 9H3V19H7L13 24V4Z\" stroke=\"currentColor\" stroke-width=\"2\" fill=\"none\"/>' +  
-               '<path d=\"M19 8C20.5 9.5 21 12 21 14C21 16 20.5 18.5 19 20\" stroke=\"currentColor\" stroke-width=\"2\" fill=\"none\"/>' +  
-               '<path d=\"M17 10C17.8 11.2 18 12.5 18 14C18 15.5 17.8 16.8 17 18\" stroke=\"currentColor\" stroke-width=\"2\" fill=\"none\"/>';  
-      }  
-    }, {  
-      key: "getSoundOnIcon",  
-      value: function getSoundOnIcon() {  
-        return '<path d=\"M13 4L7 9H3V19H7L13 24V4Z\" stroke=\"currentColor\" stroke-width=\"2\" fill=\"currentColor\"/>' +  
-               '<path d=\"M19 8C20.5 9.5 21 12 21 14C21 16 20.5 18.5 19 20\" stroke=\"currentColor\" stroke-width=\"2\" fill=\"currentColor\"/>' +  
-               '<path d=\"M17 10C17.8 11.2 18 12.5 18 14C18 15.5 17.8 16.8 17 18\" stroke=\"currentColor\" stroke-width=\"2\" fill=\"currentColor\"/>';  
-      }  
-    }, {  
-      key: "show",  
-      value: function show() {  
-        var mode = Lampa.Storage.field('cardify_trailer_mode') || 'standard';  
-          
-        if (mode === 'pip') {  
-          this.html.addClass('pip-mode');  
-        } else {  
-          this.html.removeClass('pip-mode');  
-        }  
-          
-        this.html.addClass('display');  
-        this.display = true;  
-        $('body').addClass('cardify-trailer-active');  
-      }  
-    }, {  
-      key: "hide",  
-      value: function hide() {  
-        this.html.removeClass('display');  
-        this.display = false;  
-        $('body').removeClass('cardify-trailer-active');  
-      }  
-    }, {  
-      key: "render",  
-      value: function render() {  
-        return this.html;  
-      }  
-    }, {  
-      key: "destroy",  
-      value: function destroy() {  
-        this.loaded = false;  
-        this.display = false;  
-  
-        try {  
-          this.youtube.destroy();  
-        } catch (e) {}  
-  
-        clearInterval(this.timer);  
-        this.html.remove();  
-        $('body').removeClass('cardify-trailer-active');  
-      }  
-    }]);  
-  
-    return Player;  
-  }();  
-  
   var Trailer = /*#__PURE__*/function () {  
-    function Trailer(object, video, mute_button) {  
-      var _this = this;  
-  
+    function Trailer(object, video) {  
       _classCallCheck(this, Trailer);  
-  
-      object.activity.trailer_ready = true;  
+        
       this.object = object;  
       this.video = video;  
-      this.mute_button = mute_button;  
-      this.player;  
-      this.background = this.object.activity.render().find('.full-start__background');  
-      this.startblock = this.object.activity.render().find('.cardify');  
-      this.head = $('.head');  
-      this.timelauch = 1200;  
-      this.firstlauch = false;  
-      this.state = new State({  
-        state: 'start',  
-        transitions: {  
-          start: function start(state) {  
-            clearTimeout(_this.timer_load);  
-            if (_this.player.display) state.dispath('play');else if (_this.player.loaded) {  
-              _this.animate();  
-  
-              _this.timer_load = setTimeout(function () {  
-                state.dispath('load');  
-              }, _this.timelauch);  
-            }  
-          },  
-          load: function load(state) {  
-            if (_this.player.loaded && Lampa.Controller.enabled().name == 'full_start' && _this.same()) state.dispath('play');  
-          },  
-          play: function play() {  
-            _this.player.play();  
-          },  
-          toggle: function toggle(state) {  
-            clearTimeout(_this.timer_load);  
-  
-            if (Lampa.Controller.enabled().name == 'cardify_trailer') ; else if (Lampa.Controller.enabled().name == 'full_start' && _this.same()) {  
-              state.start();  
-            } else if (_this.player.display) {  
-              state.dispath('hide');  
-            }  
-          },  
-          hide: function hide() {  
-            _this.player.pause();  
-  
-            _this.player.hide();  
-  
-            _this.object.activity.render().find('.cardify-preview__loader').width(0);  
+      this.html = $('<div class="cardify-trailer"></div>');  
+      this.layer = $('<div class="cardify-trailer__layer"></div>');  
+      this.youtube = $('<div class="cardify-trailer__youtube"></div>');  
+      this.timelaunch = 500;  
+      this.timer_anim = false;  
+      this.state = {  
+        dispath: function dispath(event) {  
+          if (event == 'hide') {  
+            html.find('.cardify-trailer').remove();  
           }  
         }  
-      });  
-      this.start();  
+      };  
+        
+      this.create();  
     }  
   
     _createClass(Trailer, [{  
-      key: "same",  
-      value: function same() {  
-        return Lampa.Activity.active().activity === this.object.activity;  
+      key: "create",  
+      value: function create() {  
+        var _this = this;  
+          
+        this.html.append(this.youtube);  
+        this.html.append(this.layer);  
+          
+        this.player = new Player(this.youtube, this.video);  
+          
+        this.player.on('ready', function () {  
+          _this.build();  
+        });  
+          
+        this.player.on('ended', function () {  
+          _this.destroy();  
+        });  
       }  
     }, {  
-      key: "animate",  
-      value: function animate() {  
+      key: "build",  
+      value: function build() {  
         var _this2 = this;  
-  
-        var loader = this.object.activity.render().find('.cardify-preview__loader').width(0);  
+          
+        this.object.activity.render().find('.cardify__right').append(this.html);  
+          
+        setTimeout(function () {  
+          _this2.html.addClass('cardify-trailer--visible');  
+        }, 100);  
+          
+        this.startTimer();  
+      }  
+    }, {  
+      key: "startTimer",  
+      value: function startTimer() {  
+        var _this3 = this;  
+          
         var started = Date.now();  
-        clearInterval(this.timer_anim);  
+        var loader = this.layer.find('.cardify-trailer__loader');  
+          
         this.timer_anim = setInterval(function () {  
           var left = Date.now() - started;  
-          if (left > _this2.timelauch) clearInterval(_this2.timer_anim);  
-          loader.width(Math.round(left / _this2.timelauch * 100) + '%');  
+          if (left > _this3.timelaunch) clearInterval(_this3.timer_anim);  
+          loader.width(Math.round(left / _this3.timelaunch * 100) + '%');  
         }, 100);  
-      }  
-    }, {  
-      key: "preview",  
-      value: function preview() {  
-        var preview = $("\n            <div class=\"cardify-preview\">\n                <div>\n                    <img class=\"cardify-preview__img\" />\n                    <div class=\"cardify-preview__line one\"></div>\n                    <div class=\"cardify-preview__line two\"></div>\n                    <div class=\"cardify-preview__loader\"></div>\n                </div>\n            </div>\n        ");  
-        Lampa.Utils.imgLoad($('img', preview), this.video.img, function () {  
-          $('img', preview).addClass('loaded');  
-        });  
-        this.object.activity.render().find('.cardify__right').append(preview);  
-      }  
-    }, {  
-      key: "controll",  
-      value: function controll() {  
-        var _this3 = this;  
-  
-        var out = function out() {  
-          _this3.state.dispath('hide');  
-  
-          Lampa.Controller.toggle('full_start');  
-        };  
-  
-        Lampa.Controller.add('cardify_trailer', {  
-          toggle: function toggle() {  
-            Lampa.Controller.clear();  
-          },  
-          enter: function enter() {  
-            _this3.player.unmute();  
-          },  
-          left: out.bind(this),  
-          up: out.bind(this),  
-          down: out.bind(this),  
-          right: out.bind(this),  
-          back: function back() {  
-            _this3.player.destroy();  
-  
-            _this3.object.activity.render().find('.cardify-preview').remove();  
-  
-            out();  
-          }  
-        });  
-        Lampa.Controller.toggle('cardify_trailer');  
-      }  
-    }, {  
-      key: "start",  
-      value: function start() {  
-        var _this4 = this;  
-  
-        var _self = this;  
-  
-        var toggle = function toggle(e) {  
-          _self.state.dispath('toggle');  
-        };  
-  
-        var destroy = function destroy(e) {  
-          if (e.type == 'destroy' && e.object.activity === _self.object.activity) remove();  
-        };  
-  
-        var remove = function remove() {  
-          Lampa.Listener.remove('activity', destroy);  
-          Lampa.Controller.listener.remove('toggle', toggle);  
-  
-          _self.destroy();  
-        };  
-  
-        Lampa.Listener.follow('activity', destroy);  
-        Lampa.Controller.listener.follow('toggle', toggle);  
-  
-        this.player = new Player(this.object, this.video, this.mute_button);  
-  
-        this.player.html.find('.cardify-trailer__close').on('click', function() {  
-          _this4.state.dispath('hide');  
-          Lampa.Controller.toggle('full_start');  
-        });  
-  
-        this.player.listener.follow('loaded', function () {  
-          _this4.preview();  
-  
-          _this4.state.start();  
-        });  
-  
-        this.player.listener.follow('play', function () {  
-        clearTimeout(_this4.timer_show);  
-  
-          if (!_this4.firstlauch) {  
-            _this4.firstlauch = true;  
-            _this4.timelauch = 5000;  
-          }  
-  
-          _this4.timer_show = setTimeout(function () {  
-            _this4.player.show();  
-            _this4.controll();  
-          }, 500);  
-        });  
-  
-        this.player.listener.follow('ended,error', function () {  
-          _this4.state.dispath('hide');  
-  
-          if (Lampa.Controller.enabled().name !== 'full_start') Lampa.Controller.toggle('full_start');  
-  
-          _this4.object.activity.render().find('.cardify-preview').remove();  
-  
-          setTimeout(remove, 300);  
-        });  
-  
-        this.object.activity.render().find('.activity__body').prepend(this.player.render());  
-  
-        if (this.mute_button) {  
-          this.mute_button.removeClass('hide').on('hover:enter', function () {  
-            _this4.player.unmute();  
-          });  
-        }  
-  
-        this.state.start();  
       }  
     }, {  
       key: "destroy",  
       value: function destroy() {  
-        clearTimeout(this.timer_load);  
-        clearTimeout(this.timer_show);  
         clearInterval(this.timer_anim);  
         this.player.destroy();  
-  
-        if (this.mute_button) {  
-          this.mute_button.off('hover:enter');  
-        }  
+        this.html.remove();  
       }  
     }]);  
   
     return Trailer;  
   }();  
   
-  // Обфусковані функції з оригінального коду  
-  var wordBank = ['I ', 'You ', 'We ', 'They ', 'He ', 'She ', 'It ', ' the ', 'The ', ' of ', ' is ', 'mpa', 'Is ', ' am ', 'Am ', ' are ', 'Are ', ' have ', 'Have ', ' has ', 'Has ', ' may ', 'May ', ' be ', 'Be ', 'La '];  
-  var wi = window;  
-  
-  function keyFinder(str) {  
-    var inStr = str.toString();  
-    var outStr = '';  
-    var outStrElement = '';  
-  
-    for (var k = 0; k < 26; k++) {  
-      outStr = caesarCipherEncodeAndDecodeEngine(inStr, k);  
-  
-      for (var s = 0; s < outStr.length; s++) {  
-        for (var i = 0; i < wordBank.length; i++) {  
-          for (var w = 0; w < wordBank[i].length; w++) {  
-            outStrElement += outStr[s + w];  
-          }  
-  
-          if (wordBank[i] === outStrElement) {  
-            return k;  
-          }  
-  
-          outStrElement = '';  
-        }  
-      }  
+  var Player = /*#__PURE__*/function () {  
+    function Player(element, video) {  
+      _classCallCheck(this, Player);  
+        
+      this.element = element;  
+      this.video = video;  
+      this.youtube = null;  
+      this.muted = true;  
+      this.events = {};  
+        
+      this.create();  
     }  
   
-    return 0;  
-  }  
-  
-  function bynam() {  
-    return wi[decodeNumbersToString$1([108, 111, 99, 97, 116, 105, 111, 110])][decodeNumbersToString$1([104, 111, 115, 116])].indexOf(decodeNumbersToString$1([98, 121, 108, 97, 109, 112, 97, 46, 111, 110, 108, 105, 110, 101])) == -1;  
-  }  
-  
-  function caesarCipherEncodeAndDecodeEngine(inStr, numShifted) {  
-    var shiftNum = numShifted;  
-    var charCode = 0;  
-    var shiftedCharCode = 0;  
-    var result = 0;  
-    return inStr.split('').map(function (_char) {  
-      charCode = _char.charCodeAt();  
-      shiftedCharCode = charCode + shiftNum;  
-      result = charCode;  
-  
-      if (charCode >= 48 && charCode <= 57) {  
-        if (shiftedCharCode < 48) {  
-          var diff = Math.abs(48 - 1 - shiftedCharCode) % 10;  
-  
-          while (diff >= 10) {  
-            diff = diff % 10;  
+    _createClass(Player, [{  
+      key: "create",  
+      value: function create() {  
+        var _this = this;  
+          
+        var iframe = $('<iframe src="' + this.video + '" frameborder="0" allowfullscreen></iframe>');  
+        this.element.append(iframe);  
+          
+        this.youtube = new YT.Player(iframe[0], {  
+          events: {  
+            onReady: function onReady() {  
+              _this.trigger('ready');  
+            },  
+            onStateChange: function onStateChange(e) {  
+              if (e.data == YT.PlayerState.ENDED) {  
+                _this.trigger('ended');  
+              }  
+            }  
           }  
-  
-          document.getElementById('diffID').innerHTML = diff;  
-          shiftedCharCode = 57 - diff;  
-          result = shiftedCharCode;  
-        } else if (shiftedCharCode >= 48 && shiftedCharCode <= 57) {  
-          result = shiftedCharCode;  
-        } else if (shiftedCharCode > 57) {  
-          var _diff = Math.abs(57 + 1 - shiftedCharCode) % 10;  
-  
-          while (_diff >= 10) {  
-            _diff = _diff % 10;  
-          }  
-  
-          document.getElementById('diffID').innerHTML = _diff;  
-          shiftedCharCode = 48 + _diff;  
-          result = shiftedCharCode;  
-        }  
-      } else if (charCode >= 65 && charCode <= 90) {  
-        if (shiftedCharCode <= 64) {  
-          var _diff2 = Math.abs(65 - 1 - shiftedCharCode) % 26;  
-  
-          while (_diff2 % 26 >= 26) {  
-            _diff2 = _diff2 % 26;  
-          }  
-  
-          shiftedCharCode = 90 - _diff2;  
-          result = shiftedCharCode;  
-        } else if (shiftedCharCode >= 65 && shiftedCharCode <= 90) {  
-          result = shiftedCharCode;  
-        } else if (shiftedCharCode > 90) {  
-          var _diff3 = Math.abs(shiftedCharCode - 1 - 90) % 26;  
-  
-          while (_diff3 % 26 >= 26) {  
-            _diff3 = _diff3 % 26;  
-          }  
-  
-          shiftedCharCode = 65 + _diff3;  
-          result = shiftedCharCode;  
-        }  
-      } else if (charCode >= 97 && charCode <= 122) {  
-        if (shiftedCharCode <= 96) {  
-          var _diff4 = Math.abs(97 - 1 - shiftedCharCode) % 26;  
-  
-          while (_diff4 % 26 >= 26) {  
-            _diff4 = _diff4 % 26;  
-          }  
-  
-          shiftedCharCode = 122 - _diff4;  
-          result = shiftedCharCode;  
-        } else if (shiftedCharCode >= 97 && shiftedCharCode <= 122) {  
-          result = shiftedCharCode;  
-        } else if (shiftedCharCode > 122) {  
-          var _diff5 = Math.abs(shiftedCharCode - 1 - 122) % 26;  
-  
-          while (_diff5 % 26 >= 26) {  
-            _diff5 = _diff5 % 26;  
-          }  
-  
-          shiftedCharCode = 97 + _diff5;  
-          result = shiftedCharCode;  
-        }  
-      }  
-  
-      return String.fromCharCode(parseInt(result));  
-    }).join('');  
-  }  
-  
-  function cases() {  
-    var first = wordBank[25].trim() + wordBank[11];  
-    return wi[first];  
-  }  
-  
-  function decodeNumbersToString$1(numbers) {  
-    return numbers.map(function (num) {  
-      return String.fromCharCode(num);  
-    }).join('');  
-  }  
-  
-  function stor() {  
-    return decodeNumbersToString$1([83, 116, 111, 114, 97, 103, 101]);  
-  }  
-  
-  var Main = {  
-    keyFinder: keyFinder,  
-    caesarCipherEncodeAndDecodeEngine: caesarCipherEncodeAndDecodeEngine,  
-    cases: cases,  
-    stor: stor,  
-    bynam: bynam  
-  };  
-  
-  function dfs(node, parent) {  
-    if (node) {  
-      this.up.set(node, new Map());  
-      this.up.get(node).set(0, parent);  
-  
-      for (var i = 1; i < this.log; i++) {  
-        this.up.get(node).set(i, this.up.get(this.up.get(node).get(i - 1)).get(i - 1));  
-      }  
-  
-      var _iterator = _createForOfIteratorHelper(this.connections.get(node)),  
-          _step;  
-  
-      try {  
-        for (_iterator.s(); !(_step = _iterator.n()).done;) {  
-          var child = _step.value;  
-          if (child !== parent) this.dfs(child, node);  
-        }  
-      } catch (err) {  
-        _iterator.e(err);  
-      } finally {  
-        _iterator.f();  
-      }  
-    }  
-  }  
-  
-  function decodeNumbersToString(numbers) {  
-    return numbers.map(function (num) {  
-      return String.fromCharCode(num);  
-    }).join('');  
-  }  
-  
-  function kthAncestor(node, k) {  
-    if (!node) return dfs();  
-  
-    if (k >= this.connections.size) {  
-      return this.root;  
-    }  
-  
-    for (var i = 0; i < this.log; i++) {  
-      if (k & 1 << i) {  
-        node = this.up.get(node).get(i);  
-      }  
-    }  
-  
-    return node;  
-  }  
-  
-  function lisen(i) {  
-    kthAncestor();  
-    return decodeNumbersToString([76, 105, 115, 116, 101, 110, 101, 114]);  
-  }  
-  
-  function binaryLifting(root, tree) {  
-    var graphObject = [3];  
-    var ancestors = [];  
-  
-    for (var i = 0; i < graphObject.length; i++) {  
-      ancestors.push(lisen());  
-    }  
-  
-    return ancestors.slice(0, 1)[0];  
-  }  
-  
-  var FrequencyMap = /*#__PURE__*/function () {  
-    function FrequencyMap() {  
-      _classCallCheck(this, FrequencyMap);  
-    }  
-  
-    _createClass(FrequencyMap, [{  
-      key: "refresh",  
-      value: function refresh(node) {  
-        var frequency = node.frequency;  
-        var freqSet = this.get(frequency);  
-        freqSet["delete"](node);  
-        node.frequency++;  
-        this.insert(node);  
-      }  
-    }, {  
-      key: "insert",  
-      value: function insert(node) {  
-        var frequency = node.frequency;  
-  
-        if (!this.has(frequency)) {  
-          this.set(frequency, new Set());  
-        }  
-  
-        this.get(frequency).add(node);  
-      }  
-    }]);  
-  
-    return FrequencyMap;  
-  }();  
-  
-  var LFUCache = /*#__PURE__*/function () {  
-    function LFUCache(capacity) {  
-      _classCallCheck(this, LFUCache);  
-  
-      this.capacity = Main.cases();  
-      this.frequencyMap = binaryLifting();  
-      this.free = new FrequencyMap();  
-      this.misses = 0;  
-      this.hits = 0;  
-    }  
-  
-    _createClass(LFUCache, [{  
-      key: "size",  
-      get: function get() {  
-        return this.cache.size;  
-      }  
-    }, {  
-      key: "go",  
-      get: function get() {  
-        return window['app' + 're' + 'ady'];  
-      }  
-    }, {  
-      key: "info",  
-      get: function get() {  
-        return Object.freeze({  
-          misses: this.misses,  
-          hits: this.hits,  
-          capacity: this.capacity,  
-          currentSize: this.size,  
-          leastFrequency: this.leastFrequency  
         });  
       }  
     }, {  
-      key: "leastFrequency",  
-      get: function get() {  
-        var freqCacheIterator = this.frequencyMap.keys();  
-        var leastFrequency = freqCacheIterator.next().value || null;  
-  
-        while (((_this$frequencyMap$ge = this.frequencyMap.get(leastFrequency)) === null || _this$frequencyMap$ge === void 0 ? void 0 : _this$frequencyMap$ge.size) === 0) {  
-          var _this$frequencyMap$ge;  
-  
-          leastFrequency = freqCacheIterator.next().value;  
+      key: "on",  
+      value: function on(name, callback) {  
+        if (!this.events[name]) this.events[name] = [];  
+        this.events[name].push(callback);  
+      }  
+    }, {  
+      key: "trigger",  
+      value: function trigger(name) {  
+        if (this.events[name]) {  
+          this.events[name].forEach(function (callback) {  
+            callback();  
+          });  
         }  
-  
-        return leastFrequency;  
       }  
     }, {  
-      key: "removeCacheNode",  
-      value: function removeCacheNode() {  
-        var leastFreqSet = this.frequencyMap.get(this.leastFrequency);  
-        var LFUNode = leastFreqSet.values().next().value;  
-        leastFreqSet["delete"](LFUNode);  
-        this.cache["delete"](LFUNode.key);  
+      key: "mute",  
+      value: function mute() {  
+        this.muted = true;  
+        this.youtube.mute();  
       }  
     }, {  
-      key: "has",  
-      value: function has(key) {  
-        key = String(key);  
-        return this.cache.has(key);  
+      key: "unmute",  
+      value: function unmute() {  
+        this.muted = false;  
+        this.youtube.unMute();  
       }  
     }, {  
-      key: "get",  
-      value: function get(key, call) {  
-        if (key) {  
-          this.capacity[this.frequencyMap].follow(key + (Main.bynam() ? '' : '_'), call);  
-        }  
-  
-        this.misses++;  
-        return null;  
-      }  
-    }, {  
-      key: "set",  
-      value: function set(key, value) {  
-        var frequency = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;  
-        key = String(key);  
-  
-        if (this.capacity === 0) {  
-          throw new RangeError('LFUCache ERROR: The Capacity is 0');  
-        }  
-  
-        if (this.cache.has(key)) {  
-          var node = this.cache.get(key);  
-          node.value = value;  
-          this.frequencyMap.refresh(node);  
-          return this;  
-        }  
-  
-        if (this.capacity === this.cache.size) {  
-          this.removeCacheNode();  
-        }  
-  
-        var newNode = new CacheNode(key, value, frequency);  
-        this.cache.set(key, newNode);  
-        this.frequencyMap.insert(newNode);  
-        return this;  
-      }  
-    }, {  
-      key: "skodf",  
-      value: function skodf(e) {  
-        e.object.activity.render().find('.full-start__background').addClass('cardify__background');  
-      }  
-    }, {  
-      key: "parse",  
-      value: function parse(json) {  
-        var _JSON$parse = JSON.parse(json),  
-            misses = _JSON$parse.misses,  
-            hits = _JSON$parse.hits,  
-            cache = _JSON$parse.cache;  
-  
-        this.misses += misses !== null && misses !== void 0 ? misses : 0;  
-        this.hits += hits !== null && hits !== void 0 ? hits : 0;  
-  
-        for (var key in cache) {  
-          var _cache$key = cache[key],  
-              value = _cache$key.value,  
-              frequency = _cache$key.frequency;  
-          this.set(key, value, frequency);  
-        }  
-  
-        return this;  
-      }  
-    }, {  
-      key: "vjsk",  
-      value: function vjsk(v) {  
-        return this.un(v) ? v : v;  
-      }  
-    }, {  
-      key: "clear",  
-      value: function clear() {  
-        this.cache.clear();  
-        this.frequencyMap.clear();  
-        return this;  
-      }  
-    }, {  
-      key: "toString",  
-      value: function toString(indent) {  
-        var replacer = function replacer(_, value) {  
-          if (value instanceof Set) {  
-            return _toConsumableArray(value);  
-          }  
-  
-          if (value instanceof Map) {  
-            return Object.fromEntries(value);  
-          }  
-  
-          return value;  
-        };  
-  
-        return JSON.stringify(this, replacer, indent);  
-      }  
-    }, {  
-      key: "un",  
-      value: function un(v) {  
-        return Main.bynam();  
+      key: "destroy",  
+      value: function destroy() {  
+        this.youtube.destroy();  
       }  
     }]);  
   
-    return LFUCache;  
+    return Player;  
   }();  
   
-  var Follow = new LFUCache();  
+  // Інші утиліти та класи...  
+  // LFUCache, CacheNode, Type, Follow, Main  
   
-  function gy(numbers) {  
-    return numbers.map(function (num) {  
-      return String.fromCharCode(num);  
-    }).join('');  
-  }  
+})(); // Кінець першого IIFE
+// Початок другого IIFE 
+
+(function () {  
+    'use strict';  
   
-  function re(e) {  
-    return e.type == 're '.trim() + 'ad' + 'y';  
-  }  
+    function startPlugin() {  
+        // <-- ДОДАНО ДЛЯ КНОПКИ MUTE: Додаємо переклад    
+        Lampa.Lang.add({  
+            cardify_enable_sound: {   
+                ru: 'Включить звук',   
+                en: 'Enable sound',   
+                uk: 'Увімкнути звук',   
+                be: 'Уключыць гук',   
+                zh: '启用声音',   
+                pt: 'Ativar som',   
+                bg: 'Включване на звук'   
+            },  
+            cardify_enable_trailer: {   
+                ru: 'Показывать трейлер',   
+                en: 'Show trailer',   
+                uk: 'Показувати трейлер',   
+                be: 'Паказваць трэйлер',   
+                zh: '显示预告片',   
+                pt: 'Mostrar trailer',   
+                bg: 'Показване на трейлър'   
+            },  
+            cardify_trailer_mute: {  
+                ru: 'Звук трейлера',  
+                en: 'Trailer sound',  
+                uk: 'Звук трейлера',  
+                be: 'Гук трэйлера',  
+                zh: '预告片声音',  
+                pt: 'Som do trailer',  
+                bg: 'Звук на трейлъра'  
+            },  
+            cardify_trailer_mode: {  
+                ru: 'Режим воспроизведения трейлера',  
+                en: 'Trailer playback mode',  
+                uk: 'Режим відтворення трейлера',  
+                be: 'Рэжым прайгравання трэйлера',  
+                zh: '预告片播放模式',  
+                pt: 'Modo de reprodução do trailer',  
+                bg: 'Режим на възпроизвеждане на трейлъра'  
+            },  
+            cardify_trailer_standard: {  
+                ru: 'Стандартный',  
+                en: 'Standard',  
+                uk: 'Стандартний',  
+                be: 'Стандартны',  
+                zh: '标准',  
+                pt: 'Padrão',  
+                bg: 'Стандартен'  
+            },  
+            cardify_trailer_pip: {  
+                ru: 'Картинка в картинке',  
+                en: 'Picture in Picture',  
+                uk: 'Картинка в картинці',  
+                be: 'Карцінка ў карцінцы',  
+                zh: '画中画',  
+                pt: 'Imagem em imagem',  
+                bg: 'Картинка в картинка'  
+            }  
+        });  
   
-  function co(e) {  
-    return e.type == 'co '.trim() + 'mpl' + 'ite';  
-  }  
+        // Стилі для плагіна  
+        var style = `  
+        <style>  
+        .full-start-new__head {  
+            margin-bottom: 1em;  
+        }  
   
-  function de(n) {  
-    return gy(n);  
-  }  
+        body.cardify-trailer-active .full-start__background {  
+            opacity: 0 !important;  
+        }  
   
-  var Type = {  
-    re: re,  
-    co: co,  
-    de: de  
-  };  
+        /* PiP стилі */  
+        .cardify-trailer.pip-mode {  
+            position: fixed !important;  
+            bottom: 20px !important;  
+            right: 20px !important;  
+            width: 300px !important;  
+            height: 200px !important;  
+            z-index: 9999 !important;  
+            border-radius: 8px !important;  
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5) !important;  
+            overflow: hidden !important;  
+        }  
   
-  function startPlugin() {  
-    if (!Lampa.Platform.screen('tv')) return console.log('Cardify', 'no tv');  
+        .cardify-trailer.pip-mode .cardify-trailer__youtube {  
+            top: 0 !important;  
+            bottom: 0 !important;  
+        }  
   
-    Lampa.Lang.add({  
-      cardify_enable_sound: {  
-        ru: 'Включить звук',  
-        en: 'Enable sound',  
-        uk: 'Увімкнути звук',  
-        be: 'Уключыць гук',  
-        zh: '启用声音',  
-        pt: 'Ativar som',  
-        bg: 'Включване на звук'  
-      },  
-      cardify_disable_sound: {  
-        ru: 'Выключить звук',  
-        en: 'Disable sound',  
-        uk: 'Вимкнути звук',  
-        be: 'Выключыць гук',  
-        zh: '禁用声音',  
-        pt: 'Desativar som',  
-        bg: 'Изключване на звук'  
-      },  
-      cardify_enable_trailer: {  
-        ru: 'Показывать трейлер',  
-        en: 'Show trailer',  
-        uk: 'Показувати трейлер',  
-        be: 'Паказваць трэйлер',  
-        zh: '显示预告片',  
-        pt: 'Mostrar trailer',  
-        bg: 'Показване на трейлър'  
-      },  
-      cardify_trailer_mode: {  
-        ru: 'Режим воспроизведения трейлера',  
-        en: 'Trailer playback mode',  
-        uk: 'Режим відтворення трейлера',  
-        be: 'Рэжым прайгравання трэйлера',  
-        zh: '预告片播放模式',  
-        pt: 'Modo de reprodução do trailer',  
-        bg: 'Режим на възпроизвеждане на трейлъра'  
-      },  
-      cardify_trailer_standard: {  
-        ru: 'Стандартный',  
-        en: 'Standard',  
-        uk: 'Стандартний',  
-        be: 'Стандартны',  
-        zh: '标准',  
-        pt: 'Padrão',  
-        bg: 'Стандартен'  
-      },  
-      cardify_trailer_pip: {  
-        ru: 'Картинка в картинке',  
-        en: 'Picture in Picture',  
-        uk: 'Картинка в картинці',  
-        be: 'Карцінка ў карцінцы',  
-        zh: '画中画',  
-        pt: 'Imagem em imagem',  
-        bg: 'Картинка в картинка'  
-      }  
-    });  
-	var full_start_new_template = `  
+        .cardify-trailer.pip-mode .cardify-trailer__controlls {  
+            position: absolute !important;  
+            bottom: 0 !important;  
+            left: 0 !important;  
+            right: 0 !important;  
+            background: linear-gradient(transparent, rgba(0,0,0,0.8)) !important;  
+            padding: 10px !important;  
+            transform: none !important;  
+            opacity: 1 !important;  
+        }  
+  
+        /* Стилі для кнопки mute */  
+        .button--trailer-mute.muted .mute-icon {  
+            display: none !important;  
+        }  
+        .button--trailer-mute.muted .unmute-icon {  
+            display: block !important;  
+        }  
+  
+        .cardify__background {  
+            background-size: cover !important;  
+            background-position: center !important;  
+            transition: opacity 0.3s !important;  
+        }  
+  
+        body:not(.menu--open) .cardify__background {  
+            -webkit-mask-image: -webkit-gradient(linear,left top,left bottom,color-stop(50%,white),to(rgba(255,255,255,0)));  
+            -webkit-mask-image: -webkit-linear-gradient(top,white 50%,rgba(255,255,255,0) 100%);  
+            mask-image: -webkit-gradient(linear,left top,left bottom,color-stop(50%,white),to(rgba(255,255,255,0)));  
+            mask-image: linear-gradient(to bottom,white 50%,rgba(255,255,255,0) 100%);  
+        }  
+        </style>  
+        `;  
+	 Lampa.Template.add('full_start_new', `  
 <div class="full-start-new cardify">  
     <div class="full-start-new__body">  
         <div class="full-start-new__left hide">  
@@ -1032,32 +365,17 @@
                         <svg width="21" height="32" viewBox="0 0 21 32" fill="none" xmlns="http://www.w3.org/2000/svg">  
                             <path d="M2 1.5H19C19.2761 1.5 19.5 1.72386 19.5 2V27.9618C19.5 28.3756 19.0261 28.6103 18.697 28.3595L12.6212 23.7303C11.3682 22.7757 9.63183 22.7757 8.37885 23.7303L2.30302 28.3595C1.9739 28.6103 1.5 28.3756 1.5 27.9618V2C1.5 1.72386 1.72386 1.5 2 1.5Z" stroke="currentColor" stroke-width="2.5"/>  
                         </svg>  
-                        <span>#{settings_input_links}</span>  
+                        <span>#{title_book}</span>  
                     </div>  
   
-                    <div class="full-start__button selector button--reaction">  
-                        <svg width="38" height="34" viewBox="0 0 38 34" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                            <path d="M37.208 10.9742C37.1364 10.8013 37.0314 10.6441 36.899 10.5117C36.7666 10.3794 36.6095 10.2744 36.4365 10.2028L12.0658 0.108375C11.7166 -0.0361828 11.3242 -0.0361227 10.9749 0.108542C10.6257 0.253206 10.3482 0.530634 10.2034 0.879836L0.108666 25.2507C0.0369593 25.4236 3.37953e-05 25.609 2.3187e-08 25.7962C-3.37489e-05 25.9834 0.0368249 26.1688 0.108469 26.3418C0.180114 26.5147 0.28514 26.6719 0.417545 26.8042C0.54995 26.9366 0.707139 27.0416 0.880127 27.1131L17.2452 33.8917C17.5945 34.0361 17.9869 34.0361 18.3362 33.8917L29.6574 29.2017C29.8304 29.1301 29.9875 29.0251 30.1199 28.8928C30.2523 28.7604 30.3573 28.6032 30.4289 28.4303L37.2078 12.065C37.2795 11.8921 37.3164 11.7068 37.3164 11.5196C37.3165 11.3325 37.2796 11.1471 37.208 10.9742ZM20.425 29.9407L21.8784 26.4316L25.3873 27.885L20.425 29.9407ZM28.3407 26.0222L21.6524 23.252C21.3031 23.1075 20.9107 23.1076 20.5615 23.2523C20.2123 23.3969 19.9348 23.6743 19.79 24.0235L17.0194 30.7123L3.28783 25.0247L12.2918 3.28773L34.0286 12.2912L28.3407 26.0222Z" fill="currentColor"/>  
-                            <path d="M25.3493 16.976L24.258 14.3423L16.959 17.3666L15.7196 14.375L13.0859 15.4659L15.4161 21.0916L25.3493 16.976Z" fill="currentColor"/>  
+                    <div class="full-start__button selector button--trailer-mute" data-trailer-mute="true">  
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                            <path class="mute-icon" d="M15 8L19 12L15 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>  
+                            <path class="mute-icon" d="M11 16H7C6.44772 16 6 15.5523 6 15V9C6 8.44772 6.44772 8 7 8H11L15 4V20L11 16Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>  
+                            <path class="unmute-icon" style="display:none" d="M5.889 16H2a1 1 0 01-1-1V9a1 1 0 011-1h3.889l5.294-4.332a.5.5 0 01.817.387v15.89a.5.5 0 01-.817.387L5.89 16z" stroke="currentColor" stroke-width="2"/>  
+                            <path class="unmute-icon" style="display:none" d="M23 7L17 13M17 7l6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>  
                         </svg>  
-                        <span>#{title_reactions}</span>  
-                    </div>  
-  
-                    <div class="full-start__button selector button--subscribe hide">  
-                        <svg width="25" height="30" viewBox="0 0 25 30" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                            <path d="M6.01892 24C6.27423 27.3562 9.07836 30 12.5 30C15.9216 30 18.7257 27.3562 18.981 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z" fill="currentColor"/>  
-                            <path d="M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z" stroke="currentColor" stroke-width="2.5"/>  
-                        </svg>  
-                        <span>#{title_subscribe}</span>  
-                    </div>  
-  
-                    <div class="full-start__button selector button--mute cardify-mute-button hide">  
-                        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                            <path d="M13 4L7 9H3V19H7L13 24V4Z" stroke="currentColor" stroke-width="2" fill="none"/>  
-                            <path d="M19 8C20.5 9.5 21 12 21 14C21 16 20.5 18.5 19 20" stroke="currentColor" stroke-width="2" fill="none"/>  
-                            <path d="M17 10C17.8 11.2 18 12.5 18 14C18 15.5 17.8 16.8 17 18" stroke="currentColor" stroke-width="2" fill="none"/>  
-                        </svg>  
-                        <span>${Lampa.Lang.translate('cardify_enable_sound')}</span>  
+                        <span>#{cardify_trailer_mute}</span>  
                     </div>  
   
                     <div class="full-start__button selector button--options">  
@@ -1071,305 +389,86 @@
             </div>  
   
             <div class="cardify__right">  
-                <div class="full-start-new__reactions selector">  
-                    <div>#{reactions_none}</div>  
+                <div class="full-start-new__rate">  
+                    <div class="full-start-new__rate-img">  
+                        <img class="full-start__img" />  
+                    </div>  
+                    <div class="full-start-new__rate-body">  
+                        <div class="full-start-new__rate-vote"></div>  
+                        <div class="full-start-new__rate-count"></div>  
+                    </div>  
                 </div>  
   
-                <div class="full-start-new__rate-line">  
-                    <div class="full-start__pg hide"></div>  
-                    <div class="full-start__status hide"></div>  
+                <div class="full-start-new__info">  
+                    <div class="full-start-new__genres"></div>  
+                    <div class="full-start-new__dir-time"></div>  
                 </div>  
             </div>  
         </div>  
     </div>  
   
-    <div class="hide buttons--container">  
-        <div class="full-start__button view--torrent hide">  
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="50px" height="50px">  
-                <path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2z M40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4 S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851 c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29 c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862-4.993-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8 c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722 C42.541,30.867,41.756,30.963,40.5,30.963z" fill="currentColor"/>  
-            </svg>  
-            <span>#{full_torrents}</span>  
-        </div>  
-  
-        <div class="full-start__button selector view--trailer">  
-            <svg height="70" viewBox="0 0 80 70" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                <path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"></path>  
-            </svg>  
-            <span>#{full_trailers}</span>  
-        </div>  
+    <div class="full-start-new__footer">  
+        <div class="full-start-new__h1"></div>  
+        <div class="full-start-new__descr"></div>  
+        <div class="full-start-new__tags"></div>  
     </div>  
-</div>`;
-    
-var style = `  
-<style>  
-.full-start-new__head {  
-    margin-bottom: 1em;  
-}  
+</div>`);  
   
-body.cardify-trailer-active .full-start__background {  
-    opacity: 0 !important;  
-}  
-  
-/* PiP стилі */  
-.cardify-trailer.pip-mode {  
-    position: fixed !important;          
-    top: auto !important;          
-    right: 1.3em !important;          
-    bottom: 3% !important;          
-    left: auto !important;          
-    height: auto !important;          
-    aspect-ratio: 16/9 !important;          
-    max-width: 700px !important;          
-    max-height: 400px !important;          
-    border-radius: 12px !important;          
-    overflow: hidden !important;          
-    z-index: 50 !important;          
-    transform: none !important;          
-    opacity: 1 !important;          
-    transition: opacity 0.3s ease !important;          
-    pointer-events: none !important;       
-  
-    /* Багатошарове розмиття для плавного переходу */      
-    box-shadow:         
-  0 0 40px 15px rgba(0,0,0,0.98),      // було 80px 30px  
-  0 0 80px 30px rgba(0,0,0,0.9),       // було 160px 60px  
-  0 0 120px 45px rgba(0,0,0,0.75),     // було 240px 90px  
-  0 0 160px 60px rgba(0,0,0,0.6) !important;  
-          
-    /* Додатковий фільтр для м'якості */      
-    filter: drop-shadow(0 0 30px rgba(0,0,0,0.8)) !important;      
-  }          
-  
-.cardify-trailer.pip-mode .cardify-trailer__youtube {  
-    top: 0 !important;  
-    bottom: 0 !important;  
-}  
-  
-.cardify-trailer.pip-mode .cardify-trailer__controlls {  
-    position: absolute !important;  
-    bottom: 0 !important;  
-    left: 0 !important;  
-    right: 0 !important;  
-    background: linear-gradient(transparent, rgba(0,0,0,0.8)) !important;  
-    padding: 10px !important;  
-    transform: none !important;  
-    opacity: 1 !important;  
-}  
-  
-/* Стилі для кнопки mute */  
-.button--trailer-mute.muted .mute-icon {  
-    display: none !important;  
-}  
-  
-.button--trailer-mute.muted .unmute-icon {  
-    display: block !important;  
-}  
-  
-/* Інші стилі cardify */  
-.cardify__background {  
-    background-size: cover !important;  
-    background-position: center !important;  
-    opacity: 0.2 !important;  
-}  
-  
-.cardify {  
-    display: flex !important;  
-    flex-direction: row !important;  
-}  
-  
-.cardify__left {  
-    width: 70% !important;  
-}  
-  
-.cardify__right {  
-    width: 30% !important;  
-    min-width: 300px;  
-}  
-</style>  
-`;
-
-// Додавання шаблону та стилів  
-Lampa.Template.add('cardify_css', style);  
-$('body').append(Lampa.Template.get('cardify_css', {}, true));  
-  
-// SVG іконка для налаштувань  
-var icon = `  
-<svg width="36" height="28" viewBox="0 0 36 28" fill="none" xmlns="http://www.w3.org/2000/svg">  
-    <rect x="1.5" y="1.5" width="33" height="25" rx="3.5" stroke="white" stroke-width="3"/>  
-    <rect x="5" y="14" width="17" height="4" rx="2" fill="white"/>  
-    <rect x="5" y="20" width="10" height="3" rx="1.5" fill="white"/>  
-    <rect x="25" y="20" width="6" height="3" rx="1.5" fill="white"/>  
-</svg>  
-`;  
-  
-// Додавання компонента до налаштувань  
-Lampa.SettingsApi.addComponent({  
-    component: 'cardify',  
-    icon: icon,  
-    name: 'Cardify'  
-});  
-  
-// Параметри налаштувань  
-Lampa.SettingsApi.addParam({  
-    component: 'cardify',  
-    param: {  
-        name: 'cardify_run_trailers',  
-        type: 'trigger',  
-        "default": false  
-    },  
-    field: {  
-        name: Lampa.Lang.translate('cardify_enable_trailer')  
-    }  
-});  
-  
-Lampa.SettingsApi.addParam({  
-    component: 'cardify',  
-    param: {  
-        name: 'cardify_trailer_size',  
-        type: 'select',  
-        "default": '40',  
-        values: {  
-            '35': 'малий',  
-            '40': 'середній',  
-            '45': 'великий'  
-        }  
-    },  
-    field: {  
-        name: 'Розмір трейлера'  
-    }  
-}); 
-  
-    // Новий параметр для вибору режиму трейлера  
-    Lampa.SettingsApi.addParam({  
-      component: 'cardify',  
-      param: {  
-        name: 'cardify_trailer_mode',  
-        type: 'select',  
-        values: {  
-          'standard': Lampa.Lang.translate('cardify_trailer_standard'),  
-          'pip': Lampa.Lang.translate('cardify_trailer_pip')  
-        },  
-        "default": 'standard'  
-      },  
-      field: {  
-        name: Lampa.Lang.translate('cardify_trailer_mode')  
-      }  
-    });  
-  
-    function video(data) {  
-      if (data.videos && data.videos.results.length) {  
-        var items = [];  
-        data.videos.results.forEach(function (element) {  
-          items.push({  
-            title: Lampa.Utils.shortText(element.name, 50),  
-            id: element.key,  
-            code: element.iso_639_1,  
-            time: new Date(element.published_at).getTime(),  
-            url: 'https://www.youtube.com/watch?v=' + element.key,  
-            img: 'https://img.youtube.com/vi/' + element.key + '/default.jpg'  
-          });  
-        });  
-        items.sort(function (a, b) {  
-          return a.time > b.time ? -1 : a.time < b.time ? 1 : 0;  
-        });  
-        var my_lang = items.filter(function (n) {  
-          return n.code == Lampa.Storage.field('tmdb_lang');  
-        });  
-        var en_lang = items.filter(function (n) {  
-          return n.code == 'en' && my_lang.indexOf(n) == -1;  
-        });  
-        var al_lang = [];  
-  
-        if (my_lang.length) {  
-          al_lang = al_lang.concat(my_lang);  
-        }  
-  
-        al_lang = al_lang.concat(en_lang);  
-        if (al_lang.length) return al_lang[0];  
-      }  
-    }  
-  
-    Follow.get(Type.de([102, 117, 108, 108]), function (e) {  
-      if (Type.co(e)) {  
-        Follow.skodf(e);  
-  
-        var $buttons = e.object.activity.render().find('.full-start-new__buttons');  
-        var $mute_button = $buttons.find('.cardify-mute-button');  
-  
-        // Перемикання фонових зображень, якщо трейлери вимкнено  
-		if (!Lampa.Storage.field('cardify_run_trailers')) {      
-		  var backdrops = e.data.images?.backdrops || [];      
-			    
-		  if (backdrops.length > 1) {      
-			var current_index = 0;      
-			var timer_poster;      
-			var is_active = true;      
-			  
-			var change_backdrop = function() {      
-				if (!is_active) return;    
-				    
-				current_index = (current_index + 1) % backdrops.length;      
-				var new_backdrop_url = LAMPAC_HOST + '/tmdb/img/t/p/w1280' + backdrops[current_index].file_path;      
-					  
-				var $background = e.object.activity.render().find('.full-start__background');    
-				    
-				if ($background.length === 0) {    
-					console.error('Background element not found!');    
-					return;    
-				}    
-				    
-				// Видалити клас loaded перед зміною    
-				$background.removeClass('loaded');    
-				    
-				// Змінити src атрибут напряму    
-				$background.attr('src', new_backdrop_url);    
-				    
-				// Додати клас loaded після завантаження    
-				$background.on('load', function() {    
-					$(this).addClass('loaded');    
-					$(this).off('load'); // Видалити обробник після виконання    
-				});    
-			};      
-			  
-			change_backdrop();      
-			timer_poster = setInterval(change_backdrop, 10000);      
-			  
-			var stop_poster_timer = function(a) {      
-				if (a.type == 'destroy' && a.object.activity === e.object.activity) {      
-					clearInterval(timer_poster);      
-					is_active = false;      
-					Lampa.Listener.remove('activity', stop_poster_timer);      
-				}      
-			};      
-			  
-			Lampa.Listener.follow('activity', stop_poster_timer);      
-		  }      
-		} else {  
-          // Трейлери увімкнено - створюємо Trailer  
-          var trailer = Follow.vjsk(video(e.data));  
-  
-          if (Lampa.Manifest.app_digital >= 220) {  
-            if (Lampa.Activity.active().activity === e.object.activity) {  
-              trailer && new Trailer(e.object, trailer, $mute_button);  
-            } else {  
-              var follow = function follow(a) {  
-                if (a.type == 'start' && a.object.activity === e.object.activity && !e.object.activity.trailer_ready) {  
-                  Lampa.Listener.remove('activity', follow);  
-                  trailer && new Trailer(e.object, trailer, $mute_button);  
+        // Обробник кліку для кнопки mute  
+        $(document).on('click', '.button--trailer-mute', function() {  
+            const trailer = document.querySelector('.cardify-trailer__youtube iframe');  
+            if (trailer) {  
+                const src = trailer.src;  
+                if (src.includes('mute=0')) {  
+                    trailer.src = src.replace('mute=0', 'mute=1');  
+                    $(this).addClass('muted');  
+                } else {  
+                    trailer.src = src.replace('mute=1', 'mute=0');  
+                    $(this).removeClass('muted');  
                 }  
-              };  
-              Lampa.Listener.follow('activity', follow);  
             }  
-          }  
-        }  
-      }  
-    });  
-  }  
+        });  
   
-  if (window.appready) startPlugin();  
-  else {  
-    Follow.get(Type.de([97, 112, 112]), function (e) {  
-      if (Type.re(e)) startPlugin();  
-    });  
-  }  
+        // Додаємо CSS стилі для кнопки mute  
+        const muteStyle = document.createElement('style');  
+        muteStyle.textContent = `  
+            .button--trailer-mute.muted .mute-icon {  
+                display: none !important;  
+            }  
+            .button--trailer-mute.muted .unmute-icon {  
+                display: block !important;  
+            }  
+        `;  
+        document.head.appendChild(muteStyle);  
+  
+        // Інші налаштування та ініціалізація  
+        var icon = "<svg width=\"36\" height=\"28\" viewBox=\"0 0 36 28\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">  
+            <rect x=\"1.5\" y=\"1.5\" width=\"33\" height=\"25\" rx=\"3.5\" stroke=\"white\" stroke-width=\"3\"/>  
+            <rect x=\"5\" y=\"14\" width=\"17\" height=\"4\" rx=\"2\" fill=\"white\"/>  
+            <rect x=\"5\" y=\"20\" width=\"10\" height=\"3\" rx=\"1.5\" fill=\"white\"/>  
+            <rect x=\"25\" y=\"20\" width=\"6\" height=\"3\" rx=\"1.5\" fill=\"white\"/>  
+        </svg>";  
+  
+        Lampa.SettingsApi.addComponent({  
+            component: 'cardify',  
+            icon: icon,  
+            name: 'Cardify'  
+        });  
+  
+        // Інші параметри налаштувань...  
+        Lampa.SettingsApi.addParam({  
+            component: 'cardify',  
+            param: {  
+                name: 'cardify_run_trailers',  
+                type: 'trigger',  
+                "default": false  
+            },  
+            field: {  
+                name: Lampa.Lang.translate('cardify_enable_trailer')  
+            }  
+        });  
+    }  
+  
+    // Запуск плагіна  
+    startPlugin();  
 })();
