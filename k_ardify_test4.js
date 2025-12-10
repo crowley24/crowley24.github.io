@@ -1187,7 +1187,7 @@ body.cardify-trailer-active .full-start__background {
 }  
 </style>  
 `;
-3. Ініціалізація плагіна
+
 // Додавання шаблону та стилів  
 Lampa.Template.add('cardify_css', style);  
 $('body').append(Lampa.Template.get('cardify_css', {}, true));  
