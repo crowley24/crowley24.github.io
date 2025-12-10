@@ -1087,5 +1087,5 @@ if (typeof modifyCardifyStyles === 'function') {
         originalStyle.textContent += muteStyles;  
     }  
 }  
-  
+ });  
 })();  // <-- Закриваємо другий IIFE
