@@ -467,7 +467,7 @@ value: function controll() {
           _this4.state.start();  
         });  
     
-        this.player.listener.follow('play', function () {  
+       Lampa.Listener.follow('activity', (e) => {    
           clearTimeout(_this4.timer_show);  
     
           if (!_this4.firstlauch) {  
@@ -839,7 +839,8 @@ value: function controll() {
         this.misses += misses !== null && misses !== void 0 ? misses : 0;  
         this.hits += hits !== null && hits !== void 0 ? hits : 0;  
   
-        for (var key in cache) {  
+     			for (var key in object) {  
+    if (object.hasOwnProperty(key)) {  
           var _cache$key = cache[key],  
               value = _cache$key.value,  
               frequency = _cache$key.frequency;  
