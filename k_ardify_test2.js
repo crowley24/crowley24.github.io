@@ -1161,8 +1161,7 @@ Lampa.Template.add('full_start_new', `<div class="full-start-new cardify">
         <circle cx="4.88968" cy="4.98563" r="4.75394" fill="currentColor"/>  
         <circle cx="18.9746" cy="4.98563" r="4.75394" fill="currentColor"/>  
         <circle cx="33.0596" cy="4.98563" r="4.75394" fill="currentColor"/>  
-    </svg>  
-</div> 
+  
         </div>  
     </div>  
 </div>`);
