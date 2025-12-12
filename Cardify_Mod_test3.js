@@ -396,36 +396,36 @@
     }, {
       key: "controll",
       value: function controll() {
-        var _this3 = this;
-
-        var out = function out() {
-          _this3.state.dispath('hide');
-
-          Lampa.Controller.toggle('full_start');
-        };
-
-        Lampa.Controller.add('cardify_trailer', {
-          toggle: function toggle() {
-            Lampa.Controller.clear();
-          },
-          enter: function enter() {
-            _this3.player.unmute();
-          },
-          left: out.bind(this),
-          up: out.bind(this),
-          down: out.bind(this),
-          right: out.bind(this),
-          back: function back() {
-            _this3.player.destroy();
-
-            _this3.object.activity.render().find('.cardify-preview').remove();
-
-            out();
-          }
-        });
-        Lampa.Controller.toggle('cardify_trailer');
-      }
-    }, {
+        var _this3 = this;  
+  
+    // Змінено: виходимо тільки при натисканні назад  
+    var out = function out() {  
+      // Закриваємо трейлер тільки при явному виході  
+      _this3.state.dispath('hide');  
+      Lampa.Controller.toggle('full_start');  
+    };  
+  
+    Lampa.Controller.add('cardify_trailer', {  
+      toggle: function toggle() {  
+        Lampa.Controller.clear();  
+      },  
+      enter: function enter() {  
+        _this3.player.unmute();  
+      },  
+      // Видалено: left, up, down, right - щоб не закривати при навігації  
+      back: function back() {  
+        _this3.player.destroy();  
+        _this3.object.activity.render().find('.cardify-preview').remove();  
+        out();  
+      }  
+    });  
+  
+    // Переключаємо контролер тільки якщо потрібно  
+    if (Lampa.Controller.enabled().name !== 'cardify_trailer') {  
+      Lampa.Controller.toggle('cardify_trailer');  
+    }  
+  }  
+}, {  
       key: "start",
       value: function start() {
         var _this4 = this;
