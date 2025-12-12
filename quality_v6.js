@@ -375,7 +375,7 @@ initStyles: function() {
         .card__quality {          
             position: absolute !important;          
             bottom: 0.1em !important;          
-            left: -0.8em !important;          
+            left: -0.5em !important;          
             background-color: transparent !important;          
             z-index: 10;          
             width: fit-content !important;          
@@ -388,9 +388,9 @@ initStyles: function() {
             color: #FFFFFF !important;          
             font-weight: bold !important;          
             font-style: normal !important;          
-            font-size: 1.5em !important;          
+            font-size: 1.2em !important;          
             border-radius: 3px !important;          
-            padding: 0.35em 0.65em !important;          
+            padding: 0.2em 0.4em !important;          
             box-shadow: 0 2px 8px rgba(0,0,0,0.5) !important;          
             text-shadow: 1px 1px 2px rgba(0,0,0,0.8) !important;          
         }          
