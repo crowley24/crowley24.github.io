@@ -391,29 +391,14 @@ initStyles: function() {
             font-size: 1.5em !important;          
             border-radius: 3px !important;          
             padding: 0.35em 0.65em !important;          
-            transition: all 0.3s ease !important;          
             box-shadow: 0 2px 8px rgba(0,0,0,0.5) !important;          
             text-shadow: 1px 1px 2px rgba(0,0,0,0.8) !important;          
-            animation: qualityPulse 2s ease-in-out infinite;          
         }          
         .card__quality div:hover {          
             transform: scale(1.1) !important;          
             box-shadow: 0 4px 12px rgba(0,0,0,0.7) !important;          
         }            
-            
-        @keyframes qualityPulse {          
-            0%, 100% { transform: scale(1); }          
-            50% { transform: scale(1.15); }    
-        }
-            
-        @keyframes fadeIn {          
-            from { opacity: 0; transform: scale(0.8); }          
-            to { opacity: 1; transform: scale(1); }          
-        }          
-        .card__quality {          
-            animation: fadeIn 0.3s ease-out;          
-        }    
-            
+          
         /* Градієнтні схеми для потрібних якостей */          
         .card__quality div[data-quality*="4K"][data-quality*="DV"] {          
             border-color: #8A2BE2 !important;          
@@ -448,11 +433,9 @@ initStyles: function() {
             }      
         }      
     `;      
-          
-    document.head.appendChild(styleElement); 
       
-
-    },  
+    document.head.appendChild(styleElement); 
+},
   
                /**  
          * Додавання бейджа якості з санітизацією  
