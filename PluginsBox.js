@@ -232,7 +232,7 @@ function addonStart() {
             },  
         },  
         field: {  
-            name: 'Clock',  
+            name: 'Годинник',  
             description: 'Годинник для інтерфейсу'  
         },  
         onChange: function(value) {  
@@ -297,17 +297,17 @@ function addonStart() {
         },  
         onChange: function(value) {  
             if (value == '1') {  
-                itemON('https://crowley24.github.io/quality_v7.js', 'Якість на картках', '@lampa', 'QUALITY');  
+                itemON('https://crowley24.github.io/quality.js', 'Якість на картках', '@lampa', 'QUALITY');  
             }  
             if (value == '2') {  
-                deletePlugin("https://crowley24.github.io/quality_v7.js");  
+                deletePlugin("https://crowley24.github.io/quality.js");  
             }  
         },  
         onRender: function(item) {  
             $('.settings-param__name', item).css('color', '#f3d900');  
             hideInstall();  
               
-            var myResult = checkPlugin('https://crowley24.github.io/quality_v7.js');  
+            var myResult = checkPlugin('https://crowley24.github.io/quality.js');  
             var pluginsArray = Lampa.Storage.get('plugins') || [];  
               
             setTimeout(function() {  
@@ -317,7 +317,7 @@ function addonStart() {
                 }  
                 var pluginStatus = null;  
                 for (var i = 0; i < pluginsArray.length; i++) {  
-                    if (pluginsArray[i] && pluginsArray[i].url === 'https://crowley24.github.io/quality_v7.js') {  
+                    if (pluginsArray[i] && pluginsArray[i].url === 'https://crowley24.github.io/quality.js') {  
                         pluginStatus = pluginsArray[i].status;  
                         break;  
                     }  
