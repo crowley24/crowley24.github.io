@@ -412,7 +412,27 @@
       enter: function enter() {  
         _this3.player.unmute();  
       },  
-      // Видалено: left, up, down, right - щоб не закривати при навігації  
+      // Додано навігацію - передаємо управління до full_start  
+      left: function left() {  
+        Lampa.Controller.toggle('full_start');  
+        Lampa.Controller.move('left');  
+        Lampa.Controller.toggle('cardify_trailer');  
+      },  
+      up: function up() {  
+        Lampa.Controller.toggle('full_start');  
+        Lampa.Controller.move('up');  
+        Lampa.Controller.toggle('cardify_trailer');  
+      },  
+      down: function down() {  
+        Lampa.Controller.toggle('full_start');  
+        Lampa.Controller.move('down');  
+        Lampa.Controller.toggle('cardify_trailer');  
+      },  
+      right: function right() {  
+        Lampa.Controller.toggle('full_start');  
+        Lampa.Controller.move('right');  
+        Lampa.Controller.toggle('cardify_trailer');  
+      },  
       back: function back() {  
         _this3.player.destroy();  
         _this3.object.activity.render().find('.cardify-preview').remove();  
@@ -425,7 +445,7 @@
       Lampa.Controller.toggle('cardify_trailer');  
     }  
   }  
-}, {  
+}, {
       key: "start",
       value: function start() {
         var _this4 = this;
