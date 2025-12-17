@@ -512,7 +512,7 @@ body.applecation--logo-large .applecation__logo img {
     display: flex;
     align-items: center;
     color: #fff;
-    font-size: 1.1em;
+    font-size: 1.3em;
     margin-bottom: 0.5em;
     line-height: 1;
     opacity: 0;
@@ -540,7 +540,7 @@ body.applecation--logo-large .applecation__logo img {
 
 .applecation__network img {
     display: block;
-    max-height: 0.8em;
+    max-height: 1.3em;
     width: auto;
     object-fit: contain;
     filter: brightness(0) invert(1);
@@ -589,7 +589,7 @@ body.applecation--logo-large .applecation__logo img {
 }
 
 .applecation__ratings svg {
-    width: 1.8em;
+    width: 2.5em;
     height: auto;
     flex-shrink: 0;
     color: rgba(255, 255, 255, 0.85);
