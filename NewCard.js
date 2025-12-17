@@ -1033,18 +1033,28 @@ body.advanced--animation:not(.no--animation) .full-start__background.loaded {
         
         if (!data || !activity) return;
 
+        // ВИПРАВЛЕННЯ ДУБЛЮВАННЯ (залишаємо)
+        const detailsContainer = activity.render().find('.full-start-new__details');
+        if (detailsContainer.length) {
+            detailsContainer.hide().empty();
+        }
+        const headContainer = activity.render().find('.full-start-new__head');
+        if (headContainer.length) {
+            headContainer.hide().empty();
+        }
+        
         // Заполняем основную информацию
-        fillMetaInfo(activity, data);
-        fillDescription(activity, data);
-        fillAdditionalInfo(activity, data);
+        fillMetaInfo(activity, data);       // <-- ЗАЛИШИТИ! (Студія, Тип, Жанр)
+        // fillDescription(activity, data);  // <-- ВИДАЛЕНО! (Опис)
+        fillAdditionalInfo(activity, data); // <-- ЗАЛИШИТИ! (Рік, Тривалість, Сезони)
 
         // Ждем когда фон загрузится и появится
         waitForBackgroundLoad(activity, () => {
             // После загрузки фона показываем контент
-            activity.render().find('.applecation__meta').addClass('show');
-            activity.render().find('.applecation__description').addClass('show');
-            activity.render().find('.applecation__info').addClass('show');
-            activity.render().find('.applecation__ratings').addClass('show');
+            activity.render().find('.applecation__meta').addClass('show');      // <-- ЗАЛИШИТИ!
+            // activity.render().find('.applecation__description').addClass('show'); // <-- ВИДАЛЕНО!
+            activity.render().find('.applecation__info').addClass('show');       // <-- ЗАЛИШИТИ!
+            activity.render().find('.applecation__ratings').addClass('show');    // <-- ЗАЛИШИТИ!
         });
 
         // Загружаем логотип
