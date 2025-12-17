@@ -1026,47 +1026,42 @@ body.advanced--animation:not(.no--animation) .full-start__background.loaded {
         infoContainer.html(infoParts.join(' · '));
     }
 
-        // Загружаем логотип фильма
+        
+    // Загружаем логотип фильма
     function loadLogo(event) {
         const data = event.data.movie;
         const activity = event.object.activity;
         
         if (!data || !activity) return;
 
-        // --- ВИПРАВЛЕННЯ: ОЧИЩАЄМО СТАНДАРТНІ КОНТЕЙНЕРИ LAMPA ---
-        
-        // 1. Приховуємо та очищаємо стандартний контейнер деталей Lampa (де Lampa розміщує опис/вкладки)
+        // ВИПРАВЛЕННЯ ДУБЛЮВАННЯ (залишаємо)
         const detailsContainer = activity.render().find('.full-start-new__details');
         if (detailsContainer.length) {
             detailsContainer.hide().empty();
         }
-        
-        // 2. Приховуємо та очищаємо стандартний контейнер заголовка (на випадок, якщо там є елементи, які конфліктують)
         const headContainer = activity.render().find('.full-start-new__head');
         if (headContainer.length) {
             headContainer.hide().empty();
         }
         
-        // --- КІНЕЦЬ ВИПРАВЛЕННЯ ---
-
         // Заполняем основную информацию
-        fillMetaInfo(activity, data);
-        // fillDescription(activity, data);  <-- ЗАКОМЕНТОВАНО!
-        fillAdditionalInfo(activity, data);
+        fillMetaInfo(activity, data);       // <-- ЗАЛИШИТИ! (Студія, Тип, Жанр)
+        // fillDescription(activity, data);  // <-- ВИДАЛЕНО! (Опис)
+        fillAdditionalInfo(activity, data); // <-- ЗАЛИШИТИ! (Рік, Тривалість, Сезони)
 
         // Ждем когда фон загрузится и появится
         waitForBackgroundLoad(activity, () => {
             // После загрузки фона показываем контент
-            activity.render().find('.applecation__meta').addClass('show');
-            // activity.render().find('.applecation__description').addClass('show'); <-- ЗАКОМЕНТОВАНО!
-            activity.render().find('.applecation__info').addClass('show');
-            activity.render().find('.applecation__ratings').addClass('show');
+            activity.render().find('.applecation__meta').addClass('show');      // <-- ЗАЛИШИТИ!
+            // activity.render().find('.applecation__description').addClass('show'); // <-- ВИДАЛЕНО!
+            activity.render().find('.applecation__info').addClass('show');       // <-- ЗАЛИШИТИ!
+            activity.render().find('.applecation__ratings').addClass('show');    // <-- ЗАЛИШИТИ!
         });
 
-        // Загружаем логотип
-        // ... (далі код функції loadLogo)
-        
-
+        // ... (далі код із завантаженням логотипу)
+        // ...
+    }
+    
         // Загружаем логотип
         const mediaType = data.name ? 'tv' : 'movie';
         const currentLang = Lampa.Storage.get('language', 'ru');
