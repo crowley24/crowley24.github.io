@@ -1058,10 +1058,6 @@ body.advanced--animation:not(.no--animation) .full-start__background.loaded {
             activity.render().find('.applecation__ratings').addClass('show');    // <-- ЗАЛИШИТИ!
         });
 
-        // ... (далі код із завантаженням логотипу)
-        // ...
-    }
-    
         // Загружаем логотип
         const mediaType = data.name ? 'tv' : 'movie';
         const currentLang = Lampa.Storage.get('language', 'ru');
