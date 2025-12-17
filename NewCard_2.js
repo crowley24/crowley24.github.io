@@ -540,7 +540,7 @@ body.applecation--logo-large .applecation__logo img {
 
 .applecation__network img {
     display: block;
-    max-height: 0.8em;
+    max-height: 1.5em;
     width: auto;
     object-fit: contain;
     filter: brightness(0) invert(1);
