@@ -363,7 +363,7 @@
                     
                     ${ratingsPosition === 'card' ? ratingsBlock : ''}
                     
-                    <div class="applecation__description"></div>
+                
                     <div class="applecation__info"></div>
                     
                     <div class="full-start-new__head" style="display: none;"></div>
@@ -378,7 +378,7 @@
                             <span>#{title_watch}</span>
                         </div>
 
-                        <div class="full-start__button selector button--book">
+                     <div class="full-start__button selector button--book">
                             <svg width="21" height="32" viewBox="0 0 21 32" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M2 1.5H19C19.2761 1.5 19.5 1.72386 19.5 2V27.9618C19.5 28.3756 19.0261 28.6103 18.697 28.3595L12.6212 23.7303C11.3682 22.7757 9.63183 22.7757 8.37885 23.7303L2.30302 28.3595C1.9739 28.6103 1.5 28.3756 1.5 27.9618V2C1.5 1.72386 1.72386 1.5 2 1.5Z" stroke="currentColor" stroke-width="2.5"/>
                             </svg>
