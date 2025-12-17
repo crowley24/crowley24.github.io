@@ -587,7 +587,7 @@
         });
 
         // Заміна основного інтерфейсу
-        Lampa.InteractionMain = function (object) {
+                Lampa.InteractionMain = function (object) {
             var use = new_interface;
             var reasons = [];
 
@@ -609,10 +609,13 @@
                 use = old_interface;
                 reasons.push('Lampa version too old');
             }
+            // >>> ВИДАЛИТИ/ЗАКОМЕНТУВАТИ ЦЮ ПЕРЕВІРКУ! <<<
+            /*
             if (Lampa.Platform.screen('mobile')) {
                 use = old_interface;
                 reasons.push('mobile platform');
             }
+            */
 
             if (use === new_interface) {
                 console.log('[Enhanced Interface] ✅ ACTIVATED!');
