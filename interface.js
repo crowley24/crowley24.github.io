@@ -587,16 +587,18 @@
         });
 
         // Заміна основного інтерфейсу
-                Lampa.InteractionMain = function (object) {
-            var use = new_interface;
+                  Lampa.InteractionMain = function (object) {
+            var use = new_interface; // <-- Починаємо з нового інтерфейсу
             var reasons = [];
 
             // Debug logging
             console.log('[Enhanced Interface] Checking activation conditions...');
             console.log('[Enhanced Interface] Source:', object.source);
-            console.log('[Enhanced Interface] Window width:', window.innerWidth);
-            console.log('[Enhanced Interface] Lampa version:', Lampa.Manifest.app_digital);
-
+            
+            // --- ПРИМУСОВА АКТИВАЦІЯ ДЛЯ ТЕСТУ ---
+            // use = new_interface; // Вже встановлено
+            
+            /*
             if (!(object.source == 'tmdb' || object.source == 'cub')) {
                 use = old_interface;
                 reasons.push('source not TMDB/CUB');
@@ -609,22 +611,21 @@
                 use = old_interface;
                 reasons.push('Lampa version too old');
             }
-            // >>> ВИДАЛИТИ/ЗАКОМЕНТУВАТИ ЦЮ ПЕРЕВІРКУ! <<<
-            /*
             if (Lampa.Platform.screen('mobile')) {
                 use = old_interface;
                 reasons.push('mobile platform');
             }
             */
-
+            
             if (use === new_interface) {
-                console.log('[Enhanced Interface] ✅ ACTIVATED!');
+                console.log('[Enhanced Interface] ✅ ACTIVATED! (Forced)');
             } else {
                 console.log('[Enhanced Interface] ❌ NOT activated. Reasons:', reasons.join(', '));
             }
 
             return new use(object);
         };
+        
 
         // Застосування теми при завантаженні
         ThemeManager.applyTheme();
