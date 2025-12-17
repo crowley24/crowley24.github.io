@@ -1026,26 +1026,46 @@ body.advanced--animation:not(.no--animation) .full-start__background.loaded {
         infoContainer.html(infoParts.join(' · '));
     }
 
-    // Загружаем логотип фильма
+        // Загружаем логотип фильма
     function loadLogo(event) {
         const data = event.data.movie;
         const activity = event.object.activity;
         
         if (!data || !activity) return;
 
+        // --- ВИПРАВЛЕННЯ: ОЧИЩАЄМО СТАНДАРТНІ КОНТЕЙНЕРИ LAMPA ---
+        
+        // 1. Приховуємо та очищаємо стандартний контейнер деталей Lampa (де Lampa розміщує опис/вкладки)
+        const detailsContainer = activity.render().find('.full-start-new__details');
+        if (detailsContainer.length) {
+            detailsContainer.hide().empty();
+        }
+        
+        // 2. Приховуємо та очищаємо стандартний контейнер заголовка (на випадок, якщо там є елементи, які конфліктують)
+        const headContainer = activity.render().find('.full-start-new__head');
+        if (headContainer.length) {
+            headContainer.hide().empty();
+        }
+        
+        // --- КІНЕЦЬ ВИПРАВЛЕННЯ ---
+
         // Заполняем основную информацию
         fillMetaInfo(activity, data);
-        fillDescription(activity, data);
+        // fillDescription(activity, data);  <-- ЗАКОМЕНТОВАНО!
         fillAdditionalInfo(activity, data);
 
         // Ждем когда фон загрузится и появится
         waitForBackgroundLoad(activity, () => {
             // После загрузки фона показываем контент
             activity.render().find('.applecation__meta').addClass('show');
-            activity.render().find('.applecation__description').addClass('show');
+            // activity.render().find('.applecation__description').addClass('show'); <-- ЗАКОМЕНТОВАНО!
             activity.render().find('.applecation__info').addClass('show');
             activity.render().find('.applecation__ratings').addClass('show');
         });
+
+        // Загружаем логотип
+        // ... (далі код функції loadLogo)
+        
 
         // Загружаем логотип
         const mediaType = data.name ? 'tv' : 'movie';
