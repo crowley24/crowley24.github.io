@@ -512,7 +512,7 @@ body.applecation--logo-large .applecation__logo img {
     display: flex;
     align-items: center;
     color: #fff;
-    font-size: 1.3em;
+    font-size: 1.2em;
     margin-bottom: 0.5em;
     line-height: 1;
     opacity: 0;
@@ -540,7 +540,7 @@ body.applecation--logo-large .applecation__logo img {
 
 .applecation__network img {
     display: block;
-    max-height: 1.3em;
+    max-height: 1.2em;
     width: auto;
     object-fit: contain;
     filter: brightness(0) invert(1);
