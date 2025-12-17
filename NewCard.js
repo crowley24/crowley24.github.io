@@ -363,7 +363,7 @@
                     
                     ${ratingsPosition === 'card' ? ratingsBlock : ''}
                     
-                    <div class="applecation__description"></div>
+                    
                     <div class="applecation__info"></div>
                     
                     <div class="full-start-new__head" style="display: none;"></div>
