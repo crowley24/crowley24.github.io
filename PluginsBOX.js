@@ -356,7 +356,7 @@
 Lampa.SettingsApi.addParam({
     component: 'add_plugin',
     param: {
-        name: 'Теми maxsm', // Локалізація
+        name: 'UA_Finder', // Нова назва
         type: 'select',
         values: {
             1: 'Встановити', // Локалізація
@@ -365,42 +365,45 @@ Lampa.SettingsApi.addParam({
         //default: '1',
     },
     field: {
-        name: 'Теми maxsm', // Локалізація
-        description: ''
+        name: 'UA_Finder', // Нова назва
+        description: 'Плашка на постерах з українським дубляжем' // Новий опис
     },
     onChange: function (value) {
+        // Нове посилання на плагін
         if (value == '1') {
-            itemON('https://zy5arc.github.io/maxsm_themes.js', 'Теми maxsm', '@author', 'Теми maxsm'); // Локалізація
+            itemON('https://crowley24.github.io/UA-Finder+Mod.js', 'UA_Finder', '@author', 'UA_Finder'); 
             // console.log("nthChildIndex, переданный в itemON:", nthChildIndex);
         }
+        // Нове посилання на плагін для видалення
         if (value == '2') {
-            var pluginToRemoveUrl = "https://zy5arc.github.io/maxsm_themes.js";
+            var pluginToRemoveUrl = "https://crowley24.github.io/UA-Finder+Mod.js";
             deletePlugin(pluginToRemoveUrl);
             // console.log("nthChildIndex, переданный в deletePlugin:", nthChildIndex);
         }
     },
     onRender: function (item) { $('.settings-param__name', item).css('color', 'f3d900'); hideInstall()
-        var myResult = checkPlugin('https://zy5arc.github.io/maxsm_themes.js');
+        var myResult = checkPlugin('https://crowley24.github.io/UA-Finder+Mod.js');
         var pluginsArray = Lampa.Storage.get('plugins');
         setTimeout(function () {
-            // >>> Це правильно для Теми maxsm
-            $('div[data-name="Теми maxsm"]').append('<div class="settings-param__status one"></div>');
+            // Додаємо індикатор для 'UA_Finder'
+            $('div[data-name="UA_Finder"]').append('<div class="settings-param__status one"></div>');
             var pluginStatus = null;
             for (var i = 0; i < pluginsArray.length; i++) {
-                if (pluginsArray[i].url === 'https://zy5arc.github.io/maxsm_themes.js') {
+                // Перевіряємо за новим URL
+                if (pluginsArray[i].url === 'https://crowley24.github.io/UA-Finder+Mod.js') {
                     pluginStatus = pluginsArray[i].status;
                     break;
                 }
             }
             if (myResult && pluginStatus !== 0) {
                 // Встановлено та Активно (Зелений градієнт)
-                $('div[data-name="Теми maxsm"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #11e400, #36a700)');
+                $('div[data-name="UA_Finder"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #11e400, #36a700)');
             } else if (pluginStatus === 0) {
                 // Відключено (Помаранчевий градієнт)
-                $('div[data-name="Теми maxsm"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff8c00, #d96e00)');
+                $('div[data-name="UA_Finder"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff8c00, #d96e00)');
             } else {
                 // Не встановлено (Червоний градієнт)
-                $('div[data-name="Теми maxsm"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff0000, #c40000)');
+                $('div[data-name="UA_Finder"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff0000, #c40000)');
             }
         }, 100);
         item.on("hover:enter", function (event) {
@@ -409,9 +412,7 @@ Lampa.SettingsApi.addParam({
        }
       });
         
-        
-        
-        Lampa.SettingsApi.addParam({
+          Lampa.SettingsApi.addParam({
             component: 'add_plugin',
             param: {
                 name: 'Rating_omdb', 
