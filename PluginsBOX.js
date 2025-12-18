@@ -300,7 +300,7 @@
         Lampa.SettingsApi.addParam({
     component: 'add_plugin',
     param: {
-        name: 'NewLogo', 
+        name: 'NewLogo 🌟', 
         type: 'select',
         values: {
             1: 'Встановити', 
