@@ -300,7 +300,7 @@
         Lampa.SettingsApi.addParam({
     component: 'add_plugin',
     param: {
-        name: 'NewLogo 🌟', 
+        name: 'NewLogo', 
         type: 'select',
         values: {
             1: 'Встановити', 
@@ -309,7 +309,7 @@
         //default: '1',
     },
     field: {
-        name: 'NewLogo 🌟', 
+        name: 'NewLogo', 
         description: 'Заміна назви фільма на логотип'
     },
     onChange: function (value) {
