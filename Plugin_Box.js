@@ -1,20 +1,18 @@
-
 (function () {
     'use strict';
 
     function addonStart() {
 
         /*
-         * * * Іконки розділів плагіна
+         * * * Иконки разделов плагина
          */
-        // Іконка для головного розділу "Додатки"
         var icon_add_plugin = '<svg version="1.1" id="_x32_" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="256px" height="256px" viewBox="0 0 512 512" xml:space="preserve" fill="#ffffff"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <style type="text/css">  .st0{fill:#ffffff;}  </style> <g> <path class="st0" d="M432.531,229.906c-9.906,0-19.125,2.594-27.313,6.375v-51.656c0-42.938-34.922-77.875-77.859-77.875h-51.641 c3.781-8.156,6.375-17.375,6.375-27.281C282.094,35.656,246.438,0,202.625,0c-43.828,0-79.484,35.656-79.484,79.469 c0,9.906,2.594,19.125,6.359,27.281H77.875C34.938,106.75,0,141.688,0,184.625l0.047,23.828H0l0.078,33.781 c0,23.031,8.578,36.828,12.641,42.063c12.219,15.797,27.094,18.172,34.891,18.172c11.953,0,23.141-4.953,33.203-14.703l0.906-0.422 l1.516-2.141c1.391-1.359,6.328-5.484,14.016-5.5c16.344,0,29.656,13.297,29.656,29.672c0,16.344-13.313,29.656-29.672,29.656 c-7.672,0-12.609-4.125-14-5.5l-1.516-2.141l-0.906-0.422c-10.063-9.75-21.25-14.703-33.203-14.703 c-7.797,0.016-22.672,2.375-34.891,18.172c-4.063,5.25-12.641,19.031-12.641,42.063L0,410.281h0.047L0,434.063 C0,477.063,34.938,512,77.875,512h54.563v-0.063l3.047-0.016c23.016,0,36.828-8.563,42.063-12.641 c15.797-12.219,18.172-27.094,18.172-34.891c0-11.953-4.953-23.141-14.688-33.203l-0.438-0.906l-2.125-1.516 c-1.375-1.391-5.516-6.328-5.516-14.016c0-16.344,13.313-29.656,29.672-29.656c16.344,0,29.656,13.313,29.656,29.656 c0,7.688-4.141,12.625-5.5,14.016l-2.125,1.516l-0.438,0.906c-9.75,10.063-14.703,21.25-14.703,33.203 c0,7.797,2.359,22.672,18.172,34.891c5.25,4.078,19.031,12.641,42.063,12.641l17,0.047V512h40.609 c42.938,0,77.859-34.938,77.859-77.875v-51.641c8.188,3.766,17.406,6.375,27.313,6.375c43.813,0,79.469-35.656,79.469-79.484 C512,265.563,476.344,229.906,432.531,229.906z M432.531,356.375c-19.031,0-37.469-22.063-37.469-22.063 c-3.344-3.203-6.391-4.813-9.25-4.813c-2.844,0-5.469,1.609-7.938,4.813c0,0-5.125,5.891-5.125,19.313v80.5 c0,25.063-20.313,45.391-45.391,45.391h-23.813l-33.797-0.078c-15.438,0-22.188-5.875-22.188-5.875 c-3.703-2.859-5.563-5.875-5.563-9.172c0-3.266,1.859-6.797,5.563-10.594c0,0,17.219-13.891,17.219-39.047 c0-34.313-27.844-62.156-62.156-62.156c-34.344,0-62.156,27.844-62.156,62.156c0,25.156,17.219,39.047,17.219,39.047 c3.688,3.797,5.531,7.328,5.531,10.594c0,3.297-1.844,6.313-5.531,9.172c0,0-6.766,5.875-22.203,5.875l-33.797,0.078H77.875 c-25.063,0-45.375-20.328-45.375-45.391l0.094-48.203h-0.047l0.016-9.422c0-15.422,5.875-22.203,5.875-22.203 c2.859-3.703,5.875-5.531,9.156-5.531s6.813,1.828,10.609,5.531c0,0,13.891,17.234,39.047,17.234 c34.313-0.016,62.156-27.844,62.156-62.156c-0.016-34.344-27.844-62.156-62.156-62.156c-25.156,0-39.047,17.219-39.047,17.219 c-3.797,3.688-7.328,5.531-10.609,5.531s-6.297-1.828-9.156-5.531c0,0-5.875-6.781-5.875-22.203v-1.156h0.031L32.5,184.625 c0-25.063,20.313-45.375,45.375-45.375h80.5c13.422,0,19.313-5.125,19.313-5.125c6.422-4.938,6.422-10.531,0-17.188 c0,0-22.063-18.438-22.063-37.469c0-25.953,21.047-46.984,47-46.984c25.938,0,46.984,21.031,46.984,46.984 c0,19.031-22.047,37.469-22.047,37.469c-6.438,6.656-6.438,12.25,0,17.188c0,0,5.875,5.125,19.281,5.125h80.516 c25.078,0,45.391,20.313,45.391,45.375v80.516c0,13.422,5.125,19.297,5.125,19.297c2.469,3.219,5.094,4.813,7.938,4.813 c2.859,0,5.906-1.594,9.25-4.813c0,0,18.438-22.047,37.469-22.047c25.938,0,46.969,21.047,46.969,46.984 C479.5,335.344,458.469,356.375,432.531,356.375z"></path> </g> </g></svg>';
-        // var icon_add_interface_plugin = '<div class="settings-folder" style="padding:0!important"><div style="width:1.8em;height:1.3em;padding-right:.5em"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24"><path fill="currentColor" d="M18 8a2 2 0 1 1-4 0a2 2 0 0 1 4 0"/><path fill="currentColor" fill-rule="evenodd" d="M11.943 1.25h.114c2.309 0 4.118 0 5.53.19c1.444.194 2.584.6 3.479 1.494c.895.895 1.3 2.035 1.494 3.48c.19 1.411.19 3.22.19 5.529v.088c0 1.909 0 3.471-.104 4.743c-.104 1.28-.317 2.347-.795 3.235q-.314.586-.785 1.057c-.895.895-2.035 1.3-3.48 1.494c-1.411.19-3.22.19-5.529.19h-.114c-2.309 0-4.118 0-5.53-.19c-1.444-.194-2.584-.6-3.479-1.494c-.793-.793-1.203-1.78-1.42-3.006c-.215-1.203-.254-2.7-.262-4.558Q1.25 12.792 1.25 12v-.058c0-2.309 0-4.118.19-5.53c.194-1.444.6-2.584 1.494-3.479c.895-.895 2.035-1.3 3.48-1.494c1.411-.19 3.22-.19 5.529-.19m-5.33 1.676c-1.278.172-2.049.5-2.618 1.069c-.57.57-.897 1.34-1.069 2.619c-.174 1.3-.176 3.008-.176 5.386v.844l1.001-.876a2.3 2.3 0 0 1 3.141.104l4.29 4.29a2 2 0 0 0 2.564.222l.298-.21a3 3 0 0 1 3.732.225l2.83 2.547c.286-.598.455-1.384.545-2.493c.098-1.205.099-2.707.099-4.653c0-2.378-.002-4.086-.176-5.386c-.172-1.279-.5-2.05-1.069-2.62c-.57-.569-1.34-.896-2.619-1.068c-1.3-.174-3.008-.176-5.386-.176s-4.086.002-5.386.176" clip-rule="evenodd"/></svg></div><div style="font-size:1.3em">Інтерфейс</div></div>';
-        var nthChildIndex = null; // Оголошуємо змінну для зберігання індексу nth-child
-        /* Регулярно викликані функції */
+        // var icon_add_interface_plugin = '<div class="settings-folder" style="padding:0!important"><div style="width:1.8em;height:1.3em;padding-right:.5em"><svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24"><path fill="currentColor" d="M18 8a2 2 0 1 1-4 0a2 2 0 0 1 4 0"/><path fill="currentColor" fill-rule="evenodd" d="M11.943 1.25h.114c2.309 0 4.118 0 5.53.19c1.444.194 2.584.6 3.479 1.494c.895.895 1.3 2.035 1.494 3.48c.19 1.411.19 3.22.19 5.529v.088c0 1.909 0 3.471-.104 4.743c-.104 1.28-.317 2.347-.795 3.235q-.314.586-.785 1.057c-.895.895-2.035 1.3-3.48 1.494c-1.411.19-3.22.19-5.529.19h-.114c-2.309 0-4.118 0-5.53-.19c-1.444-.194-2.584-.6-3.479-1.494c-.793-.793-1.203-1.78-1.42-3.006c-.215-1.203-.254-2.7-.262-4.558Q1.25 12.792 1.25 12v-.058c0-2.309 0-4.118.19-5.53c.194-1.444.6-2.584 1.494-3.479c.895-.895 2.035-1.3 3.48-1.494c1.411-.19 3.22-.19 5.529-.19m-5.33 1.676c-1.278.172-2.049.5-2.618 1.069c-.57.57-.897 1.34-1.069 2.619c-.174 1.3-.176 3.008-.176 5.386v.844l1.001-.876a2.3 2.3 0 0 1 3.141.104l4.29 4.29a2 2 0 0 0 2.564.222l.298-.21a3 3 0 0 1 3.732.225l2.83 2.547c.286-.598.455-1.384.545-2.493c.098-1.205.099-2.707.099-4.653c0-2.378-.002-4.086-.176-5.386c-.172-1.279-.5-2.05-1.069-2.62c-.57-.569-1.34-.896-2.619-1.068c-1.3-.174-3.008-.176-5.386-.176s-4.086.002-5.386.176" clip-rule="evenodd"/></svg></div><div style="font-size:1.3em">Интерфейс</div></div>';
+        var nthChildIndex = null; // Объявляем переменную для хранения индекса nth-child
+        /* Регулярно вызываемые функции */
         Lampa.Storage.set('needReboot', false);
         Lampa.Storage.set('needRebootSettingExit', false);
-        /* Запит на перезавантаження в модальному вікні */
+        /* Запрос на перезагрузку в модальном окне */
         function showReload(reloadText) {
             if (document.querySelector('.modal') == null) {
                 Lampa.Modal.open({
@@ -23,14 +21,14 @@
                     zIndex: 300,
                     html: $('<div class="about">' + reloadText + '</div>'),
                     buttons: [{
-                        name: 'Ні',
+                        name: 'Нет',
                         onSelect: function onSelect() {
                             //Lampa.Modal.close();
                             $('.modal').remove();
                             Lampa.Controller.toggle('content')
                         }
                     }, {
-                        name: 'Так',
+                        name: 'Да',
                         onSelect: function onSelect() {
                             window.location.reload();
                         }
@@ -38,15 +36,15 @@
                 });
             }
         }
-        /* Функція анімації встановлення плагіна */
+        /* Функция анимации установки плагина */
         function showLoadingBar() {
-            // Створюємо елемент для смуги завантаження
+            // Создаем элемент для полосы загрузки
             var loadingBar = document.createElement('div');
             loadingBar.className = 'loading-bar';
             loadingBar.style.position = 'fixed';
             loadingBar.style.top = '50%';
             loadingBar.style.left = '50%';
-            loadingBar.style.transform = 'translate(-50%, -50%)'; // Центруємо
+            loadingBar.style.transform = 'translate(-50%, -50%)'; // Центрируем по центру
             loadingBar.style.zIndex = '9999';
             loadingBar.style.display = 'none';
             loadingBar.style.width = '30em';
@@ -54,7 +52,7 @@
             loadingBar.style.backgroundColor = '#595959';
             loadingBar.style.borderRadius = '4em';
 
-            // Створюємо елемент для індикатора завантаження
+            // Создаем элемент для индикатора загрузки
             var loadingIndicator = document.createElement('div');
             loadingIndicator.className = 'loading-indicator';
             loadingIndicator.style.position = 'absolute';
@@ -65,7 +63,7 @@
             loadingIndicator.style.backgroundColor = '#64e364';
             loadingIndicator.style.borderRadius = '4em';
 
-            // Створюємо елемент для відображення відсотка завантаження
+            // Создаем элемент для отображения процента загрузки
             var loadingPercentage = document.createElement('div');
             loadingPercentage.className = 'loading-percentage';
             loadingPercentage.style.position = 'absolute';
@@ -76,15 +74,15 @@
             loadingPercentage.style.fontWeight = 'bold';
             loadingPercentage.style.fontSize = '1.7em';
 
-            // Додаємо елементи на сторінку
+            // Добавляем элементы на страницу
             loadingBar.appendChild(loadingIndicator);
             loadingBar.appendChild(loadingPercentage);
             document.body.appendChild(loadingBar);
 
-            // Відображаємо смугу завантаження
+            // Отображаем полосу загрузки
             loadingBar.style.display = 'block';
 
-            // Анімація
+            // Анимация с использованием setTimeout
             var startTime = Date.now();
             var duration = 1000; // 1 секунда
             var interval = setInterval(function () {
@@ -104,15 +102,15 @@
             }, 16);
         }
 
-        /* Функція анімації видалення плагіна */
+        /* Функция анимации удаления плагина */
         function showDeletedBar() {
-            // Створюємо елемент для смуги завантаження
+            // Создаем элемент для полосы загрузки
             var loadingBar = document.createElement('div');
             loadingBar.className = 'loading-bar';
             loadingBar.style.position = 'fixed';
             loadingBar.style.top = '50%';
             loadingBar.style.left = '50%';
-            loadingBar.style.transform = 'translate(-50%, -50%)'; // Центруємо
+            loadingBar.style.transform = 'translate(-50%, -50%)'; // Центрируем по центру
             loadingBar.style.zIndex = '9999';
             loadingBar.style.display = 'none';
             loadingBar.style.width = '30em';
@@ -120,7 +118,7 @@
             loadingBar.style.backgroundColor = '#595959';
             loadingBar.style.borderRadius = '4em';
 
-            // Створюємо елемент для індикатора завантаження
+            // Создаем элемент для индикатора загрузки
             var loadingIndicator = document.createElement('div');
             loadingIndicator.className = 'loading-indicator';
             loadingIndicator.style.position = 'absolute';
@@ -131,7 +129,7 @@
             loadingIndicator.style.backgroundColor = '#ff2121';
             loadingIndicator.style.borderRadius = '4em';
 
-            // Створюємо елемент для відображення відсотка завантаження
+            // Создаем элемент для отображения процента загрузки
             var loadingPercentage = document.createElement('div');
             loadingPercentage.className = 'loading-percentage';
             loadingPercentage.style.position = 'absolute';
@@ -142,20 +140,20 @@
             loadingPercentage.style.fontWeight = 'bold';
             loadingPercentage.style.fontSize = '1.7em';
 
-            // Додаємо елементи на сторінку
+            // Добавляем элементы на страницу
             loadingBar.appendChild(loadingIndicator);
             loadingBar.appendChild(loadingPercentage);
             document.body.appendChild(loadingBar);
 
-            // Відображаємо смугу завантаження
+            // Отображаем полосу загрузки
             loadingBar.style.display = 'block';
 
-            // Анімація
+            // Анимация с использованием setTimeout
             var startTime = Date.now();
             var duration = 1000; // 1 секунда
             var interval = setInterval(function () {
                 var elapsed = Date.now() - startTime;
-                var progress = 100 - Math.min((elapsed / duration) * 100, 100); // Обернена анімація
+                var progress = 100 - Math.min((elapsed / duration) * 100, 100);
 
                 loadingIndicator.style.width = progress + '%';
                 loadingPercentage.textContent = Math.round(progress) + '%';
@@ -170,64 +168,63 @@
             }, 16);
         }
 
-        /* Слідкуємо за налаштуваннями */
+        /* Следим за настройками */
         function settingsWatch() {
-            /* Перевіряємо прапор перезавантаження і чекаємо виходу з налаштувань */
+            /* проверяем флаг перезагрузки и ждём выхода из настроек */
             if (Lampa.Storage.get('needRebootSettingExit')) {
                 var intervalSettings = setInterval(function () {
                     var elementSettings = $('#app > div.settings > div.settings__content.layer--height > div.settings__body > div');
                     if (!elementSettings.length > 0) {
                         clearInterval(intervalSettings);
-                        showReload('Для повного видалення плагіна перезавантажте застосунок!');
+                        showReload('Для полного удаления плагина перезагрузите приложение!');
                     }
                 }, 1000)
             }
         }
-        /* Спосіб від Lampac */
+        /* Способ от Lampac */
         function itemON(sourceURL, sourceName, sourceAuthor, itemName) {
             if ($('DIV[data-name="' + itemName + '"]').find('.settings-param__status').hasClass('active')) {
-                Lampa.Noty.show("Плагін уже встановлено!");
+                Lampa.Noty.show("Плагин уже установлен!");
             } else if ($('DIV[data-name="' + itemName + '"]').find('.settings-param__status').css('background-color') === 'rgb(255, 165, 0)') {
-                Lampa.Noty.show("Плагін уже встановлено, але вимкнено в розширеннях!");
+                Lampa.Noty.show("Плагин уже установлен, но отключен в расширениях!");
             } else {
-                // Якщо перезавантаження не вимагається - контроль після видалення плагінів
+                // Если перезагрузки не требуется - контроль после удаления плагинов
                 if (!Lampa.Storage.get('needReboot')) {
-                    // Отримуємо список плагінів
+                    // Получаем список плагинов
                     var pluginsArray = Lampa.Storage.get('plugins');
-                    // Додаємо новий елемент до списку
+                    // Добавляем новый элемент к списку
                     pluginsArray.push({
                         "author": sourceAuthor,
                         "url": sourceURL,
                         "name": sourceName,
                         "status": 1
                     });
-                    // Впроваджуємо змінений список у лампу
+                    // Внедряем изменённый список в лампу
                     Lampa.Storage.set('plugins', pluginsArray);
-                    // Робимо ін'єкцію скрипта для негайної роботи
+                    // Делаем инъекцию скрипта для немедленной работы
                     var script = document.createElement('script');
                     script.src = sourceURL;
                     document.getElementsByTagName('head')[0].appendChild(script);
                     showLoadingBar();
                     setTimeout(function () {
                         Lampa.Settings.update();
-                        Lampa.Noty.show("Плагін " + sourceName + " успішно встановлено")
+                        Lampa.Noty.show("Плагин " + sourceName + " успешно установлен")
                     }, 1500);
                     setTimeout(function () {
                         if (nthChildIndex) {
                             var F = document.querySelector("#app > div.settings.animate > div.settings__content.layer--height > div.settings__body > div > div > div > div > div:nth-child(" + nthChildIndex + ")");
                             Lampa.Controller.focus(F);
                             Lampa.Controller.toggle('settings_component');
-                            // console.log("Встановлено фокус на елемент:", F.outerHTML);
+                            // console.log("Установлен фокус на элемент:", F.outerHTML);
                         } else {
-                            console.error("Помилка: Елемент з індексом nth-child " + nthChildIndex + " не знайдено.");
+                            console.error("Ошибка: Элемент с индексом nth-child " + nthChildIndex + " не найден.");
                         }
                     }, 2000);
-                } //else {showReload('Для встановлення плагінів після видалення, потрібно перезавантажити застосунок');}
+                } //else {showReload('Для установки плагинов после удаления, нужно перезагрузить приложение');}
             }
         }
 
         function hideInstall() {
-            // Приховуємо поле вибору "Установити/Видалити", оскільки використовуємо його для дії
             $("#hideInstall").remove();
             $('body').append('<div id="hideInstall"><style>div.settings-param__value{opacity: 0%!important;display: none;}</style><div>')
         }
@@ -239,18 +236,20 @@
             //Lampa.Storage.set('needReboot', true);
             setTimeout(function () {
                 Lampa.Settings.update();
-                Lampa.Noty.show("Плагін успішно видалено");
+                Lampa.Noty.show("Плагин успешно удален");
             }, 1500);
             setTimeout(function () {
                 if (nthChildIndex) {
                     var F = document.querySelector("#app > div.settings.animate > div.settings__content.layer--height > div.settings__body > div > div > div > div > div:nth-child(" + nthChildIndex + ")");
                     Lampa.Controller.focus(F);
                     Lampa.Controller.toggle('settings_component');
-                    // console.log("Встановлено фокус на елемент:", F.outerHTML);
+                    // console.log("Установлен фокус на элемент:", F.outerHTML);
                 } else {
-                    console.error("Помилка: Елемент з індексом nth-child " + nthChildIndex + " не знайдено.");
+                    console.error("Ошибка: Элемент с индексом nth-child " + nthChildIndex + " не найден.");
                 }
             }, 2000);
+            /*Lampa.Settings.update();
+            Lampa.Noty.show("Плагин успешно удален");*/
             Lampa.Storage.set('needRebootSettingExit', true);
             settingsWatch();
             showDeletedBar();
@@ -264,70 +263,63 @@
             if (JSON.stringify(checkResult) !== '[]') { return true } else { return false }
         };
 
-        // Функція для отримання індексу параметра (для повернення фокуса)
+        // Функция для получения индекса параметра
         function focus_back(event) {
-            var targetElement = event.target; // Об'єкт події
-            var parentElement = targetElement.parentElement; // Батьківський елемент
-            var children = Array.from(parentElement.children); // Список усіх дочірніх елементів
-            var index = children.indexOf(targetElement); // Індекс (0-based)
-            var nthChildIndex = index + 1; // 1-based індекс для nth-child
-            // console.log("Знайдений індекс:", nthChildIndex);
+            var targetElement = event.target; // Здесь мы берём объект события
+
+            // Находим родительский элемент
+            var parentElement = targetElement.parentElement;
+
+            // Получаем список всех дочерних элементов
+            var children = Array.from(parentElement.children);
+
+            // Находим индекс (0-based) текущего элемента
+            var index = children.indexOf(targetElement);
+
+            // Учитываем, что nth-child принимает 1-based индекс
+            var nthChildIndex = index + 1;
+
+            // Выводим найденный индекс в консоль
+            // console.log("Найденный индекс:", nthChildIndex);
+
+            // Возвращаем найденный элемент
             return nthChildIndex;
         }
 
         /* Компонент */
         Lampa.SettingsApi.addComponent({
             component: 'add_plugin',
-            name: 'Додатки', // Переклад: Додатки
+            name: 'Додатки', // Згідно з оригіналом, але в секції, що відображається кирилицею. Залишаю "Додатки", як в оригінальному файлі користувача (але в російському оригіналі, ймовірно, мало бути "Дополнения")
             icon: icon_add_plugin
         });
         
-        // ** ВИДАЛЕНО: Lampa.SettingsApi.addParam для "Інтерфейс" **
-        /*
-        Lampa.SettingsApi.addParam({
-            component: 'add_plugin',
-            param: {
-                name: 'add_interface_plugin',
-                type: 'static',
-                default: true
-            },
-            field: {
-                name: icon_add_interface_plugin // Раніше був "Інтерфейс"
-            },
-            onRender: function (item) {
-                item.on('hover:enter', function () {
-                    Lampa.Settings.create('add_interface_plugin');
-                    Lampa.Controller.enabled().controller.back = function () {
-                        Lampa.Settings.create('add_plugin');
-                    }
-                });
-            }
-        });
-        */
-        
+        /* * Блок Lampa.SettingsApi.addParam для 'add_interface_plugin' (Интерфейс) був видалений.
+         */
         
         Lampa.SettingsApi.addParam({
             component: 'add_plugin',
             param: {
-                name: 'Теми maxsm', // Переклад: Теми maxsm
+                name: 'Темы maxsm',
                 type: 'select',
                 values: {
-                    1: 'Встановити', // Переклад: Установить -> Встановити
-                    2: 'Видалити', // Переклад: Удалить -> Видалити
+                    1: 'Установить',
+                    2: 'Удалить',
                 },
                 //default: '1',
             },
             field: {
-                name: 'Теми maxsm', // Переклад: Теми maxsm
+                name: 'Темы maxsm',
                 description: ''
             },
             onChange: function (value) {
                 if (value == '1') {
                     itemON('https://zy5arc.github.io/maxsm_themes.js', 'Темы maxsm', '@author', 'Темы maxsm');
+                    // console.log("nthChildIndex, переданный в itemON:", nthChildIndex);
                 }
                 if (value == '2') {
                     var pluginToRemoveUrl = "https://zy5arc.github.io/maxsm_themes.js";
                     deletePlugin(pluginToRemoveUrl);
+                    // console.log("nthChildIndex, переданный в deletePlugin:", nthChildIndex);
                 }
             },
             onRender: function (item) { $('.settings-param__name', item).css('color', 'f3d900'); hideInstall()
@@ -345,15 +337,13 @@
                     if (myResult && pluginStatus !== 0) {
                         $('div[data-name="Темы maxsm"]').find('.settings-param__status').removeClass('active error').addClass('active');
                     } else if (pluginStatus === 0) {
-                        // Помаранчевий колір для вимкненого плагіна
                         $('div[data-name="Темы maxsm"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
                     } else {
                         $('div[data-name="Темы maxsm"]').find('.settings-param__status').removeClass('active error').addClass('error');
                     }
                 }, 100);
                 item.on("hover:enter", function (event) {
-                    // Зберігаємо індекс, щоб повернути фокус
-                    nthChildIndex = focus_back(event); 
+                    nthChildIndex = focus_back(event); // Сохраняем элемент в переменной
                 });
             }
         });
@@ -361,25 +351,27 @@
         Lampa.SettingsApi.addParam({
             component: 'add_plugin',
             param: {
-                name: 'Рейтинг OMDB', // Переклад: Rating_omdb -> Рейтинг OMDB
+                name: 'Rating_omdb',
                 type: 'select',
                 values: {
-                    1: 'Встановити', // Переклад: Установить -> Встановити
-                    2: 'Видалити', // Переклад: Удалить -> Видалити
+                    1: 'Установить',
+                    2: 'Удалить',
                 },
                 //default: '1',
             },
             field: {
-                name: 'Рейтинг OMDB', // Переклад: Rating_omdb -> Рейтинг OMDB
-                description: 'Цей плагін "Combined Ratings" для Lampa інтегрує рейтинги з OMDB API (Rotten Tomatoes, Metacritic, IMDB) на сторінку повного опису, розраховує зважену середню (IMDB/TMDB по 40%, MC/RT по 10%), додає кількість Оскарів, локалізовані вікові рейтинги (3+/6+ тощо), з анімацією завантаження та кешуванням на 3 дні'
+                name: 'Rating_omdb',
+                description: 'Цей плагін "Combined Ratings" для Lampa інтегрує рейтинги з OMDB API (Rotten Tomatoes, Metacritic, IMDB) на сторінку повного опису (full), розраховує зважену середню (IMDB/TMDB по 40%, MC/RT по 10%), додає кількість Оскарів, локалізовані вікові рейтинги (3+/6+ тощо), з анімацією завантаження та кешуванням на 3 дні'
             },
             onChange: function (value) {
                 if (value == '1') {
                     itemON('https://zy5arc.github.io/rating_omdb.js', 'Rating_omdb', '@author', 'Rating_omdb');
+                    // console.log("nthChildIndex, переданный в itemON:", nthChildIndex);
                 }
                 if (value == '2') {
                     var pluginToRemoveUrl = "https://zy5arc.github.io/rating_omdb.js";
                     deletePlugin(pluginToRemoveUrl);
+                    // console.log("nthChildIndex, переданный в deletePlugin:", nthChildIndex);
                 }
             },
             onRender: function (item) { $('.settings-param__name', item).css('color', 'f3d900'); hideInstall()
@@ -397,15 +389,13 @@
                     if (myResult && pluginStatus !== 0) {
                         $('div[data-name="Rating_omdb"]').find('.settings-param__status').removeClass('active error').addClass('active');
                     } else if (pluginStatus === 0) {
-                         // Помаранчевий колір для вимкненого плагіна
                         $('div[data-name="Rating_omdb"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
                     } else {
                         $('div[data-name="Rating_omdb"]').find('.settings-param__status').removeClass('active error').addClass('error');
                     }
                 }, 100);
                 item.on("hover:enter", function (event) {
-                    // Зберігаємо індекс, щоб повернути фокус
-                    nthChildIndex = focus_back(event); 
+                    nthChildIndex = focus_back(event); // Сохраняем элемент в переменной
                 });
             }
         });
@@ -414,25 +404,27 @@
         Lampa.SettingsApi.addParam({
             component: 'add_plugin',
             param: {
-                name: 'Коментарі з HDRezka.ag', // Залишаємо назву
+                name: 'Коментарі з HDRezka.ag',
                 type: 'select',
                 values: {
-                    1: 'Встановити', // Переклад: Установить -> Встановити
-                    2: 'Видалити', // Переклад: Удалить -> Видалити
+                    1: 'Установить',
+                    2: 'Удалить',
                 },
                 //default: '1',
             },
             field: {
-                name: 'Коментарі з HDRezka.ag', // Залишаємо назву
+                name: 'Коментарі з HDRezka.ag',
                 description: 'Коментарі з HDRezka.ag'
             },
             onChange: function (value) {
                 if (value == '1') {
                     itemON('https://zy5arc.github.io/rezkacomment.js', 'Коментарі з HDRezka.ag', '@author', 'Коментарі з HDRezka.ag');
+                    // console.log("nthChildIndex, переданный в itemON:", nthChildIndex);
                 }
                 if (value == '2') {
                     var pluginToRemoveUrl = "https://zy5arc.github.io/rezkacomment.js";
                     deletePlugin(pluginToRemoveUrl);
+                    // console.log("nthChildIndex, переданный в deletePlugin:", nthChildIndex);
                 }
             },
             onRender: function (item) { $('.settings-param__name', item).css('color', 'f3d900'); hideInstall()
@@ -450,15 +442,13 @@
                     if (myResult && pluginStatus !== 0) {
                         $('div[data-name="Коментарі з HDRezka.ag"]').find('.settings-param__status').removeClass('active error').addClass('active');
                     } else if (pluginStatus === 0) {
-                         // Помаранчевий колір для вимкненого плагіна
                         $('div[data-name="Коментарі з HDRezka.ag"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
                     } else {
                         $('div[data-name="Коментарі з HDRezka.ag"]').find('.settings-param__status').removeClass('active error').addClass('error');
                     }
                 }, 100);
                 item.on("hover:enter", function (event) {
-                    // Зберігаємо індекс, щоб повернути фокус
-                    nthChildIndex = focus_back(event); 
+                    nthChildIndex = focus_back(event); // Сохраняем элемент в переменной
                 });
             }
         });
@@ -467,25 +457,27 @@
         Lampa.SettingsApi.addParam({
             component: 'add_plugin',
             param: {
-                name: 'Твіки та хитрощі', // Переклад: tricks -> Твіки та хитрощі
+                name: 'tricks',
                 type: 'select',
                 values: {
-                    1: 'Встановити', // Переклад: Установить -> Встановити
-                    2: 'Видалити', // Переклад: Удалить -> Видалити
+                    1: 'Установить',
+                    2: 'Удалить',
                 },
                 //default: '1',
             },
             field: {
-                name: 'Твіки та хитрощі', // Переклад: tricks -> Твіки та хитрощі
-                description: 'Tweaks & Tricks' // Залишаємо оригінальний опис
+                name: 'tricks',
+                description: 'Tweaks & Tricks'
             },
             onChange: function (value) {
                 if (value == '1') {
                     itemON('https://zy5arc.github.io/tricks.js', 'tricks', '@author', 'tricks');
+                    // console.log("nthChildIndex, переданный в itemON:", nthChildIndex);
                 }
                 if (value == '2') {
                     var pluginToRemoveUrl = "https://zy5arc.github.io/tricks.js";
                     deletePlugin(pluginToRemoveUrl);
+                    // console.log("nthChildIndex, переданный в deletePlugin:", nthChildIndex);
                 }
             },
             onRender: function (item) { $('.settings-param__name', item).css('color', 'f3d900'); hideInstall()
@@ -503,15 +495,13 @@
                     if (myResult && pluginStatus !== 0) {
                         $('div[data-name="tricks"]').find('.settings-param__status').removeClass('active error').addClass('active');
                     } else if (pluginStatus === 0) {
-                         // Помаранчевий колір для вимкненого плагіна
                         $('div[data-name="tricks"]').find('.settings-param__status').removeClass('active error').css('background-color', 'rgb(255, 165, 0)');
                     } else {
                         $('div[data-name="tricks"]').find('.settings-param__status').removeClass('active error').addClass('error');
                     }
                 }, 100);
                 item.on("hover:enter", function (event) {
-                    // Зберігаємо індекс, щоб повернути фокус
-                    nthChildIndex = focus_back(event); 
+                    nthChildIndex = focus_back(event); // Сохраняем элемент в переменной
                 });
             }
         });
@@ -522,3 +512,4 @@
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') addonStart() });
 
 })();
+                        
