@@ -291,59 +291,60 @@
         /* Компонент */
         Lampa.SettingsApi.addComponent({
             component: 'add_plugin',
-            name: 'Плагіни', // Локалізація
+            name: 'Доповнення', // Локалізація
             icon: icon_add_plugin
         });
         
         /* * Блок Lampa.SettingsApi.addParam для 'add_interface_plugin' (Інтерфейс) було видалено.
          */
+        
         Lampa.SettingsApi.addParam({
             component: 'add_plugin',
             param: {
-                name: 'NewLogo', 
+                name: 'Теми maxsm', // Локалізація
                 type: 'select',
                 values: {
-                    1: 'Встановити', 
-                    2: 'Видалити', 
+                    1: 'Встановити', // Локалізація
+                    2: 'Видалити', // Локалізація
                 },
                 //default: '1',
             },
             field: {
-                name: 'NewLogo', 
-                description: 'Заміна назви фільма на логотип'
+                name: 'Теми maxsm', // Локалізація
+                description: ''
             },
             onChange: function (value) {
                 if (value == '1') {
-                    itemON('https://crowley24.github.io/NewLogo.js', 'NewLogo', '@author', 'NewLogo'); // Локалізація
+                    itemON('https://zy5arc.github.io/maxsm_themes.js', 'Теми maxsm', '@author', 'Теми maxsm'); // Локалізація
                     // console.log("nthChildIndex, переданный в itemON:", nthChildIndex);
                 }
                 if (value == '2') {
-                    var pluginToRemoveUrl = "https://crowley24.github.io/NewLogo.js";
+                    var pluginToRemoveUrl = "https://zy5arc.github.io/maxsm_themes.js";
                     deletePlugin(pluginToRemoveUrl);
                     // console.log("nthChildIndex, переданный в deletePlugin:", nthChildIndex);
                 }
             },
             onRender: function (item) { $('.settings-param__name', item).css('color', 'f3d900'); hideInstall()
-                var myResult = checkPlugin('https://crowley24.github.io/NewLogo.js');
+                var myResult = checkPlugin('https://zy5arc.github.io/maxsm_themes.js');
                 var pluginsArray = Lampa.Storage.get('plugins');
                 setTimeout(function () {
-                    $('div[data-name="NewLogo"]').append('<div class="settings-param__status one"></div>');
+                    $('div[data-name="Теми maxsm"]').append('<div class="settings-param__status one"></div>');
                     var pluginStatus = null;
                     for (var i = 0; i < pluginsArray.length; i++) {
-                        if (pluginsArray[i].url === 'https://crowley24.github.io/NewLogo.js') {
+                        if (pluginsArray[i].url === 'https://zy5arc.github.io/maxsm_themes.js') {
                             pluginStatus = pluginsArray[i].status;
                             break;
                         }
                     }
                     if (myResult && pluginStatus !== 0) {
                         // Встановлено та Активно (Зелений градієнт)
-                        $('div[data-name="NewLogo"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #11e400, #36a700)');
+                        $('div[data-name="Теми maxsm"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #11e400, #36a700)');
                     } else if (pluginStatus === 0) {
                         // Відключено (Помаранчевий градієнт)
-                        $('div[data-name="NewLogo"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff8c00, #d96e00)');
+                        $('div[data-name="Теми maxsm"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff8c00, #d96e00)');
                     } else {
                         // Не встановлено (Червоний градієнт)
-                        $('div[data-name="NewLogo"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff0000, #c40000)');
+                        $('div[data-name="Теми maxsm"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff0000, #c40000)');
                     }
                 }, 100);
                 item.on("hover:enter", function (event) {
@@ -351,309 +352,6 @@
                 });
             }
         });
-
-        Lampa.SettingsApi.addParam({
-    component: 'add_plugin',
-    param: {
-        name: 'Кольоровий рейтинг', // Нова назва
-        type: 'select',
-        values: {
-            1: 'Встановити', // Локалізація
-            2: 'Видалити', // Локалізація
-        },
-        //default: '1',
-    },
-    field: {
-        name: 'Кольоровий рейтинг', // Нова назва
-        description: 'Кольоровий рейтинг на картках фільмів' // Новий опис
-    },
-    onChange: function (value) {
-        // Посилання на плагін
-        var pluginUrl = 'https://crowley24.github.io/colored_ratings.js';
-        
-        if (value == '1') {
-            itemON(pluginUrl, 'Кольоровий рейтинг', '@author', 'Кольоровий рейтинг'); 
-            // console.log("nthChildIndex, переданный в itemON:", nthChildIndex);
-        }
-        
-        if (value == '2') {
-            var pluginToRemoveUrl = pluginUrl;
-            deletePlugin(pluginToRemoveUrl);
-            // console.log("nthChildIndex, переданный в deletePlugin:", nthChildIndex);
-        }
-    },
-    onRender: function (item) { $('.settings-param__name', item).css('color', 'f3d900'); hideInstall()
-        var pluginUrl = 'https://crowley24.github.io/colored_ratings.js';
-        var myResult = checkPlugin(pluginUrl);
-        var pluginsArray = Lampa.Storage.get('plugins');
-        setTimeout(function () {
-            // Додаємо індикатор для 'Кольоровий рейтинг'
-            $('div[data-name="Кольоровий рейтинг"]').append('<div class="settings-param__status one"></div>');
-            var pluginStatus = null;
-            for (var i = 0; i < pluginsArray.length; i++) {
-                // Перевіряємо за URL
-                if (pluginsArray[i].url === pluginUrl) {
-                    pluginStatus = pluginsArray[i].status;
-                    break;
-                }
-            }
-            if (myResult && pluginStatus !== 0) {
-                // Встановлено та Активно (Зелений градієнт)
-                $('div[data-name="Кольоровий рейтинг"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #11e400, #36a700)');
-            } else if (pluginStatus === 0) {
-                // Відключено (Помаранчевий градієнт)
-                $('div[data-name="Кольоровий рейтинг"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff8c00, #d96e00)');
-            } else {
-                // Не встановлено (Червоний градієнт)
-                $('div[data-name="Кольоровий рейтинг"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff0000, #c40000)');
-            }
-        }, 100);
-        item.on("hover:enter", function (event) {
-            nthChildIndex = focus_back(event); // Зберігаємо елемент у змінній
-        });
-       }
-      });
-        
-        Lampa.SettingsApi.addParam({
-    component: 'add_plugin',
-    param: {
-        name: 'Шрифти', // Нова назва
-        type: 'select',
-        values: {
-            1: 'Встановити', // Локалізація
-            2: 'Видалити', // Локалізація
-        },
-        //default: '1',
-    },
-    field: {
-        name: 'Шрифти', // Нова назва
-        description: 'Новий шрифт для інтерфейсу' // Новий опис
-    },
-    onChange: function (value) {
-        // Посилання на плагін
-        var pluginUrl = 'https://crowley24.github.io/Fonts.js';
-        
-        if (value == '1') {
-            itemON(pluginUrl, 'Шрифти', '@author', 'Шрифти'); 
-            // console.log("nthChildIndex, переданный в itemON:", nthChildIndex);
-        }
-        
-        if (value == '2') {
-            var pluginToRemoveUrl = pluginUrl;
-            deletePlugin(pluginToRemoveUrl);
-            // console.log("nthChildIndex, переданный в deletePlugin:", nthChildIndex);
-        }
-    },
-    onRender: function (item) { $('.settings-param__name', item).css('color', 'f3d900'); hideInstall()
-        var pluginUrl = 'https://crowley24.github.io/Fonts.js';
-        var myResult = checkPlugin(pluginUrl);
-        var pluginsArray = Lampa.Storage.get('plugins');
-        setTimeout(function () {
-            // Додаємо індикатор для 'Шрифти'
-            $('div[data-name="Шрифти"]').append('<div class="settings-param__status one"></div>');
-            var pluginStatus = null;
-            for (var i = 0; i < pluginsArray.length; i++) {
-                // Перевіряємо за URL
-                if (pluginsArray[i].url === pluginUrl) {
-                    pluginStatus = pluginsArray[i].status;
-                    break;
-                }
-            }
-            if (myResult && pluginStatus !== 0) {
-                // Встановлено та Активно (Зелений градієнт)
-                $('div[data-name="Шрифти"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #11e400, #36a700)');
-            } else if (pluginStatus === 0) {
-                // Відключено (Помаранчевий градієнт)
-                $('div[data-name="Шрифти"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff8c00, #d96e00)');
-            } else {
-                // Не встановлено (Червоний градієнт)
-                $('div[data-name="Шрифти"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff0000, #c40000)');
-            }
-        }, 100);
-        item.on("hover:enter", function (event) {
-            nthChildIndex = focus_back(event); // Зберігаємо елемент у змінній
-        });
-    }
-});
-        
-
-        Lampa.SettingsApi.addParam({
-    component: 'add_plugin',
-    param: {
-        name: 'UA_Finder', // Нова назва
-        type: 'select',
-        values: {
-            1: 'Встановити', // Локалізація
-            2: 'Видалити', // Локалізація
-        },
-        //default: '1',
-    },
-    field: {
-        name: 'UA_Finder', // Нова назва
-        description: 'Плашка на постерах з українським дубляжем' // Новий опис
-    },
-    onChange: function (value) {
-        // Нове посилання на плагін
-        if (value == '1') {
-            itemON('https://crowley24.github.io/UA-Finder+Mod.js', 'UA_Finder', '@author', 'UA_Finder'); 
-            // console.log("nthChildIndex, переданный в itemON:", nthChildIndex);
-        }
-        // Нове посилання на плагін для видалення
-        if (value == '2') {
-            var pluginToRemoveUrl = "https://crowley24.github.io/UA-Finder+Mod.js";
-            deletePlugin(pluginToRemoveUrl);
-            // console.log("nthChildIndex, переданный в deletePlugin:", nthChildIndex);
-        }
-    },
-    onRender: function (item) { $('.settings-param__name', item).css('color', 'f3d900'); hideInstall()
-        var myResult = checkPlugin('https://crowley24.github.io/UA-Finder+Mod.js');
-        var pluginsArray = Lampa.Storage.get('plugins');
-        setTimeout(function () {
-            // Додаємо індикатор для 'UA_Finder'
-            $('div[data-name="UA_Finder"]').append('<div class="settings-param__status one"></div>');
-            var pluginStatus = null;
-            for (var i = 0; i < pluginsArray.length; i++) {
-                // Перевіряємо за новим URL
-                if (pluginsArray[i].url === 'https://crowley24.github.io/UA-Finder+Mod.js') {
-                    pluginStatus = pluginsArray[i].status;
-                    break;
-                }
-            }
-            if (myResult && pluginStatus !== 0) {
-                // Встановлено та Активно (Зелений градієнт)
-                $('div[data-name="UA_Finder"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #11e400, #36a700)');
-            } else if (pluginStatus === 0) {
-                // Відключено (Помаранчевий градієнт)
-                $('div[data-name="UA_Finder"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff8c00, #d96e00)');
-            } else {
-                // Не встановлено (Червоний градієнт)
-                $('div[data-name="UA_Finder"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff0000, #c40000)');
-            }
-        }, 100);
-        item.on("hover:enter", function (event) {
-            nthChildIndex = focus_back(event); // Зберігаємо елемент у змінній
-        });
-       }
-      }); 
-
-        Lampa.SettingsApi.addParam({
-    component: 'add_plugin',
-    param: {
-        name: 'Годинник', // Нова назва
-        type: 'select',
-        values: {
-            1: 'Встановити', // Локалізація
-            2: 'Видалити', // Локалізація
-        },
-        //default: '1',
-    },
-    field: {
-        name: 'Годинник', // Нова назва
-        description: 'Стильний годинник для інтерфейсу' // Новий опис
-    },
-    onChange: function (value) {
-        // Посилання на плагін (припускаю, що це https://crowley24.github.io/clock.js або подібне, оскільки URL не був наданий явно, але використовуємо логічну назву)
-        // ВИПРАВЛЕНО: Я використав crowley24.github.io/clock.js, оскільки всі попередні були від crowley24.github.io
-        if (value == '1') {
-            itemON('https://crowley24.github.io/clock.js', 'Годинник', '@author', 'Годинник'); 
-            // console.log("nthChildIndex, переданный в itemON:", nthChildIndex);
-        }
-        
-        if (value == '2') {
-            var pluginToRemoveUrl = "https://crowley24.github.io/clock.js";
-            deletePlugin(pluginToRemoveUrl);
-            // console.log("nthChildIndex, переданный в deletePlugin:", nthChildIndex);
-        }
-    },
-    onRender: function (item) { $('.settings-param__name', item).css('color', 'f3d900'); hideInstall()
-        var myResult = checkPlugin('https://crowley24.github.io/clock.js');
-        var pluginsArray = Lampa.Storage.get('plugins');
-        setTimeout(function () {
-            // Додаємо індикатор для 'Годинник'
-            $('div[data-name="Годинник"]').append('<div class="settings-param__status one"></div>');
-            var pluginStatus = null;
-            for (var i = 0; i < pluginsArray.length; i++) {
-                // Перевіряємо за URL
-                if (pluginsArray[i].url === 'https://crowley24.github.io/clock.js') {
-                    pluginStatus = pluginsArray[i].status;
-                    break;
-                }
-            }
-            if (myResult && pluginStatus !== 0) {
-                // Встановлено та Активно (Зелений градієнт)
-                $('div[data-name="Годинник"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #11e400, #36a700)');
-            } else if (pluginStatus === 0) {
-                // Відключено (Помаранчевий градієнт)
-                $('div[data-name="Годинник"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff8c00, #d96e00)');
-            } else {
-                // Не встановлено (Червоний градієнт)
-                $('div[data-name="Годинник"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff0000, #c40000)');
-            }
-        }, 100);
-        item.on("hover:enter", function (event) {
-            nthChildIndex = focus_back(event); // Зберігаємо елемент у змінній
-        });
-       }
-      });
-        
-        Lampa.SettingsApi.addParam({
-    component: 'add_plugin',
-    param: {
-        name: 'My Bookmarks', // Нова назва
-        type: 'select',
-        values: {
-            1: 'Встановити', // Локалізація
-            2: 'Видалити', // Локалізація
-        },
-        //default: '1',
-    },
-    field: {
-        name: 'My Bookmarks', // Нова назва
-        description: 'Кастомні закладки з обраними фільмами' // Новий опис
-    },
-    onChange: function (value) {
-        // Нове посилання на плагін
-        if (value == '1') {
-            itemON('https://crowley24.github.io/bookmarks.js', 'My Bookmarks', '@author', 'My Bookmarks'); 
-            // console.log("nthChildIndex, переданный в itemON:", nthChildIndex);
-        }
-        // Нове посилання на плагін для видалення
-        if (value == '2') {
-            var pluginToRemoveUrl = "https://crowley24.github.io/bookmarks.js";
-            deletePlugin(pluginToRemoveUrl);
-            // console.log("nthChildIndex, переданный в deletePlugin:", nthChildIndex);
-        }
-    },
-    onRender: function (item) { $('.settings-param__name', item).css('color', 'f3d900'); hideInstall()
-        var myResult = checkPlugin('https://crowley24.github.io/bookmarks.js');
-        var pluginsArray = Lampa.Storage.get('plugins');
-        setTimeout(function () {
-            // Додаємо індикатор для 'My Bookmarks'
-            $('div[data-name="My Bookmarks"]').append('<div class="settings-param__status one"></div>');
-            var pluginStatus = null;
-            for (var i = 0; i < pluginsArray.length; i++) {
-                // Перевіряємо за новим URL
-                if (pluginsArray[i].url === 'https://crowley24.github.io/bookmarks.js') {
-                    pluginStatus = pluginsArray[i].status;
-                    break;
-                }
-            }
-            if (myResult && pluginStatus !== 0) {
-                // Встановлено та Активно (Зелений градієнт)
-                $('div[data-name="My Bookmarks"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #11e400, #36a700)');
-            } else if (pluginStatus === 0) {
-                // Відключено (Помаранчевий градієнт)
-                $('div[data-name="My Bookmarks"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff8c00, #d96e00)');
-            } else {
-                // Не встановлено (Червоний градієнт)
-                $('div[data-name="My Bookmarks"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff0000, #c40000)');
-            }
-        }, 100);
-        item.on("hover:enter", function (event) {
-            nthChildIndex = focus_back(event); // Зберігаємо елемент у змінній
-        });
-       }
-      });
         
         Lampa.SettingsApi.addParam({
             component: 'add_plugin',
@@ -709,68 +407,7 @@
                 });
             }
         });
-
-        Lampa.SettingsApi.addParam({
-    component: 'add_plugin',
-    param: {
-        name: 'Приховання інтерфейсу', // Нова назва
-        type: 'select',
-        values: {
-            1: 'Встановити', // Локалізація
-            2: 'Видалити', // Локалізація
-        },
-        //default: '1',
-    },
-    field: {
-        name: 'Приховання інтерфейсу', // Нова назва
-        description: 'Приховати елементи інтерфейсу' // Новий опис
-    },
-    onChange: function (value) {
-        // Посилання на плагін
-        var pluginUrl = 'https://crowley24.github.io/Interface_hide.js';
         
-        if (value == '1') {
-            itemON(pluginUrl, 'Приховання інтерфейсу', '@author', 'Приховання інтерфейсу'); 
-            // console.log("nthChildIndex, переданный в itemON:", nthChildIndex);
-        }
-        
-        if (value == '2') {
-            var pluginToRemoveUrl = pluginUrl;
-            deletePlugin(pluginToRemoveUrl);
-            // console.log("nthChildIndex, переданный в deletePlugin:", nthChildIndex);
-        }
-    },
-    onRender: function (item) { $('.settings-param__name', item).css('color', 'f3d900'); hideInstall()
-        var pluginUrl = 'https://crowley24.github.io/Interface_hide.js';
-        var myResult = checkPlugin(pluginUrl);
-        var pluginsArray = Lampa.Storage.get('plugins');
-        setTimeout(function () {
-            // Додаємо індикатор для 'Приховання інтерфейсу'
-            $('div[data-name="Приховання інтерфейсу"]').append('<div class="settings-param__status one"></div>');
-            var pluginStatus = null;
-            for (var i = 0; i < pluginsArray.length; i++) {
-                // Перевіряємо за URL
-                if (pluginsArray[i].url === pluginUrl) {
-                    pluginStatus = pluginsArray[i].status;
-                    break;
-                }
-            }
-            if (myResult && pluginStatus !== 0) {
-                // Встановлено та Активно (Зелений градієнт)
-                $('div[data-name="Приховання інтерфейсу"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #11e400, #36a700)');
-            } else if (pluginStatus === 0) {
-                // Відключено (Помаранчевий градієнт)
-                $('div[data-name="Приховання інтерфейсу"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff8c00, #d96e00)');
-            } else {
-                // Не встановлено (Червоний градієнт)
-                $('div[data-name="Приховання інтерфейсу"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff0000, #c40000)');
-            }
-        }, 100);
-        item.on("hover:enter", function (event) {
-            nthChildIndex = focus_back(event); // Зберігаємо елемент у змінній
-        });
-       }
-      });
         
         Lampa.SettingsApi.addParam({
             component: 'add_plugin',
@@ -889,4 +526,4 @@
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') addonStart() });
 
 })();
-                                          
+
