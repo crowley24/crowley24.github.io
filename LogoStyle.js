@@ -80,8 +80,8 @@ function applyLogo(img, titleBlock, hasTagline, textHeight){
         img.style.width="auto";
         img.style.maxWidth="100%";
         img.style.maxHeight="none";
-    } else if(window.innerWidth<768){
-        img.style.width="100%";
+     } else if(window.innerWidth<768){
+        img.style.width="15em"; // Змінено зі 100% на фіксовану, меншу ширину
         img.style.height="auto";
     } else {
         img.style.width="7em";
