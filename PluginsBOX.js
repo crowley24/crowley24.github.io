@@ -472,68 +472,70 @@
        }
       });
 
+                 /* Блок 2: Кольоровий рейтинг */
         Lampa.SettingsApi.addParam({
-    component: 'add_plugin',
-    param: {
-        name: 'Кольоровий рейтинг', // Нова назва
-        type: 'select',
-        values: {
-            1: 'Встановити', // Локалізація
-            2: 'Видалити', // Локалізація
-        },
-        //default: '1',
-    },
-    field: {
-        name: 'Кольоровий рейтинг', // Нова назва
-        description: 'Кольоровий рейтинг на картках фільмів' // Новий опис
-    },
-    onChange: function (value) {
-        // Посилання на плагін
-        var pluginUrl = 'https://crowley24.github.io/colored_ratings.js';
-        
-        if (value == '1') {
-            itemON(pluginUrl, 'Кольоровий рейтинг', '@author', 'Кольоровий рейтинг'); 
-            // console.log("nthChildIndex, переданный в itemON:", nthChildIndex);
-        }
-        
-        if (value == '2') {
-            var pluginToRemoveUrl = pluginUrl;
-            deletePlugin(pluginToRemoveUrl);
-            // console.log("nthChildIndex, переданный в deletePlugin:", nthChildIndex);
-        }
-    },
-    onRender: function (item) { $('.settings-param__name', item).css('color', 'f3d900'); hideInstall()
-        var pluginUrl = 'https://crowley24.github.io/colored_ratings.js';
-        var myResult = checkPlugin(pluginUrl);
-        var pluginsArray = Lampa.Storage.get('plugins');
-        setTimeout(function () {
-            // Додаємо індикатор для 'Кольоровий рейтинг'
-            $('div[data-name="Кольоровий рейтинг"]').append('<div class="settings-param__status one"></div>');
-            var pluginStatus = null;
-            for (var i = 0; i < pluginsArray.length; i++) {
-                // Перевіряємо за URL
-                if (pluginsArray[i].url === pluginUrl) {
-                    pluginStatus = pluginsArray[i].status;
-                    break;
-                }
-            }
-            if (myResult && pluginStatus !== 0) {
-                // Встановлено та Активно (Зелений градієнт)
-                $('div[data-name="Кольоровий рейтинг"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #11e400, #36a700)');
-            } else if (pluginStatus === 0) {
-                // Відключено (Помаранчевий градієнт)
-                $('div[data-name="Кольоровий рейтинг"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff8c00, #d96e00)');
-            } else {
-                // Не встановлено (Червоний градієнт)
-                $('div[data-name="Кольоровий рейтинг"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff0000, #c40000)');
-            }
-        }, 100);
-        item.on("hover:enter", function (event) {
-            nthChildIndex = focus_back(event); // Зберігаємо елемент у змінній
-        });
-       }
-      });
+            component: 'add_plugin',
+            param: {
+                name: 'Кольоровий рейтинг', // Нова назва
+                type: 'select',
+                values: {
+                    1: 'Встановити', // Локалізація
+                    2: 'Видалити', // Локалізація
+                },
+            },
+            field: {
+                name: 'Кольоровий рейтинг', // Нова назва
+                description: 'Кольоровий рейтинг на картках фільмів' // Новий опис
+            },
+            // !!! ВИПРАВЛЕННЯ 1: Приймаємо item як другий аргумент
+            onChange: function (value, item) { 
+                var pluginUrl = 'https://crowley24.github.io/colored_ratings.js';
+                
+                // !!! ВИПРАВЛЕННЯ 2: Отримуємо індекс локально з елемента item
+                var index = $(item).data('nthChildIndex'); 
 
+                if (value == '1') {
+                    // !!! ВИПРАВЛЕННЯ 3: Передаємо index у функцію
+                    itemON(pluginUrl, 'Кольоровий рейтинг', '@author', 'Кольоровий рейтинг', index); 
+                }
+                
+                if (value == '2') {
+                    var pluginToRemoveUrl = pluginUrl;
+                    // !!! ВИПРАВЛЕННЯ 4: Передаємо index у функцію
+                    deletePlugin(pluginToRemoveUrl, index);
+                }
+            },
+            onRender: function (item) { $('.settings-param__name', item).css('color', 'f3d900'); hideInstall()
+                var pluginUrl = 'https://crowley24.github.io/colored_ratings.js';
+                var myResult = checkPlugin(pluginUrl);
+                var pluginsArray = Lampa.Storage.get('plugins');
+                
+                setTimeout(function () {
+                    $('div[data-name="Кольоровий рейтинг"]').append('<div class="settings-param__status one"></div>');
+                    var pluginStatus = null;
+                    for (var i = 0; i < pluginsArray.length; i++) {
+                        if (pluginsArray[i].url === pluginUrl) {
+                            pluginStatus = pluginsArray[i].status;
+                            break;
+                        }
+                    }
+                    if (myResult && pluginStatus !== 0) {
+                        $('div[data-name="Кольоровий рейтинг"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #11e400, #36a700)');
+                    } else if (pluginStatus === 0) {
+                        $('div[data-name="Кольоровий рейтинг"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff8c00, #d96e00)');
+                    } else {
+                        $('div[data-name="Кольоровий рейтинг"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff0000, #c40000)');
+                    }
+                }, 100);
+
+                // !!! ВИПРАВЛЕННЯ 5: Зберігаємо індекс ЛОКАЛЬНО в елементі, а не в глобальній змінній.
+                item.on("hover:enter", function (event) {
+                    var localNthChildIndex = focus_back(event); 
+                    $(this).data('nthChildIndex', localNthChildIndex); // Зберігаємо в data-атрибуті елемента
+                });
+               }
+              });
+        
     Lampa.SettingsApi.addParam({
     component: 'add_plugin',
     param: {
