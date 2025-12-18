@@ -553,7 +553,7 @@
     },
     onChange: function (value) {
         // Посилання на плагін
-        var pluginUrl = 'https://crowley24.github.io/Fonts.js';
+        var pluginUrl = 'https://crowley24.github.io/fonts.js';
         
         if (value == '1') {
             itemON(pluginUrl, 'Шрифти', '@author', 'Шрифти'); 
@@ -567,7 +567,7 @@
         }
     },
     onRender: function (item) { $('.settings-param__name', item).css('color', 'f3d900'); hideInstall()
-        var pluginUrl = 'https://crowley24.github.io/Fonts.js';
+        var pluginUrl = 'https://crowley24.github.io/fonts.js';
         var myResult = checkPlugin(pluginUrl);
         var pluginsArray = Lampa.Storage.get('plugins');
         setTimeout(function () {
@@ -615,7 +615,7 @@
     },
     onChange: function (value) {
         // Посилання на плагін
-        var pluginUrl = 'https://crowley24.github.io/Interface_hide.js';
+        var pluginUrl = 'https://crowley24.github.io/interface_hide.js';
         
         if (value == '1') {
             itemON(pluginUrl, 'Приховання інтерфейсу', '@author', 'Приховання інтерфейсу'); 
@@ -629,7 +629,7 @@
         }
     },
     onRender: function (item) { $('.settings-param__name', item).css('color', 'f3d900'); hideInstall()
-        var pluginUrl = 'https://crowley24.github.io/Interface_hide.js';
+        var pluginUrl = 'https://crowley24.github.io/interface_hide.js';
         var myResult = checkPlugin(pluginUrl);
         var pluginsArray = Lampa.Storage.get('plugins');
         setTimeout(function () {
