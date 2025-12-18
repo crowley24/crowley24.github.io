@@ -769,8 +769,8 @@ Lampa.SettingsApi.addParam({
                 item.on("hover:enter", function (event) {
                     nthChildIndex = focus_back(event); // Зберігаємо елемент у змінній
                 });
-            }
-        });
+               }
+              });
         
         
         Lampa.SettingsApi.addParam({
@@ -825,9 +825,67 @@ Lampa.SettingsApi.addParam({
                 item.on("hover:enter", function (event) {
                     nthChildIndex = focus_back(event); // Зберігаємо елемент у змінній
                 });
-            }
-        });
-        
+               }
+              });
+
+        Lampa.SettingsApi.addParam({
+            component: 'add_plugin',
+            param: {
+                name: 'Стильний інтерфейс ( моб. версія)',
+                type: 'select',
+                values: {
+                    1: 'Встановити',
+                    2: 'Видалити',
+                },
+            },
+            field: {
+                name: 'Стильний інтерфейс ( моб. версія)',
+                description: 'Стильний інтерфейс + логотипи замість назви в картці фільму на мобільних пристроях'
+            },
+            onChange: function (value, item) { 
+                var pluginUrl = 'https://crowley24.github.io/logo+mob.js';
+                var pluginName = 'Стильний інтерфейс ( моб. версія)';
+                var index = $(item).data('nthChildIndex'); 
+
+                if (value == '1') {
+                    itemON(pluginUrl, pluginName, '@author', pluginName, index); 
+                }
+                
+                if (value == '2') {
+                    deletePlugin(pluginUrl, index);
+                }
+            },
+            onRender: function (item) { $('.settings-param__name', item).css('color', 'f3d900'); hideInstall()
+                var pluginUrl = 'https://crowley24.github.io/logo+mob.js';
+                var pluginName = 'Стильний інтерфейс ( моб. версія)';
+                var myResult = checkPlugin(pluginUrl);
+                var pluginsArray = Lampa.Storage.get('plugins');
+                
+                setTimeout(function () {
+                    $('div[data-name="' + pluginName + '"]').append('<div class="settings-param__status one"></div>');
+                    var pluginStatus = null;
+                    for (var i = 0; i < pluginsArray.length; i++) {
+                        if (pluginsArray[i].url === pluginUrl) {
+                            pluginStatus = pluginsArray[i].status;
+                            break;
+                        }
+                    }
+                    if (myResult && pluginStatus !== 0) {
+                        $('div[data-name="' + pluginName + '"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #11e400, #36a700)');
+                    } else if (pluginStatus === 0) {
+                        $('div[data-name="' + pluginName + '"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff8c00, #d96e00)');
+                    } else {
+                        $('div[data-name="' + pluginName + '"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff0000, #c40000)');
+                    }
+                }, 100);
+
+                // Зберігаємо індекс локально в елементі для коректного фокусування
+                item.on("hover:enter", function (event) {
+                    var localNthChildIndex = focus_back(event);
+                    $(this).data('nthChildIndex', localNthChildIndex);
+                });
+               }
+              });
         
         Lampa.SettingsApi.addParam({
             component: 'add_plugin',
