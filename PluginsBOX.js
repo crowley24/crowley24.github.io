@@ -327,7 +327,7 @@
                 var myResult = checkPlugin('https://crowley24.github.io/NewLogo.js');
                 var pluginsArray = Lampa.Storage.get('plugins');
                 setTimeout(function () {
-                    $('div[data-name="Теми maxsm"]').append('<div class="settings-param__status one"></div>');
+                    $('div[data-name="NewLogo"]').append('<div class="settings-param__status one"></div>');
                     var pluginStatus = null;
                     for (var i = 0; i < pluginsArray.length; i++) {
                         if (pluginsArray[i].url === 'https://crowley24.github.io/NewLogo.js') {
