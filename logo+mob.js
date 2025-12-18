@@ -13,7 +13,7 @@
 
     Lampa.Utils.putScriptAsync([  
 
-        'https://crowley24.github.io/NewLogo.js',  
+        'https://crowley24.github.io/LogoStyle.js',  
 
         'https://crowley24.github.io/mob_style.js',
 
