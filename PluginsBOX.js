@@ -309,7 +309,7 @@
         //default: '1',
     },
     field: {
-        name: 'NewLogo', 
+        name: 'NewLogo 🌟', 
         description: 'Заміна назви фільма на логотип'
     },
     onChange: function (value) {
