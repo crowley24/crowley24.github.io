@@ -297,61 +297,119 @@
         
         /* * Блок Lampa.SettingsApi.addParam для 'add_interface_plugin' (Інтерфейс) було видалено.
          */
-        
         Lampa.SettingsApi.addParam({
-            component: 'add_plugin',
-            param: {
-                name: 'Теми maxsm', // Локалізація
-                type: 'select',
-                values: {
-                    1: 'Встановити', // Локалізація
-                    2: 'Видалити', // Локалізація
-                },
-                //default: '1',
-            },
-            field: {
-                name: 'Теми maxsm', // Локалізація
-                description: ''
-            },
-            onChange: function (value) {
-                if (value == '1') {
-                    itemON('https://zy5arc.github.io/maxsm_themes.js', 'Теми maxsm', '@author', 'Теми maxsm'); // Локалізація
-                    // console.log("nthChildIndex, переданный в itemON:", nthChildIndex);
+    component: 'add_plugin',
+    param: {
+        name: 'NewLogo', 
+        type: 'select',
+        values: {
+            1: 'Встановити', 
+            2: 'Видалити', 
+        },
+        //default: '1',
+    },
+    field: {
+        name: 'NewLogo', 
+        description: 'Заміна назви фільма на логотип'
+    },
+    onChange: function (value) {
+        if (value == '1') {
+            itemON('https://crowley24.github.io/NewLogo.js', 'NewLogo', '@author', 'NewLogo'); // Локалізація
+            // console.log("nthChildIndex, переданный в itemON:", nthChildIndex);
+        }
+        if (value == '2') {
+            var pluginToRemoveUrl = "https://crowley24.github.io/NewLogo.js";
+            deletePlugin(pluginToRemoveUrl);
+            // console.log("nthChildIndex, переданный в deletePlugin:", nthChildIndex);
+        }
+    },
+    onRender: function (item) { $('.settings-param__name', item).css('color', 'f3d900'); hideInstall()
+        var myResult = checkPlugin('https://crowley24.github.io/NewLogo.js');
+        var pluginsArray = Lampa.Storage.get('plugins');
+        setTimeout(function () {
+            // >>> ВИПРАВЛЕНО: Додаємо індикатор до NewLogo
+            $('div[data-name="NewLogo"]').append('<div class="settings-param__status one"></div>');
+            var pluginStatus = null;
+            for (var i = 0; i < pluginsArray.length; i++) {
+                if (pluginsArray[i].url === 'https://crowley24.github.io/NewLogo.js') {
+                    pluginStatus = pluginsArray[i].status;
+                    break;
                 }
-                if (value == '2') {
-                    var pluginToRemoveUrl = "https://zy5arc.github.io/maxsm_themes.js";
-                    deletePlugin(pluginToRemoveUrl);
-                    // console.log("nthChildIndex, переданный в deletePlugin:", nthChildIndex);
-                }
-            },
-            onRender: function (item) { $('.settings-param__name', item).css('color', 'f3d900'); hideInstall()
-                var myResult = checkPlugin('https://zy5arc.github.io/maxsm_themes.js');
-                var pluginsArray = Lampa.Storage.get('plugins');
-                setTimeout(function () {
-                    $('div[data-name="Теми maxsm"]').append('<div class="settings-param__status one"></div>');
-                    var pluginStatus = null;
-                    for (var i = 0; i < pluginsArray.length; i++) {
-                        if (pluginsArray[i].url === 'https://zy5arc.github.io/maxsm_themes.js') {
-                            pluginStatus = pluginsArray[i].status;
-                            break;
-                        }
-                    }
-                    if (myResult && pluginStatus !== 0) {
-                        // Встановлено та Активно (Зелений градієнт)
-                        $('div[data-name="Теми maxsm"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #11e400, #36a700)');
-                    } else if (pluginStatus === 0) {
-                        // Відключено (Помаранчевий градієнт)
-                        $('div[data-name="Теми maxsm"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff8c00, #d96e00)');
-                    } else {
-                        // Не встановлено (Червоний градієнт)
-                        $('div[data-name="Теми maxsm"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff0000, #c40000)');
-                    }
-                }, 100);
-                item.on("hover:enter", function (event) {
-                    nthChildIndex = focus_back(event); // Зберігаємо елемент у змінній
-                });
             }
+            if (myResult && pluginStatus !== 0) {
+                // Встановлено та Активно (Зелений градієнт)
+                $('div[data-name="NewLogo"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #11e400, #36a700)');
+            } else if (pluginStatus === 0) {
+                // Відключено (Помаранчевий градієнт)
+                $('div[data-name="NewLogo"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff8c00, #d96e00)');
+            } else {
+                // Не встановлено (Червоний градієнт)
+                $('div[data-name="NewLogo"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff0000, #c40000)');
+            }
+        }, 100);
+        item.on("hover:enter", function (event) {
+            nthChildIndex = focus_back(event); // Зберігаємо елемент у змінній
         });
+       }
+      });
+
+Lampa.SettingsApi.addParam({
+    component: 'add_plugin',
+    param: {
+        name: 'Теми maxsm', // Локалізація
+        type: 'select',
+        values: {
+            1: 'Встановити', // Локалізація
+            2: 'Видалити', // Локалізація
+        },
+        //default: '1',
+    },
+    field: {
+        name: 'Теми maxsm', // Локалізація
+        description: ''
+    },
+    onChange: function (value) {
+        if (value == '1') {
+            itemON('https://zy5arc.github.io/maxsm_themes.js', 'Теми maxsm', '@author', 'Теми maxsm'); // Локалізація
+            // console.log("nthChildIndex, переданный в itemON:", nthChildIndex);
+        }
+        if (value == '2') {
+            var pluginToRemoveUrl = "https://zy5arc.github.io/maxsm_themes.js";
+            deletePlugin(pluginToRemoveUrl);
+            // console.log("nthChildIndex, переданный в deletePlugin:", nthChildIndex);
+        }
+    },
+    onRender: function (item) { $('.settings-param__name', item).css('color', 'f3d900'); hideInstall()
+        var myResult = checkPlugin('https://zy5arc.github.io/maxsm_themes.js');
+        var pluginsArray = Lampa.Storage.get('plugins');
+        setTimeout(function () {
+            // >>> Це правильно для Теми maxsm
+            $('div[data-name="Теми maxsm"]').append('<div class="settings-param__status one"></div>');
+            var pluginStatus = null;
+            for (var i = 0; i < pluginsArray.length; i++) {
+                if (pluginsArray[i].url === 'https://zy5arc.github.io/maxsm_themes.js') {
+                    pluginStatus = pluginsArray[i].status;
+                    break;
+                }
+            }
+            if (myResult && pluginStatus !== 0) {
+                // Встановлено та Активно (Зелений градієнт)
+                $('div[data-name="Теми maxsm"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #11e400, #36a700)');
+            } else if (pluginStatus === 0) {
+                // Відключено (Помаранчевий градієнт)
+                $('div[data-name="Теми maxsm"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff8c00, #d96e00)');
+            } else {
+                // Не встановлено (Червоний градієнт)
+                $('div[data-name="Теми maxsm"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff0000, #c40000)');
+            }
+        }, 100);
+        item.on("hover:enter", function (event) {
+            nthChildIndex = focus_back(event); // Зберігаємо елемент у змінній
+        });
+       }
+      });
+        
+        
         
         Lampa.SettingsApi.addParam({
             component: 'add_plugin',
