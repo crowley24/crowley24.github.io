@@ -709,7 +709,68 @@
                 });
             }
         });
+
+        Lampa.SettingsApi.addParam({
+    component: 'add_plugin',
+    param: {
+        name: 'Приховання інтерфейсу', // Нова назва
+        type: 'select',
+        values: {
+            1: 'Встановити', // Локалізація
+            2: 'Видалити', // Локалізація
+        },
+        //default: '1',
+    },
+    field: {
+        name: 'Приховання інтерфейсу', // Нова назва
+        description: 'Приховати елементи інтерфейсу' // Новий опис
+    },
+    onChange: function (value) {
+        // Посилання на плагін
+        var pluginUrl = 'https://crowley24.github.io/Interface_hide.js';
         
+        if (value == '1') {
+            itemON(pluginUrl, 'Приховання інтерфейсу', '@author', 'Приховання інтерфейсу'); 
+            // console.log("nthChildIndex, переданный в itemON:", nthChildIndex);
+        }
+        
+        if (value == '2') {
+            var pluginToRemoveUrl = pluginUrl;
+            deletePlugin(pluginToRemoveUrl);
+            // console.log("nthChildIndex, переданный в deletePlugin:", nthChildIndex);
+        }
+    },
+    onRender: function (item) { $('.settings-param__name', item).css('color', 'f3d900'); hideInstall()
+        var pluginUrl = 'https://crowley24.github.io/Interface_hide.js';
+        var myResult = checkPlugin(pluginUrl);
+        var pluginsArray = Lampa.Storage.get('plugins');
+        setTimeout(function () {
+            // Додаємо індикатор для 'Приховання інтерфейсу'
+            $('div[data-name="Приховання інтерфейсу"]').append('<div class="settings-param__status one"></div>');
+            var pluginStatus = null;
+            for (var i = 0; i < pluginsArray.length; i++) {
+                // Перевіряємо за URL
+                if (pluginsArray[i].url === pluginUrl) {
+                    pluginStatus = pluginsArray[i].status;
+                    break;
+                }
+            }
+            if (myResult && pluginStatus !== 0) {
+                // Встановлено та Активно (Зелений градієнт)
+                $('div[data-name="Приховання інтерфейсу"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #11e400, #36a700)');
+            } else if (pluginStatus === 0) {
+                // Відключено (Помаранчевий градієнт)
+                $('div[data-name="Приховання інтерфейсу"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff8c00, #d96e00)');
+            } else {
+                // Не встановлено (Червоний градієнт)
+                $('div[data-name="Приховання інтерфейсу"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff0000, #c40000)');
+            }
+        }, 100);
+        item.on("hover:enter", function (event) {
+            nthChildIndex = focus_back(event); // Зберігаємо елемент у змінній
+        });
+       }
+      });
         
         Lampa.SettingsApi.addParam({
             component: 'add_plugin',
