@@ -15,7 +15,7 @@
         
     console.log('[ActionMenu] Ініціалізація плагіна');    
         
-    // Локалізація    
+    // Локалізація (оновлено для Exit/Вихід)
     Lampa.Lang.add({    
       action_menu: {    
         en: 'Actions',    
@@ -24,14 +24,40 @@
       },  
       reload_button: {    
         en: 'Reload',    
-        uk: 'Перезавантаження', // Виправлено: Перезавантаження
+        uk: 'Перезавантаження', 
         ru: 'Перезагрузка'    
       },  
-      logout_button: {    
-        en: 'Exit',    
-        uk: 'Вихід',    
-        ru: 'Выход'    
-      }  
+      // ВИПРАВЛЕНО: Повертаємо назву для Закриття застосунку
+      exit_button: {    
+          en: 'Exit App',    
+          uk: 'Закрити застосунок',    
+          ru: 'Выйти из приложения'    
+      },
+      exit_confirm_title: {    
+          en: 'Exit Application',    
+          uk: 'Вихід з застосунку',    
+          ru: 'Выход из приложения'    
+      },    
+      exit_confirm_message: {    
+          en: 'Are you sure you want to exit?',    
+          uk: 'Ви впевнені, що хочете вийти?',    
+          ru: 'Вы уверены, что хотите выйти?'    
+      },    
+      exit_confirm_yes: {    
+          en: 'Yes',    
+          uk: 'Так',    
+          ru: 'Да'    
+      },    
+      exit_confirm_no: {    
+          en: 'No',    
+          uk: 'Ні',    
+          ru: 'Нет'    
+      },    
+      exit_manual_instruction: {    
+          en: 'Please close the app manually via Smart TV menu',    
+          uk: 'Закрийте застосунок вручну через меню Smart TV',    
+          ru: 'Закройте приложение вручную через меню Smart TV'    
+      } 
     });    
         
     // Функції дій  
@@ -39,40 +65,106 @@
       window.location.reload();  
     }  
       
-    function doLogout() {  
-      if (Lampa.Account && typeof Lampa.Account.logout === 'function') {    
-        Lampa.Account.logout();    
-      }    
+    // НОВА ФУНКЦІЯ: ВИХІД ІЗ ЗАСТОСУНКУ З ПІДТВЕРДЖЕННЯМ
+    function doExitApp() {
+        if (Lampa.Select) {    
+            Lampa.Select.show({    
+                title: Lampa.Lang.translate('exit_confirm_title'),    
+                items: [    
+                    {    
+                        title: Lampa.Lang.translate('exit_confirm_yes'),    
+                        value: 'yes'    
+                    },    
+                    {    
+                        title: Lampa.Lang.translate('exit_confirm_no'),    
+                        value: 'no'    
+                    }    
+                ],    
+                onSelect: function(item) {    
+                    if (item.value === 'yes') {    
+                        performPlatformExit();    
+                    }    
+                },    
+                onBack: function() {
+                    // Повертаємо фокус назад у шапку
+                    Lampa.Controller.toggle('head');
+                }    
+            });    
+        } else {    
+            performPlatformExit();    
+        }
+    }
+    
+    // ПЛАТФОРМОЗАЛЕЖНА ЛОГІКА ЗАКРИТТЯ
+    function performPlatformExit() {
+        try {  
+            if (Lampa.Activity && typeof Lampa.Activity.out === 'function') {  
+                Lampa.Activity.out();  
+            }  
+        } catch(e) {}  
           
-      Lampa.Storage.set('account', {});    
-      Lampa.Storage.set('account_user', null);    
-      window.location.reload();  
-    }  
+        setTimeout(function() {  
+            // 1. Tizen
+            if (window.tizen) {  
+                try {  
+                    tizen.application.getCurrentApplication().exit();  
+                    return;  
+                } catch(e) {}  
+            }  
+            // 2. webOS
+            if (window.webOS) {  
+                try {  
+                    webOS.platformBack();  
+                    return;  
+                } catch(e) {}  
+            }  
+            // 3. Android
+            if (window.Android) {  
+                try {  
+                    Android.exit();  
+                    return;  
+                } catch(e) {}  
+            }  
+            // 4. NetCast (LG Legacy)
+            if (typeof NetCastBack === 'function') {  
+                try {  
+                    NetCastBack();  
+                    return;  
+                } catch(e) {}  
+            }  
+            // 5. Стандартне закриття вкладки
+            try {  
+                window.close();  
+            } catch(e) {}  
+              
+            // 6. Якщо все інше не вдалося
+            if (Lampa.Noty) {  
+                Lampa.Noty.show(Lampa.Lang.translate('exit_manual_instruction'));  
+            }  
+        }, 100);
+    }
       
     // Показати меню дій  
     function showActionMenu() {  
-      // Тут ми використовуємо Lampa.Select, тому нам не потрібно турбуватися про фокус пульта, 
-      // оскільки Lampa сама обробляє фокус у вікні Select.
       Lampa.Select.show({  
         title: Lampa.Lang.translate('action_menu'),  
         items: [  
           {  
             title: Lampa.Lang.translate('reload_button'),  
-            reload: true  
+            action: 'reload'  
           },  
           {  
-            title: Lampa.Lang.translate('logout_button'),  
-            logout: true  
+            title: Lampa.Lang.translate('exit_button'),  
+            action: 'exit'
           }  
         ],  
         onSelect: function(item) {  
-          if (item.reload) {  
+          if (item.action === 'reload') {  
             doReload();  
-          } else if (item.logout) {  
-            doLogout();  
+          } else if (item.action === 'exit') {  
+            doExitApp();
           }  
         },  
-        // Повертаємо фокус на 'head', щоб закрити меню Select і повернути фокус назад до шапки.
         onBack: function() {  
           Lampa.Controller.toggle('head');  
         }  
@@ -84,15 +176,15 @@
       var button = document.createElement('div');    
       button.className = 'head__action action-menu-button selector';    
       
-      // ЗМІНЕНО: Збільшено SVG до 32x32
+      // ВИПРАВЛЕНО: SVG 24x24
       button.innerHTML = `    
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">    
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">    
           <path d="M18.36 6.64a9 9 0 1 1-12.73 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>  
           <line x1="12" y1="2" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>  
         </svg>    
       `;    
           
-      // ЗМІНЕНО: Збільшено розмір контейнера до 3.5em
+      // ВИПРАВЛЕНО: Розмір контейнера 2.8em
       button.style.cssText = `    
         display: inline-flex;    
         align-items: center;    
@@ -102,8 +194,8 @@
         cursor: pointer;    
         border-radius: 8px;    
         transition: background 0.2s;  
-        width: 3.5em;  
-        height: 3.5em;  
+        width: 2.8em;  
+        height: 2.8em;  
       `;    
           
       // Обробник для пульта  
@@ -116,24 +208,19 @@
         showActionMenu();  
       });    
           
-      // Hover ефекти для пульта    
+      // Hover ефекти (залишаємо без змін)
       $(button).on('hover:focus', function() {    
         button.style.background = 'rgba(255, 255, 255, 0.1)';    
       });    
-          
       $(button).on('hover:hover', function() {    
         button.style.background = 'rgba(255, 255, 255, 0.1)';    
       });    
-          
       $(button).on('hover:blur', function() {    
         button.style.background = 'transparent';    
       });    
-          
-      // Hover ефекти для миші    
       button.addEventListener('mouseenter', function() {    
         button.style.background = 'rgba(255, 255, 255, 0.1)';    
       });    
-          
       button.addEventListener('mouseleave', function() {    
         button.style.background = 'transparent';    
       });    
@@ -152,7 +239,6 @@
       var actions = header.querySelector('.head__actions');    
       if (actions) {    
         var button = createActionButton();  
-        // Вставляємо кнопку на початок списку дій (препенд) для кращої видимості
         actions.prepend(button);  
         console.log('[ActionMenu] Кнопку меню додано в header');    
       }    
