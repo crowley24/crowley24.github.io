@@ -431,7 +431,7 @@
         // Посилання на плагін (припускаю, що це https://crowley24.github.io/clock.js або подібне, оскільки URL не був наданий явно, але використовуємо логічну назву)
         // ВИПРАВЛЕНО: Я використав crowley24.github.io/clock.js, оскільки всі попередні були від crowley24.github.io
         if (value == '1') {
-            itemON('https://crowley24.github.io/clock.js', 'Годинник', '@author', 'Годинник'); 
+            itemON('https://crowley24.github.io/clock.js', 'Годинник', '@crowley', 'Годинник'); 
             // console.log("nthChildIndex, переданный в itemON:", nthChildIndex);
         }
         
@@ -555,7 +555,7 @@
         var pluginUrl = 'https://crowley24.github.io/fonts.js';
         
         if (value == '1') {
-            itemON(pluginUrl, 'Шрифти', '@author', 'Шрифти'); 
+            itemON(pluginUrl, 'Шрифти', '@crowley', 'Шрифти'); 
             // console.log("nthChildIndex, переданный в itemON:", nthChildIndex);
         }
         
@@ -679,7 +679,7 @@
                 var index = $(item).data('nthChildIndex'); 
 
                 if (value == '1') {
-                    itemON(pluginUrl, pluginName, '@author', pluginName, index); 
+                    itemON(pluginUrl, pluginName, '@and7ey', pluginName, index); 
                 }
                 
                 if (value == '2') {
