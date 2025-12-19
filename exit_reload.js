@@ -15,7 +15,7 @@
         
     console.log('[ActionMenu] Ініціалізація плагіна');    
         
-    // Локалізація (оновлено для Exit/Вихід)
+    // Локалізація    
     Lampa.Lang.add({    
       action_menu: {    
         en: 'Actions',    
@@ -27,7 +27,6 @@
         uk: 'Перезавантаження', 
         ru: 'Перезагрузка'    
       },  
-      // ВИПРАВЛЕНО: Повертаємо назву для Закриття застосунку
       exit_button: {    
           en: 'Exit App',    
           uk: 'Закрити застосунок',    
@@ -86,7 +85,6 @@
                     }    
                 },    
                 onBack: function() {
-                    // Повертаємо фокус назад у шапку
                     Lampa.Controller.toggle('head');
                 }    
             });    
@@ -95,14 +93,11 @@
         }
     }
     
-    // ПЛАТФОРМОЗАЛЕЖНА ЛОГІКА ЗАКРИТТЯ
+    // ПЛАТФОРМОЗАЛЕЖНА ЛОГІКА ЗАКРИТТЯ (ВИПРАВЛЕНО: прибрано Activity.out та збільшено затримку)
     function performPlatformExit() {
-        try {  
-            if (Lampa.Activity && typeof Lampa.Activity.out === 'function') {  
-                Lampa.Activity.out();  
-            }  
-        } catch(e) {}  
-          
+        
+        // Видалено Lampa.Activity.out() для уникнення конфліктів.
+        
         setTimeout(function() {  
             // 1. Tizen
             if (window.tizen) {  
@@ -141,7 +136,7 @@
             if (Lampa.Noty) {  
                 Lampa.Noty.show(Lampa.Lang.translate('exit_manual_instruction'));  
             }  
-        }, 100);
+        }, 300); // Збільшено затримку до 300ms для надійності
     }
       
     // Показати меню дій  
@@ -176,7 +171,6 @@
       var button = document.createElement('div');    
       button.className = 'head__action action-menu-button selector';    
       
-      // ВИПРАВЛЕНО: SVG 24x24
       button.innerHTML = `    
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">    
           <path d="M18.36 6.64a9 9 0 1 1-12.73 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>  
@@ -184,7 +178,6 @@
         </svg>    
       `;    
           
-      // ВИПРАВЛЕНО: Розмір контейнера 2.8em
       button.style.cssText = `    
         display: inline-flex;    
         align-items: center;    
