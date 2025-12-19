@@ -14,8 +14,10 @@
   function getSelected() {
     try {
       if (typeof Lampa !== 'undefined' && Lampa.Storage && typeof Lampa.Storage.get === 'function') {
+        // Отримуємо з Lampa.Storage
         return Lampa.Storage.get(STORAGE_KEY, 'tmdb') || 'tmdb';
       } else if (window.localStorage) {
+        // Fallback: localStorage
         return localStorage.getItem(STORAGE_KEY) || 'tmdb';
       }
     } catch (e) {
@@ -36,31 +38,9 @@
     }
   }
 
-  // ====== Спроби застосувати джерело у різних місцях (щоб інші модулі підхопили зміни) ======
-  function applyToLocalStorageKeys(id) {
-    try {
-      if (!window.localStorage) return;
-      const keys = Object.keys(localStorage);
-      keys.forEach(k => {
-        const lk = k.toLowerCase();
-        const v = (localStorage.getItem(k) || '').toLowerCase();
+  // ====== Спроби застосувати джерело (Обмежено, тільки для Lampa і Window) ======
 
-        // Якщо ключ або значення явно містять 'source', 'provider' або відоме ім'я джерела — замінити
-        if (/source|provider|current|def/i.test(lk) || KNOWN_CANDIDATES.some(c => lk.includes(c))) {
-          try { localStorage.setItem(k, id); } catch (e) {}
-        } else {
-          // якщо значення точно дорівнює одному із кандидатів
-          KNOWN_CANDIDATES.forEach(c => {
-            if (v === c) {
-              try { localStorage.setItem(k, id); } catch (e) {}
-            }
-          });
-        }
-      });
-    } catch (e) {
-      console.warn('[Source Switcher] applyToLocalStorageKeys error', e);
-    }
-  }
+  // Видалено функцію applyToLocalStorageKeys, щоб уникнути конфліктів.
 
   function applyToWindowProps(id) {
     try {
@@ -84,32 +64,26 @@
         try {
           const lk = String(k).toLowerCase();
           if (/source|provider|current|def|selected/i.test(lk)) {
-            if (typeof Lampa[k] === 'function') {
-              // якщо функція — не викликаємо без впевненості
-            } else if (typeof Lampa[k] === 'object' && Lampa[k] !== null) {
+            if (typeof Lampa[k] === 'object' && Lampa[k] !== null) {
               if ('current' in Lampa[k]) Lampa[k].current = id;
               if ('value' in Lampa[k]) Lampa[k].value = id;
               if ('source' in Lampa[k]) Lampa[k].source = id;
-            } else {
+            } else if (typeof Lampa[k] !== 'function') {
               try { Lampa[k] = id; } catch (e) {}
             }
           }
         } catch (e) {}
       });
 
-      // Конкретні відомі варіанти API (якщо є) — пробуємо викликати
+      // Конкретні відомі варіанти API
       try { if (Lampa.Sources && typeof Lampa.Sources.setCurrent === 'function') Lampa.Sources.setCurrent(id); } catch (e) {}
-      try { if (Lampa.Sources && typeof Lampa.Sources.select === 'function') Lampa.Sources.select(id); } catch (e) {}
-      try { if (Lampa.Core && typeof Lampa.Core.setProvider === 'function') Lampa.Core.setProvider(id); } catch (e) {}
-      try { if (Lampa.App && typeof Lampa.App.setSource === 'function') Lampa.App.setSource(id); } catch (e) {}
-      try { if (Lampa.Provider && typeof Lampa.Provider.set === 'function') Lampa.Provider.set(id); } catch (e) {}
       try { if (typeof Lampa.setSource === 'function') Lampa.setSource(id); } catch (e) {}
     } catch (e) {
       console.warn('[Source Switcher] applyToLampaObject error', e);
     }
   }
 
-  // Повідомлення через Lampa.Listener (якщо є)
+  // Повідомлення через Lampa.Listener
   function notifyLampaListener(id) {
     try {
       if (typeof Lampa === 'undefined') return;
@@ -128,8 +102,8 @@
     if (!id) return;
     savePrimaryStorage(id);
 
-    // Спроби записати куди ще можуть читати інші модулі
-    applyToLocalStorageKeys(id);
+    // Спроби записати, куди ще можуть читати інші модулі
+    // applyToLocalStorageKeys(id); // ВИДАЛЕНО, щоб уникнути конфліктів
     applyToWindowProps(id);
     applyToLampaObject(id);
     notifyLampaListener(id);
@@ -139,52 +113,22 @@
       window.dispatchEvent(new CustomEvent('source_switcher_changed', { detail: { id } }));
     } catch (e) {}
 
-    // Показати нотифікацію, якщо є Lampa.Noty
+    // Показати нотифікацію
     try {
       if (typeof Lampa !== 'undefined' && Lampa.Noty && typeof Lampa.Noty.show === 'function') {
-        Lampa.Noty.show('Джерело: ' + id);
+        Lampa.Noty.show('Джерело змінено на: ' + id.toUpperCase());
       } else {
         console.info('[Source Switcher] Джерело:', id);
       }
     } catch (e) {}
 
-    // Спробувати застосувати через API або перезавантажити
-    tryApplyAndReload(id);
+    // Спроба застосувати через API або перезавантажити
+    tryApplyAndReload();
   }
 
-  // ====== Спроба застосувати через API, і якщо не вдалось — reload ======
-  function tryApplyAndReload(id) {
-    let applied = false;
-
-    try {
-      if (typeof Lampa !== 'undefined') {
-        // Якщо є метод reload/refresh в App/Activity
-        if (Lampa.App && typeof Lampa.App.reload === 'function') {
-          Lampa.App.reload();
-          applied = true;
-        } else if (Lampa.Activity && typeof Lampa.Activity.restart === 'function') {
-          Lampa.Activity.restart();
-          applied = true;
-        } else {
-          // Якщо є більш "м'які" методи оновлення джерел — викликаємо їх
-          if (Lampa.Sources && typeof Lampa.Sources.setCurrent === 'function') {
-            try { Lampa.Sources.setCurrent(id); applied = true; } catch (e) {}
-          }
-          if (!applied && Lampa.Sources && typeof Lampa.Sources.select === 'function') {
-            try { Lampa.Sources.select(id); applied = true; } catch (e) {}
-          }
-          if (!applied && typeof Lampa.setSource === 'function') {
-            try { Lampa.setSource(id); applied = true; } catch (e) {}
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('[Source Switcher] tryApplyAndReload Lampa calls failed', e);
-    }
-
-    if (applied) return;
-
-    // Fallback: повний reload сторінки через невелику затримку
+  // ====== ЗМІНЕНА ФУНКЦІЯ: ТІЛЬКИ ПЕРЕЗАВАНТАЖЕННЯ ======
+  function tryApplyAndReload() {
+    // Гарантуємо, що зміна буде застосована, примусовим перезавантаженням.
     setTimeout(() => {
       try {
         // сучасні браузери ігнорують параметр, але спробуємо
@@ -192,52 +136,30 @@
       } catch (e) {
         window.location.reload();
       }
-    }, 250);
+    }, 400); // Затримка 400мс, щоб нотифікація встигла відобразитися
   }
 
   // ====== Автоматичне виявлення джерел ======
   function detectSources() {
     const found = new Map();
 
-    // 1) Скануємо глобальні змінні window
+    // 1) Скануємо глобальні змінні window та Lampa
     KNOWN_CANDIDATES.forEach(id => {
       try {
-        if (window[id] !== undefined) found.set(id, id.toUpperCase());
-        if (window['plugin_' + id] !== undefined) found.set(id, id.toUpperCase());
-        if (window['source_' + id] !== undefined) found.set(id, id.toUpperCase());
+        // Якщо є плагін-провайдер чи модуль
+        if (window[id] !== undefined || window['plugin_' + id] !== undefined || (typeof Lampa !== 'undefined' && Lampa[id] !== undefined)) {
+          found.set(id, id.toUpperCase());
+        }
       } catch (e) {}
     });
 
-    // 2) Скануємо об'єкт Lampa на наявність модулів/ключів
+    // 2) Скануємо localStorage значення на згадки (якщо не знайдено)
     try {
-      if (typeof Lampa !== 'undefined') {
-        Object.keys(Lampa).forEach(k => {
-          const low = String(k).toLowerCase();
-          KNOWN_CANDIDATES.forEach(id => {
-            if (low.includes(id) || low === id || low === id + 'source' || low.includes('source')) {
-              found.set(id, id.toUpperCase());
-            }
-          });
-        });
-      }
-    } catch (e) {}
-
-    // 3) Скануємо DOM на data-атрибути
-    try {
-      KNOWN_CANDIDATES.forEach(id => {
-        if (document.querySelector(`[data-source="${id}"], [data-provider="${id}"], [data-id="${id}"]`)) {
-          found.set(id, id.toUpperCase());
-        }
-      });
-    } catch (e) {}
-
-    // 4) Скануємо localStorage значення на згадки
-    try {
-      if (window.localStorage) {
+      if (window.localStorage && found.size < 2) {
         Object.keys(localStorage).forEach(k => {
           const v = (localStorage.getItem(k) || '').toLowerCase();
           KNOWN_CANDIDATES.forEach(id => {
-            if (k.toLowerCase().includes(id) || v.includes(id) || k.toLowerCase().includes('source') || v.includes('source')) {
+            if (v.includes(id) || k.toLowerCase().includes('source')) {
               found.set(id, id.toUpperCase());
             }
           });
@@ -245,9 +167,9 @@
       }
     } catch (e) {}
 
-    // 5) Якщо нічого не знайдено — fallback базовий список
+    // 3) Якщо нічого не знайдено — fallback базовий список
     if (found.size === 0) {
-      [['tmdb','TMDB'], ['cub','CUB']].forEach(a => found.set(a[0], a[1]));
+      [['tmdb','TMDB (Default)'], ['cub','CUB (Fallback)']].forEach(a => found.set(a[0], a[1]));
     }
 
     return Array.from(found.entries()).map(([id, title]) => ({ id, title }));
@@ -267,8 +189,9 @@
         title: 'Перемикач джерел',
         items,
         onSelect(item) {
+          if (item.source_id === selected) return; // Не робимо нічого, якщо вибрано те саме
           setSelected(item.source_id);
-          updateButton();
+          // updateButton() викликається після перезавантаження
         }
       });
     } else {
@@ -277,7 +200,6 @@
       const idx = parseInt(choice, 10) - 1;
       if (!Number.isNaN(idx) && items[idx]) {
         setSelected(items[idx].source_id);
-        updateButton();
       }
     }
   }
@@ -299,9 +221,10 @@
 
     const refreshTitle = () => {
       const sel = getSelected();
-      const found = getSourcesFn().find(s => s.id === sel);
+      const sources = getSourcesFn();
+      const found = sources.find(s => s.id === sel);
       btn.title = found ? `Джерело: ${found.title}` : 'Перемикач джерел';
-      btn.style.opacity = sel === 'tmdb' ? '1' : '0.9';
+      btn.style.opacity = sel === 'tmdb' ? '1' : '0.8'; // Змінюємо прозорість, якщо не TMDB
     };
 
     btn.addEventListener('click', (e) => {
@@ -321,18 +244,17 @@
     return { btn, refreshTitle };
   }
 
-  function updateButton() {
-    const el = document.querySelector(`.${BUTTON_CLASS}`);
-    if (!el) return;
-    const sel = getSelected();
-    const found = detectedSourcesCache.find(s => s.id === sel);
-    el.title = found ? `Джерело: ${found.title}` : 'Перемикач джерел';
-    el.style.opacity = sel === 'tmdb' ? '1' : '0.9';
-  }
-
   function addButton(getSourcesFn) {
     try {
-      if (document.querySelector(`.${BUTTON_CLASS}`)) return;
+      // Якщо кнопка вже є, оновлюємо її
+      let existingBtn = document.querySelector(`.${BUTTON_CLASS}`);
+      if (existingBtn) {
+        const sel = getSelected();
+        const found = getSourcesFn().find(s => s.id === sel);
+        existingBtn.title = found ? `Джерело: ${found.title}` : 'Перемикач джерел';
+        existingBtn.style.opacity = sel === 'tmdb' ? '1' : '0.8';
+        return;
+      }
 
       const header = document.querySelector('.head');
       if (!header) return;
@@ -343,7 +265,6 @@
       const created = createButton(getSourcesFn);
       actions.prepend(created.btn);
       created.refreshTitle();
-      // Якщо Lampa надає стилі, кнопка повинна виглядати як інші дії
       console.log('[Source Switcher] Кнопку додано');
     } catch (e) {
       console.error('[Source Switcher] addButton error', e);
@@ -353,22 +274,22 @@
   // ====== Кеш та провайдер для джерел ======
   let detectedSourcesCache = detectSources();
   function getDetectedSources() {
-    if (!detectedSourcesCache || detectedSourcesCache.length === 0) {
-      detectedSourcesCache = detectSources();
-    }
+    // Оновлюємо кеш при кожному запиті, щоб врахувати динамічні плагіни
+    detectedSourcesCache = detectSources();
     return detectedSourcesCache;
   }
 
   // ====== Спроби вставити кнопку та відслідковування DOM ======
   function tryAddButton() {
-    [0, 200, 800, 1500].forEach(delay => setTimeout(() => addButton(getDetectedSources), delay));
+    [0, 200, 800].forEach(delay => setTimeout(() => addButton(getDetectedSources), delay));
 
+    // Додаємо постійний спостерігач за DOM, щоб кнопка з'явилася при рендерингу
     if (typeof MutationObserver !== 'undefined') {
       const observer = new MutationObserver(() => {
-        detectedSourcesCache = detectSources();
         addButton(getDetectedSources);
       });
-      observer.observe(document.documentElement || document.body, { childList: true, subtree: true });
+      // Спостерігаємо за тілом документа
+      observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
     }
   }
 
@@ -376,37 +297,26 @@
   function init() {
     console.log('[Source Switcher] Ініціалізація плагіна...');
 
+    // Прослуховуємо події Lampa
     try {
       if (typeof Lampa !== 'undefined' && Lampa.Listener && typeof Lampa.Listener.follow === 'function') {
-        Lampa.Listener.follow('full', function (event) {
-          if (event && event.type === 'render') {
-            detectedSourcesCache = detectSources();
-            setTimeout(() => addButton(getDetectedSources), 100);
-          }
-        });
         Lampa.Listener.follow('app', function (event) {
           if (event && event.type === 'ready') {
-            detectedSourcesCache = detectSources();
-            setTimeout(() => addButton(getDetectedSources), 200);
+            tryAddButton();
           }
         });
       }
     } catch (e) { /* ignore */ }
 
-    tryAddButton();
-
+    // Додаємо кнопку при повному завантаженні сторінки
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', tryAddButton);
     } else {
       tryAddButton();
     }
-
-    // Для налагодження: лог коли інші модулі шлють подію
-    window.addEventListener('source_switcher_changed', e => {
-      console.log('[Source Switcher] external event received:', e && e.detail);
-    });
   }
 
   init();
 
 })();
+
