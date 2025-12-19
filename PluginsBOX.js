@@ -853,23 +853,23 @@ Lampa.SettingsApi.addParam({
             },
             onChange: function (value) {
                 if (value == '1') {
-                    itemON('https://zy5arc.github.io/rating_omdb.js', 'Rating_omdb', '@author', 'Rating_omdb');
+                    itemON('https://tvigl.info/plugins/rating_omdb.js', 'Rating_omdb', '@author', 'Rating_omdb');
                     // console.log("nthChildIndex, переданный в itemON:", nthChildIndex);
                 }
                 if (value == '2') {
-                    var pluginToRemoveUrl = "https://zy5arc.github.io/rating_omdb.js";
+                    var pluginToRemoveUrl = "https://tvigl.info/plugins/rating_omdb.js";
                     deletePlugin(pluginToRemoveUrl);
                     // console.log("nthChildIndex, переданный в deletePlugin:", nthChildIndex);
                 }
             },
             onRender: function (item) { $('.settings-param__name', item).css('color', 'f3d900'); hideInstall()
-                var myResult = checkPlugin('https://zy5arc.github.io/rating_omdb.js');
+                var myResult = checkPlugin('https://tvigl.info/plugins/rating_omdb.js');
                 var pluginsArray = Lampa.Storage.get('plugins');
                 setTimeout(function () {
                     $('div[data-name="Rating_omdb"]').append('<div class="settings-param__status one"></div>');
                     var pluginStatus = null;
                     for (var i = 0; i < pluginsArray.length; i++) {
-                        if (pluginsArray[i].url === 'https://zy5arc.github.io/rating_omdb.js') {
+                        if (pluginsArray[i].url === 'https://tvigl.info/plugins/rating_omdb.js') {
                             pluginStatus = pluginsArray[i].status;
                             break;
                         }
