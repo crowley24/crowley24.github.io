@@ -373,7 +373,7 @@
                 var index = $(item).data('nthChildIndex'); 
 
                 if (value == '1') {
-                    itemON(pluginUrl, pluginName, '@author', pluginName, index); 
+                    itemON(pluginUrl, pluginName, '@crowley', pluginName, index); 
                 }
                 
                 if (value == '2') {
