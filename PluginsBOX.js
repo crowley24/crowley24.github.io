@@ -471,8 +471,7 @@
         });
        }
       });
-
-                 /* Блок 2: Кольоровий рейтинг */
+        
         Lampa.SettingsApi.addParam({
             component: 'add_plugin',
             param: {
@@ -659,7 +658,66 @@
         });
        }
       });
-         
+
+        Lampa.SettingsApi.addParam({
+            component: 'add_plugin',
+            param: {
+                name: 'Head filter',
+                type: 'select',
+                values: {
+                    1: 'Встановити',
+                    2: 'Видалити',
+                },
+            },
+            field: {
+                name: 'Head filter',
+                description: 'Налаштування елементів верхнього меню'
+            },
+            onChange: function (value, item) { 
+                var pluginUrl = 'https://and7ey.github.io/lampa/head_filter.js';
+                var pluginName = 'Head filter';
+                var index = $(item).data('nthChildIndex'); 
+
+                if (value == '1') {
+                    itemON(pluginUrl, pluginName, '@author', pluginName, index); 
+                }
+                
+                if (value == '2') {
+                    deletePlugin(pluginUrl, index);
+                }
+            },
+            onRender: function (item) { $('.settings-param__name', item).css('color', 'f3d900'); hideInstall()
+                var pluginUrl = 'https://and7ey.github.io/lampa/head_filter.js';
+                var pluginName = 'Head filter';
+                var myResult = checkPlugin(pluginUrl);
+                var pluginsArray = Lampa.Storage.get('plugins');
+                
+                setTimeout(function () {
+                    $('div[data-name="' + pluginName + '"]').append('<div class="settings-param__status one"></div>');
+                    var pluginStatus = null;
+                    for (var i = 0; i < pluginsArray.length; i++) {
+                        if (pluginsArray[i].url === pluginUrl) {
+                            pluginStatus = pluginsArray[i].status;
+                            break;
+                        }
+                    }
+                    if (myResult && pluginStatus !== 0) {
+                        $('div[data-name="' + pluginName + '"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #11e400, #36a700)');
+                    } else if (pluginStatus === 0) {
+                        $('div[data-name="' + pluginName + '"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff8c00, #d96e00)');
+                    } else {
+                        $('div[data-name="' + pluginName + '"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff0000, #c40000)');
+                    }
+                }, 100);
+
+                // Зберігаємо індекс локально в елементі для коректного фокусування
+                item.on("hover:enter", function (event) {
+                    var localNthChildIndex = focus_back(event);
+                    $(this).data('nthChildIndex', localNthChildIndex);
+                });
+               }
+              });
+        
         Lampa.SettingsApi.addParam({
     component: 'add_plugin',
     param: {
