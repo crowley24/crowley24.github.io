@@ -1,13 +1,13 @@
 (function () {
     'use strict';
 
-    // Для совместимости используем Lampa.JQ вместо $
+    // Используем Lampa.JQ для гарантированной совместимости с jQuery в Lampa
     const $ = Lampa.JQ; 
 
     // Основной объект плагина
     var InterFaceMod = {
-        name: 'interface_mod_lite',
-        version: '2.2.2',
+        name: 'im_lite', // Сократили имя
+        version: '2.2.3',
         debug: false,
         settings: {
             enabled: true,
@@ -16,204 +16,6 @@
         }
     };
 	
-    /**
-     * @fileoverview Функционал организации и отображения всех кнопок действий.
-     */
-    function showAllButtons() {
-        // Добавляем стили для кнопок с помощью CSS
-        var buttonStyle = document.createElement('style');
-        buttonStyle.id = 'interface_mod_buttons_style';
-        buttonStyle.innerHTML = `
-            .full-start-new__buttons, .full-start__buttons {
-                display: flex !important;
-                flex-wrap: wrap !important;
-                gap: 10px !important;
-            }
-        `;
-        document.head.appendChild(buttonStyle);
-        
-        // Вспомогательная функция для организации кнопок
-        function organizeButtons(element) {
-            if (!element) return;
-            
-            // Находим контейнеры для кнопок (поддержка различных версий Lampa)
-            var targetContainer = $(element).find('.full-start-new__buttons, .full-start__buttons, .buttons-container').first();
-            
-            if (!targetContainer.length) return;
-            
-            if (InterFaceMod.debug) {
-                console.log('InterfaceMod: Найден контейнер для кнопок', targetContainer);
-            }
-            
-            // Находим все кнопки из разных контейнеров
-            var allButtons = [];
-            
-            var buttonSelectors = [
-                '.buttons--container .full-start__button',
-                '.full-start-new__buttons .full-start__button', 
-                '.full-start__buttons .full-start__button',
-                '.buttons-container .button',
-                '.full-start-new__buttons .button',
-                '.full-start__buttons .button'
-            ];
-            
-            buttonSelectors.forEach(function(selector) {
-                $(element).find(selector).each(function() {
-                    // Проверяем, что кнопка находится внутри FullCard
-                    if ($(this).closest('.full-start-new, .full-start').length) {
-                         allButtons.push(this);
-                    }
-                });
-            });
-            
-            if (allButtons.length === 0) {
-                if (InterFaceMod.debug) {
-                    console.log('InterfaceMod: Не найдены кнопки для организации');
-                }
-                return;
-            }
-            
-            // Категории кнопок
-            var categories = {
-                online: [],
-                torrent: [],
-                trailer: [],
-                other: []
-            };
-            
-            // Отслеживаем добавленные кнопки по тексту, чтобы избежать дубликатов
-            var addedButtonTexts = {};
-            
-            // Сортируем кнопки по категориям
-            $(allButtons).each(function() {
-                var button = this;
-                var buttonText = $(button).text().trim();
-                var className = button.className || '';
-                
-                // Пропускаем дубликаты
-                if (!buttonText || addedButtonTexts[buttonText]) return;
-                addedButtonTexts[buttonText] = true;
-                
-                // Определяем категорию кнопки
-                if (className.includes('online') || buttonText.toLowerCase().includes('смотреть') || buttonText.toLowerCase().includes('онлайн')) {
-                    categories.online.push(button);
-                } else if (className.includes('torrent') || buttonText.toLowerCase().includes('торрент')) {
-                    categories.torrent.push(button);
-                } else if (className.includes('trailer') || buttonText.toLowerCase().includes('трейлер')) {
-                    categories.trailer.push(button);
-                } else {
-                    categories.other.push(button);
-                }
-            });
-            
-            // Порядок кнопок
-            var buttonSortOrder = ['online', 'torrent', 'trailer', 'other'];
-            
-            // Проверяем, активен ли сейчас контроллер FullCard
-            var activeControllerName = Lampa.Controller.enabled().name;
-            var needToggle = (activeControllerName === 'full_start' || activeControllerName === 'full_card');
-            
-            // Если нужно, временно отключаем контроллер
-            if (needToggle) Lampa.Controller.toggle('settings_component');
-            
-            // Удаляем все кнопки из контейнеров, сохраняя их
-            var buttonsToKeep = [];
-            targetContainer.children().each(function() {
-                if (allButtons.includes(this)) {
-                    $(this).detach();
-                } else {
-                    // Оставляем кнопки, которые не были найдены в allButtons
-                    buttonsToKeep.push(this);
-                }
-            });
-            
-            // Очищаем контейнер
-            targetContainer.empty();
-            
-            // Добавляем кнопки в порядке категорий
-            buttonSortOrder.forEach(function(category) {
-                categories[category].forEach(function(button) {
-                    targetContainer.append(button);
-                });
-            });
-            
-            // Добавляем обратно любые кнопки, которые были вне категории allButtons
-            buttonsToKeep.forEach(function(button) {
-                targetContainer.append(button);
-            });
-            
-            // Включаем обратно контроллер
-            if (needToggle) {
-                Lampa.Controller.toggle(activeControllerName);
-            }
-        }
-        
-        // 1. Модификация Lampa.FullCard.build (для новых версий Lampa)
-        if (Lampa.FullCard && Lampa.FullCard.build) {
-            var originFullCard = Lampa.FullCard.build;
-            
-            Lampa.FullCard.build = function(data) {
-                var card = originFullCard(data);
-                
-                card.organizeButtons = function() {
-                    if (InterFaceMod.settings.show_buttons) {
-                         // Увеличили задержку для избежания конфликтов
-                        setTimeout(function() {
-                             organizeButtons(card.activity.render());
-                        }, 250); // Увеличено до 250ms
-                    }
-                };
-                
-                // Используем onRender, чтобы гарантировать наличие всех элементов
-                card.onRender = card.organizeButtons;
-                
-                return card;
-            };
-        }
-        
-        // 2. Listener для совместимости (для старых версий Lampa)
-        Lampa.Listener.follow('full', function(e) {
-            if (e.type === 'complite' && e.object && e.object.activity && InterFaceMod.settings.show_buttons) {
-                // Увеличили задержку для избежания конфликтов
-                setTimeout(function() {
-                    organizeButtons(e.object.activity.render());
-                }, 300); // Увеличено до 300ms
-            }
-        });
-        
-        // 3. MutationObserver для отслеживания динамически добавляемых кнопок (универсальный)
-        var buttonObserver = new MutationObserver(function(mutations) {
-            if (!InterFaceMod.settings.show_buttons) return;
-            
-            let needReorganize = false;
-            
-            mutations.forEach(function(mutation) {
-                // Проверяем, чи були додані елементи в один із контейнерів кнопок
-                if (mutation.type === 'childList' && 
-                    (mutation.target.classList.contains('full-start-new__buttons') || 
-                     mutation.target.classList.contains('full-start__buttons') ||
-                     mutation.target.classList.contains('buttons-container'))) {
-                    needReorganize = true;
-                }
-            });
-            
-            if (needReorganize) {
-                // Маленька затримка для завершення операцій додавання іншими плагінами
-                setTimeout(function() {
-                    if (Lampa.Activity.active() && Lampa.Activity.active().activity) {
-                        organizeButtons(Lampa.Activity.active().activity.render());
-                    }
-                }, 100); 
-            }
-        });
-        
-        // Спостерігаємо за тілом документа
-        buttonObserver.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-    }
-
     /**
      * @fileoverview Функционал применения тем оформления.
      */
@@ -226,11 +28,12 @@
             return;
         }
 
-        // ... [Стили тем остаются без изменений, они были корректными] ...
         // Создаем новый стиль
         const style = $('<style id="interface_mod_theme"></style>');
 
+        // Определяем стили для разных тем
         const themes = {
+             // ... [Стили тем остаются без изменений, они были корректными] ...
             neon: `
                 body { background: linear-gradient(135deg, #0d0221 0%, #150734 50%, #1f0c47 100%); color: #ffffff; }
                 .menu__item.focus, .menu__item.traverse, .menu__item.hover,
@@ -374,14 +177,201 @@
                 }
             `
         };
-
+        
         // Устанавливаем стили для выбранной темы
         style.html(themes[theme] || '');
         
         // Добавляем стиль в head
         $('head').append(style);
     }
-    
+
+    /**
+     * @fileoverview Функционал организации и отображения всех кнопок действий.
+     */
+    function showAllButtons() {
+        // Добавляем стили для кнопок с помощью CSS
+        var buttonStyle = document.createElement('style');
+        buttonStyle.id = 'interface_mod_buttons_style';
+        buttonStyle.innerHTML = `
+            .full-start-new__buttons, .full-start__buttons {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                gap: 10px !important;
+            }
+        `;
+        document.head.appendChild(buttonStyle);
+
+        // Вспомогательная функция для организации кнопок (остается без изменений)
+        function organizeButtons(element) {
+            // ... (логика organizeButtons из предыдущего варианта, она была корректна) ...
+             if (!element) return;
+            
+            // Находим контейнеры для кнопок (поддержка различных версий Lampa)
+            var targetContainer = $(element).find('.full-start-new__buttons, .full-start__buttons, .buttons-container').first();
+            
+            if (!targetContainer.length) return;
+            
+            // Находим все кнопки из разных контейнеров
+            var allButtons = [];
+            
+            var buttonSelectors = [
+                '.buttons--container .full-start__button',
+                '.full-start-new__buttons .full-start__button', 
+                '.full-start__buttons .full-start__button',
+                '.buttons-container .button',
+                '.full-start-new__buttons .button',
+                '.full-start__buttons .button'
+            ];
+            
+            buttonSelectors.forEach(function(selector) {
+                $(element).find(selector).each(function() {
+                    // Проверяем, что кнопка находится внутри FullCard
+                    if ($(this).closest('.full-start-new, .full-start').length) {
+                         allButtons.push(this);
+                    }
+                });
+            });
+            
+            if (allButtons.length === 0) {
+                return;
+            }
+            
+            // Категории кнопок
+            var categories = {
+                online: [],
+                torrent: [],
+                trailer: [],
+                other: []
+            };
+            
+            // Отслеживаем добавленные кнопки по тексту, чтобы избежать дубликатов
+            var addedButtonTexts = {};
+            
+            // Сортируем кнопки по категориям
+            $(allButtons).each(function() {
+                var button = this;
+                var buttonText = $(button).text().trim();
+                var className = button.className || '';
+                
+                // Пропускаем дубликаты
+                if (!buttonText || addedButtonTexts[buttonText]) return;
+                addedButtonTexts[buttonText] = true;
+                
+                // Определяем категорию кнопки
+                if (className.includes('online') || buttonText.toLowerCase().includes('смотреть') || buttonText.toLowerCase().includes('онлайн')) {
+                    categories.online.push(button);
+                } else if (className.includes('torrent') || buttonText.toLowerCase().includes('торрент')) {
+                    categories.torrent.push(button);
+                } else if (className.includes('trailer') || buttonText.toLowerCase().includes('трейлер')) {
+                    categories.trailer.push(button);
+                } else {
+                    categories.other.push(button);
+                }
+            });
+            
+            // Порядок кнопок
+            var buttonSortOrder = ['online', 'torrent', 'trailer', 'other'];
+            
+            // Проверяем, активен ли сейчас контроллер FullCard
+            var activeControllerName = Lampa.Controller.enabled().name;
+            var needToggle = (activeControllerName === 'full_start' || activeControllerName === 'full_card');
+            
+            // Если нужно, временно отключаем контроллер
+            if (needToggle) Lampa.Controller.toggle('settings_component');
+            
+            // Удаляем все кнопки из контейнеров, сохраняя их
+            var buttonsToKeep = [];
+            targetContainer.children().each(function() {
+                if (allButtons.includes(this)) {
+                    $(this).detach();
+                } else {
+                    // Оставляем кнопки, которые не были найдены в allButtons
+                    buttonsToKeep.push(this);
+                }
+            });
+            
+            // Очищаем контейнер
+            targetContainer.empty();
+            
+            // Добавляем кнопки в порядке категорий
+            buttonSortOrder.forEach(function(category) {
+                categories[category].forEach(function(button) {
+                    targetContainer.append(button);
+                });
+            });
+            
+            // Добавляем обратно любые кнопки, которые были вне категории allButtons
+            buttonsToKeep.forEach(function(button) {
+                targetContainer.append(button);
+            });
+            
+            // Включаем обратно контроллер
+            if (needToggle) {
+                Lampa.Controller.toggle(activeControllerName);
+            }
+        }
+
+        // 1. Модификация Lampa.FullCard.build (для новых версий Lampa)
+        if (Lampa.FullCard && Lampa.FullCard.build) {
+            var originFullCard = Lampa.FullCard.build;
+            
+            Lampa.FullCard.build = function(data) {
+                var card = originFullCard(data);
+                
+                card.organizeButtons = function() {
+                    if (InterFaceMod.settings.show_buttons) {
+                        setTimeout(function() {
+                             organizeButtons(card.activity.render());
+                        }, 250); 
+                    }
+                };
+                
+                card.onRender = card.organizeButtons;
+                
+                return card;
+            };
+        }
+        
+        // 2. Listener для совместимости (для старых версий Lampa)
+        Lampa.Listener.follow('full', function(e) {
+            if (e.type === 'complite' && e.object && e.object.activity && InterFaceMod.settings.show_buttons) {
+                setTimeout(function() {
+                    organizeButtons(e.object.activity.render());
+                }, 300);
+            }
+        });
+        
+        // 3. MutationObserver
+        var buttonObserver = new MutationObserver(function(mutations) {
+            if (!InterFaceMod.settings.show_buttons) return;
+            
+            let needReorganize = false;
+            
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'childList' && 
+                    (mutation.target.classList.contains('full-start-new__buttons') || 
+                     mutation.target.classList.contains('full-start__buttons') ||
+                     mutation.target.classList.contains('buttons-container'))) {
+                    needReorganize = true;
+                }
+            });
+            
+            if (needReorganize) {
+                setTimeout(function() {
+                    if (Lampa.Activity.active() && Lampa.Activity.active().activity) {
+                        organizeButtons(Lampa.Activity.active().activity.render());
+                    }
+                }, 100); 
+            }
+        });
+        
+        // Спостерігаємо за тілом документа
+        buttonObserver.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
+
     /**
      * @fileoverview Главная функция запуска плагина
      */
@@ -390,20 +380,20 @@
         InterFaceMod.settings.show_buttons = Lampa.Storage.get('show_buttons', true);
         InterFaceMod.settings.theme = Lampa.Storage.get('theme_select', 'default');
         
-        // **!!! КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: ПРИМЕНЯЕМ ТЕМУ ПЕРВЫМ !!!**
-        // Это гарантирует, что стили темы будут применены до того, как пользователь увидит интерфейс
+        // 1. Применяем тему сразу при старте, чтобы не ждать открытия FullCard.
         applyTheme(InterFaceMod.settings.theme); 
         
-         // 1. Регистрация компонента настроек
+        // 2. Регистрация компонента настроек
+        // КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: Используем короткое имя 'im_lite'
         Lampa.SettingsApi.addComponent({
-            component: 'interface_mod_lite',
+            component: 'im_lite',
             name: 'Интерфейс мод LITE',
             icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 5C4 4.44772 4.44772 4 5 4H19C19.5523 4 20 4.44772 20 5V7C20 7.55228 19.5523 8 19 8H5C4.44772 8 4 7.55228 4 7V5Z" fill="currentColor"/><path d="M4 11C4 10.4477 4.44772 10 5 10H19C19.5523 10 20 10.4477 20 11V13C20 13.5523 19.5523 14 19 14H5C4.44772 14 4 13.5523 4 13V11Z" fill="currentColor"/><path d="M4 17C4 16.4477 4.44772 16 5 16H19C19.5523 16 20 16.4477 20 17V19C20 19.5523 19.5523 20 19 20H5C4.44772 20 4 19.5523 4 19V17Z" fill="currentColor"/></svg>'
         });
         
-        // 2. Параметр: Показывать все кнопки
+        // 3. Параметр: Показывать все кнопки
         Lampa.SettingsApi.addParam({
-            component: 'interface_mod_lite',
+            component: 'im_lite',
             param: {
                 name: 'show_buttons',
                 type: 'trigger',
@@ -411,25 +401,24 @@
             },
             field: {
                 name: 'Показывать все кнопки',
-                description: 'Отображать все кнопки действий в карточке, сортируя их по типу: Онлайн, Торрент, Трейлер'
+                description: 'Отображать все кнопки действий в карточке, сортируя их'
             },
             onChange: function (value) {
                 InterFaceMod.settings.show_buttons = value;
                 Lampa.Settings.update();
-                // Повторная организация кнопок при изменении настройки
                 if (Lampa.Activity.active() && Lampa.Activity.active().name === 'full') {
                      setTimeout(function() {
                         if (Lampa.Activity.active().activity && Lampa.Activity.active().activity.render) {
                             organizeButtons(Lampa.Activity.active().activity.render());
                         }
-                     }, 350); // Увеличили задержку
+                     }, 350); 
                 }
             }
         });
         
-        // 3. Параметр: Тема интерфейса
+        // 4. Параметр: Тема интерфейса
         Lampa.SettingsApi.addParam({
-            component: 'interface_mod_lite',
+            component: 'im_lite',
             param: {
                 name: 'theme_select',
                 type: 'select',
@@ -456,13 +445,14 @@
             }
         });
         
-        // Запускаем функцию отображения и сортировки кнопок
+        // 5. Запускаем функцию отображения и сортировки кнопок
         showAllButtons();
         
-        // Перемещаем наш компонент в настройках
+        // 6. Перемещаем наш компонент в настройках
         Lampa.Settings.listener.follow('open', function (e) {
             setTimeout(function() {
-                var interfaceMod = $('.settings-folder[data-component="interface_mod_lite"]');
+                // Используем новое имя компонента 'im_lite'
+                var interfaceMod = $('.settings-folder[data-component="im_lite"]');
                 var interfaceStandard = $('.settings-folder[data-component="interface"]');
                 
                 if (interfaceMod.length && interfaceStandard.length) {
@@ -472,10 +462,9 @@
         });
     }
 
-    // Усиленный запуск плагина
+    // Усиленный запуск плагина (остается для надежности)
     function bootPlugin() {
-        if (typeof Lampa === 'undefined' || typeof Lampa.Manifest === 'undefined') {
-            // Если Lampa не готова, ждем 50мс и пробуем еще раз
+        if (typeof Lampa === 'undefined' || typeof Lampa.Manifest === 'undefined' || typeof Lampa.SettingsApi === 'undefined') {
             setTimeout(bootPlugin, 50);
             return;
         }
@@ -491,15 +480,15 @@
         }
     }
     
-    bootPlugin(); // Запускаем усиленную загрузку
+    bootPlugin();
 
     // Регистрация плагина в манифесте
-    Lampa.Manifest.plugins.interface_mod_lite = {
+    Lampa.Manifest.plugins.im_lite = { // Используем короткое имя 'im_lite'
         name: 'Интерфейс мод LITE',
-        version: '2.2.2',
+        version: '2.2.3',
         description: 'Улучшенный интерфейс для приложения Lampa (только темы и кнопки)'
     };
     
     // Экспортируем объект плагина
-    window.interface_mod_lite = InterFaceMod;
+    window.im_lite = InterFaceMod;
 })();
