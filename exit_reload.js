@@ -22,7 +22,7 @@
             },  
             reload_button: {  
                 en: 'Reload',  
-                uk: 'Перезагрузка',  
+                uk: 'Перезавантаження',
                 ru: 'Перезагрузка'  
             },  
             console_button: {  
@@ -62,7 +62,7 @@
             }  
         });  
           
-        // Функція перезагрузки  
+        // Функція перезавантаження  
         function doReload() {  
             window.location.reload();  
         }  
@@ -149,43 +149,11 @@
             }, 100);  
         }  
           
-        // Створення кнопки меню  
-        function createActionButton() {  
-            var button = document.createElement('div');  
-            button.className = 'head__action selector';  
-            button.setAttribute('tabindex', '0');  
-            button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>';  
-              
-            var menu = createMenu();  
-              
-            button.addEventListener('click', function() {  
-                toggleMenu(menu);  
-            });  
-              
-            button.addEventListener('keydown', function(e) {  
-                if (e.keyCode === 13) {  
-                    e.preventDefault();  
-                    e.stopPropagation();  
-                    toggleMenu(menu);  
-                }  
-            });  
-              
-            if (Lampa.Listener) {  
-                Lampa.Listener.follow('back', function() {  
-                    if (menu && menu.style.display === 'block') {  
-                        closeMenu(menu);  
-                        return false;  
-                    }  
-                });  
-            }  
-              
-            return button;  
-        }  
-          
-        // Створення меню  
+        // ====== ЗМІНЕНА ФУНКЦІЯ: Створення меню (ВСТАВЛЯЄТЬСЯ У КНОПКУ) ======
         function createMenu() {  
             var menu = document.createElement('div');  
             menu.className = 'action-menu';  
+            // Змінено позиціонування: тепер відносне до батьківської кнопки
             menu.style.cssText = 'display: none; position: absolute; top: 100%; right: 0; background: rgba(0, 0, 0, 0.95); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 0.3em; padding: 0.5em 0; min-width: 200px; z-index: 10000; margin-top: 0.5em;';  
               
             var items = [  
@@ -220,14 +188,61 @@
                         e.stopPropagation();  
                         closeMenu(menu);  
                         setTimeout(item.action, 100);  
-                    }  
+                    } else if (e.keyCode === 40) { // Arrow Down
+                        e.preventDefault();
+                        var next = this.nextElementSibling;
+                        if (next) next.focus();
+                    } else if (e.keyCode === 38) { // Arrow Up
+                        e.preventDefault();
+                        var prev = this.previousElementSibling;
+                        if (prev) prev.focus();
+                    }
                 });  
                   
                 menu.appendChild(menuItem);  
             });  
+            
+            // Меню більше не додається до document.body
+            return menu;
+        }  
+          
+        // ====== ЗМІНЕНА ФУНКЦІЯ: Створення кнопки меню ======
+        function createActionButton() {  
+            var button = document.createElement('div');  
+            button.className = 'head__action selector action-menu-button';
+            // Додаємо position:relative, щоб меню всередині позиціонувалося коректно
+            button.style.position = 'relative'; 
+            button.setAttribute('tabindex', '0');  
+            // Змінено іконку: використовуємо іконку, більш схожу на "Меню дій" (більш універсальна)
+            button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>';  
               
-            document.body.appendChild(menu);  
-            return menu;  
+            var menu = createMenu();  
+            button.appendChild(menu); // <<<<< ВСТАВКА МЕНЮ В СЕРЕДИНУ КНОПКИ
+              
+            button.addEventListener('click', function(e) {  
+                e.stopPropagation();
+                toggleMenu(menu);  
+            });  
+              
+            // Обробка натискання Enter/Select на пульті
+            button.addEventListener('keydown', function(e) {  
+                if (e.keyCode === 13) {  
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleMenu(menu);  
+                }
+            });  
+              
+            if (Lampa.Listener) {  
+                Lampa.Listener.follow('back', function() {  
+                    if (menu && menu.style.display === 'block') {  
+                        closeMenu(menu);  
+                        return false; // Запобігаємо стандартній дії "Назад"
+                    }
+                });  
+            }  
+              
+            return button;  
         }  
           
         // Відкриття/закриття меню  
@@ -243,6 +258,7 @@
             menu.style.display = 'block';  
             var firstItem = menu.querySelector('.action-menu__item');  
             if (firstItem) {  
+                // НАЙВАЖЛИВІШЕ: одразу переводимо фокус на перший елемент меню
                 setTimeout(function() {  
                     firstItem.focus();  
                 }, 50);  
@@ -251,9 +267,12 @@
           
         function closeMenu(menu) {  
             menu.style.display = 'none';  
+            // Повертаємо фокус на кнопку після закриття
+            var button = menu.closest('.action-menu-button'); 
+            if(button) button.focus();
         }  
           
-        // Вставка кнопки в header  
+        // Вставка кнопки в header (Логіка, яка працює)
         function insertButton() {  
             var header = document.querySelector('.head');  
             if (!header) {  
@@ -261,11 +280,18 @@
                 return;  
             }  
               
-            var actions = header.querySelector('.head__actions');  
+            // Знаходимо контейнер дій, який працює в Lampa
+            var actions = header.querySelector('.head__actions');
             if (actions) {  
+                // Перевіряємо, чи кнопка вже існує, щоб не дублювати
+                if(actions.querySelector('.action-menu-button')) return;
+                
                 var button = createActionButton();  
-                actions.appendChild(button);  
-            }  
+                // Вставляємо на початок, щоб вона була серед перших кнопок
+                actions.prepend(button); 
+                // Після вставки може знадобитися фокус
+                button.focus(); 
+            }
         }  
           
         // Ініціалізація  
@@ -274,9 +300,16 @@
                 if (e.type === 'ready') {  
                     insertButton();  
                 }  
-            });  
+            });
+            // Додаємо прослуховування для оновлення DOM, якщо щось було пропущено
+             Lampa.Listener.follow('full', function(e) {  
+                if (e.type === 'render') {  
+                    setTimeout(insertButton, 200);
+                }  
+            });
         } else {  
             setTimeout(insertButton, 1000);  
         }  
     });  
 })();
+
