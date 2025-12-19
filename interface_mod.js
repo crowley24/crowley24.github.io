@@ -1,10 +1,13 @@
 (function () {
     'use strict';
 
+    // Для совместимости используем Lampa.JQ вместо $
+    const $ = Lampa.JQ; 
+
     // Основной объект плагина
     var InterFaceMod = {
         name: 'interface_mod_lite',
-        version: '2.2.1',
+        version: '2.2.2',
         debug: false,
         settings: {
             enabled: true,
@@ -92,7 +95,7 @@
                 addedButtonTexts[buttonText] = true;
                 
                 // Определяем категорию кнопки
-                if (className.includes('online') || buttonText.toLowerCase().includes('смотреть')) {
+                if (className.includes('online') || buttonText.toLowerCase().includes('смотреть') || buttonText.toLowerCase().includes('онлайн')) {
                     categories.online.push(button);
                 } else if (className.includes('torrent') || buttonText.toLowerCase().includes('торрент')) {
                     categories.torrent.push(button);
@@ -106,8 +109,11 @@
             // Порядок кнопок
             var buttonSortOrder = ['online', 'torrent', 'trailer', 'other'];
             
-            // Проверяем, активен ли сейчас контроллер FullCard, чтобы избежать мерцания
-            var needToggle = Lampa.Controller.enabled().name === 'full_start';
+            // Проверяем, активен ли сейчас контроллер FullCard
+            var activeControllerName = Lampa.Controller.enabled().name;
+            var needToggle = (activeControllerName === 'full_start' || activeControllerName === 'full_card');
+            
+            // Если нужно, временно отключаем контроллер
             if (needToggle) Lampa.Controller.toggle('settings_component');
             
             // Удаляем все кнопки из контейнеров, сохраняя их
@@ -116,7 +122,7 @@
                 if (allButtons.includes(this)) {
                     $(this).detach();
                 } else {
-                    // Оставляем кнопки, которые не были найдены в allButtons (если такие есть)
+                    // Оставляем кнопки, которые не были найдены в allButtons
                     buttonsToKeep.push(this);
                 }
             });
@@ -138,28 +144,28 @@
             
             // Включаем обратно контроллер
             if (needToggle) {
-                Lampa.Controller.toggle('full_start');
+                Lampa.Controller.toggle(activeControllerName);
             }
         }
         
         // 1. Модификация Lampa.FullCard.build (для новых версий Lampa)
-        if (Lampa.FullCard) {
+        if (Lampa.FullCard && Lampa.FullCard.build) {
             var originFullCard = Lampa.FullCard.build;
             
             Lampa.FullCard.build = function(data) {
                 var card = originFullCard(data);
                 
-                // Добавляем функцию организации кнопок в карточку
                 card.organizeButtons = function() {
                     if (InterFaceMod.settings.show_buttons) {
-                         // Задержка необходима, чтобы другие плагины успели добавить свои кнопки
+                         // Увеличили задержку для избежания конфликтов
                         setTimeout(function() {
                              organizeButtons(card.activity.render());
-                        }, 50); 
+                        }, 250); // Увеличено до 250ms
                     }
                 };
                 
-                card.onCreate = card.organizeButtons;
+                // Используем onRender, чтобы гарантировать наличие всех элементов
+                card.onRender = card.organizeButtons;
                 
                 return card;
             };
@@ -168,10 +174,10 @@
         // 2. Listener для совместимости (для старых версий Lampa)
         Lampa.Listener.follow('full', function(e) {
             if (e.type === 'complite' && e.object && e.object.activity && InterFaceMod.settings.show_buttons) {
-                // Задержка необходима, чтобы другие плагины успели добавить свои кнопки
+                // Увеличили задержку для избежания конфликтов
                 setTimeout(function() {
                     organizeButtons(e.object.activity.render());
-                }, 100); 
+                }, 300); // Увеличено до 300ms
             }
         });
         
@@ -197,7 +203,7 @@
                     if (Lampa.Activity.active() && Lampa.Activity.active().activity) {
                         organizeButtons(Lampa.Activity.active().activity.render());
                     }
-                }, 50); 
+                }, 100); 
             }
         });
         
@@ -216,15 +222,14 @@
         $('#interface_mod_theme').remove();
 
         // Если выбрано "Нет" или плагин отключен, выходим
-        if (theme === 'default' || !InterFaceMod.settings.enabled) {
-            // Удаляем стили, если они остались
+        if (theme === 'default') {
             return;
         }
 
+        // ... [Стили тем остаются без изменений, они были корректными] ...
         // Создаем новый стиль
         const style = $('<style id="interface_mod_theme"></style>');
 
-        // Определяем стили для разных тем
         const themes = {
             neon: `
                 body { background: linear-gradient(135deg, #0d0221 0%, #150734 50%, #1f0c47 100%); color: #ffffff; }
@@ -385,12 +390,17 @@
         InterFaceMod.settings.show_buttons = Lampa.Storage.get('show_buttons', true);
         InterFaceMod.settings.theme = Lampa.Storage.get('theme_select', 'default');
         
-        // 1. Регистрация компонента настроек
+        // **!!! КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ: ПРИМЕНЯЕМ ТЕМУ ПЕРВЫМ !!!**
+        // Это гарантирует, что стили темы будут применены до того, как пользователь увидит интерфейс
+        applyTheme(InterFaceMod.settings.theme); 
+        
+         // 1. Регистрация компонента настроек
         Lampa.SettingsApi.addComponent({
-            component: 'interface_mod_lite', // Изменено имя компонента
+            component: 'interface_mod_lite',
             name: 'Интерфейс мод LITE',
             icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 5C4 4.44772 4.44772 4 5 4H19C19.5523 4 20 4.44772 20 5V7C20 7.55228 19.5523 8 19 8H5C4.44772 8 4 7.55228 4 7V5Z" fill="currentColor"/><path d="M4 11C4 10.4477 4.44772 10 5 10H19C19.5523 10 20 10.4477 20 11V13C20 13.5523 19.5523 14 19 14H5C4.44772 14 4 13.5523 4 13V11Z" fill="currentColor"/><path d="M4 17C4 16.4477 4.44772 16 5 16H19C19.5523 16 20 16.4477 20 17V19C20 19.5523 19.5523 20 19 20H5C4.44772 20 4 19.5523 4 19V17Z" fill="currentColor"/></svg>'
         });
+        
         // 2. Параметр: Показывать все кнопки
         Lampa.SettingsApi.addParam({
             component: 'interface_mod_lite',
@@ -406,13 +416,13 @@
             onChange: function (value) {
                 InterFaceMod.settings.show_buttons = value;
                 Lampa.Settings.update();
-                // Логика перерисовки кнопок в активной FullCard может быть добавлена здесь при необходимости
+                // Повторная организация кнопок при изменении настройки
                 if (Lampa.Activity.active() && Lampa.Activity.active().name === 'full') {
                      setTimeout(function() {
                         if (Lampa.Activity.active().activity && Lampa.Activity.active().activity.render) {
                             organizeButtons(Lampa.Activity.active().activity.render());
                         }
-                     }, 100);
+                     }, 350); // Увеличили задержку
                 }
             }
         });
@@ -428,9 +438,9 @@
                     bywolf_mod: 'Bywolf_mod (Неоновая)',
                     dark_night: 'Dark Night bywolf (Градієнт)',
                     blue_cosmos: 'Blue Cosmos (Космічний)',
-                    neon: 'Neon (Класичний)',
+                    neon: 'Neon (Классический)',
                     sunset: 'Dark MOD (М\'який)',
-                    emerald: 'Emerald V1 (Смарагдовий)',
+                    emerald: 'Emerald V1 (Смарагдовый)',
                     aurora: 'Aurora (Північне сяйво)'
                 },
                 default: 'default'
@@ -446,14 +456,9 @@
             }
         });
         
-        // Применяем тему при старте
-        applyTheme(InterFaceMod.settings.theme);
-        
         // Запускаем функцию отображения и сортировки кнопок
         showAllButtons();
         
-        // Убираем обфусцированный код о поддержке и прочую неиспользуемую логику.
-
         // Перемещаем наш компонент в настройках
         Lampa.Settings.listener.follow('open', function (e) {
             setTimeout(function() {
@@ -467,21 +472,31 @@
         });
     }
 
-    // Ждем загрузки приложения и запускаем плагин
-    if (window.appready) {
-        startPlugin();
-    } else {
-        Lampa.Listener.follow('app', function (event) {
-            if (event.type === 'ready') {
-                startPlugin();
-            }
-        });
+    // Усиленный запуск плагина
+    function bootPlugin() {
+        if (typeof Lampa === 'undefined' || typeof Lampa.Manifest === 'undefined') {
+            // Если Lampa не готова, ждем 50мс и пробуем еще раз
+            setTimeout(bootPlugin, 50);
+            return;
+        }
+
+        if (window.appready) {
+            startPlugin();
+        } else {
+            Lampa.Listener.follow('app', function (event) {
+                if (event.type === 'ready') {
+                    startPlugin();
+                }
+            });
+        }
     }
+    
+    bootPlugin(); // Запускаем усиленную загрузку
 
     // Регистрация плагина в манифесте
     Lampa.Manifest.plugins.interface_mod_lite = {
         name: 'Интерфейс мод LITE',
-        version: '2.2.1',
+        version: '2.2.2',
         description: 'Улучшенный интерфейс для приложения Lampa (только темы и кнопки)'
     };
     
