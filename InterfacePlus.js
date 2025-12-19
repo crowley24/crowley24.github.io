@@ -25,7 +25,7 @@
                 display: flex !important;
                 flex-wrap: wrap !important;
                 gap: 10px !important;
-                align-items: flex-start !important; /* Вирівнювання елементів по верхньому краю */
+                align-items: flex-start !important;
             }
             /* Забезпечуємо, щоб самі кнопки не займали всю ширину */
             .full-start__button {
@@ -56,36 +56,40 @@
             targetContainer = element.find('.buttons-container');
         }
         if (!targetContainer.length) {
-            // console.log('InterfaceMod: Контейнер для кнопок не знайдено.');
             return;
         }
 
         // --- 2. Пошук всіх кнопок ---
         var allButtons = [];
+        // Включаємо селектори, які можуть знаходитися поза цільовим контейнером, але належать картці
         var buttonSelectors = [
             '.buttons--container .full-start__button',
             '.full-start-new__buttons .full-start__button',
             '.full-start__buttons .full-start__button',
             '.buttons-container .button',
             '.full-start-new__buttons .button',
-            '.full-start__buttons .button'
+            '.full-start__buttons .button',
+            // Додатковий пошук кнопок у межах картки, які можуть бути у старих структурах
+            '.full-start .full-start__button',
+            '.full-start-new .full-start__button'
         ];
+        
+        // Збираємо унікальні кнопки
+        var collectedButtons = new Set(); 
 
         buttonSelectors.forEach(function(selector) {
             element.find(selector).each(function() {
-                // Виключаємо кнопки, які вже знаходяться всередині іншого контейнера
-                if ($(this).closest(targetContainer).length) {
+                // Додаємо лише кнопки, які ще не були додані
+                if (!collectedButtons.has(this)) {
                      allButtons.push(this);
+                     collectedButtons.add(this);
                 }
             });
         });
 
         if (allButtons.length === 0) {
-            // console.log('InterfaceMod: Не знайдено кнопки для організації.');
             return;
         }
-
-        // console.log('InterfaceMod: Знайдено кнопок:', allButtons.length);
 
         // --- 3. Сортування кнопок ---
         var categories = {
@@ -101,7 +105,7 @@
             var buttonText = $(button).text().trim();
             var className = button.className || '';
 
-            // Пропускаємо дублікати
+            // Пропускаємо дублікати та кнопки без тексту
             if (!buttonText || addedButtonTexts[buttonText]) return;
             addedButtonTexts[buttonText] = true;
 
@@ -120,8 +124,8 @@
         var buttonSortOrder = ['online', 'torrent', 'trailer', 'other'];
 
         // --- 4. Реорганізація ---
-        var needToggle = Lampa.Controller.enabled().name === 'full_start';
-        if (needToggle) Lampa.Controller.toggle('settings_component'); // Тимчасово відключаємо фокус
+        var needToggle = Lampa.Controller.enabled() && Lampa.Controller.enabled().name === 'full_start';
+        if (needToggle) Lampa.Controller.toggle('settings_component');
 
         // Видаляємо всі поточні дочірні елементи контейнера
         targetContainer.empty();
@@ -139,7 +143,7 @@
                 Lampa.Controller.toggle('full_start');
             }, 100);
         }
-        console.log('InterfaceMod: Кнопки реорганізовано.');
+        console.log('InterfaceMod: Кнопки реорганізовано. Знайдено:', allButtons.length);
     }
 
     /**
@@ -164,7 +168,7 @@
                 if (InterFaceMod.settings.show_buttons) {
                     setTimeout(function() {
                         card.organizeButtons();
-                    }, 300); // Тайм-аут для забезпечення завантаження всіх кнопок
+                    }, 300);
                 }
             };
 
@@ -183,7 +187,7 @@
                 if (InterFaceMod.settings.show_buttons && !Lampa.FullCard) {
                     setTimeout(function() {
                         organizeButtons(e.object.activity);
-                    }, 300); // Тайм-аут
+                    }, 300);
                 }
             }
         });
@@ -208,23 +212,21 @@
                          mutation.target.classList.contains('buttons-container'))) {
                         needReorganize = true;
                     }
-
-                    // Перевіряємо, чи були додані елементи, які є кнопками
-                    if (!needReorganize) {
-                         mutation.addedNodes.forEach(function(node) {
-                             if (node.nodeType === 1 && (
-                                 (node.classList && (node.classList.contains('full-start__button') || node.classList.contains('button'))) ||
-                                 (node.closest && node.closest('.full-start-new__buttons, .full-start__buttons, .buttons-container'))
-                             )) {
-                                 needReorganize = true;
-                             }
-                         });
-                    }
+                    // Перевіряємо, чи була додана сама кнопка в будь-який батьківський елемент
+                    mutation.addedNodes.forEach(function(node) {
+                        if (node.nodeType === 1 && (
+                            node.classList && (node.classList.contains('full-start__button') || node.classList.contains('button'))
+                        )) {
+                            // Переконаємося, що це відбувається в контексті FullCard
+                            if (Lampa.Activity.active() && Lampa.Activity.active().name === 'full') {
+                                needReorganize = true;
+                            }
+                        }
+                    });
                 }
             });
 
             if (needReorganize) {
-                // Викликаємо реорганізацію, якщо активна повна картка
                 setTimeout(function() {
                     if (Lampa.Activity.active() && Lampa.Activity.active().name === 'full') {
                         var cardActivity = Lampa.Activity.active().activity;
@@ -232,7 +234,7 @@
                         if (cardActivity.card && typeof cardActivity.card.organizeButtons === 'function') {
                             cardActivity.card.organizeButtons();
                         } else {
-                            // Резервний варіант для версій без FullCard хука
+                            // Резервний варіант
                             organizeButtons(cardActivity);
                         }
                     }
@@ -252,6 +254,11 @@
      * Додає меню налаштувань плагіна.
      */
     function addSettings() {
+        if (!Lampa.Settings || Lampa.Settings.get().some(s => s.id === 'interface_mod')) {
+            // Налаштування вже додані
+            return;
+        }
+
         var sett = Lampa.Settings.get();
 
         // Створюємо нову секцію "Інтерфейс+"
@@ -266,31 +273,31 @@
                         menu: [
                             {
                                 title: 'Показувати всі кнопки в картці',
-                                subtitle: 'Вмикає організацію всіх кнопок у картці в один рядок (онлайн, торент, трейлер, інше).',
+                                subtitle: 'Організовує кнопки (онлайн, торент, трейлер) в один гнучкий рядок.',
                                 type: 'toggle',
                                 value: InterFaceMod.settings.show_buttons,
                                 onChange: function(value) {
                                     InterFaceMod.settings.show_buttons = value;
                                     Lampa.Storage.set('interface_mod_settings', InterFaceMod.settings);
                                     Lampa.Settings.update();
-                                    // При зміні потрібно перезапустити для застосування стилів/логіки
+                                    
+                                    // Одразу застосовуємо або видаляємо стилі
                                     if (value) {
                                         applyStyles();
                                     } else {
-                                        // Видалення стилів (якщо потрібно)
                                         var styleEl = document.getElementById('interface_mod_buttons_style');
                                         if (styleEl) styleEl.remove();
                                     }
-                                    Lampa.Noty.show('Налаштування застосуються після перезапуску картки.');
+                                    Lampa.Noty.show('Зміни налаштувань застосуються після перезапуску картки.');
                                 }
                             }
-                            // Сюди можна додати інші налаштування в майбутньому
                         ]
                     };
                     Lampa.Base.update(scheme);
                 });
             },
-            icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2A10 10 0 0 0 2 12A10 10 0 0 0 12 22A10 10 0 0 0 22 12A10 10 0 0 0 12 2M12 4A8 8 0 0 1 20 12A8 8 0 0 1 12 20A8 8 0 0 1 4 12A8 8 0 0 1 12 4M12 6A6 6 0 0 0 6 12A6 6 0 0 0 12 18A6 6 0 0 0 18 12A6 6 0 0 0 12 6M12 8A4 4 0 0 1 16 12A4 4 0 0 1 12 16A4 4 0 0 1 8 12A4 4 0 0 1 12 8Z" /></svg>' // Приклад іконки (шестерні)
+            // Іконка шестерні для налаштувань
+            icon: '<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2A10 10 0 0 0 2 12A10 10 0 0 0 12 22A10 10 0 0 0 22 12A10 10 0 0 0 12 2M12 4A8 8 0 0 1 20 12A8 8 0 0 1 12 20A8 8 0 0 1 4 12A8 8 0 0 1 12 4M12 6A6 6 0 0 0 6 12A6 6 0 0 0 12 18A6 6 0 0 0 18 12A6 6 0 0 0 12 6M12 8A4 4 0 0 1 16 12A4 4 0 0 1 12 16A4 4 0 0 1 8 12A4 4 0 0 1 12 8Z" /></svg>'
         }];
 
         // Додаємо нову секцію перед секцією "Інше" або в кінець
@@ -302,7 +309,7 @@
         }
 
         Lampa.Settings.set(sett);
-        console.log('InterfaceMod: Меню налаштувань додано.');
+        console.log('InterfaceMod: Меню налаштувань "Інтерфейс+" додано.');
     }
 
     /**
@@ -310,8 +317,14 @@
      * Ініціалізація плагіна
      */
     function init() {
-        console.log('InterfaceMod: Плагін завантажено.');
+        console.log('InterfaceMod: Плагін ініціалізується.');
 
+        // --- ВАЖЛИВЕ ВИПРАВЛЕННЯ: Спроба додати налаштування одразу
+        if (window.Lampa && Lampa.Settings) {
+             addSettings();
+        }
+
+        // Запуск логіки модифікації
         if (InterFaceMod.settings.show_buttons) {
             applyStyles();
             FullCard_hook();
@@ -319,7 +332,7 @@
             MutationObserver_setup();
         }
 
-        // Додаємо налаштування незалежно від початкового стану плагіна
+        // Додаємо налаштування через слухач як резервний варіант (якщо Lampa.Settings не був доступний одразу)
         Lampa.Listener.follow('app', function(e) {
             if (e.type === 'ready') {
                 addSettings();
@@ -335,4 +348,4 @@
     }
 
 })();
-      
+
