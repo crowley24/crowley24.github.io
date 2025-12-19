@@ -1,210 +1,128 @@
 (function () {
   'use strict';
 
-  // ====== Налаштування ======
-  const STORAGE_KEY = 'source_switcher_selected';
+  // Ідентифікатор кнопки
   const BUTTON_CLASS = 'source-switcher-btn';
 
-  // Відомі кандидати джерел (додай/видали під свої потреби)
-  const KNOWN_CANDIDATES = [
-    'tmdb', 'cub', 'trakt', 'kinopoisk', 'imdb', 'dnet', 'hdgo', 'kinopoiskhd', 'megogo', 'moretv'
-  ];
-
-  // ====== Робота зі сховищем (Lampa.Storage або localStorage) ======
-  function getSelected() {
-    try {
-      if (typeof Lampa !== 'undefined' && Lampa.Storage && typeof Lampa.Storage.get === 'function') {
-        // Отримуємо з Lampa.Storage
-        return Lampa.Storage.get(STORAGE_KEY, 'tmdb') || 'tmdb';
-      } else if (window.localStorage) {
-        // Fallback: localStorage
-        return localStorage.getItem(STORAGE_KEY) || 'tmdb';
-      }
-    } catch (e) {
-      console.warn('[Source Switcher] getSelected error', e);
-    }
-    return 'tmdb';
+  // Перевірка наявності ключового модуля Lampa.Sources
+  if (typeof Lampa === 'undefined' || !Lampa.Sources || typeof Lampa.Sources.all !== 'function') {
+    console.error('[Source Switcher] Модуль Lampa.Sources не знайдено або він не має необхідних методів. Плагін не працює.');
+    return;
   }
 
-  function savePrimaryStorage(id) {
+  // ====== Функції роботи з джерелами через Lampa API ======
+
+  /**
+   * Отримує список доступних джерел.
+   * @returns {Array} Список джерел [{id: 'tmdb', name: 'TMDB'}]
+   */
+  function getAvailableSources() {
     try {
-      if (typeof Lampa !== 'undefined' && Lampa.Storage && typeof Lampa.Storage.set === 'function') {
-        Lampa.Storage.set(STORAGE_KEY, id);
-      } else if (window.localStorage) {
-        localStorage.setItem(STORAGE_KEY, id);
-      }
+      // Використовуємо офіційний метод для отримання всіх доступних джерел
+      const allSources = Lampa.Sources.all(); 
+      // Приводимо до зручного масиву
+      return Object.keys(allSources).map(id => ({
+        id: id,
+        title: allSources[id].title || id.toUpperCase()
+      }));
     } catch (e) {
-      console.warn('[Source Switcher] savePrimaryStorage error', e);
+      console.error('[Source Switcher] Помилка при отриманні джерел:', e);
+      return [];
     }
   }
 
-  // ====== Спроби застосувати джерело (Обмежено, тільки для Lampa і Window) ======
-
-  // Видалено функцію applyToLocalStorageKeys, щоб уникнути конфліктів.
-
-  function applyToWindowProps(id) {
+  /**
+   * Змінює поточне джерело через офіційний API Lampa.
+   * @param {string} id ID нового джерела.
+   */
+  function changeSource(id) {
     try {
-      // Поширені імена
-      try { window.currentSource = id; } catch (e) {}
-      try { window.source = id; } catch (e) {}
-      try { window.provider = id; } catch (e) {}
-      try { window.current_provider = id; } catch (e) {}
-      try { window.default_source = id; } catch (e) {}
-    } catch (e) {
-      console.warn('[Source Switcher] applyToWindowProps error', e);
-    }
-  }
+      // Використовуємо офіційний метод для зміни джерела
+      Lampa.Sources.change(id);
 
-  function applyToLampaObject(id) {
-    try {
-      if (typeof Lampa === 'undefined') return;
-
-      // Спроба встановити загальні ключі в Lampa
-      Object.keys(Lampa).forEach(k => {
-        try {
-          const lk = String(k).toLowerCase();
-          if (/source|provider|current|def|selected/i.test(lk)) {
-            if (typeof Lampa[k] === 'object' && Lampa[k] !== null) {
-              if ('current' in Lampa[k]) Lampa[k].current = id;
-              if ('value' in Lampa[k]) Lampa[k].value = id;
-              if ('source' in Lampa[k]) Lampa[k].source = id;
-            } else if (typeof Lampa[k] !== 'function') {
-              try { Lampa[k] = id; } catch (e) {}
-            }
-          }
-        } catch (e) {}
-      });
-
-      // Конкретні відомі варіанти API
-      try { if (Lampa.Sources && typeof Lampa.Sources.setCurrent === 'function') Lampa.Sources.setCurrent(id); } catch (e) {}
-      try { if (typeof Lampa.setSource === 'function') Lampa.setSource(id); } catch (e) {}
-    } catch (e) {
-      console.warn('[Source Switcher] applyToLampaObject error', e);
-    }
-  }
-
-  // Повідомлення через Lampa.Listener
-  function notifyLampaListener(id) {
-    try {
-      if (typeof Lampa === 'undefined') return;
-      if (Lampa.Listener && typeof Lampa.Listener.send === 'function') {
-        Lampa.Listener.send('source_switcher.changed', { id });
-      } else if (Lampa.Listener && typeof Lampa.Listener.trigger === 'function') {
-        Lampa.Listener.trigger('source_switcher.changed', { id });
-      }
-    } catch (e) {
-      // ignore
-    }
-  }
-
-  // ====== Головна функція: зберегти і застосувати обране джерело ======
-  function setSelected(id) {
-    if (!id) return;
-    savePrimaryStorage(id);
-
-    // Спроби записати, куди ще можуть читати інші модулі
-    // applyToLocalStorageKeys(id); // ВИДАЛЕНО, щоб уникнути конфліктів
-    applyToWindowProps(id);
-    applyToLampaObject(id);
-    notifyLampaListener(id);
-
-    // Глобальна подія, щоб інші плагіни/модулі могли слухати
-    try {
-      window.dispatchEvent(new CustomEvent('source_switcher_changed', { detail: { id } }));
-    } catch (e) {}
-
-    // Показати нотифікацію
-    try {
-      if (typeof Lampa !== 'undefined' && Lampa.Noty && typeof Lampa.Noty.show === 'function') {
-        Lampa.Noty.show('Джерело змінено на: ' + id.toUpperCase());
+      const sourceName = (Lampa.Sources.all()[id].title || id).toUpperCase();
+      
+      // Показати нотифікацію
+      if (Lampa.Noty && typeof Lampa.Noty.show === 'function') {
+        Lampa.Noty.show('Джерело змінено на: ' + sourceName);
       } else {
-        console.info('[Source Switcher] Джерело:', id);
+        console.info('[Source Switcher] Джерело змінено на:', sourceName);
       }
-    } catch (e) {}
+      
+      // ПРИМІТКА: Lampa.Sources.change() зазвичай сама викликає необхідне оновлення інтерфейсу. 
+      // Якщо цього не відбувається, можна додати Lampa.Activity.restart() або Lampa.App.reload() тут.
+      
+      // Додаємо виклик перезапуску, як найнадійніший варіант
+      setTimeout(() => {
+           if (Lampa.Activity && typeof Lampa.Activity.restart === 'function') {
+               Lampa.Activity.restart();
+           } else if (Lampa.App && typeof Lampa.App.reload === 'function') {
+               Lampa.App.reload();
+           }
+      }, 300);
 
-    // Спроба застосувати через API або перезавантажити
-    tryApplyAndReload();
-  }
-
-  // ====== ЗМІНЕНА ФУНКЦІЯ: ТІЛЬКИ ПЕРЕЗАВАНТАЖЕННЯ ======
-  function tryApplyAndReload() {
-    // Гарантуємо, що зміна буде застосована, примусовим перезавантаженням.
-    setTimeout(() => {
-      try {
-        // сучасні браузери ігнорують параметр, але спробуємо
-        window.location.reload(true);
-      } catch (e) {
-        window.location.reload();
-      }
-    }, 400); // Затримка 400мс, щоб нотифікація встигла відобразитися
-  }
-
-  // ====== Автоматичне виявлення джерел ======
-  function detectSources() {
-    const found = new Map();
-
-    // 1) Скануємо глобальні змінні window та Lampa
-    KNOWN_CANDIDATES.forEach(id => {
-      try {
-        // Якщо є плагін-провайдер чи модуль
-        if (window[id] !== undefined || window['plugin_' + id] !== undefined || (typeof Lampa !== 'undefined' && Lampa[id] !== undefined)) {
-          found.set(id, id.toUpperCase());
-        }
-      } catch (e) {}
-    });
-
-    // 2) Скануємо localStorage значення на згадки (якщо не знайдено)
-    try {
-      if (window.localStorage && found.size < 2) {
-        Object.keys(localStorage).forEach(k => {
-          const v = (localStorage.getItem(k) || '').toLowerCase();
-          KNOWN_CANDIDATES.forEach(id => {
-            if (v.includes(id) || k.toLowerCase().includes('source')) {
-              found.set(id, id.toUpperCase());
-            }
-          });
-        });
-      }
-    } catch (e) {}
-
-    // 3) Якщо нічого не знайдено — fallback базовий список
-    if (found.size === 0) {
-      [['tmdb','TMDB (Default)'], ['cub','CUB (Fallback)']].forEach(a => found.set(a[0], a[1]));
+    } catch (e) {
+      console.error('[Source Switcher] Помилка при зміні джерела:', e);
+      Lampa.Noty.show('Помилка при зміні джерела.');
     }
-
-    return Array.from(found.entries()).map(([id, title]) => ({ id, title }));
+  }
+  
+  /**
+   * Отримує ID активного джерела.
+   * @returns {string} ID активного джерела.
+   */
+  function getActiveSourceId() {
+      try {
+          // Використовуємо офіційний метод
+          return Lampa.Sources.active();
+      } catch (e) {
+          return 'tmdb';
+      }
   }
 
   // ====== UI: меню і кнопка ======
+
   function showMenu(sources) {
-    const selected = getSelected();
+    const selected = getActiveSourceId();
     const items = sources.map(src => ({
       title: (src.id === selected ? '✔ ' : '') + src.title,
-      source_id: src.id,
-      rawTitle: src.title
+      source_id: src.id
     }));
 
-    if (typeof Lampa !== 'undefined' && Lampa.Select && typeof Lampa.Select.show === 'function') {
+    if (Lampa.Select && typeof Lampa.Select.show === 'function') {
       Lampa.Select.show({
         title: 'Перемикач джерел',
         items,
         onSelect(item) {
-          if (item.source_id === selected) return; // Не робимо нічого, якщо вибрано те саме
-          setSelected(item.source_id);
-          // updateButton() викликається після перезавантаження
+          if (item.source_id === selected) return; 
+          changeSource(item.source_id);
+          // Оновлення кнопки відбувається після виклику changeSource
         }
       });
     } else {
+      // Fallback, якщо Lampa.Select недоступний
       const names = items.map((it, i) => `${i + 1}. ${it.title}`).join('\n');
       const choice = prompt('Виберіть джерело:\n' + names);
       const idx = parseInt(choice, 10) - 1;
       if (!Number.isNaN(idx) && items[idx]) {
-        setSelected(items[idx].source_id);
+        changeSource(items[idx].source_id);
       }
     }
   }
+  
+  function updateButton(btn, sources) {
+      const sel = getActiveSourceId();
+      const found = sources.find(s => s.id === sel);
+      const title = found ? `Джерело: ${found.title}` : 'Перемикач джерел';
+      
+      if (btn) {
+          btn.title = title;
+          btn.style.opacity = sel === 'tmdb' ? '1' : '0.8';
+      }
+      return title;
+  }
 
-  function createButton(getSourcesFn) {
+  function createButton() {
     const btn = document.createElement('div');
     btn.className = `head__action ${BUTTON_CLASS}`;
     btn.setAttribute('role', 'button');
@@ -219,100 +137,86 @@
       </svg>
     `;
 
-    const refreshTitle = () => {
-      const sel = getSelected();
-      const sources = getSourcesFn();
-      const found = sources.find(s => s.id === sel);
-      btn.title = found ? `Джерело: ${found.title}` : 'Перемикач джерел';
-      btn.style.opacity = sel === 'tmdb' ? '1' : '0.8'; // Змінюємо прозорість, якщо не TMDB
-    };
-
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      const sources = getSourcesFn();
+      const sources = getAvailableSources();
       showMenu(sources);
     });
 
     btn.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        const sources = getSourcesFn();
+        const sources = getAvailableSources();
         showMenu(sources);
       }
     });
 
-    return { btn, refreshTitle };
+    return btn;
   }
 
-  function addButton(getSourcesFn) {
+  function addButton() {
     try {
-      // Якщо кнопка вже є, оновлюємо її
-      let existingBtn = document.querySelector(`.${BUTTON_CLASS}`);
-      if (existingBtn) {
-        const sel = getSelected();
-        const found = getSourcesFn().find(s => s.id === sel);
-        existingBtn.title = found ? `Джерело: ${found.title}` : 'Перемикач джерел';
-        existingBtn.style.opacity = sel === 'tmdb' ? '1' : '0.8';
-        return;
+      // Отримуємо джерела лише для перевірки, чи варто додавати кнопку
+      const sources = getAvailableSources();
+      if (sources.length < 2) {
+          console.log('[Source Switcher] Знайдено менше двох джерел. Кнопку не додано.');
+          return;
       }
-
+      
+      let existingBtn = document.querySelector(`.${BUTTON_CLASS}`);
       const header = document.querySelector('.head');
       if (!header) return;
 
       const actions = header.querySelector('.head__actions') || header.querySelector('.head__right') || header;
       if (!actions) return;
+      
+      if (existingBtn) {
+          // Якщо кнопка вже є, просто оновлюємо її стан
+          updateButton(existingBtn, sources);
+          return;
+      }
 
-      const created = createButton(getSourcesFn);
-      actions.prepend(created.btn);
-      created.refreshTitle();
+      const newBtn = createButton();
+      actions.prepend(newBtn);
+      updateButton(newBtn, sources);
       console.log('[Source Switcher] Кнопку додано');
     } catch (e) {
       console.error('[Source Switcher] addButton error', e);
     }
   }
 
-  // ====== Кеш та провайдер для джерел ======
-  let detectedSourcesCache = detectSources();
-  function getDetectedSources() {
-    // Оновлюємо кеш при кожному запиті, щоб врахувати динамічні плагіни
-    detectedSourcesCache = detectSources();
-    return detectedSourcesCache;
-  }
-
-  // ====== Спроби вставити кнопку та відслідковування DOM ======
-  function tryAddButton() {
-    [0, 200, 800].forEach(delay => setTimeout(() => addButton(getDetectedSources), delay));
-
-    // Додаємо постійний спостерігач за DOM, щоб кнопка з'явилася при рендерингу
-    if (typeof MutationObserver !== 'undefined') {
-      const observer = new MutationObserver(() => {
-        addButton(getDetectedSources);
-      });
-      // Спостерігаємо за тілом документа
-      observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
-    }
-  }
-
-  // ====== Ініціалізація ======
+  // ====== Ініціалізація та Прослуховування ======
+  
   function init() {
-    console.log('[Source Switcher] Ініціалізація плагіна...');
+    console.log('[Source Switcher] Ініціалізація плагіна (API Mode)...');
 
-    // Прослуховуємо події Lampa
+    // Прослуховуємо офіційну подію, коли джерело змінюється
     try {
-      if (typeof Lampa !== 'undefined' && Lampa.Listener && typeof Lampa.Listener.follow === 'function') {
-        Lampa.Listener.follow('app', function (event) {
-          if (event && event.type === 'ready') {
-            tryAddButton();
-          }
-        });
-      }
-    } catch (e) { /* ignore */ }
+        if (Lampa.Listener && typeof Lampa.Listener.follow === 'function') {
+            Lampa.Listener.follow('sources', function(event) {
+                // Подія 'sources' спрацьовує, коли список джерел змінюється або коли активне джерело змінюється
+                if (event.type === 'change' || event.type === 'all') {
+                    // Оновлюємо кнопку
+                    addButton(); 
+                }
+            });
+            
+            Lampa.Listener.follow('app', function (event) {
+              if (event && event.type === 'ready') {
+                // Додаємо кнопку при готовності App
+                addButton();
+              }
+            });
+        }
+    } catch (e) {
+        console.error('[Source Switcher] Помилка прослуховування подій Lampa:', e);
+    }
 
-    // Додаємо кнопку при повному завантаженні сторінки
+    // Додаємо кнопку при завантаженні DOM
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', tryAddButton);
+      document.addEventListener('DOMContentLoaded', addButton);
     } else {
-      tryAddButton();
+      setTimeout(addButton, 100);
     }
   }
 
