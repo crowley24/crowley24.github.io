@@ -15,48 +15,16 @@
         
     console.log('[ActionMenu] Ініціалізація плагіна');    
         
-    // Локалізація    
+    // Локалізація (Залишаємо без змін)
     Lampa.Lang.add({    
-      action_menu: {    
-        en: 'Actions',    
-        uk: 'Дії',    
-        ru: 'Действия'    
-      },  
-      reload_button: {    
-        en: 'Reload',    
-        uk: 'Перезавантаження', 
-        ru: 'Перезагрузка'    
-      },  
-      exit_button: {    
-          en: 'Exit App',    
-          uk: 'Закрити застосунок',    
-          ru: 'Выйти из приложения'    
-      },
-      exit_confirm_title: {    
-          en: 'Exit Application',    
-          uk: 'Вихід з застосунку',    
-          ru: 'Выход из приложения'    
-      },    
-      exit_confirm_message: {    
-          en: 'Are you sure you want to exit?',    
-          uk: 'Ви впевнені, що хочете вийти?',    
-          ru: 'Вы уверены, что хотите выйти?'    
-      },    
-      exit_confirm_yes: {    
-          en: 'Yes',    
-          uk: 'Так',    
-          ru: 'Да'    
-      },    
-      exit_confirm_no: {    
-          en: 'No',    
-          uk: 'Ні',    
-          ru: 'Нет'    
-      },    
-      exit_manual_instruction: {    
-          en: 'Please close the app manually via Smart TV menu',    
-          uk: 'Закрийте застосунок вручну через меню Smart TV',    
-          ru: 'Закройте приложение вручную через меню Smart TV'    
-      } 
+      action_menu: { en: 'Actions', uk: 'Дії', ru: 'Действия' },  
+      reload_button: { en: 'Reload', uk: 'Перезавантаження', ru: 'Перезагрузка' },  
+      exit_button: { en: 'Exit App', uk: 'Закрити застосунок', ru: 'Выйти из приложения' },
+      exit_confirm_title: { en: 'Exit Application', uk: 'Вихід з застосунку', ru: 'Выход из приложения' },    
+      exit_confirm_message: { en: 'Are you sure you want to exit?', uk: 'Ви впевнені, що хочете вийти?', ru: 'Вы уверены, что хотите выйти?' },    
+      exit_confirm_yes: { en: 'Yes', uk: 'Так', ru: 'Да' },    
+      exit_confirm_no: { en: 'No', uk: 'Ні', ru: 'Нет' },    
+      exit_manual_instruction: { en: 'Please close the app manually via Smart TV menu', uk: 'Закрийте застосунок вручну через меню Smart TV', ru: 'Закройте приложение вручную через меню Smart TV' } 
     });    
         
     // Функції дій  
@@ -64,94 +32,99 @@
       window.location.reload();  
     }  
       
+    // Функція, яка виконує виклик API платформи
+    function attemptExit() {
+        // 1. Tizen
+        if (window.tizen) {  
+            try {  
+                tizen.application.getCurrentApplication().exit();  
+                return true;  
+            } catch(e) {}  
+        }  
+        // 2. webOS
+        if (window.webOS) {  
+            try {  
+                webOS.platformBack();  
+                return true;  
+            } catch(e) {}  
+        }  
+        // 3. Android
+        if (window.Android) {  
+            try {  
+                Android.exit();  
+                return true;  
+            } catch(e) {}  
+        }  
+        // 4. NetCast (LG Legacy)
+        if (typeof NetCastBack === 'function') {  
+            try {  
+                NetCastBack();  
+                return true;  
+            } catch(e) {}  
+        }  
+        // 5. Стандартне закриття вкладки
+        try {  
+            window.close();  
+            return true;
+        } catch(e) {}
+        
+        return false;
+    }
+    
+    // ПЛАТФОРМОЗАЛЕЖНА ЛОГІКА ЗАКРИТТЯ (Використовуємо подвійний виклик для надійності)
+    function performPlatformExit() {
+        
+        // Крок 1: Негайно просимо Lampa звільнити активність
+        try {  
+            if (Lampa.Activity && typeof Lampa.Activity.out === 'function') {  
+                Lampa.Activity.out();  
+            }  
+        } catch(e) {}
+        
+        // Крок 2: Перша спроба (через 100ms) 
+        setTimeout(function() {  
+            if (!attemptExit()) {
+                // Якщо після першої спроби не вийшло, показуємо інструкцію
+                if (Lampa.Noty) {  
+                    Lampa.Noty.show(Lampa.Lang.translate('exit_manual_instruction'));  
+                } 
+            }
+        }, 100); 
+        
+        // Крок 3: Друга спроба (через 500ms) - як fallback
+        setTimeout(function() {  
+            attemptExit();
+        }, 500);
+    }
+      
     // НОВА ФУНКЦІЯ: ВИХІД ІЗ ЗАСТОСУНКУ З ПІДТВЕРДЖЕННЯМ
     function doExitApp() {
         if (Lampa.Select) {    
             Lampa.Select.show({    
                 title: Lampa.Lang.translate('exit_confirm_title'),    
                 items: [    
-                    {    
-                        title: Lampa.Lang.translate('exit_confirm_yes'),    
-                        value: 'yes'    
-                    },    
-                    {    
-                        title: Lampa.Lang.translate('exit_confirm_no'),    
-                        value: 'no'    
-                    }    
+                    { title: Lampa.Lang.translate('exit_confirm_yes'), value: 'yes' },    
+                    { title: Lampa.Lang.translate('exit_confirm_no'), value: 'no' }    
                 ],    
                 onSelect: function(item) {    
                     if (item.value === 'yes') {    
                         performPlatformExit();    
                     }    
                 },    
-                onBack: function() {
-                    Lampa.Controller.toggle('head');
-                }    
+                onBack: function() { Lampa.Controller.toggle('head'); }    
             });    
         } else {    
             performPlatformExit();    
         }
     }
-    
-    // ПЛАТФОРМОЗАЛЕЖНА ЛОГІКА ЗАКРИТТЯ (ВИПРАВЛЕНО: прибрано Activity.out та збільшено затримку)
-    function performPlatformExit() {
-        
-        // Видалено Lampa.Activity.out() для уникнення конфліктів.
-        
-        setTimeout(function() {  
-            // 1. Tizen
-            if (window.tizen) {  
-                try {  
-                    tizen.application.getCurrentApplication().exit();  
-                    return;  
-                } catch(e) {}  
-            }  
-            // 2. webOS
-            if (window.webOS) {  
-                try {  
-                    webOS.platformBack();  
-                    return;  
-                } catch(e) {}  
-            }  
-            // 3. Android
-            if (window.Android) {  
-                try {  
-                    Android.exit();  
-                    return;  
-                } catch(e) {}  
-            }  
-            // 4. NetCast (LG Legacy)
-            if (typeof NetCastBack === 'function') {  
-                try {  
-                    NetCastBack();  
-                    return;  
-                } catch(e) {}  
-            }  
-            // 5. Стандартне закриття вкладки
-            try {  
-                window.close();  
-            } catch(e) {}  
-              
-            // 6. Якщо все інше не вдалося
-            if (Lampa.Noty) {  
-                Lampa.Noty.show(Lampa.Lang.translate('exit_manual_instruction'));  
-            }  
-        }, 300); // Збільшено затримку до 300ms для надійності
-    }
       
-    // Показати меню дій  
+    // Показати меню дій (Залишаємо без змін)
     function showActionMenu() {  
       Lampa.Select.show({  
         title: Lampa.Lang.translate('action_menu'),  
         items: [  
-          {  
-            title: Lampa.Lang.translate('reload_button'),  
-            action: 'reload'  
-          },  
-          {  
-            title: Lampa.Lang.translate('exit_button'),  
-            action: 'exit'
-          }  
+          { title: Lampa.Lang.translate('reload_button'), action: 'reload' },  
+          { title: Lampa.Lang.translate('exit_button'), action: 'exit' }  
         ],  
         onSelect: function(item) {  
           if (item.action === 'reload') {  
@@ -166,7 +139,7 @@
       });  
     }  
         
-    // Створення основної кнопки меню з іконкою power/reload  
+    // Створення основної кнопки меню з іконкою power/reload (Залишаємо без змін)
     function createActionButton() {    
       var button = document.createElement('div');    
       button.className = 'head__action action-menu-button selector';    
@@ -191,58 +164,36 @@
         height: 2.8em;  
       `;    
           
-      // Обробник для пульта  
-      $(button).on('hover:enter', function() {    
-        showActionMenu();  
-      });    
+      $(button).on('hover:enter', showActionMenu);    
+      button.addEventListener('click', showActionMenu);    
           
-      // Обробник для миші    
-      button.addEventListener('click', function() {    
-        showActionMenu();  
-      });    
-          
-      // Hover ефекти (залишаємо без змін)
-      $(button).on('hover:focus', function() {    
-        button.style.background = 'rgba(255, 255, 255, 0.1)';    
-      });    
-      $(button).on('hover:hover', function() {    
-        button.style.background = 'rgba(255, 255, 255, 0.1)';    
-      });    
-      $(button).on('hover:blur', function() {    
-        button.style.background = 'transparent';    
-      });    
-      button.addEventListener('mouseenter', function() {    
-        button.style.background = 'rgba(255, 255, 255, 0.1)';    
-      });    
-      button.addEventListener('mouseleave', function() {    
-        button.style.background = 'transparent';    
-      });    
+      $(button).on('hover:focus', function() { button.style.background = 'rgba(255, 255, 255, 0.1)'; });    
+      $(button).on('hover:hover', function() { button.style.background = 'rgba(255, 255, 255, 0.1)'; });    
+      $(button).on('hover:blur', function() { button.style.background = 'transparent'; });    
+      button.addEventListener('mouseenter', function() { button.style.background = 'rgba(255, 255, 255, 0.1)'; });    
+      button.addEventListener('mouseleave', function() { button.style.background = 'transparent'; });    
           
       return button;    
     }    
         
-    // Додавання кнопки в header  
+    // Додавання кнопки в header
     function insertButton() {    
       var header = document.querySelector('.head');    
-      if (!header) {    
-        setTimeout(insertButton, 100);    
-        return;    
-      }    
+      if (!header) { setTimeout(insertButton, 100); return; }    
           
       var actions = header.querySelector('.head__actions');    
       if (actions) {    
         var button = createActionButton();  
-        actions.prepend(button);  
-        console.log('[ActionMenu] Кнопку меню додано в header');    
+        // ЗМІНЕНО: Використовуємо appendChild, щоб додати кнопку в кінець.
+        actions.appendChild(button);  
+        console.log('[ActionMenu] Кнопку меню додано в кінець header');    
       }    
     }    
         
-    // Ініціалізація    
+    // Ініціалізація (Залишаємо без змін)    
     if (Lampa.Listener) {    
       Lampa.Listener.follow('app', function(e) {    
-        if (e.type === 'ready') {    
-          insertButton();    
-        }    
+        if (e.type === 'ready') { insertButton(); }    
       });    
     } else {    
       setTimeout(insertButton, 1000);    
