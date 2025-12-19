@@ -598,7 +598,7 @@
             // --- ПРИМУСОВА АКТИВАЦІЯ ДЛЯ ТЕСТУ ---
             // use = new_interface; // Вже встановлено
             
-            /*
+            
             if (!(object.source == 'tmdb' || object.source == 'cub')) {
                 use = old_interface;
                 reasons.push('source not TMDB/CUB');
@@ -615,7 +615,7 @@
                 use = old_interface;
                 reasons.push('mobile platform');
             }
-            */
+            
             
             if (use === new_interface) {
                 console.log('[Enhanced Interface] ✅ ACTIVATED! (Forced)');
