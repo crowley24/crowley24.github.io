@@ -1076,10 +1076,10 @@ Lampa.SettingsApi.addParam({
             },
             field: {
                 name: 'Стильний інтерфейс ( моб. версія)',
-                description: 'Стильний інтерфейс + логотипи замість назви в картці фільму на мобільних пристроях'
+                description: 'Стильний інтерфейс в картці фільму на мобільних пристроях'
             },
             onChange: function (value, item) { 
-                var pluginUrl = 'https://crowley24.github.io/logo+mob.js';
+                var pluginUrl = 'https://crowley24.github.io/mob_style.js';
                 var pluginName = 'Стильний інтерфейс ( моб. версія)';
                 var index = $(item).data('nthChildIndex'); 
 
@@ -1092,7 +1092,7 @@ Lampa.SettingsApi.addParam({
                 }
             },
             onRender: function (item) { $('.settings-param__name', item).css('color', 'f3d900'); hideInstall()
-                var pluginUrl = 'https://crowley24.github.io/logo+mob.js';
+                var pluginUrl = 'https://crowley24.github.io/mob_style.js';
                 var pluginName = 'Стильний інтерфейс ( моб. версія)';
                 var myResult = checkPlugin(pluginUrl);
                 var pluginsArray = Lampa.Storage.get('plugins');
