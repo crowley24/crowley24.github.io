@@ -41,7 +41,6 @@
         attachLogoLoader();
     }
 
-    // Рефакторинг: Перенесення старих ключів налаштувань
     function migrateStorage() {
         const storageMap = {
             'applecation_show_ratings': 'newcard_show_ratings',
@@ -57,19 +56,14 @@
         });
     }
 
-    // Рефакторинг: Єдина функція застосування класів до <body>
     function applyCurrentSettings() {
-        // 1. Показувати/ховати рейтинги
         $('body').toggleClass('newcard--hide-ratings', !Lampa.Storage.get('newcard_show_ratings', defaults.newcard_show_ratings));
         
-        // 2. Позиція рейтингів
         const position = Lampa.Storage.get('newcard_ratings_position', defaults.newcard_ratings_position);
         $('body').removeClass('newcard--ratings-card newcard--ratings-corner').addClass('newcard--ratings-' + position);
         
-        // 3. Сховати реакції
         $('body').toggleClass('newcard--hide-reactions', Lampa.Storage.get('newcard_hide_reactions', defaults.newcard_hide_reactions));
         
-        // 4. Розмір логотипу
         const logoSize = Lampa.Storage.get('newcard_logo_size', defaults.newcard_logo_size);
         $('body').removeClass('newcard--logo-small newcard--logo-medium newcard--logo-large').addClass('newcard--logo-' + logoSize);
     }
@@ -89,7 +83,6 @@
             icon: PLUGIN_ICON
         });
 
-        // Показувати рейтинги
         Lampa.SettingsApi.addParam({
             component: 'newcard_settings',
             param: { name: 'newcard_show_ratings', type: 'trigger', default: defaults.newcard_show_ratings },
@@ -97,7 +90,6 @@
             onChange: applyCurrentSettings
         });
 
-        // Розташування рейтингів
         Lampa.SettingsApi.addParam({
             component: 'newcard_settings',
             param: {
@@ -110,12 +102,11 @@
             onChange: (value) => {
                 Lampa.Storage.set('newcard_ratings_position', value);
                 applyCurrentSettings(); 
-                addCustomTemplate(); // Перезавантаження шаблону для зміни позиції
+                addCustomTemplate();
                 Lampa.Activity.back();
             }
         });
 
-        // Розмір логотипу
         Lampa.SettingsApi.addParam({
             component: 'newcard_settings',
             param: {
@@ -128,7 +119,6 @@
             onChange: applyCurrentSettings
         });
 
-        // Сховати реакції
         Lampa.SettingsApi.addParam({
             component: 'newcard_settings',
             param: { name: 'newcard_hide_reactions', type: 'trigger', default: defaults.newcard_hide_reactions },
@@ -136,7 +126,6 @@
             onChange: applyCurrentSettings
         });
 
-        // Застосування поточної конфігурації при старті
         applyCurrentSettings();
     }
 
@@ -265,41 +254,38 @@
         Lampa.Template.add('full_start_new', template);
     }
 
-// Оптимізація: Мінімізація CSS та додавання анімацій
     function addStyles() {
         const styles = `<style>
-.newcard{transition:all .3s}.newcard .full-start-new__body{height:80vh}.newcard .full-start-new__right{display:flex;align-items:flex-end}.newcard .full-start-new__title{font-size:2.5em;font-weight:700;line-height:1.2;margin-bottom:.5em;text-shadow:0 0 .1em rgba(0,0,0,.3)}.newcard__logo{margin-bottom:.5em;opacity:0;transform:translateY(20px);transition:opacity .4s ease-out,transform .4s ease-out}.newcard__logo.loaded{opacity:1;transform:translateY(0)}.newcard__logo img{display:block;max-width:35vw;width:auto;height:auto;object-fit:contain;object-position:left center;max-height:180px}body.newcard--logo-small .newcard__logo img{max-height:120px;max-width:25vw}body.newcard--logo-large .newcard__logo img{max-height:250px;max-width:45vw}.newcard__meta{display:flex;align-items:center;color:#fff;font-size:1.1em;margin-bottom:.5em;line-height:1;opacity:0;transform:translateY(15px);transition:opacity .4s ease-out,transform .4s ease-out;transition-delay:.05s}.newcard__meta.show{opacity:1;transform:translateY(0)}.newcard__meta-left{display:flex;align-items:center;line-height:1}.newcard__network{display:inline-flex;align-items:center;line-height:1}.newcard__network img{display:block;max-height:1.4em;width:auto;object-fit:contain;filter:brightness(0) invert(1)}.newcard__meta-text{margin-left:1em;line-height:1}.newcard__meta .full-start__pg{margin:0 0 0 .6em;padding:.2em .5em;font-size:.85em;font-weight:600;border:1.5px solid rgba(255,255,255,.4);border-radius:.3em;background:rgba(255,255,255,.1);color:rgba(255,255,255,.9);line-height:1;vertical-align:middle}.newcard__ratings{display:flex;align-items:center;gap:.8em;margin-bottom:.5em;opacity:0;transform:translateY(15px);transition:opacity .4s ease-out,transform .4s ease-out;transition-delay:.08s}.newcard__ratings.show{opacity:1;transform:translateY(0)}.newcard__ratings .rate--imdb,.newcard__ratings .rate--kp{display:flex;align-items:center;gap:.35em}.newcard__ratings svg{width:2.5em;height:auto;flex-shrink:0;color:rgba(255,255,255,.85)}.newcard__ratings .rate--kp svg{width:1.5em}.newcard__ratings > div > div{font-size:.95em;font-weight:600;line-height:1;color:#fff}body.newcard--hide-ratings .newcard__ratings{display:none !important}body.newcard--hide-reactions .full-start-new__reactions{display:none !important}body.newcard--ratings-corner .newcard__right{gap:1em}body.newcard--ratings-corner .newcard__ratings{margin-bottom:0}.newcard__description{color:rgba(255,255,255,.6);font-size:.95em;line-height:1.5;margin-bottom:.5em;max-width:35vw;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;opacity:0;transform:translateY(15px);transition:opacity .4s ease-out,transform .4s ease-out;transition-delay:.1s}.newcard__description.show{opacity:1;transform:translateY(0)}.newcard__info{color:rgba(255,255,255,.75);font-size:1em;line-height:1.4;margin-bottom:.5em;opacity:0;transform:translateY(15px);transition:opacity .4s ease-out,transform .4s ease-out;transition-delay:.15s}.newcard__info.show{opacity:1;transform:translateY(0)}.newcard__left{flex-grow:1}.newcard__right{display:flex;align-items:flex-end;flex-shrink:0;position:relative}body.newcard--ratings-corner:not(.newcard--hide-reactions) .newcard__right{align-items:last baseline}.newcard .full-start-new__reactions{margin:0;display:flex;flex-direction:column-reverse;align-items:flex-end}.newcard .full-start-new__reactions > div{align-self:flex-end}.newcard .full-start-new__reactions:not(.focus){margin:0}.newcard .full-start-new__reactions:not(.focus) > div:not(:first-child){display:none}.newcard .full-start-new__reactions > div:first-child .reaction{display:flex !important;align-items:center !important;background-color:rgba(0,0,0,0) !important;gap:0 !important}.newcard .full-start-new__reactions > div:first-child .reaction__icon{background-color:rgba(0,0,0,.3) !important;-webkit-border-radius:5em;-moz-border-radius:5em;border-radius:5em;padding:.5em;width:2.6em !important;height:2.6em !important}.newcard .full-start-new__reactions > div:first-child .reaction__count{font-size:1.2em !important;font-weight:500 !important}.newcard .full-start-new__reactions.focus{gap:.5em}.newcard .full-start-new__reactions.focus > div{display:block}.newcard .full-start-new__rate-line{margin:0;height:0;overflow:hidden;opacity:0;pointer-events:none}.full-start__background{height:calc(100% + 6em);left:0 !important;opacity:0 !important;transition:opacity .6s ease-out,filter .3s ease-out !important;animation:none !important;transform:none !important;will-change:opacity,filter}.full-start__background.loaded:not(.dim){opacity:1 !important}.full-start__background.dim{filter:blur(30px)}.full-start__background.loaded.newcard-animated{opacity:1 !important}body:not(.menu--open) .full-start__background{mask-image:none}body.advanced--animation:not(.no--animation) .full-start__background.loaded{animation:none !important}.newcard .full-start__status{display:none}.newcard__overlay{width:90vw;background:linear-gradient(to right,rgba(0,0,0,.792) 0%,rgba(0,0,0,.504) 25%,rgba(0,0,0,.264) 45%,rgba(0,0,0,.12) 55%,rgba(0,0,0,.043) 60%,rgba(0,0,0,0) 65%)}
+.newcard{transition:all .3s}.newcard .full-start-new__body{height:80vh}.newcard .full-start-new__right{display:flex;align-items:flex-end}.newcard .full-start-new__title{font-size:2.5em;font-weight:700;line-height:1.2;margin-bottom:.5em;text-shadow:0 0 .1em rgba(0,0,0,.3)}.newcard__logo{margin-bottom:.5em;opacity:0;transform:translateY(20px);transition:opacity .4s ease-out,transform .4s ease-out}.newcard__logo.loaded{opacity:1;transform:translateY(0)}.newcard__logo img{display:block;max-width:35vw;width:auto;height:auto;object-fit:contain;object-position:left center;max-height:180px}body.newcard--logo-small .newcard__logo img{max-height:120px;max-width:25vw}body.newcard--logo-large .newcard__logo img{max-height:250px;max-width:45vw}.newcard__meta{display:flex;align-items:center;color:#fff;font-size:1.1em;margin-bottom:.5em;line-height:1;opacity:0;transform:translateY(15px);transition:opacity .4s ease-out,transform .4s ease-out;transition-delay:.05s}.newcard__meta.show{opacity:1;transform:translateY(0)}.newcard__meta-left{display:flex;align-items:center;line-height:1}.newcard__network{display:inline-flex;align-items:center;line-height:1}.newcard__network img{display:block;max-height:1.4em;width:auto;object-fit:contain;filter:brightness(0) invert(1)}.newcard__meta-text{margin-left:1em;line-height:1}.newcard__meta .full-start__pg{margin:0 0 0 .6em;padding:.2em .5em;font-size:.85em;font-weight:600;border:1.5px solid rgba(255,255,255,.4);border-radius:.3em;background:rgba(255,255,255,.1);color:rgba(255,255,255,.9);line-height:1;vertical-align:middle}.newcard__ratings{display:flex;align-items:center;gap:.8em;margin-bottom:.5em;opacity:0;transform:translateY(15px);transition:opacity .4s ease-out,transform .4s ease-out;transition-delay:.08s}.newcard__ratings.show{opacity:1;transform:translateY(0)}.newcard__ratings .rate--imdb,.newcard__ratings .rate--kp{display:flex;align-items:center;gap:.35em}.newcard__ratings svg{width:2.5em;height:auto;flex-shrink:0;color:rgba(255,255,255,.85)}.newcard__ratings .rate--kp svg{width:1.5em}.newcard__ratings > div > div{font-size:.95em;font-weight:600;line-height:1;color:#fff}body.newcard--hide-ratings .newcard__ratings{display:none !important}body.newcard--hide-reactions .full-start-new__reactions{display:none !important}body.newcard--ratings-corner .newcard__right{gap:1em}body.newcard--ratings-corner .newcard__ratings{margin-bottom:0}.newcard__description{color:rgba(255,255,255,.6);font-size:.95em;line-height:1.5;margin-bottom:.5em;max-width:35vw;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;opacity:0;transform:translateY(15px);transition:opacity .4s ease-out,transform .4s ease-out;transition-delay:.1s}.newcard__description.show{opacity:1;transform:translateY(0)}.newcard__info{color:rgba(255,255,255,.75);font-size:1em;line-height:1.4;margin-bottom:.5em;opacity:0;transform:translateY(15px);transition:opacity .4s ease-out,transform .4s ease-out;transition-delay:.15s}.newcard__info.show{opacity:1;transform:translateY(0)}.newcard__left{flex-grow:1}.newcard__right{display:flex;align-items:flex-end;flex-shrink:0;position:relative}body.newcard--ratings-corner:not(.newcard--hide-reactions) .newcard__right{align-items:last baseline}.newcard .full-start-new__reactions{margin:0;display:flex;flex-direction:column-reverse;align-items:flex-end}.newcard .full-start-new__reactions > div{align-self:flex-end}.newcard .full-start-new__reactions:not(.focus){margin:0}.newcard .full-start-new__reactions:not(.focus) > div:not(:first-child){display:none}.newcard .full-start-new__reactions > div:first-child .reaction{display:flex !important;align-items:center !important;background-color:rgba(0,0,0,0) !important;gap:0 !important}.newcard .full-start-new__reactions > div:first-child .reaction__icon{background-color:rgba(0,0,0,.3) !important;-webkit-border-radius:5em;-moz-border-radius:5em;border-radius:5em;padding:.5em;width:2.6em !important;height:2.6em !important}.newcard .full-start-new__reactions > div:first-child .reaction__count{font-size:1.2em !important;font-weight:500 !important}.newcard .full-start-new__reactions.focus{gap:.5em}.newcard .full-start-new__reactions.focus > div{display:block}.newcard .full-start-new__rate-line{margin:0;height:0;overflow:hidden;opacity:0;pointer-events:none}.full-start__background{height:calc(100% + 6em);left:0 !important;opacity:0 !important;transition:opacity .6s ease-out,filter .3s ease-out !important;animation:none !important;transform:none !important;will-change:opacity,filter}.full-start__background.loaded:not(.dim){opacity:1 !important}.full-start__background.dim{filter:brightness(0.6);transition:filter .3s ease-out !important;will-change:filter}.full-start__background.loaded.newcard-animated{opacity:1 !important}body:not(.menu--open) .full-start__background{mask-image:none}body.advanced--animation:not(.no--animation) .full-start__background.loaded{animation:none !important}.newcard .full-start__status{display:none}.newcard__overlay{width:90vw;background:linear-gradient(to right,rgba(0,0,0,.792) 0%,rgba(0,0,0,.504) 25%,rgba(0,0,0,.264) 45%,rgba(0,0,0,.12) 55%,rgba(0,0,0,.043) 60%,rgba(0,0,0,0) 65%)}
 
-/* --- АНІМАЦІЇ КНОПОК --- */
+/* --- ПРИСКОРЕНІ АНІМАЦІЇ КНОПОК (GPU-ACCELERATED) --- */
 .full-start-new__buttons .selector {
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
-    will-change: transform, box-shadow; 
-    border: 3px solid transparent; 
+    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1); 
+    will-change: transform, filter, box-shadow; 
+    transform: scale(1) translateZ(0); 
+    border: 0; 
 }
 .full-start-new__buttons .selector.focus {
-    transform: scale(1.08); 
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.4), 0 0 5px rgba(255, 255, 255, 0.2);
-    border: 3px solid rgba(255, 255, 255, 0.6); 
-    filter: brightness(1.2); 
+    transform: scale(1.05) translateZ(0); 
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.6); 
+    filter: brightness(1.3); 
 }
 .button--play.focus {
-    /* Сильніший ефект для кнопки Play */
-    transform: scale(1.12);
-    box-shadow: 0 0 20px #fff, 0 0 8px rgba(255, 255, 255, 0.7);
+    transform: scale(1.1) translateZ(0);
+    box-shadow: 0 0 15px #fff, 0 0 5px rgba(255, 255, 255, 0.8);
 }
 .button--options {
-    margin-top: 10px; /* Компенсація збільшення, щоб не "стрибало" */
+    margin-top: 0;
 }
 </style>`;
         
-        // Мінімізація CSS
         const minifiedStyles = styles.replace(/\s+/g, ' ').replace(/> </g, '><').trim();
 
         Lampa.Template.add('newcard_css', minifiedStyles);
         $('body').append(Lampa.Template.get('newcard_css', {}, true));
     }
 
-    // Патчинг та інші утиліти (залишені без змін)
+    // --- Функціональні блоки (без змін) ---
     function patchApiImg() {
         const originalImg = Lampa.Api.img;
         Lampa.Api.img = (src, size) => {
@@ -464,8 +450,8 @@
 
         const runCallback = () => {
             background.addClass('newcard-animated');
-            // Прискорена поява контенту (400мс)
-            setTimeout(callback, 400); 
+            // Зменшена затримка для прискорення UX (250мс)
+            setTimeout(callback, 250); 
         };
 
         if (background.hasClass('loaded')) {
