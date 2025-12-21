@@ -1,29 +1,19 @@
 (function () {
   'use strict';
 
-  /* ======================================================
-     INIT
-  ====================================================== */
   function init() {
     if (!Lampa.Platform.screen('tv')) return;
 
-    addTemplate();
     addStyles();
     addListener();
-  }
-
-  /* ======================================================
-     TEMPLATE
-     (мінімальний, бо UI вставляємо вручну)
-  ====================================================== */
-  function addTemplate() {
-    Lampa.Template.add('full_start_new', `<div class="nf-wrap"></div>`);
   }
 
   /* ======================================================
      STYLES
   ====================================================== */
   function addStyles() {
+    if ($('#nf-ui-style').length) return;
+
     const css = `
       .nf-left {
         max-width: 55vw;
@@ -87,21 +77,26 @@
   function addListener() {
     Lampa.Listener.follow('full', e => {
       if (e.type !== 'complite') return;
-      buildUI(e.object.activity, e.data.movie);
+      rebuildUI(e.object.activity, e.data.movie);
     });
   }
 
   /* ======================================================
-     BUILD UI
+     SAFE UI REBUILD
   ====================================================== */
-  function buildUI(activity, data) {
+  function rebuildUI(activity, data) {
     const render = activity.render();
     const left = render.find('.full-start__left');
+    const right = render.find('.full-start__right');
     const reactions = render.find('.full-start__reactions');
 
     if (!left.length) return;
 
-    left.empty();
+    // не чіпаємо базову структуру — тільки контент
+    left.children().hide();
+
+    // не дублюємо
+    if (left.find('.nf-left').length) return;
 
     const ui = $(`
       <div class="nf-left">
@@ -122,16 +117,15 @@
 
     left.append(ui);
 
-    // reactions залишаємо справа
-    if (reactions.length) {
-      render.find('.full-start__right').append(reactions);
+    if (right.length && reactions.length) {
+      right.append(reactions);
     }
 
     fillData(render, data);
   }
 
   /* ======================================================
-     FILL DATA
+     DATA
   ====================================================== */
   function fillData(render, data) {
     const meta = [];
@@ -140,7 +134,7 @@
       meta.push((data.release_date || data.first_air_date).slice(0, 4));
     }
 
-    if (data.genres && data.genres.length) {
+    if (data.genres?.length) {
       meta.push(data.genres.slice(0, 2).map(g => g.name).join(', '));
     }
 
@@ -158,7 +152,7 @@
   }
 
   /* ======================================================
-     LOGO (TMDB)
+     LOGO
   ====================================================== */
   function loadLogo(render, data) {
     const type = data.name ? 'tv' : 'movie';
@@ -167,20 +161,20 @@
     const url = Lampa.TMDB.api(`${type}/${data.id}/images`);
 
     $.get(url, res => {
-      const logos = res && res.logos ? res.logos : [];
+      const logos = res?.logos || [];
       const logo =
         logos.find(l => l.iso_639_1 === lang) ||
         logos.find(l => l.iso_639_1 === 'en') ||
         logos[0];
 
-      const container = render.find('.nf-logo');
+      const box = render.find('.nf-logo');
 
       if (logo) {
-        const img = new Image();
-        img.src = Lampa.TMDB.image('/t/p/w500' + logo.file_path);
-        container.html(img);
+        box.html(
+          `<img src="${Lampa.TMDB.image('/t/p/w500' + logo.file_path)}">`
+        );
       } else {
-        container.html(
+        box.html(
           `<div class="nf-title">${data.title || data.name}</div>`
         );
       }
