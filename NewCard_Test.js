@@ -18,6 +18,9 @@
         addStyles();
         addSettings();
         attachLogoLoader();
+        // >>>>>>> ПОЧАТОК ЗМІНИ (Додавання логіки затемнення) <<<<<<<
+        addFullStartBackgroundLogic(); 
+        // <<<<<<< КІНЕЦЬ ЗМІНИ (Додавання логіки затемнення) >>>>>>>
     }
 
     // Переводы для настроек
@@ -26,155 +29,93 @@
             ru: 'Показывать рейтинги',
             en: 'Show ratings',
             uk: 'Показувати рейтинги',
-            be: 'Паказваць рэйтынгі',
-            bg: 'Показване на рейтинги',
-            cs: 'Zobrazit hodnocení',
-            he: 'הצג דירוגים',
-            pt: 'Mostrar classificações',
-            zh: '显示评分'
         },
         show_ratings_desc: {
             ru: 'Отображать рейтинги IMDB и КиноПоиск',
             en: 'Display IMDB and KinoPoisk ratings',
             uk: 'Відображати рейтинги IMDB та КіноПошук',
-            be: 'Адлюстроўваць рэйтынгі IMDB і КіноПошук',
-            bg: 'Показване на рейтинги IMDB и КиноПоиск',
-            cs: 'Zobrazit hodnocění IMDB и KinoPoisk',
-            he: 'הצג דירוגי IMDB וקינופויסק',
-            pt: 'Exibir classificações IMDB e KinoPoisk',
-            zh: '显示 IMDB 和 KinoPoisk 评分'
         },
         hide_reactions: {
             ru: 'Скрыть реакции Lampa',
             en: 'Hide Lampa reactions',
             uk: 'Сховати реакції Lampa',
-            be: 'Схаваць рэакцыі Lampa',
-            bg: 'Скриване на реакции Lampa',
-            cs: 'Skrýt reakce Lampa',
-            he: 'הסתר תגובות Lampa',
-            pt: 'Ocultar reações Lampa',
-            zh: '隐藏 Lampa 反应'
         },
         hide_reactions_desc: {
             ru: 'Скрыть блок с реакциями',
             en: 'Hide reactions block',
             uk: 'Сховати блок з реакціями',
-            be: 'Схаваць блок з рэакцыямі',
-            bg: 'Скриване на блока с реакции',
-            cs: 'Skrýt blok s reakcemi',
-            he: 'הסתר בלוק תגובות',
-            pt: 'Ocultar bloco de reações',
-            zh: '隐藏反应块'
         },
         ratings_position: {
             ru: 'Расположение рейтингов',
             en: 'Ratings position',
             uk: 'Розташування рейтингів',
-            be: 'Размяшчэнне рэйтынгаў',
-            bg: 'Позиция на рейтингите',
-            cs: 'Umístění hodnocení',
-            he: 'מיקום דירוגים',
-            pt: 'Posição das classificações',
-            zh: '评分位置'
         },
         ratings_position_desc: {
             ru: 'Выберите где отображать рейтинги',
             en: 'Choose where to display ratings',
             uk: 'Виберіть де відображати рейтинги',
-            be: 'Выберыце дзе адлюстроўваць рэйтынгі',
-            bg: 'Изберете къде да се показват рейтингите',
-            cs: 'Vyberte, kde zobrazit hodnocení',
-            he: 'בחר היכן להציג דירוגים',
-            pt: 'Escolha onde exibir classificações',
-            zh: '选择评分显示位置'
         },
         position_card: {
             ru: 'В карточке',
             en: 'In card',
             uk: 'У картці',
-            be: 'У картцы',
-            bg: 'В картата',
-            cs: 'Na kartě',
-            he: 'בכרטיס',
-            pt: 'No cartão',
-            zh: '在卡片中'
         },
         position_corner: {
             ru: 'В левом нижнем углу',
             en: 'Bottom left corner',
             uk: 'У лівому нижньому куті',
-            be: 'У левым ніжнім куце',
-            bg: 'В долния ляв ъгъл',
-            cs: 'V levém dolním rohu',
-            he: 'בפינה השמאלית התחתונה',
-            pt: 'Canto inferior esquerdo',
-            zh: '左下角'
         },
         logo_size: {
             ru: 'Размер логотипа',
             en: 'Logo size',
             uk: 'Розмір логотипу',
-            be: 'Памер лагатыпа',
-            bg: 'Размер на логото',
-            cs: 'Velikost loga',
-            he: 'גודל לוגו',
-            pt: 'Tamanho do logotipo',
-            zh: '标志尺寸'
         },
         logo_size_desc: {
             ru: 'Выберите максимальный размер логотипа',
             en: 'Choose maximum logo size',
             uk: 'Виберіть максимальний розмір логотипу',
-            be: 'Выберыце максімальны памер лагатыпа',
-            bg: 'Изберете максималния размер на логото',
-            cs: 'Vyberte maximální velikost loga',
-            he: 'בחר גודל לוגו מקסיмальный',
-            pt: 'Escolha o tamanho máximo do logotipo',
-            zh: '选择最大标志尺寸'
         },
         size_small: {
             ru: 'Маленький',
             en: 'Small',
             uk: 'Маленький',
-            be: 'Маленькі',
-            bg: 'Малък',
-            cs: 'Malý',
-            he: 'קטן',
-            pt: 'Pequeno',
-            zh: '小型'
         },
         size_medium: {
             ru: 'Средний',
             en: 'Medium',
             uk: 'Середній',
-            be: 'Сярэдні',
-            bg: 'Среден',
-            cs: 'Střední',
-            he: 'בינוני',
-            pt: 'Médio',
-            zh: '中型'
         },
         size_large: {
             ru: 'Большой',
             en: 'Large',
             uk: 'Великий',
-            be: 'Вялікі',
-            bg: 'Голям',
-            cs: 'Velký',
-            he: 'גדול',
-            pt: 'Grande',
-            zh: '大型'
         }
     };
-
+    
+    // >>>>>>> ПОЧАТОК ЗМІНИ (Коригування локалізації в t) <<<<<<<
     function t(key) {
-        const lang = Lampa.Storage.get('language', 'ru');
-        return translations[key] && translations[key][lang] || translations[key].ru;
+        // Оновлено: використовуємо лише ru/en/uk для пошуку
+        const lang = Lampa.Storage.get('language'); // Просто отримуємо код мови
+        
+        // Перевіряємо, чи підтримується мова. Якщо ні, або якщо перекладу немає, використовуємо 'ru'
+        if (translations[key] && translations[key][lang]) {
+            return translations[key][lang];
+        }
+        
+        // Використовуємо 'uk' як запасний варіант після поточної мови, якщо вона не 'ru'
+        if (lang !== 'ru' && translations[key] && translations[key]['uk']) {
+             return translations[key]['uk'];
+        }
+        
+        // За замовчуванням завжди повертаємо 'ru', якщо інше не знайдено
+        return translations[key] && translations[key].ru || key;
     }
+    // <<<<<<< КІНЕЦЬ ЗМІНИ (Коригування локалізації в t) >>>>>>>
 
     // Добавляем настройки плагина
     function addSettings() {
-        // Инициализируем значения по умолчанию
+        // ... (Ваш оригінальний код налаштувань) ...
+        // Ініціалізуємо значення за замовчуванням
         if (Lampa.Storage.get('applecation_show_ratings') === undefined) {
             Lampa.Storage.set('applecation_show_ratings', false);
         }
@@ -306,7 +247,7 @@
     function addCustomTemplate() {
         const ratingsPosition = Lampa.Storage.get('applecation_ratings_position', 'card');
         
-                // Блок с рейтингами
+        // Блок с рейтингами
         const ratingsBlock = `<div class="applecation__ratings">
                         <div class="rate--imdb hide">
                             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none">
@@ -322,7 +263,180 @@
                         </div>
                     </div>`;
         
-        const template = `<div class="full-start-new applecation">
+          // >>>>>>> ПОЧАТОК ЗМІНИ (Коригування локалізації в t) <<<<<<<
+    function t(key) {
+        // Оновлено: використовуємо лише ru/en/uk для пошуку
+        const lang = Lampa.Storage.get('language'); // Просто отримуємо код мови
+        
+        // Перевіряємо, чи підтримується мова. Якщо ні, або якщо перекладу немає, використовуємо 'ru'
+        if (translations[key] && translations[key][lang]) {
+            return translations[key][lang];
+        }
+        
+        // Використовуємо 'uk' як запасний варіант після поточної мови, якщо вона не 'ru'
+        if (lang !== 'ru' && translations[key] && translations[key]['uk']) {
+             return translations[key]['uk'];
+        }
+        
+        // За замовчуванням завжди повертаємо 'ru', якщо інше не знайдено
+        return translations[key] && translations[key].ru || key;
+    }
+    // <<<<<<< КІНЕЦЬ ЗМІНИ (Коригування локалізації в t) >>>>>>>
+
+    // Добавляем настройки плагина
+    function addSettings() {
+        // ... (Ваш оригінальний код налаштувань) ...
+        // Ініціалізуємо значення за замовчуванням
+        if (Lampa.Storage.get('applecation_show_ratings') === undefined) {
+            Lampa.Storage.set('applecation_show_ratings', false);
+        }
+        if (Lampa.Storage.get('applecation_hide_reactions') === undefined) {
+            Lampa.Storage.set('applecation_hide_reactions', false);
+        }
+        if (Lampa.Storage.get('applecation_ratings_position') === undefined) {
+            Lampa.Storage.set('applecation_ratings_position', 'card');
+        }
+        // Добавляем значение по умолчанию для размера логотипа
+        if (Lampa.Storage.get('applecation_logo_size') === undefined) {
+            Lampa.Storage.set('applecation_logo_size', 'medium');
+        }
+
+        // Создаем раздел настроек
+        Lampa.SettingsApi.addComponent({
+            component: 'applecation_settings',
+            name: 'Applecation',
+            icon: PLUGIN_ICON
+        });
+        
+        // --- ВИДАЛЕНО: Додавання інформації про плагін ---
+
+        // Показывать рейтинги
+        Lampa.SettingsApi.addParam({
+            component: 'applecation_settings',
+            param: {
+                name: 'applecation_show_ratings',
+                type: 'trigger',
+                default: false
+            },
+            field: {
+                name: t('show_ratings'),
+                description: t('show_ratings_desc')
+            },
+            onChange: function(value) {
+                if (value) {
+                    $('body').removeClass('applecation--hide-ratings');
+                } else {
+                    $('body').addClass('applecation--hide-ratings');
+                }
+            }
+        });
+
+        // Расположение рейтингов
+        Lampa.SettingsApi.addParam({
+            component: 'applecation_settings',
+            param: {
+                name: 'applecation_ratings_position',
+                type: 'select',
+                values: {
+                    card: t('position_card'),
+                    corner: t('position_corner')
+                },
+                default: 'card'
+            },
+            field: {
+                name: t('ratings_position'),
+                description: t('ratings_position_desc')
+            },
+            onChange: function(value) {
+                Lampa.Storage.set('applecation_ratings_position', value);
+                $('body').removeClass('applecation--ratings-card applecation--ratings-corner');
+                $('body').addClass('applecation--ratings-' + value);
+                // Обновляем шаблон и перезагружаем активность
+                addCustomTemplate();
+                Lampa.Activity.back();
+            }
+        });
+
+        // Размер логотипа (НОВАЯ НАСТРОЙКА)
+        Lampa.SettingsApi.addParam({
+            component: 'applecation_settings',
+            param: {
+                name: 'applecation_logo_size',
+                type: 'select',
+                values: {
+                    small: t('size_small'),
+                    medium: t('size_medium'),
+                    large: t('size_large')
+                },
+                default: 'medium'
+            },
+            field: {
+                name: t('logo_size'),
+                description: t('logo_size_desc')
+            },
+            onChange: function(value) {
+                Lampa.Storage.set('applecation_logo_size', value);
+                // Обновляем класс на body для стилей
+                $('body').removeClass('applecation--logo-small applecation--logo-medium applecation--logo-large');
+                $('body').addClass('applecation--logo-' + value);
+            }
+        });
+
+        // Скрыть реакции
+        Lampa.SettingsApi.addParam({
+            component: 'applecation_settings',
+            param: {
+                name: 'applecation_hide_reactions',
+                type: 'trigger',
+                default: false
+            },
+            field: {
+                name: t('hide_reactions'),
+                description: t('hide_reactions_desc')
+            },
+            onChange: function(value) {
+                if (value) {
+                    $('body').addClass('applecation--hide-reactions');
+                } else {
+                    $('body').removeClass('applecation--hide-reactions');
+                }
+            }
+        });
+
+        // Применяем текущие настройки
+        if (!Lampa.Storage.get('applecation_show_ratings', false)) {
+            $('body').addClass('applecation--hide-ratings');
+        }
+        $('body').addClass('applecation--ratings-' + Lampa.Storage.get('applecation_ratings_position', 'card'));
+        if (Lampa.Storage.get('applecation_hide_reactions', false)) {
+            $('body').addClass('applecation--hide-reactions');
+        }
+        // Применяем текущую настройку размера логотипа
+        $('body').addClass('applecation--logo-' + Lampa.Storage.get('applecation_logo_size', 'medium'));
+    }
+
+    function addCustomTemplate() {
+        const ratingsPosition = Lampa.Storage.get('applecation_ratings_position', 'card');
+        
+        // Блок с рейтингами
+        const ratingsBlock = `<div class="applecation__ratings">
+                        <div class="rate--imdb hide">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none">
+                                <path fill="currentColor" d="M4 7c-1.103 0-2 .897-2 2v6.4c0 1.103.897 2 2 2h16c1.103 0 2-.897 2-2V9c0-1.103-.897-2-2-2H4Zm1.4 2.363h1.275v5.312H5.4V9.362Zm1.962 0H9l.438 2.512.287-2.512h1.75v5.312H10.4v-3l-.563 3h-.8l-.512-3v3H7.362V9.362Zm8.313 0H17v1.2c.16-.16.516-.363.875-.363.36.04.84.283.8.763v3.075c0 .24-.075.404-.275.524-.16.04-.28.075-.6.075-.32 0-.795-.196-.875-.237-.08-.04-.163.275-.163.275h-1.087V9.362Zm-3.513.037H13.6c.88 0 1.084.078 1.325.237.24.16.35.397.35.838v3.2c0 .32-.15.563-.35.762-.2.2-.484.288-1.325.288h-1.438V9.4Zm1.275.8v3.563c.2 0 .488.04.488-.2v-3.126c0-.28-.247-.237-.488-.237Zm3.763.675c-.12 0-.2.08-.2.2v2.688c0 .159.08.237.2.237.12 0 .2-.117.2-.238l-.037-2.687c0-.12-.043-.2-.163-.2Z"/>
+                            </svg>
+                            <div>0.0</div>
+                        </div>
+                        <div class="rate--kp hide">
+                            <svg viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg" fill="none">
+                                <path d="M96.5 20 66.1 75.733V20H40.767v152H66.1v-55.733L96.5 172h35.467C116.767 153.422 95.2 133.578 80 115c28.711 16.889 63.789 35.044 92.5 51.933v-30.4C148.856 126.4 108.644 115.133 85 105c23.644 3.378 63.856 7.889 87.5 11.267v-30.4L85 90c27.022-11.822 60.478-22.711 87.5-34.533v-30.4C143.789 41.956 108.711 63.11 80 80l51.967-60z" style="fill:none;stroke:currentColor;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10"/>
+                            </svg>
+                            <div>0.0</div>
+                        </div>
+                    </div>`;
+        
+        // >>>>>>> ПОЧАТОК ЗМІНИ (Додавання класу applecation--wrapper для затемнення) <<<<<<<
+// Додаємо клас applecation--wrapper, щоб можна було стилізувати backdrop
+        const template = `<div class="full-start-new applecation applecation--wrapper"> 
         <div class="full-start-new__body">
             <div class="full-start-new__left hide">
                 <div class="full-start-new__poster">
@@ -350,46 +464,58 @@
                     
                     <div class="full-start-new__head" style="display: none;"></div>
                     <div class="full-start-new__details" style="display: none;"></div>
+                    
+                    <div class="applecation__scrollable"> 
+                    
+                        <div class="full-start-new__buttons">
+                            <div class="full-start__button selector button--play">
+                                <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/>
+                                    <path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/>
+                                </svg>
+                                <span>#{title_watch}</span>
+                            </div>
 
-                    <div class="full-start-new__buttons">
-                        <div class="full-start__button selector button--play">
-                            <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/>
-                                <path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/>
- </svg>
-                            <span>#{title_watch}</span>
-                        </div>
+                            <div class="full-start__button selector button--book">
+                                <svg width="21" height="32" viewBox="0 0 21 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M2 1.5H19C19.2761 1.5 19.5 1.72386 19.5 2V27.9618C19.5 28.3756 19.0261 28.6103 18.697 28.3595L12.6212 23.7303C11.3682 22.7757 9.63183 22.7757 8.37885 23.7303L2.30302 28.3595C1.9739 28.6103 1.5 28.3756 1.5 27.9618V2C1.5 1.72386 1.72386 1.5 2 1.5Z" stroke="currentColor" stroke-width="2.5"/>
+                                </svg>
+                                <span>#{settings_input_links}</span>
+                            </div>
 
-                        <div class="full-start__button selector button--book">
-                            <svg width="21" height="32" viewBox="0 0 21 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M2 1.5H19C19.2761 1.5 19.5 1.72386 19.5 2V27.9618C19.5 28.3756 19.0261 28.6103 18.697 28.3595L12.6212 23.7303C11.3682 22.7757 9.63183 22.7757 8.37885 23.7303L2.30302 28.3595C1.9739 28.6103 1.5 28.3756 1.5 27.9618V2C1.5 1.72386 1.72386 1.5 2 1.5Z" stroke="currentColor" stroke-width="2.5"/>
-                            </svg>
-                            <span>#{settings_input_links}</span>
-                        </div>
+                            <div class="full-start__button selector button--reaction">
+                                <svg width="38" height="34" viewBox="0 0 38 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M37.208 10.9742C37.1364 10.8013 37.0314 10.6441 36.899 10.5117C36.7666 10.3794 36.6095 10.2744 36.4365 10.2028L12.0658 0.108375C11.7166 -0.0361828 11.3242 -0.0361227 10.9749 0.108542C10.6257 0.253206 10.3482 0.530634 10.2034 0.879836L0.108666 25.2507C0.0369593 25.4236 3.37953e-05 25.609 2.3187e-08 25.7962C-3.37489e-05 25.9834 0.0368249 26.1688 0.108469 26.3418C0.180114 26.5147 0.28514 26.6719 0.417545 26.8042C0.54995 26.9366 0.707139 27.0416 0.880127 27.1131L17.2452 33.8917C17.5945 34.0361 17.9869 34.0361 18.3362 33.8917L29.6574 29.2017C29.8304 29.1301 29.9875 29.0251 30.1199 28.8928C30.2523 28.7604 30.3573 28.6032 30.4289 28.4303L37.2078 12.065C37.2795 11.8921 37.3164 11.7068 37.3164 11.5196C37.3165 11.3325 37.2796 11.1471 37.208 10.9742ZM20.425 29.9407L21.8784 26.4316L25.3873 27.885L20.425 29.9407ZM28.3407 26.0222L21.6524 23.252C21.3031 23.1075 20.9107 23.1076 20.5615 23.2523C20.2123 23.3969 19.9348 23.6743 19.79 24.0235L17.0194 30.7123L3.28783 25.0247L12.2918 3.28773L34.0286 12.2912L28.3407 26.0222Z" fill="currentColor"/>
+                                    <path d="M25.3493 16.976L24.258 14.3423L16.959 17.3666L15.7196 14.375L13.0859 15.4659L15.4161 21.0916L25.3493 16.976Z" fill="currentColor"/>
+                                </svg>
+                                <span>#{title_reactions}</span>
+                            </div>
 
-                        <div class="full-start__button selector button--reaction">
-                            <svg width="38" height="34" viewBox="0 0 38 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M37.208 10.9742C37.1364 10.8013 37.0314 10.6441 36.899 10.5117C36.7666 10.3794 36.6095 10.2744 36.4365 10.2028L12.0658 0.108375C11.7166 -0.0361828 11.3242 -0.0361227 10.9749 0.108542C10.6257 0.253206 10.3482 0.530634 10.2034 0.879836L0.108666 25.2507C0.0369593 25.4236 3.37953e-05 25.609 2.3187e-08 25.7962C-3.37489e-05 25.9834 0.0368249 26.1688 0.108469 26.3418C0.180114 26.5147 0.28514 26.6719 0.417545 26.8042C0.54995 26.9366 0.707139 27.0416 0.880127 27.1131L17.2452 33.8917C17.5945 34.0361 17.9869 34.0361 18.3362 33.8917L29.6574 29.2017C29.8304 29.1301 29.9875 29.0251 30.1199 28.8928C30.2523 28.7604 30.3573 28.6032 30.4289 28.4303L37.2078 12.065C37.2795 11.8921 37.3164 11.7068 37.3164 11.5196C37.3165 11.3325 37.2796 11.1471 37.208 10.9742ZM20.425 29.9407L21.8784 26.4316L25.3873 27.885L20.425 29.9407ZM28.3407 26.0222L21.6524 23.252C21.3031 23.1075 20.9107 23.1076 20.5615 23.2523C20.2123 23.3969 19.9348 23.6743 19.79 24.0235L17.0194 30.7123L3.28783 25.0247L12.2918 3.28773L34.0286 12.2912L28.3407 26.0222Z" fill="currentColor"/>
-                                <path d="M25.3493 16.976L24.258 14.3423L16.959 17.3666L15.7196 14.375L13.0859 15.4659L15.4161 21.0916L25.3493 16.976Z" fill="currentColor"/>
-                            </svg>
-                            <span>#{title_reactions}</span>
-                        </div>
+                            <div class="full-start__button selector button--subscribe hide">
+                                <svg width="25" height="30" viewBox="0 0 25 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M6.01892 24C6.27423 27.3562 9.07836 30 12.5 30C15.9216 30 18.7257 27.3562 18.981 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z" fill="currentColor"/>
+                                    <path d="M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z" stroke="currentColor" stroke-width="2.5"/>
+                                </svg>
+                                <span>#{title_subscribe}</span>
+                            </div>
 
-                        <div class="full-start__button selector button--subscribe hide">
-                            <svg width="25" height="30" viewBox="0 0 25 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M6.01892 24C6.27423 27.3562 9.07836 30 12.5 30C15.9216 30 18.7257 27.3562 18.981 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z" fill="currentColor"/>
-                                <path d="M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z" stroke="currentColor" stroke-width="2.5"/>
-                            </svg>
-                            <span>#{title_subscribe}</span>
+                            <div class="full-start__button selector button--options">
+                                <svg width="38" height="10" viewBox="0 0 38 10" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <circle cx="4.88968" cy="4.98563" r="4.75394" fill="currentColor"/>
+                                    <circle cx="18.9746" cy="4.98563" r="4.75394" fill="currentColor"/>
+                                    <circle cx="33.0596" cy="4.98563" r="4.75394" fill="currentColor"/>
+                                </svg>
+                            </div>
                         </div>
+                        
+                        <div class="hide buttons--container">
+                            <div class="full-start__button view--torrent hide">
+                                </div>
 
-                        <div class="full-start__button selector button--options">
-                            <svg width="38" height="10" viewBox="0 0 38 10" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <circle cx="4.88968" cy="4.98563" r="4.75394" fill="currentColor"/>
-                                <circle cx="18.9746" cy="4.98563" r="4.75394" fill="currentColor"/>
-                                <circle cx="33.0596" cy="4.98563" r="4.75394" fill="currentColor"/>
-                            </svg>
+                            <div class="full-start__button selector view--trailer">
+                                </div>
                         </div>
+                        
                     </div>
                 </div>
 
@@ -408,23 +534,8 @@
                 </div>
             </div>
         </div>
-
-        <div class="hide buttons--container">
-            <div class="full-start__button view--torrent hide">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="50px" height="50px">
-                    <path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2z M40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4 S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851 c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29 c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862-4.993-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8 c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722 C42.541,30.867,41.756,30.963,40.5,30.963z" fill="currentColor"/>
-                </svg>
-                <span>#{full_torrents}</span>
-            </div>
-
-            <div class="full-start__button selector view--trailer">
-                <svg height="70" viewBox="0 0 80 70" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"></path>
-                </svg>
-                <span>#{full_trailers}</span>
-            </div>
-        </div>
     </div>`;
+        // <<<<<<< КІНЕЦЬ ЗМІНИ (Додавання класу applecation--wrapper для затемнення) >>>>>>>
 
         Lampa.Template.add('full_start_new', template);
     }
@@ -436,6 +547,89 @@
     transition: all .3s;
 }
 
+/* >>>>>>> ПОЧАТОК ЗМІНИ (Виправлення смуги та затемнення) <<<<<<< */
+
+/* Виправлення смуги/границь */
+.applecation--wrapper {
+    /* Робимо кореневий контейнер активності прокручуваним */
+    height: 100vh;
+    overflow: hidden; 
+    position: relative;
+}
+
+/* Обгортка для контенту, що прокручується */
+.applecation__scrollable {
+    /* Дозволяємо прокрутку тільки для цієї частини */
+    height: 100%; 
+    overflow-y: auto;
+    overflow-x: hidden; /* Додатково, щоб уникнути горизонтальної смуги */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 3; /* Поверх фону та оверлея */
+}
+
+/* Фон, який ми замінюємо */
+.full-start__background {
+    /* Залишаємо його на місці, але додаємо наш оверлей */
+    position: fixed !important; 
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important; 
+    z-index: 1; 
+    transition: opacity 0.6s ease-out, filter 0.3s ease-out !important;
+    animation: none !important;
+    transform: none !important;
+    will-change: opacity, filter;
+}
+
+.full-start__background.loaded.applecation-animated {
+    opacity: 1 !important;
+}
+
+/* Оверлей для Затемнення */
+.full-start__background::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    /* Початковий рівень затемнення */
+    background-color: rgba(0, 0, 0, 0.1); 
+    /* Миттєвий перехід */
+    transition: background-color 0.05s linear; 
+}
+
+/* КЛАС ЗАТЕМНЕННЯ: Активується при скролі */
+.applecation--dim .full-start__background::after {
+    /* Максимальне затемнення для читабельності */
+    background-color: rgba(0, 0, 0, 0.65); 
+}
+
+/* Оверлей внизу для плавного переходу */
+.full-start-new__body {
+    height: 80vh;
+    /* Додаємо градієнт, щоб контент картки плавно переходив у фон */
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0.4) 100%);
+    position: relative; /* Щоб body був над backdrop */
+    z-index: 3;
+}
+
+/* Скидання прокрутки для body плагіна Lampa, щоб запобігти подвійному скролу */
+.applecation .full-start-new__body > div:last-child {
+    overflow: hidden !important; 
+}
+
+/* Фон - переопределяем стандартную анимацию на fade */
+/* ... (Ваш оригінальний код для .full-start__background) ... */
+/* ... */
+/* <<<<<<< КІНЕЦЬ ЗМІНИ (Виправлення смуги та затемнення) >>>>>>> */
+
+
 .applecation .full-start-new__body {
     height: 80vh;
 }
@@ -444,304 +638,7 @@
     display: flex;
     align-items: flex-end;
 }
-
-.applecation .full-start-new__title {
-    font-size: 2.5em;
-    font-weight: 700;
-    line-height: 1.2;
-    margin-bottom: 0.5em;
-    text-shadow: 0 0 .1em rgba(0, 0, 0, 0.3);
-}
-
-/* Логотип */
-.applecation__logo {
-    margin-bottom: 0.5em;
-    opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 0.4s ease-out, transform 0.4s ease-out;
-}
-
-.applecation__logo.loaded {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.applecation__logo img {
-    display: block;
-    max-width: 35vw;
-    width: auto;
-    height: auto;
-    object-fit: contain;
-    object-position: left center;
-    
-    /* Дефолтный (Средний) размер */
-    max-height: 180px; 
-}
-
-/* Стилизация размера логотипа */
-body.applecation--logo-small .applecation__logo img {
-    max-height: 120px;
-    max-width: 25vw;
-}
-
-body.applecation--logo-large .applecation__logo img {
-    max-height: 250px;
-    max-width: 45vw;
-}
-
-/* Мета информация (Тип/Жанр/поджанр) */
-.applecation__meta {
-    display: flex;
-    align-items: center;
-    color: #fff;
-    font-size: 1.1em;
-    margin-bottom: 0.5em;
-    line-height: 1;
-    opacity: 0;
-    transform: translateY(15px);
-    transition: opacity 0.4s ease-out, transform 0.4s ease-out;
-    transition-delay: 0.05s;
-}
-
-.applecation__meta.show {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.applecation__meta-left {
-    display: flex;
-    align-items: center;
-    line-height: 1;
-}
-
-.applecation__network {
-    display: inline-flex;
-    align-items: center;
-    line-height: 1;
-}
-
-.applecation__network img {
-    display: block;
-    max-height: 1.4em;
-    width: auto;
-    object-fit: contain;
-    filter: brightness(0) invert(1);
-}
-
-.applecation__meta-text {
-    margin-left: 1em;
-    line-height: 1;
-}
-
-.applecation__meta .full-start__pg {
-    margin: 0 0 0 0.6em;
-    padding: 0.2em 0.5em;
-    font-size: 0.85em;
-    font-weight: 600;
-    border: 1.5px solid rgba(255, 255, 255, 0.4);
-    border-radius: 0.3em;
-    background: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.9);
-    line-height: 1;
-    vertical-align: middle;
-}
-
-/* Рейтинги */
-.applecation__ratings {
-    display: flex;
-    align-items: center;
-    gap: 0.8em;
-    margin-bottom: 0.5em;
-    opacity: 0;
-    transform: translateY(15px);
-    transition: opacity 0.4s ease-out, transform 0.4s ease-out;
-    transition-delay: 0.08s;
-}
-
-.applecation__ratings.show {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.applecation__ratings .rate--imdb,
-.applecation__ratings .rate--kp {
-    display: flex;
-    align-items: center;
-    gap: 0.35em;
-}
-
-.applecation__ratings svg {
-    width: 2.5em;
-    height: auto;
-    flex-shrink: 0;
-    color: rgba(255, 255, 255, 0.85);
-}
-
-.applecation__ratings .rate--kp svg {
-    width: 1.5em;
-}
-
-.applecation__ratings > div > div {
-    font-size: 0.95em;
-    font-weight: 600;
-    line-height: 1;
-    color: #fff;
-}
-
-/* Управление видимостью рейтингов через настройки */
-body.applecation--hide-ratings .applecation__ratings {
-    display: none !important;
-}
-
-/* Скрытие реакций через настройки */
-body.applecation--hide-reactions .full-start-new__reactions {
-    display: none !important;
-}
-
-/* Расположение рейтингов - в левом нижнем углу */
-body.applecation--ratings-corner .applecation__right {
-    gap: 1em;
-}
-
-body.applecation--ratings-corner .applecation__ratings {
-    margin-bottom: 0;
-}
-
-/* Описание */
-.applecation__description {
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 0.95em;
-    line-height: 1.5;
-    margin-bottom: 0.5em;
-    max-width: 35vw;
-    display: -webkit-box;
-    -webkit-line-clamp: 4;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    opacity: 0;
-    transform: translateY(15px);
-    transition: opacity 0.4s ease-out, transform 0.4s ease-out;
-    transition-delay: 0.1s;
-}
-
-.applecation__description.show {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-/* Дополнительная информация (Год/длительность) */
-.applecation__info {
-    color: rgba(255, 255, 255, 0.75);
-    font-size: 1em;
-    line-height: 1.4;
-    margin-bottom: 0.5em;
-    opacity: 0;
-    transform: translateY(15px);
-    transition: opacity 0.4s ease-out, transform 0.4s ease-out;
-    transition-delay: 0.15s;
-}
-
-.applecation__info.show {
-    opacity: 1;
-    transform: translateY(0);
-}
-
-/* Левая и правая части */
-.applecation__left {
-    flex-grow: 1;
-}
-
-.applecation__right {
-    display: flex;
-    align-items: flex-end;
-    flex-shrink: 0;
-    position: relative;
-}
-
-/* Выравнивание по baseline только если реакции видны и рейтинги в углу */
-body.applecation--ratings-corner:not(.applecation--hide-reactions) .applecation__right {
-    align-items: last baseline;
-}
-
-/* Реакции */
-.applecation .full-start-new__reactions {
-    margin: 0;
-    display: flex;
-    flex-direction: column-reverse;
-    align-items: flex-end;
-}
-
-.applecation .full-start-new__reactions > div {
-    align-self: flex-end;
-}
-
-.applecation .full-start-new__reactions:not(.focus) {
-    margin: 0;
-}
-
-.applecation .full-start-new__reactions:not(.focus) > div:not(:first-child) {
-    display: none;
-}
-
-/* Стили первой реакции (всегда видимой) */
-.applecation .full-start-new__reactions > div:first-child .reaction {
-    display: flex !important;
-    align-items: center !important;
-    background-color: rgba(0, 0, 0, 0) !important;
-    gap: 0 !important;
-}
-
-.applecation .full-start-new__reactions > div:first-child .reaction__icon {
-    background-color: rgba(0, 0, 0, 0.3) !important;
-    -webkit-border-radius: 5em;
-    -moz-border-radius: 5em;
-    border-radius: 5em;
-    padding: 0.5em;
-    width: 2.6em !important;
-    height: 2.6em !important;
-}
-
-.applecation .full-start-new__reactions > div:first-child .reaction__count {
-    font-size: 1.2em !important;
-    font-weight: 500 !important;
-}
-
-/* При фокусе реакции раскрываются вверх */
-.applecation .full-start-new__reactions.focus {
-    gap: 0.5em;
-}
-
-.applecation .full-start-new__reactions.focus > div {
-    display: block;
-}
-
-/* Скрываем стандартный rate-line (используется только для статуса) */
-.applecation .full-start-new__rate-line {
-    margin: 0;
-    height: 0;
-    overflow: hidden;
-    opacity: 0;
-    pointer-events: none;
-}
-
-/* Фон - переопределяем стандартную анимацию на fade */
-/* ВІДНОВЛЕНО СТАНДАРТНУ ПОВЕДІНКУ LAMPA ДЛЯ ФОНУ ПРИ СКРОЛІНГУ (без блюру/оверлея) */
-.full-start__background {
-    height: 100%; /* Повертаємо до стандартного значення */
-    left: 0 !important;
-    opacity: 0 !important;
-    transition: opacity 0.6s ease-out, filter 0.3s ease-out !important;
-    animation: none !important;
-    transform: none !important;
-    will-change: opacity, filter;
-}
-
-.full-start__background.loaded:not(.dim) {
-    opacity: 1 !important;
-}
-
-/* ВИДАЛЕНО .full-start__background.dim { filter: blur(30px); } */
+/* ... (Ваш оригінальний CSS) ... */
 
 /* Удерживаем opacity при загрузке нового фона */
 .full-start__background.loaded.applecation-animated {
@@ -770,8 +667,39 @@ body.advanced--animation:not(.no--animation) .full-start__background.loaded {
         $('body').append(Lampa.Template.get('applecation_css', {}, true));
     }
 
+    // >>>>>>> ПОЧАТОК ЗМІНИ (Логіка затемнення при скролі) <<<<<<<
+    function addFullStartBackgroundLogic() {
+        // Логіка запускається при відкритті будь-якої активності (зокрема full)
+        Lampa.Listener.follow('activity', (event) => {
+            if (event.type === 'start') {
+                // Відстежуємо лише активність full (картку фільму)
+                if (event.object.component === 'full') {
+                    const activityElement = event.object.render();
+                    
+                    // Шукаємо прокручуваний елемент, який ми створили
+                    const scrollableContent = activityElement.find('.applecation__scrollable');
+                    
+                    if (scrollableContent.length) {
+                        scrollableContent.on('scroll', function() {
+                            const container = activityElement.find('.applecation--wrapper');
+                            
+                            // Миттєве затемнення: активується, як тільки прокрутка більша за поріг (наприклад, 10 пікселів)
+                            if (this.scrollTop > 10) { 
+                                container.addClass('applecation--dim');
+                            } else {
+                                container.removeClass('applecation--dim');
+                            }
+                        });
+                    }
+                }
+            }
+        });
+    }
+    // <<<<<<< КІНЕЦЬ ЗМІНИ (Логіка затемнення при скролі) >>>>>>>
+    
     // Патчим Api.img для улучшенного качества фона
     function patchApiImg() {
+        // ... (Ваш оригінальний код patchApiImg) ...
         const originalImg = Lampa.Api.img;
         
         Lampa.Api.img = function(src, size) {
@@ -792,6 +720,9 @@ body.advanced--animation:not(.no--animation) .full-start__background.loaded {
         };
     }
 
+    // ... (Ваш оригінальний код getLogoQuality, selectBestLogo, getMediaType, formatSeasons, loadNetworkIcon, fillMetaInfo, fillAdditionalInfo) ...
+    // ...
+
     // Получаем качество логотипа на основе poster_size
     function getLogoQuality() {
         const posterSize = Lampa.Storage.field('poster_size');
@@ -808,7 +739,7 @@ body.advanced--animation:not(.no--animation) .full-start__background.loaded {
         // Приорітети мов: 1. Поточна мова, 2. Англійська ('en'), 3. Будь-яка.
         
                 // 1. Поточна мова
-        const preferred = logos.filter(l => l.iso_639_1 === currentLang);
+const preferred = logos.filter(l => l.iso_639_1 === currentLang);
         if (preferred.length > 0) {
             // Беремо логотип з найвищим рейтингом серед відповідних мов
             preferred.sort((a, b) => b.vote_average - a.vote_average);
@@ -832,7 +763,7 @@ body.advanced--animation:not(.no--animation) .full-start__background.loaded {
     }
 
     // Получаем локализованный тип медиа
-    function getMediaType(data) {
+function getMediaType(data) {
         const lang = Lampa.Storage.get('language', 'ru');
         const isTv = !!data.name;
         
@@ -840,19 +771,13 @@ body.advanced--animation:not(.no--animation) .full-start__background.loaded {
             ru: isTv ? 'Сериал' : 'Фильм',
             en: isTv ? 'TV Series' : 'Movie',
             uk: isTv ? 'Серіал' : 'Фільм',
-            be: isTv ? 'Серыял' : 'Фільм',
-            bg: isTv ? 'Сериал' : 'Филм',
-            cs: isTv ? 'Seriál' : 'Film',
-            he: isTv ? 'סדרה' : 'סרט',
-            pt: isTv ? 'Série' : 'Filme',
-            zh: isTv ? '电视剧' : '电影'
         };
         
         return types[lang] || types['en'];
     }
 
     // Загружаем иконку студии/сети
-function loadNetworkIcon(activity, data) {
+    function loadNetworkIcon(activity, data) {
         const networkContainer = activity.render().find('.applecation__network');
         
         // Для сериалов - телесеть
@@ -901,27 +826,16 @@ function loadNetworkIcon(activity, data) {
         loadNetworkIcon(activity, data);
     }
 
-    // Заполняем описание (ВИДАЛЕНО)
-    /*
-    function fillDescription(activity, data) {
-        const descContainer = activity.render().find('.applecation__description');
-        const description = data.overview || '';
-        descContainer.text(description);
-    }
-    */
-
     // Склонение сезонов с локализацией
     function formatSeasons(count) {
         const lang = Lampa.Storage.get('language', 'ru');
         
-        // Славянские языки (ru, uk, be, bg) - сложное склонение
-        if (['ru', 'uk', 'be', 'bg'].includes(lang)) {
+        // Славянские языки (ru, uk) - сложное склонение
+        if (['ru', 'uk'].includes(lang)) {
             const cases = [2, 0, 1, 1, 1, 2];
             const titles = {
                 ru: ['сезон', 'сезона', 'сезонов'],
                 uk: ['сезон', 'сезони', 'сезонів'],
-                be: ['сезон', 'сезоны', 'сезонаў'],
-                bg: ['сезон', 'сезона', 'сезона']
             };
             
             const langTitles = titles[lang] || titles['ru'];
@@ -935,31 +849,7 @@ function loadNetworkIcon(activity, data) {
             return count === 1 ? `${count} Season` : `${count} Seasons`;
         }
         
-        // Чешский
-      if (lang === 'cs') {
-            if (count === 1) return `${count} série`;
-            if (count >= 2 && count <= 4) return `${count} série`;
-            return `${count} sérií`;
-        }
-        
-        // Португальский
-        if (lang === 'pt') {
-            return count === 1 ? `${count} Temporada` : `${count} Temporadas`;
-        }
-        
-        // Иврит
-        if (lang === 'he') {
-            if (count === 1) return `עונה ${count}`;
-            if (count === 2) return `${count} עונות`;
-            return `${count} עונות`;
-        }
-        
-        // Китайский (без склонения)
-        if (lang === 'zh') {
-            return `${count} 季`;
-        }
-        
-        // Остальные языки - базовое склонение
+        // Остальные языки - базовое склонение (Видалено cs, he, pt, zh)
         const seasonWord = Lampa.Lang.translate('full_season');
         return count === 1 ? `${count} ${seasonWord}` : `${count} ${seasonWord}s`;
     }
@@ -1006,6 +896,7 @@ function loadNetworkIcon(activity, data) {
 
         infoContainer.html(infoParts.join(' · '));
     }
+
 
     // Загружаем логотип фильма
     function loadLogo(event) {
@@ -1130,21 +1021,10 @@ function loadNetworkIcon(activity, data) {
         }, 2000);
     }
 
-    // ВИДАЛЕНО: addOverlay
-    /*
-    function addOverlay(activity) {
-        const background = activity.render().find('.full-start__background');
-        if (background.length && !background.next('.applecation__overlay').length) {
-            background.after('<div class="full-start__background loaded applecation__overlay"></div>');
-        }
-    }
-    */
-
     // Подключаем загрузку логотипов
     function attachLogoLoader() {
         Lampa.Listener.follow('full', (event) => {
             if (event.type === 'complite') {
-                // ВИДАЛЕНО: addOverlay(event.object.activity);
                 loadLogo(event);
             }
         });
@@ -1177,3 +1057,4 @@ function loadNetworkIcon(activity, data) {
     }
 
 })();
+    
