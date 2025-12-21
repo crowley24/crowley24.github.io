@@ -1,8 +1,8 @@
 (function () {
     'use strict';
 
-    // Скорочена Іконка плагіна (зменшена на 50% для обсягу)
-    const PLUGIN_ICON = '<svg viewBox="110 90 180 210"xmlns=http://www.w3.org/2000/svg><g id=sphere><circle cx=200 cy=140 fill="hsl(200, 80%, 40%)"opacity=0.3 r=1.2 /><circle cx=230 cy=150 fill="hsl(200, 80%, 45%)"opacity=0.35 r=1.3 /><circle cx=170 cy=155 fill="hsl(200, 80%, 42%)"opacity=0.32 r=1.2 /><circle cx=245 cy=175 fill="hsl(200, 80%, 48%)"opacity=0.38 r=1.4 /><circle cx=155 cy=180 fill="hsl(200, 80%, 44%)"opacity=0.34 r=1.3 /><circle cx=215 cy=165 fill="hsl(200, 80%, 46%)"opacity=0.36 r=1.2 /><circle cx=185 cy=170 fill="hsl(200, 80%, 43%)"opacity=0.33 r=1.3 /><circle cx=260 cy=200 fill="hsl(200, 80%, 50%)"opacity=0.4 r=1.5 /><circle cx=140 cy=200 fill="hsl(200, 80%, 50%)"opacity=0.4 r=1.5 /><circle cx=250 cy=220 fill="hsl(200, 80%, 48%)"opacity=0.38 r=1.4 /><circle cx=150 cy=225 fill="hsl(200, 80%, 47%)"opacity=0.37 r=1.4 /><circle cx=235 cy=240 fill="hsl(200, 80%, 45%)"opacity=0.35 r=1.3 /><circle cx=165 cy=245 fill="hsl(200, 80%, 44%)"opacity=0.34 r=1.3 /><circle cx=220 cy=255 fill="hsl(200, 80%, 42%)"opacity=0.32 r=1.2 /><circle cx=180 cy=258 fill="hsl(200, 80%, 41%)"opacity=0.31 r=1.2 /><circle cx=200 cy=120 fill="hsl(200, 80%, 60%)"opacity=0.5 r=1.8 /><circle cx=240 cy=135 fill="hsl(200, 80%, 65%)"opacity=0.55 r=2 /><circle cx=160 cy=140 fill="hsl(200, 80%, 62%)"opacity=0.52 r=1.9 /><circle cx=270 cy=165 fill="hsl(200, 80%, 70%)"opacity=0.6 r=2.2 /><circle cx=130 cy=170 fill="hsl(200, 80%, 67%)"opacity=0.57 r=2.1 /><circle cx=255 cy=190 fill="hsl(200, 80%, 72%)"opacity=0.62 r=2.3 /><circle cx=145 cy=195 fill="hsl(200, 80%, 69%)"opacity=0.59 r=2.2 /><circle cx=280 cy=200 fill="hsl(200, 80%, 75%)"opacity=0.65 r=2.5 /><circle cx=120 cy=200 fill="hsl(200, 80%, 75%)"opacity=0.65 r=2.5 /><circle cx=275 cy=215 fill="hsl(200, 80%, 73%)"opacity=0.63 r=2.4 /><circle cx=125 cy=220 fill="hsl(200, 80%, 71%)"opacity=0.61 r=2.3 /><circle cx=260 cy=235 fill="hsl(200, 80%, 68%)"opacity=0.58 r=2.2 /><circle cx=140 cy=240 fill="hsl(200, 80%, 66%)"opacity=0.56 r=2.1 /><circle cx=245 cy=255 fill="hsl(200, 80%, 63%)"opacity=0.53 r=2 /><circle cx=155 cy=260 fill="hsl(200, 80%, 61%)"opacity=0.51 r=1.9 /><circle cx=225 cy=270 fill="hsl(200, 80%, 58%)"opacity=0.48 r=1.8 /><circle cx=175 cy=272 fill="hsl(200, 80%, 56%)"opacity=0.46 r=1.7 /></g></svg>';
+    // Проста іконка для NewCard
+    const PLUGIN_ICON = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 4.5C4 4.22386 4.22386 4 4.5 4H19.5C19.7761 4 20 4.22386 20 4.5V19.5C20 19.7761 19.7761 20 19.5 20H4.5C4.22386 20 4 19.7761 4 19.5V4.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M10 16H15M6 8H18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
     const uk_translations = {
         show_ratings: 'Показувати рейтинги',
@@ -20,6 +20,13 @@
         size_large: 'Великий'
     };
 
+    const defaults = {
+        newcard_show_ratings: false,
+        newcard_hide_reactions: false,
+        newcard_ratings_position: 'card',
+        newcard_logo_size: 'medium'
+    };
+
     function getUkrainianTranslation(key) {
         return uk_translations[key] || '';
     }
@@ -34,13 +41,41 @@
         attachLogoLoader();
     }
 
-    function addSettings() {
-        const defaults = {
-            applecation_show_ratings: false,
-            applecation_hide_reactions: false,
-            applecation_ratings_position: 'card',
-            applecation_logo_size: 'medium'
+    // ⭐ ПОКРАЩЕННЯ I: Функція міграції налаштувань
+    function migrateStorage() {
+        const storageMap = {
+            'applecation_show_ratings': 'newcard_show_ratings',
+            'applecation_hide_reactions': 'newcard_hide_reactions',
+            'applecation_ratings_position': 'newcard_ratings_position',
+            'applecation_logo_size': 'newcard_logo_size'
         };
+        Object.keys(storageMap).forEach(oldKey => {
+            if (Lampa.Storage.get(oldKey) !== undefined) {
+                Lampa.Storage.set(storageMap[oldKey], Lampa.Storage.get(oldKey));
+                Lampa.Storage.remove(oldKey); 
+            }
+        });
+    }
+
+    // ⭐ ПОКРАЩЕННЯ I: Функція застосування класів до <body>
+    function applyCurrentSettings() {
+        // 1. Показувати/ховати рейтинги
+        $('body').toggleClass('newcard--hide-ratings', !Lampa.Storage.get('newcard_show_ratings', defaults.newcard_show_ratings));
+        
+        // 2. Позиція рейтингів
+        const position = Lampa.Storage.get('newcard_ratings_position', defaults.newcard_ratings_position);
+        $('body').removeClass('newcard--ratings-card newcard--ratings-corner').addClass('newcard--ratings-' + position);
+        
+        // 3. Сховати реакції
+        $('body').toggleClass('newcard--hide-reactions', Lampa.Storage.get('newcard_hide_reactions', defaults.newcard_hide_reactions));
+        
+        // 4. Розмір логотипу
+        const logoSize = Lampa.Storage.get('newcard_logo_size', defaults.newcard_logo_size);
+        $('body').removeClass('newcard--logo-small newcard--logo-medium newcard--logo-large').addClass('newcard--logo-' + logoSize);
+    }
+
+    function addSettings() {
+        migrateStorage(); // Запуск міграції
 
         Object.keys(defaults).forEach(key => {
             if (Lampa.Storage.get(key) === undefined) {
@@ -49,32 +84,32 @@
         });
 
         Lampa.SettingsApi.addComponent({
-            component: 'applecation_settings',
-            name: 'Applecation',
+            component: 'newcard_settings', 
+            name: 'NewCard', 
             icon: PLUGIN_ICON
         });
 
         // Показувати рейтинги
         Lampa.SettingsApi.addParam({
-            component: 'applecation_settings',
-            param: { name: 'applecation_show_ratings', type: 'trigger', default: defaults.applecation_show_ratings },
+            component: 'newcard_settings',
+            param: { name: 'newcard_show_ratings', type: 'trigger', default: defaults.newcard_show_ratings },
             field: { name: getUkrainianTranslation('show_ratings'), description: getUkrainianTranslation('show_ratings_desc') },
-            onChange: (value) => $('body').toggleClass('applecation--hide-ratings', !value)
+            onChange: applyCurrentSettings
         });
 
         // Розташування рейтингів
         Lampa.SettingsApi.addParam({
-            component: 'applecation_settings',
+            component: 'newcard_settings',
             param: {
-                name: 'applecation_ratings_position',
+                name: 'newcard_ratings_position',
                 type: 'select',
                 values: { card: getUkrainianTranslation('position_card'), corner: getUkrainianTranslation('position_corner') },
-                default: defaults.applecation_ratings_position
+                default: defaults.newcard_ratings_position
             },
             field: { name: getUkrainianTranslation('ratings_position'), description: getUkrainianTranslation('ratings_position_desc') },
             onChange: (value) => {
-                Lampa.Storage.set('applecation_ratings_position', value);
-                $('body').removeClass('applecation--ratings-card applecation--ratings-corner').addClass('applecation--ratings-' + value);
+                Lampa.Storage.set('newcard_ratings_position', value);
+                applyCurrentSettings(); // Оновлюємо клас позиції
                 addCustomTemplate();
                 Lampa.Activity.back();
             }
@@ -82,43 +117,33 @@
 
         // Розмір логотипу
         Lampa.SettingsApi.addParam({
-            component: 'applecation_settings',
+            component: 'newcard_settings',
             param: {
-                name: 'applecation_logo_size',
+                name: 'newcard_logo_size',
                 type: 'select',
                 values: { small: getUkrainianTranslation('size_small'), medium: getUkrainianTranslation('size_medium'), large: getUkrainianTranslation('size_large') },
-                default: defaults.applecation_logo_size
+                default: defaults.newcard_logo_size
             },
             field: { name: getUkrainianTranslation('logo_size'), description: getUkrainianTranslation('logo_size_desc') },
-            onChange: (value) => {
-                Lampa.Storage.set('applecation_logo_size', value);
-                $('body').removeClass('applecation--logo-small applecation--logo-medium applecation--logo-large').addClass('applecation--logo-' + value);
-            }
+            onChange: applyCurrentSettings
         });
 
         // Сховати реакції
         Lampa.SettingsApi.addParam({
-            component: 'applecation_settings',
-            param: { name: 'applecation_hide_reactions', type: 'trigger', default: defaults.applecation_hide_reactions },
+            component: 'newcard_settings',
+            param: { name: 'newcard_hide_reactions', type: 'trigger', default: defaults.newcard_hide_reactions },
             field: { name: getUkrainianTranslation('hide_reactions'), description: getUkrainianTranslation('hide_reactions_desc') },
-            onChange: (value) => $('body').toggleClass('applecation--hide-reactions', value)
+            onChange: applyCurrentSettings
         });
 
-        // Застосування поточної конфігурації
-        if (!Lampa.Storage.get('applecation_show_ratings', defaults.applecation_show_ratings)) {
-            $('body').addClass('applecation--hide-ratings');
-        }
-        $('body').addClass('applecation--ratings-' + Lampa.Storage.get('applecation_ratings_position', defaults.applecation_ratings_position));
-        if (Lampa.Storage.get('applecation_hide_reactions', defaults.applecation_hide_reactions)) {
-            $('body').addClass('applecation--hide-reactions');
-        }
-        $('body').addClass('applecation--logo-' + Lampa.Storage.get('applecation_logo_size', defaults.applecation_logo_size));
+        // ⭐ ПОКРАЩЕННЯ I: Застосування поточної конфігурації
+        applyCurrentSettings();
     }
 
     function addCustomTemplate() {
-        const ratingsPosition = Lampa.Storage.get('applecation_ratings_position', 'card');
+        const ratingsPosition = Lampa.Storage.get('newcard_ratings_position', 'card');
         
-        const ratingsBlock = `<div class="applecation__ratings">
+        const ratingsBlock = `<div class="newcard__ratings">
                         <div class="rate--imdb hide">
                             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none">
                                 <path fill="currentColor" d="M4 7c-1.103 0-2 .897-2 2v6.4c0 1.103.897 2 2 2h16c1.103 0 2-.897 2-2V9c0-1.103-.897-2-2-2H4Zm1.4 2.363h1.275v5.312H5.4V9.362Zm1.962 0H9l.438 2.512.287-2.512h1.75v5.312H10.4v-3l-.563 3h-.8l-.512-3v3H7.362V9.362Zm8.313 0H17v1.2c.16-.16.516-.363.875-.363.36.04.84.283.8.763v3.075c0 .24-.075.404-.275.524-.16.04-.28.075-.6.075-.32 0-.795-.196-.875-.237-.08-.04-.163.275-.163.275h-1.087V9.362Zm-3.513.037H13.6c.88 0 1.084.078 1.325.237.24.16.35.397.35.838v3.2c0 .32-.15.563-.35.762-.2.2-.484.288-1.325.288h-1.438V9.4Zm1.275.8v3.563c.2 0 .488.04.488-.2v-3.126c0-.28-.247-.237-.488-.237Zm3.763.675c-.12 0-.2.08-.2.2v2.688c0 .159.08.237.2.237.12 0 .2-.117.2-.238l-.037-2.687c0-.12-.043-.2-.163-.2Z"/>
@@ -133,7 +158,7 @@
                         </div>
                     </div>`;
         
-        const template = `<div class="full-start-new applecation">
+        const template = `<div class="full-start-new newcard">
         <div class="full-start-new__body">
             <div class="full-start-new__left hide">
                 <div class="full-start-new__poster">
@@ -142,14 +167,14 @@
             </div>
 
             <div class="full-start-new__right">
-                <div class="applecation__left">
-                    <div class="applecation__logo"></div>
+                <div class="newcard__left">
+                    <div class="newcard__logo"></div>
                     <div class="full-start-new__title" style="display: none;">{title}</div>
                     
-                    <div class="applecation__meta">
-                        <div class="applecation__meta-left">
-                            <span class="applecation__network"></span>
-                            <span class="applecation__meta-text"></span>
+                    <div class="newcard__meta">
+                        <div class="newcard__meta-left">
+                            <span class="newcard__network"></span>
+                            <span class="newcard__meta-text"></span>
                             <div class="full-start__pg hide"></div>
                         </div>
                     </div>
@@ -157,7 +182,7 @@
                     ${ratingsPosition === 'card' ? ratingsBlock : ''}
                     
                     
-                    <div class="applecation__info"></div>
+                    <div class="newcard__info"></div>
                     
                     <div class="full-start-new__head" style="display: none;"></div>
                     <div class="full-start-new__details" style="display: none;"></div>
@@ -204,7 +229,7 @@
                     </div>
                 </div>
 
-                <div class="applecation__right">
+                <div class="newcard__right">
                     <div class="full-start-new__reactions selector">
                         <div>#{reactions_none}</div>
                     </div>
@@ -240,17 +265,19 @@
         Lampa.Template.add('full_start_new', template);
     }
 
+    // ⭐ ПОКРАЩЕННЯ II: Мінімізація CSS
     function addStyles() {
-        // Компактні стилі
         const styles = `<style>
-.applecation{transition:all .3s}.applecation .full-start-new__body{height:80vh}.applecation .full-start-new__right{display:flex;align-items:flex-end}.applecation .full-start-new__title{font-size:2.5em;font-weight:700;line-height:1.2;margin-bottom:.5em;text-shadow:0 0 .1em rgba(0,0,0,.3)}.applecation__logo{margin-bottom:.5em;opacity:0;transform:translateY(20px);transition:opacity .4s ease-out,transform .4s ease-out}.applecation__logo.loaded{opacity:1;transform:translateY(0)}.applecation__logo img{display:block;max-width:35vw;width:auto;height:auto;object-fit:contain;object-position:left center;max-height:180px}body.applecation--logo-small .applecation__logo img{max-height:120px;max-width:25vw}body.applecation--logo-large .applecation__logo img{max-height:250px;max-width:45vw}.applecation__meta{display:flex;align-items:center;color:#fff;font-size:1.1em;margin-bottom:.5em;line-height:1;opacity:0;transform:translateY(15px);transition:opacity .4s ease-out,transform .4s ease-out;transition-delay:.05s}.applecation__meta.show{opacity:1;transform:translateY(0)}.applecation__meta-left{display:flex;align-items:center;line-height:1}.applecation__network{display:inline-flex;align-items:center;line-height:1}.applecation__network img{display:block;max-height:1.4em;width:auto;object-fit:contain;filter:brightness(0) invert(1)}.applecation__meta-text{margin-left:1em;line-height:1}.applecation__meta .full-start__pg{margin:0 0 0 .6em;padding:.2em .5em;font-size:.85em;font-weight:600;border:1.5px solid rgba(255,255,255,.4);border-radius:.3em;background:rgba(255,255,255,.1);color:rgba(255,255,255,.9);line-height:1;vertical-align:middle}.applecation__ratings{display:flex;align-items:center;gap:.8em;margin-bottom:.5em;opacity:0;transform:translateY(15px);transition:opacity .4s ease-out,transform .4s ease-out;transition-delay:.08s}.applecation__ratings.show{opacity:1;transform:translateY(0)}.applecation__ratings .rate--imdb,.applecation__ratings .rate--kp{display:flex;align-items:center;gap:.35em}.applecation__ratings svg{width:2.5em;height:auto;flex-shrink:0;color:rgba(255,255,255,.85)}.applecation__ratings .rate--kp svg{width:1.5em}.applecation__ratings > div > div{font-size:.95em;font-weight:600;line-height:1;color:#fff}body.applecation--hide-ratings .applecation__ratings{display:none !important}body.applecation--hide-reactions .full-start-new__reactions{display:none !important}body.applecation--ratings-corner .applecation__right{gap:1em}body.applecation--ratings-corner .applecation__ratings{margin-bottom:0}.applecation__description{color:rgba(255,255,255,.6);font-size:.95em;line-height:1.5;margin-bottom:.5em;max-width:35vw;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;opacity:0;transform:translateY(15px);transition:opacity .4s ease-out,transform .4s ease-out;transition-delay:.1s}.applecation__description.show{opacity:1;transform:translateY(0)}.applecation__info{color:rgba(255,255,255,.75);font-size:1em;line-height:1.4;margin-bottom:.5em;opacity:0;transform:translateY(15px);transition:opacity .4s ease-out,transform .4s ease-out;transition-delay:.15s}.applecation__info.show{opacity:1;transform:translateY(0)}.applecation__left{flex-grow:1}.applecation__right{display:flex;align-items:flex-end;flex-shrink:0;position:relative}body.applecation--ratings-corner:not(.applecation--hide-reactions) .applecation__right{align-items:last baseline}.applecation .full-start-new__reactions{margin:0;display:flex;flex-direction:column-reverse;align-items:flex-end}.applecation .full-start-new__reactions > div{align-self:flex-end}.applecation .full-start-new__reactions:not(.focus){margin:0}.applecation .full-start-new__reactions:not(.focus) > div:not(:first-child){display:none}.applecation .full-start-new__reactions > div:first-child .reaction{display:flex !important;align-items:center !important;background-color:rgba(0,0,0,0) !important;gap:0 !important}.applecation .full-start-new__reactions > div:first-child .reaction__icon{background-color:rgba(0,0,0,.3) !important;-webkit-border-radius:5em;-moz-border-radius:5em;border-radius:5em;padding:.5em;width:2.6em !important;height:2.6em !important}.applecation .full-start-new__reactions > div:first-child .reaction__count{font-size:1.2em !important;font-weight:500 !important}.applecation .full-start-new__reactions.focus{gap:.5em}.applecation .full-start-new__reactions.focus > div{display:block}.applecation .full-start-new__rate-line{margin:0;height:0;overflow:hidden;opacity:0;pointer-events:none}.full-start__background{height:calc(100% + 6em);left:0 !important;opacity:0 !important;transition:opacity .6s ease-out,filter .3s ease-out !important;animation:none !important;transform:none !important;will-change:opacity,filter}.full-start__background.loaded:not(.dim){opacity:1 !important}.full-start__background.dim{filter:blur(30px)}.full-start__background.loaded.applecation-animated{opacity:1 !important}body:not(.menu--open) .full-start__background{mask-image:none}body.advanced--animation:not(.no--animation) .full-start__background.loaded{animation:none !important}.applecation .full-start__status{display:none}.applecation__overlay{width:90vw;background:linear-gradient(to right,rgba(0,0,0,.792) 0%,rgba(0,0,0,.504) 25%,rgba(0,0,0,.264) 45%,rgba(0,0,0,.12) 55%,rgba(0,0,0,.043) 60%,rgba(0,0,0,0) 65%)}
+.newcard{transition:all .3s}.newcard .full-start-new__body{height:80vh}.newcard .full-start-new__right{display:flex;align-items:flex-end}.newcard .full-start-new__title{font-size:2.5em;font-weight:700;line-height:1.2;margin-bottom:.5em;text-shadow:0 0 .1em rgba(0,0,0,.3)}.newcard__logo{margin-bottom:.5em;opacity:0;transform:translateY(20px);transition:opacity .4s ease-out,transform .4s ease-out}.newcard__logo.loaded{opacity:1;transform:translateY(0)}.newcard__logo img{display:block;max-width:35vw;width:auto;height:auto;object-fit:contain;object-position:left center;max-height:180px}body.newcard--logo-small .newcard__logo img{max-height:120px;max-width:25vw}body.newcard--logo-large .newcard__logo img{max-height:250px;max-width:45vw}.newcard__meta{display:flex;align-items:center;color:#fff;font-size:1.1em;margin-bottom:.5em;line-height:1;opacity:0;transform:translateY(15px);transition:opacity .4s ease-out,transform .4s ease-out;transition-delay:.05s}.newcard__meta.show{opacity:1;transform:translateY(0)}.newcard__meta-left{display:flex;align-items:center;line-height:1}.newcard__network{display:inline-flex;align-items:center;line-height:1}.newcard__network img{display:block;max-height:1.4em;width:auto;object-fit:contain;filter:brightness(0) invert(1)}.newcard__meta-text{margin-left:1em;line-height:1}.newcard__meta .full-start__pg{margin:0 0 0 .6em;padding:.2em .5em;font-size:.85em;font-weight:600;border:1.5px solid rgba(255,255,255,.4);border-radius:.3em;background:rgba(255,255,255,.1);color:rgba(255,255,255,.9);line-height:1;vertical-align:middle}.newcard__ratings{display:flex;align-items:center;gap:.8em;margin-bottom:.5em;opacity:0;transform:translateY(15px);transition:opacity .4s ease-out,transform .4s ease-out;transition-delay:.08s}.newcard__ratings.show{opacity:1;transform:translateY(0)}.newcard__ratings .rate--imdb,.newcard__ratings .rate--kp{display:flex;align-items:center;gap:.35em}.newcard__ratings svg{width:2.5em;height:auto;flex-shrink:0;color:rgba(255,255,255,.85)}.newcard__ratings .rate--kp svg{width:1.5em}.newcard__ratings > div > div{font-size:.95em;font-weight:600;line-height:1;color:#fff}body.newcard--hide-ratings .newcard__ratings{display:none !important}body.newcard--hide-reactions .full-start-new__reactions{display:none !important}body.newcard--ratings-corner .newcard__right{gap:1em}body.newcard--ratings-corner .newcard__ratings{margin-bottom:0}.newcard__description{color:rgba(255,255,255,.6);font-size:.95em;line-height:1.5;margin-bottom:.5em;max-width:35vw;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;text-overflow:ellipsis;opacity:0;transform:translateY(15px);transition:opacity .4s ease-out,transform .4s ease-out;transition-delay:.1s}.newcard__description.show{opacity:1;transform:translateY(0)}.newcard__info{color:rgba(255,255,255,.75);font-size:1em;line-height:1.4;margin-bottom:.5em;opacity:0;transform:translateY(15px);transition:opacity .4s ease-out,transform .4s ease-out;transition-delay:.15s}.newcard__info.show{opacity:1;transform:translateY(0)}.newcard__left{flex-grow:1}.newcard__right{display:flex;align-items:flex-end;flex-shrink:0;position:relative}body.newcard--ratings-corner:not(.newcard--hide-reactions) .newcard__right{align-items:last baseline}.newcard .full-start-new__reactions{margin:0;display:flex;flex-direction:column-reverse;align-items:flex-end}.newcard .full-start-new__reactions > div{align-self:flex-end}.newcard .full-start-new__reactions:not(.focus){margin:0}.newcard .full-start-new__reactions:not(.focus) > div:not(:first-child){display:none}.newcard .full-start-new__reactions > div:first-child .reaction{display:flex !important;align-items:center !important;background-color:rgba(0,0,0,0) !important;gap:0 !important}.newcard .full-start-new__reactions > div:first-child .reaction__icon{background-color:rgba(0,0,0,.3) !important;-webkit-border-radius:5em;-moz-border-radius:5em;border-radius:5em;padding:.5em;width:2.6em !important;height:2.6em !important}.newcard .full-start-new__reactions > div:first-child .reaction__count{font-size:1.2em !important;font-weight:500 !important}.newcard .full-start-new__reactions.focus{gap:.5em}.newcard .full-start-new__reactions.focus > div{display:block}.newcard .full-start-new__rate-line{margin:0;height:0;overflow:hidden;opacity:0;pointer-events:none}.full-start__background{height:calc(100% + 6em);left:0 !important;opacity:0 !important;transition:opacity .6s ease-out,filter .3s ease-out !important;animation:none !important;transform:none !important;will-change:opacity,filter}.full-start__background.loaded:not(.dim){opacity:1 !important}.full-start__background.dim{filter:blur(30px)}.full-start__background.loaded.newcard-animated{opacity:1 !important}body:not(.menu--open) .full-start__background{mask-image:none}body.advanced--animation:not(.no--animation) .full-start__background.loaded{animation:none !important}.newcard .full-start__status{display:none}.newcard__overlay{width:90vw;background:linear-gradient(to right,rgba(0,0,0,.792) 0%,rgba(0,0,0,.504) 25%,rgba(0,0,0,.264) 45%,rgba(0,0,0,.12) 55%,rgba(0,0,0,.043) 60%,rgba(0,0,0,0) 65%)}
 </style>`;
         
-        Lampa.Template.add('applecation_css', styles);
-        $('body').append(Lampa.Template.get('applecation_css', {}, true));
+        // Видаляємо зайві пробіли та переноси рядків для максимальної компактності
+        const minifiedStyles = styles.replace(/\s+/g, ' ').replace(/> </g, '><').trim();
+
+        Lampa.Template.add('newcard_css', minifiedStyles);
+        $('body').append(Lampa.Template.get('newcard_css', {}, true));
     }
 
-    // Патчинг Api.img
     function patchApiImg() {
         const originalImg = Lampa.Api.img;
         Lampa.Api.img = (src, size) => {
@@ -279,7 +306,6 @@
             }
         }
         
-        // Будь-яка мова
         if (logos.length) {
             logos.sort((a, b) => b.vote_average - a.vote_average);
             return logos[0];
@@ -293,7 +319,7 @@
     }
 
     function loadNetworkIcon(activity, data) {
-        const networkContainer = activity.render().find('.applecation__network');
+        const networkContainer = activity.render().find('.newcard__network');
         let mediaSource = data.networks || data.production_companies;
         
         if (mediaSource && mediaSource.length && mediaSource[0].logo_path) {
@@ -306,7 +332,7 @@
     }
 
     function fillMetaInfo(activity, data) {
-        const metaTextContainer = activity.render().find('.applecation__meta-text');
+        const metaTextContainer = activity.render().find('.newcard__meta-text');
         const genres = (data.genres || []).slice(0, 2).map(g => Lampa.Utils.capitalizeFirstLetter(g.name));
         
         const metaParts = [getMediaType(data), ...genres];
@@ -323,7 +349,7 @@
     }
 
     function fillAdditionalInfo(activity, data) {
-        const infoContainer = activity.render().find('.applecation__info');
+        const infoContainer = activity.render().find('.newcard__info');
         const infoParts = [];
 
         const releaseDate = data.release_date || data.first_air_date || '';
@@ -363,23 +389,25 @@
         const render = activity.render();
         render.find('.full-start-new__details, .full-start-new__head').hide().empty();
         
+        // ⭐ ПОКРАЩЕННЯ III: Уніфікація медіа типу
+        const mediaType = data.name ? 'tv' : 'movie';
+        
         fillMetaInfo(activity, data);       
         fillAdditionalInfo(activity, data); 
 
         const showContent = () => {
-            render.find('.applecation__meta').addClass('show');      
-            render.find('.applecation__info').addClass('show');       
-            render.find('.applecation__ratings').addClass('show');    
+            render.find('.newcard__meta').addClass('show');      
+            render.find('.newcard__info').addClass('show');       
+            render.find('.newcard__ratings').addClass('show');    
         };
 
         waitForBackgroundLoad(activity, showContent);
 
-        const mediaType = data.name ? 'tv' : 'movie';
         const currentLang = Lampa.Storage.get('language', 'ru');
         const apiUrl = Lampa.TMDB.api(`${mediaType}/${data.id}/images?api_key=${Lampa.TMDB.key()}`);
 
         $.get(apiUrl, (imagesData) => {
-            const logoContainer = render.find('.applecation__logo');
+            const logoContainer = render.find('.newcard__logo');
             const titleElement = render.find('.full-start-new__title');
             const bestLogo = selectBestLogo(imagesData.logos, currentLang);
 
@@ -397,49 +425,50 @@
             }
         }).fail(() => {
             render.find('.full-start-new__title').show();
-            waitForBackgroundLoad(activity, () => render.find('.applecation__logo').addClass('loaded'));
+            waitForBackgroundLoad(activity, () => render.find('.newcard__logo').addClass('loaded'));
         });
     }
 
     function waitForBackgroundLoad(activity, callback) {
-        const background = activity.render().find('.full-start__background:not(.applecation__overlay)');
+        const background = activity.render().find('.full-start__background:not(.newcard__overlay)');
         if (!background.length) {
             callback();
             return;
         }
 
-        if (background.hasClass('loaded') && background.hasClass('applecation-animated')) {
+        if (background.hasClass('loaded') && background.hasClass('newcard-animated')) {
             callback();
             return;
         }
 
         const runCallback = () => {
-            background.addClass('applecation-animated');
-            callback();
+            background.addClass('newcard-animated');
+            // ⭐ ПОКРАЩЕННЯ IV: Зменшення затримки для швидшої реакції (650ms -> 400ms)
+            setTimeout(callback, 400); 
         };
 
         if (background.hasClass('loaded')) {
-            setTimeout(runCallback, 650);
+            runCallback();
             return;
         }
 
         const checkInterval = setInterval(() => {
             if (background.hasClass('loaded')) {
                 clearInterval(checkInterval);
-                setTimeout(runCallback, 650);
+                runCallback();
             }
         }, 50);
 
         setTimeout(() => {
             clearInterval(checkInterval);
-            if (!background.hasClass('applecation-animated')) runCallback();
+            if (!background.hasClass('newcard-animated')) runCallback();
         }, 2000);
     }
 
     function addOverlay(activity) {
         const background = activity.render().find('.full-start__background');
-        if (background.length && !background.next('.applecation__overlay').length) {
-            background.after('<div class="full-start__background loaded applecation__overlay"></div>');
+        if (background.length && !background.next('.newcard__overlay').length) {
+            background.after('<div class="full-start__background loaded newcard__overlay"></div>');
         }
     }
 
@@ -455,8 +484,8 @@
     var pluginManifest = {
         type: 'other',
         version: '1.0.0',
-        name: 'Applecation',
-        description: 'Делает интерфейс в карточке фильма похожим на Apple TV и оптимизирует под 4K',
+        name: 'NewCard',
+        description: 'Оновлений дизайн картки фільму та оптимізація під 4K',
         author: '@darkestclouds',
         icon: PLUGIN_ICON
     };
