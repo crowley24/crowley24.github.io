@@ -4,25 +4,31 @@
   if (!window.Lampa) return;
 
   /* ======================================================
-     TEMPLATE (на базі Applecation)
+     TEMPLATE — НЕ ЛАМАЄМО ЯДРО
      ====================================================== */
 
   var template = `
     <div class="nf-wrap">
+      <!-- ОБОВʼЯЗКОВІ БЛОКИ LAMPA -->
+      <div class="full-start__title"></div>
+      <div class="full-start__info"></div>
+
+      <!-- НАШ UI -->
       <div class="nf-content">
         <div class="nf-studio"></div>
         <div class="nf-logo"></div>
         <div class="nf-meta"></div>
         <div class="nf-overview"></div>
-        <div class="buttons"></div>
       </div>
+
+      <div class="full-start__buttons"></div>
     </div>
   `;
 
   Lampa.Template.add('full_start_new', template);
 
   /* ======================================================
-     STYLES (Netflix / Apple TV)
+     STYLES — NETFLIX / APPLE TV
      ====================================================== */
 
   var css = `
@@ -36,8 +42,14 @@
         to right,
         rgba(0,0,0,.9) 40%,
         rgba(0,0,0,.4) 65%,
-        transparent 100%
+        transparent
       );
+    }
+
+    /* ховаємо стандартні блоки */
+    .full-start__title,
+    .full-start__info {
+      display: none;
     }
 
     .nf-content {
@@ -47,8 +59,8 @@
     .nf-studio img {
       max-height: 42px;
       margin-bottom: 1.2em;
-      opacity: .85;
       filter: invert(1);
+      opacity: .85;
     }
 
     .nf-logo img {
@@ -74,31 +86,22 @@
   $('head').append('<style>' + css + '</style>');
 
   /* ======================================================
-     DATA FILL (як у твоєму коді)
+     DATA (твій підхід, але safe)
      ====================================================== */
 
   function fillCard(e) {
-    var data = e.data && e.data.movie;
-    var activity = e.object && e.object.activity;
+    var data = e?.data?.movie;
+    var activity = e?.object?.activity;
     if (!data || !activity) return;
 
     var render = activity.render();
 
-    /* ---------- META ---------- */
-
+    /* META */
     var year = (data.release_date || data.first_air_date || '').slice(0, 4);
-    var genres = (data.genres || []).slice(0, 2).map(function (g) {
-      return g.name;
-    }).join(' · ');
-
-    var runtime = '';
-    if (data.runtime) {
-      runtime =
-        Math.floor(data.runtime / 60) +
-        'h ' +
-        (data.runtime % 60) +
-        'm';
-    }
+    var genres = (data.genres || []).slice(0, 2).map(g => g.name).join(' · ');
+    var runtime = data.runtime
+      ? Math.floor(data.runtime / 60) + 'h ' + (data.runtime % 60) + 'm'
+      : '';
 
     render.find('.nf-meta').text(
       [year, genres, runtime].filter(Boolean).join(' · ')
@@ -106,51 +109,40 @@
 
     render.find('.nf-overview').text(data.overview || '');
 
-    /* ---------- STUDIO LOGO ---------- */
-
+    /* STUDIO */
     var studio =
-      (data.networks && data.networks[0]) ||
-      (data.production_companies && data.production_companies[0]);
+      data.networks?.[0] || data.production_companies?.[0];
 
-    if (studio && studio.logo_path) {
-      var studio_img = Lampa.Api.img(studio.logo_path, 'w300');
-      render.find('.nf-studio').html('<img src="' + studio_img + '">');
+    if (studio?.logo_path) {
+      render.find('.nf-studio').html(
+        `<img src="${Lampa.Api.img(studio.logo_path, 'w300')}">`
+      );
     }
 
-    /* ---------- MOVIE / SERIES LOGO ---------- */
-
+    /* LOGO */
     var type = data.name ? 'tv' : 'movie';
     var lang = Lampa.Storage.get('language', 'en');
 
-    $.get(
-      Lampa.TMDB.api(type + '/' + data.id + '/images'),
-      function (res) {
-        if (!res || !res.logos || !res.logos.length) return;
+    $.get(Lampa.TMDB.api(`${type}/${data.id}/images`), res => {
+      var logos = res?.logos || [];
+      var logo =
+        logos.find(l => l.iso_639_1 === lang) ||
+        logos.find(l => l.iso_639_1 === 'en') ||
+        logos[0];
 
-        var logo =
-          res.logos.find(function (l) {
-            return l.iso_639_1 === lang;
-          }) ||
-          res.logos.find(function (l) {
-            return l.iso_639_1 === 'en';
-          }) ||
-          res.logos[0];
-
-        if (!logo) return;
-
-        var img =
-          Lampa.TMDB.image('/t/p/original' + logo.file_path);
-
-        render.find('.nf-logo').html('<img src="' + img + '">');
+      if (logo) {
+        render.find('.nf-logo').html(
+          `<img src="${Lampa.TMDB.image('/t/p/original' + logo.file_path)}">`
+        );
       }
-    );
+    });
   }
 
   /* ======================================================
      LISTENER
      ====================================================== */
 
-  Lampa.Listener.follow('full', function (e) {
+  Lampa.Listener.follow('full', e => {
     if (e.type === 'complite') fillCard(e);
   });
 
