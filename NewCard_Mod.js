@@ -4,56 +4,48 @@
   if (!window.Lampa) return;
 
   /* ======================================================
-     TEMPLATE — НЕ ЛАМАЄМО ЯДРО
+     TEMPLATE — 100% СУМІСНИЙ З ЯДРОМ
      ====================================================== */
 
   var template = `
-    <div class="nf-wrap">
-      <!-- ОБОВʼЯЗКОВІ БЛОКИ LAMPA -->
-      <div class="full-start__title"></div>
-      <div class="full-start__info"></div>
+    <div class="full-start">
 
-      <!-- НАШ UI -->
-      <div class="nf-content">
-        <div class="nf-studio"></div>
-        <div class="nf-logo"></div>
-        <div class="nf-meta"></div>
-        <div class="nf-overview"></div>
+      <div class="full-start__poster"></div>
+
+      <div class="full-start__body">
+
+        <div class="full-start__title"></div>
+        <div class="full-start__info"></div>
+
+        <!-- NETFLIX / APPLE TV UI -->
+        <div class="nf-wrap">
+          <div class="nf-studio"></div>
+          <div class="nf-logo"></div>
+          <div class="nf-meta"></div>
+          <div class="nf-overview"></div>
+        </div>
+
+        <div class="full-start__buttons"></div>
+
       </div>
-
-      <div class="full-start__buttons"></div>
     </div>
   `;
 
   Lampa.Template.add('full_start_new', template);
 
   /* ======================================================
-     STYLES — NETFLIX / APPLE TV
+     STYLES
      ====================================================== */
 
   var css = `
     .nf-wrap {
-      position: absolute;
-      inset: 0;
-      padding: 6vh 6vw;
-      display: flex;
-      align-items: flex-end;
-      background: linear-gradient(
-        to right,
-        rgba(0,0,0,.9) 40%,
-        rgba(0,0,0,.4) 65%,
-        transparent
-      );
+      margin-top: 2em;
+      max-width: 45vw;
     }
 
-    /* ховаємо стандартні блоки */
     .full-start__title,
     .full-start__info {
       display: none;
-    }
-
-    .nf-content {
-      max-width: 45vw;
     }
 
     .nf-studio img {
@@ -86,7 +78,7 @@
   $('head').append('<style>' + css + '</style>');
 
   /* ======================================================
-     DATA (твій підхід, але safe)
+     DATA (SAFE, ЯК В APPLECATION)
      ====================================================== */
 
   function fillCard(e) {
@@ -96,7 +88,6 @@
 
     var render = activity.render();
 
-    /* META */
     var year = (data.release_date || data.first_air_date || '').slice(0, 4);
     var genres = (data.genres || []).slice(0, 2).map(g => g.name).join(' · ');
     var runtime = data.runtime
@@ -109,7 +100,6 @@
 
     render.find('.nf-overview').text(data.overview || '');
 
-    /* STUDIO */
     var studio =
       data.networks?.[0] || data.production_companies?.[0];
 
@@ -119,7 +109,6 @@
       );
     }
 
-    /* LOGO */
     var type = data.name ? 'tv' : 'movie';
     var lang = Lampa.Storage.get('language', 'en');
 
