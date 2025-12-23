@@ -22,24 +22,24 @@
     }
 
     // Переклади для налаштувань (лише українська)
-    const translations = {
+const translations = {
         show_ratings: {
             uk: 'Показувати рейтинги'
         },
         show_ratings_desc: {
             uk: 'Відображати рейтинги IMDB та КіноПошук'
         },
-        hide_reactions: {
-            uk: 'Приховати реакції Lampa'
+        show_reactions: {
+            uk: 'Показувати реакції Lampa'
         },
-        hide_reactions_desc: {
-            uk: 'Приховати блок з реакціями'
+        show_reactions_desc: {
+            uk: 'Відображати блок з реакціями на картці'
         },
         ratings_position: {
             uk: 'Розташування рейтингів'
         },
         ratings_position_desc: {
-            uk: 'Оберіть де відображати рейтинги'
+            uk: 'Виберіть де відображати рейтинги'
         },
         position_card: {
             uk: 'У картці'
@@ -47,23 +47,44 @@
         position_corner: {
             uk: 'У лівому нижньому куті'
         },
-        logo_size: {
+        year_short: {
+            uk: ' р.'
+        },
+        logo_scale: {
             uk: 'Розмір логотипу'
         },
-        logo_size_desc: {
-            uk: 'Оберіть максимальний розмір логотипу'
+        logo_scale_desc: {
+            uk: 'Масштаб логотипу фільму'
         },
-        size_small: {
-            uk: 'Маленький'
+        text_scale: {
+            uk: 'Розмір тексту'
         },
-        size_medium: {
-            uk: 'Середній'
+        text_scale_desc: {
+            uk: 'Масштаб тексту даних про фільм'
         },
-        size_large: {
-            uk: 'Великий'
+        scale_default: {
+            uk: 'За замовчуванням'
+        },
+        spacing_scale: {
+            uk: 'Відступи між рядками'
+        },
+        spacing_scale_desc: {
+            uk: 'Відстань між елементами інформації'
+        },
+        settings_title_display: {
+            uk: 'Відображення'
+        },
+        settings_title_scaling: {
+            uk: 'Масштабування'
+        },
+        reverse_episodes: {
+            uk: 'Перевернути список епізодів'
+        },
+        reverse_episodes_desc: {
+            uk: 'Показувати епізоди у зворотному порядку (від нових до старих)'
         }
     };
-
+    
     function t(key) {
         // Залишаємо лише українську, при помилці - заглушка '???'
         return translations[key] && translations[key]['uk'] || '???';
@@ -72,19 +93,25 @@
     // Додаємо налаштування плагіна
     function addSettings() {
         // Ініціалізуємо значення за замовчуванням
-        if (Lampa.Storage.get('applecation_show_ratings') === undefined) {
+       if (Lampa.Storage.get('applecation_show_ratings') === undefined) {
             Lampa.Storage.set('applecation_show_ratings', false);
-        }
-        if (Lampa.Storage.get('applecation_hide_reactions') === undefined) {
-            Lampa.Storage.set('applecation_hide_reactions', false);
         }
         if (Lampa.Storage.get('applecation_ratings_position') === undefined) {
             Lampa.Storage.set('applecation_ratings_position', 'card');
         }
-        // Додаємо значення за замовчуванням для розміру логотипа
-        if (Lampa.Storage.get('applecation_logo_size') === undefined) {
-            Lampa.Storage.set('applecation_logo_size', 'medium');
+        if (Lampa.Storage.get('applecation_logo_scale') === undefined) {
+            Lampa.Storage.set('applecation_logo_scale', '100');
         }
+        if (Lampa.Storage.get('applecation_text_scale') === undefined) {
+            Lampa.Storage.set('applecation_text_scale', '100');
+        }
+        if (Lampa.Storage.get('applecation_spacing_scale') === undefined) {
+            Lampa.Storage.set('applecation_spacing_scale', '100');
+        }
+        if (Lampa.Storage.get('applecation_reverse_episodes') === undefined) {
+            Lampa.Storage.set('applecation_reverse_episodes', true);
+        }
+        
 
         // Створюємо розділ налаштувань
         Lampa.SettingsApi.addComponent({
