@@ -637,7 +637,7 @@ body.applecation--ratings-corner:not(.applecation--hide-reactions) .applecation_
 
 /* ЗМІНЕНО: Замість блюру — затемнення, як в оригінальній Lampa */
 .full-start__background.dim {
-  filter: brightness(0.65); /* Затемнення фону */
+  filter: brightness(0.45); /* Затемнення фону */
 }
 
 /* Удерживаем opacity при загрузке нового фона */
