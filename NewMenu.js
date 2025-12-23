@@ -135,7 +135,7 @@ Lampa.Platform.tv();
     // addItem('anime', ANIME_SVG); // Видалено
 
     // Додано нові кнопки
-    addItem('bookmarks', FAVORITE_SVG); 
+    addItem('favorite', FAVORITE_SVG); 
     addItem('history', HISTORY_SVG);
     
     adjustSpacing();
