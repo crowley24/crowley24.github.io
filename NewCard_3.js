@@ -166,50 +166,122 @@ const translations = {
                 Lampa.Activity.back();
             }
         });
+       // Показати реакції
+        Lampa.SettingsApi.addParam({
+            component: 'applecation_settings',
+            param: {
+                name: 'card_interfice_reactions',
+                type: 'trigger',
+                default: true
+            },
+            field: {
+                name: t('show_reactions'),
+                description: t('show_reactions_desc')
+            }
+        });
 
         // Розмір логотипа
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: {
-                name: 'applecation_logo_size',
+                name: 'applecation_logo_scale',
                 type: 'select',
                 values: {
-                    small: t('size_small'),
-                    medium: t('size_medium'),
-                    large: t('size_large')
+                    '50': '50%',
+                    '60': '60%',
+                    '70': '70%',
+                    '80': '80%',
+                    '90': '90%',
+                    '100': t('scale_default'),
+                    '110': '110%',
+                    '120': '120%',
+                    '130': '130%',
+                    '140': '140%',
+                    '150': '150%',
+                    '160': '160%',
+                    '170': '170%',
+                    '180': '180%'
                 },
-                default: 'medium'
+                default: '100'
             },
             field: {
-                name: t('logo_size'),
-                description: t('logo_size_desc')
+                name: t('logo_scale'),
+                description: t('logo_scale_desc')
             },
             onChange: function(value) {
-                Lampa.Storage.set('applecation_logo_size', value);
-                // Оновлюємо клас на body для стилів
-                $('body').removeClass('applecation--logo-small applecation--logo-medium applecation--logo-large');
-                $('body').addClass('applecation--logo-' + value);
+                Lampa.Storage.set('applecation_logo_scale', value);
+                applyScales();
             }
         });
 
-        // Приховати реакції
+        // Розмір тексту
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: {
-                name: 'applecation_hide_reactions',
-                type: 'trigger',
-                default: false
+                name: 'applecation_text_scale',
+                type: 'select',
+                values: {
+                    '50': '50%',
+                    '60': '60%',
+                    '70': '70%',
+                    '80': '80%',
+                    '90': '90%',
+                    '100': t('scale_default'),
+                    '110': '110%',
+                    '120': '120%',
+                    '130': '130%',
+                    '140': '140%',
+                    '150': '150%',
+                    '160': '160%',
+                    '170': '170%',
+                    '180': '180%'
+                },
+                default: '100'
             },
             field: {
-                name: t('hide_reactions'),
-                description: t('hide_reactions_desc')
+                name: t('text_scale'),
+                description: t('text_scale_desc')
             },
             onChange: function(value) {
-                if (value) {
-                    $('body').addClass('applecation--hide-reactions');
-                } else {
-                    $('body').removeClass('applecation--hide-reactions');
-                }
+                Lampa.Storage.set('applecation_text_scale', value);
+                applyScales();
+            }
+        });
+
+        // відступ між нядками
+        Lampa.SettingsApi.addParam({
+            component: 'applecation_settings',
+            param: {
+                name: 'applecation_spacing_scale',
+                type: 'select',
+                values: {
+                    '50': '50%',
+                    '60': '60%',
+                    '70': '70%',
+                    '80': '80%',
+                    '90': '90%',
+                    '100': t('scale_default'),
+                    '110': '110%',
+                    '120': '120%',
+                    '130': '130%',
+                    '140': '140%',
+                    '150': '150%',
+                    '160': '160%',
+                    '170': '170%',
+                    '180': '180%',
+                    '200': '200%',
+                    '250': '250%',
+                    '300': '300%'
+                },
+                default: '100'
+            },
+            field: {
+                name: t('spacing_scale'),
+                description: t('spacing_scale_desc')
+            },
+            onChange: function(value) {
+                Lampa.Storage.set('applecation_spacing_scale', value);
+                applyScales();
             }
         });
 
