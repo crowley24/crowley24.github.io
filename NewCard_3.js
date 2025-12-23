@@ -286,20 +286,69 @@ const translations = {
         });
 
         // Застосовуємо поточні налаштування
-        if (!Lampa.Storage.get('applecation_show_ratings', false)) {
+        
+if (!Lampa.Storage.get('applecation_show_ratings', false)) {
             $('body').addClass('applecation--hide-ratings');
         }
         $('body').addClass('applecation--ratings-' + Lampa.Storage.get('applecation_ratings_position', 'card'));
-        if (Lampa.Storage.get('applecation_hide_reactions', false)) {
-            $('body').addClass('applecation--hide-reactions');
-        }
-        // Застосовуємо поточну настройку розміру логотипа
-        $('body').addClass('applecation--logo-' + Lampa.Storage.get('applecation_logo_size', 'medium'));
+        applyScales();
+    }
+
+    // Застосовуємо маштабування
+    function applyScales() {
+        const logoScale = parseInt(Lampa.Storage.get('applecation_logo_scale', '100'));
+        const textScale = parseInt(Lampa.Storage.get('applecation_text_scale', '100'));
+        const spacingScale = parseInt(Lampa.Storage.get('applecation_spacing_scale', '100'));
+
+        // Видаляємо старі мтилі, якщо були
+        $('style[data-id="applecation_scales"]').remove();
+
+        // Створюємо нові стилі
+        const scaleStyles = `
+            <style data-id="applecation_scales">
+                /* Розмір логотипу */
+                
+                .applecation .applecation__logo img {
+                    max-width: ${35 * logoScale / 100}vw !important;
+                    max-height: ${180 * logoScale / 100}px !important;
+                }
+
+                /* Розмір тексту та мета-інформації */
+                .applecation .applecation__content-wrapper {
+                    font-size: ${textScale}% !important;
+                }
+
+                /* Відступ між рядками */
+                .applecation .full-start-new__title {
+                    margin-bottom: ${0.5 * spacingScale / 100}em !important;
+                }
+                
+                .applecation .applecation__meta {
+                    margin-bottom: ${0.5 * spacingScale / 100}em !important;
+                }
+                
+                .applecation .applecation__ratings {
+                    margin-bottom: ${0.5 * spacingScale / 100}em !important;
+                }
+                
+                .applecation .applecation__description {
+                    max-width: ${35 * textScale / 100}vw !important;
+                    margin-bottom: ${0.5 * spacingScale / 100}em !important;
+                }
+                
+                .applecation .applecation__info {
+                    margin-bottom: ${0.5 * spacingScale / 100}em !important;
+                }
+            </style>
+        `;
+
+        $('body').append(scaleStyles);
     }
 
     function addCustomTemplate() {
         const ratingsPosition = Lampa.Storage.get('applecation_ratings_position', 'card');
         
+    
                   // Блок з рейтингами
         const ratingsBlock = `<div class="applecation__ratings">
                         <div class="rate--imdb hide">
