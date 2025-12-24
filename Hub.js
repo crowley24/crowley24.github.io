@@ -2,91 +2,125 @@
     'use strict';
 
     var plugin = {
-        name: 'Universal Content Hub',
-        version: '2.0.0',
-        description: 'Розширене керування секціями на головному екрані (для Lampa 3.0+)'
+        name: 'Standard Section Manager',
+        version: '1.0.0',
+        description: 'Управління порядком та видимістю стандартних секцій Lampa.'
     };
 
-    const KEY_PREFIX = 'uch_'; // Новий унікальний префікс
-    const SETTINGS_COMPONENT = 'universal_hub_settings';
-    
-    // 10 розширених секцій
-    const SECTIONS_DATA = [
-        { id: 'trending_day_all', title: 'В Тренді Сьогодні (Усе)', api_path: 'trending/all/day', default_order: 10, line_type: 'wide' },
-        { id: 'netflix_popular', title: 'Netflix: Популярні (ТВ)', api_path: 'discover/tv?with_networks=213&sort_by=popularity.desc', default_order: 20, line_type: 'small' },
-        { id: 'hbo_top', title: 'HBO Max: Рейтингові (ТВ)', api_path: 'discover/tv?with_networks=49&sort_by=vote_average.desc&vote_count.gte=500', default_order: 30, line_type: 'small' },
-        { id: 'top_rus_movie', title: 'Топ Російські Фільми', api_path: 'discover/movie?with_original_language=ru&sort_by=vote_average.desc&vote_count.gte=1000', default_order: 40, line_type: 'full' },
-        { id: 'dorams_top', title: 'Дорами: Топ-Рейтинг', api_path: 'discover/tv?with_genres=18&with_original_language=ko&sort_by=vote_average.desc&vote_count.gte=500', default_order: 50, line_type: 'small' },
-        { id: 'family_animation', title: 'Сімейна Анімація', api_path: 'discover/movie?with_genres=16&without_genres=99,10755,10765&sort_by=popularity.desc', default_order: 60, line_type: 'small' },
-        { id: 'upcoming_films', title: 'Незабаром у Кіно', api_path: 'movie/upcoming', default_order: 70, line_type: 'wide' },
-        { id: 'prime_video_new', title: 'Prime Video: Новинки', api_path: 'discover/movie?with_networks=1024&sort_by=release_date.desc', default_order: 80, line_type: 'full' },
-        { id: 'kinopoisk_films', title: 'Фільми (Kinopoisk Top)', api_path: 'discover/movie?vote_average.gte=7&vote_count.gte=1000&with_original_language=ru|en&sort_by=vote_average.desc', default_order: 90, line_type: 'small' },
-        { id: 'top_movie_week', title: 'Тренди Тижня (Фільми)', api_path: 'trending/movie/week', default_order: 100, line_type: 'full' },
+    const KEY_PREFIX = 'ssm_';
+    const SETTINGS_COMPONENT = 'lampa_standard_sections';
+    const DEFAULT_ORDER = 999;
+
+    // Секції, які ми намагаємося перехопити та перевизначити.
+    // Назви (titles) використовуються для ідентифікації в налаштуваннях.
+    const STANDARD_SECTIONS = [
+        { id: 'now_watching', title: 'Зараз дивляться', default_order: 10 },
+        { id: 'upcoming_episodes', title: 'Вихід найближчих епізодів', default_order: 20 },
+        { id: 'trending_day', title: 'Сьогодні у тренді', default_order: 30 },
+        { id: 'trending_week', title: 'У тренді за тиждень', default_order: 40 },
+        { id: 'movie_now_playing', title: 'Дивіться у кінозалах', default_order: 50 },
+        { id: 'popular_movie', title: 'Популярні фільми', default_order: 60 },
+        { id: 'popular_tv', title: 'Популярні серіали', default_order: 70 },
+        { id: 'upcoming_movie', title: 'Очікувані фільми', default_order: 80 }
     ];
 
     function storageGet(key, def) {
         try { return Lampa.Storage.get(key, def); } catch (e) { return def; }
     }
-    
-    // Функція, що отримує відсортований і відфільтрований список секцій
-    function getActiveSections() {
-        return SECTIONS_DATA
+
+    // 1. Створюємо конфігурацію на основі налаштувань користувача
+    function getSectionConfig() {
+        return STANDARD_SECTIONS
             .map(section => {
-                // Виправлення помилок з NaN: приводимо до числа, використовуючи дефолт
                 const isRemoved = storageGet(KEY_PREFIX + section.id + '_remove', 0) == 1;
-                const order = parseInt(storageGet(KEY_PREFIX + section.id + '_order', section.default_order), 10) || section.default_order;
+                // Читаємо порядок, забезпечуючи, що це число
+                const order = parseInt(storageGet(KEY_PREFIX + section.id + '_order', section.default_order), 10) || DEFAULT_ORDER;
                 
                 return { ...section, isRemoved, order };
             })
-            .filter(section => !section.isRemoved)
             .sort((a, b) => a.order - b.order);
     }
-
-    // Рендеринг однієї секції на головному екрані
-    function renderSection(section) {
-        const object_type = section.api_path.includes('/movie') ? 'movie' : 'tv';
-        
-        const list = new Lampa.List.list(section.title, section.api_path, {
-            card_type: object_type,
-            line_type: section.line_type || 'small',
-            object_type: object_type
-        });
-
+    
+    // 2. Функція, що замінює стандартний рендеринг секцій
+    function customSectionRender(config) {
         const activeActivity = Lampa.Activity.active();
         
-        if (activeActivity && activeActivity.name === 'home') {
-            activeActivity.append(list.render({
-                method: 'append',
-                url: section.api_path,
-                title: section.title,
-                slice: 18 // Кількість карток у рядку
-            }));
-        }
-    }
-
-    // Головна функція рендерингу
-    function customRender() {
-        const sections = getActiveSections();
-        const activeActivity = Lampa.Activity.active();
-        
-        // Перевіряємо, що ми на головному екрані і ще не додали наші секції
-        if (activeActivity && activeActivity.name === 'home' && !activeActivity.custom_sections_added) {
+        if (activeActivity && activeActivity.name === 'home' && !activeActivity.ssm_sections_modified) {
             
-            if (sections.length === 0) {
-                Lampa.Noty.show('Немає активних секцій для відображення. Перевірте налаштування.', 3000);
-                return;
-            }
-
-            // Додаємо секції
-            sections.forEach(renderSection);
-            activeActivity.custom_sections_added = true; 
+            // Очищаємо існуючі секції, щоб відобразити їх у новому порядку.
+            // Це ризикований крок, але необхідний для сортування.
+            $(activeActivity.render()).empty(); 
             
-            // Скидаємо фокус, щоб Lampa перерахувала елементи з урахуванням нових рядків
+            config.forEach(section => {
+                if (!section.isRemoved) {
+                    
+                    // Тут нам потрібно відтворити внутрішню логіку Lampa для кожної стандартної секції.
+                    // Це лише ПРИКЛАДИ, як Lampa може генерувати URL для стандартних секцій (TMDB)
+                    let api_url = '';
+                    let object_type = 'movie'; 
+                    let line_type = 'small';
+                    let title = section.title;
+
+                    switch (section.id) {
+                        case 'trending_week':
+                            api_url = 'trending/all/week';
+                            line_type = 'wide';
+                            break;
+                        case 'trending_day':
+                            api_url = 'trending/all/day';
+                            line_type = 'wide';
+                            break;
+                        case 'popular_movie':
+                            api_url = 'movie/popular';
+                            object_type = 'movie';
+                            line_type = 'small';
+                            break;
+                        case 'popular_tv':
+                            api_url = 'tv/popular';
+                            object_type = 'tv';
+                            line_type = 'full';
+                            break;
+                        case 'upcoming_movie':
+                            api_url = 'movie/upcoming';
+                            object_type = 'movie';
+                            line_type = 'wide';
+                            break;
+                        // Секції 'now_watching', 'upcoming_episodes' та 'movie_now_playing' 
+                        // вимагають складнішої внутрішньої логіки Lampa, яку неможливо відтворити тут.
+                        // Тому для них ми використовуємо прості заглушки TMDB, які схожі за змістом.
+                        case 'now_watching':
+                            api_url = 'movie/now_playing';
+                            break;
+                        case 'movie_now_playing':
+                             api_url = 'movie/now_playing';
+                             break;
+                        default:
+                            return; // Ігноруємо невідомі або складні секції
+                    }
+
+                    if (api_url) {
+                        const list = new Lampa.List.list(title, api_url, {
+                            card_type: object_type,
+                            line_type: line_type,
+                            object_type: object_type
+                        });
+
+                        activeActivity.append(list.render({
+                            method: 'append',
+                            url: api_url,
+                            title: title,
+                            slice: 18 
+                        }));
+                    }
+                }
+            });
+
+            activeActivity.ssm_sections_modified = true; 
             if(Lampa.Controller && Lampa.Controller.enabled()) Lampa.Controller.toggle('content');
         }
     }
 
-    // Додавання налаштувань плагіна
+    // 3. Додавання налаштувань
     function addSettings() {
         if (!Lampa.SettingsApi) return;
         
@@ -96,16 +130,15 @@
             icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.41-7-7.38 0-2.31 1.03-4.37 2.64-5.74L11 11.66v8.27zm-1.07-8.31l-3.6-3.6C7.39 6.88 9.53 6 12 6c3.04 0 5.68 1.44 7.37 3.66L10.93 11.62zM19.08 14c-.11.83-.45 1.6-1 2.22l-3.67-3.67 4.67-.55zM12 4.07V11.5l3.6-3.6C14.07 5.17 12.06 4.14 12 4.07z" fill="currentColor"/></svg>`
         });
         
-        SECTIONS_DATA.forEach(section => {
+        STANDARD_SECTIONS.forEach(section => {
             const groupName = section.title;
 
-            // 1. Налаштування порядку (виправлено потенційну проблему з типом String)
             Lampa.SettingsApi.addParam({
                 component: SETTINGS_COMPONENT,
                 param: {
                     name: KEY_PREFIX + section.id + '_order',
                     type: 'input',
-                    default: String(section.default_order), // Default як рядок
+                    default: String(section.default_order), 
                     placeholder: String(section.default_order),
                     comment: 'Позиція на головному екрані (число)'
                 },
@@ -115,7 +148,6 @@
                 }
             });
 
-            // 2. Налаштування видимості
             Lampa.SettingsApi.addParam({
                 component: SETTINGS_COMPONENT,
                 param: {
@@ -131,32 +163,30 @@
             });
         });
 
-        // Прослуховуємо збереження налаштувань для оновлення головного екрана
         Lampa.Listener.follow('settings', (event) => {
             if (event.component === SETTINGS_COMPONENT && event.name === 'save') {
                 const activeActivity = Lampa.Activity.active();
                 if(activeActivity && activeActivity.name === 'home') {
-                    // Скидаємо прапор, щоб функція customRender спрацювала при перезапуску
-                    activeActivity.custom_sections_added = false; 
+                    activeActivity.ssm_sections_modified = false;
                     Lampa.Activity.replace(activeActivity); 
                 }
             }
         });
     }
-
-    // Ініціалізація плагіна
+    
+    // 4. Перехоплення рендерингу Lampa
     function start() {
         console.log(`[${plugin.name} v${plugin.version}] loaded.`);
         
-        // Додаємо налаштування одразу, або після готовності сховища
         Lampa.Storage.listener.follow('ready', addSettings);
         addSettings();
 
-        // Основний хук: запускаємо рендеринг, коли Lampa закінчить завантажувати свій контент
+        // Замінюємо стандартний рендеринг!
         Lampa.Listener.follow('content_ready', (event) => {
             if (event.name === 'home') {
-                // Невелика затримка гарантує, що DOM готовий до додавання нових елементів
-                setTimeout(customRender, 100); 
+                const config = getSectionConfig();
+                // Запускаємо наш кастомний рендеринг, який очистить існуючий контент
+                setTimeout(() => customSectionRender(config), 200); 
             }
         });
     }
