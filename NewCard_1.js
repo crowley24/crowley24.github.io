@@ -1,15 +1,15 @@
 (function () {
     'use strict';
 
-    // Иконка плагина
-    const PLUGIN_ICON = '<svg viewBox="110 90 180 210"xmlns=http://www.w3.org/2000/svg><g id=sphere><circle cx=200 cy=140 fill="hsl(200, 80%, 40%)"opacity=0.3 r=1.2 /><circle cx=230 cy=150 fill="hsl(200, 80%, 45%)"opacity=0.35 r=1.3 /><circle cx=170 cy=155 fill="hsl(200, 80%, 42%)"opacity=0.32 r=1.2 /><circle cx=245 cy=175 fill="hsl(200, 80%, 48%)"opacity=0.38 r=1.4 /><circle cx=155 cy=180 fill="hsl(200, 80%, 44%)"opacity=0.34 r=1.3 /><circle cx=215 cy=165 fill="hsl(200, 80%, 46%)"opacity=0.36 r=1.2 /><circle cx=185 cy=170 fill="hsl(200, 80%, 43%)"opacity=0.33 r=1.3 /><circle cx=260 cy=200 fill="hsl(200, 80%, 50%)"opacity=0.4 r=1.5 /><circle cx=140 cy=200 fill="hsl(200, 80%, 50%)"opacity=0.4 r=1.5 /><circle cx=250 cy=220 fill="hsl(200, 80%, 48%)"opacity=0.38 r=1.4 /><circle cx=150 cy=225 fill="hsl(200, 80%, 47%)"opacity=0.37 r=1.4 /><circle cx=235 cy=240 fill="hsl(200, 80%, 45%)"opacity=0.35 r=1.3 /><circle cx=165 cy=245 fill="hsl(200, 80%, 44%)"opacity=0.34 r=1.3 /><circle cx=220 cy=255 fill="hsl(200, 80%, 42%)"opacity=0.32 r=1.2 /><circle cx=180 cy=258 fill="hsl(200, 80%, 41%)"opacity=0.31 r=1.2 /><circle cx=200 cy=120 fill="hsl(200, 80%, 60%)"opacity=0.5 r=1.8 /><circle cx=240 cy=135 fill="hsl(200, 80%, 65%)"opacity=0.55 r=2 /><circle cx=160 cy=140 fill="hsl(200, 80%, 62%)"opacity=0.52 r=1.9 /><circle cx=270 cy=165 fill="hsl(200, 80%, 70%)"opacity=0.6 r=2.2 /><circle cx=130 cy=170 fill="hsl(200, 80%, 67%)"opacity=0.57 r=2.1 /><circle cx=255 cy=190 fill="hsl(200, 80%, 72%)"opacity=0.62 r=2.3 /><circle cx=145 cy=195 fill="hsl(200, 80%, 69%)"opacity=0.59 r=2.2 /><circle cx=280 cy=200 fill="hsl(200, 80%, 75%)"opacity=0.65 r=2.5 /><circle cx=120 cy=200 fill="hsl(200, 80%, 75%)"opacity=0.65 r=2.5 /><circle cx=275 cy=215 fill="hsl(200, 80%, 73%)"opacity=0.63 r=2.4 /><circle cx=125 cy=220 fill="hsl(200, 80%, 71%)"opacity=0.61 r=2.3 /><circle cx=260 cy=235 fill="hsl(200, 80%, 68%)"opacity=0.58 r=2.2 /><circle cx=140 cy=240 fill="hsl(200, 80%, 66%)"opacity=0.56 r=2.1 /><circle cx=245 cy=255 fill="hsl(200, 80%, 63%)"opacity=0.53 r=2 /><circle cx=155 cy=260 fill="hsl(200, 80%, 61%)"opacity=0.51 r=1.9 /><circle cx=225 cy=270 fill="hsl(200, 80%, 58%)"opacity=0.48 r=1.8 /><circle cx=175 cy=272 fill="hsl(200, 80%, 56%)"opacity=0.46 r=1.7 /><circle cx=200 cy=100 fill="hsl(200, 80%, 85%)"opacity=0.8 r=2.8 /><circle cx=230 cy=115 fill="hsl(200, 80%, 90%)"opacity=0.85 r=3 /><circle cx=170 cy=120 fill="hsl(200, 80%, 87%)"opacity=0.82 r=2.9 /><circle cx=250 cy=140 fill="hsl(200, 80%, 92%)"opacity=0.88 r=3.2 /><circle cx=150 cy=145 fill="hsl(200, 80%, 89%)"opacity=0.84 r=3.1 /><circle cx=265 cy=170 fill="hsl(200, 80%, 95%)"opacity=0.9 r=3.4 /><circle cx=135 cy=175 fill="hsl(200, 80%, 93%)"opacity=0.87 r=3.3 /><circle cx=275 cy=200 fill="hsl(200, 80%, 98%)"opacity=0.95 r=3.5 /><circle cx=125 cy=200 fill="hsl(200, 80%, 98%)"opacity=0.95 r=3.5 /><circle cx=200 cy=200 fill="hsl(200, 80%, 100%)"opacity=1 r=4 /><circle cx=220 cy=195 fill="hsl(200, 80%, 98%)"opacity=0.95 r=3.8 /><circle cx=180 cy=205 fill="hsl(200, 80%, 97%)"opacity=0.93 r=3.7 /><circle cx=240 cy=210 fill="hsl(200, 80%, 96%)"opacity=0.92 r=3.6 /><circle cx=160 cy=215 fill="hsl(200, 80%, 95%)"opacity=0.9 r=3.5 /><circle cx=270 cy=230 fill="hsl(200, 80%, 94%)"opacity=0.88 r=3.4 /><circle cx=130 cy=235 fill="hsl(200, 80%, 92%)"opacity=0.86 r=3.3 /><circle cx=255 cy=250 fill="hsl(200, 80%, 90%)"opacity=0.84 r=3.2 /><circle cx=145 cy=255 fill="hsl(200, 80%, 88%)"opacity=0.82 r=3.1 /><circle cx=235 cy=265 fill="hsl(200, 80%, 86%)"opacity=0.8 r=3 /><circle cx=165 cy=268 fill="hsl(200, 80%, 84%)"opacity=0.78 r=2.9 /><circle cx=215 cy=280 fill="hsl(200, 80%, 82%)"opacity=0.76 r=2.8 /><circle cx=185 cy=282 fill="hsl(200, 80%, 80%)"opacity=0.74 r=2.7 /><circle cx=200 cy=290 fill="hsl(200, 80%, 78%)"opacity=0.72 r=2.6 /><circle cx=210 cy=130 fill="hsl(200, 80%, 88%)"opacity=0.83 r=2.5 /><circle cx=190 cy=135 fill="hsl(200, 80%, 86%)"opacity=0.81 r=2.4 /><circle cx=225 cy=155 fill="hsl(200, 80%, 91%)"opacity=0.86 r=2.8 /><circle cx=175 cy=160 fill="hsl(200, 80%, 89%)"opacity=0.84 r=2.7 /><circle cx=245 cy=185 fill="hsl(200, 80%, 94%)"opacity=0.89 r=3.3 /><circle cx=155 cy=190 fill="hsl(200, 80%, 92%)"opacity=0.87 r=3.2 /><circle cx=260 cy=210 fill="hsl(200, 80%, 95%)"opacity=0.91 r=3.4 /><circle cx=140 cy=215 fill="hsl(200, 80%, 93%)"opacity=0.88 r=3.3 /><circle cx=250 cy=230 fill="hsl(200, 80%, 91%)"opacity=0.85 r=3.2 /><circle cx=150 cy=235 fill="hsl(200, 80%, 89%)"opacity=0.83 r=3.1 /><circle cx=230 cy=245 fill="hsl(200, 80%, 87%)"opacity=0.81 r=3 /><circle cx=170 cy=250 fill="hsl(200, 80%, 85%)"opacity=0.79 r=2.9 /><circle cx=210 cy=260 fill="hsl(200, 80%, 83%)"opacity=0.77 r=2.8 /><circle cx=190 cy=265 fill="hsl(200, 80%, 81%)"opacity=0.75 r=2.7 /></g></svg>';
-
-    // Главная функция плагина
+    // Іконка плагіна (Фрагмент кіноплівки - NewCard)
+const PLUGIN_ICON = '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#333"><rect x="5" y="30" width="90" height="40" rx="5" fill="hsl(0, 0%, 30%)"/><rect x="8" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="18" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="28" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="38" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="48" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="58" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="68" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="78" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="8" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="18" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="28" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="38" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="48" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="58" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="68" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="78" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="15" y="40" width="20" height="20" fill="hsl(200, 80%, 70%)"/><rect x="40" y="40" width="20" height="20" fill="hsl(200, 80%, 80%)"/><rect x="65" y="40" width="20" height="20" fill="hsl(200, 80%, 70%)"/></svg>';
+    
+    // Головна функція плагіна
     function initializePlugin() {
-        console.log('Applecation', 'v1.0.0');
+        console.log('NewCard', 'v1.0.0');
         
         if (!Lampa.Platform.screen('tv')) {
-            console.log('Applecation', 'TV mode only');
+            console.log('NewCard', 'TV mode only');
             return;
         }
 
@@ -20,203 +20,89 @@
         attachLogoLoader();
     }
 
-    // Переводы для настроек
-    const translations = {
+    // Переклади для налаштувань (лише українська)
+const translations = {
         show_ratings: {
-            ru: 'Показывать рейтинги',
-            en: 'Show ratings',
-            uk: 'Показувати рейтинги',
-            be: 'Паказваць рэйтынгі',
-            bg: 'Показване на рейтинги',
-            cs: 'Zobrazit hodnocení',
-            he: 'הצג דירוגים',
-            pt: 'Mostrar classificações',
-            zh: '显示评分'
+            uk: 'Показувати рейтинги'
         },
         show_ratings_desc: {
-            ru: 'Отображать рейтинги IMDB и КиноПоиск',
-            en: 'Display IMDB and KinoPoisk ratings',
-            uk: 'Відображати рейтинги IMDB та КіноПошук',
-            be: 'Адлюстроўваць рэйтынгі IMDB і КіноПошук',
-            bg: 'Показване на рейтинги IMDB и КиноПоиск',
-            cs: 'Zobrazit hodnocění IMDB и KinoPoisk',
-            he: 'הצג דירוגי IMDB וקינופויסק',
-            pt: 'Exibir classificações IMDB e KinoPoisk',
-            zh: '显示 IMDB 和 KinoPoisk 评分'
-        },
-        hide_reactions: {
-            ru: 'Скрыть реакции Lampa',
-            en: 'Hide Lampa reactions',
-            uk: 'Сховати реакції Lampa',
-            be: 'Схаваць рэакцыі Lampa',
-            bg: 'Скриване на реакции Lampa',
-            cs: 'Skrýt reakce Lampa',
-            he: 'הסתר תגובות Lampa',
-            pt: 'Ocultar reações Lampa',
-            zh: '隐藏 Lampa 反应'
-        },
-        hide_reactions_desc: {
-            ru: 'Скрыть блок с реакциями',
-            en: 'Hide reactions block',
-            uk: 'Сховати блок з реакціями',
-            be: 'Схаваць блок з рэакцыямі',
-            bg: 'Скриване на блока с реакции',
-            cs: 'Skrýt blok s reakcemi',
-            he: 'הסתר בלוק תגובות',
-            pt: 'Ocultar bloco de reações',
-            zh: '隐藏反应块'
+            uk: 'Відображати рейтинги IMDB та КіноПошук'
         },
         ratings_position: {
-            ru: 'Расположение рейтингов',
-            en: 'Ratings position',
-            uk: 'Розташування рейтингів',
-            be: 'Размяшчэнне рэйтынгаў',
-            bg: 'Позиция на рейтингите',
-            cs: 'Umístění hodnocení',
-            he: 'מיקום דירוגים',
-            pt: 'Posição das classificações',
-            zh: '评分位置'
+            uk: 'Розташування рейтингів'
         },
         ratings_position_desc: {
-            ru: 'Выберите где отображать рейтинги',
-            en: 'Choose where to display ratings',
-            uk: 'Виберіть де відображати рейтинги',
-            be: 'Выберыце дзе адлюстроўваць рэйтынгі',
-            bg: 'Изберете къде да се показват рейтингите',
-            cs: 'Vyberte, kde zobrazit hodnocení',
-            he: 'בחר היכן להציג דירוגים',
-            pt: 'Escolha onde exibir classificações',
-            zh: '选择评分显示位置'
+            uk: 'Виберіть де відображати рейтинги'
         },
         position_card: {
-            ru: 'В карточке',
-            en: 'In card',
-            uk: 'У картці',
-            be: 'У картцы',
-            bg: 'В картата',
-            cs: 'Na kartě',
-            he: 'בכרטיס',
-            pt: 'No cartão',
-            zh: '在卡片中'
+            uk: 'У картці'
         },
         position_corner: {
-            ru: 'В левом нижнем углу',
-            en: 'Bottom left corner',
-            uk: 'У лівому нижньому куті',
-            be: 'У левым ніжнім куце',
-            bg: 'В долния ляв ъгъл',
-            cs: 'V levém dolním rohu',
-            he: 'בפינה השמאלית התחתונה',
-            pt: 'Canto inferior esquerdo',
-            zh: '左下角'
+            uk: 'У лівому нижньому куті'
         },
-        logo_size: {
-            ru: 'Размер логотипа',
-            en: 'Logo size',
-            uk: 'Розмір логотипу',
-            be: 'Памер лагатыпа',
-            bg: 'Размер на логото',
-            cs: 'Velikost loga',
-            he: 'גודל לוגו',
-            pt: 'Tamanho do logotipo',
-            zh: '标志尺寸'
+        logo_scale: {
+            uk: 'Розмір логотипу'
         },
-        logo_size_desc: {
-            ru: 'Выберите максимальный размер логотипа',
-            en: 'Choose maximum logo size',
-            uk: 'Виберіть максимальний розмір логотипу',
-            be: 'Выберыце максімальны памер лагатыпа',
-            bg: 'Изберете максималния размер на логото',
-            cs: 'Vyberte maximální velikost loga',
-            he: 'בחר גודל לוגו מקסימלי',
-            pt: 'Escolha o tamanho máximo do logotipo',
-            zh: '选择最大标志尺寸'
+        logo_scale_desc: {
+            uk: 'Масштаб логотипу фільму'
         },
-        size_small: {
-            ru: 'Маленький',
-            en: 'Small',
-            uk: 'Маленький',
-            be: 'Маленькі',
-            bg: 'Малък',
-            cs: 'Malý',
-            he: 'קטן',
-            pt: 'Pequeno',
-            zh: '小型'
+        text_scale: {
+            uk: 'Розмір тексту'
         },
-        size_medium: {
-            ru: 'Средний',
-            en: 'Medium',
-            uk: 'Середній',
-            be: 'Сярэдні',
-            bg: 'Среден',
-            cs: 'Střední',
-            he: 'בינוני',
-            pt: 'Médio',
-            zh: '中型'
+        text_scale_desc: {
+            uk: 'Масштаб тексту даних про фільм'
         },
-        size_large: {
-            ru: 'Большой',
-            en: 'Large',
-            uk: 'Великий',
-            be: 'Вялікі',
-            bg: 'Голям',
-            cs: 'Velký',
-            he: 'גדול',
-            pt: 'Grande',
-            zh: '大型'
-        }
+        scale_default: {
+            uk: 'За замовчуванням'
+        },
+        spacing_scale: {
+            uk: 'Відступи між рядками'
+        },
+        spacing_scale_desc: {
+            uk: 'Відстань між елементами інформації'
+        },
+        settings_title_display: {
+            uk: 'Відображення'
+        },
+        settings_title_scaling: {
+            uk: 'Масштабування'
+        },
+        // Видалено: show_reactions, show_reactions_desc, reverse_episodes, reverse_episodes_desc, year_short
     };
-
+    
+    // Рефакторинг: Спрощена функція перекладу
     function t(key) {
-        const lang = Lampa.Storage.get('language', 'ru');
-        return translations[key] && translations[key][lang] || translations[key].ru;
+        return translations[key]?.['uk'] || '???';
     }
 
-    // Добавляем настройки плагина
+    // Додаємо налаштування плагіна
     function addSettings() {
-        // Инициализируем значения по умолчанию
-        if (Lampa.Storage.get('applecation_show_ratings') === undefined) {
+        // Ініціалізуємо значення за замовчуванням
+       if (Lampa.Storage.get('applecation_show_ratings') === undefined) {
             Lampa.Storage.set('applecation_show_ratings', false);
-        }
-        if (Lampa.Storage.get('applecation_hide_reactions') === undefined) {
-            Lampa.Storage.set('applecation_hide_reactions', false);
         }
         if (Lampa.Storage.get('applecation_ratings_position') === undefined) {
             Lampa.Storage.set('applecation_ratings_position', 'card');
         }
-        // Добавляем значение по умолчанию для размера логотипа
-        if (Lampa.Storage.get('applecation_logo_size') === undefined) {
-            Lampa.Storage.set('applecation_logo_size', 'medium');
+        if (Lampa.Storage.get('applecation_logo_scale') === undefined) {
+            Lampa.Storage.set('applecation_logo_scale', '100');
         }
+        if (Lampa.Storage.get('applecation_text_scale') === undefined) {
+            Lampa.Storage.set('applecation_text_scale', '100');
+        }
+        if (Lampa.Storage.get('applecation_spacing_scale') === undefined) {
+            Lampa.Storage.set('applecation_spacing_scale', '100');
+        }
+        // Видалено ініціалізацію 'applecation_reverse_episodes'
 
-        // Создаем раздел настроек
+        // Створюємо розділ налаштувань
         Lampa.SettingsApi.addComponent({
             component: 'applecation_settings',
-            name: 'Applecation',
+            name: 'NewCard', // Перейменовано
             icon: PLUGIN_ICON
         });
         
-        // Добавляем информацию о плагине
-        Lampa.SettingsApi.addParam({
-            component: 'applecation_settings',
-            param: {
-                name: 'applecation_about',
-                type: 'static'
-            },
-            field: {
-                name: '<div>Applecation v1.0.0</div>'
-            },
-            onRender: function(item) {
-                item.css('opacity', '0.7');
-                item.find('.settings-param__name').css({
-                    'font-size': '1.2em',
-                    'margin-bottom': '0.3em'
-                });
-                item.append('<div style="font-size: 0.9em; padding: 0 1.2em; line-height: 1.4;">Автор: DarkestClouds<br>Делает интерфейс в карточке фильма похожим на Apple TV и оптимизирует под 4K</div>');
-            }
-        });
-
-        // Показывать рейтинги
+        // Показувати рейтинги
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: {
@@ -237,7 +123,7 @@
             }
         });
 
-        // Расположение рейтингов
+        // Розташування рейтингів
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: {
@@ -257,74 +143,194 @@
                 Lampa.Storage.set('applecation_ratings_position', value);
                 $('body').removeClass('applecation--ratings-card applecation--ratings-corner');
                 $('body').addClass('applecation--ratings-' + value);
-                // Обновляем шаблон и перезагружаем активность
+                // Оновлюємо шаблон і перезавантажуємо активність
                 addCustomTemplate();
                 Lampa.Activity.back();
             }
         });
-
-        // Размер логотипа (НОВАЯ НАСТРОЙКА)
+       // Показати реакції (Налаштування залишено, але переклади видалено, оскільки воно не має onChange)
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: {
-                name: 'applecation_logo_size',
+                name: 'card_interfice_reactions',
+                type: 'trigger',
+                default: true
+            },
+            field: {
+                name: 'Показувати реакції Lampa', // Використовуємо тут фіксований текст
+                description: 'Відображати блок з реакціями на картці' // Використовуємо тут фіксований текст
+            }
+        });
+
+        // Розмір логотипа
+        Lampa.SettingsApi.addParam({
+            component: 'applecation_settings',
+            param: {
+                name: 'applecation_logo_scale',
                 type: 'select',
                 values: {
-                    small: t('size_small'),
-                    medium: t('size_medium'),
-                    large: t('size_large')
+                    '50': '50%',
+                    '60': '60%',
+                    '70': '70%',
+                    '80': '80%',
+                    '90': '90%',
+                    '100': t('scale_default'),
+                    '110': '110%',
+                    '120': '120%',
+                    '130': '130%',
+                    '140': '140%',
+                    '150': '150%',
+                    '160': '160%',
+                    '170': '170%',
+                    '180': '180%'
                 },
-                default: 'medium'
+                default: '100'
             },
             field: {
-                name: t('logo_size'),
-                description: t('logo_size_desc')
+                name: t('logo_scale'),
+                description: t('logo_scale_desc')
             },
             onChange: function(value) {
-                Lampa.Storage.set('applecation_logo_size', value);
-                // Обновляем класс на body для стилей
-                $('body').removeClass('applecation--logo-small applecation--logo-medium applecation--logo-large');
-                $('body').addClass('applecation--logo-' + value);
+                Lampa.Storage.set('applecation_logo_scale', value);
+                applyScales();
             }
         });
 
-        // Скрыть реакции
+        // Розмір тексту
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: {
-                name: 'applecation_hide_reactions',
-                type: 'trigger',
-                default: false
+                name: 'applecation_text_scale',
+                type: 'select',
+                values: {
+                    '50': '50%',
+                    '60': '60%',
+                    '70': '70%',
+                    '80': '80%',
+                    '90': '90%',
+                    '100': t('scale_default'),
+                    '110': '110%',
+                    '120': '120%',
+                    '130': '130%',
+                    '140': '140%',
+                    '150': '150%',
+                    '160': '160%',
+                    '170': '170%',
+                    '180': '180%'
+                },
+                default: '100'
             },
             field: {
-                name: t('hide_reactions'),
-                description: t('hide_reactions_desc')
+                name: t('text_scale'),
+                description: t('text_scale_desc')
             },
             onChange: function(value) {
-                if (value) {
-                    $('body').addClass('applecation--hide-reactions');
-                } else {
-                    $('body').removeClass('applecation--hide-reactions');
-                }
+                Lampa.Storage.set('applecation_text_scale', value);
+                applyScales();
             }
         });
 
-        // Применяем текущие настройки
+        // відступ між нядками
+        Lampa.SettingsApi.addParam({
+            component: 'applecation_settings',
+            param: {
+                name: 'applecation_spacing_scale',
+                type: 'select',
+                values: {
+                    '50': '50%',
+                    '60': '60%',
+                    '70': '70%',
+                    '80': '80%',
+                    '90': '90%',
+                    '100': t('scale_default'),
+                    '110': '110%',
+                    '120': '120%',
+                    '130': '130%',
+                    '140': '140%',
+                    '150': '150%',
+                    '160': '160%',
+                    '170': '170%',
+                    '180': '180%',
+                    '200': '200%',
+                    '250': '250%',
+                    '300': '300%'
+                },
+                default: '100'
+            },
+            field: {
+                name: t('spacing_scale'),
+                description: t('spacing_scale_desc')
+            },
+            onChange: function(value) {
+                Lampa.Storage.set('applecation_spacing_scale', value);
+                applyScales();
+            }
+        });
+
+        // Застосовуємо налаштування 
         if (!Lampa.Storage.get('applecation_show_ratings', false)) {
             $('body').addClass('applecation--hide-ratings');
         }
         $('body').addClass('applecation--ratings-' + Lampa.Storage.get('applecation_ratings_position', 'card'));
-        if (Lampa.Storage.get('applecation_hide_reactions', false)) {
-            $('body').addClass('applecation--hide-reactions');
-        }
-        // Применяем текущую настройку размера логотипа
-        $('body').addClass('applecation--logo-' + Lampa.Storage.get('applecation_logo_size', 'medium'));
+        applyScales();
     }
 
+    // Применяем масштабирование контента
+    function applyScales() {
+        const logoScale = parseInt(Lampa.Storage.get('applecation_logo_scale', '100'));
+        const textScale = parseInt(Lampa.Storage.get('applecation_text_scale', '100'));
+        const spacingScale = parseInt(Lampa.Storage.get('applecation_spacing_scale', '100'));
+
+        // Удаляем старые стили если есть
+        $('style[data-id="applecation_scales"]').remove();
+
+        // Создаем новые стили
+        const scaleStyles = `
+            <style data-id="applecation_scales">
+                /* Масштаб логотипа */
+                
+                .applecation .applecation__logo img {
+                    max-width: ${35 * logoScale / 100}vw !important;
+                    max-height: ${180 * logoScale / 100}px !important;
+                }
+
+                /* Масштаб текста и мета-информации */
+                .applecation .applecation__content-wrapper {
+                    font-size: ${textScale}% !important;
+                }
+
+                /* Отступы между элементами */
+                .applecation .full-start-new__title {
+                    margin-bottom: ${0.5 * spacingScale / 100}em !important;
+                }
+                
+                .applecation .applecation__meta {
+                    margin-bottom: ${0.5 * spacingScale / 100}em !important;
+                }
+                
+                .applecation .applecation__ratings {
+                    margin-bottom: ${0.5 * spacingScale / 100}em !important;
+                }
+                
+                .applecation .applecation__description {
+                    max-width: ${35 * textScale / 100}vw !important;
+                    margin-bottom: ${0.5 * spacingScale / 100}em !important;
+                }
+                
+                .applecation .applecation__info {
+                    margin-bottom: ${0.5 * spacingScale / 100}em !important;
+                }
+            </style>
+        `;
+
+        $('body').append(scaleStyles);
+    }
+
+    // Реєструємо кастомний шаблон сторінки full
     function addCustomTemplate() {
         const ratingsPosition = Lampa.Storage.get('applecation_ratings_position', 'card');
         
-                // Блок с рейтингами
+        // Блок з рейтингами
         const ratingsBlock = `<div class="applecation__ratings">
                         <div class="rate--imdb hide">
                             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none">
@@ -351,22 +357,27 @@
             <div class="full-start-new__right">
                 <div class="applecation__left">
                     <div class="applecation__logo"></div>
-                    <div class="full-start-new__title" style="display: none;">{title}</div>
                     
-                    <div class="applecation__meta">
-                        <div class="applecation__meta-left">
-                            <span class="applecation__network"></span>
-                            <span class="applecation__meta-text"></span>
-                            <div class="full-start__pg hide"></div>
+                    <div class="applecation__content-wrapper">
+                        <div class="full-start-new__title" style="display: none;">{title}</div>
+                        
+                        <div class="applecation__meta">
+                            <div class="applecation__meta-left">
+                                <span class="applecation__network"></span>
+                                <span class="applecation__meta-text"></span>
+                                <div class="full-start__pg hide"></div>
+                            </div>
                         </div>
+                        
+                        ${ratingsPosition === 'card' ? ratingsBlock : ''}
+                        
+                        <div class="applecation__description-wrapper">
+                            <div class="applecation__description"></div>
+                        </div>
+                        <div class="applecation__info"></div>
                     </div>
                     
-                    ${ratingsPosition === 'card' ? ratingsBlock : ''}
-                    
-                    
-                    <div class="applecation__info"></div>
-                    
-                    <div class="full-start-new__head" style="display: none;"></div>
+        <div class="full-start-new__head" style="display: none;"></div>
                     <div class="full-start-new__details" style="display: none;"></div>
 
                     <div class="full-start-new__buttons">
@@ -395,7 +406,7 @@
 
                         <div class="full-start__button selector button--subscribe hide">
                             <svg width="25" height="30" viewBox="0 0 25 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M6.01892 24C6.27423 27.3562 9.07836 30 12.5 30C15.9216 30 18.7257 27.3562 18.981 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z" fill="currentColor"/>
+                                <path d="M6.01892 24C6.27423 27.3562 9.07836 30 12.5 30C15.9216 30 18.7257 27.3562 18.981 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z" fill="currentColor"/>
                                 <path d="M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z" stroke="currentColor" stroke-width="2.5"/>
                             </svg>
                             <span>#{title_subscribe}</span>
@@ -443,10 +454,39 @@
             </div>
         </div>
     </div>`;
-
+    
+        
         Lampa.Template.add('full_start_new', template);
+
+        // Переопределяем шаблон эпизода для стиля Apple TV
+        const episodeTemplate = `<div class="full-episode selector layer--visible">
+            <div class="full-episode__img">
+                <img />
+                <div class="full-episode__time">{time}</div>
+            </div>
+
+            <div class="full-episode__body">
+                <div class="full-episode__num">#{full_episode} {num}</div>
+                <div class="full-episode__name">{name}</div>
+                <div class="full-episode__overview">{overview}</div>
+                <div class="full-episode__date">{date}</div>
+            </div>
+        </div>`;
+        
+        Lampa.Template.add('full_episode', episodeTemplate);
     }
 
+    function disableFullDescription(e) {
+        if (e.type === 'start' && e.link) {
+            
+            const rows = e.link.rows;
+            const index = rows.indexOf('description');
+            if (index > -1) {
+                rows.splice(index, 1);
+            }
+        }
+    }
+    
     function addStyles() {
         const styles = `<style>
 /* Основной контейнер */
@@ -758,9 +798,11 @@ body.applecation--ratings-corner:not(.applecation--hide-reactions) .applecation_
     opacity: 1 !important;
 }
 
+/* ЗМІНЕНО: Замість блюру — затемнення, як в оригінальній Lampa */
 .full-start__background.dim {
-  filter: blur(30px);
+  filter: brightness(0.35); /* Затемнення фону */
 }
+
 /* Удерживаем opacity при загрузке нового фона */
 .full-start__background.loaded.applecation-animated {
     opacity: 1 !important;
@@ -780,11 +822,7 @@ body.advanced--animation:not(.no--animation) .full-start__background.loaded {
     display: none;
 }
 
-/* Оверлей для затемнения левого края */
-.applecation__overlay {
-    width: 90vw;
-    background: linear-gradient(to right, rgba(0, 0, 0, 0.792) 0%, rgba(0, 0, 0, 0.504) 25%, rgba(0, 0, 0, 0.264) 45%, rgba(0, 0, 0, 0.12) 55%, rgba(0, 0, 0, 0.043) 60%, rgba(0, 0, 0, 0) 65%);
-}
+/* ВИДАЛЕНО: applecation__overlay - тепер його немає */
 </style>`;
         
         Lampa.Template.add('applecation_css', styles);
@@ -800,11 +838,11 @@ body.advanced--animation:not(.no--animation) .full-start__background.loaded {
             if (size === 'w1280') {
                 const posterSize = Lampa.Storage.field('poster_size');
                 
-                // Маппинг poster_size на backdrop размеры
+                // Маппінг poster_size на backdrop розміри
                 const sizeMap = {
-                    'w200': 'w780',      // Низкое → минимальный backdrop
-                    'w300': 'w1280',     // Среднее → стандартный backdrop
-                    'w500': 'original'   // Высокое → оригинальный backdrop
+                    'w200': 'w780',      // Низьке → мінімальний backdrop
+                    'w300': 'w1280',     // Середнє → стандартний backdrop
+                    'w500': 'original'   // Високе → оригінальний backdrop
                 };
                 
                 size = sizeMap[posterSize] || 'w1280';
@@ -813,23 +851,23 @@ body.advanced--animation:not(.no--animation) .full-start__background.loaded {
         };
     }
 
-    // Получаем качество логотипа на основе poster_size
+    // Отримуємо якість логотипа на основі poster_size
     function getLogoQuality() {
         const posterSize = Lampa.Storage.field('poster_size');
         const qualityMap = {
-            'w200': 'w300',      // Низкое постера → низкое лого
-            'w300': 'w500',      // Среднее постера → среднее лого
-            'w500': 'original'   // Высокое постера → оригинальное лого
+            'w200': 'w300',      // Низьке постера → низьке лого
+            'w300': 'w500',      // Середнє постера → середнє лого
+            'w500': 'original'   // Високе постера → оригінальне лого
         };
         return qualityMap[posterSize] || 'w500';
     }
     
-    // Новая функция для выбора лучшего логотипа
+    // Нова функція для вибору найкращого логотипа
     function selectBestLogo(logos, currentLang) {
-        // Приорітети мов: 1. Поточна мова, 2. Англійська ('en'), 3. Будь-яка.
+        // Приорітети мов: 1. Поточна мова ('uk'), 2. Англійська ('en'), 3. Будь-яка.
         
-                // 1. Поточна мова
-        const preferred = logos.filter(l => l.iso_639_1 === currentLang);
+        // 1. Поточна мова ('uk')
+        const preferred = logos.filter(l => l.iso_639_1 === 'uk');
         if (preferred.length > 0) {
             // Беремо логотип з найвищим рейтингом серед відповідних мов
             preferred.sort((a, b) => b.vote_average - a.vote_average);
@@ -852,31 +890,23 @@ body.advanced--animation:not(.no--animation) .full-start__background.loaded {
         return null;
     }
 
-    // Получаем локализованный тип медиа
+    // Отримуємо локалізований тип медіа (лише українська)
     function getMediaType(data) {
-        const lang = Lampa.Storage.get('language', 'ru');
         const isTv = !!data.name;
         
         const types = {
-            ru: isTv ? 'Сериал' : 'Фильм',
-            en: isTv ? 'TV Series' : 'Movie',
             uk: isTv ? 'Серіал' : 'Фільм',
-            be: isTv ? 'Серыял' : 'Фільм',
-            bg: isTv ? 'Сериал' : 'Филм',
-            cs: isTv ? 'Seriál' : 'Film',
-            he: isTv ? 'סדרה' : 'סרט',
-            pt: isTv ? 'Série' : 'Filme',
-            zh: isTv ? '电视剧' : '电影'
         };
         
-        return types[lang] || types['en'];
+        // Оскільки залишаємо лише 'uk', можна не перевіряти Lampa.Storage.get('language')
+        return types['uk']; 
     }
 
-    // Загружаем иконку студии/сети
+    // Завантажуємо іконку студії/мережі
     function loadNetworkIcon(activity, data) {
         const networkContainer = activity.render().find('.applecation__network');
         
-        // Для сериалов - телесеть
+        // Для серіалів - телемережа
         if (data.networks && data.networks.length) {
             const network = data.networks[0];
             if (network.logo_path) {
@@ -886,7 +916,7 @@ body.advanced--animation:not(.no--animation) .full-start__background.loaded {
             }
         }
         
-        // Для фильмов - студия
+        // Для фільмів - студія
         if (data.production_companies && data.production_companies.length) {
             const company = data.production_companies[0];
             if (company.logo_path) {
@@ -896,19 +926,19 @@ body.advanced--animation:not(.no--animation) .full-start__background.loaded {
             }
         }
         
-        // Если нет иконки - скрываем контейнер
+// Якщо немає іконки - приховуємо контейнер
         networkContainer.remove();
     }
 
-    // Заполняем мета информацию (Тип/Жанр/поджанр)
+   // Заповнюємо мета інформацію (Тип/Жанр/піджанр)
     function fillMetaInfo(activity, data) {
         const metaTextContainer = activity.render().find('.applecation__meta-text');
         const metaParts = [];
 
-        // Тип контента
+        // Тип контенту
         metaParts.push(getMediaType(data));
 
-        // Жанры (первые 2-3)
+        // Жанри (перші 2-3)
         if (data.genres && data.genres.length) {
             const genres = data.genres.slice(0, 2).map(g => 
                 Lampa.Utils.capitalizeFirstLetter(g.name)
@@ -918,102 +948,54 @@ body.advanced--animation:not(.no--animation) .full-start__background.loaded {
 
         metaTextContainer.html(metaParts.join(' · '));
         
-        // Загружаем иконку студии/сети
+        // Завантажуємо іконку студії/мережі
         loadNetworkIcon(activity, data);
     }
 
-    // Заполняем описание
-    function fillDescription(activity, data) {
-        const descContainer = activity.render().find('.applecation__description');
-        const description = data.overview || '';
-        descContainer.text(description);
-    }
-
-    // Склонение сезонов с локализацией
+    // Схиляння сезонів з локалізацією (залишено лише українську логіку)
     function formatSeasons(count) {
-        const lang = Lampa.Storage.get('language', 'ru');
+        // Логіка для української мови
+        const cases = [2, 0, 1, 1, 1, 2];
+        const titles = ['сезон', 'сезони', 'сезонів'];
         
-        // Славянские языки (ru, uk, be, bg) - сложное склонение
-        if (['ru', 'uk', 'be', 'bg'].includes(lang)) {
-            const cases = [2, 0, 1, 1, 1, 2];
-            const titles = {
-                ru: ['сезон', 'сезона', 'сезонов'],
-                uk: ['сезон', 'сезони', 'сезонів'],
-                be: ['сезон', 'сезоны', 'сезонаў'],
-                bg: ['сезон', 'сезона', 'сезона']
-            };
-            
-            const langTitles = titles[lang] || titles['ru'];
-            const caseIndex = (count % 100 > 4 && count % 100 < 20) ? 2 : cases[Math.min(count % 10, 5)];
-            
-            return `${count} ${langTitles[caseIndex]}`;
-        }
+        const caseIndex = (count % 100 > 4 && count % 100 < 20) ? 2 : cases[Math.min(count % 10, 5)];
         
-        // Английский
-        if (lang === 'en') {
-            return count === 1 ? `${count} Season` : `${count} Seasons`;
-        }
-        
-        // Чешский
-        if (lang === 'cs') {
-            if (count === 1) return `${count} série`;
-            if (count >= 2 && count <= 4) return `${count} série`;
-            return `${count} sérií`;
-        }
-        
-        // Португальский
-        if (lang === 'pt') {
-            return count === 1 ? `${count} Temporada` : `${count} Temporadas`;
-        }
-        
-        // Иврит
-        if (lang === 'he') {
-            if (count === 1) return `עונה ${count}`;
-            if (count === 2) return `${count} עונות`;
-            return `${count} עונות`;
-        }
-        
-        // Китайский (без склонения)
-        if (lang === 'zh') {
-            return `${count} 季`;
-        }
-        
-        // Остальные языки - базовое склонение
-        const seasonWord = Lampa.Lang.translate('full_season');
-        return count === 1 ? `${count} ${seasonWord}` : `${count} ${seasonWord}s`;
+        return `${count} ${titles[caseIndex]}`;
     }
 
-    // Заполняем дополнительную информацию (Год/длительность)
+    // Заповнюємо додаткову інформацію (Рік/тривалість)
     function fillAdditionalInfo(activity, data) {
         const infoContainer = activity.render().find('.applecation__info');
         const infoParts = [];
 
-        // Год выпуска
+        // Рік випуску
         const releaseDate = data.release_date || data.first_air_date || '';
         if (releaseDate) {
             const year = releaseDate.split('-')[0];
             infoParts.push(year);
         }
 
-        // Длительность
+        // Тривалість
         if (data.name) {
-            // Сериал - показываем и продолжительность эпизода, и количество сезонов
+            // Серіал - показуємо і тривалість епізоду, і кількість сезонів
             if (data.episode_run_time && data.episode_run_time.length) {
                 const avgRuntime = data.episode_run_time[0];
+                // Використовуємо Lampa.Lang.translate, оскільки воно не було видалено
                 const timeM = Lampa.Lang.translate('time_m').replace('.', '');
                 infoParts.push(`${avgRuntime} ${timeM}`);
             }
             
-            // Всегда показываем количество сезонов для сериалов
+            // Завжди показуємо кількість сезонів для серіалів
             const seasons = Lampa.Utils.countSeasons(data);
             if (seasons) {
                 infoParts.push(formatSeasons(seasons));
             }
         } else {
-            // Фильм - общая продолжительность
+            // Фільм - загальна тривалість
             if (data.runtime && data.runtime > 0) {
                 const hours = Math.floor(data.runtime / 60);
                 const minutes = data.runtime % 60;
+                // Використовуємо Lampa.Lang.translate
                 const timeH = Lampa.Lang.translate('time_h').replace('.', '');
                 const timeM = Lampa.Lang.translate('time_m').replace('.', '');
                 const timeStr = hours > 0 
@@ -1026,44 +1008,37 @@ body.advanced--animation:not(.no--animation) .full-start__background.loaded {
         infoContainer.html(infoParts.join(' · '));
     }
 
-    // Загружаем логотип фильма
+    // Завантажуємо логотип фільму
     function loadLogo(event) {
         const data = event.data.movie;
         const activity = event.object.activity;
         
         if (!data || !activity) return;
 
-        // ВИПРАВЛЕННЯ ДУБЛЮВАННЯ (залишаємо)
-        const detailsContainer = activity.render().find('.full-start-new__details');
-        if (detailsContainer.length) {
-            detailsContainer.hide().empty();
-        }
-        const headContainer = activity.render().find('.full-start-new__head');
-        if (headContainer.length) {
-            headContainer.hide().empty();
-        }
+        // ВИДАЛЕНО: Зайвий код для видалення елементів full-start-new__details та full-start-new__head
         
-        // Заполняем основную информацию
-        fillMetaInfo(activity, data);       // <-- ЗАЛИШИТИ! (Студія, Тип, Жанр)
-        // fillDescription(activity, data);  // <-- ВИДАЛЕНО! (Опис)
-        fillAdditionalInfo(activity, data); // <-- ЗАЛИШИТИ! (Рік, Тривалість, Сезони)
+        // Заповнюємо основну інформацію
+        fillMetaInfo(activity, data);       
+        fillAdditionalInfo(activity, data); 
 
-        // Ждем когда фон загрузится и появится
+        // Чекаємо коли фон завантажиться і з'явиться
         waitForBackgroundLoad(activity, () => {
-            // После загрузки фона показываем контент
-            activity.render().find('.applecation__meta').addClass('show');      // <-- ЗАЛИШИТИ!
-            // activity.render().find('.applecation__description').addClass('show'); // <-- ВИДАЛЕНО!
-            activity.render().find('.applecation__info').addClass('show');       // <-- ЗАЛИШИТИ!
-            activity.render().find('.applecation__ratings').addClass('show');    // <-- ЗАЛИШИТИ!
+            // Після завантаження фону показуємо контент
+            activity.render().find('.applecation__meta').addClass('show');      
+            activity.render().find('.applecation__info').addClass('show');       
+            activity.render().find('.applecation__ratings').addClass('show');    
+            // Також показуємо опис, оскільки він має клас opacity: 0
+            activity.render().find('.applecation__description').addClass('show');
         });
 
-        // Загружаем логотип
+        // Завантажуємо логотип
         const mediaType = data.name ? 'tv' : 'movie';
-        const currentLang = Lampa.Storage.get('language', 'ru');
+        // Примусово встановлюємо мову для пошуку лого
+        const currentLang = 'uk'; 
         
-        // Запрос всех логотипов (TMDb images endpoint)
+        // Запит всіх логотипів (TMDb images endpoint)
         const apiUrl = Lampa.TMDB.api(
-            `${mediaType}/${data.id}/images?api_key=${Lampa.TMDB.key()}` // Убрали локализацию, чтобы получить все доступные лого
+            `${mediaType}/${data.id}/images?api_key=${Lampa.TMDB.key()}` // Залишили без локалізації, щоб отримати всі доступні лого
         );
 
         $.get(apiUrl, (imagesData) => {
@@ -1086,14 +1061,14 @@ body.advanced--animation:not(.no--animation) .full-start__background.loaded {
                 };
                 img.src = logoUrl;
             } else {
-                // Нет логотипа - показываем текстовое название
+                // Немає логотипа - показуємо текстову назву
                 titleElement.show();
                 waitForBackgroundLoad(activity, () => {
                     logoContainer.addClass('loaded');
                 });
             }
         }).fail(() => {
-            // При ошибке показываем текстовое название
+        // При помилці показуємо текстову назву
             activity.render().find('.full-start-new__title').show();
             waitForBackgroundLoad(activity, () => {
                 activity.render().find('.applecation__logo').addClass('loaded');
@@ -1101,24 +1076,24 @@ body.advanced--animation:not(.no--animation) .full-start__background.loaded {
         });
     }
 
-    // Ждем загрузки и появления фона
+ // Чекаємо завантаження та появи фону
     function waitForBackgroundLoad(activity, callback) {
-        const background = activity.render().find('.full-start__background:not(.applecation__overlay)');
+        const background = activity.render().find('.full-start__background');
         
         if (!background.length) {
             callback();
             return;
         }
 
-        // Если фон уже загружен и анимация завершена
+        // Якщо фон вже завантажений і анімація завершена
         if (background.hasClass('loaded') && background.hasClass('applecation-animated')) {
             callback();
             return;
         }
 
-        // Если фон загружен но анимация еще идет
+        // Якщо фон завантажений але анімація ще триває
         if (background.hasClass('loaded')) {
-            // Ждем завершения transition + небольшая задержка для надежности
+            // Чекаємо завершення transition + невелика затримка для надійності
             setTimeout(() => {
                 background.addClass('applecation-animated');
                 callback();
@@ -1126,11 +1101,11 @@ body.advanced--animation:not(.no--animation) .full-start__background.loaded {
             return;
         }
 
-        // Ждем загрузки фона
+        // Чекаємо завантаження фону
         const checkInterval = setInterval(() => {
             if (background.hasClass('loaded')) {
                 clearInterval(checkInterval);
-                // Ждем завершения transition + небольшая задержка
+                // Чекаємо завершення transition + невелика затримка
                 setTimeout(() => {
                     background.addClass('applecation-animated');
                     callback();
@@ -1138,7 +1113,7 @@ body.advanced--animation:not(.no--animation) .full-start__background.loaded {
             }
         }, 50);
 
-        // Таймаут на случай если что-то пошло не так
+        // Таймаут на випадок якщо щось пішло не так
         setTimeout(() => {
             clearInterval(checkInterval);
             if (!background.hasClass('applecation-animated')) {
@@ -1148,40 +1123,31 @@ body.advanced--animation:not(.no--animation) .full-start__background.loaded {
         }, 2000);
     }
 
-    // Добавляем оверлей рядом с фоном
-    function addOverlay(activity) {
-        const background = activity.render().find('.full-start__background');
-        if (background.length && !background.next('.applecation__overlay').length) {
-            background.after('<div class="full-start__background loaded applecation__overlay"></div>');
-        }
-    }
-
-    // Подключаем загрузку логотипов
+    // Підключаємо завантаження логотипів
     function attachLogoLoader() {
         Lampa.Listener.follow('full', (event) => {
             if (event.type === 'complite') {
-                addOverlay(event.object.activity);
                 loadLogo(event);
             }
         });
     }
 
-    // Регистрация плагина в манифесте
+    // Реєстрація плагіна в маніфесті
     var pluginManifest = {
         type: 'other',
         version: '1.0.0',
-        name: 'Applecation',
-        description: 'Делает интерфейс в карточке фильма похожим на Apple TV и оптимизирует под 4K',
-        author: '@darkestclouds',
+        name: 'NewCard', // Перейменовано
+        description: 'Новий дизайн картки фільму/серіалу.', // Оновлений опис
+        author: '', // Видалено автора
         icon: PLUGIN_ICON
     };
 
-    // Регистрируем плагин
+    // Реєструємо плагін
     if (Lampa.Manifest && Lampa.Manifest.plugins) {
         Lampa.Manifest.plugins = pluginManifest;
     }
 
-    // Запуск плагина
+    // Запуск плагіна
     if (window.appready) {
         initializePlugin();
     } else {
@@ -1193,4 +1159,3 @@ body.advanced--animation:not(.no--animation) .full-start__background.loaded {
     }
 
 })();
-      
