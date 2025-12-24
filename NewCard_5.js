@@ -285,7 +285,7 @@ const translations = {
             }
         });
 
-        // Применяем текущие настройки
+        // Застосовуємо налаштування 
         if (!Lampa.Storage.get('applecation_show_ratings', false)) {
             $('body').addClass('applecation--hide-ratings');
         }
@@ -344,11 +344,11 @@ const translations = {
         $('body').append(scaleStyles);
     }
 
-    // Регистрируем кастомный шаблон страницы full
+    // Реєструємо кастомний шаблон сторінки full
     function addCustomTemplate() {
         const ratingsPosition = Lampa.Storage.get('applecation_ratings_position', 'card');
         
-        // Блок с рейтингами
+        // Блок з рейтингами
         const ratingsBlock = `<!-- Рейтинги -->
                     <div class="applecation__ratings">
                         <div class="rate--imdb hide">
@@ -500,7 +500,7 @@ const translations = {
 
     function disableFullDescription(e) {
         if (e.type === 'start' && e.link) {
-            // Удаляем 'description' из списка rows перед рендерингом
+            
             const rows = e.link.rows;
             const index = rows.indexOf('description');
             if (index > -1) {
