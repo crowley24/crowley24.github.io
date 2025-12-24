@@ -344,13 +344,13 @@ const translations = {
         $('body').append(scaleStyles);
     }
 
-    
+    // Регистрируем кастомный шаблон страницы full
     function addCustomTemplate() {
         const ratingsPosition = Lampa.Storage.get('applecation_ratings_position', 'card');
         
-    
-                  // Блок з рейтингами
-        const ratingsBlock = `<div class="applecation__ratings">
+        // Блок с рейтингами
+        const ratingsBlock = `<!-- Рейтинги -->
+                    <div class="applecation__ratings">
                         <div class="rate--imdb hide">
                             <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none">
                                 <path fill="currentColor" d="M4 7c-1.103 0-2 .897-2 2v6.4c0 1.103.897 2 2 2h16c1.103 0 2-.897 2-2V9c0-1.103-.897-2-2-2H4Zm1.4 2.363h1.275v5.312H5.4V9.362Zm1.962 0H9l.438 2.512.287-2.512h1.75v5.312H10.4v-3l-.563 3h-.8l-.512-3v3H7.362V9.362Zm8.313 0H17v1.2c.16-.16.516-.363.875-.363.36.04.84.283.8.763v3.075c0 .24-.075.404-.275.524-.16.04-.28.075-.6.075-.32 0-.795-.196-.875-.237-.08-.04-.163.275-.163.275h-1.087V9.362Zm-3.513.037H13.6c.88 0 1.084.078 1.325.237.24.16.35.397.35.838v3.2c0 .32-.15.563-.35.762-.2.2-.484.288-1.325.288h-1.438V9.4Zm1.275.8v3.563c.2 0 .488.04.488-.2v-3.126c0-.28-.247-.237-.488-.237Zm3.763.675c-.12 0-.2.08-.2.2v2.688c0 .159.08.237.2.237.12 0 .2-.117.2-.238l-.037-2.687c0-.12-.043-.2-.163-.2Z"/>
@@ -376,23 +376,27 @@ const translations = {
             <div class="full-start-new__right">
                 <div class="applecation__left">
                     <div class="applecation__logo"></div>
-
+                    
                     <div class="applecation__content-wrapper">
                         <div class="full-start-new__title" style="display: none;">{title}</div>
                         
-                    <div class="applecation__meta">
-                        <div class="applecation__meta-left">
-                            <span class="applecation__network"></span>
-                            <span class="applecation__meta-text"></span>
-                            <div class="full-start__pg hide"></div>
+                        <div class="applecation__meta">
+                            <div class="applecation__meta-left">
+                                <span class="applecation__network"></span>
+                                <span class="applecation__meta-text"></span>
+                                <div class="full-start__pg hide"></div>
+                            </div>
                         </div>
+                        
+                        ${ratingsPosition === 'card' ? ratingsBlock : ''}
+                        
+                        <div class="applecation__description-wrapper">
+                            <div class="applecation__description"></div>
+                        </div>
+                        <div class="applecation__info"></div>
                     </div>
                     
-                    ${ratingsPosition === 'card' ? ratingsBlock : ''}
-                    
-                    
-                    <div class="applecation__info"></div>
-                    
+                    <!-- Скрытые оригинальные элементы -->
                     <div class="full-start-new__head" style="display: none;"></div>
                     <div class="full-start-new__details" style="display: none;"></div>
 
@@ -401,7 +405,7 @@ const translations = {
                             <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/>
                                 <path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/>
- </svg>
+                            </svg>
                             <span>#{title_watch}</span>
                         </div>
 
@@ -422,7 +426,7 @@ const translations = {
 
                         <div class="full-start__button selector button--subscribe hide">
                             <svg width="25" height="30" viewBox="0 0 25 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M6.01892 24C6.27423 27.3562 9.07836 30 12.5 30C15.9216 30 18.7257 27.3562 18.981 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z" fill="currentColor"/>
+                                <path d="M6.01892 24C6.27423 27.3562 9.07836 30 12.5 30C15.9216 30 18.7257 27.3562 18.981 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z" fill="currentColor"/>
                                 <path d="M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z" stroke="currentColor" stroke-width="2.5"/>
                             </svg>
                             <span>#{title_subscribe}</span>
@@ -445,10 +449,12 @@ const translations = {
                     
                     ${ratingsPosition === 'corner' ? ratingsBlock : ''}
 
+                    <!-- Скрытый элемент для совместимости (предотвращает выход реакций за экран) -->
                     <div class="full-start-new__rate-line">
                         <div class="full-start__status hide"></div>
                     </div>
                     
+                    <!-- Пустой маркер для предотвращения вставки элементов от modss.js -->
                     <div class="rating--modss" style="display: none;"></div>
                 </div>
             </div>
@@ -470,10 +476,39 @@ const translations = {
             </div>
         </div>
     </div>`;
-
+    
+        
         Lampa.Template.add('full_start_new', template);
+
+        // Переопределяем шаблон эпизода для стиля Apple TV
+        const episodeTemplate = `<div class="full-episode selector layer--visible">
+            <div class="full-episode__img">
+                <img />
+                <div class="full-episode__time">{time}</div>
+            </div>
+
+            <div class="full-episode__body">
+                <div class="full-episode__num">#{full_episode} {num}</div>
+                <div class="full-episode__name">{name}</div>
+                <div class="full-episode__overview">{overview}</div>
+                <div class="full-episode__date">{date}</div>
+            </div>
+        </div>`;
+        
+        Lampa.Template.add('full_episode', episodeTemplate);
     }
 
+    function disableFullDescription(e) {
+        if (e.type === 'start' && e.link) {
+            // Удаляем 'description' из списка rows перед рендерингом
+            const rows = e.link.rows;
+            const index = rows.indexOf('description');
+            if (index > -1) {
+                rows.splice(index, 1);
+            }
+        }
+    }
+    
     function addStyles() {
         const styles = `<style>
 /* Основной контейнер */
