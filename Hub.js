@@ -2,35 +2,39 @@
     'use strict';
 
     var plugin = {
-        name: 'Custom Sections Hub',
-        version: '1.0.2', // Оновлена версія з виправленням помилок
+        name: 'Universal Content Hub',
+        version: '2.0.0',
         description: 'Розширене керування секціями на головному екрані (для Lampa 3.0+)'
     };
 
-    const KEY_PREFIX = 'csh_';
-    const SETTINGS_COMPONENT = 'custom_sections_hub';
-
-    // Список доданих секцій
+    const KEY_PREFIX = 'uch_'; // Новий унікальний префікс
+    const SETTINGS_COMPONENT = 'universal_hub_settings';
+    
+    // 10 розширених секцій
     const SECTIONS_DATA = [
-        { id: 'netflix_popular', title: 'Netflix: Популярні (ТВ)', api_path: 'discover/tv?with_networks=213&sort_by=popularity.desc', default_order: 10, line_type: 'wide' },
-        { id: 'hbo_top', title: 'HBO Max: Рейтингові (ТВ)', api_path: 'discover/tv?with_networks=49&sort_by=vote_average.desc&vote_count.gte=500', default_order: 20, line_type: 'small' },
-        { id: 'dorams_top', title: 'Дорами: Топ-Рейтинг', api_path: 'discover/tv?with_genres=18&with_original_language=ko&sort_by=vote_average.desc&vote_count.gte=500', default_order: 30, line_type: 'small' },
+        { id: 'trending_day_all', title: 'В Тренді Сьогодні (Усе)', api_path: 'trending/all/day', default_order: 10, line_type: 'wide' },
+        { id: 'netflix_popular', title: 'Netflix: Популярні (ТВ)', api_path: 'discover/tv?with_networks=213&sort_by=popularity.desc', default_order: 20, line_type: 'small' },
+        { id: 'hbo_top', title: 'HBO Max: Рейтингові (ТВ)', api_path: 'discover/tv?with_networks=49&sort_by=vote_average.desc&vote_count.gte=500', default_order: 30, line_type: 'small' },
         { id: 'top_rus_movie', title: 'Топ Російські Фільми', api_path: 'discover/movie?with_original_language=ru&sort_by=vote_average.desc&vote_count.gte=1000', default_order: 40, line_type: 'full' },
-        { id: 'prime_video_new', title: 'Prime Video: Новинки', api_path: 'discover/movie?with_networks=1024&sort_by=release_date.desc', default_order: 50, line_type: 'full' },
-        { id: 'upcoming_films', title: 'Незабаром у Кіно', api_path: 'movie/upcoming', default_order: 60, line_type: 'wide' },
-        { id: 'top_movie_week', title: 'Тренди Тижня (Фільми)', api_path: 'trending/movie/week', default_order: 70, line_type: 'small' },
+        { id: 'dorams_top', title: 'Дорами: Топ-Рейтинг', api_path: 'discover/tv?with_genres=18&with_original_language=ko&sort_by=vote_average.desc&vote_count.gte=500', default_order: 50, line_type: 'small' },
+        { id: 'family_animation', title: 'Сімейна Анімація', api_path: 'discover/movie?with_genres=16&without_genres=99,10755,10765&sort_by=popularity.desc', default_order: 60, line_type: 'small' },
+        { id: 'upcoming_films', title: 'Незабаром у Кіно', api_path: 'movie/upcoming', default_order: 70, line_type: 'wide' },
+        { id: 'prime_video_new', title: 'Prime Video: Новинки', api_path: 'discover/movie?with_networks=1024&sort_by=release_date.desc', default_order: 80, line_type: 'full' },
+        { id: 'kinopoisk_films', title: 'Фільми (Kinopoisk Top)', api_path: 'discover/movie?vote_average.gte=7&vote_count.gte=1000&with_original_language=ru|en&sort_by=vote_average.desc', default_order: 90, line_type: 'small' },
+        { id: 'top_movie_week', title: 'Тренди Тижня (Фільми)', api_path: 'trending/movie/week', default_order: 100, line_type: 'full' },
     ];
 
     function storageGet(key, def) {
         try { return Lampa.Storage.get(key, def); } catch (e) { return def; }
     }
-
+    
+    // Функція, що отримує відсортований і відфільтрований список секцій
     function getActiveSections() {
         return SECTIONS_DATA
             .map(section => {
+                // Виправлення помилок з NaN: приводимо до числа, використовуючи дефолт
                 const isRemoved = storageGet(KEY_PREFIX + section.id + '_remove', 0) == 1;
-                // Забезпечуємо, що порядок завжди є числом
-                const order = parseInt(storageGet(KEY_PREFIX + section.id + '_order', section.default_order), 10) || 999;
+                const order = parseInt(storageGet(KEY_PREFIX + section.id + '_order', section.default_order), 10) || section.default_order;
                 
                 return { ...section, isRemoved, order };
             })
@@ -38,11 +42,14 @@
             .sort((a, b) => a.order - b.order);
     }
 
+    // Рендеринг однієї секції на головному екрані
     function renderSection(section) {
+        const object_type = section.api_path.includes('/movie') ? 'movie' : 'tv';
+        
         const list = new Lampa.List.list(section.title, section.api_path, {
-            card_type: section.api_path.includes('/movie') ? 'movie' : 'tv',
+            card_type: object_type,
             line_type: section.line_type || 'small',
-            object_type: section.api_path.includes('/movie') ? 'movie' : 'tv'
+            object_type: object_type
         });
 
         const activeActivity = Lampa.Activity.active();
@@ -52,15 +59,17 @@
                 method: 'append',
                 url: section.api_path,
                 title: section.title,
-                slice: 18
+                slice: 18 // Кількість карток у рядку
             }));
         }
     }
 
+    // Головна функція рендерингу
     function customRender() {
         const sections = getActiveSections();
         const activeActivity = Lampa.Activity.active();
         
+        // Перевіряємо, що ми на головному екрані і ще не додали наші секції
         if (activeActivity && activeActivity.name === 'home' && !activeActivity.custom_sections_added) {
             
             if (sections.length === 0) {
@@ -68,18 +77,18 @@
                 return;
             }
 
+            // Додаємо секції
             sections.forEach(renderSection);
             activeActivity.custom_sections_added = true; 
             
+            // Скидаємо фокус, щоб Lampa перерахувала елементи з урахуванням нових рядків
             if(Lampa.Controller && Lampa.Controller.enabled()) Lampa.Controller.toggle('content');
         }
     }
 
+    // Додавання налаштувань плагіна
     function addSettings() {
-        if (!Lampa.SettingsApi) {
-            console.warn('Custom Sections Hub: SettingsApi is not available.');
-            return;
-        }
+        if (!Lampa.SettingsApi) return;
         
         Lampa.SettingsApi.addComponent({
             component: SETTINGS_COMPONENT,
@@ -90,13 +99,13 @@
         SECTIONS_DATA.forEach(section => {
             const groupName = section.title;
 
+            // 1. Налаштування порядку (виправлено потенційну проблему з типом String)
             Lampa.SettingsApi.addParam({
                 component: SETTINGS_COMPONENT,
                 param: {
                     name: KEY_PREFIX + section.id + '_order',
                     type: 'input',
-                    // ВИПРАВЛЕННЯ: Гарантуємо, що default є рядком
-                    default: String(section.default_order), 
+                    default: String(section.default_order), // Default як рядок
                     placeholder: String(section.default_order),
                     comment: 'Позиція на головному екрані (число)'
                 },
@@ -106,46 +115,50 @@
                 }
             });
 
+            // 2. Налаштування видимості
             Lampa.SettingsApi.addParam({
                 component: SETTINGS_COMPONENT,
                 param: {
                     name: KEY_PREFIX + section.id + '_remove',
                     type: 'select',
                     values: {0: 'Показувати', 1: 'Приховати'},
-                    // ВИПРАВЛЕННЯ: Гарантуємо, що default для select є числом 0
                     default: 0
                 },
                 field: {
                     name: `Видимість: ${groupName}`,
-                    description: `Показати або приховати секцію ${groupName} на головному екрані.`
+                    description: `Показати або приховати секцію ${groupName}.`
                 }
             });
         });
 
+        // Прослуховуємо збереження налаштувань для оновлення головного екрана
         Lampa.Listener.follow('settings', (event) => {
             if (event.component === SETTINGS_COMPONENT && event.name === 'save') {
                 const activeActivity = Lampa.Activity.active();
                 if(activeActivity && activeActivity.name === 'home') {
-                    activeActivity.custom_sections_added = false;
+                    // Скидаємо прапор, щоб функція customRender спрацювала при перезапуску
+                    activeActivity.custom_sections_added = false; 
                     Lampa.Activity.replace(activeActivity); 
                 }
             }
         });
     }
 
+    // Ініціалізація плагіна
     function start() {
         console.log(`[${plugin.name} v${plugin.version}] loaded.`);
         
+        // Додаємо налаштування одразу, або після готовності сховища
+        Lampa.Storage.listener.follow('ready', addSettings);
         addSettings();
 
+        // Основний хук: запускаємо рендеринг, коли Lampa закінчить завантажувати свій контент
         Lampa.Listener.follow('content_ready', (event) => {
             if (event.name === 'home') {
+                // Невелика затримка гарантує, що DOM готовий до додавання нових елементів
                 setTimeout(customRender, 100); 
             }
         });
-        
-        // Додаємо налаштування після готовності Storage, якщо він завантажився пізніше
-        Lampa.Storage.listener.follow('ready', addSettings);
     }
 
     if (window.appready) {
