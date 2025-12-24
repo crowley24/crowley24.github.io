@@ -376,8 +376,10 @@ if (!Lampa.Storage.get('applecation_show_ratings', false)) {
             <div class="full-start-new__right">
                 <div class="applecation__left">
                     <div class="applecation__logo"></div>
-                    <div class="full-start-new__title" style="display: none;">{title}</div>
-                    
+
+                    <div class="applecation__content-wrapper">
+                        <div class="full-start-new__title" style="display: none;">{title}</div>
+                        
                     <div class="applecation__meta">
                         <div class="applecation__meta-left">
                             <span class="applecation__network"></span>
