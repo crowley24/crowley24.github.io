@@ -285,40 +285,39 @@ const translations = {
             }
         });
 
-        // Застосовуємо поточні налаштування
-        
-if (!Lampa.Storage.get('applecation_show_ratings', false)) {
+        // Применяем текущие настройки
+        if (!Lampa.Storage.get('applecation_show_ratings', false)) {
             $('body').addClass('applecation--hide-ratings');
         }
         $('body').addClass('applecation--ratings-' + Lampa.Storage.get('applecation_ratings_position', 'card'));
         applyScales();
     }
 
-    // Застосовуємо маштабування
+    // Применяем масштабирование контента
     function applyScales() {
         const logoScale = parseInt(Lampa.Storage.get('applecation_logo_scale', '100'));
         const textScale = parseInt(Lampa.Storage.get('applecation_text_scale', '100'));
         const spacingScale = parseInt(Lampa.Storage.get('applecation_spacing_scale', '100'));
 
-        // Видаляємо старі мтилі, якщо були
+        // Удаляем старые стили если есть
         $('style[data-id="applecation_scales"]').remove();
 
-        // Створюємо нові стилі
+        // Создаем новые стили
         const scaleStyles = `
             <style data-id="applecation_scales">
-                /* Розмір логотипу */
+                /* Масштаб логотипа */
                 
                 .applecation .applecation__logo img {
                     max-width: ${35 * logoScale / 100}vw !important;
                     max-height: ${180 * logoScale / 100}px !important;
                 }
 
-                /* Розмір тексту та мета-інформації */
+                /* Масштаб текста и мета-информации */
                 .applecation .applecation__content-wrapper {
                     font-size: ${textScale}% !important;
                 }
 
-                /* Відступ між рядками */
+                /* Отступы между элементами */
                 .applecation .full-start-new__title {
                     margin-bottom: ${0.5 * spacingScale / 100}em !important;
                 }
@@ -345,6 +344,7 @@ if (!Lampa.Storage.get('applecation_show_ratings', false)) {
         $('body').append(scaleStyles);
     }
 
+    
     function addCustomTemplate() {
         const ratingsPosition = Lampa.Storage.get('applecation_ratings_position', 'card');
         
