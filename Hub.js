@@ -3,25 +3,26 @@
 
     var plugin = {
         name: 'Standard Section Manager',
-        version: '1.0.0',
-        description: 'Управління порядком та видимістю стандартних секцій Lampa.'
+        version: '1.1.0',
+        description: 'Управління порядком та видимістю стандартних секцій Lampa (Фінальна спроба з обходом UI-помилки).'
     };
 
     const KEY_PREFIX = 'ssm_';
     const SETTINGS_COMPONENT = 'lampa_standard_sections';
     const DEFAULT_ORDER = 999;
 
-    // Секції, які ми намагаємося перехопити та перевизначити.
-    // Назви (titles) використовуються для ідентифікації в налаштуваннях.
+    // Секції, які ми перевизначаємо (їхній порядок і URL)
     const STANDARD_SECTIONS = [
-        { id: 'now_watching', title: 'Зараз дивляться', default_order: 10 },
-        { id: 'upcoming_episodes', title: 'Вихід найближчих епізодів', default_order: 20 },
-        { id: 'trending_day', title: 'Сьогодні у тренді', default_order: 30 },
-        { id: 'trending_week', title: 'У тренді за тиждень', default_order: 40 },
-        { id: 'movie_now_playing', title: 'Дивіться у кінозалах', default_order: 50 },
-        { id: 'popular_movie', title: 'Популярні фільми', default_order: 60 },
-        { id: 'popular_tv', title: 'Популярні серіали', default_order: 70 },
-        { id: 'upcoming_movie', title: 'Очікувані фільми', default_order: 80 }
+        { id: 'trending_week', title: 'У тренді за тиждень', api_path: 'trending/all/week', default_order: 10, line_type: 'wide' },
+        { id: 'trending_day', title: 'Сьогодні у тренді', api_path: 'trending/all/day', default_order: 20, line_type: 'wide' },
+        { id: 'popular_movie', title: 'Популярні фільми', api_path: 'movie/popular', default_order: 30, line_type: 'small' },
+        { id: 'popular_tv', title: 'Популярні серіали', api_path: 'tv/popular', default_order: 40, line_type: 'full' },
+        { id: 'upcoming_movie', title: 'Очікувані фільми', api_path: 'movie/upcoming', default_order: 50, line_type: 'wide' },
+        
+        // Ці секції вимагають складної логіки Lampa, тому ми використовуємо схожі TMDB API:
+        { id: 'now_watching', title: 'Зараз дивляться (TMDB)', api_path: 'movie/now_playing', default_order: 60, line_type: 'small' },
+        { id: 'movie_now_playing', title: 'Дивіться у кінозалах (TMDB)', api_path: 'movie/now_playing', default_order: 70, line_type: 'wide' },
+        // Примітка: Секція 'Вихід найближчих епізодів' надто складна для відтворення
     ];
 
     function storageGet(key, def) {
@@ -32,8 +33,9 @@
     function getSectionConfig() {
         return STANDARD_SECTIONS
             .map(section => {
-                const isRemoved = storageGet(KEY_PREFIX + section.id + '_remove', 0) == 1;
-                // Читаємо порядок, забезпечуючи, що це число
+                // Виправлення: Тепер використовуємо Toggle (0 або 1)
+                const isRemoved = storageGet(KEY_PREFIX + section.id + '_remove', 0) == 1; 
+                // Обов'язкове поле введення для порядку
                 const order = parseInt(storageGet(KEY_PREFIX + section.id + '_order', section.default_order), 10) || DEFAULT_ORDER;
                 
                 return { ...section, isRemoved, order };
@@ -47,71 +49,31 @@
         
         if (activeActivity && activeActivity.name === 'home' && !activeActivity.ssm_sections_modified) {
             
-            // Очищаємо існуючі секції, щоб відобразити їх у новому порядку.
-            // Це ризикований крок, але необхідний для сортування.
-            $(activeActivity.render()).empty(); 
+            // КРИТИЧНИЙ ЕТАП: Очищаємо екран від стандартного контенту Lampa
+            // Цей метод може викликати збій, але він потрібен для сортування.
+            try {
+                $(activeActivity.render()).empty();
+            } catch (e) {
+                console.error('SSM: Не вдалося очистити DOM.', e);
+                // Якщо не вдалося очистити, зупиняємось, щоб не накладати контент
+                return; 
+            }
             
             config.forEach(section => {
                 if (!section.isRemoved) {
                     
-                    // Тут нам потрібно відтворити внутрішню логіку Lampa для кожної стандартної секції.
-                    // Це лише ПРИКЛАДИ, як Lampa може генерувати URL для стандартних секцій (TMDB)
-                    let api_url = '';
-                    let object_type = 'movie'; 
-                    let line_type = 'small';
-                    let title = section.title;
+                    const list = new Lampa.List.list(section.title, section.api_path, {
+                        card_type: section.api_path.includes('movie') ? 'movie' : 'tv',
+                        line_type: section.line_type || 'small',
+                        object_type: section.api_path.includes('movie') ? 'movie' : 'tv'
+                    });
 
-                    switch (section.id) {
-                        case 'trending_week':
-                            api_url = 'trending/all/week';
-                            line_type = 'wide';
-                            break;
-                        case 'trending_day':
-                            api_url = 'trending/all/day';
-                            line_type = 'wide';
-                            break;
-                        case 'popular_movie':
-                            api_url = 'movie/popular';
-                            object_type = 'movie';
-                            line_type = 'small';
-                            break;
-                        case 'popular_tv':
-                            api_url = 'tv/popular';
-                            object_type = 'tv';
-                            line_type = 'full';
-                            break;
-                        case 'upcoming_movie':
-                            api_url = 'movie/upcoming';
-                            object_type = 'movie';
-                            line_type = 'wide';
-                            break;
-                        // Секції 'now_watching', 'upcoming_episodes' та 'movie_now_playing' 
-                        // вимагають складнішої внутрішньої логіки Lampa, яку неможливо відтворити тут.
-                        // Тому для них ми використовуємо прості заглушки TMDB, які схожі за змістом.
-                        case 'now_watching':
-                            api_url = 'movie/now_playing';
-                            break;
-                        case 'movie_now_playing':
-                             api_url = 'movie/now_playing';
-                             break;
-                        default:
-                            return; // Ігноруємо невідомі або складні секції
-                    }
-
-                    if (api_url) {
-                        const list = new Lampa.List.list(title, api_url, {
-                            card_type: object_type,
-                            line_type: line_type,
-                            object_type: object_type
-                        });
-
-                        activeActivity.append(list.render({
-                            method: 'append',
-                            url: api_url,
-                            title: title,
-                            slice: 18 
-                        }));
-                    }
+                    activeActivity.append(list.render({
+                        method: 'append',
+                        url: section.api_path,
+                        title: section.title,
+                        slice: 18 
+                    }));
                 }
             });
 
@@ -120,7 +82,7 @@
         }
     }
 
-    // 3. Додавання налаштувань
+    // 3. Додавання налаштувань (Використовуємо String() для INPUT)
     function addSettings() {
         if (!Lampa.SettingsApi) return;
         
@@ -133,32 +95,33 @@
         STANDARD_SECTIONS.forEach(section => {
             const groupName = section.title;
 
+            // Налаштування порядку (type: input)
             Lampa.SettingsApi.addParam({
                 component: SETTINGS_COMPONENT,
                 param: {
                     name: KEY_PREFIX + section.id + '_order',
                     type: 'input',
-                    default: String(section.default_order), 
+                    default: String(section.default_order), // ОБОВ'ЯЗКОВО String
                     placeholder: String(section.default_order),
-                    comment: 'Позиція на головному екрані (число)'
+                    comment: 'Позиція на головному екрані (число 1-99)'
                 },
                 field: {
                     name: `Порядок: ${groupName}`,
                     description: `Встановіть порядковий номер для ${groupName}.`
                 }
             });
-
+            
+            // Налаштування видимості (type: toggle - безпечніший компонент)
             Lampa.SettingsApi.addParam({
                 component: SETTINGS_COMPONENT,
                 param: {
                     name: KEY_PREFIX + section.id + '_remove',
-                    type: 'select',
-                    values: {0: 'Показувати', 1: 'Приховати'},
-                    default: 0
+                    type: 'toggle', // Використовуємо toggle, він більш стабільний, ніж select
+                    default: false, // false = показувати
                 },
                 field: {
-                    name: `Видимість: ${groupName}`,
-                    description: `Показати або приховати секцію ${groupName}.`
+                    name: `Показувати секцію: ${groupName}`,
+                    description: `Увімкніть, щоб показати, вимкніть, щоб приховати.`
                 }
             });
         });
@@ -174,18 +137,17 @@
         });
     }
     
-    // 4. Перехоплення рендерингу Lampa
+    // 4. Запуск і перехоплення
     function start() {
         console.log(`[${plugin.name} v${plugin.version}] loaded.`);
         
         Lampa.Storage.listener.follow('ready', addSettings);
         addSettings();
 
-        // Замінюємо стандартний рендеринг!
         Lampa.Listener.follow('content_ready', (event) => {
             if (event.name === 'home') {
                 const config = getSectionConfig();
-                // Запускаємо наш кастомний рендеринг, який очистить існуючий контент
+                // Запускаємо наш рендеринг, що очищує існуючий контент
                 setTimeout(() => customSectionRender(config), 200); 
             }
         });
