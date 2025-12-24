@@ -1,81 +1,159 @@
 (function () {
     'use strict';
 
-    var plugin = {
-        name: 'Static Content Hub',
-        version: '1.0.1',
-        description: 'Додає 10 фіксованих секцій. Не містить налаштувань для обходу UI-помилки.'
-    };
-
-    // Фіксований список секцій та їхній порядок
-    const SECTIONS_DATA = [
-        { id: 'trending_day_all', title: 'В Тренді Сьогодні (Усе)', api_path: 'trending/all/day', line_type: 'wide' },
-        { id: 'netflix_popular', title: 'Netflix: Популярні (ТВ)', api_path: 'discover/tv?with_networks=213&sort_by=popularity.desc', line_type: 'small' },
-        { id: 'hbo_top', title: 'HBO Max: Рейтингові (ТВ)', api_path: 'discover/tv?with_networks=49&sort_by=vote_average.desc&vote_count.gte=500', line_type: 'small' },
-        { id: 'top_rus_movie', title: 'Топ Російські Фільми', api_path: 'discover/movie?with_original_language=ru&sort_by=vote_average.desc&vote_count.gte=1000', line_type: 'full' },
-        { id: 'dorams_top', title: 'Дорами: Топ-Рейтинг', api_path: 'discover/tv?with_genres=18&with_original_language=ko&sort_by=vote_average.desc&vote_count.gte=500', line_type: 'small' },
-        { id: 'family_animation', title: 'Сімейна Анімація', api_path: 'discover/movie?with_genres=16&without_genres=99,10755,10765&sort_by=popularity.desc', line_type: 'small' },
-        { id: 'upcoming_films', title: 'Незабаром у Кіно', api_path: 'movie/upcoming', line_type: 'wide' },
-        { id: 'prime_video_new', title: 'Prime Video: Новинки', api_path: 'discover/movie?with_networks=1024&sort_by=release_date.desc', line_type: 'full' },
-        { id: 'kinopoisk_films', title: 'Фільми (Kinopoisk Top)', api_path: 'discover/movie?vote_average.gte=7&vote_count.gte=1000&with_original_language=ru|en&sort_by=vote_average.desc', line_type: 'small' },
-        { id: 'top_movie_week', title: 'Тренди Тижня (Фільми)', api_path: 'trending/movie/week', line_type: 'full' },
-    ];
+    // Ім'я вашого нового джерела для налаштувань
+    const SOURCE_NAME = 'my_tmdb_addon';
     
-    // Функція, що рендерить одну секцію
-    function renderSection(section) {
-        const object_type = section.api_path.includes('/movie') ? 'movie' : 'tv';
-        
-        const list = new Lampa.List.list(section.title, section.api_path, {
-            card_type: object_type,
-            line_type: section.line_type || 'small',
-            object_type: object_type
+    // Список категорій з відповідними TMDB API-запитами
+    // та налаштуваннями за замовчуванням
+    const categories = [
+        {
+            id: 'now_watch',
+            title: '🔥 Зараз дивляться',
+            api_path: '/movie/now_playing',
+            remove_key: 'now_watch_remove',
+            default_order: 1,
+            default_remove: false,
+        },
+        {
+            id: 'upcoming_episodes',
+            title: '📺 Найближчі епізоди',
+            api_path: '/tv/airing_today', // Використовуємо TV Airing Today як заміну
+            remove_key: 'upcoming_episodes_remove',
+            default_order: 2,
+            default_remove: false,
+        },
+        {
+            id: 'trend_day_tv',
+            title: '📈 Тренд за день (Серіали)',
+            api_path: '/trending/tv/day',
+            remove_key: 'trend_day_tv_remove',
+            default_order: 3,
+            default_remove: false,
+        },
+        {
+            id: 'trend_day_film',
+            title: '📈 Тренд за день (Фільми)',
+            api_path: '/trending/movie/day',
+            remove_key: 'trend_day_film_remove',
+            default_order: 4,
+            default_remove: false,
+        },
+        {
+            id: 'top_movie',
+            title: '⭐ Топ Фільми',
+            api_path: '/movie/top_rated',
+            remove_key: 'top_movie_remove',
+            default_order: 5,
+            default_remove: false,
+        },
+        {
+            id: 'top_tv',
+            title: '⭐ Топ Серіали',
+            api_path: '/tv/top_rated',
+            remove_key: 'top_tv_remove',
+            default_order: 6,
+            default_remove: false,
+        },
+        {
+            id: 'upcoming',
+            title: '🔜 Майбутні релізи',
+            api_path: '/movie/upcoming',
+            remove_key: 'upcoming_remove',
+            default_order: 7,
+            default_remove: false,
+        },
+        // Додаткова категорія "Жахи"
+        {
+            id: 'horror_genre',
+            title: '💀 Жахи (Фільми)',
+            api_path: '/discover/movie?with_genres=27&sort_by=popularity.desc', // ID жанру "Horror" - 27
+            remove_key: 'horror_remove',
+            default_order: 8,
+            default_remove: false,
+        },
+    ];
+
+    /**
+     * Головна функція ініціалізації плагіна
+     */
+    function initialize() {
+        // 1. Додаємо всі категорії в налаштування Lampa
+        categories.forEach(category => {
+            // Додаємо налаштування для ввімкнення/вимкнення
+            Lampa.SettingsApi.addParam({
+                component: 'main', // Додаємо до головних налаштувань
+                param: {
+                    name: category.remove_key,
+                    type: 'toggle',
+                    default: category.default_remove,
+                },
+                field: {
+                    name: 'Сховати ' + category.title,
+                    description: `Видалити категорію "${category.title}" з головної сторінки.`,
+                },
+            });
+
+            // Додаємо налаштування для зміни порядку (як у вашому прикладі)
+            Lampa.SettingsApi.addParam({
+                component: 'main',
+                param: {
+                    name: 'number_' + category.id,
+                    type: 'select',
+                    values: [...Array(30).keys()].map(i => ({ [i + 1]: String(i + 1) })), // Числа від 1 до 30
+                    default: String(category.default_order),
+                },
+                field: {
+                    name: 'Порядок ' + category.title,
+                },
+            });
         });
 
-        const activeActivity = Lampa.Activity.active();
-        
-        if (activeActivity && activeActivity.name === 'home') {
-            activeActivity.append(list.render({
-                method: 'append',
-                url: section.api_path,
-                title: section.title,
-                slice: 18
-            }));
-        }
-    }
+        // 2. Реєструємо функцію для завантаження даних
+        Lampa.Listener.follow('app', function(e) {
+            if (e.type === 'ready') {
+                
+                // Додаємо кожну категорію на головний екран
+                categories.forEach(category => {
+                    const remove = Lampa.Storage.get(category.remove_key);
+                    
+                    if (!remove) {
+                        // Отримуємо порядок з налаштувань
+                        const order = parseInt(Lampa.Storage.get('number_' + category.id), 10) || category.default_order;
+                        
+                        Lampa.Home.add({
+                            id: category.id,
+                            title: category.title,
+                            order: order,
+                            visible: true,
+                            
+                            // Функція для отримання контенту
+                            onLoad: function(resolve, reject) {
+                                Lampa.Api.get(category.api_path, {}, function(data) {
+                                    // TMDB повертає data.results
+                                    resolve(data.results); 
+                                }, function(error) {
+                                    Lampa.Noty.error('Помилка завантаження категорії: ' + category.title);
+                                    reject(error);
+                                });
+                            }
+                        });
+                    }
+                });
 
-    // Головна функція рендерингу всіх секцій
-    function customRender() {
-        const activeActivity = Lampa.Activity.active();
-        
-        if (activeActivity && activeActivity.name === 'home' && !activeActivity.static_sections_added) {
-            
-            // Просто додаємо всі секції у фіксованому порядку
-            SECTIONS_DATA.forEach(renderSection);
-            activeActivity.static_sections_added = true; 
-            
-            if(Lampa.Controller && Lampa.Controller.enabled()) Lampa.Controller.toggle('content');
-        }
-    }
-
-    function start() {
-        console.log(`[${plugin.name} v${plugin.version}] loaded.`);
-        
-        // Підключаємося до події готовності контенту
-        Lampa.Listener.follow('content_ready', (event) => {
-            if (event.name === 'home') {
-                setTimeout(customRender, 100); 
+                // Після додавання всіх компонентів, оновлюємо головний екран
+                Lampa.Home.render();
             }
         });
+
     }
 
+    // Запускаємо плагін після готовності Lampa
     if (window.appready) {
-        start();
+        initialize();
     } else {
-        Lampa.Listener.follow('app', function (event) {
-            if (event.type === 'ready') {
-                start();
-            }
-        });
+        Lampa.Listener.follow('app', initialize);
     }
+    
 })();
 
