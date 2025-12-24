@@ -3,7 +3,7 @@
 
     var plugin = {
         name: 'Custom Sections Hub',
-        version: '1.0.1',
+        version: '1.0.2', // Оновлена версія з виправленням помилок
         description: 'Розширене керування секціями на головному екрані (для Lampa 3.0+)'
     };
 
@@ -29,6 +29,7 @@
         return SECTIONS_DATA
             .map(section => {
                 const isRemoved = storageGet(KEY_PREFIX + section.id + '_remove', 0) == 1;
+                // Забезпечуємо, що порядок завжди є числом
                 const order = parseInt(storageGet(KEY_PREFIX + section.id + '_order', section.default_order), 10) || 999;
                 
                 return { ...section, isRemoved, order };
@@ -68,15 +69,17 @@
             }
 
             sections.forEach(renderSection);
-            activeActivity.custom_sections_added = true; // Запобігання повторному рендерингу
+            activeActivity.custom_sections_added = true; 
             
-            // Якщо є необхідність, можна викликати focus на перший елемент
             if(Lampa.Controller && Lampa.Controller.enabled()) Lampa.Controller.toggle('content');
         }
     }
 
     function addSettings() {
-        if (!Lampa.SettingsApi) return;
+        if (!Lampa.SettingsApi) {
+            console.warn('Custom Sections Hub: SettingsApi is not available.');
+            return;
+        }
         
         Lampa.SettingsApi.addComponent({
             component: SETTINGS_COMPONENT,
@@ -92,8 +95,9 @@
                 param: {
                     name: KEY_PREFIX + section.id + '_order',
                     type: 'input',
-                    default: section.default_order.toString(),
-                    placeholder: section.default_order.toString(),
+                    // ВИПРАВЛЕННЯ: Гарантуємо, що default є рядком
+                    default: String(section.default_order), 
+                    placeholder: String(section.default_order),
                     comment: 'Позиція на головному екрані (число)'
                 },
                 field: {
@@ -108,6 +112,7 @@
                     name: KEY_PREFIX + section.id + '_remove',
                     type: 'select',
                     values: {0: 'Показувати', 1: 'Приховати'},
+                    // ВИПРАВЛЕННЯ: Гарантуємо, що default для select є числом 0
                     default: 0
                 },
                 field: {
@@ -119,10 +124,9 @@
 
         Lampa.Listener.follow('settings', (event) => {
             if (event.component === SETTINGS_COMPONENT && event.name === 'save') {
-                // Перезапуск активності 'home' для застосування змін
                 const activeActivity = Lampa.Activity.active();
                 if(activeActivity && activeActivity.name === 'home') {
-                    activeActivity.custom_sections_added = false; // Дозволити повторний рендеринг
+                    activeActivity.custom_sections_added = false;
                     Lampa.Activity.replace(activeActivity); 
                 }
             }
@@ -134,14 +138,13 @@
         
         addSettings();
 
-        // Додаємо наші секції після того, як Lampa закінчить рендерити свої стандартні
         Lampa.Listener.follow('content_ready', (event) => {
             if (event.name === 'home') {
-                // Маленька затримка для забезпечення повного рендерингу Lampa
                 setTimeout(customRender, 100); 
             }
         });
         
+        // Додаємо налаштування після готовності Storage, якщо він завантажився пізніше
         Lampa.Storage.listener.follow('ready', addSettings);
     }
 
@@ -155,3 +158,4 @@
         });
     }
 })();
+
