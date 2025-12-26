@@ -1263,7 +1263,7 @@ Lampa.SettingsApi.addParam({
             },
             onChange: function (value, item) { 
                 var pluginUrl = 'https://crowley24.github.io/mob_style.js';
-                var pluginName = 'Стильний інтерфейс ( моб. версія)';
+                var pluginName = 'Стильний інтерфейс (mobile)';
                 var index = $(item).data('nthChildIndex'); 
 
                 if (value == '1') {
@@ -1276,7 +1276,7 @@ Lampa.SettingsApi.addParam({
             },
             onRender: function (item) { $('.settings-param__name', item).css('color', 'f3d900'); hideInstall()
                 var pluginUrl = 'https://crowley24.github.io/mob_style.js';
-                var pluginName = 'Стильний інтерфейс ( моб. версія)';
+                var pluginName = 'Стильний інтерфейс (mobile)';
                 var myResult = checkPlugin(pluginUrl);
                 var pluginsArray = Lampa.Storage.get('plugins');
                 
@@ -1368,60 +1368,88 @@ Lampa.SettingsApi.addParam({
       });
         
         Lampa.SettingsApi.addParam({
-            component: 'add_plugin',
-            param: {
-                name: 'Tweaks & Tricks', // Залишаю оригінальну назву англійською для плагіна
-                type: 'select',
-                values: {
-                    1: 'Встановити', // Локалізація
-                    2: 'Видалити', // Локалізація
-                },
-                //default: '1',
-            },
-            field: {
-                name: 'Tweaks & Tricks', // Залишаю оригінальну назву англійською для плагіна
-                description: 'Tweaks & Tricks'
-            },
-            onChange: function (value) {
-                if (value == '1') {
-                    itemON('https://zy5arc.github.io/tricks.js', 'Tweaks & Tricks', '@author', 'Tweaks & Tricks');
-                    // console.log("nthChildIndex, переданный в itemON:", nthChildIndex);
-                }
-                if (value == '2') {
-                    var pluginToRemoveUrl = "https://zy5arc.github.io/tricks.js";
-                    deletePlugin(pluginToRemoveUrl);
-                    // console.log("nthChildIndex, переданный в deletePlugin:", nthChildIndex);
-                }
-            },
-            onRender: function (item) { $('.settings-param__name', item).css('color', 'f3d900'); hideInstall()
-                var myResult = checkPlugin('https://zy5arc.github.io/tricks.js');
-                var pluginsArray = Lampa.Storage.get('plugins');
-                setTimeout(function () {
-                    $('div[data-name="Tweaks & Tricks"]').append('<div class="settings-param__status one"></div>');
-                    var pluginStatus = null;
-                    for (var i = 0; i < pluginsArray.length; i++) {
-                        if (pluginsArray[i].url === 'https://zy5arc.github.io/tricks.js') {
-                            pluginStatus = pluginsArray[i].status;
-                            break;
-                        }
-                    }
-                    if (myResult && pluginStatus !== 0) {
-                        // Встановлено та Активно (Зелений градієнт)
-                        $('div[data-name="Tweaks & Tricks"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #11e400, #36a700)');
-                    } else if (pluginStatus === 0) {
-                        // Відключено (Помаранчевий градієнт)
-                        $('div[data-name="Tweaks & Tricks"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff8c00, #d96e00)');
-                    } else {
-                        // Не встановлено (Червоний градієнт)
-                        $('div[data-name="Tweaks & Tricks"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff0000, #c40000)');
-                    }
-                }, 100);
-                item.on("hover:enter", function (event) {
-                    nthChildIndex = focus_back(event); // Зберігаємо елемент у змінній
-                });
-            }
-        });
+    // Оновлення: Цей компонент зазвичай не змінюється, якщо ви додаєте його в той самий розділ "Додавання плагінів"
+    component: 'add_plugin',
+    param: {
+        // Змінено: Назва параметра
+        name: 'color_settings', 
+        type: 'select',
+        values: {
+            1: 'Встановити',
+            2: 'Видалити',
+        },
+    },
+    field: {
+        // Змінено: Відображувана назва в меню
+        name: 'Налаштування кольорів', 
+        // Змінено: Опис в меню
+        description: 'Налаштування кольорів певних елементів інтерфейсу' 
+    },
+    onChange: function (value, item) {
+        // Змінено: Нова URL-адреса плагіна
+        var pluginUrl = 'https://mastermagic98.github.io/l_plugins/th3.js'; 
+        // Змінено: Нова назва плагіна (використовуємо внутрішнє ім'я)
+        var pluginName = 'color_settings'; 
+        var index = $(item).data('nthChildIndex');
 
+        if (value == '1') {
+            // Викликаємо функцію встановлення
+            itemON(pluginUrl, pluginName, '@author', 'Налаштування кольорів', index); 
+        }
+
+        if (value == '2') {
+            // Викликаємо функцію видалення
+            deletePlugin(pluginUrl, index);
+        }
+    },
+    onRender: function (item) {
+        // Внутрішня назва плагіна для пошуку елемента
+        var pluginNameInternal = 'color_settings'; 
+        
+        // Змінено: Нова URL-адреса плагіна
+        var pluginUrl = 'https://mastermagic98.github.io/l_plugins/th3.js'; 
+        
+        // Зберігаємо оригінальне підсвічування
+        $('.settings-param__name', item).css('color', '#f3d900');
+        
+        // Перевірка стану плагіна (встановлений, вимкнений, не встановлений)
+        hideInstall();
+        var myResult = checkPlugin(pluginUrl);
+        var pluginsArray = Lampa.Storage.get('plugins');
+
+        setTimeout(function () {
+            // Додаємо індикатор статусу
+            $('div[data-name="' + pluginNameInternal + '"]').append('<div class="settings-param__status one"></div>');
+            var pluginStatus = null;
+            
+            for (var i = 0; i < pluginsArray.length; i++) {
+                if (pluginsArray[i].url === pluginUrl) {
+                    pluginStatus = pluginsArray[i].status;
+                    break;
+                }
+            }
+            
+            // Логіка відображення статусу (кольори градієнта)
+            if (myResult && pluginStatus !== 0) {
+                // Встановлено та Активно (Зелений)
+                $('div[data-name="' + pluginNameInternal + '"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #11e400, #36a700)');
+            } else if (pluginStatus === 0) {
+                // Встановлено, але Вимкнено (Помаранчевий)
+                $('div[data-name="' + pluginNameInternal + '"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff8c00, #d96e00)');
+            } else {
+                // Не встановлено (Червоний)
+                $('div[data-name="' + pluginNameInternal + '"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff0000, #c40000)');
+            }
+        }, 100);
+
+        // Зберігаємо індекс для коректного фокусування
+        item.on("hover:enter", function (event) {
+            var localNthChildIndex = focus_back(event);
+            $(this).data('nthChildIndex', localNthChildIndex);
+        });
+       }
+      });
+        
     } // /* addonStart */
 
     if (!!window.appready) addonStart();
