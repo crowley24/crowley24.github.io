@@ -4,15 +4,14 @@ Lampa.Platform.tv();
   'use strict';
 
   /** SVG-иконки через спрайт */
-  // Використовуємо MOVIE_SVG як іконку "Головна" (Home)
   const MOVIE_SVG = `<svg><use xlink:href="#sprite-movie"></use></svg>`; 
   const FAVORITE_SVG = `<svg><use xlink:href="#sprite-favorite"></use></svg>`; 
   const HISTORY_SVG = `<svg><use xlink:href="#sprite-history"></use></svg>`;
   const SEARCH_SVG = `<svg><use xlink:href="#sprite-search"></use></svg>`; 
   const SETTINGS_SVG = `<svg><use xlink:href="#sprite-settings"></use></svg>`; 
-  const BACK_SVG = `<svg><use xlink:href="#sprite-arrow-left"></use></svg>`; 
+  // ВИДАЛЕНО: const BACK_SVG = `<svg><use xlink:href="#sprite-arrow-left"></use></svg>`; 
   
-  /** CSS (Мінімальні зміни для сумісності та виправлення дублікатів) */
+  /** CSS (Без змін, щоб зберегти порядок та зовнішній вигляд) */
   const css = `
   .navigation-bar__body {
       display: flex !important;
@@ -28,8 +27,7 @@ Lampa.Platform.tv();
       overflow: hidden !important;
   }
 
-  /* ХОВАЄМО ВСІ ДУБЛІКАТИ (які Lampa може додати), крім тих, що ми контролюємо. */
-  /* Оскільки ми використовуємо updateLampaItem для 'movie', ми не приховуємо його, але приховуємо 'home'. */
+  /* ХОВАЄМО ДУБЛІКАТ 'home' (залишено з вашого попереднього коду) */
   .navigation-bar__item[data-action="home"] { 
       display: none !important;
   }
@@ -124,10 +122,7 @@ Lampa.Platform.tv();
   }
 
   function emulateSidebarClick(action){
-    if(action === 'back') {
-        Lampa.Router.back();
-        return;
-    }
+    // ЛОГІКА ДЛЯ 'back' ВИДАЛЕНА. Lampa сама оброблятиме клік.
     
     for(const el of $$('.menu__item, .selector')){
       if(el.dataset && el.dataset.action && el.dataset.action === action){
@@ -139,7 +134,6 @@ Lampa.Platform.tv();
   
   function addItem(action, svg){
     const bar = $('.navigation-bar__body');
-    // Додаємо лише, якщо елемент відсутній
     if(!bar || bar.querySelector(`[data-action="${action}"]`)) return; 
     
     const div = document.createElement('div');
@@ -147,16 +141,11 @@ Lampa.Platform.tv();
     div.dataset.action = action;
     div.innerHTML = `<div class="navigation-bar__icon">${svg}</div>`;
     
-    // Знаходимо Налаштування (settings) - вони завжди є кінцевою точкою
     const settings = bar.querySelector('.navigation-bar__item[data-action="settings"]');
     
     let target = settings; 
     
-    // Логіка вставлення (у зворотному порядку):
-    // 1. search вставляємо перед settings
-    // 2. history вставляємо перед search
-    // 3. favorite вставляємо перед history
-    
+    // ЛОГІКА ПОРЯДКУ (Favorite, History, Search)
     if (action === 'history') {
         const search = bar.querySelector('.navigation-bar__item[data-action="search"]');
         if (search) target = search; else target = settings;
@@ -188,13 +177,9 @@ Lampa.Platform.tv();
     }
     iconContainer.innerHTML = svg;
     
-    if(action === 'back'){
-        item.removeEventListener('click', item._click_handler);
-        const handler = () => emulateSidebarClick('back');
-        item.addEventListener('click', handler);
-        item._click_handler = handler;
-    }
-    // Забезпечуємо, що елемент видимий
+    // ЛОГІКА 'back' ВИДАЛЕНА ЗВІДСИ.
+    
+    // Забезпечуємо, що елемент видимий (залишено з вашого коду)
     item.style.display = 'flex';
   }
 
@@ -228,9 +213,7 @@ Lampa.Platform.tv();
   function init(){
     injectCSS();
     
-    // Очікуваний порядок: movie, favorite, history, search, settings (зліва направо)
-    
-    // 1. Оновлюємо Налаштування (будуть останніми)
+    // 1. Оновлюємо Налаштування 
     updateLampaItem('settings', SETTINGS_SVG); 
 
     // 2. Додаємо Пошук (стане перед Налаштуваннями)
@@ -242,11 +225,10 @@ Lampa.Platform.tv();
     // 4. Додаємо Вибране (стане перед Історією)
     addItem('favorite', FAVORITE_SVG); 
     
-    // 5. Оновлюємо Головну Сторінку (movie) (стане першим)
+    // 5. Оновлюємо Головну Сторінку (movie) 
     updateLampaItem('movie', MOVIE_SVG); 
 
-    // 6. ФІКС "НАЗАД" (буде крайнім зліва)
-    updateLampaItem('back', BACK_SVG);
+    // 6. ВИДАЛЕНО: updateLampaItem('back', BACK_SVG);
     
     adjustSpacing();
 
