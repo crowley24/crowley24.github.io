@@ -4,12 +4,14 @@ Lampa.Platform.tv();
   'use strict';
 
   /** SVG-иконки через спрайт */
-  const HOME_SVG     = `<svg><use xlink:href="#sprite-home"></use></svg>`;      // Головна (замість movie)
-  const FAVORITE_SVG = `<svg><use xlink:href="#sprite-favorite"></use></svg>`;   // Вибране
-  const HISTORY_SVG  = `<svg><use xlink:href="#sprite-history"></use></svg>`;    // Історія
-  const SEARCH_SVG   = `<svg><use xlink:href="#sprite-search"></use></svg>`;     // Пошук
-
-  /** CSS (Мінімалістичні покращення + Фікс порядку) */
+  // MOVIE_SVG - не потрібен, оскільки Lampa додає його автоматично
+  const FAVORITE_SVG = `<svg><use xlink:href="#sprite-favorite"></use></svg>`; 
+  const HISTORY_SVG = `<svg><use xlink:href="#sprite-history"></use></svg>`;
+  const SEARCH_SVG = `<svg><use xlink:href="#sprite-search"></use></svg>`; 
+  const SETTINGS_SVG = `<svg><use xlink:href="#sprite-settings"></use></svg>`; 
+  const MOVIE_SVG = `<svg><use xlink:href="#sprite-movie"></use></svg>`; 
+  
+  /** CSS */
   const css = `
   .navigation-bar__body {
       display: flex !important;
@@ -20,30 +22,33 @@ Lampa.Platform.tv();
       background: rgba(20,20,25,0.6);
       backdrop-filter: blur(18px);
       -webkit-backdrop-filter: blur(18px);
-      box-shadow: 0 2px 30px rgba(0,0,0,0.8);
+      box-shadow: 0 2px 25px rgba(0,0,0,0.6);
       border-top: 1px solid rgba(255,255,255,0.15);
       overflow: hidden !important;
   }
 
-  /* **ХОВАЄМО СТАРИЙ "ФІЛЬМИ" (movie)** */
-  .navigation-bar__item[data-action="movie"] {
+  /* **ПРИМУСОВО ХОВАЄМО ВСІ ДУБЛІКАТИ** (якщо вони з'являться) */
+  /* Lampa іноді додає movie, іноді home. Приховуємо обидва. */
+  .navigation-bar__item[data-action="movie"],
+  .navigation-bar__item[data-action="home"] {
       display: none !important;
   }
   
   /* **ПОВЕРТАЄМО ПОШУК** */
   .navigation-bar__item[data-action="search"] {
-      display: flex !important;
+      display: flex !important; 
   }
   
-  /* Змінено: Налаштування тепер рівне з іншими */
+  /* Забезпечуємо, що Налаштування (які Lampa додає) мають однаковий стиль */
   .navigation-bar__item[data-action="settings"] {
+      display: flex !important;
       margin-left: 0 !important; 
       margin-right: 0 !important; 
       flex: 1 1 auto !important; 
       width: auto; 
   }
-
-  /* Загальний стиль елементів */
+  
+  /* ... (Решта вашого CSS для дизайну) */
   .navigation-bar__item {
       flex: 1 1 auto !important;
       display: flex !important;
@@ -54,44 +59,43 @@ Lampa.Platform.tv();
       
       /* Візуальні покращення */
       background: rgba(255,255,255,0.05); 
-      box-shadow: inset 0 0 12px rgba(0,0,0,0.4), 0 6px 20px rgba(0,0,0,0.5); 
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.3), 0 4px 15px rgba(0,0,0,0.4);
       
-      border-radius: 16px; 
+      border-radius: 14px;
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
-      transition: all .35s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
+      transition: all .25s cubic-bezier(0.17, 0.84, 0.44, 1);
       box-sizing: border-box;
-      position: relative; 
   }
 
-  /* **ЕФЕКТ НАВЕДЕННЯ** (Світіння + Збільшення) */
+  /* Ефект наведення (градієнт та 3D-відчуття) */
   .navigation-bar__item:hover,
   .navigation-bar__item.active {
-      background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.3) 100%);
-      transform: scale(1.1); 
-      box-shadow: inset 0 0 8px rgba(0,0,0,0.1), 0 10px 30px rgba(100,200,255,0.5); 
-  }
-
-  /* **АНІМАЦІЯ ІКОНКИ** (без обертання) */
-  .navigation-bar__item:hover .navigation-bar__icon svg {
-      transform: scale(1.15); 
-      transition: transform .35s;
-      fill: #FFFFFF !important;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.2) 100%);
+      transform: scale(1.08);
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.1), 0 8px 25px rgba(100,200,255,0.3);
   }
 
   .navigation-bar__icon {
-      width: 26px;
-      height: 26px;
+      width: 24px;
+      height: 24px;
       display: flex;
       align-items: center;
       justify-content: center;
   }
 
   .navigation-bar__icon svg {
-      width: 24px !important;
-      height: 24px !important;
-      fill: #E0E0E0 !important;
-      transition: fill .35s, transform .35s;
+      width: 22px !important;
+      height: 22px !important;
+      fill: #F0F0F0 !important;
+      /* Додано: Плавність іконки */
+      transition: fill .25s, transform .25s;
+  }
+  
+  /* Анімація іконки при наведенні (додано для завершення дизайну) */
+  .navigation-bar__item:hover .navigation-bar__icon svg {
+      transform: scale(1.15); 
+      fill: #FFFFFF !important;
   }
 
   /* Полностью скрываем подписи */
@@ -100,12 +104,13 @@ Lampa.Platform.tv();
   }
 
   @media (max-width: 900px) {
-      .navigation-bar__item { height: 66px !important; border-radius: 14px; }
+      .navigation-bar__item { height: 66px !important; border-radius: 13px; }
   }
   @media (max-width: 600px) {
       .navigation-bar__item { height: 60px !important; border-radius: 12px; }
       .navigation-bar__icon svg { width: 20px !important; height: 20px !important; }
-  }`;
+  }
+  `;
 
   const $  = (s,r=document)=>r.querySelector(s);
   const $$ = (s,r=document)=>Array.from(r.querySelectorAll(s));
@@ -119,9 +124,7 @@ Lampa.Platform.tv();
     }
   }
 
-  // >>> ПОВЕРНУТА ОРИГІНАЛЬНА ЛОГІКА КЛІКІВ
   function emulateSidebarClick(action){
-    // Використовуємо Lampa.Router.back() для "Назад"
     if(action === 'back') {
         Lampa.Router.back();
         return;
@@ -135,11 +138,10 @@ Lampa.Platform.tv();
     }
   }
   
-  // Функція додавання елемента, Вставляємо перед Налаштуваннями
+  // Функція додавання елемента
   function addItem(action, svg){
     const bar = $('.navigation-bar__body');
-    // Не дозволяємо додавати, якщо елемент вже існує
-    if(!bar || bar.querySelector(`[data-action="${action}"]`)) return;
+    if(!bar || bar.querySelector(`[data-action="${action}"]`)) return; // Не додаємо, якщо вже є
     
     const div = document.createElement('div');
     div.className = 'navigation-bar__item';
@@ -149,8 +151,15 @@ Lampa.Platform.tv();
     // Вставляємо перед Налаштуваннями (settings)
     const settings = bar.querySelector('.navigation-bar__item[data-action="settings"]');
     
-    if (settings) {
-        bar.insertBefore(div, settings);
+    // Вставляємо перед елементом "Фільми", якщо він існує і ми додаємо щось інше
+    const movie = bar.querySelector('.navigation-bar__item[data-action="movie"]');
+
+    let target = settings;
+    
+    if (target) {
+        bar.insertBefore(div, target);
+    } else if (movie) {
+        bar.insertBefore(div, movie); // Вставити перед Фільмами
     } else {
         bar.appendChild(div);
     }
@@ -158,7 +167,7 @@ Lampa.Platform.tv();
     div.addEventListener('click', () => emulateSidebarClick(action));
   }
   
-  // Функція для оновлення іконок існуючих елементів Lampa (search, settings, back)
+  // Функція для оновлення іконок існуючих елементів Lampa (movie, search, settings, back)
   function updateLampaItem(action, svg){
     const item = $('.navigation-bar__item[data-action="' + action + '"]');
     if(!item) return;
@@ -171,15 +180,16 @@ Lampa.Platform.tv();
     }
     iconContainer.innerHTML = svg;
     
-    // Оновлення обробника кліку для "Назад"
     if(action === 'back'){
         item.removeEventListener('click', item._click_handler);
         const handler = () => emulateSidebarClick('back');
         item.addEventListener('click', handler);
         item._click_handler = handler;
     }
-    // Примусово показуємо, якщо це елементи, які ми повернули (як Search)
-    item.style.display = 'flex';
+    // ДОДАТКОВИЙ ФІКС: Забезпечуємо, що елемент visible
+    if(action === 'search' || action === 'settings' || action === 'movie') {
+        item.style.display = 'flex';
+    }
   }
 
 
@@ -187,18 +197,18 @@ Lampa.Platform.tv();
     const bar=$('.navigation-bar__body');
     if(!bar) return;
     
-    // Отримуємо ВСІ видимі елементи, виключаючи "movie"
-    const items=$$('.navigation-bar__item', bar);
+    const items=$$('.navigation-bar__item', bar); 
+    // Виключаємо лише елементи, які приховуються CSS (movie/home)
     const visibleItems = items.filter(item => {
         const computedStyle = window.getComputedStyle(item);
-        return computedStyle.display !== 'none' && item.dataset.action !== 'movie'; 
+        return computedStyle.display !== 'none';
     });
     
     if(!visibleItems.length) return;
 
     const width=bar.clientWidth;
     const count=visibleItems.length;
-    const minGap=Math.max(4,Math.floor(width*0.006));
+    const minGap=Math.max(2,Math.floor(width*0.005));
     const totalGap=minGap*(count-1);
     const available=width-totalGap;
     const itemWidth=Math.floor(available/count);
@@ -212,26 +222,31 @@ Lampa.Platform.tv();
 
   function init(){
     injectCSS();
-    const bar = $('.navigation-bar__body');
-    if(!bar) return;
     
-    // 1. ДОДАВАННЯ "HOME" (замість movie, який приховано CSS)
-    addItem('home', HOME_SVG); 
+    // ПОРЯДОК: settings, search, history, favorite, movie
 
-    // 2. ДОДАВАННЯ КНОПОК
-    addItem('favorite', FAVORITE_SVG); 
-    addItem('history', HISTORY_SVG);
-    // Додаємо search, який буде вставлено перед settings
+    // 1. Оновлюємо Налаштування (Lampa додає)
+    updateLampaItem('settings', SETTINGS_SVG); 
+
+    // 2. Додаємо Пошук (стане перед Налаштуваннями)
     addItem('search', SEARCH_SVG); 
     
-    // 3. ОНОВЛЮЄМО ІКОНКИ Lampa:
-    updateLampaItem('settings', SETTINGS_SVG); 
-    updateLampaItem('search', SEARCH_SVG); 
-    updateLampaItem('back', BACK_SVG); 
+    // 3. Додаємо Історію (стане перед Пошуком)
+    addItem('history', HISTORY_SVG);
+    
+    // 4. Додаємо Вибране (стане перед Історією)
+    addItem('favorite', FAVORITE_SVG); 
+    
+    // 5. Оновлюємо Фільми (Lampa додає)
+    updateLampaItem('movie', MOVIE_SVG); 
 
+    // 6. Оновлюємо Назад
+    updateLampaItem('back', `<svg><use xlink:href="#sprite-arrow-left"></use></svg>`);
     
     adjustSpacing();
 
+    const bar=$('.navigation-bar__body');
+    if(!bar) return;
     const ro=new ResizeObserver(adjustSpacing);
     ro.observe(bar);
     window.addEventListener('resize',adjustSpacing);
