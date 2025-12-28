@@ -880,6 +880,35 @@ html:not(.is-smarttv) .new-interface .card-more__box{
     overflow: hidden;
     z-index: 3; /* поверх линий, чтобы текст не перекрывался */
 }
+/* Затемнення фону під інформацією для покращення контрасту тексту */
+.new-interface-info {
+    position: relative; /* Переконаємось, що контейнер має позицію */
+    /* Додаємо темний градієнт як псевдоелемент */
+}
+.new-interface-info:after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0; /* Градієнт має бути під текстом */
+    /* Градієнт: темно зліва, темніше справа, де опис */
+    background: linear-gradient(
+        90deg, 
+        rgba(0, 0, 0, 0.65) 0%, 
+        rgba(0, 0, 0, 0.45) 50%, 
+        rgba(0, 0, 0, 0.85) 100% /* Зробили ще темніше праворуч */
+    );
+}
+
+/* Якщо ви хочете, щоб текст був над градієнтом, переконайтеся, що він має z-index: */
+.new-interface-info__left,
+.new-interface-info__right {
+    position: relative;
+    z-index: 1; 
+}
+
 
 /* Общая подложка под текст: слева сильнее, справа мягче (под описание) */
 .new-interface-info:before{
