@@ -857,7 +857,7 @@ card.use({
     --ni-info-h: clamp(15em, 34vh, 24em);
 }
 html:not(.is-smarttv) .new-interface{
-    --ni-card-w: clamp(100px, 6.5vw, 140px); /* Зменшені значення */
+    --ni-card-w: clamp(90px, 5.5vw, 125px); /* Зменшені значення для більш компактного вигляду */
 }
 
 /* Размер карточек и плитки "Ещё" */
