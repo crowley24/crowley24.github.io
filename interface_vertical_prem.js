@@ -1026,12 +1026,12 @@ html:not(.is-smarttv) .new-interface .card-more__box{
 }
 
 
-/* Описание справа */
+/* Опис справа */
 .new-interface-info__description{
-    font-size: 0.87em;
-    font-weight: 300;
-    line-height: 1.38;
-    color: rgba(255, 255, 255, 0.90);
+    font-size: 1.0em; /* Збільшення шрифту */
+    font-weight: 400; /* Збільшення товщини */
+    line-height: 1.45; /* Збільшення інтервалу */
+    color: #ffffff; /* Примусово білий колір */
     text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);
     overflow: hidden;
     -o-text-overflow: '.';
