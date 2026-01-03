@@ -461,7 +461,6 @@
             return handler.call(this, original, args);
         };
     }
-
     function addStyles() {
         if (addStyles.added) return;
         addStyles.added = true;
@@ -471,12 +470,30 @@
             position: relative;
         }
 
+        /* === СТИЛІ ДЛЯ ЗАТЕМНЕННЯ ФОНУ (OVERLAY) === */
+        .new-interface::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1; /* Зсуває оверлей поверх фонового зображення */
+            /* Використовуємо 60% прозорості (0.6) для кращої читабельності, 
+               за потреби змініть це значення (0.5 - світліше, 0.7 - темніше) */
+            background-color: rgba(0, 0, 0, 0.6); 
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        /* ========================================= */
+
         .new-interface .card.card--wide {
             width: 18.3em;
         }
 
         .new-interface-info {
             position: relative;
+            z-index: 2; /* Піднімаємо інформаційний блок над оверлеєм (z-index: 1) */
             padding: 1.5em;
             height: 24em;
         }
@@ -609,7 +626,7 @@
 
         $('body').append(Lampa.Template.get('new_interface_logo_styles', {}, true));
     }
-
+    
     // ========== КЛАС ДЛЯ ІНФОРМАЦІЇ З ПІДТРИМКОЮ ЛОГОТИПІВ ==========
 
     class InterfaceInfo {
