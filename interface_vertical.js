@@ -475,18 +475,18 @@
             width: 18.3em;
         }
 
-        /* * >>> ФІКС КОНТРАСТУ: Додаємо темний градієнт
+        /* * >>> ФІКС КОНТРАСТУ: Повне затемнення інформаційного блоку
          */
         .new-interface-info {
             position: relative;
             padding: 1.5em;
             height: 24em;
-            /* Темний градієнт, що покриває ліву частину */
-            background: linear-gradient(to right, rgba(0, 0, 0, 0.75) 30%, rgba(0, 0, 0, 0.5) 70%, rgba(0, 0, 0, 0) 100%);
+            /* Суцільний напівпрозорий фон для повного затемнення */
+            background: rgba(0, 0, 0, 0.85); 
             z-index: 2; 
         }
 
-        /* * >>> ФІКС КОНТРАСТУ: Додаємо тінь для всього тексту
+        /* * >>> ФІКС КОНТРАСТУ: Додаємо тінь для всього тексту (допомагає "вирізати" його)
          */
         .new-interface-info__body {
             width: 80%;
@@ -564,7 +564,130 @@
         .new-interface .full-start__background {
             height: 108%;
             top: -6em;
-            z-index: 1; /* Зображення має бути під градієнтом */
+            z-index: 1; /* Зображення має бути під затемненням */
+        }
+
+        .new-interface .full-start__rate {
+            font-size: 1.3em;
+            margin-right: 0;
+        }
+
+        .new-interface .card__promo {
+            display: none;
+        }
+
+        .new-interface .card.card--wide + .card-more .card-more__box {
+            padding-bottom: 95%;
+        }
+
+        .new-interface .card.card--wide .card-watched {
+            display: none !important;
+        }
+
+        .new-interface-card-title {
+            margin-top: 0.6em;
+            font-size: 1.05em;
+            font-weight: 500;
+            color: #fff;
+            display: block;
+            text-align: left;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+
+        /* * >>> ФІКС КОНТРАСТУ: Повне затемнення інформаційного блоку
+         */
+        .new-interface-info {
+            position: relative;
+            padding: 1.5em;
+            height: 24em;
+            /* Суцільний напівпрозорий фон для повного затемнення */
+            background: rgba(0, 0, 0, 0.85); 
+            z-index: 2; 
+        }
+
+        /* * >>> ФІКС КОНТРАСТУ: Додаємо тінь для всього тексту (допомагає "вирізати" його)
+         */
+        .new-interface-info__body {
+            width: 80%;
+            padding-top: 1.1em;
+            /* Тінь для всіх елементів в body */
+            text-shadow: 0 0 0.5em rgba(0, 0, 0, 0.8);
+            z-index: 3; 
+        }
+
+        .new-interface-info__head {
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 1em;
+            font-size: 1.3em;
+            min-height: 1em;
+        }
+
+        .new-interface-info__head span {
+            color: #fff;
+        }
+
+        .new-interface-info__title {
+            font-size: 4em;
+            font-weight: 600;
+            margin-bottom: 0.3em;
+            overflow: hidden;
+            -o-text-overflow: '.';
+            text-overflow: '.';
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            line-clamp: 1;
+            -webkit-box-orient: vertical;
+            margin-left: -0.03em;
+            line-height: 1.3;
+        }
+
+        .new-interface-info__title img {
+            max-height: 125px;
+            margin-top: 5px;
+        }
+
+        .new-interface-info__details {
+            margin-bottom: 1.6em;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            min-height: 1.9em;
+            font-size: 1.1em;
+        }
+
+        .new-interface-info__split {
+            margin: 0 1em;
+            font-size: 0.7em;
+        }
+
+        .new-interface-info__description {
+            font-size: 1.2em;
+            font-weight: 300;
+            line-height: 1.5;
+            overflow: hidden;
+            -o-text-overflow: '.';
+            text-overflow: '.';
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            line-clamp: 4;
+            -webkit-box-orient: vertical;
+            width: 70%;
+            /* Додаткова тінь для опису (для кращої читабельності) */
+            text-shadow: 0 0 0.2em #000, 0 0 0.3em #000, 0 0 0.4em #000;
+        }
+
+        .new-interface .card-more__box {
+            padding-bottom: 95%;
+        }
+
+        .new-interface .full-start__background {
+            height: 108%;
+            top: -6em;
+            z-index: 1; /* Зображення має бути під затемненням */
         }
 
         .new-interface .full-start__rate {
@@ -620,7 +743,7 @@
         }
 
         body.light--version .new-interface-info {
-            background: none; /* Прибираємо темний градієнт */
+            background: rgba(255, 255, 255, 0.9); /* Світлий напівпрозорий фон для світлої теми */
         }
 
         body.light--version .new-interface-info__body {
@@ -784,7 +907,7 @@
             const logoUrl = Lampa.TMDB.image('/t/p/w300' + logoPath.replace('.svg', '.png'));
             
             // Створюємо зображення логотипу
-			const logoImg = $('<img>')
+            const logoImg = $('<img>')
                 .attr('src', logoUrl)
                 .attr('alt', data.title || data.name || '')
                 .css({
@@ -799,7 +922,7 @@
                 });
             
             // Замінюємо текст на логотип
-            titleElement.empty().append(logoImg);
+			titleElement.empty().append(logoImg);
         }
 
         loadDetails(data) {
