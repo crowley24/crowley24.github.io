@@ -1835,7 +1835,7 @@ body.light--version .new-interface-info__body{
         --ni-info-h: clamp(13em, 30vh, 20em);
     }
     html:not(.is-smarttv) .new-interface{
-        --ni-card-w: clamp(110px, 7.2vw, 160px);
+        --ni-card-w: clamp(80px, 5.5vw, 120px);
     }
 
     .new-interface-info__right{
