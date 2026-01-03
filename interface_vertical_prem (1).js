@@ -1651,8 +1651,12 @@ if (Lampa.Manifest.app_digital >= 300) {
     /* На SMART-TV используем стандартные размеры постеров (без принудительного card-w) */
     --ni-info-h: clamp(15em, 34vh, 24em);
 }
-html:not(.is-smarttv) .new-interface{
-    --ni-card-w: clamp(120px, 7.6vw, 170px);
+.new-interface{
+    position: relative;
+    /* На SMART-TV используем стандартные размеры постеров (без принудительного card-w) */
+    --ni-info-h: clamp(15em, 34vh, 24em);
+    /* ДОДАЄМО НАШУ НОВУ ШИРИНУ ПРЯМО ТУТ: */
+    --ni-card-w: clamp(90px, 6.0vw, 130px);
 }
 
 /* Размер карточек и плитки "Ещё" */
