@@ -499,8 +499,7 @@ function markSmartTV(){
             } catch (e) { }
         }
     }
-
-    const Logo = new LogoEngine();
+const Logo = new LogoEngine();
     initInterface2Settings();
 
     function applyInfoTitleLogo(wrapper, titleNode, headNode, movie, titleText) {
@@ -734,11 +733,10 @@ function markSmartTV(){
 
         return state;
     }
-
-    function prepareLineData(element) {
+function prepareLineData(element) {
         // Оставляем стандартный стиль карточек (вертикальные постеры),
         // поэтому ничего не переопределяем.
-        return;
+return;
     }
 
     function decorateCard(state, card) {
@@ -855,20 +853,22 @@ card.use({
     position: relative;
     /* На SMART-TV используем стандартные размеры постеров (без принудительного card-w) */
     --ni-info-h: clamp(15em, 34vh, 24em);
+    /* ЗМІНА: Встановлюємо ширину карток для ВСІХ пристроїв */
+    --ni-card-w: clamp(90px, 6.0vw, 130px);
 }
-html:not(.is-smarttv) .new-interface{
---ni-card-w: clamp(90px, 6.0vw, 130px);
-}
+/* html:not(.is-smarttv) .new-interface{ --ni-card-w: clamp(120px, 7.6vw, 170px); } <--- ВИДАЛЕНО */
 
 /* Размер карточек и плитки "Ещё" */
-html:not(.is-smarttv) .new-interface .card--small,
-html:not(.is-smarttv) .new-interface .card-more{
+/* ЗМІНА: Застосовуємо ширину карток для ВСІХ пристроїв */
+.new-interface .card--small,
+.new-interface .card-more{
     width: var(--ni-card-w) !important;
 }
 
 /* Вертикальные постеры: используем стандартный стиль Lampa.
    Подправляем только плитку "Ещё", чтобы была вертикальной */
-html:not(.is-smarttv) .new-interface .card-more__box{
+/* ЗМІНА: Застосовуємо для ВСІХ пристроїв */
+.new-interface .card-more__box{
     padding-bottom: 150%;
 }
 
@@ -1065,7 +1065,8 @@ html:not(.is-smarttv) .new-interface .card-more__box{
     position: relative;
     z-index: 5;
 }
-html:not(.is-smarttv) .new-interface .items-line__head{
+/* ЗМІНА: Застосовуємо для ВСІХ пристроїв */
+.items-line__head{
     transform: translateY(-2vh);
 }
 
@@ -1075,7 +1076,8 @@ html:not(.is-smarttv) .new-interface .items-line__head{
 .new-interface{
     --ni-lines-up: 0vh;
 }
-html:not(.is-smarttv) .new-interface{
+/* ЗМІНА: Застосовуємо для ВСІХ пристроїв */
+.new-interface{
     --ni-lines-up: 3vh;
 }
 .new-interface .items-line__body > .scroll.scroll--horizontal,
@@ -1102,7 +1104,8 @@ body.light--version .new-interface-info__body{
     .new-interface{
         --ni-info-h: clamp(13em, 30vh, 20em);
     }
-    html:not(.is-smarttv) .new-interface{
+    /* ЗМІНА: Встановлюємо меншу ширину для низьких екранів для ВСІХ пристроїв */
+    .new-interface{
         --ni-card-w: clamp(80px, 5.5vw, 120px);
     }
 
@@ -1136,6 +1139,7 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
     }
 
     class InterfaceInfo {
+// ... (Інший код InterfaceInfo без змін) ...
         constructor() {
             this.html = null;
             this.timer = null;
@@ -1245,7 +1249,7 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
             this.html.find('.new-interface-info__head').empty().append(head.join(', '));
 
             // TMDB плашка — перед жанрами
-            if (vote > 0) {
+        if (vote > 0) {
                 this.html.find('.new-interface-info__rate').html(`<div class="full-start__rate"><div>${vote}</div><div>TMDB</div></div>`);
             } else {
                 this.html.find('.new-interface-info__rate').empty();
@@ -1374,8 +1378,7 @@ if (Lampa.Manifest.app_digital >= 300) {
 
       this.load = function (data) {
         var _this = this;
-
-        clearTimeout(timer);
+clearTimeout(timer);
         var url = Lampa.TMDB.api((data.name ? 'tv' : 'movie') + '/' + data.id + '?api_key=' + Lampa.TMDB.key() + '&append_to_response=content_ratings,release_dates&language=' + Lampa.Storage.get('language'));
         if (loaded[url]) return this.draw(loaded[url]);
         timer = setTimeout(function () {
@@ -1631,7 +1634,7 @@ if (Lampa.Manifest.app_digital >= 300) {
     }
 
     function startPlugin() {
-      window.plugin_interface_ready = true;
+        window.plugin_interface_ready = true;
       var old_interface = Lampa.InteractionMain;
       var new_interface = component;
 
@@ -1650,24 +1653,22 @@ if (Lampa.Manifest.app_digital >= 300) {
     position: relative;
     /* На SMART-TV используем стандартные размеры постеров (без принудительного card-w) */
     --ni-info-h: clamp(15em, 34vh, 24em);
-}
-.new-interface{
-    position: relative;
-    /* На SMART-TV используем стандартные размеры постеров (без принудительного card-w) */
-    --ni-info-h: clamp(15em, 34vh, 24em);
-    /* ДОДАЄМО НАШУ НОВУ ШИРИНУ ПРЯМО ТУТ: */
+    /* ЗМІНА: Встановлюємо ширину карток для ВСІХ пристроїв */
     --ni-card-w: clamp(90px, 6.0vw, 130px);
 }
+/* html:not(.is-smarttv) .new-interface{ --ni-card-w: clamp(120px, 7.6vw, 170px); } <--- ВИДАЛЕНО */
 
 /* Размер карточек и плитки "Ещё" */
-html:not(.is-smarttv) .new-interface .card--small,
-html:not(.is-smarttv) .new-interface .card-more{
+/* ЗМІНА: Застосовуємо ширину карток для ВСІХ пристроїв */
+.new-interface .card--small,
+.new-interface .card-more{
     width: var(--ni-card-w) !important;
 }
 
 /* Вертикальные постеры: используем стандартный стиль Lampa.
    Подправляем только плитку "Ещё", чтобы была вертикальной */
-html:not(.is-smarttv) .new-interface .card-more__box{
+/* ЗМІНА: Застосовуємо для ВСІХ пристроїв */
+.new-interface .card-more__box{
     padding-bottom: 150%;
 }
 
@@ -1806,12 +1807,12 @@ html:not(.is-smarttv) .new-interface .card-more__box{
 }
 
 
-
 /* Поднять ленты постеров на 3% выше (3vh). Двигаем только саму ленту карточек, заголовок строки не трогаем. */
 .new-interface{
     --ni-lines-up: 0vh;
 }
-html:not(.is-smarttv) .new-interface{
+/* ЗМІНА: Застосовуємо для ВСІХ пристроїв */
+.new-interface{
     --ni-lines-up: 3vh;
 }
 .new-interface .items-line__body > .scroll.scroll--horizontal,
@@ -1838,7 +1839,8 @@ body.light--version .new-interface-info__body{
     .new-interface{
         --ni-info-h: clamp(13em, 30vh, 20em);
     }
-    html:not(.is-smarttv) .new-interface{
+    /* ЗМІНА: Встановлюємо меншу ширину для низьких екранів для ВСІХ пристроїв */
+    .new-interface{
         --ni-card-w: clamp(80px, 5.5vw, 120px);
     }
 
