@@ -89,76 +89,27 @@
     if (best.dolbyVision) badges.push(createBadgeImg('Dolby Vision', true, badges.length));
     if (badges.length) card.find('.card__view').append('<div class="card-quality-badges">' + badges.join('') + '</div>');
   }
-  
-  // Функція для обробки черги з затримкою
-  function processCardQueue(cards, index) {
-    if (index >= cards.length) return;
-
-    var card = $(cards[index]);
-    var movie = card.data('item');
-
-    card.addClass('qb-processed');
-
-    if (movie && movie.id && Lampa.Storage.field('parser_use')) { 
-      var searchQuery = movie.title || movie.name;
-      
-      // ЗМІНА ТУТ: Використовуємо movie.id для пошуку, якщо він є, 
-      // інакше використовуємо назву як резерв
-      var searchOptions = { 
-        search: movie.id, // Спробуємо передати ID як основний пошуковий запит
-        movie: movie, 
-        page: 1 
-      };
-      
-      // Логіка пошуку
-      var performSearch = function(options) {
-        Lampa.Parser.get(options, function(response) {
-          if (response && response.Results && response.Results.length > 0) {
-            addCardBadges(card, getBest(response.Results));
-          } else if (movie.original_title && options.search !== movie.original_title) {
-            // Спроба резервного пошуку за оригінальною назвою (якщо не шукали за нею)
-            var fallbackOptions = { search: movie.original_title, movie: movie, page: 1 };
-            Lampa.Parser.get(fallbackOptions, function(response) {
-               if (response && response.Results && response.Results.length > 0) {
-                   addCardBadges(card, getBest(response.Results));
-               }
-               setTimeout(function() { processCardQueue(cards, index + 1); }, 200);
-            });
-            return;
-          }
-          // Якщо ID не спрацював, і оригінальна назва не спрацювала, або це був останній пошук
-          setTimeout(function() { processCardQueue(cards, index + 1); }, 200);
-        });
-      };
-      
-      // Спочатку шукаємо за ID
-      performSearch(searchOptions);
-
-    } else {
-       // Якщо movie.id відсутній або парсер вимкнений, продовжуємо негайно
-       setTimeout(function() { processCardQueue(cards, index + 1); }, 0); 
-    }
-  }
 
   function processCards() {
-    var cardsToProcess = $('.card:not(.qb-processed)');
-    if (cardsToProcess.length > 0) {
-        processCardQueue(cardsToProcess, 0);
-    }
+    $('.card:not(.qb-processed)').addClass('qb-processed').each(function() {
+      var card = $(this);
+      var movie = card.data('item');
+      if (movie && Lampa.Storage.field('parser_use')) {
+        Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(response) {
+          if (response && response.Results) addCardBadges(card, getBest(response.Results));
+        });
+      }
+    });
   }
-  
+
   Lampa.Listener.follow('full', function(e) {
     if (e.type !== 'complite') return;
     var details = $('.full-start-new__details');
     if (details.length) {
         if (!$('.quality-badges-container').length) details.after('<div class="quality-badges-container"></div>');
-        
-        var movie = e.data.movie;
-        var searchQuery = movie.title || movie.name;
-        
-        var handleFull = function(results, searchType) {
-            if (results && results.length > 0) {
-                var best = getBest(results);
+        Lampa.Parser.get({ search: e.data.movie.title || e.data.movie.name, movie: e.data.movie, page: 1 }, function(response) {
+            if (response && response.Results) {
+                var best = getBest(response.Results);
                 var badges = [];
                 if (best.resolution) badges.push(createBadgeImg(best.resolution, false, badges.length));
                 if (best.hdr) badges.push(createBadgeImg('HDR', false, badges.length));
@@ -166,25 +117,12 @@
                 if (best.dub) badges.push(createBadgeImg('DUB', false, badges.length));
                 if (best.dolbyVision) badges.push(createBadgeImg('Dolby Vision', false, badges.length));
                 $('.quality-badges-container').html(badges.join(''));
-            } else if (searchType === 'id' && movie.original_title) {
-                // Якщо пошук за ID не спрацював, спробуємо оригінальну назву
-                var fallbackOptions = { search: movie.original_title, movie: movie, page: 1 };
-                Lampa.Parser.get(fallbackOptions, function(response) {
-                    handleFull(response ? response.Results : null, 'name');
-                });
             }
-        };
-        
-        // Спочатку шукаємо за ID (найбільш надійно)
-        var initialSearchOptions = { search: movie.id, movie: movie, page: 1 };
-
-        Lampa.Parser.get(initialSearchOptions, function(response) {
-            handleFull(response ? response.Results : null, 'id');
         });
     }
   });
 
-  setInterval(processCards, 3000); 
+  setInterval(processCards, 3000);
 
   var style = '<style>\
     .quality-badges-container { display: flex; gap: 0.3em; margin: 0 0 0.4em 0; min-height: 1.2em; pointer-events: none; }\
@@ -206,4 +144,3 @@
   console.log('[QualityBadges] Запущен');
 
 })();
-                  
