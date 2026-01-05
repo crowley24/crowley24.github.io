@@ -1,3 +1,5 @@
+//Оригінальний плагін https://github.com/FoxStudio24/lampa/blob/main/Quality/Quality.js
+
 (function () {
   'use strict';
 
