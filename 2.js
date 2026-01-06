@@ -472,11 +472,12 @@
 						line-height: 1.3;  
 					}  
 					.new-interface-info__title img {  
-    min-width: 12em !important;  
-    min-height: 6em !important;  
-    width: 14em !important;  
+    min-width: 10em !important;  /* Зменшено з 12em */  
+    min-height: 5em !important;  /* Зменшено з 6em */  
+    width: 12em !important;      /* Зменшено з 14em */  
     height: auto !important;  
     object-fit: contain !important;  
+    margin-top: -0.5em !important; /* Підняти логотип вище */  
 }
 					.new-interface-info__details {  
                         margin-top: 1.5em;  
@@ -632,11 +633,12 @@
 						line-height: 1.3;  
 					}  
 					.new-interface-info__title img {  
-    min-width: 12em !important;  
-    min-height: 6em !important;  
-    width: 14em !important;  
+    min-width: 10em !important;  /* Зменшено з 12em */  
+    min-height: 5em !important;  /* Зменшено з 6em */  
+    width: 12em !important;      /* Зменшено з 14em */  
     height: auto !important;  
     object-fit: contain !important;  
+    margin-top: -0.5em !important; /* Підняти логотип вище */  
 }
 					.new-interface-info__details {  
 						margin-top: 1.2em;  
@@ -862,7 +864,7 @@
 		var FADE_OUT_TEXT = 300;  
 		var MORPH_HEIGHT = 400;  
 		var FADE_IN_IMG = 400;  
-		var TARGET_WIDTH = "14em";  
+		var TARGET_WIDTH = "12em";  
 		var PADDING_TOP_EM = 0;  
 		var PADDING_BOTTOM_EM = 0.2;  
   
@@ -906,18 +908,17 @@
 		}  
   
 		function applyFinalStyles(img, text_height) {  
-    img.style.marginTop = "0";  
+    img.style.marginTop = "-0.5em"; /* Додано для підняття */  
     img.style.marginLeft = "0";  
     img.style.paddingTop = PADDING_TOP_EM + "em";  
     img.style.paddingBottom = PADDING_BOTTOM_EM + "em";  
     img.style.imageRendering = "-webkit-optimize-contrast";  
   
-    // Завжди використовувати фіксовану ширину для консистентності  
-    img.style.width = "14em"; // Фіксована ширина  
+    img.style.width = "12em"; /* Зменшено з 14em */  
     img.style.height = "auto";  
     img.style.maxWidth = "100%";  
     img.style.maxHeight = "none";  
-    img.style.minHeight = "8em"; // Мінімальна висота для маленьких логотипів  
+    img.style.minHeight = "6em"; /* Зменшено з 8em */  
   
     img.style.boxSizing = "border-box";  
     img.style.display = "block";  
