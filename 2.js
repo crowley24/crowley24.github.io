@@ -116,11 +116,6 @@
 			main: mainInstance,  
 			info: infoPanel,  
 			background: backgroundWrapper,  
-			infoElement: null,  
-			backgroundTimer: null,  
-			backgroundLast: "",  
-			attached: false,  
-  
 			attach: function () {  
 				if (this.attached) return;  
   
@@ -129,12 +124,10 @@
   
 				container.classList.add("new-interface");  
   
-				// Спочатку додаємо фон  
 				if (!backgroundWrapper.parentElement) {  
 					container.appendChild(backgroundWrapper);  
 				}  
   
-				// Потім інформаційну панель  
 				var infoElement = infoPanel.render(true);  
 				this.infoElement = infoElement;  
   
@@ -145,190 +138,78 @@
 				mainInstance.scroll.minus(infoElement);  
 				this.attached = true;  
 			},  
+			detach: function () {  
+				if (!this.attached) return;  
   
-			update: function (data) {  
-				if (!data) return;  
-				infoPanel.update(data);  
-				this.updateBackground(data);  
-			},  
-  
-			updateBackground: function (data) {  
-				var BACKGROUND_DEBOUNCE_DELAY = 300;  
-				var self = this;  
-  
-				clearTimeout(this.backgroundTimer);  
-  
-				if (this._pendingImg) {  
-					this._pendingImg.onload = null;  
-					this._pendingImg.onerror = null;  
-					this._pendingImg = null;  
-				}  
-  
-				var show_bg = Lampa.Storage.get("show_background", true);  
-				var bg_resolution = Lampa.Storage.get("background_resolution", "original");  
-				var backdropUrl = data && data.backdrop_path && show_bg ? Lampa.Api.img(data.backdrop_path, bg_resolution) : "";  
-  
-				if (backdropUrl === this.backgroundLast) {  
-					if (backdropUrl) {  
-						this.showBackground(backdropUrl);  
+				var container = mainInstance.render(true);  
+				if (container) {  
+					container.classList.remove("new-interface");  
+					if (backgroundWrapper.parentElement === container) {  
+						container.removeChild(backgroundWrapper);  
 					}  
-					return;  
+					if (this.infoElement && this.infoElement.parentNode === container) {  
+						container.removeChild(this.infoElement);  
+					}  
 				}  
   
-				this.backgroundLast = backdropUrl;  
-  
-				if (!backdropUrl) {  
-					this.hideBackground();  
-					return;  
-				}  
-  
-				this.backgroundTimer = setTimeout(function () {  
-					self.loadBackground(backdropUrl);  
-				}, BACKGROUND_DEBOUNCE_DELAY);  
+				mainInstance.scroll.plus(this.infoElement);  
+				this.attached = false;  
 			},  
-  
-			loadBackground: function (url) {  
-				var self = this;  
-				var img = new Image();  
-				img.src = url;  
-  
-				img.onload = function () {  
-					self.showBackground(url);  
-				};  
-  
-				img.onerror = function () {  
-					self.hideBackground();  
-				};  
-			},  
-  
-			showBackground: function (url) {  
-				var images = this.background.querySelectorAll("img");  
-				var currentBg = images[0].classList.contains("active") ? images[0] : images[1];  
-				var nextBg = images[0].classList.contains("active") ? images[1] : images[0];  
-  
-				nextBg.src = url;  
-				nextBg.classList.add("active");  
-				currentBg.classList.remove("active");  
-			},  
-  
-			hideBackground: function () {  
-				var images = this.background.querySelectorAll("img");  
-				images.forEach(function (img) {  
-					img.classList.remove("active");  
-				});  
-			},  
-  
 			reset: function () {  
-				this.hideBackground();  
-				this.backgroundLast = "";  
-				if (this.info) {  
-					this.info.empty();  
-				}  
+				infoPanel.empty();  
 			},  
-  
+			update: function (data) {  
+				infoPanel.update(data);  
+			},  
 			destroy: function () {  
-				this.reset();  
-				if (this.info) {  
-					this.info.destroy();  
-				}  
-				if (this.background && this.background.parentElement) {  
-					this.background.parentElement.removeChild(this.background);  
-				}  
+				this.detach();  
+				infoPanel.destroy();  
 			}  
 		};  
   
 		return state;  
 	}  
   
-	function handleCard(state, card) {  
-		if (!card || !card.render) return;  
+	function handleLineAppend(line, element, data) {  
+		if (!line.__newInterfaceLine) {  
+			line.__newInterfaceLine = {  
+				state: null,  
+				reset: function () {  
+					if (this.state) {  
+						this.state.reset();  
+						this.state = null;  
+					}  
+				}  
+			};  
   
-		var cardData = getCardData(card);  
-		if (cardData) {  
-			state.update(cardData);  
+			line.on("scroll", function () {  
+				if (line.__newInterfaceLine.state) {  
+					line.__newInterfaceLine.state.reset();  
+				}  
+			});  
+  
+			line.on("hover", function (card) {  
+				var cardData = findCardData(card);  
+				if (cardData) {  
+					if (!line.__newInterfaceLine.state) {  
+						line.__newInterfaceLine.state = createState(line);  
+					}  
+					line.__newInterfaceLine.state.update(cardData);  
+				}  
+			});  
+  
+			line.on("hover:leave", function () {  
+				if (line.__newInterfaceLine.state) {  
+					line.__newInterfaceLine.state.reset();  
+				}  
+			});  
+  
+			line.on("more", function () {  
+				if (line.__newInterfaceLine.state) {  
+					line.__newInterfaceLine.state.reset();  
+				}  
+			});  
 		}  
-	}  
-  
-	function extendResultsWithStyle(data) {  
-		if (!data || !data.results || !Array.isArray(data.results)) return;  
-  
-		data.results.forEach(function (item) {  
-			if (item) {  
-				item.wide = false;  
-			}  
-		});  
-	}  
-  
-	function getCardData(card, index) {  
-		index = index || 0;  
-  
-		if (card && card.data) return card.data;  
-		if (results && Array.isArray(results.results)) {  
-			return results.results[index] || results.results[0];  
-		}  
-  
-		return null;  
-	}  
-  
-	function findCardData(element) {  
-		if (!element) return null;  
-  
-		var node = element && element.jquery ? element[0] : element;  
-  
-		while (node && !node.card_data) {  
-			node = node.parentNode;  
-		}  
-  
-		return node && node.card_data ? node.card_data : null;  
-	}  
-  
-	function getFocusedCard(items) {  
-		var container = items && typeof items.render === "function" ? items.render(true) : null;  
-		if (!container || !container.querySelector) return null;  
-  
-		var focusedElement = container.querySelector(".selector.focus") || container.querySelector(".focus");  
-		return findCardData(focusedElement);  
-	}  
-  
-	function handleLineAppend(items, line, data) {  
-		if (line.__newInterfaceLine) return;  
-		line.__newInterfaceLine = true;  
-  
-		var state = getOrCreateState(items);  
-  
-		line.items_per_row = 12;  
-		line.view = 12;  
-		if (line.params) {  
-			line.params.items_per_row = 12;  
-			if (line.params.items) line.params.items.view = 12;  
-		}  
-  
-		var processCard = function (card) {  
-			handleCard(state, card);  
-		};  
-  
-		line.use({  
-			onInstance: function (instance) {  
-				processCard(instance);  
-			},  
-			onActive: function (card, results) {  
-				var cardData = getCardData(card, results);  
-				if (cardData) state.update(cardData);  
-			},  
-			onToggle: function () {  
-				setTimeout(function () {  
-					var focusedCard = getFocusedCard(line);  
-					if (focusedCard) state.update(focusedCard);  
-				}, 32);  
-			},  
-			onMore: function () {  
-				state.reset();  
-			},  
-			onDestroy: function () {  
-				state.reset();  
-				delete line.__newInterfaceLine;  
-			},  
-		});  
   
 		if (Array.isArray(line.items) && line.items.length) {  
 			line.items.forEach(processCard);  
@@ -374,10 +255,6 @@
 					.items-line__title .full-person__photo {  
 						margin-right: 0.5em !important;  
 					}  
-					.new-interface .items-line {  
-                    position: relative;  
-                    z-index: 2; /* Забезпечити що картки над фоном */  
-                }  
 					.items-line {  
 						padding-bottom: 4em !important;  
 					}  
@@ -393,44 +270,26 @@
 						position: relative;  
 						padding: 1.5em;  
 						height: 27.5em;  
-						max-width: 100%;  
-						overflow: hidden;  
 					}  
-					.new-interface-info__body {  
-    position: absolute;  
-    z-index: 9999; /* Збільшено з 999 */  
-    width: 98% !important;  
-    left: auto !important;  
-    right: 0 !important;  
-    top: 0;  
-    padding: 2em;  
-    background: linear-gradient(135deg,   
-        rgba(0,0,0,0.7) 0%,   
-        rgba(0,0,0,0.3) 100%);  
-    border-radius: 1.5em;  
-    backdrop-filter: blur(20px);  
-    display: flex;  
-    justify-content: flex-end !important;  
-    gap: 2em;  
-    pointer-events: none;  
-}
-
-					.new-interface-info__left,  
-					.new-interface-info__right {  
-						pointer-events: auto;  
+					.new-interface-info__logo-block {  
+						position: absolute;  
+						top: 1.5em;  
+						left: 1.5em;  
+						z-index: 9999;  
+						max-width: 30%;  
 					}  
-					.new-interface-info__left {  
-						flex: 0.4 !important;  
-						max-width: 25% !important;  
-					}  
-					.new-interface-info__right {  
-						flex: 1.6 !important;  
-						padding-left: 2em;  
-						display: flex;  
-						flex-direction: column;  
-						align-items: flex-start;  
-						max-width: 70% !important;  
-						overflow: hidden;  
+					.new-interface-info__content-block {  
+						position: absolute;  
+						top: 1.5em;  
+						right: 1.5em;  
+						z-index: 9999;  
+						max-width: 60%;  
+						background: linear-gradient(135deg,   
+							rgba(0,0,0,0.7) 0%,   
+							rgba(0,0,0,0.3) 100%);  
+						border-radius: 1.5em;  
+						backdrop-filter: blur(20px);  
+						padding: 2em;  
 					}  
 					.new-interface-info__head {  
 						color: rgba(255, 255, 255, 0.6);  
@@ -441,34 +300,31 @@
 						color: #fff;  
 					}  
 					.new-interface-info__title {  
-    font-size: 5em;  
-    font-weight: 700;  
-    margin-bottom: 0.3em;  
-    overflow: hidden;  
-    -o-text-overflow: '.';  
-    text-overflow: '.';  
-    display: -webkit-box;  
-    -webkit-line-clamp: 1;  
-    line-clamp: 1;  
-    -webkit-box-orient: vertical;  
-    margin-left: -0.03em;  
-    line-height: 1.3;  
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);  
-    letter-spacing: -0.02em;  
-    min-height: 6em !important; /* Додано для логотипів */  
-    overflow: visible !important; /* Дозволити вихід логотипа */  
-}
-					.new-interface-info__title img {  
-    max-width: 12em !important;  
-    max-height: 6em !important;  
-    width: auto !important;  
-    height: auto !important;  
-    object-fit: contain !important;  
-    margin: 0 !important;  
-    display: block !important;
+						font-size: 5em;  
+						font-weight: 700;  
+						margin-bottom: 0.3em;  
+						overflow: hidden;  
+						-o-text-overflow: '.';  
+						text-overflow: '.';  
+						display: -webkit-box;  
+						-webkit-line-clamp: 1;  
+						line-clamp: 1;  
+						-webkit-box-orient: vertical;  
+						margin-left: -0.03em;  
+						line-height: 1.3;  
+						text-shadow: 2px 2px 4px rgba(0,0,0,0.8);  
+						letter-spacing: -0.02em;  
+						min-height: 6em !important;  
+						overflow: visible !important;  
 					}  
-					.new-interface-info__title img:hover {  
-						transform: scale(1.05);  
+					.new-interface-info__title img {  
+						max-width: 12em !important;  
+						max-height: 6em !important;  
+						width: auto !important;  
+						height: auto !important;  
+						object-fit: contain !important;  
+						margin: 0 !important;  
+						display: block !important;  
 					}  
 					.new-interface-info__details {  
 						margin-top: 1.5em;  
@@ -516,21 +372,21 @@
 						padding-bottom: 95%;  
 					}  
 					.new-interface .full-start__background-wrapper {  
-    position: absolute;  
-    top: 0;  
-    left: 0;  
-    width: 100%;  
-    height: 100%;  
-    z-index: 1; /* Змінено з -1 на 1 */  
-    pointer-events: none;  
-    overflow: hidden;  
-}
+						position: absolute;  
+						top: 0;  
+						left: 0;  
+						width: 100%;  
+						height: 100%;  
+						z-index: 1;  
+						pointer-events: none;  
+						overflow: hidden;  
+					}  
 					.new-interface .full-start__background {  
 						position: absolute;  
 						height: 100%;  
 						width: 100%;  
 						top: 0;  
-						left: 0; 
+						left: 0;  
 						opacity: 0;  
 						object-fit: cover;  
 						transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);  
@@ -553,11 +409,19 @@
 					.new-interface .card.card--wide .card-watched {  
 						display: none !important;  
 					}  
-					body.light--version .new-interface-info__body {  
+					.new-interface .items-line {  
+						position: relative;  
+						z-index: 2;  
+					}  
+					body.light--version .new-interface-info__logo-block {  
 						position: absolute;  
 						z-index: 999;  
-						width: 69%;  
-						padding-top: 1.5em;  
+						width: 30%;  
+					}  
+					body.light--version .new-interface-info__content-block {  
+						position: absolute;  
+						z-index: 999;  
+						width: 60%;  
 					}  
 					body.light--version .new-interface-info {  
 						height: 25.3em;  
@@ -597,100 +461,75 @@
 					}  
 					.items-line__title .full-person__photo {  
 						margin-right: 0.5em !important;  
-					} 
-					.new-interface .items-line {  
-                    position: relative;  
-                    z-index: 2; /* Забезпечити що картки над фоном */  
-                }  
+					}  
 					.new-interface-info {  
 						position: relative;  
 						padding: 1.5em;  
 						height: 19.8em;  
 					}  
-					.new-interface-info__body {  
-    position: absolute;  
-    z-index: 9999; /* Збільшено з 999 */  
-    width: 98% !important;  
-    left: auto !important;  
-    right: 0 !important;  
-    top: 0;  
-    padding: 2em;  
-    background: linear-gradient(135deg,   
-        rgba(0,0,0,0.7) 0%,   
-        rgba(0,0,0,0.3) 100%);  
-    border-radius: 1.5em;  
-    backdrop-filter: blur(20px);  
-    display: flex;  
-    justify-content: flex-end !important;  
-    gap: 2em;  
-    pointer-events: none;  
-}
-
-					.new-interface-info__left,  
-					.new-interface-info__right {  
-						pointer-events: auto;  
+					.new-interface-info__logo-block {  
+						position: absolute;  
+						top: 1.5em;  
+						left: 1.5em;  
+						z-index: 9999;  
+						max-width: 30%;  
 					}  
-					.new-interface-info__left {  
-						flex: 0.4 !important;  
-						max-width: 25% !important;  
-					}  
-					.new-interface-info__right {  
-						flex: 1.6 !important;  
-						padding-left: 1.5em;  
-						display: flex;  
-						flex-direction: column;  
-						align-items: flex-start;  
-						max-width: 70% !important;  
-						overflow: hidden;  
+					.new-interface-info__content-block {  
+						position: absolute;  
+						top: 1.5em;  
+						right: 1.5em;  
+						z-index: 9999;  
+						max-width: 60%;  
+						background: linear-gradient(135deg,   
+							rgba(0,0,0,0.7) 0%,   
+							rgba(0,0,0,0.3) 100%);  
+						border-radius: 1.5em;  
+						backdrop-filter: blur(20px);  
+						padding: 2em;  
 					}  
 					.new-interface-info__head {  
 						color: rgba(255, 255, 255, 0.6);  
-						margin-bottom: 0.3em;  
-						font-size: 1.2em;  
+						font-size: 1.3em;  
 						min-height: 1em;  
 					}  
 					.new-interface-info__head span {  
 						color: #fff;  
 					}  
 					.new-interface-info__title {  
-    font-size: 5em;  
-    font-weight: 700;  
-    margin-bottom: 0.3em;  
-    overflow: hidden;  
-    -o-text-overflow: '.';  
-    text-overflow: '.';  
-    display: -webkit-box;  
-    -webkit-line-clamp: 1;  
-    line-clamp: 1;  
-    -webkit-box-orient: vertical;  
-    margin-left: -0.03em;  
-    line-height: 1.3;  
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);  
-    letter-spacing: -0.02em;  
-    min-height: 6em !important; /* Додано для логотипів */  
-    overflow: visible !important; /* Дозволити вихід логотипа */  
-}
-					.new-interface-info__title img {  
-						.new-interface-info__title img {  
-    max-width: 12em !important;  
-    max-height: 6em !important;  
-    width: auto !important;  
-    height: auto !important;  
-    object-fit: contain !important;  
-    margin: 0 !important;  
-    display: block !important;
+						font-size: 5em;  
+						font-weight: 700;  
+						margin-bottom: 0.3em;  
+						overflow: hidden;  
+						-o-text-overflow: '.';  
+						text-overflow: '.';  
+						display: -webkit-box;  
+						-webkit-line-clamp: 1;  
+						line-clamp: 1;  
+						-webkit-box-orient: vertical;  
+						margin-left: -0.03em;  
+						line-height: 1.3;  
+						text-shadow: 2px 2px 4px rgba(0,0,0,0.8);  
+						letter-spacing: -0.02em;  
+						min-height: 6em !important;  
+						overflow: visible !important;  
 					}  
-					.new-interface-info__title img:hover {  
-						transform: scale(1.05);  
+					.new-interface-info__title img {  
+						max-width: 12em !important;  
+						max-height: 6em !important;  
+						width: auto !important;  
+						height: auto !important;  
+						object-fit: contain !important;  
+						margin: 0 !important;  
+						display: block !important;  
 					}  
 					.new-interface-info__details {  
-						margin-top: 1.2em;  
+						margin-top: 1.5em;  
 						margin-bottom: 0;  
 						display: flex;  
 						align-items: center;  
 						flex-wrap: wrap;  
 						min-height: 1.9em;  
-						font-size: 1.2em;  
+						font-size: 1.3em;  
 						transition: all 0.3s ease;  
 						transform: translateY(0);  
 					}  
@@ -710,15 +549,15 @@
 						font-size: 0.7em;  
 					}  
 					.new-interface-info__description {  
-						font-size: 1.4em;  
+						font-size: 1.6em;  
 						font-weight: 310;  
 						line-height: 1.6;  
 						overflow: hidden;  
 						-o-text-overflow: '.';  
 						text-overflow: '.';  
 						display: -webkit-box;  
-						-webkit-line-clamp: 3;  
-						line-clamp: 3;  
+						-webkit-line-clamp: 4;  
+						line-clamp: 4;  
 						-webkit-box-orient: vertical;  
 						width: 100%;  
 						text-shadow: 1px 1px 2px rgba(0,0,0,0.6);  
@@ -726,18 +565,18 @@
 						transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);  
 					}  
 					.new-interface .card-more__box {  
-						padding-bottom: 150%;  
+						padding-bottom: 95%;  
 					}  
 					.new-interface .full-start__background-wrapper {  
-    position: absolute;  
-    top: 0;  
-    left: 0;  
-    width: 100%;  
-    height: 100%;  
-    z-index: 1; /* Змінено з -1 на 1 */  
-    pointer-events: none;  
-    overflow: hidden;  
-}
+						position: absolute;  
+						top: 0;  
+						left: 0;  
+						width: 100%;  
+						height: 100%;  
+						z-index: 1;  
+						pointer-events: none;  
+						overflow: hidden;  
+					}  
 					.new-interface .full-start__background {  
 						position: absolute;  
 						height: 100%;  
@@ -754,7 +593,7 @@
 						opacity: 0.4;  
 					}  
 					.new-interface .full-start__rate {  
-						font-size: 1.2em;  
+						font-size: 1.3em;  
 						margin-right: 0;  
 					}  
 					.new-interface .card__promo {  
@@ -766,11 +605,19 @@
 					.new-interface .card.card--wide .card-watched {  
 						display: none !important;  
 					}  
-					body.light--version .new-interface-info__body {  
+					.new-interface .items-line {  
+						position: relative;  
+						z-index: 2;  
+					}  
+					body.light--version .new-interface-info__logo-block {  
 						position: absolute;  
 						z-index: 999;  
-						width: 69%;  
-						padding-top: 1.5em;  
+						width: 30%;  
+					}  
+					body.light--version .new-interface-info__content-block {  
+						position: absolute;  
+						z-index: 999;  
+						width: 60%;  
 					}  
 					body.light--version .new-interface-info {  
 						height: 25.3em;  
@@ -793,75 +640,6 @@
 				</style>`;  
 	}  
   
-	function preloadData(data, silent) {  
-		if (!data || !data.id) return;  
-		var source = data.source || "tmdb";  
-		if (source !== "tmdb" && source !== "cub") return;  
-  
-		var mediaType = data.media_type === "tv" || data.name ? "tv" : "movie";  
-		var language = Lampa.Storage.get("language") || "ru";  
-		var apiUrl = Lampa.TMDB.api(mediaType + "/" + data.id + "?api_key=" + Lampa.TMDB.key() + "&append_to_response=content_ratings,release_dates&language=" + language);  
-  
-		if (!globalInfoCache[apiUrl]) {  
-			var network = new Lampa.Reguest();  
-			network.silent(apiUrl, function (response) {  
-				globalInfoCache[apiUrl] = response;  
-			});  
-		}  
-	}  
-  
-	var preloadTimer = null;  
-	function preloadAllVisibleCards() {  
-		if (!Lampa.Storage.get("async_load", true)) return;  
-  
-		clearTimeout(preloadTimer);  
-		preloadTimer = setTimeout(function () {  
-			var layer = $(".layer--visible");  
-			if (!layer.length) return;  
-  
-			var cards = layer.find(".card");  
-			var count = 0;  
-  
-			cards.each(function () {  
-				var data = findCardData(this);  
-				if (data) {  
-					preloadData(data, true);  
-					count++;  
-				}  
-			});  
-		}, 800);  
-	}  
-  
-	function setupPreloadObserver() {  
-		var observer = new MutationObserver(function (mutations) {  
-			if (!Lampa.Storage.get("async_load", true)) return;  
-  
-			var hasNewCards = false;  
-			for (var i = 0; i < mutations.length; i++) {  
-				var added = mutations[i].addedNodes;  
-				for (var j = 0; j < added.length; j++) {  
-					var node = added[j];  
-					if (node.nodeType === 1) {  
-						if (node.classList.contains("card") || node.querySelector(".card")) {  
-							hasNewCards = true;  
-							break;  
-						}  
-					}  
-				}  
-				if (hasNewCards) break;  
-			}  
-  
-			if (hasNewCards) {  
-				preloadAllVisibleCards();  
-			}  
-		});  
-  
-		observer.observe(document.body, {  
-			childList: true,  
-			subtree: true,  
-		});  
-	}  
-	  
 	function InfoPanel() {  
 		this.html = null;  
 		this.timer = null;  
@@ -873,15 +651,13 @@
   
 	InfoPanel.prototype.create = function () {  
 		this.html = $(`<div class="new-interface-info">  
-							<div class="new-interface-info__body">  
-								<div class="new-interface-info__left">  
-									<div class="new-interface-info__head"></div>  
-									<div class="new-interface-info__title"></div>  
-								</div>  
-								<div class="new-interface-info__right">  
-									<div class="new-interface-info__description"></div>  
-									<div class="new-interface-info__details"></div>  
-								</div>  
+							<div class="new-interface-info__logo-block">  
+								<div class="new-interface-info__head"></div>  
+								<div class="new-interface-info__title"></div>  
+							</div>  
+							<div class="new-interface-info__content-block">  
+								<div class="new-interface-info__description"></div>  
+								<div class="new-interface-info__details"></div>  
 							</div>  
 						</div>`);  
 	};  
@@ -969,27 +745,25 @@
 			requestAnimationFrame(step);  
 		}  
   
-function applyFinalStyles(img, text_height) {  
-    img.style.marginTop = "0";  
-    img.style.marginLeft = "0";  
-    img.style.paddingTop = "0";  
-    img.style.paddingBottom = "0";  
-    img.style.imageRendering = "-webkit-optimize-contrast";  
+		function applyFinalStyles(img, text_height) {  
+			img.style.marginTop = "0";  
+			img.style.marginLeft = "0";  
+			img.style.paddingTop = PADDING_TOP_EM + "em";  
+			img.style.paddingBottom = PADDING_BOTTOM_EM + "em";  
+			img.style.imageRendering = "-webkit-optimize-contrast";  
   
-    // Гнучкі розміри для запобігання накладанню  
-    img.style.maxWidth = "12em";  
-    img.style.maxHeight = "6em";  
-    img.style.width = "auto";  
-    img.style.height = "auto";  
-    img.style.minHeight = "auto";  
+			img.style.maxWidth = "12em";  
+			img.style.maxHeight = "6em";  
+			img.style.width = "auto";  
+			img.style.height = "auto";  
+			img.style.minHeight = "auto";  
   
-    img.style.boxSizing = "border-box";  
-    img.style.display = "block";  
-    img.style.objectFit = "contain";  
-    img.style.objectPosition = "center center";  
-    img.style.transition = "none";  
-}
-
+			img.style.boxSizing = "border-box";  
+			img.style.display = "block";  
+			img.style.objectFit = "contain";  
+			img.style.objectPosition = "center center";  
+			img.style.transition = "none";  
+		}  
   
 		function moveHeadToDetails(animate) {  
 			if (!head_elem.length || !details_elem.length) return;  
@@ -1165,547 +939,426 @@ function applyFinalStyles(img, text_height) {
 					} else {  
 						Lampa.Storage.set(cache_key, "none");  
 					}  
-				}).fail(function () {});  
+				}).fail(function () {  
+					Lampa.Storage.set(cache_key, "none");  
+				});  
 			}  
 		}  
-	};  
   
-	InfoPanel.prototype.load = function (data) {  
-		if (!data || !data.id) return;  
+		InfoPanel.prototype.load = function (data) {  
+			var _this = this;  
+			var need = Lampa.Arrays.clone(data);  
+			var where = { id: data.id };  
   
-		var source = data.source || "tmdb";  
-		if (source !== "tmdb" && source !== "cub") return;  
+			if (this.loaded[where.id]) {  
+				this.build(this.loaded[where.id]);  
+				return;  
+			}  
   
-		if (!Lampa.TMDB || typeof Lampa.TMDB.api !== "function" || typeof Lampa.TMDB.key !== "function") return;  
-  
-		var mediaType = data.media_type === "tv" || data.name ? "tv" : "movie";  
-		var language = Lampa.Storage.get("language");  
-		var apiUrl = Lampa.TMDB.api(mediaType + "/" + data.id + "?api_key=" + Lampa.TMDB.key() + "&append_to_response=content_ratings,release_dates&language=" + language);  
-  
-		this.currentUrl = apiUrl;  
-  
-		if (this.loaded[apiUrl]) {  
-			this.draw(this.loaded[apiUrl]);  
-			return;  
-		}  
-  
-		clearTimeout(this.timer);  
-		var self = this;  
-  
-		this.timer = setTimeout(function () {  
-			self.network.clear();  
-			self.network.timeout(5000);  
-			self.network.silent(apiUrl, function (response) {  
-				self.loaded[apiUrl] = response;  
-				if (self.currentUrl === apiUrl) {  
-					self.draw(response);  
-				}  
+			this.network.silent(Lampa.TMDB.api((data.name ? "tv" : "movie") + "/" + data.id), function (json) {  
+				_this.loaded[where.id] = json;  
+				_this.build(json);  
+			}, function (a, c) {  
+				Lampa.Noty.show(Lampa.Lang.translate("title_error") + " - " + Lampa.Lang.translate("title_error_network"));  
 			});  
-		}, 300);  
-	};  
+		};  
   
-	InfoPanel.prototype.draw = function (data) {  
-		if (!data || !this.html) return;  
+		InfoPanel.prototype.build = function (data) {  
+			var genres = [];  
+			var countries = [];  
+			var companies = [];  
   
-		if (data.overview) {  
-			this.html.find(".new-interface-info__description").text(data.overview);  
-		}  
-  
-		var headInfo = [];  
-		var detailsInfo = [];  
-  
-		var year = (data.release_date || data.first_air_date || "0000").slice(0, 4);  
-		var countries = [];  
-		var ageRating = null;  
-  
-		if (data.production_countries && data.production_countries.length > 0) {  
-			countries = data.production_countries.map(function (c) {  
-				return Lampa.Utils.capitalizeFirstLetter(c.name);  
-			});  
-		}  
-  
-		if (data.release_dates && data.release_dates.results && data.release_dates.results.length > 0) {  
-			var releaseDates = data.release_dates.results.find(function (r) {  
-				return r.iso_3166_1 === "UA";  
-			});  
-  
-			if (!releaseDates) {  
-				releaseDates = data.release_dates.results.find(function (r) {  
-					return r.iso_3166_1 === "US";  
+			if (data.genres) {  
+				data.genres.forEach(function (item) {  
+					genres.push(Lampa.Utils.capitalizeFirstLetter(item.name));  
 				});  
 			}  
   
-			if (releaseDates && releaseDates.release_dates && releaseDates.release_dates.length > 0) {  
-				var rating = releaseDates.release_dates.find(function (rd) {  
-					return rd.certification && rd.certification.trim() !== "";  
+			if (data.production_countries) {  
+				data.production_countries.forEach(function (item) {  
+					countries.push(Lampa.Utils.capitalizeFirstLetter(item.name));  
 				});  
+			}  
   
-				if (rating) {  
-					ageRating = rating.certification;  
+			if (data.production_companies) {  
+				data.production_companies.forEach(function (item) {  
+					companies.push(Lampa.Utils.capitalizeFirstLetter(item.name));  
+				});  
+			}  
+  
+			var year = data.first_air_date || data.release_date;  
+			year = year ? new Date(year).getFullYear() : "0000";  
+  
+			var headInfo = [];  
+			var detailsInfo = [];  
+  
+			if (Lampa.Storage.get("ganr", true) && genres.length > 0) {  
+				headInfo.push(genres.join(", "));  
+			}  
+  
+			if (Lampa.Storage.get("rat", true) && data.vote_average > 0) {  
+				var vote = parseFloat(data.vote_average).toFixed(1);  
+				headInfo.push('<span class="full-start__rate" style="border: 1px solid ' + siStyleGetColorByRating(vote) + '; color: ' + siStyleGetColorByRating(vote) + ';">' + vote + '</span>');  
+			}  
+  
+			if (Lampa.Storage.get("year_ogr", true) && data.adult) {  
+				headInfo.push('<span class="full-start__age">18+</span>');  
+			}  
+  
+			if (Lampa.Storage.get("vremya", true) && data.runtime) {  
+				var time = Math.floor(data.runtime / 60);  
+				var minutes = data.runtime % 60;  
+				detailsInfo.push(time + " ч " + minutes + " мин");  
+			}  
+  
+			if (Lampa.Storage.get("seas", false) && data.number_of_seasons) {  
+				detailsInfo.push(data.number_of_seasons + " " + Lampa.Lang.translate("title_season"));  
+			}  
+  
+			if (Lampa.Storage.get("eps", false) && data.number_of_episodes) {  
+				detailsInfo.push(data.number_of_episodes + " " + Lampa.Lang.translate("title_episode"));  
+			}  
+  
+			if (Lampa.Storage.get("status", false) && data.status) {  
+				var statusText = "";  
+				if (data.status) {  
+					switch (data.status.toLowerCase()) {  
+						case "returning series":  
+							statusText = "Продолжается";  
+							break;  
+						case "ended":  
+							statusText = "Завершен";  
+							break;  
+						case "canceled":  
+							statusText = "Отменено";  
+							break;  
+						case "post production":  
+							statusText = "Скоро";  
+							break;  
+						case "planned":  
+							statusText = "Запланировано";  
+							break;  
+						case "in production":  
+							statusText = "В производстве";  
+							break;  
+						default:  
+							statusText = data.status;  
+							break;  
+					}  
 				}  
-			}  
-		}  
   
-		if (Lampa.Storage.get("rat") !== false) {  
-			if (data.vote_average && data.vote_average > 0) {  
-				var vote = data.vote_average.toFixed(1);  
-				var rate_style = "";  
-  
-				if (Lampa.Storage.get("si_colored_ratings", true)) {  
-					var color = siStyleGetColorByRating(parseFloat(vote));  
-  
-					if (color) rate_style = ' style="color: ' + color + '"';  
-				}  
-  
-				detailsInfo.push('<div class="full-start__rate"' + rate_style + "><div>" + vote + "</div><div>TMDB</div></div>");  
-			}  
-		}  
-  
-		if (Lampa.Storage.get("ganr") !== false) {  
-			if (data.genres && data.genres.length > 0) {  
-				detailsInfo.push(  
-					data.genres  
-						.slice(0, 2)  
-						.map(function (genre) {  
-							return Lampa.Utils.capitalizeFirstLetter(genre.name);  
-						})  
-						.join(" | "),  
-				);  
-			}  
-		}  
-  
-		if (Lampa.Storage.get("vremya") !== false) {  
-			if (data.runtime) {  
-				detailsInfo.push(Lampa.Utils.secondsToTime(data.runtime * 60, true));  
-			}  
-		}  
-  
-		if (Lampa.Storage.get("seas", false) && data.number_of_seasons) {  
-			detailsInfo.push('<span class="full-start__pg" style="font-size: 0.9em;">Сезонов ' + data.number_of_seasons + "</span>");  
-		}  
-  
-		if (Lampa.Storage.get("eps", false) && data.number_of_episodes) {  
-			detailsInfo.push('<span class="full-start__pg" style="font-size: 0.9em;">Эпизодов ' + data.number_of_episodes + "</span>");  
-		}  
-  
-		if (Lampa.Storage.get("year_ogr") !== false) {  
-			if (ageRating) {  
-				detailsInfo.push('<span class="full-start__pg">' + ageRating + "</span>");  
-			}  
-		}  
-  
-		if (Lampa.Storage.get("status", false) && data.status) {  
-			var statusText = "";  
-			if (data.status) {  
-				switch (data.status.toLowerCase()) {  
-					case "returning series":  
-						statusText = "Продолжается";  
-						break;  
-					case "ended":  
-						statusText = "Завершен";  
-						break;  
-					case "canceled":  
-						statusText = "Отменено";  
-						break;  
-					case "post production":  
-						statusText = "Скоро";  
-						break;  
-					case "planned":  
-						statusText = "Запланировано";  
-						break;  
-					case "in production":  
-						statusText = "В производстве";  
-						break;  
-					default:  
-						statusText = data.status;  
-						break;  
+				if (statusText) {  
+					detailsInfo.push('<span class="full-start__status" style="font-size: 0.9em;">' + statusText + "</span>");  
 				}  
 			}  
   
-			if (statusText) {  
-				detailsInfo.push('<span class="full-start__status" style="font-size: 0.9em;">' + statusText + "</span>");  
+			var yc = [];  
+			if (year !== "0000") yc.push("<span>" + year + "</span>");  
+			if (countries.length > 0) yc.push(countries.join(", "));  
+  
+			if (yc.length > 0) {  
+				detailsInfo.push(yc.join(", "));  
 			}  
+  
+			this.html  
+				.find(".new-interface-info__head")  
+				.empty()  
+				.append(headInfo.join(", "))  
+				.toggleClass("visible", headInfo.length > 0);  
+			this.html.find(".new-interface-info__details").html(detailsInfo.join('<span class="new-interface-info__split">&#9679;</span>')).addClass("visible");  
+		};  
+  
+		InfoPanel.prototype.empty = function () {  
+			if (!this.html) return;  
+			this.html.find(".new-interface-info__head,.new-interface-info__details").text("").removeClass("visible");  
+		};  
+  
+		InfoPanel.prototype.destroy = function () {  
+			clearTimeout(this.fadeTimer);  
+			clearTimeout(this.timer);  
+			this.network.clear();  
+			this.currentUrl = null;  
+  
+			if (this.html) {  
+				this.html.remove();  
+				this.html = null;  
+			}  
+		};  
+  
+		function siStyleGetColorByRating(vote) {  
+			if (isNaN(vote)) return "";  
+			if (vote >= 0 && vote <= 3) return "red";  
+			if (vote > 3 && vote < 6) return "orange";  
+			if (vote >= 6 && vote < 7) return "cornflowerblue";  
+			if (vote >= 7 && vote < 8) return "darkmagenta";  
+			if (vote >= 8 && vote <= 10) return "lawngreen";  
+			return "";  
 		}  
   
-		var yc = [];  
-		if (year !== "0000") yc.push("<span>" + year + "</span>");  
-		if (countries.length > 0) yc.push(countries.join(", "));  
+		function siStyleApplyColorByRating(element) {  
+			var $el = $(element);  
+			var voteText = $el.text().trim();  
   
-		if (yc.length > 0) {  
-			detailsInfo.push(yc.join(", "));  
-		}  
+			if (/^\d+(\.\d+)?K$/.test(voteText)) return;  
   
-		this.html  
-			.find(".new-interface-info__head")  
-			.empty()  
-			.append(headInfo.join(", "))  
-			.toggleClass("visible", headInfo.length > 0);  
-		this.html.find(".new-interface-info__details").html(detailsInfo.join('<span class="new-interface-info__split">&#9679;</span>')).addClass("visible");  
-	};  
+			var match = voteText.match(/(\d+(\.\d+)?)/);  
+			if (!match) return;  
   
-	InfoPanel.prototype.empty = function () {  
-		if (!this.html) return;  
-		this.html.find(".new-interface-info__head,.new-interface-info__details").text("").removeClass("visible");  
-	};  
+			var vote = parseFloat(match[0]);  
+			var color = siStyleGetColorByRating(vote);  
   
-	InfoPanel.prototype.destroy = function () {  
-		clearTimeout(this.fadeTimer);  
-		clearTimeout(this.timer);  
-		this.network.clear();  
-		this.currentUrl = null;  
+			if (color && Lampa.Storage.get("si_colored_ratings", true)) {  
+				$el.css("color", color);  
   
-		if (this.html) {  
-			this.html.remove();  
-			this.html = null;  
-		}  
-	};  
-  
-	function siStyleGetColorByRating(vote) {  
-		if (isNaN(vote)) return "";  
-		if (vote >= 0 && vote <= 3) return "red";  
-		if (vote > 3 && vote < 6) return "orange";  
-		if (vote >= 6 && vote < 7) return "cornflowerblue";  
-		if (vote >= 7 && vote < 8) return "darkmagenta";  
-		if (vote >= 8 && vote <= 10) return "lawngreen";  
-		return "";  
-	}  
-  
-	function siStyleApplyColorByRating(element) {  
-		var $el = $(element);  
-		var voteText = $el.text().trim();  
-  
-		if (/^\d+(\.\d+)?K$/.test(voteText)) return;  
-  
-		var match = voteText.match(/(\d+(\.\d+)?)/);  
-		if (!match) return;  
-  
-		var vote = parseFloat(match[0]);  
-		var color = siStyleGetColorByRating(vote);  
-  
-		if (color && Lampa.Storage.get("si_colored_ratings", true)) {  
-			$el.css("color", color);  
-  
-			if (Lampa.Storage.get("si_rating_border", false) && !$el.hasClass("card__vote")) {  
-				if ($el.parent().hasClass("full-start__rate")) {  
-					$el.parent().css("border", "1px solid " + color);  
-					$el.css("border", "");  
-				} else if ($el.hasClass("full-start__rate") || $el.hasClass("full-start-new__rate") || $el.hasClass("info__rate")) {  
-					$el.css("border", "1px solid " + color);  
+				if (Lampa.Storage.get("si_rating_border", false) && !$el.hasClass("card__vote")) {  
+					if ($el.parent().hasClass("full-start__rate")) {  
+						$el.parent().css("border", "1px solid " + color);  
+						$el.css("border", "");  
+					} else if ($el.hasClass("full-start__rate") || $el.hasClass("full-start-new__rate") || $el.hasClass("info__rate")) {  
+						$el.css("border", "1px solid " + color);  
+					} else {  
+						$el.css("border", "");  
+					}  
 				} else {  
 					$el.css("border", "");  
+					if ($el.parent().hasClass("full-start__rate")) {  
+						$el.parent().css("border", "");  
+					}  
 				}  
 			} else {  
+				$el.css("color", "");  
 				$el.css("border", "");  
 				if ($el.parent().hasClass("full-start__rate")) {  
 					$el.parent().css("border", "");  
 				}  
 			}  
-		} else {  
-			$el.css("color", "");  
-			$el.css("border", "");  
-			if ($el.parent().hasClass("full-start__rate")) {  
-				$el.parent().css("border", "");  
-			}  
 		}  
-	}  
   
-	function siStyleUpdateVoteColors() {  
-		if (!Lampa.Storage.get("si_colored_ratings", true)) return;  
-  
-		$(".card__vote").each(function () {  
-			siStyleApplyColorByRating(this);  
-		});  
-  
-		$(".full-start__rate, .full-start-new__rate").each(function () {  
-			siStyleApplyColorByRating(this);  
-		});  
-  
-		$(".info__rate, .card__imdb-rate, .card__kinopoisk-rate").each(function () {  
-			siStyleApplyColorByRating(this);  
-		});  
-  
-		$(".rate--kp, .rate--imdb, .rate--cub").each(function () {  
-			siStyleApplyColorByRating($(this).find("> div").eq(0));  
-		});  
-	}  
-  
-	function siStyleSetupVoteColorsObserver() {  
-		siStyleUpdateVoteColors();  
-  
-		var pendingUpdate = null;  
-		var observer = new MutationObserver(function (mutations) {  
+		function siStyleUpdateVoteColors() {  
 			if (!Lampa.Storage.get("si_colored_ratings", true)) return;  
   
-			for (var i = 0; i < mutations.length; i++) {  
-				var added = mutations[i].addedNodes;  
-				for (var j = 0; j < added.length; j++) {  
-					var node = added[j];  
-					if (node.nodeType === 1) {  
-						var $node = $(node);  
-						$node.find(".card__vote, .full-start__rate, .full-start-new__rate, .info__rate, .card__imdb-rate, .card__kinopoisk-rate").each(function () {  
-							siStyleApplyColorByRating(this);  
-						});  
-						$node.find(".rate--kp, .rate--imdb, .rate--cub").each(function () {  
-							siStyleApplyColorByRating($(this).find("> div").eq(0));  
-						});  
-						if ($node.hasClass("card__vote") || $node.hasClass("full-start__rate") || $node.hasClass("info__rate")) {  
-							siStyleApplyColorByRating(node);  
-						}  
-						if ($node.hasClass("rate--kp") || $node.hasClass("rate--imdb") || $node.hasClass("rate--cub")) {  
-							siStyleApplyColorByRating($node.find("> div").eq(0));  
+			$(".card__vote").each(function () {  
+				siStyleApplyColorByRating(this);  
+			});  
+  
+			$(".full-start__rate, .full-start-new__rate").each(function () {  
+				siStyleApplyColorByRating(this);  
+			});  
+  
+			$(".info__rate, .card__imdb-rate, .card__kinopoisk-rate").each(function () {  
+				siStyleApplyColorByRating(this);  
+			});  
+  
+			$(".rate--kp, .rate--imdb, .rate--cub").each(function () {  
+				siStyleApplyColorByRating($(this).find("> div").eq(0));  
+			});  
+		}  
+  
+		function siStyleSetupVoteColorsObserver() {  
+			siStyleUpdateVoteColors();  
+  
+			var pendingUpdate = null;  
+			var observer = new MutationObserver(function (mutations) {  
+				if (!Lampa.Storage.get("si_colored_ratings", true)) return;  
+  
+				for (var i = 0; i < mutations.length; i++) {  
+					var added = mutations[i].addedNodes;  
+					for (var j = 0; j < added.length; j++) {  
+						var node = added[j];  
+						if (node.nodeType === 1) {  
+							var $node = $(node);  
+							$node.find(".card__vote, .full-start__rate, .full-start-new__rate, .info__rate, .card__imdb-rate, .card__kinopoisk-rate").each(function () {  
+								siStyleApplyColorByRating(this);  
+							});  
+							$node.find(".rate--kp, .rate--imdb, .rate--cub").each(function () {  
+								siStyleApplyColorByRating($(this).find("> div").eq(0));  
+							});  
+							if ($node.hasClass("card__vote") || $node.hasClass("full-start__rate") || $node.hasClass("info__rate")) {  
+								siStyleApplyColorByRating(node);  
+							}  
+							if ($node.hasClass("rate--kp") || $node.hasClass("rate--imdb") || $node.hasClass("rate--cub")) {  
+								siStyleApplyColorByRating($node.find("> div").eq(0));  
+							}  
 						}  
 					}  
 				}  
-			}  
-		});  
+			});  
   
-		observer.observe(document.body, {  
-			childList: true,  
-			subtree: true,  
-		});  
-	}  
+			observer.observe(document.body, {  
+				childList: true,  
+				subtree: true,  
+			});  
+		}  
   
-	function siStyleSetupVoteColorsForDetailPage() {  
-		if (!window.Lampa || !Lampa.Listener) return;  
+		function siStyleSetupVoteColorsForDetailPage() {  
+			if (!window.Lampa || !Lampa.Listener) return;  
   
-		Lampa.Listener.follow("full", function (data) {  
-			if (data.type === "complite") {  
-				siStyleUpdateVoteColors();  
-			}  
-		});  
-  
-		Lampa.Listener.follow("activity", function (e) {  
-			if (e.type === "active" || e.type === "start") {  
-				setTimeout(preloadAllVisibleCards, 1000);  
-			}  
-		});  
-  
-		Lampa.Listener.follow("target", function (e) {  
-			if (e.target && $(e.target).hasClass("card")) {  
-				preloadAllVisibleCards();  
-			}  
-		});  
-	}  
-  
-	function initializeSettings() {  
-		Lampa.Settings.listener.follow("open", function (event) {  
-			if (event.name == "main") {  
-				if (Lampa.Settings.main().render().find('[data-component="style_interface"]').length == 0) {  
-					Lampa.SettingsApi.addComponent({  
-						component: "style_interface",  
-						name: "Стильный интерфейс",  
-					});  
-				}  
-  
-				Lampa.Settings.main().update();  
-				Lampa.Settings.main().render().find('[data-component="style_interface"]').addClass("hide");  
-			}  
-		});  
-  
-		Lampa.SettingsApi.addParam({  
-			component: "interface",  
-			param: {  
-				name: "style_interface",  
-				type: "static",  
-				default: true,  
-			},  
-			field: {  
-				name: "Стильный интерфейс",  
-				description: "Настройки элементов",  
-			},  
-			onRender: function (item) {  
-				item.css("opacity", "0");  
-				requestAnimationFrame(function () {  
-					item.insertAfter($('div[data-name="interface_size"]'));  
-					item.css("opacity", "");  
-				});  
-  
-				item.on("hover:enter", function () {  
-					Lampa.Settings.create("style_interface");  
-					Lampa.Controller.enabled().controller.back = function () {  
-						Lampa.Settings.create("interface");  
-					};  
-				});  
-			},  
-		});  
-  
-		Lampa.SettingsApi.addParam({  
-			component: "style_interface",  
-			param: { name: "logo_show", type: "trigger", default: true },  
-			field: { name: "Показывать логотип вместо названия" },  
-		});  
-  
-		Lampa.SettingsApi.addParam({  
-			component: "style_interface",  
-			param: { name: "show_background", type: "trigger", default: true },  
-			field: { name: "Отображать постеры на фоне" },  
-			onChange: function (value) {  
-				if (!value) {  
-					$(".full-start__background").removeClass("active");  
-				}  
-			},  
-		});  
-  
-		Lampa.SettingsApi.addParam({  
-			component: "style_interface",  
-			param: { name: "status", type: "trigger", default: true },  
-			field: { name: "Показывать статус фильма/сериала" },  
-		});  
-  
-		Lampa.SettingsApi.addParam({  
-			component: "style_interface",  
-			param: { name: "seas", type: "trigger", default: false },  
-			field: { name: "Показывать количество сезонов" },  
-		});  
-  
-		Lampa.SettingsApi.addParam({  
-			component: "style_interface",  
-			param: { name: "eps", type: "trigger", default: false },  
-			field: { name: "Показывать количество эпизодов" },  
-		});  
-  
-		Lampa.SettingsApi.addParam({  
-			component: "style_interface",  
-			param: { name: "year_ogr", type: "trigger", default: true },  
-			field: { name: "Показывать возрастное ограничение" },  
-		});  
-  
-		Lampa.SettingsApi.addParam({  
-			component: "style_interface",  
-			param: { name: "vremya", type: "trigger", default: true },  
-			field: { name: "Показывать время фильма" },  
-		});  
-  
-		Lampa.SettingsApi.addParam({  
-			component: "style_interface",  
-			param: { name: "ganr", type: "trigger", default: true },  
-			field: { name: "Показывать жанр фильма" },  
-		});  
-  
-		Lampa.SettingsApi.addParam({  
-			component: "style_interface",  
-			param: { name: "rat", type: "trigger", default: true },  
-			field: { name: "Показывать рейтинг фильма" },  
-		});  
-  
-		Lampa.SettingsApi.addParam({  
-			component: "style_interface",  
-			param: { name: "si_colored_ratings", type: "trigger", default: true },  
-			field: { name: "Цветные рейтинги" },  
-			onChange: function (value) {  
-				if (value) {  
+			Lampa.Listener.follow("full", function (data) {  
+				if (data.type === "complite") {  
 					siStyleUpdateVoteColors();  
-				} else {  
-					$(".card__vote, .full-start__rate, .full-start-new__rate, .info__rate, .card__imdb-rate, .card__kinopoisk-rate").css("color", "").css("border", "");  
-					$(".full-start__rate").css("border", "");  
 				}  
-			},  
-		});  
+			});  
   
-		Lampa.SettingsApi.addParam({  
-			component: "style_interface",  
-			param: { name: "si_rating_border", type: "trigger", default: false },  
-			field: { name: "Обводка рейтингов" },  
-			onChange: function (value) {  
-				siStyleUpdateVoteColors();  
-			},  
-		});  
+			Lampa.Listener.follow("activity", function (e) {  
+				if (e.type === "active" || e.type === "start") {  
+					setTimeout(preloadAllVisibleCards, 1000);  
+				}  
+			});  
   
-		Lampa.SettingsApi.addParam({  
-			component: "style_interface",  
-			param: { name: "async_load", type: "trigger", default: true },  
-			field: { name: "Включить асинхронную загрузку данных" },  
-			onChange: function (value) {  
-				if (value) preloadAllVisibleCards();  
-			},  
-		});  
+			Lampa.Listener.follow("target", function (e) {  
+				if (e.target && $(e.target).hasClass("card")) {  
+					preloadAllVisibleCards();  
+				}  
+			});  
+		}  
   
-		Lampa.SettingsApi.addParam({  
-			component: "style_interface",  
-			param: { name: "background_resolution", type: "select", default: "original", values: { w300: "w300", w780: "w780", w1280: "w1280", original: "original" } },  
-			field: { name: "Разрешение фона", description: "Качество загружаемых фоновых изображений" },  
-		});  
+		function initializeSettings() {  
+			Lampa.Settings.listener.follow("open", function (event) {  
+				if (event.name == "main") {  
+					if (Lampa.Settings.main().render().find('[data-component="style_interface"]').length == 0) {  
+						Lampa.SettingsApi.addComponent({  
+							component: "style_interface",  
+							name: "Стильный интерфейс",  
+						});  
+					}  
   
-		Lampa.SettingsApi.addParam({  
-			component: "style_interface",  
-			param: { name: "hide_captions", type: "trigger", default: true },  
-			field: { name: "Скрывать названия и год", description: "Лампа будет перезагружена" },  
-			onChange: function () {  
-				window.location.reload();  
-			},  
-		});  
+					Lampa.Settings.main().update();  
+					Lampa.Settings.main().render().find('[data-component="style_interface"]').addClass("hide");  
+				}  
+			});  
   
-		Lampa.SettingsApi.addParam({  
-			component: "style_interface",  
-			param: { name: "wide_post", type: "trigger", default: true },  
-			field: { name: "Широкие постеры", description: "Лампа будет перезагружена" },  
-			onChange: function () {  
-				window.location.reload();  
-			},  
-		});  
-  
-		Lampa.SettingsApi.addParam({  
-			component: "style_interface",  
-			param: { name: "int_clear_logo_cache", type: "static" },  
-			field: { name: "Очистить кеш логотипов", description: "Лампа будет перезагружена" },  
-			onRender: function (item) {  
-				item.on("hover:enter", function () {  
-					Lampa.Select.show({  
-						title: "Очистить кеш логотипов?",  
-						items: [{ title: "Да", confirm: true }, { title: "Нет" }],  
-						onSelect: function (a) {  
-							if (a.confirm) {  
-								var keys = [];  
-								for (var i = 0; i < localStorage.length; i++) {  
-									var key = localStorage.key(i);  
-									if (key.indexOf("logo_cache_v2_") !== -1) {  
-										keys.push(key);  
-									}  
-								}  
-								keys.forEach(function (key) {  
-									localStorage.removeItem(key);  
-								});  
-								window.location.reload();  
-							} else {  
-								Lampa.Controller.toggle("settings_component");  
-							}  
-						},  
-						onBack: function () {  
-							Lampa.Controller.toggle("settings_component");  
-						},  
+			Lampa.SettingsApi.addParam({  
+				component: "interface",  
+				param: {  
+					name: "style_interface",  
+					type: "static",  
+					default: true,  
+				},  
+				field: {  
+					name: "Стильный интерфейс",  
+					description: "Настройки элементов",  
+				},  
+				onRender: function (item) {  
+					item.css("opacity", "0");  
+					requestAnimationFrame(function () {  
+						item.insertAfter($('div[data-name="interface_size"]'));  
+						item.css("opacity", "");  
 					});  
-				});  
-			},  
-		});  
   
-		var initInterval = setInterval(function () {  
-			if (typeof Lampa !== "undefined") {  
-				clearInterval(initInterval);  
-				if (!Lampa.Storage.get("int_plug", false)) {  
-					setDefaultSettings();  
+					item.on("hover:enter", function () {  
+						Lampa.Settings.create("style_interface");  
+						Lampa.Controller.enabled().controller.back = function () {  
+							Lampa.Settings.create("interface");  
+						};  
+					});  
+				},  
+			});  
+  
+			Lampa.SettingsApi.addParam({  
+				component: "style_interface",  
+				param: { name: "logo_show", type: "trigger", default: true },  
+				field: { name: "Показывать логотип вместо названия" },  
+			});  
+  
+			Lampa.SettingsApi.addParam({  
+				component: "style_interface",  
+				param: { name: "show_background", type: "trigger", default: true },  
+				field: { name: "Отображать постеры на фоне" },  
+				onChange: function (value) {  
+					if (!value) {  
+						$(".full-start__background").removeClass("active");  
+					}  
+				},  
+			});  
+  
+			Lampa.SettingsApi.addParam({  
+				component: "style_interface",  
+				param: { name: "background_resolution", type: "select", default: "original", values: { w300: "w300", w780: "w780", w1280: "w1280", original: "original" } },  
+				field: { name: "Разрешение фона", description: "Качество загружаемых фоновых изображений" },  
+			});  
+  
+			Lampa.SettingsApi.addParam({  
+				component: "style_interface",  
+				param: { name: "hide_captions", type: "trigger", default: true },  
+				field: { name: "Скрывать названия и год", description: "Лампа будет перезагружена" },  
+				onChange: function () {  
+					window.location.reload();  
+				},  
+			});  
+  
+			Lampa.SettingsApi.addParam({  
+				component: "style_interface",  
+				param: { name: "wide_post", type: "trigger", default: true },  
+				field: { name: "Широкие постеры", description: "Лампа будет перезагружена" },  
+				onChange: function () {  
+					window.location.reload();  
+				},  
+			});  
+  
+			Lampa.SettingsApi.addParam({  
+				component: "style_interface",  
+				param: { name: "int_clear_logo_cache", type: "static" },  
+				field: { name: "Очистить кеш логотипов", description: "Лампа будет перезагружена" },  
+				onRender: function (item) {  
+					item.on("hover:enter", function () {  
+						Lampa.Select.show({  
+							title: "Очистить кеш логотипов?",  
+							items: [{ title: "Да", confirm: true }, { title: "Нет" }],  
+							onSelect: function (a) {  
+								if (a.confirm) {  
+									var keys = [];  
+									for (var i = 0; i < localStorage.length; i++) {  
+										var key = localStorage.key(i);  
+										if (key.indexOf("logo_cache_v2_") !== -1) {  
+											keys.push(key);  
+										}  
+									}  
+									keys.forEach(function (key) {  
+										localStorage.removeItem(key);  
+									});  
+									window.location.reload();  
+								} else {  
+									Lampa.Controller.toggle("settings_component");  
+								}  
+							},  
+							onBack: function () {  
+								Lampa.Controller.toggle("settings_component");  
+							},  
+						});  
+					});  
+				},  
+			});  
+  
+			var initInterval = setInterval(function () {  
+				if (typeof Lampa !== "undefined") {  
+					clearInterval(initInterval);  
+					if (!Lampa.Storage.get("int_plug", false)) {  
+						setDefaultSettings();  
+					}  
 				}  
-			}  
-		}, 200);  
+			}, 200);  
   
-		function setDefaultSettings() {  
-			Lampa.Storage.set("int_plug", "true");  
-			Lampa.Storage.set("wide_post", "true");  
-			Lampa.Storage.set("logo_show", "true");  
-			Lampa.Storage.set("show_background", "true");  
-			Lampa.Storage.set("background_resolution", "original");  
-			Lampa.Storage.set("status", "true");  
-			Lampa.Storage.set("seas", "false");  
-			Lampa.Storage.set("eps", "false");  
-			Lampa.Storage.set("year_ogr", "true");  
-			Lampa.Storage.set("vremya", "true");  
-			Lampa.Storage.set("ganr", "true");  
-			Lampa.Storage.set("rat", "true");  
-			Lampa.Storage.set("si_colored_ratings", "true");  
-			Lampa.Storage.set("async_load", "true");  
-			Lampa.Storage.set("hide_captions", "true");  
-			Lampa.Storage.set("si_rating_border", "false");  
-			Lampa.Storage.set("interface_size", "small");  
+			function setDefaultSettings() {  
+				Lampa.Storage.set("int_plug", "true");  
+				Lampa.Storage.set("wide_post", "true");  
+				Lampa.Storage.set("logo_show", "true");  
+				Lampa.Storage.set("show_background", "true");  
+				Lampa.Storage.set("background_resolution", "original");  
+				Lampa.Storage.set("status", "true");  
+				Lampa.Storage.set("seas", "false");  
+				Lampa.Storage.set("eps", "false");  
+				Lampa.Storage.set("year_ogr", "true");  
+				Lampa.Storage.set("vremya", "true");  
+				Lampa.Storage.set("ganr", "true");  
+				Lampa.Storage.set("rat", "true");  
+				Lampa.Storage.set("si_colored_ratings", "true");  
+				Lampa.Storage.set("async_load", "true");  
+				Lampa.Storage.set("hide_captions", "true");  
+		Lampa.Storage.set("si_rating_border", "false");  
+				Lampa.Storage.set("interface_size", "small");  
+			}  
 		}  
 	}  
-})();
-				
+})();  
+								
+						
