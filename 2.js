@@ -426,29 +426,33 @@
 						height: 27.5em;  
 					}  
 					.new-interface-info__body {  
-    position: absolute;  
-    z-index: 9999999;  
-    width: 95%; /* Збільшено до 95% */  
-    right: 0; /* Додано вирівнювання по правому краю */  
-    padding-top: 1.1em;  
-    display: flex;  
-    justify-content: flex-end; /* Вирівнювання по правому краю */  
-    gap: 2em;  
-}  
-  
-.new-interface-info__left {  
-    flex: 0.6; /* Зменшено пропорцію лівої частини */  
-    max-width: 30%; /* Обмеження максимальної ширини */  
-}  
-  
-.new-interface-info__right {  
-    flex: 1.4; /* Збільшено пропорцію правої частини */  
-    padding-left: 2em;  
-    display: flex;  
-    flex-direction: column;  
-    align-items: flex-start;  
-    max-width: 65%; /* Обмеження максимальної ширини */  
-}
+						position: absolute;  
+						z-index: 9999999;  
+						width: 98% !important;  
+						left: auto !important;  
+						right: 0 !important;  
+						padding: 2em;  
+						background: linear-gradient(135deg,   
+							rgba(0,0,0,0.7) 0%,   
+							rgba(0,0,0,0.3) 100%);  
+						border-radius: 1.5em;  
+						backdrop-filter: blur(20px);  
+						display: flex;  
+						justify-content: flex-end !important;  
+						gap: 2em;  
+					}  
+					.new-interface-info__left {  
+						flex: 0.4 !important;  
+						max-width: 25% !important;  
+					}  
+					.new-interface-info__right {  
+						flex: 1.6 !important;  
+						padding-left: 2em;  
+						display: flex;  
+						flex-direction: column;  
+						align-items: flex-start;  
+						max-width: 70% !important;  
+					}  
 					.new-interface-info__head {  
 						color: rgba(255, 255, 255, 0.6);  
 						font-size: 1.3em;  
@@ -459,7 +463,7 @@
 					}  
 					.new-interface-info__title {  
 						font-size: 5em;  
-						font-weight: 600;  
+						font-weight: 700;  
 						margin-bottom: 0.3em;  
 						overflow: hidden;  
 						-o-text-overflow: '.';  
@@ -470,43 +474,67 @@
 						-webkit-box-orient: vertical;  
 						margin-left: -0.03em;  
 						line-height: 1.3;  
+						text-shadow: 2px 2px 4px rgba(0,0,0,0.8);  
+						letter-spacing: -0.02em;  
+						min-height: 8em !important;  
+						overflow: visible !important;  
 					}  
 					.new-interface-info__title img {  
-    min-width: 10em !important;  /* Зменшено з 12em */  
-    min-height: 5em !important;  /* Зменшено з 6em */  
-    width: 12em !important;      /* Зменшено з 14em */  
-    height: auto !important;  
-    object-fit: contain !important;  
-    margin-top: -0.5em !important; /* Підняти логотип вище */  
-}
+						max-width: 12em !important;  
+						max-height: 6em !important;  
+						width: auto !important;  
+						height: auto !important;  
+						object-fit: contain !important;  
+						margin: 0 !important;  
+						filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));  
+						transition: transform 0.3s ease;  
+					}  
+					.new-interface-info__title img:hover {  
+						transform: scale(1.05);  
+					}  
 					.new-interface-info__details {  
-                        margin-top: 1.5em;  
-                        margin-bottom: 0;  
-                        display: flex;  
-                        align-items: center;  
-                        flex-wrap: wrap;  
-                        min-height: 1.9em;  
-                        font-size: 1.3em;  
- 
+						margin-top: 1.5em;  
+						margin-bottom: 0;  
+						display: flex;  
+						align-items: center;  
+						flex-wrap: wrap;  
+						min-height: 1.9em;  
+						font-size: 1.3em;  
+						transition: all 0.3s ease;  
+						transform: translateY(0);  
+					}  
+					.new-interface-info__details:hover {  
+						transform: translateY(-2px);  
+					}  
+					.new-interface-info__details > * {  
+						background: rgba(255,255,255,0.1);  
+						padding: 0.3em 0.8em;  
+						border-radius: 1.5em;  
+						margin: 0.2em;  
+						backdrop-filter: blur(10px);  
+						border: 1px solid rgba(255,255,255,0.2);  
 					}  
 					.new-interface-info__split {  
 						margin: 0 1em;  
 						font-size: 0.7em;  
 					}  
 					.new-interface-info__description {  
-						font-size: 1.5em;  
-						font-weight: 310;  
-						line-height: 1.4;  
-						overflow: hidden;  
-						-o-text-overflow: '.';  
-						text-overflow: '.';  
-						display: -webkit-box;  
-						-webkit-line-clamp: 4;  
-						line-clamp: 4;  
-						-webkit-box-orient: vertical;  
-						width: 100%;  
-					}  
-					.new-interface .card-more__box {  
+    font-size: 1.6em;  
+    font-weight: 310;  
+    line-height: 1.6;  
+    overflow: hidden;  
+    -o-text-overflow: '.';  
+    text-overflow: '.';  
+    display: -webkit-box;  
+    -webkit-line-clamp: 4;  
+    line-clamp: 4;  
+    -webkit-box-orient: vertical;  
+    width: 100%;  
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.6);  
+    color: rgba(255,255,255,0.95);  
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);  
+}
+.new-interface .card-more__box {  
 						padding-bottom: 95%;  
 					}  
 					.new-interface .full-start__background-wrapper {  
@@ -527,9 +555,11 @@
 						opacity: 0;  
 						object-fit: cover;  
 						transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);  
+						filter: blur(3px);  
+						transform: scale(1.1);  
 					}  
 					.new-interface .full-start__background.active {  
-						opacity: 0.5;  
+						opacity: 0.4;  
 					}  
 					.new-interface .full-start__rate {  
 						font-size: 1.3em;  
@@ -559,10 +589,10 @@
 					body.advanced--animation:not(.no--animation) .new-interface .card.card--wide.animate-trigger-enter .card__view {  
 						animation: animation-trigger-enter 0.2s forwards;  
 					}  
-					body.advanced--animation:not(.no--animation) .new-interface .card.card--small.focus .card__view {
-						animation: animation-card-focus 0.2s;
-
-          body.advanced--animation:not(.no--animation) .new-interface .card.card--small.animate-trigger-enter .card__view {  
+					body.advanced--animation:not(.no--animation) .new-interface .card.card--small.focus .card__view {  
+						animation: animation-card-focus 0.2s;  
+					}  
+					body.advanced--animation:not(.no--animation) .new-interface .card.card--small.animate-trigger-enter .card__view {  
 						animation: animation-trigger-enter 0.2s forwards;  
 					}  
 					.logo-moved-head { transition: opacity 0.4s ease; }  
@@ -597,17 +627,31 @@
 					.new-interface-info__body {  
 						position: absolute;  
 						z-index: 9999999;  
-						width: 80%;  
+						width: 98% !important;  
+						left: auto !important;  
+						right: 0 !important;  
+						padding: 2em;  
+						background: linear-gradient(135deg,   
+							rgba(0,0,0,0.7) 0%,   
+							rgba(0,0,0,0.3) 100%);  
+						border-radius: 1.5em;  
+						backdrop-filter: blur(20px);  
 						padding-top: 0.2em;  
 						display: flex;  
-						gap: 2em;  
+						justify-content: flex-end !important;  
+						gap: 1.5em;  
 					}  
 					.new-interface-info__left {  
-						flex: 1;  
+						flex: 0.4 !important;  
+						max-width: 25% !important;  
 					}  
 					.new-interface-info__right {  
-						flex: 1;  
-						padding-left: 2em;  
+						flex: 1.6 !important;  
+						padding-left: 1.5em;  
+						display: flex;  
+						flex-direction: column;  
+						align-items: flex-start;  
+						max-width: 70% !important;  
 					}  
 					.new-interface-info__head {  
 						color: rgba(255, 255, 255, 0.6);  
@@ -620,7 +664,7 @@
 					}  
 					.new-interface-info__title {  
 						font-size: 4em;  
-						font-weight: 600;  
+						font-weight: 700;  
 						margin-bottom: 0.2em;  
 						overflow: hidden;  
 						-o-text-overflow: '.';  
@@ -631,23 +675,45 @@
 						-webkit-box-orient: vertical;  
 						margin-left: -0.03em;  
 						line-height: 1.3;  
+						text-shadow: 2px 2px 4px rgba(0,0,0,0.8);  
+						letter-spacing: -0.02em;  
+						min-height: 6em !important;  
+						overflow: visible !important;  
 					}  
 					.new-interface-info__title img {  
-    min-width: 10em !important;  /* Зменшено з 12em */  
-    min-height: 5em !important;  /* Зменшено з 6em */  
-    width: 12em !important;      /* Зменшено з 14em */  
-    height: auto !important;  
-    object-fit: contain !important;  
-    margin-top: -0.5em !important; /* Підняти логотип вище */  
-}
+						max-width: 10em !important;  
+						max-height: 5em !important;  
+						width: auto !important;  
+						height: auto !important;  
+						object-fit: contain !important;  
+						margin: 0 !important;  
+						filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));  
+						transition: transform 0.3s ease;  
+					}  
+					.new-interface-info__title img:hover {  
+						transform: scale(1.05);  
+					}  
 					.new-interface-info__details {  
-						margin-top: 1.2em;  
-						margin-bottom: 1.6em;  
+						margin-top: 1.5em;  
+						margin-bottom: 0;  
 						display: flex;  
 						align-items: center;  
 						flex-wrap: wrap;  
 						min-height: 1.9em;  
 						font-size: 1.2em;  
+						transition: all 0.3s ease;  
+						transform: translateY(0);  
+					}  
+					.new-interface-info__details:hover {  
+						transform: translateY(-2px);  
+					}  
+					.new-interface-info__details > * {  
+						background: rgba(255,255,255,0.1);  
+						padding: 0.3em 0.8em;  
+						border-radius: 1.5em;  
+						margin: 0.2em;  
+						backdrop-filter: blur(10px);  
+						border: 1px solid rgba(255,255,255,0.2);  
 					}  
 					.new-interface-info__split {  
 						margin: 0 1em;  
@@ -656,7 +722,7 @@
 					.new-interface-info__description {  
 						font-size: 1.4em;  
 						font-weight: 310;  
-						line-height: 1.4;  
+						line-height: 1.6;  
 						overflow: hidden;  
 						-o-text-overflow: '.';  
 						text-overflow: '.';  
@@ -665,6 +731,9 @@
 						line-clamp: 3;  
 						-webkit-box-orient: vertical;  
 						width: 100%;  
+						text-shadow: 1px 1px 2px rgba(0,0,0,0.6);  
+						color: rgba(255,255,255,0.95);  
+						transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);  
 					}  
 					.new-interface .card-more__box {  
 						padding-bottom: 150%;  
@@ -687,9 +756,11 @@
 						opacity: 0;  
 						object-fit: cover;  
 						transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);  
+						filter: blur(3px);  
+						transform: scale(1.1);  
 					}  
 					.new-interface .full-start__background.active {  
-						opacity: 0.5;  
+						opacity: 0.4;  
 					}  
 					.new-interface .full-start__rate {  
 						font-size: 1.2em;  
@@ -810,19 +881,19 @@
 	}  
   
 	InfoPanel.prototype.create = function () {  
-    this.html = $(`<div class="new-interface-info">  
-                        <div class="new-interface-info__body">  
-                            <div class="new-interface-info__left">  
-                                <div class="new-interface-info__head"></div>  
-                                <div class="new-interface-info__title"></div>  
-                            </div>  
-                            <div class="new-interface-info__right">  
-                                <div class="new-interface-info__description"></div>  
-                                <div class="new-interface-info__details"></div>  
-                            </div>  
-                        </div>  
-                    </div>`);  
-};
+		this.html = $(`<div class="new-interface-info">  
+							<div class="new-interface-info__body">  
+								<div class="new-interface-info__left">  
+									<div class="new-interface-info__head"></div>  
+									<div class="new-interface-info__title"></div>  
+								</div>  
+								<div class="new-interface-info__right">  
+									<div class="new-interface-info__description"></div>  
+									<div class="new-interface-info__details"></div>  
+								</div>  
+							</div>  
+						</div>`);  
+	};  
   
 	InfoPanel.prototype.render = function (asElement) {  
 		if (!this.html) this.create();  
@@ -908,24 +979,24 @@
 		}  
   
 		function applyFinalStyles(img, text_height) {  
-    img.style.marginTop = "-0.5em"; /* Додано для підняття */  
-    img.style.marginLeft = "0";  
-    img.style.paddingTop = PADDING_TOP_EM + "em";  
-    img.style.paddingBottom = PADDING_BOTTOM_EM + "em";  
-    img.style.imageRendering = "-webkit-optimize-contrast";  
+			img.style.marginTop = "0";  
+			img.style.marginLeft = "0";  
+			img.style.paddingTop = PADDING_TOP_EM + "em";  
+			img.style.paddingBottom = PADDING_BOTTOM_EM + "em";  
+			img.style.imageRendering = "-webkit-optimize-contrast";  
   
-    img.style.width = "12em"; /* Зменшено з 14em */  
-    img.style.height = "auto";  
-    img.style.maxWidth = "100%";  
-    img.style.maxHeight = "none";  
-    img.style.minHeight = "6em"; /* Зменшено з 8em */  
+			img.style.width = "12em";  
+			img.style.height = "auto";  
+			img.style.maxWidth = "100%";  
+			img.style.maxHeight = "none";  
+			img.style.minHeight = "auto";  
   
-    img.style.boxSizing = "border-box";  
-    img.style.display = "block";  
-    img.style.objectFit = "contain";  
-    img.style.objectPosition = "left bottom";  
-    img.style.transition = "none";  
-}
+			img.style.boxSizing = "border-box";  
+			img.style.display = "block";  
+			img.style.objectFit = "contain";  
+			img.style.objectPosition = "center center";  
+			img.style.transition = "none";  
+		}  
   
 		function moveHeadToDetails(animate) {  
 			if (!head_elem.length || !details_elem.length) return;  
@@ -1217,23 +1288,19 @@
   
 		if (Lampa.Storage.get("year_ogr") !== false) {  
 			if (ageRating) {  
-				detailsInfo.push('<span class="full-start__pg" style="font-size: 0.9em;">' + ageRating + "</span>");  
+				detailsInfo.push('<span class="full-start__pg">' + ageRating + "</span>");  
 			}  
 		}  
   
-		if (Lampa.Storage.get("status") !== false) {  
+		if (Lampa.Storage.get("status", false) && data.status) {  
 			var statusText = "";  
-  
 			if (data.status) {  
 				switch (data.status.toLowerCase()) {  
-					case "released":  
-						statusText = "Выпущенный";  
+					case "returning series":  
+						statusText = "Продолжается";  
 						break;  
 					case "ended":  
-						statusText = "Закончен";  
-						break;  
-					case "returning series":  
-						statusText = "Онгоинг";  
+						statusText = "Завершен";  
 						break;  
 					case "canceled":  
 						statusText = "Отменено";  
@@ -1448,7 +1515,7 @@
 				item.css("opacity", "0");  
 				requestAnimationFrame(function () {  
 					item.insertAfter($('div[data-name="interface_size"]'));  
-				  item.css("opacity", "");  
+					item.css("opacity", "");  
 				});  
   
 				item.on("hover:enter", function () {  
