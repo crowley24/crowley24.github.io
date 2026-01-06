@@ -374,6 +374,10 @@
 					.items-line__title .full-person__photo {  
 						margin-right: 0.5em !important;  
 					}  
+					.new-interface .items-line {  
+                    position: relative;  
+                    z-index: 2; /* Забезпечити що картки над фоном */  
+                }  
 					.items-line {  
 						padding-bottom: 4em !important;  
 					}  
@@ -393,23 +397,24 @@
 						overflow: hidden;  
 					}  
 					.new-interface-info__body {  
-						position: absolute;  
-						z-index: 999;  
-						width: 98% !important;  
-						left: auto !important;  
-						right: 0 !important;  
-						top: 0;  
-						padding: 2em;  
-						background: linear-gradient(135deg,   
-							rgba(0,0,0,0.7) 0%,   
-							rgba(0,0,0,0.3) 100%);  
-						border-radius: 1.5em;  
-						backdrop-filter: blur(20px);  
-						display: flex;  
-						justify-content: flex-end !important;  
-						gap: 2em;  
-						pointer-events: none;  
-					}  
+    position: absolute;  
+    z-index: 9999; /* Збільшено з 999 */  
+    width: 98% !important;  
+    left: auto !important;  
+    right: 0 !important;  
+    top: 0;  
+    padding: 2em;  
+    background: linear-gradient(135deg,   
+        rgba(0,0,0,0.7) 0%,   
+        rgba(0,0,0,0.3) 100%);  
+    border-radius: 1.5em;  
+    backdrop-filter: blur(20px);  
+    display: flex;  
+    justify-content: flex-end !important;  
+    gap: 2em;  
+    pointer-events: none;  
+}
+
 					.new-interface-info__left,  
 					.new-interface-info__right {  
 						pointer-events: auto;  
@@ -511,15 +516,15 @@
 						padding-bottom: 95%;  
 					}  
 					.new-interface .full-start__background-wrapper {  
-						position: absolute;  
-						top: 0;  
-						left: 0;  
-						width: 100%;  
-						height: 100%;  
-						z-index: -1;  
-						pointer-events: none;  
-						overflow: hidden;  
-					}  
+    position: absolute;  
+    top: 0;  
+    left: 0;  
+    width: 100%;  
+    height: 100%;  
+    z-index: 1; /* Змінено з -1 на 1 */  
+    pointer-events: none;  
+    overflow: hidden;  
+}
 					.new-interface .full-start__background {  
 						position: absolute;  
 						height: 100%;  
@@ -592,31 +597,35 @@
 					}  
 					.items-line__title .full-person__photo {  
 						margin-right: 0.5em !important;  
-					}  
+					} 
+					.new-interface .items-line {  
+                    position: relative;  
+                    z-index: 2; /* Забезпечити що картки над фоном */  
+                }  
 					.new-interface-info {  
 						position: relative;  
 						padding: 1.5em;  
 						height: 19.8em;  
 					}  
 					.new-interface-info__body {  
-						position: absolute;  
-						z-index: 999;  
-						width: 98% !important;  
-						left: auto !important;  
-						right: 0 !important;  
-						top: 0;  
-						padding: 2em;  
-						background: linear-gradient(135deg,   
-							rgba(0,0,0,0.7) 0%,   
-							rgba(0,0,0,0.3) 100%);  
-						border-radius: 1.5em;  
-						backdrop-filter: blur(20px);  
-						padding-top: 0.2em;  
-						display: flex;  
-						justify-content: flex-end !important;  
-						gap: 1.5em;  
-						pointer-events: none;  
-					}  
+    position: absolute;  
+    z-index: 9999; /* Збільшено з 999 */  
+    width: 98% !important;  
+    left: auto !important;  
+    right: 0 !important;  
+    top: 0;  
+    padding: 2em;  
+    background: linear-gradient(135deg,   
+        rgba(0,0,0,0.7) 0%,   
+        rgba(0,0,0,0.3) 100%);  
+    border-radius: 1.5em;  
+    backdrop-filter: blur(20px);  
+    display: flex;  
+    justify-content: flex-end !important;  
+    gap: 2em;  
+    pointer-events: none;  
+}
+
 					.new-interface-info__left,  
 					.new-interface-info__right {  
 						pointer-events: auto;  
@@ -720,15 +729,15 @@
 						padding-bottom: 150%;  
 					}  
 					.new-interface .full-start__background-wrapper {  
-						position: absolute;  
-						top: 0;  
-						left: 0;  
-						width: 100%;  
-						height: 100%;  
-						z-index: -1;  
-						pointer-events: none;  
-						overflow: hidden;  
-					}  
+    position: absolute;  
+    top: 0;  
+    left: 0;  
+    width: 100%;  
+    height: 100%;  
+    z-index: 1; /* Змінено з -1 на 1 */  
+    pointer-events: none;  
+    overflow: hidden;  
+}
 					.new-interface .full-start__background {  
 						position: absolute;  
 						height: 100%;  
