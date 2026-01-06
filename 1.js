@@ -3,7 +3,7 @@
 (function () {  
   'use strict';  
   
-  console.log('[QualityBadges] Starting minimal version');  
+  console.log('[QualityBadges] Starting fixed version');  
   
   // Перевірка залежностей  
   if (typeof $ === 'undefined') {  
@@ -11,18 +11,22 @@
     return;  
   }  
   
-  // Проста функція додавання тестових бейджів  
+  // Функція додавання тестових бейджів з правильним позиціонуванням  
   function addTestBadges() {  
-    console.log('[QualityBadges] Adding test badges to cards');  
+    console.log('[QualityBadges] Adding VISIBLE test badges to cards');  
       
     $('.card').each(function(index) {  
       var card = $(this);  
         
       // Перевіряємо чи вже є бейдж  
       if (card.find('.test-quality-badge').length === 0) {  
-        var badge = '<div class="test-quality-badge" style="position: absolute; top: 5px; right: 5px; background: #ff4444; color: white; padding: 2px 6px; font-size: 10px; z-index: 10; border-radius: 3px;">TEST</div>';  
-        card.find('.card__view').append(badge);  
-        console.log('[QualityBadges] Added badge to card', index);  
+        // Шукаємо правильний контейнер для бейджа  
+        var cardView = card.find('.card__view') || card.find('.card__poster') || card;  
+          
+        var badge = '<div class="test-quality-badge" style="position: absolute; top: 5px; right: 5px; background: #ff0000 !important; color: white !important; padding: 3px 6px !important; font-size: 12px !important; z-index: 9999 !important; border-radius: 3px !important; font-weight: bold !important; pointer-events: none !important;">TEST</div>';  
+          
+        cardView.append(badge);  
+        console.log('[QualityBadges] Added VISIBLE badge to card', index);  
       }  
     });  
   }  
@@ -33,9 +37,12 @@
   setTimeout(addTestBadges, 5000);  
   
   // Додаємо кнопку для ручного тестування  
-  $('body').append('<button id="test-badge-btn" style="position: fixed; top: 10px; right: 10px; z-index: 9999; background: #ff4444; color: white; padding: 10px;">ADD BADGES</button>');  
-  $('#test-badge-btn').on('click', addTestBadges);  
+  $('body').append('<button id="test-badge-btn" style="position: fixed; top: 10px; right: 10px; z-index: 10000; background: #ff0000; color: white; padding: 10px; font-size: 14px; font-weight: bold;">ADD BADGES</button>');  
+  $('#test-badge-btn').on('click', function() {  
+    console.log('[QualityBadges] Manual test triggered');  
+    addTestBadges();  
+  });  
   
-  console.log('[QualityBadges] Minimal plugin initialized');  
+  console.log('[QualityBadges] Fixed plugin initialized');  
   
 })();
