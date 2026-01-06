@@ -3,7 +3,6 @@
 (function () {  
   'use strict';  
   
-  var cardBadgesCache = {};  
   var pluginPath = 'https://raw.githubusercontent.com/FoxStudio24/lampa/main/Quality/';  
   
   var svgIcons = {  
@@ -96,7 +95,6 @@
     }  
   }  
   
-  // Оновлена функція processCards з діагностикою  
   function processCards() {  
     console.log('[QualityBadges] Processing cards...');  
     var cards = $('.card:not(.qb-processed)');  
@@ -151,7 +149,6 @@
     }  
   });  
   
-  // Більш надійний MutationObserver з кількома цільовими елементами  
   var observer = new MutationObserver(function(mutations) {  
     mutations.forEach(function(mutation) {  
       if (mutation.addedNodes.length) {  
@@ -160,7 +157,6 @@
     });  
   });  
   
-  // Спостерігаємо за кількома можливими контейнерами  
   var targets = [  
     '.scroll__content',  
     '.items-cards',  
@@ -186,31 +182,29 @@
     console.log('[QualityBadges] No suitable target found for observer');  
   }  
   
-  // Початкова обробка з затримкою  
   setTimeout(function() {  
     processCards();  
   }, 1000);  
   
-  // Обробка при прокрутці  
   $(window).on('scroll', function() {  
     processCards();  
   });  
   
-  var style = '<style>\  
-    .quality-badges-container { display: flex; gap: 0.3em; margin: 0 0 0.4em 0; min-height: 1.2em; pointer-events: none; }\  
-    .quality-badge { height: 1.2em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; }\  
-    .card-quality-badges { position: absolute; top: 0.3em; right: 0.3em; display: flex; flex-direction: row; gap: 0.2em; pointer-events: none; z-index: 5; }\  
-    .card-quality-badge { height: 0.9em; opacity: 0; transform: translateY(5px); animation: qb_in 0.3s ease forwards; }\  
-    @keyframes qb_in { to { opacity: 1; transform: translateY(0); } }\  
-    .quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; }\  
-    .card-quality-badge img { filter: drop-shadow(0 1px 2px #000); }\  
-    @media (max-width: 768px) {\  
-      .quality-badges-container { gap: 0.25em; margin: 0 0 0.35em 0; min-height: 1em; }\  
-      .quality-badge { height: 1em; }\  
-      .card-quality-badges { top: 0.25em; right: 0.25em; gap: 0.18em; }\  
-      .card-quality-badge { height: 0.75em; }\  
-    }\  
-  </style>';  
+  var style = '<style>' +  
+    '.quality-badges-container { display: flex; gap: 0.3em; margin: 0 0 0.4em 0; min-height: 1.2em; pointer-events: none; }' +  
+    '.quality-badge { height: 1.2em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; }' +  
+    '.card-quality-badges { position: absolute; top: 0.3em; right: 0.3em; display: flex; flex-direction: row; gap: 0.2em; pointer-events: none; z-index: 5; }' +  
+    '.card-quality-badge { height: 0.9em; opacity: 0; transform: translateY(5px); animation: qb_in 0.3s ease forwards; }' +  
+    '@keyframes qb_in { to { opacity: 1; transform: translateY(0); } }' +  
+    '.quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; }' +  
+    '.card-quality-badge img { filter: drop-shadow(0 1px 2px #000); }' +  
+    '@media (max-width: 768px) {' +  
+      '.quality-badges-container { gap: 0.25em; margin: 0 0 0.35em 0; min-height: 1em; }' +  
+      '.quality-badge { height: 1em; }' +  
+      '.card-quality-badges { top: 0.25em; right: 0.25em; gap: 0.18em; }' +  
+      '.card-quality-badge { height: 0.75em; }' +  
+    '}' +  
+  '</style>';  
   $('body').append(style);  
   
   console.log('[QualityBadges] Plugin initialized with diagnostics');  
