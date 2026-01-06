@@ -1,353 +1,378 @@
-(function () {
-    'use strict';
-
-    if (typeof Lampa === 'undefined') return;
-    if (Lampa.Manifest.app_digital < 300) return; // Тільки для v3.0.0+
-
-    if (window.plugin_new_interface_logo_ready) return;
-    window.plugin_new_interface_logo_ready = true;
-
-    // ========== ПЕРЕКЛАДИ ==========
-    Lampa.Lang.add({
-        new_interface_name: { en:'New interface', uk:'Новий інтерфейс', ru:'Новый интерфейс' },
-        new_interface_desc: { en:'Enhanced interface with background and details', uk:'Розширений інтерфейс з фоном та деталями', ru:'Расширенный интерфейс с фоном и деталями' },
-        logo_name: { en:'Logos instead of titles', uk:'Логотипи замість назв', ru:'Логотипы вместо названий' },
-        logo_desc: { en:'Show logos in fullscreen', uk:'Показує логотипи в повноекранному перегляді', ru:'Показывает логотипы в полноэкранном просмотре' }
-    });
-
-    // ========== НАЛАШТУВАННЯ ==========
-    Lampa.SettingsApi.addParam({
-        component:'interface',
-        param:{ name:'new_interface', type:'trigger', default:true },
-        field:{ name:Lampa.Lang.translate('new_interface_name'), description:Lampa.Lang.translate('new_interface_desc') }
-    });
-
-    Lampa.SettingsApi.addParam({
-        component:'interface',
-        param:{ name:'logo_glav', type:'select', values:{1:'Вимкнути',0:'Увімкнути'}, default:'0' },
-        field:{ name:Lampa.Lang.translate('logo_name'), description:Lampa.Lang.translate('logo_desc') }
-    });
-
-    // ========== СТИЛІ ДЛЯ ВЕРТИКАЛЬНИХ КАРТОК ==========
-    function addStyles() {
-        if (addStyles.added) return;
-        addStyles.added = true;
-
-        Lampa.Template.add('new_interface_logo_styles', `<style>
-            .new-interface { position: relative; }
-            .new-interface .card { width: 13em; } /* класичні вертикальні */
-            .new-interface .card .card__view { padding-bottom: 150%; }
-            .new-interface-info { position: relative; padding: 1.5em; height: 24em; }
-            .new-interface-info__body { width: 80%; padding-top: 1.1em; }
-            .new-interface-info__head { color: rgba(255,255,255,0.6); margin-bottom: 1em; font-size:1.3em; min-height:1em; }
-            .new-interface-info__head span { color:#fff; }
-            .new-interface-info__title { font-size: 2.2em; font-weight:600; margin-bottom:0.3em; overflow:hidden; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; line-height:1.3; }
-            .new-interface-info__title img { max-height:80px; margin-top:5px; display:block; }
-            .new-interface-info__details { margin-bottom:1.6em; display:flex; align-items:center; flex-wrap:wrap; min-height:1.9em; font-size:1.1em; }
-            .new-interface-info__split { margin:0 1em; font-size:0.7em; }
-            .new-interface-info__description { font-size:1.1em; font-weight:300; line-height:1.4; overflow:hidden; display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; width:70%; }
-            .new-interface-card-title { margin-top:0.6em; font-size:1em; font-weight:500; color:#fff; display:block; text-align:left; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; pointer-events:none; }
-            body.light--version .new-interface-card-title { color:#111; }
-        </style>`);
-
-        $('body').append(Lampa.Template.get('new_interface_logo_styles', {}, true));
-    }
-
-    // ========== ЛОГІКА НОВОГО ІНТЕРФЕЙСУ ==========
-    function startNewInterface() {
-        if (!Lampa.Maker || !Lampa.Maker.map || !Lampa.Utils) return;
-        addStyles();
-
-        const mainMap = Lampa.Maker.map('Main');
-        if (!mainMap || !mainMap.Items || !mainMap.Create) return;
-
-        wrap(mainMap.Items,'onInit',function(orig,args){
-            if(orig) orig.apply(this,args);
-            this.__newInterfaceEnabled = shouldUseNewInterface(this && this.object);
-        });
-
-        wrap(mainMap.Create,'onCreate',function(orig,args){
-            if(orig) orig.apply(this,args);
-            if(!this.__newInterfaceEnabled) return;
-            const state = ensureState(this);
-            state.attach();
-        });
-
-        wrap(mainMap.Items,'onAppend',function(orig,args){
-            if(orig) orig.apply(this,args);
-            if(!this.__newInterfaceEnabled) return;
-            attachLineHandlers(this,args[0],args[1]);
-        });
-
-        wrap(mainMap.Items,'onDestroy',function(orig,args){
-            if(this.__newInterfaceState) { this.__newInterfaceState.destroy(); delete this.__newInterfaceState; }
-            delete this.__newInterfaceEnabled;
-            if(orig) orig.apply(this,args);
-        });
-    }
-
-    function shouldUseNewInterface(object){
-        if(!object) return false;
-        if(!(object.source==='tmdb'||object.source==='cub')) return false;
-        if(window.innerWidth<767) return false;
-        return Lampa.Storage.field('new_interface');
-    }
-
-    function ensureState(main){
-        if(main.__newInterfaceState) return main.__newInterfaceState;
-        const state = createInterfaceState(main);
-        main.__newInterfaceState = state;
-        return state;
-    }
-
-    function createInterfaceState(main){
-        const info = new InterfaceInfo();
-        info.create();
-        const background = document.createElement('img');
-        background.className = 'full-start__background';
-
-        return {
-            main, info, background, infoElement:null, backgroundTimer:null, backgroundLast:'', attached:false,
-            attach(){
-                if(this.attached) return;
-                const container = main.render(true);
-                if(!container) return;
-                container.classList.add('new-interface');
-                if(!background.parentElement) container.insertBefore(background,container.firstChild||null);
-
-                const infoNode = info.render(true);
-                this.infoElement = infoNode;
-                if(infoNode && infoNode.parentNode !== container){
-                    container.insertBefore(infoNode, background.nextSibling||container.firstChild||null);
-                }
-
-                main.scroll.minus(infoNode);
-                this.attached = true;
-            },
-            update(data){
-                if(!data) return;
-                info.update(data);
-                this.updateBackground(data);
-            },
-            updateBackground(data){
-                const path = data && data.backdrop_path ? Lampa.Api.img(data.backdrop_path,'w1280'):'';
-                if(!path || path===this.backgroundLast) return;
-                clearTimeout(this.backgroundTimer);
-                this.backgroundTimer = setTimeout(()=>{
-                    background.classList.remove('loaded');
-                    background.onload = ()=>background.classList.add('loaded');
-                    background.onerror = ()=>background.classList.remove('loaded');
-                    this.backgroundLast = path;
-                    setTimeout(()=>{ background.src=this.backgroundLast; },300);
-                },1000);
-            },
-            reset(){ info.empty(); },
-            destroy(){
-                clearTimeout(this.backgroundTimer);
-                info.destroy();
-                const container = main.render(true);
-                if(container) container.classList.remove('new-interface');
-                if(this.infoElement && this.infoElement.parentNode) this.infoElement.parentNode.removeChild(this.infoElement);
-                if(background && background.parentNode) background.parentNode.removeChild(background);
-                this.attached=false;
-            }
-        };
-    }
-
-    // ========== КЛАС ДЛЯ ІНФОРМАЦІЇ ==========
-    class InterfaceInfo{
-        constructor(){ this.html=null; this.timer=null; this.network=new Lampa.Reguest(); this.loadedLogos={}; this.currentLogoUrl=null; this.logoData=null; }
-        create(){
-            if(this.html) return;
-            this.html = $(`<div class="new-interface-info">
-                <div class="new-interface-info__body">
-                    <div class="new-interface-info__head"></div>
-                    <div class="new-interface-info__title"></div>
-                    <div class="new-interface-info__details"></div>
-                    <div class="new-interface-info__description"></div>
-                </div>
-            </div>`);
-        }
-        render(js){ if(!this.html) this.create(); return js ? this.html[0] : this.html; }
-        update(data){
-            if(!data) return;
-            if(!this.html) this.create();
-            this.html.find('.new-interface-info__head,.new-interface-info__details').text('---');
-            this.updateTitle(data);
-            this.html.find('.new-interface-info__description').text(data.overview||Lampa.Lang.translate('full_notext'));
-            Lampa.Background.change(Lampa.Utils.cardImgBackground(data));
-            this.loadDetails(data);
-        }
-        updateTitle(data){
-            const titleElement = this.html.find('.new-interface-info__title');
-            if(Lampa.Storage.get('logo_glav')!='1'){ titleElement.text(data.title||data.name||''); this.loadLogo(data); }
-            else{ titleElement.text(data.title||data.name||''); titleElement.find('img').remove(); }
-        }
-        loadLogo(data){
-            if(!data||!data.id) return;
-            const source = data.source||'tmdb';
-            if(source!=='tmdb'&&source!=='cub') return;
-            if(!Lampa.TMDB||typeof Lampa.TMDB.api!=='function'||typeof Lampa.TMDB.key!=='function') return;
-
-            const type = data.media_type==='tv'||data.name?'tv':'movie';
-            const userLanguage = Lampa.Storage.get('language');
-            const cacheKey = `${type}_${data.id}_${userLanguage}`;
-            if(this.loadedLogos[cacheKey]&&this.loadedLogos[cacheKey]!=''){ this.displayLogo(data,this.loadedLogos[cacheKey]); return; }
-
-            const currentLangUrl = Lampa.TMDB.api(`${type}/${data.id}/images?api_key=${Lampa.TMDB.key()}&language=${userLanguage}`);
-            this.currentLogoUrl = currentLangUrl;
-
-            $.get(currentLangUrl,(currentLangData)=>{
-                if(this.currentLogoUrl!==currentLangUrl) return;
-                let logoPath=null;
-                if(currentLangData.logos && currentLangData.logos.length>0 && currentLangData.logos[0].file_path){ logoPath=currentLangData.logos[0].file_path; }
-                if(logoPath){ this.loadedLogos[cacheKey]=logoPath; this.displayLogo(data,logoPath); }
-            });
-        }
-        displayLogo(data,logoPath){
-            if(!logoPath||!this.html) return;
-            const titleElement=this.html.find('.new-interface-info__title');
-            const logoUrl=Lampa.TMDB.image('/t/p/w300'+logoPath.replace('.svg','.png'));
-            const logoImg=$('<img>').attr('src',logoUrl).attr('alt',data.title||data.name||'').css({'max-height':'80px','margin-top':'5px','display':'block'}).on('error',function(){ $(this).remove(); titleElement.text(data.title||data.name||''); });
-            titleElement.empty().append(logoImg);
-        }
-        loadDetails(data){
-            if(!data||!data.id) return;
-            const source = data.source||'tmdb';
-            if(source!=='tmdb'&&source!=='cub') return;
-            if(!Lampa.TMDB||typeof Lampa.TMDB.api!=='function'||typeof Lampa.TMDB.key!=='function') return;
-            const type = data.media_type==='tv'||data.name?'tv':'movie';
-            const language=Lampa.Storage.get('language');
-            const url=Lampa.TMDB.api(`${type}/${data.id}?api_key=${Lampa.TMDB.key()}&append_to_response=content_ratings,release_dates&language=${language}`);
-            this.currentUrl=url;
-            if(this.loadedLogos[url]){ this.drawDetails(this.loadedLogos[url]); return; }
-            clearTimeout(this.timer);
-            this.timer=setTimeout(()=>{
-                this.network.clear();
-                this.network.timeout(5000);
-                this.network.silent(url,(movie)=>{
-                    this.loadedLogos[url]=movie;
-                    if(this.currentUrl===url) this.drawDetails(movie);
-                });
-            },300);
-        }
-        drawDetails(movie){
-            if(!movie||!this.html) return;
-            const create=((movie.release_date||movie.first_air_date||'0000')+'').slice(0,4);
-            const vote=parseFloat((movie.vote_average||0)+'').toFixed(1);
-            const head=[]; const details=[];
-            const sources=Lampa.Api&&Lampa.Api.sources&&Lampa.Api.sources.tmdb?Lampa.Api.sources.tmdb:null;
-            const countries=sources&&typeof sources.parseCountries==='function'?sources.parseCountries(movie):[];
-            const pg=sources&&typeof sources.parsePG==='function'?sources.parsePG(movie):'';
-
-            if(create!=='0000') head.push(`<span>${create}</span>`);
-            if(countries&&countries.length) head.push(countries.join(','));
-            if(vote>0) details.push(`<div class="full-start__rate"><div>${vote}</div><div>TMDB</div></div>`);
-            if(Array.isArray(movie.genres)&&movie.genres.length) details.push(movie.genres.map((g)=>Lampa.Utils.capitalizeFirstLetter(g.name)).join(' | '));
-            if(movie.runtime) details.push(Lampa.Utils.secondsToTime(movie.runtime*60,true));
-            if(pg) details.push(`<span class="full-start__pg" style="font-size:0.9em;">${pg}</span>`);
-
-            this.html.find('.new-interface-info__head').empty().append(head.join(','));
-            this.html.find('.new-interface-info__details').html(details.join('<span class="new-interface-info__split">&#9679;</span>'));
-        }
-        empty(){
-            if(!this.html) return;
-            this.html.find('.new-interface-info__head,.new-interface-info__details').text('---');
-            this.html.find('.new-interface-info__title').empty();
-        }
-        destroy(){ clearTimeout(this.timer); this.network.clear(); this.loadedLogos={}; this.currentUrl=null; this.currentLogoUrl=null; if(this.html){ this.html.remove(); this.html=null; } }
-    }
-
-    // ========== ЛОГІКА ЛОГОТИПІВ ПОВНОЕКРАННО ==========
-    function startLogosPlugin(){
-        Lampa.Listener.follow('full',function(e){
-            if(e.type=='complite'&&Lampa.Storage.get('logo_glav')!='1'){
-                const data=e.data.movie;
-                const type=data.name?'tv':'movie';
-                if(!data.id) return;
-                const userLanguage=Lampa.Storage.get('language');
-                const currentLangUrl=Lampa.TMDB.api(`${type}/${data.id}/images?api_key=${Lampa.TMDB.key()}&language=${userLanguage}`);
-                $.get(currentLangUrl,function(currentLangData){
-                    let logo=null;
-                    if(currentLangData.logos&&currentLangData.logos.length>0&&currentLangData.logos[0].file_path) logo=currentLangData.logos[0].file_path;
-                    if(logo) displayLogoInFullView(e,logo);
-                });
-            }
-        });
-    }
-
-    function displayLogoInFullView(e,logoPath){
-        if(!logoPath) return;
-        e.object.activity.render().find('.full-start-new__title').html('<img style="margin-top:5px;max-height:80px;" src="'+Lampa.TMDB.image('/t/p/w300'+logoPath.replace('.svg','.png'))+'"/>');
-    }
-
-    // ========== ПРИВ'ЯЗКА КАРТОК ==========
-    function attachLineHandlers(main,line,element){
-        if(line.__newInterfaceLine) return;
-        line.__newInterfaceLine=true;
-        const state = ensureState(main);
-        const applyToCard=(card)=>{
-            if(!card||card.__newInterfaceCard||!card.use||!card.data) return;
-            card.__newInterfaceCard=true;
-            card.params=card.params||{};
-            card.params.style=card.params.style||{};
-            card.use({
-                onFocus(){ state.update(card.data); },
-                onHover(){ state.update(card.data); },
-                onTouch(){ state.update(card.data); },
-                onVisible(){ updateCardTitle(card); },
-                onUpdate(){ updateCardTitle(card); },
-                onDestroy(){ clearTimeout(card.__newInterfaceLabelTimer); if(card.__newInterfaceLabel&&card.__newInterfaceLabel.parentNode) card.__newInterfaceLabel.parentNode.removeChild(card.__newInterfaceLabel); card.__newInterfaceLabel=null; delete card.__newInterfaceCard; }
-            });
-            updateCardTitle(card);
-        };
-        if(Array.isArray(line.items)&&line.items.length) line.items.forEach(applyToCard);
-        if(line.last){ const lastData=getDomCardData(line.last); if(lastData) state.update(lastData); }
-    }
-
-    function getDomCardData(node){ if(!node) return null; let current=node.jquery?node[0]:node; while(current&&!current.card_data) current=current.parentNode; return current&&current.card_data?current.card_data:null; }
-    function getFocusedCardData(line){ const container=line&&typeof line.render==='function'?line.render(true):null; if(!container||!container.querySelector) return null; const focus=container.querySelector('.selector.focus')||container.querySelector('.focus'); return getDomCardData(focus); }
-    function updateCardTitle(card){
-        if(!card||typeof card.render!=='function') return;
-        const element=card.render(true); if(!element) return;
-        if(!element.isConnected){ clearTimeout(card.__newInterfaceLabelTimer); card.__newInterfaceLabelTimer=setTimeout(()=>updateCardTitle(card),50); return; }
-        clearTimeout(card.__newInterfaceLabelTimer);
-        const text=(card.data&&(card.data.title||card.data.name||card.data.original_title||card.data.original_name))?(card.data.title||card.data.name||card.data.original_title||card.data.original_name).trim():'';
-        const seek = element.querySelector('.new-interface-card-title');
-
-        if (!text) {
-            if (seek && seek.parentNode) seek.parentNode.removeChild(seek);
-            card.__newInterfaceLabel = null;
-            return;
-        }
-
-        let label = seek || card.__newInterfaceLabel;
-
-        if (!label) {
-            label = document.createElement('div');
-            label.className = 'new-interface-card-title';
-        }
-
-        label.textContent = text; // Тільки текст для картки
-
-        if (!label.parentNode || label.parentNode !== element) {
-            if (label.parentNode) label.parentNode.removeChild(label);
-            element.appendChild(label);
-        }
-
-        card.__newInterfaceLabel = label;
-    }
-
-    function wrap(target, method, handler) {
-        if (!target) return;
-        const original = typeof target[method] === 'function' ? target[method] : null;
-        target[method] = function (...args) {
-            return handler.call(this, original, args);
-        };
-    }
-
-    // ========== ІНІЦІАЛІЗАЦІЯ ПЛАГІНУ ==========
-    startNewInterface();
-    startLogosPlugin();
-
+// Об'єднаний плагін якості з вертикальними постерами  
+(function () {  
+    'use strict';  
+  
+    if (typeof Lampa === 'undefined') return;  
+    if (Lampa.Manifest.app_digital < 300) return;  
+  
+    // Флаг, щоб уникнути повторної ініціалізації  
+    if (window.unified_quality_plugin_ready) return;  
+    window.unified_quality_plugin_ready = true;  
+  
+    // ========== КОНФІГУРАЦІЯ ==========  
+    var Config = {  
+        Q_LOGGING: true,  
+        QUALITY_CACHE: 'maxsm_ratings_quality_cache',  
+        JACRED_PROTOCOL: 'http://',  
+        JACRED_URL: Lampa.Storage.get('jacred.xyz') || 'jacred.xyz',  
+        PROXY_TIMEOUT: 5000,  
+        PROXY_LIST: [  
+            'http://api.allorigins.win/raw?url=',  
+            'http://cors.bwa.workers.dev/'  
+        ],  
+        MAX_CONCURRENT_REQUESTS: 3,  
+        RETRY_ATTEMPTS: 3,  
+        RETRY_DELAY: 1000,  
+        BATCH_SIZE: 5,  
+        TTL: {  
+            quality: 24 * 60 * 60 * 1000,  
+            error: 5 * 60 * 1000,  
+            no_quality: 60 * 60 * 1000  
+        }  
+    };  
+  
+    // ========== SVG ІКОНКИ ==========  
+    var pluginPath = 'https://raw.githubusercontent.com/FoxStudio24/lampa/main/Quality/';  
+    var svgIcons = {  
+        '4K': pluginPath + 'Quality_ico/4K.svg',  
+        '2K': pluginPath + 'Quality_ico/2K.svg',  
+        'FULL HD': pluginPath + 'Quality_ico/FULL HD.svg',  
+        'HD': pluginPath + 'Quality_ico/HD.svg',  
+        'HDR': pluginPath + 'Quality_ico/HDR.svg',  
+        'Dolby Vision': pluginPath + 'Quality_ico/Dolby Vision.svg',  
+        '7.1': pluginPath + 'Quality_ico/7.1.svg',  
+        '5.1': pluginPath + 'Quality_ico/5.1.svg',  
+        '4.0': pluginPath + 'Quality_ico/4.0.svg',  
+        '2.0': pluginPath + 'Quality_ico/2.0.svg',  
+        'DUB': pluginPath + 'Quality_ico/DUB.svg'  
+    };  
+  
+    // ========== УТИЛІТИ ==========  
+    var Utils = {  
+        debounce: function(func, wait) {  
+            var timeout;  
+            return function executedFunction() {  
+                var context = this;  
+                var args = arguments;  
+                var later = function() {  
+                    timeout = null;  
+                    func.apply(context, args);  
+                };  
+                clearTimeout(timeout);  
+                timeout = setTimeout(later, wait);  
+            };  
+        },  
+  
+        logWithContext: function(level, message, context) {  
+            if (Config.Q_LOGGING) {  
+                console[level]('[UnifiedQuality]', message, context || '');  
+            }  
+        },  
+  
+        getCacheKey: function(title, year) {  
+            return 'quality_' + (title || '').toLowerCase().replace(/\s+/g, '_') + '_' + (year || '');  
+        },  
+  
+        isExpired: function(timestamp, ttl) {  
+            return Date.now() - timestamp > ttl;  
+        }  
+    };  
+  
+    // ========== API КЛІЄНТ ==========  
+    var API = {  
+        requestQueue: [],  
+        activeRequests: 0,  
+  
+        makeRequest: function(url) {  
+            return new Promise(function(resolve, reject) {  
+                var attempt = 0;  
+                var tryRequest = function() {  
+                    attempt++;  
+                    var proxyUrl = Config.PROXY_LIST[0] + encodeURIComponent(url);  
+                      
+                    var xhr = new XMLHttpRequest();  
+                    xhr.timeout = Config.PROXY_TIMEOUT;  
+                    xhr.onload = function() {  
+                        if (xhr.status === 200) {  
+                            try {  
+                                var data = JSON.parse(xhr.responseText);  
+                                resolve(data);  
+                            } catch (e) {  
+                                reject(e);  
+                            }  
+                        } else {  
+                            reject(new Error('HTTP ' + xhr.status));  
+                        }  
+                    };  
+                    xhr.onerror = function() {  
+                        if (attempt < Config.RETRY_ATTEMPTS) {  
+                            setTimeout(tryRequest, Config.RETRY_DELAY * attempt);  
+                        } else {  
+                            reject(new Error('Network error'));  
+                        }  
+                    };  
+                    xhr.ontimeout = function() {  
+                        reject(new Error('Timeout'));  
+                    };  
+                    xhr.open('GET', proxyUrl, true);  
+                    xhr.send();  
+                };  
+                tryRequest();  
+            });  
+        },  
+  
+        getQuality: function(title, year) {  
+            var cacheKey = Utils.getCacheKey(title, year);  
+            var cached = localStorage.getItem(cacheKey);  
+              
+            if (cached) {  
+                try {  
+                    var parsed = JSON.parse(cached);  
+                    if (!Utils.isExpired(parsed.timestamp, Config.TTL.quality)) {  
+                        return Promise.resolve(parsed.data);  
+                    }  
+                } catch (e) {  
+                    localStorage.removeItem(cacheKey);  
+                }  
+            }  
+  
+            var url = Config.JACRED_PROTOCOL + Config.JACRED_URL + '/api/v2/search?query=' + encodeURIComponent(title);  
+            if (year) url += '&year=' + year;  
+  
+            return API.makeRequest(url).then(function(data) {  
+                var result = { quality: 'NO INFO', timestamp: Date.now() };  
+                if (data && data.length > 0) {  
+                    result.quality = data[0].quality || 'NO INFO';  
+                }  
+                localStorage.setItem(cacheKey, JSON.stringify(result));  
+                return result;  
+            }).catch(function(error) {  
+                Utils.logWithContext('error', 'API request failed', error);  
+                return { quality: 'ERROR', timestamp: Date.now() };  
+            });  
+        }  
+    };  
+  
+    // ========== ВИЗНАЧЕННЯ ЯКОСТІ ==========  
+    var QualityDetector = {  
+        getBest: function(results) {  
+            var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false };  
+            var resOrder = ['HD', 'FULL HD', '2K', '4K'];  
+            var audioOrder = ['2.0', '4.0', '5.1', '7.1'];  
+              
+            var limit = Math.min(results.length, 20);  
+            for (var i = 0; i < limit; i++) {  
+                var item = results[i];  
+                var title = (item.Title || '').toLowerCase();  
+                  
+                // Визначення роздільної здатності  
+                for (var j = 0; j < resOrder.length; j++) {  
+                    if (title.indexOf(resOrder[j].toLowerCase()) >= 0) {  
+                        var currentIndex = resOrder.indexOf(best.resolution);  
+                        var newIndex = resOrder.indexOf(resOrder[j]);  
+                        if (currentIndex === -1 || newIndex > currentIndex) {  
+                            best.resolution = resOrder[j];  
+                        }  
+                    }  
+                }  
+                  
+                // HDR та Dolby Vision  
+                if (title.indexOf('hdr') >= 0) best.hdr = true;  
+                if (title.indexOf('dolby vision') >= 0) best.dolbyVision = true;  
+                  
+                // Аудіо  
+                for (var k = 0; k < audioOrder.length; k++) {  
+                    if (title.indexOf(audioOrder[k]) >= 0) {  
+                        var currentAudioIndex = audioOrder.indexOf(best.audio);  
+                        var newAudioIndex = audioOrder.indexOf(audioOrder[k]);  
+                        if (currentAudioIndex === -1 || newAudioIndex > currentAudioIndex) {  
+                            best.audio = audioOrder[k];  
+                        }  
+                    }  
+                }  
+                  
+                // Дубляж  
+                if (title.indexOf('dub') >= 0) best.dub = true;  
+            }  
+              
+            return best;  
+        },  
+  
+        fetchQuality: function(title, year) {  
+            return API.getQuality(title, year).then(function(result) {  
+                return {  
+                    resolution: result.quality === 'NO INFO' ? null : result.quality,  
+                    hdr: false,  
+                    dolbyVision: false,  
+                    audio: null,  
+                    dub: false,  
+                    no_quality: result.quality === 'NO INFO',  
+                    error: result.quality === 'ERROR'  
+                };  
+            });  
+        }  
+    };  
+  
+    // ========== ІНТЕРФЕЙС ==========  
+    var UI = {  
+        addBadgesToCard: function(card, quality) {  
+            if (!card || !quality) return;  
+              
+            var badges = [];  
+              
+            if (quality.resolution) {  
+                badges.push('<img class="card-quality-badge" src="' + svgIcons[quality.resolution] + '" onerror="this.style.display=\'none\'">');  
+            }  
+            if (quality.hdr) {  
+                badges.push('<img class="card-quality-badge" src="' + svgIcons['HDR'] + '" onerror="this.style.display=\'none\'">');  
+            }  
+            if (quality.dolbyVision) {  
+                badges.push('<img class="card-quality-badge" src="' + svgIcons['Dolby Vision'] + '" onerror="this.style.display=\'none\'">');  
+            }  
+            if (quality.audio) {  
+                badges.push('<img class="card-quality-badge" src="' + svgIcons[quality.audio] + '" onerror="this.style.display=\'none\'">');  
+            }  
+            if (quality.dub) {  
+                badges.push('<img class="card-quality-badge" src="' + svgIcons['DUB'] + '" onerror="this.style.display=\'none\'">');  
+            }  
+              
+            if (badges.length === 0) {  
+                if (quality.no_quality) {  
+                    badges.push('<div class="card-quality-badge" style="background: #4a90e2; color: white; padding: 2px 4px; font-size: 8px; line-height: 1;">NO INFO</div>');  
+                } else if (quality.error) {  
+                    badges.push('<div class="card-quality-badge" style="background: #e74c3c; color: white; padding: 2px 4px; font-size: 8px; line-height: 1;">ERROR</div>');  
+                }  
+            }  
+              
+            if (badges.length > 0) {  
+                var container = card.find('.card__view');  
+                if (container.length && !container.find('.card-quality-badges').length) {  
+                    container.append('<div class="card-quality-badges">' + badges.join('') + '</div>');  
+                }  
+            }  
+        },  
+  
+        addBadgesToFullCard: function(quality) {  
+            var container = $('.full-start-new__quality');  
+            if (container.length) {  
+                var badges = [];  
+                  
+                if (quality.resolution) {  
+                    badges.push('<img class="quality-badge" src="' + svgIcons[quality.resolution] + '" onerror="this.style.display=\'none\'">');  
+                }  
+                if (quality.hdr) {  
+                    badges.push('<img class="quality-badge" src="' + svgIcons['HDR'] + '" onerror="this.style.display=\'none\'">');  
+                }  
+                if (quality.dolbyVision) {  
+                    badges.push('<img class="quality-badge" src="' + svgIcons['Dolby Vision'] + '" onerror="this.style.display=\'none\'">');  
+                }  
+                if (quality.audio) {  
+                    badges.push('<img class="quality-badge" src="' + svgIcons[quality.audio] + '" onerror="this.style.display=\'none\'">');  
+                }  
+                if (quality.dub) {  
+                    badges.push('<img class="quality-badge" src="' + svgIcons['DUB'] + '" onerror="this.style.display=\'none\'">');  
+                }  
+                  
+                if (badges.length > 0) {  
+                    container.html('<div class="quality-badges-container">' + badges.join('') + '</div>');  
+                }  
+            }  
+        },  
+  
+        initStyles: function() {  
+            var styleId = 'unified_quality_styles';  
+            if (document.getElementById(styleId)) return;  
+              
+            var style = document.createElement('style');  
+            style.id = styleId;  
+            style.textContent = `  
+                /* Вертикальні постери */  
+                .card:not(.card--wide):not(.card--small):not(.card--more) .card__view {  
+                    padding-bottom: 150% !important;  
+                }  
+                  
+                /* Бейджі якості */  
+                .quality-badges-container { display: flex; gap: 0.3em; margin: 0 0 0.4em 0; min-height: 1.2em; pointer-events: none; }  
+                .quality-badge { height: 1.2em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; }  
+                .card-quality-badges { position: absolute; top: 0.3em; right: 0.3em; display: flex; flex-direction: row; gap: 0.2em; pointer-events: none; z-index: 5; }  
+                .card-quality-badge { height: 0.9em; opacity: 0; transform: translateY(5px); animation: qb_in 0.3s ease forwards; }  
+                @keyframes qb_in { to { opacity: 1; transform: translateY(0); } }  
+                .quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; }  
+                .card-quality-badge img { filter: drop-shadow(0 1px 2px #000); }  
+                @media (max-width: 768px) {  
+                    .quality-badges-container { gap: 0.25em; margin: 0 0 0.35em 0; min-height: 1em; }  
+                    .quality-badge { height: 1em; }  
+                    .card-quality-badges { top: 0.25em; right: 0.25em; gap: 0.18em; }  
+                    .card-quality-badge { height: 0.75em; }  
+                }  
+            `;  
+            document.head.appendChild(style);  
+        }  
+    };  
+  
+    // ========== ОБРОБКА КАРТОК ==========  
+    function processCard(card) {  
+        if (!card || card.hasClass('quality-processed')) return;  
+          
+        var cardData = card.data() || {};  
+        var title = cardData.title || cardData.name || '';  
+        var year = cardData.year || cardData.release_year;  
+          
+        if (title) {  
+            card.addClass('quality-processed');  
+            QualityDetector.fetchQuality(title, year)  
+                .then(function(quality) {  
+                    UI.addBadgesToCard(card, quality);  
+                })  
+                .catch(function(error) {  
+                    Utils.logWithContext('error', 'Failed to process card', error);  
+                });  
+        }  
+    }  
+  
+    function processCards() {  
+        $('.card:not(.quality-processed)').each(function() {  
+            processCard($(this));  
+        });  
+    }  
+  
+    function processFullCard() {  
+        var movie = Lampa.Activity.get().movie;  
+        if (movie) {  
+            QualityDetector.fetchQuality(movie.title || movie.name, movie.year || movie.release_year)  
+                .then(function(quality) {  
+                    UI.addBadgesToFullCard(quality);  
+                });  
+        }  
+    }  
+  
+    // ========== ІНІЦІАЛІЗАЦІЯ ==========  
+    function startPlugin() {  
+        Utils.logWithContext('log', 'Starting unified quality plugin with vertical posters');  
+          
+        UI.initStyles();  
+          
+        // Обробка існуючих карток  
+        setTimeout(processCards, 2000);  
+          
+        // Observer для нових карток  
+        var debouncedProcess = Utils.debounce(processCards, 300);  
+        var observer = new MutationObserver(function(mutations) {  
+            debouncedProcess();  
+        });  
+          
+        observer.observe(document.body, { childList: true, subtree: true });  
+          
+        // Обробка повної картки  
+        Lampa.Listener.follow('full', function(e) {  
+            if (e.type === 'complite') {  
+                setTimeout(processFullCard, 1000);  
+            }  
+        });  
+          
+        Utils.logWithContext('log', 'Unified quality plugin initialized');  
+    }  
+  
+    // Запуск плагіна  
+    startPlugin();  
 })();
