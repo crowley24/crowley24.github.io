@@ -95,40 +95,60 @@
     }  
   }  
   
+  // Спрощена функція обробки з повною діагностикою  
   function processCards() {  
-    console.log('[QualityBadges] Processing cards...');  
-    console.log('[QualityBadges] Total cards found:', $('.card').length);  
-    console.log('[QualityBadges] Unprocessed cards:', $('.card:not(.qb-processed)').length);  
+    console.log('[QualityBadges] === processCards() called ===');  
       
+    // Перевіряємо доступність jQuery та Lampa  
+    console.log('[QualityBadges] jQuery available:', typeof $ !== 'undefined');  
+    console.log('[QualityBadges] Lampa available:', typeof Lampa !== 'undefined');  
+      
+    // Шукаємо всі можливі селектори карток  
+    var selectors = ['.card', '.items-cards .card', '.scroll__content .card', '[class*="card"]'];  
+    var foundCards = 0;  
+      
+    selectors.forEach(function(selector) {  
+      var cards = $(selector);  
+      console.log('[QualityBadges] Selector "' + selector + '" found:', cards.length, 'cards');  
+      foundCards += cards.length;  
+    });  
+      
+    console.log('[QualityBadges] Total cards found:', foundCards);  
+      
+    if (foundCards === 0) {  
+      console.log('[QualityBadges] No cards found! DOM structure might be different.');  
+      return;  
+    }  
+      
+    // Обробляємо картки  
     $('.card:not(.qb-processed)').each(function() {  
       var card = $(this);  
       var movie = card.data('item');  
         
-      console.log('[QualityBadges] Card found:', card.find('.card__title').text());  
-      console.log('[QualityBadges] Card data:', movie ? JSON.stringify(movie) : 'no data');  
+      console.log('[QualityBadges] Processing card - has data:', !!movie);  
+      if (movie) {  
+        console.log('[QualityBadges] Movie data:', movie.title || movie.name || 'No title');  
+      }  
         
       card.addClass('qb-processed');  
         
-      if (movie) {  
-        console.log('[QualityBadges] Processing movie:', movie.title || movie.name);  
-          
-        if (typeof Lampa !== 'undefined' && Lampa.Storage && Lampa.Storage.field('parser_use')) {  
-          console.log('[QualityBadges] Parser is enabled, making request...');  
-          Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(response) {  
-            console.log('[QualityBadges] Parser response:', response ? JSON.stringify(response).substring(0, 200) + '...' : 'no data');  
-            if (response && response.Results) {  
-              var best = getBest(response.Results);  
-              console.log('[QualityBadges] Best quality:', best);  
-              addCardBadges(card, best);  
-            }  
-          });  
-        } else {  
-          console.log('[QualityBadges] Parser is disabled or Lampa not available');  
-        }  
+      if (movie && typeof Lampa !== 'undefined' && Lampa.Storage && Lampa.Storage.field('parser_use')) {  
+        console.log('[QualityBadges] Making parser request for:', movie.title || movie.name);  
+        Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(response) {  
+          console.log('[QualityBadges] Parser response received:', !!response);  
+          if (response && response.Results) {  
+            var best = getBest(response.Results);  
+            console.log('[QualityBadges] Best quality determined:', best);  
+            addCardBadges(card, best);  
+          }  
+        });  
+      } else {  
+        console.log('[QualityBadges] Cannot process - missing movie data or parser disabled');  
       }  
     });  
   }  
   
+  // Обробка повної картки (це працює)  
   Lampa.Listener.follow('full', function(e) {  
     if (e.type !== 'complite') return;  
     var details = $('.full-start-new__details');  
@@ -149,34 +169,22 @@
     }  
   });  
   
-  // Спостерігач за змінами в DOM  
-  var observer = new MutationObserver(function(mutations) {  
-    mutations.forEach(function(mutation) {  
-      if (mutation.addedNodes.length) {  
-        processCards();  
-      }  
-    });  
-  });  
-  
-  // Шукаємо контейнер для спостереження  
-  var targetNode = document.querySelector('.scroll__content') ||   
-                   document.querySelector('.items-cards') ||   
-                   document.querySelector('.content') ||   
-                   document.body;  
+  // Запускаємо обробку з різними затримками  
+  console.log('[QualityBadges] Setting up processing...');  
     
-  console.log('[QualityBadges] Observer attached to:', targetNode.className || 'body');  
-    
-  observer.observe(targetNode, {  
-    childList: true,  
-    subtree: true  
-  });  
-  
-  // Запускаємо обробку  
   setTimeout(function() {  
+    console.log('[QualityBadges] Initial processing after 2 seconds...');  
     processCards();  
   }, 2000);  
-  
-  $(window).on('scroll', function() {  
+    
+  setTimeout(function() {  
+    console.log('[QualityBadges] Second processing after 5 seconds...');  
+    processCards();  
+  }, 5000);  
+    
+  // Обробка при кліку (для тестування)  
+  $(document).on('click', function() {  
+    console.log('[QualityBadges] Document clicked - processing cards...');  
     processCards();  
   });  
   
@@ -197,6 +205,6 @@
   '</style>';  
   $('body').append(style);  
   
-  console.log('[QualityBadges] Plugin initialized');  
+  console.log('[QualityBadges] Plugin initialized with full diagnostics');  
   
 })();
