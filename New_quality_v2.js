@@ -31,7 +31,6 @@
     // *** КОНФІГУРАЦІЯ ТА РЕСУРСИ ДЛЯ FOXSTUDIO'S BADGES (ІКОНКИ) ***
     var FoxstudioConfig = {
         PLUGIN_PATH: 'https://raw.githubusercontent.com/FoxStudio24/lampa/main/Quality/',
-        // FoxStudio's плагін використовує Lampa.Parser, тому API-конфігурація не потрібна
     };
 
     var FoxstudioIcons = {
@@ -94,7 +93,7 @@
     // =======================================================
     var MaxsmModule = (function() {
 
-        // III. API (Оригінальний Maxsm)
+        // III. API 
         var API = {
             activeRequests: 0,
             requestQueue: [],
@@ -168,7 +167,7 @@
             }
         };
 
-        // IV. КАШУВАННЯ (Оригінальний Maxsm)
+        // IV. КАШУВАННЯ
         var Cache = {
             get: function(key) {
                 try {
@@ -217,7 +216,7 @@
             }
         };
 
-        // V. ВИЗНАЧЕННЯ ЯКОСТІ (Оригінальний Maxsm - спрощено)
+        // V. ВИЗНАЧЕННЯ ЯКОСТІ
         var QualityDetector = {
             detectQuality: function(torrentTitle) {
                 if (!torrentTitle) return null;
@@ -243,13 +242,12 @@
              }
         };
 
-        // VI. UI (Оригінальний Maxsm)
+        // VI. UI 
         var UI = {
             initStyles: function() {
                 if (document.getElementById('maxsm_ratings_quality')) return;
                 var styleElement = document.createElement('style');
                 styleElement.id = 'maxsm_ratings_quality';
-                // Оригінальні стилі Maxsm-Ratings для текстового бейджа
                 styleElement.textContent = `
                     .card__view {position: relative !important;}
                     .card__quality_maxsm {
@@ -275,7 +273,6 @@
                         text-shadow: 1px 1px 2px rgba(0,0,0,0.8) !important;
                         transition: transform 0.15s ease, box-shadow 0.15s ease;
                     }
-                    /* ... (частина стилів MaxsmConfig) */
                     .card__quality_maxsm div[data-quality*="4K"][data-quality*="DV"] { border-color: #8A2BE2 !important; background: linear-gradient(135deg, #8A2BE2 0%, #4B0082 50%, #6A0DAD 100%) !important; }
                     .card__quality_maxsm div[data-quality*="4K"][data-quality*="HDR"] { border-color: #FF8C00 !important; background: linear-gradient(135deg, #FFA500 0%, #FF8C00 50%, #FF6347 100%) !important; }
                     .card__quality_maxsm div[data-quality*="4K"] { border-color: #8B0000 !important; background: linear-gradient(135deg, #8B0000 0%, #660000 50%, #4D0000 100%) !important; }
@@ -291,7 +288,6 @@
                 var cardView = card.querySelector('.card__view');
                 if (!cardView) return;
 
-                // Видаляємо лише бейджі Maxsm, щоб не конфліктувати з бейджами FoxStudio
                 var existing = cardView.getElementsByClassName('card__quality_maxsm');
                 while(existing.length > 0) {
                     existing[0].parentNode.removeChild(existing[0]);
@@ -299,7 +295,7 @@
 
                 if (quality && quality !== 'NO') {
                     var qualityDiv = document.createElement('div');
-                    qualityDiv.className = 'card__quality_maxsm'; // Унікальний клас
+                    qualityDiv.className = 'card__quality_maxsm';
                     var qualityInner = document.createElement('div');
                     qualityInner.textContent = Utils.escapeHtml(quality);
                     qualityInner.setAttribute('data-quality', quality);
@@ -308,9 +304,8 @@
             }
         };
         
-        // VII. ОСНОВНІ ФУНКЦІЇ (Оригінальний Maxsm)
+        // VII. ОСНОВНІ ФУНКЦІЇ 
         function getBestReleaseFromJacred(normalizedCard, cardId, callback) {
-            // ... (оригінальна логіка JacRed з Maxsm)
             if (!MaxsmConfig.JACRED_URL) {
                 callback(null); return;
             }
@@ -347,7 +342,6 @@
                             return;
                         }
 
-                        // Логіка оцінки та вибір найкращого
                         var qualities = torrents.map(t => QualityDetector.detectQuality(t.title));
                         var bestQuality = QualityDetector.getBestQuality(qualities);
                         
@@ -394,7 +388,6 @@
                 var batch = cards.slice(i, i + MaxsmConfig.BATCH_SIZE);
                   
                 batch.forEach(function(card) {
-                    // Використовуємо окремий атрибут, щоб не конфліктувати з FoxStudio
                     if (card.hasAttribute('data-maxsm-processed')) return;
                     card.setAttribute('data-maxsm-processed', 'true');
 
@@ -428,47 +421,17 @@
                 });
             }
         }
-
-        // VIII. OBSERVER (Оригінальний Maxsm)
-        var debouncedUpdateCards = Utils.debounce(function(cards) {
-            updateCards(cards);
-        }, 300);
-
-        var observer = new MutationObserver(function (mutations) {
-            var newCards = [];
-            for (var m = 0; m < mutations.length; m++) {
-                var mutation = mutations[m];
-                if (mutation.addedNodes) {
-                    for (var j = 0; j < mutation.addedNodes.length; j++) {
-                        var node = mutation.addedNodes[j];
-                        if (node.nodeType !== 1) continue;
-                        if (node.classList && node.classList.contains('card')) {
-                            newCards.push(node);
-                        }
-                        var nestedCards = node.querySelectorAll('.card');
-                        for (var k = 0; k < nestedCards.length; k++) {
-                            newCards.push(nestedCards[k]);
-                        }
-                    }
-                }
-            }
-            if (newCards.length) debouncedUpdateCards(newCards);
-        });
-
-        // Ініціалізація модуля
+        
+        // Функція для зовнішнього виклику з Observer
         return {
             start: function() {
                 if (localStorage.getItem('maxsm_ratings_quality') !== 'true') return;
-                
                 UI.initStyles();
-
-                if (localStorage.getItem('maxsm_ratings_quality_inlist') === 'true') {
-                    observer.observe(document.body, { childList: true, subtree: true });
-                    var existingCards = document.querySelectorAll('.card');
-                    if (existingCards.length) {
-                        updateCards(existingCards);
-                    }
-                }
+            },
+            update: function(cards) {
+                 if (localStorage.getItem('maxsm_ratings_quality_inlist') === 'true') {
+                    updateCards(cards);
+                 }
             }
         };
     })();
@@ -478,7 +441,7 @@
     // =======================================================
     var FoxstudioModule = (function() {
 
-        // Логіка визначення найкращої деталізованої якості (Оригінальний FoxStudio)
+        // Логіка визначення найкращої деталізованої якості
         function getBest(results) {
             var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false };
             var resOrder = ['HD', 'FULL HD', '2K', '4K'];
@@ -532,18 +495,18 @@
             return best;
         }
 
-        // Функції UI (Оригінальний FoxStudio)
+        // Функції UI 
         function createBadgeImg(type, isCard, index) {
             var iconPath = FoxstudioIcons[type];
             if (!iconPath) return '';
-            var className = isCard ? 'card-quality-badge-fs' : 'quality-badge-fs'; // Унікальні класи
+            var className = isCard ? 'card-quality-badge-fs' : 'quality-badge-fs';
             var delay = (index * 0.08) + 's';
             return '<div class="' + className + '" style="animation-delay: ' + delay + '"><img src="' + iconPath + '" draggable="false" oncontextmenu="return false;"></div>';
         }
 
         function addCardBadges(card, best) {
-            // Використовуємо унікальний клас для пошуку
-            if (card.find('.card-quality-badges-fs').length) return; 
+            var $card = $(card);
+            if ($card.find('.card-quality-badges-fs').length) return; 
 
             var badges = [];
             if (best.dolbyVision) badges.push(createBadgeImg('Dolby Vision', true, badges.length));
@@ -553,15 +516,14 @@
             if (best.audio) badges.push(createBadgeImg(best.audio, true, badges.length));
             if (best.dub) badges.push(createBadgeImg('DUB', true, badges.length));
 
-            if (badges.length) card.find('.card__view').append('<div class="card-quality-badges-fs">' + badges.join('') + '</div>');
+            if (badges.length) $card.find('.card__view').append('<div class="card-quality-badges-fs">' + badges.join('') + '</div>');
         }
 
-        function processCards() {
-            // Використовуємо унікальний клас qb-processed-fs для уникнення конфліктів
-            $('.card:not(.qb-processed-fs)').addClass('qb-processed-fs').each(function() {
+        function processCards(cards) {
+            $(cards).filter(':not(.qb-processed-fs)').addClass('qb-processed-fs').each(function() {
                 var card = $(this);
                 var movie = card.data('item');
-                // Використовуємо оригінальний тригер FoxStudio Lampa.Parser
+                // Використовуємо Lampa.Parser
                 if (movie && Lampa.Storage.field('parser_use')) {
                     Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(response) {
                         if (response && response.Results) addCardBadges(card, getBest(response.Results));
@@ -570,12 +532,10 @@
             });
         }
         
-        // Стилі FoxStudio's
         function initStyles() {
             if (document.getElementById('foxstudio_quality_badges_style')) return;
             var styleElement = document.createElement('style');
             styleElement.id = 'foxstudio_quality_badges_style';
-            // Оригінальні стилі FoxStudio, класи змінено на унікальні
             styleElement.textContent = `
                 .quality-badges-container-fs { display: flex; gap: 0.3em; margin: 0 0 0.4em 0; min-height: 1.2em; pointer-events: none; }
                 .quality-badge-fs { height: 1.2em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; }
@@ -598,14 +558,12 @@
         return {
             start: function() {
                 initStyles();
-                console.log('[FoxStudio Badges] Запущен');
 
-                // Обробка сторінки деталізації
+                // Обробка сторінки деталізації (full)
                 Lampa.Listener.follow('full', function(e) {
                     if (e.type !== 'complite') return;
                     var details = $('.full-start-new__details');
                     if (details.length) {
-                        // Унікальний контейнер
                         if (!$('.quality-badges-container-fs').length) details.after('<div class="quality-badges-container-fs"></div>');
                         
                         Lampa.Parser.get({ search: e.data.movie.title || e.data.movie.name, movie: e.data.movie, page: 1 }, function(response) {
@@ -624,15 +582,15 @@
                         });
                     }
                 });
-
-                // Обробка карток у списках (використовуємо інтервал, як в оригіналі)
-                setInterval(processCards, 3000);
+            },
+            update: function(cards) {
+                 processCards(cards);
             }
         };
     })();
 
     // =======================================================
-    // IX. ГЛОБАЛЬНА ІНІЦІАЛІЗАЦІЯ
+    // VIII. ГЛОБАЛЬНА ІНІЦІАЛІЗАЦІЯ ТА OBSERVER (СПІЛЬНІ)
     // =======================================================
     
     // Встановлення налаштувань за замовчуванням (спільні)
@@ -648,15 +606,55 @@
         }
     }
 
+    // Спільний Observer для обох модулів
+    var debouncedUpdateCards = Utils.debounce(function(cards) {
+        MaxsmModule.update(cards);
+        FoxstudioModule.update(cards);
+    }, 300);
+
+    var observer = new MutationObserver(function (mutations) {
+        var newCards = [];
+        for (var m = 0; m < mutations.length; m++) {
+            var mutation = mutations[m];
+            if (mutation.addedNodes) {
+                for (var j = 0; j < mutation.addedNodes.length; j++) {
+                    var node = mutation.addedNodes[j];
+                    if (node.nodeType !== 1) continue;
+                    if (node.classList && node.classList.contains('card')) {
+                        newCards.push(node);
+                    }
+                    var nestedCards = node.querySelectorAll('.card');
+                    for (var k = 0; k < nestedCards.length; k++) {
+                        newCards.push(nestedCards[k]);
+                    }
+                }
+            }
+        }
+        if (newCards.length) debouncedUpdateCards(newCards);
+    });
+
     // Запуск обох модулів
     if (!window.maxsmFoxstudioMergedPlugin) {
         window.maxsmFoxstudioMergedPlugin = true;
         
         setDefaults();
         
+        // 1. Ініціалізація стилів
         MaxsmModule.start();
         FoxstudioModule.start();
+
+        // 2. Запуск Observer, якщо увімкнено відображення у списках
+        if (localStorage.getItem('maxsm_ratings_quality_inlist') === 'true') {
+             observer.observe(document.body, { childList: true, subtree: true });
+             
+             // 3. Обробка вже існуючих карток при першому завантаженні
+             var existingCards = document.querySelectorAll('.card');
+             if (existingCards.length) {
+                 console.log("MERGED PLUGIN: Processing " + existingCards.length + " initial cards.");
+                 debouncedUpdateCards(existingCards);
+             }
+        }
         
-        console.log("MERGED PLUGIN: Maxsm-Ratings (Text) and FoxStudio-Badges (Icons) are running independently.");
+        console.log("MERGED PLUGIN: Maxsm-Ratings (Text) and FoxStudio-Badges (Icons) are running independently using a shared Observer.");
     }
 })();
