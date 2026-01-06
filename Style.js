@@ -313,3 +313,41 @@
         if(!element.isConnected){ clearTimeout(card.__newInterfaceLabelTimer); card.__newInterfaceLabelTimer=setTimeout(()=>updateCardTitle(card),50); return; }
         clearTimeout(card.__newInterfaceLabelTimer);
         const text=(card.data&&(card.data.title||card.data.name||card.data.original_title||card.data.original_name))?(card.data.title||card.data.name||card.data.original_title||card.data.original_name).trim():'';
+        const seek = element.querySelector('.new-interface-card-title');
+
+        if (!text) {
+            if (seek && seek.parentNode) seek.parentNode.removeChild(seek);
+            card.__newInterfaceLabel = null;
+            return;
+        }
+
+        let label = seek || card.__newInterfaceLabel;
+
+        if (!label) {
+            label = document.createElement('div');
+            label.className = 'new-interface-card-title';
+        }
+
+        label.textContent = text; // Тільки текст для картки
+
+        if (!label.parentNode || label.parentNode !== element) {
+            if (label.parentNode) label.parentNode.removeChild(label);
+            element.appendChild(label);
+        }
+
+        card.__newInterfaceLabel = label;
+    }
+
+    function wrap(target, method, handler) {
+        if (!target) return;
+        const original = typeof target[method] === 'function' ? target[method] : null;
+        target[method] = function (...args) {
+            return handler.call(this, original, args);
+        };
+    }
+
+    // ========== ІНІЦІАЛІЗАЦІЯ ПЛАГІНУ ==========
+    startNewInterface();
+    startLogosPlugin();
+
+})();
