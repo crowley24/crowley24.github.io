@@ -426,25 +426,29 @@
 						height: 27.5em;  
 					}  
 					.new-interface-info__body {  
-                        position: absolute;  
-                        z-index: 9999999;  
-                        width: 90%; /* Збільшено ширину */  
-                        padding-top: 1.1em;  
-                        display: flex;  
-                        justify-content: space-between; /* Додаємо розтягування */  
-                        gap: 3em; /* Збільшено відступ */    
-					}  
-                    .new-interface-info__left {  
-                        flex: 0.8; /* Зменшено пропорцію лівої частини */  
-                    }  
+    position: absolute;  
+    z-index: 9999999;  
+    width: 95%; /* Збільшено до 95% */  
+    right: 0; /* Додано вирівнювання по правому краю */  
+    padding-top: 1.1em;  
+    display: flex;  
+    justify-content: flex-end; /* Вирівнювання по правому краю */  
+    gap: 2em;  
+}  
   
-                    .new-interface-info__right {  
-                        flex: 1.2; /* Збільшено пропорцію правої частини */  
-                        padding-left: 2em;  
-                        display: flex;  
-                        flex-direction: column;  
-                        align-items: flex-start; /* Вирівнювання по лівому краю правої колонки */  
-                    }
+.new-interface-info__left {  
+    flex: 0.6; /* Зменшено пропорцію лівої частини */  
+    max-width: 30%; /* Обмеження максимальної ширини */  
+}  
+  
+.new-interface-info__right {  
+    flex: 1.4; /* Збільшено пропорцію правої частини */  
+    padding-left: 2em;  
+    display: flex;  
+    flex-direction: column;  
+    align-items: flex-start;  
+    max-width: 65%; /* Обмеження максимальної ширини */  
+}
 					.new-interface-info__head {  
 						color: rgba(255, 255, 255, 0.6);  
 						font-size: 1.3em;  
