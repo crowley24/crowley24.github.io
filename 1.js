@@ -3,46 +3,179 @@
 (function () {  
   'use strict';  
   
-  console.log('[QualityBadges] Starting fixed version');  
+  var pluginPath = 'https://raw.githubusercontent.com/FoxStudio24/lampa/main/Quality/';  
   
-  // Перевірка залежностей  
-  if (typeof $ === 'undefined') {  
-    console.error('[QualityBadges] jQuery not found');  
-    return;  
+  var svgIcons = {  
+    '4K': pluginPath + 'Quality_ico/4K.svg',  
+    '2K': pluginPath + 'Quality_ico/2K.svg',  
+    'FULL HD': pluginPath + 'Quality_ico/FULL HD.svg',  
+    'HD': pluginPath + 'Quality_ico/HD.svg',  
+    'HDR': pluginPath + 'Quality_ico/HDR.svg',  
+    'Dolby Vision': pluginPath + 'Quality_ico/Dolby Vision.svg',  
+    '7.1': pluginPath + 'Quality_ico/7.1.svg',  
+    '5.1': pluginPath + 'Quality_ico/5.1.svg',  
+    '4.0': pluginPath + 'Quality_ico/4.0.svg',  
+    '2.0': pluginPath + 'Quality_ico/2.0.svg',  
+    'DUB': pluginPath + 'Quality_ico/DUB.svg'  
+  };  
+  
+  function getBest(results) {  
+    var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false };  
+    var resOrder = ['HD', 'FULL HD', '2K', '4K'];  
+    var audioOrder = ['2.0', '4.0', '5.1', '7.1'];  
+      
+    var limit = Math.min(results.length, 20);  
+    for (var i = 0; i < limit; i++) {  
+      var item = results[i];  
+      var title = (item.Title || '').toLowerCase();  
+  
+      var foundRes = null;  
+      if (title.indexOf('4k') >= 0 || title.indexOf('2160') >= 0 || title.indexOf('uhd') >= 0) foundRes = '4K';  
+      else if (title.indexOf('2k') >= 0 || title.indexOf('1440') >= 0) foundRes = '2K';  
+      else if (title.indexOf('1080') >= 0 || title.indexOf('fhd') >= 0 || title.indexOf('full hd') >= 0) foundRes = 'FULL HD';  
+      else if (title.indexOf('720') >= 0 || title.indexOf('hd') >= 0) foundRes = 'HD';  
+  
+      if (foundRes && (!best.resolution || resOrder.indexOf(foundRes) > resOrder.indexOf(best.resolution))) {  
+          best.resolution = foundRes;  
+      }  
+  
+      if (item.ffprobe && Array.isArray(item.ffprobe)) {  
+        item.ffprobe.forEach(function(stream) {  
+          if (stream.codec_type === 'video') {  
+            var h = parseInt(stream.height || 0);  
+            var w = parseInt(stream.width || 0);  
+            var res = null;  
+            if (h >= 2160 || w >= 3840) res = '4K';  
+            else if (h >= 1440 || w >= 2560) res = '2K';  
+            else if (h >= 1080 || w >= 1920) res = 'FULL HD';  
+            else if (h >= 720 || w >= 1280) res = 'HD';  
+              
+            if (res && (!best.resolution || resOrder.indexOf(res) > resOrder.indexOf(best.resolution))) {  
+              best.resolution = res;  
+            }  
+            if (stream.side_data_list && JSON.stringify(stream.side_data_list).indexOf('Vision') >= 0) best.dolbyVision = true;  
+            if (stream.color_transfer === 'smpte2084' || stream.color_transfer === 'arib-std-b67') best.hdr = true;  
+          }  
+          if (stream.codec_type === 'audio' && stream.channels) {  
+            var ch = parseInt(stream.channels);  
+            var aud = (ch >= 8) ? '7.1' : (ch >= 6) ? '5.1' : (ch >= 4) ? '4.0' : '2.0';  
+            if (!best.audio || audioOrder.indexOf(aud) > audioOrder.indexOf(best.audio)) best.audio = aud;  
+          }  
+        });  
+      }  
+        
+      if (title.indexOf('vision') >= 0 || title.indexOf('dovi') >= 0) best.dolbyVision = true;  
+      if (title.indexOf('hdr') >= 0) best.hdr = true;  
+      if (title.indexOf('dub') >= 0 || title.indexOf('дуб') >= 0) best.dub = true;  
+    }  
+      
+    return best;  
   }  
   
-  // Функція додавання тестових бейджів з правильним позиціонуванням  
-  function addTestBadges() {  
-    console.log('[QualityBadges] Adding VISIBLE test badges to cards');  
-      
-    $('.card').each(function(index) {  
+  function createBadgeImg(type, isCard, index) {  
+    return '<img class="' + (isCard ? 'card-quality-badge' : 'quality-badge') + '" src="' + svgIcons[type] + '" alt="' + type + '" style="animation-delay: ' + (index * 0.1) + 's">';  
+  }  
+  
+  function addCardBadges(card, best) {  
+    var badges = [];  
+    if (best.resolution) badges.push(createBadgeImg(best.resolution, true, badges.length));  
+    if (best.hdr) badges.push(createBadgeImg('HDR', true, badges.length));  
+    if (best.audio) badges.push(createBadgeImg(best.audio, true, badges.length));  
+    if (best.dub) badges.push(createBadgeImg('DUB', true, badges.length));  
+    if (best.dolbyVision) badges.push(createBadgeImg('Dolby Vision', true, badges.length));  
+    if (badges.length) card.find('.card__view').append('<div class="card-quality-badges">' + badges.join('') + '</div>');  
+  }  
+  
+  function processCards() {  
+    $('.card').each(function() {  
       var card = $(this);  
-        
-      // Перевіряємо чи вже є бейдж  
-      if (card.find('.test-quality-badge').length === 0) {  
-        // Шукаємо правильний контейнер для бейджа  
-        var cardView = card.find('.card__view') || card.find('.card__poster') || card;  
+      if (!card.hasClass('quality-processed')) {  
+        card.addClass('quality-processed');  
+        var movie = card.data('item') || card.data('movie') || card.data();  
           
-        var badge = '<div class="test-quality-badge" style="position: absolute; top: 5px; right: 5px; background: #ff0000 !important; color: white !important; padding: 3px 6px !important; font-size: 12px !important; z-index: 9999 !important; border-radius: 3px !important; font-weight: bold !important; pointer-events: none !important;">TEST</div>';  
-          
-        cardView.append(badge);  
-        console.log('[QualityBadges] Added VISIBLE badge to card', index);  
+        if (movie && (movie.title || movie.name)) {  
+          if (Lampa.Storage.field('parser_use')) {  
+            Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(response) {  
+              if (response && response.Results) {  
+                var best = getBest(response.Results);  
+                if (best.resolution || best.hdr || best.audio || best.dub || best.dolbyVision) {  
+                  addCardBadges(card, best);  
+                } else {  
+                  // Якщо якість не визначено, показуємо тестовий бейдж  
+                  var testBadge = '<div class="card-quality-badges"><div class="test-quality-badge" style="position: absolute; top: 5px; right: 5px; background: #ff9800 !important; color: white !important; padding: 2px 6px !important; font-size: 10px !important; z-index: 9999 !important; border-radius: 3px !important; font-weight: bold !important;">NO INFO</div></div>';  
+                  card.find('.card__view').append(testBadge);  
+                }  
+              }  
+            });  
+          } else {  
+            // Парсер не активований  
+            var testBadge = '<div class="card-quality-badges"><div class="test-quality-badge" style="position: absolute; top: 5px; right: 5px; background: #2196f3 !important; color: white !important; padding: 2px 6px !important; font-size: 10px !important; z-index: 9999 !important; border-radius: 3px !important; font-weight: bold !important;">PARSER OFF</div></div>';  
+            card.find('.card__view').append(testBadge);  
+          }  
+        }  
       }  
     });  
   }  
   
-  // Запускаємо кілька разів з різними затримками  
-  setTimeout(addTestBadges, 1000);  
-  setTimeout(addTestBadges, 3000);  
-  setTimeout(addTestBadges, 5000);  
-  
-  // Додаємо кнопку для ручного тестування  
-  $('body').append('<button id="test-badge-btn" style="position: fixed; top: 10px; right: 10px; z-index: 10000; background: #ff0000; color: white; padding: 10px; font-size: 14px; font-weight: bold;">ADD BADGES</button>');  
-  $('#test-badge-btn').on('click', function() {  
-    console.log('[QualityBadges] Manual test triggered');  
-    addTestBadges();  
+  // Обробка повної картки  
+  Lampa.Listener.follow('full', function(e) {  
+    if (e.type !== 'complite') return;  
+    var details = $('.full-start-new__details');  
+    if (details.length) {  
+      if (!$('.quality-badges-container').length) details.after('<div class="quality-badges-container"></div>');  
+      Lampa.Parser.get({ search: e.data.movie.title || e.data.movie.name, movie: e.data.movie, page: 1 }, function(response) {  
+        if (response && response.Results) {  
+          var best = getBest(response.Results);  
+          var badges = [];  
+          if (best.resolution) badges.push(createBadgeImg(best.resolution, false, badges.length));  
+          if (best.hdr) badges.push(createBadgeImg('HDR', false, badges.length));  
+          if (best.audio) badges.push(createBadgeImg(best.audio, false, badges.length));  
+          if (best.dub) badges.push(createBadgeImg('DUB', false, badges.length));  
+          if (best.dolbyVision) badges.push(createBadgeImg('Dolby Vision', false, badges.length));  
+          $('.quality-badges-container').html(badges.join(''));  
+        }  
+      });  
+    }  
   });  
   
-  console.log('[QualityBadges] Fixed plugin initialized');  
+  // Спостерігач за змінами  
+  var observer = new MutationObserver(function(mutations) {  
+    mutations.forEach(function(mutation) {  
+      if (mutation.addedNodes.length) {  
+        setTimeout(processCards, 500);  
+      }  
+    });  
+  });  
+  
+  observer.observe(document.body, {  
+    childList: true,  
+    subtree: true  
+  });  
+  
+  // Запускаємо обробку  
+  setTimeout(processCards, 2000);  
+    
+  $(window).on('scroll', function() {  
+    setTimeout(processCards, 300);  
+  });  
+  
+  var style = '<style>' +  
+    '.quality-badges-container { display: flex; gap: 0.3em; margin: 0 0 0.4em 0; min-height: 1.2em; pointer-events: none; }' +  
+    '.quality-badge { height: 1.2em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; }' +  
+    '.card-quality-badges { position: absolute; top: 0.3em; right: 0.3em; display: flex; flex-direction: row; gap: 0.2em; pointer-events: none; z-index: 5; }' +  
+    '.card-quality-badge { height: 0.9em; opacity: 0; transform: translateY(5px); animation: qb_in 0.3s ease forwards; }' +  
+    '@keyframes qb_in { to { opacity: 1; transform: translateY(0); } }' +  
+    '.quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; }' +  
+    '.card-quality-badge img { filter: drop-shadow(0 1px 2px #000); }' +  
+    '@media (max-width: 768px) {' +  
+      '.quality-badges-container { gap: 0.25em; margin: 0 0 0.35em 0; min-height: 1em; }' +  
+      '.quality-badge { height: 1em; }' +  
+      '.card-quality-badges { top: 0.25em; right: 0.25em; gap: 0.18em; }' +  
+      '.card-quality-badge { height: 0.75em; }' +  
+    '}' +  
+  '</style>';  
+  $('body').append(style);  
+  
+  console.log('[QualityBadges] Full quality plugin loaded');  
   
 })();
