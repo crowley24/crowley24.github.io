@@ -471,6 +471,13 @@
 						margin-left: -0.03em;  
 						line-height: 1.3;  
 					}  
+					.new-interface-info__title img {  
+    min-width: 12em !important;  
+    min-height: 6em !important;  
+    width: 14em !important;  
+    height: auto !important;  
+    object-fit: contain !important;  
+}
 					.new-interface-info__details {  
                         margin-top: 1.5em;  
                         margin-bottom: 0;  
@@ -624,6 +631,13 @@
 						margin-left: -0.03em;  
 						line-height: 1.3;  
 					}  
+					.new-interface-info__title img {  
+    min-width: 12em !important;  
+    min-height: 6em !important;  
+    width: 14em !important;  
+    height: auto !important;  
+    object-fit: contain !important;  
+}
 					.new-interface-info__details {  
 						margin-top: 1.2em;  
 						margin-bottom: 1.6em;  
@@ -848,7 +862,7 @@
 		var FADE_OUT_TEXT = 300;  
 		var MORPH_HEIGHT = 400;  
 		var FADE_IN_IMG = 400;  
-		var TARGET_WIDTH = "10em";  
+		var TARGET_WIDTH = "14em";  
 		var PADDING_TOP_EM = 0;  
 		var PADDING_BOTTOM_EM = 0.2;  
   
@@ -892,36 +906,25 @@
 		}  
   
 		function applyFinalStyles(img, text_height) {  
-			img.style.marginTop = "0";  
-			img.style.marginLeft = "0";  
-			img.style.paddingTop = PADDING_TOP_EM + "em";  
-			img.style.paddingBottom = PADDING_BOTTOM_EM + "em";  
+    img.style.marginTop = "0";  
+    img.style.marginLeft = "0";  
+    img.style.paddingTop = PADDING_TOP_EM + "em";  
+    img.style.paddingBottom = PADDING_BOTTOM_EM + "em";  
+    img.style.imageRendering = "-webkit-optimize-contrast";  
   
-			img.style.imageRendering = "-webkit-optimize-contrast";  
+    // Завжди використовувати фіксовану ширину для консистентності  
+    img.style.width = "14em"; // Фіксована ширина  
+    img.style.height = "auto";  
+    img.style.maxWidth = "100%";  
+    img.style.maxHeight = "none";  
+    img.style.minHeight = "8em"; // Мінімальна висота для маленьких логотипів  
   
-			if (text_height) {  
-				img.style.height = text_height + "px";  
-				img.style.width = "auto";  
-				img.style.maxWidth = "100%";  
-				img.style.maxHeight = "none";  
-			} else if (window.innerWidth < 768) {  
-				img.style.width = "100%";  
-				img.style.height = "auto";  
-				img.style.maxWidth = "100%";  
-				img.style.maxHeight = "none";  
-			} else {  
-				img.style.width = TARGET_WIDTH;  
-				img.style.height = "auto";  
-				img.style.maxHeight = "none";  
-				img.style.maxWidth = "100%";  
-			}  
-  
-			img.style.boxSizing = "border-box";  
-			img.style.display = "block";  
-			img.style.objectFit = "contain";  
-			img.style.objectPosition = "left bottom";  
-			img.style.transition = "none";  
-		}  
+    img.style.boxSizing = "border-box";  
+    img.style.display = "block";  
+    img.style.objectFit = "contain";  
+    img.style.objectPosition = "left bottom";  
+    img.style.transition = "none";  
+}
   
 		function moveHeadToDetails(animate) {  
 			if (!head_elem.length || !details_elem.length) return;  
