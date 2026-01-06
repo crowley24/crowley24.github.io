@@ -478,22 +478,20 @@ function addStyles() {
         position: relative;  
         padding: 1.5em;  
         height: 24em;  
-        margin-top: 2em; /* Опускаємо весь блок вниз */  
+        margin-top: 2em;  
     }  
   
+    /* Прибираємо градієнтний фон */  
     .new-interface-info__body {  
         width: 80%;  
         padding-top: 1.1em;  
-        /* Додаємо градієнтний фон для кращої читабельності */  
-        background: linear-gradient(135deg,   
-            rgba(0, 0, 0, 0.85) 0%,   
-            rgba(0, 0, 0, 0.75) 30%,  
-            rgba(0, 0, 0, 0.6) 60%,  
-            rgba(0, 0, 0, 0.4) 100%);  
-        border-radius: 1.5em;  
-        padding: 2em;  
-        backdrop-filter: blur(10px);  
-        transition: all 0.3s ease;  
+    }  
+  
+    /* Затемнюємо саме фонове зображення */  
+    .new-interface .full-start__background {  
+        height: 108%;  
+        top: -6em;  
+        filter: brightness(0.4) blur(1px);  
     }  
   
     .new-interface-info__head {  
@@ -520,108 +518,36 @@ function addStyles() {
         -webkit-line-clamp: 1;  
         line-clamp: 1;  
         -webkit-box-orient: vertical;  
-        margin-left: -0.03em;  
-        line-height: 1.3;  
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.9);  
-    }  
-  
-    .new-interface-info__title img {  
-        max-height: 125px;  
-        margin-top: 5px;  
-        filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.8));  
-    }  
-  
-    .new-interface-info__details {  
-        margin-bottom: 1.6em;  
-        display: flex;  
-        align-items: center;  
-        flex-wrap: wrap;  
-        min-height: 1.9em;  
-        font-size: 1.1em;  
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.8);  
-    }  
-  
-    .new-interface-info__split {  
-        margin: 0 1em;  
-        font-size: 0.7em;  
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.8);  
     }  
   
     .new-interface-info__description {  
-        font-size: 1.2em;  
+        font-size: 1.4em;  
         font-weight: 300;  
-        line-height: 1.5;  
-        overflow: hidden;  
-        -o-text-overflow: '.';  
-        text-overflow: '.';  
-        display: -webkit-box;  
-        -webkit-line-clamp: 4;  
-        line-clamp: 4;  
-        -webkit-box-orient: vertical;  
-        width: 70%;  
-        text-shadow: 1px 1px 2px rgba(0,0,0,0.8);  
+        line-height: 1.4;  
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.6);  
         color: rgba(255,255,255,0.95);  
     }  
   
+    .new-interface-info__details {  
+        margin-top: 1em;  
+        font-size: 1.2em;  
+        text-shadow: 1px 1px 2px rgba(0,0,0,0.6);  
+        color: rgba(255,255,255,0.9);  
+    }  
+  
     /* Опускаємо рядки з фільмами */  
-    .new-interface .items-line {  
-        margin-top: 1em !important;  
+    .items-line {  
+        margin-top: 1em;  
     }  
   
-    .new-interface .items-line:first-child {  
-        margin-top: 2em !important;  
-    }  
-  
-    .new-interface .card-more__box {  
-        padding-bottom: 95%;  
-    }  
-  
-    .new-interface .full-start__background {  
-        height: 108%;  
-        top: -6em;  
-    }  
-  
-    .new-interface .full-start__rate {  
-        font-size: 1.3em;  
-        margin-right: 0;  
-    }  
-  
-    .new-interface .card__promo {  
-        display: none;  
-    }  
-  
-    .new-interface .card.card--wide + .card-more .card-more__box {  
-        padding-bottom: 95%;  
-    }  
-  
-    .new-interface .card.card--wide .card-watched {  
-        display: none !important;  
-    }  
-  
-    .new-interface-card-title {  
-        margin-top: 0.6em;  
-        font-size: 1.05em;  
-        font-weight: 500;  
-        color: #fff;  
-        display: block;  
-        text-align: left;  
-        max-width: 100%;  
-        overflow: hidden;  
-        text-overflow: ellipsis;  
-        white-space: nowrap;  
-        pointer-events: none;  
-    }  
-  
-    body.light--version .new-interface-card-title {  
-        color: #111;  
+    .items-line__title {  
+        margin-top: 2em;  
     }  
   
     body.light--version .new-interface-info__body {  
         width: 69%;  
         padding-top: 1.5em;  
-        background: linear-gradient(135deg,   
-            rgba(255, 255, 255, 0.95) 0%,   
-            rgba(255, 255, 255, 0.9) 100%);  
-        color: #000;  
     }  
   
     body.light--version .new-interface-info__head,  
@@ -647,7 +573,6 @@ function addStyles() {
   
     $('body').append(Lampa.Template.get('new_interface_logo_styles', {}, true));  
 }
-
     // ========== КЛАС ДЛЯ ІНФОРМАЦІЇ З ПІДТРИМКОЮ ЛОГОТИПІВ ==========
 
     class InterfaceInfo {
