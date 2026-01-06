@@ -1,6 +1,10 @@
 (function () {
   'use strict';
 
+  // =======================================================
+  // CONFIG
+  // =======================================================
+
   var pluginPath = 'https://raw.githubusercontent.com/FoxStudio24/lampa/main/Quality/';
 
   var svgIcons = {
@@ -16,221 +20,177 @@
     '2.0': pluginPath + 'Quality_ico/2.0.svg',
     'DUB': pluginPath + 'Quality_ico/DUB.svg'
   };
-  
+
   // =======================================================
-  // ЛОГІКА ВИЗНАЧЕННЯ ЯКОСТІ
+  // QUALITY DETECTION
   // =======================================================
 
   function getBest(results) {
     var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false };
     var resOrder = ['HD', 'FULL HD', '2K', '4K'];
     var audioOrder = ['2.0', '4.0', '5.1', '7.1'];
-    
-    var limit = Math.min(results.length, 20);
-    for (var i = 0; i < limit; i++) {
+
+    for (var i = 0; i < Math.min(results.length, 20); i++) {
       var item = results[i];
       var title = (item.Title || '').toLowerCase();
 
       var foundRes = null;
-      if (title.indexOf('4k') >= 0 || title.indexOf('2160') >= 0 || title.indexOf('uhd') >= 0) foundRes = '4K';
-      else if (title.indexOf('2k') >= 0 || title.indexOf('1440') >= 0) foundRes = '2K';
-      else if (title.indexOf('1080') >= 0 || title.indexOf('fhd') >= 0 || title.indexOf('full hd') >= 0) foundRes = 'FULL HD';
-      else if (title.indexOf('720') >= 0 || title.indexOf('hd') >= 0) foundRes = 'HD';
+      if (title.includes('2160') || title.includes('4k') || title.includes('uhd')) foundRes = '4K';
+      else if (title.includes('1440') || title.includes('2k')) foundRes = '2K';
+      else if (title.includes('1080') || title.includes('fhd') || title.includes('full hd')) foundRes = 'FULL HD';
+      else if (title.includes('720') || title.includes('hd')) foundRes = 'HD';
 
       if (foundRes && (!best.resolution || resOrder.indexOf(foundRes) > resOrder.indexOf(best.resolution))) {
-          best.resolution = foundRes;
+        best.resolution = foundRes;
       }
 
       if (item.ffprobe && Array.isArray(item.ffprobe)) {
-        item.ffprobe.forEach(function(stream) {
-          if (stream.codec_type === 'video') {
-            var h = parseInt(stream.height || 0);
-            var w = parseInt(stream.width || 0);
-            var res = null;
-            if (h >= 2160 || w >= 3840) res = '4K';
-            else if (h >= 1440 || w >= 2560) res = '2K';
-            else if (h >= 1080 || w >= 1920) res = 'FULL HD';
-            else if (h >= 720 || w >= 1280) res = 'HD';
-            
-            if (res && (!best.resolution || resOrder.indexOf(res) > resOrder.indexOf(best.resolution))) {
-              best.resolution = res;
-            }
-            if (stream.side_data_list && JSON.stringify(stream.side_data_list).indexOf('Vision') >= 0) best.dolbyVision = true;
-            if (stream.color_transfer === 'smpte2084' || stream.color_transfer === 'arib-std-b67') best.hdr = true;
+        item.ffprobe.forEach(function (s) {
+          if (s.codec_type === 'video') {
+            if (s.side_data_list && JSON.stringify(s.side_data_list).includes('Vision')) best.dolbyVision = true;
+            if (s.color_transfer === 'smpte2084' || s.color_transfer === 'arib-std-b67') best.hdr = true;
           }
-          if (stream.codec_type === 'audio' && stream.channels) {
-            var ch = parseInt(stream.channels);
-            var aud = (ch >= 8) ? '7.1' : (ch >= 6) ? '5.1' : (ch >= 4) ? '4.0' : '2.0';
+          if (s.codec_type === 'audio' && s.channels) {
+            var ch = parseInt(s.channels);
+            var aud = ch >= 8 ? '7.1' : ch >= 6 ? '5.1' : ch >= 4 ? '4.0' : '2.0';
             if (!best.audio || audioOrder.indexOf(aud) > audioOrder.indexOf(best.audio)) best.audio = aud;
           }
         });
       }
-      
-      if (title.indexOf('vision') >= 0 || title.indexOf('dovi') >= 0) best.dolbyVision = true;
-      if (title.indexOf('hdr') >= 0) best.hdr = true;
-      if (title.indexOf('dub') >= 0 || title.indexOf('дубл') >= 0) best.dub = true;
+
+      if (title.includes('hdr')) best.hdr = true;
+      if (title.includes('vision') || title.includes('dovi')) best.dolbyVision = true;
+      if (title.includes('dub') || title.includes('дубл')) best.dub = true;
     }
+
     if (best.dolbyVision) best.hdr = true;
     return best;
   }
-  
+
   // =======================================================
-  // UI ТА ОБРОБКА КАРТОК
+  // UI
   // =======================================================
 
-  function createBadgeImg(type, isCard, index) {
-    var iconPath = svgIcons[type];
-    if (!iconPath) return '';
-    var className = isCard ? 'card-quality-badge' : 'quality-badge';
-    var delay = (index * 0.08) + 's';
-    return '<div class="' + className + '" style="animation-delay: ' + delay + '"><img src="' + iconPath + '" draggable="false" oncontextmenu="return false;"></div>';
+  function createBadge(type, isCard, index) {
+    var src = svgIcons[type];
+    if (!src) return '';
+    var cls = isCard ? 'card-quality-badge' : 'quality-badge';
+    return '<div class="' + cls + '" style="animation-delay:' + (index * 0.07) + 's"><img src="' + src + '"></div>';
   }
 
   function addCardBadges(card, best) {
-    // Перевірка, чи картка ще в DOM
-    if (!document.body.contains(card[0])) return; 
-    
-    if (card.find('.card-quality-badges').length) return;
-    
+    if (!document.body.contains(card[0])) return;
+    if (card.hasClass('qb-processed')) return;
+
     var badges = [];
-    if (best.resolution) badges.push(createBadgeImg(best.resolution, true, badges.length));
-    if (best.hdr) badges.push(createBadgeImg('HDR', true, badges.length));
-    if (best.audio) badges.push(createBadgeImg(best.audio, true, badges.length));
-    if (best.dub) badges.push(createBadgeImg('DUB', true, badges.length));
-    if (best.dolbyVision) badges.push(createBadgeImg('Dolby Vision', true, badges.length));
-    
-    if (badges.length) card.find('.card__view').append('<div class="card-quality-badges">' + badges.join('') + '</div>');
-  }
+    if (best.resolution) badges.push(createBadge(best.resolution, true, badges.length));
+    if (best.hdr) badges.push(createBadge('HDR', true, badges.length));
+    if (best.audio) badges.push(createBadge(best.audio, true, badges.length));
+    if (best.dub) badges.push(createBadge('DUB', true, badges.length));
+    if (best.dolbyVision) badges.push(createBadge('Dolby Vision', true, badges.length));
 
-  // >>> ЗМІНА В ЦІЙ ФУНКЦІЇ: ВПРОВАДЖЕННЯ ТАЙМЕРА ПОВТОРНИХ СПРОБ
-  function processCards(cards) {
-    $(cards).filter(':not(.qb-processed)').addClass('qb-processed').each(function() {
-      var card = $(this);
-      
-      // Асинхронний механізм очікування даних
-      waitForCardData(card, 0); 
-    });
-  }
-
-  function waitForCardData(card, attempt) {
-      var maxAttempts = 5;
-      var delay = 200; // 200 мс між спробами
-
-      var movie = card.data('item');
-
-      // Перевірка 1: Чи доступні дані для пошуку?
-      if (movie && (movie.title || movie.name)) {
-          // Дані є. Викликаємо парсер.
-          if (Lampa.Storage.field('parser_use')) {
-              Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(response) {
-                  if (response && response.Results) addCardBadges(card, getBest(response.Results));
-              });
-          }
-      } else if (attempt < maxAttempts) {
-          // Даних ще немає. Спроба не вичерпана.
-          setTimeout(function() {
-              waitForCardData(card, attempt + 1);
-          }, delay);
-      } else {
-          // Досягнуто максимальну кількість спроб, дані не з'явилися.
-          console.warn('[QualityBadges] Failed to get card data after max attempts:', card[0]);
-      }
-  }
-  // <<< КІНЕЦЬ ЗМІН
-
-
-  // =======================================================
-  // ІНІЦІАЛІЗАЦІЯ
-  // =======================================================
-  
-  // 1. Обробка повної картки (Працює коректно)
-  Lampa.Listener.follow('full', function(e) {
-    if (e.type !== 'complite') return;
-    var details = $('.full-start-new__details');
-    if (details.length) {
-        if (!$('.quality-badges-container').length) details.after('<div class="quality-badges-container"></div>');
-        Lampa.Parser.get({ search: e.data.movie.title || e.data.movie.name, movie: e.data.movie, page: 1 }, function(response) {
-            if (response && response.Results) {
-                var best = getBest(response.Results);
-                var badges = [];
-                if (best.resolution) badges.push(createBadgeImg(best.resolution, false, badges.length));
-                if (best.hdr) badges.push(createBadgeImg('HDR', false, badges.length));
-                if (best.audio) badges.push(createBadgeImg(best.audio, false, badges.length));
-                if (best.dub) badges.push(createBadgeImg('DUB', false, badges.length));
-                if (best.dolbyVision) badges.push(createBadgeImg('Dolby Vision', false, badges.length));
-                
-                $('.quality-badges-container').html(badges.join(''));
-            }
-        });
+    if (badges.length) {
+      card.find('.card__view').append('<div class="card-quality-badges">' + badges.join('') + '</div>');
+      card.addClass('qb-processed'); // 🔥 КЛЮЧОВЕ ВИПРАВЛЕННЯ
     }
+  }
+
+  // =======================================================
+  // CARD PROCESSING WITH RETRY
+  // =======================================================
+
+  function waitForData(card, attempt) {
+    var max = 6;
+    var delay = 250;
+
+    var item = card.data('item');
+
+    if (item && (item.title || item.name)) {
+      Lampa.Parser.get(
+        { search: item.title || item.name, movie: item, page: 1 },
+        function (r) {
+          if (r && r.Results) addCardBadges(card, getBest(r.Results));
+        }
+      );
+    } else if (attempt < max) {
+      setTimeout(function () {
+        waitForData(card, attempt + 1);
+      }, delay);
+    }
+  }
+
+  function processCards(cards) {
+    $(cards)
+      .filter(':not(.qb-processing):not(.qb-processed)')
+      .addClass('qb-processing')
+      .each(function () {
+        waitForData($(this), 0);
+      });
+  }
+
+  // =======================================================
+  // FULL CARD
+  // =======================================================
+
+  Lampa.Listener.follow('full', function (e) {
+    if (e.type !== 'complite') return;
+
+    var d = $('.full-start-new__details');
+    if (!$('.quality-badges-container').length) d.after('<div class="quality-badges-container"></div>');
+
+    Lampa.Parser.get(
+      { search: e.data.movie.title || e.data.movie.name, movie: e.data.movie, page: 1 },
+      function (r) {
+        if (!r || !r.Results) return;
+
+        var best = getBest(r.Results);
+        var out = [];
+        if (best.resolution) out.push(createBadge(best.resolution, false, out.length));
+        if (best.hdr) out.push(createBadge('HDR', false, out.length));
+        if (best.audio) out.push(createBadge(best.audio, false, out.length));
+        if (best.dub) out.push(createBadge('DUB', false, out.length));
+        if (best.dolbyVision) out.push(createBadge('Dolby Vision', false, out.length));
+
+        $('.quality-badges-container').html(out.join(''));
+      }
+    );
   });
 
-  // 2. Додавання стилів
-  var style = '<style>\
-    .quality-badges-container { display: flex; gap: 0.3em; margin: 0 0 0.4em 0; min-height: 1.2em; pointer-events: none; }\
-    .quality-badge { height: 1.2em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; }\
-    .card-quality-badges { position: absolute; top: 0.3em; right: 0.3em; display: flex; flex-direction: row; gap: 0.2em; pointer-events: none; z-index: 5; }\
-    .card-quality-badge { height: 0.9em; opacity: 0; transform: translateY(5px); animation: qb_in 0.3s ease forwards; }\
-    @keyframes qb_in { to { opacity: 1; transform: translateY(0); } }\
-    .quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; }\
-    .card-quality-badge img { filter: drop-shadow(0 1px 2px #000); }\
-    @media (max-width: 768px) {\
-      .quality-badges-container { gap: 0.25em; margin: 0 0 0.35em 0; min-height: 1em; }\
-      .quality-badge { height: 1em; }\
-      .card-quality-badges { top: 0.25em; right: 0.25em; gap: 0.18em; }\
-      .card-quality-badge { height: 0.75em; }\
-    }\
-  </style>';
-  $('body').append(style);
-  
-  // 3. MutationObserver з Debounce
-  var debouncedProcessCards = (function(func, wait) {
-    var timeout;
-    return function executedFunction(cards) {
-        var context = this;
-        var args = arguments;
-        var later = function() {
-            clearTimeout(timeout);
-            func.apply(context, args[0]); // Передаємо масив карток
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-  })(function(cards) {
-      processCards(cards);
-  }, 300);
+  // =======================================================
+  // STYLES
+  // =======================================================
 
-  var observer = new MutationObserver(function (mutations) {
-      var newCards = [];
-      mutations.forEach(function(mutation) {
-          mutation.addedNodes.forEach(function(node) {
-              if (node.nodeType === 1) {
-                  if (node.classList.contains('card')) {
-                      newCards.push(node);
-                  }
-                  node.querySelectorAll && node.querySelectorAll('.card').forEach(function(nestedCard) {
-                      newCards.push(nestedCard);
-                  });
-              }
-          });
+  $('body').append(`
+<style>
+.quality-badges-container{display:flex;gap:.3em;margin:.4em 0;pointer-events:none}
+.quality-badge{height:1.2em;opacity:0;transform:translateY(6px);animation:qb .3s ease forwards}
+.card-quality-badges{position:absolute;top:.3em;right:.3em;display:flex;gap:.2em;pointer-events:none;z-index:6}
+.card-quality-badge{height:.9em;opacity:0;transform:translateY(5px);animation:qb .25s ease forwards}
+@keyframes qb{to{opacity:1;transform:none}}
+.quality-badge img,.card-quality-badge img{height:100%;filter:drop-shadow(0 1px 2px #000)}
+</style>`);
+
+  // =======================================================
+  // OBSERVER
+  // =======================================================
+
+  var observer = new MutationObserver(function (m) {
+    var cards = [];
+    m.forEach(function (x) {
+      x.addedNodes.forEach(function (n) {
+        if (n.nodeType === 1) {
+          if (n.classList.contains('card')) cards.push(n);
+          n.querySelectorAll && n.querySelectorAll('.card').forEach(c => cards.push(c));
+        }
       });
-      if (newCards.length) {
-          debouncedProcessCards(newCards);
-      }
+    });
+    if (cards.length) processCards(cards);
   });
 
   observer.observe(document.body, { childList: true, subtree: true });
 
-  // Обробка карток, які вже існують при завантаженні плагіна
-  setTimeout(function() {
-      var existingCards = document.querySelectorAll('.card');
-      if (existingCards.length) {
-          debouncedProcessCards(existingCards);
-          console.log('[QualityBadges] Initial cards processed with delay logic:', existingCards.length);
-      }
-  }, 1500); // Збільшено затримку для надійності
-  
-  console.log('[QualityBadges] Запущений (Observer + Data Retry Logic Active)');
+  setTimeout(() => processCards(document.querySelectorAll('.card')), 1500);
+
+  console.log('[QualityBadges] Loaded successfully ✔');
 
 })();
-                               
