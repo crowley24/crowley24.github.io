@@ -59,65 +59,103 @@
           if (stream.codec_type === 'audio' && stream.channels) {  
             var ch = parseInt(stream.channels);  
             var aud = (ch >= 8) ? '7.1' : (ch >= 6) ? '5.1' : (ch >= 4) ? '4.0' : '2.0';  
-            if (!best.audio || audioOrder.indexOf(aud) > audioOrder.indexOf(best.audio)) best.audio = aud;  
+            if (!best.audio || audioOrder.indexOf(aud) > audioOrder.indexOf(best.audio)) {  
+              best.audio = aud;  
+            }  
           }  
         });  
       }  
         
-      if (title.indexOf('vision') >= 0 || title.indexOf('dovi') >= 0) best.dolbyVision = true;  
-      if (title.indexOf('hdr') >= 0) best.hdr = true;  
-      if (title.indexOf('dub') >= 0 || title.indexOf('дуб') >= 0) best.dub = true;  
+      if (item.Title && item.Title.toLowerCase().indexOf('dub') >= 0) best.dub = true;  
     }  
       
     return best;  
   }  
   
-  function createBadgeImg(type, isCard, index) {  
-    return '<img class="' + (isCard ? 'card-quality-badge' : 'quality-badge') + '" src="' + svgIcons[type] + '" alt="' + type + '" style="animation-delay: ' + (index * 0.1) + 's">';  
+  function createBadgeImg(type, index, total) {  
+    return '<img class="card-quality-badge" src="' + svgIcons[type] + '" alt="' + type + '" style="animation-delay: ' + (index * 0.1) + 's">';  
   }  
   
   function addCardBadges(card, best) {  
+    if (!best) return;  
+      
     var badges = [];  
-    if (best.resolution) badges.push(createBadgeImg(best.resolution, true, badges.length));  
-    if (best.hdr) badges.push(createBadgeImg('HDR', true, badges.length));  
-    if (best.audio) badges.push(createBadgeImg(best.audio, true, badges.length));  
-    if (best.dub) badges.push(createBadgeImg('DUB', true, badges.length));  
-    if (best.dolbyVision) badges.push(createBadgeImg('Dolby Vision', true, badges.length));  
-    if (badges.length) card.find('.card__view').append('<div class="card-quality-badges">' + badges.join('') + '</div>');  
+    if (best.resolution) badges.push(createBadgeImg(best.resolution, false, badges.length));  
+    if (best.hdr) badges.push(createBadgeImg('HDR', false, badges.length));  
+    if (best.audio) badges.push(createBadgeImg(best.audio, false, badges.length));  
+    if (best.dub) badges.push(createBadgeImg('DUB', false, badges.length));  
+    if (best.dolbyVision) badges.push(createBadgeImg('Dolby Vision', false, badges.length));  
+      
+    if (badges.length > 0) {  
+      var container = '<div class="card-quality-badges">' + badges.join('') + '</div>';  
+      card.find('.card__view').append(container);  
+    }  
   }  
   
   function processCards() {  
-    $('.card').each(function() {  
+    console.log('[QualityBadges] Processing cards...');  
+      
+    $('.card').each(function(index) {  
       var card = $(this);  
-      if (!card.hasClass('quality-processed')) {  
-        card.addClass('quality-processed');  
-        var movie = card.data('item') || card.data('movie') || card.data();  
-          
-        if (movie && (movie.title || movie.name)) {  
-          if (Lampa.Storage.field('parser_use')) {  
-            Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(response) {  
-              if (response && response.Results) {  
-                var best = getBest(response.Results);  
-                if (best.resolution || best.hdr || best.audio || best.dub || best.dolbyVision) {  
-                  addCardBadges(card, best);  
-                } else {  
-                  // Якщо якість не визначено, показуємо тестовий бейдж  
-                  var testBadge = '<div class="card-quality-badges"><div class="test-quality-badge" style="position: absolute; top: 5px; right: 5px; background: #ff9800 !important; color: white !important; padding: 2px 6px !important; font-size: 10px !important; z-index: 9999 !important; border-radius: 3px !important; font-weight: bold !important;">NO INFO</div></div>';  
-                  card.find('.card__view').append(testBadge);  
-                }  
-              }  
-            });  
+        
+      if (card.find('.card-quality-badges').length > 0) {  
+        return; // Already has badges  
+      }  
+        
+      console.log('[QualityBadges] Processing card', index);  
+        
+      // Спробуємо отримати дані різними способами  
+      var movie = card.data('item') || card.data('movie') || card.data();  
+      var title = card.find('.card__title').text() || (movie && (movie.title || movie.name));  
+        
+      console.log('[QualityBadges] Card data:', {   
+        hasData: !!movie,   
+        title: title,  
+        dataKeys: movie ? Object.keys(movie) : []  
+      });  
+        
+      if (!movie || !title) {  
+        // Якщо немає даних, додаємо fallback бейдж  
+        console.log('[QualityBadges] No data found, adding fallback badge');  
+        var fallbackBadge = '<div class="card-quality-badges"><div class="card-quality-badge" style="background: #ff4444; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px;">NO DATA</div></div>';  
+        card.find('.card__view').append(fallbackBadge);  
+        return;  
+      }  
+        
+      // Перевіряємо чи активований парсер  
+      var parserEnabled = Lampa.Storage.field('parser_use');  
+      console.log('[QualityBadges] Parser enabled:', parserEnabled);  
+        
+      if (parserEnabled) {  
+        // Використовуємо парсер  
+        Lampa.Parser.get({   
+          search: title,   
+          movie: movie,   
+          page: 1   
+        }, function(response) {  
+          console.log('[QualityBadges] Parser response:', response);  
+            
+          if (response && response.Results && response.Results.length > 0) {  
+            var best = getBest(response.Results);  
+            console.log('[QualityBadges] Best quality:', best);  
+            addCardBadges(card, best);  
           } else {  
-            // Парсер не активований  
-            var testBadge = '<div class="card-quality-badges"><div class="test-quality-badge" style="position: absolute; top: 5px; right: 5px; background: #2196f3 !important; color: white !important; padding: 2px 6px !important; font-size: 10px !important; z-index: 9999 !important; border-radius: 3px !important; font-weight: bold !important;">PARSER OFF</div></div>';  
-            card.find('.card__view').append(testBadge);  
+            // Якщо парсер не повернув результати  
+            console.log('[QualityBadges] No parser results, adding fallback');  
+            var fallbackBadge = '<div class="card-quality-badges"><div class="card-quality-badge" style="background: #ff8800; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px;">NO INFO</div></div>';  
+            card.find('.card__view').append(fallbackBadge);  
           }  
-        }  
+        });  
+      } else {  
+        // Якщо парсер не активований  
+        console.log('[QualityBadges] Parser disabled, adding indicator');  
+        var disabledBadge = '<div class="card-quality-badges"><div class="card-quality-badge" style="background: #888; color: white; padding: 2px 6px; font-size: 10px; border-radius: 3px;">PARSER OFF</div></div>';  
+        card.find('.card__view').append(disabledBadge);  
       }  
     });  
   }  
   
-  // Обробка повної картки  
+  // Обробка повної картки (це працює)  
   Lampa.Listener.follow('full', function(e) {  
     if (e.type !== 'complite') return;  
     var details = $('.full-start-new__details');  
@@ -138,6 +176,10 @@
     }  
   });  
   
+  // Запускаємо обробку з різними затримками  
+  setTimeout(processCards, 2000);  
+  setTimeout(processCards, 5000);  
+    
   // Спостерігач за змінами  
   var observer = new MutationObserver(function(mutations) {  
     mutations.forEach(function(mutation) {  
@@ -152,9 +194,7 @@
     subtree: true  
   });  
   
-  // Запускаємо обробку  
-  setTimeout(processCards, 2000);  
-    
+  // Обробка при прокрутці  
   $(window).on('scroll', function() {  
     setTimeout(processCards, 300);  
   });  
@@ -176,6 +216,6 @@
   '</style>';  
   $('body').append(style);  
   
-  console.log('[QualityBadges] Full quality plugin loaded');  
+  console.log('[QualityBadges] Enhanced plugin loaded with diagnostics');  
   
 })();
