@@ -129,19 +129,17 @@
   
 				container.classList.add("new-interface");  
   
+				// Спочатку додаємо фон  
 				if (!backgroundWrapper.parentElement) {  
-					container.insertBefore(backgroundWrapper, container.firstChild || null);  
+					container.appendChild(backgroundWrapper);  
 				}  
   
+				// Потім інформаційну панель  
 				var infoElement = infoPanel.render(true);  
 				this.infoElement = infoElement;  
   
 				if (infoElement && infoElement.parentNode !== container) {  
-					if (backgroundWrapper.parentElement === container) {  
-						container.insertBefore(infoElement, backgroundWrapper.nextSibling);  
-					} else {  
-						container.insertBefore(infoElement, container.firstChild || null);  
-					}  
+					container.appendChild(infoElement);  
 				}  
   
 				mainInstance.scroll.minus(infoElement);  
@@ -170,131 +168,98 @@
 				var bg_resolution = Lampa.Storage.get("background_resolution", "original");  
 				var backdropUrl = data && data.backdrop_path && show_bg ? Lampa.Api.img(data.backdrop_path, bg_resolution) : "";  
   
-				if (backdropUrl === this.backgroundLast) return;  
+				if (backdropUrl === this.backgroundLast) {  
+					if (backdropUrl) {  
+						this.showBackground(backdropUrl);  
+					}  
+					return;  
+				}  
+  
+				this.backgroundLast = backdropUrl;  
+  
+				if (!backdropUrl) {  
+					this.hideBackground();  
+					return;  
+				}  
   
 				this.backgroundTimer = setTimeout(function () {  
-					if (!backdropUrl) {  
-						bg1.classList.remove("active");  
-						bg2.classList.remove("active");  
-						self.backgroundLast = "";  
-						return;  
-					}  
-  
-					var nextLayer = bg1.classList.contains("active") ? bg2 : bg1;  
-					var prevLayer = bg1.classList.contains("active") ? bg1 : bg2;  
-  
-					var img = new Image();  
-					self._pendingImg = img;  
-  
-					img.onload = function () {  
-						if (self._pendingImg !== img) return;  
-						if (backdropUrl !== self.backgroundLast) return;  
-  
-						self._pendingImg = null;  
-						nextLayer.src = backdropUrl;  
-						nextLayer.classList.add("active");  
-  
-						setTimeout(function () {  
-							if (backdropUrl !== self.backgroundLast) return;  
-							prevLayer.classList.remove("active");  
-						}, 100);  
-					};  
-  
-					self.backgroundLast = backdropUrl;  
-					img.src = backdropUrl;  
+					self.loadBackground(backdropUrl);  
 				}, BACKGROUND_DEBOUNCE_DELAY);  
 			},  
   
+			loadBackground: function (url) {  
+				var self = this;  
+				var img = new Image();  
+				img.src = url;  
+  
+				img.onload = function () {  
+					self.showBackground(url);  
+				};  
+  
+				img.onerror = function () {  
+					self.hideBackground();  
+				};  
+			},  
+  
+			showBackground: function (url) {  
+				var images = this.background.querySelectorAll("img");  
+				var currentBg = images[0].classList.contains("active") ? images[0] : images[1];  
+				var nextBg = images[0].classList.contains("active") ? images[1] : images[0];  
+  
+				nextBg.src = url;  
+				nextBg.classList.add("active");  
+				currentBg.classList.remove("active");  
+			},  
+  
+			hideBackground: function () {  
+				var images = this.background.querySelectorAll("img");  
+				images.forEach(function (img) {  
+					img.classList.remove("active");  
+				});  
+			},  
+  
 			reset: function () {  
-				infoPanel.empty();  
+				this.hideBackground();  
+				this.backgroundLast = "";  
+				if (this.info) {  
+					this.info.empty();  
+				}  
 			},  
   
 			destroy: function () {  
-				clearTimeout(this.backgroundTimer);  
-				infoPanel.destroy();  
-  
-				var container = mainInstance.render(true);  
-				if (container) {  
-					container.classList.remove("new-interface");  
+				this.reset();  
+				if (this.info) {  
+					this.info.destroy();  
 				}  
-  
-				if (this.infoElement && this.infoElement.parentNode) {  
-					this.infoElement.parentNode.removeChild(this.infoElement);  
+				if (this.background && this.background.parentElement) {  
+					this.background.parentElement.removeChild(this.background);  
 				}  
-  
-				if (backgroundWrapper && backgroundWrapper.parentNode) {  
-					backgroundWrapper.parentNode.removeChild(backgroundWrapper);  
-				}  
-  
-				this.attached = false;  
-			},  
+			}  
 		};  
   
 		return state;  
 	}  
   
-	function extendResultsWithStyle(data) {  
-		if (!data) return;  
+	function handleCard(state, card) {  
+		if (!card || !card.render) return;  
   
-		if (Array.isArray(data.results)) {  
-			data.results.forEach(function (card) {  
-				if (card.wide !== false) {  
-					card.wide = false;  
-				}  
-			});  
-  
-			Lampa.Utils.extendItemsParams(data.results, {  
-				style: {  
-					name: Lampa.Storage.get("wide_post") !== false ? "wide" : "small",  
-				},  
-			});  
+		var cardData = getCardData(card);  
+		if (cardData) {  
+			state.update(cardData);  
 		}  
 	}  
   
-	function handleCard(state, card) {  
-		if (!card || card.__newInterfaceCard) return;  
-		if (typeof card.use !== "function" || !card.data) return;  
+	function extendResultsWithStyle(data) {  
+		if (!data || !data.results || !Array.isArray(data.results)) return;  
   
-		card.__newInterfaceCard = true;  
-		card.params = card.params || {};  
-		card.params.style = card.params.style || {};  
-  
-		var targetStyle = Lampa.Storage.get("wide_post") !== false ? "wide" : "small";  
-		card.params.style.name = targetStyle;  
-  
-		if (card.render && typeof card.render === "function") {  
-			var element = card.render(true);  
-			if (element) {  
-				var node = element.jquery ? element[0] : element;  
-				if (node && node.classList) {  
-					if (targetStyle === "wide") {  
-						node.classList.add("card--wide");  
-						node.classList.remove("card--small");  
-					} else {  
-						node.classList.add("card--small");  
-						node.classList.remove("card--wide");  
-					}  
-				}  
+		data.results.forEach(function (item) {  
+			if (item) {  
+				item.wide = false;  
 			}  
-		}  
-  
-		card.use({  
-			onFocus: function () {  
-				state.update(card.data);  
-			},  
-			onHover: function () {  
-				state.update(card.data);  
-			},  
-			onTouch: function () {  
-				state.update(card.data);  
-			},  
-			onDestroy: function () {  
-				delete card.__newInterfaceCard;  
-			},  
 		});  
 	}  
   
-	function getCardData(card, results, index) {  
+	function getCardData(card, index) {  
 		index = index || 0;  
   
 		if (card && card.data) return card.data;  
@@ -424,13 +389,16 @@
 						position: relative;  
 						padding: 1.5em;  
 						height: 27.5em;  
+						max-width: 100%;  
+						overflow: hidden;  
 					}  
 					.new-interface-info__body {  
 						position: absolute;  
-						z-index: 9999999;  
+						z-index: 999;  
 						width: 98% !important;  
 						left: auto !important;  
 						right: 0 !important;  
+						top: 0;  
 						padding: 2em;  
 						background: linear-gradient(135deg,   
 							rgba(0,0,0,0.7) 0%,   
@@ -440,6 +408,11 @@
 						display: flex;  
 						justify-content: flex-end !important;  
 						gap: 2em;  
+						pointer-events: none;  
+					}  
+					.new-interface-info__left,  
+					.new-interface-info__right {  
+						pointer-events: auto;  
 					}  
 					.new-interface-info__left {  
 						flex: 0.4 !important;  
@@ -452,6 +425,7 @@
 						flex-direction: column;  
 						align-items: flex-start;  
 						max-width: 70% !important;  
+						overflow: hidden;  
 					}  
 					.new-interface-info__head {  
 						color: rgba(255, 255, 255, 0.6);  
@@ -519,22 +493,22 @@
 						font-size: 0.7em;  
 					}  
 					.new-interface-info__description {  
-    font-size: 1.6em;  
-    font-weight: 310;  
-    line-height: 1.6;  
-    overflow: hidden;  
-    -o-text-overflow: '.';  
-    text-overflow: '.';  
-    display: -webkit-box;  
-    -webkit-line-clamp: 4;  
-    line-clamp: 4;  
-    -webkit-box-orient: vertical;  
-    width: 100%;  
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.6);  
-    color: rgba(255,255,255,0.95);  
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);  
-}
-.new-interface .card-more__box {  
+						font-size: 1.6em;  
+						font-weight: 310;  
+						line-height: 1.6;  
+						overflow: hidden;  
+						-o-text-overflow: '.';  
+						text-overflow: '.';  
+						display: -webkit-box;  
+						-webkit-line-clamp: 4;  
+						line-clamp: 4;  
+						-webkit-box-orient: vertical;  
+						width: 100%;  
+						text-shadow: 1px 1px 2px rgba(0,0,0,0.6);  
+						color: rgba(255,255,255,0.95);  
+						transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);  
+					}  
+					.new-interface .card-more__box {  
 						padding-bottom: 95%;  
 					}  
 					.new-interface .full-start__background-wrapper {  
@@ -545,18 +519,19 @@
 						height: 100%;  
 						z-index: -1;  
 						pointer-events: none;  
+						overflow: hidden;  
 					}  
 					.new-interface .full-start__background {  
 						position: absolute;  
-						height: 108%;  
+						height: 100%;  
 						width: 100%;  
-						top: -5em;  
-						left: 0;  
+						top: 0;  
+						left: 0; 
 						opacity: 0;  
 						object-fit: cover;  
 						transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);  
-						filter: blur(3px);  
-						transform: scale(1.1);  
+						filter: blur(2px);  
+						transform: scale(1.05);  
 					}  
 					.new-interface .full-start__background.active {  
 						opacity: 0.4;  
@@ -576,7 +551,7 @@
 					}  
 					body.light--version .new-interface-info__body {  
 						position: absolute;  
-						z-index: 9999999;  
+						z-index: 999;  
 						width: 69%;  
 						padding-top: 1.5em;  
 					}  
@@ -626,10 +601,11 @@
 					}  
 					.new-interface-info__body {  
 						position: absolute;  
-						z-index: 9999999;  
+						z-index: 999;  
 						width: 98% !important;  
 						left: auto !important;  
 						right: 0 !important;  
+						top: 0;  
 						padding: 2em;  
 						background: linear-gradient(135deg,   
 							rgba(0,0,0,0.7) 0%,   
@@ -640,6 +616,11 @@
 						display: flex;  
 						justify-content: flex-end !important;  
 						gap: 1.5em;  
+						pointer-events: none;  
+					}  
+					.new-interface-info__left,  
+					.new-interface-info__right {  
+						pointer-events: auto;  
 					}  
 					.new-interface-info__left {  
 						flex: 0.4 !important;  
@@ -652,6 +633,7 @@
 						flex-direction: column;  
 						align-items: flex-start;  
 						max-width: 70% !important;  
+						overflow: hidden;  
 					}  
 					.new-interface-info__head {  
 						color: rgba(255, 255, 255, 0.6);  
@@ -694,7 +676,7 @@
 						transform: scale(1.05);  
 					}  
 					.new-interface-info__details {  
-						margin-top: 1.5em;  
+						margin-top: 1.2em;  
 						margin-bottom: 0;  
 						display: flex;  
 						align-items: center;  
@@ -746,18 +728,19 @@
 						height: 100%;  
 						z-index: -1;  
 						pointer-events: none;  
+						overflow: hidden;  
 					}  
 					.new-interface .full-start__background {  
 						position: absolute;  
-						height: 108%;  
+						height: 100%;  
 						width: 100%;  
-						top: -5em;  
+						top: 0;  
 						left: 0;  
 						opacity: 0;  
 						object-fit: cover;  
 						transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);  
-						filter: blur(3px);  
-						transform: scale(1.1);  
+						filter: blur(2px);  
+						transform: scale(1.05);  
 					}  
 					.new-interface .full-start__background.active {  
 						opacity: 0.4;  
@@ -777,7 +760,7 @@
 					}  
 					body.light--version .new-interface-info__body {  
 						position: absolute;  
-						z-index: 9999999;  
+						z-index: 999;  
 						width: 69%;  
 						padding-top: 1.5em;  
 					}  
@@ -1218,44 +1201,53 @@
 			this.html.find(".new-interface-info__description").text(data.overview);  
 		}  
   
-		var year = ((data.release_date || data.first_air_date || "0000") + "").slice(0, 4);  
-  
-		var rating = parseFloat((data.vote_average || 0) + "").toFixed(1);  
-  
 		var headInfo = [];  
 		var detailsInfo = [];  
   
-		var countries = Lampa.Api.sources.tmdb.parseCountries(data);  
-		if (countries.length > 2) countries = countries.slice(0, 2);  
+		var year = (data.release_date || data.first_air_date || "0000").slice(0, 4);  
+		var countries = [];  
+		var ageRating = null;  
   
-		var ageRating = Lampa.Api.sources.tmdb.parsePG(data);  
+		if (data.production_countries && data.production_countries.length > 0) {  
+			countries = data.production_countries.map(function (c) {  
+				return Lampa.Utils.capitalizeFirstLetter(c.name);  
+			});  
+		}  
   
-		var show_logo = Lampa.Storage.get("logo_show", true);  
+		if (data.release_dates && data.release_dates.results && data.release_dates.results.length > 0) {  
+			var releaseDates = data.release_dates.results.find(function (r) {  
+				return r.iso_3166_1 === "UA";  
+			});  
+  
+			if (!releaseDates) {  
+				releaseDates = data.release_dates.results.find(function (r) {  
+					return r.iso_3166_1 === "US";  
+				});  
+			}  
+  
+			if (releaseDates && releaseDates.release_dates && releaseDates.release_dates.length > 0) {  
+				var rating = releaseDates.release_dates.find(function (rd) {  
+					return rd.certification && rd.certification.trim() !== "";  
+				});  
+  
+				if (rating) {  
+					ageRating = rating.certification;  
+				}  
+			}  
+		}  
   
 		if (Lampa.Storage.get("rat") !== false) {  
-			if (rating > 0) {  
+			if (data.vote_average && data.vote_average > 0) {  
+				var vote = data.vote_average.toFixed(1);  
 				var rate_style = "";  
   
 				if (Lampa.Storage.get("si_colored_ratings", true)) {  
-					var vote_num = parseFloat(rating);  
-					var color = "";  
-  
-					if (vote_num >= 0 && vote_num <= 3) {  
-						color = "red";  
-					} else if (vote_num > 3 && vote_num < 6) {  
-						color = "orange";  
-					} else if (vote_num >= 6 && vote_num < 7) {  
-						color = "cornflowerblue";  
-					} else if (vote_num >= 7 && vote_num < 8) {  
-						color = "darkmagenta";  
-					} else if (vote_num >= 8 && vote_num <= 10) {  
-						color = "lawngreen";  
-					}  
+					var color = siStyleGetColorByRating(parseFloat(vote));  
   
 					if (color) rate_style = ' style="color: ' + color + '"';  
 				}  
   
-				detailsInfo.push('<div class="full-start__rate"' + rate_style + "><div>" + rating + "</div><div>TMDB</div></div>");  
+				detailsInfo.push('<div class="full-start__rate"' + rate_style + "><div>" + vote + "</div><div>TMDB</div></div>");  
 			}  
 		}  
   
@@ -1706,3 +1698,4 @@
 		}  
 	}  
 })();
+				
