@@ -89,21 +89,43 @@
     if (best.audio) badges.push(createBadgeImg(best.audio, true, badges.length));  
     if (best.dub) badges.push(createBadgeImg('DUB', true, badges.length));  
     if (best.dolbyVision) badges.push(createBadgeImg('Dolby Vision', true, badges.length));  
-    if (badges.length) card.find('.card__view').append('<div class="card-quality-badges">' + badges.join('') + '</div>');  
+    if (badges.length) {  
+      var badgesHtml = '<div class="card-quality-badges">' + badges.join('') + '</div>';  
+      card.find('.card__view').append(badgesHtml);  
+      console.log('[QualityBadges] Added badges to card:', card.find('.card__title').text());  
+    }  
   }  
   
-  // Оновлена функція processCards з перевіркою видимості  
+  // Оновлена функція processCards з діагностикою  
   function processCards() {  
-    $('.card:not(.qb-processed)').each(function() {  
+    console.log('[QualityBadges] Processing cards...');  
+    var cards = $('.card:not(.qb-processed)');  
+    console.log('[QualityBadges] Found unprocessed cards:', cards.length);  
+      
+    cards.each(function() {  
       var card = $(this);  
-      // Перевірка чи картка видима в межах екрану + 200px запасу  
+      var movie = card.data('item');  
+        
+      console.log('[QualityBadges] Card data:', movie ? 'has data' : 'no data');  
+        
       if (card.offset().top < $(window).height() + 200) {  
         card.addClass('qb-processed');  
-        var movie = card.data('item');  
-        if (movie && Lampa.Storage.field('parser_use')) {  
-          Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(response) {  
-            if (response && response.Results) addCardBadges(card, getBest(response.Results));  
-          });  
+          
+        if (movie) {  
+          console.log('[QualityBadges] Processing movie:', movie.title || movie.name);  
+            
+          if (Lampa.Storage.field('parser_use')) {  
+            Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(response) {  
+              console.log('[QualityBadges] Parser response:', response ? 'has data' : 'no data');  
+              if (response && response.Results) {  
+                var best = getBest(response.Results);  
+                console.log('[QualityBadges] Best quality:', best);  
+                addCardBadges(card, best);  
+              }  
+            });  
+          } else {  
+            console.log('[QualityBadges] Parser is disabled');  
+          }  
         }  
       }  
     });  
@@ -129,7 +151,7 @@
     }  
   });  
   
-  // Заміна setInterval на MutationObserver  
+  // Більш надійний MutationObserver з кількома цільовими елементами  
   var observer = new MutationObserver(function(mutations) {  
     mutations.forEach(function(mutation) {  
       if (mutation.addedNodes.length) {  
@@ -138,17 +160,38 @@
     });  
   });  
   
-  // Запускаємо спостерігача за контентом  
-  var targetNode = document.querySelector('.scroll__content') || document.body;  
-  observer.observe(targetNode, {  
-    childList: true,  
-    subtree: true  
-  });  
+  // Спостерігаємо за кількома можливими контейнерами  
+  var targets = [  
+    '.scroll__content',  
+    '.items-cards',  
+    '.content',  
+    'body'  
+  ];  
+    
+  var targetNode = null;  
+  for (var i = 0; i < targets.length; i++) {  
+    targetNode = document.querySelector(targets[i]);  
+    if (targetNode) {  
+      console.log('[QualityBadges] Observer attached to:', targets[i]);  
+      break;  
+    }  
+  }  
+    
+  if (targetNode) {  
+    observer.observe(targetNode, {  
+      childList: true,  
+      subtree: true  
+    });  
+  } else {  
+    console.log('[QualityBadges] No suitable target found for observer');  
+  }  
   
-  // Початкова обробка існуючих карток  
-  processCards();  
+  // Початкова обробка з затримкою  
+  setTimeout(function() {  
+    processCards();  
+  }, 1000);  
   
-  // Додатково обробляємо при прокрутці для карток що стають видимими  
+  // Обробка при прокрутці  
   $(window).on('scroll', function() {  
     processCards();  
   });  
@@ -170,6 +213,6 @@
   </style>';  
   $('body').append(style);  
   
-  console.log('[QualityBadges] Запущен з MutationObserver');  
+  console.log('[QualityBadges] Plugin initialized with diagnostics');  
   
 })();
