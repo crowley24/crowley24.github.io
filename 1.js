@@ -1,51 +1,37 @@
-//Оригінальний плагін https://github.com/FoxStudio24/lampa/blob/main/Quality/Quality.js  
+/Оригінальний плагін https://github.com/FoxStudio24/lampa/blob/main/Quality/Quality.js  
   
 (function () {  
   'use strict';  
   
-  console.log('[QualityBadges] Starting with Lampa events approach');  
+  console.log('[QualityBadges] Testing card data');  
   
-  // Використовуємо вбудовані події Lampa  
-  Lampa.Listener.follow('scroll', function(e) {  
-    if (e.type === 'end') {  
-      console.log('[QualityBadges] Scroll ended, checking for new cards');  
-      // Затримка для рендерингу  
-      setTimeout(addBadgesToVisibleCards, 500);  
+  // Перевіряємо перші 3 картки  
+  $('.card').slice(0, 3).each(function(index) {  
+    var card = $(this);  
+    var itemData = card.data('item');  
+    var movieData = card.data('movie');  
+    var title = card.find('.card__title').text();  
+      
+    console.log('[QualityBadges] Card', index, ':');  
+    console.log('  - Title:', title);  
+    console.log('  - Has data.item:', !!itemData);  
+    console.log('  - Has data.movie:', !!movieData);  
+    console.log('  - Parser enabled:', Lampa.Storage.field('parser_use'));  
+      
+    if (itemData) {  
+      console.log('  - Item data keys:', Object.keys(itemData));  
+    }  
+    if (movieData) {  
+      console.log('  - Movie data keys:', Object.keys(movieData));  
     }  
   });  
   
-  Lampa.Listener.follow('content', function(e) {  
-    if (e.type === 'loaded') {  
-      console.log('[QualityBadges] Content loaded');  
-      setTimeout(addBadgesToVisibleCards, 1000);  
-    }  
-  });  
-  
-  function addBadgesToVisibleCards() {  
-    // Шукаємо картки в видимій області  
-    var visibleCards = $('.card').filter(function() {  
-      var card = $(this);  
-      var rect = this.getBoundingClientRect();  
-      return rect.top < window.innerHeight && rect.bottom > 0;  
-    });  
-  
-    console.log('[QualityBadges] Found visible cards:', visibleCards.length);  
-  
-    visibleCards.each(function() {  
-      var card = $(this);  
-      if (!card.hasClass('quality-processed')) {  
-        card.addClass('quality-processed');  
-        var movie = card.data('movie') || card.data('item');  
-          
-        if (movie) {  
-          console.log('[QualityBadges] Processing:', movie.title || movie.name);  
-          // Тут логіка додавання бейджів  
-        }  
-      }  
-    });  
+  // Додаємо тестовий бейдж до першої картки  
+  var firstCard = $('.card').first();  
+  if (firstCard.length) {  
+    var testBadge = '<div style="position: absolute; top: 5px; right: 5px; background: red; color: white; padding: 2px 5px; font-size: 10px; z-index: 10;">TEST</div>';  
+    firstCard.find('.card__view').append(testBadge);  
+    console.log('[QualityBadges] Added test badge to first card');  
   }  
-  
-  // Початкова перевірка  
-  setTimeout(addBadgesToVisibleCards, 2000);  
   
 })();
