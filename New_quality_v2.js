@@ -41,7 +41,6 @@
           best.resolution = foundRes;
       }
 
-      // ... (логіка ffprobe та title.indexOf) ...
       if (item.ffprobe && Array.isArray(item.ffprobe)) {
         item.ffprobe.forEach(function(stream) {
           if (stream.codec_type === 'video') {
@@ -103,23 +102,45 @@
     if (badges.length) card.find('.card__view').append('<div class="card-quality-badges">' + badges.join('') + '</div>');
   }
 
+  // >>> ЗМІНА В ЦІЙ ФУНКЦІЇ: ВПРОВАДЖЕННЯ ТАЙМЕРА ПОВТОРНИХ СПРОБ
   function processCards(cards) {
-    // Обробляємо лише ті, що не були оброблені, та мають дані для пошуку
     $(cards).filter(':not(.qb-processed)').addClass('qb-processed').each(function() {
       var card = $(this);
-      var movie = card.data('item');
-
-      // КЛЮЧОВЕ ПОКРАЩЕННЯ: Перевіряємо, чи є дані для пошуку
-      if (movie && (movie.title || movie.name) && Lampa.Storage.field('parser_use')) {
-        Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(response) {
-          if (response && response.Results) addCardBadges(card, getBest(response.Results));
-        });
-      }
+      
+      // Асинхронний механізм очікування даних
+      waitForCardData(card, 0); 
     });
   }
-  
+
+  function waitForCardData(card, attempt) {
+      var maxAttempts = 5;
+      var delay = 200; // 200 мс між спробами
+
+      var movie = card.data('item');
+
+      // Перевірка 1: Чи доступні дані для пошуку?
+      if (movie && (movie.title || movie.name)) {
+          // Дані є. Викликаємо парсер.
+          if (Lampa.Storage.field('parser_use')) {
+              Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(response) {
+                  if (response && response.Results) addCardBadges(card, getBest(response.Results));
+              });
+          }
+      } else if (attempt < maxAttempts) {
+          // Даних ще немає. Спроба не вичерпана.
+          setTimeout(function() {
+              waitForCardData(card, attempt + 1);
+          }, delay);
+      } else {
+          // Досягнуто максимальну кількість спроб, дані не з'явилися.
+          console.warn('[QualityBadges] Failed to get card data after max attempts:', card[0]);
+      }
+  }
+  // <<< КІНЕЦЬ ЗМІН
+
+
   // =======================================================
-  // ІНІЦІАЛІЗАЦІЯ (ВИДАЛЕНО setInterval)
+  // ІНІЦІАЛІЗАЦІЯ
   // =======================================================
   
   // 1. Обробка повної картки (Працює коректно)
@@ -132,7 +153,6 @@
             if (response && response.Results) {
                 var best = getBest(response.Results);
                 var badges = [];
-                // Порядок іконок у повній картці має бути такий самий, як і у списку для послідовності
                 if (best.resolution) badges.push(createBadgeImg(best.resolution, false, badges.length));
                 if (best.hdr) badges.push(createBadgeImg('HDR', false, badges.length));
                 if (best.audio) badges.push(createBadgeImg(best.audio, false, badges.length));
@@ -163,22 +183,22 @@
   </style>';
   $('body').append(style);
   
-  // 3. Заміна setInterval на MutationObserver
+  // 3. MutationObserver з Debounce
   var debouncedProcessCards = (function(func, wait) {
     var timeout;
-    return function executedFunction() {
+    return function executedFunction(cards) {
         var context = this;
         var args = arguments;
         var later = function() {
             clearTimeout(timeout);
-            func.apply(context, args);
+            func.apply(context, args[0]); // Передаємо масив карток
         };
         clearTimeout(timeout);
         timeout = setTimeout(later, wait);
     };
   })(function(cards) {
       processCards(cards);
-  }, 300); // 300мс - розумна затримка
+  }, 300);
 
   var observer = new MutationObserver(function (mutations) {
       var newCards = [];
@@ -188,7 +208,6 @@
                   if (node.classList.contains('card')) {
                       newCards.push(node);
                   }
-                  // Додавання карток, які з'явилися всередині контейнерів
                   node.querySelectorAll && node.querySelectorAll('.card').forEach(function(nestedCard) {
                       newCards.push(nestedCard);
                   });
@@ -200,7 +219,6 @@
       }
   });
 
-  // Спостерігаємо за всім тілом документа, щоб ловити картки у всіх списках
   observer.observe(document.body, { childList: true, subtree: true });
 
   // Обробка карток, які вже існують при завантаженні плагіна
@@ -208,11 +226,11 @@
       var existingCards = document.querySelectorAll('.card');
       if (existingCards.length) {
           debouncedProcessCards(existingCards);
-          console.log('[QualityBadges] Initial cards processed:', existingCards.length);
+          console.log('[QualityBadges] Initial cards processed with delay logic:', existingCards.length);
       }
-  }, 1000); // Невелика затримка, щоб DOM і Lampa.data гарантовано ініціалізувалися
-
-  console.log('[QualityBadges] Запущен (MutationObserver Active)');
+  }, 1500); // Збільшено затримку для надійності
+  
+  console.log('[QualityBadges] Запущений (Observer + Data Retry Logic Active)');
 
 })();
-
+                               
