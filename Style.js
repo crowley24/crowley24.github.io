@@ -488,11 +488,16 @@ function addStyles() {
     }  
   
     /* Затемнюємо саме фонове зображення */  
-    .new-interface .full-start__background {  
-        height: 108%;  
-        top: -6em;  
-        filter: brightness(0.4) blur(1px);  
-    }  
+    .new-interface .full-start__background::after {  
+    content: '';  
+    position: absolute;  
+    top: 0;  
+    left: 0;  
+    width: 50%;  
+    height: 100%;  
+    background: linear-gradient(to right, rgba(0,0,0,0.6), transparent);  
+    pointer-events: none;  
+}
   
     .new-interface-info__head {  
         color: rgba(255, 255, 255, 0.8);  
