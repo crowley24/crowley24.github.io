@@ -439,6 +439,8 @@
 					.new-interface-info__right {  
 						flex: 1;  
 						padding-left: 2em;  
+						display: flex;  
+						flex-direction: column;  
 					}  
 					.new-interface-info__head {  
 						color: rgba(255, 255, 255, 0.6);  
@@ -463,13 +465,14 @@
 						line-height: 1.3;  
 					}  
 					.new-interface-info__details {  
-						margin-top: 1.2em;  
-						margin-bottom: 1.6em;  
-						display: flex;  
-						align-items: center;  
-						flex-wrap: wrap;  
-						min-height: 1.9em;  
-						font-size: 1.3em;  
+                        margin-top: 1.5em;  
+                        margin-bottom: 0;  
+                        display: flex;  
+                        align-items: center;  
+                        flex-wrap: wrap;  
+                        min-height: 1.9em;  
+                        font-size: 1.3em;  
+ 
 					}  
 					.new-interface-info__split {  
 						margin: 0 1em;  
@@ -784,19 +787,19 @@
 	}  
   
 	InfoPanel.prototype.create = function () {  
-		this.html = $(`<div class="new-interface-info">  
-							<div class="new-interface-info__body">  
-								<div class="new-interface-info__left">  
-									<div class="new-interface-info__head"></div>  
-									<div class="new-interface-info__title"></div>  
-									<div class="new-interface-info__details"></div>  
-								</div>  
-								<div class="new-interface-info__right">  
-									<div class="new-interface-info__description"></div>  
-								</div>  
-							</div>  
-						</div>`);  
-	};  
+    this.html = $(`<div class="new-interface-info">  
+                        <div class="new-interface-info__body">  
+                            <div class="new-interface-info__left">  
+                                <div class="new-interface-info__head"></div>  
+                                <div class="new-interface-info__title"></div>  
+                            </div>  
+                            <div class="new-interface-info__right">  
+                                <div class="new-interface-info__description"></div>  
+                                <div class="new-interface-info__details"></div>  
+                            </div>  
+                        </div>  
+                    </div>`);  
+};
   
 	InfoPanel.prototype.render = function (asElement) {  
 		if (!this.html) this.create();  
