@@ -3,18 +3,20 @@
 (function () {  
     'use strict';  
   
+    // Перевірка залежностей  
+    if (typeof window.Lampa === 'undefined' || typeof window.$ === 'undefined') {  
+        console.error('[QualityBadges] Required dependencies not available');  
+        return;  
+    }  
+  
     // =======================================================  
     // КОНФІГУРАЦІЯ  
     // =======================================================  
     var Config = {  
         Q_LOGGING: true,  
         QUALITY_CACHE: 'maxsm_ratings_quality_cache',  
-          
-        // JacRed API  
         JACRED_PROTOCOL: 'http://',  
-        JACRED_URL: Lampa.Storage.get('jacred.xyz') || 'jacred.xyz',  
-          
-        // Мережа та Проксі  
+        JACRED_URL: window.Lampa.Storage.get('jacred.xyz') || 'jacred.xyz',  
         PROXY_TIMEOUT: 5000,  
         PROXY_LIST: [  
             'http://api.allorigins.win/raw?url=',  
@@ -24,8 +26,6 @@
         RETRY_ATTEMPTS: 3,  
         RETRY_DELAY: 1000,  
         BATCH_SIZE: 5,  
-          
-        // TTL кешування  
         TTL: {  
             quality: 24 * 60 * 60 * 1000,  
             error: 5 * 60 * 1000,  
@@ -33,7 +33,7 @@
         }  
     };  
   
-    // SVG іконки з першого плагіна  
+    // SVG іконки  
     var pluginPath = 'https://raw.githubusercontent.com/FoxStudio24/lampa/main/Quality/';  
     var svgIcons = {  
         '4K': pluginPath + 'Quality_ico/4K.svg',  
@@ -69,12 +69,8 @@
   
         logWithContext: function(level, message, context) {  
             if (Config.Q_LOGGING) {  
-                console[level]('MAXSM-RATINGS:', message, context || '');  
+                console[level]('[QualityBadges]', message, context || '');  
             }  
-        },  
-  
-        getCacheKey: function(title, year) {  
-            return 'quality_' + (title || '').toLowerCase().replace(/\s+/g, '_') + '_' + (year || '');  
         }  
     };  
   
@@ -85,76 +81,82 @@
         requestQueue: [],  
         activeRequests: 0,  
   
-        apiRequest: function(url, timeout, attempt) {  
-            attempt = attempt || 1;  
-            timeout = timeout || Config.PROXY_TIMEOUT;  
-  
+        makeRequest: function(url) {  
             return new Promise(function(resolve, reject) {  
-                var proxyUrl = Config.PROXY_LIST[0] + encodeURIComponent(url);  
-                  
-                var xhr = new XMLHttpRequest();  
-                xhr.open('GET', proxyUrl, true);  
-                xhr.timeout = timeout;  
-                xhr.onload = function() {  
-                    if (xhr.status === 200) {  
-                        try {  
-                            var data = JSON.parse(xhr.responseText);  
-                            resolve(data);  
-                        } catch (e) {  
-                            reject(e);  
+                var attempt = 0;  
+                var tryRequest = function() {  
+                    attempt++;  
+                    var timeout = setTimeout(function() {  
+                        reject(new Error('Request timeout'));  
+                    }, Config.PROXY_TIMEOUT);  
+  
+                    var xhr = new XMLHttpRequest();  
+                    xhr.onreadystatechange = function() {  
+                        if (xhr.readyState === 4) {  
+                            clearTimeout(timeout);  
+                            if (xhr.status === 200) {  
+                                try {  
+                                    var data = JSON.parse(xhr.responseText);  
+                                    resolve(data);  
+                                } catch (e) {  
+                                    reject(e);  
+                                }  
+                            } else {  
+                                if (attempt < Config.RETRY_ATTEMPTS) {  
+                                    setTimeout(tryRequest, Config.RETRY_DELAY * attempt);  
+                                } else {  
+                                    reject(new Error('Request failed'));  
+                                }  
+                            }  
                         }  
-                    } else {  
-                        reject(new Error('HTTP ' + xhr.status));  
-                    }  
+                    };  
+  
+                    xhr.open('GET', url, true);  
+                    xhr.send();  
                 };  
-                xhr.onerror = function() {  
-                    if (attempt < Config.RETRY_ATTEMPTS) {  
-                        var delay = Config.RETRY_DELAY * Math.pow(2, attempt - 1);  
-                        setTimeout(function() {  
-                            API.apiRequest(url, timeout, attempt + 1).then(resolve).catch(reject);  
-                        }, delay);  
-                    } else {  
-                        reject(new Error('Network error'));  
-                    }  
-                };  
-                xhr.ontimeout = function() {  
-                    if (attempt < Config.RETRY_ATTEMPTS) {  
-                        API.apiRequest(url, timeout * 1.5, attempt + 1).then(resolve).catch(reject);  
-                    } else {  
-                        reject(new Error('Timeout'));  
-                    }  
-                };  
-                xhr.send();  
+                tryRequest();  
             });  
         },  
   
-        addToQueue: function(request) {  
+        fetchWithProxy: function(url) {  
+            var self = this;  
             return new Promise(function(resolve, reject) {  
-                API.requestQueue.push({  
-                    request: request,  
-                    resolve: resolve,  
-                    reject: reject  
-                });  
-                API.processQueue();  
+                if (self.activeRequests >= Config.MAX_CONCURRENT_REQUESTS) {  
+                    self.requestQueue.push({ url: url, resolve: resolve, reject: reject });  
+                    return;  
+                }  
+  
+                self.activeRequests++;  
+                var tryProxy = function(proxyIndex) {  
+                    if (proxyIndex >= Config.PROXY_LIST.length) {  
+                        self.activeRequests--;  
+                        self.processQueue();  
+                        reject(new Error('All proxies failed'));  
+                        return;  
+                    }  
+  
+                    var proxyUrl = Config.PROXY_LIST[proxyIndex] + encodeURIComponent(url);  
+                    self.makeRequest(proxyUrl)  
+                        .then(function(data) {  
+                            self.activeRequests--;  
+                            self.processQueue();  
+                            resolve(data);  
+                        })  
+                        .catch(function() {  
+                            tryProxy(proxyIndex + 1);  
+                        });  
+                };  
+                tryProxy(0);  
             });  
         },  
   
         processQueue: function() {  
-            while (API.activeRequests < Config.MAX_CONCURRENT_REQUESTS && API.requestQueue.length > 0) {  
-                var item = API.requestQueue.shift();  
-                API.activeRequests++;  
-                  
-                item.request()  
-                    .then(function(result) {  
-                        item.resolve(result);  
-                        API.activeRequests--;  
-                        API.processQueue();  
-                    })  
-                    .catch(function(error) {  
-                        item.reject(error);  
-                        API.activeRequests--;  
-                        API.processQueue();  
-                    });  
+            if (this.requestQueue.length > 0 && this.activeRequests < Config.MAX_CONCURRENT_REQUESTS) {  
+                var next = this.requestQueue.shift();  
+                this.activeRequests++;  
+                this.fetchWithProxy(next.url)  
+                    .then(next.resolve)  
+                    .catch(next.reject);  
             }  
         }  
     };  
@@ -219,153 +221,127 @@
                 if (item.ffprobe && Array.isArray(item.ffprobe)) {  
                     item.ffprobe.forEach(function(stream) {  
                         if (stream.codec_type === 'video') {  
-                            var h = parseInt(stream.height || 0);  
-                            var w = parseInt(stream.width || 0);  
-                            var res = null;  
-                            if (h >= 2160 || w >= 3840) res = '4K';  
-                            else if (h >= 1440 || w >= 2560) res = '2K';  
-                            else if (h >= 1080 || w >= 1920) res = 'FULL HD';  
-                            else if (h >= 720 || w >= 1280) res = 'HD';  
-                              
-                            if (res && (!best.resolution || resOrder.indexOf(res) > resOrder.indexOf(best.resolution))) {  
-                                best.resolution = res;  
+                            if (stream.profile && stream.profile.toLowerCase().indexOf('hdr') >= 0) {  
+                                best.hdr = true;  
+                            }  
+                            if (stream.tags && stream.tags.DURATION && stream.tags.DURATION.toLowerCase().indexOf('dovi') >= 0) {  
+                                best.dolbyVision = true;  
                             }  
                         }  
-                          
                         if (stream.codec_type === 'audio') {  
-                            var channels = parseInt(stream.channels || 0);  
-                            var audio = null;  
-                            if (channels >= 8) audio = '7.1';  
-                            else if (channels >= 6) audio = '5.1';  
-                            else if (channels >= 4) audio = '4.0';  
-                            else if (channels >= 2) audio = '2.0';  
-                              
-                            if (audio && (!best.audio || audioOrder.indexOf(audio) > audioOrder.indexOf(best.audio))) {  
-                                best.audio = audio;  
+                            var foundAudio = null;  
+                            if (stream.channels === 8) foundAudio = '7.1';  
+                            else if (stream.channels === 6) foundAudio = '5.1';  
+                            else if (stream.channels === 4) foundAudio = '4.0';  
+                            else if (stream.channels === 2) foundAudio = '2.0';  
+  
+                            if (foundAudio && (!best.audio || audioOrder.indexOf(foundAudio) > audioOrder.indexOf(best.audio))) {  
+                                best.audio = foundAudio;  
                             }  
                         }  
                     });  
                 }  
   
-                if (title.indexOf('hdr') >= 0) best.hdr = true;  
-                if (title.indexOf('dolby vision') >= 0) best.dolbyVision = true;  
-                if (title.indexOf('dub') >= 0 || title.indexOf('дубляж') >= 0) best.dub = true;  
+                if (title.indexOf('dub') >= 0 || title.indexOf('дуб') >= 0) {  
+                    best.dub = true;  
+                }  
             }  
-              
             return best;  
         },  
   
         fetchQuality: function(title, year) {  
-            var cacheKey = Utils.getCacheKey(title, year);  
-            var cached = Cache.get(cacheKey);  
-              
-            if (cached) {  
-                return Promise.resolve(cached);  
-            }  
-  
-            var searchTitle = title;  
-            if (year) {  
-                searchTitle += ' ' + year;  
-            }  
-  
-            var apiUrl = Config.JACRED_PROTOCOL + Config.JACRED_URL + '/api/v1.0/torrents?search=' +  
-                encodeURIComponent(searchTitle) +  
-                '&year=' + (year || '') + '&uid=' + (Lampa.Storage.get('device_id') || 'unknown');  
-  
-            return API.addToQueue(function() {  
-                return API.apiRequest(apiUrl);  
-            }).then(function(data) {  
-                var quality = null;  
-                if (data && data.results && data.results.length > 0) {  
-                    quality = QualityDetector.getBest(data.results);  
+            var self = this;  
+            return new Promise(function(resolve) {  
+                if (!title) {  
+                    resolve({ no_quality: true });  
+                    return;  
                 }  
-                  
-                if (quality) {  
-                    Cache.set(cacheKey, quality, Config.TTL.quality);  
-                } else {  
-                    Cache.set(cacheKey, { no_quality: true }, Config.TTL.no_quality);  
+  
+                var cacheKey = Config.QUALITY_CACHE + '_' + title + '_' + (year || '');  
+                var cached = Cache.get(cacheKey);  
+                if (cached) {  
+                    resolve(cached);  
+                    return;  
                 }  
-                  
-                return quality;  
-            }).catch(function(error) {  
-                Utils.logWithContext('error', 'API request failed', error);  
-                Cache.set(cacheKey, { error: true }, Config.TTL.error);  
-                return null;  
+  
+                var searchTitle = title.replace(/\s*\(\d{4}\)$/, '').replace(/\s*:\s*.*$/, '');  
+                var apiUrl = Config.JACRED_PROTOCOL + Config.JACRED_URL + '/api/v1.0/torrents?search=' +  
+                    encodeURIComponent(searchTitle) +  
+                    '&year=' + (year || '') + '&uid=' + (window.Lampa.Storage.get('jacred_uid') || '');  
+  
+                API.fetchWithProxy(apiUrl)  
+                    .then(function(data) {  
+                        if (data && data.length > 0) {  
+                            var quality = self.getBest(data);  
+                            if (quality.resolution || quality.hdr || quality.audio || quality.dub) {  
+                                Cache.set(cacheKey, quality);  
+                                resolve(quality);  
+                            } else {  
+                                Cache.set(cacheKey, { no_quality: true }, Config.TTL.no_quality);  
+                                resolve({ no_quality: true });  
+                            }  
+                        } else {  
+                            Cache.set(cacheKey, { no_quality: true }, Config.TTL.no_quality);  
+                            resolve({ no_quality: true });  
+                        }  
+                    })  
+                    .catch(function() {  
+                        Cache.set(cacheKey, { error: true }, Config.TTL.error);  
+                        resolve({ error: true });  
+                    });  
             });  
         }  
     };  
   
     // =======================================================  
-    // МОДУЛЬ ІНТЕРФЕЙСУ  
+    // ІНТЕРФЕЙС  
     // =======================================================  
     var UI = {  
-        createBadgeImg: function(type, isFull, index) {  
-            var className = isFull ? 'quality-badge' : 'card-quality-badge';  
-            var style = isFull ? '' : 'animation-delay: ' + (index * 0.1) + 's';  
-            return '<img class="' + className + '" src="' + svgIcons[type] + '" alt="' + type + '" style="' + style + '" />';  
-        },  
-  
-        addBadgesToCard: function(card, quality) {  
-            if (!quality) return;  
-  
-            var badges = [];  
-            if (quality.resolution) badges.push(UI.createBadgeImg(quality.resolution, false, badges.length));  
-            if (quality.hdr) badges.push(UI.createBadgeImg('HDR', false, badges.length));  
-            if (quality.dolbyVision) badges.push(UI.createBadgeImg('Dolby Vision', false, badges.length));  
-            if (quality.audio) badges.push(UI.createBadgeImg(quality.audio, false, badges.length));  
-            if (quality.dub) badges.push(UI.createBadgeImg('DUB', false, badges.length));  
-  
-            if (badges.length > 0) {  
-                var container = card.find('.card__view');  
-                if (container.length === 0) {  
-                    container = card.find('.card__poster');  
-                }  
-                if (container.length === 0) {  
-                    container = card;  
-                }  
-  
-                var badgesHtml = '<div class="card-quality-badges">' + badges.join('') + '</div>';  
-                container.append(badgesHtml);  
-            }  
-        },  
-  
-        addBadgesToFull: function(quality) {  
-            if (!quality) return;  
-  
-            var badges = [];  
-            if (quality.resolution) badges.push(UI.createBadgeImg(quality.resolution, true, badges.length));  
-            if (quality.hdr) badges.push(UI.createBadgeImg('HDR', true, badges.length));  
-            if (quality.dolbyVision) badges.push(UI.createBadgeImg('Dolby Vision', true, badges.length));  
-            if (quality.audio) badges.push(UI.createBadgeImg(quality.audio, true, badges.length));  
-            if (quality.dub) badges.push(UI.createBadgeImg('DUB', true, badges.length));  
-  
-            if (badges.length > 0) {  
-                var container = $('.full-start-new__details .quality-badges-container');  
-                if (container.length === 0) {  
-                    container = $('<div class="quality-badges-container"></div>');  
-                    $('.full-start-new__details').prepend(container);  
-                }  
-                container.html(badges.join(''));  
-            }  
-        },  
-  
         initStyles: function() {  
             var style = '<style>' +  
-                '.quality-badges-container { display: flex; gap: 0.3em; margin: 0 0 0.4em 0; min-height: 1.2em; pointer-events: none; }' +  
-                '.quality-badge { height: 1.2em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; }' +  
                 '.card-quality-badges { position: absolute; top: 0.3em; right: 0.3em; display: flex; flex-direction: row; gap: 0.2em; pointer-events: none; z-index: 5; }' +  
                 '.card-quality-badge { height: 0.9em; opacity: 0; transform: translateY(5px); animation: qb_in 0.3s ease forwards; }' +  
                 '@keyframes qb_in { to { opacity: 1; transform: translateY(0); } }' +  
-                '.quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; }' +  
-                '.card-quality-badge img { filter: drop-shadow(0 1px 2px #000); }' +  
+                '.card-quality-badge img { height: 100%; width: auto; display: block; filter: drop-shadow(0 1px 2px #000); }' +  
                 '@media (max-width: 768px) {' +  
-                    '.quality-badges-container { gap: 0.25em; margin: 0 0 0.35em 0; min-height: 1em; }' +  
-                    '.quality-badge { height: 1em; }' +  
                     '.card-quality-badges { top: 0.25em; right: 0.25em; gap: 0.18em; }' +  
                     '.card-quality-badge { height: 0.75em; }' +  
                 '}' +  
             '</style>';  
-            $('body').append(style);  
+            window.$('body').append(style);  
+        },  
+  
+        createBadgeImg: function(type, isFull, index) {  
+            var delay = isFull ? index * 100 : index * 50;  
+            return '<img class="card-quality-badge" src="' + svgIcons[type] + '" alt="' + type + '" style="animation-delay: ' + delay + 'ms">';  
+        },  
+  
+        addBadgesToCard: function(card, quality) {  
+            var badges = [];  
+            if (quality.resolution) badges.push(this.createBadgeImg(quality.resolution, false, badges.length));  
+            if (quality.hdr) badges.push(this.createBadgeImg('HDR', false, badges.length));  
+            if (quality.dolbyVision) badges.push(this.createBadgeImg('Dolby Vision', false, badges.length));  
+            if (quality.audio) badges.push(this.createBadgeImg(quality.audio, false, badges.length));  
+            if (quality.dub) badges.push(this.createBadgeImg('DUB', false, badges.length));  
+  
+            if (badges.length > 0) {  
+                var container = window.$('<div class="card-quality-badges"></div>').html(badges.join(''));  
+                card.find('.card__view').append(container);  
+            }  
+        },  
+  
+        addBadgesToFullCard: function(quality) {  
+            var badges = [];  
+            if (quality.resolution) badges.push(this.createBadgeImg(quality.resolution, true, badges.length));  
+            if (quality.hdr) badges.push(this.createBadgeImg('HDR', true, badges.length));  
+            if (quality.dolbyVision) badges.push(this.createBadgeImg('Dolby Vision', true, badges.length));  
+            if (quality.audio) badges.push(this.createBadgeImg(quality.audio, true, badges.length));  
+            if (quality.dub) badges.push(this.createBadgeImg('DUB', true, badges.length));  
+  
+            if (badges.length > 0) {  
+                var container = window.$('<div class="quality-badges-container"></div>').html(badges.join(''));  
+                window.$('.quality-badges-container').html(container);  
+            }  
         }  
     };  
   
@@ -373,7 +349,7 @@
     // ОБРОБКА КАРТОК  
     // =======================================================  
     function updateCard(card) {  
-        var $card = $(card);  
+        var $card = window.$(card);  
         if ($card.hasClass('quality-processed')) return;  
   
         var cardData = $card.data('card_data') || {};  
@@ -420,9 +396,9 @@
     // =======================================================  
     // СЛУХАЧІ ПОДІЙ  
     // =======================================================  
-  
- // Обробка повної картки фільму  
-    Lampa.Listener.follow('full', function(e) {  
+      
+    // Обробка повної картки фільму  
+    window.Lampa.Listener.follow('full', function(e) {  
         if (e.type === 'complite') {  
             var movie = e.data.movie;  
             if (movie) {  
@@ -461,7 +437,7 @@
         if (newCards.length) debouncedUpdateCards(newCards);  
     });  
   
-    // =======================================================  
+     // =======================================================  
     // ІНІЦІАЛІЗАЦІЯ  
     // =======================================================  
     function startPlugin() {  
