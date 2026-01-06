@@ -34,14 +34,14 @@
       var item = results[i];
       var title = (item.Title || '').toLowerCase();
 
-      var foundRes = null;
-      if (title.includes('2160') || title.includes('4k') || title.includes('uhd')) foundRes = '4K';
-      else if (title.includes('1440') || title.includes('2k')) foundRes = '2K';
-      else if (title.includes('1080') || title.includes('fhd') || title.includes('full hd')) foundRes = 'FULL HD';
-      else if (title.includes('720') || title.includes('hd')) foundRes = 'HD';
+      var res = null;
+      if (title.includes('2160') || title.includes('4k') || title.includes('uhd')) res = '4K';
+      else if (title.includes('1440') || title.includes('2k')) res = '2K';
+      else if (title.includes('1080') || title.includes('fhd') || title.includes('full hd')) res = 'FULL HD';
+      else if (title.includes('720') || title.includes('hd')) res = 'HD';
 
-      if (foundRes && (!best.resolution || resOrder.indexOf(foundRes) > resOrder.indexOf(best.resolution))) {
-        best.resolution = foundRes;
+      if (res && (!best.resolution || resOrder.indexOf(res) > resOrder.indexOf(best.resolution))) {
+        best.resolution = res;
       }
 
       if (item.ffprobe && Array.isArray(item.ffprobe)) {
@@ -68,14 +68,23 @@
   }
 
   // =======================================================
-  // UI
+  // UI HELPERS
   // =======================================================
 
   function createBadge(type, isCard, index) {
     var src = svgIcons[type];
     if (!src) return '';
     var cls = isCard ? 'card-quality-badge' : 'quality-badge';
-    return '<div class="' + cls + '" style="animation-delay:' + (index * 0.07) + 's"><img src="' + src + '"></div>';
+    return '<div class="' + cls + '" style="animation-delay:' + (index * 0.07) + 's"><img src="' + src + '" draggable="false"></div>';
+  }
+
+  function getCardTarget(card) {
+    return (
+      card.find('.card__view').first().length ? card.find('.card__view').first() :
+      card.find('.card__img').first().length ? card.find('.card__img').first() :
+      card.find('.card__image').first().length ? card.find('.card__image').first() :
+      card.find('.card__poster').first()
+    );
   }
 
   function addCardBadges(card, best) {
@@ -89,14 +98,18 @@
     if (best.dub) badges.push(createBadge('DUB', true, badges.length));
     if (best.dolbyVision) badges.push(createBadge('Dolby Vision', true, badges.length));
 
-    if (badges.length) {
-      card.find('.card__view').append('<div class="card-quality-badges">' + badges.join('') + '</div>');
-      card.addClass('qb-processed'); // 🔥 КЛЮЧОВЕ ВИПРАВЛЕННЯ
-    }
+    if (!badges.length) return;
+
+    var target = getCardTarget(card);
+    if (!target.length) return;
+
+    target.css('position', 'relative');
+    target.append('<div class="card-quality-badges">' + badges.join('') + '</div>');
+    card.addClass('qb-processed');
   }
 
   // =======================================================
-  // CARD PROCESSING WITH RETRY
+  // CARD PROCESSING
   // =======================================================
 
   function waitForData(card, attempt) {
@@ -135,8 +148,12 @@
   Lampa.Listener.follow('full', function (e) {
     if (e.type !== 'complite') return;
 
-    var d = $('.full-start-new__details');
-    if (!$('.quality-badges-container').length) d.after('<div class="quality-badges-container"></div>');
+    var details = $('.full-start-new__details');
+    if (!details.length) return;
+
+    if (!$('.quality-badges-container').length) {
+      details.after('<div class="quality-badges-container"></div>');
+    }
 
     Lampa.Parser.get(
       { search: e.data.movie.title || e.data.movie.name, movie: e.data.movie, page: 1 },
@@ -145,6 +162,7 @@
 
         var best = getBest(r.Results);
         var out = [];
+
         if (best.resolution) out.push(createBadge(best.resolution, false, out.length));
         if (best.hdr) out.push(createBadge('HDR', false, out.length));
         if (best.audio) out.push(createBadge(best.audio, false, out.length));
@@ -164,23 +182,25 @@
 <style>
 .quality-badges-container{display:flex;gap:.3em;margin:.4em 0;pointer-events:none}
 .quality-badge{height:1.2em;opacity:0;transform:translateY(6px);animation:qb .3s ease forwards}
-.card-quality-badges{position:absolute;top:.3em;right:.3em;display:flex;gap:.2em;pointer-events:none;z-index:6}
+.card-quality-badges{position:absolute;top:.3em;right:.3em;display:flex;gap:.2em;pointer-events:none;z-index:10}
 .card-quality-badge{height:.9em;opacity:0;transform:translateY(5px);animation:qb .25s ease forwards}
 @keyframes qb{to{opacity:1;transform:none}}
-.quality-badge img,.card-quality-badge img{height:100%;filter:drop-shadow(0 1px 2px #000)}
+.quality-badge img,.card-quality-badge img{height:100%;width:auto;filter:drop-shadow(0 1px 2px #000)}
 </style>`);
 
   // =======================================================
   // OBSERVER
   // =======================================================
 
-  var observer = new MutationObserver(function (m) {
+  var observer = new MutationObserver(function (mutations) {
     var cards = [];
-    m.forEach(function (x) {
-      x.addedNodes.forEach(function (n) {
+    mutations.forEach(function (m) {
+      m.addedNodes.forEach(function (n) {
         if (n.nodeType === 1) {
           if (n.classList.contains('card')) cards.push(n);
-          n.querySelectorAll && n.querySelectorAll('.card').forEach(c => cards.push(c));
+          n.querySelectorAll && n.querySelectorAll('.card').forEach(function (c) {
+            cards.push(c);
+          });
         }
       });
     });
@@ -189,8 +209,10 @@
 
   observer.observe(document.body, { childList: true, subtree: true });
 
-  setTimeout(() => processCards(document.querySelectorAll('.card')), 1500);
+  setTimeout(function () {
+    processCards(document.querySelectorAll('.card'));
+  }, 1500);
 
-  console.log('[QualityBadges] Loaded successfully ✔');
+  console.log('[QualityBadges] Loaded OK');
 
 })();
