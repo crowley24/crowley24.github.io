@@ -1,218 +1,163 @@
 (function () {
-  'use strict';
+    'use strict';
 
-  // =======================================================
-  // CONFIG
-  // =======================================================
+    /* ======================================================
+       I. CONFIG
+    ====================================================== */
+    var LOG = true;
 
-  var pluginPath = 'https://raw.githubusercontent.com/FoxStudio24/lampa/main/Quality/';
+    /* ======================================================
+       II. STYLES (твій дизайн)
+    ====================================================== */
+    function initStyles() {
+        if (document.getElementById('qb-style')) return;
 
-  var svgIcons = {
-    '4K': pluginPath + 'Quality_ico/4K.svg',
-    '2K': pluginPath + 'Quality_ico/2K.svg',
-    'FULL HD': pluginPath + 'Quality_ico/FULL HD.svg',
-    'HD': pluginPath + 'Quality_ico/HD.svg',
-    'HDR': pluginPath + 'Quality_ico/HDR.svg',
-    'Dolby Vision': pluginPath + 'Quality_ico/Dolby Vision.svg',
-    '7.1': pluginPath + 'Quality_ico/7.1.svg',
-    '5.1': pluginPath + 'Quality_ico/5.1.svg',
-    '4.0': pluginPath + 'Quality_ico/4.0.svg',
-    '2.0': pluginPath + 'Quality_ico/2.0.svg',
-    'DUB': pluginPath + 'Quality_ico/DUB.svg'
-  };
+        var s = document.createElement('style');
+        s.id = 'qb-style';
+        s.textContent = `
+        .card__view{position:relative!important}
 
-  // =======================================================
-  // QUALITY DETECTION
-  // =======================================================
+        .qb-badges{
+            position:absolute;
+            top:6px;
+            left:6px;
+            display:flex;
+            flex-wrap:wrap;
+            gap:4px;
+            z-index:20;
+        }
 
-  function getBest(results) {
-    var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false };
-    var resOrder = ['HD', 'FULL HD', '2K', '4K'];
-    var audioOrder = ['2.0', '4.0', '5.1', '7.1'];
+        .qb-badge{
+            font-size:11px;
+            font-weight:700;
+            padding:2px 6px;
+            border-radius:4px;
+            background:#000;
+            color:#fff;
+            box-shadow:0 1px 4px rgba(0,0,0,.6);
+            line-height:1.2;
+            white-space:nowrap;
+        }
 
-    for (var i = 0; i < Math.min(results.length, 20); i++) {
-      var item = results[i];
-      var title = (item.Title || '').toLowerCase();
+        .qb-4k{background:#8b0000}
+        .qb-hdr{background:#006400}
+        .qb-dv{background:#4b0082}
+        .qb-fhd{background:#1e90ff}
+        .qb-hd{background:#4169e1}
+        .qb-sd{background:#8b4513}
+        .qb-audio{background:#2f4f4f}
+        .qb-dub{background:#483d8b}
+        `;
+        document.head.appendChild(s);
+    }
 
-      var res = null;
-      if (title.includes('2160') || title.includes('4k') || title.includes('uhd')) res = '4K';
-      else if (title.includes('1440') || title.includes('2k')) res = '2K';
-      else if (title.includes('1080') || title.includes('fhd') || title.includes('full hd')) res = 'FULL HD';
-      else if (title.includes('720') || title.includes('hd')) res = 'HD';
+    /* ======================================================
+       III. BADGE FACTORY
+    ====================================================== */
+    function createBadge(text, cls) {
+        var b = document.createElement('div');
+        b.className = 'qb-badge ' + cls;
+        b.textContent = text;
+        return b;
+    }
 
-      if (res && (!best.resolution || resOrder.indexOf(res) > resOrder.indexOf(best.resolution))) {
-        best.resolution = res;
-      }
+    /* ======================================================
+       IV. QUALITY PARSER (твій)
+    ====================================================== */
+    function parseQuality(title) {
+        if (!title) return null;
+        var t = title.toLowerCase();
 
-      if (item.ffprobe && Array.isArray(item.ffprobe)) {
-        item.ffprobe.forEach(function (s) {
-          if (s.codec_type === 'video') {
-            if (s.side_data_list && JSON.stringify(s.side_data_list).includes('Vision')) best.dolbyVision = true;
-            if (s.color_transfer === 'smpte2084' || s.color_transfer === 'arib-std-b67') best.hdr = true;
-          }
-          if (s.codec_type === 'audio' && s.channels) {
-            var ch = parseInt(s.channels);
-            var aud = ch >= 8 ? '7.1' : ch >= 6 ? '5.1' : ch >= 4 ? '4.0' : '2.0';
-            if (!best.audio || audioOrder.indexOf(aud) > audioOrder.indexOf(best.audio)) best.audio = aud;
-          }
+        var res = [];
+        if (/dolby\s*vision|dv\b/.test(t)) res.push({t:'DV',c:'qb-dv'});
+        if (/hdr/.test(t)) res.push({t:'HDR',c:'qb-hdr'});
+        if (/2160p|4k|uhd/.test(t)) res.push({t:'4K',c:'qb-4k'});
+        else if (/1080p|fhd/.test(t)) res.push({t:'FHD',c:'qb-fhd'});
+        else if (/720p|hd\b/.test(t)) res.push({t:'HD',c:'qb-hd'});
+        else if (/480p|sd\b/.test(t)) res.push({t:'SD',c:'qb-sd'});
+
+        if (/dts|truehd|atmos/.test(t)) res.push({t:'AUDIO',c:'qb-audio'});
+        if (/dub|дубляж|ukr/.test(t)) res.push({t:'DUB',c:'qb-dub'});
+
+        return res;
+    }
+
+    /* ======================================================
+       V. UI APPLY (як MAXSM)
+    ====================================================== */
+    function applyBadges(card, badges) {
+        if (!badges || !badges.length) return;
+        if (card.hasAttribute('data-qb')) return;
+
+        var view = card.querySelector('.card__view');
+        if (!view) return;
+
+        var wrap = document.createElement('div');
+        wrap.className = 'qb-badges';
+
+        badges.forEach(function (b) {
+            wrap.appendChild(createBadge(b.t, b.c));
         });
-      }
 
-      if (title.includes('hdr')) best.hdr = true;
-      if (title.includes('vision') || title.includes('dovi')) best.dolbyVision = true;
-      if (title.includes('dub') || title.includes('дубл')) best.dub = true;
+        view.appendChild(wrap);
+        card.setAttribute('data-qb', '1');
     }
 
-    if (best.dolbyVision) best.hdr = true;
-    return best;
-  }
+    /* ======================================================
+       VI. CARD PROCESSOR
+    ====================================================== */
+    function processCard(card) {
+        var data = card.card_data;
+        if (!data) return;
 
-  // =======================================================
-  // UI HELPERS
-  // =======================================================
+        var title =
+            data.release_title ||
+            data.title ||
+            data.name ||
+            data.original_title ||
+            data.original_name;
 
-  function createBadge(type, isCard, index) {
-    var src = svgIcons[type];
-    if (!src) return '';
-    var cls = isCard ? 'card-quality-badge' : 'quality-badge';
-    return '<div class="' + cls + '" style="animation-delay:' + (index * 0.07) + 's"><img src="' + src + '" draggable="false"></div>';
-  }
-
-  function getCardTarget(card) {
-    return (
-      card.find('.card__view').first().length ? card.find('.card__view').first() :
-      card.find('.card__img').first().length ? card.find('.card__img').first() :
-      card.find('.card__image').first().length ? card.find('.card__image').first() :
-      card.find('.card__poster').first()
-    );
-  }
-
-  function addCardBadges(card, best) {
-    if (!document.body.contains(card[0])) return;
-    if (card.hasClass('qb-processed')) return;
-
-    var badges = [];
-    if (best.resolution) badges.push(createBadge(best.resolution, true, badges.length));
-    if (best.hdr) badges.push(createBadge('HDR', true, badges.length));
-    if (best.audio) badges.push(createBadge(best.audio, true, badges.length));
-    if (best.dub) badges.push(createBadge('DUB', true, badges.length));
-    if (best.dolbyVision) badges.push(createBadge('Dolby Vision', true, badges.length));
-
-    if (!badges.length) return;
-
-    var target = getCardTarget(card);
-    if (!target.length) return;
-
-    target.css('position', 'relative');
-    target.append('<div class="card-quality-badges">' + badges.join('') + '</div>');
-    card.addClass('qb-processed');
-  }
-
-  // =======================================================
-  // CARD PROCESSING
-  // =======================================================
-
-  function waitForData(card, attempt) {
-    var max = 6;
-    var delay = 250;
-
-    var item = card.data('item');
-
-    if (item && (item.title || item.name)) {
-      Lampa.Parser.get(
-        { search: item.title || item.name, movie: item, page: 1 },
-        function (r) {
-          if (r && r.Results) addCardBadges(card, getBest(r.Results));
-        }
-      );
-    } else if (attempt < max) {
-      setTimeout(function () {
-        waitForData(card, attempt + 1);
-      }, delay);
-    }
-  }
-
-  function processCards(cards) {
-    $(cards)
-      .filter(':not(.qb-processing):not(.qb-processed)')
-      .addClass('qb-processing')
-      .each(function () {
-        waitForData($(this), 0);
-      });
-  }
-
-  // =======================================================
-  // FULL CARD
-  // =======================================================
-
-  Lampa.Listener.follow('full', function (e) {
-    if (e.type !== 'complite') return;
-
-    var details = $('.full-start-new__details');
-    if (!details.length) return;
-
-    if (!$('.quality-badges-container').length) {
-      details.after('<div class="quality-badges-container"></div>');
+        var badges = parseQuality(title);
+        applyBadges(card, badges);
     }
 
-    Lampa.Parser.get(
-      { search: e.data.movie.title || e.data.movie.name, movie: e.data.movie, page: 1 },
-      function (r) {
-        if (!r || !r.Results) return;
+    /* ======================================================
+       VII. OBSERVER (MAXSM-style)
+    ====================================================== */
+    var observer = new MutationObserver(function (mutations) {
+        mutations.forEach(function (m) {
+            m.addedNodes.forEach(function (n) {
+                if (n.nodeType !== 1) return;
 
-        var best = getBest(r.Results);
-        var out = [];
+                if (n.classList && n.classList.contains('card')) {
+                    processCard(n);
+                }
 
-        if (best.resolution) out.push(createBadge(best.resolution, false, out.length));
-        if (best.hdr) out.push(createBadge('HDR', false, out.length));
-        if (best.audio) out.push(createBadge(best.audio, false, out.length));
-        if (best.dub) out.push(createBadge('DUB', false, out.length));
-        if (best.dolbyVision) out.push(createBadge('Dolby Vision', false, out.length));
-
-        $('.quality-badges-container').html(out.join(''));
-      }
-    );
-  });
-
-  // =======================================================
-  // STYLES
-  // =======================================================
-
-  $('body').append(`
-<style>
-.quality-badges-container{display:flex;gap:.3em;margin:.4em 0;pointer-events:none}
-.quality-badge{height:1.2em;opacity:0;transform:translateY(6px);animation:qb .3s ease forwards}
-.card-quality-badges{position:absolute;top:.3em;right:.3em;display:flex;gap:.2em;pointer-events:none;z-index:10}
-.card-quality-badge{height:.9em;opacity:0;transform:translateY(5px);animation:qb .25s ease forwards}
-@keyframes qb{to{opacity:1;transform:none}}
-.quality-badge img,.card-quality-badge img{height:100%;width:auto;filter:drop-shadow(0 1px 2px #000)}
-</style>`);
-
-  // =======================================================
-  // OBSERVER
-  // =======================================================
-
-  var observer = new MutationObserver(function (mutations) {
-    var cards = [];
-    mutations.forEach(function (m) {
-      m.addedNodes.forEach(function (n) {
-        if (n.nodeType === 1) {
-          if (n.classList.contains('card')) cards.push(n);
-          n.querySelectorAll && n.querySelectorAll('.card').forEach(function (c) {
-            cards.push(c);
-          });
-        }
-      });
+                var cards = n.querySelectorAll
+                    ? n.querySelectorAll('.card')
+                    : [];
+                cards.forEach(processCard);
+            });
+        });
     });
-    if (cards.length) processCards(cards);
-  });
 
-  observer.observe(document.body, { childList: true, subtree: true });
+    /* ======================================================
+       VIII. START
+    ====================================================== */
+    function start() {
+        if (LOG) console.log('[QB] start');
+        initStyles();
 
-  setTimeout(function () {
-    processCards(document.querySelectorAll('.card'));
-  }, 1500);
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
 
-  console.log('[QualityBadges] Loaded OK');
+        document.querySelectorAll('.card').forEach(processCard);
+    }
 
+    if (!window.__qualityBadgesV2) {
+        window.__qualityBadgesV2 = true;
+        start();
+    }
 })();
