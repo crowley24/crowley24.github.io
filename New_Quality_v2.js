@@ -97,33 +97,33 @@
   
   function processCards() {  
     console.log('[QualityBadges] Processing cards...');  
-    var cards = $('.card:not(.qb-processed)');  
-    console.log('[QualityBadges] Found unprocessed cards:', cards.length);  
+    console.log('[QualityBadges] Total cards found:', $('.card').length);  
+    console.log('[QualityBadges] Unprocessed cards:', $('.card:not(.qb-processed)').length);  
       
-    cards.each(function() {  
+    $('.card:not(.qb-processed)').each(function() {  
       var card = $(this);  
       var movie = card.data('item');  
         
-      console.log('[QualityBadges] Card data:', movie ? 'has data' : 'no data');  
+      console.log('[QualityBadges] Card found:', card.find('.card__title').text());  
+      console.log('[QualityBadges] Card data:', movie ? JSON.stringify(movie) : 'no data');  
         
-      if (card.offset().top < $(window).height() + 200) {  
-        card.addClass('qb-processed');  
+      card.addClass('qb-processed');  
+        
+      if (movie) {  
+        console.log('[QualityBadges] Processing movie:', movie.title || movie.name);  
           
-        if (movie) {  
-          console.log('[QualityBadges] Processing movie:', movie.title || movie.name);  
-            
-          if (Lampa.Storage.field('parser_use')) {  
-            Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(response) {  
-              console.log('[QualityBadges] Parser response:', response ? 'has data' : 'no data');  
-              if (response && response.Results) {  
-                var best = getBest(response.Results);  
-                console.log('[QualityBadges] Best quality:', best);  
-                addCardBadges(card, best);  
-              }  
-            });  
-          } else {  
-            console.log('[QualityBadges] Parser is disabled');  
-          }  
+        if (typeof Lampa !== 'undefined' && Lampa.Storage && Lampa.Storage.field('parser_use')) {  
+          console.log('[QualityBadges] Parser is enabled, making request...');  
+          Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(response) {  
+            console.log('[QualityBadges] Parser response:', response ? JSON.stringify(response).substring(0, 200) + '...' : 'no data');  
+            if (response && response.Results) {  
+              var best = getBest(response.Results);  
+              console.log('[QualityBadges] Best quality:', best);  
+              addCardBadges(card, best);  
+            }  
+          });  
+        } else {  
+          console.log('[QualityBadges] Parser is disabled or Lampa not available');  
         }  
       }  
     });  
@@ -149,6 +149,7 @@
     }  
   });  
   
+  // Спостерігач за змінами в DOM  
   var observer = new MutationObserver(function(mutations) {  
     mutations.forEach(function(mutation) {  
       if (mutation.addedNodes.length) {  
@@ -157,34 +158,23 @@
     });  
   });  
   
-  var targets = [  
-    '.scroll__content',  
-    '.items-cards',  
-    '.content',  
-    'body'  
-  ];  
+  // Шукаємо контейнер для спостереження  
+  var targetNode = document.querySelector('.scroll__content') ||   
+                   document.querySelector('.items-cards') ||   
+                   document.querySelector('.content') ||   
+                   document.body;  
     
-  var targetNode = null;  
-  for (var i = 0; i < targets.length; i++) {  
-    targetNode = document.querySelector(targets[i]);  
-    if (targetNode) {  
-      console.log('[QualityBadges] Observer attached to:', targets[i]);  
-      break;  
-    }  
-  }  
+  console.log('[QualityBadges] Observer attached to:', targetNode.className || 'body');  
     
-  if (targetNode) {  
-    observer.observe(targetNode, {  
-      childList: true,  
-      subtree: true  
-    });  
-  } else {  
-    console.log('[QualityBadges] No suitable target found for observer');  
-  }  
+  observer.observe(targetNode, {  
+    childList: true,  
+    subtree: true  
+  });  
   
+  // Запускаємо обробку  
   setTimeout(function() {  
     processCards();  
-  }, 1000);  
+  }, 2000);  
   
   $(window).on('scroll', function() {  
     processCards();  
@@ -207,6 +197,6 @@
   '</style>';  
   $('body').append(style);  
   
-  console.log('[QualityBadges] Plugin initialized with diagnostics');  
+  console.log('[QualityBadges] Plugin initialized');  
   
 })();
