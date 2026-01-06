@@ -436,32 +436,31 @@
 						color: #fff;  
 					}  
 					.new-interface-info__title {  
-						font-size: 5em;  
-						font-weight: 700;  
-						margin-bottom: 0.3em;  
-						overflow: hidden;  
-						-o-text-overflow: '.';  
-						text-overflow: '.';  
-						display: -webkit-box;  
-						-webkit-line-clamp: 1;  
-						line-clamp: 1;  
-						-webkit-box-orient: vertical;  
-						margin-left: -0.03em;  
-						line-height: 1.3;  
-						text-shadow: 2px 2px 4px rgba(0,0,0,0.8);  
-						letter-spacing: -0.02em;  
-						min-height: 8em !important;  
-						overflow: visible !important;  
-					}  
+    font-size: 5em;  
+    font-weight: 700;  
+    margin-bottom: 0.3em;  
+    overflow: hidden;  
+    -o-text-overflow: '.';  
+    text-overflow: '.';  
+    display: -webkit-box;  
+    -webkit-line-clamp: 1;  
+    line-clamp: 1;  
+    -webkit-box-orient: vertical;  
+    margin-left: -0.03em;  
+    line-height: 1.3;  
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);  
+    letter-spacing: -0.02em;  
+    min-height: 6em !important; /* Додано для логотипів */  
+    overflow: visible !important; /* Дозволити вихід логотипа */  
+}
 					.new-interface-info__title img {  
-						max-width: 12em !important;  
-						max-height: 6em !important;  
-						width: auto !important;  
-						height: auto !important;  
-						object-fit: contain !important;  
-						margin: 0 !important;  
-						filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));  
-						transition: transform 0.3s ease;  
+    max-width: 12em !important;  
+    max-height: 6em !important;  
+    width: auto !important;  
+    height: auto !important;  
+    object-fit: contain !important;  
+    margin: 0 !important;  
+    display: block !important;
 					}  
 					.new-interface-info__title img:hover {  
 						transform: scale(1.05);  
@@ -645,32 +644,32 @@
 						color: #fff;  
 					}  
 					.new-interface-info__title {  
-						font-size: 4em;  
-						font-weight: 700;  
-						margin-bottom: 0.2em;  
-						overflow: hidden;  
-						-o-text-overflow: '.';  
-						text-overflow: '.';  
-						display: -webkit-box;  
-						-webkit-line-clamp: 1;  
-						line-clamp: 1;  
-						-webkit-box-orient: vertical;  
-						margin-left: -0.03em;  
-						line-height: 1.3;  
-						text-shadow: 2px 2px 4px rgba(0,0,0,0.8);  
-						letter-spacing: -0.02em;  
-						min-height: 6em !important;  
-						overflow: visible !important;  
-					}  
+    font-size: 5em;  
+    font-weight: 700;  
+    margin-bottom: 0.3em;  
+    overflow: hidden;  
+    -o-text-overflow: '.';  
+    text-overflow: '.';  
+    display: -webkit-box;  
+    -webkit-line-clamp: 1;  
+    line-clamp: 1;  
+    -webkit-box-orient: vertical;  
+    margin-left: -0.03em;  
+    line-height: 1.3;  
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);  
+    letter-spacing: -0.02em;  
+    min-height: 6em !important; /* Додано для логотипів */  
+    overflow: visible !important; /* Дозволити вихід логотипа */  
+}
 					.new-interface-info__title img {  
-						max-width: 10em !important;  
-						max-height: 5em !important;  
-						width: auto !important;  
-						height: auto !important;  
-						object-fit: contain !important;  
-						margin: 0 !important;  
-						filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));  
-						transition: transform 0.3s ease;  
+						.new-interface-info__title img {  
+    max-width: 12em !important;  
+    max-height: 6em !important;  
+    width: auto !important;  
+    height: auto !important;  
+    object-fit: contain !important;  
+    margin: 0 !important;  
+    display: block !important;
 					}  
 					.new-interface-info__title img:hover {  
 						transform: scale(1.05);  
@@ -961,25 +960,27 @@
 			requestAnimationFrame(step);  
 		}  
   
-		function applyFinalStyles(img, text_height) {  
-			img.style.marginTop = "0";  
-			img.style.marginLeft = "0";  
-			img.style.paddingTop = PADDING_TOP_EM + "em";  
-			img.style.paddingBottom = PADDING_BOTTOM_EM + "em";  
-			img.style.imageRendering = "-webkit-optimize-contrast";  
+function applyFinalStyles(img, text_height) {  
+    img.style.marginTop = "0";  
+    img.style.marginLeft = "0";  
+    img.style.paddingTop = "0";  
+    img.style.paddingBottom = "0";  
+    img.style.imageRendering = "-webkit-optimize-contrast";  
   
-			img.style.width = "12em";  
-			img.style.height = "auto";  
-			img.style.maxWidth = "100%";  
-			img.style.maxHeight = "none";  
-			img.style.minHeight = "auto";  
+    // Гнучкі розміри для запобігання накладанню  
+    img.style.maxWidth = "12em";  
+    img.style.maxHeight = "6em";  
+    img.style.width = "auto";  
+    img.style.height = "auto";  
+    img.style.minHeight = "auto";  
   
-			img.style.boxSizing = "border-box";  
-			img.style.display = "block";  
-			img.style.objectFit = "contain";  
-			img.style.objectPosition = "center center";  
-			img.style.transition = "none";  
-		}  
+    img.style.boxSizing = "border-box";  
+    img.style.display = "block";  
+    img.style.objectFit = "contain";  
+    img.style.objectPosition = "center center";  
+    img.style.transition = "none";  
+}
+
   
 		function moveHeadToDetails(animate) {  
 			if (!head_elem.length || !details_elem.length) return;  
