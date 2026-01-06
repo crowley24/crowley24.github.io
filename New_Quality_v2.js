@@ -5,7 +5,7 @@
   
   console.log('[QualityBadges] Plugin started');  
   
-  // Спочатку перевіримо доступність необхідних бібліотек  
+  // Перевірка доступності залежностей  
   if (typeof $ === 'undefined') {  
     console.error('[QualityBadges] jQuery not available');  
     return;  
@@ -18,11 +18,11 @@
   
   console.log('[QualityBadges] Dependencies OK');  
   
-  // Спрощена функція для тестування  
+  // Функція для тестування карток  
   function testCardProcessing() {  
     console.log('[QualityBadges] === Testing card processing ===');  
       
-    // Перевіряємо різні селектори  
+    // Тестуємо різні селектори  
     var selectors = [  
       '.card',  
       '.items-cards .card',  
@@ -51,21 +51,6 @@
     console.log('[QualityBadges] Body classes:', document.body.className);  
     console.log('[QualityBadges] Main containers:', $('.scroll__content, .items-cards, .content, main').length);  
   }  
-  
-  // Обробка повної картки (це працює)  
-  Lampa.Listener.follow('full', function(e) {  
-    if (e.type !== 'complite') return;  
-    console.log('[QualityBadges] Full screen opened');  
-      
-    var details = $('.full-start-new__details');  
-    if (details.length) {  
-      console.log('[QualityBadges] Adding badges to full screen');  
-      // Спрощені бейджі для тесту  
-      if (!$('.quality-badges-container').length) {  
-        details.after('<div class="quality-badges-container" style="background: red; padding: 5px; color: white;">TEST BADGE</div>');  
-      }  
-    }  
-  });  
   
   // Запускаємо тести з різними затримками  
   console.log('[QualityBadges] Setting up test timers...');  
