@@ -40,64 +40,52 @@
             } else {  
                 sourceSwitch.destroy();  
             }  
-        },  
-        onRender: function () {  
-            this.find('.settings-param__title').css('font-size', '1.3em');  
         }  
     });  
   
     // ========== ОСНОВНА ФУНКЦІЯ ПЕРЕМИКАННЯ ==========  
     var sourceSwitch = {  
         init: function () {  
+            this.create();  
             this.bind();  
         },  
   
-        bind: function () {  
-            var _this = this;  
-  
-            Lampa.Listener.follow('full', function (e) {  
-                if (e.type === 'complite') {  
-                    setTimeout(function () {  
-                        _this.create();  
-                    }, 100);  
-                }  
-            });  
-        },  
-  
         create: function () {  
-            var _this = this;  
-  
-            // Логотипи джерел  
             var logos = {  
-                'tmdb': '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',  
-                'cub': '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 6V12L16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'  
+                'tmdb': '<svg width="160" height="48" viewBox="0 0 160 48" fill="currentColor" xmlns="http://www.w3.org/2000/svg"> <g clip-path="url(#clip0_296_49)"> <path d="M7.875 0C3.525 0 0 3.525 0 7.875V40.125C0 44.475 3.525 48 7.875 48H40.125C44.475 48 48 44.475 48 40.125V7.875C48 3.525 44.475 0 40.125 0H7.875Z" fill="currentColor"/> <path d="M33.75 33.75H14.25V14.25H33.75V33.75Z" fill="white"/> <path d="M30.375 30.375H17.625V17.625H30.375V30.375Z" fill="currentColor"/> <path d="M78.75 33.75H59.25V14.25H78.75V33.75Z" fill="currentColor"/> <path d="M75.375 30.375H62.625V17.625H75.375V30.375Z" fill="white"/> <path d="M123.75 33.75H104.25V14.25H123.75V33.75Z" fill="currentColor"/> <path d="M120.375 30.375H107.625V17.625H120.375V30.375Z" fill="white"/> <path d="M152.25 7.875C152.25 3.525 148.725 0 144.375 0H112.125C107.775 0 104.25 3.525 104.25 7.875V40.125C104.25 44.475 107.775 48 112.125 48H144.375C148.725 48 152.25 44.475 152.25 40.125V7.875Z" fill="currentColor"/> <path d="M136.125 33.75H120.375V14.25H136.125V33.75Z" fill="white"/> <path d="M132.75 30.375H123.75V17.625H132.75V30.375Z" fill="currentColor"/> </g> <defs> <clipPath id="clip0_296_49"> <rect width="160" height="48" fill="currentColor"/> </clipPath> </defs> </svg>',  
+                'cub': '<svg width="160" height="48" viewBox="0 0 160 48" fill="currentColor" xmlns="http://www.w3.org/2000/svg"> <g clip-path="url(#clip0_296_49)"> <path d="M7.875 0C3.525 0 0 3.525 0 7.875V40.125C0 44.475 3.525 48 7.875 48H40.125C44.475 48 48 44.475 48 40.125V7.875C48 3.525 44.475 0 40.125 0H7.875Z" fill="currentColor"/> <path d="M33.75 33.75H14.25V14.25H33.75V33.75Z" fill="white"/> <path d="M30.375 30.375H17.625V17.625H30.375V30.375Z" fill="currentColor"/> <path d="M78.75 33.75H59.25V14.25H78.75V33.75Z" fill="currentColor"/> <path d="M75.375 30.375H62.625V17.625H75.375V30.375Z" fill="white"/> <path d="M123.75 33.75H104.25V14.25H123.75V33.75Z" fill="currentColor"/> <path d="M120.375 30.375H107.625V17.625H120.375V30.375Z" fill="white"/> <path d="M152.25 7.875C152.25 3.525 148.725 0 144.375 0H112.125C107.775 0 104.25 3.525 104.25 7.875V40.125C104.25 44.475 107.775 48 112.125 48H144.375C148.725 48 152.25 44.475 152.25 40.125V7.875Z" fill="currentColor"/> <path d="M136.125 33.75H120.375V14.25H136.125V33.75Z" fill="white"/> <path d="M132.75 30.375H123.75V17.625H132.75V30.375Z" fill="currentColor"/> </g> <defs> <clipPath id="clip0_296_49"> <rect width="160" height="48" fill="currentColor"/> </clipPath> </defs> </svg>'  
             };  
   
-            var sources = ['tmdb', 'cub'];  
+            var allSources = ['tmdb', 'cub'];  
+            var sources = allSources.slice(0, 2);  
+  
+            // Отримуємо поточне джерело з Storage  
             var currentSource = Lampa.Storage.get('source');  
             var currentSourceIndex = sources.indexOf(currentSource);  
   
+            // Якщо поточне джерело не знайдено, встановлюємо перше джерело за замовчуванням  
             if (currentSourceIndex === -1) {  
                 currentSourceIndex = 0;  
                 currentSource = sources[currentSourceIndex];  
                 Lampa.Storage.set('source', currentSource);  
             }  
   
-            // Створюємо кнопку перемикання  
+            // Создаем новый div элемент  
             var sourceDiv = $('<div>', {  
                 'class': 'head__action selector sources',  
                 'style': 'position: relative;',  
                 'html': "<div class=\"source-logo\" style=\"text-align: center;\"></div>"  
             });  
   
+            // Добавляем новый div как первый дочерний элемент контейнера '.head__actions'  
             $('.head__actions').prepend(sourceDiv);  
   
-            // Відображаємо логотип наступного джерела  
+            // Обновляем логотип плеера під іконкою, відображаємо наступний логотип  
             var nextSourceIndex = (currentSourceIndex + 1) % sources.length;  
             var nextSourceLogo = logos[sources[nextSourceIndex]];  
             sourceDiv.find('.source-logo').html(nextSourceLogo);  
   
-            // Обробник кліку для перемикання  
+            // Добавляем обработчик события 'hover:enter' для переключения  
             sourceDiv.on('hover:enter', function () {  
                 currentSourceIndex = (currentSourceIndex + 1) % sources.length;  
                 var selectedSource = sources[currentSourceIndex];  
@@ -106,19 +94,23 @@
                 var nextLogo = logos[sources[(currentSourceIndex + 1) % sources.length]];  
                 sourceDiv.find('.source-logo').html(nextLogo);  
   
-                // Перезавантажуємо сторінку  
-                setTimeout(function () {  
+                // Перезавантажуємо сторінку для застосування нового джерела  
+                setTimeout(function() {  
                     window.location.reload();  
-                }, 500);  
+                }, 300);  
             });  
         },  
   
-        main: function () {  
-            this.init();  
+        bind: function () {  
+            // Обробники подій вже додані в create()  
         },  
   
         destroy: function () {  
             $('.head__actions .sources').remove();  
+        },  
+  
+        main: function () {  
+            this.init();  
         }  
     };  
   
