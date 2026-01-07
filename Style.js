@@ -475,11 +475,16 @@
             width: 18.3em;
         }
 
-        .new-interface-info {
+                .new-interface-info {
             position: relative;
             padding: 1.5em;
-            height: 20em; /* ЗМІНА: Зменшення висоти для опускання рядка фільмів */
+            height: 28em; /* Збільшили з 24em до 28em, щоб опустити рядки */
         }
+//...
+        body.light--version .new-interface-info {
+            height: 29.3em; /* Збільшили з 25.3em до 29.3em */
+        }
+        
 
         .new-interface-info__body {
             width: 80%;
