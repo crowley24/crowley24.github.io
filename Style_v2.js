@@ -462,13 +462,45 @@
         };
     }
 
-       function addStyles() {
+     function addStyles() {
         if (addStyles.added) return;
         addStyles.added = true;
 
         Lampa.Template.add('new_interface_logo_styles', `<style>
         .new-interface {
             position: relative;
+        }
+
+        /* 1. ЄДИНИЙ КОМПЛЕКСНИЙ ГРАДІЄНТ ДЛЯ ВСІЄЇ ОБЛАСТІ */
+        .new-interface::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0; /* Займає всю доступну висоту */
+            
+            background-image: 
+                /* 1. Вертикальне затемнення (для нижніх рядків): з прозорого в чорний */
+                linear-gradient(to bottom, transparent 0%, transparent 30em, #000000b0 40em, #000000 100%),
+                /* 2. Горизонтальне затемнення (для тексту зліва): з чорного в прозорий */
+                linear-gradient(to right, 
+                    rgba(0, 0, 0, 0.9) 0%,   
+                    rgba(0, 0, 0, 0.7) 30%,  
+                    rgba(0, 0, 0, 0) 80%     
+                );
+            background-repeat: no-repeat;
+            pointer-events: none;
+            z-index: 2; /* Над фоном, під текстом */
+        }
+        
+        /* 2. КОРИГУВАННЯ Z-INDEX ТА ВИСОТ */
+        
+        /* Фон має бути на найнижчому шарі */
+        .new-interface .full-start__background {
+            height: 108%;
+            top: -6em;
+            z-index: 1; /* Градієнт на Z-index 2 буде над ним */
         }
 
         .new-interface .card.card--wide {
@@ -478,32 +510,14 @@
         .new-interface-info {
             position: relative;
             padding: 1.5em;
-            height: 28em; /* Збільшена висота, щоб опустити рядки з фільмами */
+            height: 28em; /* Висота інформаційного блоку */
+            z-index: 3;  /* Текстовий блок - найвищий */
         }
         
-        /* ДОДАЄМО ЗАТЕМНЕННЯ ОБКЛАДИНКИ ЗЛІВА (ДЛЯ ЧИТАБЕЛЬНОСТІ) */
-        .new-interface-info::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            /* Лінійний градієнт: плавний перехід від майже чорного (зліва) до прозорого (справа) */
-            background: linear-gradient(to right, 
-                rgba(0, 0, 0, 0.9) 0%,   /* Найтемніше зліва */
-                rgba(0, 0, 0, 0.7) 30%,  /* Середнє затемнення */
-                rgba(0, 0, 0, 0) 80%     /* Прозоро справа */
-            );
-            pointer-events: none;
-            z-index: 1; /* Градієнт над фоном, але під текстом */
-        }
-
+        /* 3. ОБЛАСТЬ ТЕКСТУ ТА ЗАГОЛОВКІВ */
         .new-interface-info__body {
             width: 80%;
             padding-top: 1.1em;
-            position: relative; /* Робить елемент body контейнером для z-index */
-            z-index: 2;         /* Текст над градієнтом */
         }
 
         .new-interface-info__head {
@@ -569,11 +583,6 @@
             padding-bottom: 95%;
         }
 
-        .new-interface .full-start__background {
-            height: 108%;
-            top: -6em;
-        }
-
         .new-interface .full-start__rate {
             font-size: 1.3em;
             margin-right: 0;
@@ -612,23 +621,25 @@
         body.light--version .new-interface-info__body {
             width: 69%;
             padding-top: 1.5em;
-            position: relative; /* Для правильного z-index */
-            z-index: 2;         /* Текст над градієнтом */
         }
 
         body.light--version .new-interface-info {
-            height: 29.3em; /* Збільшена висота для світлої версії */
+            height: 29.3em; 
+            z-index: 3;
         }
         
-        /* Також додамо затемнення для світлої версії, але з меншою прозорістю */
-        body.light--version .new-interface-info::before {
-             background: linear-gradient(to right, 
-                rgba(0, 0, 0, 0.7) 0%,   /* Менш темний градієнт */
-                rgba(0, 0, 0, 0.5) 30%,
-                rgba(0, 0, 0, 0) 80%     
-            );
+        /* ЗАТЕМНЕННЯ ДЛЯ СВІТЛОЇ ВЕРСІЇ */
+        body.light--version .new-interface::before {
+             background-image: 
+                /* Вертикальне затемнення для світлої версії: перехід у світло-сірий */
+                linear-gradient(to bottom, transparent 0%, transparent 31em, #f0f0f0d0 41em, #f0f0f0 100%),
+                /* Горизонтальне затемнення для світлої версії */
+                linear-gradient(to right, 
+                    rgba(0, 0, 0, 0.7) 0%,
+                    rgba(0, 0, 0, 0.5) 30%,
+                    rgba(0, 0, 0, 0) 80%     
+                );
         }
-
 
         body.advanced--animation:not(.no--animation) .new-interface .card.card--wide.focus .card__view {
             animation: animation-card-focus 0.2s;
@@ -640,10 +651,8 @@
         </style>`);
 
         $('body').append(Lampa.Template.get('new_interface_logo_styles', {}, true));
-       }
+     }
     
-
-
     // ========== КЛАС ДЛЯ ІНФОРМАЦІЇ З ПІДТРИМКОЮ ЛОГОТИПІВ ==========
 class InterfaceInfo {
         constructor() {
