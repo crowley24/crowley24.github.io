@@ -56,6 +56,13 @@
         }  
     } catch (e) { }  
 }
+     function applyCaptionsClass(container) {  
+        try {  
+            if (!container) return;  
+            const show = !!Lampa.Storage.get('ni_card_captions', true);  
+            container.classList.toggle('ni-hide-captions', !show);  
+        } catch (e) { }  
+    }
   
     function applyCaptionsToAll() {  
         try {  
