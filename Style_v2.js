@@ -462,7 +462,7 @@
         };
     }
 
-    function addStyles() {
+       function addStyles() {
         if (addStyles.added) return;
         addStyles.added = true;
 
@@ -475,20 +475,35 @@
             width: 18.3em;
         }
 
-                .new-interface-info {
+        .new-interface-info {
             position: relative;
             padding: 1.5em;
-            height: 28em; /* Збільшили з 24em до 28em, щоб опустити рядки */
-        }
-//...
-        body.light--version .new-interface-info {
-            height: 29.3em; /* Збільшили з 25.3em до 29.3em */
+            height: 28em; /* Збільшена висота, щоб опустити рядки з фільмами */
         }
         
+        /* ДОДАЄМО ЗАТЕМНЕННЯ ОБКЛАДИНКИ ЗЛІВА (ДЛЯ ЧИТАБЕЛЬНОСТІ) */
+        .new-interface-info::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            /* Лінійний градієнт: плавний перехід від майже чорного (зліва) до прозорого (справа) */
+            background: linear-gradient(to right, 
+                rgba(0, 0, 0, 0.9) 0%,   /* Найтемніше зліва */
+                rgba(0, 0, 0, 0.7) 30%,  /* Середнє затемнення */
+                rgba(0, 0, 0, 0) 80%     /* Прозоро справа */
+            );
+            pointer-events: none;
+            z-index: 1; /* Градієнт над фоном, але під текстом */
+        }
 
         .new-interface-info__body {
             width: 80%;
             padding-top: 1.1em;
+            position: relative; /* Робить елемент body контейнером для z-index */
+            z-index: 2;         /* Текст над градієнтом */
         }
 
         .new-interface-info__head {
@@ -597,11 +612,23 @@
         body.light--version .new-interface-info__body {
             width: 69%;
             padding-top: 1.5em;
+            position: relative; /* Для правильного z-index */
+            z-index: 2;         /* Текст над градієнтом */
         }
 
         body.light--version .new-interface-info {
-            height: 21.3em; /* ЗМІНА: Зменшення висоти для світлої версії */
+            height: 29.3em; /* Збільшена висота для світлої версії */
         }
+        
+        /* Також додамо затемнення для світлої версії, але з меншою прозорістю */
+        body.light--version .new-interface-info::before {
+             background: linear-gradient(to right, 
+                rgba(0, 0, 0, 0.7) 0%,   /* Менш темний градієнт */
+                rgba(0, 0, 0, 0.5) 30%,
+                rgba(0, 0, 0, 0) 80%     
+            );
+        }
+
 
         body.advanced--animation:not(.no--animation) .new-interface .card.card--wide.focus .card__view {
             animation: animation-card-focus 0.2s;
@@ -613,7 +640,9 @@
         </style>`);
 
         $('body').append(Lampa.Template.get('new_interface_logo_styles', {}, true));
-    }
+       }
+    
+
 
     // ========== КЛАС ДЛЯ ІНФОРМАЦІЇ З ПІДТРИМКОЮ ЛОГОТИПІВ ==========
 class InterfaceInfo {
