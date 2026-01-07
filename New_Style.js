@@ -351,18 +351,18 @@
     img.style.objectFit = 'contain';  
     img.style.objectPosition = 'left center';  
   
-    // Завжди використовуємо налаштовану висоту  
-    const logoHeight = Lampa.Storage.get('logo_height', '');  
-    if (logoHeight) {  
-        img.style.maxHeight = logoHeight;  
-    }  
+    // Жорсткі обмеження для всіх логотипів  
+    const MAX_HEIGHT = 120; // пікселів  
+    const MAX_WIDTH = 400;  // пікселів  
   
-    if (this.useTextHeight() && heightPx && heightPx > 0 && !logoHeight) {  
-        const scaledHeight = Math.min(heightPx * 1.2, 120);  
+    // Завжди застосовуємо обмеження  
+    img.style.maxHeight = `${MAX_HEIGHT}px`;  
+    img.style.maxWidth = `${MAX_WIDTH}px`;  
+  
+    if (this.useTextHeight() && heightPx && heightPx > 0 && !(Lampa.Storage.get('logo_height', '') || '')) {  
+        const scaledHeight = Math.min(heightPx * 1.2, MAX_HEIGHT);  
         img.style.height = `${scaledHeight}px`;  
         img.style.width = 'auto';  
-        img.style.maxWidth = '400px';  
-        img.style.maxHeight = '120px';  
     }  
 }
         swapContent(container, newNode) {  
@@ -925,23 +925,14 @@
     overflow: visible; 
 }  
   
-.new-interface-info__title-logo {  
-    max-width: 100%;  
-    max-height: var(--ni-logo-max-h, 120px) !important; /* Використовуємо змінну */  
-    display: block;  
-    object-fit: contain;  
-    object-position: left center;  
+.new-interface-info__title-logo,  
+.new-interface-full-logo {  
+    max-width: 400px !important;  
+    max-height: 120px !important;  
     width: auto !important;  
     height: auto !important;  
-} 
-  
-.new-interface-full-logo {  
-    max-height: var(--ni-logo-max-h, 180px) !important; /* Використовуємо змінну */  
-    width: auto;  
-    max-width: 100%;  
-    object-fit: contain;  
-    object-position: left center;  
-    display: block;  
+    object-fit: contain !important;  
+    object-position: left center !important;  
 }
   
 /* Приховування підписів під карточками */  
@@ -1609,23 +1600,14 @@ create() {
 }
 
   
-.new-interface-info__title-logo {  
-    max-width: 100%;  
-    max-height: var(--ni-logo-max-h, 120px) !important; /* Використовуємо змінну */  
-    display: block;  
-    object-fit: contain;  
-    object-position: left center;  
+.new-interface-info__title-logo,  
+.new-interface-full-logo {  
+    max-width: 400px !important;  
+    max-height: 120px !important;  
     width: auto !important;  
     height: auto !important;  
-} 
-  
-.new-interface-full-logo {  
-    max-height: var(--ni-logo-max-h, 180px) !important; /* Використовуємо змінну */  
-    width: auto;  
-    max-width: 100%;  
-    object-fit: contain;  
-    object-position: left center;  
-    display: block;  
+    object-fit: contain !important;  
+    object-position: left center !important;  
 }
   
 /* Приховування підписів під карточками */  
