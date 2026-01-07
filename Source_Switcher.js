@@ -19,17 +19,12 @@
             ru: "Добавляет переключение источников из шапки",  
             en: "Adds source switcher",  
             uk: "Додає перемикач джерел у шапці"  
-        },  
-        lme_switchsource_modss_desc: {  
-            ru: "При наличии Modss добавляет источники Filmix и KinoPub",  
-            en: "If install Modss add Filmix and KinoPub",  
-            uk: "Якщо встановлено Modss додає джерела Filmix і KinoPub"  
         }  
     });  
   
     // ========== НАЛАШТУВАННЯ В МЕНЮ ==========  
     Lampa.SettingsApi.addParam({  
-        component: 'interface',  
+        component: 'interface',  // Правильний компонент  
         param: {  
             name: 'lme_switchsource',  
             type: 'trigger',  
@@ -38,96 +33,77 @@
         field: {  
             name: Lampa.Lang.translate('lme_switchsource_name'),  
             description: Lampa.Lang.translate('lme_switchsource_desc')  
-        }  
-    });  
-  
-    Lampa.SettingsApi.addParam({  
-        component: 'interface',  
-        param: {  
-            name: 'lme_switchsource_modss',  
-            type: 'trigger',  
-            default: false,  
         },  
-        field: {  
-            name: 'Modss',  
-            description: Lampa.Lang.translate('lme_switchsource_modss_desc')  
+        onChange: function (value) {  
+            if (value) {  
+                sourceSwitch.main();  
+            } else {  
+                // Вимкнення функціональності  
+                $('.head__actions .sources').remove();  
+            }  
         }  
     });  
   
-    // ========== ОСНОВНА ФУНКЦІЯ ПЕРЕМИКАЧА ДЖЕРЕЛ ==========  
-    function main() {  
-        // Логотипи джерел  
-        var logos = {  
-            tmdb: '<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="8" fill="#032541"/><path d="M8.5 28V12h4.5c1.5 0 2.7.3 3.5.9.8.6 1.2 1.5 1.2 2.6 0 .7-.2 1.3-.5 1.8-.3.5-.8.9-1.4 1.1.7.2 1.2.6 1.6 1.1.4.5.6 1.2.6 1.9 0 1.2-.4 2.1-1.2 2.8-.8.7-2 1-3.5 1H8.5zm3-7.5h1.2c.6 0 1-.1 1.3-.4.3-.3.4-.6.4-1.1s-.1-.8-.4-1.1c-.3-.3-.7-.4-1.3-.4H11.5v3zm0 5h1.4c.7 0 1.2-.1 1.5-.4.3-.3.5-.7.5-1.2s-.2-.9-.5-1.2c-.3-.3-.8-.4-1.5-.4h-1.4v3.2zM21.5 28V12h3l3.5 5.5L31.5 12h3v16h-3V18.5L28 24h-1l-3.5-5.5V28h-2zM16 20c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2z" fill="white"/></svg>',  
-            cub: '<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="8" fill="#FF6B35"/><path d="M12 12h16v16H12z" fill="white"/><path d="M15 15h10v10H15z" fill="#FF6B35"/><path d="M18 18h4v4h-4z" fill="white"/></svg>',  
-            filmix: '<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="8" fill="#E50914"/><path d="M10 15l5-3v12l-5-3V15zm20 0l-5-3v12l5-3V15zm-10-2l5 3v6l-5 3-5-3v-6l5-3z" fill="white"/></svg>',  
-            pub: '<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="40" height="40" rx="8" fill="#00A8E8"/><path d="M20 10l8 4v8l-8 4-8-4v-8l8-4z" fill="white"/><path d="M20 14l4 2v4l-4 2-4-2v-4l4-2z" fill="#00A8E8"/></svg>'  
-        };  
+    // ========== ОСНОВНА ФУНКЦІЯ ПЕРЕМИКАННЯ ==========  
+    var sourceSwitch = {  
+        main: function () {  
+            // Логотипи джерел  
+            var logos = {  
+                'tmdb': '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3.518 18.68L0 12.23l3.518-6.45h7.035L14.07 12.23l-3.518 6.45H3.518zm10.927 0l-3.518-6.45 3.518-6.45h7.035L24.998 12.23l-3.518 6.45h-7.035z"/></svg>',  
+                'cub': '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/></svg>',  
+                'filmix': '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/></svg>',  
+                'kinopub': '<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>'  
+            };  
   
-        // Визначаємо джерела в залежності від умов  
-        var allSources = ['tmdb', 'cub'];  
-        var sources = allSources.slice(0, 2);  
+            var allSources = ['tmdb', 'cub'];  
+            var sources = allSources.slice(0, 2);  
   
-        if (Lampa.Storage.get('lme_switchsource_modss') === true) {  
-            sources.push.apply(sources, ['pub', 'filmix']);  
-        }  
+            // Визначаємо джерела  
+            var currentSource = Lampa.Storage.get('source');  
+            var currentSourceIndex = sources.indexOf(currentSource);  
   
-        // Отримуємо поточне джерело з Storage  
-        var currentSource = Lampa.Storage.get('source');  
-        var currentSourceIndex = sources.indexOf(currentSource);  
+            if (currentSourceIndex === -1) {  
+                currentSourceIndex = 0;  
+                currentSource = sources[currentSourceIndex];  
+                Lampa.Storage.set('source', currentSource);  
+            }  
   
-        // Якщо поточне джерело не знайдено, встановлюємо перше джерело за замовчуванням  
-        if (currentSourceIndex === -1) {  
-            currentSourceIndex = 0;  
-            currentSource = sources[currentSourceIndex];  
-            Lampa.Storage.set('source', currentSource);  
-        }  
-  
-        // Створюємо новий div елемент  
-        var sourceDiv = $('<div>', {  
-            'class': 'head__action selector sources',  
-            'style': 'position: relative;',  
-            'html': "<div class=\"source-logo\" style=\"text-align: center;\"></div>"  
-        });  
-  
-        // Додаємо новий div як перший дочірній елемент контейнера '.head__actions'  
-        $('.head__actions').prepend(sourceDiv);  
-  
-        // Оновлюємо логотип під іконкою, відображаємо наступний логотип  
-        var nextSourceIndex = (currentSourceIndex + 1) % sources.length;  
-        var nextSourceLogo = logos[sources[nextSourceIndex]];  
-        sourceDiv.find('.source-logo').html(nextSourceLogo);  
-  
-        // Додаємо обробник події 'hover:enter' для перемикання  
-        sourceDiv.on('hover:enter', function () {  
-            currentSourceIndex = (currentSourceIndex + 1) % sources.length;  
-            var selectedSource = sources[currentSourceIndex];  
-            Lampa.Storage.set('source', selectedSource);  
-  
-            var nextLogo = logos[sources[(currentSourceIndex + 1) % sources.length]];  
-            sourceDiv.find('.source-logo').html(nextLogo);  
-  
-            Lampa.Activity.replace({  
-                source: selectedSource,  
-                title: Lampa.Lang.translate("title_main") + ' - ' + selectedSource.toUpperCase()  
+            // Створюємо елемент перемикача  
+            var sourceDiv = $('<div>', {  
+                'class': 'head__action selector sources',  
+                'style': 'position: relative;',  
+                'html': "<div class=\"source-logo\" style=\"text-align: center;\"></div>"  
             });  
-        });  
-    }  
   
-    // ========== МАНІФЕСТ ПЛАГІНА ==========  
-    var manifest = {  
-        type: "other",  
-        version: "1.0.0",  
-        author: '@lme_chat',  
-        name: "Lampa Source Switcher",  
-        description: "Source switcher for Lampa",  
-        component: "source_switch"  
+            $('.head__actions').prepend(sourceDiv);  
+  
+            // Оновлюємо логотип  
+            var nextSourceIndex = (currentSourceIndex + 1) % sources.length;  
+            var nextSourceLogo = logos[sources[nextSourceIndex]];  
+            sourceDiv.find('.source-logo').html(nextSourceLogo);  
+  
+            // Обробник перемикання  
+            sourceDiv.on('hover:enter', function () {  
+                currentSourceIndex = (currentSourceIndex + 1) % sources.length;  
+                var selectedSource = sources[currentSourceIndex];  
+                Lampa.Storage.set('source', selectedSource);  
+  
+                var nextLogo = logos[sources[(currentSourceIndex + 1) % sources.length]];  
+                sourceDiv.find('.source-logo').html(nextLogo);  
+  
+                Lampa.Activity.replace({  
+                    source: selectedSource,  
+                    title: Lampa.Activity.activity().title  
+                });  
+            });  
+        }  
     };  
   
-    // ========== ІНІЦІАЛІЗАЦІЯ ПЛАГІНА ==========  
+    // ========== ІНІЦІАЛІЗАЦІЯ ==========  
     function add() {  
+        // Перевіряємо, чи увімкнено налаштування  
         if (Lampa.Storage.get('lme_switchsource') === true) {  
-            main();  
+            sourceSwitch.main();  
         }  
     }  
   
