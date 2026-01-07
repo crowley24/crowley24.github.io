@@ -837,7 +837,7 @@
 }  
 /* Застосовуємо розміри карточок для всіх пристроїв, включаючи Smart TV */  
 .new-interface{  
-   --ni-card-w: clamp(80px, 5.5vw, 130px);
+--ni-card-w: clamp(65px, 4.5vw, 110px);
 }  
   
 /* Розмір карточок і плитки "Ще" - тепер для всіх пристроїв */  
@@ -1555,7 +1555,7 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
 }  
 /* Застосовуємо розміри карточок для всіх пристроїв, включаючи Smart TV */  
 .new-interface{  
-    --ni-card-w: clamp(80px, 5.5vw, 130px);
+--ni-card-w: clamp(65px, 4.5vw, 110px);
 }  
   
 /* Розмір карточок і плитки "Ще" - тепер для всіх пристроїв */  
