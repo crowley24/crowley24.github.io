@@ -1606,11 +1606,12 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
 .new-interface-info__meta-top{  
     display: flex;  
     align-items: center;  
-    flex-wrap: wrap;  
+    flex-wrap: nowrap;  /* ЗАБОРОНИТИ ПЕРЕНОС */  
     gap: 0.5em;  
     font-size: 0.9em;  
     color: rgba(255, 255, 255, 0.7);  
-}  
+    overflow: hidden;  /* ПРИХОВАТИ ЩО НЕ ВМІЩУЄТЬСЯ */  
+} 
 
 .new-interface-info__dot{  
     font-size: 0.6em;  
