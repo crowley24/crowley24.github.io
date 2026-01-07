@@ -45,98 +45,69 @@
   
     // ========== ОСНОВНА ФУНКЦІЯ ПЕРЕМИКАННЯ ==========  
     var sourceSwitch = {  
-        init: function () {  
+        main: function () {  
             this.create();  
             this.bind();  
         },  
   
         create: function () {  
+            var body = $('body');  
+  
             // Логотипи джерел  
             var logos = {  
-                'tmdb': '<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="48" height="48" rx="8" fill="#007DFE"/><path d="M12 18h8v12h-8V18zm16 0h8v12h-8V18z" fill="white"/></svg>',  
-                'cub': '<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="48" height="48" rx="8" fill="#FF6B35"/><path d="M16 16h16v16H16V16z" fill="white"/></svg>'  
+                'tmdb': '<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M26.7188 0H5.28125C2.36719 0 0 2.36719 0 5.28125V26.7188C0 29.6328 2.36719 32 5.28125 32H26.7188C29.6328 32 32 29.6328 32 26.7188V5.28125C32 2.36719 29.6328 0 26.7188 0Z" fill="currentColor"/><path d="M21.9531 7.67188H24.7969L19.5 14.9219L25.6562 24.3281H20.6719L16.9219 18.7344L12.6094 24.3281H9.75L15.3281 16.6875L9.42188 7.67188H14.5312L17.9062 12.8438L21.9531 7.67188ZM20.9062 22.5625H22.5L13.9219 9.35938H12.1875L20.9062 22.5625Z" fill="white"/></svg>',  
+                'cub': '<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" rx="6" fill="currentColor"/><path d="M16 8L20 12L16 16L12 12L16 8Z" fill="white"/><path d="M8 16L12 20L16 16L12 12L8 16Z" fill="white"/><path d="M16 16L20 20L16 24L12 20L16 16Z" fill="white"/><path d="M24 16L20 12L16 16L20 20L24 16Z" fill="white"/></svg>'  
             };  
   
+            // Визначаємо джерела  
             var sources = ['tmdb', 'cub'];  
             var currentSource = Lampa.Storage.get('source') || 'tmdb';  
             var currentSourceIndex = sources.indexOf(currentSource);  
   
             if (currentSourceIndex === -1) {  
                 currentSourceIndex = 0;  
-                currentSource = sources[0];  
+                currentSource = sources[currentSourceIndex];  
                 Lampa.Storage.set('source', currentSource);  
             }  
   
-            // Створюємо кнопку  
+            // Створюємо кнопку перемикання  
             var sourceDiv = $('<div>', {  
                 'class': 'head__action selector sources',  
                 'style': 'position: relative;',  
                 'html': "<div class=\"source-logo\" style=\"text-align: center;\"></div>"  
             });  
   
-            // Додаємо кнопку в шапку  
             $('.head__actions').prepend(sourceDiv);  
   
-            // Показуємо логотип наступного джерела  
+            // Відображаємо логотип наступного джерела  
             var nextSourceIndex = (currentSourceIndex + 1) % sources.length;  
             var nextSourceLogo = logos[sources[nextSourceIndex]];  
             sourceDiv.find('.source-logo').html(nextSourceLogo);  
   
-            // Зберігаємо посилання на елемент  
-            this.sourceElement = sourceDiv;  
-            this.sources = sources;  
-            this.logos = logos;  
-        },  
+            // Обробник кліку для перемикання  
+            sourceDiv.on('hover:enter', function () {  
+                currentSourceIndex = (currentSourceIndex + 1) % sources.length;  
+                var selectedSource = sources[currentSourceIndex];  
+                Lampa.Storage.set('source', selectedSource);  
   
-        bind: function () {  
-            var self = this;  
+                var nextLogo = logos[sources[(currentSourceIndex + 1) % sources.length]];  
+                sourceDiv.find('.source-logo').html(nextLogo);  
   
-            // Обробник кліку  
-            this.sourceElement.on('hover:enter', function () {  
-                var currentSource = Lampa.Storage.get('source') || 'tmdb';  
-                var currentSourceIndex = self.sources.indexOf(currentSource);  
-                  
-                // Перемикаємо на наступне джерело  
-                var newSourceIndex = (currentSourceIndex + 1) % self.sources.length;  
-                var newSource = self.sources[newSourceIndex];  
-                  
-                // Зберігаємо нове джерело  
-                Lampa.Storage.set('source', newSource);  
-                  
-                // Оновлюємо логотип  
-                var nextSourceIndex = (newSourceIndex + 1) % self.sources.length;  
-                var nextSourceLogo = self.logos[self.sources[nextSourceIndex]];  
-                self.sourceElement.find('.source-logo').html(nextSourceLogo);  
-                  
                 // Перезавантажуємо сторінку  
-                setTimeout(function() {  
+                setTimeout(function () {  
                     window.location.reload();  
-                }, 300);  
+                }, 100);  
             });  
         },  
   
-        destroy: function () {  
-            if (this.sourceElement) {  
-                this.sourceElement.remove();  
-                this.sourceElement = null;  
-            }  
+        bind: function () {  
+            // Додаткові обробники подій  
         },  
   
-        main: function () {  
-            this.init();  
+        destroy: function () {  
+            $('.head__actions .sources').remove();  
         }  
     };  
-  
-    // ========== МАНІФЕСТ ПЛАГІНА ==========  
-    var manifest = {  
-        type: "extension",  
-        name: "Source Switcher",  
-        description: "Переключатель источников из шапки",  
-        version: "1.0.0",  
-        author: "Movie Enhancer"  
-    };  
-  
-    Lampa.Manifest.plugins = manifest;  
   
     // ========== ІНІЦІАЛІЗАЦІЯ ==========  
     function add() {  
