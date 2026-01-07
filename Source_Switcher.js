@@ -40,28 +40,41 @@
             } else {  
                 sourceSwitch.destroy();  
             }  
+        },  
+        onRender: function () {  
+            this.find('.settings-param__title').css('font-size', '1.3em');  
         }  
     });  
   
     // ========== ОСНОВНА ФУНКЦІЯ ПЕРЕМИКАННЯ ==========  
     var sourceSwitch = {  
-        main: function () {  
-            this.create();  
+        init: function () {  
             this.bind();  
         },  
   
+        bind: function () {  
+            var _this = this;  
+  
+            Lampa.Listener.follow('full', function (e) {  
+                if (e.type === 'complite') {  
+                    setTimeout(function () {  
+                        _this.create();  
+                    }, 100);  
+                }  
+            });  
+        },  
+  
         create: function () {  
-            var body = $('body');  
+            var _this = this;  
   
             // Логотипи джерел  
             var logos = {  
-                'tmdb': '<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M26.7188 0H5.28125C2.36719 0 0 2.36719 0 5.28125V26.7188C0 29.6328 2.36719 32 5.28125 32H26.7188C29.6328 32 32 29.6328 32 26.7188V5.28125C32 2.36719 29.6328 0 26.7188 0Z" fill="currentColor"/><path d="M21.9531 7.67188H24.7969L19.5 14.9219L25.6562 24.3281H20.6719L16.9219 18.7344L12.6094 24.3281H9.75L15.3281 16.6875L9.42188 7.67188H14.5312L17.9062 12.8438L21.9531 7.67188ZM20.9062 22.5625H22.5L13.9219 9.35938H12.1875L20.9062 22.5625Z" fill="white"/></svg>',  
-                'cub': '<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" rx="6" fill="currentColor"/><path d="M16 8L20 12L16 16L12 12L16 8Z" fill="white"/><path d="M8 16L12 20L16 16L12 12L8 16Z" fill="white"/><path d="M16 16L20 20L16 24L12 20L16 16Z" fill="white"/><path d="M24 16L20 12L16 16L20 20L24 16Z" fill="white"/></svg>'  
+                'tmdb': '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',  
+                'cub': '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 6V12L16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'  
             };  
   
-            // Визначаємо джерела  
             var sources = ['tmdb', 'cub'];  
-            var currentSource = Lampa.Storage.get('source') || 'tmdb';  
+            var currentSource = Lampa.Storage.get('source');  
             var currentSourceIndex = sources.indexOf(currentSource);  
   
             if (currentSourceIndex === -1) {  
@@ -96,12 +109,12 @@
                 // Перезавантажуємо сторінку  
                 setTimeout(function () {  
                     window.location.reload();  
-                }, 100);  
+                }, 500);  
             });  
         },  
   
-        bind: function () {  
-            // Додаткові обробники подій  
+        main: function () {  
+            this.init();  
         },  
   
         destroy: function () {  
