@@ -1188,8 +1188,8 @@ create() {
         var loaded = {};  
   
         this.create = function () {  
-            html = $("<div class=\"new-interface-info\">\n            <div class=\"new-interface-info__body\">\n                <div class=\"new-interface-info__left\">\n                    <div class=\"new-interface-info__head\"></div>\n                    <div class=\"new-interface-info__title\"></div>\n                </div>\n                <div class=\"new-interface-info__right\">\n                    <div class=\"new-interface-info__meta\">\n                        <div class=\"new-interface-info__meta-top\">\n                            <div class=\"new-interface-info__rate\"></div>\n                            <span class=\"new-interface-info__dot dot-rate-genre\">&#9679;</span>\n                            <div class=\"new-interface-info__genres\"></div>\n                            <span class=\"new-interface-info__dot dot-genre-runtime\">&#9679;</span>\n                            <div class=\"new-interface-info__runtime\"></div>\n                            <span class=\"new-interface-info__dot dot-runtime-pg\">&#9679;</span>\n                            <div class=\"new-interface-info__pg\"></div>\n                        </div>\n                    </div>\n                    <div class=\"new-interface-info__description\"></div>\n                </div>\n            </div>\n        </div>");  
-        };  
+    html = $("<div class=\"new-interface-info\">\n            <div class=\"new-interface-info__body\">\n                <div class=\"new-interface-info__left\">\n                    <div class=\"new-interface-info__head\"></div>\n                    <div class=\"new-interface-info__title\"></div>\n                </div>\n                <!-- Права частина з деталями видалена -->\n            </div>\n        </div>");  
+};
   
         this.update = function (data) {  
             html.find('.new-interface-info__head,.new-interface-info__genres,.new-interface-info__runtime').text('---');  
