@@ -908,11 +908,6 @@
     margin-top: 5px; 
 }  
 
-.new-interface-info__details {  
-    margin-bottom: 0.5em;  
-    font-size: 0.9em;  
-    color: rgba(255, 255, 255, 0.8);  
-}  
   
 /* Приховування підписів під карточками */  
 .new-interface.ni-hide-captions .card__view ~ .card__title,  
@@ -931,11 +926,6 @@
     display: none !important;  
 }  
   
-.new-interface-info__description{  
-    font-size: 1.2em;  
-    line-height: 1.5;  
-    width: 70%; 
-}  
   
 .new-interface .full-start__background{  
     height: 108%;  
@@ -1003,12 +993,7 @@ body.light--version .new-interface-info__body{
         font-size: clamp(2.4em, 3.6vw, 3.1em);  
     }  
   
-    .new-interface-info__description{  
-        font-size: 1.2em;  
-    line-height: 1.5;  
-    width: 70%;   
     }  
-}  
   
 body.advanced--animation:not(.no--animation) .new-interface .card.focus .card__view,  
 body.advanced--animation:not(.no--animation) .new-interface .card--small.focus .card__view{  
@@ -1038,9 +1023,7 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
             this.html = $(`<div class="new-interface-info">  
     <div class="new-interface-info__body">  
         <div class="new-interface-info__head"></div>  
-        <div class="new-interface-info__title"></div>        <!-- ЛОГО / НАЗВА -->  
-        <div class="new-interface-info__details"></div>  
-        <div class="new-interface-info__description"></div> <!-- ОПИС -->  
+        <div class="new-interface-info__title"></div>  
     </div>  
 </div>`);
         }  
@@ -1098,57 +1081,27 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
         }  
   
         draw(movie) {  
-            if (!movie || !this.html) return;  
+    if (!movie || !this.html) return;  
   
-            const create = ((movie.release_date || movie.first_air_date || '0000') + '').slice(0, 4);  
-            const vote = parseFloat((movie.vote_average || 0) + '').toFixed(1);  
-            const head = [];  
-            const sources = Lampa.Api && Lampa.Api.sources && Lampa.Api.sources.tmdb ? Lampa.Api.sources.tmdb : null;  
-            const countries = sources && typeof sources.parseCountries === 'function' ? sources.parseCountries(movie) : [];  
-            const pg = sources && typeof sources.parsePG === 'function' ? sources.parsePG(movie) : '';  
+    const create = ((movie.release_date || movie.first_air_date || '0000') + '').slice(0, 4);  
+    const vote = parseFloat((movie.vote_average || 0) + '').toFixed(1);  
+    const head = [];  
+    const sources = Lampa.Api && Lampa.Api.sources && Lampa.Api.sources.tmdb ? Lampa.Api.sources.tmdb : null;  
+    const countries = sources && typeof sources.parseCountries === 'function' ? sources.parseCountries(movie) : [];  
+    const pg = sources && typeof sources.parsePG === 'function' ? sources.parsePG(movie) : '';  
   
-            if (create !== '0000') head.push(`<span>${create}</span>`);  
-            if (countries && countries.length) head.push(countries.join(', '));  
+    if (create !== '0000') head.push(`<span>${create}</span>`);  
+    if (countries && countries.length) head.push(countries.join(', '));  
   
-            const genreText = (Array.isArray(movie.genres) && movie.genres.length)  
-                ? movie.genres.map((item) => Lampa.Utils.capitalizeFirstLetter(item.name)).join(' | ')  
-                : '';  
+    this.html.find('.new-interface-info__head').empty().append(head.join(', '));  
   
-            const runtimeText = movie.runtime ? Lampa.Utils.secondsToTime(movie.runtime * 60, true) : '';  
+    const titleNode = this.html.find('.new-interface-info__title');  
+    const headNode = this.html.find('.new-interface-info__head');  
+    const titleText = movie.title || movie.name || '';  
   
-            this.html.find('.new-interface-info__head').empty().append(head.join(', '));  
-  
-            if (vote > 0) {  
-                this.html.find('.new-interface-info__rate').html(`<div class="full-start__rate"><div>${vote}</div><div>TMDB</div></div>`);  
-            } else {  
-                this.html.find('.new-interface-info__rate').empty();  
-            }  
-  
-            this.html.find('.new-interface-info__genres').text(genreText);  
-  
-            this.html.find('.new-interface-info__runtime').text(runtimeText);  
-  
-            this.html.find('.new-interface-info__pg').html(pg ? `<span class="full-start__pg" style="font-size: 0.9em;">${pg}</span>` : '');  
-  
-            const dot1 = this.html.find('.dot-rate-genre');  
-            const dot2 = this.html.find('.dot-genre-runtime');  
-            const dot3 = this.html.find('.dot-runtime-pg');  
-  
-            this.html.find('.new-interface-info__genres').toggle(!!genreText);  
-            this.html.find('.new-interface-info__runtime').toggle(!!runtimeText);  
-            this.html.find('.new-interface-info__pg').toggle(!!pg);  
-  
-            dot1.toggle(!!(vote > 0 && genreText));  
-            dot2.toggle(!!(genreText && (runtimeText || pg)));  
-            dot3.toggle(!!(runtimeText && pg));  
-  
-             
-            const titleNode = this.html.find('.new-interface-info__title');  
-            const headNode = this.html.find('.new-interface-info__head');  
-            const titleText = movie.title || movie.name || '';  
-  
-            titleNode.text(titleText);  
-            applyInfoTitleLogo(this.html, titleNode, headNode, movie, titleText);  
+    titleNode.text(titleText);  
+    applyInfoTitleLogo(this.html, titleNode, headNode, movie, titleText);  
+}  
 
             const detailsHtml = [];  
     if (vote > 0) {  
@@ -1623,11 +1576,6 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
     margin-top: 5px;
 }  
 
-.new-interface-info__details {  
-    margin-bottom: 0.5em;  
-    font-size: 0.9em;  
-    color: rgba(255, 255, 255, 0.8);  
-}  
   
 /* Приховування підписів під карточками */  
 .new-interface.ni-hide-captions .card__view ~ .card__title,  
@@ -1646,11 +1594,6 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
     display: none !important;  
 }  
   
-.new-interface-info__description{  
-    font-size: 1.2em;  
-    line-height: 1.5;  
-    width: 70%;  
-}  
   
 .new-interface .full-start__background{  
     height: 108%;  
@@ -1710,12 +1653,7 @@ body.light--version .new-interface-info__body{
         font-size: clamp(2.4em, 3.6vw, 3.1em);  
     }  
   
-    .new-interface-info__description{  
-        -webkit-line-clamp: 6;  
-        line-clamp: 6;  
-        font-size: 0.83em;  
     }  
-}  
   
 body.advanced--animation:not(.no--animation) .new-interface .card.focus .card__view,  
 body.advanced--animation:not(.no--animation) .new-interface .card--small.focus .card__view{  
