@@ -864,15 +864,11 @@
     display: none !important;  
 }  
   
-.new-interface-info__body{  
-    position: relative;  
-    z-index: 1;  
-    width: min(96%, 78em);  
+.new-interface-info__body {  
+    width: 80%;  
     padding-top: 1.1em;  
-    display: grid;  
-    grid-template-columns: minmax(0, 1fr) minmax(0, .85fr);  
-    column-gap: clamp(16px, 3vw, 54px);  
-    align-items: start;  
+    display: flex;  
+    flex-direction: column;  
 }  
   
 .new-interface-info__left,  
@@ -896,33 +892,26 @@
 }  
   
 .new-interface-info__title{  
-    font-size: clamp(2.6em, 4.0vw, 3.6em);  
+     font-size: 4em;  
     font-weight: 600;  
-    margin-bottom: 0.3em;  
-    overflow: hidden;  
-    -o-text-overflow: '.';  
-    text-overflow: '.';  
-    display: -webkit-box;  
-    -webkit-line-clamp: 1;  
-    line-clamp: 1;  
-    -webkit-box-orient: vertical;  
-    margin-left: -0.03em;  
-    line-height: 1.25;  
+    margin-bottom: 0.3em;   /* ⬅ ВІДСТУП ДО ОПИСУ */  
+    display: -webkit-box; 
 }  
   
 .new-interface-info__title-logo{  
-    max-width: 100%;  
-    max-height: var(--ni-logo-max-h, clamp(2.4em, 7vh, 4.2em));  
-    display: block;  
-    object-fit: contain;  
+   max-height: 125px;  
+    margin-top: 5px;  
 }  
   
 .new-interface-full-logo{  
-    max-height: var(--ni-logo-max-h, 125px);  
-    width: auto;  
-    max-width: 100%;  
-    object-fit: contain;  
-    display: block;  
+    max-height: 125px;  
+    margin-top: 5px; 
+}  
+
+.new-interface-info__details {  
+    margin-bottom: 0.5em;  
+    font-size: 0.9em;  
+    color: rgba(255, 255, 255, 0.8);  
 }  
   
 /* Приховування підписів під карточками */  
@@ -943,19 +932,9 @@
 }  
   
 .new-interface-info__description{  
-    font-size: 0.87em;  
-    font-weight: 300;  
-    line-height: 1.38;  
-    color: rgba(255, 255, 255, 0.90);  
-    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);  
-    overflow: hidden;  
-    -o-text-overflow: '.';  
-    text-overflow: '.';  
-    display: -webkit-box;  
-    -webkit-line-clamp: 7;  
-    line-clamp: 7;  
-    -webkit-box-orient: vertical;  
-    width: auto;  
+    font-size: 1.2em;  
+    line-height: 1.5;  
+    width: 70%; 
 }  
   
 .new-interface .full-start__background{  
@@ -1025,9 +1004,9 @@ body.light--version .new-interface-info__body{
     }  
   
     .new-interface-info__description{  
-        -webkit-line-clamp: 6;  
-        line-clamp: 6;  
-        font-size: 0.83em;  
+        font-size: 1.2em;  
+    line-height: 1.5;  
+    width: 70%;   
     }  
 }  
   
@@ -1058,27 +1037,12 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
   
             this.html = $(`<div class="new-interface-info">  
     <div class="new-interface-info__body">  
-        <div class="new-interface-info__left">  
-            <div class="new-interface-info__head"></div>  
-            <div class="new-interface-info__title"></div>  
-            <div class="new-interface-info__meta">  
-                <div class="new-interface-info__meta-top">  
-                    <div class="new-interface-info__rate"></div>  
-                    <span class="new-interface-info__dot dot-rate-genre">&#9679;</span>  
-                    <div class="new-interface-info__genres"></div>  
-                    <span class="new-interface-info__dot dot-genre-runtime">&#9679;</span>  
-                    <div class="new-interface-info__runtime"></div>  
-                    <span class="new-interface-info__dot dot-runtime-pg">&#9679;</span>  
-                    <div class="new-interface-info__pg"></div>  
-                </div>  
-            </div>  
-        </div>  
-        <div class="new-interface-info__right">  
-            <!-- Права частина порожня або для інших елементів -->  
-        </div>  
+        <div class="new-interface-info__head"></div>  
+        <div class="new-interface-info__title"></div>        <!-- ЛОГО / НАЗВА -->  
+        <div class="new-interface-info__details"></div>  
+        <div class="new-interface-info__description"></div> <!-- ОПИС -->  
     </div>  
 </div>`);
-  
         }  
   
         render(js) {  
@@ -1185,6 +1149,22 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
   
             titleNode.text(titleText);  
             applyInfoTitleLogo(this.html, titleNode, headNode, movie, titleText);  
+
+            const detailsHtml = [];  
+    if (vote > 0) {  
+        detailsHtml.push(`<span class="rate">${vote} TMDB</span>`);  
+    }  
+    if (genreText) {  
+        detailsHtml.push(`<span class="genres">${genreText}</span>`);  
+    }  
+    if (runtimeText) {  
+        detailsHtml.push(`<span class="runtime">${runtimeText}</span>`);  
+    }  
+      
+    this.html.find('.new-interface-info__details').html(detailsHtml.join(' • '));  
+      
+    // Заповнення опису  
+    this.html.find('.new-interface-info__description').text(movie.overview || Lampa.Lang.translate('full_notext'));  
         }  
   
         empty() {  
@@ -1580,14 +1560,11 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
     display: none !important;  
 }  
   
-.new-interface-info__body{  
-    position: relative;  
-    z-index: 1;  
-    width: min(96%, 78em);  
+.new-interface-info__body {  
+    width: 80%;  
     padding-top: 1.1em;  
-    display: grid;  
-    grid-template-columns: minmax(0, 1fr); 
-    align-items: start;  
+    display: flex;  
+    flex-direction: column;  
 }  
   
 .new-interface-info__left{  
@@ -1630,33 +1607,26 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
 }  
   
 .new-interface-info__title{  
-    font-size: clamp(2.6em, 4.0vw, 3.6em);  
+    font-size: 4em;  
     font-weight: 600;  
-    margin-bottom: 0.3em;  
-    overflow: hidden;  
-    -o-text-overflow: '.';  
-    text-overflow: '.';  
-    display: -webkit-box;  
-    -webkit-line-clamp: 1;  
-    line-clamp: 1;  
-    -webkit-box-orient: vertical;  
-    margin-left: -0.03em;  
-    line-height: 1.25;  
+    margin-bottom: 0.3em;   /* ⬅ ВІДСТУП ДО ОПИСУ */  
+    display: -webkit-box;
 }  
   
 .new-interface-info__title-logo{  
-    max-width: 100%;  
-    max-height: var(--ni-logo-max-h, clamp(2.4em, 7vh, 4.2em));  
-    display: block;  
-    object-fit: contain;  
+    max-height: 125px;  
+    margin-top: 5px; 
 }  
   
 .new-interface-full-logo{  
-    max-height: var(--ni-logo-max-h, 125px);  
-    width: auto;  
-    max-width: 100%;  
-    object-fit: contain;  
-    display: block;  
+    max-height: 125px;  
+    margin-top: 5px;
+}  
+
+.new-interface-info__details {  
+    margin-bottom: 0.5em;  
+    font-size: 0.9em;  
+    color: rgba(255, 255, 255, 0.8);  
 }  
   
 /* Приховування підписів під карточками */  
@@ -1677,19 +1647,9 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
 }  
   
 .new-interface-info__description{  
-    font-size: 0.87em;  
-    font-weight: 300;  
-    line-height: 1.38;  
-    color: rgba(255, 255, 255, 0.90);  
-    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);  
-    overflow: hidden;  
-    -o-text-overflow: '.';  
-    text-overflow: '.';  
-    display: -webkit-box;  
-    -webkit-line-clamp: 7;  
-    line-clamp: 7;  
-    -webkit-box-orient: vertical;  
-    width: auto;  
+    font-size: 1.2em;  
+    line-height: 1.5;  
+    width: 70%;  
 }  
   
 .new-interface .full-start__background{  
