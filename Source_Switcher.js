@@ -51,58 +51,75 @@
         },  
   
         create: function () {  
+            // Логотипи джерел  
             var logos = {  
-                'tmdb': "<svg width=\"48\" height=\"48\" viewBox=\"0 0 160 48\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <g clip-path=\"url(#clip0_296_49)\"> <path d=\"M0.5 8C0.5 3.85786 3.85786 0.5 8 0.5H152C156.142 0.5 159.5 3.85786 159.5 8V40C159.5 44.1421 156.142 47.5 152 47.5H8C3.85786 47.5 0.5 44.1421 0.5 40V8Z\" stroke=\"currentColor\"/> <path d=\"M23.6039 15.9341C22.7373 14.9808 21.5904 14.5041 20.161 14.5041C18.7752 14.5041 17.6276 14.9808 16.7188 15.9341C15.8093 16.8874 15.3545 18.0357 15.3545 19.3791C15.3545 20.7657 15.8093 21.9357 16.7188 22.8891Z\" fill=\"currentColor\"/> </g> <defs> <clipPath id=\"clip0_296_49\"> <rect width=\"160\" height=\"48\" fill=\"currentColor\"/> </clipPath> </defs> </svg>",  
-                'cub': "<svg width=\"48\" height=\"48\" viewBox=\"0 0 160 48\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <g clip-path=\"url(#clip0_296_49)\"> <path d=\"M0.5 8C0.5 3.85786 3.85786 0.5 8 0.5H152C156.142 0.5 159.5 3.85786 159.5 8V40C159.5 44.1421 156.142 47.5 152 47.5H8C3.85786 47.5 0.5 44.1421 0.5 40V8Z\" stroke=\"currentColor\"/> <path d=\"M23.6039 15.9341C22.7373 14.9808 21.5904 14.5041 20.161 14.5041C18.7752 14.5041 17.6276 14.9808 16.7188 15.9341C15.8093 16.8874 15.3545 18.0357 15.3545 19.3791C15.3545 20.7657 15.8093 21.9357 16.7188 22.8891Z\" fill=\"currentColor\"/> </g> <defs> <clipPath id=\"clip0_296_49\"> <rect width=\"160\" height=\"48\" fill=\"currentColor\"/> </clipPath> </defs> </svg>"  
+                'tmdb': '<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="48" height="48" rx="8" fill="#007DFE"/><path d="M12 18h8v12h-8V18zm16 0h8v12h-8V18z" fill="white"/></svg>',  
+                'cub': '<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="48" height="48" rx="8" fill="#FF6B35"/><path d="M16 16h16v16H16V16z" fill="white"/></svg>'  
             };  
   
             var sources = ['tmdb', 'cub'];  
-            var currentSource = Lampa.Storage.get('source');  
+            var currentSource = Lampa.Storage.get('source') || 'tmdb';  
             var currentSourceIndex = sources.indexOf(currentSource);  
   
             if (currentSourceIndex === -1) {  
                 currentSourceIndex = 0;  
-                currentSource = sources[currentSourceIndex];  
+                currentSource = sources[0];  
                 Lampa.Storage.set('source', currentSource);  
             }  
   
-            // Создаем новый div элемент  
+            // Створюємо кнопку  
             var sourceDiv = $('<div>', {  
                 'class': 'head__action selector sources',  
                 'style': 'position: relative;',  
                 'html': "<div class=\"source-logo\" style=\"text-align: center;\"></div>"  
             });  
   
-            // Добавляем новый div как первый дочерний элемент контейнера '.head__actions'  
+            // Додаємо кнопку в шапку  
             $('.head__actions').prepend(sourceDiv);  
   
-            // Обновляем логотип  
+            // Показуємо логотип наступного джерела  
             var nextSourceIndex = (currentSourceIndex + 1) % sources.length;  
             var nextSourceLogo = logos[sources[nextSourceIndex]];  
             sourceDiv.find('.source-logo').html(nextSourceLogo);  
   
-            // Добавляем обработчик события 'hover:enter' для переключения  
-            sourceDiv.on('hover:enter', function () {  
-                currentSourceIndex = (currentSourceIndex + 1) % sources.length;  
-                var selectedSource = sources[currentSourceIndex];  
-                Lampa.Storage.set('source', selectedSource);  
-  
-                var nextLogo = logos[sources[(currentSourceIndex + 1) % sources.length]];  
-                sourceDiv.find('.source-logo').html(nextLogo);  
-  
-                // Перезагружаем страницу для применения нового источника  
-                setTimeout(function () {  
-                    window.location.reload();  
-                }, 100);  
-            });  
+            // Зберігаємо посилання на елемент  
+            this.sourceElement = sourceDiv;  
+            this.sources = sources;  
+            this.logos = logos;  
         },  
   
         bind: function () {  
-            // Дополнительные привязки событий если нужны  
+            var self = this;  
+  
+            // Обробник кліку  
+            this.sourceElement.on('hover:enter', function () {  
+                var currentSource = Lampa.Storage.get('source') || 'tmdb';  
+                var currentSourceIndex = self.sources.indexOf(currentSource);  
+                  
+                // Перемикаємо на наступне джерело  
+                var newSourceIndex = (currentSourceIndex + 1) % self.sources.length;  
+                var newSource = self.sources[newSourceIndex];  
+                  
+                // Зберігаємо нове джерело  
+                Lampa.Storage.set('source', newSource);  
+                  
+                // Оновлюємо логотип  
+                var nextSourceIndex = (newSourceIndex + 1) % self.sources.length;  
+                var nextSourceLogo = self.logos[self.sources[nextSourceIndex]];  
+                self.sourceElement.find('.source-logo').html(nextSourceLogo);  
+                  
+                // Перезавантажуємо сторінку  
+                setTimeout(function() {  
+                    window.location.reload();  
+                }, 300);  
+            });  
         },  
   
         destroy: function () {  
-            $('.head__actions .sources').remove();  
+            if (this.sourceElement) {  
+                this.sourceElement.remove();  
+                this.sourceElement = null;  
+            }  
         },  
   
         main: function () {  
