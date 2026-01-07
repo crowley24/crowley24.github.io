@@ -987,7 +987,7 @@
     --ni-lines-up: 0vh;  
 }  
 .new-interface{  
-    --ni-lines-up: 3vh;  
+    --ni-lines-up: 0vh;  
 }  
 .new-interface .items-line__body > .scroll.scroll--horizontal,  
 .new-interface .items-line__body .scroll.scroll--horizontal{  
@@ -1697,7 +1697,7 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
 }  
   
 .new-interface{  
-    --ni-lines-up: 3vh;  
+    --ni-lines-up: 0vh;  
 }  
 .new-interface .items-line__body > .scroll.scroll--horizontal,  
 .new-interface .items-line__body .scroll.scroll--horizontal{  
