@@ -864,10 +864,13 @@
 .new-interface-info{  
     position: relative;  
     padding: 1.5em;  
-    height: auto !important;  
-    min-height: auto !important;  
-    overflow: visible !important;  
+    height: auto !important; /* Змінено з var(--ni-info-h) */  
+    min-height: 200px !important; /* Фіксована мінімальна висота */  
+    max-height: 250px !important; /* Обмеження максимальної висоти */  
+    overflow: visible !important; /* Змінено з hidden */  
     z-index: 3;  
+    display: flex !important;  
+    align-items: center !important;  
 }  
   
 .new-interface-info:before{  
@@ -875,21 +878,18 @@
 }  
   
 .new-interface-info__body{  
-    position: relative;  
+        position: relative;  
     z-index: 1;  
-    width: min(96%, 78em);  
-    padding-top: 1.1em;  
-    display: grid;  
-    grid-template-columns: 1fr !important;  
-    column-gap: clamp(16px, 3vw, 54px);  
-    align-items: flex-start !important;  
-    min-height: auto !important;  }  
+    width: 100%;  
+    padding-top: 0;  
+    display: block !important; /* Змінено з grid */  
+}  
   
 .new-interface-info__left {  
-    min-height: auto !important;  
-    max-height: none !important;  
-    height: auto !important;  
-    overflow: visible !important;    
+     width: 100%;  
+    display: flex;  
+    align-items: center;  
+    min-height: 120px;    
 }  
   
 .new-interface-info__right{  
@@ -908,11 +908,14 @@
 }  
   
 .new-interface-info__title {  
-     min-height: 80px !important;  
-    max-height: 140px !important;  
-    height: 120px !important;  
-    display: flex !important;  
-    align-items: center !important;
+   font-size: clamp(2.6em, 4.0vw, 3.6em);  
+    font-weight: 600;  
+    margin: 0;  
+    display: flex;  
+    align-items: center;  
+    min-height: 120px;  
+    max-height: 120px;  
+    overflow: visible; 
 }  
   
 .new-interface-info__title-logo{  
@@ -1548,28 +1551,26 @@ create() {
     overflow: visible !important; /* Змінено з hidden */  
     z-index: 3;  
     display: flex !important;  
-    align-items: center !important;
-  
+    align-items: center !important;  
+}
+
 .new-interface-info:before{  
     display: none !important;  
 }  
   
-.new-interface-info__body{  
+.new-interface-info__body {  
     position: relative;  
     z-index: 1;  
-    width: min(96%, 78em);  
-    padding-top: 1.1em;  
-    display: grid;  
-    grid-template-columns: 1fr !important; 
-    column-gap: clamp(16px, 3vw, 54px);  
-    align-items: flex-start !important;  
-    min-height: auto !important;  }  
-  
+    width: 100%;  
+    padding-top: 0;  
+    display: block !important; /* Змінено з grid */  
+}  
+
 .new-interface-info__left {  
-    min-height: auto !important;  
-    max-height: none !important;  
-    height: auto !important;  
-    overflow: visible !important;  
+    width: 100%;  
+    display: flex;  
+    align-items: center;  
+    min-height: 120px;  
 }  
   
 .new-interface-info__right{  
@@ -1588,12 +1589,16 @@ create() {
 }  
   
 .new-interface-info__title {  
-    min-height: 80px !important;  
-    max-height: 140px !important;  
-    height: 120px !important;  
-    display: flex !important;  
-    align-items: center !important;  
-}  
+    font-size: clamp(2.6em, 4.0vw, 3.6em);  
+    font-weight: 600;  
+    margin: 0;  
+    display: flex;  
+    align-items: center;  
+    min-height: 120px;  
+    max-height: 120px;  
+    overflow: visible;  
+}
+
   
 .new-interface-info__title-logo{  
     max-width: 400px !important;  
