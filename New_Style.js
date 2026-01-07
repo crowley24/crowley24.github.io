@@ -338,18 +338,28 @@
     img.style.width = '';  
     img.style.maxHeight = '';  
     img.style.maxWidth = '';  
+    img.style.minHeight = '';  
     img.style.objectFit = 'contain';  
-    img.style.objectPosition = 'left center'; // Центрування по вертикалі  
+    img.style.objectPosition = 'left center';  
+    img.style.overflow = 'visible';  
   
     if (this.useTextHeight() && heightPx && heightPx > 0 && !(Lampa.Storage.get('logo_height', '') || '')) {  
-        const scaledHeight = Math.max(heightPx * 1.5, 60);  
+        const scaledHeight = Math.max(heightPx * 2, 80); // Збільшено множник  
         img.style.height = `${scaledHeight}px`;  
         img.style.width = 'auto';  
         img.style.maxWidth = '100%';  
         img.style.maxHeight = 'none';  
+        img.style.minHeight = `${scaledHeight}px`;  
+    } else {  
+        // Використовувати налаштовану висоту  
+        const logoHeight = Lampa.Storage.get('logo_height', '');  
+        if (logoHeight) {  
+            img.style.maxHeight = logoHeight;  
+            img.style.minHeight = logoHeight;  
+        }  
     }  
-} 
-  
+}
+
         swapContent(container, newNode) {  
             if (!container) return;  
             const type = this.animationType();  
@@ -912,12 +922,15 @@
 }  
   
 .new-interface-info__title-logo{  
-    max-width: 100%;  
-    max-height: var(--ni-logo-max-h, clamp(3.5em, 9vh, 5.5em));  
-    display: block;  
-    object-fit: contain;  
-    object-position: left center;  
-    width: auto !important; 
+    max-width: 100% !important;  
+    max-height: var(--ni-logo-max-h, none) !important;  
+    min-height: var(--ni-logo-max-h, auto) !important;  
+    display: block !important;  
+    object-fit: contain !important;  
+    object-position: left center !important;  
+    width: auto !important;  
+    height: auto !important;  
+    overflow: visible !important; 
 }  
   
 .new-interface-full-logo{  
@@ -1594,12 +1607,15 @@ create() {
 }  
   
 .new-interface-info__title-logo{  
-    max-width: 100%;  
-    max-height: var(--ni-logo-max-h, clamp(3.5em, 9vh, 5.5em));  
-    display: block;  
-    object-fit: contain;  
-    object-position: left center;  
-    width: auto !important; 
+    max-width: 100% !important;  
+    max-height: var(--ni-logo-max-h, none) !important;  
+    min-height: var(--ni-logo-max-h, auto) !important;  
+    display: block !important;  
+    object-fit: contain !important;  
+    object-position: left center !important;  
+    width: auto !important;  
+    height: auto !important;  
+    overflow: visible !important; 
 }  
   
 .new-interface-full-logo{  
