@@ -338,28 +338,26 @@
     img.style.width = '';  
     img.style.maxHeight = '';  
     img.style.maxWidth = '';  
-    img.style.minHeight = '';  
     img.style.objectFit = 'contain';  
     img.style.objectPosition = 'left center';  
-    img.style.overflow = 'visible';  
+  
+    // Встановлюємо жорсткі обмеження  
+    const maxHeight = 120; // Максимальна висота в px  
+    const maxWidth = 400;  // Максимальна ширина в px  
   
     if (this.useTextHeight() && heightPx && heightPx > 0 && !(Lampa.Storage.get('logo_height', '') || '')) {  
-        const scaledHeight = Math.max(heightPx * 2, 80); // Збільшено множник  
+        const scaledHeight = Math.min(heightPx * 1.2, maxHeight);  
         img.style.height = `${scaledHeight}px`;  
         img.style.width = 'auto';  
-        img.style.maxWidth = '100%';  
-        img.style.maxHeight = 'none';  
-        img.style.minHeight = `${scaledHeight}px`;  
+        img.style.maxWidth = `${maxWidth}px`;  
+        img.style.maxHeight = `${maxHeight}px`;  
     } else {  
-        // Використовувати налаштовану висоту  
         const logoHeight = Lampa.Storage.get('logo_height', '');  
         if (logoHeight) {  
-            img.style.maxHeight = logoHeight;  
-            img.style.minHeight = logoHeight;  
+            img.style.maxHeight = `min(${logoHeight}, ${maxHeight}px)`;  
         }  
     }  
 }
-
         swapContent(container, newNode) {  
             if (!container) return;  
             const type = this.animationType();  
@@ -910,25 +908,20 @@
 }  
   
 .new-interface-info__title {  
-    min-height: auto !important;  
-    max-height: none !important;  
-    height: auto !important;  
-    overflow: visible !important;  
-    line-height: normal !important;  
-    -webkit-line-clamp: unset !important;  
-    line-clamp: unset !important;
+     min-height: 80px !important;  
+    max-height: 140px !important;  
+    height: 120px !important;  
+    display: flex !important;  
+    align-items: center !important;
 }  
   
 .new-interface-info__title-logo{  
-    max-width: 100% !important;  
-    max-height: var(--ni-logo-max-h, none) !important;  
-    min-height: var(--ni-logo-max-h, auto) !important;  
-    display: block !important;  
-    object-fit: contain !important;  
-    object-position: left center !important;  
+     max-width: 400px !important;  
+    max-height: 120px !important;  
     width: auto !important;  
     height: auto !important;  
-    overflow: visible !important; 
+    object-fit: contain !important;  
+    object-position: left center !important; 
 }  
   
 .new-interface-full-logo{  
@@ -1546,13 +1539,16 @@ create() {
 }  
   
 /* Верхній інфо-блок */  
-.new-interface-info{  
+.new-interface-info {  
     position: relative;  
     padding: 1.5em;  
-    height: var(--ni-info-h);  
-    overflow: hidden;  
+    height: auto !important; /* Змінено з var(--ni-info-h) */  
+    min-height: 200px !important; /* Фіксована мінімальна висота */  
+    max-height: 250px !important; /* Обмеження максимальної висоти */  
+    overflow: visible !important; /* Змінено з hidden */  
     z-index: 3;  
-}  
+    display: flex !important;  
+    align-items: center !important;
   
 .new-interface-info:before{  
     display: none !important;  
@@ -1592,25 +1588,20 @@ create() {
 }  
   
 .new-interface-info__title {  
-    min-height: auto !important;  
-    max-height: none !important;  
-    height: auto !important;  
-    overflow: visible !important;  
-    line-height: normal !important;  
-    -webkit-line-clamp: unset !important;  
-    line-clamp: unset !important;  
+    min-height: 80px !important;  
+    max-height: 140px !important;  
+    height: 120px !important;  
+    display: flex !important;  
+    align-items: center !important;  
 }  
   
 .new-interface-info__title-logo{  
-    max-width: 100% !important;  
-    max-height: var(--ni-logo-max-h, none) !important;  
-    min-height: var(--ni-logo-max-h, auto) !important;  
-    display: block !important;  
-    object-fit: contain !important;  
-    object-position: left center !important;  
+    max-width: 400px !important;  
+    max-height: 120px !important;  
     width: auto !important;  
     height: auto !important;  
-    overflow: visible !important; 
+    object-fit: contain !important;  
+    object-position: left center !important; 
 }  
   
 .new-interface-full-logo{  
