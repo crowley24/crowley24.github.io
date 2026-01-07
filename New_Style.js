@@ -43,15 +43,17 @@
   
         if (h) {  
             root.style.setProperty('--ni-logo-max-h', h);  
-            // Додайте оновлення існуючих логотипів  
+            // Оновити всі існуючі логотипи  
             document.querySelectorAll('.new-interface-info__title-logo, .new-interface-full-logo').forEach(img => {  
                 img.style.maxHeight = h;  
+                img.style.setProperty('max-height', h, 'important');  
             });  
         } else {  
             root.style.removeProperty('--ni-logo-max-h');  
-            // Скиньте розмір існуючих логотипів  
+            // Скинути розмір існуючих логотипів  
             document.querySelectorAll('.new-interface-info__title-logo, .new-interface-full-logo').forEach(img => {  
                 img.style.maxHeight = '';  
+                img.style.removeProperty('max-height');  
             });  
         }  
     } catch (e) { }  
@@ -351,18 +353,22 @@
     img.style.objectFit = 'contain';  
     img.style.objectPosition = 'left center';  
   
-    // Жорсткі обмеження для всіх логотипів  
-    const MAX_HEIGHT = 120; // пікселів  
-    const MAX_WIDTH = 400;  // пікселів  
+    // Завжди використовуємо налаштовану висоту  
+    const logoHeight = Lampa.Storage.get('logo_height', '');  
+    if (logoHeight) {  
+        img.style.maxHeight = logoHeight;  
+        img.style.setProperty('max-height', logoHeight, 'important');  
+    } else {  
+        // Значення за замовчуванням  
+        img.style.maxHeight = '120px';  
+        img.style.setProperty('max-height', '120px', 'important');  
+    }  
   
-    // Завжди застосовуємо обмеження  
-    img.style.maxHeight = `${MAX_HEIGHT}px`;  
-    img.style.maxWidth = `${MAX_WIDTH}px`;  
-  
-    if (this.useTextHeight() && heightPx && heightPx > 0 && !(Lampa.Storage.get('logo_height', '') || '')) {  
-        const scaledHeight = Math.min(heightPx * 1.2, MAX_HEIGHT);  
+    if (this.useTextHeight() && heightPx && heightPx > 0 && !logoHeight) {  
+        const scaledHeight = Math.min(heightPx * 1.2, 120);  
         img.style.height = `${scaledHeight}px`;  
         img.style.width = 'auto';  
+        img.style.maxWidth = '400px';  
     }  
 }
         swapContent(container, newNode) {  
@@ -925,12 +931,19 @@
     overflow: visible; 
 }  
   
-.new-interface-info__title-logo,  
-.new-interface-full-logo {  
+.new-interface-info__title-logo {  
     max-width: 400px !important;  
-    max-height: 120px !important;  
+    max-height: var(--ni-logo-max-h, 120px) !important;  
     width: auto !important;  
     height: auto !important;  
+    object-fit: contain !important;  
+    object-position: left center !important;  
+}  
+  
+.new-interface-full-logo {  
+    max-height: var(--ni-logo-max-h, 180px) !important;  
+    width: auto !important;  
+    max-width: 100% !important;  
     object-fit: contain !important;  
     object-position: left center !important;  
 }
@@ -1600,12 +1613,19 @@ create() {
 }
 
   
-.new-interface-info__title-logo,  
-.new-interface-full-logo {  
+.new-interface-info__title-logo {  
     max-width: 400px !important;  
-    max-height: 120px !important;  
+    max-height: var(--ni-logo-max-h, 120px) !important;  
     width: auto !important;  
     height: auto !important;  
+    object-fit: contain !important;  
+    object-position: left center !important;  
+}  
+  
+.new-interface-full-logo {  
+    max-height: var(--ni-logo-max-h, 180px) !important;  
+    width: auto !important;  
+    max-width: 100% !important;  
     object-fit: contain !important;  
     object-position: left center !important;  
 }
