@@ -37,22 +37,25 @@
     const LOGO_CACHE_PREFIX = 'logo_cache_width_based_v1_';  
   
     function applyLogoCssVars() {  
-        try {  
-            const h = (Lampa.Storage && typeof Lampa.Storage.get === 'function') ? (Lampa.Storage.get('logo_height', '') || '') : '';  
-            const root = document.documentElement;  
+    try {  
+        const h = (Lampa.Storage && typeof Lampa.Storage.get === 'function') ? (Lampa.Storage.get('logo_height', '') || '') : '';  
+        const root = document.documentElement;  
   
-            if (h) root.style.setProperty('--ni-logo-max-h', h);  
-            else root.style.removeProperty('--ni-logo-max-h');  
-        } catch (e) { }  
-    }  
-  
-    function applyCaptionsClass(container) {  
-        try {  
-            if (!container) return;  
-            const show = !!Lampa.Storage.get('ni_card_captions', true);  
-            container.classList.toggle('ni-hide-captions', !show);  
-        } catch (e) { }  
-    }  
+        if (h) {  
+            root.style.setProperty('--ni-logo-max-h', h);  
+            // Додайте оновлення існуючих логотипів  
+            document.querySelectorAll('.new-interface-info__title-logo, .new-interface-full-logo').forEach(img => {  
+                img.style.maxHeight = h;  
+            });  
+        } else {  
+            root.style.removeProperty('--ni-logo-max-h');  
+            // Скиньте розмір існуючих логотипів  
+            document.querySelectorAll('.new-interface-info__title-logo, .new-interface-full-logo').forEach(img => {  
+                img.style.maxHeight = '';  
+            });  
+        }  
+    } catch (e) { }  
+}
   
     function applyCaptionsToAll() {  
         try {  
@@ -341,21 +344,18 @@
     img.style.objectFit = 'contain';  
     img.style.objectPosition = 'left center';  
   
-    // Встановлюємо жорсткі обмеження  
-    const maxHeight = 120; // Максимальна висота в px  
-    const maxWidth = 400;  // Максимальна ширина в px  
+    // Завжди використовуємо налаштовану висоту  
+    const logoHeight = Lampa.Storage.get('logo_height', '');  
+    if (logoHeight) {  
+        img.style.maxHeight = logoHeight;  
+    }  
   
-    if (this.useTextHeight() && heightPx && heightPx > 0 && !(Lampa.Storage.get('logo_height', '') || '')) {  
-        const scaledHeight = Math.min(heightPx * 1.2, maxHeight);  
+    if (this.useTextHeight() && heightPx && heightPx > 0 && !logoHeight) {  
+        const scaledHeight = Math.min(heightPx * 1.2, 120);  
         img.style.height = `${scaledHeight}px`;  
         img.style.width = 'auto';  
-        img.style.maxWidth = `${maxWidth}px`;  
-        img.style.maxHeight = `${maxHeight}px`;  
-    } else {  
-        const logoHeight = Lampa.Storage.get('logo_height', '');  
-        if (logoHeight) {  
-            img.style.maxHeight = `min(${logoHeight}, ${maxHeight}px)`;  
-        }  
+        img.style.maxWidth = '400px';  
+        img.style.maxHeight = '120px';  
     }  
 }
         swapContent(container, newNode) {  
@@ -918,22 +918,24 @@
     overflow: visible; 
 }  
   
-.new-interface-info__title-logo{  
-     max-width: 400px !important;  
-    max-height: 120px !important;  
+.new-interface-info__title-logo {  
+    max-width: 100%;  
+    max-height: var(--ni-logo-max-h, 120px) !important; /* Використовуємо змінну */  
+    display: block;  
+    object-fit: contain;  
+    object-position: left center;  
     width: auto !important;  
     height: auto !important;  
-    object-fit: contain !important;  
-    object-position: left center !important; 
-}  
+} 
   
-.new-interface-full-logo{  
-    max-height: var(--ni-logo-max-h, 125px);  
+.new-interface-full-logo {  
+    max-height: var(--ni-logo-max-h, 180px) !important; /* Використовуємо змінну */  
     width: auto;  
     max-width: 100%;  
     object-fit: contain;  
+    object-position: left center;  
     display: block;  
-}  
+}
   
 /* Приховування підписів під карточками */  
 .new-interface.ni-hide-captions .card__view ~ .card__title,  
@@ -1600,22 +1602,24 @@ create() {
 }
 
   
-.new-interface-info__title-logo{  
-    max-width: 400px !important;  
-    max-height: 120px !important;  
+.new-interface-info__title-logo {  
+    max-width: 100%;  
+    max-height: var(--ni-logo-max-h, 120px) !important; /* Використовуємо змінну */  
+    display: block;  
+    object-fit: contain;  
+    object-position: left center;  
     width: auto !important;  
     height: auto !important;  
-    object-fit: contain !important;  
-    object-position: left center !important; 
-}  
+} 
   
-.new-interface-full-logo{  
-    max-height: var(--ni-logo-max-h, 125px);  
+.new-interface-full-logo {  
+    max-height: var(--ni-logo-max-h, 180px) !important; /* Використовуємо змінну */  
     width: auto;  
     max-width: 100%;  
     object-fit: contain;  
+    object-position: left center;  
     display: block;  
-}  
+}
   
 /* Приховування підписів під карточками */  
 .new-interface.ni-hide-captions .card__view ~ .card__title,  
