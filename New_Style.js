@@ -979,7 +979,7 @@
     z-index: 5;  
 }  
 .new-interface .items-line__head{  
-    transform: translateY(1vh);  
+    transform: translateY(3vh);  
 }  
   
 /* Підняти ленти постерів */  
@@ -1693,7 +1693,7 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
 .new-interface .items-line__head{  
     position: relative;  
     z-index: 5;  
-    transform: translateY(1vh);  
+    transform: translateY(3vh);  
 }  
   
 .new-interface{  
