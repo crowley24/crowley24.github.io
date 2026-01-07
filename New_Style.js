@@ -92,7 +92,7 @@
                     de: 'Deutsch',  
                     it: 'Italiano'  
                 },  
-                default: ''  
+                default: 'uk'  
             },  
             field: { name: 'Мова логотипа', description: 'Пріоритетна мова для пошуку логотипа' }  
         });  
@@ -146,56 +146,26 @@
   
         add({  
             component: 'interface',  
-            param: { name: 'logo_clear_cache', type: 'button' },  
-            field: { name: 'Скинути кеш логотипів', description: 'Натисніть для очищення кешу зображень' },  
-            onChange: function () {  
-                Lampa.Select.show({  
-                    title: 'Скинути кеш?',  
-                    items: [{ title: 'Так', confirm: !0 }, { title: 'Ні' }],  
-                    onSelect: function (e) {  
-                        if (e.confirm) {  
-                            const keys = [];  
-                            for (let i = 0; i < localStorage.length; i++) {  
-                                const k = localStorage.key(i);  
-                                if (k && k.indexOf(LOGO_CACHE_PREFIX) !== -1) keys.push(k);  
-                            }  
-                            keys.forEach((k) => localStorage.removeItem(k));  
-                            window.location.reload();  
-                        } else {  
-                            Lampa.Controller.toggle('settings_component');  
-                        }  
-                    },  
-                    onBack: function () {  
-                        Lampa.Controller.toggle('settings_component');  
-                    }  
-                });  
-            }  
+            param: { name: 'ni_card_captions', type: 'trigger', default: !0 },  
+            field: { name: 'Підписи під карточками', description: 'Показувати текст під карточками' },  
+            onChange: applyCaptionsToAll  
         });  
   
         add({  
             component: 'interface',  
-            param: { name: 'ni_card_captions', type: 'trigger', default: true },  
-            field: { name: 'Підписи під картками', description: 'Показувати / приховувати назви (і рік) під постерами в лініях' },  
-            onChange: function () {  
-                applyCaptionsToAll();  
+            param: { name: 'logo_clear_cache', type: 'button', default: !1 },  
+            field: { name: 'Очистити кеш логотипів', description: 'Видаляє всі збережені логотипи' },  
+            onChange: () => {  
+                try {  
+                    const keys = [];  
+                    for (let i = 0; i < localStorage.length; i++) {  
+                        const key = localStorage.key(i);  
+                        if (key && key.indexOf(LOGO_CACHE_PREFIX) === 0) keys.push(key);  
+                    }  
+                    keys.forEach(key => localStorage.removeItem(key));  
+                    Lampa.Noty.show('Кеш логотипів очищено');  
+                } catch (e) {}  
             }  
-        });  
-  
-        applyLogoCssVars();  
-        applyCaptionsToAll();  
-    }  
-  
-    function animateOpacity(el, from, to, duration, done) {  
-        if (!el) return done && done();  
-        let start = null;  
-        const ease = (t) => 1 - Math.pow(1 - t, 3);  
-  
-        requestAnimationFrame(function step(ts) {  
-            if (!start) start = ts;  
-            const p = Math.min((ts - start) / duration, 1);  
-            el.style.opacity = (from + (to - from) * ease(p)).toString();  
-            if (p < 1) requestAnimationFrame(step);  
-            else if (done) done();  
         });  
     }  
   
@@ -205,97 +175,80 @@
         }  
   
         enabled() {  
-            return (Lampa.Storage.get('logo_glav', '0') + '') !== '1';  
+            return Lampa.Storage.get('logo_glav', '0') === '0';  
         }  
   
         lang() {  
-            const forced = (Lampa.Storage.get('logo_lang', '') || '') + '';  
-            const base = forced || (Lampa.Storage.get('language') || 'en') + '';  
-            return (base.split('-')[0] || 'en');  
+            return Lampa.Storage.get('logo_lang', '') || (Lampa.Storage.get('language') || 'en').split('-')[0];  
         }  
   
         size() {  
-            return (Lampa.Storage.get('logo_size', 'original') || 'original') + '';  
+            return Lampa.Storage.get('logo_size', 'original');  
         }  
   
         animationType() {  
-            return (Lampa.Storage.get('logo_animation_type', 'css') || 'css') + '';  
+            return Lampa.Storage.get('logo_animation_type', 'css');  
         }  
   
         useTextHeight() {  
             return !!Lampa.Storage.get('logo_use_text_height', !1);  
         }  
   
-        cacheKey(type, id, lang) {  
-            return `${LOGO_CACHE_PREFIX}${type}_${id}_${lang}`;  
+        cacheKey(item, lang, size) {  
+            const type = item.media_type === 'tv' || item.name ? 'tv' : 'movie';  
+            return LOGO_CACHE_PREFIX + type + '_' + item.id + '_' + (lang || this.lang()) + '_' + (size || this.size());  
         }  
   
-        flush(key, value) {  
-            const list = this.pending[key] || [];  
+        flush(key, url) {  
+            const callbacks = this.pending[key] || [];  
             delete this.pending[key];  
-            list.forEach((fn) => { try { if (fn) fn(value); } catch (e) { } });  
-        }  
-  
-        resolveFromImages(item, lang) {  
-            try {  
-                if (!item || !item.images || !Array.isArray(item.images.logos) || !item.images.logos.length) return null;  
-  
-                const logos = item.images.logos.slice();  
-                const pick = (iso) => {  
-                    for (let i = 0; i < logos.length; i++) {  
-                        if (logos[i] && logos[i].iso_639_1 === iso) return logos[i].file_path;  
-                    }  
-                    return null;  
-                };  
-  
-                return pick(lang) || pick('en') || (logos[0] && logos[0].file_path) || null;  
-            } catch (e) {  
-                return null;  
-            }  
+            callbacks.forEach(cb => {  
+                if (cb) cb(url);  
+            });  
         }  
   
         getLogoUrl(item, cb) {  
+            if (!item || !item.id) {  
+                if (cb) cb(null);  
+                return;  
+            }  
+  
+            const source = item.source || 'tmdb';  
+            if (source !== 'tmdb' && source !== 'cub') {  
+                if (cb) cb(null);  
+                return;  
+            }  
+  
+            const lang = this.lang();  
+            const size = this.size();  
+            const key = this.cacheKey(item, lang, size);  
+  
+            const cached = localStorage.getItem(key);  
+            if (cached) {  
+                if (cached === 'none') {  
+                    if (cb) cb(null);  
+                } else {  
+                    if (cb) cb(cached);  
+                }  
+                return;  
+            }  
+  
+            if (this.pending[key]) {  
+                this.pending[key].push(cb);  
+                return;  
+            }  
+  
+            this.pending[key] = [cb];  
+  
             try {  
-                if (!item || !item.id) return cb && cb(null);  
-  
-                const source = item.source || 'tmdb';  
-                if (source !== 'tmdb' && source !== 'cub') return cb && cb(null);  
-  
-                if (!Lampa.TMDB || typeof Lampa.TMDB.api !== 'function' || typeof Lampa.TMDB.key !== 'function') return cb && cb(null);  
-  
-                const type = (item.media_type === 'tv' || item.name) ? 'tv' : 'movie';  
-                const lang = this.lang();  
-                const key = this.cacheKey(type, item.id, lang);  
-  
-                const cached = localStorage.getItem(key);  
-                if (cached) {  
-                    if (cached === 'none') return cb && cb(null);  
-                    return cb && cb(cached);  
-                }  
-  
-                const fromDetails = this.resolveFromImages(item, lang);  
-                if (fromDetails) {  
-                    const size = this.size();  
-                    const normalized = (fromDetails + '').replace('.svg', '.png');  
-                    const logoUrl = Lampa.TMDB.image('/t/p/' + size + normalized);  
-                    localStorage.setItem(key, logoUrl);  
-                    return cb && cb(logoUrl);  
-                }  
-  
-                if (this.pending[key]) {  
-                    this.pending[key].push(cb);  
-                    return;  
-                }  
-  
-                this.pending[key] = [cb];  
+                const type = item.media_type === 'tv' || item.name ? 'tv' : 'movie';  
+                const url = Lampa.TMDB.api(`${type}/${item.id}/images?api_key=${Lampa.TMDB.key()}&include_image_language=${lang},en,null`);  
   
                 if (typeof $ === 'undefined' || !$.get) {  
                     localStorage.setItem(key, 'none');  
                     this.flush(key, null);  
                     return;  
                 }  
-  
-                const url = Lampa.TMDB.api(`${type}/${item.id}/images?api_key=${Lampa.TMDB.key()}&include_image_language=${lang},en,null`);  
   
                 $.get(url, (res) => {  
                     let filePath = null;  
@@ -476,7 +429,7 @@
   
                     const img = new Image();  
                     img.className = 'new-interface-full-logo';  
-                    img.alt = originalText;  
+  img.alt = originalText;  
                     img.src = url;  
   
                     this.setImageSizing(img, textHeightPx);  
@@ -548,594 +501,186 @@
         Lampa.Listener.follow('full', function (e) {  
             try {  
                 if (!e || e.type !== 'complite') return;  
-                if (!e.object || !e.object.activity) return;  
-  
-                const data = (e.data && (e.data.movie || e.data)) ? (e.data.movie || e.data) : null;  
-                if (!data) return;  
-  
-                Logo.applyToFull(e.object.activity, data);  
-            } catch (err) { }  
+                if (e.data && e.data.card && e.data.activity) {  
+                    Logo.applyToFull(e.data.activity, e.data.card);  
+                }  
+            } catch (e) { }  
         });  
     }  
-  
-    hookFullTitleLogos();  
   
     function startPluginV3() {  
-        if (!Lampa.Maker || !Lampa.Maker.map || !Lampa.Utils) return;  
-        if (window.plugin_interface_ready_v3) return;  
-        window.plugin_interface_ready_v3 = true;  
+        if (window.__ni_interface2_ready_v3) return;  
+        window.__ni_interface2_ready_v3 = true;  
   
         addStyleV3();  
+        hookFullTitleLogos();  
   
-        const mainMap = Lampa.Maker.map('Main');  
-  
-        if (!mainMap || !mainMap.Items || !mainMap.Create) return;  
-  
-        wrap(mainMap.Items, 'onInit', function (original, args) {  
-            if (original) original.apply(this, args);  
-            this.__newInterfaceEnabled = shouldUseNewInterface(this && this.object);  
-        });  
-  
-        wrap(mainMap.Create, 'onCreate', function (original, args) {  
-            if (original) original.apply(this, args);  
-            if (!this.__newInterfaceEnabled) return;  
-            const state = ensureState(this);  
-            state.attach();  
-        });  
-  
-        wrap(mainMap.Create, 'onCreateAndAppend', function (original, args) {  
-            const element = args && args[0];  
-            if (this.__newInterfaceEnabled && element) {  
-                prepareLineData(element);  
-            }  
-            return original ? original.apply(this, args) : undefined;  
-        });  
-  
-        wrap(mainMap.Items, 'onAppend', function (original, args) {  
-            if (original) original.apply(this, args);  
-            if (!this.__newInterfaceEnabled) return;  
-            const item = args && args[0];  
-            const element = args && args[1];  
-            if (item && element) attachLineHandlers(this, item, element);  
-        });  
-  
-        wrap(mainMap.Items, 'onDestroy', function (original, args) {  
-            if (this.__newInterfaceState) {  
-                this.__newInterfaceState.destroy();  
-                delete this.__newInterfaceState;  
-            }  
-            delete this.__newInterfaceEnabled;  
-            if (original) original.apply(this, args);  
-        });  
-    }  
-  
-    function shouldUseNewInterface(object) {  
-        if (!object) return false;  
-        if (object.source !== 'tmdb' && object.source !== 'cub') return false;  
-        if (window.innerWidth < 767) return false;  
-        return true;  
-    }  
-  
-    function ensureState(target) {  
-        if (!target.__newInterfaceState) {  
-            target.__newInterfaceState = createInterfaceState(target);  
-        }  
-        return target.__newInterfaceState;  
-    }  
-  
-    function createInterfaceState(target) {  
-        const info = new InterfaceInfo();  
-        const background = $('<div class="new-interface__background"></div>');  
-  
-        const state = {  
-            info: info,  
-            background: background,  
-            attached: false,  
-            update: function (data) {  
-                if (data) info.update(data);  
+        Lampa.Maker.map({  
+            'main': function (object) {  
+                return new InterfaceMain(object);  
             },  
-            reset: function () {  
-                info.empty();  
+            'category': function (object) {  
+                return new InterfaceMain(object);  
             },  
-            attach: function () {  
-                if (this.attached) return;  
-                this.attached = true;  
-  
-                const scroll = target.scroll;  
-                if (scroll && scroll.render) {  
-                    const scrollElement = scroll.render();  
-                    if (scrollElement) {  
-                        $(scrollElement).prepend(background);  
-                    }  
-                }  
-            },  
-            destroy: function () {  
-                this.reset();  
-                if (background && background.parentNode) {  
-                    background.parentNode.removeChild(background);  
-                }  
-                this.attached = false;  
-            }  
-        };  
-  
-        return state;  
-    }  
-  
-    function prepareLineData(element) {  
-        return;  
-    }  
-  
-    function decorateCard(state, card) {  
-        if (!card || card.__newInterfaceCard || typeof card.use !== 'function' || !card.data) return;  
-  
-        card.__newInterfaceCard = true;  
-  
-        card.params = card.params || {};  
-        card.params.style = card.params.style || {};  
-  
-        card.use({  
-            onFocus() {  
-                state.update(card.data);  
-            },  
-            onHover() {  
-                state.update(card.data);  
-            },  
-            onTouch() {  
-                state.update(card.data);  
-            },  
-            onDestroy() {  
-                delete card.__newInterfaceCard;  
+            'search': function (object) {  
+                return new InterfaceMain(object);  
             }  
         });  
     }  
   
-    function getCardData(card, element, index = 0) {  
-        if (card && card.data) return card.data;  
-        if (element && Array.isArray(element.results)) return element.results[index] || element.results[0];  
-        return null;  
-    }  
-  
-    function getDomCardData(node) {  
-        if (!node) return null;  
-  
-        let current = node && node.jquery ? node[0] : node;  
-  
-        while (current && !current.card_data) {  
-            current = current.parentNode;  
-        }  
-  
-        return current && current.card_data ? current.card_data : null;  
-    }  
-  
-    function getFocusedCardData(line) {  
-        const container = line && typeof line.render === 'function' ? line.render(true) : null;  
-        if (!container || !container.querySelector) return null;  
-  
-        const focus = container.querySelector('.selector.focus') || container.querySelector('.focus');  
-  
-        return getDomCardData(focus);  
-    }  
-  
-    function attachLineHandlers(main, line, element) {  
-        if (line.__newInterfaceLine) return;  
-        line.__newInterfaceLine = true;  
-  
-        const state = ensureState(main);  
-        const applyToCard = (card) => decorateCard(state, card);  
-  
-        if (element && Array.isArray(element.results)) {  
-            element.results.slice(0, 5).forEach((item) => {  
-                state.info.load(item, { preload: true });  
-            });  
-        }  
-  
-        line.use({  
-            onInstance(card) {  
-                applyToCard(card);  
-            },  
-            onActive(card, itemData) {  
-                const current = getCardData(card, itemData);  
-                if (current) state.update(current);  
-            },  
-            onToggle() {  
-                setTimeout(() => {  
-                    const domData = getFocusedCardData(line);  
-                    if (domData) state.update(domData);  
-                }, 32);  
-            },  
-            onMore() {  
-                state.reset();  
-            },  
-            onDestroy() {  
-                state.reset();  
-                delete line.__newInterfaceLine;  
-            }  
-        });  
-  
-        if (Array.isArray(line.items) && line.items.length) {  
-            line.items.forEach(applyToCard);  
-        }  
-  
-        if (line.last) {  
-            const lastData = getDomCardData(line.last);  
-            if (lastData) state.update(lastData);  
-        }  
-    }  
-  
-    function wrap(target, method, handler) {  
-        if (!target) return;  
-        const original = typeof target[method] === 'function' ? target[method] : null;  
-        target[method] = function (...args) {  
-            return handler.call(this, original, args);  
-        };  
-    }  
-  
-    function addStyleV3() {  
-        if (addStyleV3.added) return;  
-        addStyleV3.added = true;  
-  
-        Lampa.Template.add('new_interface_style_v3', `<style>  
-.new-interface{  
-    position: relative;  
-    --ni-info-h: clamp(15em, 34vh, 24em);  
-    --ni-card-w: clamp(120px, 7.6vw, 170px);  
-}  
-  
-.new-interface .card--small,  
-.new-interface .card-more{  
-    width: var(--ni-card-w) !important;  
-}  
-  
-.new-interface .card-more__box{  
-    padding-bottom: 150%;  
-}  
-  
-.new-interface-info{  
-    position: relative;  
-    padding: 1.5em;  
-    height: var(--ni-info-h);  
-    overflow: hidden;  
-    z-index: 3;  
-}  
-  
-.new-interface-info:before{  
-    display: none !important;  
-}  
-  
-.new-interface-info__body{  
-    position: relative;  
-    z-index: 1;  
-    width: min(96%, 78em);  
-    padding-top: 1.1em;  
-    display: grid;  
-    grid-template-columns: minmax(0, 1fr) minmax(0, .85fr);  
-    column-gap: clamp(16px, 3vw, 54px);  
-    align-items: start;  
-}  
-  
-.new-interface-info__left,  
-.new-interface-info__right{  
-    min-width: 0;  
-}  
-  
-.new-interface-info__right{  
-    padding-top: clamp(0.2em, 2.2vh, 1.6em);  
-}  
-  
-.new-interface-info__head{  
-    color: rgba(255, 255, 255, 0.6);  
-    margin-bottom: 1em;  
-    font-size: 1.3em;  
-    min-height: 1em;  
-}  
-  
-.new-interface-info__head span{  
-    color: #fff;  
-}  
-  
-.new-interface-info__title{  
-    font-size: clamp(2.6em, 4.0vw, 3.6em);  
-    font-weight: 600;  
-    margin-bottom: 0.3em;  
-    overflow: hidden;  
-    -o-text-overflow: '.';  
-    text-overflow: '.';  
-    display: -webkit-box;  
-    -webkit-line-clamp: 1;  
-    line-clamp: 1;  
-    -webkit-box-orient: vertical;  
-    margin-left: -0.03em;  
-    line-height: 1.25;  
-}  
-  
-.new-interface-info__title-logo{  
-    max-width: 100%;  
-    max-height: var(--ni-logo-max-h, clamp(2.4em, 7vh, 4.2em));  
-    display: block;  
-    object-fit: contain;  
-}  
-  
-.new-interface-full-logo{  
-    max-height: var(--ni-logo-max-h, 125px);  
-    width: auto;  
-    max-width: 100%;  
-    object-fit: contain;  
-    display: block;  
-}  
-  
-.new-interface.ni-hide-captions .card__view ~ .card__title,  
-.new-interface.ni-hide-captions .card__view ~ .card__name,  
-.new-interface.ni-hide-captions .card__view ~ .card__text,  
-.new-interface.ni-hide-captions .card__view ~ .card__details,  
-.new-interface.ni-hide-captions .card__view ~ .card__description,  
-.new-interface.ni-hide-captions .card__view ~ .card__subtitle,  
-.new-interface.ni-hide-captions .card__view ~ .card__year,  
-.new-interface.ni-hide-captions .card__view ~ .card__bottom,  
-.new-interface.ni-hide-captions .card__view ~ .card__caption{  
-    display: none !important;  
-}  
-  
-.new-interface.ni-hide-captions .card > *:not(.card__view):not(.card__promo){  
-    display: none !important;  
-}  
-  
-.new-interface-info__description{  
-    font-size: 0.87em;  
-    font-weight: 300;  
-    line-height: 1.38;  
-    color: rgba(255, 255, 255, 0.90);  
-    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);  
-    overflow: hidden;  
-    -o-text-overflow: '.';  
-    text-overflow: '.';  
-    display: -webkit-box;  
-    -webkit-line-clamp: 7;  
-    line-clamp: 7;  
-    -webkit-box-orient: vertical;  
-    width: auto;  
-}  
-  
-.new-interface .full-start__background{  
-    height: 108%;  
-    top: -6em;  
-}  
-  
-.new-interface .full-start__rate{  
-    font-size: 1.3em;  
-    margin-right: 0;  
-}  
-  
-.new-interface .full-start__lines{  
-    padding-bottom: env(safe-area-inset-bottom, 0px);  
-}  
-  
-.new-interface .items-line__head{  
-    position: relative;  
-    z-index: 5;  
-    transform: translateY(-2vh);  
-}  
-  
-.new-interface{  
-    --ni-lines-up: 3vh;  
-}  
-.new-interface .items-line__body > .scroll.scroll--horizontal,  
-.new-interface .items-line__body .scroll.scroll--horizontal{  
-    position: relative;  
-    top: calc(var(--ni-lines-up) * -1);  
-}  
-  
-.new-interface .card__promo{  
-    display: none;  
-}  
-  
-.new-interface .card .card-watched{  
-    display: none !important;  
-}  
-  
-body.light--version .new-interface-info__body{  
-    width: min(92%, 72em);  
-    padding-top: 1.5em;  
-}  
-  
-@media (max-height: 820px){  
-    .new-interface{  
-        --ni-info-h: clamp(13em, 30vh, 20em);  
-    }  
-    .new-interface{  
-        --ni-card-w: clamp(110px, 7.2vw, 160px);  
-    }  
-  
-    .new-interface-info__right{  
-        padding-top: clamp(0.15em, 1.8vh, 1.2em);  
-    }  
-  
-    .new-interface-info__title{  
-        font-size: clamp(2.4em, 3.6vw, 3.1em);  
-    }  
-  
-    .new-interface-info__description{  
-        -webkit-line-clamp: 6;  
-        line-clamp: 6;  
-        font-size: 0.83em;  
-    }  
-}  
-  
-body.advanced--animation:not(.no--animation) .new-interface .card.focus .card__view,  
-body.advanced--animation:not(.no--animation) .new-interface .card--small.focus .card__view{  
-    animation: animation-card-focus 0.2s;  
-}  
-  
-body.advanced--animation:not(.no--animation) .new-interface .card.animate-trigger-enter .card__view,  
-body.advanced--animation:not(.no--animation) .new-interface .card--small.animate-trigger-enter .card__view{  
-    animation: animation-trigger-enter 0.2s forwards;  
-}  
-</style>`);  
-  
-        $('body').append(Lampa.Template.get('new_interface_style_v3', {}, true));  
-    }  
-  
-    // Визначення класу InterfaceInfo  
-    class InterfaceInfo {  
-        constructor() {  
-            this.html = null;  
-            this.timer = null;  
+    class InterfaceMain {  
+        constructor(object) {  
             this.network = new Lampa.Reguest();  
-            this.loaded = {};  
+            this.scroll = new Lampa.Scroll({  
+                mask: true,  
+                over: true,  
+                scroll_by_item: true  
+            });  
+            this.items = [];  
+            this.html = $('<div class="new-interface"><img class="full-start__background"></div>');  
+            this.active = 0;  
+            this.info = new InterfaceInfo();  
+            this.background_img = this.html.find('.full-start__background');  
+            this.background_last = '';  
+            this.background_timer = null;  
+            this.object = object;  
         }  
   
         create() {  
-            if (this.html) return;  
-  
-            this.html = $(`<div class="new-interface-info">  
-                <div class="new-interface-info__body">  
-                    <div class="new-interface-info__left">  
-                        <div class="new-interface-info__head"></div>  
-                        <div class="new-interface-info__title"></div>  
-                    </div>  
-                    <div class="new-interface-info__right">  
-                        <div class="new-interface-info__meta">  
-                            <div class="new-interface-info__meta-top">  
-                                <div class="new-interface-info__rate"></div>  
-                                <span class="new-interface-info__dot dot-rate-genre">&#9679;</span>  
-                                <div class="new-interface-info__genres"></div>  
-                                <span class="new-interface-info__dot dot-genre-runtime">&#9679;</span>  
-                                <div class="new-interface-info__runtime"></div>  
-                                <span class="new-interface-info__dot dot-runtime-pg">&#9679;</span>  
-                                <div class="new-interface-info__pg"></div>  
-                            </div>  
-                        </div>  
-                        <div class="new-interface-info__description"></div>  
-                    </div>  
-                </div>  
-            </div>`);  
-        }  
-  
-        render(js) {  
-            if (!this.html) this.create();  
-            return js ? this.html[0] : this.html;  
-        }  
-  
-        update(data) {  
-            if (!data) return;  
-            if (!this.html) this.create();  
-  
-            this.html.find('.new-interface-info__head,.new-interface-info__genres,.new-interface-info__runtime').text('---');  
-            this.html.find('.new-interface-info__rate').empty();  
-            this.html.find('.new-interface-info__pg').empty();  
-            this.html.find('.new-interface-info__title').text(data.title || data.name || '');  
-            this.html.find('.new-interface-info__description').text(data.overview || Lampa.Lang.translate('full_notext'));  
-  
-            Lampa.Background.change(Lampa.Utils.cardImgBackground(data));  
-  
-            this.load(data);  
-        }  
-  
-        load(data, options) {  
-            if (!data || !data.id) return;  
-  
-            const source = data.source || 'tmdb';  
-            if (source !== 'tmdb' && source !== 'cub') return;  
-            if (!Lampa.TMDB || typeof Lampa.TMDB.api !== 'function' || typeof Lampa.TMDB.key !== 'function') return;  
-  
-            const preload = options && options.preload;  
-  
-            const type = data.media_type === 'tv' || data.name ? 'tv' : 'movie';  
-            const language = Lampa.Storage.get('language');  
-            const shortLang = (language || 'en').split('-')[0];  
-            const url = Lampa.TMDB.api(`${type}/${data.id}?api_key=${Lampa.TMDB.key()}&append_to_response=content_ratings,release_dates,images&include_image_language=${shortLang},en,null&language=${language}`);  
-  
-            this.currentUrl = url;  
-  
-            if (this.loaded[url]) {  
-                if (!preload) this.draw(this.loaded[url]);  
-                return;  
-            }  
-  
-            clearTimeout(this.timer);  
-  
-            this.timer = setTimeout(() => {  
-                this.network.clear();  
-                this.network.timeout(5000);  
-                this.network.silent(url, (movie) => {  
-                    this.loaded[url] = movie;  
-                    if (!preload && this.currentUrl === url) this.draw(movie);  
-                });  
-            }, 0);  
-        }  
-  
-        draw(movie) {  
-            if (!movie || !this.html) return;  
-  
-            const create = ((movie.release_date || movie.first_air_date || '0000') + '').slice(0, 4);  
-            const vote = parseFloat((movie.vote_average || 0) + '').toFixed(1);  
-            const head = [];  
-            const sources = Lampa.Api && Lampa.Api.sources && Lampa.Api.sources.tmdb ? Lampa.Api.sources.tmdb : null;  
-            const countries = sources && typeof sources.parseCountries === 'function' ? sources.parseCountries(movie) : [];  
-            const pg = sources && typeof sources.parsePG === 'function' ? sources.parsePG(movie) : '';  
-  
-            if (create !== '0000') head.push(`<span>${create}</span>`);  
-            if (countries && countries.length) head.push(countries.join(', '));  
-  
-            const genreText = (Array.isArray(movie.genres) && movie.genres.length)  
-                ? movie.genres.map((item) => Lampa.Utils.capitalizeFirstLetter(item.name)).join(' | ')  
-                : '';  
-  
-            const runtimeText = movie.runtime ? Lampa.Utils.secondsToTime(movie.runtime * 60, true) : '';  
-  
-            this.html.find('.new-interface-info__head').empty().append(head.join(', '));  
-  
-            if (vote > 0) {  
-                this.html.find('.new-interface-info__rate').html(`<div class="full-start__rate"><div>${vote}</div><div>TMDB</div></div>`);  
-            } else {  
-                this.html.find('.new-interface-info__rate').empty();  
-            }  
-  
-            this.html.find('.new-interface-info__genres').text(genreText);  
-            this.html.find('.new-interface-info__runtime').text(runtimeText);  
-            this.html.find('.new-interface-info__pg').html(pg ? `<span class="full-start__pg" style="font-size: 0.9em;">${pg}</span>` : '');  
-  
-            const dot1 = this.html.find('.dot-rate-genre');  
-            const dot2 = this.html.find('.dot-genre-runtime');  
-            const dot3 = this.html.find('.dot-runtime-pg');  
-  
-            this.html.find('.new-interface-info__genres').toggle(!!genreText);  
-            this.html.find('.new-interface-info__runtime').toggle(!!runtimeText);  
-            this.html.find('.new-interface-info__pg').toggle(!!pg);  
-  
-            dot1.toggle(!!(vote > 0 && genreText));  
-            dot2.toggle(!!(genreText && (runtimeText || pg)));  
-            dot3.toggle(!!(runtimeText && pg));  
-  
-            this.html.find('.new-interface-info__description').text(movie.overview || Lampa.Lang.translate('full_notext'));  
-  
-            const titleNode = this.html.find('.new-interface-info__title');  
-            const headNode = this.html.find('.new-interface-info__head');  
-            const titleText = movie.title || movie.name || '';  
-  
-            titleNode.text(titleText);  
-            applyInfoTitleLogo(this.html, titleNode, headNode, movie, titleText);  
+            this.info.create();  
+            this.scroll.minus(this.info.render());  
+            this.html.append(this.info.render());  
+            this.html.append(this.scroll.render());  
         }  
   
         empty() {  
-            if (!this.html) return;  
-            this.html.find('.new-interface-info__head,.new-interface-info__genres,.new-interface-info__runtime').text('---');  
-            this.html.find('.new-interface-info__rate').empty();  
+            const button = $('<div class="empty__footer"><div class="simple-button selector">Змінити джерело на CUB</div></div>');  
+            button.find('.selector').on('hover:enter', () => {  
+                Lampa.Storage.set('source', 'cub');  
+                Lampa.Activity.replace({ source: 'cub' });  
+            });  
+  
+            const empty = new Lampa.Empty();  
+            this.html.append(empty.render(button));  
+            this.start = empty.start;  
+            this.activity.loader(false);  
+            this.activity.toggle();  
+        }  
+  
+        build(data) {  
+            this.info.update(data);  
+            data.slice(0, 2).forEach(this.append.bind(this));  
+            this.activity.loader(false);  
+            this.activity.toggle();  
+        }  
+  
+        append(element) {  
+            const item = new Lampa.InteractionLine(element, {  
+                url: element.url,  
+                card_small: true,  
+                cardClass: element.cardClass,  
+                genres: this.object.genres,  
+                object: this.object,  
+                card_wide: false,  
+                nomore: element.nomore  
+            });  
+  
+            item.create();  
+            item.onDown = this.down.bind(this);  
+            item.onUp = this.up.bind(this);  
+            item.onBack = this.back.bind(this);  
+            item.onFocus = (elem) => {  
+                this.info.update(elem);  
+                this.background(elem);  
+            };  
+  
+            this.scroll.append(item.render());  
+            this.items.push(item);  
+        }  
+  
+        background(elem) {  
+            const new_background = Lampa.Api.img(elem.backdrop_path, 'w1280');  
+            clearTimeout(this.background_timer);  
+            if (new_background === this.background_last) return;  
+  
+            this.background_timer = setTimeout(() => {  
+                this.background_img.removeClass('loaded');  
+                this.background_img[0].onload = () => {  
+                    this.background_img.addClass('loaded');  
+                };  
+                this.background_img[0].onerror = () => {  
+                    this.background_img.removeClass('loaded');  
+                };  
+                this.background_last = new_background;  
+                setTimeout(() => {  
+                    this.background_img[0].src = this.background_last;  
+                }, 300);  
+            }, 1000);  
+        }  
+  
+        back() {  
+            Lampa.Activity.backward();  
+        }  
+  
+        down() {  
+            this.active++;  
+            this.active = Math.min(this.active, this.items.length - 1);  
+            this.items[this.active].toggle();  
+            this.scroll.update(this.items[this.active].render());  
+        }  
+  
+        up() {  
+            this.active--;  
+            if (this.active < 0) {  
+                this.active = 0;  
+                Lampa.Controller.toggle('head');  
+            } else {  
+                this.items[this.active].toggle();  
+                this.scroll.update(this.items[this.active].render());  
+            }  
+        }  
+  
+        start() {  
+            Lampa.Controller.add('content', {  
+                link: this,  
+                toggle: () => {  
+                    if (this.items.length) {  
+                        this.items[this.active].toggle();  
+                    }  
+                },  
+                update: () => {},  
+                left: () => {  
+                    if (Navigator.canmove('left')) Navigator.move('left');  
+                    else Lampa.Controller.toggle('menu');  
+                },  
+                right: () => {  
+                    Navigator.move('right');  
+                },  
+                up: () => {  
+                    if (Navigator.canmove('up')) Navigator.move('up');  
+                    else Lampa.Controller.toggle('head');  
+                },  
+                down: () => {  
+                    if (Navigator.canmove('down')) Navigator.move('down');  
+                },  
+                back: this.back  
+            });  
+            Lampa.Controller.toggle('content');  
+        }  
+  
+        render() {  
+            return this.html;  
         }  
   
         destroy() {  
-            clearTimeout(this.timer);  
             this.network.clear();  
-            this.loaded = {};  
-            this.currentUrl = null;  
-  
-            if (this.html) {  
-                this.html.remove();  
-                this.html = null;  
-            }  
+            this.info.destroy();  
+            this.items.forEach(item => item.destroy());  
+            this.html.remove();  
         }  
     }  
   
-    // Запуск плагіна тільки для нових версій  
+    // Запуск плагіна  
     if (Lampa.Manifest.app_digital >= 300) {  
         startPluginV3();  
     }  
