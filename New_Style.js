@@ -1057,27 +1057,28 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
             if (this.html) return;  
   
             this.html = $(`<div class="new-interface-info">  
-                <div class="new-interface-info__body">  
-                    <div class="new-interface-info__left">  
-                        <div class="new-interface-info__head"></div>  
-                        <div class="new-interface-info__title"></div>  
-                    </div>  
-                    <div class="new-interface-info__right">  
-                        <div class="new-interface-info__meta">  
-                            <div class="new-interface-info__meta-top">  
-                                <div class="new-interface-info__rate"></div>  
-                                <span class="new-interface-info__dot dot-rate-genre">&#9679;</span>  
-                                <div class="new-interface-info__genres"></div>  
-                                <span class="new-interface-info__dot dot-genre-runtime">&#9679;</span>  
-                                <div class="new-interface-info__runtime"></div>  
-                                <span class="new-interface-info__dot dot-runtime-pg">&#9679;</span>  
-                                <div class="new-interface-info__pg"></div>  
-                            </div>  
-                        </div>  
-                        <div class="new-interface-info__description"></div>  
-                    </div>  
+    <div class="new-interface-info__body">  
+        <div class="new-interface-info__left">  
+            <div class="new-interface-info__head"></div>  
+            <div class="new-interface-info__title"></div>  
+            <div class="new-interface-info__meta">  
+                <div class="new-interface-info__meta-top">  
+                    <div class="new-interface-info__rate"></div>  
+                    <span class="new-interface-info__dot dot-rate-genre">&#9679;</span>  
+                    <div class="new-interface-info__genres"></div>  
+                    <span class="new-interface-info__dot dot-genre-runtime">&#9679;</span>  
+                    <div class="new-interface-info__runtime"></div>  
+                    <span class="new-interface-info__dot dot-runtime-pg">&#9679;</span>  
+                    <div class="new-interface-info__pg"></div>  
                 </div>  
-            </div>`);  
+            </div>  
+        </div>  
+        <div class="new-interface-info__right">  
+            <!-- Права частина порожня або для інших елементів -->  
+        </div>  
+    </div>  
+</div>`);
+  
         }  
   
         render(js) {  
@@ -1093,7 +1094,6 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
             this.html.find('.new-interface-info__rate').empty();  
             this.html.find('.new-interface-info__pg').empty();  
             this.html.find('.new-interface-info__title').text(data.title || data.name || '');  
-            this.html.find('.new-interface-info__description').text(data.overview || Lampa.Lang.translate('full_notext'));  
   
             Lampa.Background.change(Lampa.Utils.cardImgBackground(data));  
   
@@ -1178,8 +1178,7 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
             dot2.toggle(!!(genreText && (runtimeText || pg)));  
             dot3.toggle(!!(runtimeText && pg));  
   
-            this.html.find('.new-interface-info__description').text(movie.overview || Lampa.Lang.translate('full_notext'));  
-  
+             
             const titleNode = this.html.find('.new-interface-info__title');  
             const headNode = this.html.find('.new-interface-info__head');  
             const titleText = movie.title || movie.name || '';  
@@ -1227,7 +1226,6 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
             html.find('.new-interface-info__rate').empty();  
             html.find('.new-interface-info__pg').empty();  
             html.find('.new-interface-info__title').text(data.title);  
-            html.find('.new-interface-info__description').text(data.overview || Lampa.Lang.translate('full_notext'));  
             Lampa.Background.change(Lampa.Api.img(data.backdrop_path, 'w200'));  
             this.load(data);  
         };  
@@ -1588,19 +1586,36 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
     width: min(96%, 78em);  
     padding-top: 1.1em;  
     display: grid;  
-    grid-template-columns: minmax(0, 1fr) minmax(0, .85fr);  
-    column-gap: clamp(16px, 3vw, 54px);  
+    grid-template-columns: minmax(0, 1fr); 
     align-items: start;  
 }  
   
-.new-interface-info__left,  
-.new-interface-info__right{  
+.new-interface-info__left{  
     min-width: 0;  
 }  
   
 .new-interface-info__right{  
-    padding-top: clamp(0.2em, 2.2vh, 1.6em);  
+    display: none;
 }  
+
+* Стилі для інформації під лого */  
+.new-interface-info__meta{  
+    margin-top: 0.5em;  
+}  
+
+.new-interface-info__meta-top{  
+    display: flex;  
+    align-items: center;  
+    flex-wrap: wrap;  
+    gap: 0.5em;  
+    font-size: 0.9em;  
+    color: rgba(255, 255, 255, 0.7);  
+}  
+
+.new-interface-info__dot{  
+    font-size: 0.6em;  
+    opacity: 0.5;  
+}
   
 .new-interface-info__head{  
     color: rgba(255, 255, 255, 0.6);  
