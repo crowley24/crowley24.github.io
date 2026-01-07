@@ -1088,12 +1088,7 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
         update(data) {  
             if (!data) return;  
             if (!this.html) this.create();  
-  
-            this.html.find('.new-interface-info__head,.new-interface-info__genres,.new-interface-info__runtime').text('---');  
-            this.html.find('.new-interface-info__rate').empty();  
-            this.html.find('.new-interface-info__pg').empty();  
-            this.html.find('.new-interface-info__title').text(data.title || data.name || '');  
-            this.html.find('.new-interface-info__description').text(data.overview || Lampa.Lang.translate('full_notext'));  
+
   
             Lampa.Background.change(Lampa.Utils.cardImgBackground(data));  
   
@@ -1152,19 +1147,7 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
   
             const runtimeText = movie.runtime ? Lampa.Utils.secondsToTime(movie.runtime * 60, true) : '';  
   
-            this.html.find('.new-interface-info__head').empty().append(head.join(', '));  
-  
-            if (vote > 0) {  
-                this.html.find('.new-interface-info__rate').html(`<div class="full-start__rate"><div>${vote}</div><div>TMDB</div></div>`);  
-            } else {  
-                this.html.find('.new-interface-info__rate').empty();  
-            }  
-  
-            this.html.find('.new-interface-info__genres').text(genreText);  
-  
-            this.html.find('.new-interface-info__runtime').text(runtimeText);  
-  
-            this.html.find('.new-interface-info__pg').html(pg ? `<span class="full-start__pg" style="font-size: 0.9em;">${pg}</span>` : '');  
+             
   
             const dot1 = this.html.find('.dot-rate-genre');  
             const dot2 = this.html.find('.dot-genre-runtime');  
@@ -1178,7 +1161,6 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
             dot2.toggle(!!(genreText && (runtimeText || pg)));  
             dot3.toggle(!!(runtimeText && pg));  
   
-            this.html.find('.new-interface-info__description').text(movie.overview || Lampa.Lang.translate('full_notext'));  
   
             const titleNode = this.html.find('.new-interface-info__title');  
             const headNode = this.html.find('.new-interface-info__head');  
@@ -1227,7 +1209,6 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
             html.find('.new-interface-info__rate').empty();  
             html.find('.new-interface-info__pg').empty();  
             html.find('.new-interface-info__title').text(data.title);  
-            html.find('.new-interface-info__description').text(data.overview || Lampa.Lang.translate('full_notext'));  
             Lampa.Background.change(Lampa.Api.img(data.backdrop_path, 'w200'));  
             this.load(data);  
         };  
@@ -1248,15 +1229,9 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
   
             var runtimeText = data.runtime ? Lampa.Utils.secondsToTime(data.runtime * 60, true) : '';  
   
-            html.find('.new-interface-info__head').empty().append(head.join(', '));  
   
             if (vote > 0) html.find('.new-interface-info__rate').html('<div class="full-start__rate"><div>' + vote + '</div><div>TMDB</div></div>');else html.find('.new-interface-info__rate').empty();  
   
-            html.find('.new-interface-info__genres').text(genreText);  
-  
-            html.find('.new-interface-info__runtime').text(runtimeText);  
-  
-            html.find('.new-interface-info__pg').html(pg ? '<span class="full-start__pg" style="font-size: 0.9em;">' + pg + '</span>' : '');  
   
             var dot1 = html.find('.dot-rate-genre');  
             var dot2 = html.find('.dot-genre-runtime');  
