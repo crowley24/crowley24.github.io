@@ -1053,32 +1053,19 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
             this.loaded = {};  
         }  
   
-        create() {  
-            if (this.html) return;  
+create() {  
+    if (this.html) return;  
   
-            this.html = $(`<div class="new-interface-info">  
-                <div class="new-interface-info__body">  
-                    <div class="new-interface-info__left">  
-                        <div class="new-interface-info__head"></div>  
-                        <div class="new-interface-info__title"></div>  
-                    </div>  
-                    <div class="new-interface-info__right">  
-                        <div class="new-interface-info__meta">  
-                            <div class="new-interface-info__meta-top">  
-                                <div class="new-interface-info__rate"></div>  
-                                <span class="new-interface-info__dot dot-rate-genre">&#9679;</span>  
-                                <div class="new-interface-info__genres"></div>  
-                                <span class="new-interface-info__dot dot-genre-runtime">&#9679;</span>  
-                                <div class="new-interface-info__runtime"></div>  
-                                <span class="new-interface-info__dot dot-runtime-pg">&#9679;</span>  
-                                <div class="new-interface-info__pg"></div>  
-                            </div>  
-                        </div>  
-                        <div class="new-interface-info__description"></div>  
-                    </div>  
-                </div>  
-            </div>`);  
-        }  
+    this.html = $(`<div class="new-interface-info">  
+        <div class="new-interface-info__body">  
+            <div class="new-interface-info__left">  
+                <div class="new-interface-info__head"></div>  
+                <div class="new-interface-info__title"></div>  
+            </div>  
+            <!-- Вся права частина видалена -->  
+        </div>  
+    </div>`);  
+}
   
         render(js) {  
             if (!this.html) this.create();  
