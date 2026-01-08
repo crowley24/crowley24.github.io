@@ -33,26 +33,25 @@
     // Ініціалізація налаштувань  
     function initSettings() {  
         try {  
-            // Додаємо параметр в налаштування  
-            if (Lampa.SettingsApi && typeof Lampa.SettingsApi.addParam === 'function') {  
-                Lampa.SettingsApi.addParam({  
-                    component: 'test',  
-                    param: {  
-                        name: 'test_section',  
-                        type: 'static'  
-                    },  
-                    field: {  
-                        name: 'ТЕСТ',  
-                        description: 'Тестовий розділ для перевірки'  
-                    }  
-                });  
+            // Спочатку додаємо параметр  
+            Lampa.SettingsApi.addParam({  
+                component: 'test',  
+                param: {  
+                    name: 'test_section',  
+                    type: 'trigger',  
+                    default: true  
+                },  
+                field: {  
+                    name: 'ТЕСТ',  
+                    description: 'Тестовий розділ налаштувань'  
+                }  
+            });  
   
-                console.log('[TEST Plugin] Settings parameter added');  
-            }  
+            console.log('[TEST Plugin] Settings parameter added');  
   
-            // Обробник відкриття налаштувань  
-            Lampa.Listener.follow('settings', function(e) {  
-                if (e.type === 'open' && e.name === 'test') {  
+            // Потім реєструємо обробник  
+            Lampa.Listener.follow('settings', function(e){  
+                if(e.type === 'open' && e.name === 'test') {  
                     console.log('[TEST Plugin] Opening test settings');  
                     createTestSettings().render(Lampa.Utils.html('.settings-body'));  
                 }  
@@ -64,8 +63,10 @@
         }  
     }  
   
-    // Запуск  
-    initSettings();  
-    console.log('[TEST Plugin] Plugin loaded successfully');  
+    // Запуск з затримкою для гарантованої ініціалізації  
+    setTimeout(() => {  
+        initSettings();  
+        console.log('[TEST Plugin] Plugin loaded successfully');  
+    }, 500);  
   
 })();
