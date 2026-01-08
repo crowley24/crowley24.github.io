@@ -376,46 +376,45 @@
             line.params.items.type = isWidePost ? 'card--wide' : 'card';
         }
     }
-}
-    
- 
-		var processCard = function (card) {
-			handleCard(state, card);
-		};
 
-		line.use({
-			onInstance: function (instance) {
-				processCard(instance);
-			},
-			onActive: function (card, results) {
-				var cardData = getCardData(card, results);
-				if (cardData) state.update(cardData);
-			},
-			onToggle: function () {
-				setTimeout(function () {
-					var focusedCard = getFocusedCard(line);
-					if (focusedCard) state.update(focusedCard);
-				}, 32);
-			},
-			onMore: function () {
-				state.reset();
-			},
-			onDestroy: function () {
-				state.reset();
-				delete line.__newInterfaceLine;
-			},
-		});
+    // Створюємо функцію обробки карток (вона повинна бути всередині handleLineAppend)
+    var processCard = function (card) {
+        handleCard(state, card); // Переконайтеся, що об'єкт 'state' доступний у цій області
+    };
 
-		if (Array.isArray(line.items) && line.items.length) {
-			line.items.forEach(processCard);
-		}
+    line.use({
+        onInstance: function (instance) {
+            processCard(instance);
+        },
+        onActive: function (card, results) {
+            var cardData = getCardData(card, results);
+            if (cardData) state.update(cardData);
+        },
+        onToggle: function () {
+            setTimeout(function () {
+                var focusedCard = getFocusedCard(line);
+                if (focusedCard) state.update(focusedCard);
+            }, 32);
+        },
+        onMore: function () {
+            state.reset();
+        },
+        onDestroy: function () {
+            state.reset();
+            delete line.__newInterfaceLine;
+        },
+    });
 
-		if (line.last) {
-			var lastCardData = findCardData(line.last);
-			if (lastCardData) state.update(lastCardData);
-		}
-	}
+    if (Array.isArray(line.items) && line.items.length) {
+        line.items.forEach(processCard);
+    }
 
+    if (line.last) {
+        var lastCardData = findCardData(line.last);
+        if (lastCardData) state.update(lastCardData);
+    }
+} // Кінець функції handleLineAppend
+	
 	function wrapMethod(object, methodName, wrapper) {
 		if (!object) return;
 
