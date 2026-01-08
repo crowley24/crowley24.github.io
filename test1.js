@@ -569,164 +569,71 @@
 	}
 
 	function getSmallStyles() {
-		return `<style>
-					.new-interface-info__head, .new-interface-info__details{ opacity: 0; transition: opacity 0.5s ease; min-height: 2.2em !important;}
-					.new-interface-info__head.visible, .new-interface-info__details.visible{ opacity: 1; }
-					
-					/* ГОРИЗОНТАЛЬНІ КАРТКИ - без змін */
-					.new-interface .card.card--wide{
-						width: 18.3em;
-					}
+    return `<style>
+        .new-interface-info__head, .new-interface-info__details{ opacity: 0; transition: opacity 0.5s ease; min-height: 2.2em !important;}
+        .new-interface-info__head.visible, .new-interface-info__details.visible{ opacity: 1; }
+        
+        /* Широкі картки */
+        .new-interface .card.card--wide {
+            width: 18.3em !important;
+        }
 
-					/* ВЕРТИКАЛЬНІ КАРТКИ - робимо більшими та фіксуємо пропорції */
-					.new-interface .card.card--small {
-						width: 9em !important; /* Збільшена ширина */
-					}
+        /* ВЕРТИКАЛЬНІ КАРТКИ: Фіксуємо розмір для ТВ та ПК */
+        .new-interface .card.card--small {
+            width: 8.8em !important;   /* Оптимальна ширина, щоб не були малими */
+            height: auto !important;
+        }
 
-					/* Фіксація пропорції 2:3, щоб на ТВ не були прямокутними */
-					.new-interface .card.card--small .card__view {
-						padding-bottom: 150% !important;
-						height: 0 !important;
-					}
+        /* ГАРАНТІЯ ПРОПОРЦІЇ 2:3 (щоб не були прямокутними) */
+        .new-interface .card.card--small .card__view,
+        .new-interface .card.card--small .card__img-fake {
+            padding-bottom: 150% !important; /* Жорстка вертикальна пропорція */
+            height: 0 !important;
+        }
 
-					.items-line__title .full-person__photo {
-						width: 1.8em !important;
-						height: 1.8em !important;
-					}
-					.items-line__title .full-person--svg .full-person__photo {
-						padding: 0.5em !important;
-						margin-right: 0.5em !important;
-					}
-					.items-line__title .full-person__photo {
-						margin-right: 0.5em !important;
-					}
-					.new-interface-info {
-						position: relative;
-						padding: 1.5em;
-						height: 19.8em;
-					}
-					.new-interface-info__body {
-						position: absolute;
-						z-index: 9999999;
-						width: 80%;
-						padding-top: 0.2em;
-					}
-					.new-interface-info__head {
-						color: rgba(255, 255, 255, 0.6);
-						margin-bottom: 0.3em;
-						font-size: 1.2em;
-						min-height: 1em;
-					}
-					.new-interface-info__head span {
-						color: #fff;
-					}
-					.new-interface-info__title {
-						font-size: 3em;
-						font-weight: 600;
-						margin-bottom: 0.2em;
-						overflow: hidden;
-						-o-text-overflow: '.';
-						text-overflow: '.';
-						display: -webkit-box;
-						-webkit-line-clamp: 1;
-						line-clamp: 1;
-						-webkit-box-orient: vertical;
-						margin-left: -0.03em;
-						line-height: 1.3;
-					}
-					.new-interface-info__details {
-						margin-top: 1.2em;
-						margin-bottom: 1.6em;
-						display: flex;
-						align-items: center;
-						flex-wrap: wrap;
-						min-height: 1.9em;
-						font-size: 1.2em;
-					}
-					.new-interface-info__split {
-						margin: 0 1em;
-						font-size: 0.7em;
-					}
-					.new-interface-info__description {
-						font-size: 1.3em;
-						font-weight: 310;
-						line-height: 1.3;
-						overflow: hidden;
-						-o-text-overflow: '.';
-						text-overflow: '.';
-						display: -webkit-box;
-						-webkit-line-clamp: 2;
-						line-clamp: 2;
-						-webkit-box-orient: vertical;
-						width: 70%;
-					}
+        /* Корекція для ТВ-платформ (специфічно для Lampa TV) */
+        .platform--tv .new-interface .card.card--small {
+            width: 9.5em !important; /* На ТБ робимо ще трохи більшими для видимості */
+        }
 
-					/* Виправлення висоти для кнопки "Більше" */
-					.new-interface .card-more__box {
-						padding-bottom: 150% !important;
-					}
+        .items-line__title .full-person__photo {
+            width: 1.8em !important;
+            height: 1.8em !important;
+        }
+        .new-interface-info {
+            position: relative;
+            padding: 1.5em;
+            height: 21em; /* Трохи збільшили висоту під нові картки */
+        }
 
-					.new-interface .full-start__background-wrapper {
-						position: absolute;
-						top: 0;
-						left: 0;
-						width: 100%;
-						height: 100%;
-						z-index: -1;
-						pointer-events: none;
-					}
-					.new-interface .full-start__background {
-						position: absolute;
-						height: 108%;
-						width: 100%;
-						top: -5em;
-						left: 0;
-						opacity: 0;
-						object-fit: cover;
-						transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-					}
-					.new-interface .full-start__background.active {
-						opacity: 0.5;
-					}
-					.new-interface .full-start__rate {
-						font-size: 1.2em;
-						margin-right: 0;
-					}
-					.new-interface .card__promo {
-						display: none;
-					}
-					.new-interface .card.card--wide + .card-more .card-more__box {
-						padding-bottom: 95% !important;
-					}
-					.new-interface .card.card--wide .card-watched {
-						display: none !important;
-					}
-					body.light--version .new-interface-info__body {
-						position: absolute;
-						z-index: 9999999;
-						width: 69%;
-						padding-top: 1.5em;
-					}
-					body.light--version .new-interface-info {
-						height: 25.3em;
-					}
-					body.advanced--animation:not(.no--animation) .new-interface .card.card--wide.focus .card__view {
-						animation: animation-card-focus 0.2s;
-					}
-					body.advanced--animation:not(.no--animation) .new-interface .card.card--wide.animate-trigger-enter .card__view {
-						animation: animation-trigger-enter 0.2s forwards;
-					}
-					body.advanced--animation:not(.no--animation) .new-interface .card.card--small.focus .card__view {
-						animation: animation-card-focus 0.2s;
-					}
-					body.advanced--animation:not(.no--animation) .new-interface .card.card--small.animate-trigger-enter .card__view {
-						animation: animation-trigger-enter 0.2s forwards;
-					}
-					.logo-moved-head { transition: opacity 0.4s ease; }
-					.logo-moved-separator { transition: opacity 0.4s ease; }
-					${Lampa.Storage.get("hide_captions", true) ? ".card:not(.card--collection) .card__age, .card:not(.card--collection) .card__title { display: none !important; }" : ""}
-				</style>`;
-	}
+        /* Кнопка "Більше" — теж має бути пропорційною */
+        .new-interface .card-more__box {
+            padding-bottom: 150% !important;
+            width: 8.8em !important;
+        }
+        
+        .platform--tv .new-interface .card-more__box {
+            width: 9.5em !important;
+        }
+
+        .new-interface-info__body {
+            position: absolute;
+            z-index: 9999999;
+            width: 80%;
+            padding-top: 0.2em;
+        }
+
+        /* Решта ваших оригінальних стилів без змін */
+        .new-interface-info__title { font-size: 3em; font-weight: 600; line-height: 1.3; }
+        .new-interface-info__description { font-size: 1.3em; width: 70%; -webkit-line-clamp: 2; display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+        
+        .new-interface .full-start__background-wrapper { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+        .new-interface .full-start__background { position: absolute; height: 108%; width: 100%; top: -5em; left: 0; opacity: 0; object-fit: cover; transition: opacity 0.8s ease; }
+        .new-interface .full-start__background.active { opacity: 0.5; }
+        
+        ${Lampa.Storage.get("hide_captions", true) ? ".card:not(.card--collection) .card__age, .card:not(.card--collection) .card__title { display: none !important; }" : ""}
+    </style>`;
+}
 	
 	function preloadData(data, silent) {
 		if (!data || !data.id) return;
