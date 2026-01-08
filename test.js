@@ -1,3 +1,4 @@
+/* esversion: 6 */  
 (function() {  
   'use strict';  
     
@@ -100,19 +101,7 @@
         hiddenSection.append('<h3>' + Lampa.Lang.translate('source_hidden') + '</h3>');  
           
         var hiddenList = $('<div class="settings-list"></div>');  
-        hiddenSources.forEach(function(source) {  
-          var item = $('<div class="settings-item">' + source + '</div>');  
-          var showBtn = $('<button class="settings-button">' + Lampa.Lang.translate('show') + '</button>');  
-            
-          showBtn.on('click', function() {  
-            self.showSource(source);  
-            hiddenList.empty();  
-            self.refreshHiddenList();  
-          });  
-            
-          item.append(showBtn);  
-          hiddenList.append(item);  
-        });  
+        this.populateHiddenList(hiddenList, hiddenSources, self);  
           
         hiddenSection.append(hiddenList);  
         html.append(hiddenSection);  
@@ -122,19 +111,7 @@
         renamedSection.append('<h3>' + Lampa.Lang.translate('source_renamed') + '</h3>');  
           
         var renamedList = $('<div class="settings-list"></div>');  
-        for (var original in renamedSources) {  
-          var item = $('<div class="settings-item">' + original + ' → ' + renamedSources[original] + '</div>');  
-          var resetBtn = $('<button class="settings-button">' + Lampa.Lang.translate('reset') + '</button>');  
-            
-          resetBtn.on('click', function() {  
-            self.resetSourceName(original);  
-            renamedList.empty();  
-            self.refreshRenamedList();  
-          });  
-            
-          item.append(resetBtn);  
-          renamedList.append(item);  
-        }  
+        this.populateRenamedList(renamedList, renamedSources, self);  
           
         renamedSection.append(renamedList);  
         html.append(renamedSection);  
@@ -163,6 +140,41 @@
         `).appendTo('head');  
           
         return html;  
+      },  
+        
+      // Винесені функції за межі циклів  
+      populateHiddenList: function(hiddenList, hiddenSources, self) {  
+        hiddenSources.forEach(function(source) {  
+          var item = $('<div class="settings-item">' + source + '</div>');  
+          var showBtn = $('<button class="settings-button">' + Lampa.Lang.translate('show') + '</button>');  
+            
+          showBtn.on('click', function() {  
+            self.showSource(source);  
+            hiddenList.empty();  
+            self.refreshHiddenList();  
+          });  
+            
+          item.append(showBtn);  
+          hiddenList.append(item);  
+        });  
+      },  
+        
+      populateRenamedList: function(renamedList, renamedSources, self) {  
+        for (var original in renamedSources) {  
+          if (renamedSources.hasOwnProperty(original)) {  
+            var item = $('<div class="settings-item">' + original + ' → ' + renamedSources[original] + '</div>');  
+            var resetBtn = $('<button class="settings-button">' + Lampa.Lang.translate('reset') + '</button>');  
+              
+            resetBtn.on('click', function() {  
+              self.resetSourceName(original);  
+              renamedList.empty();  
+              self.refreshRenamedList();  
+            });  
+              
+            item.append(resetBtn);  
+            renamedList.append(item);  
+          }  
+        }  
       },  
         
       hideSource: function(sourceName) {  
@@ -195,43 +207,15 @@
       },  
         
       refreshHiddenList: function() {  
-        // Оновлення списку прихованих джерел  
         var hiddenSources = Lampa.Storage.get('hidden_sources', []);  
         var hiddenList = $('.settings-list').first();  
-          
-        hiddenSources.forEach(function(source) {  
-          var item = $('<div class="settings-item">' + source + '</div>');  
-          var showBtn = $('<button class="settings-button">' + Lampa.Lang.translate('show') + '</button>');  
-            
-          showBtn.on('click', function() {  
-            self.showSource(source);  
-            hiddenList.empty();  
-            self.refreshHiddenList();  
-          });  
-            
-          item.append(showBtn);  
-          hiddenList.append(item);  
-        });  
+        this.populateHiddenList(hiddenList, hiddenSources, this);  
       },  
         
       refreshRenamedList: function() {  
-        // Оновлення списку перейменованих джерел  
         var renamedSources = Lampa.Storage.get('renamed_sources', {});  
         var renamedList = $('.settings-list').last();  
-          
-        for (var original in renamedSources) {  
-          var item = $('<div class="settings-item">' + original + ' → ' + renamedSources[original] + '</div>');  
-          var resetBtn = $('<button class="settings-button">' + Lampa.Lang.translate('reset') + '</button>');  
-            
-          resetBtn.on('click', function() {  
-            self.resetSourceName(original);  
-            renamedList.empty();  
-            self.refreshRenamedList();  
-          });  
-            
-          item.append(resetBtn);  
-          renamedList.append(item);  
-        }  
+        this.populateRenamedList(renamedList, renamedSources, this);  
       }  
     });  
       
