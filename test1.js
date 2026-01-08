@@ -439,10 +439,10 @@
 					.new-interface-info__head, .new-interface-info__details{ opacity: 0; transition: opacity 0.5s ease; min-height: 2.2em !important;}
 					.new-interface-info__head.visible, .new-interface-info__details.visible{ opacity: 1; }
 					.new-interface .card.card--wide {
-						width: 6em;
+						width: 18.3em;
 					}
 					.new-interface .card.card--small {
-						width: 6em;
+						width: 18.3em;
 					}
 					.new-interface-info {
 						position: relative;
@@ -569,157 +569,163 @@
 	}
 
 	function getSmallStyles() {
-		return `<style>
-					.new-interface-info__head, .new-interface-info__details{ opacity: 0; transition: opacity 0.5s ease; min-height: 2.2em !important;}
-					.new-interface-info__head.visible, .new-interface-info__details.visible{ opacity: 1; }
-					.new-interface .card.card--wide{
-						width: 6em;
-					}
-					.items-line__title .full-person__photo {
-						width: 1.8em !important;
-						height: 1.8em !important;
-					}
-					.items-line__title .full-person--svg .full-person__photo {
-						padding: 0.5em !important;
-						margin-right: 0.5em !important;
-					}
-					.items-line__title .full-person__photo {
-						margin-right: 0.5em !important;
-					}
-					.new-interface-info {
-						position: relative;
-						padding: 1.5em;
-						height: 19.8em;
-                    }
-					.new-interface .card.card--small {
-                        width: 5.5em !important; /* Дуже маленька ширина */
-                        margin: 0.3em;           /* Мінімальні відступи між ними */
-        
-							}
-					.new-interface .card.card--small .card__view {
-                        padding-bottom: 145% !important; 
-                    }
-					
-					.new-interface-info__body {
-						position: absolute;
-						z-index: 9999999;
-						width: 80%;
-						padding-top: 0.2em;
-					}
-					.new-interface-info__head {
-						color: rgba(255, 255, 255, 0.6);
-						margin-bottom: 0.3em;
-						font-size: 1.2em;
-						min-height: 1em;
-					}
-					.new-interface-info__head span {
-						color: #fff;
-					}
-					.new-interface-info__title {
-						font-size: 3em;
-						font-weight: 600;
-						margin-bottom: 0.2em;
-						overflow: hidden;
-						-o-text-overflow: '.';
-						text-overflow: '.';
-						display: -webkit-box;
-						-webkit-line-clamp: 1;
-						line-clamp: 1;
-						-webkit-box-orient: vertical;
-						margin-left: -0.03em;
-						line-height: 1.3;
-					}
-					.new-interface-info__details {
-						margin-top: 1.2em;
-						margin-bottom: 1.6em;
-						display: flex;
-						align-items: center;
-						flex-wrap: wrap;
-						min-height: 1.9em;
-						font-size: 1.2em;
-					}
-					.new-interface-info__split {
-						margin: 0 1em;
-						font-size: 0.7em;
-					}
-					.new-interface-info__description {
-						font-size: 1.3em;
-						font-weight: 310;
-						line-height: 1.3;
-						overflow: hidden;
-						-o-text-overflow: '.';
-						text-overflow: '.';
-						display: -webkit-box;
-						-webkit-line-clamp: 2;
-						line-clamp: 2;
-						-webkit-box-orient: vertical;
-						width: 70%;
-					}
-					.new-interface .card-more__box {
-						padding-bottom: 145%;
-					}
-					.new-interface .full-start__background-wrapper {
-						position: absolute;
-						top: 0;
-						left: 0;
-						width: 100%;
-						height: 100%;
-						z-index: -1;
-						pointer-events: none;
-					}
-					.new-interface .full-start__background {
-						position: absolute;
-						height: 108%;
-						width: 100%;
-						top: -5em;
-						left: 0;
-						opacity: 0;
-						object-fit: cover;
-						transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-					}
-					.new-interface .full-start__background.active {
-						opacity: 0.5;
-					}
-					.new-interface .full-start__rate {
-						font-size: 1.2em;
-						margin-right: 0;
-					}
-					.new-interface .card__promo {
-						display: none;
-					}
-					.new-interface .card.card--small + .card-more .card-more__box,
-                    .new-interface .card-more__box {
-                        padding-bottom: 145% !important;
-                    }
-					.new-interface .card.card--wide .card-watched {
-						display: none !important;
-					}
-					body.light--version .new-interface-info__body {
-						position: absolute;
-						z-index: 9999999;
-						width: 69%;
-						padding-top: 1.5em;
-					}
-					body.light--version .new-interface-info {
-						height: 25.3em;
-					}
-					body.advanced--animation:not(.no--animation) .new-interface .card.card--wide.focus .card__view {
-						animation: animation-card-focus 0.2s;
-					}
-					body.advanced--animation:not(.no--animation) .new-interface .card.card--wide.animate-trigger-enter .card__view {
-						animation: animation-trigger-enter 0.2s forwards;
-					}
-					body.advanced--animation:not(.no--animation) .new-interface .card.card--small.focus .card__view {
-						animation: animation-card-focus 0.2s;
-					}
-					body.advanced--animation:not(.no--animation) .new-interface .card.card--small.animate-trigger-enter .card__view {
-						animation: animation-trigger-enter 0.2s forwards;
-					}
-					.logo-moved-head { transition: opacity 0.4s ease; }
-					.logo-moved-separator { transition: opacity 0.4s ease; }
-					${Lampa.Storage.get("hide_captions", true) ? ".card:not(.card--collection) .card__age, .card:not(.card--collection) .card__title { display: none !important; }" : ""}
-				</style>`;
-	}
+    return `<style>
+                .new-interface-info__head, .new-interface-info__details{ opacity: 0; transition: opacity 0.5s ease; min-height: 2.2em !important;}
+                .new-interface-info__head.visible, .new-interface-info__details.visible{ opacity: 1; }
+                
+                /* Горизонтальні картки залишаємо як є */
+                .new-interface .card.card--wide{
+                    width: 18.3em;
+                }
+
+                /* ВЕРТИКАЛЬНІ КАРТКИ: робимо трішки більшими */
+                .new-interface .card.card--small {
+                    width: 8.5em !important; /* Було 6em або авто, тепер чітко задаємо розмір */
+                }
+
+                /* Забезпечуємо правильну пропорцію висоти для вертикальних карток */
+                .new-interface .card.card--small .card__view {
+                    padding-bottom: 148% !important;
+                }
+
+                .items-line__title .full-person__photo {
+                    width: 1.8em !important;
+                    height: 1.8em !important;
+                }
+                .items-line__title .full-person--svg .full-person__photo {
+                    padding: 0.5em !important;
+                    margin-right: 0.5em !important;
+                }
+                .items-line__title .full-person__photo {
+                    margin-right: 0.5em !important;
+                }
+                .new-interface-info {
+                    position: relative;
+                    padding: 1.5em;
+                    height: 19.8em;
+                }
+                .new-interface-info__body {
+                    position: absolute;
+                    z-index: 9999999;
+                    width: 80%;
+                    padding-top: 0.2em;
+                }
+                .new-interface-info__head {
+                    color: rgba(255, 255, 255, 0.6);
+                    margin-bottom: 0.3em;
+                    font-size: 1.2em;
+                    min-height: 1em;
+                }
+                .new-interface-info__head span {
+                    color: #fff;
+                }
+                .new-interface-info__title {
+                    font-size: 3em;
+                    font-weight: 600;
+                    margin-bottom: 0.2em;
+                    overflow: hidden;
+                    -o-text-overflow: '.';
+                    text-overflow: '.';
+                    display: -webkit-box;
+                    -webkit-line-clamp: 1;
+                    line-clamp: 1;
+                    -webkit-box-orient: vertical;
+                    margin-left: -0.03em;
+                    line-height: 1.3;
+                }
+                .new-interface-info__details {
+                    margin-top: 1.2em;
+                    margin-bottom: 1.6em;
+                    display: flex;
+                    align-items: center;
+                    flex-wrap: wrap;
+                    min-height: 1.9em;
+                    font-size: 1.2em;
+                }
+                .new-interface-info__split {
+                    margin: 0 1em;
+                    font-size: 0.7em;
+                }
+                .new-interface-info__description {
+                    font-size: 1.3em;
+                    font-weight: 310;
+                    line-height: 1.3;
+                    overflow: hidden;
+                    -o-text-overflow: '.';
+                    text-overflow: '.';
+                    display: -webkit-box;
+                    -webkit-line-clamp: 2;
+                    line-clamp: 2;
+                    -webkit-box-orient: vertical;
+                    width: 70%;
+                }
+                
+                /* Коригуємо висоту кнопки "Більше" для вертикальних ліній */
+                .new-interface .card-more__box {
+                    padding-bottom: 148% !important;
+                }
+
+                .new-interface .full-start__background-wrapper {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    z-index: -1;
+                    pointer-events: none;
+                }
+                .new-interface .full-start__background {
+                    position: absolute;
+                    height: 108%;
+                    width: 100%;
+                    top: -5em;
+                    left: 0;
+                    opacity: 0;
+                    object-fit: cover;
+                    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                .new-interface .full-start__background.active {
+                    opacity: 0.5;
+                }
+                .new-interface .full-start__rate {
+                    font-size: 1.2em;
+                    margin-right: 0;
+                }
+                .new-interface .card__promo {
+                    display: none;
+                }
+                .new-interface .card.card--wide + .card-more .card-more__box {
+                    padding-bottom: 95% !important;
+                }
+                .new-interface .card.card--wide .card-watched {
+                    display: none !important;
+                }
+                body.light--version .new-interface-info__body {
+                    position: absolute;
+                    z-index: 9999999;
+                    width: 69%;
+                    padding-top: 1.5em;
+                }
+                body.light--version .new-interface-info {
+                    height: 25.3em;
+                }
+                body.advanced--animation:not(.no--animation) .new-interface .card.card--wide.focus .card__view {
+                    animation: animation-card-focus 0.2s;
+                }
+                body.advanced--animation:not(.no--animation) .new-interface .card.card--wide.animate-trigger-enter .card__view {
+                    animation: animation-trigger-enter 0.2s forwards;
+                }
+                body.advanced--animation:not(.no--animation) .new-interface .card.card--small.focus .card__view {
+                    animation: animation-card-focus 0.2s;
+                }
+                body.advanced--animation:not(.no--animation) .new-interface .card.card--small.animate-trigger-enter .card__view {
+                    animation: animation-trigger-enter 0.2s forwards;
+                }
+                .logo-moved-head { transition: opacity 0.4s ease; }
+                .logo-moved-separator { transition: opacity 0.4s ease; }
+                ${Lampa.Storage.get("hide_captions", true) ? ".card:not(.card--collection) .card__age, .card:not(.card--collection) .card__title { display: none !important; }" : ""}
+            </style>`;
+}
 
 	function preloadData(data, silent) {
 		if (!data || !data.id) return;
