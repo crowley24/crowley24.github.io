@@ -252,7 +252,8 @@
                 this.updateBackground(data);  
             },  
             updateBackground(data) {  
-                const path = data && data.backdrop_path ? Lampa.Api.img(data.backdrop_path, 'w1280') : '';  
+                // Використовуємо постер замість обкладинки  
+                const path = data && data.poster_path ? Lampa.Api.img(data.poster_path, 'w1280') : '';  
   
                 if (!path || path === this.backgroundLast) return;  
   
@@ -521,7 +522,21 @@
             margin-top: 5px;  
         }  
   
-       .new-interface-info__details {  
+        .new-interface-info__details {  
+            margin-bottom: 1.6em;  
+            display: flex;  
+            align-items: center;  
+            flex-wrap: wrap;  
+            min-height: 1.9em;  
+            font-size: 1.1em;  
+        }  
+  
+        .new-interface-info__split {  
+            margin: 0 1em;  
+            font-size: 0.7em;  
+        }  
+  
+        .new-interface-info__details {  
             margin-bottom: 1.6em;  
             display: flex;  
             align-items: center;  
@@ -654,7 +669,11 @@
             this.updateTitle(data);  
               
             this.html.find('.new-interface-info__description').text(data.overview || Lampa.Lang.translate('full_notext'));  
-            Lampa.Background.change(Lampa.Utils.cardImgBackground(data));  
+              
+            // Використовуємо постер замість обкладинки  
+            if (data.poster_path) {  
+                Lampa.Background.change(Lampa.Api.img(data.poster_path, 'w1280'));  
+            }  
   
             this.loadDetails(data);  
         }  
