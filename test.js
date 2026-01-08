@@ -156,8 +156,37 @@
                 border-radius: 0.6em;  
                 box-shadow: 0 0.3em 0.6em rgba(0, 0, 0, 0.3);  
             }  
+              
+            /* Важливо: гарантуємо відображення постерів */  
+            .new-interface .card__img {  
+                background-size: cover !important;  
+                background-position: center !important;  
+            }  
         `;  
         document.head.appendChild(style);  
+          
+        // Перехоплюємо створення карток для гарантованої заміни зображень  
+        if (Lampa.Card && Lampa.Card.create) {  
+            const originalCreate = Lampa.Card.create;  
+            Lampa.Card.create = function(data, params) {  
+                const result = originalCreate.call(this, data, params);  
+                  
+                // Перевіряємо, чи це новий інтерфейс  
+                setTimeout(() => {  
+                    const element = result.render(true);  
+                    if (element && element.closest('.new-interface') && data && data.poster_path) {  
+                        const img = element.querySelector('.card__img');  
+                        if (img) {  
+                            const posterUrl = Lampa.Api.img(data.poster_path, 'w500');  
+                            img.style.backgroundImage = `url('${posterUrl}')`;  
+                            img.setAttribute('style', img.getAttribute('style') + ` background-image: url('${posterUrl}') !important;`);  
+                        }  
+                    }  
+                }, 50);  
+                  
+                return result;  
+            };  
+        }  
           
         // Додаткова обгортка для створення карток  
         if (Lampa.Card && Lampa.Card.create) {  
@@ -349,18 +378,26 @@
         card.__newInterfaceLabel = label;  
     }  
   
-    // Додаємо функцію для зміни зображення на картках  
+    // Виправлена функція для зміни зображення на картках  
     function updateCardImage(card) {  
         if (!card || !card.data) return;  
           
-        const element = card.render(true);  
-        if (!element) return;  
-          
-        const img = element.querySelector('.card__img');  
-        if (img && card.data.poster_path) {  
-            // Замінюємо зображення картки на постер  
-            img.style.backgroundImage = `url('${Lampa.Api.img(card.data.poster_path, 'w500')}')`;  
-        }  
+        // Використовуємо setTimeout для гарантування, що елемент створено  
+        setTimeout(() => {  
+            const element = card.render(true);  
+            if (!element) return;  
+              
+            // Шукаємо елемент зображення картки  
+            const img = element.querySelector('.card__img');  
+            if (img && card.data.poster_path) {  
+                // Встановлюємо постер як фонове зображення  
+                const posterUrl = Lampa.Api.img(card.data.poster_path, 'w500');  
+                img.style.backgroundImage = `url('${posterUrl}')`;  
+                  
+                // Примусово оновлюємо стиль  
+                img.setAttribute('style', img.getAttribute('style') + ` background-image: url('${posterUrl}') !important;`);  
+            }  
+        }, 100);  
     }  
   
     function decorateCard(state, card) {  
@@ -376,23 +413,23 @@
         card.use({  
             onFocus() {  
                 state.update(card.data);  
-                updateCardImage(card); // Оновлюємо зображення при фокусі  
+                updateCardImage(card);  
             },  
             onHover() {  
                 state.update(card.data);  
-                updateCardImage(card); // Оновлюємо зображення при наведенні  
+                updateCardImage(card);  
             },  
             onTouch() {  
                 state.update(card.data);  
-                updateCardImage(card); // Оновлюємо зображення при торканні  
+                updateCardImage(card);  
             },  
             onVisible() {  
                 updateCardTitle(card);  
-                updateCardImage(card); // Оновлюємо зображення при появі  
+                updateCardImage(card);  
             },  
             onUpdate() {  
                 updateCardTitle(card);  
-                updateCardImage(card); // Оновлюємо зображення при оновленні  
+                updateCardImage(card);  
             },  
             onDestroy() {  
                 clearTimeout(card.__newInterfaceLabelTimer);  
@@ -405,7 +442,7 @@
         });  
   
         updateCardTitle(card);  
-        updateCardImage(card); // Оновлюємо зображення при створенні  
+        updateCardImage(card);  
     }  
   
     function getCardData(card, element, index = 0) {  
@@ -475,7 +512,7 @@
         }  
     }  
   
-    function wrap(target, method, handler) {  
+  function wrap(target, method, handler) {  
         if (!target) return;  
         const original = typeof target[method] === 'function' ? target[method] : null;  
         target[method] = function (...args) {  
@@ -511,7 +548,7 @@
             padding-top: 1.1em;  
         }  
   
-         .new-interface-info__head {  
+        .new-interface-info__head {  
             color: rgba(255, 255, 255, 0.6);  
             margin-bottom: 1em;  
             font-size: 1.3em;  
@@ -923,7 +960,7 @@
         });  
     }  
       
-    function displayLogoInFullView(e, logoPath){  
+ function displayLogoInFullView(e, logoPath){  
         if(logoPath != ''){  
             e.object.activity.render().find('.full-start-new__title').html('<img style="margin-top:5px;max-height:125px;" src="' + Lampa.TMDB.image('/t/p/w300' + logoPath.replace('.svg','.png')) + '"/>');  
         }  
@@ -936,3 +973,4 @@
     startLogosPlugin();  
   
 })();
+  
