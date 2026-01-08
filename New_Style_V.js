@@ -718,26 +718,26 @@
             });  
         }  
   
-        displayLogo(data, logoPath) {  
-            if (!logoPath || !this.html) return;  
-              
-            const titleElement = this.html.find('.new-interface-info__title');  
-            const logoUrl = Lampa.TMDB.image('/t/p/w300' + logoPath.replace('.svg', '.png'));  
-              
-            // Створюємо зображення логотипу  
-            const logoImg = $('<img>')  
-                .attr('src', logoUrl)  
-                .attr('alt', data.title || data.name || '')  
-                .css({  
-                    'max-height': '125px',  
-                    'margin-top': '5px',  
-                    'display': 'block'  
-                })  
-                .on('error', function() {  
-                    // Якщо логотип не завантажився, показуємо текст  
-                    $(this).remove();  
-                    titleElement.text(data.title || data.name || '');  
-                });  
+       displayLogo(data, logoPath) {  
+    if (!logoPath || !this.html) return;  
+      
+    const titleElement = this.html.find('.new-interface-info__title');  
+    const logoUrl = Lampa.TMDB.image('/t/p/w300' + logoPath.replace('.svg', '.png'));  
+      
+    // Створюємо зображення логотипу  
+    const logoImg = $('<img>')  
+        .attr('src', logoUrl)  
+        .attr('alt', data.title || data.name || '')  
+        .css({  
+            'max-height': '125px',  
+            'margin-top': '-10px', // Змінено для підняття логотипу  
+            'display': 'block'  
+        })  
+        .on('error', function() {  
+            // Якщо логотип не завантажився, показуємо текст  
+            $(this).remove();  
+            titleElement.text(data.title || data.name || '');  
+        });   
               
             // Замінюємо текст на логотип  
             titleElement.empty().append(logoImg);  
@@ -873,11 +873,11 @@
         });  
     }  
       
-    function displayLogoInFullView(e, logoPath){  
-        if(logoPath != ''){  
-            e.object.activity.render().find('.full-start-new__title').html('<img style="margin-top:5px;max-height:125px;" src="' + Lampa.TMDB.image('/t/p/w300' + logoPath.replace('.svg','.png')) + '"/>');  
-        }  
+function displayLogoInFullView(e, logoPath){  
+    if(logoPath != ''){  
+        e.object.activity.render().find('.full-start-new__title').html('<img style="margin-top:-10px;max-height:125px;" src="' + Lampa.TMDB.image('/t/p/w300' + logoPath.replace('.svg','.png')) + '"/>');  
     }  
+}
   
     // ========== ІНІЦІАЛІЗАЦІЯ ПЛАГІНУ ==========  
   
