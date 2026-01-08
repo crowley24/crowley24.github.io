@@ -460,23 +460,25 @@
   
         .new-interface-info__body {  
             width: 80%;  
-            padding-top: 1.1em;  
+            padding-top: 0.5em !important;  
         }  
   
         .new-interface-info__head {  
+            display: none !important;
             color: rgba(255, 255, 255, 0.6);  
             margin-bottom: 0.5em;  
             font-size: 1.3em;  
             min-height: 0.5em; 
-        }  
-  
-        .new-interface-info__head span {  
+        }
+
+          .new-interface-info__head span {  
             color: #fff;  
         }  
   
         .new-interface-info__title {  
             font-size: 4em;  
-            font-weight: 600;  
+            font-weight: 600;
+            margin-top: -0.5em !important;
             margin-bottom: 0.3em;  
             overflow: hidden;  
             -o-text-overflow: '.';  
@@ -772,21 +774,13 @@
                 });  
             }, 300);  
         }  
-  
-        drawDetails(movie) {  
+  drawDetails(movie) {  
     if (!movie || !this.html) return;  
   
     const vote = parseFloat((movie.vote_average || 0) + '').toFixed(1);  
-    const head = []; // Залишаємо порожнім, не додаємо рік та країни  
     const details = [];  
     const sources = Lampa.Api && Lampa.Api.sources && Lampa.Api.sources.tmdb ? Lampa.Api.sources.tmdb : null;  
     const pg = sources && typeof sources.parsePG === 'function' ? sources.parsePG(movie) : '';  
-  
-    // Видаляємо ці рядки, які додають рік та країни:  
-    // const create = ((movie.release_date || movie.first_air_date || '0000') + '').slice(0, 4);  
-    // if (create !== '0000') head.push(`<span>${create}</span>`);  
-    // const countries = sources && typeof sources.parseCountries === 'function' ? sources.parseCountries(movie) : [];  
-    // if (countries && countries.length) head.push(countries.join(', '));  
   
     if (vote > 0) {  
         details.push(`<div class="full-start__rate"><div>${vote}</div><div>TMDB</div></div>`);  
@@ -799,7 +793,8 @@
     if (movie.runtime) details.push(Lampa.Utils.secondsToTime(movie.runtime * 60, true));  
     if (pg) details.push(`<span class="full-start__pg" style="font-size: 0.9em;">${pg}</span>`);  
   
-    this.html.find('.new-interface-info__head').empty(); // Очищуємо, але нічого не додаємо  
+    // Повністю ховаємо head елемент  
+    this.html.find('.new-interface-info__head').hide().empty();  
     this.html.find('.new-interface-info__details').html(details.join('<span class="new-interface-info__split">&#9679;</span>'));  
 }
   
