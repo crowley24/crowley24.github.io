@@ -1002,15 +1002,12 @@
     z-index: 5;  
 }  
 .new-interface .items-line__head{  
-    transform: translateY(3vh);  
+    transform: translateY(1vh);  
 }  
   
 /* Підняти ленти постерів */  
 .new-interface{  
-    --ni-lines-up: 0vh;  
-}  
-.new-interface{  
-    --ni-lines-up: -3vh;  
+    --ni-lines-up: -1vh;  
 }  
 .new-interface .items-line__body > .scroll.scroll--horizontal,  
 .new-interface .items-line__body .scroll.scroll--horizontal{  
@@ -1680,11 +1677,11 @@ create() {
 .new-interface .items-line__head{  
     position: relative;  
     z-index: 5;  
-    transform: translateY(3vh);  
+    transform: translateY(1vh);  
 }  
   
 .new-interface{  
-    --ni-lines-up: -3vh;  
+    --ni-lines-up: -1vh;  
 }  
 .new-interface .items-line__body > .scroll.scroll--horizontal,  
 .new-interface .items-line__body .scroll.scroll--horizontal{  
