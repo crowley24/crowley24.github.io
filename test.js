@@ -4,6 +4,12 @@
     if (typeof Lampa === 'undefined') return;  
     if (Lampa.Manifest.app_digital < 300) return; // Тільки для v3.0.0+  
   
+    // Перевіряємо, чи завантажено tmdbproxy  
+    if (!Lampa.TMDB || !Lampa.TMDB.image) {  
+        console.error('TMDB proxy not loaded');  
+        return;  
+    }  
+  
     // Флаг, щоб уникнути повторної ініціалізації  
     if (window.plugin_new_interface_logo_ready) return;  
     window.plugin_new_interface_logo_ready = true;  
@@ -157,7 +163,7 @@
                 box-shadow: 0 0.3em 0.6em rgba(0, 0, 0, 0.3);  
             }  
               
-            /* Важливо: гарантуємо відображення постерів */  
+            /* Важливо: забезпечуємо правильне відображення постерів */  
             .new-interface .card__img {  
                 background-size: cover !important;  
                 background-position: center !important;  
@@ -165,7 +171,7 @@
         `;  
         document.head.appendChild(style);  
           
-        // Перехоплюємо створення карток для гарантованої заміни зображень  
+        // Додаткова обгортка для створення карток  
         if (Lampa.Card && Lampa.Card.create) {  
             const originalCreate = Lampa.Card.create;  
             Lampa.Card.create = function(data, params) {  
@@ -174,12 +180,11 @@
                 // Перевіряємо, чи це новий інтерфейс  
                 setTimeout(() => {  
                     const element = result.render(true);  
-                    if (element && element.closest('.new-interface') && data && data.poster_path) {  
+                    if (element && element.closest('.new-interface') && data.poster_path) {  
                         const img = element.querySelector('.card__img');  
                         if (img) {  
-                            const posterUrl = Lampa.Api.img(data.poster_path, 'w500');  
+                            const posterUrl = Lampa.TMDB.image(data.poster_path);  
                             img.style.backgroundImage = `url('${posterUrl}')`;  
-                            img.setAttribute('style', img.getAttribute('style') + ` background-image: url('${posterUrl}') !important;`);  
                         }  
                     }  
                 }, 50);  
@@ -187,154 +192,24 @@
                 return result;  
             };  
         }  
-          
-        // Додаткова обгортка для створення карток  
-        if (Lampa.Card && Lampa.Card.create) {  
-            const originalCreate = Lampa.Card.create;  
-            Lampa.Card.create = function(data, params) {  
-                // Перевіряємо, чи знаходимося в новому інтерфейсі  
-                const container = this.render ? this.render(true) : null;  
-                const isInNewInterface = container && container.closest('.new-interface');  
-                  
-                if (isInNewInterface) {  
-                    params = params || {};  
-                    params.style = params.style || {};  
-                    params.style.name = 'wide';  
-                    params.card_wide = true;  
-                }  
-                  
-                return originalCreate.call(this, data, params);  
-            };  
-              
-            // Додаємо обробку існуючих карток  
-            setTimeout(() => {  
-                document.querySelectorAll('.new-interface .card:not(.card--wide):not(.card--small)').forEach(card => {  
-                    card.classList.add('card--wide');  
-                });  
-            }, 100);  
-        }  
     }  
   
+    // ========== ДОПОМІЖНІ ФУНКЦІЇ ==========  
+      
     function shouldUseNewInterface(object) {  
-        if (!object) return false;  
-        if (!(object.source === 'tmdb' || object.source === 'cub')) return false;  
-        if (window.innerWidth < 767) return false;  
-          
-        // Перевірка налаштування нового інтерфейсу  
-        if (!Lampa.Storage.field('new_interface')) return false;  
-          
-        return true;  
+        return Lampa.Storage.get('new_interface') !== false;  
     }  
   
-    function ensureState(main) {  
-        if (main.__newInterfaceState) return main.__newInterfaceState;  
-        const state = createInterfaceState(main);  
-        main.__newInterfaceState = state;  
-        return state;  
-    }  
-  
-    function createInterfaceState(main) {  
-        const info = new InterfaceInfo();  
-        info.create();  
-  
-        const background = document.createElement('img');  
-        background.className = 'full-start__background';  
-  
-        const state = {  
-            main,  
-            info,  
-            background,  
-            infoElement: null,  
-            backgroundTimer: null,  
-            backgroundLast: '',  
-            attached: false,  
-            attach() {  
-                if (this.attached) return;  
-  
-                const container = main.render(true);  
-                if (!container) return;  
-  
-                container.classList.add('new-interface');  
-  
-                if (!background.parentElement) {  
-                    container.insertBefore(background, container.firstChild || null);  
-                }  
-  
-                const infoNode = info.render(true);  
-                this.infoElement = infoNode;  
-  
-                if (infoNode && infoNode.parentNode !== container) {  
-                    if (background.parentElement === container) {  
-                        container.insertBefore(infoNode, background.nextSibling);  
-                    } else {  
-                        container.insertBefore(infoNode, container.firstChild || null);  
-                    }  
-                }  
-  
-                main.scroll.minus(infoNode);  
-  
-                this.attached = true;  
-            },  
-            update(data) {  
-                if (!data) return;  
-                info.update(data);  
-                this.updateBackground(data);  
-            },  
-            updateBackground(data) {  
-                // Використовуємо обкладинку для фону  
-                const path = data && data.backdrop_path ? Lampa.Api.img(data.backdrop_path, 'w1280') : '';  
-  
-                if (!path || path === this.backgroundLast) return;  
-  
-                clearTimeout(this.backgroundTimer);  
-  
-                this.backgroundTimer = setTimeout(() => {  
-                    background.classList.remove('loaded');  
-  
-                    background.onload = () => background.classList.add('loaded');  
-                    background.onerror = () => background.classList.remove('loaded');  
-  
-                    this.backgroundLast = path;  
-  
-                    setTimeout(() => {  
-                        background.src = this.backgroundLast;  
-                    }, 300);  
-                }, 1000);  
-            },  
-            reset() {  
-                info.empty();  
-            },  
-            destroy() {  
-                clearTimeout(this.backgroundTimer);  
-                info.destroy();  
-  
-                const container = main.render(true);  
-                if (container) container.classList.remove('new-interface');  
-  
-                if (this.infoElement && this.infoElement.parentNode) {  
-                    this.infoElement.parentNode.removeChild(this.infoElement);  
-                }  
-  
-                if (background && background.parentNode) {  
-                    background.parentNode.removeChild(background);  
-                }  
-  
-                this.attached = false;  
-            }  
-        };  
-  
-        return state;  
+    function ensureState(target) {  
+        if (!target.__newInterfaceState) {  
+            target.__newInterfaceState = new InterfaceState();  
+        }  
+        return target.__newInterfaceState;  
     }  
   
     function prepareLineData(element) {  
-        if (!element) return;  
-        if (Array.isArray(element.results)) {  
-            Lampa.Utils.extendItemsParams(element.results, {  
-                style: {  
-                    name: 'wide'  
-                }  
-            });  
-        }  
+        if (!element || !element.card_data) return;  
+        element.classList.add('new-interface');  
     }  
   
     function updateCardTitle(card) {  
@@ -390,8 +265,8 @@
             // Шукаємо елемент зображення картки  
             const img = element.querySelector('.card__img');  
             if (img && card.data.poster_path) {  
-                // Встановлюємо постер як фонове зображення  
-                const posterUrl = Lampa.Api.img(card.data.poster_path, 'w500');  
+                // Використовуємо проксі для зображень  
+                const posterUrl = Lampa.TMDB.image(card.data.poster_path);  
                 img.style.backgroundImage = `url('${posterUrl}')`;  
                   
                 // Примусово оновлюємо стиль  
@@ -512,7 +387,7 @@
         }  
     }  
   
-  function wrap(target, method, handler) {  
+    function wrap(target, method, handler) {  
         if (!target) return;  
         const original = typeof target[method] === 'function' ? target[method] : null;  
         target[method] = function (...args) {  
@@ -633,7 +508,7 @@
             display: none !important;  
         }  
   
-        .new-interface-card-title {  
+         .new-interface-card-title {  
             margin-top: 0.6em;  
             font-size: 1.05em;  
             font-weight: 500;  
@@ -748,114 +623,55 @@
             // Генеруємо унікальний ключ для кешу  
             const cacheKey = `${type}_${data.id}_${userLanguage}`;  
               
-            if (this.loadedLogos[cacheKey] && this.loadedLogos[cacheKey] != '') {  
-                this.displayLogo(data, this.loadedLogos[cacheKey]);  
+            // Перевіряємо кеш  
+            if (this.loadedLogos[cacheKey]) {  
+                this.displayLogo(this.loadedLogos[cacheKey]);  
                 return;  
             }  
   
-            // Запит з поточною мовою користувача  
-            const currentLangUrl = Lampa.TMDB.api(`${type}/${data.id}/images?api_key=${Lampa.TMDB.key()}&language=${userLanguage}`);  
-            this.currentLogoUrl = currentLangUrl;  
-  
-            $.get(currentLangUrl, (currentLangData) => {  
-                if (this.currentLogoUrl !== currentLangUrl) return;  
-                  
-                let logoPath = null;  
-                  
-                if (currentLangData.logos && currentLangData.logos.length > 0 && currentLangData.logos[0].file_path) {  
-                    logoPath = currentLangData.logos[0].file_path;  
-                } else {  
-                    // Шукаємо англійську версію  
-                    const englishUrl = Lampa.TMDB.api(`${type}/${data.id}/images?api_key=${Lampa.TMDB.key()}&language=en`);  
-                      
-                    $.get(englishUrl, (englishData) => {  
-                        if (this.currentLogoUrl !== currentLangUrl) return;  
-                          
-                        if (englishData.logos && englishData.logos.length > 0 && englishData.logos[0].file_path) {  
-                            logoPath = englishData.logos[0].file_path;  
-                        } else {  
-                            // Беремо оригінальну версію  
-                            const originalUrl = Lampa.TMDB.api(`${type}/${data.id}/images?api_key=${Lampa.TMDB.key()}`);  
-                              
-                            $.get(originalUrl, (originalData) => {  
-                                if (this.currentLogoUrl !== currentLangUrl) return;  
-                                  
-                                if (originalData.logos && originalData.logos.length > 0 && originalData.logos[0].file_path) {  
-                                    logoPath = originalData.logos[0].file_path;  
-                                }  
-                                  
-                                if (logoPath) {  
-                                    this.loadedLogos[cacheKey] = logoPath;  
-                                    this.displayLogo(data, logoPath);  
-                                }  
-                            });  
-                        }  
-                          
-                        if (logoPath) {  
-                            this.loadedLogos[cacheKey] = logoPath;  
-                            this.displayLogo(data, logoPath);  
-                        }  
-                    });  
-                }  
-                  
-                if (logoPath) {  
-                    this.loadedLogos[cacheKey] = logoPath;  
-                    this.displayLogo(data, logoPath);  
-                }  
-            });  
-        }  
-  
-        displayLogo(data, logoPath) {  
-            if (!logoPath || !this.html) return;  
+            const url = Lampa.TMDB.api(type + '/' + data.id + '/images?api_key=' + Lampa.TMDB.key() + '&language=' + userLanguage);  
               
-            const titleElement = this.html.find('.new-interface-info__title');  
-            const logoUrl = Lampa.TMDB.image('/t/p/w300' + logoPath.replace('.svg', '.png'));  
-              
-            // Створюємо зображення логотипу  
-            const logoImg = $('<img>')  
-                .attr('src', logoUrl)  
-                .attr('alt', data.title || data.name || '')  
-                .css({  
-                    'max-height': '125px',  
-                    'margin-top': '5px',  
-                    'display': 'block'  
-                })  
-                .on('error', function() {  
-                    // Якщо логотип не завантажився, показуємо текст  
-                    $(this).remove();  
-                    titleElement.text(data.title || data.name || '');  
-                });  
-              
-            // Замінюємо текст на логотип  
-            titleElement.empty().append(logoImg);  
-        }  
-  
-        loadDetails(data) {  
-            if (!data || !data.id) return;  
-  
-            const source = data.source || 'tmdb';  
-            if (source !== 'tmdb' && source !== 'cub') return;  
-            if (!Lampa.TMDB || typeof Lampa.TMDB.api !== 'function' || typeof Lampa.TMDB.key !== 'function') return;  
-  
-            const type = data.media_type === 'tv' || data.name ? 'tv' : 'movie';  
-            const language = Lampa.Storage.get('language');  
-            const url = Lampa.TMDB.api(`${type}/${data.id}?api_key=${Lampa.TMDB.key()}&append_to_response=content_ratings,release_dates&language=${language}`);  
-  
-            this.currentUrl = url;  
-  
-            if (this.loadedLogos[url]) {  
-                this.drawDetails(this.loadedLogos[url]);  
-                return;  
-            }  
-  
             clearTimeout(this.timer);  
-  
             this.timer = setTimeout(() => {  
                 this.network.clear();  
                 this.network.timeout(5000);  
                 this.network.silent(url, (movie) => {  
-                    this.loadedLogos[url] = movie;  
-                    if (this.currentUrl === url) this.drawDetails(movie);  
+                    this.loadedLogos[cacheKey] = movie;  
+                    if (this.currentUrl === url) this.drawLogo(movie);  
+                });  
+            }, 300);  
+        }  
+  
+        displayLogo(movie) {  
+            if (!movie || !this.html) return;  
+  
+            const logo = movie.logos && movie.logos.length ? movie.logos[0] : null;  
+            const titleElement = this.html.find('.new-interface-info__title');  
+  
+            if (logo && logo.file_path) {  
+                // Використовуємо проксі для логотипів  
+                const logoUrl = Lampa.TMDB.image(logo.file_path.replace('.svg', '.png'));  
+                titleElement.html('<img style="margin-top:5px;max-height:125px;" src="' + logoUrl + '"/>');  
+            } else {  
+                titleElement.text(movie.title || movie.name || '');  
+            }  
+        }  
+  
+        loadDetails(data) {  
+            if (!data || !data.id) return;  
+              
+            const source = data.source || 'tmdb';  
+            if (source !== 'tmdb' && source !== 'cub') return;  
+  
+            const type = data.media_type === 'tv' || data.name ? 'tv' : 'movie';  
+            const url = Lampa.TMDB.api(type + '/' + data.id + '?api_key=' + Lampa.TMDB.key() + '&language=' + Lampa.Storage.get('language'));  
+              
+            clearTimeout(this.timer);  
+            this.timer = setTimeout(() => {  
+                this.network.clear();  
+                this.network.timeout(5000);  
+                this.network.silent(url, (movie) => {  
+                    this.drawDetails(movie);  
                 });  
             }, 300);  
         }  
@@ -883,7 +699,7 @@
             }  
   
             if (movie.runtime) details.push(Lampa.Utils.secondsToTime(movie.runtime * 60, true));  
-            if (pg) details.push(`<span class="full-start__pg" style="font-size: 0.9em;">${pg}</span>`);  
+            if (pg) details.push(`<span class="new-interface-info__pg" style="font-size: 0.9em;">${pg}</span>`);  
   
             this.html.find('.new-interface-info__head').empty().append(head.join(', '));  
             this.html.find('.new-interface-info__details').html(details.join('<span class="new-interface-info__split">&#9679;</span>'));  
@@ -960,9 +776,11 @@
         });  
     }  
       
- function displayLogoInFullView(e, logoPath){  
+    function displayLogoInFullView(e, logoPath){  
         if(logoPath != ''){  
-            e.object.activity.render().find('.full-start-new__title').html('<img style="margin-top:5px;max-height:125px;" src="' + Lampa.TMDB.image('/t/p/w300' + logoPath.replace('.svg','.png')) + '"/>');  
+            // Використовуємо проксі для логотипів  
+            const logoUrl = Lampa.TMDB.image(logoPath.replace('.svg','.png'));  
+            e.object.activity.render().find('.full-start-new__title').html('<img style="margin-top:5px;max-height:125px;" src="' + logoUrl + '"/>');  
         }  
     }  
   
@@ -973,4 +791,3 @@
     startLogosPlugin();  
   
 })();
-  
