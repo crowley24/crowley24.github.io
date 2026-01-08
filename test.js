@@ -349,46 +349,53 @@
     }  
   
    function decorateCard(state, card) {
+    // Перевірка на валідність об'єкта карти
     if (!card || card.__newInterfaceCard || typeof card.use !== 'function' || !card.data) return;
 
-    // ДОДАЙТЕ ЦЕЙ РЯДОК ПЕРЕД card.__newInterfaceCard = true;
-    if (card.data.poster_path) card.data.img = card.data.poster_path;
+    // 1. Примусово підміняємо картинку на вертикальний постер
+    if (card.data.poster_path) {
+        card.data.img = card.data.poster_path;
+    }
 
     card.__newInterfaceCard = true;
     card.params = card.params || {};
     card.params.style = card.params.style || {};
 
-    // Тут теж міняємо wide на poster
-    if (!card.params.style.name || card.params.style.name === 'wide') card.params.style.name = 'poster'; 
+    // 2. Змінюємо тип карти з wide на poster для правильного відображення
+    if (!card.params.style.name || card.params.style.name === 'wide') {
+        card.params.style.name = 'poster';
+    }
 
+    // 3. Реєструємо використання карти з вашими методами
     card.use({ 
-            onFocus() {  
-                state.update(card.data);  
-            },  
-            onHover() {  
-                state.update(card.data);  
-            },  
-            onTouch() {  
-                state.update(card.data);  
-            },  
-            onVisible() {  
-                updateCardTitle(card);  
-            },  
-            onUpdate() {  
-                updateCardTitle(card);  
-            },  
-            onDestroy() {  
-                clearTimeout(card.__newInterfaceLabelTimer);  
-                if (card.__newInterfaceLabel && card.__newInterfaceLabel.parentNode) {  
-                    card.__newInterfaceLabel.parentNode.removeChild(card.__newInterfaceLabel);  
-                }  
-                card.__newInterfaceLabel = null;  
-                delete card.__newInterfaceCard;  
+        onFocus() {  
+            state.update(card.data);  
+        },  
+        onHover() {  
+            state.update(card.data);  
+        },  
+        onTouch() {  
+            state.update(card.data);  
+        },  
+        onVisible() {  
+            updateCardTitle(card);  
+        },  
+        onUpdate() {  
+            updateCardTitle(card);  
+        },  
+        onDestroy() {  
+            clearTimeout(card.__newInterfaceLabelTimer);  
+            if (card.__newInterfaceLabel && card.__newInterfaceLabel.parentNode) {  
+                card.__newInterfaceLabel.parentNode.removeChild(card.__newInterfaceLabel);  
             }  
-        });  
-  
-        updateCardTitle(card);  
-    }  
+            card.__newInterfaceLabel = null;  
+            delete card.__newInterfaceCard;  
+        }  
+    });  
+
+    // Початкове оновлення заголовка
+    updateCardTitle(card);
+}
   
     function getCardData(card, element, index = 0) {  
         if (card && card.data) return card.data;  
