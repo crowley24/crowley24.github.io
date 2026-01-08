@@ -839,7 +839,7 @@ swapContent(container, newNode) {
             delete line.__newInterfaceLine;  
         }  
     });  
-}
+
         if (Array.isArray(line.items) && line.items.length) {  
             line.items.forEach(applyToCard);  
         }  
