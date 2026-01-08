@@ -7,8 +7,7 @@
         return;  
     }  
   
-    const PLUGIN_NAME = 'crowley_plugins';  
-    const PLUGIN_TITLE = 'Плагіни Crowley24';  
+    console.log('[Crowley Manager] Starting plugin...');  
   
     // Список плагінів для керування  
     const PLUGINS = [  
@@ -28,31 +27,27 @@
   
     // Функція завантаження увімкнених плагінів  
     function loadEnabledPlugins() {  
-        const pluginsToLoad = [];  
-          
+        console.log('[Crowley Manager] Loading enabled plugins...');  
         PLUGINS.forEach(plugin => {  
             const isEnabled = Lampa.Storage.get(plugin.key, true);  
+            console.log(`[Crowley Manager] ${plugin.name}: ${isEnabled ? 'enabled' : 'disabled'}`);  
             if (isEnabled) {  
-                pluginsToLoad.push(plugin.url);  
+                Lampa.Utils.putScriptAsync([plugin.url], function() {  
+                    console.log(`[Crowley Manager] ${plugin.name} loaded`);  
+                });  
             }  
         });  
-  
-        if (pluginsToLoad.length > 0) {  
-            console.log('[Crowley24] Завантаження плагінів:', pluginsToLoad);  
-            Lampa.Utils.putScriptAsync(pluginsToLoad, function () {  
-                console.log('[Crowley24] Плагіни завантажені:', pluginsToLoad);  
-            });  
-        }  
     }  
   
     // Створення інтерфейсу налаштувань  
     function createSettings() {  
+        console.log('[Crowley Manager] Creating settings interface...');  
         let html = $('<div></div>');  
           
-        // Додати заголовок  
-        html.append('<div class="settings__title">' + PLUGIN_TITLE + '</div>');  
+        // Заголовок  
+        html.append('<div class="settings__title">Плагіни Crowley24</div>');  
           
-        // Додати налаштування для кожного плагіна  
+        // Перемикачі для кожного плагіна  
         PLUGINS.forEach(plugin => {  
             const isEnabled = Lampa.Storage.get(plugin.key, true);  
               
@@ -65,22 +60,20 @@
                 const newState = !Lampa.Storage.get(plugin.key, true);  
                 Lampa.Storage.set(plugin.key, newState);  
                 setting.find('.settings-param__value').text(newState ? 'Увімкнено' : 'Вимкнено');  
+                console.log(`[Crowley Manager] ${plugin.name} ${newState ? 'enabled' : 'disabled'}`);  
             });  
               
             html.append(setting);  
         });  
           
-        // Додати кнопку перезавантаження  
+        // Кнопка перезавантаження  
         const reloadBtn = $('<div class="settings-param selector">' +  
             '<div class="settings-param__name">Перезавантажити додаток</div>' +  
-            '<div class="settings-param__descr">Для застосування змін потрібне перезавантаження</div>' +  
+            '<div class="settings-param__value">Застосувати зміни</div>' +  
             '</div>');  
           
         reloadBtn.on('hover:enter', function() {  
-            Lampa.Controller.toggle('settings');  
-            setTimeout(() => {  
-                window.location.reload();  
-            }, 300);  
+            window.location.reload();  
         });  
           
         html.append(reloadBtn);  
@@ -95,37 +88,37 @@
         };  
     }  
   
-    // Ініціалізація налаштувань  
+    // Реєстрація в налаштуваннях  
     function initSettings() {  
-        // Перевірка наявності API  
-        if (!Lampa.SettingsApi || typeof Lampa.SettingsApi.addParam !== 'function') {  
-            console.log('[Crowley24] SettingsApi не доступний');  
-            return;  
+        console.log('[Crowley Manager] Initializing settings...');  
+          
+        // Додаємо пункт в головне меню налаштувань  
+        if (Lampa.SettingsApi && typeof Lampa.SettingsApi.addParam === 'function') {  
+            Lampa.SettingsApi.addParam({  
+                component: 'crowley_plugins',  
+                param: {  
+                    name: 'crowley_plugins_main',  
+                    type: 'trigger',  
+                    default: true  
+                },  
+                field: {  
+                    name: 'Плагіни Crowley24',  
+                    description: 'Керування плагінами NewLogo та MobStyle'  
+                }  
+            });  
+              
+            console.log('[Crowley Manager] Settings param added');  
         }  
-  
-        // Реєстрація параметра (обов'язково з правильною структурою)  
-        Lampa.SettingsApi.addParam({  
-            component: PLUGIN_NAME,  
-            param: {  
-                name: 'plugin_manager',  
-                type: 'trigger',  
-                default: true  
-            },  
-            field: {  
-                name: PLUGIN_TITLE,  
-                description: 'Керування плагінами Crowley24'  
-            }  
-        });  
   
         // Обробник відкриття налаштувань  
         Lampa.Listener.follow('settings', function(e){  
-            if(e.type === 'open' && e.name === PLUGIN_NAME){  
-                console.log('[Crowley24] Відкриття налаштувань');  
+            if(e.type === 'open' && e.name === 'crowley_plugins'){  
+                console.log('[Crowley Manager] Opening settings...');  
                 createSettings().render(Lampa.Utils.html('.settings-body'));  
             }  
         });  
   
-        console.log('[Crowley24] Налаштування ініціалізовані');  
+        console.log('[Crowley Manager] Settings initialized');  
     }  
   
     // Запуск  
