@@ -168,10 +168,10 @@
                 const isInNewInterface = container && container.closest('.new-interface');  
                   
                 if (isInNewInterface) {  
-                    params = params || {};  
-                    params.style = params.style || {};  
-                    params.style.name = 'wide';  
-                    params.card_wide = true;  
+    params = params || {};
+    params.style = params.style || {};
+    params.style.name = 'poster'; // Змінено з 'wide' на 'poster'
+    params.card_wide = false;     // Змінено з true на false 
                 }  
                   
                 return originalCreate.call(this, data, params);  
@@ -296,16 +296,16 @@
         return state;  
     }  
   
-    function prepareLineData(element) {  
-        if (!element) return;  
-        if (Array.isArray(element.results)) {  
-            Lampa.Utils.extendItemsParams(element.results, {  
-                style: {  
-                    name: 'wide'  
-                }  
-            });  
-        }  
-    }  
+    function prepareLineData(element) {
+    if (!element) return;
+    if (Array.isArray(element.results)) {
+        Lampa.Utils.extendItemsParams(element.results, {
+            style: {
+                name: 'poster' // Змінено з 'wide' на 'poster'
+            }
+        });
+    }
+}
   
     function updateCardTitle(card) {  
         if (!card || typeof card.render !== 'function') return;  
@@ -348,17 +348,20 @@
         card.__newInterfaceLabel = label;  
     }  
   
-    function decorateCard(state, card) {  
-        if (!card || card.__newInterfaceCard || typeof card.use !== 'function' || !card.data) return;  
-  
-        card.__newInterfaceCard = true;  
-  
-        card.params = card.params || {};  
-        card.params.style = card.params.style || {};  
-  
-        if (!card.params.style.name) card.params.style.name = 'wide';  
-  
-        card.use({  
+   function decorateCard(state, card) {
+    if (!card || card.__newInterfaceCard || typeof card.use !== 'function' || !card.data) return;
+
+    // ДОДАЙТЕ ЦЕЙ РЯДОК ПЕРЕД card.__newInterfaceCard = true;
+    if (card.data.poster_path) card.data.img = card.data.poster_path;
+
+    card.__newInterfaceCard = true;
+    card.params = card.params || {};
+    card.params.style = card.params.style || {};
+
+    // Тут теж міняємо wide на poster
+    if (!card.params.style.name || card.params.style.name === 'wide') card.params.style.name = 'poster'; 
+
+    card.use({ 
             onFocus() {  
                 state.update(card.data);  
             },  
