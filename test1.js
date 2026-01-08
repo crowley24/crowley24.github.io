@@ -43,26 +43,30 @@
 		state.attach();
 	});
 
-	wrapMethod(mainMaker.Create, "onCreateAndAppend", function (originalMethod, args) {
+	wwrapMethod(mainMaker.Create, "onCreateAndAppend", function (originalMethod, args) {
     var data = args && args[0];
     if (this.__newInterfaceEnabled && data) {
-        // ОГОЛОШУЄМО ЗМІННУ
-        var isWide = Lampa.Storage.get("wide_post") !== false;
-        var count = isWide ? 6 : 9; 
+        var isWidePost = Lampa.Storage.get("wide_post") !== false;
 
-        data.wide = false;
+        // ПРИМУСОВО скидаємо широкість, якщо користувач вимкнув широкі постери
+        data.wide = isWidePost; 
+        
         if (!data.params) data.params = {};
         if (!data.params.items) data.params.items = {};
+
+        var count = isWidePost ? 6 : 9; // 6 для широких, 9 для вертикальних
 
         data.params.items.view = count;
         data.params.items_per_row = count;
         data.items_per_row = count;
+        
+        // Якщо це не широкі постери, примусово ставимо тип 'card' (вертикальний)
+        if(!isWidePost) data.params.items.type = 'card';
 
         extendResultsWithStyle(data);
     }
     return originalMethod ? originalMethod.apply(this, args) : undefined;
 });
-
 	wrapMethod(mainMaker.Items, "onAppend", function (originalMethod, args) {
 		if (originalMethod) originalMethod.apply(this, args);
 		if (!this.__newInterfaceEnabled) return;
@@ -357,16 +361,22 @@
     if (line.__newInterfaceLine) return;
     line.__newInterfaceLine = true;
 
-    // ОБОВ'ЯЗКОВО ОГОЛОШУЄМО count
-    var isWide = Lampa.Storage.get("wide_post") !== false;
-    var count = isWide ? 6 : 9;
+    var isWidePost = Lampa.Storage.get("wide_post") !== false;
+    var count = isWidePost ? 6 : 9;
 
+    // Скидаємо широкість об'єкта лінії
+    line.wide = isWidePost;
     line.items_per_row = count;
     line.view = count;
 
     if (line.params) {
+        line.params.wide = isWidePost;
         line.params.items_per_row = count;
-        if (line.params.items) line.params.items.view = count;
+        if (line.params.items) {
+            line.params.items.view = count;
+            // Примусово міняємо клас відображення
+            line.params.items.type = isWidePost ? 'card--wide' : 'card';
+        }
     }
     
  
@@ -580,7 +590,11 @@
     return `<style>
         .new-interface-info__head, .new-interface-info__details{ opacity: 0; transition: opacity 0.5s ease; min-height: 2.2em !important;}
         .new-interface-info__head.visible, .new-interface-info__details.visible{ opacity: 1; }
-        
+
+.new-interface .card:not(.card--wide) {
+    display: block !important;
+}
+		
         /* Широкі картки */
         .new-interface .card.card--wide {
             width: 18.3em !important;
