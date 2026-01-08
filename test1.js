@@ -590,7 +590,16 @@
 						position: relative;
 						padding: 1.5em;
 						height: 19.8em;
-					}
+                    }
+					.new-interface .card.card--small {
+                        width: 5.5em !important; /* Дуже маленька ширина */
+                        margin: 0.3em;           /* Мінімальні відступи між ними */
+        
+							}
+					.new-interface .card.card--small .card__view {
+                        padding-bottom: 145% !important; 
+                    }
+					
 					.new-interface-info__body {
 						position: absolute;
 						z-index: 9999999;
@@ -647,7 +656,7 @@
 						width: 70%;
 					}
 					.new-interface .card-more__box {
-						padding-bottom: 60%;
+						padding-bottom: 145%;
 					}
 					.new-interface .full-start__background-wrapper {
 						position: absolute;
@@ -678,9 +687,10 @@
 					.new-interface .card__promo {
 						display: none;
 					}
-					.new-interface .card.card--wide + .card-more .card-more__box {
-						padding-bottom: 95%;
-					}
+					.new-interface .card.card--small + .card-more .card-more__box,
+                    .new-interface .card-more__box {
+                        padding-bottom: 145% !important;
+                    }
 					.new-interface .card.card--wide .card-watched {
 						display: none !important;
 					}
