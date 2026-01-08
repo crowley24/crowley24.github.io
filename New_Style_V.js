@@ -184,9 +184,14 @@
     function createInterfaceState(main) {  
         const info = new InterfaceInfo();  
         info.create();  
-  
-        const background = document.createElement('img');  
-        background.className = 'full-start__background';  
+  const background = document.createElement('img');  
+background.className = 'full-start__background';  
+background.style.position = 'absolute';  
+background.style.top = '0';  
+background.style.right = '0';  
+background.style.width = '33.33%';  
+background.style.height = '33.33%';  
+background.style.objectFit = 'cover';  
   
         const state = {  
             main,  
@@ -529,10 +534,16 @@
             padding-bottom: 95%;    
         }    
     
-        .new-interface .full-start__background {    
-            height: 108%;    
-            top: -6em;    
-        }    
+       .new-interface .full-start__background {  
+    width: 33.33% !important;  
+    height: 33.33% !important;  
+    top: 0 !important;  
+    right: 0 !important;  
+    left: auto !important;  
+    position: absolute !important;  
+    object-fit: cover !important;  
+    z-index: -1 !important; /* Фон позаду контенту */  
+}
     
         .new-interface .full-start__rate {    
             font-size: 1.3em;    
