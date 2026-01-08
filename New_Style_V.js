@@ -858,27 +858,62 @@ swapContent(container, newNode) {
         };  
     }  
   
-    function addStyleV3() {  
-        if (addStyleV3.added) return;  
-        addStyleV3.added = true;  
-  
-        Lampa.Template.add('new_interface_style_v3', `<style>  
+function addStyleV3() {  
+    if (addStyleV3.added) return;  
+    addStyleV3.added = true;  
+
+    Lampa.Template.add('new_interface_style_v3', `<style>  
 .new-interface{  
     position: relative;  
-    --ni-info-h: clamp(15em, 34vh, 24em);  
+    --ni-info-h: clamp(15em, 34vh, 24em); 
+    background-color: #141414; /* Базовий колір фону під картинкою */
 }  
-/* Застосовуємо розміри карточок для всіх пристроїв, включаючи Smart TV */  
-.new-interface{  
-    --ni-card-w: clamp(35px, 2.8vw, 60px); /* Зменшено з 45px, 3.2vw, 75px */  
+
+/* Стиль для фонового зображення */
+.new-interface .full-start__background{  
+    position: absolute;
+    width: 100%;
+    height: 108%;  
+    top: -6em;  
+    right: 0;
+    object-fit: cover;
+    z-index: 0;
+    opacity: 0;
+    transition: opacity 0.5s ease;
 }
-  
-/* Розмір карточок і плитки "Ще" - тепер для всіх пристроїв */  
+
+.new-interface .full-start__background.loaded {
+    opacity: 1;
+}
+
+/* ЕФЕКТ ЗАТЕМНЕННЯ (ГРАДІЄНТ) */
+.new-interface .full-start__gradient {
+    position: absolute;
+    top: -6em;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 112%;
+    z-index: 1; /* Між картинкою і текстом */
+    /* Складний градієнт для читабельності та плавного злиття */
+    background: 
+        /* Затемнення зліва (для чіткості тексту) */
+        linear-gradient(90deg, rgba(20, 20, 20, 1) 0%, rgba(20, 20, 20, 0.85) 20%, rgba(20, 20, 20, 0.4) 50%, rgba(20, 20, 20, 0) 100%),
+        /* Затемнення знизу (для злиття з контентом) */
+        linear-gradient(0deg, rgba(20, 20, 20, 1) 0%, rgba(20, 20, 20, 0.7) 25%, rgba(20, 20, 20, 0) 50%);
+    pointer-events: none;
+}
+
+/* Застосовуємо розміри карточок */  
+.new-interface{  
+    --ni-card-w: clamp(35px, 2.8vw, 60px); 
+}
+
 .new-interface .card--small,  
 .new-interface .card-more{  
     width: var(--ni-card-w) !important;  
 }  
   
-/* Вертикальні постери: використовуємо стандартний стиль Lampa */  
 .new-interface .card-more__box{  
     padding-bottom: 150%;  
 }  
@@ -887,11 +922,11 @@ swapContent(container, newNode) {
 .new-interface-info{  
     position: relative;  
     padding: 1.5em;  
-    height: auto !important; /* Змінено з var(--ni-info-h) */  
-    min-height: 200px !important; /* Фіксована мінімальна висота */  
-    max-height: 250px !important; /* Обмеження максимальної висоти */  
-    overflow: visible !important; /* Змінено з hidden */  
-    z-index: 3;  
+    height: auto !important;  
+    min-height: 200px !important;  
+    max-height: 250px !important;  
+    overflow: visible !important;  
+    z-index: 3; /* Вище за градієнт */
     display: flex !important;  
     align-items: center !important;  
 }  
@@ -901,11 +936,11 @@ swapContent(container, newNode) {
 }  
   
 .new-interface-info__body{  
-        position: relative;  
+    position: relative;  
     z-index: 1;  
     width: 100%;  
     padding-top: 0;  
-    display: block !important; /* Змінено з grid */  
+    display: block !important;  
 }  
   
 .new-interface-info__left {  
@@ -914,24 +949,9 @@ swapContent(container, newNode) {
     align-items: center;  
     min-height: 120px;    
 }  
-  
-.new-interface-info__right{  
-    padding-top: clamp(0.2em, 2.2vh, 1.6em);  
-}  
-  
-.new-interface-info__head{  
-    color: rgba(255, 255, 255, 0.6);  
-    margin-bottom: 1em;  
-    font-size: 1.3em;  
-    min-height: 1em;  
-}  
-  
-.new-interface-info__head span{  
-    color: #fff;  
-}  
-  
+
 .new-interface-info__title {  
-   font-size: clamp(2.6em, 4.0vw, 3.6em);  
+    font-size: clamp(2.6em, 4.0vw, 3.6em);  
     font-weight: 600;  
     margin: 0;  
     display: flex;  
@@ -939,40 +959,7 @@ swapContent(container, newNode) {
     min-height: 120px;  
     max-height: 120px;  
     overflow: visible; 
-}  
-  
-.new-interface-info__title-logo {  
-    max-width: 400px !important;  
-    max-height: var(--ni-logo-max-h, 120px) !important;  
-    width: auto !important;  
-    height: auto !important;  
-    object-fit: contain !important;  
-    object-position: left center !important;  
-}  
-  
-.new-interface-full-logo {  
-    max-height: var(--ni-logo-max-h, 180px) !important;  
-    width: auto !important;  
-    max-width: 100% !important;  
-    object-fit: contain !important;  
-    object-position: left center !important;  
-}
-  
-/* Приховування підписів під карточками */  
-.new-interface.ni-hide-captions .card__view ~ .card__title,  
-.new-interface.ni-hide-captions .card__view ~ .card__name,  
-.new-interface.ni-hide-captions .card__view ~ .card__text,  
-.new-interface.ni-hide-captions .card__view ~ .card__details,  
-.new-interface.ni-hide-captions .card__view ~ .card__description,  
-.new-interface.ni-hide-captions .card__view ~ .card__subtitle,  
-.new-interface.ni-hide-captions .card__view ~ .card__year,  
-.new-interface.ni-hide-captions .card__bottom,  
-.new-interface.ni-hide-captions .card__caption{  
-    display: none !important;  
-}  
-  
-.new-interface.ni-hide-captions .card > *:not(.card__view):not(.card__promo){  
-    display: none !important;  
+    text-shadow: 0 2px 20px rgba(0,0,0,0.8); /* Тінь для заголовка */
 }  
   
 .new-interface-info__description{  
@@ -982,98 +969,37 @@ swapContent(container, newNode) {
     color: rgba(255, 255, 255, 0.90);  
     text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);  
     overflow: hidden;  
-    -o-text-overflow: '.';  
-    text-overflow: '.';  
     display: -webkit-box;  
     -webkit-line-clamp: 7;  
     line-clamp: 7;  
     -webkit-box-orient: vertical;  
     width: auto;  
 }  
-  
-.new-interface .full-start__background{  
-    height: 108%;  
-    top: -6em;  
-}  
-  
+
 .new-interface .full-start__rate{  
     font-size: 1.3em;  
     margin-right: 0;  
 }  
-  
-/* Safe-area для всіх пристроїв */  
-.new-interface .full-start__lines{  
-    padding-bottom: env(safe-area-inset-bottom, 0px);  
-}  
-  
-/* Підняти заголовки ліній */  
+
 .new-interface .items-line__head{  
     position: relative;  
     z-index: 5;  
-}  
-.new-interface .items-line__head{  
     transform: translateY(1vh);  
 }  
-  
-/* Підняти ленти постерів */  
-.new-interface{  
-    --ni-lines-up: -1vh;  
-}  
-.new-interface .items-line__body > .scroll.scroll--horizontal,  
-.new-interface .items-line__body .scroll.scroll--horizontal{  
-    position: relative;  
-    top: calc(var(--ni-lines-up) * -1);  
-}  
-  
-.new-interface .card__promo{  
-    display: none;  
-}  
-  
-.new-interface .card .card-watched{  
-    display: none !important;  
-}  
-  
-body.light--version .new-interface-info__body{  
-    width: min(92%, 72em);  
-    padding-top: 1.5em;  
-}  
-  
+
 @media (max-height: 820px){  
     .new-interface{  
         --ni-info-h: clamp(13em, 30vh, 20em);  
+        --ni-card-w: clamp(60px, 4.2vw, 90px);
     }  
-.new-interface{  
-        --ni-card-w: clamp(60px, 4.2vw, 90px); /* Зменшено з 75px, 5vw, 110px */  
-    }   
-  
-    .new-interface-info__right{  
-        padding-top: clamp(0.15em, 1.8vh, 1.2em);  
-    }  
-  
     .new-interface-info__title{  
         font-size: clamp(2.4em, 3.6vw, 3.1em);  
     }  
-  
-    .new-interface-info__description{  
-        -webkit-line-clamp: 6;  
-        line-clamp: 6;  
-        font-size: 0.83em;  
-    }  
-}  
-  
-body.advanced--animation:not(.no--animation) .new-interface .card.focus .card__view,  
-body.advanced--animation:not(.no--animation) .new-interface .card--small.focus .card__view{  
-    animation: animation-card-focus 0.2s;  
-}  
-  
-body.advanced--animation:not(.no--animation) .new-interface .card.animate-trigger-enter .card__view,  
-body.advanced--animation:not(.no--animation) .new-interface .card--small.animate-trigger-enter .card__view{  
-    animation: animation-trigger-enter 0.2s forwards;  
 }  
 </style>`);  
-  
-        $('body').append(Lampa.Template.get('new_interface_style_v3', {}, true));  
-    }  
+
+    $('body').append(Lampa.Template.get('new_interface_style_v3', {}, true));  
+}  
   
     class InterfaceInfo {  
         constructor() {  
