@@ -732,7 +732,7 @@
         .attr('alt', data.title || data.name || '')  
         .css({  
             'max-height': '125px',  
-            'margin-top': '5px', // Змінено для підняття логотипу  
+            'margin-top': '10px', // Змінено для підняття логотипу  
             'display': 'block'  
         })  
         .on('error', function() {  
@@ -871,7 +871,7 @@
       
 function displayLogoInFullView(e, logoPath){  
     if(logoPath != ''){  
-        e.object.activity.render().find('.full-start-new__title').html('<img style="margin-top:5px;max-height:125px;" src="' + Lampa.TMDB.image('/t/p/w300' + logoPath.replace('.svg','.png')) + '"/>');  
+        e.object.activity.render().find('.full-start-new__title').html('<img style="margin-top:10px;max-height:125px;" src="' + Lampa.TMDB.image('/t/p/w300' + logoPath.replace('.svg','.png')) + '"/>');  
     }  
 }
   
