@@ -31,7 +31,7 @@
         const pluginsToLoad = [];  
           
         PLUGINS.forEach(plugin => {  
-            const isEnabled = Lampa.Storage.get(plugin.key, true); // За замовчуванням увімкнено  
+            const isEnabled = Lampa.Storage.get(plugin.key, true);  
             if (isEnabled) {  
                 pluginsToLoad.push(plugin.url);  
             }  
@@ -39,7 +39,7 @@
   
         if (pluginsToLoad.length > 0) {  
             Lampa.Utils.putScriptAsync(pluginsToLoad, function () {  
-                console.log('Crowley24 плагіни завантажені:', pluginsToLoad);  
+                console.log('[Crowley24 плагіни завантажені:]', pluginsToLoad);  
             });  
         }  
     }  
@@ -48,10 +48,10 @@
     function createSettings() {  
         let html = $('<div></div>');  
           
-        // Заголовок  
+        // Додати заголовок  
         html.append('<div class="settings__title">' + PLUGIN_TITLE + '</div>');  
           
-        // Додаємо налаштування для кожного плагіна  
+        // Додати налаштування для кожного плагіна  
         PLUGINS.forEach(plugin => {  
             const isEnabled = Lampa.Storage.get(plugin.key, true);  
               
@@ -64,25 +64,27 @@
                 const newState = !Lampa.Storage.get(plugin.key, true);  
                 Lampa.Storage.set(plugin.key, newState);  
                 setting.find('.settings-param__value').text(newState ? 'Увімкнено' : 'Вимкнено');  
-                  
-                // Показуємо повідомлення про необхідність перезавантаження  
-                Lampa.Noty.show('Для застосування змін перезавантажте додаток');  
             });  
               
             html.append(setting);  
         });  
           
-        // Кнопка перезавантаження  
+        // Додати кнопку перезавантаження  
         const reloadBtn = $('<div class="settings-param selector">' +  
             '<div class="settings-param__name">Перезавантажити додаток</div>' +  
-            '<div class="settings-param__value">Застосувати зміни</div>' +  
+            '<div class="settings-param__value">Для застосування змін</div>' +  
             '</div>');  
           
         reloadBtn.on('hover:enter', function() {  
-            Lampa.Noty.show('Перезавантаження...');  
-            setTimeout(() => {  
-                window.location.reload();  
-            }, 1000);  
+            Lampa.Select.show({  
+                title: 'Перезавантажити?',  
+                items: [{ title: 'Так', confirm: true }, { title: 'Ні' }],  
+                onSelect: function (e) {  
+                    if (e.confirm) {  
+                        window.location.reload();  
+                    }  
+                }  
+            });  
         });  
           
         html.append(reloadBtn);  
@@ -97,30 +99,34 @@
         };  
     }  
   
-    // Додаємо пункт в меню налаштувань  
-    if (Lampa.SettingsApi && typeof Lampa.SettingsApi.addParam === 'function') {  
-        Lampa.SettingsApi.addParam({  
-            component: PLUGIN_NAME,  
-            param: {  
-                name: 'crowley_plugins_manager',  
-                type: 'trigger',  
-                default: true  
-            },  
-            field: {  
-                name: PLUGIN_TITLE,  
-                description: 'Керування плагінами Crowley24'  
+    // Реєстрація в налаштуваннях  
+    function initSettings() {  
+        // Додати пункт в головне меню налаштувань  
+        if (Lampa.SettingsApi && typeof Lampa.SettingsApi.addParam === 'function') {  
+            Lampa.SettingsApi.addParam({  
+                component: PLUGIN_NAME,  
+                param: {  
+                    name: 'crowley_plugins_manager',  
+                    type: 'trigger',  
+                    default: true  
+                },  
+                field: {  
+                    name: PLUGIN_TITLE,  
+                    description: 'Керування плагінами Crowley24'  
+                }  
+            });  
+        }  
+  
+        // Обробник відкриття налаштувань  
+        Lampa.Listener.follow('settings', function(e){  
+            if(e.type === 'open' && e.name === PLUGIN_NAME){  
+                createSettings().render(Lampa.Utils.html('.settings-body'));  
             }  
         });  
     }  
   
-    // Обробник відкриття налаштувань  
-    Lampa.Listener.follow('settings', function(e){  
-        if(e.type === 'open' && e.name === PLUGIN_NAME){  
-            createSettings().render(Lampa.Utils.html('.settings-body'));  
-        }  
-    });  
-  
-    // Завантажуємо плагіни при старті  
+    // Запуск  
+    initSettings();  
     loadEnabledPlugins();  
   
 })();
