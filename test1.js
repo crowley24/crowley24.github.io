@@ -44,20 +44,24 @@
 	});
 
 	wrapMethod(mainMaker.Create, "onCreateAndAppend", function (originalMethod, args) {
-		var data = args && args[0];
-		if (this.__newInterfaceEnabled && data) {
-			data.wide = false;
+    var data = args && args[0];
+    if (this.__newInterfaceEnabled && data) {
+        // ОГОЛОШУЄМО ЗМІННУ
+        var isWide = Lampa.Storage.get("wide_post") !== false;
+        var count = isWide ? 6 : 9; 
 
-			if (!data.params) data.params = {};
-			if (!data.params.items) data.params.items = {};
-			data.params.items.view = count;
-			data.params.items_per_row = count;
-			data.items_per_row = count;
+        data.wide = false;
+        if (!data.params) data.params = {};
+        if (!data.params.items) data.params.items = {};
 
-			extendResultsWithStyle(data);
-		}
-		return originalMethod ? originalMethod.apply(this, args) : undefined;
-	});
+        data.params.items.view = count;
+        data.params.items_per_row = count;
+        data.items_per_row = count;
+
+        extendResultsWithStyle(data);
+    }
+    return originalMethod ? originalMethod.apply(this, args) : undefined;
+});
 
 	wrapMethod(mainMaker.Items, "onAppend", function (originalMethod, args) {
 		if (originalMethod) originalMethod.apply(this, args);
@@ -350,18 +354,22 @@
 	}
 
 	function handleLineAppend(items, line, data) {
-		if (line.__newInterfaceLine) return;
-		line.__newInterfaceLine = true;
+    if (line.__newInterfaceLine) return;
+    line.__newInterfaceLine = true;
 
-		var state = getOrCreateState(items);
+    // ОБОВ'ЯЗКОВО ОГОЛОШУЄМО count
+    var isWide = Lampa.Storage.get("wide_post") !== false;
+    var count = isWide ? 6 : 9;
 
-		line.items_per_row = count;
-		line.view = count;
-		if (line.params) {
-			line.params.items_per_row = count;
-			if (line.params.items) line.params.items.view = count;
-		}
+    line.items_per_row = count;
+    line.view = count;
 
+    if (line.params) {
+        line.params.items_per_row = count;
+        if (line.params.items) line.params.items.view = count;
+    }
+    
+ 
 		var processCard = function (card) {
 			handleCard(state, card);
 		};
