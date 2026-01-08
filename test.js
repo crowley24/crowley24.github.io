@@ -469,154 +469,160 @@
         if (addStyles.added) return;  
         addStyles.added = true;  
   
-        Lampa.Template.add('new_interface_logo_styles', `<style>  
-        .new-interface {  
-            position: relative;  
-        }  
-  
-        .new-interface .card.card--wide {  
-            width: 6em; /* Дуже малий розмір */  
-        }  
-  
-        .new-interface .card.card--wide .card__view {  
-            padding-bottom: 150%; /* Вертикальний формат */  
-        }  
-  
-        .new-interface-info {  
-            position: relative;  
-            padding: 1.5em;  
-            height: 24em;  
-        }  
-  
-        .new-interface-info__body {  
-            width: 80%;  
-            padding-top: 1.1em;  
-        }  
-  
-        .new-interface-info__head {  
-            color: rgba(255, 255, 255, 0.6);  
-            margin-bottom: 1em;  
-            font-size: 1.3em;  
-            min-height: 1em;  
-        }  
-  
-        .new-interface-info__head span {  
-            color: #fff;  
-        }  
-  
-        .new-interface-info__title {  
-            font-size: 4em;  
-            font-weight: 600;  
-            margin-bottom: 0.3em;  
-            overflow: hidden;  
-            -o-text-overflow: '.';  
-            text-overflow: '.';  
-            display: -webkit-box;  
-            -webkit-line-clamp: 1;  
-            line-clamp: 1;  
-            -webkit-box-orient: vertical;  
-            margin-left: -0.03em;  
-            line-height: 1.3;  
-        }  
-  
-        .new-interface-info__title img {  
-            max-height: 125px;  
-            margin-top: 5px;  
-        }  
-  
-         .new-interface-info__details {  
-            margin-bottom: 1.6em;  
-            display: flex;  
-            align-items: center;  
-            flex-wrap: wrap;  
-            min-height: 1.9em;  
-            font-size: 1.1em;  
-        }  
-  
-        .new-interface-info__split {  
-            margin: 0 1em;  
-            font-size: 0.7em;  
-        }  
-  
-        .new-interface-info__description {  
-            font-size: 1.2em;  
-            font-weight: 300;  
-            line-height: 1.5;  
-            overflow: hidden;  
-            -o-text-overflow: '.';  
-            text-overflow: '.';  
-            display: -webkit-box;  
-            -webkit-line-clamp: 4;  
-            line-clamp: 4;  
-            -webkit-box-orient: vertical;  
-            width: 70%;  
-        }  
-  
-        .new-interface .card-more__box {  
-            padding-bottom: 95%;  
-        }  
-  
-        .new-interface .full-start__background {  
-            height: 108%;  
-            top: -6em;  
-        }  
-  
-        .new-interface .full-start__rate {  
-            font-size: 1.3em;  
-            margin-right: 0;  
-        }  
-  
-        .new-interface .card__promo {  
-            display: none;  
-        }  
-  
-        .new-interface .card.card--wide + .card-more .card-more__box {  
-            padding-bottom: 95%;  
-        }  
-  
-        .new-interface .card.card--wide .card-watched {  
-            display: none !important;  
-        }  
-  
-        .new-interface-card-title {  
-            margin-top: 0.6em;  
-            font-size: 1.05em;  
-            font-weight: 500;  
-            color: #fff;  
-            display: block;  
-            text-align: left;  
-            max-width: 100%;  
-            overflow: hidden;  
-            text-overflow: ellipsis;  
-            white-space: nowrap;  
-            pointer-events: none;  
-        }  
-  
-        body.light--version .new-interface-card-title {  
-            color: #111;  
-        }  
-  
-        body.light--version .new-interface-info__body {  
-            width: 69%;  
-            padding-top: 1.5em;  
-        }  
-  
-        body.light--version .new-interface-info {  
-            height: 25.3em;  
-        }  
-  
-        body.advanced--animation:not(.no--animation) .new-interface .card.card--wide.focus .card__view {  
-            animation: animation-card-focus 0.2s;  
-        }  
-  
-        body.advanced--animation:not(.no--animation) .new-interface .card.card--wide.animate-trigger-enter .card__view {  
-            animation: animation-trigger-enter 0.2s forwards;  
-        }  
-        </style>`);  
-  
-        $('body').append(Lampa.Template.get('new_interface_logo_styles', {}, true));  
-    }  
-  
+       function addStyles() {
+    Lampa.Template.add('new_interface_logo_styles', `<style>
+        .new-interface {
+            position: relative;
+        }
+
+        /* ТУТ ОСНОВНІ ЗМІНИ ДЛЯ ВЕРТИКАЛЬНИХ КАРТОК */
+        .new-interface .card.card--poster {
+            width: 10em !important; /* Ширина картки на ПК */
+            margin-right: 1.2em !important;
+            display: inline-block !important;
+            float: none !important;
+            vertical-align: top;
+        }
+
+        .new-interface .card.card--poster .card__view {
+            padding-bottom: 150% !important; /* Пропорція 2:3 (вертикальна) */
+            height: 0 !important;
+            width: 100% !important;
+        }
+
+        /* Виправлення для того, щоб картки не ставали в стовпчик на ПК */
+        .new-interface .items__line {
+            white-space: nowrap !important;
+            display: block !important;
+        }
+
+        /* Адаптивність: трохи менші картки на невеликих екранах */
+        @media screen and (max-width: 1200px) {
+            .new-interface .card.card--poster {
+                width: 8.5em !important;
+            }
+        }
+
+        .new-interface-info {
+            position: relative;
+            padding: 1.5em;
+            height: 24em;
+        }
+
+        .new-interface-info__body {
+            width: 80%;
+            padding-top: 1.1em;
+        }
+
+        .new-interface-info__head {
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 1em;
+            font-size: 1.3em;
+            min-height: 1em;
+        }
+
+        .new-interface-info__head span {
+            color: #fff;
+        }
+
+        .new-interface-info__title {
+            font-size: 4em;
+            font-weight: 600;
+            margin-bottom: 0.3em;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            line-clamp: 1;
+            -webkit-box-orient: vertical;
+            margin-left: -0.03em;
+            line-height: 1.3;
+        }
+
+        .new-interface-info__title img {
+            max-height: 125px;
+            margin-top: 5px;
+        }
+
+        .new-interface-info__details {
+            margin-bottom: 1.6em;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            min-height: 1.9em;
+            font-size: 1.1em;
+        }
+
+        .new-interface-info__split {
+            margin: 0 1em;
+            font-size: 0.7em;
+        }
+
+        .new-interface-info__description {
+            font-size: 1.2em;
+            font-weight: 300;
+            line-height: 1.5;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            line-clamp: 4;
+            -webkit-box-orient: vertical;
+            width: 70%;
+        }
+
+        .new-interface .card-more__box {
+            padding-bottom: 150% !important; /* Теж вертикально */
+        }
+
+        .new-interface .full-start__background {
+            height: 108%;
+            top: -6em;
+        }
+
+        .new-interface .full-start__rate {
+            font-size: 1.3em;
+            margin-right: 0;
+        }
+
+        .new-interface .card__promo {
+            display: none;
+        }
+
+        .new-interface .card.card--poster .card-watched {
+            display: none !important;
+        }
+
+        .new-interface-card-title {
+            margin-top: 0.6em;
+            font-size: 0.95em;
+            font-weight: 500;
+            color: #fff;
+            display: block;
+            text-align: left;
+            width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+
+        body.light--version .new-interface-card-title {
+            color: #111;
+        }
+
+        /* Анімації фокусу саме для вертикальних карток */
+        body.advanced--animation:not(.no--animation) .new-interface .card.card--poster.focus .card__view {
+            animation: animation-card-focus 0.2s;
+        }
+
+        body.advanced--animation:not(.no--animation) .new-interface .card.card--poster.animate-trigger-enter .card__view {
+            animation: animation-trigger-enter 0.2s forwards;
+        }
+    </style>`);
+
+    $('body').append(Lampa.Template.get('new_interface_logo_styles', {}, true));
+}
     // ========== КЛАС ДЛЯ ІНФОРМАЦІЇ З ПІДТРИМКОЮ ЛОГОТИПІВ ==========  
   
     class InterfaceInfo {  
