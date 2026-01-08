@@ -43,7 +43,7 @@
 		state.attach();
 	});
 
-	wwrapMethod(mainMaker.Create, "onCreateAndAppend", function (originalMethod, args) {
+	wrapMethod(mainMaker.Create, "onCreateAndAppend", function (originalMethod, args) {
     var data = args && args[0];
     if (this.__newInterfaceEnabled && data) {
         var isWidePost = Lampa.Storage.get("wide_post") !== false;
@@ -364,7 +364,6 @@
     var isWidePost = Lampa.Storage.get("wide_post") !== false;
     var count = isWidePost ? 6 : 9;
 
-    // Скидаємо широкість об'єкта лінії
     line.wide = isWidePost;
     line.items_per_row = count;
     line.view = count;
@@ -374,10 +373,10 @@
         line.params.items_per_row = count;
         if (line.params.items) {
             line.params.items.view = count;
-            // Примусово міняємо клас відображення
             line.params.items.type = isWidePost ? 'card--wide' : 'card';
         }
     }
+}
     
  
 		var processCard = function (card) {
