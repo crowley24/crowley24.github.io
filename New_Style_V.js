@@ -465,9 +465,9 @@
   
         .new-interface-info__head {  
             color: rgba(255, 255, 255, 0.6);  
-            margin-bottom: 1em;  
+            margin-bottom: 0.5em;  
             font-size: 1.3em;  
-            min-height: 1em;  
+            min-height: 0.5em; 
         }  
   
         .new-interface-info__head span {  
@@ -774,33 +774,34 @@
         }  
   
         drawDetails(movie) {  
-            if (!movie || !this.html) return;  
+    if (!movie || !this.html) return;  
   
-            const create = ((movie.release_date || movie.first_air_date || '0000') + '').slice(0, 4);  
-            const vote = parseFloat((movie.vote_average || 0) + '').toFixed(1);  
-            const head = [];  
-            const details = [];  
-            const sources = Lampa.Api && Lampa.Api.sources && Lampa.Api.sources.tmdb ? Lampa.Api.sources.tmdb : null;  
-            const countries = sources && typeof sources.parseCountries === 'function' ? sources.parseCountries(movie) : [];  
-            const pg = sources && typeof sources.parsePG === 'function' ? sources.parsePG(movie) : '';  
+    const vote = parseFloat((movie.vote_average || 0) + '').toFixed(1);  
+    const head = []; // Залишаємо порожнім, не додаємо рік та країни  
+    const details = [];  
+    const sources = Lampa.Api && Lampa.Api.sources && Lampa.Api.sources.tmdb ? Lampa.Api.sources.tmdb : null;  
+    const pg = sources && typeof sources.parsePG === 'function' ? sources.parsePG(movie) : '';  
   
-            if (create !== '0000') head.push(`<span>${create}</span>`);  
-            if (countries && countries.length) head.push(countries.join(', '));  
+    // Видаляємо ці рядки, які додають рік та країни:  
+    // const create = ((movie.release_date || movie.first_air_date || '0000') + '').slice(0, 4);  
+    // if (create !== '0000') head.push(`<span>${create}</span>`);  
+    // const countries = sources && typeof sources.parseCountries === 'function' ? sources.parseCountries(movie) : [];  
+    // if (countries && countries.length) head.push(countries.join(', '));  
   
-            if (vote > 0) {  
-                details.push(`<div class="full-start__rate"><div>${vote}</div><div>TMDB</div></div>`);  
-            }  
+    if (vote > 0) {  
+        details.push(`<div class="full-start__rate"><div>${vote}</div><div>TMDB</div></div>`);  
+    }  
   
-            if (Array.isArray(movie.genres) && movie.genres.length) {  
-                details.push(movie.genres.map((item) => Lampa.Utils.capitalizeFirstLetter(item.name)).join(' | '));  
-            }  
+    if (Array.isArray(movie.genres) && movie.genres.length) {  
+        details.push(movie.genres.map((item) => Lampa.Utils.capitalizeFirstLetter(item.name)).join(' | '));  
+    }  
   
-            if (movie.runtime) details.push(Lampa.Utils.secondsToTime(movie.runtime * 60, true));  
-            if (pg) details.push(`<span class="full-start__pg" style="font-size: 0.9em;">${pg}</span>`);  
+    if (movie.runtime) details.push(Lampa.Utils.secondsToTime(movie.runtime * 60, true));  
+    if (pg) details.push(`<span class="full-start__pg" style="font-size: 0.9em;">${pg}</span>`);  
   
-            this.html.find('.new-interface-info__head').empty().append(head.join(', '));  
-            this.html.find('.new-interface-info__details').html(details.join('<span class="new-interface-info__split">&#9679;</span>'));  
-        }  
+    this.html.find('.new-interface-info__head').empty(); // Очищуємо, але нічого не додаємо  
+    this.html.find('.new-interface-info__details').html(details.join('<span class="new-interface-info__split">&#9679;</span>'));  
+}
   
         empty() {  
             if (!this.html) return;  
