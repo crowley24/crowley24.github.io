@@ -252,8 +252,8 @@
                 this.updateBackground(data);  
             },  
             updateBackground(data) {  
-                // Використовуємо постер замість обкладинки  
-                const path = data && data.poster_path ? Lampa.Api.img(data.poster_path, 'w1280') : '';  
+                // Використовуємо обкладинку для фону  
+                const path = data && data.backdrop_path ? Lampa.Api.img(data.backdrop_path, 'w1280') : '';  
   
                 if (!path || path === this.backgroundLast) return;  
   
@@ -349,6 +349,20 @@
         card.__newInterfaceLabel = label;  
     }  
   
+    // Додаємо функцію для зміни зображення на картках  
+    function updateCardImage(card) {  
+        if (!card || !card.data) return;  
+          
+        const element = card.render(true);  
+        if (!element) return;  
+          
+        const img = element.querySelector('.card__img');  
+        if (img && card.data.poster_path) {  
+            // Замінюємо зображення картки на постер  
+            img.style.backgroundImage = `url('${Lampa.Api.img(card.data.poster_path, 'w500')}')`;  
+        }  
+    }  
+  
     function decorateCard(state, card) {  
         if (!card || card.__newInterfaceCard || typeof card.use !== 'function' || !card.data) return;  
   
@@ -362,18 +376,23 @@
         card.use({  
             onFocus() {  
                 state.update(card.data);  
+                updateCardImage(card); // Оновлюємо зображення при фокусі  
             },  
             onHover() {  
                 state.update(card.data);  
+                updateCardImage(card); // Оновлюємо зображення при наведенні  
             },  
             onTouch() {  
                 state.update(card.data);  
+                updateCardImage(card); // Оновлюємо зображення при торканні  
             },  
             onVisible() {  
                 updateCardTitle(card);  
+                updateCardImage(card); // Оновлюємо зображення при появі  
             },  
             onUpdate() {  
                 updateCardTitle(card);  
+                updateCardImage(card); // Оновлюємо зображення при оновленні  
             },  
             onDestroy() {  
                 clearTimeout(card.__newInterfaceLabelTimer);  
@@ -386,6 +405,7 @@
         });  
   
         updateCardTitle(card);  
+        updateCardImage(card); // Оновлюємо зображення при створенні  
     }  
   
     function getCardData(card, element, index = 0) {  
@@ -491,7 +511,7 @@
             padding-top: 1.1em;  
         }  
   
-        .new-interface-info__head {  
+         .new-interface-info__head {  
             color: rgba(255, 255, 255, 0.6);  
             margin-bottom: 1em;  
             font-size: 1.3em;  
@@ -520,20 +540,6 @@
         .new-interface-info__title img {  
             max-height: 125px;  
             margin-top: 5px;  
-        }  
-  
-        .new-interface-info__details {  
-            margin-bottom: 1.6em;  
-            display: flex;  
-            align-items: center;  
-            flex-wrap: wrap;  
-            min-height: 1.9em;  
-            font-size: 1.1em;  
-        }  
-  
-        .new-interface-info__split {  
-            margin: 0 1em;  
-            font-size: 0.7em;  
         }  
   
         .new-interface-info__details {  
@@ -670,10 +676,8 @@
               
             this.html.find('.new-interface-info__description').text(data.overview || Lampa.Lang.translate('full_notext'));  
               
-            // Використовуємо постер замість обкладинки  
-            if (data.poster_path) {  
-                Lampa.Background.change(Lampa.Api.img(data.poster_path, 'w1280'));  
-            }  
+            // Залишаємо обкладинку для фону  
+            Lampa.Background.change(Lampa.Utils.cardImgBackground(data));  
   
             this.loadDetails(data);  
         }  
