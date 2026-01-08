@@ -308,7 +308,13 @@
                 }  
   
                 const url = Lampa.TMDB.api(`${type}/${item.id}/images?api_key=${Lampa.TMDB.key()}&include_image_language=${lang},en,null`);  
-  
+
+                const priority = item.__priority || 0;  
+        const timeout = priority > 0 ? 200 : 800; // Швидше для активних карток  
+          
+        this.network.timeout(timeout);  
+        this.network.silent(url, (res) => {  
+
                 $.get(url, (res) => {  
                     let filePath = null;  
   
@@ -371,37 +377,37 @@
         img.style.maxWidth = '400px';  
     }  
 }
-        swapContent(container, newNode) {  
-            if (!container) return;  
-            const type = this.animationType();  
+swapContent(container, newNode) {  
+    if (!container) return;  
+    const type = this.animationType();  
   
-            if (container.__ni_logo_timer) {  
-                clearTimeout(container.__ni_logo_timer);  
-                container.__ni_logo_timer = null;  
-            }  
+    if (container.__ni_logo_timer) {  
+        clearTimeout(container.__ni_logo_timer);  
+        container.__ni_logo_timer = null;  
+    }  
   
-            if (type === 'js') {  
-                container.style.transition = 'none';  
-                animateOpacity(container, 1, 0, 300, () => {  
-                    container.innerHTML = '';  
-                    if (typeof newNode === 'string') container.textContent = newNode;  
-                    else container.appendChild(newNode);  
-                    container.style.opacity = '0';  
-                    animateOpacity(container, 0, 1, 400);  
-                });  
-            } else {  
-                container.style.transition = 'opacity 0.3s ease';  
-                container.style.opacity = '0';  
-                container.__ni_logo_timer = setTimeout(() => {  
-                    container.__ni_logo_timer = null;  
-                    container.innerHTML = '';  
-                    if (typeof newNode === 'string') container.textContent = newNode;  
-                    else container.appendChild(newNode);  
-                    container.style.transition = 'opacity 0.4s ease';  
-                    container.style.opacity = '1';  
-                }, 150);  
-            }  
-        }  
+    if (type === 'js') {  
+        container.style.transition = 'none';  
+        animateOpacity(container, 1, 0, 200, () => { // Зменшено з 300ms  
+            container.innerHTML = '';  
+            if (typeof newNode === 'string') container.textContent = newNode;  
+            else container.appendChild(newNode);  
+            container.style.opacity = '0';  
+            animateOpacity(container, 0, 1, 300); // Зменшено з 400ms  
+        });  
+    } else {  
+        container.style.transition = 'opacity 0.2s ease'; // Зменшено з 0.3s  
+        container.style.opacity = '0';  
+        container.__ni_logo_timer = setTimeout(() => {  
+            container.__ni_logo_timer = null;  
+            container.innerHTML = '';  
+            if (typeof newNode === 'string') container.textContent = newNode;  
+            else container.appendChild(newNode);  
+            container.style.transition = 'opacity 0.3s ease'; // Зменшено з 0.4s  
+            container.style.opacity = '1';  
+        }, 100); // Зменшено з 150ms  
+    }  
+}
   
         syncFullHead(container, logoActive) {  
             try {  
@@ -811,10 +817,18 @@
             onInstance(card) {  
                 applyToCard(card);  
             },  
-            onActive(card, itemData) {  
-                const current = getCardData(card, itemData);  
-                if (current) state.update(current);  
-            },  
+            onActive(card, itemData) {  // ВСТАВИТИ ОСЬ ЦЕЙ ОБРОБНИК  
+            const current = getCardData(card, itemData);  
+            if (current) {  
+                current.__priority = 1; // Високий пріоритет для активної картки  
+                state.update(current);  
+                  
+                // Завантажити логотипи для сусідніх карток  
+                const index = items.indexOf(card);  
+                if (index > 0) items[index-1].data.__priority = 0.5;  
+                if (index < items.length-1) items[index+1].data.__priority = 0.5;  
+            }  
+        },    
             onToggle() {  
                 setTimeout(() => {  
                     const domData = getFocusedCardData(line);  
