@@ -266,88 +266,87 @@
             }  
         }  
   
-        getLogoUrl(item, cb) {  
-            try {  
-                if (!item || !item.id) return cb && cb(null);  
+       getLogoUrl(item, cb) {  
+    try {  
+        if (!item || !item.id) return cb && cb(null);  
   
-                const source = item.source || 'tmdb';  
-                if (source !== 'tmdb' && source !== 'cub') return cb && cb(null);  
+        const source = item.source || 'tmdb';  
+        if (source !== 'tmdb' && source !== 'cub') return cb && cb(null);  
   
-                if (!Lampa.TMDB || typeof Lampa.TMDB.api !== 'function' || typeof Lampa.TMDB.key !== 'function') return cb && cb(null);  
+        if (!Lampa.TMDB || typeof Lampa.TMDB.api !== 'function' || typeof Lampa.TMDB.key !== 'function') return cb && cb(null);  
   
-                const type = (item.media_type === 'tv' || item.name) ? 'tv' : 'movie';  
-                const lang = this.lang();  
-                const key = this.cacheKey(type, item.id, lang);  
+        const type = (item.media_type === 'tv' || item.name) ? 'tv' : 'movie';  
+        const lang = this.lang();  
+        const key = this.cacheKey(type, item.id, lang);  
   
-                const cached = localStorage.getItem(key);  
-                if (cached) {  
-                    if (cached === 'none') return cb && cb(null);  
-                    return cb && cb(cached);  
-                }  
-  
-                const fromDetails = this.resolveFromImages(item, lang);  
-                if (fromDetails) {  
-                    const size = this.size();  
-                    const normalized = (fromDetails + '').replace('.svg', '.png');  
-                    const logoUrl = Lampa.TMDB.image('/t/p/' + size + normalized);  
-                    localStorage.setItem(key, logoUrl);  
-                    return cb && cb(logoUrl);  
-                }  
-  
-                if (this.pending[key]) {  
-                    this.pending[key].push(cb);  
-                    return;  
-                }  
-  
-                this.pending[key] = [cb];  
-  
-                if (typeof $ === 'undefined' || !$.get) {  
-                    localStorage.setItem(key, 'none');  
-                    this.flush(key, null);  
-                    return;  
-                }  
-  
-                const url = Lampa.TMDB.api(`${type}/${item.id}/images?api_key=${Lampa.TMDB.key()}&include_image_language=${lang},en,null`);  
-
-                const priority = item.__priority || 0;  
-        const timeout = priority > 0 ? 200 : 800; // Швидше для активних карток  
-          
-        this.network.timeout(timeout);  
-        this.network.silent(url, (res) => {  
-
-                $.get(url, (res) => {  
-                    let filePath = null;  
-  
-                    if (res && Array.isArray(res.logos) && res.logos.length) {  
-                        for (let i = 0; i < res.logos.length; i++) {  
-                            if (res.logos[i] && res.logos[i].iso_639_1 === lang) { filePath = res.logos[i].file_path; break; }  
-                        }  
-                        if (!filePath) {  
-                            for (let i = 0; i < res.logos.length; i++) {  
-                                if (res.logos[i] && res.logos[i].iso_639_1 === 'en') { filePath = res.logos[i].file_path; break; }  
-                            }  
-                        }  
-                        if (!filePath) filePath = res.logos[0] && res.logos[0].file_path;  
-                    }  
-  
-                    if (filePath) {  
-                        const size = this.size();  
-                        const normalized = (filePath + '').replace('.svg', '.png');  
-                        const logoUrl = Lampa.TMDB.image('/t/p/' + size + normalized);  
-                        localStorage.setItem(key, logoUrl);  
-                        this.flush(key, logoUrl);  
-                    } else {  
-                        localStorage.setItem(key, 'none');  
-                        this.flush(key, null);  
-                    }  
-                }).fail(() => {  
-                    localStorage.setItem(key, 'none');  
-                    this.flush(key, null);  
-                });  
-            } catch (e) {  
-                if (cb) cb(null);  
-            }  
+        const cached = localStorage.getItem(key);  
+        if (cached) {  
+            if (cached === 'none') return cb && cb(null);  
+            return cb && cb(cached);  
         }  
+  
+        const fromDetails = this.resolveFromImages(item, lang);  
+        if (fromDetails) {  
+            const size = this.size();  
+            const normalized = (fromDetails + '').replace('.svg', '.png');  
+            const logoUrl = Lampa.TMDB.image('/t/p/' + size + normalized);  
+            localStorage.setItem(key, logoUrl);  
+            return cb && cb(logoUrl);  
+        }  
+  
+        if (this.pending[key]) {  
+            this.pending[key].push(cb);  
+            return;  
+        }  
+  
+        this.pending[key] = [cb];  
+  
+        if (typeof $ === 'undefined' || !$.get) {  
+            localStorage.setItem(key, 'none');  
+            this.flush(key, null);  
+            return;  
+        }  
+  
+        const url = Lampa.TMDB.api(`${type}/${item.id}/images?api_key=${Lampa.TMDB.key()}&include_image_language=${lang},en,null`);  
+          
+        const priority = item.__priority || 0;  
+        const timeout = priority > 0 ? 200 : 800;  
+  
+        // Видаляємо this.network.timeout і this.network.silent  
+        // Використовуємо тільки $.get  
+        $.get(url, (res) => {  
+            let filePath = null;  
+  
+            if (res && Array.isArray(res.logos) && res.logos.length) {  
+                for (let i = 0; i < res.logos.length; i++) {  
+                    if (res.logos[i] && res.logos[i].iso_639_1 === lang) { filePath = res.logos[i].file_path; break; }  
+                }  
+                if (!filePath) {  
+                    for (let i = 0; i < res.logos.length; i++) {  
+                        if (res.logos[i] && res.logos[i].iso_639_1 === 'en') { filePath = res.logos[i].file_path; break; }  
+                    }  
+                }  
+                if (!filePath) filePath = res.logos[0] && res.logos[0].file_path;  
+            }  
+  
+            if (filePath) {  
+                const size = this.size();  
+                const normalized = (filePath + '').replace('.svg', '.png');  
+                const logoUrl = Lampa.TMDB.image('/t/p/' + size + normalized);  
+                localStorage.setItem(key, logoUrl);  
+                this.flush(key, logoUrl);  
+            } else {  
+                localStorage.setItem(key, 'none');  
+                this.flush(key, null);  
+            }  
+        }).fail(() => {  
+            localStorage.setItem(key, 'none');  
+            this.flush(key, null);  
+        });  
+    } catch (e) {  
+        if (cb) cb(null);  
+    }  
+}
   
        setImageSizing(img, heightPx) {  
     if (!img) return;  
