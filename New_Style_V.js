@@ -443,176 +443,165 @@
         if (addStyles.added) return;    
         addStyles.added = true;    
     
-        Lampa.Template.add('new_interface_logo_styles', `<style>      
-        .new-interface {      
-            position: relative;      
-        }      
-      
-        .new-interface .card {      
-            width: 11.5em;      
-        }      
-      
-        .new-interface-info {      
-            position: relative;      
-            padding: 1.5em;      
-            height: 24em;      
-            margin-bottom: 0.5em !important; /* Зменшуємо відступ після інформаційного блоку */    
-        }      
-      
-        .new-interface-info__body {      
-            width: 80%;      
-            padding-top: 0.5em !important;      
-        }      
-      
-        .new-interface-info__head {      
-            display: none !important;    
-            color: rgba(255, 255, 255, 0.6);      
-            margin-bottom: 0.5em;      
-            font-size: 1.3em;      
-            min-height: 0.5em;     
+        Lampa.Template.add('new_interface_logo_styles', `<style>    
+        .new-interface {    
+            position: relative;    
         }    
     
-          .new-interface-info__head span {      
-            color: #fff;      
-        }      
-      
-        .new-interface-info__title {      
-            font-size: 4em;      
-            font-weight: 600;    
-            margin-top: -0.5em !important;    
-            margin-bottom: 0.3em;      
-            overflow: hidden;      
-            -o-text-overflow: '.';      
-            text-overflow: '.';      
-            display: -webkit-box;      
-            -webkit-line-clamp: 1;      
-            line-clamp: 1;      
-            -webkit-box-orient: vertical;      
-            margin-left: -0.03em;      
-            line-height: 1.3;      
-        }      
-      
-        .new-interface-info__title img {      
-            max-height: 125px;      
-            margin-top: 5px;      
-        }      
-      
-        .new-interface-info__details {      
-            margin-bottom: 1.6em;      
-            display: flex;      
-            align-items: center;      
-            flex-wrap: wrap;      
-            min-height: 1.9em;      
-            font-size: 1.1em;      
-        }      
-      
-        .new-interface-info__split {      
-            margin: 0 1em;      
-            font-size: 0.7em;      
-        }      
-      
-        .new-interface-info__description {      
-            font-size: 1.2em;      
-            font-weight: 300;      
-            line-height: 1.5;      
-            overflow: hidden;      
-            -o-text-overflow: '.';      
-            text-overflow: '.';      
-            display: -webkit-box;      
-            -webkit-line-clamp: 4;      
-            line-clamp: 4;      
-            -webkit-box-orient: vertical;      
-            width: 70%;      
-        }      
-      
-        .new-interface .card-more__box {      
-            padding-bottom: 95%;      
-        }      
-      
-        .new-interface .full-start__background {      
-            height: 108%;      
-            top: -6em;      
-        }      
-      
-        .new-interface .full-start__rate {      
-            font-size: 1.3em;      
-            margin-right: 0;      
-        }      
-      
-        .new-interface .card__promo {      
-            display: none;      
-        }      
-    
-.new-interface .card.card--wide + .card-more .card-more__box {      
-            padding-bottom: 95%;      
-        }      
-      
-        .new-interface .card.card--wide .card-watched {      
-            display: none !important;      
-        }      
-      
-        .new-interface-card-title {      
-            margin-top: 0.4em !important; /* Зменшуємо відступ зверху */    
-            margin-bottom: 0.2em !important;    
-            font-size: 1.05em;      
-            font-weight: 500;      
-            color: #fff;      
-            display: block;      
-            text-align: left;      
-            max-width: 100%;      
-            overflow: hidden;      
-            text-overflow: ellipsis;      
-            white-space: nowrap;      
-            pointer-events: none;      
-        }      
-      
-        body.light--version .new-interface-card-title {      
-            color: #111;      
-        }      
-      
-        body.light--version .new-interface-info__body {      
-            width: 69%;      
-            padding-top: 1.5em;      
-        }      
-      
-        body.light--version .new-interface-info {      
-            height: 25.3em;      
-        }      
-      
-        body.advanced--animation:not(.no--animation) .new-interface .card.focus .card__view {      
-            animation: animation-card-focus 0.2s;      
-        }      
-      
-        body.advanced--animation:not(.no--animation) .new-interface .card.animate-trigger-enter .card__view {      
-            animation: animation-trigger-enter 0.2s forwards;      
+        .new-interface .card {    
+            width: 11.5em;    
         }    
     
-        /* Оновлені стилі для підняття карток фільмів */    
-        .new-interface .scroll--mask {      
-            padding-top: 0 !important;      
-            margin-top: -2em !important; /* Піднімаємо контейнер прокрутки вище */    
+        .new-interface-info {    
+            position: relative;    
+            padding: 1.5em;    
+            height: 24em;    
+            margin-bottom: 0.5em !important; /* Зменшуємо відступ після інформаційного блоку */  
         }    
     
-        .new-interface .content {      
-            margin-top: -2em !important; /* Збільшуємо підняття всього контенту */    
+        .new-interface-info__body {    
+            width: 80%;    
+            padding-top: 0.5em !important;    
         }    
     
-        .new-interface .card {      
-            margin-bottom: 0.3em !important; /* Зменшуємо відступ між картками */    
+        .new-interface-info__head {    
+            display: none !important;  
+            color: rgba(255, 255, 255, 0.6);    
+            margin-bottom: 0.5em;    
+            font-size: 1.3em;    
+            min-height: 0.5em;   
         }  
   
-        /* Піднімаємо рядки з картками */  
-        .new-interface .items-line {  
+          .new-interface-info__head span {    
+            color: #fff;    
+        }    
+    
+        .new-interface-info__title {    
+            font-size: 4em;    
+            font-weight: 600;  
+            margin-top: -0.5em !important;  
+            margin-bottom: 0.3em;    
+            overflow: hidden;    
+            -o-text-overflow: '.';    
+            text-overflow: '.';    
+            display: -webkit-box;    
+            -webkit-line-clamp: 1;    
+            line-clamp: 1;    
+            -webkit-box-orient: vertical;    
+            margin-left: -0.03em;    
+            line-height: 1.3;    
+        }    
+    
+        .new-interface-info__title img {    
+            max-height: 125px;    
+            margin-top: 5px;    
+        }    
+    
+        .new-interface-info__details {    
+            margin-bottom: 1.6em;    
+            display: flex;    
+            align-items: center;    
+            flex-wrap: wrap;    
+            min-height: 1.9em;    
+            font-size: 1.1em;    
+        }    
+    
+        .new-interface-info__split {    
+            margin: 0 1em;    
+            font-size: 0.7em;    
+        }    
+    
+        .new-interface-info__description {    
+            font-size: 1.2em;    
+            font-weight: 300;    
+            line-height: 1.5;    
+            overflow: hidden;    
+            -o-text-overflow: '.';    
+            text-overflow: '.';    
+            display: -webkit-box;    
+            -webkit-line-clamp: 4;    
+            line-clamp: 4;    
+            -webkit-box-orient: vertical;    
+            width: 70%;    
+        }    
+    
+        .new-interface .card-more__box {    
+            padding-bottom: 95%;    
+        }    
+    
+        .new-interface .full-start__background {    
+            height: 108%;    
+            top: -6em;    
+        }    
+    
+        .new-interface .full-start__rate {    
+            font-size: 1.3em;    
+            margin-right: 0;    
+        }    
+    
+        .new-interface .card__promo {    
+            display: none;    
+        }    
+  
+.new-interface .card.card--wide + .card-more .card-more__box {    
+            padding-bottom: 95%;    
+        }    
+    
+        .new-interface .card.card--wide .card-watched {    
+            display: none !important;    
+        }    
+    
+        .new-interface-card-title {    
+            margin-top: 0.4em !important; /* Зменшуємо відступ зверху */  
+            margin-bottom: 0.2em !important;  
+            font-size: 1.05em;    
+            font-weight: 500;    
+            color: #fff;    
+            display: block;    
+            text-align: left;    
+            max-width: 100%;    
+            overflow: hidden;    
+            text-overflow: ellipsis;    
+            white-space: nowrap;    
+            pointer-events: none;    
+        }    
+    
+        body.light--version .new-interface-card-title {    
+            color: #111;    
+        }    
+    
+        body.light--version .new-interface-info__body {    
+            width: 69%;    
+            padding-top: 1.5em;    
+        }    
+    
+        body.light--version .new-interface-info {    
+            height: 25.3em;    
+        }    
+    
+        body.advanced--animation:not(.no--animation) .new-interface .card.focus .card__view {    
+            animation: animation-card-focus 0.2s;    
+        }    
+    
+        body.advanced--animation:not(.no--animation) .new-interface .card.animate-trigger-enter .card__view {    
+            animation: animation-trigger-enter 0.2s forwards;    
+        }  
+  
+        /* Нові стилі для підняття рядків */  
+        .new-interface .scroll--mask {  
+            padding-top: 0 !important;  
+        }  
+  
+        .new-interface .content {  
             margin-top: -1em !important;  
         }  
   
-        /* Зменшуємо відступ між рядками */  
-        .new-interface .items-line + .items-line {  
-            margin-top: -0.5em !important;  
+        .new-interface .card {  
+            margin-bottom: 0.5em !important;  
         }  
-        </style>`);      
+        </style>`);    
     
-        $('body').append(Lampa.Template.get('new_interface_logo_styles', {}, true));      
+        $('body').append(Lampa.Template.get('new_interface_logo_styles', {}, true));    
     }
   
         /* Нові стилі для підняття рядків */  
