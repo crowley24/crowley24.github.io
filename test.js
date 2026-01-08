@@ -1,7 +1,6 @@
 (function () {  
   'use strict'  
     
-  // Зберігаємо налаштування джерел  
   var sourceSettings = Lampa.Storage.get('source_settings', {});  
     
   function start() {  
@@ -26,63 +25,68 @@
         return;  
       }  
   
-      var $sourceBtn = $('.simple-button--filter.filter--sort');  
-      if ($sourceBtn.length !== 1 || $sourceBtn.hasClass('hide')) {  
+      // Знаходимо всі кнопки джерел  
+      var $sourceButtons = $('.simple-button--filter.filter--sort');  
+      if ($sourceButtons.length === 0) {  
         return;  
       }  
   
-      var sourceText = $('div', $sourceBtn).text();  
-      var sourceKey = sourceText.toLowerCase().replace(/\s+/g, '_');  
-        
-      // Перевіряємо чи джерело не приховане  
-      if (sourceSettings[sourceKey] && sourceSettings[sourceKey].hidden) {  
-        return;  
-      }  
-        
-      // Використовуємо перейменовану назву якщо є  
-      var displayName = sourceSettings[sourceKey] && sourceSettings[sourceKey].name   
-        ? sourceSettings[sourceKey].name   
-        : sourceText;  
-  
-      var $selectBoxItem = Lampa.Template.get('selectbox_item', {  
-        title: Lampa.Lang.translate('settings_rest_source'),  
-        subtitle: displayName  
-      });  
-  
-      var longPressTimer;  
-      var isLongPress = false;  
-  
-      // Обробник короткого натискання  
-      $selectBoxItem.on('hover:enter', function () {  
-        if (!isLongPress) {  
-          $sourceBtn.trigger('hover:enter');  
+      // Створюємо пункти меню для кожного джерела  
+      $sourceButtons.each(function(index) {  
+        var $sourceBtn = $(this);  
+        var sourceText = $('div', $sourceBtn).text();  
+        var sourceKey = sourceText.toLowerCase().replace(/\s+/g, '_');  
+          
+        // Пропускаємо приховані джерела  
+        if (sourceSettings[sourceKey] && sourceSettings[sourceKey].hidden) {  
+          return;  
         }  
-        isLongPress = false;  
-      });  
+          
+        var displayName = sourceSettings[sourceKey] && sourceSettings[sourceKey].name   
+          ? sourceSettings[sourceKey].name   
+          : sourceText;  
   
-      // Обробник довгого натискання  
-      $selectBoxItem.on('hover:long', function () {  
-        isLongPress = true;  
-        showSourceMenu(sourceKey, sourceText, $selectBoxItem);  
-      });  
+        var $selectBoxItem = Lampa.Template.get('selectbox_item', {  
+          title: Lampa.Lang.translate('settings_rest_source') + ' ' + (index + 1),  
+          subtitle: displayName  
+        });  
   
-      // Реалізація довгого натискання через таймер  
-      $selectBoxItem.on('mouseenter', function () {  
-        longPressTimer = setTimeout(function () {  
-          $selectBoxItem.trigger('hover:long');  
-        }, 800); // 800ms для довгого натискання  
-      });  
+        var longPressTimer;  
+        var isLongPress = false;  
   
-      $selectBoxItem.on('mouseleave', function () {  
-        clearTimeout(longPressTimer);  
-      });  
+        // Коротке натискання - вибір джерела  
+        $selectBoxItem.on('hover:enter', function () {  
+          if (!isLongPress) {  
+            $sourceBtn.trigger('hover:enter');  
+          }  
+          isLongPress = false;  
+        });  
   
-      var $selectOptions = $('.selectbox-item');  
-      if ($selectOptions.length > 0) {  
-        $selectOptions.first().after($selectBoxItem);  
-      } else {  
-        $('body > .selectbox').find('.scroll__body').prepend($selectBoxItem);  
-      }  
+        // Довге натискання - меню налаштувань  
+        $selectBoxItem.on('hover:long', function () {  
+          isLongPress = true;  
+          showSourceMenu(sourceKey, sourceText, $selectBoxItem);  
+        });  
+  
+        // Реалізація довгого натискання  
+        $selectBoxItem.on('mouseenter', function () {  
+          longPressTimer = setTimeout(function () {  
+            $selectBoxItem.trigger('hover:long');  
+          }, 800);  
+        });  
+  
+        $selectBoxItem.on('mouseleave', function () {  
+          clearTimeout(longPressTimer);  
+        });  
+  
+        // Додаємо пункт до меню  
+        var $selectOptions = $('.selectbox-item');  
+        if ($selectOptions.length > 0) {  
+          $selectOptions.first().after($selectBoxItem);  
+        } else {  
+          $('body > .selectbox').find('.scroll__body').prepend($selectBoxItem);  
+        }  
+      });  
   
       Lampa.Controller.collectionSet($('body > .selectbox').find('.scroll__body'));  
       Lampa.Controller.collectionFocus($('.selectbox-item').first());  
@@ -120,9 +124,6 @@
         } else if (item.title === (Lampa.Lang.translate('settings_rest_source_reset') || 'Скинути все')) {  
           resetAllSources();  
         }  
-      },  
-      onBack: function () {  
-        // Повернення до попереднього меню  
       }  
     });  
   }  
@@ -143,7 +144,6 @@
         sourceSettings[sourceKey].name = newName.trim();  
         Lampa.Storage.set('source_settings', sourceSettings);  
           
-        // Оновлюємо відображення  
         $sourceItem.find('.selectbox-item__subtitle').text(newName.trim());  
         Lampa.Noty.show('Джерело перейменовано');  
       }  
@@ -171,7 +171,6 @@
     Lampa.Storage.set('source_settings', {});  
     sourceSettings = {};  
     Lampa.Noty.show('Усі налаштування джерел скинуто');  
-    // Перезавантажуємо поточний компонент для оновлення інтерфейсу  
     var active = Lampa.Activity.active();  
     if (active) {  
       Lampa.Activity.replace(active);  
