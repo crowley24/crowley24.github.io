@@ -50,9 +50,9 @@
 
 			if (!data.params) data.params = {};
 			if (!data.params.items) data.params.items = {};
-			data.params.items.view = 12;
-			data.params.items_per_row = 12;
-			data.items_per_row = 12;
+			data.params.items.view = count;
+			data.params.items_per_row = count;
+			data.items_per_row = count;
 
 			extendResultsWithStyle(data);
 		}
@@ -355,11 +355,11 @@
 
 		var state = getOrCreateState(items);
 
-		line.items_per_row = 12;
-		line.view = 12;
+		line.items_per_row = count;
+		line.view = count;
 		if (line.params) {
-			line.params.items_per_row = 12;
-			if (line.params.items) line.params.items.view = 12;
+			line.params.items_per_row = count;
+			if (line.params.items) line.params.items.view = count;
 		}
 
 		var processCard = function (card) {
