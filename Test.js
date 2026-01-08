@@ -7,75 +7,19 @@
         return;  
     }  
   
-    console.log('[Crowley Manager] Starting plugin...');  
+    console.log('[TEST Plugin] Starting...');  
   
-    // Список плагінів для керування  
-    const PLUGINS = [  
-        {  
-            name: 'NewLogo',  
-            url: 'https://crowley24.github.io/NewLogo.js',  
-            key: 'newlogo_enabled',  
-            title: 'NewLogo - Логотипи замість назв'  
-        },  
-        {  
-            name: 'MobStyle',  
-            url: 'https://crowley24.github.io/mob_style.js',  
-            key: 'mobstyle_enabled',  
-            title: 'MobStyle - Мобільний стиль'  
-        }  
-    ];  
-  
-    // Функція завантаження увімкнених плагінів  
-    function loadEnabledPlugins() {  
-        console.log('[Crowley Manager] Loading enabled plugins...');  
-        PLUGINS.forEach(plugin => {  
-            const isEnabled = Lampa.Storage.get(plugin.key, true);  
-            console.log(`[Crowley Manager] ${plugin.name}: ${isEnabled ? 'enabled' : 'disabled'}`);  
-            if (isEnabled) {  
-                Lampa.Utils.putScriptAsync([plugin.url], function() {  
-                    console.log(`[Crowley Manager] ${plugin.name} loaded`);  
-                });  
-            }  
-        });  
-    }  
-  
-    // Створення інтерфейсу налаштувань  
-    function createSettings() {  
-        const html = $('<div></div>');  
+    // Функція створення інтерфейсу налаштувань  
+    function createTestSettings() {  
+        const html = $('<div class="settings-test"></div>');  
           
         // Додаємо заголовок  
-        html.append('<div class="settings__title">Плагіни Crowley24</div>');  
+        html.append('<div class="settings__title">ТЕСТ РОЗДІЛ</div>');  
           
-        // Додаємо налаштування для кожного плагіна  
-        PLUGINS.forEach(plugin => {  
-            const isEnabled = Lampa.Storage.get(plugin.key, true);  
-              
-            const setting = $('<div class="settings-param selector">' +  
-                '<div class="settings-param__name">' + plugin.title + '</div>' +  
-                '<div class="settings-param__value">' + (isEnabled ? 'Увімкнено' : 'Вимкнено') + '</div>' +  
-                '</div>');  
-              
-            setting.on('hover:enter', function() {  
-                const newState = !Lampa.Storage.get(plugin.key, true);  
-                Lampa.Storage.set(plugin.key, newState);  
-                setting.find('.settings-param__value').text(newState ? 'Увімкнено' : 'Вимкнено');  
-            });  
-              
-            html.append(setting);  
-        });  
-          
-        // Додаємо кнопку перезавантаження  
-        const reloadBtn = $('<div class="settings-param selector">' +  
-            '<div class="settings-param__name">Перезавантажити додаток</div>' +  
-            '<div class="settings-param__value">Застосувати зміни</div>' +  
-            '</div>');  
-          
-        reloadBtn.on('hover:enter', function() {  
-            window.location.reload();  
-        });  
-          
-        html.append(reloadBtn);  
-          
+        // Додаємо тестовий контент  
+        html.append('<div style="padding: 2em;">Це тестовий розділ налаштувань</div>');  
+        html.append('<div style="padding: 1em;">Плагін працює коректно!</div>');  
+  
         return {  
             render: function(container) {  
                 container.empty().append(html);  
@@ -88,39 +32,40 @@
   
     // Ініціалізація налаштувань  
     function initSettings() {  
-        console.log('[Crowley Manager] Initializing settings...');  
-          
-        // Додаємо параметр в головне меню налаштувань  
-        if (Lampa.SettingsApi && typeof Lampa.SettingsApi.addParam === 'function') {  
-            Lampa.SettingsApi.addParam({  
-                component: 'plugins',  
-                param: {  
-                    name: 'crowley_plugins',  
-                    type: 'trigger',  
-                    default: true  
-                },  
-                field: {  
-                    name: 'Плагіни Crowley24',  
-                    description: 'Керування завантаженням плагінів'  
+        try {  
+            // Додаємо параметр в налаштування  
+            if (Lampa.SettingsApi && typeof Lampa.SettingsApi.addParam === 'function') {  
+                Lampa.SettingsApi.addParam({  
+                    component: 'test',  
+                    param: {  
+                        name: 'test_section',  
+                        type: 'static'  
+                    },  
+                    field: {  
+                        name: 'ТЕСТ',  
+                        description: 'Тестовий розділ для перевірки'  
+                    }  
+                });  
+  
+                console.log('[TEST Plugin] Settings parameter added');  
+            }  
+  
+            // Обробник відкриття налаштувань  
+            Lampa.Listener.follow('settings', function(e) {  
+                if (e.type === 'open' && e.name === 'test') {  
+                    console.log('[TEST Plugin] Opening test settings');  
+                    createTestSettings().render(Lampa.Utils.html('.settings-body'));  
                 }  
             });  
-              
-            console.log('[Crowley Manager] Settings param added');  
+  
+            console.log('[TEST Plugin] Settings initialized');  
+        } catch (e) {  
+            console.error('[TEST Plugin] Error initializing settings:', e);  
         }  
-  
-        // Реєструємо обробник для відкриття налаштувань  
-        Lampa.Listener.follow('settings', function(e){  
-            if(e.type === 'open' && e.name === 'crowley_plugins'){  
-                console.log('[Crowley Manager] Opening settings...');  
-                createSettings().render(Lampa.Utils.html('.settings-body'));  
-            }  
-        });  
-  
-        console.log('[Crowley Manager] Settings initialized');  
     }  
   
     // Запуск  
     initSettings();  
-    loadEnabledPlugins();  
+    console.log('[TEST Plugin] Plugin loaded successfully');  
   
 })();
