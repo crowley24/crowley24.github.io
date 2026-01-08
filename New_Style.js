@@ -800,49 +800,46 @@ swapContent(container, newNode) {
     }  
   
     function attachLineHandlers(main, line, element) {  
-        if (line.__newInterfaceLine) return;  
-        line.__newInterfaceLine = true;  
+    if (line.__newInterfaceLine) return;  
+    line.__newInterfaceLine = true;  
   
-        const state = ensureState(main);  
-        const applyToCard = (card) => decorateCard(state, card);  
+    const state = ensureState(main);  
+    const applyToCard = (card) => decorateCard(state, card);  
   
-        if (element && Array.isArray(element.results)) {  
-            element.results.slice(0, 5).forEach((item) => {  
-                state.info.load(item, { preload: true });  
-            });  
-        }  
+    if (element && Array.isArray(element.results)) {  
+        element.results.slice(0, 5).forEach((item) => {  
+            state.info.load(item, { preload: true });  
+        });  
+    }  
   
-        line.use({  
-            onInstance(card) {  
-                applyToCard(card);  
-            },  
-            onActive(card, itemData) {  // ВСТАВИТИ ОСЬ ЦЕЙ ОБРОБНИК  
+    line.use({  
+        onInstance(card) {  
+            applyToCard(card);  
+        },  
+        onActive(card, itemData) {  
             const current = getCardData(card, itemData);  
             if (current) {  
                 current.__priority = 1; // Високий пріоритет для активної картки  
                 state.update(current);  
                   
-                // Завантажити логотипи для сусідніх карток  
-                const index = items.indexOf(card);  
-                if (index > 0) items[index-1].data.__priority = 0.5;  
-                if (index < items.length-1) items[index+1].data.__priority = 0.5;  
+                // ВИДАЛЕНО: Спроба завантажити сусідні картки (викликало помилку)  
             }  
-        },    
-            onToggle() {  
-                setTimeout(() => {  
-                    const domData = getFocusedCardData(line);  
-                    if (domData) state.update(domData);  
-                }, 32);  
-            },  
-            onMore() {  
-                state.reset();  
-            },  
-            onDestroy() {  
-                state.reset();  
-                delete line.__newInterfaceLine;  
-            }  
-        });  
-  
+        },  
+        onToggle() {  
+            setTimeout(() => {  
+                const domData = getFocusedCardData(line);  
+                if (domData) state.update(domData);  
+            }, 32);  
+        },  
+        onMore() {  
+            state.reset();  
+        },  
+        onDestroy() {  
+            state.reset();  
+            delete line.__newInterfaceLine;  
+        }  
+    });  
+}
         if (Array.isArray(line.items) && line.items.length) {  
             line.items.forEach(applyToCard);  
         }  
