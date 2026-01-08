@@ -859,8 +859,8 @@
 }  
 /* Застосовуємо розміри карточок для всіх пристроїв, включаючи Smart TV */  
 .new-interface{  
-    --ni-card-w: clamp(55px, 3.8vw, 90px); /* Зменшено з 65px, 4.5vw, 110px */  
-} 
+    --ni-card-w: clamp(45px, 3.2vw, 75px); /* Зменшено з 55px, 3.8vw, 90px */  
+}
   
 /* Розмір карточок і плитки "Ще" - тепер для всіх пристроїв */  
 .new-interface .card--small,  
@@ -1035,9 +1035,9 @@ body.light--version .new-interface-info__body{
     .new-interface{  
         --ni-info-h: clamp(13em, 30vh, 20em);  
     }  
-        .new-interface{  
-        --ni-card-w: clamp(90px, 6vw, 130px); /* Зменшено з 110px, 7.2vw, 160px */  
-    }   
+.new-interface{  
+        --ni-card-w: clamp(75px, 5vw, 110px); /* Зменшено з 90px, 6vw, 130px */  
+    }  
   
     .new-interface-info__right{  
         padding-top: clamp(0.15em, 1.8vh, 1.2em);  
@@ -1540,7 +1540,7 @@ create() {
 }  
 /* Застосовуємо розміри карточок для всіх пристроїв, включаючи Smart TV */  
 .new-interface{  
-    --ni-card-w: clamp(55px, 3.8vw, 90px); /* Зменшено з 65px, 4.5vw, 110px */  
+    --ni-card-w: clamp(45px, 3.2vw, 75px); /* Зменшено з 55px, 3.8vw, 90px */  
 }
   
 /* Розмір карточок і плитки "Ще" - тепер для всіх пристроїв */  
@@ -1709,8 +1709,8 @@ body.light--version .new-interface-info__body{
     .new-interface{  
         --ni-info-h: clamp(13em, 30vh, 20em);  
     }  
-   .new-interface{  
-        --ni-card-w: clamp(90px, 6vw, 130px); /* Зменшено з 110px, 7.2vw, 160px */  
+  .new-interface{  
+        --ni-card-w: clamp(75px, 5vw, 110px); /* Зменшено з 90px, 6vw, 130px */  
     }  
   
     .new-interface-info__right{  
