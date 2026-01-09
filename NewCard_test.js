@@ -783,7 +783,7 @@ body.applecation--ratings-corner:not(.applecation--hide-reactions) .applecation_
     pointer-events: none;
 }
 
-/* Фон - переопределяем стандартную анимацию на fade */
+/* 1. Стиль для фону (лише картинка) */
 .full-start__background {
     height: calc(100% + 6em);
     left: 0 !important;
@@ -792,61 +792,52 @@ body.applecation--ratings-corner:not(.applecation--hide-reactions) .applecation_
     animation: none !important;
     transform: none !important;
     will-change: opacity, filter;
-    position: absolute; /* Змінено на absolute для коректного позиціонування */
-    width: 100%;
-    z-index: 0; /* Фон завжди внизу */
+    z-index: 0 !important; /* Найнижчий шар */
 }
 
-/* Ефект градієнтного затемнення лівої частини */
-.full-start__background::after {
+/* 2. Створюємо НОВИЙ шар затемнення, який не залежить від фону */
+.full-start__details::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    /* Затемнення зліва направо */
+    top: -100px; /* Перекриваємо з запасом зверху */
+    left: -100px; /* Перекриваємо з запасом зліва */
+    width: 150%;  /* Широкий градієнт */
+    height: 150%;
+    /* Ті самі кольори Apple TV: чорний -> прозорий */
     background: linear-gradient(90deg, 
-        rgba(0, 0, 0, 0.95) 0%, 
-        rgba(0, 0, 0, 0.6) 35%, 
-        rgba(0, 0, 0, 0) 80%
+        rgba(0, 0, 0, 1) 0%, 
+        rgba(0, 0, 0, 0.8) 25%, 
+        rgba(0, 0, 0, 0.4) 50%, 
+        rgba(0, 0, 0, 0) 100%
     );
-    z-index: 1; /* Градієнт над картинкою, але під текстом */
-    pointer-events: none; /* Щоб не блокував натискання на кнопки */
+    z-index: -1; /* Він буде під текстом деталей, але над фоном */
+    pointer-events: none;
 }
 
-/* Щоб інформація була НАД фоном і градієнтом */
+/* 3. Гарантуємо, що контент (логотип, текст) буде зверху */
 .applecation__logo, 
 .applecation__meta, 
 .applecation__info, 
 .applecation__description, 
-.applecation__ratings,
-.full-start__details {
+.applecation__ratings {
     position: relative;
-    z-index: 10 !important; /* Виштовхуємо контент на передній план */
+    z-index: 2;
 }
 
+/* Стандартні стани завантаження */
 .full-start__background.loaded:not(.dim) {
     opacity: 1 !important;
 }
 
-/* ЗМІНЕНО: Замість блюру — затемнення */
 .full-start__background.dim {
-    filter: brightness(0.3); 
+    filter: brightness(0.3);
 }
 
 .full-start__background.loaded.applecation-animated {
     opacity: 1 !important;
 }
 
-body:not(.menu--open) .full-start__background {
-    mask-image: none;
-}
-
-body.advanced--animation:not(.no--animation) .full-start__background.loaded {
-    animation: none !important;
-}
-
+/* Приховуємо зайві елементи */
 .applecation .full-start__status {
     display: none;
 }
