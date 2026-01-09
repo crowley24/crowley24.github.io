@@ -1222,20 +1222,27 @@ function initializePlugin() {
         type: 'other',
         version: '1.0.0',
         name: 'NewCard',
-        description: 'Новий дизайн картки фільму/серіалу.',
-        author: '',
-        icon: '<svg ...></svg>' // Тут має бути ваш PLUGIN_ICON
+        description: 'Новий дизайн картки',
+        icon: '<svg>...</svg>' // замініть на вашу іконку
     };
 
-    if (Lampa.Manifest && Lampa.Manifest.plugins) {
+    function initializePlugin() {
+        console.log('NewCard: Initialization started...');
+        if (typeof addStyles === 'function') addStyles();
+        if (typeof patchApiImg === 'function') patchApiImg();
+        if (typeof attachLogoLoader === 'function') attachLogoLoader();
+    }
+
+    // Реєструємо маніфест
+    if (window.Lampa && Lampa.Manifest) {
         Lampa.Manifest.plugins = pluginManifest;
     }
 
-    // 3. Єдиний блок запуску (без дублів)
+    // Запуск
     if (window.appready) {
         initializePlugin();
     } else {
-        Lampa.Listener.follow('app', (event) => {
+        Lampa.Listener.follow('app', function (event) {
             if (event.type === 'ready') {
                 initializePlugin();
             }
