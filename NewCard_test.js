@@ -487,366 +487,366 @@ const translations = {
         }
     }
     
-  function addStyles() {  
-    const styles = `<style>  
-/* Основной контейнер */  
-.applecation {  
-    transition: all .3s;  
-}  
-  
-.applecation .full-start-new__body {  
-    height: 80vh;  
-}  
-  
-.applecation .full-start-new__right {  
-    display: flex;  
-    align-items: flex-end;  
-}  
-  
-.applecation .full-start-new__title {  
-    font-size: 2.5em;  
-    font-weight: 700;  
-    line-height: 1.2;  
-    margin-bottom: 0.5em;  
-    text-shadow: 0 0 .1em rgba(0, 0, 0, 0.3);  
-}  
-  
-/* Логотип */  
-.applecation__logo {  
-    margin-bottom: 0.5em;  
-    opacity: 0;  
-    transform: translateY(20px);  
-    transition: opacity 0.4s ease-out, transform 0.4s ease-out;  
-}  
-  
-.applecation__logo.loaded {  
-    opacity: 1;  
-    transform: translateY(0);  
-}  
-  
-.applecation__logo img {  
-    display: block;  
-    max-width: 35vw;  
-    width: auto;  
-    height: auto;  
-    object-fit: contain;  
-    object-position: left center;  
-      
-    /* Дефолтный (Средний) размер */  
-    max-height: 180px;   
-}  
-  
-/* Стилизация размера логотипа */  
-body.applecation--logo-small .applecation__logo img {  
-    max-height: 120px;  
-    max-width: 25vw;  
-}  
-  
-body.applecation--logo-large .applecation__logo img {  
-    max-height: 250px;  
-    max-width: 45vw;  
-}  
-  
-/* Мета информация (Тип/Жанр/поджанр) */  
-.applecation__meta {  
-    display: flex;  
-    align-items: center;  
-    color: #fff;  
-    font-size: 1.1em;  
-    margin-bottom: 0.5em;  
-    line-height: 1;  
-    opacity: 0;  
-    transform: translateY(15px);  
-    transition: opacity 0.4s ease-out, transform 0.4s ease-out;  
-    transition-delay: 0.05s;  
-}  
-  
-.applecation__meta.show {  
-    opacity: 1;  
-    transform: translateY(0);  
-}  
-  
-.applecation__meta-left {  
-    display: flex;  
-    align-items: center;  
-    line-height: 1;  
-}  
-  
-.applecation__network {  
-    display: inline-flex;  
-    align-items: center;  
-    line-height: 1;  
-}  
-  
-.applecation__network img {  
-    display: block;  
-    max-height: 1.4em;  
-    width: auto;  
-    object-fit: contain;  
-    filter: brightness(0) invert(1);  
-}  
-  
-.applecation__meta-text {  
-    margin-left: 1em;  
-    line-height: 1;  
-}  
-  
-.applecation__meta .full-start__pg {  
-    margin: 0 0 0 0.6em;  
-    padding: 0.2em 0.5em;  
-    font-size: 0.85em;  
-    font-weight: 600;  
-    border: 1.5px solid rgba(255, 255, 255, 0.4);  
-    border-radius: 0.3em;  
-    background: rgba(255, 255, 255, 0.1);  
-    color: rgba(255, 255, 255, 0.9);  
-    line-height: 1;  
-    vertical-align: middle;  
-}  
-  
-/* Рейтинги */  
-.applecation__ratings {  
-    display: flex;  
-    align-items: center;  
-    gap: 0.8em;  
-    margin-bottom: 0.5em;  
-    opacity: 0;  
-    transform: translateY(15px);  
-    transition: opacity 0.4s ease-out, transform 0.4s ease-out;  
-    transition-delay: 0.08s;  
-}  
-  
-.applecation__ratings.show {  
-    opacity: 1;  
-    transform: translateY(0);  
-}  
-  
-.applecation__ratings .rate--imdb,  
-.applecation__ratings .rate--kp {  
-    display: flex;  
-    align-items: center;  
-    gap: 0.35em;  
-}  
-  
-.applecation__ratings svg {  
-    width: 2.5em;  
-    height: auto;  
-    flex-shrink: 0;  
-    color: rgba(255, 255, 255, 0.85);  
-}  
-  
-.applecation__ratings .rate--kp svg {  
-    width: 1.5em;  
-}  
-  
-.applecation__ratings > div > div {  
-    font-size: 0.95em;  
-    font-weight: 600;  
-    line-height: 1;  
-    color: #fff;  
-}  
-  
-/* Управление видимостью рейтингов через настройки */  
-body.applecation--hide-ratings .applecation__ratings {  
-    display: none !important;  
-}  
-  
-/* Скрытие реакций через настройки */  
-body.applecation--hide-reactions .full-start-new__reactions {  
-    display: none !important;  
-}  
-  
-/* Расположение рейтингов - в левом нижнем углу */  
-body.applecation--ratings-corner .applecation__right {  
-    gap: 1em;  
-}  
-  
-body.applecation--ratings-corner .applecation__ratings {  
-    margin-bottom: 0;  
-}  
-  
-/* Описание */  
-.applecation__description {  
-    color: rgba(255, 255, 255, 0.6);  
-    font-size: 0.95em;  
-    line-height: 1.5;  
-    margin-bottom: 0.5em;  
-    max-width: 35vw;  
-    display: -webkit-box;  
-    -webkit-line-clamp: 4;  
-    -webkit-box-orient: vertical;  
-    overflow: hidden;  
-    text-overflow: ellipsis;  
-    opacity: 0;  
-    transform: translateY(15px);  
-    transition: opacity 0.4s ease-out, transform 0.4s ease-out;  
-    transition-delay: 0.1s;  
-}  
-  
-.applecation__description.show {  
-    opacity: 1;  
-    transform: translateY(0);  
-}  
-  
-/* Дополнительная информация (Год/длительность) */  
-.applecation__info {  
-    color: rgba(255, 255, 255, 0.75);  
-    font-size: 1em;  
-    line-height: 1.4;  
-    margin-bottom: 0.5em;  
-    opacity: 0;  
-    transform: translateY(15px);  
-    transition: opacity 0.4s ease-out, transform 0.4s ease-out;  
-    transition-delay: 0.15s;  
-}  
-  
-.applecation__info.show {  
-    opacity: 1;  
-    transform: translateY(0);  
-}  
-  
-/* Левая и правая части */  
-.applecation__left {  
-    flex-grow: 1;  
-}  
-  
-.applecation__right {  
-    display: flex;  
-    align-items: flex-end;  
-    flex-shrink: 0;  
-    position: relative;  
-}  
-  
-/* Выравнивание по baseline только если реакции видны и рейтинги в углу */  
-body.applecation--ratings-corner:not(.applecation--hide-reactions) .applecation__right {  
-    align-items: last baseline;  
-}  
-  
-/* Реакции */  
-.applecation .full-start-new__reactions {  
-    margin: 0;  
-    display: flex;  
-    flex-direction: column-reverse;  
-    align-items: flex-end;  
-}  
-  
-.applecation .full-start-new__reactions > div {  
-    align-self: flex-end;  
-}  
-  
-.applecation .full-start-new__reactions:not(.focus) {  
-    margin: 0;  
-}  
-  
-.applecation .full-start-new__reactions:not(.focus) > div:not(:first-child) {  
-    display: none;  
-}  
-  
-/* Стили первой реакции (всегда видимой) */  
-.applecation .full-start-new__reactions > div:first-child .reaction {  
-    display: flex !important;  
-    align-items: center !important;  
-    background-color: rgba(0, 0, 0, 0) !important;  
-    gap: 0 !important;  
-}  
-  
-.applecation .full-start-new__reactions > div:first-child .reaction__icon {  
-    background-color: rgba(0, 0, 0, 0.3) !important;  
-    -webkit-border-radius: 5em;  
-    -moz-border-radius: 5em;  
-    border-radius: 5em;  
-    padding: 0.5em;  
-    width: 2.6em !important;  
-    height: 2.6em !important;  
-}  
-  
-.applecation .full-start-new__reactions > div:first-child .reaction__count {  
-    font-size: 1.2em !important;  
-    font-weight: 500 !important;  
-}  
-  
-/* При фокусе реакции раскрываются вверх */  
-.applecation .full-start-new__reactions.focus {  
-    gap: 0.5em;  
-}  
-  
-.applecation .full-start-new__reactions.focus > div {  
-    display: block;  
-}  
-  
-/* Скрываем стандартный rate-line (используется только для статуса) */  
-.applecation .full-start-new__rate-line {  
-    margin: 0;  
-    height: 0;  
-    overflow: hidden;  
-    opacity: 0;  
-    pointer-events: none;  
-}  
-  
-/* Фон - переопределяем стандартную анимацию на fade */  
-.full-start__background {  
-    height: calc(100% + 6em);  
-    left: 0 !important;  
-    opacity: 0 !important;  
-    transition: opacity 0.6s ease-out, filter 0.3s ease-out !important;  
-    animation: none !important;  
-    transform: none !important;  
-    will-change: opacity, filter;  
-    position: relative !important; /* Важливо для ::after */  
-}  
-  
-.full-start__background.loaded:not(.dim) {  
-    opacity: 1 !important;  
-}  
-  
-/* Створюємо градієнтний оверлей як в оригінальній Lampa */  
-.full-start__background::after {  
-    content: '';  
-    position: absolute;  
-    top: 0;  
-    left: 0;  
-    right: 0;  
-    bottom: 0;  
-    background: linear-gradient(  
-        to right,  
-        rgba(0, 0, 0, 0.8) 0%,  
-        rgba(0, 0, 0, 0.6) 30%,  
-        rgba(0, 0, 0, 0.3) 60%,  
-        rgba(0, 0, 0, 0.1) 100%  
-    );  
-    pointer-events: none;  
-    z-index: 1;  
-}  
-  
-/* Зберігаємо затемнення фону */  
-.full-start__background.dim {  
-    filter: brightness(0.4);  
-} 
-  
-/* Удерживаем opacity при загрузке нового фона */  
-.full-start__background.loaded.applecation-animated {  
-    opacity: 1 !important;  
-}  
-  
-body:not(.menu--open) .full-start__background {  
-    mask-image: none;  
-}  
-  
-/* Отключаем стандартную анимацию Lampa для фона */  
-body.advanced--animation:not(.no--animation) .full-start__background.loaded {  
-    animation: none !important;  
-}  
-  
-/* Скрываем статус для предотвращения выхода реакций за экран */  
-.applecation .full-start__status {  
-    display: none;  
-}  
-  
-/* ВИДАЛЕНО: applecation__overlay - тепер його немає */  
-</style>`;  
-          
-        Lampa.Template.add('applecation_css', styles);  
-        $('body').append(Lampa.Template.get('applecation_css', {}, true));  
+    function addStyles() {
+        const styles = `<style>
+/* Основной контейнер */
+.applecation {
+    transition: all .3s;
+}
+
+.applecation .full-start-new__body {
+    height: 80vh;
+}
+
+.applecation .full-start-new__right {
+    display: flex;
+    align-items: flex-end;
+}
+
+.applecation .full-start-new__title {
+    font-size: 2.5em;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 0.5em;
+    text-shadow: 0 0 .1em rgba(0, 0, 0, 0.3);
+}
+
+/* Логотип */
+.applecation__logo {
+    margin-bottom: 0.5em;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+}
+
+.applecation__logo.loaded {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.applecation__logo img {
+    display: block;
+    max-width: 35vw;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    object-position: left center;
+    
+    /* Дефолтный (Средний) размер */
+    max-height: 180px; 
+}
+
+/* Стилизация размера логотипа */
+body.applecation--logo-small .applecation__logo img {
+    max-height: 120px;
+    max-width: 25vw;
+}
+
+body.applecation--logo-large .applecation__logo img {
+    max-height: 250px;
+    max-width: 45vw;
+}
+
+/* Мета информация (Тип/Жанр/поджанр) */
+.applecation__meta {
+    display: flex;
+    align-items: center;
+    color: #fff;
+    font-size: 1.1em;
+    margin-bottom: 0.5em;
+    line-height: 1;
+    opacity: 0;
+    transform: translateY(15px);
+    transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+    transition-delay: 0.05s;
+}
+
+.applecation__meta.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.applecation__meta-left {
+    display: flex;
+    align-items: center;
+    line-height: 1;
+}
+
+.applecation__network {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+}
+
+.applecation__network img {
+    display: block;
+    max-height: 1.4em;
+    width: auto;
+    object-fit: contain;
+    filter: brightness(0) invert(1);
+}
+
+.applecation__meta-text {
+    margin-left: 1em;
+    line-height: 1;
+}
+
+.applecation__meta .full-start__pg {
+    margin: 0 0 0 0.6em;
+    padding: 0.2em 0.5em;
+    font-size: 0.85em;
+    font-weight: 600;
+    border: 1.5px solid rgba(255, 255, 255, 0.4);
+    border-radius: 0.3em;
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1;
+    vertical-align: middle;
+}
+
+/* Рейтинги */
+.applecation__ratings {
+    display: flex;
+    align-items: center;
+    gap: 0.8em;
+    margin-bottom: 0.5em;
+    opacity: 0;
+    transform: translateY(15px);
+    transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+    transition-delay: 0.08s;
+}
+
+.applecation__ratings.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.applecation__ratings .rate--imdb,
+.applecation__ratings .rate--kp {
+    display: flex;
+    align-items: center;
+    gap: 0.35em;
+}
+
+.applecation__ratings svg {
+    width: 2.5em;
+    height: auto;
+    flex-shrink: 0;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.applecation__ratings .rate--kp svg {
+    width: 1.5em;
+}
+
+.applecation__ratings > div > div {
+    font-size: 0.95em;
+    font-weight: 600;
+    line-height: 1;
+    color: #fff;
+}
+
+/* Управление видимостью рейтингов через настройки */
+body.applecation--hide-ratings .applecation__ratings {
+    display: none !important;
+}
+
+/* Скрытие реакций через настройки */
+body.applecation--hide-reactions .full-start-new__reactions {
+    display: none !important;
+}
+
+/* Расположение рейтингов - в левом нижнем углу */
+body.applecation--ratings-corner .applecation__right {
+    gap: 1em;
+}
+
+body.applecation--ratings-corner .applecation__ratings {
+    margin-bottom: 0;
+}
+
+/* Описание */
+.applecation__description {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.95em;
+    line-height: 1.5;
+    margin-bottom: 0.5em;
+    max-width: 35vw;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0;
+    transform: translateY(15px);
+    transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+    transition-delay: 0.1s;
+}
+
+.applecation__description.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Дополнительная информация (Год/длительность) */
+.applecation__info {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 1em;
+    line-height: 1.4;
+    margin-bottom: 0.5em;
+    opacity: 0;
+    transform: translateY(15px);
+    transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+    transition-delay: 0.15s;
+}
+
+.applecation__info.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Левая и правая части */
+.applecation__left {
+    flex-grow: 1;
+}
+
+.applecation__right {
+    display: flex;
+    align-items: flex-end;
+    flex-shrink: 0;
+    position: relative;
+}
+
+/* Выравнивание по baseline только если реакции видны и рейтинги в углу */
+body.applecation--ratings-corner:not(.applecation--hide-reactions) .applecation__right {
+    align-items: last baseline;
+}
+
+/* Реакции */
+.applecation .full-start-new__reactions {
+    margin: 0;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: flex-end;
+}
+
+.applecation .full-start-new__reactions > div {
+    align-self: flex-end;
+}
+
+.applecation .full-start-new__reactions:not(.focus) {
+    margin: 0;
+}
+
+.applecation .full-start-new__reactions:not(.focus) > div:not(:first-child) {
+    display: none;
+}
+
+/* Стили первой реакции (всегда видимой) */
+.applecation .full-start-new__reactions > div:first-child .reaction {
+    display: flex !important;
+    align-items: center !important;
+    background-color: rgba(0, 0, 0, 0) !important;
+    gap: 0 !important;
+}
+
+.applecation .full-start-new__reactions > div:first-child .reaction__icon {
+    background-color: rgba(0, 0, 0, 0.3) !important;
+    -webkit-border-radius: 5em;
+    -moz-border-radius: 5em;
+    border-radius: 5em;
+    padding: 0.5em;
+    width: 2.6em !important;
+    height: 2.6em !important;
+}
+
+.applecation .full-start-new__reactions > div:first-child .reaction__count {
+    font-size: 1.2em !important;
+    font-weight: 500 !important;
+}
+
+/* При фокусе реакции раскрываются вверх */
+.applecation .full-start-new__reactions.focus {
+    gap: 0.5em;
+}
+
+.applecation .full-start-new__reactions.focus > div {
+    display: block;
+}
+
+/* Скрываем стандартный rate-line (используется только для статуса) */
+.applecation .full-start-new__rate-line {
+    margin: 0;
+    height: 0;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Фон - переопределяем стандартную анимацию на fade */
+.full-start__background {
+    height: calc(100% + 6em);
+    left: 0 !important;
+    opacity: 0 !important;
+    transition: opacity 0.6s ease-out, filter 0.3s ease-out !important;
+    animation: none !important;
+    transform: none !important;
+    will-change: opacity, filter;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Ефект градієнтного затемнення лівої частини (Apple TV style) */
+.full-start__background::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* Затемнення: зліва направо (від чорного до прозорого) */
+    background: linear-gradient(90deg, 
+        rgba(0, 0, 0, 1) 0%, 
+        rgba(0, 0, 0, 0.8) 20%, 
+        rgba(0, 0, 0, 0.4) 40%, 
+        rgba(0, 0, 0, 0) 80%
+    );
+    z-index: 1;
+}
+
+.full-start__background.loaded:not(.dim) {
+    opacity: 1 !important;
+}
+
+/* ЗМІНЕНО: Замість блюру — затемнення, як в оригінальній Lampa */
+.full-start__background.dim {
+    filter: brightness(0.35); /* Загальне затемнення фону при відкритті меню */
+}
+
+/* Удерживаем opacity при загрузке нового фона */
+.full-start__background.loaded.applecation-animated {
+    opacity: 1 !important;
+}
+
+body:not(.menu--open) .full-start__background {
+    mask-image: none;
+}
+
+/* Отключаем стандартную анимацию Lampa для фона */
+body.advanced--animation:not(.no--animation) .full-start__background.loaded {
+    animation: none !important;
+}
+
+/* Скрываем статус для предотвращения выхода реакций за экран */
+.applecation .full-start__status {
+    display: none;
+}
+
+/* ВИДАЛЕНО: applecation__overlay - тепер його немає, ми замінили його на ::after */
+</style>`;
+        
+        Lampa.Template.add('applecation_css', styles);
+        $('body').append(Lampa.Template.get('applecation_css', {}, true));
     }
 
     // Патчим Api.img для улучшенного качества фона
