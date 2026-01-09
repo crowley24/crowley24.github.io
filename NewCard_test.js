@@ -786,13 +786,17 @@ body.applecation--ratings-corner:not(.applecation--hide-reactions) .applecation_
     pointer-events: none;
 }
 
-/* Анімація плаваючого зуму (Ken Burns) */
+/* Анімація Ken Burns (лише якщо клас додано через налаштування) */
 @keyframes kenBurns {
     0% { transform: scale(1.0); }
     50% { transform: scale(1.1); }
     100% { transform: scale(1.0); }
 }
 
+/* Анімація спрацює тільки якщо у body є клас .applecation--zoom */
+body.applecation--zoom .full-start__background.loaded:not(.dim) {
+    animation: kenBurns 40s linear infinite !important;
+}
 /* 1. Стиль для фону з підтримкою анімації */
 .full-start__background {
     height: calc(100% + 6em);
