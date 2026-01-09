@@ -1,8 +1,7 @@
 (function () {
     'use strict';
 
-function initializePlugin() {
-    // 1. Спочатку завантажуємо бібліотеку кольорів
+    // 1. Спочатку завантажуємо бібліотеку кольорів (Vibrant)
     if (typeof Vibrant === 'undefined') {
         $('<script>')
             .attr('src', 'https://cdnjs.cloudflare.com/ajax/libs/node-vibrant/3.1.6/vibrant.min.js')
@@ -10,10 +9,33 @@ function initializePlugin() {
     }
 
     // Іконка плагіна (Фрагмент кіноплівки - NewCard)
-const PLUGIN_ICON = '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#333"><rect x="5" y="30" width="90" height="40" rx="5" fill="hsl(0, 0%, 30%)"/><rect x="8" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="18" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="28" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="38" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="48" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="58" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="68" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="78" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="8" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="18" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="28" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="38" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="48" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="58" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="68" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="78" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="15" y="40" width="20" height="20" fill="hsl(200, 80%, 70%)"/><rect x="40" y="40" width="20" height="20" fill="hsl(200, 80%, 80%)"/><rect x="65" y="40" width="20" height="20" fill="hsl(200, 80%, 70%)"/></svg>';
-    
-    // Головна функція плагіна
-    function initializePlugin() {
+    const PLUGIN_ICON = '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#333"><rect x="5" y="30" width="90" height="40" rx="5" fill="hsl(0, 0%, 30%)"/><rect x="8" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="18" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="28" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="38" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="48" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="58" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="68" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="78" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="8" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="18" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="28" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="38" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="48" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="58" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="68" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="78" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="15" y="40" width="20" height="20" fill="hsl(200, 80%, 70%)"/><rect x="40" y="40" width="20" height="20" fill="hsl(200, 80%, 80%)"/><rect x="65" y="40" width="20" height="20" fill="hsl(200, 80%, 70%)"/></svg>';
+
+    // Переклади для налаштувань (лише українська)
+    const translations = {
+        show_ratings: { uk: 'Показувати рейтинги' },
+        show_ratings_desc: { uk: 'Відображати рейтинги IMDB та КіноПошук' },
+        ratings_position: { uk: 'Розташування рейтингів' },
+        ratings_position_desc: { uk: 'Виберіть де відображати рейтинги' },
+        position_card: { uk: 'У картці' },
+        position_corner: { uk: 'У лівому нижньому куті' },
+        logo_scale: { uk: 'Розмір логотипу' },
+        logo_scale_desc: { uk: 'Масштаб логотипу фільму' },
+        text_scale: { uk: 'Розмір тексту' },
+        text_scale_desc: { uk: 'Масштаб тексту даних про фільм' },
+        scale_default: { uk: 'За замовчуванням' },
+        spacing_scale: { uk: 'Відступи між рядками' },
+        spacing_scale_desc: { uk: 'Відстань між елементами інформації' },
+        settings_title_display: { uk: 'Відображення' },
+        settings_title_scaling: { uk: 'Масштабування' }
+    };
+
+    function t(key) {
+        return translations[key]?.['uk'] || '???';
+    }
+
+    // Головна функція ініціалізації
+    function startPlugin() {
         console.log('NewCard', 'v1.0.0');
         
         if (!Lampa.Platform.screen('tv')) {
@@ -28,74 +50,14 @@ const PLUGIN_ICON = '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/sv
         attachLogoLoader();
     }
 
-    // Переклади для налаштувань (лише українська)
-const translations = {
-        show_ratings: {
-            uk: 'Показувати рейтинги'
-        },
-        show_ratings_desc: {
-            uk: 'Відображати рейтинги IMDB та КіноПошук'
-        },
-        ratings_position: {
-            uk: 'Розташування рейтингів'
-        },
-        ratings_position_desc: {
-            uk: 'Виберіть де відображати рейтинги'
-        },
-        position_card: {
-            uk: 'У картці'
-        },
-        position_corner: {
-            uk: 'У лівому нижньому куті'
-        },
-        logo_scale: {
-            uk: 'Розмір логотипу'
-        },
-        logo_scale_desc: {
-            uk: 'Масштаб логотипу фільму'
-        },
-        text_scale: {
-            uk: 'Розмір тексту'
-        },
-        text_scale_desc: {
-            uk: 'Масштаб тексту даних про фільм'
-        },
-        scale_default: {
-            uk: 'За замовчуванням'
-        },
-        spacing_scale: {
-            uk: 'Відступи між рядками'
-        },
-        spacing_scale_desc: {
-            uk: 'Відстань між елементами інформації'
-        },
-        settings_title_display: {
-            uk: 'Відображення'
-        },
-        settings_title_scaling: {
-            uk: 'Масштабування'
-        },
-        // Видалено: show_reactions, show_reactions_desc, reverse_episodes, reverse_episodes_desc, year_short
-    };
-    
-    // Рефакторинг: Спрощена функція перекладу
-    function t(key) {
-        return translations[key]?.['uk'] || '???';
-    }
-
     // Додаємо налаштування плагіна
     function addSettings() {
-        // Ініціалізуємо значення за замовчуванням
         if (Lampa.Storage.get('applecation_show_ratings') === undefined) Lampa.Storage.set('applecation_show_ratings', false);
         if (Lampa.Storage.get('applecation_ratings_position') === undefined) Lampa.Storage.set('applecation_ratings_position', 'card');
         if (Lampa.Storage.get('applecation_logo_scale') === undefined) Lampa.Storage.set('applecation_logo_scale', '100');
         if (Lampa.Storage.get('applecation_text_scale') === undefined) Lampa.Storage.set('applecation_text_scale', '100');
         if (Lampa.Storage.get('applecation_spacing_scale') === undefined) Lampa.Storage.set('applecation_spacing_scale', '100');
-        
-        // Ініціалізація зуму (Ken Burns)
-        if (Lampa.Storage.get('applecation_apple_zoom') === undefined) {
-            Lampa.Storage.set('applecation_apple_zoom', true);
-        }
+        if (Lampa.Storage.get('applecation_apple_zoom') === undefined) Lampa.Storage.set('applecation_apple_zoom', true);
 
         Lampa.SettingsApi.addComponent({
             component: 'applecation_settings',
@@ -103,80 +65,43 @@ const translations = {
             icon: PLUGIN_ICON
         });
 
-        // ПАРАМЕТР: Плаваючий зум фону
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
-            param: {
-                name: 'applecation_apple_zoom',
-                type: 'trigger',
-                default: true
-            },
-            field: {
-                name: 'Плаваючий зум фону',
-                description: 'Повільна анімація наближення фонового зображення'
-            },
-            onChange: function(value) {
-                updateZoomState();
-            }
+            param: { name: 'applecation_apple_zoom', type: 'trigger', default: true },
+            field: { name: 'Плаваючий зум фону', description: 'Повільна анімація наближення фонового зображення' },
+            onChange: function() { updateZoomState(); }
         });
         
-        // Параметр: Показувати рейтинги
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
-            param: {
-                name: 'applecation_show_ratings',
-                type: 'trigger',
-                default: false
-            },
-            field: {
-                name: t('show_ratings'),
-                description: t('show_ratings_desc')
-            },
-            onChange: function(value) {
-                $('body').toggleClass('applecation--hide-ratings', !value);
-            }
+            param: { name: 'applecation_show_ratings', type: 'trigger', default: false },
+            field: { name: t('show_ratings'), description: t('show_ratings_desc') },
+            onChange: function(value) { $('body').toggleClass('applecation--hide-ratings', !value); }
         });
         
-        // Розташування рейтингів
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: {
                 name: 'applecation_ratings_position',
                 type: 'select',
-                values: {
-                    card: t('position_card'),
-                    corner: t('position_corner')
-                },
+                values: { card: t('position_card'), corner: t('position_corner') },
                 default: 'card'
             },
-            field: {
-                name: t('ratings_position'),
-                description: t('ratings_position_desc')
-            },
+            field: { name: t('ratings_position'), description: t('ratings_position_desc') },
             onChange: function(value) {
                 Lampa.Storage.set('applecation_ratings_position', value);
-                $('body').removeClass('applecation--ratings-card applecation--ratings-corner');
-                $('body').addClass('applecation--ratings-' + value);
+                $('body').removeClass('applecation--ratings-card applecation--ratings-corner').addClass('applecation--ratings-' + value);
                 addCustomTemplate();
                 Lampa.Activity.back();
             }
         });
 
-        // Показувати реакції Lampa
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
-            param: {
-                name: 'card_interfice_reactions',
-                type: 'trigger',
-                default: true
-            },
-            field: {
-                name: 'Показувати реакції Lampa',
-                description: 'Відображати блок з реакціями на картці'
-            }
+            param: { name: 'card_interfice_reactions', type: 'trigger', default: true },
+            field: { name: 'Показувати реакції Lampa', description: 'Відображати блок з реакціями на картці' }
         });
 
-        // Розмір логотипа
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: {
@@ -185,17 +110,10 @@ const translations = {
                 values: {'50':'50%','60':'60%','70':'70%','80':'80%','90':'90%','100':t('scale_default'),'110':'110%','120':'120%','130':'130%','140':'140%','150':'150%','160':'160%','170':'170%','180':'180%'},
                 default: '100'
             },
-            field: {
-                name: t('logo_scale'),
-                description: t('logo_scale_desc')
-            },
-            onChange: function(value) {
-                Lampa.Storage.set('applecation_logo_scale', value);
-                applyScales();
-            }
+            field: { name: t('logo_scale'), description: t('logo_scale_desc') },
+            onChange: function(value) { applyScales(); }
         });
 
-        // Розмір тексту
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: {
@@ -204,17 +122,10 @@ const translations = {
                 values: {'50':'50%','60':'60%','70':'70%','80':'80%','90':'90%','100':t('scale_default'),'110':'110%','120':'120%','130':'130%','140':'140%','150':'150%','160':'160%','170':'170%','180':'180%'},
                 default: '100'
             },
-            field: {
-                name: t('text_scale'),
-                description: t('text_scale_desc')
-            },
-            onChange: function(value) {
-                Lampa.Storage.set('applecation_text_scale', value);
-                applyScales();
-            }
+            field: { name: t('text_scale'), description: t('text_scale_desc') },
+            onChange: function(value) { applyScales(); }
         });
 
-        // Відступи
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: {
@@ -223,32 +134,21 @@ const translations = {
                 values: {'50':'50%','60':'60%','70':'70%','80':'80%','90':'90%','100':t('scale_default'),'110':'110%','120':'120%','130':'130%','140':'140%','150':'150%','160':'160%','170':'170%','180':'180%','200':'200%','250':'250%','300':'300%'},
                 default: '100'
             },
-            field: {
-                name: t('spacing_scale'),
-                description: t('spacing_scale_desc')
-            },
-            onChange: function(value) {
-                Lampa.Storage.set('applecation_spacing_scale', value);
-                applyScales();
-            }
+            field: { name: t('spacing_scale'), description: t('spacing_scale_desc') },
+            onChange: function(value) { applyScales(); }
         });
 
-        // ЗАПУСК ПЕРЕВІРОК ПРИ СТАРТІ
         updateZoomState();
-        if (!Lampa.Storage.get('applecation_show_ratings', false)) {
-            $('body').addClass('applecation--hide-ratings');
-        }
+        if (!Lampa.Storage.get('applecation_show_ratings', false)) $('body').addClass('applecation--hide-ratings');
         $('body').addClass('applecation--ratings-' + Lampa.Storage.get('applecation_ratings_position', 'card'));
         applyScales();
     }
 
-    // Функція керування зумом
-   function updateZoomState() {
-    let enabled = Lampa.Storage.get('applecation_apple_zoom', true);
-    $('body').toggleClass('applecation--zoom-enabled', enabled); 
-}
+    function updateZoomState() {
+        let enabled = Lampa.Storage.get('applecation_apple_zoom', true);
+        $('body').toggleClass('applecation--zoom-enabled', enabled); 
+    }
 
-    // Применяем масштабирование контента
     function applyScales() {
         const logoScale = parseInt(Lampa.Storage.get('applecation_logo_scale', '100'));
         const textScale = parseInt(Lampa.Storage.get('applecation_text_scale', '100'));
