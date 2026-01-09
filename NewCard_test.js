@@ -1208,5 +1208,38 @@ img.onload = () => {
             }
         });
     }
+function initializePlugin() {
+        console.log('NewCard: Initialization started...');
+        // Перевірте, чи ваша функція зі стилями називається саме addStyles!
+        if (typeof addStyles === 'function') addStyles(); 
+        
+        patchApiImg();    
+        attachLogoLoader(); 
+    }
+
+    // 2. Реєстрація плагіна в маніфесті (опціонально, але корисно)
+    var pluginManifest = {
+        type: 'other',
+        version: '1.0.0',
+        name: 'NewCard',
+        description: 'Новий дизайн картки фільму/серіалу.',
+        author: '',
+        icon: '<svg ...></svg>' // Тут має бути ваш PLUGIN_ICON
+    };
+
+    if (Lampa.Manifest && Lampa.Manifest.plugins) {
+        Lampa.Manifest.plugins = pluginManifest;
+    }
+
+    // 3. Єдиний блок запуску (без дублів)
+    if (window.appready) {
+        initializePlugin();
+    } else {
+        Lampa.Listener.follow('app', (event) => {
+            if (event.type === 'ready') {
+                initializePlugin();
+            }
+        });
+    }
 
 })();
