@@ -1,5 +1,10 @@
-(function () {
-    'use strict';
+function initializePlugin() {
+    // 1. Спочатку завантажуємо бібліотеку кольорів
+    if (typeof Vibrant === 'undefined') {
+        $('<script>')
+            .attr('src', 'https://cdnjs.cloudflare.com/ajax/libs/node-vibrant/3.1.6/vibrant.min.js')
+            .appendTo('head');
+    }
 
     // Іконка плагіна (Фрагмент кіноплівки - NewCard)
 const PLUGIN_ICON = '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#333"><rect x="5" y="30" width="90" height="40" rx="5" fill="hsl(0, 0%, 30%)"/><rect x="8" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="18" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="28" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="38" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="48" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="58" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="68" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="78" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="8" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="18" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="28" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="38" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="48" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="58" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="68" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="78" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="15" y="40" width="20" height="20" fill="hsl(200, 80%, 70%)"/><rect x="40" y="40" width="20" height="20" fill="hsl(200, 80%, 80%)"/><rect x="65" y="40" width="20" height="20" fill="hsl(200, 80%, 70%)"/></svg>';
@@ -900,6 +905,11 @@ body.applecation--zoom-enabled .full-start__background.loaded:not(.dim) {
     width: 0; /* Буде змінюватись динамічно через JS */
 }
 
+.applecation__star--full, 
+    .applecation__meta-text {
+        transition: fill 0.8s ease, color 0.8s ease;
+    }
+
 </style>`;
        
         Lampa.Template.add('applecation_css', styles);
@@ -1106,6 +1116,35 @@ body.applecation--zoom-enabled .full-start__background.loaded:not(.dim) {
         infoContainer.html(infoParts.join(' · '));
     }
 
+function applyVibrantColor(imageUrl, activity) {
+    // Чекаємо мить, щоб Vibrant точно завантажився в пам'ять
+    if (typeof Vibrant === 'undefined') return;
+
+    const img = new Image();
+    img.crossOrigin = "Anonymous"; // TMDB дозволяє CORS
+    img.src = imageUrl;
+
+    img.onload = () => {
+        try {
+            Vibrant.from(img).getPalette((err, palette) => {
+                if (!err && palette.Vibrant) {
+                    const color = palette.Vibrant.getHex();
+                    const root = activity.render();
+                    
+                    // Застосовуємо колір до елементів
+                    root.find('.applecation__star--full').css('fill', color);
+                    root.find('.applecation__meta-text').css('color', color);
+                    
+                    // Додаємо легке сяйво логотипу (Matrix style)
+                    root.find('.applecation__logo img').css('filter', `drop-shadow(0 0 15px ${color}66)`);
+                }
+            });
+        } catch (e) {
+            console.log('Vibrant error:', e);
+        }
+    };
+}
+    
     // Завантажуємо логотип фільму
     function loadLogo(event) {
         const data = event.data.movie;
@@ -1158,12 +1197,16 @@ if (data.vote_average > 0) {
                 const logoUrl = Lampa.TMDB.image(`/t/p/${quality}${logoPath}`);
 
                 const img = new Image();
-                img.onload = () => {
-                    logoContainer.html(`<img src="${logoUrl}" alt="" />`);
-                    waitForBackgroundLoad(activity, () => {
-                        logoContainer.addClass('loaded');
-                    });
-                };
+img.onload = () => {
+    logoContainer.html(`<img src="${logoUrl}" alt="" />`);
+    
+    // Запускаємо магію кольорів на основі логотипа
+    applyVibrantColor(logoUrl, activity);
+
+    waitForBackgroundLoad(activity, () => {
+        logoContainer.addClass('loaded');
+    });
+};
                 img.src = logoUrl;
             } else {
                 // Немає логотипа - показуємо текстову назву
