@@ -859,8 +859,49 @@ body.applecation--zoom-enabled .full-start__background.loaded:not(.dim) {
 .applecation .full-start__status {
     display: none;
 }
+
+.applecation__stars-container {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 8px;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+/* Коли все завантажиться, показуємо зірки */
+.applecation__stars-container.show {
+    opacity: 1;
+}
+
+.applecation__star {
+    width: 1.1em;
+    height: 1.1em;
+    position: relative;
+    display: inline-block;
+}
+
+.applecation__star svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.applecation__star--empty {
+    fill: rgba(255, 255, 255, 0.2);
+}
+
+.applecation__star--full {
+    fill: #ffcc00; 
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: hidden;
+    width: 0; /* Буде змінюватись динамічно через JS */
+}
+
 </style>`;
-        
+       
         Lampa.Template.add('applecation_css', styles);
         $('body').append(Lampa.Template.get('applecation_css', {}, true));
     }
@@ -966,6 +1007,27 @@ body.applecation--zoom-enabled .full-start__background.loaded:not(.dim) {
         networkContainer.remove();
     }
 
+    function renderStars(rating) {
+    const starsCount = 5;
+    const vote = rating / 2; 
+    const starSvg = `<svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>`;
+
+    let html = '<div class="applecation__stars-container">';
+    for (let i = 1; i <= starsCount; i++) {
+        let width = 0;
+        if (vote >= i) width = 100;
+        else if (vote > i - 1) width = (vote - (i - 1)) * 100;
+
+        html += `
+            <div class="applecation__star">
+                <div class="applecation__star--empty">${starSvg}</div>
+                <div class="applecation__star--full" style="width: ${width}%">${starSvg}</div>
+            </div>`;
+    }
+    html += '</div>';
+    return html;
+}
+
    // Заповнюємо мета інформацію (Тип/Жанр/піджанр)
     function fillMetaInfo(activity, data) {
         const metaTextContainer = activity.render().find('.applecation__meta-text');
@@ -1056,6 +1118,13 @@ body.applecation--zoom-enabled .full-start__background.loaded:not(.dim) {
         // Заповнюємо основну інформацію
         fillMetaInfo(activity, data);       
         fillAdditionalInfo(activity, data); 
+
+        // Знаходимо контейнер для рейтингів
+const ratingsContainer = activity.render().find('.applecation__ratings');
+if (data.vote_average > 0) {
+    const starsHtml = renderStars(data.vote_average);
+    ratingsContainer.prepend(starsHtml); // Додаємо зірки перед іншими рейтингами
+}
 
         // Чекаємо коли фон завантажиться і з'явиться
         waitForBackgroundLoad(activity, () => {
