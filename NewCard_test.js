@@ -1,3 +1,6 @@
+(function () {
+    'use strict';
+
 function initializePlugin() {
     // 1. Спочатку завантажуємо бібліотеку кольорів
     if (typeof Vibrant === 'undefined') {
