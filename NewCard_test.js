@@ -783,38 +783,52 @@ body.applecation--ratings-corner:not(.applecation--hide-reactions) .applecation_
     pointer-events: none;
 }
 
-/* 1. Стиль для фону (лише картинка) */
+/* Анімація плаваючого зуму (Ken Burns) */
+@keyframes kenBurns {
+    0% { transform: scale(1.0); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1.0); }
+}
+
+/* 1. Стиль для фону з підтримкою анімації */
 .full-start__background {
     height: calc(100% + 6em);
     left: 0 !important;
     opacity: 0 !important;
-    transition: opacity 0.6s ease-out, filter 0.3s ease-out !important;
+    transition: opacity 0.8s ease-out, filter 0.3s ease-out !important;
     animation: none !important;
-    transform: none !important;
-    will-change: opacity, filter;
-    z-index: 0 !important; /* Найнижчий шар */
+    will-change: transform, opacity, filter;
+    z-index: 0 !important;
+    position: absolute;
+    width: 100%;
+    transform-origin: center center;
 }
 
-/* 2. Створюємо НОВИЙ шар затемнення, який не залежить від фону */
+/* Коли фон завантажений — вмикаємо плавний зум */
+.full-start__background.loaded:not(.dim) {
+    opacity: 1 !important;
+    animation: kenBurns 40s linear infinite !important;
+}
+
+/* 2. Шар затемнення лівої частини (залишається нерухомим над фоном) */
 .full-start__details::before {
     content: '';
     position: absolute;
-    top: -100px; /* Перекриваємо з запасом зверху */
-    left: -100px; /* Перекриваємо з запасом зліва */
-    width: 150%;  /* Широкий градієнт */
-    height: 150%;
-    /* Ті самі кольори Apple TV: чорний -> прозорий */
+    top: -150px; 
+    left: -150px; 
+    width: 200%;  
+    height: 200%;
     background: linear-gradient(90deg, 
         rgba(0, 0, 0, 1) 0%, 
         rgba(0, 0, 0, 0.8) 25%, 
         rgba(0, 0, 0, 0.4) 50%, 
         rgba(0, 0, 0, 0) 100%
     );
-    z-index: -1; /* Він буде під текстом деталей, але над фоном */
+    z-index: -1; 
     pointer-events: none;
 }
 
-/* 3. Гарантуємо, що контент (логотип, текст) буде зверху */
+/* 3. Гарантуємо, що контент буде зверху */
 .applecation__logo, 
 .applecation__meta, 
 .applecation__info, 
@@ -824,11 +838,7 @@ body.applecation--ratings-corner:not(.applecation--hide-reactions) .applecation_
     z-index: 2;
 }
 
-/* Стандартні стани завантаження */
-.full-start__background.loaded:not(.dim) {
-    opacity: 1 !important;
-}
-
+/* Затемнення фону при відкритті меню */
 .full-start__background.dim {
     filter: brightness(0.3);
 }
@@ -837,7 +847,7 @@ body.applecation--ratings-corner:not(.applecation--hide-reactions) .applecation_
     opacity: 1 !important;
 }
 
-/* Приховуємо зайві елементи */
+/* Приховуємо статус */
 .applecation .full-start__status {
     display: none;
 }
