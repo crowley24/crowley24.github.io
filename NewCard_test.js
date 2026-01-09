@@ -792,11 +792,12 @@ body.applecation--ratings-corner:not(.applecation--hide-reactions) .applecation_
     animation: none !important;
     transform: none !important;
     will-change: opacity, filter;
-    position: relative;
-    overflow: hidden;
+    position: absolute; /* Змінено на absolute для коректного позиціонування */
+    width: 100%;
+    z-index: 0; /* Фон завжди внизу */
 }
 
-/* Ефект градієнтного затемнення лівої частини (Apple TV style) */
+/* Ефект градієнтного затемнення лівої частини */
 .full-start__background::after {
     content: '';
     position: absolute;
@@ -804,26 +805,36 @@ body.applecation--ratings-corner:not(.applecation--hide-reactions) .applecation_
     left: 0;
     width: 100%;
     height: 100%;
-    /* Затемнення: зліва направо (від чорного до прозорого) */
+    /* Затемнення зліва направо */
     background: linear-gradient(90deg, 
-        rgba(0, 0, 0, 1) 0%, 
-        rgba(0, 0, 0, 0.8) 20%, 
-        rgba(0, 0, 0, 0.4) 40%, 
+        rgba(0, 0, 0, 0.95) 0%, 
+        rgba(0, 0, 0, 0.6) 35%, 
         rgba(0, 0, 0, 0) 80%
     );
-    z-index: 1;
+    z-index: 1; /* Градієнт над картинкою, але під текстом */
+    pointer-events: none; /* Щоб не блокував натискання на кнопки */
+}
+
+/* Щоб інформація була НАД фоном і градієнтом */
+.applecation__logo, 
+.applecation__meta, 
+.applecation__info, 
+.applecation__description, 
+.applecation__ratings,
+.full-start__details {
+    position: relative;
+    z-index: 10 !important; /* Виштовхуємо контент на передній план */
 }
 
 .full-start__background.loaded:not(.dim) {
     opacity: 1 !important;
 }
 
-/* ЗМІНЕНО: Замість блюру — затемнення, як в оригінальній Lampa */
+/* ЗМІНЕНО: Замість блюру — затемнення */
 .full-start__background.dim {
-    filter: brightness(0.35); /* Загальне затемнення фону при відкритті меню */
+    filter: brightness(0.3); 
 }
 
-/* Удерживаем opacity при загрузке нового фона */
 .full-start__background.loaded.applecation-animated {
     opacity: 1 !important;
 }
@@ -832,17 +843,13 @@ body:not(.menu--open) .full-start__background {
     mask-image: none;
 }
 
-/* Отключаем стандартную анимацию Lampa для фона */
 body.advanced--animation:not(.no--animation) .full-start__background.loaded {
     animation: none !important;
 }
 
-/* Скрываем статус для предотвращения выхода реакций за экран */
 .applecation .full-start__status {
     display: none;
 }
-
-/* ВИДАЛЕНО: applecation__overlay - тепер його немає, ми замінили його на ::after */
 </style>`;
         
         Lampa.Template.add('applecation_css', styles);
