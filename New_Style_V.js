@@ -615,10 +615,10 @@ background.style.objectFit = 'cover';
         $('body').append(Lampa.Template.get('new_interface_logo_styles', {}, true));      
     }
   
-        /* Нові стилі для підняття рядків */  
-        .new-interface .scroll--mask {  
-            padding-top: 0 !important;  
-        }  
+      //  /* Нові стилі для підняття рядків */  
+      //  .new-interface .scroll--mask {  
+      //      padding-top: 0 !important;  
+      //  }  
   
         .new-interface .content {  
             margin-top: -1em !important;  
