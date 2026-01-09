@@ -235,10 +235,10 @@ const translations = {
     }
 
     // Функція керування зумом
-    function updateZoomState() {
-        let enabled = Lampa.Storage.get('applecation_apple_zoom', true);
-        $('body').toggleClass('applecation--zoom-enabled', enabled);
-    }
+   function updateZoomState() {
+    let enabled = Lampa.Storage.get('applecation_apple_zoom', true);
+    $('body').toggleClass('applecation--zoom-enabled', enabled); 
+}
 
     // Применяем масштабирование контента
     function applyScales() {
@@ -786,24 +786,20 @@ body.applecation--ratings-corner:not(.applecation--hide-reactions) .applecation_
     pointer-events: none;
 }
 
-/* Анімація Ken Burns (лише якщо клас додано через налаштування) */
+/* 1. Визначаємо анімацію Ken Burns */
 @keyframes kenBurns {
     0% { transform: scale(1.0); }
     50% { transform: scale(1.1); }
     100% { transform: scale(1.0); }
 }
 
-/* Анімація спрацює тільки якщо у body є клас .applecation--zoom */
-body.applecation--zoom .full-start__background.loaded:not(.dim) {
-    animation: kenBurns 40s linear infinite !important;
-}
-/* 1. Стиль для фону з підтримкою анімації */
+/* 2. Базовий стиль фону (без анімації за замовчуванням) */
 .full-start__background {
     height: calc(100% + 6em);
     left: 0 !important;
     opacity: 0 !important;
     transition: opacity 0.8s ease-out, filter 0.3s ease-out !important;
-    animation: none !important;
+    animation: none !important; /* Спочатку анімації немає */
     will-change: transform, opacity, filter;
     z-index: 0 !important;
     position: absolute;
@@ -811,13 +807,18 @@ body.applecation--zoom .full-start__background.loaded:not(.dim) {
     transform-origin: center center;
 }
 
-/* Коли фон завантажений — вмикаємо плавний зум */
+/* 3. Фон з'являється, коли завантажений */
 .full-start__background.loaded:not(.dim) {
     opacity: 1 !important;
+}
+
+/* 4. Анімація вмикається ТІЛЬКИ якщо у body є клас з налаштувань */
+/* Важливо: назва класу має бути applecation--zoom-enabled, як у вашому JS */
+body.applecation--zoom-enabled .full-start__background.loaded:not(.dim) {
     animation: kenBurns 40s linear infinite !important;
 }
 
-/* 2. Шар затемнення лівої частини (залишається нерухомим над фоном) */
+/* 5. Шар затемнення лівої частини */
 .full-start__details::before {
     content: '';
     position: absolute;
