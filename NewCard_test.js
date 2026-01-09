@@ -792,6 +792,7 @@ body.applecation--ratings-corner:not(.applecation--hide-reactions) .applecation_
     animation: none !important;  
     transform: none !important;  
     will-change: opacity, filter;  
+    position: relative !important; /* Важливо для ::after */  
 }  
   
 .full-start__background.loaded:not(.dim) {  
@@ -799,7 +800,7 @@ body.applecation--ratings-corner:not(.applecation--hide-reactions) .applecation_
 }  
   
 /* Створюємо градієнтний оверлей як в оригінальній Lampa */  
-.full-start__background.dim::after {  
+.full-start__background::after {  
     content: '';  
     position: absolute;  
     top: 0;  
@@ -820,7 +821,7 @@ body.applecation--ratings-corner:not(.applecation--hide-reactions) .applecation_
 /* Зберігаємо затемнення фону */  
 .full-start__background.dim {  
     filter: brightness(0.4);  
-}  
+} 
   
 /* Удерживаем opacity при загрузке нового фона */  
 .full-start__background.loaded.applecation-animated {  
