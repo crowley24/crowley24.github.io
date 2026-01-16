@@ -5189,112 +5189,6 @@ http://cdn.iptv11.com/4171/video.m3u8?token=2650D92500E6B
 #EXTINF:0  tvg-rec="14", Обучалки
 #EXTGRP:Познавательные
 http://cdn.iptv11.com/4224/video.m3u8?token=2650D92500E6B
-
-
-http://cdn.iptv11.com/DikayaOhotaHD/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-id="dikaya-rybalka-hd" tvg-logo="https://iptvx.one/picons/dikaya-rybalka-hd.png" tvg-rec="14", Дикая рыбалка HD
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/DikayaRibalkaHD/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-id="rybalka" tvg-logo="https://iptvx.one/picons/rybalka.png" tvg-rec="14", Рыбалка ТВ HD
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/Rybalka/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-id="oxotnik-i-rybolov" tvg-logo="https://iptvx.one/picons/oxotnik-i-rybolov.png" tvg-rec="14", Рыболов
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/1177/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-id="trofey" tvg-logo="https://iptvx.one/picons/trofey.png" tvg-rec="14", Трофей HD
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/TrofeyHD/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-id="world-fashion-channel" tvg-logo="https://iptvx.one/picons/world-fashion-channel.png" tvg-rec="14", WorldFashion
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/WorldFashion/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-id="world-fashion-channel" tvg-logo="https://iptvx.one/picons/world-fashion-channel.png" tvg-rec="14", World Fashion Channel HD
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/1256/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-id="fashion-tv" tvg-logo="https://iptvx.one/picons/fashion-tv.png" tvg-rec="14", Fashion HD
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/FashionHD/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-logo="https://iptvx.one/picons/fashion-tv.png" tvg-rec="14", Fashion TV
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/1156/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-id="fashionbox-hd" tvg-logo="https://iptvx.one/picons/fashionbox-hd.png" tvg-rec="14", Fashionbox
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/Fashionbox/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-id="mir-uvlecheniy" tvg-logo="https://iptvx.one/picons/mir-uvlecheniy.png" tvg-rec="14", Кто Куда
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/MirUvl/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-id="tancuj" tvg-logo="https://iptvx.one/picons/tancuj.png" tvg-rec="14", Танцуй!
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/450/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-id="luxury-hd" tvg-logo="https://iptvx.one/picons/luxury-hd.png" tvg-rec="14", Luxury HD
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/1231/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-id="7d7" tvg-logo="https://iptvx.one/picons/7d7.png" tvg-rec="14", 7D7TV
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/2822/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/358.png" tvg-rec="14", Play-x Вокруг смеха
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/2005/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/359.png" tvg-rec="14", Play-x Голубой огонек
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/2006/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/373.png" tvg-rec="14", Play-x Tik Tok
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/2019/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/61.png" tvg-rec="14", Play-x Каламбур
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/2027/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/62.png" tvg-rec="14", Play-x Мир на изнанку
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/2046/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-rec="14", Play-x Орел и решка
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/10141/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/68.png" tvg-rec="14", Play-x Уральские пельмени
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/2063/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/321.png" tvg-rec="14", Play-x Comedy Woman
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/2072/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/324.png" tvg-rec="14", Play-x Грифины
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/2075/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/334.png" tvg-rec="14", Play-x Однажды в России
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/2085/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/338.png" tvg-rec="14", Play-x Футурама
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/2089/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/385.png" tvg-rec="14", Play-x Угадай Мелодию
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/2095/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/387.png" tvg-rec="14", Play-x Городок
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/2097/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/388.png" tvg-rec="14", Play-x Дизель Шоу
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/2098/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/391.png" tvg-rec="14", Play-x Окна с Дмитрием Нагиевым
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/2101/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/392.png" tvg-rec="14", Play-x Осторожно Модерн
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/2102/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/393.png" tvg-rec="14", Play-x 6 кадров
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/2103/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/394.png" tvg-rec="14", Play-x Даёшь молодёжь!
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/2104/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/399.png" tvg-rec="14", Play-x Маски-шоу
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/2107/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/453.png" tvg-rec="14", Play-x Кабачок  13 стульев
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/2152/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/1042.png" tvg-rec="14", Play-x Час суда с Павлом Астаховым
-#EXTGRP:Развлекательные
-http://cdn.iptv11.com/2157/video.m3u8?token=2650D92500E6B
-#EXTINF:0  tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/3274.png" tvg-rec="14", Play-x Жизнь замечатетьных людей
 #EXTINF:0  tvg-id="muztv" tvg-logo="https://iptvx.one/picons/muztv.png" tvg-rec="14", МУЗ
 #EXTGRP:Музыкальные
 http://cdn.iptv11.com/MUZ/video.m3u8?token=2650D92500E6B
@@ -6102,3 +5996,4 @@ http://cdn.iptv11.com/3632/video.m3u8?token=2650D92500E6B
 #EXTINF:0  tvg-id="clarity4k-zwerinmir" tvg-logo="https://iptvx.one/picons/clarity4k-komediasssr2.png" tvg-rec="14", Clarity4K Звериный мир
 #EXTGRP:4К
 http://cdn.iptv11.com/3633/video.m3u8?token=2650D92500E6B
+
