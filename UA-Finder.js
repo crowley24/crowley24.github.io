@@ -471,23 +471,22 @@ $('body').append(Lampa.Template.get('lampa_tracks_css', {}, true));
                             // Це критично важливо, щоб фільм не підхопив доріжку від серіалу
                             // з такою ж назвою (і навпаки).
                             
-                            // Рівень 2: Перевірка по ключових словах у назві
-                            const isSeriesTorrent = /(\bсезон\b|\bseason\b|\bs\d{1,2}\b|\bсерии\b|\bсерії\b|\bepisodes\b|\bепізод\b|\d{1,2}\s*из\s*\d{1,2}|\d+×\d+)/i.test(torrentTitle);
-                            
-                            // Якщо картка - СЕРІАЛ, а в торренті НЕМАЄ ознак серіалу -> пропускаємо
-                            if (normalizedCard.type === 'tv' && !isSeriesTorrent) {
-                                if (LTF_CONFIG.LOGGING_TRACKS) console.log(`LTF-LOG [${cardId}]: Пропускаємо (схожий на фільм для картки серіалу):`, currentTorrent.title);
-                                continue; 
-                            }
-                            // Якщо картка - ФІЛЬМ, а в торренті Є ознаки серіалу -> пропускаємо
-                            if (normalizedCard.type === 'movie' && isSeriesTorrent) {
-                                if (LTF_CONFIG.LOGGING_TRACKS) console.log(`LTF-LOG [${cardId}]: Пропускаємо (схожий на серіал для картки фільму):`, currentTorrent.title);
-                                continue;
-                            }
-                            
-                            // Рівень 3 більше не потрібен окремо, бо \b у Рівні 2 робить пошук дуже точним.
-                            
-                            // --- ФІЛЬТР ЗА РОКОМ ---
+                            // Рівень 2: Перевірка по ключових словах у назві (з використанням \b для точності)
+const isSeriesTorrent = /(\bсезон\b|\bseason\b|\bs\d{1,2}\b|\bсерии\b|\bсерії\b|\bepisodes\b|\bепізод\b|\d{1,2}\s*из\s*\d{1,2}|\d+×\d+)/i.test(torrentTitle);
+
+// Якщо картка - СЕРІАЛ, а в торренті НЕМАЄ ознак серіалу -> пропускаємо
+if (normalizedCard.type === 'tv' && !isSeriesTorrent) {
+    if (LTF_CONFIG.LOGGING_TRACKS) console.log(`LTF-LOG [${cardId}]: Пропускаємо (схожий на фільм для картки серіалу):`, currentTorrent.title);
+    continue; 
+}
+// Якщо картка - ФІЛЬМ, а в торренті Є ознаки серіалу -> пропускаємо
+if (normalizedCard.type === 'movie' && isSeriesTorrent) {
+    if (LTF_CONFIG.LOGGING_TRACKS) console.log(`LTF-LOG [${cardId}]: Пропускаємо (схожий на серіал для картки фільму):`, currentTorrent.title);
+    continue;
+}
+
+// --- ФІЛЬТР ЗА РОКОМ ---
+
                             // Беремо рік з назви торрента, або (якщо там немає) з поля 'relased'
                             var parsedYear = extractYearFromTitle(currentTorrent.title) || parseInt(currentTorrent.relased, 10);
                             var yearDifference = Math.abs(parsedYear - searchYearNum);
