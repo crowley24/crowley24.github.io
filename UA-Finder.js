@@ -472,7 +472,7 @@ $('body').append(Lampa.Template.get('lampa_tracks_css', {}, true));
                             // з такою ж назвою (і навпаки).
                             
                             // Рівень 2: Перевірка по ключових словах у назві
-                            const isSeriesTorrent = /(сезон|season|s\d{1,2}|серии|серії|episodes|епізод|\d{1,2}\s*из\s*\d{1,2}|\d+×\d+)/.test(torrentTitle);
+                            const isSeriesTorrent = /(\bсезон\b|\bseason\b|\bs\d{1,2}\b|\bсерии\b|\bсерії\b|\bepisodes\b|\bепізод\b|\d{1,2}\s*из\s*\d{1,2}|\d+×\d+)/i.test(torrentTitle);
                             
                             // Якщо картка - СЕРІАЛ, а в торренті НЕМАЄ ознак серіалу -> пропускаємо
                             if (normalizedCard.type === 'tv' && !isSeriesTorrent) {
@@ -485,14 +485,7 @@ $('body').append(Lampa.Template.get('lampa_tracks_css', {}, true));
                                 continue;
                             }
                             
-                            // Рівень 3: Додаткова (суворіша) перевірка для ФІЛЬМІВ
-                            if (normalizedCard.type === 'movie') {
-                                const hasStrongSeriesIndicators = /(сезон|season|s\d|серії|episodes|епізод|\d+×\d+)/i.test(torrentTitle);
-                                if (hasStrongSeriesIndicators) {
-                                    if (LTF_CONFIG.LOGGING_TRACKS) console.log(`LTF-LOG [${cardId}]: Пропускаємо (чіткі ознаки серіалу для картки фільму):`, currentTorrent.title);
-                                    continue;
-                                }
-                            }
+                            // Рівень 3 більше не потрібен окремо, бо \b у Рівні 2 робить пошук дуже точним.
                             
                             // --- ФІЛЬТР ЗА РОКОМ ---
                             // Беремо рік з назви торрента, або (якщо там немає) з поля 'relased'
