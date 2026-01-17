@@ -2,10 +2,11 @@
     'use strict';
 
     function start() {
-        // 1. Створюємо розділ у налаштуваннях
-        Lampa.Settings.listener.follow('open', function (e) {
-            if (e.name === 'main') {
-                var item = $('<div class="settings-param selector" data-type="button" data-name="my_main_order_setup">' +
+        // 1. Додавання пункту в налаштування (Розділ Інтерфейс)
+        Lampa.Listener.follow('settings', function (e) {
+            if (e.type === 'open' && e.name === 'interface') {
+                var body = e.body;
+                var item = $('<div class="settings-param selector" data-type="button">' +
                     '<div class="settings-param__name">Моя Головна</div>' +
                     '<div class="settings-param__value">Налаштувати порядок рядків</div>' +
                     '</div>');
@@ -20,16 +21,20 @@
                     }, function (new_value) {
                         if (new_value) {
                             Lampa.Storage.set('my_main_order', new_value);
-                            Lampa.Noty.show('Налаштування збережено. Перезавантажте додаток.');
+                            Lampa.Noty.show('Збережено. Перезапустіть Lampa');
                         }
                     });
                 });
 
-                e.body.find('.settings-list').append(item);
+                // Додаємо в кінець списку налаштувань інтерфейсу
+                body.find('.settings-list').append(item);
+                
+                // Оновлюємо контролер, щоб новий пункт став клікабельним
+                Lampa.Controller.enable('settings_interface');
             }
         });
 
-        // 2. Логіка сортування рядків
+        // 2. Логіка сортування (залишаємо без змін)
         var originalCall = Lampa.ContentRows.call;
 
         Lampa.ContentRows.call = function (screen, params, calls) {
@@ -40,7 +45,6 @@
                 var copy_calls = [].concat(calls);
                 calls.length = 0;
 
-                // Мапа стандартних викликів (за індексами TMDB)
                 var map = {
                     'тренди': copy_calls[0],
                     'фільми': copy_calls[1],
@@ -56,7 +60,6 @@
                             title: Lampa.Lang.translate('title_continue')
                         });
                     } else {
-                        // Якщо немає що продовжувати, передаємо порожній результат
                         call({ results: [] });
                     }
                 };
@@ -69,7 +72,6 @@
                     }
                 });
             }
-
             originalCall.apply(this, arguments);
         };
     }
