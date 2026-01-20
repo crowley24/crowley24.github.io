@@ -48,9 +48,9 @@ function addSettings() {
         return;  
     }  
   
-    // Додаємо налаштування в розділ "Плагіни"  
+    // Створюємо новий розділ "Random Movies"  
     Lampa.SettingsApi.addParam({  
-        component: 'plugins',  
+        component: 'random_movies',  
         param: {  
             name: 'lampa_random_vote_from',  
             type: 'select',  
@@ -63,7 +63,7 @@ function addSettings() {
     });  
   
     Lampa.SettingsApi.addParam({  
-        component: 'plugins',   
+        component: 'random_movies',   
         param: {  
             name: 'lampa_random_vote_to',  
             type: 'select',  
@@ -75,52 +75,43 @@ function addSettings() {
         }  
     });  
   
-    // Додаємо налаштування жанрів  
     Lampa.SettingsApi.addParam({  
-        component: 'plugins',  
+        component: 'random_movies',  
         param: {  
             name: 'lampa_random_genres',  
             type: 'keyboard',  
-            placeholder: 'Жанри через кому'  
+            default: ''  
         },  
         onChange: function(value) {  
-            if (value) {  
-                var genres = value.split(',').map(g => g.trim());  
-                setGenres(genres);  
-            } else {  
-                setGenres([]);  
-            }  
+            Lampa.Storage.set('lampa_random_genres', value);  
         }  
     });  
   
-    // Додаємо налаштування років  
     Lampa.SettingsApi.addParam({  
-        component: 'plugins',  
+        component: 'random_movies',  
         param: {  
             name: 'lampa_random_year_from',  
             type: 'number',  
-            placeholder: 'Рік від',  
-            default: 1960  
+            default: '2000'  
         },  
         onChange: function(value) {  
-            setYears(parseInt(value) || 1960, getYearTo());  
+            Lampa.Storage.set('lampa_random_year_from', parseInt(value));  
         }  
     });  
   
     Lampa.SettingsApi.addParam({  
-        component: 'plugins',  
+        component: 'random_movies',  
         param: {  
-            name: 'lampa_random_year_to',   
+            name: 'lampa_random_year_to',  
             type: 'number',  
-            placeholder: 'Рік до',  
-            default: new Date().getFullYear()  
+            default: '2024'  
         },  
         onChange: function(value) {  
-            setYears(getYearFrom(), parseInt(value) || new Date().getFullYear());  
+            Lampa.Storage.set('lampa_random_year_to', parseInt(value));  
         }  
     });  
   
-    console.log('lampa_random: налаштування додано');  
+    console.log('lampa_random: налаштування додано в розділ Random Movies');  
 }
   
   function randInt(min, max) { return Math.floor(Math.random()*(max-min+1))+min; }  
