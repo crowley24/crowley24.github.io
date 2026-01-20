@@ -1,7 +1,7 @@
 /* Title: lampa_random
  * Version: 1.1.0
- * Description: Random movies and tv shows with rating, genres and year filter
- * Author: wapmax (extended)
+ * Description: Random movies and TV shows with rating, genres and years filter
+ * Author: wapmax + patched
  */
 (function () {
   'use strict';
@@ -11,43 +11,27 @@
 
   var MENU_ID = 'lampa_random_menu';
 
-  /* ================= STORAGE ================= */
-
   var STORAGE_VOTE_FROM = 'lampa_random_vote_from';
   var STORAGE_VOTE_TO   = 'lampa_random_vote_to';
-
   var STORAGE_GENRES    = 'lampa_random_genres';
   var STORAGE_YEAR_FROM = 'lampa_random_year_from';
   var STORAGE_YEAR_TO   = 'lampa_random_year_to';
 
-  /* ================= GENRES ================= */
-
+  /* ===== GENRES ===== */
   var TMDB_GENRES = {
-    28: 'Action',
-    12: 'Adventure',
-    16: 'Animation',
-    35: 'Comedy',
-    80: 'Crime',
-    99: 'Documentary',
-    18: 'Drama',
-    10751: 'Family',
-    14: 'Fantasy',
-    36: 'History',
-    27: 'Horror',
-    10402: 'Music',
-    9648: 'Mystery',
-    10749: 'Romance',
-    878: 'Science Fiction',
-    53: 'Thriller',
-    10752: 'War',
-    37: 'Western'
+    28:'Action',12:'Adventure',16:'Animation',35:'Comedy',80:'Crime',
+    99:'Documentary',18:'Drama',10751:'Family',14:'Fantasy',36:'History',
+    27:'Horror',10402:'Music',9648:'Mystery',10749:'Romance',
+    878:'Science Fiction',53:'Thriller',10752:'War',37:'Western'
   };
-
-  /* ================= HELPERS ================= */
 
   function tr(key, def) {
     try { return Lampa.Lang.translate(key); } catch (e) {}
     return def || key;
+  }
+
+  function nowYear() {
+    return new Date().getFullYear();
   }
 
   function randInt(min, max) {
@@ -62,227 +46,259 @@
     return arr;
   }
 
-  function nowYear() {
-    return new Date().getFullYear();
+  function getLang() {
+    var l = 'ru';
+    try { l = Lampa.Storage.get('language', 'ru'); } catch (e) {}
+    if (l === 'ua') l = 'uk';
+    return l + '-' + l.toUpperCase();
   }
 
-  function clamp(v, a, b) {
-    if (v < a) return a;
-    if (v > b) return b;
-    return v;
-  }
-
-  function roundHalf(v) {
-    return Math.round(v * 2) / 2;
-  }
-
-  /* ================= DEFAULTS ================= */
-
+  /* ===== DEFAULTS ===== */
   function ensureDefaultRange() {
-    try {
-      if (Lampa.Storage.get(STORAGE_VOTE_FROM) == null)
-        Lampa.Storage.set(STORAGE_VOTE_FROM, 5.5);
+    if (Lampa.Storage.get(STORAGE_VOTE_FROM) == null)
+      Lampa.Storage.set(STORAGE_VOTE_FROM, 5.5);
 
-      if (Lampa.Storage.get(STORAGE_VOTE_TO) == null)
-        Lampa.Storage.set(STORAGE_VOTE_TO, 9.5);
+    if (Lampa.Storage.get(STORAGE_VOTE_TO) == null)
+      Lampa.Storage.set(STORAGE_VOTE_TO, 9.5);
 
-      if (Lampa.Storage.get(STORAGE_GENRES) == null)
-        Lampa.Storage.set(STORAGE_GENRES, []);
+    if (Lampa.Storage.get(STORAGE_GENRES) == null)
+      Lampa.Storage.set(STORAGE_GENRES, []);
 
-      if (Lampa.Storage.get(STORAGE_YEAR_FROM) == null)
-        Lampa.Storage.set(STORAGE_YEAR_FROM, 1980);
+    if (Lampa.Storage.get(STORAGE_YEAR_FROM) == null)
+      Lampa.Storage.set(STORAGE_YEAR_FROM, 1980);
 
-      if (Lampa.Storage.get(STORAGE_YEAR_TO) == null)
-        Lampa.Storage.set(STORAGE_YEAR_TO, nowYear());
-    } catch (e) {}
+    if (Lampa.Storage.get(STORAGE_YEAR_TO) == null)
+      Lampa.Storage.set(STORAGE_YEAR_TO, nowYear());
   }
 
-  /* ================= GET / SET ================= */
-
-  function getVoteFrom() {
-    return roundHalf(clamp(parseFloat(Lampa.Storage.get(STORAGE_VOTE_FROM, 5.5)), 1, 10));
+  /* ===== GET / SET ===== */
+  function getVoteFrom(){return Lampa.Storage.get(STORAGE_VOTE_FROM,5.5);}
+  function getVoteTo(){return Lampa.Storage.get(STORAGE_VOTE_TO,9.5);}
+  function setVoteRange(f,t){
+    if(f>t)t=f;
+    Lampa.Storage.set(STORAGE_VOTE_FROM,f);
+    Lampa.Storage.set(STORAGE_VOTE_TO,t);
   }
 
-  function getVoteTo() {
-    return roundHalf(clamp(parseFloat(Lampa.Storage.get(STORAGE_VOTE_TO, 9.5)), 1, 10));
+  function getGenres(){
+    try{return Lampa.Storage.get(STORAGE_GENRES,[]);}catch(e){return[];}
+  }
+  function setGenres(a){Lampa.Storage.set(STORAGE_GENRES,a);}
+
+  function getYearFrom(){return Lampa.Storage.get(STORAGE_YEAR_FROM,1980);}
+  function getYearTo(){return Lampa.Storage.get(STORAGE_YEAR_TO,nowYear());}
+  function setYears(f,t){
+    if(f>t)t=f;
+    Lampa.Storage.set(STORAGE_YEAR_FROM,f);
+    Lampa.Storage.set(STORAGE_YEAR_TO,t);
   }
 
-  function setVoteRange(f, t) {
-    if (f > t) t = f;
-    Lampa.Storage.set(STORAGE_VOTE_FROM, f);
-    Lampa.Storage.set(STORAGE_VOTE_TO, t);
+  function buildYearItems(cur){
+    var out=[];
+    for(var y=nowYear();y>=1960;y--){
+      out.push({title:String(y),value:y,selected:y===cur});
+    }
+    return out;
   }
 
-  function getGenres() {
-    try { return Lampa.Storage.get(STORAGE_GENRES, []); }
-    catch (e) { return []; }
-  }
+  /* ===== TMDB PARAMS ===== */
+  function makeDiscoverParams(type,page,vf,vt,base){
+    var y=nowYear();
+    var y1=randInt(1960,y);
+    var y2=Math.min(y,y1+randInt(0,12));
 
-  function setGenres(arr) {
-    try { Lampa.Storage.set(STORAGE_GENRES, arr); }
-    catch (e) {}
-  }
-
-  function getYearFrom() {
-    return Lampa.Storage.get(STORAGE_YEAR_FROM, 1980);
-  }
-
-  function getYearTo() {
-    return Lampa.Storage.get(STORAGE_YEAR_TO, nowYear());
-  }
-
-  function setYears(f, t) {
-    if (f > t) t = f;
-    Lampa.Storage.set(STORAGE_YEAR_FROM, f);
-    Lampa.Storage.set(STORAGE_YEAR_TO, t);
-  }
-
-  /* ================= TMDB PARAMS ================= */
-
-  function makeDiscoverParams(type, page, voteFrom, voteTo, baseParams) {
-    var y = nowYear();
-    var y1 = randInt(1960, y);
-    var y2 = Math.min(y, y1 + randInt(0, 12));
-
-    var params = {
-      page: page,
-      language: baseParams.language,
-      sort_by: 'popularity.desc',
-      include_adult: false,
-      'vote_count.gte': randInt(100, 2000),
-      'vote_average.gte': voteFrom,
-      'vote_average.lte': voteTo
+    var params={
+      page:page,
+      language:base.language||getLang(),
+      sort_by:'popularity.desc',
+      'vote_average.gte':vf,
+      'vote_average.lte':vt,
+      'vote_count.gte':150
     };
 
-    /* 👇 ПЕРЕВИЗНАЧЕННЯ (DIFF) */
-
-    var genres = getGenres();
-    if (genres.length) params.with_genres = genres.join(',');
-
-    var yf = getYearFrom();
-    var yt = getYearTo();
-
-    if (type === 'movie') {
-      params['primary_release_date.gte'] = yf + '-01-01';
-      params['primary_release_date.lte'] = yt + '-12-31';
+    if(type==='movie'){
+      params['primary_release_date.gte']=y1+'-01-01';
+      params['primary_release_date.lte']=y2+'-12-31';
     } else {
-      params['first_air_date.gte'] = yf + '-01-01';
-      params['first_air_date.lte'] = yt + '-12-31';
+      params['first_air_date.gte']=y1+'-01-01';
+      params['first_air_date.lte']=y2+'-12-31';
+    }
+
+    /* ===== OVERRIDE BY USER ===== */
+    var g=getGenres();
+    if(g.length) params.with_genres=g.join(',');
+
+    var yf=getYearFrom(), yt=getYearTo();
+    if(type==='movie'){
+      params['primary_release_date.gte']=yf+'-01-01';
+      params['primary_release_date.lte']=yt+'-12-31';
+    } else {
+      params['first_air_date.gte']=yf+'-01-01';
+      params['first_air_date.lte']=yt+'-12-31';
     }
 
     return params;
   }
 
-  /* ================= UI ================= */
-
-  function buildYearItems(current) {
-    var items = [];
-    for (var y = nowYear(); y >= 1950; y--) {
-      items.push({ title: String(y), value: y, selected: y === current });
-    }
-    return items;
+  /* ===== TMDB REQUEST ===== */
+  function tmdbGet(req,params,ok,bad){
+    Lampa.Api.sources.tmdb.get(req,params,ok,bad);
   }
 
-  function injectControls() {
-    var active = Lampa.Activity.active();
-    if (!active || !active.activity || !active.params.lampa_random_ui) return;
+  function buildMixedResponse(page,vf,vt,base,done){
+    var tasks=[
+      {type:'movie',page:randInt(1,500)},
+      {type:'movie',page:randInt(1,500)},
+      {type:'tv',page:randInt(1,500)},
+      {type:'tv',page:randInt(1,500)}
+    ];
 
-    var $body = active.activity.render().find('.scroll__body');
-    if ($body.find('[data-lr-top]').length) return;
+    var res=[], left=tasks.length;
 
-    var $bar = $('<div class="buttons" data-lr-top="1"></div>');
+    function next(){
+      if(--left>0)return;
+      shuffle(res);
+      done({
+        page:page,
+        total_pages:500,
+        total_results:999999,
+        results:res
+      });
+    }
 
-    var $fromBtn = $('<div class="selector button">Рейтинг від</div>');
-    var $toBtn   = $('<div class="selector button">До</div>');
-    var $genresBtn   = $('<div class="selector button">Жанри</div>');
-    var $yearFromBtn = $('<div class="selector button">Рік від</div>');
-    var $yearToBtn   = $('<div class="selector button">До</div>');
-    var $applyBtn    = $('<div class="selector button">Застосувати</div>');
+    tasks.forEach(function(t){
+      tmdbGet(
+        t.type==='movie'?'discover/movie':'discover/tv',
+        makeDiscoverParams(t.type,t.page,vf,vt,base),
+        function(j){
+          (j.results||[]).forEach(function(i){
+            i.media_type=t.type;
+            i.source='tmdb';
+            res.push(i);
+          });
+          next();
+        },
+        next
+      );
+    });
+  }
 
-    $genresBtn.on('hover:enter', function () {
+  /* ===== AJAX PATCH (CRITICAL) ===== */
+  function patchAjaxForVirtualEndpoint(){
+    if($.ajax.__lrpatched)return;
+    $.ajax.__lrpatched=true;
+
+    var orig=$.ajax;
+    $.ajax=function(o){
+      if(o.url&&/\/3\/lampa_random/.test(o.url)){
+        var d=o.data||{};
+        var p=parseInt(d.page)||1;
+        var df=$.Deferred();
+        buildMixedResponse(
+          p,getVoteFrom(),getVoteTo(),
+          {language:d.language||getLang(),region:d.region||''},
+          function(r){
+            o.success&&o.success(r);
+            df.resolve(r);
+          }
+        );
+        return df.promise();
+      }
+      return orig.apply(this,arguments);
+    };
+  }
+
+  /* ===== UI ===== */
+  function injectControls(){
+    var a=Lampa.Activity.active();
+    if(!a||a.params.lampa_random_ui!==1)return;
+
+    var b=a.activity.render().find('.scroll__body');
+    if(b.find('[data-lr]').length)return;
+
+    var bar=$('<div class="buttons" data-lr></div>');
+
+    var gbtn=$('<div class="selector button">Жанри</div>');
+    var yfbtn=$('<div class="selector button">Рік від</div>');
+    var ytbtn=$('<div class="selector button">Рік до</div>');
+    var abtn=$('<div class="selector button">Застосувати</div>');
+
+    gbtn.on('hover:enter',function(){
       Lampa.Select.show({
-        title: 'Жанри',
-        multiselect: true,
-        items: Object.keys(TMDB_GENRES).map(function (id) {
+        title:'Жанри',
+        multiselect:true,
+        items:Object.keys(TMDB_GENRES).map(function(id){
           return {
-            title: TMDB_GENRES[id],
-            value: id,
-            selected: getGenres().indexOf(id) !== -1
+            title:TMDB_GENRES[id],
+            value:id,
+            selected:getGenres().indexOf(id)!==-1
           };
         }),
-        onSelect: function (items) {
-          setGenres(items.map(function (i) { return i.value; }));
+        onSelect:function(it){
+          setGenres(it.map(function(i){return i.value;}));
           Lampa.Controller.toggle('content');
         }
       });
     });
 
-    $yearFromBtn.on('hover:enter', function () {
+    yfbtn.on('hover:enter',function(){
       Lampa.Select.show({
-        title: 'Рік від',
-        items: buildYearItems(getYearFrom()),
-        onSelect: function (a) {
-          setYears(a.value, getYearTo());
+        title:'Рік від',
+        items:buildYearItems(getYearFrom()),
+        onSelect:function(a){
+          setYears(a.value,getYearTo());
           Lampa.Controller.toggle('content');
         }
       });
     });
 
-    $yearToBtn.on('hover:enter', function () {
+    ytbtn.on('hover:enter',function(){
       Lampa.Select.show({
-        title: 'Рік до',
-        items: buildYearItems(getYearTo()),
-        onSelect: function (a) {
-          setYears(getYearFrom(), a.value);
+        title:'Рік до',
+        items:buildYearItems(getYearTo()),
+        onSelect:function(a){
+          setYears(getYearFrom(),a.value);
           Lampa.Controller.toggle('content');
         }
       });
     });
 
-    $applyBtn.on('hover:enter', function () {
-      Lampa.Activity.replace(active.params);
+    abtn.on('hover:enter',function(){
+      Lampa.Activity.replace({
+        url:'lampa_random?'+Date.now(),
+        component:'category_full',
+        source:'tmdb',
+        page:1,
+        lampa_random_ui:1
+      });
     });
 
-    $bar
-      .append($fromBtn)
-      .append($toBtn)
-      .append($genresBtn)
-      .append($yearFromBtn)
-      .append($yearToBtn)
-      .append($applyBtn);
-
-    $body.prepend($bar);
+    bar.append(gbtn,yfbtn,ytbtn,abtn);
+    b.prepend(bar);
   }
 
-  /* ================= INIT ================= */
-
-  function addMenuItem() {
-    if (document.querySelector('[data-id="' + MENU_ID + '"]')) return;
-
-    var $btn = $('<li class="menu__item selector" data-id="' + MENU_ID + '"><div class="menu__text">🎲 Мне повезёт</div></li>');
-    $btn.on('hover:enter', function () {
-      ensureDefaultRange();
-      Lampa.Activity.push({
-        url: '/3/lampa_random',
-        title: 'Мне повезёт',
-        component: 'category_full',
-        source: 'tmdb',
-        page: 1,
-        lampa_random_ui: 1
-      });
-      Lampa.Controller.toggle('content');
-      setTimeout(injectControls, 300);
-    });
-
-    $('.menu .menu__list').append($btn);
-  }
-
-  function init() {
+  /* ===== START ===== */
+  function openScreen(){
+    patchAjaxForVirtualEndpoint();
     ensureDefaultRange();
-    if (window.appready) addMenuItem();
-    else Lampa.Listener.follow('app', function (e) {
-      if (e.type === 'ready') addMenuItem();
+    Lampa.Activity.push({
+      url:'lampa_random?'+Date.now(),
+      title:'🎲 Мне повезёт',
+      component:'category_full',
+      source:'tmdb',
+      page:1,
+      lampa_random_ui:1
     });
+    setInterval(injectControls,300);
+  }
+
+  function init(){
+    ensureDefaultRange();
+    patchAjaxForVirtualEndpoint();
+    $('.menu .menu__list').append(
+      $('<li class="menu__item selector"><div class="menu__text">🎲 Мне повезёт</div></li>')
+        .on('hover:enter',openScreen)
+    );
   }
 
   init();
