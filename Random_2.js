@@ -24,7 +24,7 @@
     53: 'Thriller', 10752: 'War', 37: 'Western'  
   };  
   
-  // Default genres for your requirements: horror, thriller, mystery, action, crime, comedy, adventure  
+  // Default genres: horror, thriller, mystery, action, crime, comedy, adventure  
   var DEFAULT_GENRES = [27, 53, 9648, 28, 80, 35, 12];  
   
   function tr(key, def) {  
@@ -58,17 +58,17 @@
     try {  
       var f = Lampa.Storage.get(STORAGE_VOTE_FROM,null);  
       var t = Lampa.Storage.get(STORAGE_VOTE_TO,null);  
-      if(f===null||f===undefined||f==='') Lampa.Storage.set(STORAGE_VOTE_FROM,6.0); // Changed to 6.0 minimum  
-      if(t===null||t===undefined||t==='') Lampa.Storage.set(STORAGE_VOTE_TO,9.5);  
+      if(f===null||f===undefined||f==='') Lampa.Storage.set(STORAGE_VOTE_FROM,6.0);  
+      if(t===null||t===undefined||t==='') Lampa.Storage.set(STORAGE_VOTE_TO,10.0);  
   
-      if(Lampa.Storage.get(STORAGE_GENRES)==null) Lampa.Storage.set(STORAGE_GENRES,DEFAULT_GENRES); // Set default genres  
+      if(Lampa.Storage.get(STORAGE_GENRES)==null) Lampa.Storage.set(STORAGE_GENRES,DEFAULT_GENRES);  
       if(Lampa.Storage.get(STORAGE_YEAR_FROM)==null) Lampa.Storage.set(STORAGE_YEAR_FROM,1980);  
       if(Lampa.Storage.get(STORAGE_YEAR_TO)==null) Lampa.Storage.set(STORAGE_YEAR_TO, nowYear());  
     } catch(e){}  
   }  
   
   function getVoteFrom(){var v=6.0; try{v=parseFloat(Lampa.Storage.get(STORAGE_VOTE_FROM,6.0)); if(isNaN(v))v=6.0;}catch(e){v=6.0;} return roundHalf(clamp(v,1,10));}  
-  function getVoteTo(){var v=9.5; try{v=parseFloat(Lampa.Storage.get(STORAGE_VOTE_TO,9.5)); if(isNaN(v))v=9.5;}catch(e){v=9.5;} return roundHalf(clamp(v,1,10));}  
+  function getVoteTo(){var v=10.0; try{v=parseFloat(Lampa.Storage.get(STORAGE_VOTE_TO,10.0)); if(isNaN(v))v=10.0;}catch(e){v=10.0;} return roundHalf(clamp(v,1,10));}  
   function setVoteRange(f,t){f=roundHalf(clamp(f,1,10)); t=roundHalf(clamp(t,1,10)); if(f>t)t=f; try{Lampa.Storage.set(STORAGE_VOTE_FROM,f);}catch(e){} try{Lampa.Storage.set(STORAGE_VOTE_TO,t);}catch(e){}}  
   
   function getGenres(){try{return Lampa.Storage.get(STORAGE_GENRES,DEFAULT_GENRES);}catch(e){return DEFAULT_GENRES;}}  
@@ -95,16 +95,22 @@
       'vote_average.gte': voteFrom,  
       'vote_average.lte': voteTo  
     };  
-    if(type==='movie'){ params['primary_release_date.gte']=y1+'-01-01'; params['primary_release_date.lte']=y2+'-12-31'; }  
-    else { params['first_air_date.gte']=y1+'-01-01'; params['first_air_date.lte']=y2+'-12-31'; }  
+      
+    // Always use user-defined year range  
+    var yf=getYearFrom(); var yt=getYearTo();  
+    if(type==='movie'){   
+      params['primary_release_date.gte']=yf+'-01-01';   
+      params['primary_release_date.lte']=yt+'-12-31';   
+    } else {   
+      params['first_air_date.gte']=yf+'-01-01';   
+      params['first_air_date.lte']=yt+'-12-31';   
+    }  
+  
+    // Always apply genre filter  
+    var genres = getGenres();   
+    if(genres && genres.length) params.with_genres=genres.join(',');  
   
     try{ var region=(baseParams&&baseParams.region)?baseParams.region:Lampa.Storage.get('region',''); if(region) params.region=region;}catch(e){}  
-  
-    // genres & years override  
-    var genres = getGenres(); if(genres.length) params.with_genres=genres.join(',');  
-    var yf=getYearFrom(); var yt=getYearTo();  
-    if(type==='movie'){ params['primary_release_date.gte']=yf+'-01-01'; params['primary_release_date.lte']=yt+'-12-31'; }  
-    else { params['first_air_date.gte']=yf+'-01-01'; params['first_air_date.lte']=yt+'-12-31'; }  
   
     return params;  
   }  
@@ -115,13 +121,13 @@
   
   function buildMixedResponse(page,voteFrom,voteTo,baseParams,done,attempt){  
     attempt=attempt||0;  
-    // Changed to only fetch movies, removed TV shows  
+    // Only fetch movies  
     var tasks=[{type:'movie',page:randInt(1,500)},{type:'movie',page:randInt(1,500)},{type:'movie',page:randInt(1,500)},{type:'movie',page:randInt(1,500)}];  
     var res=[]; var left=tasks.length;  
     function oneDone(){left--; if(left>0)return;  
       var filtered=filterByVote(res,voteFrom,voteTo);  
       shuffle(filtered);  
-      if(filtered.length<24&&attempt<1){ buildMixedResponse(page,voteFrom,voteTo,baseParams,done,attempt+1); return; }  
+      if(filtered.length<24&&attempt<2){ buildMixedResponse(page,voteFrom,voteTo,baseParams,done,attempt+1); return; }  
       var result={ page:page, total_pages:500, total_results:999999, results:filtered};  
       try{ if(Lampa.Utils&&typeof Lampa.Utils.addSource==='function') Lampa.Utils.addSource(result,'tmdb'); }catch(e){}  
       done(result);  
@@ -175,7 +181,7 @@
   function openScreen(){ patchAjaxForVirtualEndpoint(); ensureDefaultRange(); var url='lampa_random?rnd='+Date.now(); Lampa.Activity.push(activityParams(url)); Lampa.Controller.toggle('content'); scheduleInject();}  
   function refreshScreen(){ patchAjaxForVirtualEndpoint(); var url='lampa_random?rnd='+Date.now(); Lampa.Activity.replace(activityParams(url)); scheduleInject();}  
   
-  function buildVoteItems(current){var items=[];for(var x=10;x<=100;x+=5){var v=x/10; items.push({title:formatVote(v), value:v, selected:v===current});} return items;}  
+  function buildVoteItems(current){var items=[];for(var x=60;x<=100;x+=5){var v=x/10; items.push({title:formatVote(v), value:v, selected:v===current});} return items;}  
   function buildYearItems(current){var items=[]; var y=nowYear(); for(var i=y;i>=1960;i--){items.push({title:i+'', value:i, selected:i===current});} return items;}  
   
   function injectControls(){  
@@ -234,7 +240,7 @@
   
   function addMenuItem(){  
     var title='🎲 '+tr('lampa_random_name','Мені пощастить');  
-    var $btn=$('<li class="menu__item selector" data-id="'+MENU_ID+'"><div class="menu__text">'+title+'</div></li>');  
+    var $btn=$('<li class="menu__item selector" data-id="'+MENU_ID+'"><div class="menu__ico"><svg height="24" viewBox="0 0 24 24" width="24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="currentColor"/></svg></div><div class="menu__text">'+title+'</div></li>');  
     $btn.on('hover:enter',openScreen);  
   
     // чекатиме меню, поки не з'явиться  
@@ -256,4 +262,4 @@
   }  
   
   init();  
-})();
+})(); 
