@@ -72,7 +72,7 @@
   function setVoteRange(f,t){f=roundHalf(clamp(f,1,10)); t=roundHalf(clamp(t,1,10)); if(f>t)t=f; try{Lampa.Storage.set(STORAGE_VOTE_FROM,f);}catch(e){} try{Lampa.Storage.set(STORAGE_VOTE_TO,t);}catch(e){}}  
   
   function getGenres(){try{return Lampa.Storage.get(STORAGE_GENRES,DEFAULT_GENRES);}catch(e){return DEFAULT_GENRES;}}  
-  function setGenres(arr){try{Lampa.Storage.set(STORAGE_GENRES,arr);}catch(e){}  
+  function setGenres(arr){try{Lampa.Storage.set(STORAGE_GENRES,arr);}catch(e){}}  
   
   function getYearFrom(){return Lampa.Storage.get(STORAGE_YEAR_FROM,1980);}  
   function getYearTo(){return Lampa.Storage.get(STORAGE_YEAR_TO, nowYear());}  
