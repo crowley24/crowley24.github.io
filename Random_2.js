@@ -181,120 +181,135 @@ function refreshScreen(){
     scheduleInject();  
 }  
   
-function addControlsToScreen() {    
-    try {    
-        // Шукаємо різні можливі контейнери    
-        var $scrollBody = $('.scroll-body').eq(0);    
-        if (!$scrollBody.length) $scrollBody = $('.content').eq(0);    
-        if (!$scrollBody.length) $scrollBody = $('.full-start-new__body').eq(0);    
-            
-        if (!$scrollBody.length) {    
-            console.log('lampa_random: контейнер для контролів не знайдено');    
-            return false;    
-        }    
-    
-        var $bar = $('<div class="controls-bar" style="padding: 1em; background: rgba(0,0,0,0.3); margin-bottom: 1em;"></div>');    
-            
-        // Кнопки рейтингу    
-        var $fromBtn = $('<div class="selector" style="display: inline-block; margin-right: 1em;"><div class="selector__name">Рейтинг від: ' + getVoteFrom() + '</div></div>');    
-        var $toBtn = $('<div class="selector" style="display: inline-block; margin-right: 1em;"><div class="selector__name">Рейтинг до: ' + getVoteTo() + '</div></div>');    
-            
-        // Кнопка жанрів    
-        var $genresBtn = $('<div class="selector" style="display: inline-block; margin-right: 1em;"><div class="selector__name">Жанри: ' + getGenres().length + '</div></div>');    
-            
-        // Кнопки років    
-        var $yearFromBtn = $('<div class="selector" style="display: inline-block; margin-right: 1em;"><div class="selector__name">Рік від: ' + getYearFrom() + '</div></div>');    
-        var $yearToBtn = $('<div class="selector" style="display: inline-block; margin-right: 1em;"><div class="selector__name">Рік до: ' + getYearTo() + '</div></div>');    
-            
-        // Кнопка застосування    
-        var $applyBtn = $('<div class="selector" style="display: inline-block;"><div class="selector__name">Застосувати</div></div>');    
-    
-        // Обробники подій    
-        $fromBtn.on('hover:enter', function(){    
-            Lampa.Select.show({    
-                title: 'Рейтинг від',    
-                items: buildVoteItems(getVoteFrom()),    
-                onSelect: function(a){    
-                    var from = a.value;    
-                    var to = getVoteTo();    
-                    if(from > to) to = from;    
-                    setVoteRange(from, to);    
-                    updateTexts();    
-                    Lampa.Controller.toggle('content');    
-                },    
-                onBack: function(){Lampa.Controller.toggle('content');}    
-            });    
-        });    
-    
-        $toBtn.on('hover:enter', function(){    
-            Lampa.Select.show({    
-                title: 'Рейтинг до',    
-                items: buildVoteItems(getVoteTo()),    
-                onSelect: function(a){    
-                    var to = a.value;    
-                    var from = getVoteFrom();    
-                    if(from > to) from = to;    
-                    setVoteRange(from, to);    
-                    updateTexts();    
-                    Lampa.Controller.toggle('content');    
-                },    
-                onBack: function(){Lampa.Controller.toggle('content');}    
-            });    
-        });    
-    
-        $genresBtn.on('hover:enter', function(){    
-            Lampa.Select.show({    
-                title: 'Жанри',    
-                multiselect: true,    
-                items: Object.keys(TMDB_GENRES).map(function(id){    
-                    return {    
-                        title: TMDB_GENRES[id],    
-                        value: id,    
-                        selected: getGenres().indexOf(id) !== -1    
-                    };    
-                }),    
-                onSelect: function(items){    
-                    setGenres(items.map(function(i){return i.value;}));    
-                    Lampa.Controller.toggle('content');    
-                }    
-            });    
-        });    
-    
-        $yearFromBtn.on('hover:enter', function(){    
-            Lampa.Select.show({    
-                title: 'Рік від',    
-                items: buildYearItems(getYearFrom()),    
-                onSelect: function(a){    
-                    setYears(a.value, getYearTo());    
-                    Lampa.Controller.toggle('content');    
-                }    
-            });    
-        });    
-    
-        $yearToBtn.on('hover:enter', function(){    
-            Lampa.Select.show({    
-                title: 'Рік до',    
-                items: buildYearItems(getYearTo()),    
-                onSelect: function(a){    
-                    setYears(getYearFrom(), a.value);    
-                    Lampa.Controller.toggle('content');    
-                }    
-            });    
-        });    
-    
-        $applyBtn.on('hover:enter', refreshScreen);    
-    
-        updateTexts();    
-    
-        $bar.append($fromBtn).append($toBtn).append($genresBtn).append($yearFromBtn).append($yearToBtn).append($applyBtn);    
-        $scrollBody.prepend($bar);    
-            
-        console.log('lampa_random: елементи керування додані');    
-        return true;    
-    } catch(e) {    
-        console.error('lampa_random помилка:', e);    
-        return false;    
-    }    
+function addControlsToScreen() {  
+    try {  
+        // Зачекаємо повного завантаження сторінки  
+        if (document.readyState !== 'complete') {  
+            setTimeout(addControlsToScreen, 500);  
+            return false;  
+        }  
+  
+        // Шукаємо різні можливі контейнери  
+        var containers = [  
+            '.scroll__body',  
+            '.scroll-body',   
+            '.content',  
+            '.full-start-new__body',  
+            '.category-full__body',  
+            'body > .layer > .layer--content'  
+        ];  
+          
+        var $scrollBody = null;  
+        for (var i = 0; i < containers.length; i++) {  
+            $scrollBody = $(containers[i]).eq(0);  
+            if ($scrollBody.length) break;  
+        }  
+          
+        if (!$scrollBody || !$scrollBody.length) {  
+            console.log('lampa_random: контейнер для контролів не знайдено');  
+            return false;  
+        }  
+  
+        // Перевіряємо чи контроли вже додані  
+        if ($scrollBody.find('.controls-bar').length) {  
+            console.log('lampa_random: контроли вже існують');  
+            return true;  
+        }  
+  
+        var $bar = $('<div class="controls-bar" style="padding: 1em; background: rgba(0,0,0,0.8); margin-bottom: 1em; border-radius: 0.5em; position: relative; z-index: 10;"></div>');  
+          
+        // Кнопки рейтингу  
+        var $fromBtn = $('<div class="selector" style="display: inline-block; margin-right: 1em; padding: 0.5em; background: rgba(255,255,255,0.1); border-radius: 0.3em; cursor: pointer;"><div class="selector__name">Рейтинг від: ' + getVoteFrom() + '</div></div>');  
+        var $toBtn = $('<div class="selector" style="display: inline-block; margin-right: 1em; padding: 0.5em; background: rgba(255,255,255,0.1); border-radius: 0.3em; cursor: pointer;"><div class="selector__name">Рейтинг до: ' + getVoteTo() + '</div></div>');  
+          
+        // Кнопка жанрів  
+        var $genresBtn = $('<div class="selector" style="display: inline-block; margin-right: 1em; padding: 0.5em; background: rgba(255,255,255,0.1); border-radius: 0.3em; cursor: pointer;"><div class="selector__name">Жанри: ' + (getGenres().length ? 'Вибрано (' + getGenres().length + ')' : 'Усі') + '</div></div>');  
+          
+        // Кнопки років  
+        var $yearFromBtn = $('<div class="selector" style="display: inline-block; margin-right: 1em; padding: 0.5em; background: rgba(255,255,255,0.1); border-radius: 0.3em; cursor: pointer;"><div class="selector__name">Рік від: ' + getYearFrom() + '</div></div>');  
+        var $yearToBtn = $('<div class="selector" style="display: inline-block; margin-right: 1em; padding: 0.5em; background: rgba(255,255,255,0.1); border-radius: 0.3em; cursor: pointer;"><div class="selector__name">Рік до: ' + getYearTo() + '</div></div>');  
+          
+        // Кнопка застосування  
+        var $applyBtn = $('<div class="selector" style="display: inline-block; padding: 0.5em 1em; background: rgba(76, 175, 80, 0.8); border-radius: 0.3em; cursor: pointer; color: white; font-weight: bold;"><div class="selector__name">Застосувати</div></div>');  
+  
+        // Обробники подій  
+        $fromBtn.on('hover:enter click', function(){  
+            Lampa.Select.show({  
+                title: 'Рейтинг від',  
+                items: buildVoteItems(getVoteFrom()),  
+                onSelect: function(item){  
+                    setVoteRange(item.value, getVoteTo());  
+                    Lampa.Controller.toggle('content');  
+                }  
+            });  
+        });  
+  
+        $toBtn.on('hover:enter click', function(){  
+            Lampa.Select.show({  
+                title: 'Рейтинг до',  
+                items: buildVoteItems(getVoteTo()),  
+                onSelect: function(item){  
+                    setVoteRange(getVoteFrom(), item.value);  
+                    Lampa.Controller.toggle('content');  
+                }  
+            });  
+        });  
+  
+        $genresBtn.on('hover:enter click', function(){  
+            Lampa.Select.show({  
+                title: 'Жанри',  
+                multiselect: true,  
+                items: Object.keys(TMDB_GENRES).map(function(id){  
+                    return {  
+                        title: TMDB_GENRES[id],  
+                        value: id,  
+                        selected: getGenres().indexOf(id) !== -1  
+                    };  
+                }),  
+                onSelect: function(items){  
+                    setGenres(items.map(function(i){return i.value;}));  
+                    Lampa.Controller.toggle('content');  
+                }  
+            });  
+        });  
+  
+        $yearFromBtn.on('hover:enter click', function(){  
+            Lampa.Select.show({  
+                title: 'Рік від',  
+                items: buildYearItems(getYearFrom()),  
+                onSelect: function(item){  
+                    setYears(item.value, getYearTo());  
+                    Lampa.Controller.toggle('content');  
+                }  
+            });  
+        });  
+  
+        $yearToBtn.on('hover:enter click', function(){  
+            Lampa.Select.show({  
+                title: 'Рік до',  
+                items: buildYearItems(getYearTo()),  
+                onSelect: function(item){  
+                    setYears(getYearFrom(), item.value);  
+                    Lampa.Controller.toggle('content');  
+                }  
+            });  
+        });  
+  
+        $applyBtn.on('hover:enter click', refreshScreen);  
+  
+        // Додаємо елементи на панель  
+        $bar.append($fromBtn).append($toBtn).append($genresBtn).append($yearFromBtn).append($yearToBtn).append($applyBtn);  
+          
+        // Вставляємо панель на початок контейнера  
+        $scrollBody.prepend($bar);  
+          
+        console.log('lampa_random: елементи керування успішно додані');  
+        return true;  
+          
+    } catch(e) {  
+        console.error('lampa_random помилка:', e);  
+        return false;  
+    }  
 }
 
   function addMenuItem(){
