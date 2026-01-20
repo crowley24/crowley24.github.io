@@ -1,6 +1,5 @@
 /* Оригінальний плагін https://github.com/wapmax/lampa_plugins/blob/main/lampa_random.js
  */ 
-
 (function () {  
   'use strict';  
   
