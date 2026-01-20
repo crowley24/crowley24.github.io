@@ -1,7 +1,7 @@
 /* Title: lampa_random
- * Version: 1.1.0
- * Description: Random movies and TV shows with rating, genres and years filter
- * Author: wapmax + patched
+ * Version: 1.0.3
+ * Description: Random movies and TV shows with rating, genres, years sort
+ * Author: wapmax + modified by Eugene
  */
 (function () {
   'use strict';
@@ -12,293 +12,240 @@
   var MENU_ID = 'lampa_random_menu';
 
   var STORAGE_VOTE_FROM = 'lampa_random_vote_from';
-  var STORAGE_VOTE_TO   = 'lampa_random_vote_to';
-  var STORAGE_GENRES    = 'lampa_random_genres';
+  var STORAGE_VOTE_TO = 'lampa_random_vote_to';
+  var STORAGE_GENRES = 'lampa_random_genres';
   var STORAGE_YEAR_FROM = 'lampa_random_year_from';
-  var STORAGE_YEAR_TO   = 'lampa_random_year_to';
+  var STORAGE_YEAR_TO = 'lampa_random_year_to';
 
-  /* ===== GENRES ===== */
   var TMDB_GENRES = {
-    28:'Action',12:'Adventure',16:'Animation',35:'Comedy',80:'Crime',
-    99:'Documentary',18:'Drama',10751:'Family',14:'Fantasy',36:'History',
-    27:'Horror',10402:'Music',9648:'Mystery',10749:'Romance',
-    878:'Science Fiction',53:'Thriller',10752:'War',37:'Western'
+    28: 'Action', 12: 'Adventure', 16: 'Animation', 35: 'Comedy', 80: 'Crime',
+    99: 'Documentary', 18: 'Drama', 10751: 'Family', 14: 'Fantasy', 36: 'History',
+    27: 'Horror', 10402: 'Music', 9648: 'Mystery', 10749: 'Romance', 878: 'Science Fiction',
+    53: 'Thriller', 10752: 'War', 37: 'Western'
   };
 
   function tr(key, def) {
-    try { return Lampa.Lang.translate(key); } catch (e) {}
+    try { return Lampa.Lang.translate(key); } catch(e) {}
     return def || key;
   }
 
-  function nowYear() {
-    return new Date().getFullYear();
+  function addTranslations() {
+    if (!window.Lampa || !Lampa.Lang) return;
+    Lampa.Lang.add({
+      lampa_random_name: { ru: 'Мне повезёт' },
+      lampa_random_title: { ru: '🎲 Мне повезёт' },
+      lampa_random_vote_from: { ru: 'Рейтинг: От' },
+      lampa_random_vote_to: { ru: 'До' },
+      lampa_random_apply: { ru: 'Применить' }
+    });
   }
 
-  function randInt(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  }
+  function randInt(min, max) { return Math.floor(Math.random()*(max-min+1))+min; }
+  function shuffle(arr) { for(var i=arr.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)); var t=arr[i]; arr[i]=arr[j]; arr[j]=t;} return arr; }
+  function nowYear() { return new Date().getFullYear(); }
+  function clamp(v,a,b){if(v<a)return a;if(v>b)return b;return v;}
+  function roundHalf(v){return Math.round(v*2)/2;}
+  function formatVote(v){return (v.toFixed(1)+'').replace('.',',');}
 
-  function shuffle(arr) {
-    for (var i = arr.length - 1; i > 0; i--) {
-      var j = Math.floor(Math.random() * (i + 1));
-      var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
-    }
-    return arr;
-  }
-
-  function getLang() {
-    var l = 'ru';
-    try { l = Lampa.Storage.get('language', 'ru'); } catch (e) {}
-    if (l === 'ua') l = 'uk';
-    return l + '-' + l.toUpperCase();
-  }
-
-  /* ===== DEFAULTS ===== */
+  // STORAGE helpers
   function ensureDefaultRange() {
-    if (Lampa.Storage.get(STORAGE_VOTE_FROM) == null)
-      Lampa.Storage.set(STORAGE_VOTE_FROM, 5.5);
+    try {
+      var f = Lampa.Storage.get(STORAGE_VOTE_FROM,null);
+      var t = Lampa.Storage.get(STORAGE_VOTE_TO,null);
+      if(f===null||f===undefined||f==='') Lampa.Storage.set(STORAGE_VOTE_FROM,5.5);
+      if(t===null||t===undefined||t==='') Lampa.Storage.set(STORAGE_VOTE_TO,9.5);
 
-    if (Lampa.Storage.get(STORAGE_VOTE_TO) == null)
-      Lampa.Storage.set(STORAGE_VOTE_TO, 9.5);
-
-    if (Lampa.Storage.get(STORAGE_GENRES) == null)
-      Lampa.Storage.set(STORAGE_GENRES, []);
-
-    if (Lampa.Storage.get(STORAGE_YEAR_FROM) == null)
-      Lampa.Storage.set(STORAGE_YEAR_FROM, 1980);
-
-    if (Lampa.Storage.get(STORAGE_YEAR_TO) == null)
-      Lampa.Storage.set(STORAGE_YEAR_TO, nowYear());
+      if(Lampa.Storage.get(STORAGE_GENRES)==null) Lampa.Storage.set(STORAGE_GENRES,[]);
+      if(Lampa.Storage.get(STORAGE_YEAR_FROM)==null) Lampa.Storage.set(STORAGE_YEAR_FROM,1980);
+      if(Lampa.Storage.get(STORAGE_YEAR_TO)==null) Lampa.Storage.set(STORAGE_YEAR_TO, nowYear());
+    } catch(e){}
   }
 
-  /* ===== GET / SET ===== */
-  function getVoteFrom(){return Lampa.Storage.get(STORAGE_VOTE_FROM,5.5);}
-  function getVoteTo(){return Lampa.Storage.get(STORAGE_VOTE_TO,9.5);}
-  function setVoteRange(f,t){
-    if(f>t)t=f;
-    Lampa.Storage.set(STORAGE_VOTE_FROM,f);
-    Lampa.Storage.set(STORAGE_VOTE_TO,t);
-  }
+  function getVoteFrom(){var v=5.5; try{v=parseFloat(Lampa.Storage.get(STORAGE_VOTE_FROM,5.5)); if(isNaN(v))v=5.5;}catch(e){v=5.5;} return roundHalf(clamp(v,1,10));}
+  function getVoteTo(){var v=9.5; try{v=parseFloat(Lampa.Storage.get(STORAGE_VOTE_TO,9.5)); if(isNaN(v))v=9.5;}catch(e){v=9.5;} return roundHalf(clamp(v,1,10));}
+  function setVoteRange(f,t){f=roundHalf(clamp(f,1,10)); t=roundHalf(clamp(t,1,10)); if(f>t)t=f; try{Lampa.Storage.set(STORAGE_VOTE_FROM,f);}catch(e){} try{Lampa.Storage.set(STORAGE_VOTE_TO,t);}catch(e){}}
 
-  function getGenres(){
-    try{return Lampa.Storage.get(STORAGE_GENRES,[]);}catch(e){return[];}
-  }
-  function setGenres(a){Lampa.Storage.set(STORAGE_GENRES,a);}
+  function getGenres(){try{return Lampa.Storage.get(STORAGE_GENRES,[]);}catch(e){return [];}}
+  function setGenres(arr){try{Lampa.Storage.set(STORAGE_GENRES,arr);}catch(e){}}
 
   function getYearFrom(){return Lampa.Storage.get(STORAGE_YEAR_FROM,1980);}
-  function getYearTo(){return Lampa.Storage.get(STORAGE_YEAR_TO,nowYear());}
-  function setYears(f,t){
-    if(f>t)t=f;
-    Lampa.Storage.set(STORAGE_YEAR_FROM,f);
-    Lampa.Storage.set(STORAGE_YEAR_TO,t);
-  }
+  function getYearTo(){return Lampa.Storage.get(STORAGE_YEAR_TO, nowYear());}
+  function setYears(f,t){if(f>t)t=f; Lampa.Storage.set(STORAGE_YEAR_FROM,f); Lampa.Storage.set(STORAGE_YEAR_TO,t);}
 
-  function buildYearItems(cur){
-    var out=[];
-    for(var y=nowYear();y>=1960;y--){
-      out.push({title:String(y),value:y,selected:y===cur});
-    }
-    return out;
-  }
+  function getLang(){var l='ru'; try{l=Lampa.Storage.get('language','ru')||'ru';}catch(e){} if(l==='ua')l='uk'; return l+'-'+String(l).toUpperCase();}
 
-  /* ===== TMDB PARAMS ===== */
-  function makeDiscoverParams(type,page,vf,vt,base){
-    var y=nowYear();
-    var y1=randInt(1960,y);
-    var y2=Math.min(y,y1+randInt(0,12));
+  function normalizeItem(it,type){it=it||{}; it.type=type; it.media_type=type; it.source='tmdb'; it.title=it.title||it.name||it.original_title||it.original_name||''; it.name=it.name||it.title||''; return it;}
 
-    var params={
-      page:page,
-      language:base.language||getLang(),
-      sort_by:'popularity.desc',
-      'vote_average.gte':vf,
-      'vote_average.lte':vt,
-      'vote_count.gte':150
+  function makeDiscoverParams(type,page,voteFrom,voteTo,baseParams){
+    var y = nowYear();
+    var y1 = randInt(1960,y);
+    var y2 = Math.min(y, y1+randInt(0,12));
+    var params = {
+      page: page,
+      language: (baseParams && baseParams.language) ? baseParams.language : getLang(),
+      include_adult:false,
+      sort_by: (Math.random()<0.85?'popularity.desc':'vote_average.desc'),
+      'vote_count.gte': randInt(150,1500),
+      'vote_average.gte': voteFrom,
+      'vote_average.lte': voteTo
     };
+    if(type==='movie'){ params['primary_release_date.gte']=y1+'-01-01'; params['primary_release_date.lte']=y2+'-12-31'; }
+    else { params['first_air_date.gte']=y1+'-01-01'; params['first_air_date.lte']=y2+'-12-31'; }
 
-    if(type==='movie'){
-      params['primary_release_date.gte']=y1+'-01-01';
-      params['primary_release_date.lte']=y2+'-12-31';
-    } else {
-      params['first_air_date.gte']=y1+'-01-01';
-      params['first_air_date.lte']=y2+'-12-31';
-    }
+    try{ var region=(baseParams&&baseParams.region)?baseParams.region:Lampa.Storage.get('region',''); if(region) params.region=region;}catch(e){}
 
-    /* ===== OVERRIDE BY USER ===== */
-    var g=getGenres();
-    if(g.length) params.with_genres=g.join(',');
-
-    var yf=getYearFrom(), yt=getYearTo();
-    if(type==='movie'){
-      params['primary_release_date.gte']=yf+'-01-01';
-      params['primary_release_date.lte']=yt+'-12-31';
-    } else {
-      params['first_air_date.gte']=yf+'-01-01';
-      params['first_air_date.lte']=yt+'-12-31';
-    }
+    // genres & years override
+    var genres = getGenres(); if(genres.length) params.with_genres=genres.join(',');
+    var yf=getYearFrom(); var yt=getYearTo();
+    if(type==='movie'){ params['primary_release_date.gte']=yf+'-01-01'; params['primary_release_date.lte']=yt+'-12-31'; }
+    else { params['first_air_date.gte']=yf+'-01-01'; params['first_air_date.lte']=yt+'-12-31'; }
 
     return params;
   }
 
-  /* ===== TMDB REQUEST ===== */
-  function tmdbGet(req,params,ok,bad){
-    Lampa.Api.sources.tmdb.get(req,params,ok,bad);
-  }
+  function tmdbGet(req,params,ok,bad){try{var tmdb=Lampa.Api&&Lampa.Api.sources&&Lampa.Api.sources.tmdb; if(!tmdb||typeof tmdb.get!=='function') return bad&&bad('NO_TMDB_GET'); tmdb.get(req,params,ok,bad);}catch(e){bad&&bad(e);}}
 
-  function buildMixedResponse(page,vf,vt,base,done){
-    var tasks=[
-      {type:'movie',page:randInt(1,500)},
-      {type:'movie',page:randInt(1,500)},
-      {type:'tv',page:randInt(1,500)},
-      {type:'tv',page:randInt(1,500)}
-    ];
+  function filterByVote(items,voteFrom,voteTo){var out=[]; for(var i=0;i<items.length;i++){var v=parseFloat(items[i].vote_average); if(isNaN(v))continue; if(v>=voteFrom&&v<=voteTo) out.push(items[i]);} return out;}
 
-    var res=[], left=tasks.length;
-
-    function next(){
-      if(--left>0)return;
-      shuffle(res);
-      done({
-        page:page,
-        total_pages:500,
-        total_results:999999,
-        results:res
-      });
+  function buildMixedResponse(page,voteFrom,voteTo,baseParams,done,attempt){
+    attempt=attempt||0;
+    var tasks=[{type:'movie',page:randInt(1,500)},{type:'movie',page:randInt(1,500)},{type:'tv',page:randInt(1,500)},{type:'tv',page:randInt(1,500)}];
+    var res=[]; var left=tasks.length;
+    function oneDone(){left--; if(left>0)return;
+      var filtered=filterByVote(res,voteFrom,voteTo);
+      shuffle(filtered);
+      if(filtered.length<24&&attempt<1){ buildMixedResponse(page,voteFrom,voteTo,baseParams,done,attempt+1); return; }
+      var result={ page:page, total_pages:500, total_results:999999, results:filtered};
+      try{ if(Lampa.Utils&&typeof Lampa.Utils.addSource==='function') Lampa.Utils.addSource(result,'tmdb'); }catch(e){}
+      done(result);
     }
-
-    tasks.forEach(function(t){
-      tmdbGet(
-        t.type==='movie'?'discover/movie':'discover/tv',
-        makeDiscoverParams(t.type,t.page,vf,vt,base),
-        function(j){
-          (j.results||[]).forEach(function(i){
-            i.media_type=t.type;
-            i.source='tmdb';
-            res.push(i);
-          });
-          next();
-        },
-        next
-      );
-    });
+    for(var i=0;i<tasks.length;i++){
+      (function(task){
+        var req=task.type==='movie'?'discover/movie':'discover/tv';
+        var p=makeDiscoverParams(task.type,task.page,voteFrom,voteTo,baseParams);
+        tmdbGet(req,p,function(json){ var list=(json&&json.results)?json.results:[]; for(var k=0;k<list.length;k++) res.push(normalizeItem(list[k],task.type)); oneDone();},function(){oneDone();});
+      })(tasks[i]);
+    }
   }
 
-  /* ===== AJAX PATCH (CRITICAL) ===== */
   function patchAjaxForVirtualEndpoint(){
-    if($.ajax.__lrpatched)return;
-    $.ajax.__lrpatched=true;
-
-    var orig=$.ajax;
-    $.ajax=function(o){
-      if(o.url&&/\/3\/lampa_random/.test(o.url)){
-        var d=o.data||{};
-        var p=parseInt(d.page)||1;
-        var df=$.Deferred();
-        buildMixedResponse(
-          p,getVoteFrom(),getVoteTo(),
-          {language:d.language||getLang(),region:d.region||''},
-          function(r){
-            o.success&&o.success(r);
-            df.resolve(r);
-          }
-        );
-        return df.promise();
-      }
-      return orig.apply(this,arguments);
+    if(!window.$||!$.ajax)return;
+    if($.ajax.__lampa_random_patched) return;
+    $.ajax.__lampa_random_patched=true;
+    var originalAjax=$.ajax;
+    $.ajax=function(options){
+      try{
+        var url=options&&options.url?String(options.url):'';
+        if(/\/3\/lampa_random(\?|$)/.test(url)){
+          var data=options.data||{};
+          var page=parseInt(data.page||1,10)||1;
+          var voteFrom=getVoteFrom();
+          var voteTo=getVoteTo();
+          if(voteFrom>voteTo){ voteTo=voteFrom; setVoteRange(voteFrom,voteTo);}
+          var baseParams={ language:data.language||getLang(), region:data.region||''};
+          var dfd=$.Deferred(); var jq=dfd.promise(); jq.abort=function(){};
+          buildMixedResponse(page,voteFrom,voteTo,baseParams,function(json){
+            setTimeout(function(){
+              try{if(options.success) options.success(json,'success',jq);}catch(e1){}
+              try{if(options.complete) options.complete(jq,'success');}catch(e2){}
+              dfd.resolve(json,'success',jq);
+            },0);
+          });
+          return jq;
+        }
+      }catch(e){}
+      return originalAjax.apply(this,arguments);
     };
   }
 
-  /* ===== UI ===== */
-  function injectControls(){
-    var a=Lampa.Activity.active();
-    if(!a||a.params.lampa_random_ui!==1)return;
+  function activityParams(url){ return { url:url, title:tr('lampa_random_name','Мне повезёт'), component:'category_full', source:'tmdb', sort:'now', card_type:true, page:1, lampa_random_ui:1}; }
 
-    var b=a.activity.render().find('.scroll__body');
-    if(b.find('[data-lr]').length)return;
-
-    var bar=$('<div class="buttons" data-lr></div>');
-
-    var gbtn=$('<div class="selector button">Жанри</div>');
-    var yfbtn=$('<div class="selector button">Рік від</div>');
-    var ytbtn=$('<div class="selector button">Рік до</div>');
-    var abtn=$('<div class="selector button">Застосувати</div>');
-
-    gbtn.on('hover:enter',function(){
-      Lampa.Select.show({
-        title:'Жанри',
-        multiselect:true,
-        items:Object.keys(TMDB_GENRES).map(function(id){
-          return {
-            title:TMDB_GENRES[id],
-            value:id,
-            selected:getGenres().indexOf(id)!==-1
-          };
-        }),
-        onSelect:function(it){
-          setGenres(it.map(function(i){return i.value;}));
-          Lampa.Controller.toggle('content');
-        }
-      });
-    });
-
-    yfbtn.on('hover:enter',function(){
-      Lampa.Select.show({
-        title:'Рік від',
-        items:buildYearItems(getYearFrom()),
-        onSelect:function(a){
-          setYears(a.value,getYearTo());
-          Lampa.Controller.toggle('content');
-        }
-      });
-    });
-
-    ytbtn.on('hover:enter',function(){
-      Lampa.Select.show({
-        title:'Рік до',
-        items:buildYearItems(getYearTo()),
-        onSelect:function(a){
-          setYears(getYearFrom(),a.value);
-          Lampa.Controller.toggle('content');
-        }
-      });
-    });
-
-    abtn.on('hover:enter',function(){
-      Lampa.Activity.replace({
-        url:'lampa_random?'+Date.now(),
-        component:'category_full',
-        source:'tmdb',
-        page:1,
-        lampa_random_ui:1
-      });
-    });
-
-    bar.append(gbtn,yfbtn,ytbtn,abtn);
-    b.prepend(bar);
+  function scheduleInject(){
+    var tries=0;
+    var id=setInterval(function(){tries++; injectControls(); if(tries>=120) clearInterval(id);},250);
   }
 
-  /* ===== START ===== */
-  function openScreen(){
-    patchAjaxForVirtualEndpoint();
-    ensureDefaultRange();
-    Lampa.Activity.push({
-      url:'lampa_random?'+Date.now(),
-      title:'🎲 Мне повезёт',
-      component:'category_full',
-      source:'tmdb',
-      page:1,
-      lampa_random_ui:1
-    });
-    setInterval(injectControls,300);
+  function openScreen(){ patchAjaxForVirtualEndpoint(); ensureDefaultRange(); var url='lampa_random?rnd='+Date.now(); Lampa.Activity.push(activityParams(url)); Lampa.Controller.toggle('content'); scheduleInject();}
+  function refreshScreen(){ patchAjaxForVirtualEndpoint(); var url='lampa_random?rnd='+Date.now(); Lampa.Activity.replace(activityParams(url)); scheduleInject();}
+
+  function buildVoteItems(current){var items=[];for(var x=10;x<=100;x+=5){var v=x/10; items.push({title:formatVote(v), value:v, selected:v===current});} return items;}
+  function buildYearItems(current){var items=[]; var y=nowYear(); for(var i=y;i>=1960;i--){items.push({title:i+'', value:i, selected:i===current});} return items;}
+
+  function injectControls(){
+    try{
+      var active=Lampa.Activity.active();
+      if(!active||!active.activity) return false;
+      var p=active.params||{};
+      if(p.component!=='category_full'||!p.lampa_random_ui) return false;
+      var $render=active.activity.render();
+      if(!$render||!$render.length) return false;
+      var $scrollBody=$render.find('.scroll__body').eq(0);
+      if(!$scrollBody.length) return false;
+
+      var $existing=$scrollBody.find('[data-lr-top="1"]').eq(0);
+      if($existing.length){
+        var f0=getVoteFrom(),t0=getVoteTo();
+        if(f0>t0){t0=f0; setVoteRange(f0,t0);}
+        $existing.find('[data-lr-role="from"]').text(tr('lampa_random_vote_from','Рейтинг: От')+' '+formatVote(f0));
+        $existing.find('[data-lr-role="to"]').text(tr('lampa_random_vote_to','До')+' '+formatVote(t0));
+        $existing.find('[data-lr-role="apply"]').text(tr('lampa_random_apply','Применить'));
+        return true;
+      }
+
+      var voteFrom=getVoteFrom(), voteTo=getVoteTo();
+      if(voteFrom>voteTo){voteTo=voteFrom; setVoteRange(voteFrom,voteTo);}
+      var $bar=$('<div class="buttons" data-lr-top="1"></div>').css({display:'flex',gap:'0.6em',padding:'0.8em 1em',alignItems:'center',flexWrap:'wrap'});
+
+      var $fromBtn=$('<div class="selector button" data-lr-role="from"></div>');
+      var $toBtn=$('<div class="selector button" data-lr-role="to"></div>');
+      var $genresBtn=$('<div class="selector button">Жанри</div>');
+      var $yearFromBtn=$('<div class="selector button">Рік від</div>');
+      var $yearToBtn=$('<div class="selector button">До</div>');
+      var $applyBtn=$('<div class="selector button" data-lr-role="apply"></div>');
+
+      function updateTexts(){ var f=getVoteFrom(); var t=getVoteTo(); if(f>t){t=f; setVoteRange(f,t);} $fromBtn.text(tr('lampa_random_vote_from','Рейтинг: От')+' '+formatVote(f)); $toBtn.text(tr('lampa_random_vote_to','До')+' '+formatVote(t)); $applyBtn.text(tr('lampa_random_apply','Применить')); }
+
+      $fromBtn.on('hover:enter', function(){ Lampa.Select.show({ title:tr('lampa_random_vote_from','Рейтинг: От'), items:buildVoteItems(getVoteFrom()), onSelect:function(a){var from=a.value; var to=getVoteTo(); if(from>to) to=from; setVoteRange(from,to); updateTexts(); Lampa.Controller.toggle('content');}, onBack:function(){Lampa.Controller.toggle('content');} });});
+      $toBtn.on('hover:enter', function(){ Lampa.Select.show({ title:tr('lampa_random_vote_to','До'), items:buildVoteItems(getVoteTo()), onSelect:function(a){var to=a.value; var from=getVoteFrom(); if(from>to) from=to; setVoteRange(from,to); updateTexts(); Lampa.Controller.toggle('content');}, onBack:function(){Lampa.Controller.toggle('content');} });});
+
+      $genresBtn.on('hover:enter', function(){
+        Lampa.Select.show({ title:'Жанри', multiselect:true, items:Object.keys(TMDB_GENRES).map(function(id){return {title:TMDB_GENRES[id],value:id,selected:getGenres().indexOf(id)!==-1};}), onSelect:function(items){ setGenres(items.map(function(i){return i.value;})); Lampa.Controller.toggle('content'); } });
+      });
+
+      $yearFromBtn.on('hover:enter', function(){ Lampa.Select.show({ title:'Рік від', items:buildYearItems(getYearFrom()), onSelect:function(a){ setYears(a.value,getYearTo()); Lampa.Controller.toggle('content');} }); });
+      $yearToBtn.on('hover:enter', function(){ Lampa.Select.show({ title:'Рік до', items:buildYearItems(getYearTo()), onSelect:function(a){ setYears(getYearFrom(),a.value); Lampa.Controller.toggle('content');} }); });
+
+      $applyBtn.on('hover:enter', refreshScreen);
+
+      updateTexts();
+
+      $bar.append($fromBtn).append($toBtn).append($genresBtn).append($yearFromBtn).append($yearToBtn).append($applyBtn);
+      $scrollBody.prepend($bar);
+      return true;
+    }catch(e){return false;}
+  }
+
+  function addMenuItem(){
+    var title='🎲 Мне повезёт';
+    var $btn=$('<li class="menu__item selector" data-id="'+MENU_ID+'"><div class="menu__text">'+title+'</div></li>');
+    $btn.on('hover:enter',openScreen);
+
+    // чекатиме меню, поки не з’явиться
+    var tries=0;
+    var id=setInterval(function(){
+      var $menu=$('.menu .menu__list').eq(0);
+      if($menu.length){ $menu.append($btn); clearInterval(id); }
+      if(++tries>100) clearInterval(id);
+    },100);
   }
 
   function init(){
-    ensureDefaultRange();
-    patchAjaxForVirtualEndpoint();
-    $('.menu .menu__list').append(
-      $('<li class="menu__item selector"><div class="menu__text">🎲 Мне повезёт</div></li>')
-        .on('hover:enter',openScreen)
-    );
+    if(!window.Lampa||!Lampa.Activity||!Lampa.Api) return;
+    addTranslations(); ensureDefaultRange(); patchAjaxForVirtualEndpoint();
+    if(window.appready) addMenuItem();
+    else if(Lampa.Listener&&typeof Lampa.Listener.follow==='function'){
+      Lampa.Listener.follow('app',function(e){ if(e.type==='ready') addMenuItem(); });
+    }
   }
 
   init();
