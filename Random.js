@@ -1,8 +1,6 @@
-/* Title: lampa_random  
- * Version: 1.0.3  
- * Description: Random movies with rating, genres, years sort  
- * Author: wapmax + modified by Eugene  
- */  
+/* Оригінальний плагін https://github.com/wapmax/lampa_plugins/blob/main/lampa_random.js
+ */ 
+
 (function () {  
   'use strict';  
   
@@ -240,7 +238,7 @@
   
  function addMenuItem(){  
   var title=tr('lampa_random_name','Випадкова добірка');  
-  var $btn=$('<li class="menu__item selector" data-id="'+MENU_ID+'"><div class="menu__ico"><svg height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg" style="width: 1.5em; height: 1.5em;"><defs><linearGradient id="cubeTop" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#ff6b6b;stop-opacity:1"/><stop offset="100%" style="stop-color:#ee5a52;stop-opacity:1"/></linearGradient><linearGradient id="cubeLeft" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#ee5a52;stop-opacity:1"/><stop offset="100%" style="stop-color:#c44569;stop-opacity:1"/></linearGradient><linearGradient id="cubeRight" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#f8b500;stop-opacity:1"/><stop offset="100%" style="stop-color:#fceabb;stop-opacity:1"/></linearGradient><filter id="shadow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.5"/><feOffset dx="1" dy="2" result="offsetblur"/><feComponentTransfer><feFuncA type="linear" slope="0.4"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><g filter="url(#shadow)"><path d="M12 4 L20 8 L20 16 L12 20 L4 16 L4 8 Z" fill="url(#cubeTop)" stroke="#c44569" stroke-width="0.8"/><path d="M4 8 L12 12 L12 20 L4 16 Z" fill="url(#cubeLeft)" stroke="#c44569" stroke-width="0.8"/><path d="M12 12 L20 8 L20 16 L12 20 Z" fill="url(#cubeRight)" stroke="#f8b500" stroke-width="0.8"/><circle cx="12" cy="10" r="1.2" fill="#fff"/><circle cx="8" cy="14" r="1.2" fill="#fff"/><circle cx="16" cy="14" r="1.2" fill="#fff"/></g></svg></div><div class="menu__text">'+title+'</div></li>');  
+  var $btn=$('<li class="menu__item selector" data-id="'+MENU_ID+'"><div class="menu__ico"><svg height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg" style="width: 2em; height: 2em;"><defs><linearGradient id="cubeTop" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#ff6b6b;stop-opacity:1"/><stop offset="100%" style="stop-color:#ee5a52;stop-opacity:1"/></linearGradient><linearGradient id="cubeLeft" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#ee5a52;stop-opacity:1"/><stop offset="100%" style="stop-color:#c44569;stop-opacity:1"/></linearGradient><linearGradient id="cubeRight" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#f8b500;stop-opacity:1"/><stop offset="100%" style="stop-color:#fceabb;stop-opacity:1"/></linearGradient><filter id="shadow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur in="SourceAlpha" stdDeviation="1.5"/><feOffset dx="1" dy="2" result="offsetblur"/><feComponentTransfer><feFuncA type="linear" slope="0.4"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><g filter="url(#shadow)"><path d="M12 4 L20 8 L20 16 L12 20 L4 16 L4 8 Z" fill="url(#cubeTop)" stroke="#c44569" stroke-width="0.8"/><path d="M4 8 L12 12 L12 20 L4 16 Z" fill="url(#cubeLeft)" stroke="#c44569" stroke-width="0.8"/><path d="M12 12 L20 8 L20 16 L12 20 Z" fill="url(#cubeRight)" stroke="#f8b500" stroke-width="0.8"/><circle cx="12" cy="10" r="1.2" fill="#fff"/><circle cx="8" cy="14" r="1.2" fill="#fff"/><circle cx="16" cy="14" r="1.2" fill="#fff"/></g></svg></div><div class="menu__text">'+title+'</div></li>');  
   $btn.on('hover:enter',openScreen);  
   
   // чекатиме меню, поки не з'явиться  
