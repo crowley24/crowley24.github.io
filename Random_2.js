@@ -35,8 +35,8 @@
   function addTranslations() {  
     if (!window.Lampa || !Lampa.Lang) return;  
     Lampa.Lang.add({  
-      lampa_random_name: { ru: 'Мне повезёт', uk: 'Мені пощастить' },  
-      lampa_random_title: { ru: '🎲 Мне повезёт', uk: '🎲 Мені пощастить' },  
+      lampa_random_name: { ru: 'Мне повезёт', uk: 'Випадкова добірка' },  
+      lampa_random_title: { ru: 'Мне повезёт', uk: 'Випадкова добірка' },  
       lampa_random_vote_from: { ru: 'Рейтинг: От', uk: 'Рейтинг: Від' },  
       lampa_random_vote_to: { ru: 'До', uk: 'До' },  
       lampa_random_apply: { ru: 'Применить', uk: 'Застосувати' },  
@@ -72,7 +72,7 @@
   function setVoteRange(f,t){f=roundHalf(clamp(f,1,10)); t=roundHalf(clamp(t,1,10)); if(f>t)t=f; try{Lampa.Storage.set(STORAGE_VOTE_FROM,f);}catch(e){} try{Lampa.Storage.set(STORAGE_VOTE_TO,t);}catch(e){}}  
   
   function getGenres(){try{return Lampa.Storage.get(STORAGE_GENRES,DEFAULT_GENRES);}catch(e){return DEFAULT_GENRES;}}  
-  function setGenres(arr){try{Lampa.Storage.set(STORAGE_GENRES,arr);}catch(e){}}  
+  function setGenres(arr){try{Lampa.Storage.set(STORAGE_GENRES,arr);}catch(e){}  
   
   function getYearFrom(){return Lampa.Storage.get(STORAGE_YEAR_FROM,1980);}  
   function getYearTo(){return Lampa.Storage.get(STORAGE_YEAR_TO, nowYear());}  
@@ -171,7 +171,7 @@
     };  
   }  
   
-  function activityParams(url){ return { url:url, title:tr('lampa_random_name','Мені пощастить'), component:'category_full', source:'tmdb', sort:'now', card_type:true, page:1, lampa_random_ui:1}; }  
+  function activityParams(url){ return { url:url, title:tr('lampa_random_name','Випадкова добірка'), component:'category_full', source:'tmdb', sort:'now', card_type:true, page:1, lampa_random_ui:1}; }  
   
   function scheduleInject(){  
     var tries=0;  
@@ -239,8 +239,8 @@
   }  
   
   function addMenuItem(){  
-    var title='🎲 '+tr('lampa_random_name','Мені пощастить');  
-    var $btn=$('<li class="menu__item selector" data-id="'+MENU_ID+'"><div class="menu__ico"><svg height="24" viewBox="0 0 24 24" width="24"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" fill="currentColor"/></svg></div><div class="menu__text">'+title+'</div></li>');  
+    var title=tr('lampa_random_name','Випадкова добірка');  
+    var $btn=$('<li class="menu__item selector" data-id="'+MENU_ID+'"><div class="menu__ico"><svg height="24" viewBox="0 0 24 24" width="24"><path d="M5 3h4v2H5v4H3V5c0-1.1.9-2 2-2zm4 18H5c-1.1 0-2-.9-2-2v-4h2v4h4v2zm12-4h2v4c0 1.1-.9 2-2 2h-4v-2h4v-4zm2-12c0-1.1-.9-2-2-2h-4v2h4v4h2V5z" fill="currentColor"/><path d="M14.5 7.5L16 9l-5 5-3-3 1.5-1.5L11 11.5z" fill="currentColor"/></svg></div><div class="menu__text">'+title+'</div></li>');  
     $btn.on('hover:enter',openScreen);  
   
     // чекатиме меню, поки не з'явиться  
