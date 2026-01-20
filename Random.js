@@ -1,163 +1,298 @@
-/* Title: lampa_random_ultra
- * Version: 1.2.0
- * Description: Повне виправлення: Жанри, Роки, Оновлення при кожному вході.
- * Author: wapmax & AI
+/* Title: lampa_random
+ * Version: 1.1.0
+ * Description: Random movies & TV shows with filters (rating, genres, years)
+ * Author: wapmax + modifications
  */
 (function () {
   'use strict';
 
-  if (window.lampa_random_ultra_inited) return;
-  window.lampa_random_ultra_inited = true;
+  if (window.plugin_lampa_random_ready) return;
+  window.plugin_lampa_random_ready = true;
 
-  var STORAGE_GENRE = 'lr_genre_id';
-  var STORAGE_YEARS = 'lr_years_preset';
+  var MENU_ID = 'lampa_random_menu';
 
-  var GENRES = [
-    { title: 'Всі жанри', id: '' },
-    { title: 'Бойовики', id: '28' }, { title: 'Пригоди', id: '12' },
-    { title: 'Мультфільми', id: '16' }, { title: 'Комедії', id: '35' },
-    { title: 'Кримінал', id: '80' }, { title: 'Драми', id: '18' },
-    { title: 'Жахи', id: '27' }, { title: 'Фантастика', id: '878' }
-  ];
+  var STORAGE_VOTE_FROM = 'lampa_random_vote_from';
+  var STORAGE_VOTE_TO   = 'lampa_random_vote_to';
+  var STORAGE_GENRES    = 'lampa_random_genres';
+  var STORAGE_YEAR_FROM = 'lampa_random_year_from';
+  var STORAGE_YEAR_TO   = 'lampa_random_year_to';
 
-  var YEAR_PRESETS = [
-    { title: 'Всі роки', value: 'all', min: 1960, max: 2026 },
-    { title: 'Новинки', value: 'new', min: 2024, max: 2026 },
-    { title: 'Сучасні', value: 'modern', min: 2015, max: 2026 },
-    { title: '2000-ні', value: '2000s', min: 2000, max: 2010 },
-    { title: '90-ті', value: '90s', min: 1990, max: 1999 }
-  ];
-
-  // 1. ПЕРЕХОПЛЕННЯ AJAX (З ПРИМУСОВИМ РАНДОМОМ)
-  var originalAjax = $.ajax;
-  $.ajax = function (opt) {
-    if (opt.url && opt.url.indexOf('lampa_random_search') > -1) {
-      var dfd = $.Deferred();
-      var results = [];
-      var count = 0;
-      
-      var genre = Lampa.Storage.get(STORAGE_GENRE, '');
-      var yPreset = Lampa.Storage.get(STORAGE_YEARS, 'all');
-      var years = YEAR_PRESETS.find(function(p){ return p.value == yPreset }) || YEAR_PRESETS[0];
-
-      ['movie', 'tv'].forEach(function(type) {
-        var p = {
-          page: Math.floor(Math.random() * 20) + 1, // Кожен запит - нова сторінка
-          language: 'uk-UA',
-          sort_by: 'popularity.desc',
-          'vote_count.gte': 100,
-          'with_genres': genre,
-          'primary_release_date.gte': years.min + '-01-01',
-          'primary_release_date.lte': years.max + '-12-31',
-          'first_air_date.gte': years.min + '-01-01',
-          'first_air_date.lte': years.max + '-12-31'
-        };
-
-        Lampa.Api.sources.tmdb.get('discover/' + type, p, function(json) {
-          if (json && json.results) {
-            json.results.forEach(function(it) { 
-              it.type = type; 
-              it.media_type = type; 
-              results.push(it); 
-            });
-          }
-          if (++count === 2) {
-            results.sort(function() { return 0.5 - Math.random(); });
-            dfd.resolve({ results: results.slice(0, 40), page: 1, total_pages: 1 });
-          }
-        }, function() { if (++count === 2) dfd.resolve({ results: results }); });
-      });
-
-      var jq = dfd.promise();
-      if (opt.success) jq.done(opt.success);
-      return jq;
-    }
-    return originalAjax.apply(this, arguments);
+  /* ===== GENRES ===== */
+  var TMDB_GENRES = {
+    28: 'Action',
+    12: 'Adventure',
+    16: 'Animation',
+    35: 'Comedy',
+    80: 'Crime',
+    99: 'Documentary',
+    18: 'Drama',
+    10751: 'Family',
+    14: 'Fantasy',
+    36: 'History',
+    27: 'Horror',
+    10402: 'Music',
+    9648: 'Mystery',
+    10749: 'Romance',
+    878: 'Science Fiction',
+    53: 'Thriller',
+    10752: 'War',
+    37: 'Western'
   };
 
-  // 2. ФУНКЦІЯ МАЛЮВАННЯ КНОПОК
-  function injectUI(activity) {
-    var render = activity.render();
-    if (render.find('.lr-bar').length) return;
+  function tr(key, def) {
+    try { return Lampa.Lang.translate(key); } catch (e) {}
+    return def || key;
+  }
 
-    var bar = $('<div class="lr-bar" style="display:flex; flex-wrap:wrap; gap:10px; padding:15px; width:100%;"></div>');
+  function nowYear() {
+    return new Date().getFullYear();
+  }
 
-    function createBtn(name, storage, list) {
-      var cur = Lampa.Storage.get(storage, '');
-      var item = list.find(function(i){ return (i.id || i.value || '') == cur }) || list[0];
-      var btn = $('<div class="selector button" style="padding:10px 15px; background:rgba(255,255,255,0.1); border-radius:8px;">' + name + ': ' + item.title + '</div>');
-      
-      btn.on('hover:enter', function() {
-        Lampa.Select.show({
-          title: name,
-          items: list.map(function(i){ return {title: i.title, value: (i.id || i.value || ''), selected: (i.id || i.value || '') == cur} }),
-          onSelect: function(sel) {
-            Lampa.Storage.set(storage, sel.value);
-            Lampa.Activity.replace(activity.params);
-          },
-          onBack: function(){ Lampa.Controller.toggle('content'); }
+  function clamp(v, a, b) {
+    return Math.max(a, Math.min(b, v));
+  }
+
+  function roundHalf(v) {
+    return Math.round(v * 2) / 2;
+  }
+
+  /* ===== STORAGE ===== */
+
+  function ensureDefaults() {
+    if (Lampa.Storage.get(STORAGE_VOTE_FROM) == null) Lampa.Storage.set(STORAGE_VOTE_FROM, 5.5);
+    if (Lampa.Storage.get(STORAGE_VOTE_TO)   == null) Lampa.Storage.set(STORAGE_VOTE_TO, 9.5);
+    if (Lampa.Storage.get(STORAGE_GENRES)    == null) Lampa.Storage.set(STORAGE_GENRES, []);
+    if (Lampa.Storage.get(STORAGE_YEAR_FROM) == null) Lampa.Storage.set(STORAGE_YEAR_FROM, 1980);
+    if (Lampa.Storage.get(STORAGE_YEAR_TO)   == null) Lampa.Storage.set(STORAGE_YEAR_TO, nowYear());
+  }
+
+  function getVoteFrom() {
+    return roundHalf(clamp(+Lampa.Storage.get(STORAGE_VOTE_FROM, 5.5), 1, 10));
+  }
+
+  function getVoteTo() {
+    return roundHalf(clamp(+Lampa.Storage.get(STORAGE_VOTE_TO, 9.5), 1, 10));
+  }
+
+  function setVoteRange(f, t) {
+    if (f > t) t = f;
+    Lampa.Storage.set(STORAGE_VOTE_FROM, f);
+    Lampa.Storage.set(STORAGE_VOTE_TO, t);
+  }
+
+  function getGenres() {
+    return Lampa.Storage.get(STORAGE_GENRES, []);
+  }
+
+  function setGenres(arr) {
+    Lampa.Storage.set(STORAGE_GENRES, arr);
+  }
+
+  function getYearFrom() {
+    return Lampa.Storage.get(STORAGE_YEAR_FROM, 1980);
+  }
+
+  function getYearTo() {
+    return Lampa.Storage.get(STORAGE_YEAR_TO, nowYear());
+  }
+
+  function setYears(f, t) {
+    if (f > t) t = f;
+    Lampa.Storage.set(STORAGE_YEAR_FROM, f);
+    Lampa.Storage.set(STORAGE_YEAR_TO, t);
+  }
+
+  /* ===== UI BUILDERS ===== */
+
+  function formatVote(v) {
+    return v.toFixed(1).replace('.', ',');
+  }
+
+  function buildVoteItems(current) {
+    var out = [];
+    for (var i = 10; i <= 100; i += 5) {
+      var v = i / 10;
+      out.push({ title: formatVote(v), value: v, selected: v === current });
+    }
+    return out;
+  }
+
+  function buildGenreItems() {
+    var sel = getGenres();
+    return Object.keys(TMDB_GENRES).map(function (id) {
+      return {
+        title: TMDB_GENRES[id],
+        value: id,
+        selected: sel.indexOf(id) !== -1
+      };
+    });
+  }
+
+  function buildYearItems(current) {
+    var out = [];
+    for (var y = nowYear(); y >= 1950; y--) {
+      out.push({ title: String(y), value: y, selected: y === current });
+    }
+    return out;
+  }
+
+  /* ===== TMDB ===== */
+
+  function makeDiscoverParams(type, page) {
+    var params = {
+      page: page,
+      sort_by: 'popularity.desc',
+      include_adult: false,
+      'vote_average.gte': getVoteFrom(),
+      'vote_average.lte': getVoteTo(),
+      'vote_count.gte': 100
+    };
+
+    var genres = getGenres();
+    if (genres.length) params.with_genres = genres.join(',');
+
+    var yf = getYearFrom();
+    var yt = getYearTo();
+
+    if (type === 'movie') {
+      params['primary_release_date.gte'] = yf + '-01-01';
+      params['primary_release_date.lte'] = yt + '-12-31';
+    } else {
+      params['first_air_date.gte'] = yf + '-01-01';
+      params['first_air_date.lte'] = yt + '-12-31';
+    }
+
+    return params;
+  }
+
+  /* ===== AJAX PATCH ===== */
+
+  function patchAjax() {
+    if ($.ajax.__lrpatched) return;
+    $.ajax.__lrpatched = true;
+
+    var orig = $.ajax;
+    $.ajax = function (opt) {
+      if (/lampa_random/.test(opt.url)) {
+        var dfd = $.Deferred();
+        var page = opt.data.page || 1;
+
+        var tasks = ['movie', 'tv'];
+        var res = [];
+        var left = tasks.length;
+
+        tasks.forEach(function (type) {
+          Lampa.Api.sources.tmdb.get(
+            'discover/' + type,
+            makeDiscoverParams(type, Math.floor(Math.random() * 400) + 1),
+            function (json) {
+              if (json && json.results) {
+                json.results.forEach(function (i) {
+                  i.media_type = type;
+                  res.push(i);
+                });
+              }
+              if (--left === 0) {
+                opt.success({
+                  page: page,
+                  total_pages: 500,
+                  results: res.sort(() => Math.random() - 0.5)
+                });
+                dfd.resolve();
+              }
+            }
+          );
         });
-      });
-      return btn;
-    }
 
-    bar.append(createBtn('Жанр', STORAGE_GENRE, GENRES));
-    bar.append(createBtn('Роки', STORAGE_YEARS, YEAR_PRESETS));
-    
-    var refresh = $('<div class="selector button" style="padding:10px 15px; background:rgba(50,100,255,0.5); border-radius:8px;">🎲 Ще</div>');
-    refresh.on('hover:enter', function(){ Lampa.Activity.replace(activity.params); });
-    bar.append(refresh);
-
-    render.find('.scroll__body').prepend(bar);
-    
-    // Перепідключаємо контролер, щоб кнопки стали доступні для пульта
-    Lampa.Controller.add('content', {
-      toggle: function() {
-        Lampa.Controller.collectionSet(render);
-        Lampa.Controller.render().find('.selector').first().focus();
+        return dfd.promise();
       }
+      return orig.apply(this, arguments);
+    };
+  }
+
+  /* ===== UI ===== */
+
+  function openScreen() {
+    patchAjax();
+    Lampa.Activity.push({
+      url: 'lampa_random',
+      title: '🎲 Мені пощастить',
+      component: 'category_full',
+      source: 'tmdb',
+      lampa_random_ui: 1
     });
   }
 
-  // 3. ДОДАВАННЯ В МЕНЮ (З ОЧИЩЕННЯМ ДУБЛІВ)
-  function addMenu() {
-    $('[data-id="lr_ultra"]').remove();
-    var item = $('<li class="menu__item selector" data-id="lr_ultra">' +
-      '<div class="menu__ico"><svg viewBox="0 0 200 200"><rect x="30" y="30" width="140" height="140" rx="24" stroke="currentColor" stroke-width="14" fill="none"/><circle cx="70" cy="70" r="12" fill="currentColor"/><circle cx="130" cy="130" r="12" fill="currentColor"/><circle cx="100" cy="100" r="12" fill="currentColor"/><circle cx="70" cy="130" r="12" fill="currentColor"/><circle cx="130" cy="70" r="12" fill="currentColor"/></svg></div>' +
-      '<div class="menu__text">Мені пощастить</div>' +
-    '</li>');
+  function injectUI() {
+    var a = Lampa.Activity.active();
+    if (!a || !a.params || !a.params.lampa_random_ui) return;
 
-    item.on('hover:enter', function () {
-      // Додаємо випадковий rnd, щоб Lampa не брала результати з кешу
-      Lampa.Activity.push({
-        url: 'lampa_random_search?rnd=' + Math.random(),
-        title: 'Мені пощастить',
-        component: 'category_full',
-        source: 'tmdb',
-        card_type: true,
-        lr_ultra: true
-      });
+    var body = a.activity.render().find('.scroll__body');
+    if (body.find('[data-lr-ui]').length) return;
+
+    var bar = $('<div class="buttons" data-lr-ui></div>').css({
+      display: 'flex',
+      gap: '0.6em',
+      padding: '1em',
+      flexWrap: 'wrap'
     });
 
-    $('.menu .menu__list').first().append(item);
-  }
-
-  // 4. СЛУХАЧІ ПОДІЙ
-  if (window.appready) addMenu();
-  else Lampa.Listener.follow('app', function(e){ if(e.type === 'ready') addMenu(); });
-  
-  Lampa.Listener.follow('activity', function(e){
-    if (e.type === 'opened' && e.object.params.lr_ultra) {
-      // Використовуємо інтервал, поки scroll__body не з'явиться в DOM
-      var wait = setInterval(function(){
-        if (e.object.activity.render().find('.scroll__body').length) {
-          clearInterval(wait);
-          injectUI(e.object);
-        }
-      }, 50);
-      // Страховка на випадок довгих завантажень
-      setTimeout(function(){ clearInterval(wait); }, 3000);
+    function btn(text, cb) {
+      return $('<div class="selector button">' + text + '</div>').on('hover:enter', cb);
     }
-  });
 
+    bar.append(
+      btn('Рейтинг від', () => Lampa.Select.show({
+        title: 'Рейтинг від',
+        items: buildVoteItems(getVoteFrom()),
+        onSelect: a => setVoteRange(a.value, getVoteTo())
+      })),
+      btn('Рейтинг до', () => Lampa.Select.show({
+        title: 'Рейтинг до',
+        items: buildVoteItems(getVoteTo()),
+        onSelect: a => setVoteRange(getVoteFrom(), a.value)
+      })),
+      btn('Жанри', () => Lampa.Select.show({
+        title: 'Жанри',
+        multiselect: true,
+        items: buildGenreItems(),
+        onSelect: a => setGenres(a.map(i => i.value))
+      })),
+      btn('Рік від', () => Lampa.Select.show({
+        title: 'Рік від',
+        items: buildYearItems(getYearFrom()),
+        onSelect: a => setYears(a.value, getYearTo())
+      })),
+      btn('Рік до', () => Lampa.Select.show({
+        title: 'Рік до',
+        items: buildYearItems(getYearTo()),
+        onSelect: a => setYears(getYearFrom(), a.value)
+      })),
+      btn('Застосувати', () => openScreen())
+    );
+
+    body.prepend(bar);
+  }
+
+  /* ===== INIT ===== */
+
+  function init() {
+    ensureDefaults();
+    patchAjax();
+
+    if (window.appready) openMenu();
+    else Lampa.Listener.follow('app', e => e.type === 'ready' && openMenu());
+
+    setInterval(injectUI, 300);
+  }
+
+  function openMenu() {
+    $('.menu__list').append(
+      $('<li class="menu__item selector">' +
+        '<div class="menu__text">🎲 Мені пощастить</div>' +
+      '</li>').on('hover:enter', openScreen)
+    );
+  }
+
+  init();
 })();
