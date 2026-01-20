@@ -41,87 +41,83 @@
   }  
   
   // Виправлена функція для додавання налаштувань  
-  function addSettings() {  
+ function addSettings() {  
     // Перевіряємо чи доступний API налаштувань  
     if (!Lampa.Settings) {  
-      console.log('lampa_random: Settings API не доступний');  
-      return;  
+        console.log('lampa_random: Settings API не доступний');  
+        return;  
     }  
   
     try {  
-      // Додаємо плагін в розділ "Плагіни"  
-      Lampa.Settings.addParam({  
-        component: 'plugins',  
-        param: {  
-          name: 'lampa_random_vote_from',  
-          type: 'select',  
-          values: ['1.0', '2.0', '3.0', '4.0', '5.0', '6.0', '7.0', '8.0', '9.0', '10.0'],  
-          default: '5.0',  
-          caption: 'Рейтинг від'  
-        },  
-        onChange: function(value) {  
-          Lampa.Storage.set('lampa_random_vote_from', parseFloat(value));  
-        }  
-      });  
+        // Реєструємо налаштування в розділі "Плагіни"  
+        Lampa.Settings.addParam({  
+            component: 'plugins',  
+            param: {  
+                name: 'lampa_random_vote_from',  
+                type: 'select',  
+                values: ['1.0', '2.0', '3.0', '4.0', '5.0', '6.0', '7.0', '8.0', '9.0', '10.0'],  
+                default: '5.0'  
+            },  
+            onChange: function(value) {  
+                Lampa.Storage.set('lampa_random_vote_from', parseFloat(value));  
+            }  
+        });  
   
-      Lampa.Settings.addParam({  
-        component: 'plugins',  
-        param: {  
-          name: 'lampa_random_vote_to',  
-          type: 'select',  
-          values: ['1.0', '2.0', '3.0', '4.0', '5.0', '6.0', '7.0', '8.0', '9.0', '10.0'],  
-          default: '8.0',  
-          caption: 'Рейтинг до'  
-        },  
-        onChange: function(value) {  
-          Lampa.Storage.set('lampa_random_vote_to', parseFloat(value));  
-        }  
-      });  
+        Lampa.Settings.addParam({  
+            component: 'plugins',  
+            param: {  
+                name: 'lampa_random_vote_to',  
+                type: 'select',   
+                values: ['1.0', '2.0', '3.0', '4.0', '5.0', '6.0', '7.0', '8.0', '9.0', '10.0'],  
+                default: '8.0'  
+            },  
+            onChange: function(value) {  
+                Lampa.Storage.set('lampa_random_vote_to', parseFloat(value));  
+            }  
+        });  
   
-      Lampa.Settings.addParam({  
-        component: 'plugins',  
-        param: {  
-          name: 'lampa_random_genres',  
-          type: 'trigger',  
-          caption: 'Жанри'  
-        },  
-        onChange: function() {  
-          // Показуємо діалог вибору жанрів  
-          showGenresDialog();  
-        }  
-      });  
+        Lampa.Settings.addParam({  
+            component: 'plugins',  
+            param: {  
+                name: 'lampa_random_genres',  
+                type: 'trigger',  
+                default: ''  
+            },  
+            onChange: function() {  
+                // Показуємо діалог вибору жанрів  
+                showGenresSelector();  
+            }  
+        });  
   
-      Lampa.Settings.addParam({  
-        component: 'plugins',  
-        param: {  
-          name: 'lampa_random_year_from',  
-          type: 'number',  
-          default: '2000',  
-          caption: 'Рік від'  
-        },  
-        onChange: function(value) {  
-          Lampa.Storage.set('lampa_random_year_from', parseInt(value));  
-        }  
-      });  
+        Lampa.Settings.addParam({  
+            component: 'plugins',  
+            param: {  
+                name: 'lampa_random_year_from',  
+                type: 'number',  
+                default: '2000'  
+            },  
+            onChange: function(value) {  
+                Lampa.Storage.set('lampa_random_year_from', parseInt(value));  
+            }  
+        });  
   
-      Lampa.Settings.addParam({  
-        component: 'plugins',  
-        param: {  
-          name: 'lampa_random_year_to',  
-          type: 'number',  
-          default: '2024',  
-          caption: 'Рік до'  
-        },  
-        onChange: function(value) {  
-          Lampa.Storage.set('lampa_random_year_to', parseInt(value));  
-        }  
-      });  
+        Lampa.Settings.addParam({  
+            component: 'plugins',  
+            param: {  
+                name: 'lampa_random_year_to',  
+                type: 'number',  
+                default: '2024'  
+            },  
+            onChange: function(value) {  
+                Lampa.Storage.set('lampa_random_year_to', parseInt(value));  
+            }  
+        });  
   
-      console.log('lampa_random: налаштування додано в розділ Плагіни');  
+        console.log('lampa_random: налаштування додано');  
     } catch(e) {  
-      console.error('lampa_random помилка додавання налаштувань:', e);  
+        console.error('lampa_random помилка налаштувань:', e);  
     }  
-  }  
+}
   
   // Функція для показу діалогу вибору жанрів  
   function showGenresDialog() {  
@@ -285,25 +281,22 @@
   
   function init(){  
     if(!window.Lampa||!Lampa.Activity||!Lampa.Api) return;  
-    addTranslations();  
-    ensureDefaultRange();  
+    addTranslations();     
+    ensureDefaultRange();     
     patchAjaxForVirtualEndpoint();  
-        
-    // Додаємо налаштування з затримкою  
-    setTimeout(function() {  
-        addSettings();  
-    }, 2000); // Збільшено затримку для гарантії завантаження  
-        
-    if(window.appready) addMenuItem();  
-    else if(Lampa.Listener&&typeof Lampa.Listener.follow==='function'){  
-      Lampa.Listener.follow('app',function(e){  
-        if(e.type==='ready') {  
-          addMenuItem();  
-          setTimeout(addSettings, 1000); // Збільшено затримку  
-        }  
-      });  
+      
+    // Додаємо налаштування після повної готовності Lampa  
+    if(window.appready) {  
+        setTimeout(addSettings, 1000);  
+    } else if(Lampa.Listener&&typeof Lampa.Listener.follow==='function'){  
+        Lampa.Listener.follow('app',function(e){   
+            if(e.type==='ready') {   
+                addMenuItem();  
+                setTimeout(addSettings, 2000); // Збільшено затримку  
+            }   
+        });  
     }  
-  }  
+}
   
   init();  
 })();
