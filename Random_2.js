@@ -40,84 +40,112 @@
     });  
   }  
   
-  // Виправлена функція для додавання налаштувань  
- function addSettings() {  
-    // Перевіряємо чи доступний API налаштувань  
-    if (!Lampa.Settings) {  
-        console.log('lampa_random: Settings API не доступний');  
-        return;  
-    }  
-  
+  // Функція для створення інтерфейсу налаштувань  
+  function addSettings() {  
     try {  
-        // Реєструємо налаштування в розділі "Плагіни"  
-        Lampa.Settings.addParam({  
-            component: 'plugins',  
-            param: {  
-                name: 'lampa_random_vote_from',  
-                type: 'select',  
-                values: ['1.0', '2.0', '3.0', '4.0', '5.0', '6.0', '7.0', '8.0', '9.0', '10.0'],  
-                default: '5.0'  
-            },  
-            onChange: function(value) {  
-                Lampa.Storage.set('lampa_random_vote_from', parseFloat(value));  
-            }  
-        });  
+      // Створюємо HTML для налаштувань  
+      Lampa.Template.add('lampa_random_settings', `  
+        <div class="settings--selector">  
+          <div class="settings-param" data-name="lampa_random_vote_from">  
+            <div class="settings-param__title">Рейтинг від</div>  
+            <div class="settings-param__value"></div>  
+          </div>  
+          <div class="settings-param" data-name="lampa_random_vote_to">  
+            <div class="settings-param__title">Рейтинг до</div>  
+            <div class="settings-param__value"></div>  
+          </div>  
+          <div class="settings-param" data-name="lampa_random_genres">  
+            <div class="settings-param__title">Жанри</div>  
+            <div class="settings-param__value"></div>  
+          </div>  
+          <div class="settings-param" data-name="lampa_random_year_from">  
+            <div class="settings-param__title">Рік від</div>  
+            <div class="settings-param__value"></div>  
+          </div>  
+          <div class="settings-param" data-name="lampa_random_year_to">  
+            <div class="settings-param__title">Рік до</div>  
+            <div class="settings-param__value"></div>  
+          </div>  
+        </div>  
+      `);  
   
-        Lampa.Settings.addParam({  
-            component: 'plugins',  
-            param: {  
-                name: 'lampa_random_vote_to',  
-                type: 'select',   
-                values: ['1.0', '2.0', '3.0', '4.0', '5.0', '6.0', '7.0', '8.0', '9.0', '10.0'],  
-                default: '8.0'  
-            },  
-            onChange: function(value) {  
-                Lampa.Storage.set('lampa_random_vote_to', parseFloat(value));  
+      // Додаємо обробники для налаштувань  
+      Lampa.Settings.listener.follow('open', function (e) {  
+        if (e.name === 'lampa_random') {  
+          e.body.find('.settings-param').each(function () {  
+            var name = $(this).data('name');  
+            var value = Lampa.Storage.get(name);  
+              
+            if (name === 'lampa_random_vote_from' || name === 'lampa_random_vote_to') {  
+              value = value || (name === 'lampa_random_vote_from' ? '5.5' : '9.5');  
+              $(this).find('.settings-param__value').text(value);  
+            } else if (name === 'lampa_random_genres') {  
+              var genres = value || [];  
+              var genreNames = genres.map(id => TMDB_GENRES[id]).join(', ');  
+              $(this).find('.settings-param__value').text(genreNames || 'Всі жанри');  
+            } else if (name.indexOf('year') !== -1) {  
+              value = value || (name.indexOf('from') !== -1 ? 1980 : new Date().getFullYear());  
+              $(this).find('.settings-param__value').text(value);  
             }  
-        });  
+          });  
   
-        Lampa.Settings.addParam({  
-            component: 'plugins',  
-            param: {  
-                name: 'lampa_random_genres',  
-                type: 'trigger',  
-                default: ''  
-            },  
-            onChange: function() {  
-                // Показуємо діалог вибору жанрів  
-                showGenresSelector();  
+          e.body.find('.settings-param').on('click', function () {  
+            var name = $(this).data('name');  
+              
+            if (name === 'lampa_random_vote_from' || name === 'lampa_random_vote_to') {  
+              var items = [];  
+              for (var i = 1; i <= 10; i += 0.5) {  
+                items.push({  
+                  title: i.toFixed(1),  
+                  value: i  
+                });  
+              }  
+                
+              Lampa.Select.show({  
+                title: $(this).find('.settings-param__title').text(),  
+                items: items,  
+                onSelect: function (data) {  
+                  Lampa.Storage.set(name, data.value);  
+                  Lampa.Controller.toggle('settings');  
+                }  
+              });  
+            } else if (name === 'lampa_random_genres') {  
+              showGenresDialog();  
+            } else if (name.indexOf('year') !== -1) {  
+              var currentYear = new Date().getFullYear();  
+              var items = [];  
+              for (var i = currentYear; i >= 1980; i--) {  
+                items.push({  
+                  title: i,  
+                  value: i  
+                });  
+              }  
+                
+              Lampa.Select.show({  
+                title: $(this).find('.settings-param__title').text(),  
+                items: items,  
+                onSelect: function (data) {  
+                  Lampa.Storage.set(name, data.value);  
+                  Lampa.Controller.toggle('settings');  
+                }  
+              });  
             }  
-        });  
+          });  
+        }  
+      });  
   
-        Lampa.Settings.addParam({  
-            component: 'plugins',  
-            param: {  
-                name: 'lampa_random_year_from',  
-                type: 'number',  
-                default: '2000'  
-            },  
-            onChange: function(value) {  
-                Lampa.Storage.set('lampa_random_year_from', parseInt(value));  
-            }  
-        });  
+      // Додаємо пункт в меню налаштувань  
+      Lampa.Settings.add({  
+        component: 'lampa_random',  
+        name: 'Random Movies',  
+        description: 'Налаштування випадкових фільмів'  
+      });  
   
-        Lampa.Settings.addParam({  
-            component: 'plugins',  
-            param: {  
-                name: 'lampa_random_year_to',  
-                type: 'number',  
-                default: '2024'  
-            },  
-            onChange: function(value) {  
-                Lampa.Storage.set('lampa_random_year_to', parseInt(value));  
-            }  
-        });  
-  
-        console.log('lampa_random: налаштування додано');  
+      console.log('lampa_random: налаштування додано');  
     } catch(e) {  
-        console.error('lampa_random помилка налаштувань:', e);  
+      console.error('lampa_random помилка налаштувань:', e);  
     }  
-}
+  }  
   
   // Функція для показу діалогу вибору жанрів  
   function showGenresDialog() {  
@@ -142,7 +170,7 @@
       onMultiSelect: true  
     });  
   }  
-    
+  
   function randInt(min, max) { return Math.floor(Math.random()*(max-min+1))+min; }  
   function shuffle(arr) { for(var i=arr.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)); var t=arr[i]; arr[i]=arr[j]; arr[j]=t;} return arr; }  
   function nowYear() { return new Date().getFullYear(); }  
@@ -266,37 +294,41 @@
   function openScreen(){ patchAjaxForVirtualEndpoint(); ensureDefaultRange(); var url='lampa_random?rnd='+Date.now(); Lampa.Activity.push(activityParams(url)); Lampa.Controller.toggle('content');}  
   function refreshScreen(){ patchAjaxForVirtualEndpoint(); var url='lampa_random?rnd='+Date.now(); Lampa.Activity.replace(activityParams(url));}  
   
-  function addMenuItem(){  
-    var title='🎲 Мне повезёт';  
-    var $btn=$('<li class="menu__item selector" data-id="'+MENU_ID+'"><div class="menu__text">'+title+'</div></li>');  
-    $btn.on('hover:enter',openScreen);  
+   function addMenuItem() {  
+    var title = '🎲 Мне повезёт';  
+    var $btn = $('<li class="menu__item selector" data-id="' + MENU_ID + '"><div class="menu__text">' + title + '</div></li>');  
+    $btn.on('hover:enter', openScreen);  
   
-    var tries=0;  
-    var id=setInterval(function(){  
-      var $menu=$('.menu .menu__list').eq(0);  
-      if($menu.length){ $menu.append($btn); clearInterval(id); }  
-      if(++tries>100) clearInterval(id);  
-    },100);  
+    var tries = 0;  
+    var id = setInterval(function () {  
+      var $menu = $('.menu .menu__list').eq(0);  
+      if ($menu.length) {  
+        $menu.append($btn);  
+        clearInterval(id);  
+      }  
+      if (++tries > 100) clearInterval(id);  
+    }, 100);  
   }  
   
-  function init(){  
-    if(!window.Lampa||!Lampa.Activity||!Lampa.Api) return;  
-    addTranslations();     
-    ensureDefaultRange();     
+  function init() {  
+    if (!window.Lampa || !Lampa.Activity || !Lampa.Api) return;  
+    ensureDefaultRange();  
     patchAjaxForVirtualEndpoint();  
       
-    // Додаємо налаштування після повної готовності Lampa  
-    if(window.appready) {  
-        setTimeout(addSettings, 1000);  
-    } else if(Lampa.Listener&&typeof Lampa.Listener.follow==='function'){  
-        Lampa.Listener.follow('app',function(e){   
-            if(e.type==='ready') {   
-                addMenuItem();  
-                setTimeout(addSettings, 2000); // Збільшено затримку  
-            }   
-        });  
+    // Додаємо налаштування  
+    setTimeout(addSettings, 1000);  
+      
+    if (window.appready) {  
+      addMenuItem();  
+    } else if (Lampa.Listener && typeof Lampa.Listener.follow === 'function') {  
+      Lampa.Listener.follow('app', function (e) {  
+        if (e.type === 'ready') {  
+          addMenuItem();  
+          setTimeout(addSettings, 500);  
+        }  
+      });  
     }  
-}
+  }  
   
   init();  
 })();
