@@ -40,80 +40,113 @@
     });  
   }  
   
-  // Нова функція для додавання налаштувань  
-function addSettings() {  
+  // Виправлена функція для додавання налаштувань  
+  function addSettings() {  
     // Перевіряємо чи доступний API налаштувань  
-    if (!Lampa.Settings || !Lampa.SettingsApi) {  
-        console.log('lampa_random: Settings API не доступний');  
-        return;  
+    if (!Lampa.Settings) {  
+      console.log('lampa_random: Settings API не доступний');  
+      return;  
     }  
   
-    // Створюємо новий розділ "Random Movies"  
-    Lampa.SettingsApi.addParam({  
-        component: 'random_movies',  
+    try {  
+      // Додаємо плагін в розділ "Плагіни"  
+      Lampa.Settings.addParam({  
+        component: 'plugins',  
         param: {  
-            name: 'lampa_random_vote_from',  
-            type: 'select',  
-            values: ['1.0', '2.0', '3.0', '4.0', '5.0', '6.0', '7.0', '8.0', '9.0', '10.0'],  
-            default: '5.0'  
+          name: 'lampa_random_vote_from',  
+          type: 'select',  
+          values: ['1.0', '2.0', '3.0', '4.0', '5.0', '6.0', '7.0', '8.0', '9.0', '10.0'],  
+          default: '5.0',  
+          caption: 'Рейтинг від'  
         },  
         onChange: function(value) {  
-            Lampa.Storage.set('lampa_random_vote_from', parseFloat(value));  
+          Lampa.Storage.set('lampa_random_vote_from', parseFloat(value));  
         }  
-    });  
+      });  
   
-    Lampa.SettingsApi.addParam({  
-        component: 'random_movies',   
+      Lampa.Settings.addParam({  
+        component: 'plugins',  
         param: {  
-            name: 'lampa_random_vote_to',  
-            type: 'select',  
-            values: ['1.0', '2.0', '3.0', '4.0', '5.0', '6.0', '7.0', '8.0', '9.0', '10.0'],  
-            default: '8.0'  
+          name: 'lampa_random_vote_to',  
+          type: 'select',  
+          values: ['1.0', '2.0', '3.0', '4.0', '5.0', '6.0', '7.0', '8.0', '9.0', '10.0'],  
+          default: '8.0',  
+          caption: 'Рейтинг до'  
         },  
         onChange: function(value) {  
-            Lampa.Storage.set('lampa_random_vote_to', parseFloat(value));  
+          Lampa.Storage.set('lampa_random_vote_to', parseFloat(value));  
         }  
-    });  
+      });  
   
-    Lampa.SettingsApi.addParam({  
-        component: 'random_movies',  
+      Lampa.Settings.addParam({  
+        component: 'plugins',  
         param: {  
-            name: 'lampa_random_genres',  
-            type: 'keyboard',  
-            default: ''  
+          name: 'lampa_random_genres',  
+          type: 'trigger',  
+          caption: 'Жанри'  
+        },  
+        onChange: function() {  
+          // Показуємо діалог вибору жанрів  
+          showGenresDialog();  
+        }  
+      });  
+  
+      Lampa.Settings.addParam({  
+        component: 'plugins',  
+        param: {  
+          name: 'lampa_random_year_from',  
+          type: 'number',  
+          default: '2000',  
+          caption: 'Рік від'  
         },  
         onChange: function(value) {  
-            Lampa.Storage.set('lampa_random_genres', value);  
+          Lampa.Storage.set('lampa_random_year_from', parseInt(value));  
         }  
-    });  
+      });  
   
-    Lampa.SettingsApi.addParam({  
-        component: 'random_movies',  
+      Lampa.Settings.addParam({  
+        component: 'plugins',  
         param: {  
-            name: 'lampa_random_year_from',  
-            type: 'number',  
-            default: '2000'  
+          name: 'lampa_random_year_to',  
+          type: 'number',  
+          default: '2024',  
+          caption: 'Рік до'  
         },  
         onChange: function(value) {  
-            Lampa.Storage.set('lampa_random_year_from', parseInt(value));  
+          Lampa.Storage.set('lampa_random_year_to', parseInt(value));  
         }  
+      });  
+  
+      console.log('lampa_random: налаштування додано в розділ Плагіни');  
+    } catch(e) {  
+      console.error('lampa_random помилка додавання налаштувань:', e);  
+    }  
+  }  
+  
+  // Функція для показу діалогу вибору жанрів  
+  function showGenresDialog() {  
+    var current = getGenres();  
+    var items = [];  
+      
+    for (var id in TMDB_GENRES) {  
+      items.push({  
+        title: TMDB_GENRES[id],  
+        selected: current.indexOf(parseInt(id)) !== -1,  
+        id: parseInt(id)  
+      });  
+    }  
+  
+    Lampa.Select.show({  
+      title: 'Виберіть жанри',  
+      items: items,  
+      onSelect: function(data) {  
+        var selected = items.filter(function(item) { return item.selected; }).map(function(item) { return item.id; });  
+        setGenres(selected);  
+      },  
+      onMultiSelect: true  
     });  
-  
-    Lampa.SettingsApi.addParam({  
-        component: 'random_movies',  
-        param: {  
-            name: 'lampa_random_year_to',  
-            type: 'number',  
-            default: '2024'  
-        },  
-        onChange: function(value) {  
-            Lampa.Storage.set('lampa_random_year_to', parseInt(value));  
-        }  
-    });  
-  
-    console.log('lampa_random: налаштування додано в розділ Random Movies');  
-}
-  
+  }  
+    
   function randInt(min, max) { return Math.floor(Math.random()*(max-min+1))+min; }  
   function shuffle(arr) { for(var i=arr.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)); var t=arr[i]; arr[i]=arr[j]; arr[j]=t;} return arr; }  
   function nowYear() { return new Date().getFullYear(); }  
@@ -140,7 +173,7 @@ function addSettings() {
   function setVoteRange(f,t){f=roundHalf(clamp(f,1,10)); t=roundHalf(clamp(t,1,10)); if(f>t)t=f; try{Lampa.Storage.set(STORAGE_VOTE_FROM,f);}catch(e){} try{Lampa.Storage.set(STORAGE_VOTE_TO,t);}catch(e){}}  
   
   function getGenres(){try{return Lampa.Storage.get(STORAGE_GENRES,[]);}catch(e){return [];}}  
-  function setGenres(arr){try{Lampa.Storage.set(STORAGE_GENRES,arr);}catch(e){}}  // ВИПРАВЛЕНО: додано закриваючу дужку  
+  function setGenres(arr){try{Lampa.Storage.set(STORAGE_GENRES,arr);}catch(e){}}  
   
   function getYearFrom(){return Lampa.Storage.get(STORAGE_YEAR_FROM,1980);}  
   function getYearTo(){return Lampa.Storage.get(STORAGE_YEAR_TO, nowYear());}  
@@ -234,7 +267,6 @@ function addSettings() {
   
   function activityParams(url){ return { url:url, title:tr('lampa_random_name','Мне повезёт'), component:'category_full', source:'tmdb', sort:'now', card_type:true, page:1, lampa_random_ui:1}; }  
   
-  // Спрощені функції без injectControls  
   function openScreen(){ patchAjaxForVirtualEndpoint(); ensureDefaultRange(); var url='lampa_random?rnd='+Date.now(); Lampa.Activity.push(activityParams(url)); Lampa.Controller.toggle('content');}  
   function refreshScreen(){ patchAjaxForVirtualEndpoint(); var url='lampa_random?rnd='+Date.now(); Lampa.Activity.replace(activityParams(url));}  
   
@@ -243,7 +275,6 @@ function addSettings() {
     var $btn=$('<li class="menu__item selector" data-id="'+MENU_ID+'"><div class="menu__text">'+title+'</div></li>');  
     $btn.on('hover:enter',openScreen);  
   
-    // чекатиме меню, поки не з'явиться  
     var tries=0;  
     var id=setInterval(function(){  
       var $menu=$('.menu .menu__list').eq(0);  
@@ -254,26 +285,25 @@ function addSettings() {
   
   function init(){  
     if(!window.Lampa||!Lampa.Activity||!Lampa.Api) return;  
-    addTranslations();   
-    ensureDefaultRange();   
+    addTranslations();  
+    ensureDefaultRange();  
     patchAjaxForVirtualEndpoint();  
-      
+        
     // Додаємо налаштування з затримкою  
     setTimeout(function() {  
         addSettings();  
-    }, 1000);  
-      
+    }, 2000); // Збільшено затримку для гарантії завантаження  
+        
     if(window.appready) addMenuItem();  
     else if(Lampa.Listener&&typeof Lampa.Listener.follow==='function'){  
-        Lampa.Listener.follow('app',function(e){   
-            if(e.type==='ready') {  
-                addMenuItem();  
-                // Додаємо налаштування після готовності додатку  
-                setTimeout(addSettings, 500);  
-            }  
-        });  
+      Lampa.Listener.follow('app',function(e){  
+        if(e.type==='ready') {  
+          addMenuItem();  
+          setTimeout(addSettings, 1000); // Збільшено затримку  
+        }  
+      });  
     }  
-}
+  }  
   
   init();  
 })();
