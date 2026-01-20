@@ -1,7 +1,4 @@
-/* Title: lampa_random  
- * Version: 1.0.3  
- * Description: Random movies with rating, genres, years sort  
- * Author: wapmax + modified by Eugene  
+/* Оригінальний плагін https://github.com/wapmax/lampa_plugins/blob/main/lampa_random.js
  */  
 (function () {  
   'use strict';  
