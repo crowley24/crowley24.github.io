@@ -1,6 +1,6 @@
 /* Title: lampa_random  
  * Version: 1.0.3  
- * Description: Random movies and TV shows with rating, genres, years sort  
+ * Description: Random movies with rating, genres, years sort  
  * Author: wapmax + modified by Eugene  
  */  
 (function () {  
@@ -24,6 +24,9 @@
     53: 'Thriller', 10752: 'War', 37: 'Western'  
   };  
   
+  // Default genres for your requirements: horror, thriller, mystery, action, crime, comedy, adventure  
+  var DEFAULT_GENRES = [27, 53, 9648, 28, 80, 35, 12];  
+  
   function tr(key, def) {  
     try { return Lampa.Lang.translate(key); } catch(e) {}  
     return def || key;  
@@ -32,142 +35,14 @@
   function addTranslations() {  
     if (!window.Lampa || !Lampa.Lang) return;  
     Lampa.Lang.add({  
-      lampa_random_name: { ru: 'Мне повезёт' },  
-      lampa_random_title: { ru: '🎲 Мне повезёт' },  
-      lampa_random_vote_from: { ru: 'Рейтинг: От' },  
-      lampa_random_vote_to: { ru: 'До' },  
-      lampa_random_apply: { ru: 'Применить' }  
-    });  
-  }  
-  
-  // Функція для створення інтерфейсу налаштувань  
-  function addSettings() {  
-    try {  
-      // Створюємо HTML для налаштувань  
-      Lampa.Template.add('lampa_random_settings', `  
-        <div class="settings--selector">  
-          <div class="settings-param" data-name="lampa_random_vote_from">  
-            <div class="settings-param__title">Рейтинг від</div>  
-            <div class="settings-param__value"></div>  
-          </div>  
-          <div class="settings-param" data-name="lampa_random_vote_to">  
-            <div class="settings-param__title">Рейтинг до</div>  
-            <div class="settings-param__value"></div>  
-          </div>  
-          <div class="settings-param" data-name="lampa_random_genres">  
-            <div class="settings-param__title">Жанри</div>  
-            <div class="settings-param__value"></div>  
-          </div>  
-          <div class="settings-param" data-name="lampa_random_year_from">  
-            <div class="settings-param__title">Рік від</div>  
-            <div class="settings-param__value"></div>  
-          </div>  
-          <div class="settings-param" data-name="lampa_random_year_to">  
-            <div class="settings-param__title">Рік до</div>  
-            <div class="settings-param__value"></div>  
-          </div>  
-        </div>  
-      `);  
-  
-      // Додаємо обробники для налаштувань  
-      Lampa.Settings.listener.follow('open', function (e) {  
-        if (e.name === 'lampa_random') {  
-          e.body.find('.settings-param').each(function () {  
-            var name = $(this).data('name');  
-            var value = Lampa.Storage.get(name);  
-              
-            if (name === 'lampa_random_vote_from' || name === 'lampa_random_vote_to') {  
-              value = value || (name === 'lampa_random_vote_from' ? '5.5' : '9.5');  
-              $(this).find('.settings-param__value').text(value);  
-            } else if (name === 'lampa_random_genres') {  
-              var genres = value || [];  
-              var genreNames = genres.map(id => TMDB_GENRES[id]).join(', ');  
-              $(this).find('.settings-param__value').text(genreNames || 'Всі жанри');  
-            } else if (name.indexOf('year') !== -1) {  
-              value = value || (name.indexOf('from') !== -1 ? 1980 : new Date().getFullYear());  
-              $(this).find('.settings-param__value').text(value);  
-            }  
-          });  
-  
-          e.body.find('.settings-param').on('click', function () {  
-            var name = $(this).data('name');  
-              
-            if (name === 'lampa_random_vote_from' || name === 'lampa_random_vote_to') {  
-              var items = [];  
-              for (var i = 1; i <= 10; i += 0.5) {  
-                items.push({  
-                  title: i.toFixed(1),  
-                  value: i  
-                });  
-              }  
-                
-              Lampa.Select.show({  
-                title: $(this).find('.settings-param__title').text(),  
-                items: items,  
-                onSelect: function (data) {  
-                  Lampa.Storage.set(name, data.value);  
-                  Lampa.Controller.toggle('settings');  
-                }  
-              });  
-            } else if (name === 'lampa_random_genres') {  
-              showGenresDialog();  
-            } else if (name.indexOf('year') !== -1) {  
-              var currentYear = new Date().getFullYear();  
-              var items = [];  
-              for (var i = currentYear; i >= 1980; i--) {  
-                items.push({  
-                  title: i,  
-                  value: i  
-                });  
-              }  
-                
-              Lampa.Select.show({  
-                title: $(this).find('.settings-param__title').text(),  
-                items: items,  
-                onSelect: function (data) {  
-                  Lampa.Storage.set(name, data.value);  
-                  Lampa.Controller.toggle('settings');  
-                }  
-              });  
-            }  
-          });  
-        }  
-      });  
-  
-      // Додаємо пункт в меню налаштувань  
-      Lampa.Settings.add({  
-        component: 'lampa_random',  
-        name: 'Random Movies',  
-        description: 'Налаштування випадкових фільмів'  
-      });  
-  
-      console.log('lampa_random: налаштування додано');  
-    } catch(e) {  
-      console.error('lampa_random помилка налаштувань:', e);  
-    }  
-  }  
-  
-  // Функція для показу діалогу вибору жанрів  
-  function showGenresDialog() {  
-    var current = getGenres();  
-    var items = [];  
-      
-    for (var id in TMDB_GENRES) {  
-      items.push({  
-        title: TMDB_GENRES[id],  
-        selected: current.indexOf(parseInt(id)) !== -1,  
-        id: parseInt(id)  
-      });  
-    }  
-  
-    Lampa.Select.show({  
-      title: 'Виберіть жанри',  
-      items: items,  
-      onSelect: function(data) {  
-        var selected = items.filter(function(item) { return item.selected; }).map(function(item) { return item.id; });  
-        setGenres(selected);  
-      },  
-      onMultiSelect: true  
+      lampa_random_name: { ru: 'Мне повезёт', uk: 'Мені пощастить' },  
+      lampa_random_title: { ru: '🎲 Мне повезёт', uk: '🎲 Мені пощастить' },  
+      lampa_random_vote_from: { ru: 'Рейтинг: От', uk: 'Рейтинг: Від' },  
+      lampa_random_vote_to: { ru: 'До', uk: 'До' },  
+      lampa_random_apply: { ru: 'Применить', uk: 'Застосувати' },  
+      lampa_random_genres: { ru: 'Жанры', uk: 'Жанри' },  
+      lampa_random_year_from: { ru: 'Год от', uk: 'Рік від' },  
+      lampa_random_year_to: { ru: 'До', uk: 'До' }  
     });  
   }  
   
@@ -183,27 +58,27 @@
     try {  
       var f = Lampa.Storage.get(STORAGE_VOTE_FROM,null);  
       var t = Lampa.Storage.get(STORAGE_VOTE_TO,null);  
-      if(f===null||f===undefined||f==='') Lampa.Storage.set(STORAGE_VOTE_FROM,5.5);  
+      if(f===null||f===undefined||f==='') Lampa.Storage.set(STORAGE_VOTE_FROM,6.0); // Changed to 6.0 minimum  
       if(t===null||t===undefined||t==='') Lampa.Storage.set(STORAGE_VOTE_TO,9.5);  
   
-      if(Lampa.Storage.get(STORAGE_GENRES)==null) Lampa.Storage.set(STORAGE_GENRES,[]);  
+      if(Lampa.Storage.get(STORAGE_GENRES)==null) Lampa.Storage.set(STORAGE_GENRES,DEFAULT_GENRES); // Set default genres  
       if(Lampa.Storage.get(STORAGE_YEAR_FROM)==null) Lampa.Storage.set(STORAGE_YEAR_FROM,1980);  
       if(Lampa.Storage.get(STORAGE_YEAR_TO)==null) Lampa.Storage.set(STORAGE_YEAR_TO, nowYear());  
     } catch(e){}  
   }  
   
-  function getVoteFrom(){var v=5.5; try{v=parseFloat(Lampa.Storage.get(STORAGE_VOTE_FROM,5.5)); if(isNaN(v))v=5.5;}catch(e){v=5.5;} return roundHalf(clamp(v,1,10));}  
+  function getVoteFrom(){var v=6.0; try{v=parseFloat(Lampa.Storage.get(STORAGE_VOTE_FROM,6.0)); if(isNaN(v))v=6.0;}catch(e){v=6.0;} return roundHalf(clamp(v,1,10));}  
   function getVoteTo(){var v=9.5; try{v=parseFloat(Lampa.Storage.get(STORAGE_VOTE_TO,9.5)); if(isNaN(v))v=9.5;}catch(e){v=9.5;} return roundHalf(clamp(v,1,10));}  
   function setVoteRange(f,t){f=roundHalf(clamp(f,1,10)); t=roundHalf(clamp(t,1,10)); if(f>t)t=f; try{Lampa.Storage.set(STORAGE_VOTE_FROM,f);}catch(e){} try{Lampa.Storage.set(STORAGE_VOTE_TO,t);}catch(e){}}  
   
-  function getGenres(){try{return Lampa.Storage.get(STORAGE_GENRES,[]);}catch(e){return [];}}  
+  function getGenres(){try{return Lampa.Storage.get(STORAGE_GENRES,DEFAULT_GENRES);}catch(e){return DEFAULT_GENRES;}}  
   function setGenres(arr){try{Lampa.Storage.set(STORAGE_GENRES,arr);}catch(e){}}  
   
   function getYearFrom(){return Lampa.Storage.get(STORAGE_YEAR_FROM,1980);}  
   function getYearTo(){return Lampa.Storage.get(STORAGE_YEAR_TO, nowYear());}  
   function setYears(f,t){if(f>t)t=f; Lampa.Storage.set(STORAGE_YEAR_FROM,f); Lampa.Storage.set(STORAGE_YEAR_TO,t);}  
   
-  function getLang(){var l='ru'; try{l=Lampa.Storage.get('language','ru')||'ru';}catch(e){} if(l==='ua')l='uk'; return l+'-'+String(l).toUpperCase();}  
+  function getLang(){var l='uk'; try{l=Lampa.Storage.get('language','uk')||'uk';}catch(e){} if(l==='ua')l='uk'; return l+'-'+String(l).toUpperCase();}  
   
   function normalizeItem(it,type){it=it||{}; it.type=type; it.media_type=type; it.source='tmdb'; it.title=it.title||it.name||it.original_title||it.original_name||''; it.name=it.name||it.title||''; return it;}  
   
@@ -240,7 +115,8 @@
   
   function buildMixedResponse(page,voteFrom,voteTo,baseParams,done,attempt){  
     attempt=attempt||0;  
-    var tasks=[{type:'movie',page:randInt(1,500)},{type:'movie',page:randInt(1,500)},{type:'tv',page:randInt(1,500)},{type:'tv',page:randInt(1,500)}];  
+    // Changed to only fetch movies, removed TV shows  
+    var tasks=[{type:'movie',page:randInt(1,500)},{type:'movie',page:randInt(1,500)},{type:'movie',page:randInt(1,500)},{type:'movie',page:randInt(1,500)}];  
     var res=[]; var left=tasks.length;  
     function oneDone(){left--; if(left>0)return;  
       var filtered=filterByVote(res,voteFrom,voteTo);  
@@ -289,44 +165,93 @@
     };  
   }  
   
-  function activityParams(url){ return { url:url, title:tr('lampa_random_name','Мне повезёт'), component:'category_full', source:'tmdb', sort:'now', card_type:true, page:1, lampa_random_ui:1}; }  
+  function activityParams(url){ return { url:url, title:tr('lampa_random_name','Мені пощастить'), component:'category_full', source:'tmdb', sort:'now', card_type:true, page:1, lampa_random_ui:1}; }  
   
-  function openScreen(){ patchAjaxForVirtualEndpoint(); ensureDefaultRange(); var url='lampa_random?rnd='+Date.now(); Lampa.Activity.push(activityParams(url)); Lampa.Controller.toggle('content');}  
-  function refreshScreen(){ patchAjaxForVirtualEndpoint(); var url='lampa_random?rnd='+Date.now(); Lampa.Activity.replace(activityParams(url));}  
-  
-   function addMenuItem() {  
-    var title = '🎲 Мне повезёт';  
-    var $btn = $('<li class="menu__item selector" data-id="' + MENU_ID + '"><div class="menu__text">' + title + '</div></li>');  
-    $btn.on('hover:enter', openScreen);  
-  
-    var tries = 0;  
-    var id = setInterval(function () {  
-      var $menu = $('.menu .menu__list').eq(0);  
-      if ($menu.length) {  
-        $menu.append($btn);  
-        clearInterval(id);  
-      }  
-      if (++tries > 100) clearInterval(id);  
-    }, 100);  
+  function scheduleInject(){  
+    var tries=0;  
+    var id=setInterval(function(){tries++; injectControls(); if(tries>=120) clearInterval(id);},250);  
   }  
   
-  function init() {  
-    if (!window.Lampa || !Lampa.Activity || !Lampa.Api) return;  
-    ensureDefaultRange();  
-    patchAjaxForVirtualEndpoint();  
-      
-    // Додаємо налаштування  
-    setTimeout(addSettings, 1000);  
-      
-    if (window.appready) {  
-      addMenuItem();  
-    } else if (Lampa.Listener && typeof Lampa.Listener.follow === 'function') {  
-      Lampa.Listener.follow('app', function (e) {  
-        if (e.type === 'ready') {  
-          addMenuItem();  
-          setTimeout(addSettings, 500);  
-        }  
+  function openScreen(){ patchAjaxForVirtualEndpoint(); ensureDefaultRange(); var url='lampa_random?rnd='+Date.now(); Lampa.Activity.push(activityParams(url)); Lampa.Controller.toggle('content'); scheduleInject();}  
+  function refreshScreen(){ patchAjaxForVirtualEndpoint(); var url='lampa_random?rnd='+Date.now(); Lampa.Activity.replace(activityParams(url)); scheduleInject();}  
+  
+  function buildVoteItems(current){var items=[];for(var x=10;x<=100;x+=5){var v=x/10; items.push({title:formatVote(v), value:v, selected:v===current});} return items;}  
+  function buildYearItems(current){var items=[]; var y=nowYear(); for(var i=y;i>=1960;i--){items.push({title:i+'', value:i, selected:i===current});} return items;}  
+  
+  function injectControls(){  
+    try{  
+      var active=Lampa.Activity.active();  
+      if(!active||!active.activity) return false;  
+      var p=active.params||{};  
+      if(p.component!=='category_full'||!p.lampa_random_ui) return false;  
+      var $render=active.activity.render();  
+      if(!$render||!$render.length) return false;  
+      var $scrollBody=$render.find('.scroll__body').eq(0);  
+      if(!$scrollBody.length) return false;  
+  
+      var $existing=$scrollBody.find('[data-lr-top="1"]').eq(0);  
+      if($existing.length){  
+        var f0=getVoteFrom(),t0=getVoteTo();  
+        if(f0>t0){t0=f0; setVoteRange(f0,t0);}  
+        $existing.find('[data-lr-role="from"]').text(tr('lampa_random_vote_from','Рейтинг: Від')+' '+formatVote(f0));  
+        $existing.find('[data-lr-role="to"]').text(tr('lampa_random_vote_to','До')+' '+formatVote(t0));  
+        $existing.find('[data-lr-role="apply"]').text(tr('lampa_random_apply','Застосувати'));  
+        return true;  
+      }  
+  
+      var voteFrom=getVoteFrom(), voteTo=getVoteTo();  
+      if(voteFrom>voteTo){voteTo=voteFrom; setVoteRange(voteFrom,voteTo);}  
+      var $bar=$('<div class="buttons" data-lr-top="1"></div>').css({display:'flex',gap:'0.6em',padding:'0.8em 1em',alignItems:'center',flexWrap:'wrap'});  
+  
+      var $fromBtn=$('<div class="selector button" data-lr-role="from"></div>');  
+      var $toBtn=$('<div class="selector button" data-lr-role="to"></div>');  
+      var $genresBtn=$('<div class="selector button">'+tr('lampa_random_genres','Жанри')+'</div>');  
+      var $yearFromBtn=$('<div class="selector button">'+tr('lampa_random_year_from','Рік від')+'</div>');  
+      var $yearToBtn=$('<div class="selector button">'+tr('lampa_random_year_to','До')+'</div>');  
+      var $applyBtn=$('<div class="selector button" data-lr-role="apply"></div>');  
+  
+      function updateTexts(){ var f=getVoteFrom(); var t=getVoteTo(); if(f>t){t=f; setVoteRange(f,t);} $fromBtn.text(tr('lampa_random_vote_from','Рейтинг: Від')+' '+formatVote(f)); $toBtn.text(tr('lampa_random_vote_to','До')+' '+formatVote(t)); $applyBtn.text(tr('lampa_random_apply','Застосувати')); }  
+  
+      $fromBtn.on('hover:enter', function(){ Lampa.Select.show({ title:tr('lampa_random_vote_from','Рейтинг: Від'), items:buildVoteItems(getVoteFrom()), onSelect:function(a){var from=a.value; var to=getVoteTo(); if(from>to) to=from; setVoteRange(from,to); updateTexts(); Lampa.Controller.toggle('content');}, onBack:function(){Lampa.Controller.toggle('content');} });});  
+      $toBtn.on('hover:enter', function(){ Lampa.Select.show({ title:tr('lampa_random_vote_to','До'), items:buildVoteItems(getVoteTo()), onSelect:function(a){var to=a.value; var from=getVoteFrom(); if(from>to) from=to; setVoteRange(from,to); updateTexts(); Lampa.Controller.toggle('content');}, onBack:function(){Lampa.Controller.toggle('content');} });});  
+  
+      $genresBtn.on('hover:enter', function(){  
+        Lampa.Select.show({ title:tr('lampa_random_genres','Жанри'), multiselect:true, items:Object.keys(TMDB_GENRES).map(function(id){return {title:TMDB_GENRES[id],value:id,selected:getGenres().indexOf(id)!==-1};}), onSelect:function(items){ setGenres(items.map(function(i){return i.value;})); Lampa.Controller.toggle('content'); } });  
       });  
+  
+      $yearFromBtn.on('hover:enter', function(){ Lampa.Select.show({ title:tr('lampa_random_year_from','Рік від'), items:buildYearItems(getYearFrom()), onSelect:function(a){ setYears(a.value,getYearTo()); Lampa.Controller.toggle('content');} }); });  
+      $yearToBtn.on('hover:enter', function(){ Lampa.Select.show({ title:tr('lampa_random_year_to','До'), items:buildYearItems(getYearTo()), onSelect:function(a){ setYears(getYearFrom(),a.value); Lampa.Controller.toggle('content');} }); });  
+  
+      $applyBtn.on('hover:enter', refreshScreen);  
+  
+      updateTexts();  
+  
+      $bar.append($fromBtn).append($toBtn).append($genresBtn).append($yearFromBtn).append($yearToBtn).append($applyBtn);  
+      $scrollBody.prepend($bar);  
+      return true;  
+    }catch(e){return false;}  
+  }  
+  
+  function addMenuItem(){  
+    var title='🎲 '+tr('lampa_random_name','Мені пощастить');  
+    var $btn=$('<li class="menu__item selector" data-id="'+MENU_ID+'"><div class="menu__text">'+title+'</div></li>');  
+    $btn.on('hover:enter',openScreen);  
+  
+    // чекатиме меню, поки не з'явиться  
+    var tries=0;  
+    var id=setInterval(function(){  
+      var $menu=$('.menu .menu__list').eq(0);  
+      if($menu.length){ $menu.append($btn); clearInterval(id); }  
+      if(++tries>100) clearInterval(id);  
+    },100);  
+  }  
+  
+  function init(){  
+    if(!window.Lampa||!Lampa.Activity||!Lampa.Api) return;  
+    addTranslations(); ensureDefaultRange(); patchAjaxForVirtualEndpoint();  
+    if(window.appready) addMenuItem();  
+    else if(Lampa.Listener&&typeof Lampa.Listener.follow==='function'){  
+      Lampa.Listener.follow('app',function(e){ if(e.type==='ready') addMenuItem(); });  
     }  
   }  
   
