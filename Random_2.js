@@ -24,8 +24,8 @@
     53: 'Thriller', 10752: 'War', 37: 'Western'  
   };  
   
-  // Default genres: horror, thriller, mystery, action, crime, comedy, adventure  
-  var DEFAULT_GENRES = [27, 53, 9648, 28, 80, 35, 12];  
+  // Тільки жанри: жахи, триллер, містика, бойовик  
+  var DEFAULT_GENRES = [27, 53, 9648, 28];  
   
   function tr(key, def) {  
     try { return Lampa.Lang.translate(key); } catch(e) {}  
@@ -240,14 +240,23 @@
   
   function addMenuItem(){  
     var title='🎲 '+tr('lampa_random_name','Мені пощастить');  
-    var $btn=$('<li class="menu__item selector" data-id="'+MENU_ID+'"><div class="menu__ico"><svg height="24" viewBox="0 0 24 24" width="24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="currentColor"/></svg></div><div class="menu__text">'+title+'</div></li>');  
+    var $btn=$('<li class="menu__item selector" data-id="'+MENU_ID+'"><div class="menu__ico"><svg height="24" viewBox="0 0 24 24" width="24"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" fill="currentColor"/></svg></div><div class="menu__text">'+title+'</div></li>');  
     $btn.on('hover:enter',openScreen);  
   
     // чекатиме меню, поки не з'явиться  
     var tries=0;  
     var id=setInterval(function(){  
       var $menu=$('.menu .menu__list').eq(0);  
-      if($menu.length){ $menu.append($btn); clearInterval(id); }  
+      if($menu.length){   
+        // Додаємо після пункту "Каталог" для кращого розташування  
+        var $catalogItem = $menu.find('[data-id="main"]').eq(0);  
+        if($catalogItem.length){  
+          $catalogItem.after($btn);  
+        } else {  
+          $menu.append($btn);  
+        }  
+        clearInterval(id);   
+      }  
       if(++tries>100) clearInterval(id);  
     },100);  
   }  
@@ -262,4 +271,4 @@
   }  
   
   init();  
-})(); 
+})();
