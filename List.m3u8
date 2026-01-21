@@ -1,4 +1,4 @@
-#EXTM3U catchup="flussonic"  url-tvg="http://1lot.tv/epg/epg.xml" refresh="3600"
+#EXTM3U catchup="flussonic"  url-tvg="https://epg.tvoetv.io/api/epg.xml.gz" refresh="3600"
 #EXTINF:0  tvg-id="1plus1" tvg-logo="https://iptvx.one/picons/1plus1.png" tvg-rec="14", 1+1 Марафон
 #EXTGRP:Украина
 http://cdn.iptv11.com/11UA/video.m3u8?token=2650D92500E6B
@@ -5996,5 +5996,6 @@ http://cdn.iptv11.com/3632/video.m3u8?token=2650D92500E6B
 #EXTINF:0  tvg-id="clarity4k-zwerinmir" tvg-logo="https://iptvx.one/picons/clarity4k-komediasssr2.png" tvg-rec="14", Clarity4K Звериный мир
 #EXTGRP:4К
 http://cdn.iptv11.com/3633/video.m3u8?token=2650D92500E6B
+
 
 
