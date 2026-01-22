@@ -6,4 +6,12 @@ http://cdn.iptv11.com/NoviyKanal-UA/video.m3u8?token=2650D92500E6B
 http://cdn.iptv11.com/3959/video.m3u8?token=2650D92500E6B
 #EXTINF:-1 tvg-name="Твоє Кіно Action HD", Твоє Кіно Action
 http://cdn.iptv11.com/3959/video.m3u8?token=2650D92500E6B
+#EXTINF:0 tvg-id="tvoe-kino-action" tvg-logo="http://1lot.tv/ch/10279.png" catchup-days="1" catchup-type="flussonic" group-title="Кіно",Твоє Кіно Action HD
+http://cdn.iptv11.com/3959/video.m3u8?token=2650D92500E6B
+#EXTINF:-1 tvg-id="tvoje-kino-action-hd" tvg-logo="http://1lot.tv/ch/10279.png" catchup-days="1" catchup-type="flussonic" group-title="Кіно",Твоє Кіно Action HD
+http://cdn.iptv11.com/3959/video.m3u8?token=2650D92500E6B
+#EXTINF:-1 tvg-id="tvoe-kino-action-hd" tvg-logo="http://1lot.tv/ch/10279.png" catchup-days="1" catchup-type="flussonic" group-title="Кіно",Твоє Кіно Action HD
+http://cdn.iptv11.com/3959/video.m3u8?token=2650D92500E6B
+#EXTINF:-1 tvg-id="твоє-кіно-action" tvg-logo="http://1lot.tv/ch/10279.png" catchup-days="1" catchup-type="flussonic" group-title="Кіно",Твоє Кіно Action HD
+http://cdn.iptv11.com/3959/video.m3u8?token=2650D92500E6B
 
