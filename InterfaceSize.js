@@ -30,7 +30,7 @@
     if (fontSize <= 10.5) return 7;   // 10.5px - 7 карток  
     if (fontSize <= 11) return 7;     // 11px - 7 карток  
     if (fontSize <= 11.5) return 6;   // 11.5px - 6 карток  
-    return 6;                         // 12px - 6 карток  
+    if (fontSize <= 12) return 6;     // 12px - 6 карток  
   };  
     
   const updateSize = () => {  
