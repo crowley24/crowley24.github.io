@@ -12,7 +12,7 @@
         JACRED_PROTOCOL: 'http://',
         JACRED_URL: Lampa.Storage.get('jacred.xyz') || 'jacred.xyz',
 
-        // Шлях до іконок
+        // Шлях до іконок (FoxStudio)
         ICONS_PATH: 'https://raw.githubusercontent.com/FoxStudio24/lampa/main/Quality/Quality_ico/',
         
         // Мапінг якості до файлів SVG
@@ -22,10 +22,10 @@
             '4K': '4K.svg',
             'FHD': 'FULL HD.svg',
             'HD': 'HD.svg',
-            'SD': 'HD.svg' // Можна замінити на SD.svg, якщо він з'явиться
+            'SD': 'HD.svg' 
         },
 
-        // Мережа
+        // Мережа та Проксі
         PROXY_TIMEOUT: 5000,
         PROXY_LIST: [
             'http://api.allorigins.win/raw?url=',
@@ -36,11 +36,11 @@
         RETRY_DELAY: 1000,
         BATCH_SIZE: 5,
 
-        // Кешування TTL
+        // Кешування TTL (в мс)
         TTL: {
-            quality: 24 * 60 * 60 * 1000, 
-            error: 5 * 60 * 1000,        
-            no_quality: 60 * 60 * 1000   
+            quality: 24 * 60 * 60 * 1000, // 24 години
+            error: 5 * 60 * 1000,        // 5 хвилин для помилок
+            no_quality: 60 * 60 * 1000   // 1 година для відсутності якості
         }
     };
 
@@ -70,7 +70,13 @@
 
         logWithContext: function(level, message, context) {
             if (!Config.Q_LOGGING) return;
-            console[level]('[MAXSM-RATINGS] ' + message, context || '');
+            var logEntry = {
+                timestamp: new Date().toISOString(),
+                level: level,
+                message: message,
+                context: context || {}
+            };
+            console[level]('[MAXSM-RATINGS] ' + message, logEntry);
         },
 
         performance: {
@@ -79,6 +85,7 @@
             end: function(name) {
                 if (this.timers[name]) {
                     var duration = performance.now() - this.timers[name];
+                    Utils.logWithContext('log', 'Performance: ' + name, { duration: duration.toFixed(2) + 'ms' });
                     delete this.timers[name];
                     return duration;
                 }
@@ -87,20 +94,20 @@
 
         stats: {
             requests: 0, cacheHits: 0, errors: 0,
-            increment: function(type) { this[type]++; },
+            increment: function(type) { this[type] = (this[type] || 0) + 1; },
             getStats: function() {
                 return {
                     requests: this.requests,
                     cacheHits: this.cacheHits,
                     errors: this.errors,
-                    hitRate: (this.requests > 0 ? (this.cacheHits / this.requests * 100).toFixed(1) : 0) + '%'
+                    cacheHitRate: this.requests > 0 ? (this.cacheHits / this.requests * 100).toFixed(2) + '%' : '0%'
                 };
             }
         }
     };
 
     // =======================================================
-    // III. МОДУЛЬ API
+    // III. МОДУЛЬ API (Черга запитів)
     // =======================================================
     var API = {
         activeRequests: 0,
@@ -138,23 +145,21 @@
         fetchWithProxy: function(url, cardId, callback) {
             var currentProxyIndex = 0;
             var callbackCalled = false;
-
             function tryNextProxy() {
                 if (currentProxyIndex >= Config.PROXY_LIST.length) {
-                    if (!callbackCalled) { callbackCalled = true; callback(new Error('Proxy fail')); }
+                    if (!callbackCalled) { callbackCalled = true; callback(new Error('All proxies failed')); }
                     return;
                 }
                 var proxyUrl = Config.PROXY_LIST[currentProxyIndex] + encodeURIComponent(url);
                 var timeoutId = setTimeout(function() {
                     if (!callbackCalled) { currentProxyIndex++; tryNextProxy(); }
                 }, Config.PROXY_TIMEOUT);
-
                 fetch(proxyUrl)
-                    .then(res => res.ok ? res.text() : Promise.reject())
-                    .then(data => {
+                    .then(function(res) { if (!res.ok) throw new Error(); return res.text(); })
+                    .then(function(data) {
                         if (!callbackCalled) { callbackCalled = true; clearTimeout(timeoutId); callback(null, data); }
                     })
-                    .catch(() => {
+                    .catch(function() {
                         clearTimeout(timeoutId);
                         if (!callbackCalled) { currentProxyIndex++; tryNextProxy(); }
                     });
@@ -172,13 +177,14 @@
                 var cache = Lampa.Storage.get(Config.QUALITY_CACHE) || {};
                 var item = cache[key];
                 if (!item) return null;
-                if (Date.now() - item.timestamp < (Config.TTL[item.type] || Config.TTL.quality)) {
+                var ttl = Config.TTL[item.type] || Config.TTL.quality;
+                if (Date.now() - item.timestamp < ttl) {
                     Utils.stats.increment('cacheHits');
                     return item;
                 }
                 delete cache[key];
                 Lampa.Storage.set(Config.QUALITY_CACHE, cache);
-            } catch (e) { Utils.logWithContext('error', 'Cache get error', e); }
+            } catch (e) { Utils.logWithContext('error', 'Cache error', e); }
             return null;
         },
         set: function(key, data, type) {
@@ -186,14 +192,15 @@
                 var cache = Lampa.Storage.get(Config.QUALITY_CACHE) || {};
                 cache[key] = { quality: data.quality, timestamp: Date.now(), type: type || 'quality' };
                 Lampa.Storage.set(Config.QUALITY_CACHE, cache);
-            } catch (e) { Utils.logWithContext('error', 'Cache set error', e); }
+            } catch (e) {}
         },
         cleanup: function() {
             try {
                 var cache = Lampa.Storage.get(Config.QUALITY_CACHE) || {};
                 var now = Date.now();
                 for (var k in cache) {
-                    if (now - cache[k].timestamp > (Config.TTL[cache[k].type] || Config.TTL.quality)) delete cache[k];
+                    var ttl = Config.TTL[cache[k].type] || Config.TTL.quality;
+                    if (now - cache[k].timestamp > ttl) delete cache[k];
                 }
                 Lampa.Storage.set(Config.QUALITY_CACHE, cache);
             } catch (e) {}
@@ -201,39 +208,35 @@
     };
 
     // =======================================================
-    // V. МОДУЛЬ UI (ОНОВЛЕНО ПІД SVG)
+    // V. МОДУЛЬ UI (З ІКОНКАМИ FOXSTUDIO)
     // =======================================================
     var UI = {
         initStyles: function() {
-            if (document.getElementById('maxsm_ratings_quality')) return;
             var style = document.createElement('style');
             style.id = 'maxsm_ratings_quality';
             style.textContent = `
                 .card__view { position: relative !important; }
-                .card__quality_box {
+                .card__quality_fox {
                     position: absolute !important;
-                    bottom: 0.4em !important;
-                    left: 0.4em !important;
+                    bottom: 0.3em !important;
+                    left: 0.3em !important;
                     z-index: 10;
                     display: flex;
-                    gap: 3px;
                     pointer-events: none;
                 }
-                .card__quality_box img {
-                    height: 1.6em !important;
+                .card__quality_fox img {
+                    height: 1.7em !important;
                     width: auto !important;
-                    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.9));
-                    transition: transform 0.2s ease;
+                    filter: drop-shadow(0 2px 5px rgba(0,0,0,0.95)) !important;
                 }
-                /* Фолбек стиль, якщо немає іконки */
-                .quality-text-badge {
-                    background: rgba(0,0,0,0.6);
-                    border: 1px solid #fff;
-                    color: #fff;
-                    font-size: 0.8em;
-                    padding: 1px 4px;
+                .quality-fallback {
+                    background: rgba(0,0,0,0.7);
+                    color: white;
+                    padding: 2px 5px;
                     border-radius: 3px;
+                    font-size: 1em;
                     font-weight: bold;
+                    border: 1px solid white;
                 }
             `;
             document.head.appendChild(style);
@@ -242,32 +245,29 @@
         addQualityBadge: function(card, quality) {
             if (!document.body.contains(card)) return;
             card.setAttribute('data-quality-added', 'true');
-            
             var cardView = card.querySelector('.card__view');
             if (!cardView) return;
 
-            // Видаляємо старі
-            var old = cardView.querySelector('.card__quality_box');
+            // Очищуємо старі бейджи
+            var old = cardView.querySelector('.card__quality_fox');
             if (old) old.remove();
 
             if (quality && quality !== 'NO') {
                 var container = document.createElement('div');
-                container.className = 'card__quality_box';
+                container.className = 'card__quality_fox';
 
                 var iconFile = Config.ICONS_MAP[quality];
                 if (iconFile) {
                     var img = document.createElement('img');
                     img.src = Config.ICONS_PATH + iconFile;
-                    img.onerror = function() { // Якщо файл не завантажився
+                    // Якщо іконка не завантажилась, показуємо текст
+                    img.onerror = function() {
                         this.style.display = 'none';
-                        container.innerHTML = '<div class="quality-text-badge">' + quality + '</div>';
+                        container.innerHTML = '<div class="quality-fallback">' + quality + '</div>';
                     };
                     container.appendChild(img);
                 } else {
-                    var txt = document.createElement('div');
-                    txt.className = 'quality-text-badge';
-                    txt.textContent = quality;
-                    container.appendChild(txt);
+                    container.innerHTML = '<div class="quality-fallback">' + quality + '</div>';
                 }
                 cardView.appendChild(container);
             }
@@ -275,114 +275,121 @@
     };
 
     // =======================================================
-    // VI. ЛОГІКА ТА ПОШУК
+    // VI. ОСНОВНІ ФУНКЦІЇ (JacRed)
     // =======================================================
     function getCardType(card) {
-        return (card.media_type === 'tv' || card.first_air_date) ? 'tv' : 'movie';
+        var type = card.media_type || card.type;
+        if (type === 'movie' || type === 'tv') return type;
+        return card.name || card.original_name ? 'tv' : 'movie';
     }
 
     function getBestReleaseFromJacred(normalizedCard, cardId, callback) {
         if (!Config.JACRED_URL) return callback(null);
 
-        var dateStr = normalizedCard.release_date || '';
-        var year = dateStr.substring(0, 4);
+        var year = (normalizedCard.release_date || '').substring(0, 4);
         if (!year || isNaN(year)) return callback(null);
 
-        function translateQuality(q, dv, hdr) {
-            if (q >= 2160) return dv ? '4K DV' : (hdr ? '4K HDR' : '4K');
-            if (q >= 1080) return 'FHD';
-            if (q >= 720) return 'HD';
-            return 'SD';
-        }
-
-        var url = Config.JACRED_PROTOCOL + Config.JACRED_URL + '/api/v1.0/torrents?search=' +
+        var userId = Lampa.Storage.get('lampac_unic_id', '');
+        var apiUrl = Config.JACRED_PROTOCOL + Config.JACRED_URL + '/api/v1.0/torrents?search=' +
             encodeURIComponent(normalizedCard.original_title || normalizedCard.title) +
-            '&year=' + year + '&uid=' + Lampa.Storage.get('lampac_unic_id', '');
+            '&year=' + year + '&uid=' + userId;
 
-        API.queueRequest(url, cardId, function(err, res) {
+        API.queueRequest(apiUrl, cardId, function(error, responseText) {
             Utils.stats.increment('requests');
-            if (err || !res) return callback(null);
-            try {
-                var json = JSON.parse(res);
-                if (!Array.isArray(json) || !json.length) return callback(null);
+            if (error || !responseText) return callback(null);
 
-                // Знаходимо найкращий за якістю
-                json.sort((a, b) => (b.quality || 0) - (a.quality || 0));
-                var best = json[0];
-                var title = best.title.toLowerCase();
-                
-                callback({
-                    quality: translateQuality(
-                        best.quality, 
-                        /\b(dv|dolby\s*vision)\b/.test(title), 
-                        /\b(hdr|hdr10)\b/.test(title)
-                    )
-                });
+            try {
+                var torrents = JSON.parse(responseText);
+                if (!Array.isArray(torrents) || torrents.length === 0) return callback(null);
+
+                // Сортування за якістю (спрощено для швидкості)
+                torrents.sort(function(a, b) { return (b.quality || 0) - (a.quality || 0); });
+                var best = torrents[0];
+                var lowTitle = best.title.toLowerCase();
+
+                // Визначення тега якості
+                var qTag = 'SD';
+                if (best.quality >= 2160) {
+                    qTag = '4K';
+                    if (/\b(dv|dolby\s*vision)\b/.test(lowTitle)) qTag = '4K DV';
+                    else if (/\b(hdr|hdr10)\b/.test(lowTitle)) qTag = '4K HDR';
+                } else if (best.quality >= 1080) qTag = 'FHD';
+                else if (best.quality >= 720) qTag = 'HD';
+
+                callback({ quality: qTag });
             } catch (e) { callback(null); }
         });
     }
 
     function updateCards(cards) {
         Cache.cleanup();
-        cards.forEach(function(card) {
-            if (card.hasAttribute('data-quality-added')) return;
-            
-            var data = card.card_data;
-            if (!data) return;
+        for (var i = 0; i < cards.length; i++) {
+            var card = cards[i];
+            if (card.hasAttribute('data-quality-added')) continue;
 
-            var normalized = {
-                id: data.id,
-                title: data.title || data.name,
-                original_title: data.original_title || data.original_name,
-                release_date: data.release_date || data.first_air_date,
-                type: getCardType(data)
-            };
+            (function(c) {
+                var data = c.card_data;
+                if (!data) return;
 
-            var cacheKey = normalized.type + '_' + normalized.id;
-            var cached = Cache.get(cacheKey);
+                var norm = {
+                    id: data.id,
+                    title: data.title || data.name,
+                    original_title: data.original_title || data.original_name,
+                    release_date: data.release_date || data.first_air_date,
+                    type: getCardType(data)
+                };
 
-            if (cached) {
-                UI.addQualityBadge(card, cached.quality);
-            } else {
-                getBestReleaseFromJacred(normalized, normalized.id, function(res) {
-                    var q = res ? res.quality : null;
-                    Cache.set(cacheKey, { quality: q }, q ? 'quality' : 'no_quality');
-                    UI.addQualityBadge(card, q);
-                });
-            }
-        });
+                var cacheKey = norm.type + '_' + norm.id;
+                var cached = Cache.get(cacheKey);
+
+                if (cached) {
+                    UI.addQualityBadge(c, cached.quality);
+                } else {
+                    getBestReleaseFromJacred(norm, norm.id, function(res) {
+                        var q = res ? res.quality : null;
+                        Cache.set(cacheKey, { quality: q }, q ? 'quality' : 'no_quality');
+                        UI.addQualityBadge(c, q);
+                    });
+                }
+            })(card);
+        }
     }
 
     // =======================================================
-    // VII. ІНІЦІАЛІЗАЦІЯ
+    // VII. OBSERVER ТА ЗАПУСК
     // =======================================================
-    var debouncedUpdate = Utils.debounce(updateCards, 300);
+    var debouncedUpdateCards = Utils.debounce(function(cards) {
+        updateCards(cards);
+    }, 300);
 
-    var observer = new MutationObserver(function(mutations) {
-        var added = [];
-        mutations.forEach(m => {
-            if (m.addedNodes) m.addedNodes.forEach(n => {
-                if (n.nodeType === 1) {
-                    if (n.classList.contains('card')) added.push(n);
-                    n.querySelectorAll('.card').forEach(c => added.push(c));
+    var observer = new MutationObserver(function (mutations) {
+        var newCards = [];
+        for (var m = 0; m < mutations.length; m++) {
+            if (mutations[m].addedNodes) {
+                for (var j = 0; j < mutations[m].addedNodes.length; j++) {
+                    var node = mutations[m].addedNodes[j];
+                    if (node.nodeType !== 1) continue;
+                    if (node.classList.contains('card')) newCards.push(node);
+                    var nested = node.querySelectorAll('.card');
+                    for (var k = 0; k < nested.length; k++) newCards.push(nested[k]);
                 }
-            });
-        });
-        if (added.length) debouncedUpdate(added);
+            }
+        }
+        if (newCards.length) debouncedUpdateCards(newCards);
     });
 
-    function start() {
+    function startPlugin() {
         UI.initStyles();
         if (Lampa.Storage.get('maxsm_ratings_quality_inlist', 'true') === 'true') {
             observer.observe(document.body, { childList: true, subtree: true });
-            var initial = document.querySelectorAll('.card');
-            if (initial.length) updateCards(Array.from(initial));
+            var existing = document.querySelectorAll('.card');
+            if (existing.length) updateCards(Array.prototype.slice.call(existing));
         }
+        console.log("MAXSM-RATINGS", "Started with SVG Icons");
     }
 
     if (!window.maxsmRatingsQualityPlugin) {
         window.maxsmRatingsQualityPlugin = true;
-        start();
+        startPlugin();
     }
 })();
-
