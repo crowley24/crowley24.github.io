@@ -245,17 +245,6 @@
             const trackDiv = document.createElement('div');  
             trackDiv.className = 'card__tracks';  
               
-            // Перевірка сумісності з RatingUp  
-            const parentCard = cardView.closest('.card');  
-            if (parentCard) {  
-                const voteElement = parentCard.querySelector('.card__vote');  
-                if (voteElement) {  
-                    const topStyle = getComputedStyle(voteElement).top;  
-                    if (topStyle !== 'auto' && parseInt(topStyle) < 100) {  
-                        trackDiv.classList.add('positioned-below-rating');  
-                    }  
-                }  
-            }  
               
             const innerElement = document.createElement('div');  
             innerElement.innerHTML = displayLabel;  
