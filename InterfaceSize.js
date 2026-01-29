@@ -9,16 +9,16 @@
   };  
   Lampa.Manifest.plugins = manifest;  
   
-  // Використовуємо масив об'єктів для правильного порядку  
-  Lampa.Params.select('interface_size', [  
-    { value: '9', name: '9' },  
-    { value: '9.5', name: '9.5' },  
-    { value: '10', name: '10' },  
-    { value: '10.5', name: '10.5' },  
-    { value: '11', name: '11' },  
-    { value: '11.5', name: '11.5' },  
-    { value: '12', name: '12' }  
-  ], '12');  
+  // Використовуємо рядки з нулями для правильного порядку сортування  
+  Lampa.Params.select('interface_size', {   
+    '09': '9',   
+    '09.5': '9.5',   
+    '10': '10',   
+    '10.5': '10.5',   
+    '11': '11',   
+    '11.5': '11.5',   
+    '12': '12'  
+  }, '12');  
     
   const getSize = () => Lampa.Platform.screen('mobile') ? 10 : parseFloat(Lampa.Storage.field('interface_size')) || 12;  
   const updateSize = () => $('body').css({ fontSize: getSize() + 'px' });  
