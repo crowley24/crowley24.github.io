@@ -44,22 +44,22 @@
     
                     /* Стилі для бейджів українських доріжок на картках */    
                     .card__view { position: relative; }    
-                    .card__tracks {    
-                        position: absolute !important;    
-                        right: 0.3em !important;    
-                        left: auto !important;    
-                        top: 0.3em !important;    
-                        background: rgba(0,0,0,0.5) !important;    
-                        color: #FFFFFF !important;    
-                        font-size: 1.3em !important;    
-                        padding: 0.2em 0.5em !important;    
-                        border-radius: 1em !important;    
-                        font-weight: 700 !important;    
-                        z-index: 20 !important;    
-                        width: fit-content !important;    
-                        max-width: calc(100% - 1em) !important;    
-                        overflow: hidden !important;    
-                    }    
+                    .card__tracks {  
+    position: absolute !important;  
+    left: 0.3em !important;        /* Змінено з right на left */  
+    right: auto !important;        /* Змінено з left на right */  
+    top: 0.3em !important;  
+    background: rgba(0,0,0,0.5) !important;  
+    color: #FFFFFF !important;  
+    font-size: 1.3em !important;  
+    padding: 0.2em 0.5em !important;  
+    border-radius: 1em !important;  
+    font-weight: 700 !important;  
+    z-index: 20 !important;  
+    width: fit-content !important;  
+    max-width: calc(100% - 1em) !important;  
+    overflow: hidden !important;  
+}
                     .card__tracks.positioned-below-rating {    
                         top: 1.85em !important;    
                     }    
