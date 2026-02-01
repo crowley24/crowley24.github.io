@@ -582,4 +582,5 @@
     if (!window.sursQualityPlugin) {
         startPlugin();
     }
+
 })();
