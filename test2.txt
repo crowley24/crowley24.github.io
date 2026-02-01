@@ -1,0 +1,323 @@
+#EXTM3U url-tvg="https://iptvx.one/EPG_NOARCH"
+#EXTINF:-1 tvg-id="1plus1" tvg-rec="14" tvg-logo="https://iptvx.one/picons/1plus1.png" group-title="Національні",1+1 Марафон HD
+http://cdn.iptv11.com/11HDUA/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="1plus1" tvg-rec="14" tvg-logo="https://iptvx.one/picons/1plus1.png" group-title="Національні",1+1 Україна HD
+http://cdn.iptv11.com/872/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="ictv-ua" tvg-rec="14" tvg-logo="https://iptvx.one/picons/ictv.png" group-title="Національні",ICTV HD
+http://cdn.iptv11.com/ICTVHD-ua/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="ictv-ukraine" tvg-rec="14" group-title="Національні",ICTV2
+http://cdn.iptv11.com/2422/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="novy-kanal-ua" tvg-rec="14" tvg-logo="https://iptvx.one/picons/novy.png" group-title="Національні",Новий канал HD
+http://cdn.iptv11.com/NoviyKanalHD-ua/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="stb-ua" tvg-rec="14" tvg-logo="https://iptvx.one/picons/stb.png" group-title="Національні",СТБ HD
+http://cdn.iptv11.com/STBHD-ua/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="tet-ua" tvg-rec="14" tvg-logo="https://iptvx.one/picons/tet.png" group-title="Національні",ТЕТ HD
+http://cdn.iptv11.com/553/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="kvartal-tv" tvg-rec="14" tvg-logo="https://iptvx.one/picons/kvartal-tv.png" group-title="Національні",Квартал ТВ
+http://cdn.iptv11.com/KvartalTV-ua/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="ntn-ua" tvg-rec="14" tvg-logo="https://iptvx.one/picons/ntn.png" group-title="Національні",НТН HD
+http://cdn.iptv11.com/559/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="k1-ua" tvg-rec="14" tvg-logo="https://iptvx.one/picons/k1-ua.png" group-title="Національні",К1 HD
+http://cdn.iptv11.com/561/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="k2-ua" tvg-rec="14" tvg-logo="https://iptvx.one/picons/k2-ua.png" group-title="Національні",К2 HD
+http://cdn.iptv11.com/562/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="2plus2" tvg-rec="14" tvg-logo="https://iptvx.one/picons/2plus2.png" group-title="Національні",2+2 HD
+http://cdn.iptv11.com/22HDUA/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="nashe-lubimoe-kino-ua" tvg-rec="14" tvg-logo="https://iptvx.one/picons/nashe-lubimoe-kino-ua.png" group-title="Національні",Наше улюблене кіно
+http://cdn.iptv11.com/3320/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="mega-ua" tvg-rec="14" tvg-logo="https://iptvx.one/picons/mega-ua.png" group-title="Національні",Мега HD
+http://cdn.iptv11.com/557/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="suspilne-sport-ua" tvg-rec="14" tvg-logo="https://iptvx.one/picons/suspilne-sport-ua.png" group-title="Національні",Суспільне Спорт
+http://cdn.iptv11.com/3618/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Національні",Кіно HD
+http://cdn.iptv11.com/2884/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="paramount-comedy-ua" tvg-rec="14" tvg-logo="https://iptvx.one/picons/paramount_comedy.png" group-title="Національні",Comedy Central HD
+http://cdn.iptv11.com/195/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="filmua-live" tvg-rec="14" group-title="Національні",FilmUA Live HD
+http://cdn.iptv11.com/2890/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="Super+" tvg-rec="14" group-title="Національні",Super+
+http://cdn.iptv11.com/3935/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="tvoje-kino-action" tvg-rec="14" tvg-logo="http://1lot.tv/ch/10279.png" group-title="Кіно",Твоє Кіно Action
+http://cdn.iptv11.com/3959/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" tvg-logo="http://1lot.tv/ch/10280.png" group-title="Кіно",Твоє Кіно Хіт
+http://cdn.iptv11.com/3960/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" tvg-logo="http://1lot.tv/ch/10281.png" group-title="Кіно",Твоє Кіно Relax
+http://cdn.iptv11.com/3961/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",Kino Premiere HD
+http://cdn.iptv11.com/2901/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",Kino Action HD
+http://cdn.iptv11.com/2902/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",Kino Comedy HD
+http://cdn.iptv11.com/2903/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" tvg-logo="http://1lot.tv/ch/6508.png" group-title="Кіно",Cine+ Legend
+http://cdn.iptv11.com/2891/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="cine-plus" tvg-rec="14" group-title="Кіно",Cine+ HD
+http://cdn.iptv11.com/2893/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="cine-plus-hit-hd" tvg-rec="14" group-title="Кіно",Cine+ Hit HD
+http://cdn.iptv11.com/2894/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="kinowood" tvg-rec="14" tvg-logo="https://iptvx.one/picons/kinowood.png" group-title="Кіно",KINOWOOD HD
+http://cdn.iptv11.com/2888/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",Fantastika
+http://cdn.iptv11.com/4025/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",jk_Alf
+http://cdn.iptv11.com/4031/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",jk_90
+http://cdn.iptv11.com/4040/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",jk_x_files
+http://cdn.iptv11.com/4042/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",jk_Van_Dame
+http://cdn.iptv11.com/4061/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",jk_Cinema
+http://cdn.iptv11.com/4075/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",jk_Cinema2
+http://cdn.iptv11.com/4076/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",jk_Cinema3
+http://cdn.iptv11.com/4077/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",jk_doku_Ukraine
+http://cdn.iptv11.com/4079/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",jk_ograblenie
+http://cdn.iptv11.com/4088/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",jk_strah
+http://cdn.iptv11.com/4089/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",jk_detektiv
+http://cdn.iptv11.com/4105/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",jk_biograf
+http://cdn.iptv11.com/4106/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",jk_dark
+http://cdn.iptv11.com/4110/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",jk_arnold
+http://cdn.iptv11.com/4121/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",jk_Ritchie
+http://cdn.iptv11.com/4125/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",jk_Scorsese
+http://cdn.iptv11.com/4126/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",jk_Spilberg
+http://cdn.iptv11.com/4127/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",jk_Tarantino
+http://cdn.iptv11.com/4130/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",jk_Kameron
+http://cdn.iptv11.com/4131/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",jk_Nolan
+http://cdn.iptv11.com/4133/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",jk_King
+http://cdn.iptv11.com/4135/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",jk_Crowe
+http://cdn.iptv11.com/4136/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",jk_Butler
+http://cdn.iptv11.com/4139/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Кіно",jk_Neeson
+http://cdn.iptv11.com/4141/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="4ever-cinema" tvg-rec="14" tvg-logo="https://iptvx.one/picons/4ever-cinema.png" group-title="Кіно",4ever Cinema HD
+http://cdn.iptv11.com/1562/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="4ever-drama" tvg-rec="14" tvg-logo="https://iptvx.one/picons/4ever-drama.png" group-title="Кіно",4ever Drama HD
+http://cdn.iptv11.com/1563/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="4ever-theater" tvg-rec="14" tvg-logo="https://iptvx.one/picons/4ever-theater.png" group-title="Кіно",4ever Theater HD
+http://cdn.iptv11.com/1565/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="kinouzhas" tvg-rec="14" tvg-logo="https://iptvx.one/picons/kinouzhas.png" group-title="Жахи",Киноужас HD
+http://cdn.iptv11.com/187/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="strashnoe-hd" tvg-rec="14" tvg-logo="https://iptvx.one/picons/strashnoe-hd.png" group-title="Жахи",Страшное HD
+http://cdn.iptv11.com/188/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="shokiruyushchee" tvg-rec="14" tvg-logo="https://iptvx.one/picons/shokiruyushchee.png" group-title="Жахи",Шокирующее
+http://cdn.iptv11.com/244/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="trashtv" tvg-rec="14" tvg-logo="https://iptvx.one/picons/trashtv.png" group-title="Жахи",Trash HD
+http://cdn.iptv11.com/302/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="iptv6247" tvg-rec="14" tvg-logo="http://epg.it999.ru/img/6247.png" group-title="Жахи",Kinoshka Mystic HD
+http://cdn.iptv11.com/760/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="iptv5181" tvg-rec="14" tvg-logo="http://epg.it999.ru/img/5181.png" group-title="Жахи",UZ Ужасное ТВ HD
+http://cdn.iptv11.com/538/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="magic-horror" tvg-rec="14" group-title="Жахи",Magic Horror
+http://cdn.iptv11.com/768/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="mm-uzhasy" tvg-rec="14" group-title="Жахи",MM Ужасы HD
+http://cdn.iptv11.com/796/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="mm-uzhasyclassic" tvg-rec="14" group-title="Жахи",MM Ужасы Classic HD
+http://cdn.iptv11.com/797/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="mm-uzhastik" tvg-rec="14" group-title="Жахи",MM Ужастик HD
+http://cdn.iptv11.com/799/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="mm-stivenking" tvg-rec="14" group-title="Жахи",MM Стивен Кинг HD
+http://cdn.iptv11.com/814/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="kbc-koshmar" tvg-rec="14" tvg-logo="https://iptv.online/epg/icon/KBC/36277.png" group-title="Жахи",KBC-Кошмарное HD
+http://cdn.iptv11.com/739/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="cineman-uzhasy" tvg-rec="14" tvg-logo="https://iptvx.one/picons/cineman-uzhasy.png" group-title="Жахи",CineMan Ужасы
+http://cdn.iptv11.com/852/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="klihorror" tvg-rec="14" group-title="Жахи",KLI Horror HD
+http://cdn.iptv11.com/2509/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 group-title="Жахи",VeleS Страшное
+http://cdn.iptv11.com/3694/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="fresh-horror" tvg-logo="https://iptvx.one/picons/fresh-horror.png" group-title="Жахи",Fresh Horror
+http://cdn.iptv11.com/3706/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 group-title="Жахи",ЧебурТВ Ужастики
+http://cdn.iptv11.com/3733/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 group-title="Жахи",ЧебурТВ Мистика
+http://cdn.iptv11.com/3742/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 group-title="Жахи",Dosug TV Horror
+http://cdn.iptv11.com/3805/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 group-title="Жахи",TVPlay Ужастик HD
+http://cdn.iptv11.com/3863/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="mitv0053" tvg-rec="14" tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/123.png" group-title="Жахи",Play-x Вампир
+http://cdn.iptv11.com/986/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="mitv0912" tvg-rec="14" tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/275.png" group-title="Жахи",Play-x Ужасы VHS
+http://cdn.iptv11.com/993/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="mitv3012" tvg-rec="14" tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/10931.png" group-title="Жахи",Play-x Cinema Horror Kids
+http://cdn.iptv11.com/2308/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Жахи",Ужасы HD
+http://cdn.iptv11.com/4261/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Жахи",Scream
+http://cdn.iptv11.com/4262/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="clarity4k-uzasy" tvg-rec="14" tvg-logo="https://ip-tv.dev/images/ico/clarity4k-uzasy.png" group-title="Жахи",Clarity4K Ужасы
+http://cdn.iptv11.com/3594/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="vhshd" tvg-rec="14" tvg-logo="https://iptvx.one/picons/vhshd.png" group-title="VHS",VHS HD
+http://cdn.iptv11.com/2454/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="yossovhs-yosso" tvg-rec="14" tvg-logo="https://iptvx.one/picons/yosso-vhs.png" group-title="VHS",Yosso TV VHS
+http://cdn.iptv11.com/397/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="kbc-vidak" tvg-rec="14" tvg-logo="https://iptv.online/epg/icon/KBC/36251.png" group-title="VHS",KBC-Видак HD
+http://cdn.iptv11.com/735/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="magic-vhs" tvg-rec="14" group-title="VHS",Magic VHS
+http://cdn.iptv11.com/772/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="cineman-vhs" tvg-rec="14" tvg-logo="https://iptvx.one/picons/cineman-vhs.png" group-title="VHS",CineMan VHS
+http://cdn.iptv11.com/843/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 group-title="VHS",VeleS Киноплёнка
+http://cdn.iptv11.com/3690/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="fresh-vhs" tvg-logo="https://iptvx.one/picons/fresh-vhs.png" group-title="VHS",Fresh VHS
+http://cdn.iptv11.com/3703/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 group-title="VHS",Dosug TV VHS
+http://cdn.iptv11.com/3809/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="klivhs" tvg-rec="14" group-title="VHS",KLI VHS HD
+http://cdn.iptv11.com/2499/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="history-ru" tvg-rec="14" tvg-logo="https://iptvx.one/picons/history-hd.png" group-title="Пізнавальні",History HD
+http://cdn.iptv11.com/HistoryHD/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="h2" tvg-rec="14" tvg-logo="https://iptvx.one/picons/h2.png" group-title="Пізнавальні",History 2 HD
+http://cdn.iptv11.com/207/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="viasat-history-ua" tvg-rec="14" tvg-logo="https://iptvx.one/picons/viasat-history.png" group-title="Пізнавальні",Viasat History HD
+http://cdn.iptv11.com/3500/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="viasat-history" tvg-rec="14" tvg-logo="https://iptvx.one/picons/viasat-history.png" group-title="Пізнавальні",Viju History
+http://cdn.iptv11.com/ViasatHistory/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="national-geographic" tvg-rec="14" tvg-logo="https://iptvx.one/picons/national-geographic-hd.png" group-title="Пізнавальні",National Geographic HD
+http://cdn.iptv11.com/NationalGeographicHD/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="viasat-explore" tvg-rec="14" tvg-logo="https://iptvx.one/picons/viasat-explore.png" group-title="Пізнавальні",Viju Explore
+http://cdn.iptv11.com/ViasatExplore/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="nat-geo-wild" tvg-rec="14" tvg-logo="https://iptvx.one/picons/nat-geo-wild-hd.png" group-title="Пізнавальні",Nat Geo Wild HD
+http://cdn.iptv11.com/NatGeoWildHD/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="discovery-science" tvg-rec="14" tvg-logo="https://iptvx.one/picons/discovery-science.png" group-title="Пізнавальні",Discovery Science
+http://cdn.iptv11.com/DiscoveryScience/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Пізнавальні",Big Planet HD
+http://cdn.iptv11.com/3586/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="animal-planet" tvg-rec="14" tvg-logo="https://iptvx.one/picons/animal-planet.png" group-title="Пізнавальні",Animal Planet HD
+http://cdn.iptv11.com/AnimalPlanetHD/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Пізнавальні",CineMan Air Crash
+http://cdn.iptv11.com/4406/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="discovery-channel" tvg-rec="14" tvg-logo="https://iptvx.one/picons/discovery-channel.png" group-title="Пізнавальні",Discovery Channel HD
+http://cdn.iptv11.com/DiscoveryChannelHD/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="mm-makromir" tvg-rec="14" group-title="Пізнавальні",MM Макромир HD
+http://cdn.iptv11.com/801/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="mm-megamir" tvg-rec="14" group-title="Пізнавальні",MM Мегамир HD
+http://cdn.iptv11.com/802/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="mm-otkritiya" tvg-rec="14" group-title="Пізнавальні",MM Открытия HD
+http://cdn.iptv11.com/2465/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="docubox-hd" tvg-rec="14" tvg-logo="https://iptvx.one/picons/docubox-hd.png" group-title="Пізнавальні",DocuBox HD
+http://cdn.iptv11.com/Docubox/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="sea-tv" tvg-rec="14" tvg-logo="https://iptvx.one/picons/sea-tv.png" group-title="Пізнавальні",Sea TV HD
+http://cdn.iptv11.com/1226/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="mitv0001" tvg-rec="14" tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/341.png" group-title="Пізнавальні",Play-x Космический
+http://cdn.iptv11.com/2001/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="mitv0003" tvg-rec="14" tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/342.png" group-title="Пізнавальні",Play-x UFO
+http://cdn.iptv11.com/2002/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/362.png" group-title="Пізнавальні",Play-x Жизнь в 90-е
+http://cdn.iptv11.com/2009/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/364.png" group-title="Пізнавальні",Play-x Очевидное  невероятное
+http://cdn.iptv11.com/2011/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 group-title="Пізнавальні",ЧебурТВ ДОКУ Univerce
+http://cdn.iptv11.com/3799/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 group-title="Пізнавальні",ЧебурТВ ДОКУ Science
+http://cdn.iptv11.com/3800/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="utravel" tvg-rec="14" tvg-logo="https://iptvx.one/picons/utravel.png" group-title="Пізнавальні",UTravel
+http://cdn.iptv11.com/3015/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Пізнавальні",ZooSweet
+http://cdn.iptv11.com/4164/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Пізнавальні",CuriosityStream
+http://cdn.iptv11.com/3297/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="id-xtra-eu" tvg-rec="14" tvg-logo="https://iptvx.one/picons/idxtra.png" group-title="Пізнавальні",ID Xtra HD
+http://cdn.iptv11.com/498/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="setanta-ua" tvg-rec="14" tvg-logo="https://iptvx.one/picons/setanta-sports.png" group-title="Спортивні",Setanta Sports HD
+http://cdn.iptv11.com/SetantaSportsHD-ua/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="setanta-sports" tvg-rec="14" tvg-logo="https://iptvx.one/picons/setanta-sports1.png" group-title="Спортивні",Setanta Sports 1 HD
+http://cdn.iptv11.com/SetantaSportsHD/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="setanta-sports-plus" tvg-rec="14" tvg-logo="https://iptvx.one/picons/setanta-sports2.png" group-title="Спортивні",Setanta Sports 2 HD
+http://cdn.iptv11.com/871/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="setanta-plus-ua" tvg-rec="14" tvg-logo="https://iptvx.one/picons/setanta-sports-plus.png" group-title="Спортивні",Setanta Sports+ HD
+http://cdn.iptv11.com/001/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="iptv7494" tvg-rec="14" tvg-logo="http://epg.it999.ru/img/7494.png" group-title="Спортивні",Setanta event 1
+http://cdn.iptv11.com/2471/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="iptv7495" tvg-rec="14" tvg-logo="http://epg.it999.ru/img/7495.png" group-title="Спортивні",Setanta event 2
+http://cdn.iptv11.com/2472/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="iptv7496" tvg-rec="14" tvg-logo="http://epg.it999.ru/img/7496.png" group-title="Спортивні",Setanta event 3
+http://cdn.iptv11.com/2473/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="iptv7497" tvg-rec="14" tvg-logo="http://epg.it999.ru/img/7497.png" group-title="Спортивні",Setanta event 4
+http://cdn.iptv11.com/2474/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="iptv7498" tvg-rec="14" tvg-logo="http://epg.it999.ru/img/7498.png" group-title="Спортивні",Setanta event 5
+http://cdn.iptv11.com/2475/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="iptv7539" tvg-rec="14" tvg-logo="http://epg.it999.ru/img/7539.png" group-title="Спортивні",ViP Sport 1
+http://cdn.iptv11.com/3042/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="iptv7540" tvg-rec="14" tvg-logo="http://epg.it999.ru/img/7540.png" group-title="Спортивні",ViP Sport 2
+http://cdn.iptv11.com/3044/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="iptv7541" tvg-rec="14" tvg-logo="http://epg.it999.ru/img/7541.png" group-title="Спортивні",ViP Sport 3
+http://cdn.iptv11.com/3046/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="iptv7542" tvg-rec="14" tvg-logo="http://epg.it999.ru/img/7542.png" group-title="Спортивні",ViP Sport 4
+http://cdn.iptv11.com/3048/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="iptv7543" tvg-rec="14" tvg-logo="http://epg.it999.ru/img/7543.png" group-title="Спортивні",ViP Sport 5
+http://cdn.iptv11.com/3050/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="iptv7544" tvg-rec="14" tvg-logo="http://epg.it999.ru/img/7544.png" group-title="Спортивні",ViP Sport 6
+http://cdn.iptv11.com/3052/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="iptv7545" tvg-rec="14" tvg-logo="http://epg.it999.ru/img/7545.png" group-title="Спортивні",ViP Sport 7
+http://cdn.iptv11.com/3054/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="iptv7546" tvg-rec="14" tvg-logo="http://epg.it999.ru/img/7546.png" group-title="Спортивні",ViP Sport 8
+http://cdn.iptv11.com/3056/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="iptv7547" tvg-rec="14" tvg-logo="http://epg.it999.ru/img/7547.png" group-title="Спортивні",ViP Sport 9
+http://cdn.iptv11.com/3058/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="iptv7548" tvg-rec="14" tvg-logo="http://epg.it999.ru/img/7548.png" group-title="Спортивні",ViP Sport 10
+http://cdn.iptv11.com/3043/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="iptv7549" tvg-rec="14" tvg-logo="http://epg.it999.ru/img/7549.png" group-title="Спортивні",ViP Sport 11
+http://cdn.iptv11.com/3076/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="iptv7550" tvg-rec="14" tvg-logo="http://epg.it999.ru/img/7550.png" group-title="Спортивні",ViP Sport 12
+http://cdn.iptv11.com/3045/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Спортивні",Megogo Футбол 1 HD
+http://cdn.iptv11.com/3936/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Спортивні",Megogo Футбол 2 HD
+http://cdn.iptv11.com/3937/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Спортивні",Megogo Футбол 3 HD
+http://cdn.iptv11.com/3938/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Спортивні",Megogo Футбол 4 HD
+http://cdn.iptv11.com/3939/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Спортивні",Megogo Футбол 5 HD
+http://cdn.iptv11.com/3940/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Спортивні",Megogo Гонг HD
+http://cdn.iptv11.com/3950/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Музика",KroneHit TV
+http://cdn.iptv11.com/4190/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="4ever-music" tvg-rec="14" tvg-logo="https://iptvx.one/picons/4ever-music.png" group-title="Музика",4ever music HD
+http://cdn.iptv11.com/4evermusicHD/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="mtv-hits" tvg-rec="14" tvg-logo="https://iptvx.one/picons/mtv_hits.png" group-title="Музика",MTV Hits
+http://cdn.iptv11.com/MTVHits/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="mtv-rocks" tvg-rec="14" tvg-logo="https://iptvx.one/picons/mtv_rocks.png" group-title="Музика",MTV90s
+http://cdn.iptv11.com/MTVRocks/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="vh1-european" tvg-rec="14" tvg-logo="https://iptvx.one/picons/vh1.png" group-title="Музика",MTV00s
+http://cdn.iptv11.com/VH1European/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="vh1-classic" tvg-rec="14" tvg-logo="https://iptvx.one/picons/vh1-classic.png" group-title="Музика",VH1 Classic
+http://cdn.iptv11.com/VH1Classic/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="yossomusichits-yosso" tvg-rec="14" group-title="Музика",Yosso TV Music Hits
+http://cdn.iptv11.com/BRIDGE-Hits/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="m1-ua" tvg-rec="14" tvg-logo="https://iptvx.one/picons/m1-ua.png" group-title="Музика",M1 HD
+http://cdn.iptv11.com/334/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-id="m2-ua" tvg-rec="14" tvg-logo="https://iptvx.one/picons/m2-ua.png" group-title="Музика",M2 HD
+http://cdn.iptv11.com/335/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Музика",My Hits
+http://cdn.iptv11.com/2967/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Музика",Best of Dance TV
+http://cdn.iptv11.com/4196/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" group-title="Музика",Oxygen Music
+http://cdn.iptv11.com/4197/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/373.png" group-title="Розважальні",Play-x Tik Tok
+http://cdn.iptv11.com/2019/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/394.png" group-title="Розважальні",Play-x Даёшь молодёжь!
+http://cdn.iptv11.com/2104/video.m3u8?token=6A157BAF0CD4E
+#EXTINF:-1 tvg-rec="14" tvg-logo="http://sr1.mitv-iptv.ru:4000/icons/3280.png" group-title="Розважальні",Play-x Чудаки
+http://cdn.iptv11.com/2184/video.m3u8?token=6A157BAF0CD4E
