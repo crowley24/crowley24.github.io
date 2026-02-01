@@ -3,7 +3,7 @@
 http://cdn.iptv11.com/2891/video.m3u8?token=6A157BAF0CD4E
 #EXTINF:-1 tvg-id="8904" tvg-rec="14" tvg-logo="http://epg.one/img/8904.png" group-title="Кіно",Cine+ HD
 http://cdn.iptv11.com/2893/video.m3u8?token=6A157BAF0CD4E
-#EXTINF:-1 tvg-id="cine-plus-hit-hd" tvg-rec="14" tvg-logo="https://iptvx.one/picons/cine-plus-hit-hd.png" group-title="Кіно",Cine+ Hit
+#EXTINF:-1 channel id="cine-plus-hit-hd tvg-rec="14" tvg-logo="https://iptvx.one/picons/cine-plus-hit-hd.png" group-title="Кіно",Cine+ Hit
 http://cdn.iptv11.com/2894/video.m3u8?token=6A157BAF0CD4E
 #EXTINF:-1 tvg-id="4653" tvg-rec="14" tvg-logo="http://epg.one/img/4653.png" group-title="Музика",KroneHit TV
 http://cdn.iptv11.com/4190/video.m3u8?token=6A157BAF0CD4E
