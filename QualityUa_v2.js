@@ -2,7 +2,18 @@
   'use strict';  
   
   try {  
-    var cardBadgesCache = {}; // Використовуємо кеш  
+    // Перевірка доступності залежностей  
+    if (typeof $ === 'undefined') {  
+      console.error('[QualityBadges] jQuery не доступний');  
+      return;  
+    }  
+      
+    if (typeof Lampa === 'undefined') {  
+      console.error('[QualityBadges] Lampa API не доступний');  
+      return;  
+    }  
+  
+    var cardBadgesCache = {};  
     var pluginPath = 'https://crowley24.github.io/Icons/';  
   
     var svgIcons = {  
@@ -20,18 +31,8 @@
       'UKR': pluginPath + 'UKR.svg'  
     };  
   
-    // Перевірка доступності залежностей  
-    if (typeof $ === 'undefined') {  
-      console.error('[QualityBadges] jQuery не доступний');  
-      return;  
-    }  
-      
-    if (typeof Lampa === 'undefined') {  
-      console.error('[QualityBadges] Lampa API не доступний');  
-      return;  
-    }  
-  
-    function getBest(results) {  
+    // Функція вираження замість оголошення в блоці  
+    var getBest = function (results) {  
       var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };  
       var resOrder = ['HD', 'FULL HD', '2K', '4K'];  
         
@@ -61,45 +62,53 @@
   
         if (item.ffprobe && Array.isArray(item.ffprobe)) {  
           item.ffprobe.forEach(function(stream) {  
-            if (!stream || stream.codec_type !== 'video') return;  
+            if (!stream) return;  
               
-            var h = parseInt(stream.height || 0);  
-            var w = parseInt(stream.width || 0);  
-            var res = null;  
-            if (h >= 2160 || w >= 3840) res = '4K';  
-            else if (h >= 1440 || w >= 2560) res = '2K';  
-            else if (h >= 1080 || w >= 1920) res = 'FULL HD';  
-            else if (h >= 720 || w >= 1280) res = 'HD';  
-              
-            if (res && (!best.resolution || resOrder.indexOf(res) > resOrder.indexOf(best.resolution))) {  
-              best.resolution = res;  
-            }  
-            if (stream.side_data_list && JSON.stringify(stream.side_data_list).indexOf('Vision') >= 0) best.dolbyVision = true;  
-            if (stream.color_transfer === 'smpte2084' || stream.color_space === 'bt2020') best.hdr = true;  
-          });  
-            
-          item.ffprobe.forEach(function(stream) {  
-            if (!stream || stream.codec_type !== 'audio') return;  
-              
-            var channels = parseInt(stream.channels || 0);  
-            var audioRes = null;  
-            if (channels >= 8) audioRes = '7.1';  
-            else if (channels >= 6) audioRes = '5.1';  
-            else if (channels >= 4) audioRes = '4.0';  
-            else if (channels >= 2) audioRes = '2.0';  
-              
-            if (audioRes && (!best.audio || [2.0, 4.0, 5.1, 7.1].indexOf(audioRes) > [2.0, 4.0, 5.1, 7.1].indexOf(best.audio))) {  
-              best.audio = audioRes;  
+            if (stream.codec_type === 'video') {  
+              var h = parseInt(stream.height || 0);  
+              var w = parseInt(stream.width || 0);  
+              var res = null;  
+              if (h >= 2160 || w >= 3840) res = '4K';  
+              else if (h >= 1440 || w >= 2560) res = '2K';  
+              else if (h >= 1080 || w >= 1920) res = 'FULL HD';  
+              else if (h >= 720 || w >= 1280) res = 'HD';  
+                
+              if (res && (!best.resolution || resOrder.indexOf(res) > resOrder.indexOf(best.resolution))) {  
+                best.resolution = res;  
+              }  
             }  
           });  
         }  
-          
+  
+        if (item.ffprobe && Array.isArray(item.ffprobe)) {  
+          item.ffprobe.forEach(function(stream) {  
+            if (!stream) return;  
+              
+            if (stream.codec_type === 'audio') {  
+              var channels = parseInt(stream.channels || 0);  
+              var audio = null;  
+              if (channels >= 8) audio = '7.1';  
+              else if (channels >= 6) audio = '5.1';  
+              else if (channels >= 4) audio = '4.0';  
+              else if (channels >= 2) audio = '2.0';  
+                
+              if (audio && (!best.audio || ['2.0', '4.0', '5.1', '7.1'].indexOf(audio) > ['2.0', '4.0', '5.1', '7.1'].indexOf(best.audio))) {  
+                best.audio = audio;  
+              }  
+            }  
+          });  
+        }  
+  
+        if (title.indexOf('hdr') >= 0) best.hdr = true;  
+        if (title.indexOf('dolby vision') >= 0) best.dolbyVision = true;  
         if (title.indexOf('dub') >= 0 || title.indexOf('дубл') >= 0) best.dub = true;  
       }  
+        
       return best;  
-    }  
+    };  
   
-    function createBadgeImg(type, isCard, index) {  
+    // Функція вираження замість оголошення в блоці  
+    var createBadgeImg = function (type, isCard, index) {  
       var className = isCard ? 'card-quality-badge' : 'quality-badge';  
       var delay = (index * 0.08) + 's';  
         
@@ -111,17 +120,10 @@
       if (!iconPath) return '';  
         
       return '<div class="' + className + '" style="animation-delay: ' + delay + '"><img src="' + iconPath + '" draggable="false" oncontextmenu="return false;"></div>';  
-    }  
+    };  
   
-    function addCardBadges(card, best) {  
-      if (!card || !best) return;  
-        
-      var cacheKey = JSON.stringify(best);  
-      if (cardBadgesCache[cacheKey]) {  
-        card.find('.card__view').append(cardBadgesCache[cacheKey]);  
-        return;  
-      }  
-        
+    // Функція вираження замість оголошення в блоці  
+    var addCardBadges = function (card, best) {  
       if (card.find('.card-quality-badges').length) return;  
         
       var badges = [];  
@@ -133,20 +135,20 @@
       if (best.dolbyVision) badges.push(createBadgeImg('Dolby Vision', true, badges.length));  
         
       if (badges.length) {  
-        var badgeHtml = '<div class="card-quality-badges">' + badges.join('') + '</div>';  
-        cardBadgesCache[cacheKey] = badgeHtml;  
-        card.find('.card__view').append(badgeHtml);  
+        card.find('.card__view').append('<div class="card-quality-badges">' + badges.join('') + '</div>');  
       }  
-    }  
+    };  
   
-    function getCardType(card) {  
+    // Функція вираження замість оголошення в блоці  
+    var getCardType = function (card) {  
       var type = card.media_type || card.type;  
       if (type === 'movie' || type === 'tv') return type;  
       return card.name || card.original_name ? 'tv' : 'movie';  
-    }  
+    };  
   
-    function processCards() {  
-      $('.card:not(.qb-processed)').addClass('qb-processed').each(function() {  
+    // Функція вираження замість оголошення в блоці  
+    var processCards = function () {  
+      $('.card:not(.qb-processed)').addClass('qb-processed').each(function () {  
         var card = $(this)[0];  
         var data = card.card_data;  
           
@@ -175,15 +177,17 @@
           });  
         }  
       });  
-    }  
+    };  
   
-    // Observer для нових карток  
-    var observer = new MutationObserver(function(mutations) {  
+    // Observer для відстеження нових карток  
+    var observer = new MutationObserver(function (mutations) {  
       var newCards = [];  
-      mutations.forEach(function(mutation) {  
+      for (var m = 0; m < mutations.length; m++) {  
+        var mutation = mutations[m];  
         if (mutation.addedNodes) {  
-          mutation.addedNodes.forEach(function(node) {  
-            if (node.nodeType !== 1) return;  
+          for (var j = 0; j < mutation.addedNodes.length; j++) {  
+            var node = mutation.addedNodes[j];  
+            if (node.nodeType !== 1) continue;  
               
             if (node.classList && node.classList.contains('card')) {  
               newCards.push(node);  
@@ -193,41 +197,14 @@
             for (var k = 0; k < nestedCards.length; k++) {  
               newCards.push(nestedCards[k]);  
             }  
-          });  
-        }  
-      });  
-        
-      if (newCards.length) {  
-        for (var i = 0; i < newCards.length; i++) {  
-          var card = $(newCards[i]);  
-          var data = newCards[i].card_data;  
-            
-          if (!data) continue;  
-            
-          if (Lampa.Storage.field('parser_use')) {  
-            var normalizedCard = {  
-              id: data.id || '',  
-              title: data.title || data.name || '',  
-              original_title: data.original_title || data.original_name || '',  
-              release_date: data.release_date || data.first_air_date || '',  
-              type: getCardType(data)  
-            };  
-              
-            Lampa.Parser.get({   
-              search: normalizedCard.title,   
-              movie: normalizedCard,   
-              page: 1   
-            }, function(response) {  
-              if (response && response.Results) {  
-                addCardBadges(card, getBest(response.Results));  
-              }  
-            });  
           }  
         }  
       }  
+      if (newCards.length) processCards();  
     });  
   
-    Lampa.Listener.follow('full', function(e) {  
+    // Обробка повної картки  
+    Lampa.Listener.follow('full', function (e) {  
       if (e.type !== 'complite') return;  
       var details = $('.full-start-new__details');  
       if (details.length) {  
