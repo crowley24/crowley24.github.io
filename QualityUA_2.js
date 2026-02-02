@@ -4,20 +4,20 @@
   'use strict';
 
   var cardBadgesCache = {};
-  var pluginPath = 'https://raw.githubusercontent.com/crowley24/main/Icons/';
+    var pluginPath = 'https://crowley24.github.io/Icons/';
 
   var svgIcons = {
-    '4K': pluginPath + 'Icons/4K.svg',
-    '2K': pluginPath + 'Icons/2K.svg',
-    'FULL HD': pluginPath + 'Icons/FULL HD.svg',
-    'HD': pluginPath + 'Icons/HD.svg',
-    'HDR': pluginPath + 'Icons/HDR.svg',
-    'Dolby Vision': pluginPath + 'Icons/Dolby Vision.svg',
-    '7.1': pluginPath + 'Icons/7.1.svg',
-    '5.1': pluginPath + 'Icons/5.1.svg',
-    '4.0': pluginPath + 'Icons/4.0.svg',
-    '2.0': pluginPath + 'Icons/2.0.svg',
-    'DUB': pluginPath + 'Icons/DUB.svg'
+    '4K': pluginPath + '4K.svg',
+    '2K': pluginPath + '2K.svg',
+    'FULL HD': pluginPath + 'FULL HD.svg',
+    'HD': pluginPath + 'HD.svg',
+    'HDR': pluginPath + 'HDR.svg',
+    'Dolby Vision': pluginPath + 'Dolby Vision.svg',
+    '7.1': pluginPath + '7.1.svg',
+    '5.1': pluginPath + '5.1.svg',
+    '4.0': pluginPath + '4.0.svg',
+    '2.0': pluginPath + '2.0.svg',
+    'DUB': pluginPath + 'DUB.svg'
   };
 
   function getBest(results) {
