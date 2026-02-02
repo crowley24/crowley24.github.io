@@ -4,7 +4,7 @@
   'use strict';
 
   var cardBadgesCache = {};
-  var pluginPath = 'https://github.com/crowley24/crowley24.github.io/tree/main/Icons';
+  var pluginPath = 'https://raw.githubusercontent.com/crowley24/main/Icons/';
 
   var svgIcons = {
     '4K': pluginPath + 'Icons/4K.svg',
