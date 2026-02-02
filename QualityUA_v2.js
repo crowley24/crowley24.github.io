@@ -84,7 +84,7 @@
       
     // Спеціальна обробка для українського прапорця  
     if (type === 'UA') {  
-      return '<div class="' + className + '" style="animation-delay: ' + delay + '; font-size: 1.2em;">🇺🇦</div>';  
+      return '<div class="' + className + '" style="animation-delay: ' + delay + '; font-size: 1.2em; display: flex; align-items: center;">🇺🇦</div>';  
     }  
       
     var iconPath = svgIcons[type];  
