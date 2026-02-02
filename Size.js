@@ -16,13 +16,13 @@
         settings_interface_text_size: 'Розмір тексту',  
         settings_interface_text_size_descr: 'Незалежний розмір тексту елементів інтерфейсу',  
         // Нові ключі для розміру інтерфейсу  
-        settings_param_interface_size_mini: 'Міні (9)',  
-        settings_param_interface_size_very_small: 'Дуже малий (9.5)',  
-        settings_param_interface_size_small: 'Малий (10)',  
-        settings_param_interface_size_medium: 'Середній (10.5)',  
-        settings_param_interface_size_standard: 'Стандартний (11)',  
-        settings_param_interface_size_large: 'Великий (11.5)',  
-        settings_param_interface_size_very_large: 'Дуже великий (12)'  
+        settings_param_interface_size_mini: 'Міні',  
+        settings_param_interface_size_very_small: 'Дуже малий',  
+        settings_param_interface_size_small: 'Малий',  
+        settings_param_interface_size_medium: 'Середній',  
+        settings_param_interface_size_standard: 'Стандартний',  
+        settings_param_interface_size_large: 'Великий',  
+        settings_param_interface_size_very_large: 'Дуже великий'  
       });  
     } catch (e) {  
       console.error('Помилка додавання перекладів:', e);  
