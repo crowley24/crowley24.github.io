@@ -39,7 +39,6 @@
           best.resolution = foundRes;
       }
 
-      // ПОВЕРНУТО: Аналіз технічних стрімів (ffprobe)
       if (item.ffprobe && Array.isArray(item.ffprobe)) {
         item.ffprobe.forEach(function(stream) {
           if (stream.codec_type === 'video') {
@@ -50,10 +49,7 @@
             else if (h >= 1440 || w >= 2560) res = '2K';
             else if (h >= 1080 || w >= 1920) res = 'FULL HD';
             else if (h >= 720 || w >= 1280) res = 'HD';
-            
-            if (res && (!best.resolution || resOrder.indexOf(res) > resOrder.indexOf(best.resolution))) {
-              best.resolution = res;
-            }
+            if (res && (!best.resolution || resOrder.indexOf(res) > resOrder.indexOf(best.resolution))) best.resolution = res;
             if (stream.side_data_list && JSON.stringify(stream.side_data_list).indexOf('Vision') >= 0) best.dolbyVision = true;
             if (stream.color_transfer === 'smpte2084' || stream.color_transfer === 'arib-std-b67') best.hdr = true;
           }
@@ -64,7 +60,6 @@
           }
         });
       }
-      
       if (title.indexOf('vision') >= 0 || title.indexOf('dovi') >= 0) best.dolbyVision = true;
       if (title.indexOf('hdr') >= 0) best.hdr = true;
       if (title.indexOf('dub') >= 0 || title.indexOf('дубл') >= 0) best.dub = true;
@@ -81,11 +76,12 @@
     return '<div class="' + className + '" style="animation-delay: ' + delay + '"><img src="' + iconPath + '" draggable="false"></div>';
   }
 
-  // Обробка карток (головна та списки)
   function processCards() {
-    $('.card, .items__item').not('.qb-processed').each(function() {
-      var card = $(this).addClass('qb-processed');
+    $('.card, .items__item, .watchlist-item').not('.qb-processed').each(function() {
+      var card = $(this);
+      card.addClass('qb-processed');
       var movie = card.data('item');
+      
       if (movie && Lampa.Storage.field('parser_use')) {
         Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(response) {
           if (response && response.Results) {
@@ -97,8 +93,11 @@
             if (best.audio) badges.push(createBadgeImg(best.audio, true, badges.length));
             
             if (badges.length) {
-              var container = card.find('.card__view, .items__view').first();
-              if (container.length) container.append('<div class="card-quality-badges">' + badges.join('') + '</div>');
+              // Знаходимо контейнер: спершу card__view, якщо немає - items__view, якщо немає - просто першу картинку
+              var container = card.find('.card__view, .items__view, .info-list__item-img').first();
+              if (container.length && !container.find('.card-quality-badges').length) {
+                container.append('<div class="card-quality-badges">' + badges.join('') + '</div>');
+              }
             }
           }
         });
@@ -106,42 +105,40 @@
     });
   }
 
-  // ПОВЕРНУТО: Слухач для повної картки фільму
   Lampa.Listener.follow('full', function(e) {
     if (e.type !== 'complite') return;
-    var details = $('.full-start-new__details');
-    if (details.length) {
-        if (!$('.quality-badges-container').length) details.after('<div class="quality-badges-container"></div>');
-        Lampa.Parser.get({ search: e.data.movie.title || e.data.movie.name, movie: e.data.movie, page: 1 }, function(response) {
-            if (response && response.Results) {
-                var best = getBest(response.Results);
-                var badges = [];
-                if (best.ukr) badges.push(createBadgeImg('UKR', false, badges.length));
-                if (best.resolution) badges.push(createBadgeImg(best.resolution, false, badges.length));
-                if (best.hdr) badges.push(createBadgeImg('HDR', false, badges.length));
-                if (best.audio) badges.push(createBadgeImg(best.audio, false, badges.length));
-                if (best.dub) badges.push(createBadgeImg('DUB', false, badges.length));
-                if (best.dolbyVision) badges.push(createBadgeImg('Dolby Vision', false, badges.length));
-                $('.quality-badges-container').html(badges.join(''));
-            }
-        });
-    }
+    setTimeout(function() {
+        var details = $('.full-start-new__details, .full-start__details');
+        if (details.length) {
+            if (!$('.quality-badges-container').length) details.after('<div class="quality-badges-container"></div>');
+            Lampa.Parser.get({ search: e.data.movie.title || e.data.movie.name, movie: e.data.movie, page: 1 }, function(response) {
+                if (response && response.Results) {
+                    var best = getBest(response.Results);
+                    var badges = [];
+                    if (best.ukr) badges.push(createBadgeImg('UKR', false, badges.length));
+                    if (best.resolution) badges.push(createBadgeImg(best.resolution, false, badges.length));
+                    if (best.hdr) badges.push(createBadgeImg('HDR', false, badges.length));
+                    if (best.audio) badges.push(createBadgeImg(best.audio, false, badges.length));
+                    if (best.dub) badges.push(createBadgeImg('DUB', false, badges.length));
+                    if (best.dolbyVision) badges.push(createBadgeImg('Dolby Vision', false, badges.length));
+                    $('.quality-badges-container').html(badges.join(''));
+                }
+            });
+        }
+    }, 100);
   });
 
   setInterval(processCards, 3000);
 
-  var style = `
-    <style>
-      .quality-badges-container { display: flex; gap: 0.3em; margin: 0 0 0.4em 0; min-height: 1.2em; pointer-events: none; }
-      .quality-badge { height: 1.2em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; }
-      .card-quality-badges { position: absolute; top: 0.3em; right: 0.3em; display: flex; flex-direction: row; gap: 0.2em; pointer-events: none; z-index: 5; }
-      .card-quality-badge { height: 0.9em; opacity: 0; transform: translateY(5px); animation: qb_in 0.3s ease forwards; }
-      @keyframes qb_in { to { opacity: 1; transform: translateY(0); } }
-      .quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; }
-      .card-quality-badge img { filter: drop-shadow(0 1px 2px #000); }
-    </style>`;
+  var style = '<style>' +
+    '.quality-badges-container { display: flex; gap: 0.3em; margin: 0 0 0.4em 0; min-height: 1.2em; pointer-events: none; }' +
+    '.quality-badge { height: 1.2em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; }' +
+    '.card-quality-badges { position: absolute; top: 0.3em; right: 0.3em; display: flex; flex-direction: row; gap: 0.2em; pointer-events: none; z-index: 5; }' +
+    '.card-quality-badge { height: 0.9em; opacity: 0; transform: translateY(5px); animation: qb_in 0.3s ease forwards; }' +
+    '@keyframes qb_in { to { opacity: 1; transform: translateY(0); } }' +
+    '.quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; }' +
+    '.card-quality-badge img { filter: drop-shadow(0 1px 2px #000); }' +
+    '</style>';
   $('body').append(style);
-
-  console.log('[QualityBadges] Повний запуск: головна + картка');
 
 })();
