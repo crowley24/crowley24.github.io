@@ -132,22 +132,22 @@
   setInterval(processCards, 3000);
 
   var style = '<style>\
-    .quality-badges-container { display: flex; gap: 0.5em; margin: 0.5em 0 0.8em 0; min-height: 2em; pointer-events: none; }\
-    .quality-badge { height: 2.2em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; }\
-    .card-quality-badges { position: absolute; top: 0.4em; right: 0.4em; display: flex; flex-direction: row; gap: 0.3em; pointer-events: none; z-index: 5; }\
-    .card-quality-badge { height: 1.4em; opacity: 0; transform: translateY(5px); animation: qb_in 0.3s ease forwards; }\
+    .quality-badges-container { display: flex; gap: 0.4em; margin: 0.4em 0 0.6em 0; min-height: 1.8em; pointer-events: none; }\
+    .quality-badge { height: 1.8em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; }\
+    .card-quality-badges { position: absolute; top: 0.35em; right: 0.35em; display: flex; flex-direction: row; gap: 0.25em; pointer-events: none; z-index: 5; }\
+    .card-quality-badge { height: 1.2em; opacity: 0; transform: translateY(5px); animation: qb_in 0.3s ease forwards; }\
     @keyframes qb_in { to { opacity: 1; transform: translateY(0); } }\
     .quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; }\
-    .card-quality-badge img { filter: drop-shadow(0 2px 3px rgba(0,0,0,0.9)); }\
+    .card-quality-badge img { filter: drop-shadow(0 1px 2px rgba(0,0,0,0.8)); }\
     @media (max-width: 768px) {\
-      .quality-badges-container { gap: 0.3em; margin: 0.4em 0; min-height: 1.5em; }\
-      .quality-badge { height: 1.6em; }\
-      .card-quality-badges { top: 0.3em; right: 0.3em; gap: 0.2em; }\
-      .card-quality-badge { height: 1.1em; }\
+      .quality-badges-container { gap: 0.3em; margin: 0.3em 0; min-height: 1.4em; }\
+      .quality-badge { height: 1.4em; }\
+      .card-quality-badges { top: 0.25em; right: 0.25em; gap: 0.2em; }\
+      .card-quality-badge { height: 1.0em; }\
     }\
   </style>';
   $('body').append(style);
 
-  console.log('[QualityBadges] Запущено: Збільшені іконки + UKR');
+  console.log('[QualityBadges] Запущено: Оптимальний розмір + UKR');
 
 })();
