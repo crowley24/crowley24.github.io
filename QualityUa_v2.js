@@ -11,28 +11,27 @@
         'UKR': pluginPath + 'UKR.svg'
     };
 
-    // Стилі як у вашому робочому плагіні, але для іконок
     var style = '<style>' +
-        '.card__view { position: relative !important; }' +
         '.card-quality-badges { ' +
         '   position: absolute !important; ' +
-        '   top: 0.5em !important; ' +
-        '   right: 0.5em !important; ' +
+        '   top: 5px !important; ' +
+        '   right: 5px !important; ' +
         '   display: flex !important; ' +
-        '   gap: 0.2em !important; ' +
-        '   z-index: 10 !important; ' +
+        '   gap: 3px !important; ' +
+        '   z-index: 20 !important; ' +
+        '   pointer-events: none; ' +
         '}' +
-        '.card-quality-badge { height: 0.9em !important; }' +
-        '.card-quality-badge img { height: 100% !important; width: auto !important; filter: drop-shadow(0 1px 2px #000); }' +
-        '.quality-badges-container { display: flex; gap: 0.4em; margin-bottom: 0.5em; }' +
-        '.quality-badge { height: 1.2em; }' +
+        '.card-quality-badge { height: 14px !important; display: block !important; }' +
+        '.card-quality-badge img { height: 100% !important; width: auto !important; filter: drop-shadow(0 1px 2px #000) !important; }' +
+        '.quality-badges-container { display: flex; gap: 5px; margin-bottom: 10px; }' +
+        '.quality-badge { height: 20px; }' +
         '</style>';
     $('body').append(style);
 
     function getBest(results) {
         var best = { resolution: null, hdr: false, ukr: false };
         var resOrder = ['HD', 'FULL HD', '2K', '4K'];
-        var limit = Math.min(results.length, 15);
+        var limit = Math.min(results.length, 12);
         
         for (var i = 0; i < limit; i++) {
             var item = results[i];
@@ -53,81 +52,73 @@
         return best;
     }
 
-    function createBadge(type) {
-        var iconPath = svgIcons[type];
-        if (!iconPath) return '';
-        return '<div class="card-quality-badge"><img src="' + iconPath + '"></div>';
-    }
+    function apply(card) {
+        if (card.getAttribute('data-qb-ready')) return;
+        
+        // Пошук даних: пробуємо всі варіанти, які використовує Lampa
+        var data = card.card_data || $(card).data('item');
+        if (!data || !(data.title || data.name)) return;
 
-    function applyBadges(cardElement, movieData) {
-        if (cardElement.getAttribute('data-quality-added')) return;
-        cardElement.setAttribute('data-quality-added', 'true');
+        card.setAttribute('data-qb-ready', 'true');
 
-        Lampa.Parser.get({ search: movieData.title || movieData.name, movie: movieData, page: 1 }, function (response) {
+        Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, function (response) {
             if (response && response.Results && response.Results.length) {
                 var best = getBest(response.Results);
                 var badges = [];
-                if (best.ukr) badges.push(createBadge('UKR'));
-                if (best.resolution) badges.push(createBadge(best.resolution));
-                if (best.hdr) badges.push(createBadge('HDR'));
+                if (best.ukr) badges.push('<div class="card-quality-badge"><img src="' + svgIcons['UKR'] + '"></div>');
+                if (best.resolution) badges.push('<div class="card-quality-badge"><img src="' + svgIcons[best.resolution] + '"></div>');
+                if (best.hdr) badges.push('<div class="card-quality-badge"><img src="' + svgIcons['HDR'] + '"></div>');
 
                 if (badges.length) {
-                    var container = cardElement.querySelector('.card__view');
-                    if (container) {
-                        var badgeWrapper = document.createElement('div');
-                        badgeWrapper.className = 'card-quality-badges';
-                        badgeWrapper.innerHTML = badges.join('');
-                        container.appendChild(badgeWrapper);
+                    // Контейнер для іконок — шукаємо місце, де постер
+                    var target = $(card).find('.card__view, .items__view, .image-body').first();
+                    if (target.length) {
+                        target.append('<div class="card-quality-badges">' + badges.join('') + '</div>');
                     }
                 }
             }
         });
     }
 
-    // Логіка оновлення карток через MutationObserver (як у вашому прикладі)
-    function updateCards(nodes) {
-        for (var i = 0; i < nodes.length; i++) {
-            var node = nodes[i];
-            if (node.nodeType !== 1) continue;
-            
-            // Шукаємо всі картки
-            var cards = node.classList.contains('card') ? [node] : node.querySelectorAll('.card');
-            
-            for (var j = 0; j < cards.length; j++) {
-                var card = cards[j];
-                var data = card.card_data || $(card).data('item'); // Беремо card_data як у вашому плагіні
-                if (data) applyBadges(card, data);
-            }
-        }
-    }
-
+    // Обробка нових елементів (MutationObserver як у вашому робочому плагіні)
     var observer = new MutationObserver(function (mutations) {
-        for (var m = 0; m < mutations.length; m++) {
-            if (mutations[m].addedNodes.length) updateCards(mutations[m].addedNodes);
-        }
+        mutations.forEach(function (m) {
+            if (m.addedNodes) {
+                m.addedNodes.forEach(function (node) {
+                    if (node.nodeType !== 1) return;
+                    if (node.classList.contains('card') || node.classList.contains('items__item')) apply(node);
+                    var nested = node.querySelectorAll('.card, .items__item');
+                    nested.forEach(apply);
+                });
+            }
+        });
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
 
-    // Початкова перевірка
-    updateCards([document.body]);
+    // Початковий запуск для тих, що вже завантажені
+    setTimeout(function() {
+        document.querySelectorAll('.card, .items__item').forEach(apply);
+    }, 1000);
 
-    // Для повної картки
+    // Підтримка повної картки фільму
     Lampa.Listener.follow('full', function (e) {
         if (e.type !== 'complite') return;
-        var details = $('.full-start-new__details, .full-start__details');
-        if (details.length && !$('.quality-badges-container').length) {
-            details.after('<div class="quality-badges-container"></div>');
-            Lampa.Parser.get({ search: e.data.movie.title || e.data.movie.name, movie: e.data.movie, page: 1 }, function (response) {
-                if (response && response.Results) {
-                    var best = getBest(response.Results);
-                    var b = [];
-                    if (best.ukr) b.push('<div class="quality-badge"><img src="' + svgIcons['UKR'] + '"></div>');
-                    if (best.resolution) b.push('<div class="quality-badge"><img src="' + svgIcons[best.resolution] + '"></div>');
-                    if (best.hdr) b.push('<div class="quality-badge"><img src="' + svgIcons['HDR'] + '"></div>');
-                    $('.quality-badges-container').html(b.join(''));
-                }
-            });
-        }
+        setTimeout(function() {
+            var det = $('.full-start-new__details, .full-start__details');
+            if (det.length && !$('.quality-badges-container').length) {
+                det.after('<div class="quality-badges-container"></div>');
+                Lampa.Parser.get({ search: e.data.movie.title || e.data.movie.name, movie: e.data.movie, page: 1 }, function (res) {
+                    if (res && res.Results) {
+                        var b = getBest(res.Results);
+                        var html = [];
+                        if (b.ukr) html.push('<div class="quality-badge"><img src="' + svgIcons['UKR'] + '"></div>');
+                        if (b.resolution) html.push('<div class="quality-badge"><img src="' + svgIcons[b.resolution] + '"></div>');
+                        if (b.hdr) html.push('<div class="quality-badge"><img src="' + svgIcons['HDR'] + '"></div>');
+                        $('.quality-badges-container').html(html.join(''));
+                    }
+                });
+            }
+        }, 200);
     });
 })();
