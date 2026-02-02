@@ -16,7 +16,7 @@
     '4.0': pluginPath + 'Quality_ico/4.0.svg',  
     '2.0': pluginPath + 'Quality_ico/2.0.svg',  
     'DUB': pluginPath + 'Quality_ico/DUB.svg',  
-    'UA': '🇺🇦'  // Додано український прапор  
+    'UA': '🇺🇦'  // Український прапор  
   };  
   
   function getBest(results) {  
@@ -77,11 +77,19 @@
     return best;  
   }  
   
+  // Виправлена функція для створення бейджів  
   function createBadgeImg(type, isCard, index) {  
-    var iconPath = svgIcons[type];  
-    if (!iconPath) return '';  
     var className = isCard ? 'card-quality-badge' : 'quality-badge';  
     var delay = (index * 0.08) + 's';  
+      
+    // Спеціальна обробка для українського прапорця  
+    if (type === 'UA') {  
+      return '<div class="' + className + '" style="animation-delay: ' + delay + '; font-size: 1.2em;">🇺🇦</div>';  
+    }  
+      
+    var iconPath = svgIcons[type];  
+    if (!iconPath) return '';  
+      
     return '<div class="' + className + '" style="animation-delay: ' + delay + '"><img src="' + iconPath + '" draggable="false" oncontextmenu="return false;"></div>';  
   }  
   
@@ -92,7 +100,7 @@
     if (best.hdr) badges.push(createBadgeImg('HDR', true, badges.length));  
     if (best.audio) badges.push(createBadgeImg(best.audio, true, badges.length));  
     if (best.dub) badges.push(createBadgeImg('DUB', true, badges.length));  
-    if (best.ukrainian) badges.push(createBadgeImg('UA', true, badges.length)); // Додано український прапор  
+    if (best.ukrainian) badges.push(createBadgeImg('UA', true, badges.length));  
     if (best.dolbyVision) badges.push(createBadgeImg('Dolby Vision', true, badges.length));  
     if (badges.length) card.find('.card__view').append('<div class="card-quality-badges">' + badges.join('') + '</div>');  
   }  
@@ -122,7 +130,7 @@
                 if (best.hdr) badges.push(createBadgeImg('HDR', false, badges.length));  
                 if (best.audio) badges.push(createBadgeImg(best.audio, false, badges.length));  
                 if (best.dub) badges.push(createBadgeImg('DUB', false, badges.length));  
-                if (best.ukrainian) badges.push(createBadgeImg('UA', false, badges.length)); // Додано український прапор  
+                if (best.ukrainian) badges.push(createBadgeImg('UA', false, badges.length));  
                 if (best.dolbyVision) badges.push(createBadgeImg('Dolby Vision', false, badges.length));  
                 $('.quality-badges-container').html(badges.join(''));  
             }  
@@ -136,7 +144,7 @@
     .quality-badges-container { display: flex; gap: 0.3em; margin: 0 0 0.4em 0; min-height: 1.2em; pointer-events: none; }\  
     .quality-badge { height: 1.2em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; }\  
     .card-quality-badges { position: absolute; top: 0.3em; right: 0.3em; display: flex; flex-direction: row; gap: 0.2em; pointer-events: none; z-index: 5; }\  
-    .card-quality-badge { height: 0.9em; opacity: 0; transform: translateY(5px); animation: qb_in 0.3s ease forwards; }\  
+    .card-quality-badge { height: 0.9em; opacity: 0; transform: translateY(5px); animation: qb_in 0.3s ease forwards; display: flex; align-items: center; }\  
     @keyframes qb_in { to { opacity: 1; transform: translateY(0); } }\  
     .quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; }\  
     .card-quality-badge img { filter: drop-shadow(0 1px 2px #000); }\  
@@ -149,6 +157,6 @@
   </style>';  
   $('body').append(style);  
   
-  console.log('[QualityBadges] Запущен з підтримкою українського прапорця');  
+  console.log('[QualityBadges] Запущено з підтримкою українського прапорця');  
   
 })();
