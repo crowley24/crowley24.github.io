@@ -1,60 +1,69 @@
 (function () {
     "use strict";
 
+    const plugin_name = 'main_editor';
+
     function init() {
-        // 1. Додаємо переклад для нового пункту
+        // 1. Додаємо переклади
         Lampa.Lang.add({
-            settings_main_editor: {
-                uk: 'Редактор головної',
-                en: 'Home Editor'
-            },
-            settings_main_editor_descr: {
-                uk: 'Налаштування відображення головної сторінки',
-                en: 'Home screen display settings'
-            },
-            settings_editor_show_banner: {
-                uk: 'Показувати банер',
-                en: 'Show banner'
-            }
+            settings_main_editor: { uk: 'Редактор головної', ru: 'Редактор главной', en: 'Home Editor' },
+            settings_main_editor_descr: { uk: 'Налаштування відображення головної сторінки', ru: 'Настройка отображения главной страницы', en: 'Home screen settings' }
         });
 
-        // 2. Створюємо новий пункт у головному меню налаштувань
-        Lampa.Settings.main({
-            name: 'main_editor',
-            type: 'open',
-            icon: '<svg ...></svg>', // Можна додати SVG іконку
-            name_lang: 'settings_main_editor',
-            descr_lang: 'settings_main_editor_descr'
-        });
+        // 2. Додаємо пункт у меню через подію рендеру
+        Lampa.Settings.listener.follow('render', function (e) {
+            if (e.name == 'main') { // Якщо рендериться головне меню налаштувань
+                let item = $('<div class="settings-param selector" data-name="' + plugin_name + '">' +
+                    '<div class="settings-param__name">' + Lampa.Lang.translate('settings_main_editor') + '</div>' +
+                    '<div class="settings-param__descr">' + Lampa.Lang.translate('settings_main_editor_descr') + '</div>' +
+                '</div>');
 
-        // 3. Слухаємо подію відкриття цього пункту
-        Lampa.Settings.listener.follow('open', function (e) {
-            if (e.name == 'main_editor') {
-                let items = [
-                    {
-                        title: Lampa.Lang.translate('settings_editor_show_banner'),
-                        name: 'home_editor_banner',
-                        type: 'select',
-                        values: {
-                            'show': 'Так',
-                            'hide': 'Ні'
-                        },
-                        default: 'show'
-                    }
-                    // Тут можна додати інші параметри (сортування, кількість рядків тощо)
-                ];
-
-                // Викликаємо вікно з параметрами
-                Lampa.Settings.create(items, {
-                    title: Lampa.Lang.translate('settings_main_editor'),
-                    onBack: () => {
-                        Lampa.Settings.main(); // Повернення в головне меню налаштувань
-                    }
+                // Додаємо івент кліку
+                item.on('hover:enter', function () {
+                    openEditor();
                 });
+
+                // Вставляємо в кінець списку (або перед іншим пунктом)
+                e.body.find('.settings-list').append(item);
             }
         });
     }
 
+    function openEditor() {
+        let items = [
+            {
+                title: 'Показувати банер',
+                name: 'home_editor_banner',
+                type: 'select',
+                values: {
+                    'show': 'Так',
+                    'hide': 'Ні'
+                },
+                default: 'show'
+            },
+            {
+                title: 'Кількість рядків',
+                name: 'home_editor_rows',
+                type: 'select',
+                values: {
+                    '2': '2 рядки',
+                    '5': '5 рядків',
+                    '10': '10 рядків'
+                },
+                default: '5'
+            }
+        ];
+
+        Lampa.Settings.create(items, {
+            title: 'Редактор головної',
+            onBack: () => {
+                // Повертаємося до головного меню
+                Lampa.Controller.toggle('settings_main'); 
+            }
+        });
+    }
+
+    // Чекаємо на завантаження Lampa
     if (window.Lampa) {
         init();
     }
