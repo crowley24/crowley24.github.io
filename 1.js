@@ -2,56 +2,57 @@
     'use strict';
 
     function RowScanner() {
-        var discoveredRows = new Set(); // Сюди запишемо унікальні назви
+        // Використовуємо window для збереження даних між відкриттями меню
+        window.discoveredLampaRows = window.discoveredLampaRows || new Set();
 
-        // 1. Функція для відображення знайденого списку
+        // 1. Функція показу результатів (виправлена)
         function showDiscoveredMenu() {
-            var list = Array.from(discoveredRows).join('<br>');
+            var rowsArray = Array.from(window.discoveredLampaRows);
+            var content = rowsArray.length > 0 
+                ? rowsArray.map(function(name) { return '• ' + name; }).join('<br>') 
+                : 'Список порожній. Погортайте головну сторінку, щоб дані завантажились!';
+
             Lampa.Modal.open({
                 title: 'Знайдені категорії',
-                html: '<div style="padding: 20px; line-height: 1.5;">' + (list || 'Рядки ще не завантажились... зачекайте') + '</div>',
-                size: 'medium'
+                html: $('<div style="padding: 20px; font-size: 1.2em; line-height: 1.6;">' + content + '</div>'),
+                onBack: function() {
+                    Lampa.Modal.close();
+                }
             });
         }
 
-        // 2. Додаємо кнопку сканування в налаштування
+        // 2. Додавання кнопки в налаштування
         Lampa.Settings.listener.follow('open', function (e) {
             if (e.name == 'interface') {
                 var btn = $(`<div class="settings-param selector">
-                    <div class="settings-param__name">Показати список категорій</div>
-                    <div class="settings-param__value">Знайти</div>
+                    <div class="settings-param__name">Сканер головної сторінки</div>
+                    <div class="settings-param__value">Показати категорії</div>
                 </div>`);
 
                 btn.on('hover:enter', function () {
                     showDiscoveredMenu();
                 });
 
-                e.body.find('.settings-param:last').before(btn);
+                e.body.find('.settings-param:last').after(btn);
             }
         });
 
-        // 3. ПЕРЕХОПЛЕННЯ ДАНИХ (ОСНОВНА ЧАСТИНА)
+        // 3. Перехоплення назв рядків
         Lampa.Listener.follow('full', function (e) {
-            if (e.type == 'append') {
-                if (e.data && e.data.length) {
-                    e.data.forEach(function (row) {
-                        if (row.title) {
-                            discoveredRows.add(row.title);
-                            console.log('Знайдено рядок:', row.title);
-                        }
-                    });
-                }
+            if (e.type == 'append' && e.data) {
+                e.data.forEach(function (row) {
+                    if (row.title && row.title.trim() !== '') {
+                        window.discoveredLampaRows.add(row.title);
+                    }
+                });
             }
         });
-        
-        // Додатково перевіряємо компонент Home
-        Lampa.Listener.follow('app', function (e) {
-            if (e.type == 'ready') {
-                Lampa.Noty.show('Сканер рядків активовано. Погортайте головну сторінку!');
-            }
-        });
+
+        // Сповіщення про запуск
+        Lampa.Noty.show('Сканер активовано. Погортайте головну!');
     }
 
+    // Очікування готовності системи
     if (window.appready) RowScanner();
     else Lampa.Listener.follow('app', function (e) {
         if (e.type == 'ready') RowScanner();
