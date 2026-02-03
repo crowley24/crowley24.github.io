@@ -3,7 +3,7 @@
   
   let manifest = {  
     type: 'interface',  
-    version: '3.11.1',  
+    version: '3.11.2',  
     name: 'Interface Size Precise',  
     component: 'interface_size_precise'  
   };  
@@ -22,9 +22,9 @@
     settings_param_interface_size_very_large: 'Дуже великий'
   };
 
-  // 2. Ініціалізація перекладів та параметрів
   function init() {
-    if (typeof Lampa !== 'undefined' && Lampa.Lang) {
+    // Додаємо переклади в систему
+    if (window.Lampa && Lampa.Lang) {
       try {
         Lampa.Lang.add(lang_data);
       } catch (e) {
@@ -32,7 +32,7 @@
       }
     }
 
-    // Додаємо вибір розміру інтерфейсу з перекладеними назвами
+    // Додаємо вибір розміру інтерфейсу (використовуємо translate для відображення назв)
     Lampa.Params.select('interface_size', {  
       '09': Lampa.Lang.translate('settings_param_interface_size_mini'),        
       '09.5': Lampa.Lang.translate('settings_param_interface_size_very_small'), 
@@ -43,7 +43,7 @@
       '12': Lampa.Lang.translate('settings_param_interface_size_very_large')   
     }, '11');  
   
-    // Параметр розміру тексту
+    // Параметр для окремого розміру тексту
     Lampa.Params.select('interface_text_size', {  
       '08': '8', '09': '9', '10': '10', '11': '11', '12': '12',  
       '13': '13', '14': '14', '15': '15', '16': '16'  
@@ -65,32 +65,36 @@
     const interfaceSize = getInterfaceSize();  
     const textSize = getTextSize();  
   
+    // Основний розмір шрифту
     $('body').css({ fontSize: interfaceSize + 'px' });  
   
-    // Коригування шрифтів для окремих елементів
-    $('.settings-param__name, .settings-param__value, .settings-param__descr, .full-descr__text, .card__title, .card__genres, .filter__name, .filter__value').css({  
+    // Коригування тексту (щоб він масштабувався відносно обраного розміру тексту)
+    const elements = '.settings-param__name, .settings-param__value, .settings-param__descr, .full-descr__text, .card__title, .card__genres, .filter__name, .filter__value';
+    $(elements).css({  
       fontSize: (textSize / interfaceSize) + 'em'  
     });  
   
     const cardCount = getCardCount(interfaceSize);  
   
-    // Модифікація відображення карток
-    const originalLine = Lampa.Maker.map('Line').Items.onInit;  
-    Lampa.Maker.map('Line').Items.onInit = function () {  
-      originalLine.call(this);  
-      this.view = cardCount;  
-    };  
+    // Кількість карток у рядку
+    if (Lampa.Maker && Lampa.Maker.map) {
+      const originalLine = Lampa.Maker.map('Line').Items.onInit;  
+      Lampa.Maker.map('Line').Items.onInit = function () {  
+        originalLine.call(this);  
+        this.view = cardCount;  
+      };  
   
-    const originalCategory = Lampa.Maker.map('Category').Items.onInit;  
-    Lampa.Maker.map('Category').Items.onInit = function () {  
-      originalCategory.call(this);  
-      this.limit_view = cardCount;  
-    };  
+      const originalCategory = Lampa.Maker.map('Category').Items.onInit;  
+      Lampa.Maker.map('Category').Items.onInit = function () {  
+        originalCategory.call(this);  
+        this.limit_view = cardCount;  
+      };
+    }
   };  
   
-  // Запуск плагіна
+  // Запуск плагіна з невеликою затримкою для коректної роботи меню
   if (window.Lampa) {
-    init();
+    setTimeout(init, 100);
     Lampa.Storage.listener.follow('change', e => {  
       if (e.name == 'interface_size' || e.name == 'interface_text_size') updateSize();  
     });
