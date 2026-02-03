@@ -1,53 +1,59 @@
 (function () {
     'use strict';
 
-    function myInterfaceModifier() {
-        // --- 1. ДОДАЄМО ПУНКТ У НАЛАШТУВАННЯ ---
+    function RowScanner() {
+        var discoveredRows = new Set(); // Сюди запишемо унікальні назви
+
+        // 1. Функція для відображення знайденого списку
+        function showDiscoveredMenu() {
+            var list = Array.from(discoveredRows).join('<br>');
+            Lampa.Modal.open({
+                title: 'Знайдені категорії',
+                html: '<div style="padding: 20px; line-height: 1.5;">' + (list || 'Рядки ще не завантажились... зачекайте') + '</div>',
+                size: 'medium'
+            });
+        }
+
+        // 2. Додаємо кнопку сканування в налаштування
         Lampa.Settings.listener.follow('open', function (e) {
             if (e.name == 'interface') {
-                var field = $(`<div class="settings-param selector" data-name="hide_trending" data-type="switch">
-                    <div class="settings-param__name">Приховати "В тренді"</div>
-                    <div class="settings-param__value"></div>
+                var btn = $(`<div class="settings-param selector">
+                    <div class="settings-param__name">Показати список категорій</div>
+                    <div class="settings-param__value">Знайти</div>
                 </div>`);
 
-                // Додаємо клік для перемикання
-                field.on('hover:enter', function () {
-                    var status = Lampa.Storage.get('hide_trending', 'false');
-                    var new_status = !(status == 'true' || status == true);
-                    Lampa.Storage.set('hide_trending', new_status);
-                    field.find('.settings-param__value').text(new_status ? 'Так' : 'Ні');
+                btn.on('hover:enter', function () {
+                    showDiscoveredMenu();
                 });
 
-                e.body.find('.settings-param:last').before(field);
-                field.find('.settings-param__value').text(Lampa.Storage.get('hide_trending') ? 'Так' : 'Ні');
+                e.body.find('.settings-param:last').before(btn);
             }
         });
 
-        // --- 2. АНАЛІЗ РЯДКІВ ГОЛОВНОЇ СТОРІНКИ ---
-        // Перехоплюємо подію додавання контенту
+        // 3. ПЕРЕХОПЛЕННЯ ДАНИХ (ОСНОВНА ЧАСТИНА)
         Lampa.Listener.follow('full', function (e) {
             if (e.type == 'append') {
-                // e.data - це масив об'єктів (рядків), які додаються
                 if (e.data && e.data.length) {
-                    console.log('Lampa Analyzer: Знайдено рядки на сторінці:');
-                    
-                    e.data.forEach(function (row, index) {
-                        // Виводимо назву кожного рядка в консоль
-                        console.log(`Рядок №${index + 1}: ${row.title}`);
-
-                        // Логіка приховування, якщо назва збігається
-                        if (Lampa.Storage.get('hide_trending') && row.title == 'В тренді') {
-                            // Видаляємо елементи з цього рядка, щоб він став порожнім
-                            row.items = [];
+                    e.data.forEach(function (row) {
+                        if (row.title) {
+                            discoveredRows.add(row.title);
+                            console.log('Знайдено рядок:', row.title);
                         }
                     });
                 }
             }
         });
+        
+        // Додатково перевіряємо компонент Home
+        Lampa.Listener.follow('app', function (e) {
+            if (e.type == 'ready') {
+                Lampa.Noty.show('Сканер рядків активовано. Погортайте головну сторінку!');
+            }
+        });
     }
 
-    if (window.appready) myInterfaceModifier();
+    if (window.appready) RowScanner();
     else Lampa.Listener.follow('app', function (e) {
-        if (e.type == 'ready') myInterfaceModifier();
+        if (e.type == 'ready') RowScanner();
     });
 })();
