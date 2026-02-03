@@ -2,48 +2,52 @@
     'use strict';
 
     function myInterfaceModifier() {
-        // 1. Додаємо пункт у меню налаштувань
+        // --- 1. ДОДАЄМО ПУНКТ У НАЛАШТУВАННЯ ---
         Lampa.Settings.listener.follow('open', function (e) {
-            if (e.name == 'interface') { // Додаємо в розділ "Інтерфейс"
+            if (e.name == 'interface') {
                 var field = $(`<div class="settings-param selector" data-name="hide_trending" data-type="switch">
                     <div class="settings-param__name">Приховати "В тренді"</div>
                     <div class="settings-param__value"></div>
                 </div>`);
 
-                e.body.find('.settings-param:last').before(field);
+                // Додаємо клік для перемикання
+                field.on('hover:enter', function () {
+                    var status = Lampa.Storage.get('hide_trending', 'false');
+                    var new_status = !(status == 'true' || status == true);
+                    Lampa.Storage.set('hide_trending', new_status);
+                    field.find('.settings-param__value').text(new_status ? 'Так' : 'Ні');
+                });
 
-                // Оновлюємо стан перемикача з пам'яті
+                e.body.find('.settings-param:last').before(field);
                 field.find('.settings-param__value').text(Lampa.Storage.get('hide_trending') ? 'Так' : 'Ні');
             }
         });
 
-        // 2. Логіка збереження вибору
-        Lampa.Storage.listener.follow('change', function (e) {
-            if (e.name == 'hide_trending') {
-                Lampa.Noty.show('Налаштування збережено. Перезавантажте додаток.');
-            }
-        });
+        // --- 2. АНАЛІЗ РЯДКІВ ГОЛОВНОЇ СТОРІНКИ ---
+        // Перехоплюємо подію додавання контенту
+        Lampa.Listener.follow('full', function (e) {
+            if (e.type == 'append') {
+                // e.data - це масив об'єктів (рядків), які додаються
+                if (e.data && e.data.length) {
+                    console.log('Lampa Analyzer: Знайдено рядки на сторінці:');
+                    
+                    e.data.forEach(function (row, index) {
+                        // Виводимо назву кожного рядка в консоль
+                        console.log(`Рядок №${index + 1}: ${row.title}`);
 
-        // 3. Основна магія: фільтрація рядків
-        Lampa.Listener.follow('app', function (e) {
-            if (e.type == 'ready') {
-                // Перехоплюємо побудову головної сторінки
-                Lampa.Component.add('home', function(object){
-                    // Тут можна додати логіку фільтрації масиву даних (data.items)
-                    // перед тим, як Lampa почне їх малювати
-                    if(Lampa.Storage.get('hide_trending')) {
-                         console.log('Плагін: Рядок трендів буде видалено');
-                         // Логіка видалення об'єкта з масиву
-                    }
-                });
+                        // Логіка приховування, якщо назва збігається
+                        if (Lampa.Storage.get('hide_trending') && row.title == 'В тренді') {
+                            // Видаляємо елементи з цього рядка, щоб він став порожнім
+                            row.items = [];
+                        }
+                    });
+                }
             }
         });
     }
 
-    // Запуск плагіна
     if (window.appready) myInterfaceModifier();
     else Lampa.Listener.follow('app', function (e) {
         if (e.type == 'ready') myInterfaceModifier();
     });
 })();
-
