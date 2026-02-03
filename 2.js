@@ -3,13 +3,12 @@
   
   let manifest = {  
     type: 'interface',  
-    version: '3.11.4',  
+    version: '3.11.5',  
     name: 'Interface Size Precise',  
     component: 'interface_size_precise'  
   };  
   Lampa.Manifest.plugins = manifest;  
   
-  // 1. Словник перекладів (тільки для розміру інтерфейсу)
   const lang_data = {
     settings_param_interface_size_mini: 'Міні',  
     settings_param_interface_size_very_small: 'Дуже малий',  
@@ -21,13 +20,14 @@
   };
 
   function init() {
-    // Реєструємо переклади
     if (window.Lampa && Lampa.Lang) {
       Lampa.Lang.add(lang_data);
     }
 
-    // Реєструємо параметр. 
-    // ВАЖЛИВО: Передаємо об'єкт, де назва ключа вже містить перекладений текст
+    // Очищуємо старі значення, щоб прибрати "Менше" та вирівняти порядок
+    Lampa.Params.values['interface_size'] = {};
+
+    // Додаємо значення в суворому порядку від 9 до 12
     Lampa.Params.select('interface_size', {  
       '09': lang_data.settings_param_interface_size_mini,        
       '09.5': lang_data.settings_param_interface_size_very_small, 
@@ -42,18 +42,14 @@
   }
   
   const updateSize = () => {
-    // Отримуємо значення, враховуючи платформу
     const iSize = Lampa.Platform.screen('mobile') ? 10 : parseFloat(Lampa.Storage.field('interface_size')) || 11;
-  
-    // Встановлюємо розмір шрифту для всього додатка
     $('body').css({ fontSize: iSize + 'px' });  
   
-    // Вираховуємо кількість карток
+    // Логіка карток
     let cardCount = 6;
     if (iSize <= 9.5) cardCount = 8;
     else if (iSize <= 11) cardCount = 7;
 
-    // Оновлюємо відображення ліній та категорій
     if (Lampa.Maker && Lampa.Maker.map) {
       ['Line', 'Category'].forEach(type => {
         const original = Lampa.Maker.map(type).Items.onInit;
@@ -66,14 +62,12 @@
     }
   };  
   
-  // Запуск плагіна
   if (window.Lampa) {
-    // Використовуємо невелику затримку, щоб переклади гарантовано підхопилися
-    setTimeout(init, 300); 
-    
+    // Затримка 500мс дає системі час завантажити стандартне меню, 
+    // щоб ми могли його переписати
+    setTimeout(init, 500); 
     Lampa.Storage.listener.follow('change', e => {  
       if (e.name == 'interface_size') updateSize();  
     });
   }
 })();
-
