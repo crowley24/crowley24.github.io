@@ -42,8 +42,8 @@
 
     // 3. Реєструємо параметри
     Lampa.Params.select('interface_size', {  
-      '09': getL('settings_param_interface_size_mini'),        
-      '09.5': getL('settings_param_interface_size_very_small'), 
+      '09': getL('Міні'),        
+      '09.5': getL('Дуже малий'), 
       '10': getL('settings_param_interface_size_small'),       
       '10.5': getL('settings_param_interface_size_medium'),    
       '11': getL('settings_param_interface_size_standard'),    
