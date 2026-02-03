@@ -1,94 +1,58 @@
-(function () {  
-  "use strict";  
-  
-  let manifest = {  
-    type: 'interface',  
-    version: '3.11.3',  
-    name: 'Interface Size Precise',  
-    component: 'interface_size_precise'  
-  };  
-  Lampa.Manifest.plugins = manifest;  
-  
-  const lang_data = {
-    settings_interface_text_size: 'Розмір тексту',  
-    settings_interface_text_size_descr: 'Незалежний розмір тексту елементів інтерфейсу',  
-    settings_param_interface_size_mini: 'Міні',  
-    settings_param_interface_size_very_small: 'Дуже малий',  
-    settings_param_interface_size_small: 'Малий',  
-    settings_param_interface_size_medium: 'Середній',  
-    settings_param_interface_size_standard: 'Стандартний',  
-    settings_param_interface_size_large: 'Великий',  
-    settings_param_interface_size_very_large: 'Дуже великий'
-  };
+(function () {
+    'use strict';
 
-  function init() {
-    // 1. Додаємо переклади в усі можливі мовні пакети Lampa
-    if (window.Lampa && Lampa.Lang) {
-      try {
-        // Додаємо в поточну та в українську локаль примусово
-        Lampa.Lang.add(lang_data);
-      } catch (e) {
-        console.error('Plugin: Lang error', e);
-      }
+    if (!window.Lampa) return;
+
+    const KEY = 'anti_ru_enabled';
+
+    const RU_PATTERNS = [
+        'ru', 'rus', 'russian',
+        'СЂСѓСЃ', 'СЂСѓСЃСЃРєРёР№'
+    ];
+
+    const UA_PATTERNS = [
+        'ua', 'ukr', 'ukrainian',
+        'СѓРєСЂ', 'СѓРєСЂР°С—РЅ'
+    ];
+
+    function isRU(track) {
+        const name = (track.label || track.lang || '').toLowerCase();
+        return RU_PATTERNS.some(p => name.includes(p));
     }
 
-    // 2. Функція-помічник для гарантованого отримання тексту
-    const getL = (key) => {
-      if (window.Lampa && Lampa.Lang) {
-        return Lampa.Lang.translate(key);
-      }
-      return lang_data[key] || key;
-    };
-
-    // 3. Реєструємо параметри
-    Lampa.Params.select('interface_size', {  
-      '09': getL('Міні'),        
-      '09.5': getL('Дуже малий'), 
-      '10': getL('Малий'),       
-      '10.5': getL('Середній'),    
-      '11': getL('Стандартний'),    
-      '11.5': getL('Великий'),     
-      '12': getL('Дуже великий')   
-    }, '11');  
-  
-    Lampa.Params.select('interface_text_size', {  
-      '08': '8', '09': '9', '10': '10', '11': '11', '12': '12',  
-      '13': '13', '14': '14', '15': '15', '16': '16'  
-    }, '12');
-
-    updateSize();
-  }
-  
-  const updateSize = () => {
-    const iSize = Lampa.Platform.screen('mobile') ? 10 : parseFloat(Lampa.Storage.field('interface_size')) || 11;
-    const tSize = parseFloat(Lampa.Storage.field('interface_text_size')) || 12;
-  
-    $('body').css({ fontSize: iSize + 'px' });  
-  
-    const elements = '.settings-param__name, .settings-param__value, .settings-param__descr, .full-descr__text, .card__title, .card__genres, .filter__name, .filter__value';
-    $(elements).css({ fontSize: (tSize / iSize) + 'em' });  
-  
-    let cardCount = 6;
-    if (iSize <= 9.5) cardCount = 8;
-    else if (iSize <= 11) cardCount = 7;
-
-    if (Lampa.Maker && Lampa.Maker.map) {
-      ['Line', 'Category'].forEach(type => {
-        const original = Lampa.Maker.map(type).Items.onInit;
-        Lampa.Maker.map(type).Items.onInit = function() {
-          original.call(this);
-          if(type === 'Line') this.view = cardCount;
-          else this.limit_view = cardCount;
-        };
-      });
+    function isUA(track) {
+        const name = (track.label || track.lang || '').toLowerCase();
+        return UA_PATTERNS.some(p => name.includes(p));
     }
-  };  
-  
-  // Використовуємо подію 'app:ready' або затримку, щоб Lampa встигла завантажити Lang
-  if (window.Lampa) {
-    setTimeout(init, 500); // Збільшено затримку для надійності
-    Lampa.Storage.listener.follow('change', e => {  
-      if (e.name == 'interface_size' || e.name == 'interface_text_size') updateSize();  
+
+    function enabled() {
+        return Lampa.Storage.get(KEY, true);
+    }
+
+    // рџ” РїРµСЂРµРјРёРєР°С‡ Сѓ РЅР°Р»Р°С€С‚СѓРІР°РЅРЅСЏС…
+    Lampa.Settings.add({
+        title: 'Anti-RU',
+        description: 'РџСЂРёР±РёСЂР°С‚Рё RU РѕР·РІСѓС‡РєСѓ С‚Р° РІС–РґРґР°РІР°С‚Рё РїСЂС–РѕСЂРёС‚РµС‚ UA',
+        setting: {
+            name: KEY,
+            type: 'toggle',
+            default: true
+        }
     });
-  }
+
+    // рџЋ§ РѕР±СЂРѕР±РєР° Р°СѓРґС–РѕРґРѕСЂС–Р¶РѕРє
+    Lampa.Listener.follow('player_tracks', function (event) {
+        if (!enabled()) return;
+        if (!event || !event.tracks || !Array.isArray(event.tracks.audio)) return;
+
+        event.tracks.audio = event.tracks.audio.filter(track => !isRU(track));
+
+        const uaTrack = event.tracks.audio.find(isUA);
+        if (uaTrack) {
+            event.tracks.audio.forEach(t => t.selected = false);
+            uaTrack.selected = true;
+        }
+    });
+
+    console.log('рџ‡єрџ‡¦ Anti-RU loaded');
 })();
