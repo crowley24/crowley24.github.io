@@ -1,60 +1,61 @@
 (function () {
-    'use strict';
+    "use strict";
 
-    function RowScanner() {
-        // Використовуємо window для збереження даних між відкриттями меню
-        window.discoveredLampaRows = window.discoveredLampaRows || new Set();
-
-        // 1. Функція показу результатів (виправлена)
-        function showDiscoveredMenu() {
-            var rowsArray = Array.from(window.discoveredLampaRows);
-            var content = rowsArray.length > 0 
-                ? rowsArray.map(function(name) { return '• ' + name; }).join('<br>') 
-                : 'Список порожній. Погортайте головну сторінку, щоб дані завантажились!';
-
-            Lampa.Modal.open({
-                title: 'Знайдені категорії',
-                html: $('<div style="padding: 20px; font-size: 1.2em; line-height: 1.6;">' + content + '</div>'),
-                onBack: function() {
-                    Lampa.Modal.close();
-                }
-            });
-        }
-
-        // 2. Додавання кнопки в налаштування
-        Lampa.Settings.listener.follow('open', function (e) {
-            if (e.name == 'interface') {
-                var btn = $(`<div class="settings-param selector">
-                    <div class="settings-param__name">Сканер головної сторінки</div>
-                    <div class="settings-param__value">Показати категорії</div>
-                </div>`);
-
-                btn.on('hover:enter', function () {
-                    showDiscoveredMenu();
-                });
-
-                e.body.find('.settings-param:last').after(btn);
+    function init() {
+        // 1. Додаємо переклад для нового пункту
+        Lampa.Lang.add({
+            settings_main_editor: {
+                uk: 'Редактор головної',
+                en: 'Home Editor'
+            },
+            settings_main_editor_descr: {
+                uk: 'Налаштування відображення головної сторінки',
+                en: 'Home screen display settings'
+            },
+            settings_editor_show_banner: {
+                uk: 'Показувати банер',
+                en: 'Show banner'
             }
         });
 
-        // 3. Перехоплення назв рядків
-        Lampa.Listener.follow('full', function (e) {
-            if (e.type == 'append' && e.data) {
-                e.data.forEach(function (row) {
-                    if (row.title && row.title.trim() !== '') {
-                        window.discoveredLampaRows.add(row.title);
+        // 2. Створюємо новий пункт у головному меню налаштувань
+        Lampa.Settings.main({
+            name: 'main_editor',
+            type: 'open',
+            icon: '<svg ...></svg>', // Можна додати SVG іконку
+            name_lang: 'settings_main_editor',
+            descr_lang: 'settings_main_editor_descr'
+        });
+
+        // 3. Слухаємо подію відкриття цього пункту
+        Lampa.Settings.listener.follow('open', function (e) {
+            if (e.name == 'main_editor') {
+                let items = [
+                    {
+                        title: Lampa.Lang.translate('settings_editor_show_banner'),
+                        name: 'home_editor_banner',
+                        type: 'select',
+                        values: {
+                            'show': 'Так',
+                            'hide': 'Ні'
+                        },
+                        default: 'show'
+                    }
+                    // Тут можна додати інші параметри (сортування, кількість рядків тощо)
+                ];
+
+                // Викликаємо вікно з параметрами
+                Lampa.Settings.create(items, {
+                    title: Lampa.Lang.translate('settings_main_editor'),
+                    onBack: () => {
+                        Lampa.Settings.main(); // Повернення в головне меню налаштувань
                     }
                 });
             }
         });
-
-        // Сповіщення про запуск
-        Lampa.Noty.show('Сканер активовано. Погортайте головну!');
     }
 
-    // Очікування готовності системи
-    if (window.appready) RowScanner();
-    else Lampa.Listener.follow('app', function (e) {
-        if (e.type == 'ready') RowScanner();
-    });
+    if (window.Lampa) {
+        init();
+    }
 })();
