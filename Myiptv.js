@@ -1753,9 +1753,10 @@ value: function program(data) {
                 loadEPG(tvg_id, loadCUB);  
             } else {  
                 findEpgId();  
+            }  
         });  
-    }  
-}]);  
+    });  
+}
   
 return EPG;  
 }();  
