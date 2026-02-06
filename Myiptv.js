@@ -1674,40 +1674,39 @@
         call(html, scroll);  
     }  
 }, {  
-    key: "program",  
-    value: function program(data) {  
-        var _this6 = this;  
+   key: "program",  
+value: function program(data) {  
+    var _this6 = this;  
   
-        return new Promise(function (resolve, reject) {  
-            var days = Lampa.Storage.field('iptv_guide_custom') ? Lampa.Storage.field('iptv_guide_save') : 3;  
-            var tvg_id = data.tvg && data.tvg.id ? data.tvg.id : data.channel_id;  
-            var tvg_name = data.tvg && data.tvg.name ? data.tvg.name : '';  
+    return new Promise(function (resolve, reject) {  
+        var days = Lampa.Storage.field('iptv_guide_custom') ? Lampa.Storage.field('iptv_guide_save') : 3;  
+        var tvg_id = data.tvg && data.tvg.id ? data.tvg.id : data.channel_id;  
+        var tvg_name = data.tvg && data.tvg.name ? data.tvg.name : '';  
   
-            // ОТРИМАТИ EPG CODE З АКТИВНОГО ПЛЕЙЛИСТА  
-            DB.getDataAnyCase('playlist', 'active').then(function(active) {  
-                var listCfg = active || {};  
-                var epgCode = listCfg.epgCode || '';  
+        console.log('EPG: program() called for', data.name, 'tvg_id:', tvg_id);  // Додаткове логування  
   
-                var isEpgIt999 = ["0", "4v7a2u", "skza0s", "oj8j5z", "sab9bx", "rv7awh", "2blr83"].indexOf(epgCode) >= 0;  
-                var isYosso = ["godxcd"].indexOf(epgCode) >= 0;  
+        DB.getDataAnyCase('playlist', 'active').then(function(active) {  
+            var listCfg = active || {};  
+            var epgCode = listCfg.epgCode || '';  
   
-                var loadCUB = function loadCUB() {  
-                    var id = Lampa.Storage.field('iptv_guide_custom') ? tvg_id : data.channel_id;  
+            var loadCUB = function loadCUB() {  
+                console.log('EPG: Loading from CUB API');  // Логування CUB  
+                // ... код loadCUB  
+            };  
   
-                    _this6.network.timeout(5000);  
-  
-                    _this6.network.silent(_this6.api_url + 'program/' + data.channel_id + '/' + data.time + '?full=true', function (result) {  
-                        DB.rewriteData('epg', id, result.program)["finally"](resolve.bind(resolve, result.program));  
-                    }, function (a) {  
-                        if (a.status == 500) DB.rewriteData('epg', id, [])["finally"](resolve.bind(resolve, [])); else reject();  
-                    });  
-                };  
-  
-                var loadEPG = function loadEPG(id, call) {  
-                    DB.getDataAnyCase('epg', id, 60 * 24 * days).then(function (epg) {  
-                        if (epg) resolve(epg); else call();  
-                    });  
-                };  
+            var loadEPG = function loadEPG(id, call) {  
+                console.log('EPG: Loading EPG for ID:', id);  // СЮДИ  
+                DB.getDataAnyCase('epg', id, 60 * 24 * days).then(function (epg) {  
+                    console.log('EPG: Loaded EPG data:', epg);  // СЮДИ  
+                    if (epg) {  
+                        resolve(epg);  
+                    } else {  
+                        call();  
+                    }  
+                })["catch"](function () {  
+                    call();  
+                });  
+            };    
   
                 var findEpgId = function() {  
                     if (tvg_id) {  
