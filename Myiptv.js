@@ -1923,14 +1923,73 @@
              */
 
         }, {
-            key: "program",
-            value: function program(channel, _program) {
-                if (this.endless) this.endless.destroy();
-                this.timeline = false;
-                this.endless = this.buildProgramList(channel, _program);
-                this.progm.empty().append(this.endless.render());
-            }
-        }, {
+            key: "program",  
+value: function program(data) {  
+    var _this6 = this;  
+  
+    return new Promise(function (resolve, reject) {  
+        var days = Lampa.Storage.field('iptv_guide_custom') ? Lampa.Storage.field('iptv_guide_save') : 3;  
+        var tvg_id = data.tvg && data.tvg.id ? data.tvg.id : data.channel_id;  
+        var tvg_name = data.tvg && data.tvg.name ? data.tvg.name : '';  
+  
+        var loadCUB = function loadCUB() {  
+            var id = Lampa.Storage.field('iptv_guide_custom') ? tvg_id : data.channel_id;  
+            // Завантаження з CUB API  
+        };  
+  
+        var loadEPG = function loadEPG(id, call) {  
+            DB.getDataAnyCase('epg', id, 60 * 24 * days).then(function (epg) {  
+                if (epg) resolve(epg); else call();  
+            });  
+        };  
+  
+        // Нова логіка пошуку EPG ID  
+        var findEpgId = function() {  
+            if (tvg_id) {  
+                loadEPG(tvg_id, function() {  
+                    // Пошук за нормалізованою назвою  
+                    var normalizedName = normalizeChannelName(tvg_name || data.name);  
+                    var transliteratedName = transliterate(normalizedName);  
+                      
+                    DB.getDataAnyCase('epg_channels', normalizedName.toLowerCase()).then(function (gu) {  
+                        if (gu) {  
+                            loadEPG(gu.id, loadCUB);  
+                        } else {  
+                            // Додатковий пошук за транслітерованою назвою  
+                            DB.getDataAnyCase('epg_channels', transliteratedName.toLowerCase()).then(function (gu2) {  
+                                if (gu2) {  
+                                    loadEPG(gu2.id, loadCUB);  
+                                } else {  
+                                    loadCUB();  
+                                }  
+                            });  
+                        }  
+                    });  
+                });  
+            } else {  
+                // Якщо немає tvg_id, спробувати знайти за назвою  
+                var normalizedName = normalizeChannelName(tvg_name || data.name);  
+                var transliteratedName = transliterate(normalizedName);  
+                  
+                DB.getDataAnyCase('epg_channels', normalizedName.toLowerCase()).then(function (gu) {  
+                    if (gu) {  
+                        loadEPG(gu.id, loadCUB);  
+                    } else {  
+                        DB.getDataAnyCase('epg_channels', transliteratedName.toLowerCase()).then(function (gu2) {  
+                            if (gu2) {  
+                                loadEPG(gu2.id, loadCUB);  
+                            } else {  
+                                loadCUB();  
+                            }  
+                        });  
+                    }  
+                });  
+            }  
+        };  
+  
+        findEpgId();  
+    });  
+}
             key: "toggle",
             value: function toggle() {
                 var _this4 = this;
