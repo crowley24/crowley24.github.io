@@ -1714,7 +1714,7 @@ value: function program(data) {
                     loadEPG(tvg_id, function() {  
                         var normalizedName = normalizeChannelName(tvg_name || data.name);  
                         var transliteratedName = transliterate(normalizedName);  
-                          
+                            
                         DB.getDataAnyCase('epg_channels', normalizedName.toLowerCase()).then(function (gu) {  
                             if (gu) {  
                                 loadEPG(gu.id, loadCUB);  
@@ -1732,7 +1732,7 @@ value: function program(data) {
                 } else {  
                     var normalizedName = normalizeChannelName(tvg_name || data.name);  
                     var transliteratedName = transliterate(normalizedName);  
-                      
+                        
                     DB.getDataAnyCase('epg_channels', normalizedName.toLowerCase()).then(function (gu) {  
                         if (gu) {  
                             loadEPG(gu.id, loadCUB);  
@@ -1754,9 +1754,9 @@ value: function program(data) {
             } else {  
                 findEpgId();  
             }  
-        }); 
-         }); 
-  }
+        }); // Тільки одна закриваюча дужка для Promise  
+    });  
+}
   
 return EPG;  
 }();  
