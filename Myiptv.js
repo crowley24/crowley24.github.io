@@ -1755,8 +1755,7 @@ value: function program(data) {
                 findEpgId();  
             }  
         });  
-    });  
-}
+  }
   
 return EPG;  
 }();  
