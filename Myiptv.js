@@ -1682,6 +1682,17 @@
             var days = Lampa.Storage.field('iptv_guide_custom') ? Lampa.Storage.field('iptv_guide_save') : 3;  
             var tvg_id = data.tvg && data.tvg.id ? data.tvg.id : data.channel_id;  
             var tvg_name = data.tvg && data.tvg.name ? data.tvg.name : '';  
+
+           
+var isEpgIt999 = ["0", "4v7a2u", "skza0s", "oj8j5z", "sab9bx", "rv7awh", "2blr83"].indexOf(epgCode) >= 0;  
+var isYosso = ["godxcd"].indexOf(epgCode) >= 0;  
+  
+if ((isEpgIt999 || isYosso) && tvg_id && /^\d{1,4}$/.test(tvg_id)) {  
+    // Пріоритетний пошук за числовим tvg-id  
+    loadEPG(tvg_id, loadCUB);  
+} else {  
+    findEpgId();  
+}
   
             var loadCUB = function loadCUB() {  
                 var id = Lampa.Storage.field('iptv_guide_custom') ? tvg_id : data.channel_id;  
