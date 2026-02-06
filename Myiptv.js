@@ -1683,21 +1683,28 @@ value: function program(data) {
         var tvg_id = data.tvg && data.tvg.id ? data.tvg.id : data.channel_id;  
         var tvg_name = data.tvg && data.tvg.name ? data.tvg.name : '';  
   
-        console.log('EPG: program() called for', data.name, 'tvg_id:', tvg_id);  // Додаткове логування  
+        console.log('EPG: Searching for channel:', data.name, 'tvg_id:', tvg_id, 'tvg_name:', tvg_name);  
   
         DB.getDataAnyCase('playlist', 'active').then(function(active) {  
             var listCfg = active || {};  
             var epgCode = listCfg.epgCode || '';  
-  
+              
+            console.log('EPG: epgCode:', epgCode);  
+              
+            var isEpgIt999 = ["0", "4v7a2u", "skza0s", "oj8j5z", "sab9bx", "rv7awh", "2blr83"].indexOf(epgCode) >= 0;  
+            var isYosso = ["godxcd"].indexOf(epgCode) >= 0;  
+              
+            console.log('EPG: isEpgIt999:', isEpgIt999, 'isYosso:', isYosso);  
+              
             var loadCUB = function loadCUB() {  
-                console.log('EPG: Loading from CUB API');  // Логування CUB  
-                // ... код loadCUB  
+                console.log('EPG: Loading CUB API data');  
+                // ... існуючий код  
             };  
   
             var loadEPG = function loadEPG(id, call) {  
-                console.log('EPG: Loading EPG for ID:', id);  // СЮДИ  
+                console.log('EPG: Loading EPG for ID:', id);  
                 DB.getDataAnyCase('epg', id, 60 * 24 * days).then(function (epg) {  
-                    console.log('EPG: Loaded EPG data:', epg);  // СЮДИ  
+                    console.log('EPG: Loaded EPG data:', epg);  
                     if (epg) {  
                         resolve(epg);  
                     } else {  
@@ -1706,57 +1713,76 @@ value: function program(data) {
                 })["catch"](function () {  
                     call();  
                 });  
-            };    
+            };  
   
-                var findEpgId = function() {  
-                    if (tvg_id) {  
-                        loadEPG(tvg_id, function() {  
-                            var normalizedName = normalizeChannelName(tvg_name || data.name);  
-                            var transliteratedName = transliterate(normalizedName);  
-                                  
+            var findEpgId = function findEpgId() {  
+                console.log('EPG: Starting intelligent search');  
+                  
+                var normalizedName = normalizeChannelName(data.name);  
+                var transliteratedName = transliterate(data.name);  
+                  
+                console.log('EPG: Normalized name:', normalizedName);  
+                console.log('EPG: Transliterated name:', transliteratedName);  
+                  
+                if (tvg_id) {  
+                    console.log('EPG: Searching by tvg_id:', tvg_id);  
+                    DB.getDataAnyCase('epg_channels', tvg_id).then(function (gu) {  
+                        if (gu) {  
+                            console.log('EPG: Found by tvg_id:', gu);  
+                            loadEPG(gu.id, loadCUB);  
+                        } else {  
+                            console.log('EPG: Not found by tvg_id, searching by normalized name');  
                             DB.getDataAnyCase('epg_channels', normalizedName.toLowerCase()).then(function (gu) {  
                                 if (gu) {  
+                                    console.log('EPG: Found by normalized name:', gu);  
                                     loadEPG(gu.id, loadCUB);  
                                 } else {  
+                                    console.log('EPG: Not found by normalized name, searching by transliterated name');  
                                     DB.getDataAnyCase('epg_channels', transliteratedName.toLowerCase()).then(function (gu2) {  
                                         if (gu2) {  
+                                            console.log('EPG: Found by transliterated name:', gu2);  
                                             loadEPG(gu2.id, loadCUB);  
                                         } else {  
+                                            console.log('EPG: Not found by any method, loading CUB');  
                                             loadCUB();  
                                         }  
                                     });  
                                 }  
                             });  
-                        });  
-                    } else {  
-                        var normalizedName = normalizeChannelName(tvg_name || data.name);  
-                        var transliteratedName = transliterate(normalizedName);  
-                              
-                        DB.getDataAnyCase('epg_channels', normalizedName.toLowerCase()).then(function (gu) {  
-                            if (gu) {  
-                                loadEPG(gu.id, loadCUB);  
-                            } else {  
-                                DB.getDataAnyCase('epg_channels', transliteratedName.toLowerCase()).then(function (gu2) {  
-                                    if (gu2) {  
-                                        loadEPG(gu2.id, loadCUB);  
-                                    } else {  
-                                        loadCUB();  
-                                    }  
-                                });  
-                            }  
-                        });  
-                    }  
-                };  
-  
-                if ((isEpgIt999 || isYosso) && tvg_id && /^\d{1,4}$/.test(tvg_id)) {  
-                    loadEPG(tvg_id, loadCUB);  
+                        }  
+                    });  
                 } else {  
-                    findEpgId();  
+                    console.log('EPG: No tvg_id, searching by normalized name');  
+                    DB.getDataAnyCase('epg_channels', normalizedName.toLowerCase()).then(function (gu) {  
+                        if (gu) {  
+                            console.log('EPG: Found by normalized name:', gu);  
+                            loadEPG(gu.id, loadCUB);  
+                        } else {  
+                            console.log('EPG: Not found by normalized name, searching by transliterated name');  
+                            DB.getDataAnyCase('epg_channels', transliteratedName.toLowerCase()).then(function (gu2) {  
+                                if (gu2) {  
+                                    console.log('EPG: Found by transliterated name:', gu2);  
+                                    loadEPG(gu2.id, loadCUB);  
+                                } else {  
+                                    console.log('EPG: Not found by any method, loading CUB');  
+                                    loadCUB();  
+                                }  
+                            });  
+                        }  
+                    });  
                 }  
-            });  
+            };  
+  
+            if ((isEpgIt999 || isYosso) && tvg_id && /^\d{1,4}$/.test(tvg_id)) {  
+                console.log('EPG: Using provider-specific search for ID:', tvg_id);  
+                loadEPG(tvg_id, loadCUB);  
+            } else {  
+                console.log('EPG: Using standard search');  
+                findEpgId();  
+            }  
         });  
-    }  
-}]);  
+    });  
+}
   
 return EPG;  
 }();  
