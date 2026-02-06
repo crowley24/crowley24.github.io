@@ -1604,98 +1604,156 @@
             _classCallCheck(this, EPG);
         }
 
-        _createClass(EPG, null, [{
-            key: "init",
-            value: function init() {
-                var _this = this;
-
-                var ts = new Date().getTime();
-                Api.time(function (json) {
-                    var te = new Date().getTime();
-                    _this.time_offset = json.time < ts || json.time > te ? json.time - te : 0;
-                });
-            }
-        }, {
-            key: "time",
-            value: function time(channel) {
-                var timeshift = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-                var date = new Date(),
-                    time = date.getTime() + this.time_offset,
-                    ofst = parseInt((localStorage.getItem('time_offset') == null ? 'n0' : localStorage.getItem('time_offset')).replace('n', ''));
-                date = new Date(time + ofst * 1000 * 60 * 60);
-                var offset = channel.name.match(/([+|-]\d)$/);
-
-                if (offset) {
-                    date.setHours(date.getHours() + parseInt(offset[1]));
-                }
-
-                var result = date.getTime();
-                result -= timeshift;
-                return result;
-            }
-        }, {
-            key: "position",
-            value: function position(channel, list, timeshift) {
-                var tim = this.time(channel, timeshift);
-                var now = list.find(function (p) {
-                    return tim > p.start && tim < p.stop;
-                });
-                return now ? list.indexOf(now) : list.length - 1;
-            }
-        }, {
-            key: "timeline",
-            value: function timeline(channel, program, timeshift) {
-                var time = this.time(channel, timeshift);
-                var total = program.stop - program.start;
-                var less = program.stop - time;
-                return Math.min(100, Math.max(0, (1 - less / total) * 100));
-            }
-        }, {
-            key: "list",
-            value: function list(channel, _list) {
-                var size = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 10;
-                var position = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 0;
-                var day_lst = '';
-                var day_prg = '';
-                var day_now = new Date(Date.now()).getDate();
-                var day_nam = {};
-                var display = [];
-                day_nam[day_now - 1] = Lampa.Lang.translate('iptv_yesterday');
-                day_nam[day_now] = Lampa.Lang.translate('iptv_today');
-                day_nam[day_now + 1] = Lampa.Lang.translate('iptv_tomorrow');
-
-                var watch = _list[this.position(channel, _list)];
-
-                _list.slice(position, position + size).forEach(function (elem) {
-                    day_prg = new Date(elem.start).getDate();
-
-                    if (day_lst !== day_prg) {
-                        day_lst = day_prg;
-                        display.push({
-                            type: 'date',
-                            date: day_nam[day_prg] ? day_nam[day_prg] : Lampa.Utils.parseTime(elem.start)["short"]
-                        });
-                    }
-
-                    display.push({
-                        type: 'program',
-                        program: elem,
-                        watch: watch == elem
-                    });
-                });
-
-                return display;
-            }
-        }]);
-
-        return EPG;
-    }();
-
-    _defineProperty(EPG, "time_offset", 0);
-
-    var Details = /*#__PURE__*/function () {
-        function Details(listener) {
-            var _this = this;
+ _createClass(EPG, null, [{  
+    key: "init",  
+    value: function init() {  
+        var _this = this;  
+  
+        var ts = new Date().getTime();  
+        Api.time(function (json) {  
+            var te = new Date().getTime();  
+            _this.time_offset = json.time < ts || json.time > te ? json.time - te : 0;  
+        });  
+    }  
+}, {  
+    key: "time",  
+    value: function time(channel) {  
+        var timeshift = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;  
+        var date = new Date(),  
+            time = date.getTime() + this.time_offset,  
+            ofst = parseInt((localStorage.getItem('time_offset') == null ? 'n0' : localStorage.getItem('time_offset')).replace('n', ''));  
+        date = new Date(time + ofst * 1000 * 60 * 60);  
+        var offset = channel.name.match(/([+|-]\d)$/);  
+  
+        if (offset) {  
+            date.setHours(date.getHours() + parseInt(offset[1]));  
+        }  
+  
+        var result = date.getTime();  
+        result -= timeshift;  
+        return result;  
+    }  
+}, {  
+    key: "position",  
+    value: function position(json) {  
+        var time = this.time(json);  
+        var position = 0;  
+  
+        for (var i = 0; i < json.length; i++) {  
+            if (json[i].start <= time && json[i].stop > time) {  
+                position = i;  
+                break;  
+            }  
+        }  
+  
+        return position;  
+    }  
+}, {  
+    key: "timeline",  
+    value: function timeline(call) {  
+        var html = $('<div class="epg-timeline"></div>');  
+        var body = $('<div class="epg-timeline__body"></div>');  
+        var scroll = new Lampa.Scroll({  
+            over: true,  
+            horizontal: true  
+        });  
+        html.append(body);  
+        scroll.append(body);  
+        call(html, scroll);  
+    }  
+}, {  
+    key: "list",  
+    value: function list(call) {  
+        var html = $('<div class="epg-list"></div>');  
+        var body = $('<div class="epg-list__body"></div>');  
+        var scroll = new Lampa.Scroll({  
+            over: true  
+        });  
+        html.append(body);  
+        scroll.append(body);  
+        call(html, scroll);  
+    }  
+}, {  
+    key: "program",  
+    value: function program(data) {  
+        var _this6 = this;  
+  
+        return new Promise(function (resolve, reject) {  
+            var days = Lampa.Storage.field('iptv_guide_custom') ? Lampa.Storage.field('iptv_guide_save') : 3;  
+            var tvg_id = data.tvg && data.tvg.id ? data.tvg.id : data.channel_id;  
+            var tvg_name = data.tvg && data.tvg.name ? data.tvg.name : '';  
+  
+            var loadCUB = function loadCUB() {  
+                var id = Lampa.Storage.field('iptv_guide_custom') ? tvg_id : data.channel_id;  
+  
+                _this6.network.timeout(5000);  
+  
+                _this6.network.silent(_this6.api_url + 'program/' + data.channel_id + '/' + data.time + '?full=true', function (result) {  
+                    DB.rewriteData('epg', id, result.program)["finally"](resolve.bind(resolve, result.program));  
+                }, function (a) {  
+                    if (a.status == 500) DB.rewriteData('epg', id, [])["finally"](resolve.bind(resolve, [])); else reject();  
+                });  
+            };  
+  
+            var loadEPG = function loadEPG(id, call) {  
+                DB.getDataAnyCase('epg', id, 60 * 24 * days).then(function (epg) {  
+                    if (epg) resolve(epg); else call();  
+                });  
+            };  
+  
+            var findEpgId = function() {  
+                if (tvg_id) {  
+                    loadEPG(tvg_id, function() {  
+                        var normalizedName = normalizeChannelName(tvg_name || data.name);  
+                        var transliteratedName = transliterate(normalizedName);  
+                          
+                        DB.getDataAnyCase('epg_channels', normalizedName.toLowerCase()).then(function (gu) {  
+                            if (gu) {  
+                                loadEPG(gu.id, loadCUB);  
+                            } else {  
+                                DB.getDataAnyCase('epg_channels', transliteratedName.toLowerCase()).then(function (gu2) {  
+                                    if (gu2) {  
+                                        loadEPG(gu2.id, loadCUB);  
+                                    } else {  
+                                        loadCUB();  
+                                    }  
+                                });  
+                            }  
+                        });  
+                    });  
+                } else {  
+                    var normalizedName = normalizeChannelName(tvg_name || data.name);  
+                    var transliteratedName = transliterate(normalizedName);  
+                      
+                    DB.getDataAnyCase('epg_channels', normalizedName.toLowerCase()).then(function (gu) {  
+                        if (gu) {  
+                            loadEPG(gu.id, loadCUB);  
+                        } else {  
+                            DB.getDataAnyCase('epg_channels', transliteratedName.toLowerCase()).then(function (gu2) {  
+                                if (gu2) {  
+                                    loadEPG(gu2.id, loadCUB);  
+                                } else {  
+                                    loadCUB();  
+                                }  
+                            });  
+                        }  
+                    });  
+                }  
+            };  
+  
+            findEpgId();  
+        });  
+    }  
+}]);  
+  
+return EPG;  
+}();  
+  
+_defineProperty(EPG, "time_offset", 0);  
+  
+var Details = /*#__PURE__*/function () {  
+    function Details(listener) {  
+        var _this = this;
 
             _classCallCheck(this, Details);
 
