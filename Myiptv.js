@@ -2807,80 +2807,81 @@ var Details = /*#__PURE__*/function () {
 
                 data.locked = Boolean(Locked.find(Locked.format('channel', start_channel.original)));
 
-                data.onGetChannel = function (position) {
-                    var original = _this2.icons.icons_clone[position];
-                    var channel = Lampa.Arrays.clone(original);
-                    var timeshift = _this2.archive && _this2.archive.channel == original ? _this2.archive.timeshift : 0;
-console.log('EPG: playChannel called for', channel.name, 'ID:', channel.id);  
+                data.onGetChannel = function (position) {  
+    var original = _this2.icons.icons_clone[position];  
+    var channel = Lampa.Arrays.clone(original);  
+    var timeshift = _this2.archive && _this2.archive.channel == original ? _this2.archive.timeshift : 0;  
+      
+    console.log('EPG: playChannel called for', channel.name, 'ID:', channel.id);  
     console.log('EPG: channel.id exists:', !!channel.id);  
-    console.log('EPG: cache exists:', !!cache[channel.id]); 
-
-                    channel.name = Utils.clearChannelName(channel.name);
-if (channel.id) {  
+    console.log('EPG: cache exists:', !!cache[channel.id]);  
+  
+    channel.name = Utils.clearChannelName(channel.name);  
+    channel.group = Utils.clearMenuName(channel.group);  
+    channel.url = Url.prepareUrl(channel.url);  
+    channel.icons = [];  
+    channel.original = original;  
+  
+    if (timeshift) {  
+        channel.shift = timeshift;  
+        channel.url = Url.catchupUrl(original.url, channel.catchup.type, channel.catchup.source);  
+        channel.url = Url.prepareUrl(channel.url, _this2.archive.program);  
+    }  
+  
+    if (Locked.find(Locked.format('channel', original))) {  
+        channel.locked = true;  
+    }  
+  
+    if (Boolean(Favorites.find(channel))) {  
+        channel.icons.push(Lampa.Template.get('cub_iptv_icon_fav', {}, true));  
+    }  
+  
+    if (Boolean(Locked.find(Locked.format('channel', channel)))) {  
+        channel.icons.push(Lampa.Template.get('cub_iptv_icon_lock', {}, true));  
+    }  
+  
+    update = false;  
+  
+    if (channel.id) {  
         console.log('EPG: Inside channel.id condition');  
         if (!cache[channel.id]) {  
             console.log('EPG: About to call Api.program');  
-                    
-                    channel.group = Utils.clearMenuName(channel.group);
-                    channel.url = Url.prepareUrl(channel.url);
-                    channel.icons = [];
-                    channel.original = original;
-
-                    if (timeshift) {
-                        channel.shift = timeshift;
-                        channel.url = Url.catchupUrl(original.url, channel.catchup.type, channel.catchup.source);
-                        channel.url = Url.prepareUrl(channel.url, _this2.archive.program);
-                    }
-
-                    if (Locked.find(Locked.format('channel', original))) {
-                        channel.locked = true;
-                    }
-
-                    if (Boolean(Favorites.find(channel))) {
-                        channel.icons.push(Lampa.Template.get('cub_iptv_icon_fav', {}, true));
-                    }
-
-                    if (Boolean(Locked.find(Locked.format('channel', channel)))) {
-                        channel.icons.push(Lampa.Template.get('cub_iptv_icon_lock', {}, true));
-                    }
-
-                    update = false;
-
-                    if (channel.id) {
-                        if (!cache[channel.id]) {
-                            cache[channel.id] = [];
-                            Api.program({
-                                name: channel.name,
-                                channel_id: channel.id,
-                                tvg: channel.tvg,
-                                time: EPG.time(channel, timeshift)
-                            }).then(function (program) {
-                                cache[channel.id] = program;
-                            })["finally"](function () {
-                                Lampa.Player.programReady({
-                                    channel: channel,
-                                    position: EPG.position(channel, cache[channel.id], timeshift),
-                                    total: cache[channel.id].length
-                                });
-                            });
-                        } else {
-                            Lampa.Player.programReady({
-                                channel: channel,
-                                position: EPG.position(channel, cache[channel.id], timeshift),
-                                total: cache[channel.id].length
-                            });
-                        }
-                    } else {
-                        Lampa.Player.programReady({
-                            channel: channel,
-                            position: 0,
-                            total: 0
-                        });
-                    }
-
-                    return channel;
-                };
-
+            cache[channel.id] = [];  
+            Api.program({  
+                name: channel.name,  
+                channel_id: channel.id,  
+                tvg: channel.tvg,  
+                time: EPG.time(channel, timeshift)  
+            }).then(function (program) {  
+                console.log('EPG: Program data received:', program);  
+                console.log('EPG: Programs count:', program ? program.length : 0);  
+                cache[channel.id] = program;  
+            })["finally"](function () {  
+                Lampa.Player.programReady({  
+                    channel: channel,  
+                    position: EPG.position(channel, cache[channel.id], timeshift),  
+                    total: cache[channel.id].length  
+                });  
+            });  
+        } else {  
+            console.log('EPG: Using cached program');  
+            Lampa.Player.programReady({  
+                channel: channel,  
+                position: EPG.position(channel, cache[channel.id], timeshift),  
+                total: cache[channel.id].length  
+            });  
+        }  
+    } else {  
+        console.log('EPG: No channel.id, calling programReady with 0');  
+        Lampa.Player.programReady({  
+            channel: channel,  
+            position: 0,  
+            total: 0  
+        });  
+    }  
+  
+    return channel;  
+};
                 data.onMenu = function (channel) {
                     _this2.hud = new HUD(channel);
 
