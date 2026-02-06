@@ -1683,19 +1683,13 @@ value: function program(data) {
         var tvg_id = data.tvg && data.tvg.id ? data.tvg.id : data.channel_id;  
         var tvg_name = data.tvg && data.tvg.name ? data.tvg.name : '';  
   
-        // ОТРИМАТИ EPG CODE З КОНФІГУРАЦІЇ ПЛЕЙЛИСТА  
-        var listCfg = Lampa.Storage.get('iptv_playlist_config', {});  
-        var epgCode = listCfg['epgCode'] || '';  
+        // ОТРИМАТИ EPG CODE З АКТИВНОГО ПЛЕЙЛИСТА  
+        DB.getDataAnyCase('playlist', 'active').then(function(active) {  
+            var listCfg = active || {};  
+            var epgCode = listCfg['epgCode'] || '';  
   
-        var isEpgIt999 = ["0", "4v7a2u", "skza0s", "oj8j5z", "sab9bx", "rv7awh", "2blr83"].indexOf(epgCode) >= 0;  
-        var isYosso = ["godxcd"].indexOf(epgCode) >= 0;  
-  
-if ((isEpgIt999 || isYosso) && tvg_id && /^\d{1,4}$/.test(tvg_id)) {  
-    // Пріоритетний пошук за числовим tvg-id  
-    loadEPG(tvg_id, loadCUB);  
-} else {  
-    findEpgId();  
-}
+            var isEpgIt999 = ["0", "4v7a2u", "skza0s", "oj8j5z", "sab9bx", "rv7awh", "2blr83"].indexOf(epgCode) >= 0;  
+            var isYosso = ["godxcd"].indexOf(epgCode) >= 0;  
   
             var loadCUB = function loadCUB() {  
                 var id = Lampa.Storage.field('iptv_guide_custom') ? tvg_id : data.channel_id;  
@@ -1755,7 +1749,10 @@ if ((isEpgIt999 || isYosso) && tvg_id && /^\d{1,4}$/.test(tvg_id)) {
                 }  
             };  
   
-            findEpgId();  
+            if ((isEpgIt999 || isYosso) && tvg_id && /^\d{1,4}$/.test(tvg_id)) {  
+                loadEPG(tvg_id, loadCUB);  
+            } else {  
+                findEpgId();  
         });  
     }  
 }]);  
