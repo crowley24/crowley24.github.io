@@ -2811,6 +2811,9 @@ var Details = /*#__PURE__*/function () {
                     var original = _this2.icons.icons_clone[position];
                     var channel = Lampa.Arrays.clone(original);
                     var timeshift = _this2.archive && _this2.archive.channel == original ? _this2.archive.timeshift : 0;
+
+                        console.log('EPG: playChannel called for', channel.name, 'ID:', channel.id);  // СЮДИ  
+
                     channel.name = Utils.clearChannelName(channel.name);
                     channel.group = Utils.clearMenuName(channel.group);
                     channel.url = Url.prepareUrl(channel.url);
