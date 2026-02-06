@@ -1783,6 +1783,7 @@ value: function program(data) {
         });  
     });  
 }
+    });
   
 return EPG;  
 }();  
