@@ -2811,10 +2811,16 @@ var Details = /*#__PURE__*/function () {
                     var original = _this2.icons.icons_clone[position];
                     var channel = Lampa.Arrays.clone(original);
                     var timeshift = _this2.archive && _this2.archive.channel == original ? _this2.archive.timeshift : 0;
-
-                        console.log('EPG: playChannel called for', channel.name, 'ID:', channel.id);  // СЮДИ  
+console.log('EPG: playChannel called for', channel.name, 'ID:', channel.id);  
+    console.log('EPG: channel.id exists:', !!channel.id);  
+    console.log('EPG: cache exists:', !!cache[channel.id]); 
 
                     channel.name = Utils.clearChannelName(channel.name);
+if (channel.id) {  
+        console.log('EPG: Inside channel.id condition');  
+        if (!cache[channel.id]) {  
+            console.log('EPG: About to call Api.program');  
+                    
                     channel.group = Utils.clearMenuName(channel.group);
                     channel.url = Url.prepareUrl(channel.url);
                     channel.icons = [];
