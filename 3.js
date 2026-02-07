@@ -11,33 +11,30 @@
                     
                     if (container.length && !container.find('.open-4k-ukr').length && !e.data.movie.number_of_seasons) {
                         
-                        // SVG з об'ємним золотим Play та компактним дизайном
-                        var svgIcon = '<svg width="100%" height="100%" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">' +
-                            '<defs>' +
-                                '<linearGradient id="gold_play" x1="0%" y1="0%" x2="0%" y2="100%">' +
-                                    '<stop offset="0%" style="stop-color:#FFF3A6;stop-opacity:1" />' +
-                                    '<stop offset="50%" style="stop-color:#FFD700;stop-opacity:1" />' +
-                                    '<stop offset="100%" style="stop-color:#B8860B;stop-opacity:1" />' +
-                                '</linearGradient>' +
-                                '<linearGradient id="ukr_border" x1="0%" y1="0%" x2="100%" y2="0%">' +
-                                    '<stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />' +
-                                    '<stop offset="49%" style="stop-color:#FFD700;stop-opacity:1" />' +
-                                    '<stop offset="51%" style="stop-color:#0057B7;stop-opacity:1" />' +
-                                    '<stop offset="100%" style="stop-color:#0057B7;stop-opacity:1" />' +
-                                </linearGradient>' +
-                            '</defs>' +
-                            '<rect x="4" y="4" width="192" height="52" rx="12" fill="black" stroke-width="6" stroke="url(#ukr_border)"/>' +
-                            // Об'ємний золотий Play
-                            '<path d="M22 18 L46 30 L22 42 Z" fill="url(#gold_play)" stroke="#8B6508" stroke-width="1"/>' +
-                            '<path d="M22 18 L46 30 L22 20 Z" fill="rgba(255,255,255,0.4)"/>' +
-                            // Текст
-                            '<text x="58" y="44" font-family="Arial, sans-serif" font-weight="bold" font-size="40" fill="#FFD700">4K</text>' +
-                            '<text x="108" y="28" font-family="Arial, sans-serif" font-weight="bold" font-size="17" fill="#0057B7">DOLBY</text>' +
-                            '<text x="108" y="48" font-family="Arial, sans-serif" font-weight="bold" font-size="17" fill="#0057B7">VISION</text>' +
-                        '</svg>';
+                        // SVG розділено на частини, щоб уникнути помилок синтаксису JSHint
+                        var defs = '<defs>' +
+                            '<linearGradient id="g_play" x1="0%" y1="0%" x2="0%" y2="100%">' +
+                                '<stop offset="0%" style="stop-color:#FFF3A6;stop-opacity:1" />' +
+                                '<stop offset="100%" style="stop-color:#B8860B;stop-opacity:1" />' +
+                            '</linearGradient>' +
+                            '<linearGradient id="g_ubr" x1="0%" y1="0%" x2="100%" y2="0%">' +
+                                '<stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />' +
+                                '<stop offset="49%" style="stop-color:#FFD700;stop-opacity:1" />' +
+                                '<stop offset="51%" style="stop-color:#0057B7;stop-opacity:1" />' +
+                                '<stop offset="100%" style="stop-color:#0057B7;stop-opacity:1" />' +
+                            '</linearGradient>' +
+                        '</defs>';
 
-                        // Розміри зменшено до стандарту Lampa (140x40)
-                        var btn = $('<div class="full-start__button selector open-4k-ukr" style="width: 145px; height: 40px; background: none !important; border: none !important; padding: 0 !important; margin: 4px; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;">' +
+                        var body = '<rect x="3" y="3" width="194" height="54" rx="12" fill="black" stroke-width="6" stroke="url(#g_ubr)"/>' +
+                            '<path d="M22 18 L46 30 L22 42 Z" fill="url(#g_play)" stroke="#8B6508" stroke-width="1"/>' +
+                            '<text x="58" y="44" font-family="Arial,sans-serif" font-weight="bold" font-size="40" fill="#FFD700">4K</text>' +
+                            '<text x="108" y="28" font-family="Arial,sans-serif" font-weight="bold" font-size="17" fill="#0057B7">DOLBY</text>' +
+                            '<text x="108" y="48" font-family="Arial,sans-serif" font-weight="bold" font-size="17" fill="#0057B7">VISION</text>';
+
+                        var svgIcon = '<svg width="100%" height="100%" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">' + defs + body + '</svg>';
+
+                        // Висота 38px - ідеально під стандарт Lampa
+                        var btn = $('<div class="full-start__button selector open-4k-ukr" style="width: 140px; height: 38px; background: none !important; border: none !important; padding: 0 !important; margin: 4px; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;">' +
                             '<div style="width: 100%; height: 100%; pointer-events: none;">' + svgIcon + '</div>' +
                             '</div>');
 
@@ -55,7 +52,7 @@
         this.searchAndPlay = function (movie) {
             var jackettUrl = Lampa.Storage.field('jackett_url') || 'https://jacred.xyz';
             var jackettKey = Lampa.Storage.field('jackett_key') || '';
-            Lampa.Noty.show('Шукаю 4K UA...');
+            Lampa.Noty.show('Пошук 4K UA...');
 
             var title = movie.original_title || movie.title;
             var year = (movie.release_date || '').slice(0, 4);
@@ -66,13 +63,15 @@
                 var results = json.Results || (Array.isArray(json) ? json : []);
                 var filtered = results.filter(function (item) {
                     var t = (item.Title || item.title || '').toLowerCase();
-                    return (t.includes('ukr') || t.includes('укр') || t.includes('ua')) && (t.includes('2160') || t.includes('4k'));
+                    return (t.indexOf('ukr') > -1 || t.indexOf('укр') > -1 || t.indexOf('ua') > -1) && (t.indexOf('2160') > -1 || t.indexOf('4k') > -1);
                 });
 
                 if (filtered.length > 0) {
                     filtered.sort(function(a, b) {
-                        var aDV = /dv|vision|dovi/i.test((a.Title || a.title).toLowerCase());
-                        var bDV = /dv|vision|dovi/i.test((b.Title || b.title).toLowerCase());
+                        var tA = (a.Title || a.title).toLowerCase();
+                        var tB = (b.Title || b.title).toLowerCase();
+                        var aDV = (tA.indexOf('vision') > -1 || tA.indexOf('dv') > -1);
+                        var bDV = (tB.indexOf('vision') > -1 || tB.indexOf('dv') > -1);
                         if (aDV && !bDV) return -1;
                         if (!aDV && bDV) return 1;
                         return (b.Size || b.size || 0) - (a.Size || a.size || 0);
