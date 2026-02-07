@@ -121,10 +121,20 @@
             if (response && response.Results) {
                 var best = getBest(response.Results);
                 var badges = [];
+                
+                // --- ПОРЯДОК ВІДОБРАЖЕННЯ ---
                 if (best.ukr) badges.push(createBadgeImg('UKR', false, badges.length));
+                
+                // 1. Роздільна здатність (4К)
                 if (best.resolution) badges.push(createBadgeImg(best.resolution, false, badges.length));
-                if (best.hdr) badges.push(createBadgeImg('HDR', false, badges.length));
+                
+                // 2. Dolby Vision ОДРАЗУ після 4К
                 if (best.dolbyVision) badges.push(createBadgeImg('Dolby Vision', false, badges.length));
+                
+                // 3. Звичайний HDR
+                if (best.hdr) badges.push(createBadgeImg('HDR', false, badges.length));
+                
+                // 4. Інші параметри
                 if (best.audio) badges.push(createBadgeImg(best.audio, false, badges.length));
                 if (best.dub) badges.push(createBadgeImg('DUB', false, badges.length));
                 
