@@ -111,6 +111,23 @@ const translations = {
                 updateZoomState();
             }
         });
+
+        //ПАРАМЕТР: Логотипи Студій
+        Lampa.SettingsApi.addParam({
+    component: 'applecation_settings', // Замініть на назву вашого компонента налаштувань, якщо вона інша
+    param: {
+        name: 'applecation_show_studio',
+        type: 'boolean',
+        default: true
+    },
+    field: {
+        name: 'Показувати логотип студії',
+        description: 'Відображати іконку Netflix, HBO, Disney тощо у мета-даних'
+    },
+    onChange: (value) => {
+        Lampa.Storage.set('applecation_show_studio', value);
+    }
+});
         
         // Параметр: Показувати рейтинги
         Lampa.SettingsApi.addParam({
