@@ -9,26 +9,26 @@
                     var render = e.object.activity.render();
                     var container = render.find('.full-start-new__buttons, .full-start__buttons');
                     
-                    // Додаємо кнопку тільки для фільмів
                     if (container.length && !container.find('.open-4k-ukr').length && !e.data.movie.number_of_seasons) {
                         
-                        // Ваш SVG дизайн
-                        var svgIcon = '<svg width="100%" height="100%" viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg" style="display: block;">' +
-                            '<rect x="2" y="2" width="196" height="76" rx="10" fill="black" stroke-width="6" stroke="url(#ukraine_grad)"/>' +
+                        // Ваш SVG дизайн зі збільшеними пропорціями
+                        var svgIcon = '<svg width="100%" height="100%" viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg" style="display: block; overflow: visible;">' +
+                            '<rect x="2" y="2" width="196" height="76" rx="10" fill="black" stroke-width="8" stroke="url(#ukraine_grad)"/>' +
                             '<defs>' +
                                 '<linearGradient id="ukraine_grad" x1="0%" y1="0%" x2="100%" y2="0%">' +
                                     '<stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />' +
                                     '<stop offset="50%" style="stop-color:#FFD700;stop-opacity:1" />' +
                                     '<stop offset="50%" style="stop-color:#0057B7;stop-opacity:1" />' +
                                     '<stop offset="100%" style="stop-color:#0057B7;stop-opacity:1" />' +
-                                '</linearGradient>' +
+                                </linearGradient>' +
                             '</defs>' +
-                            '<text x="20" y="55" font-family="Arial, sans-serif" font-weight="bold" font-size="40" fill="#FFD700">4K</text>' +
-                            '<text x="85" y="40" font-family="Arial, sans-serif" font-weight="bold" font-size="18" fill="#0057B7">DOLBY</text>' +
-                            '<text x="85" y="60" font-family="Arial, sans-serif" font-weight="bold" font-size="18" fill="#0057B7">VISION</text>' +
+                            '<text x="22" y="56" font-family="Arial, sans-serif" font-weight="bold" font-size="44" fill="#FFD700">4K</text>' +
+                            '<text x="88" y="40" font-family="Arial, sans-serif" font-weight="bold" font-size="20" fill="#0057B7">DOLBY</text>' +
+                            '<text x="88" y="62" font-family="Arial, sans-serif" font-weight="bold" font-size="20" fill="#0057B7">VISION</text>' +
                         '</svg>';
 
-                        var btn = $('<div class="full-start__button selector open-4k-ukr" style="width: 140px; height: 55px; padding: 0; background: none !important; border: none !important;">' +
+                        // Збільшено розміри: width: 220px, height: 85px
+                        var btn = $('<div class="full-start__button selector open-4k-ukr" style="width: 220px; height: 85px; padding: 5px; background: none !important; border: none !important; margin-right: 15px; margin-bottom: 10px;">' +
                             svgIcon +
                             '</div>');
 
@@ -47,18 +47,15 @@
             var jackettUrl = Lampa.Storage.field('jackett_url') || 'https://jacred.xyz';
             var jackettKey = Lampa.Storage.field('jackett_key') || '';
 
-            Lampa.Noty.show('Пошук 4K Dolby Vision (UA)...');
+            Lampa.Noty.show('Шукаю 4K DV UA...');
 
             var title = movie.original_title || movie.title;
             var year = (movie.release_date || '').slice(0, 4);
-            
-            // Запит усіх 4K релізів для подальшої фільтрації
             var query = encodeURIComponent(title + ' ' + year + ' 2160p');
             var url = jackettUrl.replace(/\/$/, '') + '/api/v2.0/indexers/all/results?apikey=' + jackettKey + '&Query=' + query;
 
             Lampa.Network.native(url, function (json) {
                 var results = json.Results || (Array.isArray(json) ? json : []);
-                
                 var regUKR = /ukr|укр|ua|hurtom|toloka/i;
                 var reg4K = /2160|4k|uhd/i;
                 var regDV = /dv|vision|dovi/i;
@@ -69,7 +66,6 @@
                 });
 
                 if (filtered.length > 0) {
-                    // Сортування: DV попереду, далі за розміром
                     filtered.sort(function(a, b) {
                         var aDV = regDV.test((a.Title || a.title).toLowerCase());
                         var bDV = regDV.test((b.Title || b.title).toLowerCase());
@@ -78,14 +74,13 @@
                         return (b.Size || b.size || 0) - (a.Size || a.size || 0);
                     });
 
-                    var best = filtered[0];
-                    Lampa.Noty.show('Знайдено! Запускаю автопрогравання...');
-                    this.play(best, movie);
+                    Lampa.Noty.show('Знайдено найкращий реліз!');
+                    this.play(filtered[0], movie);
                 } else {
-                    Lampa.Noty.show('4K UA не знайдено в базі JacRed');
+                    Lampa.Noty.show('4K UA не знайдено');
                 }
             }.bind(this), function () {
-                Lampa.Noty.show('Помилка з\'єднання з JacRed');
+                Lampa.Noty.show('Помилка JacRed');
             }, false, { dataType: 'json' });
         };
 
@@ -94,11 +89,10 @@
             var ts_url = Lampa.Storage.field('torrserver_url');
 
             if (!ts_url) {
-                Lampa.Noty.show('Вкажіть адресу TorrServer');
+                Lampa.Noty.show('Вкажіть TorrServer');
                 return;
             }
 
-            // Прямий запуск першого відеофайлу (index=1)
             var playUrl = ts_url.replace(/\/$/, '') + '/stream/?link=' + encodeURIComponent(link) + '&index=1&play=1';
             
             Lampa.Player.play({
