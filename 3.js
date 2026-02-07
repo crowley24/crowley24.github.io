@@ -3,7 +3,7 @@
 
   var cardBadgesCache = {};
   var pluginPath = 'https://crowley24.github.io/Icons/';
-  var TMDB_IMAGE_URL = 'https://image.tmdb.org/t/p/h30'; // Шлях до логотипів
+  var TMDB_IMAGE_URL = 'https://image.tmdb.org/t/p/h30'; 
 
   var svgIcons = {
     '4K': pluginPath + '4K.svg',
@@ -20,14 +20,13 @@
     'UKR': pluginPath + 'UKR.svg'
   };
 
-  // Функція для створення HTML логотипів студій
   function getStudioLogos(movie) {
     var html = '';
     if (movie && movie.production_companies) {
       movie.production_companies.forEach(function(co) {
         if (co.logo_path) {
-          html += '<div class="quality-badge studio-logo" style="margin-right: 8px;">' +
-                    '<img src="' + TMDB_IMAGE_URL + co.logo_path + '" title="' + co.name + '" style="filter: brightness(0) invert(1); opacity: 0.9;">' +
+          html += '<div class="quality-badge studio-logo" style="margin-right: 10px; display: inline-block; vertical-align: middle;">' +
+                    '<img src="' + TMDB_IMAGE_URL + co.logo_path + '" title="' + co.name + '" style="filter: brightness(0) invert(1); opacity: 0.9; height: 1.1em; width: auto;">' +
                   '</div>';
         }
       });
@@ -73,7 +72,7 @@
         });
       }
       
-      if (title.indexOf('vision') >= 0 || title.indexOf('dovi') >= 0) best.dolbyVision = true;
+      if (title.indexOf('vision') >= 0 || title.indexOf('dovi') >= 0 || title.indexOf(' dv ') >= 0) best.dolbyVision = true;
       if (title.indexOf('hdr') >= 0) best.hdr = true;
       if (title.indexOf('dub') >= 0 || title.indexOf('дубл') >= 0) best.dub = true;
     }
@@ -115,11 +114,9 @@
     if (details.length) {
         if (!$('.quality-badges-container').length) details.after('<div class="quality-badges-container"></div>');
         
-        // Спочатку рендеримо логотипи студій
         var studioHtml = getStudioLogos(e.data.movie);
         $('.quality-badges-container').html(studioHtml);
 
-        // Потім додаємо бейджі якості після парсингу
         Lampa.Parser.get({ search: e.data.movie.title || e.data.movie.name, movie: e.data.movie, page: 1 }, function(response) {
             if (response && response.Results) {
                 var best = getBest(response.Results);
@@ -127,10 +124,10 @@
                 if (best.ukr) badges.push(createBadgeImg('UKR', false, badges.length));
                 if (best.resolution) badges.push(createBadgeImg(best.resolution, false, badges.length));
                 if (best.hdr) badges.push(createBadgeImg('HDR', false, badges.length));
-                if (best.audio) badges.push(createBadgeImg('5.1', false, badges.length)); // Для прикладу 5.1
+                if (best.dolbyVision) badges.push(createBadgeImg('Dolby Vision', false, badges.length));
+                if (best.audio) badges.push(createBadgeImg(best.audio, false, badges.length));
                 if (best.dub) badges.push(createBadgeImg('DUB', false, badges.length));
                 
-                // Додаємо бейджі до вже існуючих логотипів
                 $('.quality-badges-container').append(badges.join(''));
             }
         });
@@ -140,9 +137,8 @@
   setInterval(processCards, 3000);
 
   var style = '<style>\
-    .quality-badges-container { display: flex; align-items: center; gap: 0.3em; margin: 0.6em 0; min-height: 1.5em; flex-wrap: wrap; }\
-    .quality-badge { height: 1.3em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; }\
-    .studio-logo img { height: 1.1em; width: auto; }\
+    .quality-badges-container { display: flex; align-items: center; gap: 0.35em; margin: 0.6em 0; min-height: 1.5em; flex-wrap: wrap; }\
+    .quality-badge { height: 1.3em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; display: flex; align-items: center; }\
     .card-quality-badges { position: absolute; top: 0.3em; right: 0.3em; display: flex; flex-direction: row; gap: 0.2em; pointer-events: none; z-index: 5; }\
     .card-quality-badge { height: 0.9em; opacity: 0; transform: translateY(5px); animation: qb_in 0.3s ease forwards; }\
     @keyframes qb_in { to { opacity: 1; transform: translateY(0); } }\
@@ -152,4 +148,3 @@
   $('body').append(style);
 
 })();
-        
