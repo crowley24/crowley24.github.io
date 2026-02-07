@@ -27,7 +27,7 @@
                         // Збільшений Play (viewBox 0 0 200 60)
                         // x=12 для Play, x=60 для 4K (відступ 48 одиниць)
                         var body = '<path d="M12 14 L46 30 L12 46 Z" fill="url(#g_gold_final)" stroke="#5E4600" stroke-width="1"/>' +
-                            '<text x="60" y="44" font-family="Arial,sans-serif" font-weight="bold" font-size="38" fill="url(#g_gold_final)">4K</text>' +
+                            '<text x="60" y="44" font-family="Arial,sans-serif" font-weight="bold" font-size="34" fill="url(#g_gold_final)">4K</text>' +
                             '<text x="116" y="28" font-family="Arial,sans-serif" font-weight="bold" font-size="15" fill="url(#g_blue_final)">DOLBY</text>' +
                             '<text x="116" y="48" font-family="Arial,sans-serif" font-weight="bold" font-size="15" fill="url(#g_blue_final)">VISION</text>';
 
