@@ -11,29 +11,30 @@
                     
                     if (container.length && !container.find('.open-4k-ukr').length && !e.data.movie.number_of_seasons) {
                         
-                        // Посилені градієнти для виразності
+                        // Насичені градієнти: глибоке золото та королівський синій
                         var defs = '<defs>' +
-                            '<linearGradient id="g_gold_v6" x1="0%" y1="0%" x2="0%" y2="100%">' +
+                            '<linearGradient id="g_gold_final" x1="0%" y1="0%" x2="0%" y2="100%">' +
                                 '<stop offset="0%" style="stop-color:#FFFAD6;stop-opacity:1" />' +
-                                '<stop offset="40%" style="stop-color:#FFD700;stop-opacity:1" />' +
-                                '<stop offset="100%" style="stop-color:#916A08;stop-opacity:1" />' +
+                                '<stop offset="45%" style="stop-color:#FFD700;stop-opacity:1" />' +
+                                '<stop offset="100%" style="stop-color:#8C6700;stop-opacity:1" />' +
                             '</linearGradient>' +
-                            '<linearGradient id="g_blue_v6" x1="0%" y1="0%" x2="0%" y2="100%">' +
-                                '<stop offset="0%" style="stop-color:#5CC1FF;stop-opacity:1" />' +
-                                '<stop offset="100%" style="stop-color:#003F87;stop-opacity:1" />' +
+                            '<linearGradient id="g_blue_final" x1="0%" y1="0%" x2="0%" y2="100%">' +
+                                '<stop offset="0%" style="stop-color:#60C5FF;stop-opacity:1" />' +
+                                '<stop offset="100%" style="stop-color:#0047AB;stop-opacity:1" />' +
                             '</linearGradient>' +
                         '</defs>';
 
-                        // Play більший (22px висота), відступ до 4K збільшено
-                        var body = '<path d="M15 16 L42 30 L15 44 Z" fill="url(#g_gold_v6)" stroke="#634805" stroke-width="0.8"/>' +
-                            '<text x="54" y="44" font-family="Arial,sans-serif" font-weight="bold" font-size="36" fill="url(#g_gold_v6)">4K</text>' +
-                            '<text x="108" y="29" font-family="Arial,sans-serif" font-weight="bold" font-size="14" fill="url(#g_blue_v6)">DOLBY</text>' +
-                            '<text x="108" y="47" font-family="Arial,sans-serif" font-weight="bold" font-size="14" fill="url(#g_blue_v6)">VISION</text>';
+                        // Збільшений Play (viewBox 0 0 200 60)
+                        // x=12 для Play, x=60 для 4K (відступ 48 одиниць)
+                        var body = '<path d="M12 14 L46 30 L12 46 Z" fill="url(#g_gold_final)" stroke="#5E4600" stroke-width="1"/>' +
+                            '<text x="60" y="44" font-family="Arial,sans-serif" font-weight="bold" font-size="38" fill="url(#g_gold_final)">4K</text>' +
+                            '<text x="116" y="28" font-family="Arial,sans-serif" font-weight="bold" font-size="15" fill="url(#g_blue_final)">DOLBY</text>' +
+                            '<text x="116" y="48" font-family="Arial,sans-serif" font-weight="bold" font-size="15" fill="url(#g_blue_final)">VISION</text>';
 
                         var svgIcon = '<svg width="100%" height="100%" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">' + defs + body + '</svg>';
 
-                        // Кнопка 130x34 - ідеальний компактний розмір
-                        var btn = $('<div class="full-start__button selector open-4k-ukr" style="width: 130px; height: 34px; background: rgba(255,255,255,0.08) !important; border-radius: 6px; padding: 0 !important; margin: 3px; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; overflow: hidden; border: none !important;">' +
+                        // background: none прибирає сірий фон. Розмір 135x36 для кращого балансу.
+                        var btn = $('<div class="full-start__button selector open-4k-ukr" style="width: 135px; height: 36px; background: none !important; border: none !important; padding: 0 !important; margin: 3px 6px 3px 0; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; overflow: visible;">' +
                             '<div style="width: 100%; height: 100%; pointer-events: none;">' + svgIcon + '</div>' +
                             '</div>');
 
@@ -51,7 +52,7 @@
         this.searchAndPlay = function (movie) {
             var jackettUrl = Lampa.Storage.field('jackett_url') || 'https://jacred.xyz';
             var jackettKey = Lampa.Storage.field('jackett_key') || '';
-            Lampa.Noty.show('Пошук 4K UA...');
+            Lampa.Noty.show('Шукаю 4K UA...');
 
             var title = movie.original_title || movie.title;
             var year = (movie.release_date || '').slice(0, 4);
