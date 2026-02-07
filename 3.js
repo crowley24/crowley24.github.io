@@ -7,45 +7,38 @@
             Lampa.Listener.follow('full', function (e) {
                 if (e.type === 'complite') {
                     var render = e.object.activity.render();
-                    // Шукаємо контейнер з кнопками
                     var container = render.find('.full-start-new__buttons, .full-start__buttons');
                     
                     if (container.length && !container.find('.open-4k-ukr').length && !e.data.movie.number_of_seasons) {
                         
-                        // Створюємо окремий стиль для нашої кнопки
-                        var style = '<style>' +
-                            '.open-4k-ukr-container { width: 100%; margin-bottom: 20px; padding: 0 5px; }' +
-                            '.open-4k-ukr-btn { width: 100%; height: 70px; cursor: pointer; border-radius: 12px; transition: transform 0.2s; position: relative; overflow: hidden; }' +
-                            '.open-4k-ukr-btn:hover, .open-4k-ukr-btn.focus { transform: scale(1.02); }' +
-                            '</style>';
-                        $('body').append(style);
-
-                        var svgIcon = '<svg width="100%" height="100%" viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">' +
-                            '<rect x="0" y="0" width="200" height="80" rx="10" fill="black" stroke-width="6" stroke="url(#ukr_grad)"/>' +
+                        // Стилізуємо кнопку під стандарт Lampa, але з вашим SVG
+                        var svgIcon = '<svg width="100%" height="100%" viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">' +
+                            '<rect x="4" y="4" width="192" height="72" rx="12" fill="black" stroke-width="8" stroke="url(#ukr_grad_v3)"/>' +
                             '<defs>' +
-                                '<linearGradient id="ukr_grad" x1="0%" y1="0%" x2="100%" y2="0%">' +
+                                '<linearGradient id="ukr_grad_v3" x1="0%" y1="0%" x2="100%" y2="0%">' +
                                     '<stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />' +
-                                    '<stop offset="49%" style="stop-color:#FFD700;stop-opacity:1" />' +
-                                    '<stop offset="51%" style="stop-color:#0057B7;stop-opacity:1" />' +
+                                    '<stop offset="50%" style="stop-color:#FFD700;stop-opacity:1" />' +
+                                    '<stop offset="50%" style="stop-color:#0057B7;stop-opacity:1" />' +
                                     '<stop offset="100%" style="stop-color:#0057B7;stop-opacity:1" />' +
                                 '</linearGradient>' +
                             '</defs>' +
-                            '<text x="15" y="55" font-family="Arial, sans-serif" font-weight="bold" font-size="42" fill="#FFD700">4K</text>' +
-                            '<text x="80" y="38" font-family="Arial, sans-serif" font-weight="bold" font-size="19" fill="#0057B7">DOLBY</text>' +
-                            '<text x="80" y="60" font-family="Arial, sans-serif" font-weight="bold" font-size="19" fill="#0057B7">VISION</text>' +
+                            '<text x="20" y="55" font-family="Arial, sans-serif" font-weight="bold" font-size="44" fill="#FFD700">4K</text>' +
+                            '<text x="85" y="40" font-family="Arial, sans-serif" font-weight="bold" font-size="20" fill="#0057B7">DOLBY</text>' +
+                            '<text x="85" y="62" font-family="Arial, sans-serif" font-weight="bold" font-size="20" fill="#0057B7">VISION</text>' +
                         '</svg>';
 
-                        var btn = $('<div class="open-4k-ukr-container">' +
-                            '<div class="open-4k-ukr-btn selector">' + svgIcon + '</div>' +
+                        // Створюємо кнопку, яка ідеально вписується в ряд
+                        var btn = $('<div class="full-start__button selector open-4k-ukr" style="width: 145px; height: 55px; background: none !important; padding: 0 !important; margin-right: 10px; border: none !important; display: flex; align-items: center; justify-content: center;">' +
+                            svgIcon +
                             '</div>');
 
                         btn.on('click', function () {
                             self.searchAndPlay(e.data.movie);
                         });
 
-                        // Додаємо кнопку НАД усіма іншими, щоб вона була головною
-                        container.before(btn);
-                        Lampa.Controller.collectionSet(container.parent());
+                        // Додаємо на початок ряду
+                        container.prepend(btn);
+                        Lampa.Controller.collectionSet(container);
                     }
                 }
             });
@@ -54,7 +47,7 @@
         this.searchAndPlay = function (movie) {
             var jackettUrl = Lampa.Storage.field('jackett_url') || 'https://jacred.xyz';
             var jackettKey = Lampa.Storage.field('jackett_key') || '';
-            Lampa.Noty.show('Пошук найкращого 4K UA...');
+            Lampa.Noty.show('Шукаю 4K DV UA...');
 
             var title = movie.original_title || movie.title;
             var year = (movie.release_date || '').slice(0, 4);
