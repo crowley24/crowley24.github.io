@@ -11,28 +11,29 @@
                     
                     if (container.length && !container.find('.open-4k-ukr').length && !e.data.movie.number_of_seasons) {
                         
-                        // Градієнти: Золото для Play та 4K, Синій для Vision
+                        // Компактні градієнти
                         var defs = '<defs>' +
-                            '<linearGradient id="g_gold" x1="0%" y1="0%" x2="0%" y2="100%">' +
+                            '<linearGradient id="g_gold_v5" x1="0%" y1="0%" x2="0%" y2="100%">' +
                                 '<stop offset="0%" style="stop-color:#FFF3A6;stop-opacity:1" />' +
                                 '<stop offset="50%" style="stop-color:#FFD700;stop-opacity:1" />' +
                                 '<stop offset="100%" style="stop-color:#B8860B;stop-opacity:1" />' +
                             '</linearGradient>' +
-                            '<linearGradient id="g_blue" x1="0%" y1="0%" x2="0%" y2="100%">' +
+                            '<linearGradient id="g_blue_v5" x1="0%" y1="0%" x2="0%" y2="100%">' +
                                 '<stop offset="0%" style="stop-color:#4facfe;stop-opacity:1" />' +
                                 '<stop offset="100%" style="stop-color:#0057B7;stop-opacity:1" />' +
                             '</linearGradient>' +
                         '</defs>';
 
-                        var body = '<path d="M15 15 L45 30 L15 45 Z" fill="url(#g_gold)" stroke="#8B6508" stroke-width="1"/>' +
-                            '<text x="55" y="45" font-family="Arial,sans-serif" font-weight="bold" font-size="44" fill="url(#g_gold)">4K</text>' +
-                            '<text x="115" y="28" font-family="Arial,sans-serif" font-weight="bold" font-size="18" fill="url(#g_blue)">DOLBY</text>' +
-                            '<text x="115" y="50" font-family="Arial,sans-serif" font-weight="bold" font-size="18" fill="url(#g_blue)">VISION</text>';
+                        // Зменшені шрифти та значок
+                        var body = '<path d="M18 18 L40 30 L18 42 Z" fill="url(#g_gold_v5)" stroke="#8B6508" stroke-width="0.5"/>' +
+                            '<text x="48" y="44" font-family="Arial,sans-serif" font-weight="bold" font-size="34" fill="url(#g_gold_v5)">4K</text>' +
+                            '<text x="100" y="30" font-family="Arial,sans-serif" font-weight="bold" font-size="14" fill="url(#g_blue_v5)">DOLBY</text>' +
+                            '<text x="100" y="46" font-family="Arial,sans-serif" font-weight="bold" font-size="14" fill="url(#g_blue_v5)">VISION</text>';
 
                         var svgIcon = '<svg width="100%" height="100%" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">' + defs + body + '</svg>';
 
-                        // Розмір 135x36 - ідеально вписується в ряд без перекосів
-                        var btn = $('<div class="full-start__button selector open-4k-ukr" style="width: 135px; height: 36px; background: rgba(255,255,255,0.05) !important; border-radius: 8px; padding: 0 !important; margin: 4px; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; overflow: hidden;">' +
+                        // Кнопка стала ще компактнішою (125x34)
+                        var btn = $('<div class="full-start__button selector open-4k-ukr" style="width: 125px; height: 34px; background: rgba(255,255,255,0.08) !important; border-radius: 6px; padding: 0 !important; margin: 3px; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; overflow: hidden; border: none !important;">' +
                             '<div style="width: 100%; height: 100%; pointer-events: none;">' + svgIcon + '</div>' +
                             '</div>');
 
