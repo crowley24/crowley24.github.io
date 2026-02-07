@@ -11,33 +11,35 @@
                     
                     if (container.length && !container.find('.open-4k-ukr').length && !e.data.movie.number_of_seasons) {
                         
-                        // Стилізуємо кнопку під стандарт Lampa, але з вашим SVG
+                        // Ваш SVG дизайн - оптимізований під розмір стандартної кнопки
                         var svgIcon = '<svg width="100%" height="100%" viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">' +
-                            '<rect x="4" y="4" width="192" height="72" rx="12" fill="black" stroke-width="8" stroke="url(#ukr_grad_v3)"/>' +
+                            '<rect x="5" y="5" width="190" height="70" rx="14" fill="black" stroke-width="10" stroke="url(#ukr_grad_final)"/>' +
                             '<defs>' +
-                                '<linearGradient id="ukr_grad_v3" x1="0%" y1="0%" x2="100%" y2="0%">' +
+                                '<linearGradient id="ukr_grad_final" x1="0%" y1="0%" x2="100%" y2="0%">' +
                                     '<stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />' +
                                     '<stop offset="50%" style="stop-color:#FFD700;stop-opacity:1" />' +
                                     '<stop offset="50%" style="stop-color:#0057B7;stop-opacity:1" />' +
                                     '<stop offset="100%" style="stop-color:#0057B7;stop-opacity:1" />' +
                                 '</linearGradient>' +
                             '</defs>' +
-                            '<text x="20" y="55" font-family="Arial, sans-serif" font-weight="bold" font-size="44" fill="#FFD700">4K</text>' +
-                            '<text x="85" y="40" font-family="Arial, sans-serif" font-weight="bold" font-size="20" fill="#0057B7">DOLBY</text>' +
-                            '<text x="85" y="62" font-family="Arial, sans-serif" font-weight="bold" font-size="20" fill="#0057B7">VISION</text>' +
+                            '<text x="20" y="55" font-family="Arial, sans-serif" font-weight="bold" font-size="48" fill="#FFD700">4K</text>' +
+                            '<text x="88" y="40" font-family="Arial, sans-serif" font-weight="bold" font-size="22" fill="#0057B7">DOLBY</text>' +
+                            '<text x="88" y="62" font-family="Arial, sans-serif" font-weight="bold" font-size="22" fill="#0057B7">VISION</text>' +
                         '</svg>';
 
-                        // Створюємо кнопку, яка ідеально вписується в ряд
-                        var btn = $('<div class="full-start__button selector open-4k-ukr" style="width: 145px; height: 55px; background: none !important; padding: 0 !important; margin-right: 10px; border: none !important; display: flex; align-items: center; justify-content: center;">' +
-                            svgIcon +
+                        // Створюємо кнопку з точними розмірами Lampa (зазвичай це ~150-170px ширина)
+                        var btn = $('<div class="full-start__button selector open-4k-ukr" style="width: auto; min-width: 160px; height: 55px; background: none !important; border: none !important; padding: 0 !important; display: flex; align-items: center; justify-content: center; margin-right: 10px;">' +
+                            '<div style="width: 100%; height: 100%;">' + svgIcon + '</div>' +
                             '</div>');
 
                         btn.on('click', function () {
                             self.searchAndPlay(e.data.movie);
                         });
 
-                        // Додаємо на початок ряду
+                        // Додаємо ПЕРЕД кнопкою "Дивитись"
                         container.prepend(btn);
+                        
+                        // Оновлюємо контролер, щоб пульт бачив кнопку
                         Lampa.Controller.collectionSet(container);
                     }
                 }
@@ -82,7 +84,6 @@
             var link = torrent.MagnetUri || torrent.Link || torrent.magnet || torrent.link;
             var ts_url = Lampa.Storage.field('torrserver_url');
             if (!ts_url) return Lampa.Noty.show('Налаштуйте TorrServer');
-
             var playUrl = ts_url.replace(/\/$/, '') + '/stream/?link=' + encodeURIComponent(link) + '&index=1&play=1';
             Lampa.Player.play({ url: playUrl, title: movie.title + ' (4K UA)', movie: movie });
         };
