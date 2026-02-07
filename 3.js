@@ -1,22 +1,23 @@
 (function () {
     'use strict';
 
-    var TMDB_KEY = '4ef0d7355d9ffb5151e987764708ce96'; // Ваш ключ TMDB
-
     function Ukr4KPlugin() {
         this.init = function () {
+            var self = this;
             Lampa.Listener.follow('full', function (e) {
                 if (e.type === 'complite') {
                     var render = e.object.activity.render();
                     var container = render.find('.full-start-new__buttons, .full-start__buttons');
                     
-                    if (container.length && !container.find('.open-4k-ukr').length) {
+                    // Не додаємо кнопку, якщо це серіал (для серіалів потрібна інша логіка папок)
+                    if (container.length && !container.find('.open-4k-ukr').length && !e.data.movie.number_of_seasons) {
                         var btn = $('<div class="full-start__button selector open-4k-ukr" style="background: #e67e22 !important; color: #fff !important;">' +
-                            '<span>4K UHD UA</span>' +
+                            '<svg width="16" height="16" viewBox="0 0 16 16" fill="white" style="margin-right:8px;vertical-align:middle;"><path d="M2 2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm2.372 3.715.435-.714h1.71v3.93h.733v.957h-.733V11H5.405V9.888H2.5v-.971c.574-1.077 1.225-2.142 1.872-3.202m7.73-.714h1.306l-2.14 2.584L13.5 11h-1.428l-1.679-2.624-.615.7V11H8.59V5.001h1.187v2.686h.057L12.102 5z"/></svg>' +
+                            '<span>4K DV UA</span>' +
                             '</div>');
 
-                        btn.on('hover:enter', function () {
-                            searchAndPlay(e.data.movie);
+                        btn.on('click', function () {
+                            self.searchAndPlay(e.data.movie);
                         });
 
                         container.prepend(btn);
@@ -26,69 +27,95 @@
             });
         };
 
-        async function searchAndPlay(movie) {
-            Lampa.Noty.show('Шукаю 4K Dolby Vision (UA)...');
+        this.searchAndPlay = function (movie) {
+            Lampa.Noty.show('Шукаю найкращий 4K DV (UA)...');
 
-            var title = movie.original_title || movie.title;
-            var year = (movie.release_date || '').slice(0, 4);
-            // Формуємо жорсткий запит для Jackett
-            var query = encodeURIComponent(title + ' ' + year + ' 2160p ukr');
-            
             var jackettUrl = Lampa.Storage.field('jackett_url');
             var jackettKey = Lampa.Storage.field('jackett_key');
 
             if (!jackettUrl) {
-                Lampa.Noty.show('Налаштуйте Jackett у параметрах!');
+                Lampa.Noty.show('Вкажіть Jackett URL у налаштуваннях');
                 return;
             }
 
-            try {
-                var response = await fetch(jackettUrl + '/api/v2.0/indexers/all/results?apikey=' + jackettKey + '&Query=' + query);
-                var json = await response.json();
+            var title = movie.original_title || movie.title;
+            var year = (movie.release_date || '').slice(0, 4);
+            
+            // Спеціальний фільтр: назва + рік + якість + мова
+            var query = encodeURIComponent(title + ' ' + year + ' 2160p ukr');
+            var url = jackettUrl + '/api/v2.0/indexers/all/results?apikey=' + jackettKey + '&Query=' + query;
+
+            var network = new Lampa.Reguest();
+            network.silent(url, function (json) {
                 var results = json.Results || [];
 
-                // 1. Фільтруємо результати (шукаємо Dolby Vision та 4K)
+                // Глибока фільтрація: обов'язково 4K + Dolby Vision (або хоча б HDR) + UKR
                 var filtered = results.filter(function (item) {
                     var t = item.Title.toLowerCase();
-                    return (t.includes('dv') || t.includes('vision') || t.includes('dovi')) && 
-                           (t.includes('2160p') || t.includes('4k') || t.includes('uhd'));
+                    var is4K = t.includes('2160p') || t.includes('4k') || t.includes('uhd');
+                    var isDV = t.includes('dv') || t.includes('vision') || t.includes('dovi');
+                    var isUA = t.includes('ukr') || t.includes('укр') || t.includes('ua') || t.includes('hurtom') || t.includes('toloka');
+                    return is4K && isUA;
                 });
 
-                // 2. Сортуємо за розміром (найкраща якість зазвичай найбільша)
-                filtered.sort((a, b) => b.Size - a.Size);
+                // Пріоритет: спочатку ті, де є Dolby Vision
+                filtered.sort(function(a, b) {
+                    var aDV = /dv|vision|dovi/i.test(a.Title);
+                    var bDV = /dv|vision|dovi/i.test(b.Title);
+                    if (aDV && !bDV) return -1;
+                    if (!aDV && bDV) return 1;
+                    return b.Size - a.Size; // Якщо обидва DV, беремо більший за розміром
+                });
 
                 if (filtered.length > 0) {
-                    var bestMatch = filtered[0];
-                    Lampa.Noty.show('Знайдено: ' + bestMatch.Title.slice(0, 30) + '...');
-                    startStreaming(bestMatch, movie);
+                    var best = filtered[0];
+                    Lampa.Noty.show('Знайдено: ' + (best.Title.substring(0, 40) + '...'));
+                    this.sendToTorrServer(best, movie);
                 } else {
-                    Lampa.Noty.show('4K DV з UA дубляжем не знайдено');
+                    Lampa.Noty.show('4K UA реліз не знайдено');
                 }
-            } catch (e) {
-                Lampa.Noty.show('Помилка пошуку');
-            }
-        }
+            }.bind(this), function () {
+                Lampa.Noty.show('Помилка запиту до Jackett');
+            });
+        };
 
-        function startStreaming(torrent, movie) {
+        this.sendToTorrServer = function (torrent, movie) {
             var torrserver = Lampa.Storage.field('torrserver_url');
             if (!torrserver) {
-                Lampa.Noty.show('Налаштуйте TorrServer!');
+                Lampa.Noty.show('TorrServer не налаштовано');
                 return;
             }
 
             var link = torrent.MagnetUri || torrent.Link;
-            // Логіка додавання в TorrServer та запуск плеєра Lampa
-            // (Використовуйте стандартний метод Lampa.Player.play)
-            Lampa.Player.play({
-                url: torrserver + '/stream/?link=' + encodeURIComponent(link) + '&index=1&play=1',
-                title: movie.title + ' (4K DV UA)',
-                movie: movie
-            });
-        }
+            var title = movie.title + ' (4K DV UA)';
+
+            Lampa.Noty.show('Додаю до TorrServer...');
+
+            // Використовуємо стандартний запуск через TorrServer у Lampa
+            var player_data = {
+                url: link,
+                title: title,
+                movie: movie,
+                intent: 'play'
+            };
+
+            // Перевіряємо, чи є TorrServer плагін для обробки
+            if (Lampa.Torrserver) {
+                Lampa.Torrserver.stream(link, {
+                    title: title,
+                    movie: movie
+                });
+            } else {
+                // Прямий запуск через плеєр, якщо немає спец. модуля
+                Lampa.Player.play({
+                    url: torrserver + '/stream/?link=' + encodeURIComponent(link) + '&index=1&play=1',
+                    title: title
+                });
+            }
+        };
     }
 
     if (window.Lampa) {
         new Ukr4KPlugin().init();
     }
 })();
-
