@@ -11,7 +11,7 @@
                     
                     if (container.length && !container.find('.open-4k-ukr').length && !e.data.movie.number_of_seasons) {
                         
-                        // Ваш SVG дизайн зі збільшеними пропорціями
+                        // Ваш SVG дизайн - ВИПРАВЛЕНО синтаксис градієнта
                         var svgIcon = '<svg width="100%" height="100%" viewBox="0 0 200 80" xmlns="http://www.w3.org/2000/svg" style="display: block; overflow: visible;">' +
                             '<rect x="2" y="2" width="196" height="76" rx="10" fill="black" stroke-width="8" stroke="url(#ukraine_grad)"/>' +
                             '<defs>' +
@@ -20,15 +20,15 @@
                                     '<stop offset="50%" style="stop-color:#FFD700;stop-opacity:1" />' +
                                     '<stop offset="50%" style="stop-color:#0057B7;stop-opacity:1" />' +
                                     '<stop offset="100%" style="stop-color:#0057B7;stop-opacity:1" />' +
-                                </linearGradient>' +
+                                '</linearGradient>' +
                             '</defs>' +
                             '<text x="22" y="56" font-family="Arial, sans-serif" font-weight="bold" font-size="44" fill="#FFD700">4K</text>' +
                             '<text x="88" y="40" font-family="Arial, sans-serif" font-weight="bold" font-size="20" fill="#0057B7">DOLBY</text>' +
                             '<text x="88" y="62" font-family="Arial, sans-serif" font-weight="bold" font-size="20" fill="#0057B7">VISION</text>' +
                         '</svg>';
 
-                        // Збільшено розміри: width: 220px, height: 85px
-                        var btn = $('<div class="full-start__button selector open-4k-ukr" style="width: 220px; height: 85px; padding: 5px; background: none !important; border: none !important; margin-right: 15px; margin-bottom: 10px;">' +
+                        // Розміри збільшено для кращої видимості на ТБ
+                        var btn = $('<div class="full-start__button selector open-4k-ukr" style="width: 240px; height: 95px; padding: 0; background: none !important; border: none !important; margin-right: 15px; margin-bottom: 15px; cursor: pointer; display: inline-block; vertical-align: top;">' +
                             svgIcon +
                             '</div>');
 
@@ -47,7 +47,7 @@
             var jackettUrl = Lampa.Storage.field('jackett_url') || 'https://jacred.xyz';
             var jackettKey = Lampa.Storage.field('jackett_key') || '';
 
-            Lampa.Noty.show('Шукаю 4K DV UA...');
+            Lampa.Noty.show('Шукаю найкращий 4K DV (UA)...');
 
             var title = movie.original_title || movie.title;
             var year = (movie.release_date || '').slice(0, 4);
@@ -67,14 +67,16 @@
 
                 if (filtered.length > 0) {
                     filtered.sort(function(a, b) {
-                        var aDV = regDV.test((a.Title || a.title).toLowerCase());
-                        var bDV = regDV.test((b.Title || b.title).toLowerCase());
+                        var tA = (a.Title || a.title || '').toLowerCase();
+                        var tB = (b.Title || b.title || '').toLowerCase();
+                        var aDV = regDV.test(tA);
+                        var bDV = regDV.test(tB);
                         if (aDV && !bDV) return -1;
                         if (!aDV && bDV) return 1;
                         return (b.Size || b.size || 0) - (a.Size || a.size || 0);
                     });
 
-                    Lampa.Noty.show('Знайдено найкращий реліз!');
+                    Lampa.Noty.show('Знайдено! Запускаю...');
                     this.play(filtered[0], movie);
                 } else {
                     Lampa.Noty.show('4K UA не знайдено');
@@ -89,7 +91,7 @@
             var ts_url = Lampa.Storage.field('torrserver_url');
 
             if (!ts_url) {
-                Lampa.Noty.show('Вкажіть TorrServer');
+                Lampa.Noty.show('Налаштуйте TorrServer');
                 return;
             }
 
