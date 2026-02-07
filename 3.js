@@ -11,27 +11,33 @@
                     
                     if (container.length && !container.find('.open-4k-ukr').length && !e.data.movie.number_of_seasons) {
                         
-                        // Ваш SVG: додано значок Play (трикутник) зліва
+                        // SVG з об'ємним золотим Play та компактним дизайном
                         var svgIcon = '<svg width="100%" height="100%" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">' +
                             '<defs>' +
-                                '<linearGradient id="ukr_grad_v6" x1="0%" y1="0%" x2="100%" y2="0%">' +
+                                '<linearGradient id="gold_play" x1="0%" y1="0%" x2="0%" y2="100%">' +
+                                    '<stop offset="0%" style="stop-color:#FFF3A6;stop-opacity:1" />' +
+                                    '<stop offset="50%" style="stop-color:#FFD700;stop-opacity:1" />' +
+                                    '<stop offset="100%" style="stop-color:#B8860B;stop-opacity:1" />' +
+                                '</linearGradient>' +
+                                '<linearGradient id="ukr_border" x1="0%" y1="0%" x2="100%" y2="0%">' +
                                     '<stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />' +
                                     '<stop offset="49%" style="stop-color:#FFD700;stop-opacity:1" />' +
                                     '<stop offset="51%" style="stop-color:#0057B7;stop-opacity:1" />' +
                                     '<stop offset="100%" style="stop-color:#0057B7;stop-opacity:1" />' +
-                                '</linearGradient>' +
+                                </linearGradient>' +
                             '</defs>' +
-                            '<rect x="4" y="4" width="192" height="52" rx="10" fill="black" stroke-width="6" stroke="url(#ukr_grad_v6)"/>' +
-                            // Значок Play (трикутник)
-                            '<path d="M25 18 L45 30 L25 42 Z" fill="white" />' +
-                            // Текст зміщено вправо через Play
-                            '<text x="55" y="42" font-family="Arial, sans-serif" font-weight="bold" font-size="38" fill="#FFD700">4K</text>' +
-                            '<text x="105" y="28" font-family="Arial, sans-serif" font-weight="bold" font-size="16" fill="#0057B7">DOLBY</text>' +
-                            '<text x="105" y="46" font-family="Arial, sans-serif" font-weight="bold" font-size="16" fill="#0057B7">VISION</text>' +
+                            '<rect x="4" y="4" width="192" height="52" rx="12" fill="black" stroke-width="6" stroke="url(#ukr_border)"/>' +
+                            // Об'ємний золотий Play
+                            '<path d="M22 18 L46 30 L22 42 Z" fill="url(#gold_play)" stroke="#8B6508" stroke-width="1"/>' +
+                            '<path d="M22 18 L46 30 L22 20 Z" fill="rgba(255,255,255,0.4)"/>' +
+                            // Текст
+                            '<text x="58" y="44" font-family="Arial, sans-serif" font-weight="bold" font-size="40" fill="#FFD700">4K</text>' +
+                            '<text x="108" y="28" font-family="Arial, sans-serif" font-weight="bold" font-size="17" fill="#0057B7">DOLBY</text>' +
+                            '<text x="108" y="48" font-family="Arial, sans-serif" font-weight="bold" font-size="17" fill="#0057B7">VISION</text>' +
                         '</svg>';
 
-                        // Кнопка з висотою 44px — це ідеальний стандарт Lampa
-                        var btn = $('<div class="full-start__button selector open-4k-ukr" style="width: 165px; height: 44px; background: none !important; border: none !important; padding: 0 !important; margin: 5px; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;">' +
+                        // Розміри зменшено до стандарту Lampa (140x40)
+                        var btn = $('<div class="full-start__button selector open-4k-ukr" style="width: 145px; height: 40px; background: none !important; border: none !important; padding: 0 !important; margin: 4px; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;">' +
                             '<div style="width: 100%; height: 100%; pointer-events: none;">' + svgIcon + '</div>' +
                             '</div>');
 
@@ -60,7 +66,7 @@
                 var results = json.Results || (Array.isArray(json) ? json : []);
                 var filtered = results.filter(function (item) {
                     var t = (item.Title || item.title || '').toLowerCase();
-                    return (t.includes('ukr') || t.includes('укр') || t.includes('ua') || t.includes('hurtom')) && (t.includes('2160') || t.includes('4k'));
+                    return (t.includes('ukr') || t.includes('укр') || t.includes('ua')) && (t.includes('2160') || t.includes('4k'));
                 });
 
                 if (filtered.length > 0) {
