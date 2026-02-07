@@ -40,6 +40,12 @@ const translations = {
         position_corner: {
             uk: 'У лівому нижньому куті'
         },
+        show_studio: {
+        uk: 'Показувати логотип студії'
+        },
+        show_studio_desc: {
+        uk: 'Відображати іконку телемережі (Netflix, HBO) або кіностудії'
+        },
         logo_scale: {
             uk: 'Розмір логотипу'
         },
