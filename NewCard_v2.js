@@ -958,6 +958,15 @@ body.applecation--zoom-enabled .full-start__background.loaded:not(.dim) {
     // Завантажуємо іконку студії/мережі
     function loadNetworkIcon(activity, data) {
         const networkContainer = activity.render().find('.applecation__network');
+
+         // Перевіряємо значення з пам'яті (Storage)
+    const showStudio = Lampa.Storage.get('applecation_show_studio', 'true');
+    
+    // Якщо вимкнено — видаляємо контейнер і виходимо з функції
+    if (showStudio === false || showStudio === 'false') {
+        networkContainer.remove();
+        return;
+    }
         
         // Для серіалів - телемережа
         if (data.networks && data.networks.length) {
