@@ -83,6 +83,7 @@ const translations = {
         if (Lampa.Storage.get('applecation_logo_scale') === undefined) Lampa.Storage.set('applecation_logo_scale', '100');
         if (Lampa.Storage.get('applecation_text_scale') === undefined) Lampa.Storage.set('applecation_text_scale', '100');
         if (Lampa.Storage.get('applecation_spacing_scale') === undefined) Lampa.Storage.set('applecation_spacing_scale', '100');
+        if (Lampa.Storage.get('applecation_show_studio') === undefined) Lampa.Storage.set('applecation_show_studio', true);
         
         // Ініціалізація зуму (Ken Burns)
         if (Lampa.Storage.get('applecation_apple_zoom') === undefined) {
