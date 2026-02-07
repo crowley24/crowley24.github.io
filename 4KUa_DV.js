@@ -175,7 +175,7 @@
     var qp = new URLSearchParams({ t:'search', q:query });
     if (jb.key) qp.set('apikey', jb.key);
     catsToParams(catsCSV).forEach(function(c){ qp.append('cat',c); });
-    var url = jb.base + '/api/v2.0/indexers/toloka/results/torznab/?' + qp.toString();
+    var url = jb.base + '/api/v2.0/indexers/all/results/torznab/?' + qp.toString();
     try{
       var r = await fetch(url,{method:'GET',credentials:'omit',mode:'cors'});
       if(!r.ok) return [];
