@@ -84,11 +84,7 @@ const translations = {
         if (Lampa.Storage.get('applecation_text_scale') === undefined) Lampa.Storage.set('applecation_text_scale', '100');
         if (Lampa.Storage.get('applecation_spacing_scale') === undefined) Lampa.Storage.set('applecation_spacing_scale', '100');
         if (Lampa.Storage.get('applecation_show_studio') === undefined) Lampa.Storage.set('applecation_show_studio', true);
-        
-        // Ініціалізація зуму (Ken Burns)
-        if (Lampa.Storage.get('applecation_apple_zoom') === undefined) {
-            Lampa.Storage.set('applecation_apple_zoom', true);
-        }
+        if (Lampa.Storage.get('applecation_apple_zoom') === undefined) Lampa.Storage.set('applecation_apple_zoom', true);
 
         Lampa.SettingsApi.addComponent({
             component: 'applecation_settings',
@@ -96,7 +92,7 @@ const translations = {
             icon: PLUGIN_ICON
         });
 
-        // ПАРАМЕТР: Плаваючий зум фону
+        // 1. Плаваючий зум фону
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: {
@@ -113,24 +109,25 @@ const translations = {
             }
         });
 
-        //ПАРАМЕТР: Логотипи Студій
+        // 2. Логотипи Студій (ВИПРАВЛЕНО type на trigger)
         Lampa.SettingsApi.addParam({
-    component: 'applecation_settings', // Замініть на назву вашого компонента налаштувань, якщо вона інша
-    param: {
-        name: 'applecation_show_studio',
-        type: 'boolean',
-        default: true
-    },
-    field: {
-        name: 'Показувати логотип студії',
-        description: 'Відображати іконку Netflix, HBO, Disney тощо у мета-даних'
-    },
-    onChange: (value) => {
-        Lampa.Storage.set('applecation_show_studio', value);
-    }
-});
+            component: 'applecation_settings',
+            param: {
+                name: 'applecation_show_studio',
+                type: 'trigger',
+                default: true
+            },
+            field: {
+                name: 'Показувати логотип студії',
+                description: 'Відображати іконку Netflix, HBO, Disney тощо у мета-даних'
+            },
+            onChange: function(value) {
+                Lampa.Storage.set('applecation_show_studio', value);
+                // Тут можна додати функцію оновлення інтерфейсу, якщо треба миттєво
+            }
+        });
         
-        // Параметр: Показувати рейтинги
+        // 3. Показувати рейтинги
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: {
@@ -147,7 +144,7 @@ const translations = {
             }
         });
         
-        // Розташування рейтингів
+        // 4. Розташування рейтингів
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: {
@@ -168,31 +165,16 @@ const translations = {
                 $('body').removeClass('applecation--ratings-card applecation--ratings-corner');
                 $('body').addClass('applecation--ratings-' + value);
                 addCustomTemplate();
-                Lampa.Activity.back();
             }
         });
 
-        // Показувати реакції Lampa
-        Lampa.SettingsApi.addParam({
-            component: 'applecation_settings',
-            param: {
-                name: 'card_interfice_reactions',
-                type: 'trigger',
-                default: true
-            },
-            field: {
-                name: 'Показувати реакції Lampa',
-                description: 'Відображати блок з реакціями на картці'
-            }
-        });
-
-        // Розмір логотипа
+        // 5. Розмір логотипа
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: {
                 name: 'applecation_logo_scale',
                 type: 'select',
-                values: {'50':'50%','60':'60%','70':'70%','80':'80%','90':'90%','100':t('scale_default'),'110':'110%','120':'120%','130':'130%','140':'140%','150':'150%','160':'160%','170':'170%','180':'180%'},
+                values: {'50':'50%','70':'70%','100':t('scale_default'),'130':'130%','150':'150%'},
                 default: '100'
             },
             field: {
@@ -205,13 +187,13 @@ const translations = {
             }
         });
 
-        // Розмір тексту
+        // 6. Розмір тексту
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: {
                 name: 'applecation_text_scale',
                 type: 'select',
-                values: {'50':'50%','60':'60%','70':'70%','80':'80%','90':'90%','100':t('scale_default'),'110':'110%','120':'120%','130':'130%','140':'140%','150':'150%','160':'160%','170':'170%','180':'180%'},
+                values: {'70':'70%','85':'85%','100':t('scale_default'),'115':'115%','130':'130%'},
                 default: '100'
             },
             field: {
@@ -224,13 +206,13 @@ const translations = {
             }
         });
 
-        // Відступи
+        // 7. Відступи
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: {
                 name: 'applecation_spacing_scale',
                 type: 'select',
-                values: {'50':'50%','60':'60%','70':'70%','80':'80%','90':'90%','100':t('scale_default'),'110':'110%','120':'120%','130':'130%','140':'140%','150':'150%','160':'160%','170':'170%','180':'180%','200':'200%','250':'250%','300':'300%'},
+                values: {'50':'50%','100':t('scale_default'),'150':'150%','200':'200%'},
                 default: '100'
             },
             field: {
