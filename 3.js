@@ -10,8 +10,8 @@
                     var container = render.find('.full-start-new__buttons, .full-start__buttons');
                     
                     if (container.length && !container.find('.open-4k-ukr').length && !e.data.movie.number_of_seasons) {
-                        var btn = $('<div class="full-start__button selector open-4k-ukr" style="background: #e67e22 !important; color: #fff !important; border-radius: 5px; margin-right: 5px; display: flex; align-items: center; padding: 0 15px; height: 3em;">' +
-                            '<span>4K DV UA (AUTO)</span>' +
+                        var btn = $('<div class="full-start__button selector open-4k-ukr" style="background: #e67e22 !important; color: #fff !important; border-radius: 5px; margin-right: 5px; display: flex; align-items: center; padding: 0 15px; height: 3em; font-weight: bold;">' +
+                            '<span>4K UHD UA</span>' +
                             '</div>');
 
                         btn.on('click', function () {
@@ -26,65 +26,57 @@
         };
 
         this.searchAndPlay = function (movie) {
-            // Напряму прописуємо JacRed, якщо в налаштуваннях порожньо
             var jackettUrl = Lampa.Storage.field('jackett_url') || 'https://jacred.xyz';
             var jackettKey = Lampa.Storage.field('jackett_key') || '';
 
-            Lampa.Noty.show('З’єднання з JacRed...');
+            Lampa.Noty.show('Зчитую базу торрентів...');
 
             var title = movie.original_title || movie.title;
             var year = (movie.release_date || '').slice(0, 4);
             
-            // Формуємо пошуковий запит: Назва + Рік + 2160p + ukr
-            var query = encodeURIComponent(title + ' ' + year + ' 2160p ukr');
+            // Запит робимо максимально широким, щоб JacRed не обрізав результати сам
+            var query = encodeURIComponent(title + ' ' + year + ' 2160p');
             var url = jackettUrl.replace(/\/$/, '') + '/api/v2.0/indexers/all/results?apikey=' + jackettKey + '&Query=' + query;
 
-            // Використовуємо Lampa.Network.native з додатковими параметрами
             Lampa.Network.native(url, function (json) {
-                if (json && (json.Results || Array.isArray(json))) {
-                    var results = json.Results || (Array.isArray(json) ? json : []);
-                    this.processResults(results, movie);
+                var results = json.Results || (Array.isArray(json) ? json : []);
+                
+                // Регулярні вирази для пошуку
+                var regUKR = /ukr|укр|ua|hurtom|toloka/i;
+                var reg4K = /2160|4k|uhd/i;
+                var regDV = /dv|vision|dovi/i;
+
+                var filtered = results.filter(function (item) {
+                    var t = (item.Title || item.title || '').toLowerCase();
+                    if (!t) return false;
+                    
+                    // Перевіряємо наявність UA та 4K одночасно
+                    return regUKR.test(t) && reg4K.test(t);
+                });
+
+                if (filtered.length > 0) {
+                    // Сортуємо: спочатку Dolby Vision, потім за розміром
+                    filtered.sort(function(a, b) {
+                        var tA = (a.Title || a.title || '').toLowerCase();
+                        var tB = (b.Title || b.title || '').toLowerCase();
+                        
+                        var aDV = regDV.test(tA);
+                        var bDV = regDV.test(tB);
+
+                        if (aDV && !bDV) return -1;
+                        if (!aDV && bDV) return 1;
+                        return (b.Size || b.size || 0) - (a.Size || a.size || 0);
+                    });
+
+                    var best = filtered[0];
+                    Lampa.Noty.show('Знайдено UA реліз. Запускаю...');
+                    this.play(best, movie);
                 } else {
-                    Lampa.Noty.show('JacRed: Нічого не знайдено');
+                    Lampa.Noty.show('В 4K знайдено лише іноземні релізи');
                 }
-            }.bind(this), function (err) {
-                console.log('JacRed Error:', err);
-                Lampa.Noty.show('Помилка з\'єднання. Спробуйте змінити HTTP на HTTPS.');
-            }.bind(this), false, {
-                dataType: 'json',
-                headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36'
-                }
-            });
-        };
-
-        this.processResults = function (results, movie) {
-            // Фільтруємо: Тільки 4K та Тільки Українська
-            var filtered = results.filter(function (item) {
-                var t = (item.Title || item.title || '').toLowerCase();
-                var is4K = t.indexOf('2160') >= 0 || t.indexOf('4k') >= 0;
-                var isUA = t.indexOf('ukr') >= 0 || t.indexOf('укр') >= 0 || t.indexOf('ua') >= 0 || t.indexOf('hurtom') >= 0;
-                return is4K && isUA;
-            });
-
-            // Сортуємо: Пріоритет Dolby Vision, потім за найбільшим розміром
-            filtered.sort(function(a, b) {
-                var tA = (a.Title || a.title || '').toLowerCase();
-                var tB = (b.Title || b.title || '').toLowerCase();
-                var aDV = /dv|vision|dovi/i.test(tA);
-                var bDV = /dv|vision|dovi/i.test(tB);
-                if (aDV && !bDV) return -1;
-                if (!aDV && bDV) return 1;
-                return (b.Size || b.size || 0) - (a.Size || a.size || 0);
-            });
-
-            if (filtered.length > 0) {
-                var best = filtered[0];
-                Lampa.Noty.show('Запускаю: ' + (best.Title || best.title).substring(0, 30));
-                this.play(best, movie);
-            } else {
-                Lampa.Noty.show('4K DV UA не знайдено в базі');
-            }
+            }.bind(this), function () {
+                Lampa.Noty.show('Помилка JacRed. Перевірте з\'єднання.');
+            }, false, { dataType: 'json' });
         };
 
         this.play = function (torrent, movie) {
@@ -96,12 +88,12 @@
                 return;
             }
 
-            // Формуємо посилання для автозапуску найбільшого файлу
+            // Прямий запуск першого відеофайлу
             var playUrl = ts_url.replace(/\/$/, '') + '/stream/?link=' + encodeURIComponent(link) + '&index=1&play=1';
             
             Lampa.Player.play({
                 url: playUrl,
-                title: movie.title + ' (4K DV UA)',
+                title: movie.title + ' (4K UA)',
                 movie: movie
             });
         };
