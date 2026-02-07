@@ -11,32 +11,31 @@
                     
                     if (container.length && !container.find('.open-4k-ukr').length && !e.data.movie.number_of_seasons) {
                         
-                        // SVG адаптований під компактний розмір кнопки Lampa
+                        // Оптимізований SVG без зайвих символів, що викликають Script Error
                         var svgIcon = '<svg width="100%" height="100%" viewBox="0 0 200 65" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">' +
-                            '<rect x="4" y="4" width="192" height="57" rx="10" fill="black" stroke-width="8" stroke="url(#ukr_grad_final_v4)"/>' +
                             '<defs>' +
-                                '<linearGradient id="ukr_grad_final_v4" x1="0%" y1="0%" x2="100%" y2="0%">' +
+                                '<linearGradient id="ukr_grad_final_v5" x1="0%" y1="0%" x2="100%" y2="0%">' +
                                     '<stop offset="0%" style="stop-color:#FFD700;stop-opacity:1" />' +
-                                    '<stop offset="48%" style="stop-color:#FFD700;stop-opacity:1" />' +
-                                    '<stop offset="52%" style="stop-color:#0057B7;stop-opacity:1" />' +
+                                    '<stop offset="49%" style="stop-color:#FFD700;stop-opacity:1" />' +
+                                    '<stop offset="51%" style="stop-color:#0057B7;stop-opacity:1" />' +
                                     '<stop offset="100%" style="stop-color:#0057B7;stop-opacity:1" />' +
-                                </linearGradient>' +
+                                '</linearGradient>' +
                             '</defs>' +
+                            '<rect x="4" y="4" width="192" height="57" rx="10" fill="black" stroke-width="8" stroke="url(#ukr_grad_final_v5)"/>' +
                             '<text x="18" y="46" font-family="Arial, sans-serif" font-weight="bold" font-size="42" fill="#FFD700">4K</text>' +
                             '<text x="82" y="32" font-family="Arial, sans-serif" font-weight="bold" font-size="18" fill="#0057B7">DOLBY</text>' +
                             '<text x="82" y="52" font-family="Arial, sans-serif" font-weight="bold" font-size="18" fill="#0057B7">VISION</text>' +
                         '</svg>';
 
-                        // Створюємо кнопку, яка точно повторює габарити кнопки "Дивитись"
-                        var btn = $('<div class="full-start__button selector open-4k-ukr" style="width: 140px; height: 48px; background: none !important; border: none !important; padding: 0 !important; margin: 5px; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; overflow: visible;">' +
-                            '<div style="width: 100%; height: 100%;">' + svgIcon + '</div>' +
+                        // Компактна кнопка для мобільного та ТВ інтерфейсу
+                        var btn = $('<div class="full-start__button selector open-4k-ukr" style="width: 140px; height: 48px; background: none !important; border: none !important; padding: 0 !important; margin: 5px; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;">' +
+                            '<div style="width: 100%; height: 100%; pointer-events: none;">' + svgIcon + '</div>' +
                             '</div>');
 
                         btn.on('click', function () {
                             self.searchAndPlay(e.data.movie);
                         });
 
-                        // Вставляємо її першою в контейнер, щоб вона була в одному ряду з "Дивитись"
                         container.prepend(btn);
                         Lampa.Controller.collectionSet(container);
                     }
@@ -47,7 +46,7 @@
         this.searchAndPlay = function (movie) {
             var jackettUrl = Lampa.Storage.field('jackett_url') || 'https://jacred.xyz';
             var jackettKey = Lampa.Storage.field('jackett_key') || '';
-            Lampa.Noty.show('Шукаю 4K DV UA...');
+            Lampa.Noty.show('Пошук 4K UA...');
 
             var title = movie.original_title || movie.title;
             var year = (movie.release_date || '').slice(0, 4);
@@ -58,7 +57,9 @@
                 var results = json.Results || (Array.isArray(json) ? json : []);
                 var filtered = results.filter(function (item) {
                     var t = (item.Title || item.title || '').toLowerCase();
-                    return (t.includes('ukr') || t.includes('укр') || t.includes('ua') || t.includes('hurtom')) && (t.includes('2160') || t.includes('4k'));
+                    var hasUkr = /ukr|укр|ua|hurtom|toloka/.test(t);
+                    var has4K = /2160|4k|uhd/.test(t);
+                    return hasUkr && has4K;
                 });
 
                 if (filtered.length > 0) {
