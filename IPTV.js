@@ -107,23 +107,24 @@ function epgListView(isView) {
 	}  
 }  
   
-function renderGroups() {  
-	groupsColumn.empty();  
-	lists[object.id].groups.forEach(function(group) {  
-		var groupItem = $('<div class="group-item selector" data-group="' + group.key + '">' + group.title + '</div>');  
-		if (group.key === object.currentGroup) {  
-			groupItem.addClass('selected');  
-		}  
-		groupItem.on('hover:enter', function() {  
-			$('.group-item').removeClass('selected');  
-			$(this).addClass('selected');  
-			var activity = Lampa.Arrays.clone(lists[object.id].activity);  
-			activity.currentGroup = $(this).data('group');  
-			Lampa.Activity.replace(activity);  
-		});  
-		groupsColumn.append(groupItem);  
-	});  
-}  
+function renderGroups(groupsColumn) {  
+    if (!groupsColumn) return;  
+    groupsColumn.empty();  
+    lists[object.id].groups.forEach(function(group) {  
+        var groupItem = $('<div class="group-item selector" data-group="' + group.key + '">' + group.title + '</div>');  
+        if (group.key === object.currentGroup) {  
+            groupItem.addClass('selected');  
+        }  
+        groupItem.on('hover:enter', function() {  
+            $('.group-item').removeClass('selected');  
+            $(this).addClass('selected');  
+            var activity = Lampa.Arrays.clone(lists[object.id].activity);  
+            activity.currentGroup = $(this).data('group');  
+            Lampa.Activity.replace(activity);  
+        });  
+        groupsColumn.append(groupItem);  
+    });  
+}
   
 var epgItemTeplate = $((  
 	'<div class="PLUGIN-program selector">\n' +  
