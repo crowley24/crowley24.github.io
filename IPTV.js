@@ -13,6 +13,13 @@
   
         var EPG_URL = 'https://iptvx.one/epg/epg.xml.gz';  
   
+        // Поліфіл для Lampa.Utils.hash36, якщо відсутній  
+        if (typeof Lampa.Utils.hash36 !== 'function') {  
+            Lampa.Utils.hash36 = function (str) {  
+                return (Lampa.Utils.hash(str) * 1).toString(36);  
+            };  
+        }  
+  
         /* ===================== EPG HELPERS (з першого плагіна) ===================== */  
   
         function unixtime() {  
