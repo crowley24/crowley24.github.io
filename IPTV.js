@@ -77,65 +77,72 @@
                         sessionStorage.setItem(key, JSON.stringify([false, data]));  
                         typeof fail === 'function' && fail.apply(context, [data]);  
                     },  
-                    param  
+                    false,  
+                    { dataType: 'json' }  
                 );  
             }  
         }  
   
         function epgUpdateData(epgId) {  
-            var lt = Math.floor(unixtime() / 60);  
-            var t = Math.floor(lt / 60), ed, ede;  
-            if (!!EPG[epgId] && t >= EPG[epgId][0] && t <= EPG[epgId][1]) {  
-                ed = EPG[epgId][2];  
-                if (!ed || !ed.length || ed.length >= 3) return;  
-                ede = ed[ed.length - 1];  
-                if (lt >= (ede[0] + ede[1])) {  
-                    ed.push([ede[0] + ede[1], 60, '']);  
-                    EPG[epgId][2] = ed;  
-                }  
+            var t = Math.floor(unixtime() / 3600);  
+            var epg = getEpgSessCache(epgId, t);  
+            if (epg) {  
+                EPG[epgId] = epg;  
+                epgRender(epgId);  
                 return;  
             }  
-            if (!epgPath) return;  
             var url = Lampa.Utils.protocol() + 'epg.rootu.top/api' + epgPath + '/epg/' + epgId + '/hour/' + t;  
-            networkSilentSessCache(url, function (d) {  
-                if (!d || !d.length) return;  
-                EPG[epgId] = [t, t + 1, d];  
-                setEpgSessCache(epgId, d);  
-                epgRender(epgId);  
+            networkSilentSessCache(url, function (data) {  
+                if (data && data.length) {  
+                    EPG[epgId] = data;  
+                    setEpgSessCache(epgId, data);  
+                    epgRender(epgId);  
+                }  
             });  
         }  
   
         function epgRender(epgId) {  
-            var epg = EPG[epgId] ? EPG[epgId][2] : getEpgSessCache(epgId, Math.floor(unixtime() / 60));  
-            if (!epg || !epg.length) return;  
-            var now = unixtime() * 60,  
-                i = 0,  
-                e, p, txt, t, el;  
-            for (; i < epg.length; i++) {  
-                e = epg[i];  
+            var cards = $('.iptv-row[data-epg-id="' + epgId + '"]');  
+            if (!cards.length) return;  
+            var epg = EPG[epgId];  
+            if (!epg || !epg.length) {  
+                cards.find('.epg-text').text('EPG відсутній');  
+                cards.find('.epg-bar-fill').css('width', '0%');  
+                return;  
+            }  
+            var now = unixtime();  
+            var current = null;  
+            for (var i = 0; i < epg.length; i++) {  
+                var e = epg[i];  
                 if (now >= e[0] * 60 && now < (e[0] + e[1]) * 60) {  
-                    p = Math.round((now - e[0] * 60) * 100 / (e[1] * 60 || 60));  
-                    txt = e[2] || 'Без назви';  
-                    t = toLocaleTimeString(e[0] * 60);  
-                    el = $('.js-epgNoRender[data-epg-id="' + epgId + '"]');  
-                    el.find('.card__age').text(txt + ' (' + t + ' - ' + toLocaleTimeString((e[0] + e[1]) * 60) + ')');  
-                    el.find('.card__progress').css('width', p + '%');  
-                    el.removeClass('js-epgNoRender');  
+                    current = e;  
                     break;  
                 }  
+            }  
+            if (current) {  
+                var p = Math.round((now - current[0] * 60) * 100 / (current[1] * 60 || 60));  
+                cards.find('.epg-text').text(current[2]);  
+                cards.find('.epg-bar-fill').css('width', p + '%');  
+            } else {  
+                cards.find('.epg-text').text('Немає програми');  
+                cards.find('.epg-bar-fill').css('width', '0%');  
             }  
         }  
   
         function setEpgId(channelGroup) {  
-            if (channelGroup.setEpgId || !channelGroup.channels || !listCfg.epgApiChUrl) return;  
-            var i = 0, channel;  
+            if (!channelGroup.channels) return;  
+            if (!listCfg.epgApiChUrl) {  
+                channelGroup.channels.forEach(function (channel) {  
+                    channel.epgId = channel.tid;  
+                });  
+                return;  
+            }  
             networkSilentSessCache(listCfg.epgApiChUrl, function(d){  
                 chIDs = d;  
                 if (!chIDs.id2epg) chIDs.id2epg = {};  
                 epgPath = !chIDs.epgPath ? '' : ('/' + chIDs.epgPath);  
             });  
             var chShortName = function(chName){  
-                if (!chName) return '';  
                 return chName  
                     .toLowerCase()  
                     .replace(/\s+\(архив\)$/, '')  
@@ -148,7 +155,6 @@
             };  
             var trW = {"ё":"e","у":"y","к":"k","е":"e","н":"h","ш":"w","з":"3","х":"x","ы":"bl","в":"b","а":"a","р":"p","о":"o","ч":"4","с":"c","м":"m","т":"t","ь":"b","б":"6"};  
             var trName = function(word) {  
-                if (!word) return '';  
                 return word.split('').map(function (char) {  
                     return trW[char] || char;  
                 }).join("");  
@@ -157,63 +163,25 @@
                 var n = chShortName(v), fw, key;  
                 if (n === '' || (!chIDs[n[0]] && !find)) return 0;  
                 fw = n[0];  
-                if (chIDs[fw]) {  
-                    if (chIDs[fw][n]) return chIDs[fw][n];  
+                if (!!chIDs[fw]) {  
+                    if (!!chIDs[fw][n]) return chIDs[fw][n];  
                     n = trName(n);  
-                    if (chIDs[fw][n]) return chIDs[fw][n];  
+                    if (!!chIDs[fw][n]) return chIDs[fw][n];  
                     if (find) {  
                         for (key in chIDs[fw]) {  
                             if (chIDs[fw][key] == epgId) {  
                                 return epgId;  
                             } else if (n === trName(key)) {  
                                 return chIDs[fw][key];  
-                            }  
-                        }  
-                    }  
-                }  
-                if (n[0] !== fw && chIDs[n[0]]) {  
-                    fw = n[0];  
-                    if (chIDs[fw][n]) return chIDs[fw][n];  
-                    if (find) {  
-                        for (key in chIDs[fw]) {  
-                            if (chIDs[fw][key] == epgId) {  
-                                return epgId;  
-                            } else if (n === trName(key)) {  
-                                return chIDs[fw][key];  
-                            }  
-                        }  
-                    }  
-                } else if (find) {  
-                    for(var keyW in trW) {  
-                        if (trW[keyW] === fw && chIDs[keyW]) {  
-                            for (key in chIDs[keyW]) {  
-                                if (chIDs[keyW][key] == epgId) {  
-                                    return epgId;  
-                                } else if (n === trName(key)){  
-                                    return chIDs[keyW][key];  
-                                }  
                             }  
                         }  
                     }  
                 }  
                 return 0;  
             };  
-            for (; i < channelGroup.channels.length; i++) {  
-                channel = channelGroup.channels[i];  
-                channel.epgId = (listCfg.isEpgIt999 || listCfg.isYosso)  
-                    ? (channel.tid && /^\d{1,4}$/.test(channel.tid) ? channel.tid : epgIdByName(channel.name, true, channel.tid))  
-                    : (chIDs.id2epg[channel.tid || ''] || epgIdByName(channel.name, false, channel.tid) || channel.tid);  
-                if (!channel.tvgLogo && channel.epgId && chIDs.piconUrl) {  
-                    channel.tvgLogo = Lampa.Utils.protocol() + chIDs.piconUrl.replace('{picon}', (chIDs.id2picon && chIDs.id2picon[channel.epgId]) ? chIDs.id2picon[channel.epgId] : channel.epgId);  
-                }  
-                if (!channel.tvgLogo) {  
-                    if (channel.epgId && (listCfg.isEpgIt999 || listCfg.isYosso) && /^\d{1,4}$/.test(channel.epgId)) {  
-                        channel.tvgLogo = Lampa.Utils.protocol() + 'epg.one/img2/' + channel.epgId + '.png';  
-                    } else if (listCfg.isYosso && !/^Ch \d+$/.test(channel.name)) {  
-                        channel.tvgLogo = Lampa.Utils.protocol() + 'epg.rootu.top/picon/' + encodeURIComponent(channel.name) + '.png';  
-                    }  
-                }  
-            }  
+            channelGroup.channels.forEach(function (channel) {  
+                channel.epgId = chIDs.id2epg[channel.tid || ''] || epgIdByName(channel.name, false, channel.tid) || channel.tid;  
+            });  
         }  
   
         /* ===================== CREATE ===================== */  
@@ -241,6 +209,7 @@
                 );  
             }  
   
+            $('body').append(root); // ← додати root до body  
             colG = $('<div class="col-groups"></div>');  
             colC = $('<div class="col-channels"></div>');  
             root.append(colG, colC);  
@@ -275,7 +244,6 @@
             var lines = data.split('\n');  
             var ch = null;  
   
-            // Парсинг заголовка M3U для listCfg  
             var firstLine = lines[0];  
             if (firstLine && firstLine.substr(0, 7).toUpperCase() === '#EXTM3U') {  
                 var m, mm;  
@@ -316,7 +284,6 @@
                 }  
             });  
   
-            // Прив'язка EPG до всіх каналів  
             Object.keys(groups_data).forEach(function (g) {  
                 setEpgId({ channels: groups_data[g] });  
             });  
@@ -339,7 +306,6 @@
                 colG.append(el);  
             });  
   
-            // Встановлюємо фокус на першу групу  
             colG.find('.group-item').first().addClass('focus');  
             Lampa.Controller.toggle('content');  
         };  
@@ -377,7 +343,6 @@
                 }  
             });  
   
-            // Запуск інтервалу для оновлення EPG  
             if (epgInterval) clearInterval(epgInterval);  
             epgInterval = setInterval(function () {  
                 colC.find('.iptv-row[data-epg-id]').each(function () {  
@@ -386,7 +351,6 @@
                 });  
             }, 10000);  
   
-            // Встановлюємо фокус на перший канал  
             colC.find('.selector').first().addClass('focus');  
             Lampa.Controller.toggle('content');  
         };  
@@ -400,6 +364,13 @@
                 }  
             });  
             Lampa.Controller.toggle('content');  
+            setTimeout(function () {  
+                var first = $('.iptv-ultra-root .selector').first();  
+                if (first.length) {  
+                    $('.iptv-ultra-root .selector').removeClass('focus');  
+                    first.addClass('focus');  
+                }  
+            }, 100);  
         };  
   
         this.pause = this.stop = function () {  
@@ -445,5 +416,5 @@
         if (e.type === 'ready') init();  
     });  
   
-})(); 
+})();
   
