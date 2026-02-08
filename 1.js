@@ -22,10 +22,10 @@
                     '.iptv-row { padding: 12px 15px; margin: 5px; border-radius: 8px; background: rgba(255,255,255,0.03); cursor: pointer; border: 2px solid transparent; }' +
                     '.iptv-row.active { background: #2962ff !important; border-color: #fff; }' +
                     '.ch-header { display: flex; align-items: center; gap: 12px; }' +
-                    '.ch-logo { width: 50px; height: 50px; object-fit: contain; background: #000; border-radius: 6px; flex-shrink: 0; }' +
+                    '.ch-logo { width: 50px; height: 50px; object-fit: contain; background: #000; border-radius: 6px; flex-shrink:0; }' +
                     '.ch-info { flex: 1; overflow: hidden; }' +
                     '.ch-name { font-weight: bold; font-size: 1.1rem; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }' +
-                    '.epg-text { font-size: 0.9rem; color: #30ffaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 1.2rem; }' +
+                    '.epg-text { font-size: 0.9rem; color: #30ffaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; height: 1.2rem; }' +
                     '.epg-bar-container { width: 100%; height: 4px; background: rgba(255,255,255,0.1); margin-top: 6px; border-radius: 2px; overflow: hidden; }' +
                     '.epg-bar-fill { height: 100%; background: #30ffaa; width: 0%; transition: width 0.3s; }' +
                     '</style>'
@@ -45,8 +45,8 @@
             var network = new Lampa.Reguest();
             network.silent(pl_url, function (data) {
                 if (data) {
-                    var epg_url = (data.match(/url-tvg="([^"]+)"/i) || [])[1];
-                    if (epg_url && Lampa.Tvg) Lampa.Tvg.push(epg_url);
+                    var epg_found = (data.match(/url-tvg="([^"]+)"/i) || [])[1];
+                    if (epg_found && Lampa.Tvg) Lampa.Tvg.push(epg_found);
                     _this.parse(data);
                 }
             }, function () {
@@ -94,50 +94,47 @@
         this.renderChannels = function (groupName) {
             colC.empty().scrollTop(0);
             var list = groups_data[groupName] || [];
-            
-            list.forEach(function(item) {
+            list.forEach(function(ch, i) {
                 var card = $(
-                    '<div class="iptv-row chan-item selector">' +
+                    '<div class="iptv-row chan-item">' +
                         '<div class="ch-header">' +
-                            '<img src="' + item.logo + '" class="ch-logo" onerror="this.src=\'https://placehold.co/100x100?text=TV\'">' +
+                            '<img src="' + ch.logo + '" class="ch-logo" onerror="this.src=\'https://placehold.co/100x100?text=TV\'">' +
                             '<div class="ch-info">' +
-                                '<div class="ch-name">' + item.name + '</div>' +
-                                '<div class="epg-text">...</div>' +
-                                '<div class="epg-bar-container"><div class="epg-bar-fill"></div></div>' +
+                                '<div class="ch-name">' + ch.name + '</div>' +
+                                '<div class="epg-text" id="epg-t-' + i + '">...</div>' +
+                                '<div class="epg-bar-container"><div class="epg-bar-fill" id="epg-b-' + i + '"></div></div>' +
                             '</div>' +
                         '</div>' +
                     '</div>'
                 );
-
-                card.on('click', function () { 
-                    Lampa.Player.play({ url: item.url, title: item.name }); 
-                });
-
+                card.on('click', function () { Lampa.Player.play({ url: ch.url, title: ch.name }); });
                 colC.append(card);
+                
+                // ВЛАСНЕ, ТА САМА ЛОГІКА ВІДОБРАЖЕННЯ
+                _this.applyEPG(ch, i);
+            });
+        };
 
-                // --- ТА САМА ЛОГІКА ІНТЕГРАЦІЇ ---
-                if (Lampa.Tvg) {
-                    Lampa.Tvg.get({
-                        id: item.tid,
-                        name: item.name
-                    }, function (data) {
-                        if (data && data.list) {
-                            var now = Date.now();
-                            var prog = data.list.filter(function (p) {
-                                return p.start <= now && p.stop >= now;
-                            })[0];
+        this.applyEPG = function (ch, idx) {
+            // Захист від undefined 'get'
+            if (typeof Lampa.Tvg === 'undefined' || !Lampa.Tvg.get) return;
 
-                            if (prog) {
-                                var per = ((now - prog.start) / (prog.stop - prog.start)) * 100;
-                                card.find('.epg-text').text(prog.title);
-                                card.find('.epg-bar-fill').css('width', per + '%');
-                            } else {
-                                card.find('.epg-text').text('Немає програми');
-                            }
-                        } else {
-                            card.find('.epg-text').text('Програма відсутня');
-                        }
-                    });
+            Lampa.Tvg.get({id: ch.tid, name: ch.name}, function(data) {
+                if (data && data.list && data.list.length) {
+                    var now = Date.now();
+                    var prog = data.list.filter(function(p) { 
+                        return p.start <= now && p.stop >= now; 
+                    })[0];
+
+                    if (prog) {
+                        var per = ((now - prog.start) / (prog.stop - prog.start)) * 100;
+                        $('#epg-t-' + idx).text(prog.title);
+                        $('#epg-b-' + idx).css('width', per + '%');
+                    } else {
+                        $('#epg-t-' + idx).text('Немає програми');
+                    }
+                } else {
+                    $('#epg-t-' + idx).text('Програма відсутня');
                 }
             });
         };
