@@ -11,6 +11,36 @@
 
         var EPG_URL = 'https://iptvx.one/epg/epg.xml.gz';
 
+        /* ===================== EPG HELPER ===================== */
+
+        function getEPG(item, card) {
+            Lampa.Tvg.get({
+                id: item.tid || item.name,
+                name: item.name
+            }, function (epg) {
+                if (!epg || !epg.list) {
+                    card.find('.epg-text').text('EPG відсутній');
+                    return;
+                }
+
+                var now = Date.now();
+                var prog = epg.list.filter(function (p) {
+                    return p.start <= now && p.stop >= now;
+                })[0];
+
+                if (!prog) {
+                    card.find('.epg-text').text('Немає програми');
+                    return;
+                }
+
+                var percent = ((now - prog.start) / (prog.stop - prog.start)) * 100;
+                card.find('.epg-text').text(prog.title);
+                card.find('.epg-bar-fill').css('width', percent + '%');
+            });
+        }
+
+        /* ===================== CREATE ===================== */
+
         this.create = function () {
             _this = this;
             root = $('<div class="iptv-ultra-root"></div>');
@@ -42,6 +72,8 @@
             return root;
         };
 
+        /* ===================== PLAYLIST ===================== */
+
         this.loadPlaylist = function () {
             var pl_url = 'https://m3u.ch/pl/86727211832faa261da1f840b1a63f84_c12804a6605dcff3dbef1d0b77084e84.m3u';
             var network = new Lampa.Reguest();
@@ -55,13 +87,14 @@
 
                 _this.parse(data);
             }, function () {
-                colG.html('<div style="padding:20px;">Помилка завантаження</div>');
+                colG.html('<div style="padding:20px;">Помилка мережі</div>');
             }, false, { dataType: 'text' });
         };
 
+        /* ===================== PARSE ===================== */
+
         this.parse = function (data) {
             groups_data = { 'УСІ': [] };
-
             var lines = data.split('\n');
             var ch = null;
 
@@ -82,13 +115,14 @@
                     if (!groups_data[ch.grp]) groups_data[ch.grp] = [];
                     groups_data[ch.grp].push(ch);
                     groups_data['УСІ'].push(ch);
-
                     ch = null;
                 }
             });
 
             this.renderGroups();
         };
+
+        /* ===================== GROUPS ===================== */
 
         this.renderGroups = function () {
             colG.empty();
@@ -105,6 +139,8 @@
 
             colG.find('.group-item').first().click();
         };
+
+        /* ===================== CHANNELS ===================== */
 
         this.renderChannels = function (group) {
             colC.empty().scrollTop(0);
@@ -130,38 +166,24 @@
                 colC.append(card);
 
                 if (Lampa.Tvg) {
-                    Lampa.Tvg.ready(function () {
-                        Lampa.Tvg.get({
-                            id: item.tid || item.name,
-                            name: item.name
-                        }, function (epg) {
-                            if (!epg || !epg.list) {
-                                card.find('.epg-text').text('EPG відсутній');
-                                return;
-                            }
-
-                            var now = Date.now();
-                            var prog = epg.list.filter(function (p) {
-                                return p.start <= now && p.stop >= now;
-                            })[0];
-
-                            if (!prog) {
-                                card.find('.epg-text').text('Немає програми');
-                                return;
-                            }
-
-                            var percent = ((now - prog.start) / (prog.stop - prog.start)) * 100;
-                            card.find('.epg-text').text(prog.title);
-                            card.find('.epg-bar-fill').css('width', percent + '%');
+                    if (Lampa.Tvg.isReady) {
+                        getEPG(item, card);
+                    } else {
+                        Lampa.Tvg.ready(function () {
+                            getEPG(item, card);
                         });
-                    });
+                    }
                 }
             });
         };
 
+        /* ===================== CORE ===================== */
+
         this.start = function () {
             Lampa.Controller.add('iptv_ultra', {
-                back: function () { Lampa.Activity.back(); }
+                back: function () {
+                    Lampa.Activity.back();
+                }
             });
             Lampa.Controller.toggle('iptv_ultra');
         };
@@ -170,6 +192,8 @@
         this.render = function () { return root; };
         this.destroy = function () { root.remove(); };
     }
+
+    /* ===================== INIT ===================== */
 
     function init() {
         Lampa.Component.add('iptv_ultra', IPTVUltra);
@@ -180,7 +204,10 @@
         '</li>');
 
         item.on('hover:enter', function () {
-            Lampa.Activity.push({ title: 'IPTV PRO', component: 'iptv_ultra' });
+            Lampa.Activity.push({
+                title: 'IPTV PRO',
+                component: 'iptv_ultra'
+            });
         });
 
         $('.menu .menu__list').append(item);
