@@ -8,7 +8,6 @@
         var root, colG, colC;
         var groups_data = {};
         var _this;
-        var detected_epg = ''; // Сюди запишемо посилання з плейлиста
 
         this.create = function () {
             _this = this;
@@ -20,15 +19,15 @@
                     '.iptv-ultra-root { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0b0d10; z-index: 1000; display: flex; padding-top: 3.5rem; color: #fff; font-family: sans-serif; }' +
                     '.col-groups { width: 30%; background: #0d1013; border-right: 1px solid rgba(255,255,255,0.05); overflow-y: auto; }' +
                     '.col-channels { flex: 1; background: #0b0d10; overflow-y: auto; padding: 10px; }' +
-                    '.iptv-row { padding: 12px 15px; margin: 5px; border-radius: 8px; background: rgba(255,255,255,0.03); cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }' +
+                    '.iptv-row { padding: 12px 15px; margin: 5px; border-radius: 8px; background: rgba(255,255,255,0.03); cursor: pointer; border: 2px solid transparent; }' +
                     '.iptv-row.active { background: #2962ff !important; border-color: #fff; }' +
                     '.ch-header { display: flex; align-items: center; gap: 12px; }' +
-                    '.ch-logo { width: 50px; height: 50px; object-fit: contain; background: #000; border-radius: 6px; flex-shrink: 0; }' +
+                    '.ch-logo { width: 50px; height: 50px; object-fit: contain; background: #000; border-radius: 6px; }' +
                     '.ch-info { flex: 1; overflow: hidden; }' +
                     '.ch-name { font-weight: bold; font-size: 1.1rem; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }' +
                     '.epg-text { font-size: 0.9rem; color: #30ffaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 1.2rem; }' +
                     '.epg-bar-container { width: 100%; height: 4px; background: rgba(255,255,255,0.1); margin-top: 6px; border-radius: 2px; overflow: hidden; }' +
-                    '.epg-bar-fill { height: 100%; background: #30ffaa; width: 0%; transition: width 0.3s; }' +
+                    '.epg-bar-fill { height: 100%; background: #30ffaa; width: 0%; }' +
                     '</style>'
                 );
             }
@@ -42,29 +41,19 @@
         };
 
         this.loadPlaylist = function () {
-            colG.html('<div style="padding:20px; opacity:0.5;">...</div>');
             var pl_url = 'https://m3u.ch/pl/86727211832faa261da1f840b1a63f84_c12804a6605dcff3dbef1d0b77084e84.m3u';
             var network = new Lampa.Reguest();
             network.silent(pl_url, function (data) {
                 if (data) {
-                    _this.extractEPG(data);
+                    // Реєструємо EPG з плейлиста, як це робить оригінал
+                    var epg_url = (data.match(/url-tvg="([^"]+)"/i) || [])[1];
+                    if (epg_url && Lampa.Tvg) Lampa.Tvg.push(epg_url);
+                    
                     _this.parse(data);
                 }
             }, function () {
                 colG.html('<div style="padding:20px;">Помилка</div>');
             }, false, { dataType: 'text' });
-        };
-
-        // НОВА ФУНКЦІЯ: Шукаємо EPG у самому плейлисті
-        this.extractEPG = function(data) {
-            var match = data.match(/url-tvg="([^"]+)"/i);
-            if (match && match[1]) {
-                detected_epg = match[1];
-                console.log('IPTV Ultra: Found EPG in playlist:', detected_epg);
-                if (Lampa.Tvg && Lampa.Tvg.push) {
-                    Lampa.Tvg.push(detected_epg);
-                }
-            }
         };
 
         this.parse = function (data) {
@@ -122,33 +111,30 @@
                 );
                 card.on('click', function () { Lampa.Player.play({ url: ch.url, title: ch.name }); });
                 colC.append(card);
-                _this.applyEPG(ch, i);
-            });
-        };
 
-        this.applyEPG = function (ch, idx) {
-            if (!Lampa.Tvg) return;
+                // --- КОПІЯ ЛОГІКИ З ПЛАГІНА ---
+                Lampa.Tvg.get({
+                    id: ch.tid,
+                    name: ch.name
+                }, function (data) {
+                    if (data && data.list) {
+                        var now = Date.now();
+                        var prog = data.list.filter(function (p) {
+                            return p.start <= now && p.stop >= now;
+                        })[0];
 
-            // Запит з використанням динамічного EPG
-            Lampa.Tvg.get({id: ch.tid, name: ch.name, url: detected_epg}, function(data) {
-                var txt = $('#epg-t-' + idx);
-                var bar = $('#epg-b-' + idx);
-                
-                if (data && data.list && data.list.length) {
-                    var now = Date.now();
-                    var current = null;
-                    for (var j = 0; j < data.list.length; j++) {
-                        if (data.list[j].start <= now && data.list[j].stop >= now) {
-                            current = data.list[j];
-                            break;
+                        if (prog) {
+                            var per = ((now - prog.start) / (prog.stop - prog.start)) * 100;
+                            $('#epg-t-' + i).text(prog.title);
+                            $('#epg-b-' + i).css('width', per + '%');
+                        } else {
+                            $('#epg-t-' + i).text('Немає програми');
                         }
+                    } else {
+                        $('#epg-t-' + i).text('Програма відсутня');
                     }
-                    if (current) {
-                        var per = Math.round(((now - current.start) / (current.stop - current.start)) * 100);
-                        txt.text(current.title);
-                        bar.css('width', per + '%');
-                    } else { txt.text('Немає програми'); }
-                } else { txt.text('Програма відсутня'); }
+                });
+                // --- КІНЕЦЬ ЛОГІКИ ---
             });
         };
 
