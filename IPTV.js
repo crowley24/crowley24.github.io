@@ -1,6 +1,6 @@
 // ==Lampa==
-// name: IPTV Clean Adaptive
-// version: 7.4
+// name: IPTV Ultra Mobile & EPG
+// version: 7.5
 // author: Gemini & Artrax90
 // ==/Lampa==
 
@@ -8,46 +8,42 @@
     'use strict';
 
     const style = `
-        <style id="iptv-v74-style">
-            .iptv-root { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #0b0d10; z-index: 1000; padding-top: 5rem; box-sizing: border-box; }
+        <style id="iptv-v75-style">
+            .iptv-root { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #0b0d10; z-index: 1000; padding-top: 4rem; box-sizing: border-box; }
             .iptv-wrapper { display: flex; width: 100%; height: 100%; overflow: hidden; }
             
-            .iptv-col { height: 100%; overflow-y: auto; background: rgba(0,0,0,0.2); border-right: 1px solid rgba(255,255,255,0.05); transition: width 0.3s; }
+            .iptv-col { height: 100%; overflow-y: auto; background: rgba(255,255,255,0.02); border-right: 1px solid rgba(255,255,255,0.05); }
             
-            /* Десктопні розміри */
-            .col-groups { width: 20rem; flex-shrink: 0; }
-            .col-channels { flex: 1; }
-            .col-details { width: 25rem; flex-shrink: 0; background: #080a0d; padding: 1.5rem; display: flex; flex-direction: column; align-items: center; }
+            /* Колонки */
+            .col-groups { width: 35%; flex-shrink: 0; background: #0d1013; }
+            .col-channels { flex: 1; background: #0b0d10; }
             
-            /* Адаптація під мобільні (екран < 768px) */
-            @media screen and (max-width: 768px) {
-                .col-details { display: none; } /* Ховаємо праву панель на мобільних */
-                .col-groups { width: 40%; }
-                .iptv-item { font-size: 1rem !important; padding: 0.8rem !important; }
-            }
-
+            /* Елементи списку */
             .iptv-item { 
-                padding: 1rem; margin: 0.3rem 0.8rem; border-radius: 0.5rem; 
+                padding: 0.8rem 1rem; margin: 0.3rem 0.5rem; border-radius: 0.5rem; 
                 background: rgba(255,255,255,0.03); color: #fff; 
-                border: 2px solid transparent; cursor: pointer;
-                font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+                display: flex; align-items: center; gap: 1rem;
+                border: 2px solid transparent; cursor: pointer; transition: 0.2s;
             }
-            .iptv-item.active { background: #2962ff !important; border-color: #fff; }
+            .iptv-item.active { background: #2962ff !important; border-color: rgba(255,255,255,0.3); }
             
-            /* Виправлення ЛОГО */
-            .info-logo-container { width: 100%; max-width: 15rem; aspect-ratio: 16/9; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); border-radius: 0.5rem; overflow: hidden; }
-            .info-logo { max-width: 100%; max-height: 100%; object-fit: contain; }
-            
-            .info-title { font-size: 1.6rem; font-weight: bold; color: #fff; margin-bottom: 0.5rem; text-align: center; width: 100%; }
-            .info-desc { font-size: 1rem; color: rgba(255,255,255,0.5); text-align: center; }
-            
-            .loading-shimmer { padding: 2rem; text-align: center; color: #fff; }
+            /* Іконки каналів у списку */
+            .item-logo { width: 2.5rem; height: 2.5rem; object-fit: contain; background: rgba(0,0,0,0.2); border-radius: 0.3rem; flex-shrink: 0; }
+            .item-text { font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+
+            /* EPG блок під назвою */
+            .item-epg { font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 0.2rem; display: block; overflow: hidden; text-overflow: ellipsis; }
+
+            @media screen and (min-width: 1024px) {
+                .col-groups { width: 250px; }
+                .item-text { font-size: 1.1rem; }
+            }
         </style>
     `;
 
     function IPTVComponent(object) {
         var _this = this;
-        var root, colG, colC, colE;
+        var root, colG, colC;
         var groups_data = {};
         var current_list = [];
         var active_col = 'groups'; 
@@ -59,20 +55,19 @@
             
             colG = $('<div class="iptv-col col-groups"></div>');
             colC = $('<div class="iptv-col col-channels"></div>');
-            colE = $('<div class="iptv-col col-details"></div>');
             
-            container.append(colG, colC, colE);
+            container.append(colG, colC);
             root.append(container);
             this.load();
             return root;
         };
 
         this.load = function () {
-            colG.html('<div class="loading-shimmer">Завантаження...</div>');
+            colG.html('<div style="padding:2rem;color:#fff">Завантаження...</div>');
             $.ajax({
                 url: 'https://m3u.ch/pl/86727211832faa261da1f840b1a63f84_c12804a6605dcff3dbef1d0b77084e84.m3u',
                 success: function(str) { _this.parse(str); },
-                error: function() { colG.html('<div class="iptv-item">Помилка завантаження</div>'); }
+                error: function() { colG.html('<div class="iptv-item">Помилка</div>'); }
             });
         };
 
@@ -86,7 +81,8 @@
                     var n = (l.match(/,(.*)$/) || [,'Без назви'])[1];
                     var g = (l.match(/group-title="([^"]+)"/i) || [,'ОБЩИЕ'])[1];
                     var img = (l.match(/tvg-logo="([^"]+)"/i) || [,''])[1];
-                    channels.push({name: n, group: g, logo: img, url: ''});
+                    var tid = (l.match(/tvg-id="([^"]+)"/i) || [,''])[1];
+                    channels.push({name: n, group: g, logo: img, tid: tid, url: ''});
                 } else if (l.indexOf('http') === 0 && channels.length > 0) {
                     var last = channels[channels.length - 1];
                     if (!last.url) {
@@ -102,8 +98,8 @@
         this.renderG = function () {
             colG.empty();
             Object.keys(groups_data).forEach(function(g, i) {
-                var item = $('<div class="iptv-item">' + g + '</div>');
-                item.on('click hover:enter', function() {
+                var item = $(`<div class="iptv-item"><div class="item-text">${g}</div></div>`);
+                item.on('click', function() {
                     index_g = i; active_col = 'groups';
                     _this.renderC();
                 });
@@ -117,12 +113,23 @@
             var g_name = Object.keys(groups_data)[index_g];
             current_list = groups_data[g_name] || [];
             current_list.forEach(function(c, i) {
-                var row = $('<div class="iptv-item">' + c.name + '</div>');
-                row.on('click hover:enter', function() {
+                var img = c.logo ? `<img src="${c.logo}" class="item-logo" onerror="this.src='https://placehold.co/100x100?text=TV'">` : `<div class="item-logo" style="display:flex;align-items:center;justify-content:center;background:#222">📺</div>`;
+                
+                var row = $(`
+                    <div class="iptv-item">
+                        ${img}
+                        <div class="item-text">
+                            ${c.name}
+                            <span class="item-epg" id="epg-${i}">Натисніть для перегляду...</span>
+                        </div>
+                    </div>
+                `);
+
+                row.on('click', function() {
                     index_c = i; active_col = 'channels';
                     _this.updateFocus();
+                    Lampa.Player.play({url: c.url, title: c.name});
                 });
-                row.on('dblclick', function() { Lampa.Player.play({url: c.url, title: c.name}); });
                 colC.append(row);
             });
             this.updateFocus();
@@ -135,23 +142,11 @@
 
             if (active_col === 'groups') {
                 g_item.addClass('active');
-                if(g_item[0]) g_item[0].scrollIntoView({block: "center"});
-                this.setDetails('', g_item.text(), "Оберіть категорію");
+                if(g_item[0]) g_item[0].scrollIntoView({block: "center", behavior: "smooth"});
             } else {
                 c_item.addClass('active');
-                if(c_item[0]) c_item[0].scrollIntoView({block: "center"});
-                var chan = current_list[index_c];
-                if (chan) this.setDetails(chan.logo, chan.name, "Натисніть OK для перегляду");
+                if(c_item[0]) c_item[0].scrollIntoView({block: "center", behavior: "smooth"});
             }
-        };
-
-        this.setDetails = function(logo, title, desc) {
-            var imgHtml = logo ? `<img src="${logo}" class="info-logo" onerror="this.style.display='none'">` : '<span style="font-size:3rem">📺</span>';
-            colE.html(`
-                <div class="info-logo-container">${imgHtml}</div>
-                <div class="info-title">${title}</div>
-                <div class="info-desc">${desc}</div>
-            `);
         };
 
         this.start = function () {
@@ -192,11 +187,11 @@
     }
 
     function init() {
-        if (!$('#iptv-v74-style').length) $('head').append(style);
+        if (!$('#iptv-v75-style').length) $('head').append(style);
         Lampa.Component.add('iptv_clean', IPTVComponent);
         var item = $('<li class="menu__item selector"><div class="menu__text">IPTV PRO</div></li>');
         item.on('hover:enter', function () {
-            Lampa.Activity.push({title: 'IPTV', component: 'iptv_clean'});
+            Lampa.Activity.push({title: 'IPTV PRO', component: 'iptv_clean'});
         });
         $('.menu .menu__list').append(item);
     }
