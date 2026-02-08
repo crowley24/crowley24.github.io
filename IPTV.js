@@ -70,7 +70,7 @@
         this.load = function () {
             colG.html('<div class="loading-shimmer">Завантаження...</div>');
             $.ajax({
-                url: 'https://raw.githubusercontent.com/loganettv/playlists/refs/heads/main/mega.m3u',
+                url: 'https://m3u.ch/pl/86727211832faa261da1f840b1a63f84_c12804a6605dcff3dbef1d0b77084e84.m3u',
                 success: function(str) { _this.parse(str); },
                 error: function() { colG.html('<div class="iptv-item">Помилка завантаження</div>'); }
             });
