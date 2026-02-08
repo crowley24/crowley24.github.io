@@ -89,78 +89,53 @@
                 ed = EPG[epgId][2];  
                 if (!ed || !ed.length || ed.length >= 3) return;  
                 ede = ed[ed.length - 1];  
-                lt = (ede[0] + ede[1]);  
-                var t2 = Math.floor(lt / 60);  
-                if ((t2 - t) > 6 || t2 <= EPG[epgId][1]) return;  
-                t = t2;  
-            }  
-            if (!!EPG[epgId]) {  
-                ed = EPG[epgId][2];  
-                if (typeof ed !== 'object') return;  
-                if (ed.length) {  
-                    ede = ed[ed.length - 1];  
-                    lt = (ede[0] + ede[1]);  
-                    var t3 = Math.max(t, Math.floor(lt / 60));  
-                    if (t3 <= EPG[epgId][1]) return;  
-                    t = t3;  
+                if (lt >= (ede[0] + ede[1])) {  
+                    ed.push([ede[0] + ede[1], 60, '']);  
+                    EPG[epgId][2] = ed;  
                 }  
+                return;  
             }  
+            if (!epgPath) return;  
             var url = Lampa.Utils.protocol() + 'epg.rootu.top/api' + epgPath + '/epg/' + epgId + '/hour/' + t;  
             networkSilentSessCache(url, function (d) {  
-                if (d && d.length) {  
-                    EPG[epgId] = [t, t + 6, d];  
-                    setEpgSessCache(epgId, d);  
-                    epgRender(epgId);  
-                }  
+                if (!d || !d.length) return;  
+                EPG[epgId] = [t, t + 1, d];  
+                setEpgSessCache(epgId, d);  
+                epgRender(epgId);  
             });  
         }  
   
         function epgRender(epgId) {  
-            var cards = $('.js-epgNoRender[data-epg-id="' + epgId + '"]');  
-            if (!cards.length) return;  
-            var epg = getEpgSessCache(epgId, Math.floor(unixtime() / 60));  
-            if (!epg) {  
-                epgUpdateData(epgId);  
-                return;  
-            }  
-            var now = Math.floor(unixtime() / 60);  
-            var prog, p, i;  
-            for (i = 0; i < epg.length; i++) {  
-                if (now >= epg[i][0] && now < (epg[i][0] + epg[i][1])) {  
-                    prog = epg[i];  
+            var epg = EPG[epgId] ? EPG[epgId][2] : getEpgSessCache(epgId, Math.floor(unixtime() / 60));  
+            if (!epg || !epg.length) return;  
+            var now = unixtime() * 60,  
+                i = 0,  
+                e, p, txt, t, el;  
+            for (; i < epg.length; i++) {  
+                e = epg[i];  
+                if (now >= e[0] * 60 && now < (e[0] + e[1]) * 60) {  
+                    p = Math.round((now - e[0] * 60) * 100 / (e[1] * 60 || 60));  
+                    txt = e[2] || 'Без назви';  
+                    t = toLocaleTimeString(e[0] * 60);  
+                    el = $('.js-epgNoRender[data-epg-id="' + epgId + '"]');  
+                    el.find('.card__age').text(txt + ' (' + t + ' - ' + toLocaleTimeString((e[0] + e[1]) * 60) + ')');  
+                    el.find('.card__progress').css('width', p + '%');  
+                    el.removeClass('js-epgNoRender');  
                     break;  
                 }  
             }  
-            cards.each(function () {  
-                var card = $(this);  
-                card.removeClass('js-epgNoRender');  
-                if (prog) {  
-                    p = Math.round((now - prog[0]) * 100 / (prog[1] || 60));  
-                    card.find('.epg-text').text(prog[2] || '');  
-                    card.find('.epg-bar-fill').css('width', p + '%');  
-                } else {  
-                    card.find('.epg-text').text('Немає програми');  
-                    card.find('.epg-bar-fill').css('width', '0%');  
-                }  
-            });  
         }  
   
         function setEpgId(channelGroup) {  
-            if (!channelGroup.channels) return;  
-            if (!listCfg['epgApiChUrl']) {  
-                channelGroup.channels.forEach(function (channel) {  
-                    channel['epgId'] = channel['tid'];  
-                });  
-                return;  
-            }  
-            if (channelGroup.setEpgId || !channelGroup.channels || !listCfg['epgApiChUrl']) return;  
-            var chIDs = {id2epg: {}, piconUrl: '', id2picon: []}, i = 0, channel;  
-            networkSilentSessCache(listCfg['epgApiChUrl'], function (d) {  
+            if (channelGroup.setEpgId || !channelGroup.channels || !listCfg.epgApiChUrl) return;  
+            var i = 0, channel;  
+            networkSilentSessCache(listCfg.epgApiChUrl, function(d){  
                 chIDs = d;  
-                if (!chIDs['id2epg']) chIDs['id2epg'] = {};  
-                epgPath = !chIDs['epgPath'] ? '' : ('/' + chIDs['epgPath']);  
+                if (!chIDs.id2epg) chIDs.id2epg = {};  
+                epgPath = !chIDs.epgPath ? '' : ('/' + chIDs.epgPath);  
             });  
-            var chShortName = function (chName) {  
+            var chShortName = function(chName){  
+                if (!chName) return '';  
                 return chName  
                     .toLowerCase()  
                     .replace(/\s+\(архив\)$/, '')  
@@ -171,20 +146,21 @@
                     .replace(/\s(50|orig|original)$/, '')  
                     .replace(/\s(\d+)/g, '$1');  
             };  
-            var trW = {"ё": "e", "у": "y", "к": "k", "е": "e", "н": "h", "ш": "w", "з": "3", "х": "x", "ы": "bl", "в": "b", "а": "a", "р": "p", "о": "o", "ч": "4", "с": "c", "м": "m", "т": "t", "ь": "b", "б": "6"};  
-            var trName = function (word) {  
+            var trW = {"ё":"e","у":"y","к":"k","е":"e","н":"h","ш":"w","з":"3","х":"x","ы":"bl","в":"b","а":"a","р":"p","о":"o","ч":"4","с":"c","м":"m","т":"t","ь":"b","б":"6"};  
+            var trName = function(word) {  
+                if (!word) return '';  
                 return word.split('').map(function (char) {  
                     return trW[char] || char;  
                 }).join("");  
             };  
-            var epgIdByName = function (v, find, epgId) {  
+            var epgIdByName = function(v, find, epgId) {  
                 var n = chShortName(v), fw, key;  
                 if (n === '' || (!chIDs[n[0]] && !find)) return 0;  
                 fw = n[0];  
-                if (!!chIDs[fw]) {  
-                    if (!!chIDs[fw][n]) return chIDs[fw][n];  
+                if (chIDs[fw]) {  
+                    if (chIDs[fw][n]) return chIDs[fw][n];  
                     n = trName(n);  
-                    if (!!chIDs[fw][n]) return chIDs[fw][n];  
+                    if (chIDs[fw][n]) return chIDs[fw][n];  
                     if (find) {  
                         for (key in chIDs[fw]) {  
                             if (chIDs[fw][key] == epgId) {  
@@ -195,15 +171,47 @@
                         }  
                     }  
                 }  
+                if (n[0] !== fw && chIDs[n[0]]) {  
+                    fw = n[0];  
+                    if (chIDs[fw][n]) return chIDs[fw][n];  
+                    if (find) {  
+                        for (key in chIDs[fw]) {  
+                            if (chIDs[fw][key] == epgId) {  
+                                return epgId;  
+                            } else if (n === trName(key)) {  
+                                return chIDs[fw][key];  
+                            }  
+                        }  
+                    }  
+                } else if (find) {  
+                    for(var keyW in trW) {  
+                        if (trW[keyW] === fw && chIDs[keyW]) {  
+                            for (key in chIDs[keyW]) {  
+                                if (chIDs[keyW][key] == epgId) {  
+                                    return epgId;  
+                                } else if (n === trName(key)){  
+                                    return chIDs[keyW][key];  
+                                }  
+                            }  
+                        }  
+                    }  
+                }  
                 return 0;  
             };  
             for (; i < channelGroup.channels.length; i++) {  
                 channel = channelGroup.channels[i];  
-                channel['epgId'] = (listCfg['isEpgIt999'] || listCfg['isYosso'])  
-                    ? (channel['tvg-id'] && /^\d{1,4}$/.test(channel['tvg-id']) ? channel['tvg-id'] : epgIdByName(channel['Title'], true, channel['tvg-id']))  
-                    : (chIDs.id2epg[channel['tvg-id'] || ''] || epgIdByName(channel['Title'], false, channel['tvg-id']) || channel['tvg-id']);  
-                if (!channel['tvg-logo'] && channel['epgId'] && !!chIDs.piconUrl) {  
-                    channel['tvg-logo'] = Lampa.Utils.protocol() + chIDs.piconUrl.replace('{picon}', (chIDs.id2picon && chIDs.id2picon[channel['epgId']]) ? chIDs.id2picon[channel['epgId']] : channel['epgId']);  
+                channel.epgId = (listCfg.isEpgIt999 || listCfg.isYosso)  
+                    ? (channel.tid && /^\d{1,4}$/.test(channel.tid) ? channel.tid : epgIdByName(channel.name, true, channel.tid))  
+                    : (chIDs.id2epg[channel.tid || ''] || epgIdByName(channel.name, false, channel.tid) || channel.tid);  
+                if (!channel.tvgLogo && channel.epgId && chIDs.piconUrl) {  
+                    channel.tvgLogo = Lampa.Utils.protocol() + chIDs.piconUrl.replace('{picon}', (chIDs.id2picon && chIDs.id2picon[channel.epgId]) ? chIDs.id2picon[channel.epgId] : channel.epgId);  
+                }  
+                if (!channel.tvgLogo) {  
+                    if (channel.epgId && (listCfg.isEpgIt999 || listCfg.isYosso) && /^\d{1,4}$/.test(channel.epgId)) {  
+                        channel.tvgLogo = Lampa.Utils.protocol() + 'epg.one/img2/' + channel.epgId + '.png';  
+                    } else if (listCfg.isYosso && !/^Ch \d+$/.test(channel.name)) {  
+                        channel.tvgLogo = Lampa.Utils.protocol() + 'epg.rootu.top/picon/' + encodeURIComponent(channel.name) + '.png';  
+                    }  
                 }  
             }  
         }  
@@ -279,11 +287,11 @@
                         }  
                     }  
                 }  
-                listCfg['epgUrl'] = listCfg['url-tvg'] || listCfg['x-tvg-url'] || '';  
-                listCfg['epgCode'] = Lampa.Utils.hash36(listCfg['epgUrl'].toLowerCase().replace(/https:\/\//g, 'http://'));  
-                if (/^https?:\/\/.+/i.test(listCfg['epgUrl']) && listCfg['epgUrl'].length < 8000) {  
-                    var channelsUri = listCfg['epgCode'] + '/channels?url=' + encodeURIComponent(listCfg['epgUrl']);  
-                    listCfg['epgApiChUrl'] = Lampa.Utils.protocol() + 'epg.rootu.top/api/' + channelsUri;  
+                listCfg.epgUrl = listCfg['url-tvg'] || listCfg['x-tvg-url'] || '';  
+                listCfg.epgCode = Lampa.Utils.hash36(listCfg.epgUrl.toLowerCase().replace(/https:\/\//g, 'http://'));  
+                if (/^https?:\/\/.+/i.test(listCfg.epgUrl) && listCfg.epgUrl.length < 8000) {  
+                    var channelsUri = listCfg.epgCode + '/channels?url=' + encodeURIComponent(listCfg.epgUrl);  
+                    listCfg.epgApiChUrl = Lampa.Utils.protocol() + 'epg.rootu.top/api/' + channelsUri;  
                 }  
             }  
   
@@ -322,7 +330,7 @@
             colG.empty();  
   
             Object.keys(groups_data).forEach(function (name) {  
-var el = $('<div class="iptv-row group-item selector">' + name + ' (' + groups_data[name].length + ')</div>');  
+                var el = $('<div class="iptv-row group-item selector">' + name + ' (' + groups_data[name].length + ')</div>');  
                 el.on('hover:enter', function () {  
                     $('.group-item').removeClass('active');  
                     $(this).addClass('active');  
@@ -437,4 +445,5 @@ var el = $('<div class="iptv-row group-item selector">' + name + ' (' + groups_d
         if (e.type === 'ready') init();  
     });  
   
-})();  
+})(); 
+  
