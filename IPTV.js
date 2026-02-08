@@ -8,11 +8,14 @@
         var root, colG, colC;
         var groups_data = {};
         var _this;
+        // Твоє джерело EPG
+        var epg_url = 'https://iptvx.one/epg/epg.xml.gz';
 
         this.create = function () {
             _this = this;
             root = $('<div class="iptv-ultra-root"></div>');
             
+            // Додаємо стилі
             if (!$('#iptv-ultra-style').length) {
                 $('head').append(
                     '<style id="iptv-ultra-style">' +
@@ -22,10 +25,10 @@
                     '.iptv-row { padding: 12px 15px; margin: 5px; border-radius: 8px; background: rgba(255,255,255,0.03); cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }' +
                     '.iptv-row.active { background: #2962ff !important; border-color: #fff; }' +
                     '.ch-header { display: flex; align-items: center; gap: 12px; }' +
-                    '.ch-logo { width: 45px; height: 45px; object-fit: contain; background: #000; border-radius: 6px; flex-shrink: 0; }' +
+                    '.ch-logo { width: 50px; height: 50px; object-fit: contain; background: #000; border-radius: 6px; flex-shrink: 0; }' +
                     '.ch-info { flex: 1; overflow: hidden; }' +
                     '.ch-name { font-weight: bold; font-size: 1.1rem; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }' +
-                    '.epg-text { font-size: 0.9rem; color: #30ffaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; height: 1.2rem; }' +
+                    '.epg-text { font-size: 0.9rem; color: #30ffaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 1.2rem; }' +
                     '.epg-bar-container { width: 100%; height: 4px; background: rgba(255,255,255,0.1); margin-top: 6px; border-radius: 2px; overflow: hidden; }' +
                     '.epg-bar-fill { height: 100%; background: #30ffaa; width: 0%; transition: width 0.3s; }' +
                     '</style>'
@@ -36,18 +39,23 @@
             colC = $('<div class="col-channels"></div>');
             root.append(colG, colC);
             
+            // 1. ПРИМУСОВО РЕЄСТРУЄМО EPG В СИСТЕМІ
+            if (Lampa.Tvg && Lampa.Tvg.push) {
+                Lampa.Tvg.push(epg_url);
+            }
+
             this.loadPlaylist();
             return root;
         };
 
         this.loadPlaylist = function () {
-            colG.html('<div style="padding:20px; opacity:0.5;">...</div>');
-            var url = 'https://m3u.ch/pl/86727211832faa261da1f840b1a63f84_c12804a6605dcff3dbef1d0b77084e84.m3u';
+            colG.html('<div style="padding:20px; opacity:0.5;">Завантаження...</div>');
+            var pl_url = 'https://m3u.ch/pl/86727211832faa261da1f840b1a63f84_c12804a6605dcff3dbef1d0b77084e84.m3u';
             var network = new Lampa.Reguest();
-            network.silent(url, function (data) {
+            network.silent(pl_url, function (data) {
                 if (data) _this.parse(data);
             }, function () {
-                colG.html('<div style="padding:20px;">Помилка</div>');
+                colG.html('<div style="padding:20px;">Помилка плейлиста</div>');
             }, false, { dataType: 'text' });
         };
 
@@ -98,7 +106,7 @@
                             '<img src="' + ch.logo + '" class="ch-logo" onerror="this.src=\'https://placehold.co/100x100?text=TV\'">' +
                             '<div class="ch-info">' +
                                 '<div class="ch-name">' + ch.name + '</div>' +
-                                '<div class="epg-text" id="epg-t-' + i + '">Немає програми</div>' +
+                                '<div class="epg-text" id="epg-t-' + i + '">Завантаження EPG...</div>' +
                                 '<div class="epg-bar-container"><div class="epg-bar-fill" id="epg-b-' + i + '"></div></div>' +
                             '</div>' +
                         '</div>' +
@@ -110,44 +118,34 @@
             });
         };
 
-        // Пряма логіка отримання з Lampa.Tvg.list()
         this.applyEPG = function (ch, idx) {
-            if (!Lampa.Tvg || !Lampa.Tvg.list) return;
+            if (!Lampa.Tvg) return;
 
-            var all_epg = Lampa.Tvg.list();
-            // Шукаємо спочатку за ID, потім за точним іменем
-            var data = all_epg[ch.tid] || all_epg[ch.name];
-
-            if (data && data.list && data.list.length) {
-                var now = Date.now();
-                var current = null;
-
-                for (var i = 0; i < data.list.length; i++) {
-                    var p = data.list[i];
-                    if (p.start <= now && p.stop >= now) {
-                        current = p;
-                        break;
-                    }
-                }
-
-                if (current) {
-                    var per = Math.round(((now - current.start) / (current.stop - current.start)) * 100);
-                    $('#epg-t-' + idx).text(current.title);
-                    $('#epg-b-' + idx).css('width', per + '%');
-                }
-            } else {
-                // Якщо в списку немає - робимо останню спробу через ядро
-                Lampa.Tvg.get({id: ch.tid, name: ch.name}, function(res) {
-                    if (res && res.list && res.list.length) {
-                        var n = Date.now();
-                        var curr = res.list.find(function(p) { return p.start <= n && p.stop >= n; });
-                        if (curr) {
-                            $('#epg-t-' + idx).text(curr.title);
-                            $('#epg-b-' + idx).css('width', Math.round(((n - curr.start) / (curr.stop - curr.start)) * 100) + '%');
+            // Використовуємо Lampa.Tvg.get, який тепер знає про наше посилання
+            Lampa.Tvg.get({id: ch.tid, name: ch.name, url: epg_url}, function(data) {
+                var txt = $('#epg-t-' + idx);
+                var bar = $('#epg-b-' + idx);
+                
+                if (data && data.list && data.list.length) {
+                    var now = Date.now();
+                    var current = null;
+                    for (var j = 0; j < data.list.length; j++) {
+                        if (data.list[j].start <= now && data.list[j].stop >= now) {
+                            current = data.list[j];
+                            break;
                         }
                     }
-                });
-            }
+                    if (current) {
+                        var per = Math.round(((now - current.start) / (current.stop - current.start)) * 100);
+                        txt.text(current.title);
+                        bar.css('width', per + '%');
+                    } else {
+                        txt.text('Немає програми');
+                    }
+                } else {
+                    txt.text('Програма відсутня');
+                }
+            });
         };
 
         this.start = function () {
