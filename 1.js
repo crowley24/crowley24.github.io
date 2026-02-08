@@ -18,7 +18,7 @@
         var storage_key = 'iptv_pro_v11';
         var config = Lampa.Storage.get(storage_key, {
             playlists: [
-                { name: 'MEGA', url: 'https://raw.githubusercontent.com/loganettv/playlists/refs/heads/main/mega.m3u' }
+                { name: 'TEST', url: 'https://m3u.ch/pl/86727211832faa261da1f840b1a63f84_c12804a6605dcff3dbef1d0b77084e84.m3u' }
             ],
             favorites: [],
             current_pl_index: 0
