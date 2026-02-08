@@ -25,9 +25,9 @@
                     '.ch-logo { width: 45px; height: 45px; object-fit: contain; background: #000; border-radius: 6px; flex-shrink: 0; }' +
                     '.ch-info { flex: 1; overflow: hidden; }' +
                     '.ch-name { font-weight: bold; font-size: 1.1rem; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }' +
-                    '.epg-text { font-size: 0.9rem; color: #30ffaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; height: 1.2rem; }' +
-                    '.epg-bar-container { width: 100%; height: 4px; background: rgba(255,255,255,0.1); margin-top: 6px; border-radius: 2px; }' +
-                    '.epg-bar-fill { height: 100%; background: #30ffaa; width: 0%; transition: width 0.5s; }' +
+                    '.epg-text { font-size: 0.9rem; color: #30ffaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; height: 1.2rem; min-height: 1.2rem; }' +
+                    '.epg-bar-container { width: 100%; height: 4px; background: rgba(255,255,255,0.1); margin-top: 6px; border-radius: 2px; position: relative; }' +
+                    '.epg-bar-fill { height: 100%; background: #30ffaa; width: 0%; transition: width 0.5s; border-radius: 2px; }' +
                     '</style>'
                 );
             }
@@ -60,7 +60,7 @@
             for (var i = 0; i < lines.length; i++) {
                 var line = lines[i].trim();
                 if (line.indexOf('#EXTINF') === 0) {
-                    var name = line.split(',').pop();
+                    var name = line.split(',').pop().trim();
                     var grp = (line.match(/group-title="([^"]+)"/i) || [null, 'ІНШЕ'])[1];
                     var logo = (line.match(/tvg-logo="([^"]+)"/i) || [null, ''])[1];
                     var tid = (line.match(/tvg-id="([^"]+)"/i) || [null, ''])[1];
@@ -117,45 +117,56 @@
             var list = groups_data[groupName] || [];
             for (var i = 0; i < list.length; i++) {
                 colC.append(createChannelItem(list[i], i));
-                this.updateEPG(list[i], i);
+                _this.loadEPG(list[i], i);
             }
         };
 
-        this.updateEPG = function (ch, idx) {
+        this.loadEPG = function (ch, idx) {
             if (!Lampa.Tvg) return;
 
-            // Використовуємо системний метод Lampa для отримання програми
-            Lampa.Tvg.get({
-                name: ch.name,
-                id: ch.tid
-            }, function (data) {
-                var txt = $('#epg-t-' + idx);
-                var bar = $('#epg-b-' + idx);
-                
-                if (data && data.list && data.list.length) {
-                    var now = Date.now();
-                    var prog = null;
-                    
-                    for (var j = 0; j < data.list.length; j++) {
-                        if (data.list[j].start <= now && data.list[j].stop >= now) {
-                            prog = data.list[j];
-                            break;
-                        }
-                    }
+            // Пріоритет: спочатку шукаємо за TVG-ID, якщо його немає - за назвою
+            var query = ch.tid ? { id: ch.tid } : { name: ch.name };
 
-                    if (prog) {
-                        var total = prog.stop - prog.start;
-                        var elapsed = now - prog.start;
-                        var percent = Math.round((elapsed / total) * 100);
-                        txt.text(prog.title);
-                        bar.css('width', percent + '%');
-                    } else {
-                        txt.text('Немає даних');
-                    }
+            Lampa.Tvg.get(query, function (data) {
+                // Якщо за ID нічого не знайшли, спробуємо ще раз за назвою
+                if ((!data || !data.list || data.list.length === 0) && ch.tid) {
+                    Lampa.Tvg.get({ name: ch.name }, function (ndata) {
+                        _this.drawEPG(ndata, idx);
+                    });
                 } else {
-                    txt.text('Програма відсутня');
+                    _this.drawEPG(data, idx);
                 }
             });
+        };
+
+        this.drawEPG = function (data, idx) {
+            var txt = $('#epg-t-' + idx);
+            var bar = $('#epg-b-' + idx);
+            
+            if (data && data.list && data.list.length) {
+                var now = Date.now();
+                var prog = null;
+                
+                for (var j = 0; j < data.list.length; j++) {
+                    var p = data.list[j];
+                    if (p.start <= now && p.stop >= now) {
+                        prog = p;
+                        break;
+                    }
+                }
+
+                if (prog) {
+                    var total = prog.stop - prog.start;
+                    var elapsed = now - prog.start;
+                    var percent = Math.min(100, Math.max(0, (elapsed / total) * 100));
+                    txt.text(prog.title);
+                    bar.css('width', percent + '%');
+                } else {
+                    txt.text('Немає програми');
+                }
+            } else {
+                txt.text('Програма відсутня');
+            }
         };
 
         this.start = function () {
