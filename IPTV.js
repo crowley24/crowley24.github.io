@@ -8,14 +8,12 @@
         var root, colG, colC;
         var groups_data = {};
         var _this;
-        // Твоє джерело EPG
-        var epg_url = 'https://iptvx.one/epg/epg.xml.gz';
+        var detected_epg = ''; // Сюди запишемо посилання з плейлиста
 
         this.create = function () {
             _this = this;
             root = $('<div class="iptv-ultra-root"></div>');
             
-            // Додаємо стилі
             if (!$('#iptv-ultra-style').length) {
                 $('head').append(
                     '<style id="iptv-ultra-style">' +
@@ -39,24 +37,34 @@
             colC = $('<div class="col-channels"></div>');
             root.append(colG, colC);
             
-            // 1. ПРИМУСОВО РЕЄСТРУЄМО EPG В СИСТЕМІ
-            if (Lampa.Tvg && Lampa.Tvg.push) {
-                Lampa.Tvg.push(epg_url);
-            }
-
             this.loadPlaylist();
             return root;
         };
 
         this.loadPlaylist = function () {
-            colG.html('<div style="padding:20px; opacity:0.5;">Завантаження...</div>');
+            colG.html('<div style="padding:20px; opacity:0.5;">...</div>');
             var pl_url = 'https://m3u.ch/pl/86727211832faa261da1f840b1a63f84_c12804a6605dcff3dbef1d0b77084e84.m3u';
             var network = new Lampa.Reguest();
             network.silent(pl_url, function (data) {
-                if (data) _this.parse(data);
+                if (data) {
+                    _this.extractEPG(data);
+                    _this.parse(data);
+                }
             }, function () {
-                colG.html('<div style="padding:20px;">Помилка плейлиста</div>');
+                colG.html('<div style="padding:20px;">Помилка</div>');
             }, false, { dataType: 'text' });
+        };
+
+        // НОВА ФУНКЦІЯ: Шукаємо EPG у самому плейлисті
+        this.extractEPG = function(data) {
+            var match = data.match(/url-tvg="([^"]+)"/i);
+            if (match && match[1]) {
+                detected_epg = match[1];
+                console.log('IPTV Ultra: Found EPG in playlist:', detected_epg);
+                if (Lampa.Tvg && Lampa.Tvg.push) {
+                    Lampa.Tvg.push(detected_epg);
+                }
+            }
         };
 
         this.parse = function (data) {
@@ -106,7 +114,7 @@
                             '<img src="' + ch.logo + '" class="ch-logo" onerror="this.src=\'https://placehold.co/100x100?text=TV\'">' +
                             '<div class="ch-info">' +
                                 '<div class="ch-name">' + ch.name + '</div>' +
-                                '<div class="epg-text" id="epg-t-' + i + '">Завантаження EPG...</div>' +
+                                '<div class="epg-text" id="epg-t-' + i + '">...</div>' +
                                 '<div class="epg-bar-container"><div class="epg-bar-fill" id="epg-b-' + i + '"></div></div>' +
                             '</div>' +
                         '</div>' +
@@ -121,8 +129,8 @@
         this.applyEPG = function (ch, idx) {
             if (!Lampa.Tvg) return;
 
-            // Використовуємо Lampa.Tvg.get, який тепер знає про наше посилання
-            Lampa.Tvg.get({id: ch.tid, name: ch.name, url: epg_url}, function(data) {
+            // Запит з використанням динамічного EPG
+            Lampa.Tvg.get({id: ch.tid, name: ch.name, url: detected_epg}, function(data) {
                 var txt = $('#epg-t-' + idx);
                 var bar = $('#epg-b-' + idx);
                 
@@ -139,12 +147,8 @@
                         var per = Math.round(((now - current.start) / (current.stop - current.start)) * 100);
                         txt.text(current.title);
                         bar.css('width', per + '%');
-                    } else {
-                        txt.text('Немає програми');
-                    }
-                } else {
-                    txt.text('Програма відсутня');
-                }
+                    } else { txt.text('Немає програми'); }
+                } else { txt.text('Програма відсутня'); }
             });
         };
 
