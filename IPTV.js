@@ -1,6 +1,6 @@
 // ==Lampa==
-// name: IPTV PRO Final Fix
-// version: 11.4
+// name: IPTV PRO with EPG
+// version: 11.5
 // ==/Lampa==
 
 (function () {
@@ -41,9 +41,12 @@
                     .iptv-col { height: 100%; overflow-y: auto; background: rgba(0,0,0,0.2); border-right: 1px solid rgba(255,255,255,0.1); }
                     .col-groups { width: 20rem; }
                     .col-channels { flex: 1; }
-                    .col-details { width: 25rem; background: #080a0d; padding: 2rem; }
+                    .col-details { width: 30rem; background: #080a0d; padding: 2rem; }
                     .iptv-item { padding: 1rem; margin: 0.4rem; border-radius: 0.5rem; background: rgba(255,255,255,0.03); color: #fff; cursor: pointer; }
                     .iptv-item.active { background: #2962ff !important; }
+                    .epg-title { font-size: 1.4rem; font-weight: bold; margin-bottom: 1rem; color: #2962ff; }
+                    .epg-prog { font-size: 1.2rem; margin-bottom: 0.5rem; }
+                    .epg-desc { font-size: 1rem; color: #aaa; line-height: 1.4; }
                     .btn-pl, .btn-search { padding: 1rem; margin: 0.5rem 1rem; text-align: center; border-radius: 0.5rem; cursor: pointer; color: #fff; font-weight: bold; }
                     .btn-pl { background: #2962ff; }
                     .btn-search { background: #444; }
@@ -62,7 +65,7 @@
                 url: current.url,
                 success: function (str) { _this.parse(str); },
                 error: function () {
-                    Lampa.Noty.show('Ошибка загрузки плейлиста');
+                    Lampa.Noty.show('Помилка завантаження');
                     _this.parse('');
                 }
             });
@@ -78,10 +81,12 @@
                 if (l.indexOf('#EXTINF') === 0) {
                     var name = (l.match(/,(.*)$/) || [,''])[1];
                     var group = (l.match(/group-title="([^"]+)"/i) || [,'ОБЩИЕ'])[1];
+                    var tvg_id = (l.match(/tvg-id="([^"]+)"/i) || [,''])[1];
+                    var logo = (l.match(/tvg-logo="([^"]+)"/i) || [,''])[1];
                     var url = lines[i + 1] ? lines[i + 1].trim() : '';
 
                     if (url.indexOf('http') === 0) {
-                        var item = { name: name, url: url, group: group };
+                        var item = { name: name, url: url, group: group, id: tvg_id, logo: logo };
                         all_channels.push(item);
                         if (!groups_data[group]) groups_data[group] = [];
                         groups_data[group].push(item);
@@ -93,13 +98,8 @@
 
         this.renderG = function () {
             colG.empty();
-
-            var btnAdd = $('<div class="btn-pl">🔗 Плейлисты</div>');
-            btnAdd.on('click', function () { _this.playlistMenu(); });
-
-            var btnSearch = $('<div class="btn-search">🔍 Поиск</div>');
-            btnSearch.on('click', function () { _this.searchChannels(); });
-
+            var btnAdd = $('<div class="btn-pl">🔗 Плейлисти</div>').on('click', _this.playlistMenu);
+            var btnSearch = $('<div class="btn-search">🔍 Пошук</div>').on('click', _this.searchChannels);
             colG.append(btnAdd, btnSearch);
 
             Object.keys(groups_data).forEach(function (g, i) {
@@ -111,72 +111,13 @@
                 });
                 colG.append(item);
             });
-
             this.updateFocus();
-        };
-
-        this.playlistMenu = function () {
-            var html = $('<div></div>');
-
-            config.playlists.forEach(function (pl, i) {
-                var row = $('<div class="iptv-item">' + pl.name + '</div>');
-                row.on('click', function () {
-                    config.current_pl_index = i;
-                    Lampa.Storage.set(storage_key, config);
-                    Lampa.Modal.close();
-                    _this.loadPlaylist();
-                });
-                html.append(row);
-            });
-
-            var add = $('<div class="iptv-item">➕ Добавить плейлист</div>');
-            add.on('click', function () {
-                Lampa.Input.edit({
-                    title: 'URL плейлиста',
-                    value: '',
-                    free: true
-                }, function (url) {
-                    if (!url) return;
-                    config.playlists.push({
-                        name: 'Playlist ' + config.playlists.length,
-                        url: url
-                    });
-                    config.current_pl_index = config.playlists.length - 1;
-                    Lampa.Storage.set(storage_key, config);
-                    Lampa.Modal.close();
-                    _this.loadPlaylist();
-                });
-            });
-
-            html.append(add);
-
-            Lampa.Modal.open({
-                title: 'Плейлисты',
-                html: html
-            });
-        };
-
-        this.searchChannels = function () {
-            Lampa.Input.edit({
-                title: 'Поиск канала',
-                value: '',
-                free: true
-            }, function (query) {
-                if (!query) return;
-                var q = query.toLowerCase();
-                var result = all_channels.filter(function (c) {
-                    return c.name.toLowerCase().indexOf(q) !== -1;
-                });
-                active_col = 'channels';
-                index_c = 0;
-                _this.renderC(result);
-            });
         };
 
         this.renderC = function (list) {
             colC.empty();
             current_list = list || [];
-            current_list.forEach(function (c) {
+            current_list.forEach(function (c, i) {
                 var row = $('<div class="iptv-item">' + c.name + '</div>');
                 row.on('click', function () {
                     Lampa.Player.play({ url: c.url, title: c.name, type: 'tv' });
@@ -186,10 +127,43 @@
             this.updateFocus();
         };
 
+        // Функція для відображення EPG
+        this.updateEPG = function() {
+            colE.empty();
+            var channel = current_list[index_c];
+            if (!channel || active_col !== 'channels') return;
+
+            colE.append('<div class="epg-title">' + channel.name + '</div>');
+
+            // Використовуємо вбудований сервіс Lampa для пошуку програми
+            Lampa.Tvg.get({
+                name: channel.name,
+                id: channel.id
+            }, function(data) {
+                if (data && data.program) {
+                    var prog = data.program.find(p => p.stop > Date.now() / 1000);
+                    if (prog) {
+                        colE.append('<div class="epg-prog">🔴 Зараз: ' + prog.title + '</div>');
+                        if (prog.description) {
+                            colE.append('<div class="epg-desc">' + prog.description + '</div>');
+                        }
+                    } else {
+                        colE.append('<div class="epg-desc">Програма відсутня</div>');
+                    }
+                } else {
+                    colE.append('<div class="epg-desc">EPG не знайдено. Перевірте джерело в налаштуваннях Lampa.</div>');
+                }
+            });
+        };
+
         this.updateFocus = function () {
             $('.iptv-item').removeClass('active');
-            if (active_col === 'groups') colG.find('.iptv-item').eq(index_g).addClass('active');
-            else colC.find('.iptv-item').eq(index_c).addClass('active');
+            if (active_col === 'groups') {
+                colG.find('.iptv-item').eq(index_g).addClass('active');
+            } else {
+                colC.find('.iptv-item').eq(index_c).addClass('active');
+                this.updateEPG(); // Оновлюємо EPG при зміні фокусу
+            }
         };
 
         this.start = function () {
@@ -208,13 +182,15 @@
                     if (active_col === 'groups') {
                         active_col = 'channels';
                         index_c = 0;
-                        _this.renderC(groups_data[Object.keys(groups_data)[index_g]]);
+                        var groupName = Object.keys(groups_data)[index_g];
+                        _this.renderC(groups_data[groupName]);
                     }
                 },
                 left: function () {
-                    if (active_col === 'channels') active_col = 'groups';
-                    else Lampa.Activity.back();
-                    _this.updateFocus();
+                    if (active_col === 'channels') {
+                        active_col = 'groups';
+                        _this.updateFocus();
+                    } else Lampa.Activity.back();
                 },
                 enter: function () {
                     if (active_col === 'channels' && current_list[index_c]) {
