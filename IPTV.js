@@ -295,8 +295,8 @@
             colG.empty();  
   
             Object.keys(groups_data).forEach(function (name) {  
-                var el = $('<div class="iptv-row group-item">' + name + ' (' + groups_data[name].length + ')</div>');  
-                el.on('click', function () {  
+                var el = $('<div class="iptv-row group-item selector">' + name + ' (' + groups_data[name].length + ')</div>');  
+                el.on('hover:enter', function () {  
                     $('.group-item').removeClass('active');  
                     $(this).addClass('active');  
                     _this.renderChannels(name);  
@@ -304,7 +304,9 @@
                 colG.append(el);  
             });  
   
-            colG.find('.group-item').first().click();  
+            // Встановлюємо фокус на першу групу  
+            colG.find('.group-item').first().addClass('focus');  
+            Lampa.Controller.toggle('content');  
         };  
   
         /* ===================== CHANNELS ===================== */  
@@ -326,7 +328,7 @@
                     '</div>'  
                 );  
   
-                card.on('click', function () {  
+                card.on('hover:enter', function () {  
                     Lampa.Player.play({ url: item.url, title: item.name });  
                 });  
   
@@ -340,7 +342,7 @@
                 }  
             });  
   
-            // Запуск інтервалу для оновлення EPG  
+            / // Запуск інтервалу для оновлення EPG  
             if (epgInterval) clearInterval(epgInterval);  
             epgInterval = setInterval(function () {  
                 colC.find('.iptv-row[data-epg-id]').each(function () {  
@@ -358,7 +360,7 @@
                     Lampa.Activity.back();  
                 }  
             });  
-            Lampa.Controller.toggle('iptv_ultra');  
+            Lampa.Controller.toggle('content');  
         };  
   
         this.pause = this.stop = function () {  
