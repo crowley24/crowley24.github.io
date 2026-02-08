@@ -1401,28 +1401,28 @@ function pluginPage(object) {
 		html.append(info.append());  
 		  
 		if (channelGroup.channels.length) {  
-			setEpgId(channelGroup);  
-			scroll.render().addClass('layer--wheight').data('mheight', info);  
-			channelsColumn.append(scroll.render());  
-			this.append(channelGroup.channels);  
-			  
-			// Показуємо EPG якщо увімкнено  
-			if (getStorage('epg', false)) {  
-				epgColumn.show();  
-			} else {  
-				epgColumn.hide();  
-			}  
-			  
-			scroll.append(body);  
-			setStorage('last_catalog' + object.id, object.currentGroup ? object.currentGroup : '!!');  
-			lists[object.id].activity.currentGroup = object.currentGroup;  
-		} else {  
-			var empty = new Lampa.Empty();  
-			channelsColumn.append(empty.render());  
-			this.activity.loader(false);  
-			Lampa.Controller.collectionSet(info);  
-			Navigator.move('right');  
-		}  
+    setEpgId(channelGroup);  
+    scroll.render().addClass('layer--wheight').data('mheight', info);  
+    channelsColumn.append(scroll.render());  
+    this.append(channelGroup.channels);  
+      
+    // Показуємо EPG якщо увімкнено  
+    if (getStorage('epg', false)) {  
+        epgColumn.show();  
+    } else {  
+        epgColumn.hide();  
+    }  
+      
+    scroll.append(body);  
+    setStorage('last_catalog' + object.id, object.currentGroup ? object.currentGroup : '!!');  
+    lists[object.id].activity.currentGroup = object.currentGroup;  
+} else {  
+    var empty = new Lampa.Empty();  
+    channelsColumn.append(empty.render());  
+    this.activity.loader(false);  
+    Lampa.Controller.collectionSet(info);  
+    Navigator.move('right');  
+}  
 	};  
 	this.selectGroup = function () {  
 		var activity = Lampa.Arrays.clone(lists[object.id].activity);  
