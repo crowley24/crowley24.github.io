@@ -10,7 +10,7 @@
     function IPTVComponent(object) {  
         var _this = this;  
         var root, colG, colC, colE;  
-        var playlists = Lampa.Storage.get('iptv_pl', [{name: 'MEGA', url: 'https://raw.githubusercontent.com/loganettv/playlists/refs/heads/main/mega.m3u'}]);  
+        var playlists = Lampa.Storage.get('iptv_pl', [{name: 'TEST', url: 'https://m3u.ch/pl/86727211832faa261da1f840b1a63f84_c12804a6605dcff3dbef1d0b77084e84.m3u'}]);  
         var fav = Lampa.Storage.get('iptv_fav', []);  
         var epgCache = {}; // Кеш для EPG даних  
         var CACHE_DURATION = 30 * 60 * 1000; // 30 хвилин  
