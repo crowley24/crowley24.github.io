@@ -1,206 +1,194 @@
-// ==Lampa==
-// name: IPTV Clean Adaptive
-// version: 7.4
-// author: Gemini & Artrax90
-// ==/Lampa==
+/* jshint esversion: 5 */
+/* global $, Lampa */
 
 (function () {
     'use strict';
 
-    const style = `
-        <style id="iptv-v74-style">
-            .iptv-root { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #0b0d10; z-index: 1000; padding-top: 5rem; box-sizing: border-box; }
-            .iptv-wrapper { display: flex; width: 100%; height: 100%; overflow: hidden; }
-            
-            .iptv-col { height: 100%; overflow-y: auto; background: rgba(0,0,0,0.2); border-right: 1px solid rgba(255,255,255,0.05); transition: width 0.3s; }
-            
-            /* Десктопні розміри */
-            .col-groups { width: 20rem; flex-shrink: 0; }
-            .col-channels { flex: 1; }
-            .col-details { width: 25rem; flex-shrink: 0; background: #080a0d; padding: 1.5rem; display: flex; flex-direction: column; align-items: center; }
-            
-            /* Адаптація під мобільні (екран < 768px) */
-            @media screen and (max-width: 768px) {
-                .col-details { display: none; } /* Ховаємо праву панель на мобільних */
-                .col-groups { width: 40%; }
-                .iptv-item { font-size: 1rem !important; padding: 0.8rem !important; }
-            }
-
-            .iptv-item { 
-                padding: 1rem; margin: 0.3rem 0.8rem; border-radius: 0.5rem; 
-                background: rgba(255,255,255,0.03); color: #fff; 
-                border: 2px solid transparent; cursor: pointer;
-                font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-            }
-            .iptv-item.active { background: #2962ff !important; border-color: #fff; }
-            
-            /* Виправлення ЛОГО */
-            .info-logo-container { width: 100%; max-width: 15rem; aspect-ratio: 16/9; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); border-radius: 0.5rem; overflow: hidden; }
-            .info-logo { max-width: 100%; max-height: 100%; object-fit: contain; }
-            
-            .info-title { font-size: 1.6rem; font-weight: bold; color: #fff; margin-bottom: 0.5rem; text-align: center; width: 100%; }
-            .info-desc { font-size: 1rem; color: rgba(255,255,255,0.5); text-align: center; }
-            
-            .loading-shimmer { padding: 2rem; text-align: center; color: #fff; }
-        </style>
-    `;
-
-    function IPTVComponent(object) {
-        var _this = this;
-        var root, colG, colC, colE;
+    function IPTVUltra() {
+        var root, colG, colC;
         var groups_data = {};
-        var current_list = [];
-        var active_col = 'groups'; 
-        var index_g = 0, index_c = 0;
+        var _this;
+
+        var EPG_URL = 'https://iptvx.one/epg/epg.xml.gz';
 
         this.create = function () {
-            root = $('<div class="iptv-root"></div>');
-            var container = $('<div class="iptv-wrapper"></div>');
-            
-            colG = $('<div class="iptv-col col-groups"></div>');
-            colC = $('<div class="iptv-col col-channels"></div>');
-            colE = $('<div class="iptv-col col-details"></div>');
-            
-            container.append(colG, colC, colE);
-            root.append(container);
-            this.load();
+            _this = this;
+            root = $('<div class="iptv-ultra-root"></div>');
+
+            if (!$('#iptv-ultra-style').length) {
+                $('head').append(
+                    '<style id="iptv-ultra-style">' +
+                    '.iptv-ultra-root{position:fixed;top:0;left:0;width:100%;height:100%;background:#0b0d10;z-index:1000;display:flex;padding-top:3.5rem;color:#fff;font-family:sans-serif}' +
+                    '.col-groups{width:30%;background:#0d1013;border-right:1px solid rgba(255,255,255,.05);overflow-y:auto}' +
+                    '.col-channels{flex:1;background:#0b0d10;overflow-y:auto;padding:10px}' +
+                    '.iptv-row{padding:12px 15px;margin:5px;border-radius:8px;background:rgba(255,255,255,.03);cursor:pointer;border:2px solid transparent}' +
+                    '.iptv-row.active{background:#2962ff!important;border-color:#fff}' +
+                    '.ch-header{display:flex;gap:12px}' +
+                    '.ch-logo{width:50px;height:50px;object-fit:contain;background:#000;border-radius:6px;flex-shrink:0}' +
+                    '.ch-info{flex:1;overflow:hidden}' +
+                    '.ch-name{font-weight:bold;font-size:1.1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+                    '.epg-text{font-size:.9rem;color:#30ffaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:1.2rem}' +
+                    '.epg-bar-container{width:100%;height:4px;background:rgba(255,255,255,.1);margin-top:6px;border-radius:2px;overflow:hidden}' +
+                    '.epg-bar-fill{height:100%;background:#30ffaa;width:0%}' +
+                    '</style>'
+                );
+            }
+
+            colG = $('<div class="col-groups"></div>');
+            colC = $('<div class="col-channels"></div>');
+            root.append(colG, colC);
+
+            this.loadPlaylist();
             return root;
         };
 
-        this.load = function () {
-            colG.html('<div class="loading-shimmer">Завантаження...</div>');
-            $.ajax({
-                url: 'https://m3u.ch/pl/86727211832faa261da1f840b1a63f84_c12804a6605dcff3dbef1d0b77084e84.m3u',
-                success: function(str) { _this.parse(str); },
-                error: function() { colG.html('<div class="iptv-item">Помилка завантаження</div>'); }
-            });
-        };
+        this.loadPlaylist = function () {
+            var pl_url = 'https://m3u.ch/pl/86727211832faa261da1f840b1a63f84_c12804a6605dcff3dbef1d0b77084e84.m3u';
+            var network = new Lampa.Reguest();
 
-        this.parse = function (str) {
-            var lines = str.split('\n');
-            var channels = [];
-            groups_data = {}; 
-            for (var i = 0; i < lines.length; i++) {
-                var l = lines[i].trim();
-                if (l.indexOf('#EXTINF') === 0) {
-                    var n = (l.match(/,(.*)$/) || [,'Без назви'])[1];
-                    var g = (l.match(/group-title="([^"]+)"/i) || [,'ОБЩИЕ'])[1];
-                    var img = (l.match(/tvg-logo="([^"]+)"/i) || [,''])[1];
-                    channels.push({name: n, group: g, logo: img, url: ''});
-                } else if (l.indexOf('http') === 0 && channels.length > 0) {
-                    var last = channels[channels.length - 1];
-                    if (!last.url) {
-                        last.url = l;
-                        if (!groups_data[last.group]) groups_data[last.group] = [];
-                        groups_data[last.group].push(last);
-                    }
+            network.silent(pl_url, function (data) {
+                if (!data) return;
+
+                if (Lampa.Tvg) {
+                    Lampa.Tvg.push(EPG_URL);
                 }
-            }
-            this.renderG();
+
+                _this.parse(data);
+            }, function () {
+                colG.html('<div style="padding:20px;">Помилка завантаження</div>');
+            }, false, { dataType: 'text' });
         };
 
-        this.renderG = function () {
+        this.parse = function (data) {
+            groups_data = { 'УСІ': [] };
+
+            var lines = data.split('\n');
+            var ch = null;
+
+            lines.forEach(function (line) {
+                line = line.trim();
+
+                if (line.indexOf('#EXTINF') === 0) {
+                    ch = {
+                        name: line.split(',').pop().trim(),
+                        grp: (line.match(/group-title="([^"]+)"/i) || [null, 'ІНШЕ'])[1],
+                        logo: (line.match(/tvg-logo="([^"]+)"/i) || [null, ''])[1],
+                        tid: (line.match(/tvg-id="([^"]+)"/i) || [null, ''])[1]
+                    };
+                }
+                else if (line.indexOf('http') === 0 && ch) {
+                    ch.url = line;
+
+                    if (!groups_data[ch.grp]) groups_data[ch.grp] = [];
+                    groups_data[ch.grp].push(ch);
+                    groups_data['УСІ'].push(ch);
+
+                    ch = null;
+                }
+            });
+
+            this.renderGroups();
+        };
+
+        this.renderGroups = function () {
             colG.empty();
-            Object.keys(groups_data).forEach(function(g, i) {
-                var item = $('<div class="iptv-item">' + g + '</div>');
-                item.on('click hover:enter', function() {
-                    index_g = i; active_col = 'groups';
-                    _this.renderC();
+
+            Object.keys(groups_data).forEach(function (name) {
+                var el = $('<div class="iptv-row group-item">' + name + ' (' + groups_data[name].length + ')</div>');
+                el.on('click', function () {
+                    $('.group-item').removeClass('active');
+                    $(this).addClass('active');
+                    _this.renderChannels(name);
                 });
-                colG.append(item);
+                colG.append(el);
             });
-            this.updateFocus();
+
+            colG.find('.group-item').first().click();
         };
 
-        this.renderC = function () {
-            colC.empty();
-            var g_name = Object.keys(groups_data)[index_g];
-            current_list = groups_data[g_name] || [];
-            current_list.forEach(function(c, i) {
-                var row = $('<div class="iptv-item">' + c.name + '</div>');
-                row.on('click hover:enter', function() {
-                    index_c = i; active_col = 'channels';
-                    _this.updateFocus();
+        this.renderChannels = function (group) {
+            colC.empty().scrollTop(0);
+
+            (groups_data[group] || []).forEach(function (item) {
+                var card = $(
+                    '<div class="iptv-row selector">' +
+                        '<div class="ch-header">' +
+                            '<img class="ch-logo" src="' + item.logo + '" onerror="this.src=\'https://placehold.co/100x100?text=TV\'">' +
+                            '<div class="ch-info">' +
+                                '<div class="ch-name">' + item.name + '</div>' +
+                                '<div class="epg-text">Завантаження...</div>' +
+                                '<div class="epg-bar-container"><div class="epg-bar-fill"></div></div>' +
+                            '</div>' +
+                        '</div>' +
+                    '</div>'
+                );
+
+                card.on('click', function () {
+                    Lampa.Player.play({ url: item.url, title: item.name });
                 });
-                row.on('dblclick', function() { Lampa.Player.play({url: c.url, title: c.name}); });
-                colC.append(row);
+
+                colC.append(card);
+
+                if (Lampa.Tvg) {
+                    Lampa.Tvg.ready(function () {
+                        Lampa.Tvg.get({
+                            id: item.tid || item.name,
+                            name: item.name
+                        }, function (epg) {
+                            if (!epg || !epg.list) {
+                                card.find('.epg-text').text('EPG відсутній');
+                                return;
+                            }
+
+                            var now = Date.now();
+                            var prog = epg.list.filter(function (p) {
+                                return p.start <= now && p.stop >= now;
+                            })[0];
+
+                            if (!prog) {
+                                card.find('.epg-text').text('Немає програми');
+                                return;
+                            }
+
+                            var percent = ((now - prog.start) / (prog.stop - prog.start)) * 100;
+                            card.find('.epg-text').text(prog.title);
+                            card.find('.epg-bar-fill').css('width', percent + '%');
+                        });
+                    });
+                }
             });
-            this.updateFocus();
-        };
-
-        this.updateFocus = function () {
-            $('.iptv-item').removeClass('active');
-            var g_item = colG.find('.iptv-item').eq(index_g);
-            var c_item = colC.find('.iptv-item').eq(index_c);
-
-            if (active_col === 'groups') {
-                g_item.addClass('active');
-                if(g_item[0]) g_item[0].scrollIntoView({block: "center"});
-                this.setDetails('', g_item.text(), "Оберіть категорію");
-            } else {
-                c_item.addClass('active');
-                if(c_item[0]) c_item[0].scrollIntoView({block: "center"});
-                var chan = current_list[index_c];
-                if (chan) this.setDetails(chan.logo, chan.name, "Натисніть OK для перегляду");
-            }
-        };
-
-        this.setDetails = function(logo, title, desc) {
-            var imgHtml = logo ? `<img src="${logo}" class="info-logo" onerror="this.style.display='none'">` : '<span style="font-size:3rem">📺</span>';
-            colE.html(`
-                <div class="info-logo-container">${imgHtml}</div>
-                <div class="info-title">${title}</div>
-                <div class="info-desc">${desc}</div>
-            `);
         };
 
         this.start = function () {
-            Lampa.Controller.add('iptv_clean', {
-                toggle: function () {},
-                up: function () {
-                    if (active_col === 'groups') index_g = Math.max(0, index_g - 1);
-                    else index_c = Math.max(0, index_c - 1);
-                    _this.updateFocus();
-                },
-                down: function () {
-                    if (active_col === 'groups') index_g = Math.min(Object.keys(groups_data).length - 1, index_g + 1);
-                    else index_c = Math.min(current_list.length - 1, index_c + 1);
-                    _this.updateFocus();
-                },
-                right: function () {
-                    if (active_col === 'groups') { active_col = 'channels'; index_c = 0; _this.renderC(); }
-                },
-                left: function () {
-                    if (active_col === 'channels') { active_col = 'groups'; _this.updateFocus(); }
-                    else { Lampa.Activity.back(); }
-                },
-                enter: function () {
-                    if (active_col === 'groups') { active_col = 'channels'; index_c = 0; _this.renderC(); }
-                    else { 
-                        var chan = current_list[index_c];
-                        if (chan) Lampa.Player.play({url: chan.url, title: chan.name}); 
-                    }
-                },
+            Lampa.Controller.add('iptv_ultra', {
                 back: function () { Lampa.Activity.back(); }
             });
-            Lampa.Controller.toggle('iptv_clean');
+            Lampa.Controller.toggle('iptv_ultra');
         };
 
         this.pause = this.stop = function () {};
         this.render = function () { return root; };
-        this.destroy = function () { Lampa.Controller.remove('iptv_clean'); root.remove(); };
+        this.destroy = function () { root.remove(); };
     }
 
     function init() {
-        if (!$('#iptv-v74-style').length) $('head').append(style);
-        Lampa.Component.add('iptv_clean', IPTVComponent);
-        var item = $('<li class="menu__item selector"><div class="menu__text">IPTV PRO</div></li>');
+        Lampa.Component.add('iptv_ultra', IPTVUltra);
+
+        var item = $('<li class="menu__item selector">' +
+            '<div class="menu__ico">📺</div>' +
+            '<div class="menu__text">IPTV PRO</div>' +
+        '</li>');
+
         item.on('hover:enter', function () {
-            Lampa.Activity.push({title: 'IPTV', component: 'iptv_clean'});
+            Lampa.Activity.push({ title: 'IPTV PRO', component: 'iptv_ultra' });
         });
+
         $('.menu .menu__list').append(item);
     }
 
     if (window.app_ready) init();
-    else Lampa.Listener.follow('app', function (e) { if (e.type == 'ready') init(); });
+    else Lampa.Listener.follow('app', function (e) {
+        if (e.type === 'ready') init();
+    });
+
 })();
