@@ -20,7 +20,7 @@
             playlists: [
                 {
                     name: 'TEST',
-                    url: 'https://m3u.ch/pl/86727211832faa261da1f840b1a63f84_c12804a6605dcff3dbef1d0b77084e84.m3u'
+                    url: 'https://m3u.ch/pl/cbf67b9b46359837429e6deb5b384f9e_e2c018841bc8b4dd2110ddc53d611e72.m3u'
                 }
             ],
             favorites: [],
