@@ -22,12 +22,12 @@
                     '.iptv-row { padding: 12px 15px; margin: 5px; border-radius: 8px; background: rgba(255,255,255,0.03); cursor: pointer; border: 2px solid transparent; }' +
                     '.iptv-row.active { background: #2962ff !important; border-color: #fff; }' +
                     '.ch-header { display: flex; align-items: center; gap: 12px; }' +
-                    '.ch-logo { width: 50px; height: 50px; object-fit: contain; background: #000; border-radius: 6px; flex-shrink:0; }' +
+                    '.ch-logo { width: 50px; height: 50px; object-fit: contain; background: #000; border-radius: 6px; }' +
                     '.ch-info { flex: 1; overflow: hidden; }' +
                     '.ch-name { font-weight: bold; font-size: 1.1rem; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }' +
-                    '.epg-text { font-size: 0.9rem; color: #30ffaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; height: 1.2rem; }' +
+                    '.epg-text { font-size: 0.9rem; color: #30ffaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 1.2rem; }' +
                     '.epg-bar-container { width: 100%; height: 4px; background: rgba(255,255,255,0.1); margin-top: 6px; border-radius: 2px; overflow: hidden; }' +
-                    '.epg-bar-fill { height: 100%; background: #30ffaa; width: 0%; transition: width 0.3s; }' +
+                    '.epg-bar-fill { height: 100%; background: #30ffaa; width: 0%; }' +
                     '</style>'
                 );
             }
@@ -45,12 +45,14 @@
             var network = new Lampa.Reguest();
             network.silent(pl_url, function (data) {
                 if (data) {
-                    var epg_found = (data.match(/url-tvg="([^"]+)"/i) || [])[1];
-                    if (epg_found && Lampa.Tvg) Lampa.Tvg.push(epg_found);
+                    // Реєструємо EPG з плейлиста, як це робить оригінал
+                    var epg_url = (data.match(/url-tvg="([^"]+)"/i) || [])[1];
+                    if (epg_url && Lampa.Tvg) Lampa.Tvg.push(epg_url);
+                    
                     _this.parse(data);
                 }
             }, function () {
-                colG.html('<div style="padding:20px;">Помилка мережі</div>');
+                colG.html('<div style="padding:20px;">Помилка</div>');
             }, false, { dataType: 'text' });
         };
 
@@ -109,33 +111,30 @@
                 );
                 card.on('click', function () { Lampa.Player.play({ url: ch.url, title: ch.name }); });
                 colC.append(card);
-                
-                // ВЛАСНЕ, ТА САМА ЛОГІКА ВІДОБРАЖЕННЯ
-                _this.applyEPG(ch, i);
-            });
-        };
 
-        this.applyEPG = function (ch, idx) {
-            // Захист від undefined 'get'
-            if (typeof Lampa.Tvg === 'undefined' || !Lampa.Tvg.get) return;
+                // --- КОПІЯ ЛОГІКИ З ПЛАГІНА ---
+                Lampa.Tvg.get({
+                    id: ch.tid,
+                    name: ch.name
+                }, function (data) {
+                    if (data && data.list) {
+                        var now = Date.now();
+                        var prog = data.list.filter(function (p) {
+                            return p.start <= now && p.stop >= now;
+                        })[0];
 
-            Lampa.Tvg.get({id: ch.tid, name: ch.name}, function(data) {
-                if (data && data.list && data.list.length) {
-                    var now = Date.now();
-                    var prog = data.list.filter(function(p) { 
-                        return p.start <= now && p.stop >= now; 
-                    })[0];
-
-                    if (prog) {
-                        var per = ((now - prog.start) / (prog.stop - prog.start)) * 100;
-                        $('#epg-t-' + idx).text(prog.title);
-                        $('#epg-b-' + idx).css('width', per + '%');
+                        if (prog) {
+                            var per = ((now - prog.start) / (prog.stop - prog.start)) * 100;
+                            $('#epg-t-' + i).text(prog.title);
+                            $('#epg-b-' + i).css('width', per + '%');
+                        } else {
+                            $('#epg-t-' + i).text('Немає програми');
+                        }
                     } else {
-                        $('#epg-t-' + idx).text('Немає програми');
+                        $('#epg-t-' + i).text('Програма відсутня');
                     }
-                } else {
-                    $('#epg-t-' + idx).text('Програма відсутня');
-                }
+                });
+                // --- КІНЕЦЬ ЛОГІКИ ---
             });
         };
 
