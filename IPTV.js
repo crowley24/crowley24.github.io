@@ -291,7 +291,7 @@
               
             setTimeout(function() {  
                 var firstCategory = colG.find('.selector').first();  
-                if(firstCategory.length) Lampa.Controller.focus(first[0]);  
+                if(firstCategory.length) Lampa.Controller.focus(firstCategory[0]);  
             }, 500);  
         };  
   
@@ -299,17 +299,25 @@
         this.render = function () { return root; };  
         this.destroy = function () {   
             Lampa.Controller.remove('iptv_native');  
+            $('.menu__item:contains("IPTV PRO Enhanced")').remove();  
             root.remove();   
         };  
     }  
   
     function init() {  
+        // Перевірка, чи компонент уже зареєстровано  
+        if (Lampa.Component.get('iptv_native')) return;  
+  
         Lampa.Component.add('iptv_native', IPTVComponent);  
-        var btn = $('<li class="menu__item selector"><div class="menu__text">IPTV PRO Enhanced</div></li>');  
-        btn.on('hover:enter', function () {  
-            Lampa.Activity.push({title: 'IPTV', component: 'iptv_native'});  
-        });  
-        $('.menu .menu__list').append(btn);  
+          
+        // Перевірка, чи кнопка вже існує  
+        if (!$('.menu__item:contains("IPTV PRO Enhanced")').length) {  
+            var btn = $('<li class="menu__item selector"><div class="menu__text">IPTV PRO Enhanced</div></li>');  
+            btn.on('hover:enter', function () {  
+                Lampa.Activity.push({title: 'IPTV', component: 'iptv_native'});  
+            });  
+            $('.menu .menu__list').append(btn);  
+        }  
     }  
   
     if (window.app_ready) init();  
