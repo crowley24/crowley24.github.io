@@ -107,7 +107,7 @@ function epgListView(isView) {
 	}  
 }  
   
-function renderGroups(groupsColumn) {  
+function renderGroups(groupsColumn, object) {  
     if (!groupsColumn) return;  
     groupsColumn.empty();  
     lists[object.id].groups.forEach(function(group) {  
@@ -1378,7 +1378,7 @@ function pluginPage(object) {
 		Lampa.Background.change();  
 		  
 		// Рендеринг груп  
-		renderGroups(groupsColumn);  
+		renderGroups(groupsColumn, object);  
 		  
 		// Очищення та підготовка колонки каналів  
 		channelsColumn.empty();  
