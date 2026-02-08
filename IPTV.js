@@ -160,7 +160,14 @@
         }  
   
         function setEpgId(channelGroup) {  
-            if (!channelGroup.channels || !listCfg['epgApiChUrl']) return;  
+            if (!channelGroup.channels) return;  
+            if (!listCfg['epgApiChUrl']) {  
+                // Запасний варіант: використовувати tvg-id напряму  
+                channelGroup.channels.forEach(function (channel) {  
+                    channel['epgId'] = channel['tid'];  
+                });  
+                return;  
+            }  
             networkSilentSessCache(listCfg['epgApiChUrl'], function (d) {  
                 chIDs = d;  
                 if (!chIDs['id2epg']) chIDs['id2epg'] = {};  
@@ -332,6 +339,7 @@
                     card.find('.epg-bar-fill').css('width', '0%');  
                 }  
             });  
+  
             // Запуск інтервалу для оновлення EPG  
             if (epgInterval) clearInterval(epgInterval);  
             epgInterval = setInterval(function () {  
