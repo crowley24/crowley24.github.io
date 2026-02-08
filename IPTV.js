@@ -1378,7 +1378,7 @@ function pluginPage(object) {
 		Lampa.Background.change();  
 		  
 		// Рендеринг груп  
-		renderGroups();  
+		renderGroups(groupsColumn);  
 		  
 		// Очищення та підготовка колонки каналів  
 		channelsColumn.empty();  
