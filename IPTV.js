@@ -1,6 +1,6 @@
 // ==Lampa==
-// name: IPTV Ultra + Real EPG
-// version: 7.6
+// name: IPTV Ultra Fix
+// version: 7.7
 // author: Gemini & Artrax90
 // ==/Lampa==
 
@@ -8,7 +8,7 @@
     'use strict';
 
     const style = `
-        <style id="iptv-v76-style">
+        <style id="iptv-v77-style">
             .iptv-root { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #0b0d10; z-index: 1000; padding-top: 4rem; box-sizing: border-box; }
             .iptv-wrapper { display: flex; width: 100%; height: 100%; overflow: hidden; }
             .iptv-col { height: 100%; overflow-y: auto; background: rgba(255,255,255,0.02); border-right: 1px solid rgba(255,255,255,0.05); }
@@ -23,9 +23,9 @@
             .iptv-item.active { background: #2962ff !important; border-color: rgba(255,255,255,0.3); }
             .item-logo { width: 2.8rem; height: 2.8rem; object-fit: contain; background: rgba(0,0,0,0.2); border-radius: 0.3rem; flex-shrink: 0; }
             .item-text { font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; line-height: 1.2; }
-            .item-epg-name { font-size: 0.8rem; color: #30ffaa; margin-top: 0.2rem; display: block; overflow: hidden; text-overflow: ellipsis; }
+            .item-epg-name { font-size: 0.8rem; color: #30ffaa; margin-top: 0.2rem; display: block; overflow: hidden; text-overflow: ellipsis; opacity: 0.8; }
             .item-epg-progress { width: 100%; height: 2px; background: rgba(255,255,255,0.1); margin-top: 4px; border-radius: 2px; overflow: hidden; }
-            .item-epg-bar { height: 100%; background: #30ffaa; width: 0%; }
+            .item-epg-bar { height: 100%; background: #30ffaa; width: 0%; transition: width 0.3s ease; }
         </style>
     `;
 
@@ -53,7 +53,7 @@
             $.ajax({
                 url: 'https://m3u.ch/pl/86727211832faa261da1f840b1a63f84_c12804a6605dcff3dbef1d0b77084e84.m3u',
                 success: function(str) { _this.parse(str); },
-                error: function() { colG.html('<div class="iptv-item">Помилка</div>'); }
+                error: function() { colG.html('<div class="iptv-item">Помилка мережі</div>'); }
             });
         };
 
@@ -65,10 +65,10 @@
                 var l = lines[i].trim();
                 if (l.indexOf('#EXTINF') === 0) {
                     var n = (l.match(/,(.*)$/) || [,'Без назви'])[1];
-                    var g = (l.match(/group-title="([^"]+)"/i) || [,'ОБЩИЕ'])[1];
+                    var g = (l.match(/group-title="([^"]+)"/i) || [,'ІНШЕ'])[1];
                     var img = (l.match(/tvg-logo="([^"]+)"/i) || [,''])[1];
                     var tid = (l.match(/tvg-id="([^"]+)"/i) || [,''])[1];
-                    channels.push({name: n, group: g, logo: img, tid: tid, url: ''});
+                    channels.push({name: n.trim(), group: g, logo: img, tid: tid, url: ''});
                 } else if (l.indexOf('http') === 0 && channels.length > 0) {
                     var last = channels[channels.length - 1];
                     if (!last.url) {
@@ -99,14 +99,14 @@
             var g_name = Object.keys(groups_data)[index_g];
             current_list = groups_data[g_name] || [];
             current_list.forEach(function(c, i) {
-                var img = c.logo ? `<img src="${c.logo}" class="item-logo" onerror="this.src='https://placehold.co/100x100?text=TV'">` : `<div class="item-logo" style="display:flex;align-items:center;justify-content:center;background:#222">📺</div>`;
+                var img = c.logo ? `<img src="${c.logo}" class="item-logo" onerror="this.style.display='none'">` : `<div class="item-logo" style="display:flex;align-items:center;justify-content:center;background:#222">📺</div>`;
                 
                 var row = $(`
-                    <div class="iptv-item" id="chan-${i}">
+                    <div class="iptv-item">
                         ${img}
                         <div class="item-text">
                             <div class="chan-name">${c.name}</div>
-                            <div class="item-epg-name" id="epg-name-${i}">Програма відсутня</div>
+                            <div class="item-epg-name" id="epg-name-${i}"></div>
                             <div class="item-epg-progress"><div class="item-epg-bar" id="epg-bar-${i}"></div></div>
                         </div>
                     </div>
@@ -118,27 +118,29 @@
                     Lampa.Player.play({url: c.url, title: c.name});
                 });
                 colC.append(row);
-                _this.getEPG(c, i);
+                setTimeout(function() { _this.getEPG(c, i); }, 100 * (i % 10)); // Розподіл навантаження
             });
             this.updateFocus();
         };
 
         this.getEPG = function(channel, id) {
-            Lampa.Tvg.get({
-                name: channel.name,
-                id: channel.tid
-            }, function(data) {
-                if(data && data.list && data.list.length) {
-                    var current = data.list.find(e => e.start <= Date.now() && e.stop >= Date.now());
-                    if(current) {
-                        $(`#epg-name-${id}`).text(current.title);
-                        var total = current.stop - current.start;
-                        var elapsed = Date.now() - current.start;
-                        var percent = Math.min(100, Math.max(0, (elapsed / total) * 100));
-                        $(`#epg-bar-${id}`).css('width', percent + '%');
-                    }
+            try {
+                if (typeof Lampa !== 'undefined' && Lampa.Tvg) {
+                    Lampa.Tvg.get({name: channel.name, id: channel.tid}, function(data) {
+                        if(data && data.list && data.list.length) {
+                            var now = Date.now();
+                            var current = data.list.find(e => e.start <= now && e.stop >= now);
+                            if(current) {
+                                $(`#epg-name-${id}`).text(current.title);
+                                var total = current.stop - current.start;
+                                var elapsed = now - current.start;
+                                var percent = Math.min(100, Math.max(0, (elapsed / total) * 100));
+                                $(`#epg-bar-${id}`).css('width', percent + '%');
+                            }
+                        }
+                    });
                 }
-            });
+            } catch(e) { console.log('EPG Error:', e); }
         };
 
         this.updateFocus = function () {
@@ -147,10 +149,10 @@
             var c_item = colC.find('.iptv-item').eq(index_c);
             if (active_col === 'groups') {
                 g_item.addClass('active');
-                if(g_item[0]) g_item[0].scrollIntoView({block: "center"});
+                if(g_item[0]) g_item[0].scrollIntoView({block: "center", behavior: "smooth"});
             } else {
                 c_item.addClass('active');
-                if(c_item[0]) c_item[0].scrollIntoView({block: "center"});
+                if(c_item[0]) c_item[0].scrollIntoView({block: "center", behavior: "smooth"});
             }
         };
 
@@ -192,7 +194,7 @@
     }
 
     function init() {
-        if (!$('#iptv-v76-style').length) $('head').append(style);
+        if (!$('#iptv-v77-style').length) $('head').append(style);
         Lampa.Component.add('iptv_clean', IPTVComponent);
         var item = $('<li class="menu__item selector"><div class="menu__text">IPTV PRO</div></li>');
         item.on('hover:enter', function () {
