@@ -1,21 +1,21 @@
 // ==Lampa==
 // name: IPTV PRO Final Fix
-// version: 11.9
+// version: 12.0
 // ==/Lampa==
 
 (function () {
     'use strict';
 
-    function IPTVComponent(object) {
+    function IPTVComponent() {
         var _this = this;
         var root, colG, colC, colE;
         var groups_data = {};
         var all_channels = [];
         var current_list = [];
-        var active_col = 'groups'; 
+        var active_col = 'groups';
         var index_g = 0, index_c = 0;
-        
-        var storage_key = 'iptv_pro_v11';
+
+        var storage_key = 'iptv_pro_v12';
         var config = Lampa.Storage.get(storage_key, {
             playlists: [
                 {
@@ -29,11 +29,9 @@
 
         /* ================= FAVORITES ================= */
 
-        this.toggleFavorite = function(channel) {
-            var index = -1;
-
-            config.favorites.forEach(function(f, i) {
-                if (f.url === channel.url) index = i;
+        this.toggleFavorite = function (channel) {
+            var index = config.favorites.findIndex(function (f) {
+                return f.url === channel.url;
             });
 
             if (index > -1) {
@@ -45,13 +43,13 @@
             }
 
             Lampa.Storage.set(storage_key, config);
-            _this.parseStorage();
+            this.parseStorage();
         };
 
-        this.parseStorage = function() {
+        this.parseStorage = function () {
             groups_data['⭐ Избранное'] = config.favorites;
-            if (active_col === 'groups') _this.renderG();
-            else _this.renderC(current_list);
+            if (active_col === 'groups') this.renderG();
+            else this.renderC(current_list);
         };
 
         /* ================= CREATE ================= */
@@ -67,82 +65,41 @@
             container.append(colG, colC, colE);
             root.append(container);
 
-            if (!$('#iptv-v11-style').length) {
+            if (!$('#iptv-style-v12').length) {
                 $('head').append(`
-                    <style id="iptv-v11-style">
-                        .iptv-root {
-                            position: fixed;
-                            inset: 0;
-                            background: #0b0d10;
-                            z-index: 1000;
-                            padding-top: 5rem;
-                        }
-                        .iptv-wrapper {
-                            display: flex;
-                            width: 100%;
-                            height: 100%;
-                        }
-                        .iptv-col {
-                            height: 100%;
-                            overflow-y: auto;
-                            background: rgba(0,0,0,0.2);
-                            border-right: 1px solid rgba(255,255,255,0.1);
-                        }
-                        .col-groups { width: 20rem; }
-                        .col-channels { flex: 1; }
-                        .col-details {
-                            width: 25rem;
-                            background: #080a0d;
-                            padding: 2rem;
-                        }
-                        .iptv-item {
-                            padding: 1rem;
-                            margin: 0.4rem;
-                            border-radius: 0.5rem;
-                            background: rgba(255,255,255,0.03);
-                            color: #fff;
-                            cursor: pointer;
-                        }
-                        .iptv-item.active {
-                            background: #2962ff !important;
-                        }
-                        .iptv-item.is-fav::before {
-                            content: '⭐ ';
-                            color: #ffd700;
-                        }
-                        .btn-pl, .btn-search {
-                            padding: 1rem;
-                            margin: 0.5rem 1rem;
-                            text-align: center;
-                            border-radius: 0.5rem;
-                            cursor: pointer;
-                            color: #fff;
-                            font-weight: bold;
-                        }
-                        .btn-pl { background: #2962ff; }
-                        .btn-search { background: #444; }
-                    </style>
-                `);
+<style id="iptv-style-v12">
+.iptv-root{position:fixed;inset:0;background:#0b0d10;z-index:1000;padding-top:5rem}
+.iptv-wrapper{display:flex;width:100%;height:100%}
+.iptv-col{height:100%;overflow-y:auto;border-right:1px solid rgba(255,255,255,.1)}
+.col-groups{width:20rem;background:rgba(0,0,0,.25)}
+.col-channels{flex:1;background:rgba(0,0,0,.15)}
+.col-details{width:25rem;background:#080a0d;padding:2rem}
+.iptv-item{padding:1rem;margin:.4rem;border-radius:.5rem;background:rgba(255,255,255,.04);color:#fff;cursor:pointer}
+.iptv-item.active{background:#2962ff}
+.iptv-item.is-fav:before{content:'⭐ ';color:#ffd700}
+.btn-pl,.btn-search{padding:1rem;margin:.5rem 1rem;border-radius:.5rem;text-align:center;font-weight:700;cursor:pointer}
+.btn-pl{background:#2962ff}
+.btn-search{background:#444}
+</style>`);
             }
 
             this.loadPlaylist();
             return root;
         };
 
-        /* ================= PLAYLIST LOAD ================= */
+        /* ================= LOAD ================= */
 
         this.loadPlaylist = function () {
-            var current = config.playlists[config.current_pl_index];
-            if (!current) return;
+            var pl = config.playlists[config.current_pl_index];
+            if (!pl) return;
 
             $.ajax({
-                url: current.url,
+                url: pl.url,
                 success: function (str) {
                     _this.parse(str);
                 },
                 error: function () {
                     Lampa.Noty.show('Ошибка загрузки плейлиста');
-                    _this.parse('');
                 }
             });
         };
@@ -151,16 +108,11 @@
 
         this.parse = function (str) {
             var lines = str.split('\n');
-
-            groups_data = {
-                '⭐ Избранное': config.favorites
-            };
-
+            groups_data = { '⭐ Избранное': config.favorites };
             all_channels = [];
 
             for (var i = 0; i < lines.length; i++) {
                 var l = lines[i].trim();
-
                 if (l.indexOf('#EXTINF') === 0) {
                     var name = (l.match(/,(.*)$/) || [,''])[1];
                     var group = (l.match(/group-title="([^"]+)"/i) || [,'ОБЩИЕ'])[1];
@@ -168,9 +120,7 @@
 
                     if (url.indexOf('http') === 0) {
                         var item = { name: name, url: url, group: group };
-
                         all_channels.push(item);
-
                         if (!groups_data[group]) groups_data[group] = [];
                         groups_data[group].push(item);
                     }
@@ -185,13 +135,11 @@
         this.renderG = function () {
             colG.empty();
 
-            var btnPl = $('<div class="btn-pl">📂 Плейлисты</div>');
-            btnPl.on('click', function () {
+            var btnPl = $('<div class="btn-pl">📂 Плейлисты</div>').on('click', function () {
                 _this.playlistMenu();
             });
 
-            var btnSearch = $('<div class="btn-search">🔍 Поиск</div>');
-            btnSearch.on('click', function () {
+            var btnSearch = $('<div class="btn-search">🔍 Поиск</div>').on('click', function () {
                 _this.searchChannels();
             });
 
@@ -210,6 +158,38 @@
             this.updateFocus();
         };
 
+        /* ================= CHANNELS ================= */
+
+        this.renderC = function (list) {
+            colC.empty();
+            current_list = list || [];
+
+            current_list.forEach(function (c) {
+                var is_fav = config.favorites.some(f => f.url === c.url);
+                var row = $('<div class="iptv-item ' + (is_fav ? 'is-fav' : '') + '">' + c.name + '</div>');
+
+                row.on('click', function () {
+                    Lampa.Player.play({ url: c.url, title: c.name });
+                });
+
+                colC.append(row);
+            });
+
+            active_col = 'channels';
+            index_c = 0;
+            this.updateFocus();
+        };
+
+        /* ================= SEARCH ================= */
+
+        this.searchChannels = function () {
+            Lampa.Input.edit({ title: 'Поиск', value: '', free: true }, function (q) {
+                if (!q) return;
+                var res = all_channels.filter(c => c.name.toLowerCase().includes(q.toLowerCase()));
+                _this.renderC(res);
+            });
+        };
+
         /* ================= PLAYLIST MENU ================= */
 
         this.playlistMenu = function () {
@@ -224,90 +204,6 @@
                     Lampa.Storage.set(storage_key, config);
                     _this.loadPlaylist();
                 });
-                colC.append(row);
-            });
-
-            var add = $('<div class="iptv-item">➕ Добавить плейлист</div>');
-            add.on('click', function () {
-                Lampa.Input.edit({
-                    title: 'URL плейлиста',
-                    value: '',
-                    free: true
-                }, function (url) {
-                    if (!url) return;
-
-                    config.playlists.push({
-                        name: 'Плейлист ' + (config.playlists.length + 1),
-                        url: url
-                    });
-
-                    config.current_pl_index = config.playlists.length - 1;
-                    Lampa.Storage.set(storage_key, config);
-                    _this.loadPlaylist();
-                });
-            });
-
-            colC.append(add);
-
-            var del = $('<div class="iptv-item">🗑 Удалить текущий плейлист</div>');
-            del.on('click', function () {
-                if (config.playlists.length <= 1) {
-                    Lampa.Noty.show('Нельзя удалить последний плейлист');
-                    return;
-                }
-
-                config.playlists.splice(config.current_pl_index, 1);
-                config.current_pl_index = 0;
-                Lampa.Storage.set(storage_key, config);
-                _this.loadPlaylist();
-            });
-
-            colC.append(del);
-
-            this.updateFocus();
-        };
-
-        /* ================= SEARCH ================= */
-
-        this.searchChannels = function () {
-            Lampa.Input.edit({
-                title: 'Поиск канала',
-                value: '',
-                free: true
-            }, function (query) {
-                if (!query) return;
-
-                var q = query.toLowerCase();
-                var filtered = all_channels.filter(function (c) {
-                    return c.name.toLowerCase().indexOf(q) !== -1;
-                });
-
-                active_col = 'channels';
-                index_c = 0;
-                _this.renderC(filtered);
-            });
-        };
-
-        /* ================= CHANNELS ================= */
-
-        this.renderC = function (list) {
-            colC.empty();
-            current_list = list || [];
-
-            current_list.forEach(function (c) {
-                var is_fav = config.favorites.some(function(f) {
-                    return f.url === c.url;
-                });
-
-                var row = $('<div class="iptv-item ' + (is_fav ? 'is-fav' : '') + '">' + c.name + '</div>');
-
-                row.on('click', function () {
-                    Lampa.Player.play({
-                        url: c.url,
-                        title: c.name
-                    });
-                });
-
                 colC.append(row);
             });
 
@@ -335,6 +231,7 @@
                     else index_c = Math.max(0, index_c - 1);
                     _this.updateFocus();
                 },
+
                 down: function () {
                     if (active_col === 'groups') {
                         index_g = Math.min(colG.find('.iptv-item').length - 1, index_g + 1);
@@ -343,22 +240,22 @@
                     }
                     _this.updateFocus();
                 },
+
                 right: function () {
                     if (active_col === 'groups') {
-                        active_col = 'channels';
-                        index_c = 0;
                         _this.renderC(groups_data[Object.keys(groups_data)[index_g]]);
                     }
                 },
+
                 left: function () {
                     if (active_col === 'channels') {
                         active_col = 'groups';
                         _this.updateFocus();
                     }
                 },
+
                 enter: function () {
                     if (active_col === 'groups') {
-                        active_col = 'channels';
                         _this.renderC(groups_data[Object.keys(groups_data)[index_g]]);
                     } else if (current_list[index_c]) {
                         Lampa.Player.play({
@@ -367,12 +264,21 @@
                         });
                     }
                 },
+
                 long: function () {
                     if (active_col === 'channels' && current_list[index_c]) {
                         _this.toggleFavorite(current_list[index_c]);
                     }
+                },
+
+                back: function () {
+                    if (active_col === 'channels') {
+                        active_col = 'groups';
+                        _this.updateFocus();
+                    } else {
+                        Lampa.Activity.backward();
+                    }
                 }
-                // ❌ back УБРАН — ЭТО И ЕСТЬ FIX
             });
 
             Lampa.Controller.toggle('iptv_pro');
@@ -394,7 +300,7 @@
         var item = $('<li class="menu__item selector"><div class="menu__text">IPTV PRO</div></li>');
         item.on('hover:enter', function () {
             Lampa.Activity.push({
-                title: 'IPTV',
+                title: 'IPTV PRO',
                 component: 'iptv_pro'
             });
         });
