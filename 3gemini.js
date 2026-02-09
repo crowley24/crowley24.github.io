@@ -1518,25 +1518,42 @@ Lampa.Controller.add('content', {
         }
     },
     right: function () {
-        // Якщо ми ВЖЕ в групах і тиснемо ВПРАВО -> повертаємось до каналів
-        if (Lampa.Controller.enabled().container.is(groupsPanel)) {
+    // 1. Якщо ми зараз у панелі груп, то "Вправо" має вести до КАНАЛІВ
+    if (Lampa.Controller.enabled().container.is(groupsPanel)) {
+        if (scroll && scroll.render) {
             Lampa.Controller.collectionSet(scroll.render());
-            Lampa.Controller.collectionFocus(last || false, scroll.render());
-        } else {
-            // Якщо ми в каналах, звичайний рух по сітці
-            if (Navigator.canmove('right')) Navigator.move('right');
+            // Повертаємо фокус на останній канал або перший доступний
+            var target = scroll.render().find('.selector.active')[0] || scroll.render().find('.selector')[0];
+            if (target) {
+                Lampa.Controller.collectionFocus(target, scroll.render());
+            }
         }
-    },
+    } else {
+        // 2. Якщо ми вже в каналах, просто рухаємось праворуч по сітці
+        if (Navigator.canmove('right')) {
+            Navigator.move('right');
+        }
+    }
+},
     up: function () {
-        // Якщо ми в групах, рухаємось по них
-        if (Lampa.Controller.enabled().container.is(groupsPanel)) {
+    // 1. Перевіряємо, чи ми в панелі груп
+    if (Lampa.Controller.enabled().container.is(groupsPanel)) {
+        var items = groupsPanel.find('.selector');
+        var index = items.index(groupsPanel.find('.focus'));
+        if (index > 0) {
+            Lampa.Controller.collectionFocus(items[index - 1], groupsPanel);
+        } else {
+            Lampa.Controller.toggle('head'); // Якщо це перша група, йдемо в меню
+        }
+    } else {
+        // 2. Якщо ми в каналах
+        if (Navigator.canmove('up')) {
             Navigator.move('up');
         } else {
-            // Якщо в каналах
-            if (Navigator.canmove('up')) Navigator.move('up');
-            else Lampa.Controller.toggle('head');
+            Lampa.Controller.toggle('head'); // Вихід у верхнє меню Lampa
         }
-    },
+    }
+},
     down: function () {
         if (Navigator.canmove('down')) Navigator.move('down');
     },
