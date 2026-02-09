@@ -5,6 +5,24 @@ var plugin = {
 	icon: "<svg height=\"244\" viewBox=\"0 0 260 244\" xmlns=\"http://www.w3.org/2000/svg\" style=\"fill-rule:evenodd;\" fill=\"currentColor\"><path d=\"M259.5 47.5v114c-1.709 14.556-9.375 24.723-23 30.5a2934.377 2934.377 0 0 1-107 1.5c-35.704.15-71.37-.35-107-1.5-13.625-5.777-21.291-15.944-23-30.5v-115c1.943-15.785 10.61-25.951 26-30.5a10815.71 10815.71 0 0 1 208 0c15.857 4.68 24.523 15.18 26 31.5zm-230-13a4963.403 4963.403 0 0 0 199 0c5.628 1.128 9.128 4.462 10.5 10 .667 40 .667 80 0 120-1.285 5.618-4.785 8.785-10.5 9.5-66 .667-132 .667-198 0-5.715-.715-9.215-3.882-10.5-9.5-.667-40-.667-80 0-120 1.35-5.18 4.517-8.514 9.5-10z\"/><path d=\"M70.5 71.5c17.07-.457 34.07.043 51 1.5 5.44 5.442 5.107 10.442-1 15-5.991.5-11.991.666-18 .5.167 14.337 0 28.671-.5 43-3.013 5.035-7.18 6.202-12.5 3.5a11.529 11.529 0 0 1-3.5-4.5 882.407 882.407 0 0 1-.5-42c-5.676.166-11.343 0-17-.5-4.569-2.541-6.069-6.375-4.5-11.5 1.805-2.326 3.972-3.992 6.5-5zM137.5 73.5c4.409-.882 7.909.452 10.5 4a321.009 321.009 0 0 0 16 30 322.123 322.123 0 0 0 16-30c2.602-3.712 6.102-4.879 10.5-3.5 5.148 3.334 6.314 7.834 3.5 13.5a1306.032 1306.032 0 0 0-22 43c-5.381 6.652-10.715 6.652-16 0a1424.647 1424.647 0 0 0-23-45c-1.691-5.369-.191-9.369 4.5-12zM57.5 207.5h144c7.788 2.242 10.288 7.242 7.5 15a11.532 11.532 0 0 1-4.5 3.5c-50 .667-100 .667-150 0-6.163-3.463-7.496-8.297-4-14.5 2.025-2.064 4.358-3.398 7-4z\"/></svg>",
 	name: 'ipTV'
 };
+
+// --- [STYLING BLOCK START] ---
+(function() {
+    var styleId = 'iptv-plugin-styles';
+    if (!$('#' + styleId).length) {
+        $('<style id="' + styleId + '">')
+            .text(
+                '.iptv__groups { width: 15em; flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden; }\n' +
+                '.iptv__group { padding: 0.8em 1.2em; cursor: pointer; border-radius: 0.3em; margin: 0.2em; transition: all 0.2s; opacity: 0.7; font-size: 1.1em; }\n' +
+                '.iptv__group.active { background: rgba(255,255,255,0.1); opacity: 1; border-left: 0.3em solid #fff; }\n' +
+                '.iptv__group.focus { background: #fff !important; color: #000 !important; transform: scale(1.05); opacity: 1; z-index: 10; }\n' +
+                '.iptv__channel.focus { outline: 3px solid #fff; border-radius: 0.5em; transform: scale(1.03); }'
+            )
+            .appendTo('body');
+    }
+})();
+// --- [STYLING BLOCK END] ---
+
 var isSNG = false;
 var lists = [];
 var curListId = -1;
@@ -41,22 +59,22 @@ var chHelper = $((
 var epgTemplate = $(('<div id="PLUGIN_epg">\n' +
 	'<h2 class="js-epgChannel"></h2>\n' +
 	'<div class="PLUGIN-details__program-body js-epgNow">\n' +
-	'   <div class="PLUGIN-details__program-title">Сейчас</div>\n' +
-	'   <div class="PLUGIN-details__program-list">' +
+	'   <div class="PLUGIN-details__program-title">Сейчас</div>\n' +
+	'   <div class="PLUGIN-details__program-list">' +
 	'<div class="PLUGIN-program selector">\n' +
-	'   <div class="PLUGIN-program__time js-epgTime">XX:XX</div>\n' +
-	'   <div class="PLUGIN-program__body">\n' +
-	'	   <div class="PLUGIN-program__title js-epgTitle"> </div>\n' +
-	'	   <div class="PLUGIN-program__progressbar"><div class="PLUGIN-program__progress js-epgProgress" style="width: 50%"></div></div>\n' +
-	'   </div>\n' +
+	'   <div class="PLUGIN-program__time js-epgTime">XX:XX</div>\n' +
+	'   <div class="PLUGIN-program__body">\n' +
+	'	   <div class="PLUGIN-program__title js-epgTitle"> </div>\n' +
+	'	   <div class="PLUGIN-program__progressbar"><div class="PLUGIN-program__progress js-epgProgress" style="width: 50%"></div></div>\n' +
+	'   </div>\n' +
 	'</div>' +
-	'   </div>\n' +
-	'   <div class="PLUGIN-program__desc js-epgDesc"></div>'+
+	'   </div>\n' +
+	'   <div class="PLUGIN-program__desc js-epgDesc"></div>'+
 	'</div>' +
 	'<div class="PLUGIN-details__program-body js-epgAfter">\n' +
-	'   <div class="PLUGIN-details__program-title">Потом</div>\n' +
-	'   <div class="PLUGIN-details__program-list js-epgList">' +
-	'   </div>\n' +
+	'   <div class="PLUGIN-details__program-title">Потом</div>\n' +
+	'   <div class="PLUGIN-details__program-list js-epgList">' +
+	'   </div>\n' +
 	'</div>' +
 	'</div>').replace(/PLUGIN/g, plugin.component)
 );
@@ -1477,49 +1495,59 @@ $('body').append(Lampa.Template.get(plugin.component + '_style', {}, true));
 	this.start = function () {
 		if (Lampa.Activity.active().activity !== this.activity) return; //обязательно, иначе наблюдается баг, активность создается но не стартует, в то время как компонент загружается и стартует самого себя.
 		var _this = this;
-		Lampa.Controller.add('content', {
-			toggle: function toggle() {
-				Lampa.Controller.collectionSet(scroll.render());
-				Lampa.Controller.collectionFocus(last || false, scroll.render());
-			},
-	left: function left() {
-    // Переконуємось, що панель існує в DOM
-    if (groupsPanel) {
-        // 1. Кажемо контролеру, що тепер ми працюємо з елементами в groupsPanel
-        Lampa.Controller.collectionSet(groupsPanel);
-        
-        // 2. Шукаємо активну групу або першу ліпшу
-        var groups = groupsPanel.find('.selector');
-        var active = groups.filter('.active');
-        
-        // 3. Переводимо фокус
-        Lampa.Controller.collectionFocus(active.length ? active[0] : groups[0], groupsPanel);
+Lampa.Controller.add('content', {
+    toggle: function toggle() {
+        // Коли контролер активується (наприклад, кнопкою BACK)
+        Lampa.Controller.collectionSet(scroll.render());
+        Lampa.Controller.collectionFocus(last || false, scroll.render());
+    },
+    left: function left() {
+        // Перехід до ПАНЕЛІ ГРУП
+        if (groupsPanel && groupsPanel.is(':visible')) {
+            Lampa.Controller.collectionSet(groupsPanel);
+            var groups = groupsPanel.find('.selector');
+            var active = groups.filter('.active');
+            var target = active.length ? active[0] : groups[0];
+
+            if (target) {
+                Lampa.Controller.collectionFocus(target, groupsPanel);
+                // Скрол до групи, щоб вона була в полі зору
+                var scrollContainer = groupsPanel.closest('.scroll');
+                if (scrollContainer.length) Lampa.Select.scroll(groupsPanel, target);
+            }
+        } else {
+            // Якщо груп немає, просто стандартний рух вліво (якщо потрібно)
+            if (Navigator.canmove('left')) Navigator.move('left');
+        }
+    },
+    right: function right() {
+        // Якщо ми натиснули вправо, перебуваючи ВЖЕ в групах, 
+        // треба повернути фокус на список каналів (scroll)
+        if (Lampa.Controller.enabled().container.is(groupsPanel)) {
+            Lampa.Controller.collectionSet(scroll.render());
+            Lampa.Controller.collectionFocus(last || false, scroll.render());
+        } else {
+            // Якщо ми в каналах, звичайний рух вправо
+            if (Navigator.canmove('right')) Navigator.move('right');
+        }
+    },
+    up: function up() {
+        if (Navigator.canmove('up')) {
+            Navigator.move('up');
+        } else {
+            // Перехід в шапку (пошук, налаштування), якщо зверху нічого немає
+            Lampa.Controller.toggle('head');
+        }
+    },
+    down: function down() {
+        if (Navigator.canmove('down')) {
+            Navigator.move('down');
+        }
+    },
+    back: function back() {
+        Lampa.Activity.backward();
     }
-},
-			right: function right() {
-    // При переході вправо повертаємо фокус на останню активну картку в каналах
-    Lampa.Controller.toggle('content');
-},
-			up: function up() {
-				if (Navigator.canmove('up')) {
-					Navigator.move('up');
-				} else {
-					if (!info.find('.view--category').hasClass('focus')) {
-						Lampa.Controller.collectionSet(info);
-						Navigator.move('right')
-					} else Lampa.Controller.toggle('head');
-				}
-			},
-			down: function down() {
-				if (Navigator.canmove('down')) Navigator.move('down');
-				else if (info.find('.view--category').hasClass('focus')) {
-					Lampa.Controller.toggle('content');
-				}
-			},
-			back: function back() {
-				Lampa.Activity.backward();
-			}
-		});
+});
 		Lampa.Controller.toggle('content');
 	};
 	this.pause = function () {
