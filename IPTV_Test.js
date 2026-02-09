@@ -1,7 +1,6 @@
 // ==Lampa==
 // name: IPTV PRO (EPG Built-in)
 // version: 12.7
-// ==/Lampa==
 
 (function () {
     'use strict';
