@@ -4,6 +4,7 @@
     if (typeof Lampa === 'undefined') return;
 
     function MyIPTV() {
+        var _this = this; // Виправляємо невикористану змінну
         var network = new Lampa.Reguest();
         var scroll_g = new Lampa.Scroll({mask: true, over: true});
         var scroll_c = new Lampa.Scroll({mask: true, over: true});
@@ -13,10 +14,7 @@
         var data = {};
         var layout;
 
-        // Метод CREATE - викликається першим
         this.create = function () {
-            var _this = this;
-            
             layout = $('<div class="iptv-layout">' +
                 '<div class="iptv-col iptv-groups"><div class="iptv-header">Групи</div><div class="iptv-content"></div></div>' +
                 '<div class="iptv-col iptv-channels"><div class="iptv-header">Канали</div><div class="iptv-content"></div></div>' +
@@ -27,15 +25,16 @@
             layout.find('.iptv-channels .iptv-content').append(scroll_c.render());
             layout.find('.iptv-epg .iptv-content').append(scroll_e.render());
 
+            // Додаємо заглушку, щоб екран не був порожнім
+            scroll_g.append($('<div class="iptv-item">Завантаження...</div>'));
+
             return layout;
         };
 
-        // Метод RENDER - Lampa очікує повернення DOM елемента
         this.render = function () {
             return layout;
         };
 
-        // Метод START - ініціалізація логіки та контролерів
         this.start = function () {
             Lampa.Controller.add('iptv_groups', {
                 toggle: function () {
@@ -58,22 +57,22 @@
                 }
             });
 
-            this.load();
+            _this.load(); // Використовуємо _this
         };
 
         this.load = function () {
-            var _this = this;
             network.silent(playlist_url, function (str) {
                 _this.parse(str);
                 _this.renderGroups();
             }, function () {
-                Lampa.Noty.show("Помилка завантаження");
+                Lampa.Noty.show("Помилка завантаження плейлиста");
             }, false, {dataType: 'text'});
         };
 
         this.parse = function (str) {
             var lines = str.split('\n');
             var currentGroup = "Інше";
+            data = {}; // Очищуємо перед парсингом
             for (var i = 0; i < lines.length; i++) {
                 var line = lines[i];
                 if (line.indexOf('#EXTINF') !== -1) {
@@ -91,9 +90,13 @@
         };
 
         this.renderGroups = function () {
-            var _this = this;
             scroll_g.clear();
-            Object.keys(data).forEach(function (group) {
+            var groups = Object.keys(data);
+            if (groups.length === 0) {
+                scroll_g.append($('<div class="iptv-item">Плейлист порожній</div>'));
+                return;
+            }
+            groups.forEach(function (group) {
                 var item = $('<div class="iptv-item selector">' + group + '</div>');
                 item.on('hover:focus', function () {
                     _this.renderChannels(group);
@@ -104,7 +107,6 @@
         };
 
         this.renderChannels = function (group) {
-            var _this = this;
             scroll_c.clear();
             data[group].forEach(function (ch) {
                 var item = $('<div class="iptv-item selector">' + ch.name + '</div>');
