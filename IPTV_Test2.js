@@ -1,13 +1,13 @@
 // ==Lampa==
-// name: IPTV PRO (EPG Fixed)
-// version: 12.9
+// name: IPTV PRO (EPG Fixed Ultra)
+// version: 13.0
 // ==/Lampa==
 
 (function () {
     'use strict';
 
-    var EPG = {}; // Глобальне сховище з твого коду
-    var epgPath = ''; // Шлях до EPG (змінна з твого коду)
+    var EPG = {}; 
+    var epgPath = ''; 
 
     function IPTVComponent() {
         var _this = this;
@@ -27,8 +27,6 @@
             current_pl_index: 0
         });
 
-        // --- ЛОГІКА З ТВОГО ПРИКЛАДУ (АДАПТОВАНА) ---
-        
         var chShortName = function (chName) {
             return chName.toLowerCase()
                 .replace(/\s+\(архив\)$/, '')
@@ -40,59 +38,66 @@
                 .replace(/\s(\d+)/g, '$1');
         };
 
+        // Використовуємо системний метод мережі Lampa, як у твоєму коді
         this.updateEPGData = function (epgId) {
             if (!epgId) return;
             var t = Math.floor(Date.now() / 1000 / 3600) * 3600;
 
-            if (!!EPG[epgId] && t >= EPG[epgId][0] && t <= EPG[epgId][1]) return;
+            // Якщо дані вже є в пам'яті — показуємо відразу
+            if (EPG[epgId] && t >= EPG[epgId][0] && t <= EPG[epgId][1]) {
+                _this.renderEpgDisplay(epgId);
+                return;
+            }
 
             if (!EPG[epgId]) EPG[epgId] = [t, t, []];
 
-            // Використовуємо Lampa.Network для запиту
             var url = 'https://epg.rootu.top/api/epg/' + epgId + '/hour/' + t;
-            
-            $.ajax({
-                url: url,
-                method: 'GET',
-                success: function (r) {
-                    if (!r || !r.list) return;
+
+            // Використовуємо Lampa.Network для безшумного завантаження (як у твоєму прикладі)
+            Lampa.Network.silent(url, function (r) {
+                if (r && r.list) {
                     var epg = r.list;
                     var lt = Date.now() / 1000 / 60;
 
                     for (var i = 0; i < epg.length; i++) {
+                        // epg[i][0] - початок у хвилинах, epg[i][1] - тривалість у хвилинах
                         if (lt < (epg[i][0] + epg[i][1])) {
                             EPG[epgId][2] = epg.slice(i);
                             break;
                         }
                     }
-                    EPG[epgId][0] = Math.min(EPG[epgId][0], t);
-                    EPG[epgId][1] = Math.max(EPG[epgId][1], t + 3600);
+                    EPG[epgId][0] = t;
+                    EPG[epgId][1] = t + 3600;
                     
                     _this.renderEpgDisplay(epgId);
+                } else {
+                    $('#epg-title').text('Програма відсутня');
                 }
+            }, function () {
+                $('#epg-title').text('Помилка завантаження EPG');
             });
         };
 
         this.renderEpgDisplay = function(epgId) {
-            if (!EPG[epgId] || !EPG[epgId][2].length) {
-                $('#epg-title').text('Програма відсутня');
-                return;
-            }
+            if (!EPG[epgId] || !EPG[epgId][2] || !EPG[epgId][2].length) return;
 
-            var epg = EPG[epgId][2][0]; // Поточна програма
+            var epg = EPG[epgId][2][0]; 
             var title = epg[2];
-            var start = epg[0] * 60 * 1000; // в мілісекунди
-            var duration = epg[1] * 60 * 1000; // в мілісекунди
-            var end = start + duration;
-            var now = Date.now();
+            var start_min = epg[0]; // час початку в хвилинах від Unix Epoch
+            var dur_min = epg[1];   // тривалість у хвилинах
+            
+            var now_ms = Date.now();
+            var start_ms = start_min * 60 * 1000;
+            var end_ms = (start_min + dur_min) * 60 * 1000;
 
             $('#epg-title').text(title);
 
-            var perc = ((now - start) / duration) * 100;
-            $('#epg-progress').css('width', Math.min(100, Math.max(0, perc)) + '%');
+            var total = end_ms - start_ms;
+            var current = now_ms - start_ms;
+            var perc = Math.min(100, Math.max(0, (current / total) * 100));
+            
+            $('#epg-progress').css('width', perc + '%');
         };
-
-        // --- КІНЕЦЬ ЛОГІКИ З ТВОГО ПРИКЛАДУ ---
 
         this.create = function () {
             root = $('<div class="iptv-root"></div>');
@@ -118,8 +123,8 @@
                     '.channel-title{font-size:1.3rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
                     '.epg-title-big{font-size:1.6rem; color:#fff; font-weight:700; margin-bottom:1rem;}' +
                     '.epg-now{color:#2962ff; font-size:1.1rem; font-weight:bold; margin-top:1.5rem;}' +
-                    '.epg-prog-name{font-size:1.4rem; color:#ccc; margin:.5rem 0;}' +
-                    '.epg-bar{height:4px; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden;}' +
+                    '.epg-prog-name{font-size:1.4rem; color:#ccc; margin:.5rem 0; min-height:3.2rem;}' +
+                    '.epg-bar{height:4px; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden; margin-top:10px;}' +
                     '.epg-bar-inner{height:100%; background:#2962ff; width:0%; transition: width 0.3s;}' +
                     '</style>');
             }
@@ -130,10 +135,8 @@
 
         this.loadPlaylist = function () {
             var pl = config.playlists[config.current_pl_index];
-            $.ajax({
-                url: pl.url,
-                success: function (str) { _this.parse(str); },
-                error: function () { Lampa.Noty.show('Помилка завантаження плейлиста'); }
+            Lampa.Network.silent(pl.url, function (str) { _this.parse(str); }, function() {
+                Lampa.Noty.show('Помилка завантаження плейлиста');
             });
         };
 
@@ -149,7 +152,6 @@
                     var tvg_id = (l.match(/tvg-id="([^"]+)"/i) || ['', ''])[1];
                     var url = lines[i + 1] ? lines[i + 1].trim() : '';
                     if (url.indexOf('http') === 0) {
-                        // Використовуємо твою логіку призначення ID
                         var epgId = tvg_id || chShortName(name);
                         var item = { name: name, url: url, group: group, logo: logo, tvg_id: epgId };
                         if (!groups_data[group]) groups_data[group] = [];
@@ -196,7 +198,7 @@
                 '<img src="' + channel.logo + '" style="width:100%; max-height:150px; object-fit:contain; margin-bottom:1rem; background:#000; padding:5px; border-radius:5px;">' +
                 '<div class="epg-title-big">' + channel.name + '</div>' +
                 '<div class="epg-now">ЗАРАЗ В ЕФІРІ:</div>' +
-                '<div class="epg-prog-name" id="epg-title">Завантаження...</div>' +
+                '<div class="epg-prog-name" id="epg-title">...</div>' +
                 '<div class="epg-bar"><div class="epg-bar-inner" id="epg-progress"></div></div>' +
                 '<div style="margin-top:1rem; font-size:1.1rem; color:#555;">ID: ' + channel.tvg_id + '</div>' +
             '</div>');
