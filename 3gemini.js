@@ -1391,37 +1391,32 @@ $('body').append(Lampa.Template.get(plugin.component + '_style', {}, true));
     
     Lampa.Background.change();
     
-    // Створення основних контейнерів
+    // Створення контейнерів (Тільки один раз)
     mainContainer = $('<div class="' + plugin.component + '__container"></div>');
-    groupsPanel = $('<div class="iptv__groups"></div>'); // Використовуємо клас зі стилів
+    groupsPanel = $('<div class="iptv__groups"></div>');
     var channelsPanel = $('<div class="' + plugin.component + '__channels"></div>');
     
     lists[object.id].groups.forEach(function(group) {
-        // Створюємо елемент групи. selector обов'язковий для роботи пульта
         var groupItem = $('<div class="iptv__group selector' + 
             (object.currentGroup === group.key ? ' active' : '') + '">' +
             '<div class="group__title">' + group.title + '</div>' +
             '</div>');
           
-        // Обробка фокусу: перемикаємо контент при наведенні (через 500мс)
         groupItem.on('hover:focus', function() {
             if (object.currentGroup !== group.key) {
                 clearTimeout(changeGroupTimer);
                 changeGroupTimer = setTimeout(function() {
                     var activity = Lampa.Arrays.clone(lists[object.id].activity);
                     activity.currentGroup = group.key;
-                    
-                    // Зберігаємо назву групи для повернення фокусу
                     object.currentGroup = group.key; 
                     Lampa.Activity.replace(activity);
                 }, 500);
             }
         });
 
-        // Обробка натискання OK (Enter): заходимо в канали
         groupItem.on('hover:enter', function() {
             if (object.currentGroup === group.key) {
-                Lampa.Controller.toggle('content'); // Йдемо до каналів
+                Lampa.Controller.toggle('content');
             } else {
                 clearTimeout(changeGroupTimer);
                 var activity = Lampa.Arrays.clone(lists[object.id].activity);
@@ -1433,10 +1428,38 @@ $('body').append(Lampa.Template.get(plugin.component + '_style', {}, true));
         groupsPanel.append(groupItem);
     });
 
-    // Додаємо все в DOM
+    // Підготовка інфо-панелі
+    Lampa.Template.add(plugin.component + '_info_radio', '<div class="info layer--width"><div class="info__left"><div class="info__title"></div><div class="info__title-original"></div><div class="info__create"></div></div><div class="info__right" style="display: flex !important;"></div></div>');
+    info = Lampa.Template.get(plugin.component + '_info_radio');
+    info.find('.info__title-original').text(!catalog[object.currentGroup] ? '' : catalog[object.currentGroup].title);
+
+    if (channelGroup.channels.length) {
+        setEpgId(channelGroup);
+        scroll.render().addClass('layer--wheight').data('mheight', info);
+        channelsPanel.append(scroll.render());
+        this.append(channelGroup.channels);
+          
+        if (getStorage('epg', false)) {
+            scroll.render().css({float: "left", width: '70%'});
+            scroll.render().parent().append(epgTemplate);
+        }
+          
+        scroll.append(body);
+        setStorage('last_catalog' + object.id, object.currentGroup ? object.currentGroup : '!!');
+        lists[object.id].activity.currentGroup = object.currentGroup;
+    } else {
+        var empty = new Lampa.Empty();
+        channelsPanel.append(empty.render());
+        this.activity.loader(false);
+    }
+    
+    // Складання структури (строго по одному разу)
     mainContainer.append(groupsPanel);
     mainContainer.append(channelsPanel);
+    
+    html.append(info); // Без append() всередині
     html.append(mainContainer);
+};
       
     Lampa.Template.add(plugin.component + '_info_radio', '<div class="info layer--width"><div class="info__left"><div class="info__title"></div><div class="info__title-original"></div><div class="info__create"></div></div><div class="info__right" style="display: flex !important;"></div></div>');
     info = Lampa.Template.get(plugin.component + '_info_radio');
@@ -1492,80 +1515,73 @@ $('body').append(Lampa.Template.get(plugin.component + '_style', {}, true));
 			}
 		});
 	};
-	this.start = function () {
-		if (Lampa.Activity.active().activity !== this.activity) return; //обязательно, иначе наблюдается баг, активность создается но не стартует, в то время как компонент загружается и стартует самого себя.
-		var _this = this;
-Lampa.Controller.add('content', {
-    toggle: function () {
-        if (typeof scroll !== 'undefined' && scroll.render) {
-            Lampa.Controller.collectionSet(scroll.render());
-            Lampa.Controller.collectionFocus(typeof last !== 'undefined' ? last : false, scroll.render());
-        }
-    },
-    left: function () {
-        if (typeof groupsPanel !== 'undefined' && groupsPanel && groupsPanel.is(':visible')) {
-            Lampa.Controller.collectionSet(groupsPanel);
-            var target = groupsPanel.find('.iptv__group.active')[0] || groupsPanel.find('.selector')[0];
-            if (target) {
-                Lampa.Controller.collectionFocus(target, groupsPanel);
-            }
-        } else {
-            Lampa.Controller.toggle('head');
-        }
-    },
-    right: function () {
-        // Перевірка: чи ми в панелі груп?
-        var isGroups = typeof groupsPanel !== 'undefined' && Lampa.Controller.enabled().container.is(groupsPanel);
-        
-        if (isGroups) {
+this.start = function () {
+    if (Lampa.Activity.active().activity !== this.activity) return;
+    var _this = this;
+
+    Lampa.Controller.add('content', {
+        toggle: function () {
             if (typeof scroll !== 'undefined' && scroll.render) {
-                var render = scroll.render();
-                Lampa.Controller.collectionSet(render);
-                var target = render.find('.selector.active')[0] || render.find('.selector')[0];
-                if (target) Lampa.Controller.collectionFocus(target, render);
+                Lampa.Controller.collectionSet(scroll.render());
+                Lampa.Controller.collectionFocus(typeof last !== 'undefined' ? last : false, scroll.render());
             }
-        } else {
-            if (typeof Navigator !== 'undefined' && Navigator.canmove('right')) {
-                Navigator.move('right');
-            }
-        }
-    },
-    up: function () {
-        var isGroups = typeof groupsPanel !== 'undefined' && Lampa.Controller.enabled().container.is(groupsPanel);
-        
-        if (isGroups) {
-            var items = groupsPanel.find('.selector');
-            var index = items.index(groupsPanel.find('.focus'));
-            if (index > 0) {
-                Lampa.Controller.collectionFocus(items[index - 1], groupsPanel);
+        },
+        left: function () {
+            if (typeof groupsPanel !== 'undefined' && groupsPanel.is(':visible')) {
+                Lampa.Controller.collectionSet(groupsPanel);
+                var target = groupsPanel.find('.iptv__group.active')[0] || groupsPanel.find('.selector')[0];
+                if (target) Lampa.Controller.collectionFocus(target, groupsPanel);
             } else {
                 Lampa.Controller.toggle('head');
             }
-        } else {
-            if (typeof Navigator !== 'undefined' && Navigator.canmove('up')) {
-                Navigator.move('up');
+        },
+        right: function () {
+            var isGroups = Lampa.Controller.enabled().container.is(groupsPanel);
+            if (isGroups) {
+                if (typeof scroll !== 'undefined' && scroll.render) {
+                    var render = scroll.render();
+                    Lampa.Controller.collectionSet(render);
+                    var target = render.find('.selector.active')[0] || render.find('.selector')[0];
+                    if (target) Lampa.Controller.collectionFocus(target, render);
+                }
             } else {
-                Lampa.Controller.toggle('head');
+                if (Navigator.canmove('right')) Navigator.move('right');
+            }
+        },
+        up: function () {
+            var isGroups = Lampa.Controller.enabled().container.is(groupsPanel);
+            if (isGroups) {
+                var items = groupsPanel.find('.selector');
+                var index = items.index(groupsPanel.find('.focus'));
+                if (index > 0) Lampa.Controller.collectionFocus(items[index - 1], groupsPanel);
+                else Lampa.Controller.toggle('head');
+            } else {
+                if (Navigator.canmove('up')) Navigator.move('up');
+                else Lampa.Controller.toggle('head');
+            }
+        },
+        down: function () {
+            var isGroups = Lampa.Controller.enabled().container.is(groupsPanel);
+            if (isGroups) {
+                var items = groupsPanel.find('.selector');
+                var index = items.index(groupsPanel.find('.focus'));
+                if (index < items.length - 1) Lampa.Controller.collectionFocus(items[index + 1], groupsPanel);
+            } else {
+                if (Navigator.canmove('down')) Navigator.move('down');
+            }
+        },
+        back: function () {
+            var isGroups = Lampa.Controller.enabled().container.is(groupsPanel);
+            if (isGroups) {
+                this.right(); 
+            } else {
+                Lampa.Activity.backward();
             }
         }
-    },
-    down: function () {
-        if (typeof Navigator !== 'undefined' && Navigator.canmove('down')) {
-            Navigator.move('down');
-        }
-    },
-    back: function () {
-        var isGroups = typeof groupsPanel !== 'undefined' && Lampa.Controller.enabled().container.is(groupsPanel);
-        
-        if (isGroups) {
-            this.right(); // Повертаємось до каналів
-        } else {
-            Lampa.Activity.backward();
-        }
-    }
-});
-		Lampa.Controller.toggle('content');
-	};
+    });
+
+    Lampa.Controller.toggle('content');
+};
 	this.pause = function () {
 		Lampa.Player.runas && Lampa.Player.runas('');
 	};
