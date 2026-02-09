@@ -1,12 +1,12 @@
 // ==Lampa==
-// name: IPTV PRO (Smart EPG)
-// version: 22.0
+// name: IPTV PRO (Final Smart EPG)
+// version: 23.0
 // ==/Lampa==
 
 (function () {
     'use strict';
 
-    var EPG = {}; // Глобальне сховище з вашого коду
+    var EPG = {}; 
 
     function IPTVComponent() {
         var _this = this;
@@ -18,15 +18,6 @@
 
         var playlist_url = 'https://m3u.ch/pl/cbf67b9b46359837429e6deb5b384f9e_e2c018841bc8b4dd2110ddc53d611e72.m3u';
 
-        // --- ВАША ЛОГІКА ОЧИЩЕННЯ ТА ТРАНСЛІТУ ---
-        var trW = {"ё":"e","у":"y","к":"k","е":"e","н":"h","ш":"w","з":"3","х":"x","ы":"bl","в":"b","а":"a","р":"p","о":"o","ч":"4","с":"c","м":"m","т":"t","ь":"b","б":"6"};
-        var trName = function (word) { return word.split('').map(function (c) { return trW[c] || c; }).join(""); };
-        var chShortName = function (chName) {
-            return chName.toLowerCase().replace(/\s+\(архив\)$/, '').replace(/\s+\((\+\d+)\)/g, ' $1')
-                .replace(/^телеканал\s+/, '').replace(/([!\s.,()–-]+|ⓢ|ⓖ|ⓥ|ⓞ|Ⓢ|Ⓖ|Ⓥ|Ⓞ)/g, ' ').trim()
-                .replace(/\s(канал|тв)(\s.+|\s*)$/, '$2').replace(/\s(50|orig|original)$/, '').replace(/\s(\d+)/g, '$1');
-        };
-
         this.create = function () {
             root = $('<div class="iptv-root"></div>');
             var container = $('<div class="iptv-flex-wrapper"></div>');
@@ -36,20 +27,21 @@
             container.append(colG, colC, colE);
             root.append(container);
 
-            if (!$('#iptv-style-v22').length) {
-                $('head').append('<style id="iptv-style-v22">' +
+            if (!$('#iptv-style-v23').length) {
+                $('head').append('<style id="iptv-style-v23">' +
                     '.iptv-root{position:fixed;inset:0;background:#0b0d10;z-index:1000;padding-top:4rem;}' +
                     '.iptv-flex-wrapper{display:flex;width:100%;height:100%;}' +
                     '.iptv-col{height:100%;overflow-y:auto;background:rgba(255,255,255,0.02);border-right:1px solid rgba(255,255,255,0.05);}' +
-                    '.col-groups{width:20%; min-width:180px;}' +
-                    '.col-channels{width:40%; flex-grow:1;}' +
-                    '.col-details{width:40%; background:#080a0d; padding:2rem;}' +
+                    '.col-groups{width:20%; min-width:160px;}' +
+                    '.col-channels{width:35%; min-width:250px;}' +
+                    '.col-details{width:45%; background:#080a0d; padding:2rem; position:relative;}' +
                     '.iptv-item{padding:1.2rem;margin:.4rem;border-radius:.6rem;background:rgba(255,255,255,.03);cursor:pointer;}' +
                     '.iptv-item.active{background:#2962ff;color:#fff;}' +
                     '.channel-row{display:flex;align-items:center;gap:1.5rem;}' +
-                    '.channel-logo{width:50px;height:50px;object-fit:contain;background:#000;border-radius:.5rem;}' +
-                    '.prog-title{font-size:1.8rem; color:#fff; margin:1rem 0; font-weight: 500;}' +
-                    '.prog-time{color:#2962ff; font-weight: bold; font-size: 1.4rem;}' +
+                    '.channel-logo{width:45px;height:45px;object-fit:contain;background:#000;border-radius:.5rem;}' +
+                    '.prog-title{font-size:1.8rem; color:#fff; margin:1rem 0; font-weight: 500; line-height: 1.4;}' +
+                    '.prog-time{color:#2962ff; font-weight: bold; font-size: 1.4rem; margin-top: 1.5rem;}' +
+                    '.prog-wait{color: rgba(255,255,255,0.3); font-size: 1.2rem; margin-top: 2rem; font-style: italic;}' +
                     '</style>');
             }
 
@@ -57,7 +49,7 @@
             return root;
         };
 
-        // --- ВАША ЛОГІКА ЗАВАНТАЖЕННЯ ДАНИХ ПО ГОДИНАХ ---
+        // --- ІНТЕГРОВАНА ЛОГІКА ЗАВАНТАЖЕННЯ З ВАШОГО КОДУ ---
         this.epgUpdateData = function(epgId) {
             if (!epgId) return;
             var t = Math.floor(Date.now() / 1000 / 3600) * 3600;
@@ -65,7 +57,7 @@
             if (EPG[epgId] && t >= EPG[epgId][0] && t <= EPG[epgId][1]) return;
             if (!EPG[epgId]) EPG[epgId] = [t, t, []];
 
-            // Використовуємо API з вашого коду
+            // Використовуємо API epg.rootu.top
             var url = 'https://epg.rootu.top/api/epg/' + epgId + '/hour/' + t;
             
             $.ajax({
@@ -76,10 +68,14 @@
                         EPG[epgId][2] = r.list;
                         EPG[epgId][0] = t;
                         EPG[epgId][1] = t + 3600;
-                        if (current_list[index_c] && (current_list[index_c].epgId === epgId)) {
+                        // Оновлюємо праву колонку тільки якщо цей канал все ще в фокусі
+                        if (current_list[index_c] && current_list[index_c].epgId === epgId) {
                             _this.showDetails(current_list[index_c]);
                         }
                     }
+                },
+                error: function() {
+                    console.log('EPG Load Error for:', epgId);
                 }
             });
         };
@@ -106,7 +102,7 @@
 
                     if (url.indexOf('http') === 0) {
                         if (!groups_data[group]) groups_data[group] = [];
-                        // Призначаємо epgId за вашою логікою
+                        // Використовуємо tvg-id або назву для пошуку в API
                         var epgId = tvg_id || name; 
                         groups_data[group].push({ name: name, url: url, logo: logo, epgId: epgId });
                     }
@@ -137,7 +133,7 @@
                 row.on('click', function () { Lampa.Player.play({ url: c.url, title: c.name }); });
                 row.on('hover:focus', function () { 
                     index_c = idx; 
-                    _this.epgUpdateData(c.epgId); // Завантажуємо EPG при фокусі
+                    _this.epgUpdateData(c.epgId); 
                     _this.showDetails(c); 
                 });
                 colC.append(row);
@@ -148,11 +144,12 @@
         this.showDetails = function (channel) {
             colE.empty();
             var info = EPG[channel.epgId];
-            var title = 'Немає програми';
-            var time = '--:--';
+            var title = '';
+            var time = '';
+            var is_loading = !info || !info[2] || info[2].length === 0;
 
-            if (info && info[2] && info[2].length > 0) {
-                var now = Date.now() / 1000 / 60; // хвилини
+            if (!is_loading) {
+                var now = Date.now() / 1000 / 60; 
                 for (var i = 0; i < info[2].length; i++) {
                     var prog = info[2][i]; // [start, duration, title, desc]
                     var start = prog[0];
@@ -167,11 +164,15 @@
             }
 
             var content = $('<div class="details-box">' +
-                '<img src="' + channel.logo + '" style="width:100%; max-height:200px; object-fit:contain; margin-bottom:2rem; background:#000; border-radius:10px;">' +
-                '<div style="font-size:2.4rem; color:#fff; font-weight:700;">' + channel.name + '</div>' +
-                '<div style="color:#2962ff; font-size:1.2rem; font-weight:bold; margin-top:2rem;">ЗАРАЗ В ЕФІРІ:</div>' +
-                '<div class="prog-time">' + time + '</div>' +
-                '<div class="prog-title">' + title + '</div>' +
+                '<img src="' + channel.logo + '" style="width:100%; max-height:220px; object-fit:contain; margin-bottom:2.5rem; background:#000; border-radius:12px; box-shadow: 0 10px 20px rgba(0,0,0,0.5);">' +
+                '<div style="font-size:2.6rem; color:#fff; font-weight:700; line-height:1.2;">' + channel.name + '</div>' +
+                (is_loading ? 
+                    '<div class="prog-wait">Завантаження програми...</div>' : 
+                    '<div style="margin-top:2.5rem;"><div style="color:#2962ff; font-size:1.1rem; font-weight:bold; text-transform:uppercase; letter-spacing:1px;">Зараз в ефірі</div>' +
+                    '<div class="prog-time">' + time + '</div>' +
+                    '<div class="prog-title">' + (title || 'Програма відсутня') + '</div></div>'
+                ) +
+                '<div style="position:absolute; bottom:2rem; left:2rem; opacity:0.2; font-size:0.8rem;">EPG ID: ' + channel.epgId + '</div>' +
             '</div>');
             colE.append(content);
         };
