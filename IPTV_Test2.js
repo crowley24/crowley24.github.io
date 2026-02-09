@@ -1,14 +1,13 @@
 // ==Lampa==
-// name: IPTV PRO (EPG Built-in)
-// version: 12.8
+// name: IPTV PRO (EPG Fixed)
+// version: 12.9
 // ==/Lampa==
 
 (function () {
     'use strict';
 
-    // Глобальне сховище EPG для всіх інстансів компонента
-    var EPG_CACHE = {};
-    var EPG_UPDATE_INTERVAL = false;
+    var EPG = {}; // Глобальне сховище з твого коду
+    var epgPath = ''; // Шлях до EPG (змінна з твого коду)
 
     function IPTVComponent() {
         var _this = this;
@@ -28,7 +27,8 @@
             current_pl_index: 0
         });
 
-        // Допоміжна функція нормалізації назви для пошуку EPG (з твого прикладу)
+        // --- ЛОГІКА З ТВОГО ПРИКЛАДУ (АДАПТОВАНА) ---
+        
         var chShortName = function (chName) {
             return chName.toLowerCase()
                 .replace(/\s+\(архив\)$/, '')
@@ -40,14 +40,66 @@
                 .replace(/\s(\d+)/g, '$1');
         };
 
+        this.updateEPGData = function (epgId) {
+            if (!epgId) return;
+            var t = Math.floor(Date.now() / 1000 / 3600) * 3600;
+
+            if (!!EPG[epgId] && t >= EPG[epgId][0] && t <= EPG[epgId][1]) return;
+
+            if (!EPG[epgId]) EPG[epgId] = [t, t, []];
+
+            // Використовуємо Lampa.Network для запиту
+            var url = 'https://epg.rootu.top/api/epg/' + epgId + '/hour/' + t;
+            
+            $.ajax({
+                url: url,
+                method: 'GET',
+                success: function (r) {
+                    if (!r || !r.list) return;
+                    var epg = r.list;
+                    var lt = Date.now() / 1000 / 60;
+
+                    for (var i = 0; i < epg.length; i++) {
+                        if (lt < (epg[i][0] + epg[i][1])) {
+                            EPG[epgId][2] = epg.slice(i);
+                            break;
+                        }
+                    }
+                    EPG[epgId][0] = Math.min(EPG[epgId][0], t);
+                    EPG[epgId][1] = Math.max(EPG[epgId][1], t + 3600);
+                    
+                    _this.renderEpgDisplay(epgId);
+                }
+            });
+        };
+
+        this.renderEpgDisplay = function(epgId) {
+            if (!EPG[epgId] || !EPG[epgId][2].length) {
+                $('#epg-title').text('Програма відсутня');
+                return;
+            }
+
+            var epg = EPG[epgId][2][0]; // Поточна програма
+            var title = epg[2];
+            var start = epg[0] * 60 * 1000; // в мілісекунди
+            var duration = epg[1] * 60 * 1000; // в мілісекунди
+            var end = start + duration;
+            var now = Date.now();
+
+            $('#epg-title').text(title);
+
+            var perc = ((now - start) / duration) * 100;
+            $('#epg-progress').css('width', Math.min(100, Math.max(0, perc)) + '%');
+        };
+
+        // --- КІНЕЦЬ ЛОГІКИ З ТВОГО ПРИКЛАДУ ---
+
         this.create = function () {
             root = $('<div class="iptv-root"></div>');
             var container = $('<div class="iptv-flex-wrapper"></div>');
-
             colG = $('<div class="iptv-col col-groups"></div>');
             colC = $('<div class="iptv-col col-channels"></div>');
             colE = $('<div class="iptv-col col-details"></div>');
-
             container.append(colG, colC, colE);
             root.append(container);
 
@@ -67,23 +119,13 @@
                     '.epg-title-big{font-size:1.6rem; color:#fff; font-weight:700; margin-bottom:1rem;}' +
                     '.epg-now{color:#2962ff; font-size:1.1rem; font-weight:bold; margin-top:1.5rem;}' +
                     '.epg-prog-name{font-size:1.4rem; color:#ccc; margin:.5rem 0;}' +
-                    '.epg-bar{height:4px; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden; margin-top:10px;}' +
-                    '.epg-bar-inner{height:100%; background:#2962ff; width:0%; transition: width 0.5s;}' +
+                    '.epg-bar{height:4px; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden;}' +
+                    '.epg-bar-inner{height:100%; background:#2962ff; width:0%; transition: width 0.3s;}' +
                     '</style>');
             }
 
             this.loadPlaylist();
-            this.startEpgTimer();
             return root;
-        };
-
-        this.startEpgTimer = function() {
-            if (EPG_UPDATE_INTERVAL) clearInterval(EPG_UPDATE_INTERVAL);
-            EPG_UPDATE_INTERVAL = setInterval(function() {
-                if (active_col === 'channels' && current_list[index_c]) {
-                    _this.renderEpgDetails(current_list[index_c]);
-                }
-            }, 30000); // Оновлення раз на 30 сек
         };
 
         this.loadPlaylist = function () {
@@ -107,7 +149,7 @@
                     var tvg_id = (l.match(/tvg-id="([^"]+)"/i) || ['', ''])[1];
                     var url = lines[i + 1] ? lines[i + 1].trim() : '';
                     if (url.indexOf('http') === 0) {
-                        // Використовуємо tvg_id або нормалізоване ім'я для EPG
+                        // Використовуємо твою логіку призначення ID
                         var epgId = tvg_id || chShortName(name);
                         var item = { name: name, url: url, group: group, logo: logo, tvg_id: epgId };
                         if (!groups_data[group]) groups_data[group] = [];
@@ -156,78 +198,11 @@
                 '<div class="epg-now">ЗАРАЗ В ЕФІРІ:</div>' +
                 '<div class="epg-prog-name" id="epg-title">Завантаження...</div>' +
                 '<div class="epg-bar"><div class="epg-bar-inner" id="epg-progress"></div></div>' +
-                '<div style="margin-top:1rem; font-size:1.1rem; color:#555;">ID: ' + (channel.tvg_id || '---') + '</div>' +
+                '<div style="margin-top:1rem; font-size:1.1rem; color:#555;">ID: ' + channel.tvg_id + '</div>' +
             '</div>');
             colE.append(content);
-            
-            this.updateEPG(channel);
-        };
 
-        this.updateEPG = function (channel) {
-            var epgId = channel.tvg_id;
-            if (!epgId) {
-                $('#epg-title').text('Програма відсутня');
-                return;
-            }
-
-            var t = Math.floor(Date.now() / 1000 / 3600) * 3600;
-
-            // Якщо в кеші немає даних на цю годину - завантажуємо
-            if (!EPG_CACHE[epgId] || t > EPG_CACHE[epgId].time_end) {
-                var url = 'https://epg.rootu.top/api/epg/' + encodeURIComponent(epgId) + '/hour/' + t;
-                
-                $.ajax({
-                    url: url,
-                    dataType: 'json',
-                    success: function (r) {
-                        if (r && r.list) {
-                            EPG_CACHE[epgId] = {
-                                time_start: t,
-                                time_end: t + 3600,
-                                list: r.list
-                            };
-                            _this.renderEpgDetails(channel);
-                        } else {
-                            $('#epg-title').text('Програма не знайдена');
-                        }
-                    },
-                    error: function() {
-                        $('#epg-title').text('Помилка EPG');
-                    }
-                });
-            } else {
-                _this.renderEpgDetails(channel);
-            }
-        };
-
-        this.renderEpgDetails = function (channel) {
-            var data = EPG_CACHE[channel.tvg_id];
-            if (!data || !data.list) return;
-
-            var now = Date.now() / 1000;
-            var current_prog = null;
-
-            for (var i = 0; i < data.list.length; i++) {
-                var start = data.list[i][0];
-                var dur = data.list[i][1] * 60; // Тривалість у секундах
-                if (now >= start && now < (start + dur)) {
-                    current_prog = {
-                        title: data.list[i][2],
-                        start: start,
-                        end: start + dur
-                    };
-                    break;
-                }
-            }
-
-            if (current_prog) {
-                $('#epg-title').text(current_prog.title);
-                var perc = ((now - current_prog.start) / (current_prog.end - current_prog.start)) * 100;
-                $('#epg-progress').css('width', Math.min(100, Math.max(0, perc)) + '%');
-            } else {
-                $('#epg-title').text('Завершено або немає даних');
-                $('#epg-progress').css('width', '0%');
-            }
+            this.updateEPGData(channel.tvg_id);
         };
 
         this.updateFocus = function () {
@@ -271,11 +246,7 @@
         };
 
         this.render = function () { return root; };
-        this.destroy = function () { 
-            if (EPG_UPDATE_INTERVAL) clearInterval(EPG_UPDATE_INTERVAL);
-            Lampa.Controller.remove('iptv_pro'); 
-            root.remove(); 
-        };
+        this.destroy = function () { Lampa.Controller.remove('iptv_pro'); root.remove(); };
     }
 
     function init() {
@@ -290,4 +261,3 @@
     if (window.app_ready) init();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') init(); });
 })();
-                                
