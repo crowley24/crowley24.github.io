@@ -16,6 +16,9 @@ var layerInterval;
 var epgInterval;
 var UID = '';
 
+var mainContainer;
+var groupsPanel;
+	
 var chNumber = '';
 var chTimeout = null;
 var stopRemoveChElement = false;
@@ -1369,8 +1372,8 @@ $('body').append(Lampa.Template.get(plugin.component + '_style', {}, true));
     
     Lampa.Background.change();
     
-    var mainContainer = $('<div class="' + plugin.component + '__container"></div>');
-    var groupsPanel = $('<div class="' + plugin.component + '__groups"></div>');
+        mainContainer = $('<div class="' + plugin.component + '__container"></div>');
+        groupsPanel = $('<div class="' + plugin.component + '__groups"></div>');
     var channelsPanel = $('<div class="' + plugin.component + '__channels"></div>');
     
     // Обробка клавіш на панелі груп (перехід вправо до каналів)
@@ -1480,11 +1483,14 @@ $('body').append(Lampa.Template.get(plugin.component + '_style', {}, true));
 				Lampa.Controller.collectionFocus(last || false, scroll.render());
 			},
 			left: function left() {
-    var groups = mainContainer.find('.' + plugin.component + '__group-item');
-    var active = groups.filter('.active');
-    
-    Lampa.Controller.collectionSet(groupsPanel); // Встановлюємо набір елементів
-    Lampa.Controller.collectionFocus(active.length ? active[0] : groups[0], groupsPanel);
+    // Перевіряємо, чи існують панелі перед тим як шукати в них щось
+    if (mainContainer && groupsPanel) {
+        var groups = mainContainer.find('.' + plugin.component + '__group-item');
+        var active = groups.filter('.active');
+        
+        Lampa.Controller.collectionSet(groupsPanel);
+        Lampa.Controller.collectionFocus(active.length ? active[0] : groups[0], groupsPanel);
+    }
 },
 			right: function right() {
     // При переході вправо повертаємо фокус на останню активну картку в каналах
