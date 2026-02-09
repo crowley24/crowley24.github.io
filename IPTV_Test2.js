@@ -5,7 +5,7 @@
     if (typeof Lampa === 'undefined') return;
 
     function MyIPTV() {
-        var _this = this; // Виправляємо невикористану змінну
+        var _this = this; 
         var network = new Lampa.Reguest();
         var scroll_g = new Lampa.Scroll({mask: true, over: true});
         var scroll_c = new Lampa.Scroll({mask: true, over: true});
