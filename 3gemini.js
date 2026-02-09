@@ -1482,13 +1482,17 @@ $('body').append(Lampa.Template.get(plugin.component + '_style', {}, true));
 				Lampa.Controller.collectionSet(scroll.render());
 				Lampa.Controller.collectionFocus(last || false, scroll.render());
 			},
-			left: function left() {
-    // Перевіряємо, чи існують панелі перед тим як шукати в них щось
-    if (mainContainer && groupsPanel) {
-        var groups = mainContainer.find('.' + plugin.component + '__group-item');
+	left: function left() {
+    // Переконуємось, що панель існує в DOM
+    if (groupsPanel) {
+        // 1. Кажемо контролеру, що тепер ми працюємо з елементами в groupsPanel
+        Lampa.Controller.collectionSet(groupsPanel);
+        
+        // 2. Шукаємо активну групу або першу ліпшу
+        var groups = groupsPanel.find('.selector');
         var active = groups.filter('.active');
         
-        Lampa.Controller.collectionSet(groupsPanel);
+        // 3. Переводимо фокус
         Lampa.Controller.collectionFocus(active.length ? active[0] : groups[0], groupsPanel);
     }
 },
