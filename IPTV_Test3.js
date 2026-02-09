@@ -2,7 +2,6 @@
 // name: IPTV PRO Final Fix
 // version: 13.0
 // author: Fix by ChatGPT
-// ==/Lampa==
 
 (function () {
     'use strict';
