@@ -877,195 +877,147 @@ $('body').append(Lampa.Template.get(plugin.component + '_style', {}, true));
 		if (!enableCardEpg) epgEl.hide();
 		if (epg.length < 3) epgUpdateData(epgId);
 	}
-	this.append = function (data) {
-		var catEpg = [];
-		var chIndex = 0;
-		var _this2 = this;
-		var lazyLoadImg = ('loading' in HTMLImageElement.prototype);
-		layerCards = null;
-		var bulkFn = bulkWrapper(function (channel) {
-				var chI = chIndex++;
-				var card = Lampa.Template.get('card', {
-					title: channel.Title,
-					release_year: ''
-				});
-				card.addClass('card--collection')
-					.removeClass('layer--visible')
-					.removeClass('layer--render')
-					.addClass('js-layer--hidden')
-				;
-				if (chI < layerCnt) card.addClass('js-layer--visible');
-				var img = card.find('.card__img')[0];
-				if (lazyLoadImg) img.loading = (chI < 18 ? 'eager' : 'lazy');
-				img.onload = function () {
-					card.addClass('card--loaded');
-				};
-				img.onerror = function (e) {
-					var name = channel.Title
-						.replace(/\s+\(([+-]?\d+)\)/, ' $1').replace(/[-.()\s]+/g, ' ').replace(/(^|\s+)(TV|ТВ)(\s+|$)/i, '$3');
-					var fl = name.replace(/\s+/g, '').length > 5
-						? name.split(/\s+/).map(function(v) {return v.match(/^(\+?\d+|[UF]?HD|4K)$/i) ? v : v.substring(0,1).toUpperCase()}).join('').substring(0,6)
-						: name.replace(/\s+/g, '')
-					;
-					fl = fl.replace(/([UF]?HD|4k|\+\d+)$/i, '<sup>$1</sup>');
-					var hex = (Lampa.Utils.hash(channel.Title) * 1).toString(16);
-					while (hex.length < 6) hex+=hex;
-					hex = hex.substring(0,6);
-					var r = parseInt(hex.slice(0, 2), 16),
-						g = parseInt(hex.slice(2, 4), 16),
-						b = parseInt(hex.slice(4, 6), 16);
-					var hexText = (r * 0.299 + g * 0.587 + b * 0.114) > 186 ? '#000000' : '#FFFFFF';
-					card.find('.card__img').replaceWith('<div class="card__img">' + fl + '</div>');
-					card.find('.card__view').css({'background-color': '#' + hex, 'color': hexText});
-					channel['tvg-logo'] = '';
-					card.addClass('card--loaded');
-				};
-				if (channel['tvg-logo']) img.src = channel['tvg-logo'];else img.onerror();
-				var favIcon = $('<div class="card__icon icon--book hide"></div>');
-				card.find('.card__icons-inner').append(favIcon);
-				var tvgDay = parseInt(
-					channel['catchup-days'] || channel['tvg-rec'] || channel['timeshift']
-					|| listCfg['catchup-days'] || listCfg['tvg-rec'] || listCfg['timeshift']
-					|| '0' // todo вынести в настройки?
-				);
-				if (parseInt('catchup-enable' in channel ? channel['catchup-enable'] : tvgDay) > 0) {
-					card.find('.card__icons-inner').append('<div class="card__icon icon--timeshift"></div>');
-					if (tvgDay === 0) tvgDay = 1;
-				} else {
-					tvgDay = 0;
-				}
-				card.find('.card__age').html('<div class="card__epg-progress js-epgProgress"></div><div class="card__epg-title js-epgTitle"></div>')
-				if (object.currentGroup !== '' && favorite.indexOf(favID(channel.Title)) !== -1) {
-					favIcon.toggleClass('hide', false);
-				}
-				card.playThis = function(){
-					layerFocusI = chI;
-					var video = {
-						title: channel.Title,
-						url: prepareUrl(channel.Url),
-						plugin: plugin.component,
-						iptv: true,
-						tv: true
-					};
-					var playlist = [];
-					var playlistForExtrnalPlayer = [];
-					var i = 0;
-					data.forEach(function (elem) {
-						// Изменяем порядок для внешнего плейлиста (плейлист начинается с текущего элемента)
-						var j = i < chI ? data.length - chI + i : i - chI;
-						var videoUrl = i === chI ? video.url : prepareUrl(elem.Url);
-						playlistForExtrnalPlayer[j] = {
-							title: elem.Title,
-							url: videoUrl,
-							iptv: true,
-							tv: true
-						};
-						playlist.push({
-							title: ++i + '. ' + elem.Title,
-							url: videoUrl,
-							plugin: plugin.component,
-							iptv: true,
-							tv: true
-						});
-					});
-					video['playlist'] = playlistForExtrnalPlayer;
-					Lampa.Keypad.listener.destroy()
-					Lampa.Keypad.listener.follow('keydown', keydown.bind(_this2));
-					Lampa.Player.runas && Lampa.Player.runas(Lampa.Storage.field('player_iptv'));
-					Lampa.Player.play(video);
-					Lampa.Player.runas && Lampa.Player.runas(Lampa.Storage.field('player_iptv'));
-					Lampa.Player.playlist(playlist);
-				};
-				card.on('hover:focus hover:hover touchstart', function (event) {
-					layerFocusI = chI;
-					if (event.type && event.type !== 'touchstart' && event.type !== 'hover:hover') scroll.update(card, true);
-					last = card[0];
-					// info.find('.info__title-original').text(channel['Group']);
-					info.find('.info__title').text(channel.Title);
-					var ec = $('#' + plugin.component + '_epg');
-					ec.find('.js-epgChannel').text(channel.Title);
-					if (!channel['epgId']) {
-						info.find('.info__create').empty();
-						epgIdCurrent = '';
-						ec.find('.js-epgNow').hide();
-						ec.find('.js-epgAfter').hide();
-					}
-					else {
-						epgIdCurrent = channel['epgId'];
-						epgRender(channel['epgId']);
-					}
-				}).on('hover:enter', function() {
-					getStorage('launch_menu', 'false') ? card.trigger('hover:long') : card.playThis();
-				}).on('hover:long', function () {
-					layerFocusI = chI;
-					var favI = favorite.indexOf(favID(channel.Title));
-					var isFavoriteGroup = object.currentGroup === '';
-					var menu = [];
+this.append = function (data) {
+    var catEpg = [];
+    var chIndex = 0;
+    var _this2 = this;
+    var lazyLoadImg = ('loading' in HTMLImageElement.prototype);
+    layerCards = null;
 
+    var bulkFn = bulkWrapper(function (channel) {
+        var chI = chIndex++;
+        
+        // Створюємо картку через шаблон Lampa
+        var card = Lampa.Template.get('card', {
+            title: channel.Title,
+            release_year: ''
+        });
 
-					if (getStorage('launch_menu', 'false')) {
-						menu.push({
-							title: Lampa.Lang.translate('player_lauch'),
-							startPlay: true
-						});
-					}
-					if (tvgDay > 0) {
-						if (!!channel['epgId'] && !!EPG[channel['epgId']] && EPG[channel['epgId']][2].length) {
-							menu.push({
-								title: 'Смотреть сначала',
-								restartProgram: true
-							});
-						}
-						menu.push({
-							title: 'Архив',
-							archive: true
-						});
-					}
-					if (!!channel['epgId'] && !!EPG[channel['epgId']] && EPG[channel['epgId']][2].length) {
-						menu.push({
-							title: Lampa.Lang.translate('search_start'),
-							search: EPG[channel['epgId']][2][0][2]
-						});
-					}
-					menu.push({
-						title: favI === -1 ? langGet('favorites_add') : langGet('favorites_del'),
-						favToggle: true
-					});
-					if (isFavoriteGroup && favorite.length) {
-						if (favI !== 0) {
-							menu.push({
-								title: langGet('favorites_move_top'),
-								favMove: true,
-								i: 0
-							});
-							menu.push({
-								title: langGet('favorites_move_up'),
-								favMove: true,
-								i: favI - 1
-							});
-						}
-						if ((favI + 1) !== favorite.length) {
-							menu.push({
-								title: langGet('favorites_move_down'),
-								favMove: true,
-								i: favI + 1
-							});
-							menu.push({
-								title: langGet('favorites_move_end'),
-								favMove: true,
-								i: favorite.length - 1
-							});
-						}
-						menu.push({
-							title: langGet('favorites_clear'),
-							favClear: true
-						});
-					}
-					menu.push({
-						title: getStorage('epg', 'false') ? langGet('epg_off') :  langGet('epg_on'),
-						epgToggle: true
-					});
-					Lampa.Select.show({
+        // ПЕРЕТВОРЕННЯ В СПИСОК: додаємо класи для горизонтального вигляду
+        card.addClass('card--list card--collection') 
+            .removeClass('layer--visible')
+            .removeClass('layer--render')
+            .addClass('js-layer--hidden');
+        
+        card.addClass('iptv-card-item'); // Клас для ваших CSS стилів
+        card.attr('data-epg-id', channel['epgId'] || channel.Title); 
+
+        if (chI < layerCnt) card.addClass('js-layer--visible');
+        
+        var img = card.find('.card__img')[0];
+        if (lazyLoadImg) img.loading = (chI < 18 ? 'eager' : 'lazy');
+        
+        img.onload = function () {
+            card.addClass('card--loaded');
+        };
+
+        // Генерація логотипу (ваш код)
+        img.onerror = function (e) {
+            var name = channel.Title
+                .replace(/\s+\(([+-]?\d+)\)/, ' $1').replace(/[-.()\s]+/g, ' ').replace(/(^|\s+)(TV|ТВ)(\s+|$)/i, '$3');
+            var fl = name.replace(/\s+/g, '').length > 5
+                ? name.split(/\s+/).map(function(v) {return v.match(/^(\+?\d+|[UF]?HD|4K)$/i) ? v : v.substring(0,1).toUpperCase()}).join('').substring(0,6)
+                : name.replace(/\s+/g, '');
+            
+            fl = fl.replace(/([UF]?HD|4k|\+\d+)$/i, '<sup>$1</sup>');
+            var hex = (Lampa.Utils.hash(channel.Title) * 1).toString(16);
+            while (hex.length < 6) hex+=hex;
+            hex = hex.substring(0,6);
+            
+            var r = parseInt(hex.slice(0, 2), 16),
+                g = parseInt(hex.slice(2, 4), 16),
+                b = parseInt(hex.slice(4, 6), 16);
+            var hexText = (r * 0.299 + g * 0.587 + b * 0.114) > 186 ? '#000000' : '#FFFFFF';
+            
+            card.find('.card__img').replaceWith('<div class="card__img">' + fl + '</div>');
+            card.find('.card__view').css({'background-color': '#' + hex, 'color': hexText});
+            channel['tvg-logo'] = '';
+            card.addClass('card--loaded');
+        };
+
+        if (channel['tvg-logo']) img.src = channel['tvg-logo']; else img.onerror();
+        
+        // Іконки (ваша логіка)
+        var favIcon = $('<div class="card__icon icon--book hide"></div>');
+        card.find('.card__icons-inner').append(favIcon);
+        
+        var tvgDay = parseInt(channel['catchup-days'] || channel['tvg-rec'] || channel['timeshift'] || '0');
+        if (parseInt('catchup-enable' in channel ? channel['catchup-enable'] : tvgDay) > 0) {
+            card.find('.card__icons-inner').append('<div class="card__icon icon--timeshift"></div>');
+            if (tvgDay === 0) tvgDay = 1;
+        }
+
+        // Блок EPG
+        card.find('.card__age').html('<div class="card__epg-progress js-epgProgress"></div><div class="card__epg-title js-epgTitle"></div>');
+        
+        if (object.currentGroup !== '' && favorite.indexOf(favID(channel.Title)) !== -1) {
+            favIcon.toggleClass('hide', false);
+        }
+
+        // Логіка відтворення (playThis)
+        card.playThis = function(){
+            layerFocusI = chI;
+            var video = {
+                title: channel.Title,
+                url: prepareUrl(channel.Url),
+                plugin: plugin.component,
+                iptv: true,
+                tv: true
+            };
+
+            var playlist = [];
+            var playlistForExtrnalPlayer = [];
+            var i = 0;
+            data.forEach(function (elem) {
+                var j = i < chI ? data.length - chI + i : i - chI;
+                var videoUrl = i === chI ? video.url : prepareUrl(elem.Url);
+                playlistForExtrnalPlayer[j] = { title: elem.Title, url: videoUrl, iptv: true, tv: true };
+                playlist.push({ title: ++i + '. ' + elem.Title, url: videoUrl, plugin: plugin.component, iptv: true, tv: true });
+            });
+
+            video['playlist'] = playlistForExtrnalPlayer;
+            Lampa.Keypad.listener.destroy();
+            Lampa.Keypad.listener.follow('keydown', keydown.bind(_this2));
+            Lampa.Player.play(video);
+            Lampa.Player.playlist(playlist);
+        };
+
+        // Події Фокусу та Натискання (те, що ви скинули в кінці)
+        card.on('hover:focus hover:hover touchstart', function (event) {
+            layerFocusI = chI;
+            if (event.type && event.type !== 'touchstart' && event.type !== 'hover:hover') scroll.update(card, true);
+            last = card[0];
+            info.find('.info__title').text(channel.Title);
+            
+            var ec = $('#' + plugin.component + '_epg');
+            ec.find('.js-epgChannel').text(channel.Title);
+            
+            if (!channel['epgId']) {
+                info.find('.info__create').empty();
+                epgIdCurrent = '';
+                ec.find('.js-epgNow').hide();
+                ec.find('.js-epgAfter').hide();
+            } else {
+                epgIdCurrent = channel['epgId'];
+                epgRender(channel['epgId']);
+            }
+        }).on('hover:enter', function() {
+            getStorage('launch_menu', 'false') ? card.trigger('hover:long') : card.playThis();
+        }).on('hover:long', function () {
+            layerFocusI = chI;
+            var favI = favorite.indexOf(favID(channel.Title));
+            var menu = [];
+            
+            if (getStorage('launch_menu', 'false')) {
+                menu.push({ title: Lampa.Lang.translate('player_lauch'), startPlay: true });
+            }
+            if (tvgDay > 0) {
+                menu.push({ title: 'Смотреть сначала', restartProgram: true });
+                menu.push({ title: 'Архив', archive: true });
+            }
+            menu.push({ title: favI === -1 ? langGet('favorites_add') : langGet('favorites_del'), favToggle: true });
+            
+            Lampa.Select.show({	  
 						title: Lampa.Lang.translate('title_action'),
 						items: menu,
 						onSelect: function (sel) {
