@@ -1,0 +1,162 @@
+/* =======================
+   EPG GLOBAL STORAGE
+======================= */
+var EPG = {};
+var epgInterval = false;
+
+
+/* =======================
+   EPG AUTO UPDATE TIMER
+======================= */
+if (epgInterval) clearInterval(epgInterval);
+epgInterval = setInterval(function () {
+	for (var epgId in EPG) {
+		epgRender(epgId);
+	}
+}, 10000);
+
+
+/* =======================
+   EPG SETTINGS SWITCH
+======================= */
+addSettings(
+	'trigger',
+	{
+		title: langGet('epg_on'),
+		name: 'epg',
+		default: false,
+		onChange: function(v){
+			epgListView(v === 'true');
+		}
+	}
+);
+
+
+/* =======================
+   SET EPG ID FOR CHANNELS
+======================= */
+function setEpgId(channelGroup) {
+	if (channelGroup.setEpgId || !channelGroup.channels || !listCfg['epgApiChUrl']) return;
+
+	channelGroup.setEpgId = true;
+
+	var chIDs = false;
+	var epgPath = '';
+
+	networkSilentSessCache(listCfg['epgApiChUrl'], function (d) {
+		chIDs = d;
+		if (!chIDs['id2epg']) chIDs['id2epg'] = {};
+		epgPath = !chIDs['epgPath'] ? '' : ('/' + chIDs['epgPath']);
+	});
+
+	var trW = {
+		"ё":"e","у":"y","к":"k","е":"e","н":"h","ш":"w","з":"3","х":"x","ы":"bl",
+		"в":"b","а":"a","р":"p","о":"o","ч":"4","с":"c","м":"m","т":"t",
+		"ь":"b","б":"6"
+	};
+
+	var trName = function (word) {
+		return word.split('').map(function (char) {
+			return trW[char] || char;
+		}).join("");
+	};
+
+	var chShortName = function (chName) {
+		return chName.toLowerCase()
+			.replace(/\s+\(архив\)$/, '')
+			.replace(/\s+\((\+\d+)\)/g, ' $1')
+			.replace(/^телеканал\s+/, '')
+			.replace(/([!\s.,()–-]+|ⓢ|ⓖ|ⓥ|ⓞ|Ⓢ|Ⓖ|Ⓥ|Ⓞ)/g, ' ')
+			.trim()
+			.replace(/\s(канал|тв)(\s.+|\s*)$/, '$2')
+			.replace(/\s(50|orig|original)$/, '')
+			.replace(/\s(\d+)/g, '$1');
+	};
+
+	var epgIdByName = function (v, find, epgId) {
+		var find2 = trName(find);
+		for (var k in v) {
+			if (epgId && k !== epgId) continue;
+			var kk = chShortName(k);
+			if (kk === find || kk === find2) return k;
+			if (kk.indexOf(find) === 0 || kk.indexOf(find2) === 0) return k;
+		}
+		return false;
+	};
+
+	channelGroup.channels.forEach(function (channel) {
+		if (channel['epgId']) return;
+
+		var chName = chShortName(channel['name']);
+		var trChName = trName(chName);
+
+		channel['epgId'] =
+			(listCfg['isEpgIt999'] || listCfg['isYosso'])
+				? (channel['tvg-id'] || channel['name'])
+				: (
+					chIDs.id2epg[channel['tvg-id'] || ''] ||
+					epgIdByName(chIDs.id2epg, chName) ||
+					epgIdByName(chIDs.id2epg, trChName) ||
+					channel['tvg-id']
+				);
+	});
+}
+
+
+/* =======================
+   LOAD EPG DATA BY HOUR
+======================= */
+function epgUpdateData(epgId) {
+	if (!epgId) return;
+
+	var t = Math.floor(Date.now() / 1000 / 3600) * 3600;
+
+	if (!!EPG[epgId] && t >= EPG[epgId][0] && t <= EPG[epgId][1]) {
+		return;
+	}
+
+	if (!EPG[epgId]) {
+		EPG[epgId] = [t, t, []];
+	}
+
+	network.silent(
+		Lampa.Utils.protocol() + 'epg.rootu.top/api' + epgPath + '/epg/' + epgId + '/hour/' + t,
+		function (r) {
+			if (!r || !r.list) return;
+
+			var epg = r.list;
+			var lt = Date.now() / 1000 / 60;
+
+			for (var i = 0; i < epg.length; i++) {
+				if (lt < (epg[i][0] + epg[i][1])) {
+					EPG[epgId][2].push.apply(EPG[epgId][2], epg.slice(i));
+					break;
+				}
+			}
+
+			EPG[epgId][0] = Math.min(EPG[epgId][0], t);
+			EPG[epgId][1] = Math.max(EPG[epgId][1], t + 3600);
+		}
+	);
+}
+
+
+/* =======================
+   ATTACH EPG TO CARD
+======================= */
+card.attr('data-epg-id', channel['epgId'])
+	.addClass('js-epgNoRender');
+epgRender(channel['epgId']);
+
+
+/* =======================
+   USE EPG IN CATCHUP
+======================= */
+var epg = EPG[channel['epgId']][2][0];
+
+video['timeline'] = {
+	time: 11,
+	percent: 0,
+	handler: function(){},
+	duration: (epg[1] * 60)
+};
