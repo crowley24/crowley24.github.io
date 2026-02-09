@@ -1359,7 +1359,7 @@ $('body').append(Lampa.Template.get(plugin.component + '_style', {}, true));
 			}
 		}
 	}
-	this.build = function (catalog) {  
+this.build = function (catalog) {  
     var channelGroup = !catalog[object.currentGroup]  
             ? (lists[object.id].groups.length > 1 && !!catalog[lists[object.id].groups[1].key]  
                     ? catalog[lists[object.id].groups[1].key]  
@@ -1376,22 +1376,53 @@ $('body').append(Lampa.Template.get(plugin.component + '_style', {}, true));
     // Додаємо групи в ліву панель  
     lists[object.id].groups.forEach(function(group) {  
         var groupItem = $('<div class="' + plugin.component + '__group-item selector' +   
-    (object.currentGroup === group.key ? ' active' : '') + '">' +  
-    '<div class="group__title">' + group.title + '</div>' +  
-    '</div>');  
+            (object.currentGroup === group.key ? ' active' : '') + '">' +  
+            '<div class="group__title">' + group.title + '</div>' +  
+            '</div>');  
           
         groupItem.on('hover:enter', function() {  
             if (object.currentGroup !== group.key) {  
-                var activity = Lampa.Arrays.clone(lists[object.id].activity);  
-                activity.currentGroup = group.key;  
-                Lampa.Activity.replace(activity);  
+                object.currentGroup = group.key;  
+                // Оновлюємо активний клас для груп  
+                groupsPanel.find('.active').removeClass('active');  
+                groupItem.addClass('active');  
+                  
+                // Оновлюємо інформаційну панель  
+                info.find('.info__title-original').text(group.title);  
+                  
+                // Очищуємо та перебудовуємо панель каналів  
+                channelsPanel.empty();  
+                var newChannelGroup = catalog[group.key] || {'channels': []};  
+                  
+                if (newChannelGroup.channels.length) {  
+                    setEpgId(newChannelGroup);  
+                    scroll.render().addClass('layer--wheight').data('mheight', info);  
+                    channelsPanel.append(scroll.render());  
+                    _this2.append(newChannelGroup.channels);  
+                      
+                    if (getStorage('epg', false)) {  
+                        scroll.render().css({float: "left", width: '70%'});  
+                        scroll.render().parent().append(epgTemplate);  
+                    }  
+                      
+                    scroll.append(body);  
+                    setStorage('last_catalog' + object.id, group.key);  
+                    lists[object.id].activity.currentGroup = group.key;  
+                      
+                    // Встановлюємо фокус на перший канал  
+                    Lampa.Controller.collectionSet(scroll.render());  
+                    Lampa.Controller.collectionFocus(scroll.render().find('.selector').first(), scroll.render());  
+                } else {  
+                    var empty = new Lampa.Empty();  
+                    channelsPanel.append(empty.render());  
+                }  
             }  
         });  
           
         groupsPanel.append(groupItem);  
     });  
       
-    // Інформаційна панель (без кнопки категорій, оскільки групи тепер зліва)  
+    // Інформаційна панель  
     Lampa.Template.add(plugin.component + '_info_radio', '<div class="info layer--width"><div class="info__left"><div class="info__title"></div><div class="info__title-original"></div><div class="info__create"></div></div><div class="info__right" style="display: flex !important;"></div></div>');  
     info = Lampa.Template.get(plugin.component + '_info_radio');  
     info.find('.info__title-original').text(!catalog[object.currentGroup] ? '' : catalog[object.currentGroup].title);  
