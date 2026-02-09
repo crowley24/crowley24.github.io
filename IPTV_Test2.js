@@ -1,6 +1,6 @@
 // ==Lampa==
-// name: IPTV PRO (EPG Fixed Version)
-// version: 13.4
+// name: IPTV PRO (EPG Fixed Final)
+// version: 13.5
 // ==/Lampa==
 
 (function () {
@@ -27,7 +27,6 @@
             current_pl_index: 0
         });
 
-        // --- Твоя логіка генерації ID (БЕЗ ЗМІН) ---
         var chShortName = function (chName) {
             return chName.toLowerCase()
                 .replace(/\s+\(архив\)$/, '')
@@ -39,7 +38,6 @@
                 .replace(/\s(\d+)/g, '$1');
         };
 
-        // --- Твій оригінальний метод завантаження EPG з фіксом мережі ---
         function epgUpdateData(epgId) {
             if (!epgId) return;
             var t = Math.floor(Date.now() / 1000 / 3600) * 3600;
@@ -49,26 +47,29 @@
                 return;
             }
 
-            // Використовуємо системний Network Lampa замість $.ajax
-            Lampa.Network.silent('https://epg.rootu.top/api' + epgPath + '/epg/' + epgId + '/hour/' + t, function (r) {
-                if (r && r.list) {
-                    var epg = r.list;
-                    var lt = Date.now() / 1000 / 60;
+            var url = 'https://epg.rootu.top/api' + epgPath + '/epg/' + epgId + '/hour/' + t;
 
-                    for (var i = 0; i < epg.length; i++) {
-                        if (lt < (epg[i][0] + epg[i][1])) {
-                            // Формуємо масив точно як у твоєму робочому прикладі
-                            EPG[epgId] = [t, t + 3600, epg.slice(i)];
-                            break;
+            // Використовуємо Lampa.Network.silent, як у вашому робочому прикладі
+            if (typeof Lampa !== 'undefined' && Lampa.Network) {
+                Lampa.Network.silent(url, function (r) {
+                    if (r && r.list) {
+                        var epg = r.list;
+                        var lt = Date.now() / 1000 / 60;
+
+                        for (var i = 0; i < epg.length; i++) {
+                            if (lt < (epg[i][0] + epg[i][1])) {
+                                EPG[epgId] = [t, t + 3600, epg.slice(i)];
+                                break;
+                            }
                         }
+                        _this.epgRenderUI(epgId);
+                    } else {
+                        $('#epg-title').text('Програма відсутня');
                     }
-                    _this.epgRenderUI(epgId);
-                } else {
-                    $('#epg-title').text('Програма не знайдена');
-                }
-            }, function() {
-                $('#epg-title').text('Помилка завантаження');
-            });
+                }, function() {
+                    $('#epg-title').text('Помилка мережі');
+                });
+            }
         }
 
         this.epgRenderUI = function(epgId) {
@@ -120,7 +121,9 @@
 
         this.loadPlaylist = function () {
             var pl = config.playlists[config.current_pl_index];
-            Lampa.Network.silent(pl.url, function (str) { _this.parse(str); });
+            if (typeof Lampa !== 'undefined' && Lampa.Network) {
+                Lampa.Network.silent(pl.url, function (str) { _this.parse(str); });
+            }
         };
 
         this.parse = function (str) {
@@ -134,7 +137,7 @@
                     var logo = (l.match(/tvg-logo="([^"]+)"/i) || ['', ''])[1];
                     var tvg_id = (l.match(/tvg-id="([^"]+)"/i) || ['', ''])[1];
                     var url = lines[i + 1] ? lines[i + 1].trim() : '';
-                    if (url.indexOf('http') === 0) {
+                    if (url && url.indexOf('http') === 0) {
                         var item = { 
                             name: name, 
                             url: url, 
@@ -175,7 +178,9 @@
                                 '</div>' +
                             '</div>');
                 row.on('click', function () { 
-                    Lampa.Player.play({ url: c.url, title: c.name }); 
+                    if (typeof Lampa !== 'undefined' && Lampa.Player) {
+                        Lampa.Player.play({ url: c.url, title: c.name }); 
+                    }
                 });
                 row.on('hover:focus', function () { 
                     index_c = idx; 
@@ -195,7 +200,7 @@
                 '<img src="' + channel.logo + '" style="width:100%; max-height:150px; object-fit:contain; margin-bottom:1rem;">' +
                 '<div style="font-size:1.6rem; color:#fff; font-weight:700;">' + channel.name + '</div>' +
                 '<div style="color:#2962ff; font-weight:bold; margin-top:1.5rem;">ЗАРАЗ В ЕФІРІ:</div>' +
-                '<div class="epg-prog-name" id="epg-title">...</div>' +
+                '<div class="epg-prog-name" id="epg-title">Завантаження...</div>' +
                 '<div class="epg-bar"><div class="epg-bar-inner" id="epg-progress"></div></div>' +
                 '<div style="margin-top:1rem; opacity:0.3; font-size: 0.8rem;">ID: ' + channel.tvg_id + '</div>' +
             '</div>');
@@ -249,14 +254,22 @@
     }
 
     function init() {
-        Lampa.Component.add('iptv_pro', IPTVComponent);
-        var item = $('<li class="menu__item selector"><div class="menu__text">IPTV PRO</div></li>');
-        item.on('hover:enter', function () {
-            Lampa.Activity.push({ title: 'IPTV PRO', component: 'iptv_pro' });
-        });
-        $('.menu .menu__list').append(item);
+        if (typeof Lampa !== 'undefined') {
+            Lampa.Component.add('iptv_pro', IPTVComponent);
+            var item = $('<li class="menu__item selector"><div class="menu__text">IPTV PRO</div></li>');
+            item.on('hover:enter', function () {
+                Lampa.Activity.push({ title: 'IPTV PRO', component: 'iptv_pro' });
+            });
+            $('.menu .menu__list').append(item);
+        }
     }
 
     if (window.app_ready) init();
-    else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') init(); });
+    else {
+        document.addEventListener('app:ready', init);
+        // Резервний варіант для деяких версій Lampa
+        if (typeof Lampa !== 'undefined' && Lampa.Listener) {
+            Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') init(); });
+        }
+    }
 })();
