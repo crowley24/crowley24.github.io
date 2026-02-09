@@ -1,22 +1,31 @@
-(function () {
-'use strict';
-var plugin = {
-	component: 'my_iptv',
-	icon: "<svg height=\"244\" viewBox=\"0 0 260 244\" xmlns=\"http://www.w3.org/2000/svg\" style=\"fill-rule:evenodd;\" fill=\"currentColor\"><path d=\"M259.5 47.5v114c-1.709 14.556-9.375 24.723-23 30.5a2934.377 2934.377 0 0 1-107 1.5c-35.704.15-71.37-.35-107-1.5-13.625-5.777-21.291-15.944-23-30.5v-115c1.943-15.785 10.61-25.951 26-30.5a10815.71 10815.71 0 0 1 208 0c15.857 4.68 24.523 15.18 26 31.5zm-230-13a4963.403 4963.403 0 0 0 199 0c5.628 1.128 9.128 4.462 10.5 10 .667 40 .667 80 0 120-1.285 5.618-4.785 8.785-10.5 9.5-66 .667-132 .667-198 0-5.715-.715-9.215-3.882-10.5-9.5-.667-40-.667-80 0-120 1.35-5.18 4.517-8.514 9.5-10z\"/><path d=\"M70.5 71.5c17.07-.457 34.07.043 51 1.5 5.44 5.442 5.107 10.442-1 15-5.991.5-11.991.666-18 .5.167 14.337 0 28.671-.5 43-3.013 5.035-7.18 6.202-12.5 3.5a11.529 11.529 0 0 1-3.5-4.5 882.407 882.407 0 0 1-.5-42c-5.676.166-11.343 0-17-.5-4.569-2.541-6.069-6.375-4.5-11.5 1.805-2.326 3.972-3.992 6.5-5zM137.5 73.5c4.409-.882 7.909.452 10.5 4a321.009 321.009 0 0 0 16 30 322.123 322.123 0 0 0 16-30c2.602-3.712 6.102-4.879 10.5-3.5 5.148 3.334 6.314 7.834 3.5 13.5a1306.032 1306.032 0 0 0-22 43c-5.381 6.652-10.715 6.652-16 0a1424.647 1424.647 0 0 0-23-45c-1.691-5.369-.191-9.369 4.5-12zM57.5 207.5h144c7.788 2.242 10.288 7.242 7.5 15a11.532 11.532 0 0 1-4.5 3.5c-50 .667-100 .667-150 0-6.163-3.463-7.496-8.297-4-14.5 2.025-2.064 4.358-3.398 7-4z\"/></svg>",
-	name: 'ipTV'
-};
-
-// --- [STYLING BLOCK START] ---
 (function() {
     var styleId = 'iptv-plugin-styles';
     if (!$('#' + styleId).length) {
         $('<style id="' + styleId + '">')
             .text(
-                '.iptv__groups { width: 15em; flex-shrink: 0; display: flex; flex-direction: column; overflow: hidden; }\n' +
-                '.iptv__group { padding: 0.8em 1.2em; cursor: pointer; border-radius: 0.3em; margin: 0.2em; transition: all 0.2s; opacity: 0.7; font-size: 1.1em; }\n' +
-                '.iptv__group.active { background: rgba(255,255,255,0.1); opacity: 1; border-left: 0.3em solid #fff; }\n' +
-                '.iptv__group.focus { background: #fff !important; color: #000 !important; transform: scale(1.05); opacity: 1; z-index: 10; }\n' +
-                '.iptv__channel.focus { outline: 3px solid #fff; border-radius: 0.5em; transform: scale(1.03); }'
+                /* Основний контейнер */
+                '.my_iptv__container { display: flex; height: 100%; overflow: hidden; }\n' +
+                
+                /* Панель груп (зліва) */
+                '.iptv__groups { width: 18em; flex-shrink: 0; background: rgba(0,0,0,0.3); display: flex; flex-direction: column; padding: 1em 0.5em; border-right: 1px solid rgba(255,255,255,0.1); }\n' +
+                '.iptv__group { padding: 0.8em 1.2em; cursor: pointer; border-radius: 0.3em; margin: 0.1em 0; transition: all 0.2s; opacity: 0.6; font-size: 1.1em; }\n' +
+                '.iptv__group.active { opacity: 1; background: rgba(255,255,255,0.15); border-left: 4px solid #fff; }\n' +
+                '.iptv__group.focus { background: #fff !important; color: #000 !important; transform: scale(1.02); opacity: 1; }\n' +
+
+                /* Панель каналів (справа) - ПЕРЕТВОРЕННЯ В СПИСОК */
+                '.my_iptv__channels { flex-grow: 1; padding: 1em; overflow: hidden; }\n' +
+                '.my_iptv__channels .card { width: 100% !important; height: 5em !important; margin: 0.3em 0 !important; }\n' +
+                '.my_iptv__channels .card__content { display: flex !important; flex-direction: row !important; align-items: center; padding: 0 1em; background: rgba(255,255,255,0.05); border-radius: 0.5em; height: 100%; }\n' +
+                
+                /* Логотип каналу */
+                '.my_iptv__channels .card__img { width: 4em !important; height: 4em !important; flex-shrink: 0; margin: 0 1.5em 0 0 !important; background-size: contain !important; background-repeat: no-repeat; background-position: center; }\n' +
+                
+                /* Назва каналу */
+                '.my_iptv__channels .card__title { text-align: left !important; font-size: 1.4em !important; margin: 0 !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-grow: 1; }\n' +
+
+                /* Ефект фокусу на каналі */
+                '.my_iptv__channels .card.focus .card__content { background: #fff !important; }\n' +
+                '.my_iptv__channels .card.focus .card__title { color: #000 !important; }\n'
             )
             .appendTo('body');
     }
