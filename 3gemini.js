@@ -1385,29 +1385,25 @@ $('body').append(Lampa.Template.get(plugin.component + '_style', {}, true));
             ? catalog[lists[object.id].groups[1].key]
             : {'channels': []})
         : catalog[object.currentGroup];
+    
     var _this2 = this;
-    var changeGroupTimer; // Таймер для автоматичного перемикання
+    var changeGroupTimer; 
     
     Lampa.Background.change();
     
-        mainContainer = $('<div class="' + plugin.component + '__container"></div>');
-        groupsPanel = $('<div class="' + plugin.component + '__groups"></div>');
+    // Створення основних контейнерів
+    mainContainer = $('<div class="' + plugin.component + '__container"></div>');
+    groupsPanel = $('<div class="iptv__groups"></div>'); // Використовуємо клас зі стилів
     var channelsPanel = $('<div class="' + plugin.component + '__channels"></div>');
     
-    // Обробка клавіш на панелі груп (перехід вправо до каналів)
-    groupsPanel.on('keydown', function(e) {
-        if (e.keyCode === 39) { // Клавіша Вправо
-            Lampa.Controller.toggle('content');
-        }
-    });
-      
     lists[object.id].groups.forEach(function(group) {
-        var groupItem = $('<div class="' + plugin.component + '__group-item selector' + 
+        // Створюємо елемент групи. selector обов'язковий для роботи пульта
+        var groupItem = $('<div class="iptv__group selector' + 
             (object.currentGroup === group.key ? ' active' : '') + '">' +
             '<div class="group__title">' + group.title + '</div>' +
             '</div>');
           
-        // Прямий перехід без Enter (при наведенні фокусу)
+        // Обробка фокусу: перемикаємо контент при наведенні (через 500мс)
         groupItem.on('hover:focus', function() {
             if (object.currentGroup !== group.key) {
                 clearTimeout(changeGroupTimer);
@@ -1415,28 +1411,32 @@ $('body').append(Lampa.Template.get(plugin.component + '_style', {}, true));
                     var activity = Lampa.Arrays.clone(lists[object.id].activity);
                     activity.currentGroup = group.key;
                     
-                    // Зберігаємо фокус на поточній групі після оновлення контенту
+                    // Зберігаємо назву групи для повернення фокусу
+                    object.currentGroup = group.key; 
                     Lampa.Activity.replace(activity);
-                    Lampa.Controller.collectionSet(groupsPanel);
-                    Lampa.Controller.collectionFocus(groupItem[0], groupsPanel);
-                }, 400); // Затримка 400мс
+                }, 500);
             }
         });
 
-        // Клік або Enter (миттєвий перехід або вхід у канали)
+        // Обробка натискання OK (Enter): заходимо в канали
         groupItem.on('hover:enter', function() {
-            if (object.currentGroup !== group.key) {
+            if (object.currentGroup === group.key) {
+                Lampa.Controller.toggle('content'); // Йдемо до каналів
+            } else {
                 clearTimeout(changeGroupTimer);
                 var activity = Lampa.Arrays.clone(lists[object.id].activity);
                 activity.currentGroup = group.key;
                 Lampa.Activity.replace(activity);
-            } else {
-                Lampa.Controller.toggle('content');
             }
         });
           
         groupsPanel.append(groupItem);
     });
+
+    // Додаємо все в DOM
+    mainContainer.append(groupsPanel);
+    mainContainer.append(channelsPanel);
+    html.append(mainContainer);
       
     Lampa.Template.add(plugin.component + '_info_radio', '<div class="info layer--width"><div class="info__left"><div class="info__title"></div><div class="info__title-original"></div><div class="info__create"></div></div><div class="info__right" style="display: flex !important;"></div></div>');
     info = Lampa.Template.get(plugin.component + '_info_radio');
@@ -1496,56 +1496,58 @@ $('body').append(Lampa.Template.get(plugin.component + '_style', {}, true));
 		if (Lampa.Activity.active().activity !== this.activity) return; //обязательно, иначе наблюдается баг, активность создается но не стартует, в то время как компонент загружается и стартует самого себя.
 		var _this = this;
 Lampa.Controller.add('content', {
-    toggle: function toggle() {
-        // Коли контролер активується (наприклад, кнопкою BACK)
+    toggle: function () {
+        // Активуємо фокус на списку каналів
         Lampa.Controller.collectionSet(scroll.render());
         Lampa.Controller.collectionFocus(last || false, scroll.render());
     },
-    left: function left() {
-        // Перехід до ПАНЕЛІ ГРУП
+    left: function () {
+        // Перехід до панелі груп
         if (groupsPanel && groupsPanel.is(':visible')) {
+            // Встановлюємо набір елементів - групи
             Lampa.Controller.collectionSet(groupsPanel);
-            var groups = groupsPanel.find('.selector');
-            var active = groups.filter('.active');
-            var target = active.length ? active[0] : groups[0];
-
+            
+            // Шукаємо куди саме стати: на активну або на першу ліпшу
+            var target = groupsPanel.find('.iptv__group.active')[0] || groupsPanel.find('.selector')[0];
+            
             if (target) {
                 Lampa.Controller.collectionFocus(target, groupsPanel);
-                // Скрол до групи, щоб вона була в полі зору
-                var scrollContainer = groupsPanel.closest('.scroll');
-                if (scrollContainer.length) Lampa.Select.scroll(groupsPanel, target);
             }
         } else {
-            // Якщо груп немає, просто стандартний рух вліво (якщо потрібно)
-            if (Navigator.canmove('left')) Navigator.move('left');
+            Lampa.Controller.toggle('head'); // Якщо груп нема, йдемо вгору
         }
     },
-    right: function right() {
-        // Якщо ми натиснули вправо, перебуваючи ВЖЕ в групах, 
-        // треба повернути фокус на список каналів (scroll)
+    right: function () {
+        // Якщо ми ВЖЕ в групах і тиснемо ВПРАВО -> повертаємось до каналів
         if (Lampa.Controller.enabled().container.is(groupsPanel)) {
             Lampa.Controller.collectionSet(scroll.render());
             Lampa.Controller.collectionFocus(last || false, scroll.render());
         } else {
-            // Якщо ми в каналах, звичайний рух вправо
+            // Якщо ми в каналах, звичайний рух по сітці
             if (Navigator.canmove('right')) Navigator.move('right');
         }
     },
-    up: function up() {
-        if (Navigator.canmove('up')) {
+    up: function () {
+        // Якщо ми в групах, рухаємось по них
+        if (Lampa.Controller.enabled().container.is(groupsPanel)) {
             Navigator.move('up');
         } else {
-            // Перехід в шапку (пошук, налаштування), якщо зверху нічого немає
-            Lampa.Controller.toggle('head');
+            // Якщо в каналах
+            if (Navigator.canmove('up')) Navigator.move('up');
+            else Lampa.Controller.toggle('head');
         }
     },
-    down: function down() {
-        if (Navigator.canmove('down')) {
-            Navigator.move('down');
-        }
+    down: function () {
+        if (Navigator.canmove('down')) Navigator.move('down');
     },
-    back: function back() {
-        Lampa.Activity.backward();
+    back: function () {
+        // Якщо ми в панелі груп, BACK повертає до каналів
+        if (Lampa.Controller.enabled().container.is(groupsPanel)) {
+            Lampa.Controller.collectionSet(scroll.render());
+            Lampa.Controller.collectionFocus(last || false, scroll.render());
+        } else {
+            Lampa.Activity.backward();
+        }
     }
 });
 		Lampa.Controller.toggle('content');
