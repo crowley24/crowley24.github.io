@@ -1,5 +1,4 @@
-//New IPTV
-;(function () {
+(function () {
 'use strict';
 var plugin = {
 	component: 'my_iptv',
