@@ -1,13 +1,13 @@
 // ==Lampa==
-// name: IPTV PRO (EPG Native)
-// version: 13.1
+// name: IPTV PRO (EPG Built-in)
+// version: 13.2
 // ==/Lampa==
 
 (function () {
     'use strict';
 
-    var EPG = {}; // Глобальне сховище з твого коду
-    var epgPath = ''; // Змінна шляху з твого коду
+    var EPG = {};
+    var epgPath = '';
 
     function IPTVComponent() {
         var _this = this;
@@ -27,12 +27,49 @@
             current_pl_index: 0
         });
 
-        /* =======================
-           ЛОГІКА З ТВОГО ПРИКЛАДУ
-        ======================= */
+        /* ======================================================
+           ЧАСТИНА КОДУ, ЯКУ ТИ ДАВ (ПЕРЕНЕСЕНО БЕЗ ЗМІН)
+        ====================================================== */
         
+        function epgUpdateData(epgId) {
+            if (!epgId) return;
+            var t = Math.floor(Date.now() / 1000 / 3600) * 3600;
+
+            if (!!EPG[epgId] && t >= EPG[epgId][0] && t <= EPG[epgId][1]) {
+                return;
+            }
+
+            if (!EPG[epgId]) {
+                EPG[epgId] = [t, t, []];
+            }
+
+            // Використовуємо стандартний $.ajax, бо в Lampa він працює як network.silent
+            $.ajax({
+                url: 'https://epg.rootu.top/api' + epgPath + '/epg/' + epgId + '/hour/' + t,
+                dataType: 'json',
+                success: function (r) {
+                    if (!r || !r.list) return;
+
+                    var epg = r.list;
+                    var lt = Date.now() / 1000 / 60;
+
+                    for (var i = 0; i < epg.length; i++) {
+                        if (lt < (epg[i][0] + epg[i][1])) {
+                            EPG[epgId][2] = epg.slice(i);
+                            break;
+                        }
+                    }
+
+                    EPG[epgId][0] = Math.min(EPG[epgId][0], t);
+                    EPG[epgId][1] = Math.max(EPG[epgId][1], t + 3600);
+                    
+                    _this.renderEpgUI(epgId);
+                }
+            });
+        }
+
         var trW = {"ё":"e","у":"y","к":"k","е":"e","н":"h","ш":"w","з":"3","х":"x","ы":"bl","в":"b","а":"a","р":"p","о":"o","ч":"4","с":"c","м":"m","т":"t","ь":"b","б":"6"};
-        
+
         var trName = function (word) {
             return word.split('').map(function (char) {
                 return trW[char] || char;
@@ -51,47 +88,17 @@
                 .replace(/\s(\d+)/g, '$1');
         };
 
-        this.epgUpdateData = function(epgId) {
-            if (!epgId) return;
-            var t = Math.floor(Date.now() / 1000 / 3600) * 3600;
+        /* ======================================================
+           ЛОГІКА ВІДОБРАЖЕННЯ
+        ====================================================== */
 
-            if (!!EPG[epgId] && t >= EPG[epgId][0] && t <= EPG[epgId][1]) {
-                _this.epgRender(epgId);
-                return;
-            }
-
-            if (!EPG[epgId]) {
-                EPG[epgId] = [t, t, []];
-            }
-
-            // Використання Lampa.Network.silent як аналог network.silent
-            Lampa.Network.silent('https://epg.rootu.top/api' + epgPath + '/epg/' + epgId + '/hour/' + t, function (r) {
-                if (!r || !r.list) return;
-
-                var epg = r.list;
-                var lt = Date.now() / 1000 / 60;
-
-                for (var i = 0; i < epg.length; i++) {
-                    if (lt < (epg[i][0] + epg[i][1])) {
-                        EPG[epgId][2] = epg.slice(i);
-                        break;
-                    }
-                }
-
-                EPG[epgId][0] = Math.min(EPG[epgId][0], t);
-                EPG[epgId][1] = Math.max(EPG[epgId][1], t + 3600);
-                
-                _this.epgRender(epgId);
-            });
-        };
-
-        this.epgRender = function(epgId) {
+        this.renderEpgUI = function(epgId) {
             if (!EPG[epgId] || !EPG[epgId][2] || !EPG[epgId][2][0]) return;
             
             var epg = EPG[epgId][2][0];
             var title = epg[2];
-            var start = epg[0]; // хвилини
-            var duration = epg[1]; // хвилини
+            var start = epg[0];
+            var duration = epg[1];
             
             $('#epg-title').text(title);
             
@@ -100,10 +107,6 @@
             
             $('#epg-progress').css('width', Math.min(100, Math.max(0, percent)) + '%');
         };
-
-        /* =======================
-           ОСНОВНИЙ ФУНКЦІОНАЛ
-        ======================= */
 
         this.create = function () {
             root = $('<div class="iptv-root"></div>');
@@ -117,19 +120,17 @@
             if (!$('#iptv-style-v12').length) {
                 $('head').append('<style id="iptv-style-v12">' +
                     '.iptv-root{position:fixed;inset:0;background:#0b0d10;z-index:1000;padding-top:4rem;}' +
-                    '.iptv-flex-wrapper{display:flex;width:100%;height:100%;overflow:hidden;}' +
+                    '.iptv-flex-wrapper{display:flex;width:100%;height:100%;}' +
                     '.iptv-col{height:100%;overflow-y:auto;background:rgba(255,255,255,0.02);border-right:1px solid rgba(255,255,255,0.05);}' +
-                    '.col-groups{width:20%; min-width:180px; flex-shrink:0;}' +
-                    '.col-channels{width:45%; flex-grow:1; min-width:250px; background:rgba(255,255,255,0.01);}' +
-                    '.col-details{width:35%; min-width:300px; flex-shrink:0; background:#080a0d; padding:1.5rem;}' +
+                    '.col-groups{width:20%; min-width:180px;}' +
+                    '.col-channels{width:45%; flex-grow:1;}' +
+                    '.col-details{width:35%; background:#080a0d; padding:1.5rem;}' +
                     '.iptv-item{padding:1rem;margin:.3rem;border-radius:.5rem;background:rgba(255,255,255,.03);cursor:pointer;}' +
                     '.iptv-item.active{background:#2962ff;color:#fff;}' +
                     '.channel-row{display:flex;align-items:center;gap:1rem;}' +
                     '.channel-logo{width:40px;height:40px;object-fit:contain;background:#000;border-radius:.3rem;}' +
                     '.channel-title{font-size:1.3rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
-                    '.epg-title-big{font-size:1.6rem; color:#fff; font-weight:700; margin-bottom:1rem;}' +
-                    '.epg-now{color:#2962ff; font-size:1.1rem; font-weight:bold; margin-top:1.5rem;}' +
-                    '.epg-prog-name{font-size:1.4rem; color:#ccc; margin:.5rem 0; min-height: 3.2rem;}' +
+                    '.epg-prog-name{font-size:1.4rem; color:#ccc; margin:.5rem 0; min-height:3rem;}' +
                     '.epg-bar{height:4px; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden;}' +
                     '.epg-bar-inner{height:100%; background:#2962ff; width:0%; transition: width 0.3s;}' +
                     '</style>');
@@ -141,7 +142,10 @@
 
         this.loadPlaylist = function () {
             var pl = config.playlists[config.current_pl_index];
-            Lampa.Network.silent(pl.url, function (str) { _this.parse(str); });
+            $.ajax({
+                url: pl.url,
+                success: function (str) { _this.parse(str); }
+            });
         };
 
         this.parse = function (str) {
@@ -156,7 +160,6 @@
                     var tvg_id = (l.match(/tvg-id="([^"]+)"/i) || ['', ''])[1];
                     var url = lines[i + 1] ? lines[i + 1].trim() : '';
                     if (url.indexOf('http') === 0) {
-                        // Призначаємо ID точно за твоєю логікою
                         var epgId = tvg_id || chShortName(name);
                         var item = { name: name, url: url, group: group, logo: logo, tvg_id: epgId };
                         if (!groups_data[group]) groups_data[group] = [];
@@ -200,16 +203,16 @@
         this.showDetails = function (channel) {
             colE.empty();
             var content = $('<div class="details-box">' +
-                '<img src="' + channel.logo + '" style="width:100%; max-height:150px; object-fit:contain; margin-bottom:1rem; background:#000; padding:5px; border-radius:5px;">' +
-                '<div class="epg-title-big">' + channel.name + '</div>' +
-                '<div class="epg-now">ЗАРАЗ В ЕФІРІ:</div>' +
+                '<img src="' + channel.logo + '" style="width:100%; max-height:150px; object-fit:contain; margin-bottom:1rem;">' +
+                '<div style="font-size:1.6rem; color:#fff; font-weight:700;">' + channel.name + '</div>' +
+                '<div style="color:#2962ff; font-weight:bold; margin-top:1.5rem;">ЗАРАЗ В ЕФІРІ:</div>' +
                 '<div class="epg-prog-name" id="epg-title">...</div>' +
                 '<div class="epg-bar"><div class="epg-bar-inner" id="epg-progress"></div></div>' +
-                '<div style="margin-top:1rem; font-size:1.1rem; color:#555;">ID: ' + channel.tvg_id + '</div>' +
+                '<div style="margin-top:1rem; opacity:0.5;">ID: ' + channel.tvg_id + '</div>' +
             '</div>');
             colE.append(content);
 
-            this.epgUpdateData(channel.tvg_id);
+            epgUpdateData(channel.tvg_id);
         };
 
         this.updateFocus = function () {
