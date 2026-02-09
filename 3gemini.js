@@ -1497,71 +1497,68 @@ $('body').append(Lampa.Template.get(plugin.component + '_style', {}, true));
 		var _this = this;
 Lampa.Controller.add('content', {
     toggle: function () {
-        // Активуємо фокус на списку каналів
-        Lampa.Controller.collectionSet(scroll.render());
-        Lampa.Controller.collectionFocus(last || false, scroll.render());
+        if (typeof scroll !== 'undefined' && scroll.render) {
+            Lampa.Controller.collectionSet(scroll.render());
+            Lampa.Controller.collectionFocus(typeof last !== 'undefined' ? last : false, scroll.render());
+        }
     },
     left: function () {
-        // Перехід до панелі груп
-        if (groupsPanel && groupsPanel.is(':visible')) {
-            // Встановлюємо набір елементів - групи
+        if (typeof groupsPanel !== 'undefined' && groupsPanel && groupsPanel.is(':visible')) {
             Lampa.Controller.collectionSet(groupsPanel);
-            
-            // Шукаємо куди саме стати: на активну або на першу ліпшу
             var target = groupsPanel.find('.iptv__group.active')[0] || groupsPanel.find('.selector')[0];
-            
             if (target) {
                 Lampa.Controller.collectionFocus(target, groupsPanel);
             }
         } else {
-            Lampa.Controller.toggle('head'); // Якщо груп нема, йдемо вгору
+            Lampa.Controller.toggle('head');
         }
     },
     right: function () {
-    // 1. Якщо ми зараз у панелі груп, то "Вправо" має вести до КАНАЛІВ
-    if (Lampa.Controller.enabled().container.is(groupsPanel)) {
-        if (scroll && scroll.render) {
-            Lampa.Controller.collectionSet(scroll.render());
-            // Повертаємо фокус на останній канал або перший доступний
-            var target = scroll.render().find('.selector.active')[0] || scroll.render().find('.selector')[0];
-            if (target) {
-                Lampa.Controller.collectionFocus(target, scroll.render());
+        // Перевірка: чи ми в панелі груп?
+        var isGroups = typeof groupsPanel !== 'undefined' && Lampa.Controller.enabled().container.is(groupsPanel);
+        
+        if (isGroups) {
+            if (typeof scroll !== 'undefined' && scroll.render) {
+                var render = scroll.render();
+                Lampa.Controller.collectionSet(render);
+                var target = render.find('.selector.active')[0] || render.find('.selector')[0];
+                if (target) Lampa.Controller.collectionFocus(target, render);
+            }
+        } else {
+            if (typeof Navigator !== 'undefined' && Navigator.canmove('right')) {
+                Navigator.move('right');
             }
         }
-    } else {
-        // 2. Якщо ми вже в каналах, просто рухаємось праворуч по сітці
-        if (Navigator.canmove('right')) {
-            Navigator.move('right');
-        }
-    }
-},
+    },
     up: function () {
-    // 1. Перевіряємо, чи ми в панелі груп
-    if (Lampa.Controller.enabled().container.is(groupsPanel)) {
-        var items = groupsPanel.find('.selector');
-        var index = items.index(groupsPanel.find('.focus'));
-        if (index > 0) {
-            Lampa.Controller.collectionFocus(items[index - 1], groupsPanel);
+        var isGroups = typeof groupsPanel !== 'undefined' && Lampa.Controller.enabled().container.is(groupsPanel);
+        
+        if (isGroups) {
+            var items = groupsPanel.find('.selector');
+            var index = items.index(groupsPanel.find('.focus'));
+            if (index > 0) {
+                Lampa.Controller.collectionFocus(items[index - 1], groupsPanel);
+            } else {
+                Lampa.Controller.toggle('head');
+            }
         } else {
-            Lampa.Controller.toggle('head'); // Якщо це перша група, йдемо в меню
+            if (typeof Navigator !== 'undefined' && Navigator.canmove('up')) {
+                Navigator.move('up');
+            } else {
+                Lampa.Controller.toggle('head');
+            }
         }
-    } else {
-        // 2. Якщо ми в каналах
-        if (Navigator.canmove('up')) {
-            Navigator.move('up');
-        } else {
-            Lampa.Controller.toggle('head'); // Вихід у верхнє меню Lampa
-        }
-    }
-},
+    },
     down: function () {
-        if (Navigator.canmove('down')) Navigator.move('down');
+        if (typeof Navigator !== 'undefined' && Navigator.canmove('down')) {
+            Navigator.move('down');
+        }
     },
     back: function () {
-        // Якщо ми в панелі груп, BACK повертає до каналів
-        if (Lampa.Controller.enabled().container.is(groupsPanel)) {
-            Lampa.Controller.collectionSet(scroll.render());
-            Lampa.Controller.collectionFocus(last || false, scroll.render());
+        var isGroups = typeof groupsPanel !== 'undefined' && Lampa.Controller.enabled().container.is(groupsPanel);
+        
+        if (isGroups) {
+            this.right(); // Повертаємось до каналів
         } else {
             Lampa.Activity.backward();
         }
