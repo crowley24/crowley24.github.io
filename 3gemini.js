@@ -1358,70 +1358,96 @@ $('body').append(Lampa.Template.get(plugin.component + '_style', {}, true));
 			}
 		}
 	}
-	this.build = function (catalog) {  
-    var channelGroup = !catalog[object.currentGroup]  
-            ? (lists[object.id].groups.length > 1 && !!catalog[lists[object.id].groups[1].key]  
-                    ? catalog[lists[object.id].groups[1].key]  
-                    : {'channels': []})  
-            : catalog[object.currentGroup];  
-    var _this2 = this;  
-    Lampa.Background.change();  
+	this.build = function (catalog) {
+    var channelGroup = !catalog[object.currentGroup]
+        ? (lists[object.id].groups.length > 1 && !!catalog[lists[object.id].groups[1].key]
+            ? catalog[lists[object.id].groups[1].key]
+            : {'channels': []})
+        : catalog[object.currentGroup];
+    var _this2 = this;
+    var changeGroupTimer; // Таймер для автоматичного перемикання
+    
+    Lampa.Background.change();
+    
+    var mainContainer = $('<div class="' + plugin.component + '__container"></div>');
+    var groupsPanel = $('<div class="' + plugin.component + '__groups"></div>');
+    var channelsPanel = $('<div class="' + plugin.component + '__channels"></div>');
+    
+    // Обробка клавіш на панелі груп (перехід вправо до каналів)
+    groupsPanel.on('keydown', function(e) {
+        if (e.keyCode === 39) { // Клавіша Вправо
+            Lampa.Controller.toggle('content');
+        }
+    });
       
-    // Створюємо двоколонковий контейнер  
-    var mainContainer = $('<div class="' + plugin.component + '__container"></div>');  
-    var groupsPanel = $('<div class="' + plugin.component + '__groups"></div>');  
-    var channelsPanel = $('<div class="' + plugin.component + '__channels"></div>');  
-      
-    // Додаємо групи в ліву панель  
-    lists[object.id].groups.forEach(function(group) {  
-        var groupItem = $('<div class="' + plugin.component + '__group-item selector' +   
-            (object.currentGroup === group.key ? ' active' : '') + '">' +  
-            '<div class="group__title">' + group.title + '</div>' +  
-            '</div>');  
+    lists[object.id].groups.forEach(function(group) {
+        var groupItem = $('<div class="' + plugin.component + '__group-item selector' + 
+            (object.currentGroup === group.key ? ' active' : '') + '">' +
+            '<div class="group__title">' + group.title + '</div>' +
+            '</div>');
           
-        groupItem.on('hover:enter', function() {  
-            if (object.currentGroup !== group.key) {  
-                var activity = Lampa.Arrays.clone(lists[object.id].activity);  
-                activity.currentGroup = group.key;  
-                Lampa.Activity.replace(activity);  
-            }  
-        });  
+        // Прямий перехід без Enter (при наведенні фокусу)
+        groupItem.on('hover:focus', function() {
+            if (object.currentGroup !== group.key) {
+                clearTimeout(changeGroupTimer);
+                changeGroupTimer = setTimeout(function() {
+                    var activity = Lampa.Arrays.clone(lists[object.id].activity);
+                    activity.currentGroup = group.key;
+                    
+                    // Зберігаємо фокус на поточній групі після оновлення контенту
+                    Lampa.Activity.replace(activity);
+                    Lampa.Controller.collectionSet(groupsPanel);
+                    Lampa.Controller.collectionFocus(groupItem[0], groupsPanel);
+                }, 400); // Затримка 400мс
+            }
+        });
+
+        // Клік або Enter (миттєвий перехід або вхід у канали)
+        groupItem.on('hover:enter', function() {
+            if (object.currentGroup !== group.key) {
+                clearTimeout(changeGroupTimer);
+                var activity = Lampa.Arrays.clone(lists[object.id].activity);
+                activity.currentGroup = group.key;
+                Lampa.Activity.replace(activity);
+            } else {
+                Lampa.Controller.toggle('content');
+            }
+        });
           
-        groupsPanel.append(groupItem);  
-    });  
+        groupsPanel.append(groupItem);
+    });
       
-    // Інформаційна панель (без кнопки категорій, оскільки групи тепер зліва)  
-    Lampa.Template.add(plugin.component + '_info_radio', '<div class="info layer--width"><div class="info__left"><div class="info__title"></div><div class="info__title-original"></div><div class="info__create"></div></div><div class="info__right" style="display: flex !important;"></div></div>');  
-    info = Lampa.Template.get(plugin.component + '_info_radio');  
-    info.find('.info__title-original').text(!catalog[object.currentGroup] ? '' : catalog[object.currentGroup].title);  
-    info.find('.info__title').text('');  
+    Lampa.Template.add(plugin.component + '_info_radio', '<div class="info layer--width"><div class="info__left"><div class="info__title"></div><div class="info__title-original"></div><div class="info__create"></div></div><div class="info__right" style="display: flex !important;"></div></div>');
+    info = Lampa.Template.get(plugin.component + '_info_radio');
+    info.find('.info__title-original').text(!catalog[object.currentGroup] ? '' : catalog[object.currentGroup].title);
+    info.find('.info__title').text('');
       
-    if (channelGroup.channels.length) {  
-        setEpgId(channelGroup);  
-        scroll.render().addClass('layer--wheight').data('mheight', info);  
-        channelsPanel.append(scroll.render());  
-        this.append(channelGroup.channels);  
+    if (channelGroup.channels.length) {
+        setEpgId(channelGroup);
+        scroll.render().addClass('layer--wheight').data('mheight', info);
+        channelsPanel.append(scroll.render());
+        this.append(channelGroup.channels);
           
-        if (getStorage('epg', false)) {  
-            scroll.render().css({float: "left", width: '70%'});  
-            scroll.render().parent().append(epgTemplate);  
-        }  
+        if (getStorage('epg', false)) {
+            scroll.render().css({float: "left", width: '70%'});
+            scroll.render().parent().append(epgTemplate);
+        }
           
-        scroll.append(body);  
-        setStorage('last_catalog' + object.id, object.currentGroup ? object.currentGroup : '!!');  
-        lists[object.id].activity.currentGroup = object.currentGroup;  
-    } else {  
-        var empty = new Lampa.Empty();  
-        channelsPanel.append(empty.render());  
-        this.activity.loader(false);  
-        Lampa.Controller.collectionSet(info);  
-        Navigator.move('right');  
-    }  
+        scroll.append(body);
+        setStorage('last_catalog' + object.id, object.currentGroup ? object.currentGroup : '!!');
+        lists[object.id].activity.currentGroup = object.currentGroup;
+    } else {
+        var empty = new Lampa.Empty();
+        channelsPanel.append(empty.render());
+        this.activity.loader(false);
+        Lampa.Controller.collectionSet(info);
+        Navigator.move('right');
+    }
       
-    mainContainer.append(groupsPanel);  
-    mainContainer.append(channelsPanel);  
-    html.append(info.append());  
-    html.append(mainContainer);  
+    mainContainer.append(groupsPanel);
+    mainContainer.append(channelsPanel);
+    html.append(info.append());
+    html.append(mainContainer);
 };
 	this.selectGroup = function () {
 		var activity = Lampa.Arrays.clone(lists[object.id].activity);
