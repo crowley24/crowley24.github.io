@@ -1,8 +1,3 @@
-// ==Lampa==
-// name: IPTV PRO (EPG Force Load)
-// version: 14.0
-// ==/Lampa==
-
 (function () {
     'use strict';
 
