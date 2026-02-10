@@ -1492,44 +1492,53 @@ function pluginPage(object) {
 			}
 		});
 	};
-	this.start = function () {
-		if (Lampa.Activity.active().activity !== this.activity) return; //обязательно, иначе наблюдается баг, активность создается но не стартует, в то время как компонент загружается и стартует самого себя.
+		this.start = function () {
+		if (Lampa.Activity.active().activity !== this.activity) return;
 		var _this = this;
+
 		Lampa.Controller.add('content', {
 			toggle: function toggle() {
-				Lampa.Controller.collectionSet(scroll.render());
-				Lampa.Controller.collectionFocus(last || false, scroll.render());
+				// Пріоритет фокусу: якщо є останній фокус - на нього, інакше на категорії
+				Lampa.Controller.collectionSet(categories_part);
+				Lampa.Controller.collectionFocus(last || false, categories_part);
 			},
 			left: function left() {
+				// Якщо ми в каналах - переходимо вліво до категорій
 				if (Navigator.canmove('left')) Navigator.move('left');
-				else Lampa.Controller.toggle('menu');
+				else {
+					var focused = $('.selector.focus');
+					if (focused.parents('.iptv-channels').length) {
+						Lampa.Controller.collectionSet(categories_part);
+					} else {
+						Lampa.Controller.toggle('menu');
+					}
+				}
 			},
 			right: function right() {
+				// Якщо ми в категоріях - переходимо вправо до каналів
 				if (Navigator.canmove('right')) Navigator.move('right');
-				else _this.selectGroup();
+				else {
+					var focused = $('.selector.focus');
+					if (focused.parents('.iptv-categories').length) {
+						Lampa.Controller.collectionSet(channels_part);
+					}
+				}
 			},
 			up: function up() {
-				if (Navigator.canmove('up')) {
-					Navigator.move('up');
-				} else {
-					if (!info.find('.view--category').hasClass('focus')) {
-						Lampa.Controller.collectionSet(info);
-						Navigator.move('right')
-					} else Lampa.Controller.toggle('head');
-				}
+				if (Navigator.canmove('up')) Navigator.move('up');
+				else Lampa.Controller.toggle('head');
 			},
 			down: function down() {
 				if (Navigator.canmove('down')) Navigator.move('down');
-				else if (info.find('.view--category').hasClass('focus')) {
-					Lampa.Controller.toggle('content');
-				}
 			},
 			back: function back() {
 				Lampa.Activity.backward();
 			}
 		});
+
 		Lampa.Controller.toggle('content');
 	};
+	
 	this.pause = function () {
 		Lampa.Player.runas && Lampa.Player.runas('');
 	};
