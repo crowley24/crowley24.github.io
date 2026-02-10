@@ -532,12 +532,35 @@ function pluginPage(object) {
 		step: 250
 	});
 	// var items = [];
-	var html = $('<div></div>');
+		// Створюємо окремі скроли для категорій та каналів
+	var scrollCat = new Lampa.Scroll({mask: true, over: true, step: 100});
+	var scrollChan = new Lampa.Scroll({mask: true, over: true, step: 100});
+
+	// Головний макет (Layout)
+	var html = $('<div class="iptv-layout"></div>');
+	
+	// Три основні колонки
+	var categories_part = $('<div class="iptv-categories"></div>');
+	var channels_part = $('<div class="iptv-channels"></div>');
+	var details_part = $('<div class="iptv-details"></div>');
+
+	// Додаємо колонки в макет
+	html.append(categories_part, channels_part, details_part);
+
+	// Основний контейнер для карток каналів (буде всередині середньої колонки)
 	var body = $('<div class="' + plugin.component + ' category-full"></div>');
+	
+	// Налаштування відображення
 	body.toggleClass('square_icons', getSettings('square_icons'));
 	body.toggleClass('contain_icons', getSettings('contain_icons'));
-	var info;
+	
+	// Права панель завжди містить EPG (телепрограму)
+	details_part.append(epgTemplate);
+
+	var info; // Будемо використовувати для сумісності з вашим кодом
 	var last;
+
+	// --- Далі йде ваш оригінальний код інтервалів (не змінюємо його) ---
 	if (epgInterval) clearInterval(epgInterval);
 	epgInterval = setInterval(function() {
 		for (var epgId in EPG) {
@@ -562,8 +585,8 @@ function pluginPage(object) {
 		}
 		layerMinPrev = minI;
 		layerMaxPrev = maxI;
-
 	}, 50);
+	
 	this.create = function () {
 		var _this = this;
 		this.activity.loader(true);
