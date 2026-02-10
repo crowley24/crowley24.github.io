@@ -81,11 +81,12 @@
             if (!!epg) return success(epg);
         }
 
-        network.silent(
-            Lampa.Utils.protocol() + 'epg.rootu.top/api' + epgPath + '/epg/' + epgId + '/hour/' + t,
-            success,
-            fail
-        );
+       var epgUrl = Lampa.Utils.protocol() + 'epg.rootu.top/cors.php?url=' +
+    encodeURIComponent(Lampa.Utils.protocol() + 'epg.rootu.top/api' + epgPath + '/epg/' + epgId + '/hour/' + t) +
+    '&uid=' + UID + '&sig=' + generateSigForString(epgId + t);
+
+network.silent(epgUrl, success, fail, false, {dataType:'json'});
+
     }
 
     function epgRender(epgId) {
@@ -178,16 +179,16 @@
         };
 
         this.loadPlaylist = function() {
-            var sig = generateSigForString(playlist_url);
-            var url = Lampa.Utils.protocol() + 'epg.rootu.top/cors.php?url=' + encodeURIComponent(playlist_url) + '&uid=' + UID + '&sig=' + sig;
-            var network = new Lampa.Reguest();
-            network.silent(url, function(str) {
-                if (str.indexOf('#EXTM3U') >= 0) _this.parse(str);
-                else Lampa.Noty.show('Помилка даних плейлиста');
-            }, function() {
-                Lampa.Noty.show('Помилка мережі');
-            }, false, {dataType: 'text'});
-        };
+    var sig = generateSigForString(playlist_url);
+    var url = Lampa.Utils.protocol() + 'epg.rootu.top/cors.php?url=' + encodeURIComponent(playlist_url) + '&uid=' + UID + '&sig=' + sig;
+    var network = new Lampa.Reguest();
+    network.silent(url, function(str) {
+        if (str.indexOf('#EXTM3U') >= 0) _this.parse(str);
+        else Lampa.Noty.show('Помилка даних плейлиста');
+    }, function() {
+        Lampa.Noty.show('Помилка мережі');
+    }, false, {dataType: 'text'});
+};
 
         this.parse = function(str) {
             var lines = str.split('\n');
