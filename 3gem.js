@@ -522,6 +522,7 @@ function pluginPage(object) {
 		curListId = object.id;
 	}
 	EPG = {};
+	var chIndex = 0;
 	var epgIdCurrent = '';
 	var epgPath = '';
 	var favorite = getStorage('favorite' + object.id, '[]');
