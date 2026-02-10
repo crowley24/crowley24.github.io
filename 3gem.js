@@ -907,9 +907,9 @@ function pluginPage(object) {
 		if (epg.length < 3) epgUpdateData(epgId);
 	}
 
-		this.append = function (data) {
+	this.append = function (data) {
 		var catEpg = [];
-		var chIndex = 0;
+		chIndex = 0; // Використовуємо загальну змінну
 		var _this2 = this;
 		var lazyLoadImg = ('loading' in HTMLImageElement.prototype);
 		layerCards = null;
@@ -926,51 +926,31 @@ function pluginPage(object) {
 				.removeClass('layer--render')
 				.addClass('js-layer--hidden');
 
-			if (chI < layerCnt) card.addClass('js-layer--visible');
+			if (chI < 20) card.addClass('js-layer--visible');
 
 			var img = card.find('.card__img')[0];
-			if (lazyLoadImg) img.loading = (chI < 18 ? 'eager' : 'lazy');
+			if (lazyLoadImg) img.loading = (chI < 15 ? 'eager' : 'lazy');
 
 			img.onload = function () {
 				card.addClass('card--loaded');
 			};
 
-			img.onerror = function (e) {
-				var name = channel.Title
-					.replace(/\s+\(([+-]?\d+)\)/, ' $1').replace(/[-.()\s]+/g, ' ').replace(/(^|\s+)(TV|ТВ)(\s+|$)/i, '$3');
-				var fl = name.replace(/\s+/g, '').length > 5
-					? name.split(/\s+/).map(function(v) {return v.match(/^(\+?\d+|[UF]?HD|4K)$/i) ? v : v.substring(0,1).toUpperCase()}).join('').substring(0,6)
-					: name.replace(/\s+/g, '');
-				fl = fl.replace(/([UF]?HD|4k|\+\d+)$/i, '<sup>$1</sup>');
-				var hex = (Lampa.Utils.hash(channel.Title) * 1).toString(16);
-				while (hex.length < 6) hex+=hex;
-				hex = hex.substring(0,6);
-				card.find('.card__img').replaceWith('<div class="card__img" style="background-color:#'+hex+'; color:#fff; display:flex; align-items:center; justify-content:center;">' + fl + '</div>');
+			img.onerror = function () {
+				var name = channel.Title.replace(/[-.()\s]+/g, ' ').trim();
+				var fl = name.substring(0, 1).toUpperCase();
+				var hex = (Lampa.Utils.hash(channel.Title) * 1).toString(16).substring(0, 6);
+				while (hex.length < 6) hex += '0';
+				
+				card.find('.card__img').replaceWith('<div class="card__img" style="background-color:#' + hex + '; color:#fff; display:flex; align-items:center; justify-content:center; font-size:1.4em;">' + fl + '</div>');
 				card.addClass('card--loaded');
 			};
 
 			if (channel['tvg-logo']) img.src = channel['tvg-logo']; 
 			else img.onerror();
 
-			var favIcon = $('<div class="card__icon icon--book hide"></div>');
-			card.find('.card__icons-inner').append(favIcon);
+			card.find('.card__age').css('display', 'block').html('<div class="card__epg-progress js-epgProgress"></div><div class="card__epg-title js-epgTitle"></div>');
 
-			var tvgDay = parseInt(channel['catchup-days'] || channel['tvg-rec'] || channel['timeshift'] || listCfg['catchup-days'] || '0');
-			if (parseInt('catchup-enable' in channel ? channel['catchup-enable'] : tvgDay) > 0) {
-				card.find('.card__icons-inner').append('<div class="card__icon icon--timeshift"></div>');
-				if (tvgDay === 0) tvgDay = 1;
-			} else {
-				tvgDay = 0;
-			}
-
-			card.find('.card__age').css('display','block').html('<div class="card__epg-progress js-epgProgress"></div><div class="card__epg-title js-epgTitle"></div>');
-
-			if (object.currentGroup !== '' && favorite.indexOf(favID(channel.Title)) !== -1) {
-				favIcon.toggleClass('hide', false);
-			}
-
-			card.playThis = function(){
-				layerFocusI = chI;
+			card.playThis = function () {
 				var video = {
 					title: channel.Title,
 					url: prepareUrl(channel.Url),
@@ -978,71 +958,30 @@ function pluginPage(object) {
 					iptv: true,
 					tv: true
 				};
-				var playlist = [];
-				data.forEach(function (elem, i) {
-					playlist.push({
-						title: (i + 1) + '. ' + elem.Title,
-						url: prepareUrl(elem.Url),
-						plugin: plugin.component,
-						iptv: true,
-						tv: true
-					});
-				});
 				Lampa.Player.runas && Lampa.Player.runas(Lampa.Storage.field('player_iptv'));
 				Lampa.Player.play(video);
-				Lampa.Player.playlist(playlist);
 			};
 
-			card.on('hover:focus', function (event) {
-				layerFocusI = chI;
-				// Оновлюємо скрол середньої панелі
-				scrollChan.update(card, true);
-				last = card[0];
-
-				// Оновлюємо праву панель EPG
+			card.on('hover:focus', function () {
+				if (typeof scrollChan !== 'undefined') scrollChan.update(card, true);
+				
 				var ec = $('#' + plugin.component + '_epg');
 				ec.find('.js-epgChannel').text(channel.Title);
 				
-				if (!channel['epgId']) {
-					epgIdCurrent = '';
-					ec.find('.js-epgNow').hide();
-					ec.find('.js-epgAfter').hide();
-				} else {
+				if (channel['epgId']) {
 					epgIdCurrent = channel['epgId'];
-					ec.find('.js-epgNow').show();
-					ec.find('.js-epgAfter').show();
+					ec.find('.js-epgNow, .js-epgAfter').show();
 					epgRender(channel['epgId']);
+				} else {
+					ec.find('.js-epgNow, .js-epgAfter').hide();
 				}
-			}).on('hover:enter', function() {
-				getStorage('launch_menu', 'false') === 'true' ? card.trigger('hover:long') : card.playThis();
-			}).on('hover:long', function () {
-				// Логіка контекстного меню (ваша оригінальна)
-				var favI = favorite.indexOf(favID(channel.Title));
-				var menu = [];
-				menu.push({ title: favI === -1 ? langGet('favorites_add') : langGet('favorites_del'), favToggle: true });
-				if (tvgDay > 0) menu.push({ title: 'Архів', archive: true });
-				
-				Lampa.Select.show({
-					title: 'Дія',
-					items: menu,
-					onSelect: function (sel) {
-						if (sel.favToggle) {
-							if (favI === -1) favorite.push(favID(channel.Title));
-							else favorite.splice(favI, 1);
-							setStorage('favorite' + object.id, favorite);
-							favIcon.toggleClass('hide', favI !== -1);
-						} else if (sel.archive) {
-							// Тут можна викликати вашу логіку архіву
-						}
-						Lampa.Controller.toggle('content');
-					},
-					onBack: function () { Lampa.Controller.toggle('content'); }
-				});
+			}).on('hover:enter', function () {
+				card.playThis();
 			});
 
 			body.append(card);
 		}, {
-			bulk: 18,
+			bulk: 20,
 			onEnd: function () {
 				_this2.activity.loader(false);
 				_this2.activity.toggle();
@@ -1054,67 +993,14 @@ function pluginPage(object) {
 		});
 	};
 
-	function setEpgId(channelGroup) {
-		if (channelGroup.setEpgId || !channelGroup.channels || !listCfg['epgApiChUrl']) return;
-		var chIDs = {id2epg: {}, piconUrl: '', id2picon: []}, i=0, channel;
-		networkSilentSessCache(listCfg['epgApiChUrl'], function(d){
-			chIDs = d;
-			if (!chIDs['id2epg']) chIDs['id2epg'] = {};
-			epgPath = !chIDs['epgPath'] ? '' : ('/' + chIDs['epgPath']);
-		});
-		
-		var chShortName = function(chName){
-			return chName.toLowerCase().replace(/\s+\(архив\)$/, '').replace(/([!\s.,()–-]+)/g, ' ').trim();
-		};
-
-		for (;i < channelGroup.channels.length;i++) {
-			channel = channelGroup.channels[i];
-			channel['epgId'] = chIDs.id2epg[channel['tvg-id'] || ''] || channel['tvg-id'];
-			if (!channel['tvg-logo'] && channel['epgId'] && !!chIDs.piconUrl) {
-				channel['tvg-logo'] = Lampa.Utils.protocol() + chIDs.piconUrl.replace('{picon}', channel['epgId']);
-			}
-		}
-	}
-
-	this.build = function (catalog) {
-		var _this = this;
-		Lampa.Background.change();
-		categories_part.empty();
-		scrollCat.reset();
-		
-		var groups = lists[object.id].groups;
-		groups.forEach(function(group) {
-			var item = $('<div class="selector menu__item"><div class="menu__text">' + group.title + '</div></div>');
-			item.on('hover:focus', function() {
-				if (object.currentGroup !== group.key) {
-					object.currentGroup = group.key;
-					_this.renderChannels(catalog[group.key].channels);
-				}
-			});
-			scrollCat.append(item);
-		});
-		categories_part.append(scrollCat.render());
-		
-		channels_part.empty();
-		scrollChan.reset();
-		channels_part.append(scrollChan.render());
-
-		var currentKey = object.currentGroup || (groups.length > 0 ? groups[0].key : '');
-		if (catalog[currentKey]) this.renderChannels(catalog[currentKey].channels);
-
-		this.activity.loader(false);
-		this.activity.toggle();
-		Lampa.Controller.collectionSet(categories_part);
+	this.renderChannels = function (channels) {
+		body.empty();
+		chIndex = 0; // Обнуляємо перед кожним рендером
+		if (typeof setEpgId === 'function') setEpgId({ channels: channels });
+		this.append(channels);
+		if (typeof scrollChan !== 'undefined') scrollChan.append(body);
 	};
-
-	this.renderChannels = function(channels) {
-		body.empty(); 
-		chIndex = 0; 
-		setEpgId({channels: channels}); 
-		this.append(channels); 
-		scrollChan.append(body);
-	};
-		this.selectGroup = function () {
+    this.selectGroup = function () {
 		var activity = Lampa.Arrays.clone(lists[object.id].activity);
 		var groups = Lampa.Arrays.clone(lists[object.id].groups).map(function(group){
 			group.selected = object.currentGroup === group.key;
