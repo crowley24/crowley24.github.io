@@ -1502,24 +1502,7 @@ function langGet(name) {
 	return Lampa.Lang.translate(plugin.component + '_' + name);
 }
 
-langAdd('max_ch_in_group',
-	{
-		ru: 'Количество каналов в категории',
-		uk: 'Кількість каналів у категорії',
-		be: 'Колькасць каналаў у катэгорыі',
-		en: 'Number of channels in category',
-		zh: '分类中的频道数量'
-	}
-);
-langAdd('max_ch_in_group_desc',
-	{
-		ru: 'Если количество превышено, категория разбивается на несколько. Уменьшите количество на слабых устройствах',
-		uk: 'Якщо кількість перевищена, категорія розбивається на кілька. Зменшіть кількість на слабких пристроях',
-		be: 'Калі колькасць перавышана, катэгорыя разбіваецца на некалькі. Паменшыце колькасць на слабых прыладах',
-		en: 'If the quantity is exceeded, it splits the category into several. Reduce the number on weak devices',
-		zh: '如果超出数量，则将分类拆分为多个。在弱设备上减少数量。'
-	}
-);
+
 langAdd('default_playlist',
 	{
 		ru: 'https://tsynik.github.io/tv.m3u',
@@ -1619,15 +1602,7 @@ langAdd('unique_id',
 		zh: '唯一 ID（某些播放列表链接需要）'
 	}
 );
-langAdd('launch_menu',
-	{
-		ru: 'Запуск через меню',
-		uk: 'Запуск через меню',
-		be: 'Запуск праз меню',
-		en: 'Launch via menu',
-		zh: '通过菜单启动'
-	}
-);
+
 langAdd('favorites',
 	{
 		ru: 'Избранное',
