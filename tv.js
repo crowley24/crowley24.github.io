@@ -1028,15 +1028,13 @@ function pluginPage(object) {
 						epgToggle: true
 					});
 					Lampa.Select.show({
-						title: Lampa.Lang.translate('title_action'),
-						items: menu,
-						onSelect: function (sel) {
-							if (!!sel.startPlay) {
-								card.playThis();
-							} else if (!!sel.archive) {
-								var t = unixtime();
-								var m = Math.floor(t/60);
-								var d = Math.floor(t/86400);
+                        title: Lampa.Lang.translate('title_action'),
+                        items: menu,
+                        onSelect: function (sel) {
+                         if (!!sel.archive) { // Тепер це перша умова
+                                var t = unixtime();
+                                var m = Math.floor(t/60);
+                                var d = Math.floor(t/86400);
 								var di = (tvgDay + 1), load = di;
 								var ms = m - tvgDay * 1440;
 								var tvgData = [];
