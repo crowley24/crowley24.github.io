@@ -480,10 +480,11 @@ function networkSilentSessCache(url, success, fail, param) {
 //Стиль
 Lampa.Template.add(plugin.component + '_style', '<style>' +
 '.PLUGIN .card--collection { width: 100% !important; height: auto !important; margin: 2px 0 !important; float: none !important; }' +
-'.PLUGIN div.card__view { padding-bottom: 0 !important; height: 4em !important; display: flex !important; align-items: center !important; background: rgba(255,255,255,0.05); border-radius: 8px; }' +
+'.PLUGIN div.card__view { padding-bottom: 0 !important; height: 3.5em !important; display: flex !important; align-items: center !important; background: rgba(255,255,255,0.05); border-radius: 6px; overflow: hidden; }' +
 '.PLUGIN div.card__view.focus { background: #2c5df5 !important; }' +
-'.PLUGIN .card__title_inline { margin-left: 15px; font-size: 1.4em !important; color: #fff; }' +
-'.PLUGIN img.card__img, .PLUGIN .card__img { width: 3.5em !important; height: 3.5em !important; position: static !important; transform: none !important; flex-shrink: 0; object-fit: contain; background: #000; margin-left: 5px; border-radius: 5px; }' +
+/* Цей рядок повністю видаляє блок з логотипом */
+'.PLUGIN .card__img, .PLUGIN img.card__img, .PLUGIN .card__img_container { display: none !important; }' + 
+'.PLUGIN .card__title_inline { margin-left: 1.2em; font-size: 1.4em !important; color: #fff; font-weight: 400; }' +
 '.PLUGIN .card__content, .PLUGIN .card__title { display: none !important; }' +
 '</style>'.replace(/PLUGIN/g, plugin.component));
 	
@@ -860,14 +861,17 @@ function pluginPage(object) {
 		var bulkFn = bulkWrapper(function (channel) {
 				var chI = chIndex++;
 				var card = Lampa.Template.get('card', {
-    title: '', // Порожньо, щоб не було тексту знизу
+    title: '', 
     release_year: ''
 });
 
-// Додаємо ТІЛЬКИ назву всередину рядка
-card.find('.card__view').append('<div class="card__title_inline">' + channel.Title + '</div>');
+// Додаємо тільки назву. Жодних логотипів.
+card.find('.card__view').empty().append('<div class="card__title_inline">' + channel.Title + '</div>');
 
-card.addClass('card--collection');
+card.addClass('card--collection')
+    .removeClass('layer--visible')
+    .addClass('js-layer--hidden');
+			
 				if (chI < layerCnt) card.addClass('js-layer--visible');
 				var img = card.find('.card__img')[0];
 				if (lazyLoadImg) img.loading = (chI < 18 ? 'eager' : 'lazy');
