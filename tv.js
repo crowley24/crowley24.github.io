@@ -867,17 +867,12 @@ function pluginPage(object) {
 		var bulkFn = bulkWrapper(function (channel) {
 				var chI = chIndex++;
 				var card = Lampa.Template.get('card', {
-    title: '', // Прибираємо назву знизу
+    title: '', // Очищаємо стандартну назву знизу
     release_year: ''
 });
 
-// Додаємо назву прямо всередину контейнера з картинкою
+// Вставляємо назву всередину рядка
 card.find('.card__view').append('<div class="card__title_inline">' + channel.Title + '</div>');
-
-card.addClass('card--collection')
-    .removeClass('layer--visible')
-    .removeClass('layer--render')
-    .addClass('js-layer--hidden')
 				;
 				if (chI < layerCnt) card.addClass('js-layer--visible');
 				var img = card.find('.card__img')[0];
