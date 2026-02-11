@@ -1904,23 +1904,6 @@ addSettings(
 		default: false
 	}
 );
-addSettings(
-	'select',
-	{
-		title: langGet('max_ch_in_group'),
-		description: langGet('max_ch_in_group_desc'),
-		name: 'max_ch_in_group',
-		values: {
-			0: '#{settings_param_card_view_all}',
-			60: '60',
-			120: '120',
-			180: '180',
-			240: '240',
-			300: '300'
-		},
-		default: 300
-	}
-);
 for (var i=0; i <= lists.length; i++) i = configurePlaylist(i);
 UID = getStorage('uid', '');
 if (!UID) {
