@@ -482,18 +482,20 @@ Lampa.Template.add(plugin.component + '_style', '<style>\
 #PLUGIN_epg{margin-right:1em}\
 .PLUGIN-program__desc{display:none}\
 .PLUGIN.category-full{padding: 0 1em 10em 1em}\
-.PLUGIN .card--collection{width:100% !important; height:4.2em !important; margin:0.4em 0 !important; float:none !important}\
-.PLUGIN div.card__view{position:relative; background-color:rgba(255, 255, 255, 0.07); border-radius:0.6em; cursor:pointer; padding-bottom:0 !important; height:4.2em !important; display:flex; align-items:center; padding-left:0.8em; overflow:hidden; transition: background-color 0.2s}\
-.PLUGIN div.card__view.focus{background-color:rgba(255, 255, 255, 0.2); border: 2px solid #fff}\
-.PLUGIN img.card__img, .PLUGIN div.card__img{background-color:#000; border-radius:0.4em; height:3em !important; width:3em !important; position:static !important; transform:none !important; flex-shrink:0; object-fit:cover; font-size:1.2em; display:flex; align-items:center; justify-content:center}\
-.PLUGIN .card__title{display: flex; align-items: center; text-overflow:ellipsis; white-space:nowrap; overflow:hidden; margin-left:1.2em; font-size:1.4em !important; font-weight:500; color:#fff; position:static !important; transform:none !important; padding:0 !important}\
-.PLUGIN .card__icons-inner{display:none}\
-.PLUGIN .card__age{display:none !important}\
-.PLUGIN .card__content{display:none}\
+/* Контейнер картки */\
+.PLUGIN .card--collection{width:100% !important; height:4.5em !important; margin:0.3em 0 !important; float:none !important}\
+/* Основний рядок */\
+.PLUGIN div.card__view{position:relative; background-color:rgba(255, 255, 255, 0.05); border-radius:0.8em; cursor:pointer; padding-bottom:0 !important; height:4.5em !important; display:flex; align-items:center; padding-left:0.8em; overflow:hidden; border: 2px solid transparent}\
+/* Стиль при фокусі (синій фон як на фото) */\
+.PLUGIN div.card__view.focus{background-color:#2c5df5 !important; border: 2px solid #fff}\
+/* Логотип */\
+.PLUGIN img.card__img, .PLUGIN div.card__img{background-color:#000; border-radius:0.5em; height:3.2em !important; width:3.2em !important; position:static !important; transform:none !important; flex-shrink:0; object-fit:contain}\
+/* Назва каналу всередині рядка */\
+.PLUGIN .card__title_inline{margin-left:1.5em; font-size:1.6em !important; font-weight:500; color:#fff; text-overflow:ellipsis; white-space:nowrap; overflow:hidden; flex-grow:1}\
+/* Ховаємо стандартні елементи Lampa, які нам заважають */\
+.PLUGIN .card__title, .PLUGIN .card__content, .PLUGIN .card__icons-inner, .PLUGIN .card__age{display:none !important}\
 .PLUGIN .js-layer--hidden{display: none}\
 .PLUGIN .js-layer--visible{display: block}\
-#PLUGIN{float:right; padding: 1.2em 0; width: 30%}\
-.PLUGIN .card__icon.icon--timeshift{background-image:url(https://epg.rootu.top/img/icon/timeshift.svg); width:1.2em; height:1.2em; background-size:contain}\
 </style>'.replace(/PLUGIN/g, plugin.component));
 	
 function pluginPage(object) {
