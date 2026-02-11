@@ -871,7 +871,7 @@ function pluginPage(object) {
     card.addClass('card--collection')
         .removeClass('layer--visible')
         .addClass('js-layer--hidden');
-			
+			;
 				if (chI < layerCnt) card.addClass('js-layer--visible');
 				var img = card.find('.card__img')[0];
 				if (lazyLoadImg) img.loading = (chI < 18 ? 'eager' : 'lazy');
