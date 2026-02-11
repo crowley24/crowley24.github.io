@@ -859,18 +859,20 @@ function pluginPage(object) {
 		var lazyLoadImg = ('loading' in HTMLImageElement.prototype);
 		layerCards = null;
 		var bulkFn = bulkWrapper(function (channel) {
-				var chI = chIndex++;
-				var card = Lampa.Template.get('card', {
-    title: '', 
-    release_year: ''
-});
+    var chI = chIndex++;
+    
+    // Створюємо базовий шаблон
+    var card = Lampa.Template.get('card', {
+        title: '', 
+        release_year: ''
+    });
 
-// Додаємо тільки назву. Жодних логотипів.
-card.find('.card__view').empty().append('<div class="card__title_inline">' + channel.Title + '</div>');
+    // ОЧИЩАЄМО КАРТКУ ТА ВСТАВЛЯЄМО ТІЛЬКИ НАЗВУ
+    card.find('.card__view').empty().append('<div class="card__title_inline">' + channel.Title + '</div>');
 
-card.addClass('card--collection')
-    .removeClass('layer--visible')
-    .addClass('js-layer--hidden');
+    card.addClass('card--collection')
+        .removeClass('layer--visible')
+        .addClass('js-layer--hidden');
 			
 				if (chI < layerCnt) card.addClass('js-layer--visible');
 				var img = card.find('.card__img')[0];
