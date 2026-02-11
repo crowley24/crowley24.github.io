@@ -775,7 +775,7 @@ function pluginPage(object) {
 		var epg = (EPG[epgId] || [0, 0, []])[2];
 		var card = body.find('.js-layer--visible[data-epg-id="' + epgId + '"]').removeClass('js-epgNoRender');
 		if (epg === false || !card.length) return;
-		var epgEl = card.find('.card__age');
+		var epgEl = body.find('.js-layer--visible[data-epg-id="' + epgId + '"]').find('.channel-epg');
 		if (!epgEl.length) return;
 		var t = Math.floor(unixtime() / 60), enableCardEpg = false, i = 0, e, p, cId, cIdEl;
 		while (epg.length && t >= (epg[0][0] + epg[0][1])) epg.shift();
