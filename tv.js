@@ -971,13 +971,6 @@ function pluginPage(object) {
 					var isFavoriteGroup = object.currentGroup === '';
 					var menu = [];
 
-
-					if (getStorage('launch_menu', 'false')) {
-						menu.push({
-							title: Lampa.Lang.translate('player_lauch'),
-							startPlay: true
-						});
-					}
 					if (tvgDay > 0) {
 						if (!!channel['epgId'] && !!EPG[channel['epgId']] && EPG[channel['epgId']][2].length) {
 							menu.push({
