@@ -480,12 +480,10 @@ function networkSilentSessCache(url, success, fail, param) {
 //Стиль
 Lampa.Template.add(plugin.component + '_style', '<style>' +
 '.PLUGIN .card--collection { width: 100% !important; height: auto !important; margin: 2px 0 !important; float: none !important; }' +
-'.PLUGIN div.card__view { padding-bottom: 0 !important; height: 3.5em !important; display: flex !important; align-items: center !important; background: rgba(255,255,255,0.05); border-radius: 6px; overflow: hidden; }' +
+'.PLUGIN div.card__view { padding-bottom: 0 !important; height: 3.5em !important; display: flex !important; align-items: center !important; background: rgba(255,255,255,0.05); border-radius: 6px; }' +
 '.PLUGIN div.card__view.focus { background: #2c5df5 !important; }' +
-/* Цей рядок повністю видаляє блок з логотипом */
-'.PLUGIN .card__img, .PLUGIN img.card__img, .PLUGIN .card__img_container { display: none !important; }' + 
-'.PLUGIN .card__title_inline { margin-left: 1.2em; font-size: 1.4em !important; color: #fff; font-weight: 400; }' +
-'.PLUGIN .card__content, .PLUGIN .card__title { display: none !important; }' +
+'.PLUGIN .card__title_inline { margin-left: 1.2em; font-size: 1.4em !important; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }' +
+'.PLUGIN .card__img, .PLUGIN img, .PLUGIN .card__img_container, .PLUGIN .card__title, .PLUGIN .card__content { display: none !important; }' +
 '</style>'.replace(/PLUGIN/g, plugin.component));
 	
 function pluginPage(object) {
