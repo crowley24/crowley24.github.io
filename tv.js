@@ -479,20 +479,13 @@ function networkSilentSessCache(url, success, fail, param) {
 
 //Стиль
 Lampa.Template.add(plugin.component + '_style', '<style>' +
-'#PLUGIN_epg { margin-right: 1em; }' +
-'.PLUGIN-program__desc { display: none; }' +
-'.PLUGIN.category-full { padding: 0 1em 10em 1em; }' +
-'.PLUGIN .card--collection { width: 100% !important; height: 4.5em !important; margin: 0.3em 0 !important; float: none !important; }' +
-'.PLUGIN div.card__view { position: relative; background-color: rgba(255, 255, 255, 0.05); border-radius: 0.8em; cursor: pointer; padding-bottom: 0 !important; height: 4.5em !important; display: flex; align-items: center; padding-left: 1em !important; overflow: hidden; border: 2px solid transparent; transition: all 0.2s; }' +
-'.PLUGIN div.card__view.focus { background-color: #2c5df5 !important; border-color: #fff; }' +
-'.PLUGIN img.card__img, .PLUGIN div.card__img { background-color: #000; border-radius: 0.5em; height: 3.2em !important; width: 3.2em !important; position: static !important; transform: none !important; flex-shrink: 0; object-fit: contain; }' +
-'.PLUGIN .card__title_inline { margin-left: 1.2em; font-size: 1.5em !important; font-weight: 500; color: #fff; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; flex-shrink: 0; max-width: 40%; }' +
-'.PLUGIN .card__age { display: flex !important; position: static !important; margin-left: auto; margin-right: 1em; width: 15em; height: 1.8em; border: 1px solid rgba(255,255,255,0.2); border-radius: 0.4em; overflow: hidden; background: rgba(0,0,0,0.3); }' +
-'.PLUGIN .card__age .card__epg-progress { background: rgba(255,255,255,0.2) !important; }' +
-'.PLUGIN .card__age .card__epg-title { font-size: 0.9em; padding: 0 0.5em; line-height: 1.8em; }' +
-'.PLUGIN .card__title, .PLUGIN .card__content, .PLUGIN .card__icons-inner { display: none !important; }' +
+'.PLUGIN .card--collection { width: 100% !important; height: auto !important; margin: 2px 0 !important; float: none !important; }' +
+'.PLUGIN div.card__view { padding-bottom: 0 !important; height: 4em !important; display: flex !important; align-items: center !important; background: rgba(255,255,255,0.05); border-radius: 8px; }' +
+'.PLUGIN div.card__view.focus { background: #2c5df5 !important; }' +
+'.PLUGIN .card__title_inline { margin-left: 15px; font-size: 1.4em !important; color: #fff; }' +
+'.PLUGIN img.card__img, .PLUGIN .card__img { width: 3.5em !important; height: 3.5em !important; position: static !important; transform: none !important; flex-shrink: 0; object-fit: contain; background: #000; margin-left: 5px; border-radius: 5px; }' +
+'.PLUGIN .card__content, .PLUGIN .card__title { display: none !important; }' +
 '</style>'.replace(/PLUGIN/g, plugin.component));
-	
 	
 function pluginPage(object) {
 	if (object.id !== curListId) {
@@ -867,13 +860,14 @@ function pluginPage(object) {
 		var bulkFn = bulkWrapper(function (channel) {
 				var chI = chIndex++;
 				var card = Lampa.Template.get('card', {
-    title: '', // Очищаємо стандартну назву знизу
+    title: '', // Порожньо, щоб не було тексту знизу
     release_year: ''
 });
 
-// Вставляємо назву всередину рядка
+// Додаємо ТІЛЬКИ назву всередину рядка
 card.find('.card__view').append('<div class="card__title_inline">' + channel.Title + '</div>');
-				;
+
+card.addClass('card--collection');
 				if (chI < layerCnt) card.addClass('js-layer--visible');
 				var img = card.find('.card__img')[0];
 				if (lazyLoadImg) img.loading = (chI < 18 ? 'eager' : 'lazy');
