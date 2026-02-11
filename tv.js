@@ -771,12 +771,13 @@ function pluginPage(object) {
 	function cardsEpgRender(cards) {
 		cards.filter('.js-epgNoRender[data-epg-id]').each(function(){epgRender($(this).attr('data-epg-id'))});
 	}
-	function epgRender(epgId) {
-		var epg = (EPG[epgId] || [0, 0, []])[2];
-		var card = body.find('.js-layer--visible[data-epg-id="' + epgId + '"]').removeClass('js-epgNoRender');
-		if (epg === false || !card.length) return;
-		var epgEl = body.find('.js-layer--visible[data-epg-id="' + epgId + '"]').find('.channel-epg');
-		if (!epgEl.length) return;
+	function epgRender(epgId) {  
+    var epg = (EPG[epgId] || [0, 0, []])[2];  
+    var listItem = body.find('.js-layer--visible[data-epg-id="' + epgId + '"]').removeClass('js-epgNoRender');  
+    if (epg === false || !listItem.length) return;  
+      
+    var epgEl = listItem.find('.channel-epg');  
+    if (!epgEl.length) return;  
 		var t = Math.floor(unixtime() / 60), enableCardEpg = false, i = 0, e, p, cId, cIdEl;
 		while (epg.length && t >= (epg[0][0] + epg[0][1])) epg.shift();
 		if (epg.length) {
