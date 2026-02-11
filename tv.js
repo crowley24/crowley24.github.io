@@ -962,9 +962,10 @@ function pluginPage(object) {
 						epgIdCurrent = channel['epgId'];
 						epgRender(channel['epgId']);
 					}
-				}).on('hover:enter', function() {
-					getStorage('launch_menu', 'false') ? card.trigger('hover:long') : card.playThis();
-				}).on('hover:long', function () {
+				 }).on('hover:enter', function() {
+                        card.playThis();
+                 }).on('hover:long', function () {
+					
 					layerFocusI = chI;
 					var favI = favorite.indexOf(favID(channel.Title));
 					var isFavoriteGroup = object.currentGroup === '';
