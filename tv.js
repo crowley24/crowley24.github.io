@@ -1896,14 +1896,6 @@ addSettings(
 		}
 	}
 );
-addSettings(
-	'trigger',
-	{
-		title: langGet('launch_menu'),
-		name: 'launch_menu',
-		default: false
-	}
-);
 for (var i=0; i <= lists.length; i++) i = configurePlaylist(i);
 UID = getStorage('uid', '');
 if (!UID) {
