@@ -481,31 +481,19 @@ function networkSilentSessCache(url, success, fail, param) {
 Lampa.Template.add(plugin.component + '_style', '<style>\
 #PLUGIN_epg{margin-right:1em}\
 .PLUGIN-program__desc{display:none}\
-.PLUGIN.category-full{padding-bottom:10em}\
-.PLUGIN .card--collection{width:100% !important; height:4.5em !important; margin:0.3em 0 !important}\
-.PLUGIN div.card__view{position:relative; background-color:rgba(53, 53, 53, 0.65); border-radius:0.8em; cursor:pointer; padding-bottom:0 !important; height:4.5em !important; display:flex; align-items:center; padding-left:1em; overflow:hidden}\
-.PLUGIN.square_icons div.card__view{padding-bottom:0 !important}\
-.PLUGIN img.card__img, .PLUGIN div.card__img{background-color:unset; border-radius:unset; height:3.5em !important; width:5em !important; position:static !important; transform:none !important; flex-shrink:0; object-fit:contain; font-size:1.5em}\
-.PLUGIN .card__title{text-overflow:ellipsis; white-space:nowrap; overflow:hidden; margin-left:1.2em; font-size:1.5em !important; font-weight: 500; flex-grow: 0; min-width: 15em; max-width: 25em;}\
-.PLUGIN .js-layer--hidden{visibility: hidden}\
-.PLUGIN .js-layer--visible{visibility: visible}\
-.PLUGIN .card__age{padding:0; border:1px rgba(255,255,255,0.1) solid; margin-left:2em; border-radius:0.3em; position:relative; display:none; flex-grow:1; max-width:20em; height: 1.8em; align-items: center; overflow: hidden;}\
-.PLUGIN .card__age .card__epg-progress{position:absolute; background-color:rgba(255, 255, 255, 0.15); top:0; left:0; width:0%; max-width:100%; height:100%}\
-.PLUGIN .card__age .card__epg-title{position:relative; padding:0 0.5em; text-overflow:ellipsis; white-space:nowrap; overflow:hidden; font-size: 0.8em; line-height: 1.8em}\
-.PLUGIN.category-full .card__icons {top: 50%; transform: translateY(-50%); right:1em; justify-content:right; position: absolute;}\
+.PLUGIN.category-full{padding: 0 1em 10em 1em}\
+.PLUGIN .card--collection{width:100% !important; height:4.2em !important; margin:0.4em 0 !important; float:none !important}\
+.PLUGIN div.card__view{position:relative; background-color:rgba(255, 255, 255, 0.07); border-radius:0.6em; cursor:pointer; padding-bottom:0 !important; height:4.2em !important; display:flex; align-items:center; padding-left:0.8em; overflow:hidden; transition: background-color 0.2s}\
+.PLUGIN div.card__view.focus{background-color:rgba(255, 255, 255, 0.2); border: 2px solid #fff}\
+.PLUGIN img.card__img, .PLUGIN div.card__img{background-color:#000; border-radius:0.4em; height:3em !important; width:3em !important; position:static !important; transform:none !important; flex-shrink:0; object-fit:cover; font-size:1.2em; display:flex; align-items:center; justify-content:center}\
+.PLUGIN .card__title{display: flex; align-items: center; text-overflow:ellipsis; white-space:nowrap; overflow:hidden; margin-left:1.2em; font-size:1.4em !important; font-weight:500; color:#fff; position:static !important; transform:none !important; padding:0 !important}\
+.PLUGIN .card__icons-inner{display:none}\
+.PLUGIN .card__age{display:none !important}\
+.PLUGIN .card__content{display:none}\
+.PLUGIN .js-layer--hidden{display: none}\
+.PLUGIN .js-layer--visible{display: block}\
 #PLUGIN{float:right; padding: 1.2em 0; width: 30%}\
-.PLUGIN-details__group{font-size:1.3em; margin-bottom:.9em; opacity:.5}\
-.PLUGIN-details__title{font-size:4em; font-weight:700}\
-.PLUGIN-details__program{padding-top:4em}\
-.PLUGIN-details__program-title{font-size:1.2em; padding-left:4.9em; margin-top:1em; margin-bottom:1em; opacity:.5}\
-.PLUGIN-details__program-list>div+div{margin-top:1em}\
-.PLUGIN-details__program>div+div{margin-top:2em}\
-.PLUGIN-program{display:flex; font-size:1.2em; font-weight:300}\
-.PLUGIN-program__time{flex-shrink:0; width:5em; position:relative}\
-.PLUGIN-program.focus .PLUGIN-program__time::after{content:\'\'; position:absolute; top:.5em; right:.9em; width:.4em; background-color:#fff; height:.4em; border-radius:100%; margin-top:-0.1em; font-size:1.2em}\
-.PLUGIN-program__progressbar{width:10em; height:0.3em; border:0.05em solid #fff; border-radius:0.05em; margin:0.5em 0.5em 0 0}\
-.PLUGIN-program__progress{height:0.25em; border:0.05em solid #fff; background-color:#fff; max-width: 100%}\
-.PLUGIN .card__icon.icon--timeshift{background-image:url(https://epg.rootu.top/img/icon/timeshift.svg)}\
+.PLUGIN .card__icon.icon--timeshift{background-image:url(https://epg.rootu.top/img/icon/timeshift.svg); width:1.2em; height:1.2em; background-size:contain}\
 </style>'.replace(/PLUGIN/g, plugin.component));
 	
 function pluginPage(object) {
