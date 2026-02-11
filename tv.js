@@ -618,7 +618,7 @@ function pluginPage(object) {
 					key: ''
 				}];
 				var l = data.split(/\r?\n/);
-				var cnt = 0, i = 1, chNum = 0, m, mm, defGroup = defaultGroup, chInGroupCnt = {}, maxChInGroup = getSettings('max_ch_in_group');
+                var cnt = 0, i = 1, chNum = 0, m, mm, defGroup = defaultGroup;
 				while (i < l.length) {
 					chNum = cnt + 1;
 					var channel = {
@@ -657,22 +657,19 @@ function pluginPage(object) {
 						}
 					}
 					if (!!channel.Url && !channel.isYouTube) {
-						chInGroupCnt[channel.Group] = (chInGroupCnt[channel.Group] || 0) + 1;
-						var groupPage = maxChInGroup ? Math.floor((chInGroupCnt[channel.Group] - 1) / maxChInGroup) : 0;
-						if (groupPage) channel.Group += ' #' + (groupPage + 1);
-						if (!catalog[channel.Group]) {
-							catalog[channel.Group] = {
-								title: channel.Group,
-								setEpgId: false,
-								channels: []
-							};
-							lists[object.id].groups.push({
-								title: channel.Group,
-								key: channel.Group
-							});
-						}
-						channel['Title'] = channel['Title'].replace(/\s+(\s|ⓢ|ⓖ|ⓥ|ⓞ|Ⓢ|Ⓖ|Ⓥ|Ⓞ)/g, ' ').trim();
-						catalog[channel.Group].channels.push(channel);
+    if (!catalog[channel.Group]) {
+        catalog[channel.Group] = {
+            title: channel.Group,
+            setEpgId: false,
+            channels: []
+        };
+        lists[object.id].groups.push({
+            title: channel.Group,
+            key: channel.Group
+        });
+    }
+    channel['Title'] = channel['Title'].replace(/\s+(\s|ⓢ|ⓖ|ⓥ|ⓞ|Ⓢ|Ⓖ|Ⓥ|Ⓞ)/g, ' ').trim();
+    catalog[channel.Group].channels.push(channel);
 						var favI = favorite.indexOf(favID(channel.Title));
 						if (favI !== -1) {
 							catalog[''].channels[favI] = channel;
