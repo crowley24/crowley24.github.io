@@ -452,9 +452,7 @@ function pluginPage(object) {
 		over: true,  
 		step: 250  
 	});  
-	this.create = function () {    
-        console.log('my_iptv create called');
-	  
+		  
 	// Використовуємо трьохколонковий шаблон  
 	var html = Lampa.Template.get('cub_iptv_content');  
 	var menuEl = html.find('.iptv-content__menu');  
