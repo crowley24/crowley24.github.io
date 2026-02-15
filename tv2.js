@@ -16,54 +16,6 @@ var layerInterval;
 var epgInterval;  
 var UID = '';  
   
-// EPG utility object with time synchronization  
-var EPGUtil = {  
-    time_offset: 0,  
-      
-    init: function() {  
-        var ts = new Date().getTime();  
-        // Get accurate time from server  
-        network.silent(Lampa.Utils.protocol() + 'epg.rootu.top/api/time', (json) => {  
-            var te = new Date().getTime();  
-            this.time_offset = (json.time < ts || json.time > te) ? json.time - te : 0;  
-        }, () => {  
-            // If failed to get time, use local  
-        });  
-    },  
-      
-    time: function(channel, timeshift) {  
-        timeshift = timeshift || 0;  
-        var date = new Date();  
-        var time = date.getTime() + this.time_offset;  
-        var ofst = parseInt((localStorage.getItem('time_offset') || 'n0').replace('n', ''));  
-          
-        date = new Date(time + (ofst * 1000 * 60 * 60));  
-          
-        // Channel time offset  
-        var offset = channel.Title.match(/([+|-]\d)$/);  
-        if (offset) {  
-            date.setHours(date.getHours() + parseInt(offset[1]));  
-        }  
-          
-        return date.getTime() - timeshift;  
-    },  
-      
-    position: function(list, timeshift) {  
-        var tim = this.time(null, timeshift);  
-        var now = list.find(p => tim > p[0] && tim < p[0] + p[1]);  
-        return now ? list.indexOf(now) : list.length - 1;  
-    },  
-      
-    timeline: function(program, timeshift) {  
-        var time = this.time(null, timeshift);  
-        var total = program[1];  
-        var start = program[0];  
-        var less = (start + total) - time;  
-          
-        return Math.min(100, Math.max(0, (1 - less / total) * 100));  
-    }  
-};  
-  
 var chNumber = '';  
 var chTimeout = null;  
 var stopRemoveChElement = false;  
@@ -83,28 +35,31 @@ var chHelper = $((
 	"	</div>\n" +  
 	"</div>").replace(/PLUGIN/g, plugin.component)  
 ).hide().fadeOut(0);  
-var epgTemplate = $((  
-    '<div id="' + plugin.component + '_epg" class="info layer--width">' +  
-    '<div class="info__left">' +  
-    '<div class="info__title js-epgChannel"></div>' +  
-    '<div class="info__create js-epgNow"></div>' +  
-    '</div>' +  
-    '<div class="info__right">' +  
-    '<div class="info__list js-epgList"></div>' +  
-    '</div>' +  
-    '</div>'  
-));  
+var epgTemplate = $(('<div id="PLUGIN_epg">\n' +  
+	'<h2 class="js-epgChannel"></h2>\n' +  
+	'<div class="PLUGIN-details__program-body js-epgNow">\n' +  
+	'   <div class="PLUGIN-details__program-title">Сейчас</div>\n' +  
+	'   <div class="PLUGIN-details__program-list">' +  
+	'<div class="PLUGIN-program selector">\n' +  
+	'   <div class="PLUGIN-program__time js-epgTime">XX:XX</div>\n' +  
+	'   <div class="PLUGIN-program__body">\n' +  
+	'	   <div class="PLUGIN-program__title js-epgTitle"> </div>\n' +  
+	'	   <div class="PLUGIN-program__progressbar"><div class="PLUGIN-program__progress js-epgProgress" style="width: 50%"></div></div>\n' +  
+	'   </div>\n' +  
+	'</div>' +  
+	'   </div>\n' +  
+	'   <div class="PLUGIN-program__desc js-epgDesc"></div>'+  
+	'</div>' +  
+	'<div class="PLUGIN-details__program-body js-epgAfter">\n' +  
+	'   <div class="PLUGIN-details__program-title">Потом</div>\n' +  
+	'   <div class="PLUGIN-details__program-list js-epgList">' +  
+	'   </div>\n' +  
+	'</div>\n' +  
+	'</div>').replace(/PLUGIN/g, plugin.component)  
+);  
 function epgListView(isView) {  
-	var scroll = $('.' + plugin.component + '.category-full').parents('.scroll');  
-	if (scroll.length) {  
-		if (isView) {  
-			scroll.css({float: "left", width: '70%'});  
-			scroll.parent().append(epgTemplate);  
-		} else {  
-			scroll.css({float: "none", width: '100%'});  
-			$('#' + plugin.component + '_epg').remove();  
-		}  
-	}  
+	// Зміни: більше не змінюємо float, оскільки EPG тепер у правій колонці  
+	// Залишаємо для сумісності, але не використовуємо  
 }  
 var epgItemTeplate = $((  
 	'<div class="PLUGIN-program selector">\n' +  
@@ -151,300 +106,227 @@ function channelSwitch(dig, isChNum) {
 			chHelpEl.html(help.join('<br>'));  
 			chHelper.finish().show().fadeIn(0);  
 		}  
-		if (isChNum || parseInt(chNumber + '0') > cnt || chNumber.length >= 3) {  
-			chTimeout = setTimeout(function () {  
-				Lampa.Player.playlist.move(number - 1);  
-				Lampa.Player.next();  
-				chNumber = '';  
-				chHelper.finish().hide().fadeOut(0);  
-			}, 1000);  
+		if (number < 10 || isChNum) {  
+			chPanel.finish().show().fadeIn(0);  
+		}  
+		stopRemoveChElement = false;  
+		var chSwitch = function () {  
+			var pos = number - 1;  
+			if (Lampa.PlayerPlaylist.position() !== pos) {  
+				Lampa.PlayerPlaylist.listener.send('select', {  
+					playlist: playlist,  
+					position: pos,  
+					item: playlist[pos]  
+				});  
+				Lampa.Player.runas && Lampa.Player.runas(Lampa.Storage.field('player_iptv'));  
+			}  
+			chPanel.delay(1000).fadeOut(500,function(){stopRemoveChElement || chPanel.remove()});  
+			chHelper.delay(1000).fadeOut(500,function(){stopRemoveChElement || chHelper.remove()});  
+			chNumber = "";  
+		}  
+		if (isChNum === true) {  
+			chTimeout = setTimeout(chSwitch, 1000);  
+			chNumber = "";  
+		} else if (parseInt(chNumber + '0') > cnt) {  
+			chSwitch();  
+		} else {  
+			chTimeout = setTimeout(chSwitch, 3000);  
 		}  
 	} else {  
 		chNumber = prevChNumber;  
 	}  
 	return true;  
 }  
-function keydown(e) {  
-	var key = e.keyCode || e.which;  
-	var playlist = Lampa.PlayerPlaylist.get();  
-	if (!isPluginPlaylist(playlist)) return;  
-	switch (key) {  
-		case 37:  
-		case 61448:  
-			Lampa.Player.playlist.move(Lampa.Player.playlist.position - 1);  
-			Lampa.Player.next();  
-			break;  
-		case 39:  
-		case 61449:  
-			Lampa.Player.playlist.move(Lampa.Player.playlist.position + 1);  
-			Lampa.Player.next();  
-			break;  
-		case 33:  
-		case 61445:  
-			Lampa.Player.playlist.move(Math.max(0, Lampa.Player.playlist.position - 9));  
-			Lampa.Player.next();  
-			break;  
-		case 34:  
-		case 61446:  
-			Lampa.Player.playlist.move(Math.min(playlist.length - 1, Lampa.Player.playlist.position + 9));  
-			Lampa.Player.next();  
-			break;  
-		case 48:  
-		case 49:  
-		case 50:  
-		case 51:  
-		case 52:  
-		case 53:  
-		case 54:  
-		case 55:  
-		case 56:  
-		case 57:  
-		case 61456:  
-		case 61457:  
-		case 61458:  
-		case 61459:  
-		case 61460:  
-		case 61461:  
-		case 61462:  
-		case 61463:  
-		case 61464:  
-		case 61465:  
-			var dig = key > 95 ? key - 96 : key - 48;  
-			channelSwitch(dig, e.altKey);  
-			break;  
+  
+var cacheVal = {};  
+  
+function cache(name, value, timeout) {  
+	var time = (new Date()) * 1;  
+	if (!!timeout && timeout > 0) {  
+		cacheVal[name] = [(time + timeout), value];  
+		return;  
 	}  
+	if (!!cacheVal[name] && cacheVal[name][0] > time) {  
+		return cacheVal[name][1];  
+	}  
+	delete (cacheVal[name]);  
+	return value;  
 }  
-function unixtime() { return Math.floor(Date.now() / 1000); }  
+  
+var timeOffset = 0;  
+var timeOffsetSet = false;  
+  
+function unixtime() {  
+	return Math.floor((new Date().getTime() + timeOffset)/1000);  
+}  
+  
 function toLocaleTimeString(time) {  
-	return new Date(time).toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'});  
+	var date = new Date(),  
+		ofst = parseInt(Lampa.Storage.get('time_offset', 'n0').replace('n',''));  
+	time = time || date.getTime();  
+  
+	date = new Date(time + (ofst * 1000 * 60 * 60));  
+	return ('0' + date.getHours()).substr(-2) + ':' + ('0' + date.getMinutes()).substr(-2);  
 }  
+  
 function toLocaleDateString(time) {  
-	return new Date(time).toLocaleDateString('ru-RU');  
+	var date = new Date(),  
+		ofst = parseInt(Lampa.Storage.get('time_offset', 'n0').replace('n',''));  
+	time = time || date.getTime();  
+  
+	date = new Date(time + (ofst * 1000 * 60 * 60));  
+	return date.toLocaleDateString();  
 }  
+  
+var utils = {  
+	uid: function() {return UID},  
+	timestamp: unixtime,  
+	token: function() {return generateSigForString(Lampa.Storage.field('account_email').toLowerCase())},  
+	hash: Lampa.Utils.hash,  
+	hash36: function(s) {return (this.hash(s) * 1).toString(36)}  
+};  
+  
+function generateSigForString(string) {  
+	var sigTime = unixtime();  
+	return sigTime.toString(36) + ':' + utils.hash36((string || '') + sigTime + utils.uid());  
+}  
+  
+function strReplace(str, key2val) {  
+	for (var key in key2val) {  
+		str = str.replace(  
+			new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),  
+			key2val[key]  
+		);  
+	}  
+	return str;  
+}  
+  
+function tf(t, format, u, tz) {  
+	format = format || '';  
+	tz = parseInt(tz || '0');  
+	var thisOffset = 0;  
+	thisOffset += tz * 60;  
+	if (!u) thisOffset += parseInt(Lampa.Storage.get('time_offset', 'n0').replace('n','')) * 60 - new Date().getTimezoneOffset();  
+	var d = new Date((t + thisOffset) * 6e4);  
+	var r = {yyyy:d.getUTCFullYear(),MM:('0'+(d.getUTCMonth()+1)).substr(-2),dd:('0'+d.getUTCDate()).substr(-2),HH:('0'+d.getUTCHours()).substr(-2),mm:('0'+d.getUTCMinutes()).substr(-2),ss:('0'+d.getUTCSeconds()).substr(-2),UTF:t*6e4};  
+	return strReplace(format, r);  
+}  
+  
 function prepareUrl(url, epg) {  
-	if (!url) return '';  
-	if (epg) {  
-		url = url.replace('${start}', Math.floor(epg[0] / 60))  
-			.replace('${end}', Math.floor((epg[0] + epg[1]) / 60))  
-			.replace('${timestamp}', epg[0])  
-			.replace('${duration}', epg[1])  
-			.replace('${yesterday}', toLocaleDateString((epg[0] - 86400) * 1000))  
-			.replace('${today}', toLocaleDateString(epg[0] * 1000))  
-			.replace('${tomorrow}', toLocaleDateString((epg[0] + 86400) * 1000))  
-			.replace('${date}', toLocaleDateString(epg[0] * 1000));  
+	var m = [], val = '', r = {start:unixtime,offset:0};  
+	if (epg && epg.length) {  
+		r = {  
+			start: epg[0] * 60,  
+			utc: epg[0] * 60,  
+			end: (epg[0] + epg[1]) * 60,  
+			utcend: (epg[0] + epg[1]) * 60,  
+			offset: unixtime() - epg[0] * 60,  
+			duration: epg[1] * 60,  
+			now: unixtime,  
+			lutc: unixtime,  
+			d: function(m){return strReplace(m[6]||'',{M:epg[1],S:epg[1]*60,h:Math.floor(epg[1]/60),m:('0'+(epg[1] % 60)).substr(-2),s:'00'})},  
+			b: function(m){return tf(epg[0], m[6], m[4], m[5])},  
+			e: function(m){return tf(epg[0] + epg[1], m[6], m[4], m[5])},  
+			n: function(m){return tf(unixtime() / 60, m[6], m[4], m[5])}  
+		};  
+	}  
+	while (!!(m = url.match(/\${(\((([a-zA-Z\d]+?)(u)?)([+-]\d+)?\))?([^${}]+)}/))) {  
+		if (!!m[2] && typeof r[m[2]] === "function") val = r[m[2]](m);  
+		else if (!!m[3] && typeof r[m[3]] === "function") val = r[m[3]](m);  
+		else if (m[6] in r) val = typeof r[m[6]] === "function" ? r[m[6]]() : r[m[6]];  
+		else if (!!m[2] && typeof utils[m[2]] === "function") val = utils[m[2]](m[6]);  
+		else if (m[6] in utils) val = typeof utils[m[6]] === "function" ? utils[m[6]]() : utils[m[6]];  
+		else val = m[1];  
+		url = url.replace(m[0], encodeURIComponent(val));  
 	}  
 	return url;  
 }  
+  
 function catchupUrl(url, type, source) {  
-	if (!url || !type) return url;  
-	var offset = parseInt(source) || 0;  
-	var time = unixtime() - offset * 3600;  
-	var dayStart = Math.floor(time / 86400) * 86400;  
-	var utc = new Date(time * 1000);  
-	utc = utc.getUTCHours() * 3600 + utc.getUTCMinutes() * 60 + utc.getUTCSeconds();  
-	switch (type.toLowerCase()) {  
-		case 'default':  
+	type = (type || '').toLowerCase();  
+	source = source || '';  
+	if (!type) {  
+		if (!!source) {  
+			if (source.search(/^https?:\/\//i) === 0) type = 'default';  
+			else if (source.search(/^[?&/][^/]/) === 0) type = 'append';  
+			else type = 'default';  
+		}  
+		else if (url.indexOf('${') < 0) type = 'shift';  
+		else type = 'default';  
+		console.log(plugin.name, 'Autodetect catchup-type "' + type + '"');  
+	}  
+	var newUrl = '';  
+	switch (type) {  
+		case 'append':  
+			if (source) {  
+				newUrl = (source.search(/^https?:\/\//i) === 0 ? '' : url) + source;  
+				break;  
+			}  
+		case 'timeshift':  
 		case 'shift':  
-			return url.replace('${utc}', utc).replace('${start}', dayStart);  
-		case 'xc':  
-			return url.replace('${utc}', utc).replace('${start}', dayStart).replace('${offset}', offset);  
+			newUrl = (source || url);  
+			newUrl += (newUrl.indexOf('?') >= 0 ? '&' : '?') + 'utc=${start}&lutc=${timestamp}';  
+			return newUrl;  
 		case 'flussonic':  
-			return url.replace('${start}', time).replace('${duration}', 86400).replace('${offset}', offset);  
-		case 'niagara':  
-			return url.replace('${start}', dayStart).replace('${utc}', utc);  
-		case 'udp':  
-			return url.replace('${start}', dayStart);  
-		case 'hls':  
-			return url.replace('${start}', time);  
+		case 'flussonic-hls':  
+		case 'flussonic-ts':  
 		case 'fs':  
-			return url.replace('${start}', time).replace('${end}', time + 3600);  
-		case 'all':  
-			return url.replace('${start}', dayStart).replace('${utc}', utc).replace('${offset}', offset).replace('${timestamp}', time);  
+			return url  
+				.replace(/\/(video|mono)\.(m3u8|ts)/, '/$1-\${start}-\${duration}.$2')  
+				.replace(/\/(index|playlist)\.(m3u8|ts)/, '/archive-\${start}-\${duration}.$2')  
+				.replace(/\/mpegts/, '/timeshift_abs-\${start}.ts');  
+		case 'xc':  
+			newUrl = url  
+				.replace(  
+					/^(https?:\/\/[^/]+)(\/live)?(\/[^/]+\/[^/]+\/)([^/.]+)\.m3u8?$/,  
+					'$1/timeshift$3\${(d)M}/\${(b)yyyy-MM-dd:HH-mm}/$4.m3u8'  
+				)  
+				.replace(  
+					/^(https?:\/\/[^/]+)(\/live)?(\/[^/]+\/[^/]+\/)([^/.]+)(\.ts|)$/,  
+					'$1/timeshift$3\${(d)M}/\${(b)yyyy-MM-dd:HH-mm}/$4.ts'  
+				);  
+			break;  
+		case 'default':  
+			newUrl = source || url;  
+			break;  
+		case 'disabled':  
+			return false;  
 		default:  
-			return url;  
+			console.log(plugin.name, 'Err: no support catchup-type="' + type + '"');  
+			return false;  
 	}  
+	if (newUrl.indexOf('${') < 0) return catchupUrl(newUrl,'shift');  
+	return newUrl;  
 }  
-function parseList(text) {  
-	var lines = text.split('\n');  
-	var channels = [];  
-	var currentGroup = defaultGroup;  
-	var channel = {};  
-	var reExtInf = /^#EXTINF:(-?\d+)(\s+(.*?))?,(.*?)$/i;  
-	var reGroup = /^#EXTGRP:(.*)$/i;  
-	var reUrl = /^(http|https|rtsp|rtmp|udp|file):\/\/.*$/i;  
-	var reLogo = /tvg-logo="(.*?)"/i;  
-	var reId = /tvg-id="(.*?)"/i;  
-	var reName = /tvg-name="(.*?)"/i;  
-	var reChNo = /tvg-chno="(.*?)"/i;  
-	var reShift = /timeshift="(\d+)"/i;  
-	var reCatchup = /catchup-days="(\d+)"/i;  
-	var reCatchupType = /catchup-type="(.*?)"/i;  
-	var reCatchupSource = /catchup-source="(.*?)"/i;  
-	var reRadio = /radio="true"/i;  
-	for (var i = 0; i < lines.length; i++) {  
-		var line = lines[i].trim();  
-		if (!line) continue;  
-		if (line.match(reExtInf)) {  
-			var matches = line.match(reExtInf);  
-			channel = {  
-				Title: matches[4],  
-				Group: currentGroup,  
-				Url: '',  
-				'tvg-id': '',  
-				'tvg-logo': '',  
-				'tvg-name': '',  
-				'catchup': '',  
-				'catchup-type': '',  
-				'catchup-source': '',  
-				'timeshift': ''  
-			};  
-			  
-			var logoMatch = line.match(reLogo);  
-			if (logoMatch) channel['tvg-logo'] = logoMatch[1];  
-			  
-			var idMatch = line.match(reId);  
-			if (idMatch) channel['tvg-id'] = idMatch[1];  
-			  
-			var nameMatch = line.match(reName);  
-			if (nameMatch) channel['tvg-name'] = nameMatch[1];  
-			  
-			var catchupMatch = line.match(reCatchupType);  
-			if (catchupMatch) channel['catchup-type'] = catchupMatch[1];  
-			  
-			var catchupSourceMatch = line.match(reCatchupSource);  
-			if (catchupSourceMatch) channel['catchup-source'] = catchupSourceMatch[1];  
-			  
-			var shiftMatch = line.match(reShift);  
-			if (shiftMatch) channel['timeshift'] = shiftMatch[1];  
+  
+function keydown(e) {  
+	var code = e.code;  
+	if (Lampa.Activity.active().component === plugin.component  
+		&& Lampa.Player.opened()  
+		&& !$('body.selectbox--open').length  
+	) {  
+		var playlist = Lampa.PlayerPlaylist.get();  
+		if (!isPluginPlaylist(playlist)) return;  
+		var isStopEvent = false;  
+		var curCh = cache('curCh') || (Lampa.PlayerPlaylist.position() + 1);  
+		if (code === 428 || code === 34 || ((code === 37 || code === 4) && !$('.player.tv .panel--visible .focus').length && !$('.player.tv .player-footer.open .focus').length)) {  
+			curCh = curCh === 1 ? playlist.length : curCh - 1;  
+			cache('curCh', curCh, 1000);  
+			isStopEvent = channelSwitch(curCh, true);  
+		} else if (code === 427 || code === 33 || ((code === 39 || code === 5) && !$('.player.tv .panel--visible .focus').length && !$('.player.tv .player-footer.open .focus').length)) {  
+			curCh = curCh === playlist.length ? 1 : curCh + 1;  
+			cache('curCh', curCh, 1000);  
+			isStopEvent = channelSwitch(curCh, true);  
+		} else if (code >= 48 && code <= 57) {  
+			isStopEvent = channelSwitch(code - 48);  
+		} else if (code >= 96 && code <= 105) {  
+			isStopEvent = channelSwitch(code - 96);  
 		}  
-		else if (line.match(reGroup)) {  
-			var matches = line.match(reGroup);  
-			currentGroup = matches[1] || defaultGroup;  
-		}  
-		else if (line.match(reUrl) && channel) {  
-			channel.Url = line;  
-			channels.push(channel);  
-			channel = null;  
+		if (isStopEvent) {  
+			e.event.preventDefault();  
+			e.event.stopPropagation();  
 		}  
 	}  
-	  
-	// Групуємо канали  
-	var groups = {};  
-	var groupList = [];  
-	  
-	channels.forEach(function(ch) {  
-		var group = ch.Group || defaultGroup;  
-		if (!groups[group]) {  
-			groups[group] = {  
-				title: group,  
-				key: group.toLowerCase().replace(/\s+/g, '_'),  
-				channels: []  
-			};  
-			groupList.push(groups[group]);  
-		}  
-		groups[group].channels.push(ch);  
-	});  
-	  
-	return groupList;  
-}  
-  
-function cache(key, data, expire) {  
-	if (Utils.canUseDB()) {  
-		return DB.rewriteData('cache', key, {  
-			data: data,  
-			expire: Date.now() + (expire || 3600000)  
-		});  
-	} else {  
-		return new Promise(function(resolve) {  
-			Lampa.Storage.set('iptv_cache_' + key, {  
-				data: data,  
-				expire: Date.now() + (expire || 3600000)  
-			});  
-			resolve();  
-		});  
-	}  
-}  
-  
-function getCache(key) {  
-	if (Utils.canUseDB()) {  
-		return DB.getDataAnyCase('cache', key).then(function(result) {  
-			if (result && result.expire > Date.now()) {  
-				return result.data;  
-			}  
-			return null;  
-		});  
-	} else {  
-		return new Promise(function(resolve) {  
-			var cached = Lampa.Storage.get('iptv_cache_' + key, null);  
-			if (cached && cached.expire > Date.now()) {  
-				resolve(cached.data);  
-			} else {  
-				resolve(null);  
-			}  
-		});  
-	}  
-}  
-  
-function networkSilentSessCache(url, success, error) {  
-	var cacheKey = 'sess_' + Lampa.Utils.hash(url);  
-	  
-	getCache(cacheKey).then(function(cached) {  
-		if (cached) {  
-			success(cached);  
-		} else {  
-			network.silent(url, function(data) {  
-				cache(cacheKey, data, 300000).then(function() {  
-					success(data);  
-				});  
-			}, error || function() {  
-				success([]);  
-			});  
-		}  
-	});  
-}  
-  
-function getStorage(key, def) {  
-	if (Utils.canUseDB()) {  
-		return DB.getDataAnyCase('storage', key).then(function(value) {  
-			return value !== undefined ? value : def;  
-		});  
-	} else {  
-		return Promise.resolve(Lampa.Storage.get('iptv_' + key, def));  
-	}  
-}  
-  
-function setStorage(key, value) {  
-	if (Utils.canUseDB()) {  
-		return DB.rewriteData('storage', key, value);  
-	} else {  
-		return Promise.resolve(Lampa.Storage.set('iptv_' + key, value));  
-	}  
-}  
-  
-function getSettings(key) {  
-	return Lampa.Storage.field('iptv_' + key);  
-}  
-  
-function addSettings(type, params) {  
-	Lampa.SettingsApi.addParam({  
-		component: plugin.component,  
-		param: Object.assign({  
-			type: type  
-		}, params),  
-		field: {  
-			name: params.title  
-		}  
-	});  
-}  
-  
-function langGet(key) {  
-	var langKey = plugin.component + '_' + key;  
-	var lang = Lampa.Lang.translate(langKey);  
-	return lang !== langKey ? lang : key;  
-}  
-  
-function favID(title) {  
-	return title.toLowerCase().replace(/[^a-zа-яё0-9]/g, '');  
 }  
   
 function bulkWrapper(func, bulk) {  
@@ -494,182 +376,1443 @@ function bulkWrapper(func, bulk) {
 	}  
 }  
   
-// Локалізація  
-langAdd('settings_list_name', {  
-	ru: 'Название списка',  
-	uk: 'Назва списку',  
-	be: 'Назва спісу',  
-	en: 'List name'  
-});  
+function getEpgSessCache(epgId, t) {  
+	var key = getEpgSessKey(epgId);  
+	var epg = sessionStorage.getItem(key);  
+	if (epg) {  
+		epg = JSON.parse(epg);  
+		if (t) {  
+			if (epg.length && (t < epg[0][0] || t > (epg[epg.length - 1][0] + epg[epg.length - 1][1]))) return false;  
+			while (epg.length && t >= (epg[0][0] + epg[0][1])) epg.shift();  
+		}  
+	}  
+	return epg;  
+}  
   
-langAdd('settings_list_url', {  
-	ru: 'URL плейлиста',  
-	uk: 'URL плейлиста',  
-	be: 'URL плейліста',  
-	en: 'Playlist URL'  
-});  
+function setEpgSessCache(epgId, epg) {  
+	var key = getEpgSessKey(epgId);  
+	sessionStorage.setItem(key, JSON.stringify(epg));  
+}  
   
-langAdd('settings_list_name_desc', {  
-	ru: 'Введите название для плейлиста',  
-	uk: 'Введіть назву для плейлиста',  
-	be: 'Увядзіце назву для плейліста',  
-	en: 'Enter playlist name'  
-});  
+function getEpgSessKey(epgId) {  
+	return ['epg', epgId].join('\t');  
+}  
   
-langAdd('settings_list_url_desc0', {  
-	ru: 'Введите URL M3U плейлиста',  
-	uk: 'Введіть URL M3U плейлиста',  
-	be: 'Увядзіце URL M3U плейліста',  
-	en: 'Enter M3U playlist URL'  
-});  
-  
-langAdd('settings_list_url_desc1', {  
-	ru: 'Оставьте пустым для использования списка по умолчанию',  
-	uk: 'Залиште порожнім для використання списку за замовчуванням',  
-	be: 'Пакіньце пустым для выкарыстання спісу па змаўчанні',  
-	en: 'Leave empty to use default list'  
-});  
-  
-langAdd('default_playlist', {  
-	ru: 'http://example.com/playlist.m3u',  
-	uk: 'http://example.com/playlist.m3u',  
-	be: 'http://example.com/playlist.m3u',  
-	en: 'http://example.com/playlist.m3u'  
-});  
-  
-langAdd('square_icons', {  
-	ru: 'Квадратные иконки',  
-	uk: 'Квадратні іконки',  
-	be: 'Квадратныя іконкі',  
-	en: 'Square icons'  
-});  
-  
-langAdd('contain_icons', {  
-	ru: 'Вписывать иконки',  
-	uk: 'Вписувати іконки',  
-	be: 'Упісваць іконкі',  
-	en: 'Contain icons'  
-});  
-  
-langAdd('contain_icons_desc', {  
-	ru: 'Иконки будут полностью видны в карточке',  
-	uk: 'Іконки будуть повністю видимі в картці',  
-	be: 'Іконкі будуць поўнасцю бачныя ў картцы',  
-	en: 'Icons will be fully visible in the card'  
-});  
-  
-langAdd('epg_on', {  
-	ru: 'Показать EPG',  
-	uk: 'Показати EPG',  
-	be: 'Паказаць EPG',  
-	en: 'Show EPG'  
-});  
-  
-langAdd('epg_off', {  
-	ru: 'Скрыть EPG',  
-	uk: 'Сховати EPG',  
-	be: 'Схаваць EPG',  
-	en: 'Hide EPG'  
-});  
-  
-langAdd('launch_menu', {  
-	ru: 'Меню запуска',  
-	uk: 'Меню запуску',  
-	be: 'Меню запуску',  
-	en: 'Launch menu'  
-});  
-  
-langAdd('max_ch_in_group', {  
-	ru: 'Каналов в группе',  
-	uk: 'Каналів в групі',  
-	be: 'Каналаў у групе',  
-	en: 'Channels in group'  
-});  
-  
-langAdd('max_ch_in_group_desc', {  
-	ru: 'Разбивать большие группы на страницы',  
-	uk: 'Розбивати великі групи на сторінки',  
-	be: 'Разбіваць вялікія групы на старонкі',  
-	en: 'Split large groups into pages'  
-});  
-  
-langAdd('favorites_add', {  
-	ru: 'Добавить в избранное',  
-	uk: 'Додати в обране',  
-	be: 'Дадаць у абранае',  
-	en: 'Add to favorites'  
-});  
-  
-langAdd('favorites_del', {  
-	ru: 'Удалить из избранного',  
-	uk: 'Видалити з обраного',  
-	be: 'Выдаліць з абранага',  
-	en: 'Remove from favorites'  
-});  
-  
-langAdd('favorites_move_top', {  
-	ru: 'Переместить в начало',  
-	uk: 'Перемістити на початок',  
-	be: 'Перамясціць у пачатак',  
-	en: 'Move to top'  
-});  
-  
-langAdd('favorites_move_up', {  
-	ru: 'Переместить выше',  
-	uk: 'Перемістити вище',  
-	be: 'Перамясціць вышэй',  
-	en: 'Move up'  
-});  
-  
-langAdd('favorites_move_down', {  
-	ru: 'Переместить ниже',  
-	uk: 'Перемістити нижче',  
-	be: 'Перамясціць ніжэй',  
-	en: 'Move down'  
-});  
-  
-langAdd('favorites_move_end', {  
-	ru: 'Переместить в конец',  
-	uk: 'Перемістити в кінець',  
-	be: 'Перамясціць у канец',  
-	en: 'Move to end'  
-});  
-  
-langAdd('favorites_clear', {  
-	ru: 'Очистить избранное',  
-	uk: 'Очистити обране',  
-	be: 'Ачысціць абранае',  
-	en: 'Clear favorites'  
-});  
-  
-langAdd('uid', {  
-	ru: 'Уникальный ID',  
-	uk: 'Унікальний ID',  
-	be: 'Унікальны ID',  
-	en: 'Unique ID'  
-});  
-  
-langAdd('unique_id', {  
-	ru: 'Используется для идентификации устройства',  
-	uk: 'Використовується для ідентифікації пристрою',  
-	be: 'Выкарыстоўваецца для ідэнтыфікацыі прылады',  
-	en: 'Used for device identification'  
-});  
-  
-// Ініціалізація мовних даних  
-if (Lampa.Lang) {  
-	var langData = {};  
-	for (var key in langData) {  
-		Lampa.Lang.add(key, langData[key]);  
+function networkSilentSessCache(url, success, fail, param) {  
+	var context = this;  
+	var urlForKey = url.replace(/([&?])sig=[^&]+&?/, '$1');  
+	var key = ['cache', urlForKey, param ? utils.hash36(JSON.stringify(param)) : ''].join('\t');  
+	var data = sessionStorage.getItem(key);  
+	if (data) {  
+		data = JSON.parse(data);  
+		if (data[0]) typeof success === 'function' && success.apply(context, [data[1]]);  
+		else typeof fail === 'function' && fail.apply(context, [data[1]]);  
+	} else {  
+		var network = new Lampa.Reguest();  
+		network.silent(  
+			url,  
+			function (data) {  
+				sessionStorage.setItem(key, JSON.stringify([true, data]));  
+				typeof success === 'function' && success.apply(context, [data]);  
+			},  
+			function (data) {  
+				sessionStorage.setItem(key, JSON.stringify([false, data]));  
+				typeof fail === 'function' && fail.apply(context, [data]);  
+			},  
+			param  
+		);  
 	}  
 }  
   
-// Реєстрація компонента  
+// Стилі  
+Lampa.Template.add(plugin.component + '_style', '<style>#PLUGIN_epg{margin-right:1em}.PLUGIN-program__desc{font-size:0.9em;margin:0.5em;text-align:justify;max-height:15em;overflow:hidden;}.PLUGIN.category-full{padding-bottom:10em}.PLUGIN div.card__view{position:relative;background-color:#353535;background-color:#353535a6;border-radius:1em;cursor:pointer;padding-bottom:60%}.PLUGIN.square_icons div.card__view{padding-bottom:100%}.PLUGIN img.card__img,.PLUGIN div.card__img{background-color:unset;border-radius:unset;max-height:100%;max-width:100%;height:auto;width:auto;position:absolute;top:50%;left:50%;-moz-transform:translate(-50%,-50%);-webkit-transform:translate(-50%,-50%);transform:translate(-50%,-50%);font-size:2em}.PLUGIN.contain_icons img.card__img{height:95%;width:95%;object-fit:contain}.PLUGIN .card__title{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.PLUGIN .js-layer--hidden{visibility: hidden}.PLUGIN .js-layer--visible{visibility: visible}.PLUGIN .card__age{padding:0;border:1px #3e3e3e solid;margin-top:0.3em;border-radius:0.3em;position:relative;display: none}.PLUGIN .card__age .card__epg-progress{position:absolute;background-color:#3a3a3a;top:0;left:0;width:0%;max-width:100%;height:100%}.PLUGIN .card__age .card__epg-title{position:relative;padding:0.4em 0.2em;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;}.PLUGIN.category-full .card__icons {top:0.3em;right:0.3em;justify-content:right;}#PLUGIN{float:right;padding: 1.2em 0;width: 30%;}.PLUGIN-details__group{font-size:1.3em;margin-bottom:.9em;opacity:.5}.PLUGIN-details__title{font-size:4em;font-weight:700}.PLUGIN-details__program{padding-top:4em}.PLUGIN-details__program-title{font-size:1.2em;padding-left:4.9em;margin-top:1em;margin-bottom:1em;opacity:.5}.PLUGIN-details__program-list>div+div{margin-top:1em}.PLUGIN-details__program>div+div{margin-top:2em}.PLUGIN-program{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;font-size:1.2em;font-weight:300}.PLUGIN-program__time{-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;width:5em;position:relative}.PLUGIN-program.focus .PLUGIN-program__time::after{content:\'\';position:absolute;top:.5em;right:.9em;width:.4em;background-color:#fff;height:.4em;-webkit-border-radius:100%;-moz-border-radius:100%;border-radius:100%;margin-top:-0.1em;font-size:1.2em}.PLUGIN-program__progressbar{width:10em;height:0.3em;border:0.05em solid #fff;border-radius:0.05em;margin:0.5em 0.5em 0 0}.PLUGIN-program__progress{height:0.25em;border:0.05em solid #fff;background-color:#fff;max-width: 100%}.PLUGIN .card__icon.icon--timeshift{background-image:url(https://epg.rootu.top/img/icon/timeshift.svg);}</style>'.replace(/PLUGIN/g, plugin.component));  
+$('body').append(Lampa.Template.get(plugin.component + '_style', {}, true));  
+  
+function pluginPage(object) {  
+	if (object.id !== curListId) {  
+		catalog = {};  
+		listCfg = {};  
+		curListId = object.id;  
+	}  
+	EPG = {};  
+	var epgIdCurrent = '';  
+	var epgPath = '';  
+	var favorite = getStorage('favorite' + object.id, '[]');  
+	var network = new Lampa.Reguest();  
+	var scroll = new Lampa.Scroll({  
+		mask: true,  
+		over: true,  
+		step: 250  
+	});  
+	  
+	// Використовуємо трьохколонковий шаблон  
+	var html = Lampa.Template.get('cub_iptv_content');  
+	var menuEl = html.find('.iptv-content__menu');  
+	var channelsEl = html.find('.iptv-content__channels');  
+	var detailsEl = html.find('.iptv-content__details');  
+	  
+	var body = $('<div class="' + plugin.component + ' category-full"></div>');  
+	body.toggleClass('square_icons', getSettings('square_icons'));  
+	body.toggleClass('contain_icons', getSettings('contain_icons'));  
+	  
+	var info;  
+	var last;  
+	  
+	if (epgInterval) clearInterval(epgInterval);  
+	epgInterval = setInterval(function() {  
+		for (var epgId in EPG) {  
+			epgRender(epgId);  
+		}  
+	}, 10000);  
+  
+	var layerCards, layerMinPrev = 0, layerMaxPrev = 0, layerFocusI = 0, layerCnt = 24;  
+	if (layerInterval) clearInterval(layerInterval);  
+	layerInterval = setInterval(function() {  
+		if (!layerCards) return;  
+		var minI = Math.max(layerFocusI - layerCnt, 0);  
+		var maxI = Math.min(layerFocusI + layerCnt, layerCards.length - 1);  
+		if (layerMinPrev > maxI || layerMaxPrev < minI) {  
+			layerCards.slice(layerMinPrev, layerMaxPrev + 1).removeClass('js-layer--visible');  
+			cardsEpgRender(layerCards.slice(minI, maxI + 1).addClass('js-layer--visible'));  
+		} else {  
+			if (layerMinPrev < minI) layerCards.slice(layerMinPrev, minI + 1).removeClass('js-layer--visible');  
+			if (layerMaxPrev > maxI) layerCards.slice(maxI, layerMaxPrev + 1).removeClass('js-layer--visible');  
+			if (layerMinPrev > minI) cardsEpgRender(layerCards.slice(minI, layerMinPrev + 1).addClass('js-layer--visible'));  
+			if (layerMaxPrev < maxI) cardsEpgRender(layerCards.slice(layerMaxPrev, maxI + 1).addClass('js-layer--visible'));  
+		}  
+		layerMinPrev = minI;  
+		layerMaxPrev = maxI;  
+	}, 50);  
+  
+	// Функція рендеру груп у лівій колонці  
+	function renderGroups() {  
+		menuEl.empty();  
+		lists[object.id].groups.forEach(function(group) {  
+			var item = $('<div class="selector">' + group.title + '</div>');  
+			item.on('hover:enter', function() {  
+				if (object.currentGroup !== group.key) {  
+					object.currentGroup = group.key;  
+					Lampa.Activity.replace(Lampa.Arrays.clone(lists[object.id].activity));  
+				}  
+			});  
+			if (object.currentGroup === group.key) {  
+				item.addClass('focus');  
+			}  
+			menuEl.append(item);  
+		});  
+	}  
+  
+	this.create = function () {  
+		var _this = this;  
+		this.activity.loader(true);  
+		var emptyResult = function () {  
+			var empty = new Lampa.Empty();  
+			html.append(empty.render());  
+			_this.start = empty.start;  
+			_this.activity.loader(false);  
+			_this.activity.toggle();  
+		};  
+		if (Object.keys(catalog).length) {  
+			_this.build(catalog);  
+		} else if(!lists[object.id] || !object.url) {  
+			emptyResult();  
+			return;  
+		} else {  
+			var load = 1, data;  
+			var compileList = function (dataList) {  
+				data = dataList;  
+				if (!--load) parseListHeader();  
+			};  
+			if (!timeOffsetSet) {  
+				load++;  
+				(function () {  
+					var ts = new Date().getTime();  
+					network.silent(Lampa.Utils.protocol() + 'epg.rootu.top/api/time',  
+						function (serverTime) {  
+							var te = new Date().getTime();  
+							timeOffset = (serverTime < ts || serverTime > te) ? serverTime - te : 0;  
+							timeOffsetSet = true;  
+							compileList(data);  
+						},  
+						function () {  
+							timeOffsetSet = true;  
+							compileList(data);  
+						}  
+					);  
+				})();  
+			}  
+			var parseListHeader = function () {  
+				if (typeof data != 'string' || data.substr(0, 7).toUpperCase() !== "#EXTM3U") {  
+					emptyResult();  
+					return;  
+				}  
+				var m, mm, channelsUri = 'channels';
+				var l = data.split(/\r?\n/, 2)[0];  
+				if (!!(m = l.match(/([^\s=]+)=((["'])(.*?)\3|\S+)/g))) {  
+					for (var jj = 0; jj < m.length; jj++) {  
+						if (!!(mm = m[jj].match(/([^\s=]+)=((["'])(.*?)\3|\S+)/))) {  
+							listCfg[mm[1].toLowerCase()] = mm[4] || (mm[3] ? '' : mm[2]);  
+						}  
+					}  
+				}  
+				listCfg['epgUrl'] = listCfg['url-tvg'] || listCfg['x-tvg-url'] || '';  
+				listCfg['epgCode'] = utils.hash36(listCfg['epgUrl'].toLowerCase().replace(/https:\/\//g, 'http://'));  
+				console.log(plugin.name, 'epgCode', listCfg['epgCode']);  
+				listCfg['isEpgIt999'] = ["0", "4v7a2u", "skza0s", "oj8j5z", "sab9bx", "rv7awh", "2blr83"].indexOf(listCfg['epgCode']) >= 0;  
+				listCfg['isYosso'] = ["godxcd"].indexOf(listCfg['epgCode']) >= 0;  
+				if (/^https?:\/\/.+/i.test(listCfg['epgUrl']) && listCfg['epgUrl'].length < 8000) {  
+					channelsUri = listCfg['epgCode'] + '/' + channelsUri + '?url=' + encodeURIComponent(listCfg['epgUrl'])  
+						+ '&uid=' + utils.uid() + '&sig=' + generateSigForString(listCfg['epgUrl']);  
+				}  
+				listCfg['epgApiChUrl'] = Lampa.Utils.protocol() + 'epg.rootu.top/api/' + channelsUri;  
+				networkSilentSessCache(listCfg['epgApiChUrl'], parseList, parseList);  
+			}  
+			var parseList = function () {  
+				if (typeof data != 'string' || data.substr(0, 7).toUpperCase() !== "#EXTM3U") {  
+					emptyResult();  
+					return;  
+				}  
+				catalog = {  
+					'': {  
+						title: langGet('favorites'),  
+						setEpgId: false,  
+						channels: []  
+					}  
+				};  
+				lists[object.id].groups = [{  
+					title: langGet('favorites'),  
+					key: ''  
+				}];  
+				var l = data.split(/\r?\n/);  
+				var cnt = 0, i = 1, chNum = 0, m, mm, defGroup = defaultGroup, chInGroupCnt = {}, maxChInGroup = getSettings('max_ch_in_group');  
+				while (i < l.length) {  
+					chNum = cnt + 1;  
+					var channel = {  
+						ChNum: chNum,  
+						Title: "Ch " + chNum,  
+						isYouTube: false,  
+						Url: '',  
+						Group: '',  
+						Options: {}  
+					};  
+					for (; cnt < chNum && i < l.length; i++) {  
+						if (!!(m = l[i].match(/^#EXTGRP:\s*(.+?)\s*$/i)) && m[1].trim() !== '') {  
+							defGroup = m[1].trim();  
+						} else if (!!(m = l[i].match(/^#EXTINF:\s*-?\d+(\s+\S.*?\s*)?,(.+)$/i))) {  
+							channel.Title = m[2].trim();  
+							if (!!m[1] && !!(m = m[1].match(/([^\s=]+)=((["'])(.*?)\3|\S+)/g))) {  
+								for (var j = 0; j < m.length; j++) {  
+									if (!!(mm = m[j].match(/([^\s=]+)=((["'])(.*?)\3|\S+)/))) {  
+										channel[mm[1].toLowerCase()] = mm[4] || (mm[3] ? '' : mm[2]);  
+									}  
+								}  
+							}  
+						} else if (!!(m = l[i].match(/^#EXTVLCOPT:\s*([^\s=]+)=(.+)$/i))) {  
+							channel.Options[m[1].trim().toLowerCase()] = m[2].trim();  
+						} else if (!!(m = l[i].match(/^(https?):\/\/(.+)$/i))) {  
+							channel.Url = m[0].trim();  
+							channel.isYouTube = !!(m[2].match(/^(www\.)?youtube\.com/));  
+							channel.Group = (channel['group-title'] || defGroup) + "";  
+							cnt++;  
+						}  
+					}  
+					if (!!channel.Url && !channel.isYouTube) {  
+						chInGroupCnt[channel.Group] = (chInGroupCnt[channel.Group] || 0) + 1;  
+						var groupPage = maxChInGroup ? Math.floor((chInGroupCnt[channel.Group] - 1) / maxChInGroup) : 0;  
+						if (groupPage) channel.Group += ' #' + (groupPage + 1);  
+						if (!catalog[channel.Group]) {  
+							catalog[channel.Group] = {  
+								title: channel.Group,  
+								setEpgId: false,  
+								channels: []  
+							};  
+							lists[object.id].groups.push({  
+								title: channel.Group,  
+								key: channel.Group  
+							});  
+						}  
+						channel['Title'] = channel['Title'].replace(/\s+(\s|ⓢ|ⓖ|ⓥ|ⓞ|Ⓢ|Ⓖ|Ⓥ|Ⓞ)/g, ' ').trim();  
+						catalog[channel.Group].channels.push(channel);  
+						var favI = favorite.indexOf(favID(channel.Title));  
+						if (favI !== -1) {  
+							catalog[''].channels[favI] = channel;  
+						}  
+					}  
+				}  
+				for (i = 0; i < lists[object.id].groups.length; i++) {  
+					var group = lists[object.id].groups[i];  
+					group.title += ' [' + catalog[group.key].channels.length + ']';  
+				}  
+				for (i = 0; i < favorite.length; i++) {  
+					if (!catalog[''].channels[i]) {  
+						catalog[''].channels[i] = {  
+							ChNum: -1,  
+							Title: "#" + favorite[i],  
+							isYouTube: false,  
+							Url: Lampa.Utils.protocol() + 'epg.rootu.top/empty/_.m3u8',  
+							Group: '',  
+							Options: {},  
+							'tvg-logo': Lampa.Utils.protocol() + 'epg.rootu.top/empty/_.gif'  
+						};  
+					}  
+				}  
+				_this.build(catalog);  
+			};  
+			var listUrl = prepareUrl(object.url);  
+			network.native(  
+				listUrl,  
+				compileList,  
+				function () {  
+					network.silent(  
+						Lampa.Utils.protocol() + 'epg.rootu.top/cors.php?url=' + encodeURIComponent(listUrl)  
+						+ '&uid=' + utils.uid() + '&sig=' + generateSigForString(listUrl),  
+						compileList,  
+						emptyResult,  
+						false,  
+						{dataType: 'text'}  
+					);  
+				},  
+				false,  
+				{dataType: 'text'}  
+			);  
+		}  
+		return this.render();  
+	};  
+  
+	function epgUpdateData(epgId) {  
+		var lt = Math.floor(unixtime()/60);  
+		var t = Math.floor(lt/60), ed, ede;  
+		if (!!EPG[epgId] && t >= EPG[epgId][0] && t <= EPG[epgId][1]) {  
+			ed = EPG[epgId][2];  
+			if (!ed || !ed.length || ed.length >= 3) return;  
+			ede = ed[ed.length - 1];  
+			lt = (ede[0] + ede[1]);  
+			var t2 = Math.floor(lt / 60);  
+			if ((t2 - t) > 6 || t2 <= EPG[epgId][1]) return;  
+			t = t2;  
+		}  
+		if (!!EPG[epgId]) {  
+			ed = EPG[epgId][2];  
+			if (typeof ed !== 'object') return;  
+			if (ed.length) {  
+				ede = ed[ed.length - 1];  
+				lt = (ede[0] + ede[1]);  
+				var t3 = Math.max(t, Math.floor(lt / 60));  
+				if (t < t3 && ed.length >= 3) return;  
+				t = t3;  
+			}  
+			EPG[epgId][1] = t;  
+		} else {  
+			EPG[epgId] = [t, t, false];  
+		}  
+		var success = function(epg) {  
+			if (EPG[epgId][2] === false) EPG[epgId][2] = [];  
+			for (var i = 0; i < epg.length; i++) {  
+				if (lt < (epg[i][0] + epg[i][1])) {  
+					EPG[epgId][2].push.apply(EPG[epgId][2], epg.slice(i));  
+					break;  
+				}  
+			}  
+			setEpgSessCache(epgId + epgPath, EPG[epgId][2]);  
+			epgRender(epgId);  
+		};  
+		var fail = function () {  
+			if (EPG[epgId][2] === false) EPG[epgId][2] = [];  
+			setEpgSessCache(epgId + epgPath, EPG[epgId][2]);  
+			epgRender(epgId);  
+		};  
+		if (EPG[epgId][2] === false) {  
+			var epg = getEpgSessCache(epgId + epgPath, lt);  
+			if (!!epg) return success(epg);  
+		}  
+		network.silent(  
+			Lampa.Utils.protocol() + 'epg.rootu.top/api' + epgPath + '/epg/'  + epgId + '/hour/' + t,  
+			success,  
+			fail  
+		);  
+	}  
+  
+	function cardsEpgRender(cards) {  
+		cards.filter('.js-epgNoRender[data-epg-id]').each(function(){epgRender($(this).attr('data-epg-id'))});  
+	}  
+  
+	function epgRender(epgId) {  
+		var epg = (EPG[epgId] || [0, 0, []])[2];  
+		var card = body.find('.js-layer--visible[data-epg-id="' + epgId + '"]').removeClass('js-epgNoRender');  
+		if (epg === false || !card.length) return;  
+		var epgEl = card.find('.card__age');  
+		if (!epgEl.length) return;  
+		var t = Math.floor(unixtime() / 60), enableCardEpg = false, i = 0, e, p, cId, cIdEl;  
+		while (epg.length && t >= (epg[0][0] + epg[0][1])) epg.shift();  
+		if (epg.length) {  
+			e = epg[0];  
+			if (t >= e[0] && t < (e[0] + e[1])) {  
+				i++;  
+				enableCardEpg = true;  
+				p = Math.round((unixtime() - e[0] * 60) * 100 / (e[1] * 60 || 60));  
+				cId = e[0] + '_' + epgEl.length;  
+				cIdEl = epgEl.data('cId') || '';  
+				if (cIdEl !== cId) {  
+					epgEl.data('cId', cId);  
+					epgEl.data('progress', p);  
+					epgEl.find('.js-epgTitle').text(e[2]);  
+					epgEl.find('.js-epgProgress').css('width', p + '%');  
+					epgEl.show();  
+				} else if (epgEl.data('progress') !== p) {  
+					epgEl.data('progress', p);  
+					epgEl.find('.js-epgProgress').css('width', p + '%');  
+				}  
+			}  
+		}  
+		if (epgIdCurrent === epgId) {  
+			var ec = detailsEl.find('#' + plugin.component + '_epg');  
+			var epgNow = ec.find('.js-epgNow');  
+			cId = epgId + '_' + epg.length + (epg.length ? '_' + epg[0][0] : '');  
+			cIdEl = ec.data('cId') || '';  
+			if (cIdEl !== cId) {  
+				ec.data('cId', cId);  
+				var epgAfter = ec.find('.js-epgAfter');  
+				if (i) {  
+					var slt = toLocaleTimeString(e[0] * 60000);  
+					var elt = toLocaleTimeString((e[0] + e[1]) * 60000);  
+					epgNow.data('progress', p);  
+					epgNow.find('.js-epgProgress').css('width', p + '%');  
+					epgNow.find('.js-epgTime').text(slt);  
+					epgNow.find('.js-epgTitle').text(e[2]);  
+					var desc = e[3] ? ('<p>' + encoder.text(e[3]).html() + '</p>') : '';  
+					epgNow.find('.js-epgDesc').html(desc.replace(/\n/g,'</p><p>'));  
+					epgNow.show();  
+					info.find('.info__create').html(slt + '-' + elt + ' &bull; ' + encoder.text(e[2]).html());  
+				} else {  
+					info.find('.info__create').html('');  
+					epgNow.hide();  
+				}  
+				if (epg.length > i) {  
+					var list = epgAfter.find('.js-epgList');  
+					list.empty();  
+					var iEnd = Math.min(epg.length, 8);  
+					for (; i < iEnd; i++) {  
+						e = epg[i];  
+						var item = epgItemTeplate.clone();  
+						item.find('.js-epgTime').text(toLocaleTimeString(e[0] * 60000));  
+						item.find('.js-epgTitle').text(e[2]);  
+						list.append(item);  
+					}  
+					epgAfter.show();  
+				} else {  
+					epgAfter.hide();  
+				}  
+			} else if (i && epgNow.data('progress') !== p) {  
+				epgNow.data('progress', p);  
+				epgNow.find('.js-epgProgress').css('width', p + '%');  
+			}  
+		}  
+		if (!enableCardEpg) epgEl.hide();  
+		if (epg.length < 3) epgUpdateData(epgId);  
+	}  
+  
+	this.append = function (data) {  
+		var catEpg = [];  
+		var chIndex = 0;  
+		var _this2 = this;  
+		var lazyLoadImg = ('loading' in HTMLImageElement.prototype);  
+		layerCards = null;  
+		var bulkFn = bulkWrapper(function (channel) {  
+				var chI = chIndex++;  
+				var card = Lampa.Template.get('card', {  
+					title: channel.Title,  
+					release_year: ''  
+				});  
+				card.addClass('card--collection')  
+					.removeClass('layer--visible')  
+					.removeClass('layer--render')  
+					.addClass('js-layer--hidden');  
+				if (chI < layerCnt) card.addClass('js-layer--visible');  
+				var img = card.find('.card__img')[0];  
+				if (lazyLoadImg) img.loading = (chI < 18 ? 'eager' : 'lazy');  
+				img.onload = function () {  
+					card.addClass('card--loaded');  
+				};  
+				img.onerror = function (e) {  
+					var name = channel.Title  
+						.replace(/\s+\(([+-]?\d+)\)/, ' $1').replace(/[-.()\s]+/g, ' ').replace(/(^|\s+)(TV|ТВ)(\s+|$)/i, '$3');  
+					var fl = name.replace(/\s+/g, '').length > 5  
+						? name.split(/\s+/).map(function(v) {return v.match(/^(\+?\d+|[UF]?HD|4K)$/i) ? v : v.substring(0,1).toUpperCase()}).join('').substring(0,6)  
+						: name.replace(/\s+/g, '');  
+					fl = fl.replace(/([UF]?HD|4k|\+\d+)$/i, '<sup>$1</sup>');  
+					var hex = (Lampa.Utils.hash(channel.Title) * 1).toString(16);  
+					while (hex.length < 6) hex+=hex;  
+					hex = hex.substring(0,6);  
+					var r = parseInt(hex.slice(0, 2), 16),  
+						g = parseInt(hex.slice(2, 4), 16),  
+						b = parseInt(hex.slice(4, 6), 16);  
+					var hexText = (r * 0.299 + g * 0.587 + b * 0.114) > 186 ? '#000000' : '#FFFFFF';  
+					card.find('.card__img').replaceWith('<div class="card__img">' + fl + '</div>');  
+					card.find('.card__view').css({'background-color': '#' + hex, 'color': hexText});  
+					channel['tvg-logo'] = '';  
+					card.addClass('card--loaded');  
+				};  
+				if (channel['tvg-logo']) img.src = channel['tvg-logo']; else img.onerror();  
+				var favIcon = $('<div class="card__icon icon--book hide"></div>');  
+				card.find('.card__icons-inner').append(favIcon);  
+				var tvgDay = parseInt(  
+					channel['catchup-days'] || channel['tvg-rec'] || channel['timeshift']  
+					|| listCfg['catchup-days'] || listCfg['tvg-rec'] || listCfg['timeshift']  
+					|| '0'  
+				);  
+				if (parseInt('catchup-enable' in channel ? channel['catchup-enable'] : tvgDay) > 0) {  
+					card.find('.card__icons-inner').append('<div class="card__icon icon--timeshift"></div>');  
+					if (tvgDay === 0) tvgDay = 1;  
+				} else {  
+					tvgDay = 0;  
+				}  
+				card.find('.card__age').html('<div class="card__epg-progress js-epgProgress"></div><div class="card__epg-title js-epgTitle"></div>');  
+				if (object.currentGroup !== '' && favorite.indexOf(favID(channel.Title)) !== -1) {  
+					favIcon.toggleClass('hide', false);  
+				}  
+				card.playThis = function(){  
+					layerFocusI = chI;  
+					var video = {  
+						title: channel.Title,  
+						url: prepareUrl(channel.Url),  
+						plugin: plugin.component,  
+						iptv: true,  
+						tv: true  
+					};  
+					var playlist = [];  
+					var playlistForExtrnalPlayer = [];  
+					var i = 0;  
+					data.forEach(function (elem) {  
+						var j = i < chI ? data.length - chI + i : i - chI;  
+						var videoUrl = i === chI ? video.url : prepareUrl(elem.Url);  
+						playlistForExtrnalPlayer[j] = {  
+							title: elem.Title,  
+							url: videoUrl,  
+							iptv: true,  
+							tv: true  
+						};  
+						playlist.push({  
+							title: ++i + '. ' + elem.Title,  
+							url: videoUrl,  
+							plugin: plugin.component,  
+							iptv: true,  
+							tv: true  
+						});  
+					});  
+					video['playlist'] = playlistForExtrnalPlayer;  
+					Lampa.Keypad.listener.destroy();  
+					Lampa.Keypad.listener.follow('keydown', keydown.bind(_this2));  
+					Lampa.Player.runas && Lampa.Player.runas(Lampa.Storage.field('player_iptv'));  
+					Lampa.Player.play(video);  
+					Lampa.Player.runas && Lampa.Player.runas(Lampa.Storage.field('player_iptv'));  
+					Lampa.Player.playlist(playlist);  
+				};  
+				card.on('hover:focus hover:hover touchstart', function (event) {  
+					layerFocusI = chI;  
+					if (event.type && event.type !== 'touchstart' && event.type !== 'hover:hover') scroll.update(card, true);  
+					last = card[0];  
+					info.find('.info__title').text(channel.Title);  
+					var ec = detailsEl.find('#' + plugin.component + '_epg');  
+					ec.find('.js-epgChannel').text(channel.Title);  
+					if (!channel['epgId']) {  
+						info.find('.info__create').empty();  
+						epgIdCurrent = '';  
+						ec.find('.js-epgNow').hide();  
+						ec.find('.js-epgAfter').hide();  
+					} else {  
+						epgIdCurrent = channel['epgId'];  
+						epgRender(channel['epgId']);  
+					}  
+				}).on('hover:enter', function() {  
+					getStorage('launch_menu', 'false') ? card.trigger('hover:long') : card.playThis();  
+				}).on('hover:long', function () {  
+					layerFocusI = chI;  
+					var favI = favorite.indexOf(favID(channel.Title));  
+					var isFavoriteGroup = object.currentGroup === '';  
+					var menu = [];  
+					if (getStorage('launch_menu', 'false')) {  
+						menu.push({  
+							title: Lampa.Lang.translate('player_lauch'),  
+							startPlay: true  
+						});  
+					}  
+					if (tvgDay > 0) {  
+						if (!!channel['epgId'] && !!EPG[channel['epgId']] && EPG[channel['epgId']][2].length) {  
+							menu.push({  
+								title: 'Смотреть сначала',  
+								restartProgram: true  
+							});  
+						}  
+						menu.push({  
+							title: 'Архив',  
+							archive: true  
+						});  
+					}  
+					if (!!channel['epgId'] && !!EPG[channel['epgId']] && EPG[channel['epgId']][2].length) {  
+						menu.push({  
+							title: Lampa.Lang.translate('search_start'),  
+							search: EPG[channel['epgId']][2][0][2]  
+						});  
+					}  
+					menu.push({  
+						title: favI === -1 ? langGet('favorites_add') : langGet('favorites_del'),  
+						favToggle: true  
+					});  
+					if (isFavoriteGroup && favorite.length) {  
+						if (favI !== 0) {  
+							menu.push({  
+								title: langGet('favorites_move_top'),  
+								favMove: true,  
+								i: 0  
+							});  
+							menu.push({  
+								title: langGet('favorites_move_up'),  
+								favMove: true,  
+								i: favI - 1  
+							});  
+						}  
+						if ((favI + 1) !== favorite.length) {  
+							menu.push({  
+								title: langGet('favorites_move_down'),  
+								favMove: true,  
+								i: favI + 1  
+							});  
+							menu.push({  
+								title: langGet('favorites_move_end'),  
+								favMove: true,  
+								i: favorite.length - 1  
+							});  
+						}  
+						menu.push({  
+							title: langGet('favorites_clear'),  
+							favClear: true  
+						});  
+					}  
+					menu.push({  
+						title: getStorage('epg', 'false') ? langGet('epg_off') : langGet('epg_on'),  
+						epgToggle: true  
+					});  
+					Lampa.Select.show({  
+						title: Lampa.Lang.translate('title_action'),  
+						items: menu,  
+						onSelect: function (sel) {  
+							if (!!sel.startPlay) {  
+								card.playThis();  
+							} else if (!!sel.archive) {  
+								var t = unixtime();  
+								var m = Math.floor(t/60);  
+								var d = Math.floor(t/86400);  
+								var di = (tvgDay + 1), load = di;  
+								var ms = m - tvgDay * 1440;  
+								var tvgData = [];  
+								var playlist = [];  
+								var playlistMenu = [];  
+								var archiveMenu = [];  
+								var ps = 0;  
+								var prevDate = '';  
+								var d0 = toLocaleDateString(unixtime() * 1e3);  
+								var d1 = toLocaleDateString((unixtime() - 86400) * 1e3);  
+								var d2 = toLocaleDateString((unixtime() - 2 * 86400) * 1e3);  
+								var txtD = {};  
+								txtD[d0] = 'Сегодня - ' + d0;  
+								txtD[d1] = 'Вчера - ' + d1;  
+								txtD[d2] = 'Позавчера - ' + d2;  
+								var onEpgLoad = function() {  
+									if (--load) return;  
+									for (var i=tvgData.length - 1; i >= 0; i--) {  
+										if (tvgData[i].length === 0) {  
+											var dt = (d - i) * 1440;  
+											for (var dm = 0; dm < 1440; dm+=30)  
+												tvgData[i].push([dt + dm, 30, toLocaleDateString((dt + dm) * 6e4), '']);  
+										}  
+										for (var j=0; j < tvgData[i].length; j++) {  
+											var epg = tvgData[i][j];  
+											if (epg[0] === ps || epg[0] > m || epg[0] + epg[1] < ms) continue;  
+											ps = epg[0];  
+											var url = catchupUrl(  
+												channel.Url,  
+												(channel['catchup'] || channel['catchup-type'] || listCfg['catchup'] || listCfg['catchup-type']),  
+												(channel['catchup-source'] || listCfg['catchup-source'])  
+											);  
+											var item = {  
+												title: toLocaleTimeString(epg[0] * 6e4) + ' - ' + epg[2],  
+												url: prepareUrl(url, epg),  
+												catchupUrl: url,  
+												plugin: plugin.component,  
+												epg: epg  
+											};  
+											var newDate = toLocaleDateString(epg[0] * 6e4);  
+											newDate = txtD[newDate] || newDate;  
+											if (newDate !== prevDate) {  
+												if (prevDate) {  
+													archiveMenu.unshift({  
+														title: prevDate,  
+														separator: true  
+													});  
+												}  
+												playlistMenu.push({  
+													title: newDate,  
+													separator: true,  
+													plugin: plugin.component,  
+													url: item.url  
+												});  
+												prevDate = newDate;  
+											}  
+											archiveMenu.unshift(item);  
+											playlistMenu.push(item);  
+											playlist.push(item);  
+										}  
+									}  
+									if (prevDate) {  
+										archiveMenu.unshift({  
+											title: prevDate,  
+											separator: true  
+										});  
+									}  
+									tvgData = [];  
+									Lampa.Select.show({  
+										title: 'Архив',  
+										items: archiveMenu,  
+										onSelect: function (sel) {  
+											console.log(plugin.name, 'catchupUrl: ' + sel.catchupUrl, epg.slice(0,2));  
+											var video = {  
+												title: sel.title,  
+												url: sel.url,  
+												iptv: true,  
+												playlist: playlist  
+											}  
+											Lampa.Controller.toggle('content');  
+											Lampa.Player.runas && Lampa.Player.runas(Lampa.Storage.field('player_iptv'));  
+											Lampa.Player.play(video);  
+											Lampa.Player.runas && Lampa.Player.runas(Lampa.Storage.field('player_iptv'));  
+											Lampa.Player.playlist(playlistMenu);  
+										},  
+										onBack: function () {  
+											Lampa.Controller.toggle('content');  
+										}  
+									})  
+								};  
+								while (di--) {  
+									tvgData[di] = [];  
+									(function() {  
+										var dd = di;  
+										networkSilentSessCache(Lampa.Utils.protocol() + 'epg.rootu.top/api' + epgPath + '/epg/' + channel['epgId'] + '/day/' + (d - dd) ,  
+											function (data) {  
+												tvgData[dd] = data;  
+												onEpgLoad()  
+											},  
+											onEpgLoad  
+										);  
+									})();  
+								}  
+							} else if (!!sel.search) {  
+								var search = sel.search  
+									.replace(/^«([^»]+)».*$/, '$1')  
+									.replace(/^"([^"]+)".*$/, '$1')  
+									.replace(/\s*\((19\d\d|20[01]\d|202[0-4])\)\s*(\*\s.+)?$/, '')  
+									.replace(/[.,]\s*(\d+(-й)?\s+(с-н|сезон)|(с-н|сезон)\s+\d+|[s][-.\s]*\d+(-й)?)?[-.,\s]*(\d+(-\d+|-я)?\s*(сери.|эпизоды?|episode|[cс]|ep?)\.?|(сери.|эпизоды?|episode|[cс]|ep?)[-.]?\s*\d+).*$/i,'')  
+									.replace(/\s*(\d+(-й)?\s+(с-н|сезон)|(с-н|сезон)\s+\d+|[s][-.\s]*\d+(-й)?)?[-.,\s]*(\d+(-\d+|-я)?\s*(сери.|эпизоды?|episode|[cс]|ep?)\.?|(сери.|эпизоды?|episode|[cс]|ep?)[-.]?\s*\d+)\.?/i,'')  
+									.replace(/\.\s+Дайджест\s*$/i, '')  
+									.replace(/\.?\s*\(([cCсСeE](ерия|pisode)?[-.]?\s*\d+|\d+(-[^)\s]+)?\s+[Сс]ерия)\)/,'')  
+									.replace(/\.[^.:]+:\s*[Чч](асть|\.)\s+\d+\S*$/,'')  
+									.replace(/\.\s*Сборник\s+\d+\S*\s*$/i,'')  
+									.replace(/\s*[\[(]?(\d|1\d|2[0-5])\+[\])]?[.\s]*$/, '')  
+									.replace(/\s*(\(\)|\[])/, '');  
+								Lampa.Search.open({input: search});  
+							} else if (!!sel.restartProgram) {  
+								var epg = EPG[channel['epgId']][2][0];  
+								var type = (channel['catchup'] || channel['catchup-type'] || listCfg['catchup'] || listCfg['catchup-type'] || '');  
+								var url = catchupUrl(  
+									channel.Url,  
+									type,  
+									(channel['catchup-source'] || listCfg['catchup-source'])  
+								);  
+								var flussonic = type.search(/^flussonic/i) === 0;  
+								if (flussonic) {  
+									url = url.replace('${(d)S}', 'now');  
+								}  
+								console.log(plugin.name, 'catchupUrl: ' + url, epg.slice(0,2));  
+								var video = {  
+									title: channel.Title,  
+									url: prepareUrl(url, epg),  
+									plugin: plugin.component,  
+									catchupUrl: url,  
+									iptv: true,  
+									epg: epg  
+								}  
+								if (flussonic) video['timeline'] = {  
+									time: 11,  
+									percent: 0,  
+									handler: function(){},  
+									duration: (epg[1] * 60)  
+								};  
+								Lampa.Controller.toggle('content');  
+								Lampa.Player.runas && Lampa.Player.runas(Lampa.Storage.field('player_iptv'));  
+								Lampa.Player.play(video);  
+								Lampa.Player.runas && Lampa.Player.runas(Lampa.Storage.field('player_iptv'));  
+							} else if (!!sel.epgToggle) {  
+								var isView = !getStorage('epg', false);  
+								setStorage('epg', isView);  
+								epgListView(isView);  
+								Lampa.Controller.toggle('content');  
+							} else {  
+								var favGroup = lists[object.id].groups[0];  
+								if (!!sel.favToggle) {  
+									if (favI === -1) {  
+										favI = favorite.length  
+										favorite[favI] = favID(channel.Title);  
+										catalog[favGroup.key].channels[favI] = channel;  
+									} else {  
+										favorite.splice(favI, 1);  
+										catalog[favGroup.key].channels.splice(favI, 1);  
+									}  
+								} else if (!!sel.favClear) {  
+									favorite = [];  
+									catalog[favGroup.key].channels = [];  
+								} else if (!!sel.favMove) {  
+									favorite.splice(favI, 1);  
+									favorite.splice(sel.i, 0, favID(channel.Title));  
+									catalog[favGroup.key].channels.splice(favI, 1);  
+									catalog[favGroup.key].channels.splice(sel.i, 0, channel);  
+								}  
+								setStorage('favorite' + object.id, favorite);  
+								favGroup.title = catalog[favGroup.key].title  
+									+ ' [' + catalog[favGroup.key].channels.length + ']';  
+								if (isFavoriteGroup) {  
+									Lampa.Activity.replace(Lampa.Arrays.clone(lists[object.id].activity));  
+								} else {  
+									favIcon.toggleClass('hide', favorite.indexOf(favID(channel.Title)) === -1);  
+									Lampa.Controller.toggle('content');  
+								}  
+							}  
+						},  
+						onBack: function () {  
+							Lampa.Controller.toggle('content');  
+						}  
+					});  
+				});  
+				body.append(card);  
+				if (!!channel['epgId']) {  
+					card.attr('data-epg-id', channel['epgId']).addClass('js-epgNoRender');  
+					epgRender(channel['epgId']);  
+				}  
+			},  
+			{  
+				bulk: 18,  
+				onEnd: function (last, total, left) {  
+					_this2.activity.loader(false);  
+					_this2.activity.toggle();  
+					if (chIndex > layerCnt) {  
+						layerFocusI = 0;  
+						layerCards = body.find('.js-layer--hidden');  
+					}  
+				}  
+			});  
+		data.forEach(function (channel) {  
+			bulkFn(channel);  
+			if (!!channel['epgId'] && catEpg.indexOf(channel['epgId']) === -1) catEpg.push(channel['epgId']);  
+		});  
+	};  
+  
+	function setEpgId(channelGroup) {  
+		if (channelGroup.setEpgId || !channelGroup.channels || !listCfg['epgApiChUrl']) return;  
+		var chIDs = {id2epg: {}, piconUrl: '', id2picon: []}, i=0, channel;  
+		networkSilentSessCache(listCfg['epgApiChUrl'], function(d){  
+			chIDs = d;  
+			if (!chIDs['id2epg']) chIDs['id2epg'] = {};  
+		epgPath = !chIDs['epgPath'] ? '' : ('/' + chIDs['epgPath']);  
+	});  
+	var chShortName = function(chName){  
+		return chName  
+			.toLowerCase()  
+			.replace(/\s+\(архив\)$/, '')  
+			.replace(/\s+\((\+\d+)\)/g, ' $1')  
+			.replace(/^телеканал\s+/, '')  
+			.replace(/([!\s.,()–-]+|ⓢ|ⓖ|ⓥ|ⓞ|Ⓢ|Ⓖ|Ⓥ|Ⓞ)/g, ' ').trim()  
+			.replace(/\s(канал|тв)(\s.+|\s*)$/, '$2')  
+			.replace(/\s(50|orig|original)$/, '')  
+			.replace(/\s(\d+)/g, '$1');  
+	};  
+	var trW = {"ё":"e","у":"y","к":"k","е":"e","н":"h","ш":"w","з":"3","х":"x","ы":"bl","в":"b","а":"a","р":"p","о":"o","ч":"4","с":"c","м":"m","т":"t","ь":"b","б":"6"};  
+	var trName = function(word) {  
+		return word.split('').map(function (char) {  
+			return trW[char] || char;  
+		}).join("");  
+	};  
+	var epgIdByName = function(v, find, epgId) {  
+		var n = chShortName(v), fw, key;  
+		if (n === '' || (!chIDs[n[0]] && !find)) return 0;  
+		fw = n[0];  
+		if (!!chIDs[fw]) {  
+			if (!!chIDs[fw][n]) return chIDs[fw][n];  
+			n = trName(n);  
+			if (!!chIDs[fw][n]) return chIDs[fw][n];  
+			if (find) {  
+				for (key in chIDs[fw]) {  
+					if (chIDs[fw][key] == epgId) {  
+						return epgId;  
+					} else if (n === trName(key)) {  
+						return chIDs[fw][key];  
+					}  
+				}  
+			}  
+		}  
+		if (n[0] !== fw && !!chIDs[n[0]]) {  
+			fw = n[0];  
+			if (!!chIDs[fw][n]) return chIDs[fw][n];  
+			if (find) {  
+				for (key in chIDs[fw]) {  
+					if (chIDs[fw][key] == epgId) {  
+						return epgId;  
+					} else if (n === trName(key)) {  
+						return chIDs[fw][key];  
+					}  
+				}  
+			}  
+		} else if (find) {  
+			for(var keyW in trW) {  
+				if (trW[keyW] === fw && !!chIDs[keyW]) {  
+					for (key in chIDs[keyW]) {  
+						if (chIDs[keyW][key] == epgId) {  
+							return epgId;  
+						} else if (n === trName(key)){  
+							return chIDs[keyW][key];  
+						}  
+					}  
+				}  
+			}  
+		}  
+		return 0;  
+	};  
+	for (;i < channelGroup.channels.length;i++) {  
+		channel = channelGroup.channels[i];  
+		channel['epgId'] = (listCfg['isEpgIt999'] || listCfg['isYosso'])  
+			? (channel['tvg-id'] && /^\d{1,4}$/.test(channel['tvg-id']) ? channel['tvg-id'] : epgIdByName(channel['Title'], true, channel['tvg-id']))  
+			: (chIDs.id2epg[channel['tvg-id'] || ''] || epgIdByName(channel['Title'], isSNG, channel['tvg-id']) || channel['tvg-id']);  
+		if (!channel['tvg-logo'] && channel['epgId'] && !!chIDs.piconUrl) {  
+			channel['tvg-logo'] = Lampa.Utils.protocol() + chIDs.piconUrl.replace('{picon}', (chIDs.id2picon && chIDs.id2picon[channel['epgId']]) ? chIDs.id2picon[channel['epgId']] : channel['epgId']);  
+		}  
+		if (!channel['tvg-logo']) {  
+			if (channel['epgId'] && (listCfg['isEpgIt999'] || isSNG) && /^\d{1,4}$/.test(channel['epgId'])) {  
+				channel['tvg-logo'] = Lampa.Utils.protocol() + 'epg.one/img2/' + channel['epgId'] + '.png'  
+			} else if (isSNG && !/^Ch \d+$/.test(channel['Title'])) {  
+				channel['tvg-logo'] = Lampa.Utils.protocol() + 'epg.rootu.top/picon/'  
+					+ encodeURIComponent(channel['Title']) + '.png';  
+			}  
+		}  
+	}  
+}  
+  
+	this.build = function (catalog) {  
+		var channelGroup = !catalog[object.currentGroup]  
+				? (lists[object.id].groups.length > 1 && !!catalog[lists[object.id].groups[1].key]  
+						? catalog[lists[object.id].groups[1].key]  
+						: {'channels': []}  
+				)  
+				: catalog[object.currentGroup];  
+		var _this2 = this;  
+		Lampa.Background.change();  
+		Lampa.Template.add(plugin.component + '_button_category', "<style>@media screen and (max-width: 2560px) {." + plugin.component + " .card--collection {width: 16.6%!important;}}@media screen and (max-width: 800px) {." + plugin.component + " .card--collection {width: 24.6%!important;}}@media screen and (max-width: 500px) {." + plugin.component + " .card--collection {width: 33.3%!important;}}</style><div class=\"full-start__button selector view--category\"><svg style=\"enable-background:new 0 0 512 512;\" version=\"1.1\" viewBox=\"0 0 24 24\" xml:space=\"preserve\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\"><g id=\"info\"/><g id=\"icons\"><g id=\"menu\"><path d=\"M20,10H4c-1.1,0-2,0.9-2,2c0,1.1,0.9,2,2,2h16c1.1,0,2-0.9,2-2C22,10.9,21.1,10,20,10z\" fill=\"currentColor\"/><path d=\"M4,8h12c1.1,0,2-0.9,2-2c0-1.1-0.9-2-2-2H4C2.9,4,2,4.9,2,6C2,7.1,2.9,8,4,8z\" fill=\"currentColor\"/><path d=\"M16,16H4c-1.1,0-2,0.9-2,2c0,1.1,0.9,2,2,2h12c1.1,0,2-0.9,2-2C18,16.9,17.1,16,16,16z\"/></g></g></svg><span>" + langGet('categories') + "</span>\n	</div>");  
+		Lampa.Template.add(plugin.component + '_info_radio', '<div class="info layer--width"><div class="info__left"><div class="info__title"></div><div class="info__title-original"></div><div class="info__create"></div></div><div class="info__right" style="display: flex !important;">  <div id="stantion_filtr"></div></div></div>');  
+		var btn = Lampa.Template.get(plugin.component + '_button_category');  
+		info = Lampa.Template.get(plugin.component + '_info_radio');  
+		info.find('#stantion_filtr').append(btn);  
+		info.find('.view--category').on('hover:enter hover:click', function () {  
+			_this2.selectGroup();  
+		});  
+		info.find('.info__title-original').text(!catalog[object.currentGroup] ? '' : catalog[object.currentGroup].title);  
+		info.find('.info__title').text('');  
+		html.append(info.append());  
+		if (channelGroup.channels.length) {  
+			setEpgId(channelGroup);  
+			scroll.render().addClass('layer--wheight').data('mheight', info);  
+			html.append(scroll.render());  
+			this.append(channelGroup.channels);  
+			detailsEl.append(epgTemplate);  
+			scroll.append(body);  
+			setStorage('last_catalog' + object.id, object.currentGroup ? object.currentGroup : '!!');  
+			lists[object.id].activity.currentGroup = object.currentGroup;  
+		} else {  
+			var empty = new Lampa.Empty();  
+			html.append(empty.render());  
+			this.activity.loader(false);  
+			Lampa.Controller.collectionSet(info);  
+			Navigator.move('right');  
+		}  
+		renderGroups();  
+	};  
+  
+	this.selectGroup = function () {  
+		var activity = Lampa.Arrays.clone(lists[object.id].activity);  
+		var groups = Lampa.Arrays.clone(lists[object.id].groups).map(function(group){  
+			group.selected = object.currentGroup === group.key;  
+			return group;  
+		});  
+		Lampa.Select.show({  
+			title: langGet('categories'),  
+			items: groups,  
+			onSelect: function(group) {  
+				if (object.currentGroup !== group.key) {  
+					activity.currentGroup = group.key;  
+					Lampa.Activity.replace(activity);  
+				} else {  
+					Lampa.Player.opened() || Lampa.Controller.toggle('content');  
+				}  
+			},  
+			onBack: function() {  
+				Lampa.Player.opened() || Lampa.Controller.toggle('content');  
+			}  
+		});  
+	};  
+  
+	this.start = function () {  
+		if (Lampa.Activity.active().activity !== this.activity) return;  
+		var _this = this;  
+		Lampa.Controller.add('content', {  
+			toggle: function toggle() {  
+				Lampa.Controller.collectionSet(scroll.render());  
+				Lampa.Controller.collectionFocus(last || false, scroll.render());  
+			},  
+			left: function left() {  
+				if (Navigator.canmove('left')) Navigator.move('left');  
+				else Lampa.Controller.toggle('menu');  
+			},  
+			right: function right() {  
+				if (Navigator.canmove('right')) Navigator.move('right');  
+				else _this.selectGroup();  
+			},  
+			up: function up() {  
+				if (Navigator.canmove('up')) {  
+					Navigator.move('up');  
+				} else {  
+					if (!info.find('.view--category').hasClass('focus')) {  
+						Lampa.Controller.collectionSet(info);  
+						Navigator.move('right')  
+					} else Lampa.Controller.toggle('head');  
+				}  
+			},  
+			down: function down() {  
+				if (Navigator.canmove('down')) Navigator.move('down');  
+				else if (info.find('.view--category').hasClass('focus')) {  
+					Lampa.Controller.toggle('content');  
+				}  
+			},  
+			back: function back() {  
+				Lampa.Activity.backward();  
+			}  
+		});  
+		Lampa.Controller.toggle('content');  
+	};  
+  
+	this.pause = function () {  
+		Lampa.Player.runas && Lampa.Player.runas('');  
+	};  
+  
+	this.stop = function () {  
+		Lampa.Player.runas && Lampa.Player.runas('');  
+	};  
+  
+	this.render = function () {  
+		return html;  
+	};  
+  
+	this.destroy = function () {  
+		Lampa.Player.runas && Lampa.Player.runas('');  
+		network.clear();  
+		scroll.destroy();  
+		if (info) info.remove();  
+		layerCards = null;  
+		if (layerInterval) clearInterval(layerInterval);  
+		if (epgInterval) clearInterval(epgInterval);  
+		html.remove();  
+		body.remove();  
+		favorite = null;  
+		network = null;  
+		html = null;  
+		body = null;  
+		info = null;  
+	};  
+}  
+  
+if (!Lampa.Lang) {  
+	var lang_data = {};  
+	Lampa.Lang = {  
+		add: function add(data) {  
+			lang_data = data;  
+		},  
+		translate: function translate(key) {  
+			return lang_data[key] ? lang_data[key].ru : key;  
+		}  
+	};  
+}  
+var langData = {};  
+function langAdd(name, values) {  
+	langData[plugin.component + '_' + name] = values;  
+}  
+function langGet(name) {  
+	return Lampa.Lang.translate(plugin.component + '_' + name);  
+}  
+  
+langAdd('max_ch_in_group',  
+	{  
+		ru: 'Количество каналов в категории',  
+		uk: 'Кількість каналів у категорії',  
+		be: 'Колькасць каналаў у катэгорыі',  
+		en: 'Number of channels in category',  
+		zh: '分类中的频道数量'  
+	}  
+);  
+langAdd('max_ch_in_group_desc',  
+	{  
+		ru: 'Если количество превышено, категория разбивается на несколько. Уменьшите количество на слабых устройствах',  
+		uk: 'Якщо кількість перевищена, категорія розбивається на кілька. Зменшіть кількість на слабких пристроях',  
+		be: 'Калі колькасць перавышана, катэгорыя разбіваецца на некалькі. Паменшыце колькасць на слабых прыладах',  
+		en: 'If the quantity is exceeded, it splits the category into several. Reduce the number on weak devices',  
+		zh: '如果超出数量，则将分类拆分为多个。在弱设备上减少数量。'  
+	}  
+);  
+langAdd('default_playlist',  
+	{  
+		ru: 'https://tsynik.github.io/tv.m3u',  
+		uk: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8',  
+		be: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8',  
+		en: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8',  
+		zh: 'https://raw.iqiq.io/Free-TV/IPTV/master/playlist.m3u8'  
+	}  
+);  
+langAdd('default_playlist_cat',  
+	{  
+		ru: 'Russia',  
+		uk: 'Ukraine',  
+		be: 'Belarus',  
+		en: 'VOD Movies (EN)',  
+		zh: 'China'  
+	}  
+);  
+langAdd('settings_playlist_num_group',  
+	{  
+		ru: 'Плейлист ',  
+		uk: 'Плейлист ',  
+		be: 'Плэйліст ',  
+		en: 'Playlist ',  
+		zh: '播放列表 '  
+	}  
+);  
+langAdd('settings_list_name',  
+	{  
+		ru: 'Название',  
+		uk: 'Назва',  
+		be: 'Назва',  
+		en: 'Name',  
+		zh: '名称'  
+	}  
+);  
+langAdd('settings_list_name_desc',  
+	{  
+		ru: 'Название плейлиста в левом меню',  
+		uk: 'Назва плейлиста у лівому меню',  
+		be: 'Назва плэйліста ў левым меню',  
+		en: 'Playlist name in the left menu',  
+		zh: '左侧菜单中的播放列表名称'  
+	}  
+);  
+langAdd('settings_list_url',  
+	{  
+		ru: 'URL-адрес',  
+		uk: 'URL-адреса',  
+		be: 'URL-адрас',  
+		en: 'URL',  
+		zh: '网址'  
+	}  
+);  
+langAdd('settings_list_url_desc0',  
+	{  
+		ru: 'По умолчанию используется плейлист из проекта <i>https://github.com/Free-TV/IPTV</i><br>Вы можете заменить его на свой.',  
+		uk: 'За замовчуванням використовується плейлист із проекту <i>https://github.com/Free-TV/IPTV</i><br>Ви можете замінити його на свій.',  
+		be: 'Па змаўчанні выкарыстоўваецца плэйліст з праекта <i>https://github.com/Free-TV/IPTV</i><br> Вы можаце замяніць яго на свой.',  
+		en: 'The default playlist is from the project <i>https://github.com/Free-TV/IPTV</i><br>You can replace it with your own.',  
+		zh: '默认播放列表来自项目 <i>https://github.com/Free-TV/IPTV</i><br>您可以将其替换为您自己的。'  
+	}  
+);  
+langAdd('settings_list_url_desc1',  
+	{  
+		ru: 'Вы можете добавить еще один плейлист здесь. Ссылки на плейлисты обычно заканчиваются на <i>.m3u</i> или <i>.m3u8</i>',  
+		uk: 'Ви можете додати ще один плейлист суду. Посилання на плейлисти зазвичай закінчуються на <i>.m3u</i> або <i>.m3u8</i>',  
+		be: 'Вы можаце дадаць яшчэ адзін плэйліст суда. Спасылкі на плэйлісты звычайна заканчваюцца на <i>.m3u</i> або <i>.m3u8</i>',  
+		en: 'You can add another trial playlist. Playlist links usually end with <i>.m3u</i> or <i>.m3u8</i>',  
+		zh: '您可以添加另一个播放列表。 播放列表链接通常以 <i>.m3u</i> 或 <i>.m3u8</i> 结尾'  
+	}  
+);  
+langAdd('categories',  
+	{  
+		ru: 'Категории',  
+		uk: 'Категорія',  
+		be: 'Катэгорыя',  
+		en: 'Categories',  
+		zh: '分类'  
+	}  
+);  
+langAdd('uid',  
+	{  
+		ru: 'UID',  
+		uk: 'UID',  
+		be: 'UID',  
+		en: 'UID',  
+		zh: 'UID'  
+	}  
+);  
+langAdd('unique_id',  
+	{  
+		ru: 'уникальный идентификатор (нужен для некоторых ссылок на плейлисты)',  
+		uk: 'унікальний ідентифікатор (необхідний для деяких посилань на списки відтворення)',  
+		be: 'унікальны ідэнтыфікатар (неабходны для некаторых спасылак на спіс прайгравання)',  
+		en: 'unique identifier (needed for some playlist links)',  
+		zh: '唯一 ID（某些播放列表链接需要）'  
+	}  
+);  
+langAdd('launch_menu',  
+	{  
+		ru: 'Запуск через меню',  
+		uk: 'Запуск через меню',  
+		be: 'Запуск праз меню',  
+		en: 'Launch via menu',  
+		zh: '通过菜单启动'  
+	}  
+);  
+langAdd('favorites',  
+	{  
+		ru: 'Избранное',  
+		uk: 'Вибране',  
+		be: 'Выбранае',  
+		en: 'Favorites',  
+		zh: '收藏夹'  
+	}  
+);  
+langAdd('favorites_add',  
+	{  
+		ru: 'Добавить в избранное',  
+		uk: 'Додати в обране',  
+		be: 'Дадаць у абранае',  
+		en: 'Add to favorites',  
+		zh: '添加到收藏夹'  
+	}  
+);  
+langAdd('favorites_del',  
+	{  
+		ru: 'Удалить из избранного',  
+		uk: 'Видалити з вибраного',  
+		be: 'Выдаліць з абранага',  
+		en: 'Remove from favorites',  
+		zh: '从收藏夹中删除'  
+	}  
+);  
+langAdd('favorites_clear',  
+	{  
+		ru: 'Очистить избранное',  
+		uk: 'Очистити вибране',  
+		be: 'Ачысціць выбранае',  
+		en: 'Clear favorites',  
+		zh: '清除收藏夹'  
+	}  
+);  
+langAdd('favorites_move_top',  
+	{  
+		ru: 'В начало списка',  
+		uk: 'На початок списку',  
+		be: 'Да пачатку спісу',  
+		en: 'To the top of the list',  
+		zh: '到列表顶部'  
+	}  
+);  
+langAdd('favorites_move_up',  
+	{  
+		ru: 'Сдвинуть вверх',  
+		uk: 'Зрушити вгору',  
+		be: 'Ссунуць уверх',  
+		en: 'Move up',  
+		zh: '上移'  
+	}  
+);  
+langAdd('favorites_move_down',  
+	{  
+		ru: 'Сдвинуть вниз',  
+		uk: 'Зрушити вниз',  
+		be: 'Ссунуць уніз',  
+		en: 'Move down',  
+		zh: '下移'  
+	}  
+);  
+langAdd('favorites_move_end',  
+	{  
+		ru: 'В конец списка',  
+		uk: 'В кінець списку',  
+		be: 'У канец спісу',  
+		en: 'To the end of the list',  
+		zh: '到列表末尾'  
+	}  
+);  
+langAdd('epg_on',  
+	{  
+		ru: 'Включить телепрограмму',  
+		uk: 'Увімкнути телепрограму',  
+		be: 'Уключыць тэлепраграму',  
+		en: 'TV Guide: On',  
+		zh: '電視指南：開'  
+	}  
+);  
+langAdd('epg_off',  
+	{  
+		ru: 'Отключить телепрограмму',  
+		uk: 'Вимкнути телепрограму',  
+		be: 'Адключыць тэлепраграму',  
+		en: 'TV Guide: Off',  
+		zh: '電視指南：關閉'  
+	}  
+);  
+langAdd('epg_title',  
+	{  
+		ru: 'Телепрограмма',  
+		uk: 'Телепрограма',  
+		be: 'Тэлепраграма',  
+		en: 'TV Guide',  
+		zh: '電視指南'  
+	}  
+);  
+langAdd('square_icons', {  
+	ru: 'Квадратные лого каналов',  
+	uk: 'Квадратні лого каналів',  
+	be: 'Квадратныя лога каналаў',  
+	en: 'Square channel logos',  
+	zh: '方形通道標誌'  
+});  
+langAdd('contain_icons', {  
+	ru: 'Коррекция размера логотипа телеканала',  
+	uk: 'Виправлення розміру логотипу телеканалу',  
+	be: 'Карэкцыя памеру лагатыпа тэлеканала',  
+	en: 'TV channel logo size correction',  
+	zh: '電視頻道標誌尺寸校正'  
+});  
+langAdd('contain_icons_desc', {  
+	ru: 'Может некорректно работать на старых устройствах',  
+	uk: 'Може некоректно працювати на старих пристроях',  
+	be: 'Можа некарэктна працаваць на старых прыладах',  
+	en: 'May not work correctly on older devices.',  
+	zh: '可能无法在较旧的设备上正常工作。'  
+});  
+  
+Lampa.Lang.add(langData);  
+  
+function favID(title) {  
+	return title.toLowerCase().replace(/[\s!-\/:-@\[-`{-~]+/g, '');  
+}  
+function getStorage(name, defaultValue) {  
+	return Lampa.Storage.get(plugin.component + '_' + name, defaultValue);  
+}  
+function setStorage(name, val, noListen) {  
+	return Lampa.Storage.set(plugin.component + '_' + name, val, noListen);  
+}  
+function getSettings(name) {  
+	return Lampa.Storage.field(plugin.component + '_' + name);  
+}  
+function addSettings(type, param) {  
+	var data = {  
+		component: plugin.component,  
+		param: {  
+			name: plugin.component + '_' + param.name,  
+			type: type,  
+			values: !param.values ? '' : param.values,  
+			placeholder: !param.placeholder ? '' : param.placeholder,  
+			default: (typeof param.default === 'undefined') ? '' : param.default  
+		},  
+		field: {  
+			name: !param.title ? (!param.name ? '' : param.name) : param.title  
+		}  
+	}  
+	if (!!param.name) data.param.name = plugin.component + '_' + param.name;  
+	if (!!param.description) data.field.description = param.description;  
+	if (!!param.onChange) data.onChange = param.onChange;  
+	if (!!param.onRender) data.onRender = param.onRender;  
+	Lampa.SettingsApi.addParam(data);  
+}  
+  
+function configurePlaylist(i) {  
+	addSettings('title', {title: langGet('settings_playlist_num_group') + (i+1)});  
+	var defName = 'list ' + (i+1);  
+	var activity = {  
+		id: i,  
+		url: '',  
+		title: plugin.name,  
+		groups: [],  
+		currentGroup: getStorage('last_catalog' + i, langGet('default_playlist_cat')),  
+		component: plugin.component,  
+		page: 1  
+	};  
+	if (activity.currentGroup === '!!') activity.currentGroup = '';  
+	addSettings('input', {  
+		title: langGet('settings_list_name'),  
+		name: 'list_name_' + i,  
+		default: i ? '' : plugin.name,  
+		placeholder: i ? defName : '',  
+		description: langGet('settings_list_name_desc'),  
+		onChange: function (newVal) {  
+			var title = !newVal ? (i ? defName : plugin.name) : newVal;  
+			$('.js-' + plugin.component + '-menu' + i + '-title').text(title);  
+			activity.title = title + (title === plugin.name ? '' : ' - ' + plugin.name);  
+		}  
+	});  
+	addSettings('input', {  
+		title: langGet('settings_list_url'),  
+		name: 'list_url_' + i,  
+		default: i ? '' : langGet('default_playlist'),  
+		placeholder: i ? 'http://example.com/list.m3u8' : '',  
+		description: i  
+			? (!getStorage('list_url_' + i) ? langGet('settings_list_url_desc1') : '')  
+			: langGet('settings_list_url_desc0'),  
+		onChange: function (url) {  
+			if (url === activity.url) return;  
+			if (activity.id === curListId) {  
+				catalog = {};  
+				curListId = -1;  
+			}  
+			if (/^https?:\/\/./i.test(url)) {  
+				activity.url = url;  
+				$('.js-' + plugin.component + '-menu' + i).show();  
+			} else {  
+				activity.url = '';  
+				$('.js-' + plugin.component + '-menu' + i).hide();  
+			}  
+		}  
+	});  
+  
+	var name = getSettings('list_name_' + i);  
+	var url = getSettings('list_url_' + i);  
+	var title = (name || defName);  
+	activity.title = title + (title === plugin.name ? '' : ' - ' + plugin.name);  
+	var menuEl = $('<li class="menu__item selector js-' + plugin.component + '-menu' + i + '">'  
+		+ '<div class="menu__ico">' + plugin.icon + '</div>'  
+		+ '<div class="menu__text js-' + plugin.component + '-menu' + i + '-title">'  
+		+ encoder.text(title).html()  
+		+ '</div>'  
+		+ '</li>')  
+		.hide()  
+		.on('hover:enter', function(){  
+			if (Lampa.Activity.active().component === plugin.component) {  
+				Lampa.Activity.replace(Lampa.Arrays.clone(activity));  
+			} else {  
+				Lampa.Activity.push(Lampa.Arrays.clone(activity));  
+			}  
+		});  
+	if (/^https?:\/\/./i.test(url)) {  
+		activity.url = url;  
+		menuEl.show();  
+	}  
+	lists.push({activity: activity, menuEl: menuEl, groups: []});  
+	return !activity.url ? i + 1 : i;  
+}  
+  
 Lampa.Component.add(plugin.component, pluginPage);  
-  
-// Додавання налаштувань  
+// Готовим настройки  
 Lampa.SettingsApi.addComponent(plugin);  
-  
 addSettings(  
 	'trigger',  
 	{  
@@ -681,20 +1824,18 @@ addSettings(
 		}  
 	}  
 );  
-  
 addSettings(  
 	'trigger',  
 	{  
 		title: langGet('contain_icons'),  
 		description: langGet('contain_icons_desc'),  
 		name: 'contain_icons',  
-		default: false,  
+		default: true,  
 		onChange: function(v){  
 			$('.' + plugin.component + '.category-full').toggleClass('contain_icons', v === 'true');  
 		}  
 	}  
 );  
-  
 addSettings(  
 	'trigger',  
 	{  
@@ -706,7 +1847,6 @@ addSettings(
 		}  
 	}  
 );  
-  
 addSettings(  
 	'trigger',  
 	{  
@@ -715,7 +1855,6 @@ addSettings(
 		default: false  
 	}  
 );  
-  
 addSettings(  
 	'select',  
 	{  
@@ -733,11 +1872,7 @@ addSettings(
 		default: 300  
 	}  
 );  
-  
-// Конфігурація плейлистів  
 for (var i=0; i <= lists.length; i++) i = configurePlaylist(i);  
-  
-// Генерація UID  
 UID = getStorage('uid', '');  
 if (!UID) {  
 	UID = Lampa.Utils.uid(10).toUpperCase().replace(/(.{4})/g, '$1-');  
@@ -746,11 +1881,10 @@ if (!UID) {
 	UID = UID.substring(0, 12);  
 	setStorage('uid', UID);  
 }  
-  
 addSettings('title', {title: langGet('uid')});  
 addSettings('static', {title: UID, description: langGet('unique_id')});  
+//~ Готовим настройки  
   
-// Запуск плагіна  
 function pluginStart() {  
 	if (!!window['plugin_' + plugin.component + '_ready']) {  
 		console.log(plugin.name, 'plugin already start');  
@@ -766,5 +1900,4 @@ function pluginStart() {
 console.log(plugin.name, 'plugin ready start', !!window.appready ? 'now' : 'waiting event ready');  
 if (!!window.appready) pluginStart();  
 else Lampa.Listener.follow('app', function(e){if (e.type === 'ready') pluginStart()});  
-  
 })();
