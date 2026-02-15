@@ -232,52 +232,40 @@
   }  
   
   /**  
-   * Управління трейлером з оригінальною логікою  
+   * Управління трейлером  
    */  
   class Trailer {  
     constructor(object, video, mute_button) {  
       this.object = object;  
       this.video = video;  
       this.mute_button = mute_button;  
-      this.player;  
-      this.background = this.object.activity.render().find('.full-start__background');  
-      this.startblock = this.object.activity.render().find('.cardify');  
-      this.head = $('.head');  
+      this.player = null;  
       this.timelauch = 1200;  
       this.firstlauch = false;  
-        
-      // Встановлюємо флаг готовності трейлера  
+      this.timer_load = 0;  
+      this.timer_show = 0;  
+      this.timer_anim = 0;  
+  
       this.object.activity.trailer_ready = true;  
   
       this.state = new State({  
-        state: 'start',  
+        state: 'idle',  
         transitions: {  
-          start: (state) => {  
-            clearTimeout(this.timer_load);  
-            if (this.player.display) state.dispath('play');  
-            else if (this.player.loaded) {  
-              this.animate();  
-              this.timer_load = setTimeout(() => {  
-                state.dispath('load');  
-              }, this.timelauch);  
-            }  
-          },  
-          load: (state) => {  
-            if (this.player.loaded && Lampa.Controller.enabled().name == 'full_start' && this.same()) {  
-              state.dispath('play');  
-            }  
-          },  
-          play: () => {  
+          idle: () => {  
             this.player.play();  
+            this.state.dispath('loading');  
           },  
-          toggle: (state) => {  
-            clearTimeout(this.timer_load);  
-  
+          loading: () => {  
+            if (this.player.loaded && this.same()) {  
+              this.state.dispath('playing');  
+            }  
+          },  
+          playing: () => {  
             if (Lampa.Controller.enabled().name == 'cardify_trailer') ;  
             else if (Lampa.Controller.enabled().name == 'full_start' && this.same()) {  
-              state.start();  
+              this.state.start();  
             } else if (this.player.display) {  
-              state.dispath('hide');  
+              this.state.dispath('hide');  
             }  
           },  
           hide: () => {  
@@ -465,7 +453,7 @@
       }  
     });  
   
-    // Шаблон full_start_new з підтримкою логотипів  
+    // Шаблон full_start_new  
     const fullStartNewTemplate = `  
       <div class="full-start-new cardify">  
         <div class="full-start-new__body">  
@@ -476,10 +464,7 @@
           </div>  
           <div class="full-start-new__right">  
             <div class="cardify__left">  
-              <div class="full-start-new__title">  
-                {logo ? \`<img class="full-start-new__logo" src="\${logo}" alt="\${title}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">  
-                       <div style="display:none;">\${title}</div>\` : \`\${title}\`}  
-              </div>  
+              <div class="full-start-new__title">{title}</div>  
               <div class="full-start-new__head"></div>  
               <div class="cardify__details">  
                 <div class="full-start-new__details"></div>  
@@ -488,7 +473,7 @@
                 <div class="full-start__button selector button--play">  
                   <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg">  
                     <circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/>  
-                   <path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/>  
+                    <path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/>  
                   </svg>  
                   <span>#{title_watch}</span>  
                 </div>  
@@ -603,14 +588,6 @@
         .cardify-preview__line.two{bottom:0}  
         .head.nodisplay{-webkit-transform:translate3d(0,-100%,0);-moz-transform:translate3d(0,-100%,0);transform:translate3d(0,-100%,0)}  
         body:not(.menu--open) .cardify__background{-webkit-mask-image:-webkit-gradient(linear,left top,left bottom,color-stop(50%,white),to(rgba(255,255,255,0)));-webkit-mask-image:-webkit-linear-gradient(top,white 50%,rgba(255,255,255,0) 100%);mask-image:-webkit-gradient(linear,left top,left bottom,color-stop(50%,white),to(rgba(255,255,255,0)));mask-image:linear-gradient(to bottom,white 50%,rgba(255,255,255,0) 100%)}  
-          
-        /* Стилі для логотипів */  
-        .full-start-new__logo {  
-          max-height: 80px;  
-          max-width: 100%;  
-          object-fit: contain;  
-          filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));  
-        }  
       </style>  
     `;  
   
@@ -647,7 +624,7 @@
       }  
     });  
   
-    // Обробник події full - відновлено оригінальну логіку з підтримкою логотипів  
+    // Обробник події full з підтримкою логотипів  
     Lampa.Listener.follow('full', (e) => {  
       if (e.type === 'complite') {  
         const $buttons = e.object.activity.render().find('.full-start-new__buttons');  
@@ -659,50 +636,74 @@
         // Отримуємо логотип  
         const logo = selectBestLogo(e.data);  
   
+        // Вставляємо логотип замість назви  
+        const $title = e.object.activity.render().find('.full-start-new__title');  
+        if (logo && $title.length) {  
+          $title.html(`  
+            <img class="full-start-new__logo" src="${logo}" alt="${e.data.title}"   
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">  
+            <div style="display:none;">${e.data.title}</div>  
+          `);  
+        }  
+  
+        // Додаємо CSS для логотипа, якщо ще не додано  
+        if (!$('#cardify-logo-styles').length) {  
+          $('head').append(`  
+            <style id="cardify-logo-styles">  
+            .full-start-new__logo {  
+              max-height: 80px;  
+              max-width: 100%;  
+              object-fit: contain;  
+              filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));  
+            }  
+            </style>  
+          `);  
+        }  
+  
         // Перемикання фонових зображень, якщо трейлери вимкнено  
-        if (!Lampa.Storage.field('cardify_run_trailers')) {      
-          const backdrops = e.data.images?.backdrops || [];      
+        if (!Lampa.Storage.field('cardify_run_trailers')) {  
+          const backdrops = e.data.images?.backdrops || [];  
+            
+          if (backdrops.length > 1) {  
+            let current_index = 0;  
+            let timer_poster;  
+            let is_active = true;  
+              
+            const change_backdrop = function() {  
+              if (!is_active) return;  
                 
-          if (backdrops.length > 1) {      
-            let current_index = 0;      
-            let timer_poster;      
-            let is_active = true;      
+              current_index = (current_index + 1) % backdrops.length;  
+              const new_backdrop_url = LAMPAC_HOST + '/tmdb/img/t/p/w1280' + backdrops[current_index].file_path;  
+                
+              const $background = e.object.activity.render().find('.full-start__background');  
+                
+              if ($background.length === 0) {  
+                console.error('Background element not found!');  
+                return;  
+              }  
+                
+              $background.removeClass('loaded');  
+              $background.attr('src', new_backdrop_url);  
+                
+              $background.on('load', function() {  
+                $(this).addClass('loaded');  
+                $(this).off('load');  
+              });  
+            };  
               
-            const change_backdrop = function() {      
-              if (!is_active) return;    
-                    
-              current_index = (current_index + 1) % backdrops.length;      
-              const new_backdrop_url = LAMPAC_HOST + '/tmdb/img/t/p/w1280' + backdrops[current_index].file_path;      
-                      
-              const $background = e.object.activity.render().find('.full-start__background');    
-                    
-              if ($background.length === 0) {    
-                console.error('Background element not found!');    
-                return;    
-              }    
-                    
-              $background.removeClass('loaded');    
-              $background.attr('src', new_backdrop_url);    
-                    
-              $background.on('load', function() {    
-                $(this).addClass('loaded');    
-                $(this).off('load');    
-              });    
-            };      
+            change_backdrop();  
+            timer_poster = setInterval(change_backdrop, 10000);  
               
-            change_backdrop();      
-            timer_poster = setInterval(change_backdrop, 10000);      
+            const stop_poster_timer = function(a) {  
+              if (a.type == 'destroy' && a.object.activity === e.object.activity) {  
+                clearInterval(timer_poster);  
+                is_active = false;  
+                Lampa.Listener.remove('activity', stop_poster_timer);  
+              }  
+            };  
               
-            const stop_poster_timer = function(a) {      
-              if (a.type == 'destroy' && a.object.activity === e.object.activity) {      
-                clearInterval(timer_poster);      
-                is_active = false;      
-                Lampa.Listener.remove('activity', stop_poster_timer);      
-              }      
-            };      
-              
-            Lampa.Listener.follow('activity', stop_poster_timer);      
-          }      
+            Lampa.Listener.follow('activity', stop_poster_timer);  
+          }  
         } else {  
           // Трейлери увімкнено - створюємо Trailer  
           const trailer = selectBestTrailer(e.data);  
