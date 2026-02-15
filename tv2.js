@@ -480,7 +480,7 @@ Lampa.Template.add(plugin.component + '_style', `
     display: none !important;  
 }  
 </style>  
-`);
+`)
   function pluginPage(object) {
 	if (object.id !== curListId) {
 		catalog = {};
