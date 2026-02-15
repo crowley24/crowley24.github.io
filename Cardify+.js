@@ -1,12 +1,31 @@
 (function () {  
   'use strict';  
   
-  const LAMPAC_HOST = '{localhost}'; // буде замінено при завантаженні плагіна  
+  const LAMPAC_HOST = '{localhost}';  
   
   /**  
-   * Вибирає найкращий трейлер з доступних (мова, дата)  
-   * @param {Object} data - дані картки TMDB  
-   * @returns {Object|null} - об'єкт трейлера або null  
+   * State машина для управління станами трейлера  
+   */  
+  function State(object) {  
+    this.state = object.state;  
+  
+    this.start = function () {  
+      this.dispath(this.state);  
+    };  
+  
+    this.dispath = function (action_name) {  
+      var action = object.transitions[action_name];  
+  
+      if (action) {  
+        action.call(this, this);  
+      } else {  
+        console.log('invalid action');  
+      }  
+    };  
+  }  
+  
+  /**  
+   * Вибирає найкращий трейлер  
    */  
   function selectBestTrailer(data) {  
     if (!data.videos?.results?.length) return null;  
@@ -31,14 +50,14 @@
   }  
   
   /**  
-   * Міні-плеєр YouTube для трейлера  
+   * Міні-плеєр YouTube  
    */  
   class Player {  
-    constructor(object, video, muteButton) {  
+    constructor(object, video, mute_button) {  
       this.paused = false;  
       this.display = false;  
       this.ended = false;  
-      this.muteButton = muteButton;  
+      this.mute_button = mute_button;  
       this.isMuted = true;  
       this.listener = Lampa.Subscribe();  
       this.html = $(`  
@@ -59,40 +78,40 @@
           height: 225,  
           width: 400,  
           playerVars: {  
-            controls: 1,  
-            showinfo: 0,  
-            autohide: 1,  
-            modestbranding: 1,  
-            autoplay: 0,  
-            disablekb: 1,  
-            fs: 0,  
-            enablejsapi: 1,  
-            playsinline: 1,  
-            rel: 0,  
-            suggestedQuality: 'hd1080',  
-            setPlaybackQuality: 'hd1080',  
-            mute: 1  
+            'controls': 1,  
+            'showinfo': 0,  
+            'autohide': 1,  
+            'modestbranding': 1,  
+            'autoplay': 0,  
+            'disablekb': 1,  
+            'fs': 0,  
+            'enablejsapi': 1,  
+            'playsinline': 1,  
+            'rel': 0,  
+            'suggestedQuality': 'hd1080',  
+            'setPlaybackQuality': 'hd1080',  
+            'mute': 1  
           },  
           videoId: video.id,  
           events: {  
-            onReady: () => {  
+            onReady: (event) => {  
               this.loaded = true;  
               this.listener.send('loaded');  
             },  
             onStateChange: (state) => {  
-              if (state.data === YT.PlayerState.PLAYING) {  
+              if (state.data == YT.PlayerState.PLAYING) {  
                 this.paused = false;  
                 clearInterval(this.timer);  
                 this.timer = setInterval(() => {  
-                  const left = this.youtube.getDuration() - this.youtube.getCurrentTime();  
-                  const toEnd = 13;  
-                  const fade = 5;  
+                  var left = this.youtube.getDuration() - this.youtube.getCurrentTime();  
+                  var toend = 13;  
+                  var fade = 5;  
   
-                  if (left <= toEnd + fade) {  
-                    const vol = 1 - (toEnd + fade - left) / fade;  
+                  if (left <= toend + fade) {  
+                    var vol = 1 - (toend + fade - left) / fade;  
                     this.youtube.setVolume(Math.max(0, vol * 100));  
   
-                    if (left <= toEnd) {  
+                    if (left <= toend) {  
                       clearInterval(this.timer);  
                       this.listener.send('ended');  
                     }  
@@ -101,24 +120,24 @@
   
                 this.listener.send('play');  
   
-                if (this.firstUnmute) this.unmute();  
+                if (window.cardify_fist_unmute) this.unmute();  
               }  
   
-              if (state.data === YT.PlayerState.PAUSED) {  
+              if (state.data == YT.PlayerState.PAUSED) {  
                 this.paused = true;  
                 clearInterval(this.timer);  
                 this.listener.send('paused');  
               }  
   
-              if (state.data === YT.PlayerState.ENDED) {  
+              if (state.data == YT.PlayerState.ENDED) {  
                 this.listener.send('ended');  
               }  
   
-              if (state.data === YT.PlayerState.BUFFERING) {  
+              if (state.data == YT.PlayerState.BUFFERING) {  
                 state.target.setPlaybackQuality('hd1080');  
               }  
             },  
-            onError: () => {  
+            onError: (e) => {  
               this.loaded = false;  
               this.listener.send('error');  
             }  
@@ -129,13 +148,13 @@
   
     play() {  
       try {  
-        this.youtube?.playVideo();  
+        this.youtube.playVideo();  
       } catch (e) {}  
     }  
   
     pause() {  
       try {  
-        this.youtube?.pauseVideo();  
+        this.youtube.pauseVideo();  
       } catch (e) {}  
     }  
   
@@ -144,15 +163,15 @@
         if (this.isMuted) {  
           this.youtube.unMute();  
           this.isMuted = false;  
-          this.muteButton.find('svg').html(this.getSoundOnIcon());  
-          this.muteButton.find('span').text(Lampa.Lang.translate('cardify_disable_sound'));  
+          this.mute_button.find('svg').html(this.getSoundOnIcon());  
+          this.mute_button.find('span').text(Lampa.Lang.translate('cardify_disable_sound'));  
         } else {  
           this.youtube.mute();  
           this.isMuted = true;  
-          this.muteButton.find('svg').html(this.getSoundOffIcon());  
-          this.muteButton.find('span').text(Lampa.Lang.translate('cardify_enable_sound'));  
+          this.mute_button.find('svg').html(this.getSoundOffIcon());  
+          this.mute_button.find('span').text(Lampa.Lang.translate('cardify_enable_sound'));  
         }  
-        this.firstUnmute = true;  
+        window.cardify_fist_unmute = true;  
       } catch (e) {}  
     }  
   
@@ -187,7 +206,7 @@
       this.display = false;  
   
       try {  
-        this.youtube?.destroy();  
+        this.youtube.destroy();  
       } catch (e) {}  
   
       clearInterval(this.timer);  
@@ -197,16 +216,61 @@
   }  
   
   /**  
-   * Управління трейлером: стан, анімація, контролери  
+   * Управління трейлером з оригінальною логікою  
    */  
   class Trailer {  
-    constructor(object, video, muteButton) {  
+    constructor(object, video, mute_button) {  
       this.object = object;  
       this.video = video;  
-      this.muteButton = muteButton;  
-      this.player = null;  
-      this.state = 'idle';  
-      this.timers = {};  
+      this.mute_button = mute_button;  
+      this.player;  
+      this.background = this.object.activity.render().find('.full-start__background');  
+      this.startblock = this.object.activity.render().find('.cardify');  
+      this.head = $('.head');  
+      this.timelauch = 1200;  
+      this.firstlauch = false;  
+        
+      // Встановлюємо флаг готовності трейлера  
+      this.object.activity.trailer_ready = true;  
+  
+      this.state = new State({  
+        state: 'start',  
+        transitions: {  
+          start: (state) => {  
+            clearTimeout(this.timer_load);  
+            if (this.player.display) state.dispath('play');  
+            else if (this.player.loaded) {  
+              this.animate();  
+              this.timer_load = setTimeout(() => {  
+                state.dispath('load');  
+              }, this.timelauch);  
+            }  
+          },  
+          load: (state) => {  
+            if (this.player.loaded && Lampa.Controller.enabled().name == 'full_start' && this.same()) {  
+              state.dispath('play');  
+            }  
+          },  
+          play: () => {  
+            this.player.play();  
+          },  
+          toggle: (state) => {  
+            clearTimeout(this.timer_load);  
+  
+            if (Lampa.Controller.enabled().name == 'cardify_trailer') ;  
+            else if (Lampa.Controller.enabled().name == 'full_start' && this.same()) {  
+              state.start();  
+            } else if (this.player.display) {  
+              state.dispath('hide');  
+            }  
+          },  
+          hide: () => {  
+            this.player.pause();  
+            this.player.hide();  
+            this.object.activity.render().find('.cardify-preview__loader').width(0);  
+          }  
+        }  
+      });  
   
       this.start();  
     }  
@@ -216,23 +280,18 @@
     }  
   
     animate() {  
-      const loader = this.object.activity.render().find('.cardify-preview__loader').width(0);  
-      const started = Date.now();  
-      const duration = 1200;  
-  
-      clearInterval(this.timers.anim);  
-      this.timers.anim = setInterval(() => {  
-        const left = Date.now() - started;  
-        if (left > duration) {  
-          clearInterval(this.timers.anim);  
-          return;  
-        }  
-        loader.width(Math.round(left / duration * 100) + '%');  
+      var loader = this.object.activity.render().find('.cardify-preview__loader').width(0);  
+      var started = Date.now();  
+      clearInterval(this.timer_anim);  
+      this.timer_anim = setInterval(() => {  
+        var left = Date.now() - started;  
+        if (left > this.timelauch) clearInterval(this.timer_anim);  
+        loader.width(Math.round(left / this.timelauch * 100) + '%');  
       }, 100);  
     }  
   
     preview() {  
-      const preview = $(`  
+      var preview = $(`  
         <div class="cardify-preview">  
           <div>  
             <img class="cardify-preview__img" />  
@@ -250,19 +309,23 @@
       this.object.activity.render().find('.cardify__right').append(preview);  
     }  
   
-    control() {  
-      const out = () => {  
-        this.state = 'hidden';  
+    controll() {  
+      var out = () => {  
+        this.state.dispath('hide');  
         Lampa.Controller.toggle('full_start');  
       };  
   
       Lampa.Controller.add('cardify_trailer', {  
-        toggle: () => Lampa.Controller.clear(),  
-        enter: () => this.player.unmute(),  
-        left: out,  
-        up: out,  
-        down: out,  
-        right: out,  
+        toggle: () => {  
+          Lampa.Controller.clear();  
+        },  
+        enter: () => {  
+          this.player.unmute();  
+        },  
+        left: out.bind(this),  
+        up: out.bind(this),  
+        down: out.bind(this),  
+        right: out.bind(this),  
         back: () => {  
           this.player.destroy();  
           this.object.activity.render().find('.cardify-preview').remove();  
@@ -274,31 +337,17 @@
     }  
   
     start() {  
-      const toggle = () => {  
-        if (this.state === 'idle') {  
-          this.state = 'loading';  
-        } else if (this.state === 'loading') {  
-          if (this.player.loaded && this.same()) {  
-            this.state = 'playing';  
-          }  
-        } else if (this.state === 'playing') {  
-          if (this.player.display) {  
-            this.state = 'hidden';  
-          } else {  
-            this.state = 'playing';  
-          }  
-        } else if (this.state === 'hidden') {  
-          this.state = 'idle';  
+      var toggle = (e) => {  
+        this.state.dispath('toggle');  
+      };  
+  
+      var destroy = (e) => {  
+        if (e.type == 'destroy' && e.object.activity === this.object.activity) {  
+          remove();  
         }  
       };  
   
-      const destroy = (e) => {  
-        if (e.type === 'destroy' && e.object.activity === this.object.activity) {  
-          this.destroy();  
-        }  
-      };  
-  
-      const remove = () => {  
+      var remove = () => {  
         Lampa.Listener.remove('activity', destroy);  
         Lampa.Controller.listener.remove('toggle', toggle);  
         this.destroy();  
@@ -307,49 +356,56 @@
       Lampa.Listener.follow('activity', destroy);  
       Lampa.Controller.listener.follow('toggle', toggle);  
   
-      this.player = new Player(this.object, this.video, this.muteButton);  
+      this.player = new Player(this.object, this.video, this.mute_button);  
   
       this.player.listener.follow('loaded', () => {  
         this.preview();  
-        this.state = 'loading';  
-        this.animate();  
-        this.timers.load = setTimeout(() => {  
-          if (this.player.loaded && this.same()) {  
-            this.state = 'playing';  
-          }  
-        }, 1200);  
+        this.state.start();  
       });  
   
       this.player.listener.follow('play', () => {  
-        clearTimeout(this.timers.show);  
-        this.timers.show = setTimeout(() => {  
+        clearTimeout(this.timer_show);  
+  
+        if (!this.firstlauch) {  
+          this.firstlauch = true;  
+          this.timelauch = 5000;  
+        }  
+  
+        this.timer_show = setTimeout(() => {  
           this.player.show();  
-          this.control();  
+          this.controll();  
         }, 500);  
       });  
   
       this.player.listener.follow('ended,error', () => {  
-        this.state = 'hidden';  
+        this.state.dispath('hide');  
+  
         if (Lampa.Controller.enabled().name !== 'full_start') {  
           Lampa.Controller.toggle('full_start');  
         }  
+  
         this.object.activity.render().find('.cardify-preview').remove();  
         setTimeout(remove, 300);  
       });  
   
       this.object.activity.render().find('.activity__body').prepend(this.player.render());  
   
-      if (this.muteButton) {  
-        this.muteButton.removeClass('hide').on('hover:enter', () => {  
+      if (this.mute_button) {  
+        this.mute_button.removeClass('hide').on('hover:enter', () => {  
           this.player.unmute();  
         });  
       }  
     }  
   
     destroy() {  
-      Object.values(this.timers).forEach(timer => clearTimeout(timer) || clearInterval(timer));  
-      this.player?.destroy();  
-      this.muteButton?.off('hover:enter');  
+      clearTimeout(this.timer_load);  
+      clearTimeout(this.timer_show);  
+      clearInterval(this.timer_anim);  
+      this.player.destroy();  
+  
+      if (this.mute_button) {  
+        this.mute_button.off('hover:enter');  
+      }  
     }  
   }  
   
@@ -419,7 +475,7 @@
                 </div>  
                 <div class="full-start__button selector button--book">  
                   <svg width="21" height="32" viewBox="0 0 21 32" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                    <path d="M2 1.5H19C19.2761 1.5 19.5 1.72386 19.5 2V27.9618C19.5 28.3756 19.0261 28.6103 18.697 28.3595L12.6212 23.7303C11.3682 22.7757 9.63183 22.7757 8.37885 23.7303L2.30302 28.3595C1.9739 28.6103 1.5 28.3756 1.5 27.9618V2C1.5 1.72386 1.72386 1.5 2 1.5Z" stroke="currentColor" stroke-width="2.5"/>  
+                   <path d="M2 1.5H19C19.2761 1.5 19.5 1.72386 19.5 2V27.9618C19.5 28.3756 19.0261 28.6103 18.697 28.3595L12.6212 23.7303C11.3682 22.7757 9.63183 22.7757 8.37885 23.7303L2.30302 28.3595C1.9739 28.6103 1.5 28.3756 1.5 27.9618V2C1.5 1.72386 1.72386 1.5 2 1.5Z" stroke="currentColor" stroke-width="2.5"/>  
                   </svg>  
                   <span>#{settings_input_links}</span>  
                 </div>  
@@ -490,44 +546,44 @@
       <style>  
         .full-start-new__head { margin-bottom: 1em; }  
         body.cardify-trailer-active .full-start__background { opacity: 0 !important; }  
-        .cardify { transition: all 0.3s; }  
-        .cardify .full-start-new__body { height: 80vh; }  
-        .cardify .full-start-new__right { display: flex; align-items: flex-end; }  
-        .cardify .full-start-new__title { text-shadow: 0 0 0.1em rgba(0,0,0,0.3); }  
-        .cardify__left { flex-grow: 1; }  
-        .cardify__right { display: flex; align-items: center; flex-shrink: 0; position: relative; }  
-        .cardify__details { display: flex; }  
-        .cardify .full-start-new__reactions { margin: 0; margin-right: -2.8em; }  
-        .cardify .full-start-new__reactions:not(.focus) { margin: 0; }  
-        .cardify .full-start-new__reactions:not(.focus) > div:not(:first-child) { display: none; }  
-        .cardify .full-start-new__rate-line { margin: 0; margin-left: 3.5em; }  
-        .cardify__background { left: 0; }  
-        .cardify__background.loaded:not(.dim) { opacity: 1; }  
-        .cardify__background.nodisplay { opacity: 0 !important; }  
-        .cardify.nodisplay { transform: translate3d(0,50%,0); opacity: 0; }  
-        .cardify-trailer { opacity: 0; transition: opacity 0.3s; z-index: 1; }  
-        .cardify-trailer__youtube { background-color: #000; position: fixed; bottom: 20px; right: 20px; width: 400px; height: 225px; display: flex; align-items: center; z-index: 1000; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }  
-        .cardify-trailer__youtube iframe { border: 0; width: 100%; height: 100%; border-radius: 8px; }  
-        .cardify-trailer__youtube-line { position: fixed; height: 6.2em; background-color: #000; width: 100%; left: 0; display: none; }  
-        .cardify-trailer__youtube-line.one { top: 0; }  
-        .cardify-trailer__youtube-line.two { bottom: 0; }  
-        .cardify-trailer__controlls { display: none; }  
-        .cardify-trailer__title { flex-grow: 1; padding-right: 5em; font-size: 4em; font-weight: 600; overflow: hidden; text-overflow: '.'; display: -webkit-box; -webkit-line-clamp: 1; line-clamp: 1; -webkit-box-orient: vertical; line-height: 1.4; }  
-        .cardify-trailer__remote { flex-shrink: 0; display: flex; align-items: center; }  
-        .cardify-trailer__remote-icon { flex-shrink: 0; width: 2.5em; height: 2.5em; }  
-        .cardify-trailer__remote-text { margin-left: 1em; }  
-        .cardify-trailer.display { opacity: 1; }  
-        .cardify-trailer.display .cardify-trailer__controlls { transform: translate3d(0,0,0); opacity: 1; }  
-        .cardify-preview { position: absolute; bottom: 100%; right: 0; border-radius: 0.3em; width: 6em; height: 4em; display: flex; background-color: #000; overflow: hidden; }  
-        .cardify-preview > div { position: relative; width: 100%; height: 100%; }  
-        .cardify-preview__img { opacity: 0; position: absolute; left: 0; top: 0; width: 100%; height: 100%; background-size: cover; background-position: center; transition: opacity 0.2s; }  
-        .cardify-preview__img.loaded { opacity: 1; }  
-        .cardify-preview__loader { position: absolute; left: 50%; bottom: 0; transform: translate3d(-50%,0,0); height: 0.2em; border-radius: 0.2em; background-color: #fff; width: 0; transition: width 0.1s linear; }  
-        .cardify-preview__line { position: absolute; height: 0.8em; left: 0; width: 100%; background-color: #000; }  
-        .cardify-preview__line.one { top: 0; }  
-        .cardify-preview__line.two { bottom: 0; }  
-        .head.nodisplay { transform: translate3d(0,-100%,0); }  
-        body:not(.menu--open) .cardify__background { mask-image: linear-gradient(to bottom, white 50%, rgba(255,255,255,0) 100%); -webkit-mask-image: linear-gradient(to bottom, white 50%, rgba(255,255,255,0) 100%); }  
+        .cardify{-webkit-transition:all .3s;-o-transition:all .3s;-moz-transition:all .3s;transition:all .3s}  
+        .cardify .full-start-new__body{height:80vh}  
+        .cardify .full-start-new__right{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:end;-webkit-align-items:flex-end;-moz-box-align:end;-ms-flex-align:end;align-items:flex-end}  
+        .cardify .full-start-new__title{text-shadow:0 0 .1em rgba(0,0,0,0.3)}  
+        .cardify__left{-webkit-box-flex:1;-webkit-flex-grow:1;-moz-box-flex:1;-ms-flex-positive:1;flex-grow:1}  
+        .cardify__right{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center;-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;position:relative}  
+        .cardify__details{display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex}  
+        .cardify .full-start-new__reactions{margin:0;margin-right:-2.8em}  
+        .cardify .full-start-new__reactions:not(.focus){margin:0}  
+        .cardify .full-start-new__reactions:not(.focus)>div:not(:first-child){display:none}  
+        .cardify .full-start-new__rate-line{margin:0;margin-left:3.5em}  
+        .cardify__background{left:0}  
+        .cardify__background.loaded:not(.dim){opacity:1}  
+        .cardify__background.nodisplay{opacity:0 !important}  
+        .cardify.nodisplay{-webkit-transform:translate3d(0,50%,0);-moz-transform:translate3d(0,50%,0);transform:translate3d(0,50%,0);opacity:0}  
+        .cardify-trailer{opacity:0;-webkit-transition:opacity .3s;-o-transition:opacity .3s;-moz-transition:opacity .3s;transition:opacity .3s;z-index:1}  
+       .cardify-trailer__youtube{background-color:#000;position:fixed;bottom:20px;right:20px;width:400px;height:225px;display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center;z-index:1000;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.5)}  
+        .cardify-trailer__youtube iframe{border:0;width:100%;height:100%;border-radius:8px}  
+        .cardify-trailer__youtube-line{position:fixed;height:6.2em;background-color:#000;width:100%;left:0;display:none}  
+        .cardify-trailer__youtube-line.one{top:0}  
+        .cardify-trailer__youtube-line.two{bottom:0}  
+        .cardify-trailer__controlls{display:none}  
+        .cardify-trailer__title{-webkit-box-flex:1;-webkit-flex-grow:1;-moz-box-flex:1;-ms-flex-positive:1;flex-grow:1;padding-right:5em;font-size:4em;font-weight:600;overflow:hidden;-o-text-overflow:'.';text-overflow:'.';display:-webkit-box;-webkit-line-clamp:1;line-clamp:1;-webkit-box-orient:vertical;line-height:1.4}  
+        .cardify-trailer__remote{-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center}  
+        .cardify-trailer__remote-icon{-webkit-flex-shrink:0;-ms-flex-negative:0;flex-shrink:0;width:2.5em;height:2.5em}  
+        .cardify-trailer__remote-text{margin-left:1em}  
+        .cardify-trailer.display{opacity:1}  
+        .cardify-trailer.display .cardify-trailer__controlls{-webkit-transform:translate3d(0,0,0);-moz-transform:translate3d(0,0,0);transform:translate3d(0,0,0);opacity:1}  
+        .cardify-preview{position:absolute;bottom:100%;right:0;-webkit-border-radius:.3em;-moz-border-radius:.3em;border-radius:.3em;width:6em;height:4em;display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;background-color:#000;overflow:hidden}  
+        .cardify-preview>div{position:relative;width:100%;height:100%}  
+        .cardify-preview__img{opacity:0;position:absolute;left:0;top:0;width:100%;height:100%;-webkit-background-size:cover;-moz-background-size:cover;-o-background-size:cover;background-size:cover;-webkit-transition:opacity .2s;-o-transition:opacity .2s;-moz-transition:opacity .2s;transition:opacity .2s}  
+        .cardify-preview__img.loaded{opacity:1}  
+        .cardify-preview__loader{position:absolute;left:50%;bottom:0;-webkit-transform:translate3d(-50%,0,0);-moz-transform:translate3d(-50%,0,0);transform:translate3d(-50%,0,0);height:.2em;-webkit-border-radius:.2em;-moz-border-radius:.2em;border-radius:.2em;background-color:#fff;width:0;-webkit-transition:width .1s linear;-o-transition:width .1s linear;-moz-transition:width .1s linear;transition:width .1s linear}  
+        .cardify-preview__line{position:absolute;height:.8em;left:0;width:100%;background-color:#000}  
+        .cardify-preview__line.one{top:0}  
+        .cardify-preview__line.two{bottom:0}  
+        .head.nodisplay{-webkit-transform:translate3d(0,-100%,0);-moz-transform:translate3d(0,-100%,0);transform:translate3d(0,-100%,0)}  
+        body:not(.menu--open) .cardify__background{-webkit-mask-image:-webkit-gradient(linear,left top,left bottom,color-stop(50%,white),to(rgba(255,255,255,0)));-webkit-mask-image:-webkit-linear-gradient(top,white 50%,rgba(255,255,255,0) 100%);mask-image:-webkit-gradient(linear,left top,left bottom,color-stop(50%,white),to(rgba(255,255,255,0)));mask-image:linear-gradient(to bottom,white 50%,rgba(255,255,255,0) 100%)}  
       </style>  
     `;  
   
@@ -564,71 +620,71 @@
       }  
     });  
   
-    // Обробник події full  
+    // Обробник події full - відновлено оригінальну логіку  
     Lampa.Listener.follow('full', (e) => {  
       if (e.type === 'complite') {  
         const $buttons = e.object.activity.render().find('.full-start-new__buttons');  
-        const $muteButton = $buttons.find('.cardify-mute-button');  
+        const $mute_button = $buttons.find('.cardify-mute-button');  
   
         // Додаємо клас для фону  
         e.object.activity.render().find('.full-start__background').addClass('cardify__background');  
   
-        // Якщо трейлери вимкнені - перемикання бекдропів  
-        if (!Lampa.Storage.field('cardify_run_trailers')) {  
-          const backdrops = e.data.images?.backdrops || [];  
-            
-          if (backdrops.length > 1) {  
-            let currentIndex = 0;  
-            let timerPoster;  
-            let isActive = true;  
+        // Перемикання фонових зображень, якщо трейлери вимкнено  
+        if (!Lampa.Storage.field('cardify_run_trailers')) {      
+          const backdrops = e.data.images?.backdrops || [];      
+                
+          if (backdrops.length > 1) {      
+            let current_index = 0;      
+            let timer_poster;      
+            let is_active = true;      
               
-            const changeBackdrop = () => {  
-              if (!isActive) return;  
-                
-              currentIndex = (currentIndex + 1) % backdrops.length;  
-              const newBackdropUrl = LAMPAC_HOST + '/tmdb/img/t/p/w1280' + backdrops[currentIndex].file_path;  
-                
-              const $background = e.object.activity.render().find('.full-start__background');  
-                
-              if ($background.length === 0) {  
-                console.error('Background element not found!');  
-                return;  
-              }  
-                
-              $background.removeClass('loaded');  
-              $background.attr('src', newBackdropUrl);  
-                
-              $background.on('load', function() {  
-                $(this).addClass('loaded');  
-                $(this).off('load');  
-              });  
-            };  
+            const change_backdrop = function() {      
+              if (!is_active) return;    
+                    
+              current_index = (current_index + 1) % backdrops.length;      
+              const new_backdrop_url = LAMPAC_HOST + '/tmdb/img/t/p/w1280' + backdrops[current_index].file_path;      
+                      
+              const $background = e.object.activity.render().find('.full-start__background');    
+                    
+              if ($background.length === 0) {    
+                console.error('Background element not found!');    
+                return;    
+              }    
+                    
+              $background.removeClass('loaded');    
+              $background.attr('src', new_backdrop_url);    
+                    
+              $background.on('load', function() {    
+                $(this).addClass('loaded');    
+                $(this).off('load');    
+              });    
+            };      
               
-            changeBackdrop();  
-            timerPoster = setInterval(changeBackdrop, 10000);  
+            change_backdrop();      
+            timer_poster = setInterval(change_backdrop, 10000);      
               
-            const stopPosterTimer = (a) => {  
-              if (a.type === 'destroy' && a.object.activity === e.object.activity) {  
-                clearInterval(timerPoster);  
-                isActive = false;  
-                Lampa.Listener.remove('activity', stopPosterTimer);  
-              }  
-            };  
+            const stop_poster_timer = function(a) {      
+              if (a.type == 'destroy' && a.object.activity === e.object.activity) {      
+                clearInterval(timer_poster);      
+                is_active = false;      
+                Lampa.Listener.remove('activity', stop_poster_timer);      
+              }      
+            };      
               
-            Lampa.Listener.follow('activity', stopPosterTimer);  
-          }  
+            Lampa.Listener.follow('activity', stop_poster_timer);      
+          }      
         } else {  
-          // Трейлери увімкнено  
+          // Трейлери увімкнено - створюємо Trailer  
           const trailer = selectBestTrailer(e.data);  
   
           if (Lampa.Manifest.app_digital >= 220) {  
             if (Lampa.Activity.active().activity === e.object.activity) {  
-              trailer && new Trailer(e.object, trailer, $muteButton);  
+              trailer && new Trailer(e.object, trailer, $mute_button);  
             } else {  
-              const follow = (a) => {  
-                if (a.type === 'start' && a.object.activity === e.object.activity && !e.object.activity.trailer_ready) {  
+              const follow = function follow(a) {  
+                if (a.type == 'start' && a.object.activity === e.object.activity && !e.object.activity.trailer_ready) {  
                   Lampa.Listener.remove('activity', follow);  
-                  trailer && new Trailer(e.object, trailer, $muteButton);  
+                  trailer && new Trailer(e.object, trailer, $mute_button);  
                 }  
               };  
               Lampa.Listener.follow('activity', follow);  
@@ -640,12 +696,10 @@
   }  
   
   // Ініціалізація плагіна  
-  if (window.appready) {  
-    startPlugin();  
-  } else {  
+  if (window.appready) startPlugin();  
+  else {  
     Lampa.Listener.follow('app', (e) => {  
       if (e.type === 'ready') startPlugin();  
     });  
   }  
 })();
-  
