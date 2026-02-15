@@ -1164,7 +1164,7 @@ function pluginPage(object) {
 								}  
 							});  
 						});  
-					}  
+					  
 					body.append(card);  
 					if (!!channel['epgId']) {  
 						card.attr('data-epg-id', channel['epgId']).addClass('js-epgNoRender');  
