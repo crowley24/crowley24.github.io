@@ -1,0 +1,651 @@
+(function () {  
+  'use strict';  
+  
+  const LAMPAC_HOST = '{localhost}'; // буде замінено при завантаженні плагіна  
+  
+  /**  
+   * Вибирає найкращий трейлер з доступних (мова, дата)  
+   * @param {Object} data - дані картки TMDB  
+   * @returns {Object|null} - об'єкт трейлера або null  
+   */  
+  function selectBestTrailer(data) {  
+    if (!data.videos?.results?.length) return null;  
+  
+    const items = data.videos.results.map(element => ({  
+      title: Lampa.Utils.shortText(element.name, 50),  
+      id: element.key,  
+      code: element.iso_639_1,  
+      time: new Date(element.published_at).getTime(),  
+      url: 'https://www.youtube.com/watch?v=' + element.key,  
+      img: 'https://img.youtube.com/vi/' + element.key + '/default.jpg'  
+    }));  
+  
+    items.sort((a, b) => (a.time > b.time ? -1 : a.time < b.time ? 1 : 0));  
+  
+    const tmdbLang = Lampa.Storage.field('tmdb_lang');  
+    const myLang = items.filter(n => n.code === tmdbLang);  
+    const enLang = items.filter(n => n.code === 'en' && !myLang.includes(n));  
+    const result = [...myLang, ...enLang];  
+  
+    return result[0] || null;  
+  }  
+  
+  /**  
+   * Міні-плеєр YouTube для трейлера  
+   */  
+  class Player {  
+    constructor(object, video, muteButton) {  
+      this.paused = false;  
+      this.display = false;  
+      this.ended = false;  
+      this.muteButton = muteButton;  
+      this.isMuted = true;  
+      this.listener = Lampa.Subscribe();  
+      this.html = $(`  
+        <div class="cardify-trailer">  
+          <div class="cardify-trailer__youtube">  
+            <div class="cardify-trailer__youtube-iframe"></div>  
+            <div class="cardify-trailer__youtube-line one"></div>  
+            <div class="cardify-trailer__youtube-line two"></div>  
+          </div>  
+          <div class="cardify-trailer__controlls">  
+            <div class="cardify-trailer__title"></div>  
+          </div>  
+        </div>  
+      `);  
+  
+      if (typeof YT !== 'undefined' && YT.Player) {  
+        this.youtube = new YT.Player(this.html.find('.cardify-trailer__youtube-iframe')[0], {  
+          height: 225,  
+          width: 400,  
+          playerVars: {  
+            controls: 1,  
+            showinfo: 0,  
+            autohide: 1,  
+            modestbranding: 1,  
+            autoplay: 0,  
+            disablekb: 1,  
+            fs: 0,  
+            enablejsapi: 1,  
+            playsinline: 1,  
+            rel: 0,  
+            suggestedQuality: 'hd1080',  
+            setPlaybackQuality: 'hd1080',  
+            mute: 1  
+          },  
+          videoId: video.id,  
+          events: {  
+            onReady: () => {  
+              this.loaded = true;  
+              this.listener.send('loaded');  
+            },  
+            onStateChange: (state) => {  
+              if (state.data === YT.PlayerState.PLAYING) {  
+                this.paused = false;  
+                clearInterval(this.timer);  
+                this.timer = setInterval(() => {  
+                  const left = this.youtube.getDuration() - this.youtube.getCurrentTime();  
+                  const toEnd = 13;  
+                  const fade = 5;  
+  
+                  if (left <= toEnd + fade) {  
+                    const vol = 1 - (toEnd + fade - left) / fade;  
+                    this.youtube.setVolume(Math.max(0, vol * 100));  
+  
+                    if (left <= toEnd) {  
+                      clearInterval(this.timer);  
+                      this.listener.send('ended');  
+                    }  
+                  }  
+                }, 100);  
+  
+                this.listener.send('play');  
+  
+                if (this.firstUnmute) this.unmute();  
+              }  
+  
+              if (state.data === YT.PlayerState.PAUSED) {  
+                this.paused = true;  
+                clearInterval(this.timer);  
+                this.listener.send('paused');  
+              }  
+  
+              if (state.data === YT.PlayerState.ENDED) {  
+                this.listener.send('ended');  
+              }  
+  
+              if (state.data === YT.PlayerState.BUFFERING) {  
+                state.target.setPlaybackQuality('hd1080');  
+              }  
+            },  
+            onError: () => {  
+              this.loaded = false;  
+              this.listener.send('error');  
+            }  
+          }  
+        });  
+      }  
+    }  
+  
+    play() {  
+      try {  
+        this.youtube?.playVideo();  
+      } catch (e) {}  
+    }  
+  
+    pause() {  
+      try {  
+        this.youtube?.pauseVideo();  
+      } catch (e) {}  
+    }  
+  
+    unmute() {  
+      try {  
+        if (this.isMuted) {  
+          this.youtube.unMute();  
+          this.isMuted = false;  
+          this.muteButton.find('svg').html(this.getSoundOnIcon());  
+          this.muteButton.find('span').text(Lampa.Lang.translate('cardify_disable_sound'));  
+        } else {  
+          this.youtube.mute();  
+          this.isMuted = true;  
+          this.muteButton.find('svg').html(this.getSoundOffIcon());  
+          this.muteButton.find('span').text(Lampa.Lang.translate('cardify_enable_sound'));  
+        }  
+        this.firstUnmute = true;  
+      } catch (e) {}  
+    }  
+  
+    getSoundOffIcon() {  
+      return '<path d="M13 4L7 9H3V19H7L13 24V4Z" stroke="currentColor" stroke-width="2" fill="none"/>' +  
+             '<path d="M19 8C20.5 9.5 21 12 21 14C21 16 20.5 18.5 19 20" stroke="currentColor" stroke-width="2" fill="none"/>' +  
+             '<path d="M17 10C17.8 11.2 18 12.5 18 14C18 15.5 17.8 16.8 17 18" stroke="currentColor" stroke-width="2" fill="none"/>';  
+    }  
+  
+    getSoundOnIcon() {  
+      return '<path d="M13 4L7 9H3V19H7L13 24V4Z" stroke="currentColor" stroke-width="2" fill="currentColor"/>' +  
+             '<path d="M19 8C20.5 9.5 21 12 21 14C21 16 20.5 18.5 19 20" stroke="currentColor" stroke-width="2" fill="currentColor"/>' +  
+             '<path d="M17 10C17.8 11.2 18 12.5 18 14C18 15.5 17.8 16.8 17 18" stroke="currentColor" stroke-width="2" fill="currentColor"/>';  
+    }  
+  
+    show() {  
+      this.html.addClass('display');  
+      this.display = true;  
+    }  
+  
+    hide() {  
+      this.html.removeClass('display');  
+      this.display = false;  
+    }  
+  
+    render() {  
+      return this.html;  
+    }  
+  
+    destroy() {  
+      this.loaded = false;  
+      this.display = false;  
+  
+      try {  
+        this.youtube?.destroy();  
+      } catch (e) {}  
+  
+      clearInterval(this.timer);  
+      this.html.remove();  
+      $('body').removeClass('cardify-trailer-active');  
+    }  
+  }  
+  
+  /**  
+   * Управління трейлером: стан, анімація, контролери  
+   */  
+  class Trailer {  
+    constructor(object, video, muteButton) {  
+      this.object = object;  
+      this.video = video;  
+      this.muteButton = muteButton;  
+      this.player = null;  
+      this.state = 'idle';  
+      this.timers = {};  
+  
+      this.start();  
+    }  
+  
+    same() {  
+      return Lampa.Activity.active().activity === this.object.activity;  
+    }  
+  
+    animate() {  
+      const loader = this.object.activity.render().find('.cardify-preview__loader').width(0);  
+      const started = Date.now();  
+      const duration = 1200;  
+  
+      clearInterval(this.timers.anim);  
+      this.timers.anim = setInterval(() => {  
+        const left = Date.now() - started;  
+        if (left > duration) {  
+          clearInterval(this.timers.anim);  
+          return;  
+        }  
+        loader.width(Math.round(left / duration * 100) + '%');  
+      }, 100);  
+    }  
+  
+    preview() {  
+      const preview = $(`  
+        <div class="cardify-preview">  
+          <div>  
+            <img class="cardify-preview__img" />  
+            <div class="cardify-preview__line one"></div>  
+            <div class="cardify-preview__line two"></div>  
+            <div class="cardify-preview__loader"></div>  
+          </div>  
+        </div>  
+      `);  
+  
+      Lampa.Utils.imgLoad($('img', preview), this.video.img, () => {  
+        $('img', preview).addClass('loaded');  
+      });  
+  
+      this.object.activity.render().find('.cardify__right').append(preview);  
+    }  
+  
+    control() {  
+      const out = () => {  
+        this.state = 'hidden';  
+        Lampa.Controller.toggle('full_start');  
+      };  
+  
+      Lampa.Controller.add('cardify_trailer', {  
+        toggle: () => Lampa.Controller.clear(),  
+        enter: () => this.player.unmute(),  
+        left: out,  
+        up: out,  
+        down: out,  
+        right: out,  
+        back: () => {  
+          this.player.destroy();  
+          this.object.activity.render().find('.cardify-preview').remove();  
+          out();  
+        }  
+      });  
+  
+      Lampa.Controller.toggle('cardify_trailer');  
+    }  
+  
+    start() {  
+      const toggle = () => {  
+        if (this.state === 'idle') {  
+          this.state = 'loading';  
+        } else if (this.state === 'loading') {  
+          if (this.player.loaded && this.same()) {  
+            this.state = 'playing';  
+          }  
+        } else if (this.state === 'playing') {  
+          if (this.player.display) {  
+            this.state = 'hidden';  
+          } else {  
+            this.state = 'playing';  
+          }  
+        } else if (this.state === 'hidden') {  
+          this.state = 'idle';  
+        }  
+      };  
+  
+      const destroy = (e) => {  
+        if (e.type === 'destroy' && e.object.activity === this.object.activity) {  
+          this.destroy();  
+        }  
+      };  
+  
+      const remove = () => {  
+        Lampa.Listener.remove('activity', destroy);  
+        Lampa.Controller.listener.remove('toggle', toggle);  
+        this.destroy();  
+      };  
+  
+      Lampa.Listener.follow('activity', destroy);  
+      Lampa.Controller.listener.follow('toggle', toggle);  
+  
+      this.player = new Player(this.object, this.video, this.muteButton);  
+  
+      this.player.listener.follow('loaded', () => {  
+        this.preview();  
+        this.state = 'loading';  
+        this.animate();  
+        this.timers.load = setTimeout(() => {  
+          if (this.player.loaded && this.same()) {  
+            this.state = 'playing';  
+          }  
+        }, 1200);  
+      });  
+  
+      this.player.listener.follow('play', () => {  
+        clearTimeout(this.timers.show);  
+        this.timers.show = setTimeout(() => {  
+          this.player.show();  
+          this.control();  
+        }, 500);  
+      });  
+  
+      this.player.listener.follow('ended,error', () => {  
+        this.state = 'hidden';  
+        if (Lampa.Controller.enabled().name !== 'full_start') {  
+          Lampa.Controller.toggle('full_start');  
+        }  
+        this.object.activity.render().find('.cardify-preview').remove();  
+        setTimeout(remove, 300);  
+      });  
+  
+      this.object.activity.render().find('.activity__body').prepend(this.player.render());  
+  
+      if (this.muteButton) {  
+        this.muteButton.removeClass('hide').on('hover:enter', () => {  
+          this.player.unmute();  
+        });  
+      }  
+    }  
+  
+    destroy() {  
+      Object.values(this.timers).forEach(timer => clearTimeout(timer) || clearInterval(timer));  
+      this.player?.destroy();  
+      this.muteButton?.off('hover:enter');  
+    }  
+  }  
+  
+  /**  
+   * Ініціалізація плагіна  
+   */  
+  function startPlugin() {  
+    if (!Lampa.Platform.screen('tv')) {  
+      console.log('Cardify', 'no tv');  
+      return;  
+    }  
+  
+    // Локалізація  
+    Lampa.Lang.add({  
+      cardify_enable_sound: {  
+        ru: 'Включить звук',  
+        en: 'Enable sound',  
+        uk: 'Увімкнути звук',  
+        be: 'Уключыць гук',  
+        zh: '启用声音',  
+        pt: 'Ativar som',  
+        bg: 'Включване на звук'  
+      },  
+      cardify_disable_sound: {  
+        ru: 'Выключить звук',  
+        en: 'Disable sound',  
+        uk: 'Вимкнути звук',  
+        be: 'Выключыць гук',  
+        zh: '禁用声音',  
+        pt: 'Desativar som',  
+        bg: 'Изключване на звук'  
+      },  
+      cardify_enable_trailer: {  
+        ru: 'Показывать трейлер',  
+        en: 'Show trailer',  
+        uk: 'Показувати трейлер',  
+        be: 'Паказваць трэйлер',  
+        zh: '显示预告片',  
+        pt: 'Mostrar trailer',  
+        bg: 'Показване на трейлър'  
+      }  
+    });  
+  
+    // Шаблон full_start_new  
+    const fullStartNewTemplate = `  
+      <div class="full-start-new cardify">  
+        <div class="full-start-new__body">  
+          <div class="full-start-new__left hide">  
+            <div class="full-start-new__poster">  
+              <img class="full-start-new__img full--poster" />  
+            </div>  
+          </div>  
+          <div class="full-start-new__right">  
+            <div class="cardify__left">  
+              <div class="full-start-new__title">{title}</div>  
+              <div class="full-start-new__head"></div>  
+              <div class="cardify__details">  
+                <div class="full-start-new__details"></div>  
+              </div>  
+              <div class="full-start-new__buttons">  
+                <div class="full-start__button selector button--play">  
+                  <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                    <circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/>  
+                    <path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/>  
+                  </svg>  
+                  <span>#{title_watch}</span>  
+                </div>  
+                <div class="full-start__button selector button--book">  
+                  <svg width="21" height="32" viewBox="0 0 21 32" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                    <path d="M2 1.5H19C19.2761 1.5 19.5 1.72386 19.5 2V27.9618C19.5 28.3756 19.0261 28.6103 18.697 28.3595L12.6212 23.7303C11.3682 22.7757 9.63183 22.7757 8.37885 23.7303L2.30302 28.3595C1.9739 28.6103 1.5 28.3756 1.5 27.9618V2C1.5 1.72386 1.72386 1.5 2 1.5Z" stroke="currentColor" stroke-width="2.5"/>  
+                  </svg>  
+                  <span>#{settings_input_links}</span>  
+                </div>  
+                <div class="full-start__button selector button--reaction">  
+                  <svg width="38" height="34" viewBox="0 0 38 34" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                    <path d="M37.208 10.9742C37.1364 10.8013 37.0314 10.6441 36.899 10.5117C36.7666 10.3794 36.6095 10.2744 36.4365 10.2028L12.0658 0.108375C11.7166 -0.0361828 11.3242 -0.0361227 10.9749 0.108542C10.6257 0.253206 10.3482 0.530634 10.2034 0.879836L0.108666 25.2507C0.0369593 25.4236 3.37953e-05 25.609 2.3187e-08 25.7962C-3.37489e-05 25.9834 0.0368249 26.1688 0.108469 26.3418C0.180114 26.5147 0.28514 26.6719 0.417545 26.8042C0.54995 26.9366 0.707139 27.0416 0.880127 27.1131L17.2452 33.8917C17.5945 34.0361 17.9869 34.0361 18.3362 33.8917L29.6574 29.2017C29.8304 29.1301 29.9875 29.0251 30.1199 28.8928C30.2523 28.7604 30.3573 28.6032 30.4289 28.4303L37.2078 12.065C37.2795 11.8921 37.3164 11.7068 37.3164 11.5196C37.3165 11.3325 37.2796 11.1471 37.208 10.9742ZM20.425 29.9407L21.8784 26.4316L25.3873 27.885L20.425 29.9407ZM28.3407 26.0222L21.6524 23.252C21.3031 23.1075 20.9107 23.1076 20.5615 23.2523C20.2123 23.3969 19.9348 23.6743 19.79 24.0235L17.0194 30.7123L3.28783 25.0247L12.2918 3.28773L34.0286 12.2912L28.3407 26.0222Z" fill="currentColor"/>  
+                    <path d="M25.3493 16.976L24.258 14.3423L16.959 17.3666L15.7196 14.375L13.0859 15.4659L15.4161 21.0916L25.3493 16.976Z" fill="currentColor"/>  
+                  </svg>  
+                  <span>#{title_reactions}</span>  
+                </div>  
+                <div class="full-start__button selector button--subscribe hide">  
+                  <svg width="25" height="30" viewBox="0 0 25 30" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                    <path d="M6.01892 24C6.27423 27.3562 9.07836 30 12.5 30C15.9216 30 18.7257 27.3562 18.981 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z" fill="currentColor"/>  
+                    <path d="M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z" stroke="currentColor" stroke-width="2.5"/>  
+                  </svg>  
+                  <span>#{title_subscribe}</span>  
+                </div>  
+                <div class="full-start__button selector button--mute cardify-mute-button hide">  
+                  <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                    <path d="M13 4L7 9H3V19H7L13 24V4Z" stroke="currentColor" stroke-width="2" fill="none"/>  
+                    <path d="M19 8C20.5 9.5 21 12 21 14C21 16 20.5 18.5 19 20" stroke="currentColor" stroke-width="2" fill="none"/>  
+                    <path d="M17 10C17.8 11.2 18 12.5 18 14C18 15.5 17.8 16.8 17 18" stroke="currentColor" stroke-width="2" fill="none"/>  
+                  </svg>  
+                  <span>${Lampa.Lang.translate('cardify_enable_sound')}</span>  
+                </div>  
+                <div class="full-start__button selector button--options">  
+                  <svg width="38" height="10" viewBox="0 0 38 10" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                    <circle cx="4.88968" cy="4.98563" r="4.75394" fill="currentColor"/>  
+                    <circle cx="18.9746" cy="4.98563" r="4.75394" fill="currentColor"/>  
+                    <circle cx="33.0596" cy="4.98563" r="4.75394" fill="currentColor"/>  
+                  </svg>  
+                </div>  
+              </div>  
+            </div>  
+            <div class="cardify__right">  
+              <div class="full-start-new__reactions selector">  
+                <div>#{reactions_none}</div>  
+              </div>  
+              <div class="full-start-new__rate-line">  
+                <div class="full-start__pg hide"></div>  
+                <div class="full-start__status hide"></div>  
+              </div>  
+            </div>  
+          </div>  
+        </div>  
+        <div class="hide buttons--container">  
+          <div class="full-start__button view--torrent hide">  
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="50px" height="50px">  
+              <path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2z M40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4 S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851 c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29 c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862-4.993-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8 c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722 C42.541,30.867,41.756,30.963,40.5,30.963z" fill="currentColor"/>  
+            </svg>  
+            <span>#{full_torrents}</span>  
+          </div>  
+          <div class="full-start__button selector view--trailer">  
+            <svg height="70" viewBox="0 0 80 70" fill="none" xmlns="http://www.w3.org/2000/svg">  
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/>  
+            </svg>  
+            <span>#{full_trailers}</span>  
+          </div>  
+        </div>  
+      </div>  
+    `;  
+  
+    // Реєстрація шаблону  
+    Lampa.Template.add('full_start_new', fullStartNewTemplate);  
+  
+    // CSS стилі  
+    const cardifyStyles = `  
+      <style>  
+        .full-start-new__head { margin-bottom: 1em; }  
+        body.cardify-trailer-active .full-start__background { opacity: 0 !important; }  
+        .cardify { transition: all 0.3s; }  
+        .cardify .full-start-new__body { height: 80vh; }  
+        .cardify .full-start-new__right { display: flex; align-items: flex-end; }  
+        .cardify .full-start-new__title { text-shadow: 0 0 0.1em rgba(0,0,0,0.3); }  
+        .cardify__left { flex-grow: 1; }  
+        .cardify__right { display: flex; align-items: center; flex-shrink: 0; position: relative; }  
+        .cardify__details { display: flex; }  
+        .cardify .full-start-new__reactions { margin: 0; margin-right: -2.8em; }  
+        .cardify .full-start-new__reactions:not(.focus) { margin: 0; }  
+        .cardify .full-start-new__reactions:not(.focus) > div:not(:first-child) { display: none; }  
+        .cardify .full-start-new__rate-line { margin: 0; margin-left: 3.5em; }  
+        .cardify__background { left: 0; }  
+        .cardify__background.loaded:not(.dim) { opacity: 1; }  
+        .cardify__background.nodisplay { opacity: 0 !important; }  
+        .cardify.nodisplay { transform: translate3d(0,50%,0); opacity: 0; }  
+        .cardify-trailer { opacity: 0; transition: opacity 0.3s; z-index: 1; }  
+        .cardify-trailer__youtube { background-color: #000; position: fixed; bottom: 20px; right: 20px; width: 400px; height: 225px; display: flex; align-items: center; z-index: 1000; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }  
+        .cardify-trailer__youtube iframe { border: 0; width: 100%; height: 100%; border-radius: 8px; }  
+        .cardify-trailer__youtube-line { position: fixed; height: 6.2em; background-color: #000; width: 100%; left: 0; display: none; }  
+        .cardify-trailer__youtube-line.one { top: 0; }  
+        .cardify-trailer__youtube-line.two { bottom: 0; }  
+        .cardify-trailer__controlls { display: none; }  
+        .cardify-trailer__title { flex-grow: 1; padding-right: 5em; font-size: 4em; font-weight: 600; overflow: hidden; text-overflow: '.'; display: -webkit-box; -webkit-line-clamp: 1; line-clamp: 1; -webkit-box-orient: vertical; line-height: 1.4; }  
+        .cardify-trailer__remote { flex-shrink: 0; display: flex; align-items: center; }  
+        .cardify-trailer__remote-icon { flex-shrink: 0; width: 2.5em; height: 2.5em; }  
+        .cardify-trailer__remote-text { margin-left: 1em; }  
+        .cardify-trailer.display { opacity: 1; }  
+        .cardify-trailer.display .cardify-trailer__controlls { transform: translate3d(0,0,0); opacity: 1; }  
+        .cardify-preview { position: absolute; bottom: 100%; right: 0; border-radius: 0.3em; width: 6em; height: 4em; display: flex; background-color: #000; overflow: hidden; }  
+        .cardify-preview > div { position: relative; width: 100%; height: 100%; }  
+        .cardify-preview__img { opacity: 0; position: absolute; left: 0; top: 0; width: 100%; height: 100%; background-size: cover; background-position: center; transition: opacity 0.2s; }  
+        .cardify-preview__img.loaded { opacity: 1; }  
+        .cardify-preview__loader { position: absolute; left: 50%; bottom: 0; transform: translate3d(-50%,0,0); height: 0.2em; border-radius: 0.2em; background-color: #fff; width: 0; transition: width 0.1s linear; }  
+        .cardify-preview__line { position: absolute; height: 0.8em; left: 0; width: 100%; background-color: #000; }  
+        .cardify-preview__line.one { top: 0; }  
+        .cardify-preview__line.two { bottom: 0; }  
+        .head.nodisplay { transform: translate3d(0,-100%,0); }  
+        body:not(.menu--open) .cardify__background { mask-image: linear-gradient(to bottom, white 50%, rgba(255,255,255,0) 100%); -webkit-mask-image: linear-gradient(to bottom, white 50%, rgba(255,255,255,0) 100%); }  
+      </style>  
+    `;  
+  
+    // Реєстрація CSS шаблону  
+    Lampa.Template.add('cardify_css', cardifyStyles);  
+    $('body').append(Lampa.Template.get('cardify_css', {}, true));  
+  
+    // Іконка для налаштувань  
+    const icon = `  
+      <svg width="36" height="28" viewBox="0 0 36 28" fill="none" xmlns="http://www.w3.org/2000/svg">  
+        <rect x="1.5" y="1.5" width="33" height="25" rx="3.5" stroke="white" stroke-width="3"/>  
+        <rect x="5" y="14" width="17" height="4" rx="2" fill="white"/>  
+        <rect x="5" y="20" width="10" height="3" rx="1.5" fill="white"/>  
+        <rect x="25" y="20" width="6" height="3" rx="1.5" fill="white"/>  
+      </svg>  
+    `;  
+  
+    // Реєстрація компонента в налаштуваннях  
+    Lampa.SettingsApi.addComponent({  
+      component: 'cardify',  
+      icon: icon,  
+      name: 'Cardify'  
+    });  
+  
+    Lampa.SettingsApi.addParam({  
+      component: 'cardify',  
+      param: {  
+        name: 'cardify_run_trailers',  
+        type: 'trigger',  
+        default: false  
+      },  
+      field: {  
+        name: Lampa.Lang.translate('cardify_enable_trailer')  
+      }  
+    });  
+  
+    // Обробник події full  
+    Lampa.Listener.follow('full', (e) => {  
+      if (e.type === 'complite') {  
+        const $buttons = e.object.activity.render().find('.full-start-new__buttons');  
+        const $muteButton = $buttons.find('.cardify-mute-button');  
+  
+        // Додаємо клас для фону  
+        e.object.activity.render().find('.full-start__background').addClass('cardify__background');  
+  
+        // Якщо трейлери вимкнені - перемикання бекдропів  
+        if (!Lampa.Storage.field('cardify_run_trailers')) {  
+          const backdrops = e.data.images?.backdrops || [];  
+            
+          if (backdrops.length > 1) {  
+            let currentIndex = 0;  
+            let timerPoster;  
+            let isActive = true;  
+              
+            const changeBackdrop = () => {  
+              if (!isActive) return;  
+                
+              currentIndex = (currentIndex + 1) % backdrops.length;  
+              const newBackdropUrl = LAMPAC_HOST + '/tmdb/img/t/p/w1280' + backdrops[currentIndex].file_path;  
+                
+              const $background = e.object.activity.render().find('.full-start__background');  
+                
+              if ($background.length === 0) {  
+                console.error('Background element not found!');  
+                return;  
+              }  
+                
+              $background.removeClass('loaded');  
+              $background.attr('src', newBackdropUrl);  
+                
+              $background.on('load', function() {  
+                $(this).addClass('loaded');  
+                $(this).off('load');  
+              });  
+            };  
+              
+            changeBackdrop();  
+            timerPoster = setInterval(changeBackdrop, 10000);  
+              
+            const stopPosterTimer = (a) => {  
+              if (a.type === 'destroy' && a.object.activity === e.object.activity) {  
+                clearInterval(timerPoster);  
+                isActive = false;  
+                Lampa.Listener.remove('activity', stopPosterTimer);  
+              }  
+            };  
+              
+            Lampa.Listener.follow('activity', stopPosterTimer);  
+          }  
+        } else {  
+          // Трейлери увімкнено  
+          const trailer = selectBestTrailer(e.data);  
+  
+          if (Lampa.Manifest.app_digital >= 220) {  
+            if (Lampa.Activity.active().activity === e.object.activity) {  
+              trailer && new Trailer(e.object, trailer, $muteButton);  
+            } else {  
+              const follow = (a) => {  
+                if (a.type === 'start' && a.object.activity === e.object.activity && !e.object.activity.trailer_ready) {  
+                  Lampa.Listener.remove('activity', follow);  
+                  trailer && new Trailer(e.object, trailer, $muteButton);  
+                }  
+              };  
+              Lampa.Listener.follow('activity', follow);  
+            }  
+          }  
+        }  
+      }  
+    });  
+  }  
+  
+  // Ініціалізація плагіна  
+  if (window.appready) {  
+    startPlugin();  
+  } else {  
+    Lampa.Listener.follow('app', (e) => {  
+      if (e.type === 'ready') startPlugin();  
+    });  
+  }  
+})();
+  
