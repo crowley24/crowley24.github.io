@@ -853,18 +853,21 @@ function loadPosterSwitcher(activity, data) {
         const posters = imagesData.posters || [];  
         if (posters.length <= 1) return;  
   
+        // Переконуємось що контейнер існує  
         const posterContainer = activity.render().find('.full-start-new__poster');  
+        if (!posterContainer.length) return;  
+  
         const switcherContainer = posterContainer.find('.applecation__poster-switcher');  
         const posterImg = posterContainer.find('.full-start-new__img');  
+          
+        if (!switcherContainer.length || !posterImg.length) return;  
+  
         const counterCurrent = switcherContainer.find('.current');  
         const counterTotal = switcherContainer.find('.total');  
-  
         let currentIndex = 0;  
   
-        // Оновлюємо лічильник  
         counterTotal.text(posters.length);  
   
-        // Функція зміни постера  
         function changePoster(index) {  
             if (index < 0) index = posters.length - 1;  
             if (index >= posters.length) index = 0;  
@@ -877,25 +880,27 @@ function loadPosterSwitcher(activity, data) {
             counterCurrent.text(currentIndex + 1);  
         }  
   
-        // Обробники кнопок  
-        switcherContainer.find('.poster-switcher__prev').on('click', () => {  
+        // Видаляємо попередні обробники  
+        switcherContainer.off('click');  
+          
+        // Додаємо нові обробники  
+        switcherContainer.find('.poster-switcher__prev').on('click', (e) => {  
+            e.preventDefault();  
             changePoster(currentIndex - 1);  
         });  
   
-        switcherContainer.find('.poster-switcher__next').on('click', () => {  
+        switcherContainer.find('.poster-switcher__next').on('click', (e) => {  
+            e.preventDefault();  
             changePoster(currentIndex + 1);  
         });  
   
-        // Показуємо перемикач  
         switcherContainer.show().addClass('show');  
-  
-        // Встановлюємо перший постер  
         changePoster(0);  
   
     }).fail(() => {  
-        // Помилка завантаження постерів  
+        console.warn('NewCard: Failed to load posters from TMDB API');  
     });  
-}  
+}
   
 // Патчим Api.img для улучшенного качества фона  
 function patchApiImg() {  
