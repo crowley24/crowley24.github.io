@@ -1,5 +1,3 @@
-/*jshint esversion: 6 */  
-/* global $, Lampa, Navigator */  
 (function () {  
 'use strict';  
 var plugin = {  
