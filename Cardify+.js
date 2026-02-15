@@ -50,6 +50,22 @@
   }  
   
   /**  
+   * Вибирає найкращий логотип з доступних  
+   */  
+  function selectBestLogo(data) {  
+    if (!data.images?.logos?.length) return null;  
+      
+    const tmdbLang = Lampa.Storage.field('tmdb_lang');  
+      
+    // Пріоритет: мова інтерфейсу -> англійська -> перший доступний  
+    const logo = data.images.logos.find(l => l.iso_639_1 === tmdbLang) ||  
+                 data.images.logos.find(l => l.iso_639_1 === 'en') ||  
+                 data.images.logos[0];  
+      
+    return logo ? Lampa.TMDB.image(logo.file_path) : null;  
+  }  
+  
+  /**  
    * Міні-плеєр YouTube  
    */  
   class Player {  
@@ -449,7 +465,7 @@
       }  
     });  
   
-    // Шаблон full_start_new  
+    // Шаблон full_start_new з підтримкою логотипів  
     const fullStartNewTemplate = `  
       <div class="full-start-new cardify">  
         <div class="full-start-new__body">  
@@ -460,7 +476,10 @@
           </div>  
           <div class="full-start-new__right">  
             <div class="cardify__left">  
-              <div class="full-start-new__title">{title}</div>  
+              <div class="full-start-new__title">  
+                {logo ? \`<img class="full-start-new__logo" src="\${logo}" alt="\${title}" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">  
+                       <div style="display:none;">\${title}</div>\` : \`\${title}\`}  
+              </div>  
               <div class="full-start-new__head"></div>  
               <div class="cardify__details">  
                 <div class="full-start-new__details"></div>  
@@ -469,13 +488,13 @@
                 <div class="full-start__button selector button--play">  
                   <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg">  
                     <circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/>  
-                    <path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/>  
+                   <path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/>  
                   </svg>  
                   <span>#{title_watch}</span>  
                 </div>  
                 <div class="full-start__button selector button--book">  
                   <svg width="21" height="32" viewBox="0 0 21 32" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                   <path d="M2 1.5H19C19.2761 1.5 19.5 1.72386 19.5 2V27.9618C19.5 28.3756 19.0261 28.6103 18.697 28.3595L12.6212 23.7303C11.3682 22.7757 9.63183 22.7757 8.37885 23.7303L2.30302 28.3595C1.9739 28.6103 1.5 28.3756 1.5 27.9618V2C1.5 1.72386 1.72386 1.5 2 1.5Z" stroke="currentColor" stroke-width="2.5"/>  
+                    <path d="M2 1.5H19C19.2761 1.5 19.5 1.72386 19.5 2V27.9618C19.5 28.3756 19.0261 28.6103 18.697 28.3595L12.6212 23.7303C11.3682 22.7757 9.63183 22.7757 8.37885 23.7303L2.30302 28.3595C1.9739 28.6103 1.5 28.3756 1.5 27.9618V2C1.5 1.72386 1.72386 1.5 2 1.5Z" stroke="currentColor" stroke-width="2.5"/>  
                   </svg>  
                   <span>#{settings_input_links}</span>  
                 </div>  
@@ -541,7 +560,7 @@
     // Реєстрація шаблону  
     Lampa.Template.add('full_start_new', fullStartNewTemplate);  
   
-    // CSS стилі  
+    // CSS стилі з підтримкою логотипів  
     const cardifyStyles = `  
       <style>  
         .full-start-new__head { margin-bottom: 1em; }  
@@ -562,7 +581,7 @@
         .cardify__background.nodisplay{opacity:0 !important}  
         .cardify.nodisplay{-webkit-transform:translate3d(0,50%,0);-moz-transform:translate3d(0,50%,0);transform:translate3d(0,50%,0);opacity:0}  
         .cardify-trailer{opacity:0;-webkit-transition:opacity .3s;-o-transition:opacity .3s;-moz-transition:opacity .3s;transition:opacity .3s;z-index:1}  
-       .cardify-trailer__youtube{background-color:#000;position:fixed;bottom:20px;right:20px;width:400px;height:225px;display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center;z-index:1000;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.5)}  
+        .cardify-trailer__youtube{background-color:#000;position:fixed;bottom:20px;right:20px;width:400px;height:225px;display:-webkit-box;display:-webkit-flex;display:-moz-box;display:-ms-flexbox;display:flex;-webkit-box-align:center;-webkit-align-items:center;-moz-box-align:center;-ms-flex-align:center;align-items:center;z-index:1000;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.5)}  
         .cardify-trailer__youtube iframe{border:0;width:100%;height:100%;border-radius:8px}  
         .cardify-trailer__youtube-line{position:fixed;height:6.2em;background-color:#000;width:100%;left:0;display:none}  
         .cardify-trailer__youtube-line.one{top:0}  
@@ -584,6 +603,14 @@
         .cardify-preview__line.two{bottom:0}  
         .head.nodisplay{-webkit-transform:translate3d(0,-100%,0);-moz-transform:translate3d(0,-100%,0);transform:translate3d(0,-100%,0)}  
         body:not(.menu--open) .cardify__background{-webkit-mask-image:-webkit-gradient(linear,left top,left bottom,color-stop(50%,white),to(rgba(255,255,255,0)));-webkit-mask-image:-webkit-linear-gradient(top,white 50%,rgba(255,255,255,0) 100%);mask-image:-webkit-gradient(linear,left top,left bottom,color-stop(50%,white),to(rgba(255,255,255,0)));mask-image:linear-gradient(to bottom,white 50%,rgba(255,255,255,0) 100%)}  
+          
+        /* Стилі для логотипів */  
+        .full-start-new__logo {  
+          max-height: 80px;  
+          max-width: 100%;  
+          object-fit: contain;  
+          filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));  
+        }  
       </style>  
     `;  
   
@@ -620,7 +647,7 @@
       }  
     });  
   
-    // Обробник події full - відновлено оригінальну логіку  
+    // Обробник події full - відновлено оригінальну логіку з підтримкою логотипів  
     Lampa.Listener.follow('full', (e) => {  
       if (e.type === 'complite') {  
         const $buttons = e.object.activity.render().find('.full-start-new__buttons');  
@@ -628,6 +655,9 @@
   
         // Додаємо клас для фону  
         e.object.activity.render().find('.full-start__background').addClass('cardify__background');  
+  
+        // Отримуємо логотип  
+        const logo = selectBestLogo(e.data);  
   
         // Перемикання фонових зображень, якщо трейлери вимкнено  
         if (!Lampa.Storage.field('cardify_run_trailers')) {      
