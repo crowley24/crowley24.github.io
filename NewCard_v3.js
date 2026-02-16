@@ -99,16 +99,15 @@ const translations = {
                 width: auto;  
                 object-fit: contain;  
                 filter:   
-                    /* Біла рамка тільки для оригінальних кольорів */  
+                    /* Чітка біла рамка без розмиття */  
                     ${originalColors ? `  
-                    drop-shadow(0 0 2px rgba(255,255,255,0.6))  
-                    drop-shadow(0 0 4px rgba(255,255,255,0.52))  
-                    drop-shadow(0 0 6px rgba(255,255,255,0.44))  
-                    drop-shadow(0 0 8px rgba(255,255,255,0.28))
+                        drop-shadow(0 0 0.5px rgba(255,255,255,0.8))  
+                        drop-shadow(0 0 1px rgba(255,255,255,0.6))  
+                        drop-shadow(0 0 1.5px rgba(255,255,255,0.4))  
                     ` : ''}  
-                    /* Чорні тіні для контрасту в обох режимах */  
-                    drop-shadow(0 0 1px rgba(0,0,0,0.9))  
-                    drop-shadow(0 0 2px rgba(0,0,0,0.7))  
+                    /* Чіткі чорні тіні для контрасту */  
+                    drop-shadow(0 0 0.5px rgba(0,0,0,0.9))  
+                    drop-shadow(0 0 1px rgba(0,0,0,0.7))  
                     ${originalColors ? '' : 'brightness(0) invert(1)'};  
             }  
         </style>  
@@ -116,7 +115,6 @@ const translations = {
       
     $('body').append(colorStyles);  
 }
-  
     // Додаємо налаштування плагіна  
     function addSettings() {  
         // Ініціалізуємо значення за замовчуванням  
@@ -228,64 +226,64 @@ Lampa.SettingsApi.addParam({
                 addCustomTemplate();  
             }  
         });  
-  
-        // 6. Розмір логотипа  
-        Lampa.SettingsApi.addParam({  
-            component: 'applecation_settings',  
-            param: {  
-                name: 'applecation_logo_scale',  
-                type: 'select',  
-                values: {'50':'50%','70':'70%','100':t('scale_default'),'130':'130%','150':'150%'},  
-                default: '100'  
-            },  
-            field: {  
-                name: t('logo_scale'),  
-                description: t('logo_scale_desc')  
-            },  
-            onChange: function(value) {  
-                Lampa.Storage.set('applecation_logo_scale', value);  
-                applyScales();  
-            }  
-        });  
-  
-        // 7. Розмір тексту  
-        Lampa.SettingsApi.addParam({  
-            component: 'applecation_settings',  
-            param: {  
-                name: 'applecation_text_scale',  
-                type: 'select',  
-                values: {'70':'70%','85':'85%','100':t('scale_default'),'115':'115%','130':'130%'},  
-                default: '100'  
-            },  
-            field: {  
-                name: t('text_scale'),  
-                description: t('text_scale_desc')  
-            },  
-            onChange: function(value) {  
-                Lampa.Storage.set('applecation_text_scale', value);  
-                applyScales();  
-            }  
-        });  
-  
-        // 8. Відступи  
-        Lampa.SettingsApi.addParam({  
-            component: 'applecation_settings',  
-            param: {  
-                name: 'applecation_spacing_scale',  
-                type: 'select',  
-                values: {'50':'50%','100':t('scale_default'),'150':'150%','200':'200%'},  
-                default: '100'  
-            },  
-            field: {  
-                name: t('spacing_scale'),  
-                description: t('spacing_scale_desc')  
-            },  
-            onChange: function(value) {  
-                Lampa.Storage.set('applecation_spacing_scale', value);  
-                applyScales();  
-            }  
-        });  
-  
+    
+               // Розмір логотипа
+        Lampa.SettingsApi.addParam({
+            component: 'applecation_settings',
+            param: {
+                name: 'applecation_logo_scale',
+                type: 'select',
+                values: {'50':'50%','60':'60%','70':'70%','80':'80%','90':'90%','100':t('scale_default'),'110':'110%','120':'120%','130':'130%','140':'140%','150':'150%','160':'160%','170':'170%','180':'180%'},
+                default: '100'
+            },
+            field: {
+                name: t('logo_scale'),
+                description: t('logo_scale_desc')
+            },
+            onChange: function(value) {
+                Lampa.Storage.set('applecation_logo_scale', value);
+                applyScales();
+            }
+        });
+
+        // Розмір тексту
+        Lampa.SettingsApi.addParam({
+            component: 'applecation_settings',
+            param: {
+                name: 'applecation_text_scale',
+                type: 'select',
+                values: {'50':'50%','60':'60%','70':'70%','80':'80%','90':'90%','100':t('scale_default'),'110':'110%','120':'120%','130':'130%','140':'140%','150':'150%','160':'160%','170':'170%','180':'180%'},
+                default: '100'
+            },
+            field: {
+                name: t('text_scale'),
+                description: t('text_scale_desc')
+            },
+            onChange: function(value) {
+                Lampa.Storage.set('applecation_text_scale', value);
+                applyScales();
+            }
+        });
+
+        // Відступи
+        Lampa.SettingsApi.addParam({
+            component: 'applecation_settings',
+            param: {
+                name: 'applecation_spacing_scale',
+                type: 'select',
+                values: {'50':'50%','60':'60%','70':'70%','80':'80%','90':'90%','100':t('scale_default'),'110':'110%','120':'120%','130':'130%','140':'140%','150':'150%','160':'160%','170':'170%','180':'180%','200':'200%','250':'250%','300':'300%'},
+                default: '100'
+            },
+            field: {
+                name: t('spacing_scale'),
+                description: t('spacing_scale_desc')
+            },
+            onChange: function(value) {
+                Lampa.Storage.set('applecation_spacing_scale', value);
+                applyScales();
+            }
+        });
+        
         // ЗАПУСК ПЕРЕВІРОК ПРИ СТАРТІ  
         updateZoomState();  
         if (!Lampa.Storage.get('applecation_show_ratings', false)) {  
