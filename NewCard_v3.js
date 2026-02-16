@@ -115,7 +115,7 @@ const translations = {
             }
         });
 
-        // 2. Логотипи Студій (ВИПРАВЛЕНО type на trigger)
+        // 2. Логотипи Студій 
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: {
@@ -132,8 +132,26 @@ const translations = {
                 // Тут можна додати функцію оновлення інтерфейсу, якщо треба миттєво
             }
         });
+
+        // 3. Оригінальні кольори логотипів  
+Lampa.SettingsApi.addParam({  
+    component: 'applecation_settings',  
+    param: {  
+        name: 'applecation_original_colors',  
+        type: 'trigger',  
+        default: true  
+    },  
+    field: {  
+        name: 'Оригінальні кольори логотипів',  
+        description: 'Показувати логотипи студій в оригінальних кольорах'  
+    },  
+    onChange: function(value) {  
+        Lampa.Storage.set('applecation_original_colors', value);  
+        updateLogoColors();  
+    }  
+});
         
-        // 3. Показувати рейтинги
+        // 4. Показувати рейтинги
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: {
@@ -150,7 +168,7 @@ const translations = {
             }
         });
         
-        // 4. Розташування рейтингів
+        // 5. Розташування рейтингів
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: {
@@ -174,7 +192,7 @@ const translations = {
             }
         });
 
-        // 5. Розмір логотипа
+        // 6. Розмір логотипа
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: {
@@ -193,7 +211,7 @@ const translations = {
             }
         });
 
-        // 6. Розмір тексту
+        // 7. Розмір тексту
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: {
@@ -212,7 +230,7 @@ const translations = {
             }
         });
 
-        // 7. Відступи
+        // 8. Відступи
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: {
@@ -593,7 +611,7 @@ body.applecation--logo-large .applecation__logo img {
     max-height: 1.4em;  
     width: auto;  
     object-fit: contain;  
-    filter: brightness(0) invert(1);  
+    /* Видалено: filter: brightness(0) invert(1); */  
 }
 
 .applecation__meta-text {
@@ -949,10 +967,7 @@ body.applecation--zoom-enabled .full-start__background.loaded:not(.dim) {
 function loadNetworkIcon(activity, data) {  
     const networkContainer = activity.render().find('.applecation__network');  
   
-    // Перевіряємо значення з пам'яті (Storage)  
     const showStudio = Lampa.Storage.get('applecation_show_studio', 'true');  
-      
-    // Якщо вимкнено — видаляємо контейнер і виходимо з функції  
     if (showStudio === false || showStudio === 'false') {  
         networkContainer.remove();  
         return;  
@@ -980,15 +995,13 @@ function loadNetworkIcon(activity, data) {
         });  
     }  
       
-    // Відображаємо всі логотипи з відступами  
+    // Відображаємо всі логотипи  
     if (logos.length > 0) {  
         networkContainer.html(logos.join(''));  
     } else {  
-        // Якщо немає іконок - приховуємо контейнер  
         networkContainer.remove();  
     }  
 }
-
    // Заповнюємо мета інформацію (Тип/Жанр/піджанр)
     function fillMetaInfo(activity, data) {
         const metaTextContainer = activity.render().find('.applecation__meta-text');
