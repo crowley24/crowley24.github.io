@@ -25,7 +25,7 @@
                 name: 'TEST',
                 url: 'https://m3u.ch/pl/cbf67b9b46359837429e6deb5b384f9e_e2c018841bc8b4dd2110ddc53d611e72.m3u'
             }],
-            epg_url: 'https://iptvx.one/epg/epg.xml.gz',
+            epg_url: 'https://iptvx.one/epg/epg.xml',
             favorites: [],
             current_pl_index: 0
         });
