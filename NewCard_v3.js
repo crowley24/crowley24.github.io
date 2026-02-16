@@ -100,9 +100,14 @@ const translations = {
                 object-fit: contain;  
                 ${originalColors ? '' : 'filter: brightness(0) invert(1);'}  
                 filter:   
+                    /* Потужна біла рамка для чорних логотипів */  
+                    drop-shadow(0 0 2px rgba(255,255,255,1))  
+                    drop-shadow(0 0 4px rgba(255,255,255,0.9))  
+                    drop-shadow(0 0 6px rgba(255,255,255,0.8))  
+                    drop-shadow(0 0 8px rgba(255,255,255,0.6))  
+                    /* Додатковий контур */  
                     drop-shadow(0 0 1px rgba(0,0,0,0.9))  
                     drop-shadow(0 0 2px rgba(0,0,0,0.7))  
-                    drop-shadow(0 0 3px rgba(255,255,255,0.3))  
                     ${originalColors ? '' : 'brightness(0) invert(1)'};  
             }  
         </style>  
