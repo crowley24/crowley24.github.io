@@ -87,24 +87,25 @@ const translations = {
     $('body').toggleClass('applecation--zoom-enabled', enabled);   
 }  
   
-    function updateLogoColors() {    
-    const originalColors = Lampa.Storage.get('applecation_original_colors', true);    
-    $('style[data-id="applecation_logo_colors"]').remove();    
+    function updateLogoColors() {  
+    const originalColors = Lampa.Storage.get('applecation_original_colors', true);  
+    $('style[data-id="applecation_logo_colors"]').remove();  
       
-    const colorStyles = `    
-        <style data-id="applecation_logo_colors">    
-            .applecation__network img {    
-                display: block;    
-                max-height: 1.4em;    
-                width: auto;    
-                object-fit: contain;    
-                ${originalColors ? '' : 'filter: brightness(0) invert(1);'}    
-            }    
-        </style>    
-    `;    
+    const colorStyles = `  
+        <style data-id="applecation_logo_colors">  
+            .applecation__network img {  
+                display: block;  
+                max-height: 1.4em;  
+                width: auto;  
+                object-fit: contain;  
+                ${originalColors ? '' : 'filter: brightness(0) invert(1);'}  
+                filter: drop-shadow(0 0 2px rgba(0,0,0,0.8)) ${originalColors ? '' : 'brightness(0) invert(1);'};  
+            }  
+        </style>  
+    `;  
       
-    $('body').append(colorStyles);    
-}  
+    $('body').append(colorStyles);  
+}
   
     // Додаємо налаштування плагіна  
     function addSettings() {  
