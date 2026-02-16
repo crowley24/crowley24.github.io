@@ -1,8 +1,6 @@
-); });
-})();
 // ==Lampa==
 // name: IPTV PRO (EPG Fixed)
-// version: 12.8
+// version: 12.9
 // ==/Lampa==
 
 (function () {
@@ -16,8 +14,9 @@
         var active_col = 'groups';
         var index_g = 0, index_c = 0;
 
+        // Безпечне отримання сховища
         var storage_key = 'iptv_pro_v12';
-        var config = Lampa.Storage.get(storage_key, {
+        var config = {
             playlists: [{
                 name: 'TEST',
                 url: 'https://m3u.ch/pl/cbf67b9b46359837429e6deb5b384f9e_e2c018841bc8b4dd2110ddc53d611e72.m3u'
@@ -25,7 +24,14 @@
             epg_url: 'https://iptvx.one/epg/epg.xml.gz',
             favorites: [],
             current_pl_index: 0
-        });
+        };
+
+        try {
+            var saved = Lampa.Storage.get(storage_key);
+            if (saved) config = saved;
+        } catch (e) {
+            console.log('IPTV PRO:', 'Storage error or Lampa not ready');
+        }
 
         this.create = function () {
             root = $('<div class="iptv-root"></div>');
@@ -67,14 +73,17 @@
             var pl = config.playlists[config.current_pl_index];
             $.ajax({
                 url: pl.url,
+                method: 'GET',
                 success: function (str) { _this.parse(str); },
-                error: function () { Lampa.Noty.show('Помилка завантаження плейлиста'); }
+                error: function () { 
+                    if (window.Lampa && Lampa.Noty) Lampa.Noty.show('Помилка завантаження плейлиста'); 
+                }
             });
         };
 
         this.parse = function (str) {
             var lines = str.split('\n');
-            groups_data = { '⭐ Обране': config.favorites };
+            groups_data = { '⭐ Обране': config.favorites || [] };
             for (var i = 0; i < lines.length; i++) {
                 var l = lines[i].trim();
                 if (l.indexOf('#EXTINF') === 0) {
@@ -113,7 +122,9 @@
                                     '<div class="channel-title">' + c.name + '</div>' +
                                 '</div>' +
                             '</div>');
-                row.on('click', function () { Lampa.Player.play({ url: c.url, title: c.name }); });
+                row.on('click', function () { 
+                    if (window.Lampa && Lampa.Player) Lampa.Player.play({ url: c.url, title: c.name }); 
+                });
                 row.on('hover:focus', function () { index_c = idx; _this.showDetails(c); });
                 colC.append(row);
             });
@@ -135,24 +146,27 @@
             '</div>');
             colE.append(content);
 
-            // Використовуємо системний метод Lampa для отримання програми з бази
             if (window.Lampa && Lampa.EPG) {
-                Lampa.EPG.data({ id: channel.tvg_id, name: channel.name }, function (data) {
-                    if (data && data.program && data.program.length) {
-                        var now = Date.now() / 1000;
-                        var p = data.program.find(function(prog) {
-                            return now >= prog.start && now <= prog.stop;
-                        }) || data.program[0];
+                try {
+                    Lampa.EPG.data({ id: channel.tvg_id, name: channel.name }, function (data) {
+                        if (data && data.program && data.program.length) {
+                            var now = Date.now() / 1000;
+                            var p = data.program.find(function(prog) {
+                                return now >= prog.start && now <= prog.stop;
+                            }) || data.program[0];
 
-                        $('#epg-title').text(p.title);
-                        if (p.start && p.stop) {
-                            var perc = ((now - p.start) / (p.stop - p.start)) * 100;
-                            $('#epg-progress').css('width', Math.min(100, Math.max(0, perc)) + '%');
+                            $('#epg-title').text(p.title);
+                            if (p.start && p.stop) {
+                                var perc = ((now - p.start) / (p.stop - p.start)) * 100;
+                                $('#epg-progress').css('width', Math.min(100, Math.max(0, perc)) + '%');
+                            }
+                        } else {
+                            $('#epg-title').text('Програма недоступна');
                         }
-                    } else {
-                        $('#epg-title').text('Програма недоступна');
-                    }
-                });
+                    });
+                } catch (e) {
+                    $('#epg-title').text('Помилка EPG');
+                }
             }
         };
 
@@ -161,11 +175,12 @@
             var target = active_col === 'groups' ? colG : colC;
             var item = target.find('.iptv-item').eq(active_col === 'groups' ? index_g : index_c);
             item.addClass('active');
-            if (item.length) item[0].scrollIntoView({ block: 'center', behavior: 'smooth' });
+            if (item.length && item[0].scrollIntoView) {
+                item[0].scrollIntoView({ block: 'center', behavior: 'smooth' });
+            }
         };
 
         this.start = function () {
-            // Примусова реєстрація EPG у налаштуваннях Lampa
             if (window.Lampa && Lampa.Storage) {
                 var iptv_config = Lampa.Storage.get('iptv_config', {});
                 if (iptv_config.xmltv_url !== config.epg_url) {
@@ -180,13 +195,13 @@
                     if (active_col === 'groups') index_g = Math.max(0, index_g - 1);
                     else index_c = Math.max(0, index_c - 1);
                     _this.updateFocus();
-                    if (active_col === 'channels') _this.showDetails(current_list[index_c]);
+                    if (active_col === 'channels' && current_list[index_c]) _this.showDetails(current_list[index_c]);
                 },
                 down: function () {
                     if (active_col === 'groups') index_g = Math.min(colG.find('.iptv-item').length - 1, index_g + 1);
                     else index_c = Math.min(current_list.length - 1, index_c + 1);
                     _this.updateFocus();
-                    if (active_col === 'channels') _this.showDetails(current_list[index_c]);
+                    if (active_col === 'channels' && current_list[index_c]) _this.showDetails(current_list[index_c]);
                 },
                 right: function () {
                     if (active_col === 'groups') _this.renderC(groups_data[Object.keys(groups_data)[index_g]]);
@@ -207,19 +222,45 @@
         };
 
         this.render = function () { return root; };
-        this.destroy = function () { Lampa.Controller.remove('iptv_pro'); root.remove(); };
+        this.destroy = function () { 
+            if (window.Lampa && Lampa.Controller) Lampa.Controller.remove('iptv_pro'); 
+            if (root) root.remove(); 
+        };
     }
 
     function init() {
+        if (!window.Lampa) return;
         Lampa.Component.add('iptv_pro', IPTVComponent);
-        var item = $('<li class="menu__item selector"><div class="menu__text">IPTV PRO</div></li>');
-        item.on('hover:enter', function () {
-            Lampa.Activity.push({ title: 'IPTV PRO', component: 'iptv_pro' });
-        });
-        $('.menu .menu__list').append(item);
+        
+        var setupMenu = function() {
+            var item = $('<li class="menu__item selector"><div class="menu__text">IPTV PRO</div></li>');
+            item.on('hover:enter', function () {
+                Lampa.Activity.push({ title: 'IPTV PRO', component: 'iptv_pro' });
+            });
+            $('.menu .menu__list').append(item);
+        };
+
+        if ($('.menu').length) setupMenu();
+        else {
+            var interval = setInterval(function() {
+                if ($('.menu').length) {
+                    clearInterval(interval);
+                    setupMenu();
+                }
+            }, 500);
+        }
     }
 
     if (window.app_ready) init();
-    else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') init(); });
+    else {
+        // Додаємо слухача через стандартний метод Lampa, якщо він доступний
+        if (window.Lampa && Lampa.Listener) {
+            Lampa.Listener.follow('app', function (e) { 
+                if (e.type === 'ready') init(); 
+            });
+        } else {
+            // Резервний метод
+            setTimeout(init, 2000);
+        }
+    }
 })();
-                      
