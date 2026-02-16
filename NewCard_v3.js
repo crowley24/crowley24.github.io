@@ -576,16 +576,12 @@ body.applecation--logo-large .applecation__logo img {
     line-height: 1;  
 }  
   
-.applecation__network {  
-    display: inline-flex;  
-    align-items: center;  
-    gap: 0.5em;  
-    line-height: 1;  
-    padding: 0.2em 0.4em;  
-    background: rgba(0, 0, 0, 0.3);  
-    border-radius: 0.3em;  
-    backdrop-filter: blur(0.5em);  
-}   
+.applecation__network {    
+    display: inline-flex;    
+    align-items: center;    
+    gap: 0.5em;    
+    line-height: 1;    
+}  
   
 .applecation__network img {    
     display: block;    
