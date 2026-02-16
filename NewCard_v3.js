@@ -581,18 +581,19 @@ body.applecation--logo-large .applecation__logo img {
     line-height: 1;
 }
 
-.applecation__network {
-    display: inline-flex;
-    align-items: center;
-    line-height: 1;
-}
+.applecation__network {  
+    display: inline-flex;  
+    align-items: center;  
+    gap: 0.5em;  
+    line-height: 1;  
+} 
 
-.applecation__network img {
-    display: block;
-    max-height: 1.4em;
-    width: auto;
-    object-fit: contain;
-    filter: brightness(0) invert(1);
+.applecation__network img {  
+    display: block;  
+    max-height: 1.4em;  
+    width: auto;  
+    object-fit: contain;  
+    filter: brightness(0) invert(1);  
 }
 
 .applecation__meta-text {
