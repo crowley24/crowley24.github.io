@@ -230,26 +230,25 @@ Lampa.SettingsApi.addParam({
             }  
         });  
     
-               // Розмір логотипа
-        Lampa.SettingsApi.addParam({
-            component: 'applecation_settings',
-            param: {
-                name: 'applecation_logo_scale',
-                type: 'select',
-                values: {'50':'50%','60':'60%','70':'70%','80':'80%','90':'90%','100':t('scale_default'),'110':'110%','120':'120%','130':'130%','140':'140%','150':'150%','160':'160%','170':'170%','180':'180%'},
-                default: '100'
-            },
-            field: {
-                name: t('logo_scale'),
-                description: t('logo_scale_desc')
-            },
-            onChange: function(value) {
-                Lampa.Storage.set('applecation_logo_scale', value);
-                applyScales();
-            }
-        });
-
-        // Розмір тексту
+               // 6. Розмір логотипа  
+Lampa.SettingsApi.addParam({  
+    component: 'applecation_settings',  
+    param: {  
+        name: 'applecation_logo_scale',  
+        type: 'select',  
+        values: {'50':'50%','70':'70%','100':t('scale_default'),'130':'130%','150':'150%','160':'160%','170':'170%','180':'180%'},  
+        default: '100'  
+    },  
+    field: {  
+        name: t('logo_scale'),  
+        description: t('logo_scale_desc')  
+    },  
+    onChange: function(value) {  
+        Lampa.Storage.set('applecation_logo_scale', value);  
+        applyScales();  
+    }  
+});
+        // 7. Розмір тексту
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: {
@@ -268,7 +267,7 @@ Lampa.SettingsApi.addParam({
             }
         });
 
-        // Відступи
+        // 8. Відступи
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: {
