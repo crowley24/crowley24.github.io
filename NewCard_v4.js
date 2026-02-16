@@ -3,7 +3,115 @@
   
     // Іконка плагіна  
     const PLUGIN_ICON = '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#333"><rect x="5" y="30" width="90" height="40" rx="5" fill="hsl(0, 0%, 30%)"/><rect x="8" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="18" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="28" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="38" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="48" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="58" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="68" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="78" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="8" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="18" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="28" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="38" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="48" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="58" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="68" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="78" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="15" y="40" width="20" height="20" fill="hsl(200, 80%, 70%)"/><rect x="40" y="40" width="20" height="20" fill="hsl(200, 80%, 80%)"/><rect x="65" y="40" width="20" height="20" fill="hsl(200, 80%, 70%)"/></svg>';  
+
+    let logoCache = new Map();  
   
+function loadLogo(event) {  
+    const data = event.data.movie;  
+    const activity = event.object.activity;  
+    if (!data || !activity) return;  
+  
+    // Кешуємо рендер та контейнери  
+    const render = activity.render();  
+    const ratingsContainer = render.find('.applecation__ratings');  
+    const logoContainer = render.find('.applecation__logo');  
+    const titleElement = render.find('.full-start-new__title');  
+  
+    // Викликаємо функції з кешованими контейнерами  
+    fillRatings(ratingsContainer, data);  
+    fillMetaInfo(render, data);  
+    fillAdditionalInfo(render, data);  
+  
+    waitForBackgroundLoad(activity, () => {  
+        render.find('.applecation__meta').addClass('show');  
+        render.find('.applecation__info').addClass('show');  
+        render.find('.applecation__ratings').addClass('show');  
+        render.find('.applecation__description').addClass('show');  
+    });  
+  
+    // ====== ОПТИМІЗАЦІЯ КАШУВАННЯ ======  
+    const cacheKey = `${data.id}_${data.name ? 'tv' : 'movie'}`;  
+      
+    if (logoCache.has(cacheKey)) {  
+        const cached = logoCache.get(cacheKey);  
+        applyLogoData(cached, logoContainer, titleElement, activity);  
+        return;  
+    }  
+    // =====================================  
+  
+    const mediaType = data.name ? 'tv' : 'movie';  
+    const currentLang = 'uk';  
+      
+    const apiUrl = Lampa.TMDB.api(  
+        `${mediaType}/${data.id}/images?api_key=${Lampa.TMDB.key()}`  
+    );  
+  
+    const currentActivity = Lampa.Activity.active();  
+    if (!currentActivity || currentActivity.component !== 'full') {  
+        return;  
+    }  
+  
+    $.get(apiUrl, (imagesData) => {  
+        // ЗБЕРЕГТИ В КАШ  
+        logoCache.set(cacheKey, imagesData);  
+          
+        const currentActivity = Lampa.Activity.active();  
+        if (!currentActivity || currentActivity.component !== 'full') {  
+            return;  
+        }  
+  
+        const bestLogo = selectBestLogo(imagesData.logos, currentLang);  
+  
+        if (bestLogo) {  
+            const logoPath = bestLogo.file_path;  
+            const quality = getLogoQuality();  
+            const logoUrl = Lampa.TMDB.image(`/t/p/${quality}${logoPath}`);  
+  
+            const img = new Image();  
+            img.onload = () => {  
+                logoContainer.html(`<img src="${logoUrl}" alt="" />`);  
+                waitForBackgroundLoad(activity, () => {  
+                    logoContainer.addClass('loaded');  
+                });  
+            };  
+            img.src = logoUrl;  
+        } else {  
+            titleElement.show();  
+            waitForBackgroundLoad(activity, () => {  
+                logoContainer.addClass('loaded');  
+            });  
+        }  
+    }).fail(() => {  
+        titleElement.show();  
+        waitForBackgroundLoad(activity, () => {  
+            logoContainer.addClass('loaded');  
+        });  
+    });  
+}
+    function applyLogoData(imagesData, logoContainer, titleElement, activity) {  
+    const currentLang = 'uk';  
+    const bestLogo = selectBestLogo(imagesData.logos, currentLang);  
+  
+    if (bestLogo) {  
+        const logoPath = bestLogo.file_path;  
+        const quality = getLogoQuality();  
+        const logoUrl = Lampa.TMDB.image(`/t/p/${quality}${logoPath}`);  
+  
+        const img = new Image();  
+        img.onload = () => {  
+            logoContainer.html(`<img src="${logoUrl}" alt="" />`);  
+            waitForBackgroundLoad(activity, () => {  
+                logoContainer.addClass('loaded');  
+            });  
+        };  
+        img.src = logoUrl;  
+    } else {  
+        titleElement.show();  
+        waitForBackgroundLoad(activity, () => {  
+            logoContainer.addClass('loaded');  
+        });  
+    }  
+}
     // Головна функція плагіна  
     function initializePlugin() {  
         console.log('NewCard', 'v1.1.0');  
@@ -448,8 +556,8 @@
     margin-bottom: 0.5em;  
     opacity: 0;  
     transform: translateY(20px);  
-    transition: opacity 0.4s ease-out, transform 0.4s ease-out;  
-    will-change: opacity, transform;  
+    transition: transform 0.4s ease-out;  
+    will-change: transform;   
 }  
   
 .applecation__logo.loaded {  
@@ -477,9 +585,8 @@
     line-height: 1;  
     opacity: 0;  
     transform: translateY(15px);  
-    transition: opacity 0.4s ease-out, transform 0.4s ease-out;  
-    transition-delay: 0.05s;  
-    will-change: opacity, transform;  
+transition: opacity 0.3s ease-out;  
+    will-change: opacity;
 }  
   
 .applecation__meta.show {  
