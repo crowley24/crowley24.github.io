@@ -160,36 +160,9 @@ function loadLogo(event) {
     }  
   
     function updateLogoColors() {  
-        const originalColors = Lampa.Storage.get('applecation_original_colors', true);  
-        $('style[data-id="applecation_logo_colors"]').remove();  
-          
-        const colorStyles = `  
-            <style data-id="applecation_logo_colors">  
-                .applecation__network img {  
-                    display: block;  
-                    max-height: 1.4em;  
-                    width: auto;  
-                    object-fit: contain;  
-                    ${originalColors ? `  
-                        filter:     
-                            drop-shadow(0 0 2px rgba(255,255,255,0.6))  
-                            drop-shadow(0 0 4px rgba(255,255,255,0.52))  
-                            drop-shadow(0 0 6px rgba(255,255,255,0.44))  
-                            drop-shadow(0 0 8px rgba(255,255,255,0.28))  
-                            drop-shadow(0 0 1px rgba(0,0,0,0.9))  
-                            drop-shadow(0 0 2px rgba(0,0,0,0.7));  
-                    ` : `  
-                        filter: brightness(0) invert(1);  
-                        opacity: 0.9;  
-                        height: 1.8em;  
-                        margin-top: -2px;  
-                    `}  
-                }  
-            </style>  
-        `;  
-          
-        $('body').append(colorStyles);  
-    }  
+    // Функція більше не потрібна, оскільки колір визначається автоматично  
+    // Залишаємо для сумісності, але вона нічого не робить  
+}
   
     // Налаштування  
     function addSettings() {  
@@ -233,18 +206,7 @@ function loadLogo(event) {
             onChange: (value) => Lampa.Storage.set('applecation_show_studio', value)  
         });  
   
-        // Оригінальні кольори логотипів  
-        Lampa.SettingsApi.addParam({  
-            component: 'applecation_settings',  
-            param: { name: 'applecation_original_colors', type: 'trigger', default: true },  
-            field: { name: 'Оригінальні кольори логотипів', description: 'Показувати логотипи студій в оригінальних кольорах' },  
-            onChange: (value) => {  
-                Lampa.Storage.set('applecation_original_colors', value);  
-                updateLogoColors();  
-            }  
-        });  
-  
-        // Показувати рейтинги  
+                // Показувати рейтинги  
         Lampa.SettingsApi.addParam({  
             component: 'applecation_settings',  
             param: { name: 'applecation_show_ratings', type: 'trigger', default: false },  
@@ -612,7 +574,8 @@ transition: opacity 0.3s ease-out;
     max-height: 1.4em;  
     width: auto;  
     object-fit: contain;  
-}  
+    transition: filter 0.3s ease;  
+} 
   
 .applecation__meta-text {  
     margin-left: 1em;  
@@ -946,41 +909,108 @@ body.applecation--zoom-enabled .full-start__background.loaded:not(.dim) {
     }  
   
     // Завантаження іконки студії  
-    function loadNetworkIcon(render, data) {  
-        const networkContainer = render.find('.applecation__network');  
-        const showStudio = Lampa.Storage.get('applecation_show_studio', 'true');  
-          
-        if (showStudio === false || showStudio === 'false') {  
-            networkContainer.remove();  
-            return;  
-        }  
-          
-        const logos = [];  
-          
-        if (data.networks && data.networks.length) {  
-            data.networks.forEach(network => {  
-                if (network.logo_path) {  
-                    const logoUrl = Lampa.Api.img(network.logo_path, 'w200');  
-                    logos.push(`<img src="${logoUrl}" alt="${network.name}">`);  
-                }  
-            });  
-        }  
-          
-        if (data.production_companies && data.production_companies.length) {  
-            data.production_companies.forEach(company => {  
-                if (company.logo_path) {  
-                    const logoUrl = Lampa.Api.img(company.logo_path, 'w200');  
-                    logos.push(`<img src="${logoUrl}" alt="${company.name}">`);  
-                }  
-            });  
-        }  
-          
-        if (logos.length > 0) {  
-            networkContainer.html(logos.join(''));  
-        } else {  
-            networkContainer.remove();  
-        }  
+function loadNetworkIcon(render, data) {  
+    const networkContainer = render.find('.applecation__network');  
+    const showStudio = Lampa.Storage.get('applecation_show_studio', 'true');  
+      
+    if (showStudio === false || showStudio === 'false') {  
+        networkContainer.remove();  
+        return;  
     }  
+      
+    const logos = [];  
+      
+    if (data.networks && data.networks.length) {  
+        data.networks.forEach(network => {  
+            if (network.logo_path) {  
+                const logoUrl = Lampa.Api.img(network.logo_path, 'w200');  
+                logos.push({  
+                    url: logoUrl,  
+                    name: network.name,  
+                    element: `<img src="${logoUrl}" alt="${network.name}" data-original="true">`  
+                });  
+            }  
+        });  
+    }  
+      
+    if (data.production_companies && data.production_companies.length) {  
+        data.production_companies.forEach(company => {  
+            if (company.logo_path) {  
+                const logoUrl = Lampa.Api.img(company.logo_path, 'w200');  
+                logos.push({  
+                    url: logoUrl,  
+                    name: company.name,  
+                    element: `<img src="${logoUrl}" alt="${company.name}" data-original="true">`  
+                });  
+            }  
+        });  
+    }  
+      
+    if (logos.length > 0) {  
+        networkContainer.html(logos.map(l => l.element).join(''));  
+          
+        // Перевіряємо колір кожного логотипа  
+        logos.forEach(logo => {  
+            const img = new Image();  
+            img.crossOrigin = 'anonymous';  
+            img.onload = function() {  
+                const canvas = document.createElement('canvas');  
+                const ctx = canvas.getContext('2d');  
+                canvas.width = this.width;  
+                canvas.height = this.height;  
+                ctx.drawImage(this, 0, 0);  
+                  
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);  
+                const data = imageData.data;  
+                  
+                let r = 0, g = 0, b = 0;  
+                let pixelCount = 0;  
+                  
+                // Аналізуємо центральну частину логотипа  
+                const startX = Math.floor(canvas.width * 0.3);  
+                const endX = Math.floor(canvas.width * 0.7);  
+                const startY = Math.floor(canvas.height * 0.3);  
+                const endY = Math.floor(canvas.height * 0.7);  
+                  
+                for (let y = startY; y < endY; y++) {  
+                    for (let x = startX; x < endX; x++) {  
+                        const idx = (y * canvas.width + x) * 4;  
+                        const alpha = data[idx + 3];  
+                          
+                        if (alpha > 0) { // Прозорі пікселі ігноруємо  
+                            r += data[idx];  
+                            g += data[idx + 1];  
+                            b += data[idx + 2];  
+                            pixelCount++;  
+                        }  
+                    }  
+                }  
+                  
+                if (pixelCount > 0) {  
+                    r = Math.floor(r / pixelCount);  
+                    g = Math.floor(g / pixelCount);  
+                    b = Math.floor(b / pixelCount);  
+                      
+                    // Розраховуємо яскравість (перцепційна)  
+                    const brightness = (0.299 * r + 0.587 * g + 0.114 * b);  
+                      
+                    // Якщо логотип занадто темний, інвертуємо його  
+                    if (brightness < 50) {  
+                        const imgElement = networkContainer.find(`img[alt="${logo.name}"]`);  
+                        imgElement.css({  
+                            'filter': 'brightness(0) invert(1)',  
+                            'opacity': '0.9'  
+                        });  
+                        imgElement.removeAttr('data-original');  
+                    }  
+                }  
+            };  
+            img.src = logo.url;  
+        });  
+    } else {  
+        networkContainer.remove();  
+    }  
+} 
   
     // Заповнення мета інформації  
     function fillMetaInfo(render, data) {  
