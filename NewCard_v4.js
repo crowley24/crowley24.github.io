@@ -965,23 +965,26 @@ function loadNetworkIcon(render, data) {
                   
                 let r = 0, g = 0, b = 0;  
                 let pixelCount = 0;  
+                let minBrightness = 255;  
                   
-                // Аналізуємо центральну частину логотипа  
-                const startX = Math.floor(canvas.width * 0.3);  
-                const endX = Math.floor(canvas.width * 0.7);  
-                const startY = Math.floor(canvas.height * 0.3);  
-                const endY = Math.floor(canvas.height * 0.7);  
-                  
-                for (let y = startY; y < endY; y++) {  
-                    for (let x = startX; x < endX; x++) {  
+                // Аналізуємо всю область логотипа, а не лише центр  
+                for (let y = 0; y < canvas.height; y++) {  
+                    for (let x = 0; x < canvas.width; x++) {  
                         const idx = (y * canvas.width + x) * 4;  
                         const alpha = data[idx + 3];  
                           
                         if (alpha > 0) { // Прозорі пікселі ігноруємо  
+                            const brightness = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];  
+                              
                             r += data[idx];  
                             g += data[idx + 1];  
                             b += data[idx + 2];  
                             pixelCount++;  
+                              
+                            // Відстежуємо найтемніший піксель  
+                            if (brightness < minBrightness) {  
+                                minBrightness = brightness;  
+                            }  
                         }  
                     }  
                 }  
@@ -991,15 +994,15 @@ function loadNetworkIcon(render, data) {
                     g = Math.floor(g / pixelCount);  
                     b = Math.floor(b / pixelCount);  
                       
-                    // Розраховуємо яскравість (перцепційна)  
-                    const brightness = (0.299 * r + 0.587 * g + 0.114 * b);  
+                    // Розраховуємо середню яскравість  
+                    const avgBrightness = (0.299 * r + 0.587 * g + 0.114 * b);  
                       
-                    // Якщо логотип занадто темний, інвертуємо його  
-                    if (brightness < 50) {  
+                    // Якщо середня яскравість < 35 АБО найтемніший піксель < 15, інвертуємо  
+                    if (avgBrightness < 35 || minBrightness < 15) {  
                         const imgElement = networkContainer.find(`img[alt="${logo.name}"]`);  
                         imgElement.css({  
-                            'filter': 'brightness(0) invert(1)',  
-                            'opacity': '0.9'  
+                            'filter': 'brightness(0) invert(1) contrast(1.2)',  
+                            'opacity': '0.95'  
                         });  
                         imgElement.removeAttr('data-original');  
                     }  
@@ -1010,7 +1013,7 @@ function loadNetworkIcon(render, data) {
     } else {  
         networkContainer.remove();  
     }  
-} 
+}
   
     // Заповнення мета інформації  
     function fillMetaInfo(render, data) {  
