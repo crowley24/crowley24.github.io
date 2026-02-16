@@ -1,9 +1,9 @@
 // ==Lampa==
-// name: IPTV PRO (EPG Mapping)
-// version: 13.1
+// name: IPTV PRO (EPG Fixed & Protected)
+// version: 13.2
 // ==/Lampa==
 
-(function () {
+(function ($, Lampa) {
     'use strict';
 
     function IPTVComponent() {
@@ -23,7 +23,7 @@
                 name: 'TEST',
                 url: 'https://m3u.ch/pl/cbf67b9b46359837429e6deb5b384f9e_e2c018841bc8b4dd2110ddc53d611e72.m3u'
             }],
-            // Використовуємо універсальний URI для rootu API
+            // Спробуємо отримати загальний конфіг через проксі
             epgApiUrl: 'https://cors.lampa.app/http://epg.rootu.top/api/channels.json'
         };
 
@@ -62,22 +62,23 @@
             return root;
         };
 
-        // Завантаження словника ID (Mapping)
         this.initEPGMap = function() {
             $.ajax({
                 url: config.epgApiUrl,
                 method: 'GET',
+                dataType: 'json',
                 success: function(d) {
-                    CH_IDS = d;
-                    if (d.epgPath) EPG_PATH = '/' + d.epgPath;
-                    console.log('IPTV PRO: EPG Map loaded');
-                }
+                    if(d) {
+                        CH_IDS = d;
+                        if (d.epgPath) EPG_PATH = '/' + d.epgPath;
+                    }
+                },
+                error: function() { console.log('IPTV PRO: Map fail'); }
             });
         };
 
-        // Функція очищення назви для пошуку в словнику
         var chShortName = function(chName){
-            return chName.toLowerCase()
+            return (chName || "").toLowerCase()
                 .replace(/\s+\(архив\)$/, '')
                 .replace(/^телеканал\s+/, '')
                 .replace(/([!\s.,()–-]+|ⓢ|ⓖ|ⓥ|ⓞ|Ⓢ|Ⓖ|Ⓥ|Ⓞ)/g, ' ').trim();
@@ -89,14 +90,14 @@
                 '<img src="' + channel.logo + '" style="width:100%; max-height:150px; object-fit:contain; margin-bottom:1rem; background:#000; padding:5px; border-radius:5px;">' +
                 '<div class="epg-title-big">' + channel.name + '</div>' +
                 '<div class="epg-now">В ЕФІРІ:</div>' +
-                '<div class="epg-prog-name" id="epg-title">Пошук у базі...</div>' +
+                '<div class="epg-prog-name" id="epg-title">Шукаю програму...</div>' +
                 '<div class="epg-bar"><div class="epg-bar-inner" id="epg-progress"></div></div>' +
             '</div>');
             colE.append(content);
 
-            // Визначаємо правильний EPG ID
             var shortN = chShortName(channel.name);
-            var epgId = CH_IDS.id2epg[channel.tvg_id] || CH_IDS.id2epg[shortN] || channel.tvg_id || shortN;
+            // Пріоритет: tvg_id -> словник id2epg -> назва
+            var epgId = (CH_IDS.id2epg && CH_IDS.id2epg[channel.tvg_id]) || (CH_IDS.id2epg && CH_IDS.id2epg[shortN]) || channel.tvg_id || shortN;
 
             var timeNow = Math.floor(Date.now() / 1000);
             var hourStart = Math.floor(timeNow / 3600) * 3600;
@@ -107,12 +108,13 @@
                 var url = 'https://cors.lampa.app/http://epg.rootu.top/api' + EPG_PATH + '/epg/' + encodeURIComponent(epgId) + '/hour/' + hourStart;
                 $.ajax({
                     url: url,
+                    method: 'GET',
                     success: function (r) {
-                        if (r && r.list) {
+                        if (r && r.list && r.list.length) {
                             EPG_CACHE[epgId] = { hour: hourStart, list: r.list };
                             renderEPG(r.list);
                         } else {
-                            $('#epg-title').text('Програма відсутня');
+                            $('#epg-title').text('Програма недоступна');
                         }
                     },
                     error: function () { $('#epg-title').text('Сервер EPG не відповідає'); }
@@ -127,33 +129,35 @@
                     var perc = ((nowMin - current[0]) / current[1]) * 100;
                     $('#epg-progress').css('width', Math.min(100, Math.max(0, perc)) + '%');
                 } else {
-                    $('#epg-title').text('Немає даних');
+                    $('#epg-title').text('Кінець програми');
                 }
             }
         };
 
-        // Стандартна логіка плейлиста
         this.loadPlaylist = function () {
             $.ajax({
                 url: config.playlists[0].url,
+                method: 'GET',
                 success: function (str) { _this.parse(str); }
             });
         };
 
         this.parse = function (str) {
             var lines = str.split('\n');
-            groups_data = { 'ЗАГАЛЬНІ': [] };
+            groups_data = { 'УСІ КАНАЛИ': [] };
             for (var i = 0; i < lines.length; i++) {
                 var l = lines[i].trim();
                 if (l.indexOf('#EXTINF') === 0) {
                     var name = (l.match(/,(.*)$/) || ['', ''])[1].trim();
-                    var group = (l.match(/group-title="([^"]+)"/i) || ['', 'ЗАГАЛЬНІ'])[1];
+                    var group = (l.match(/group-title="([^"]+)"/i) || ['', 'УСІ КАНАЛИ'])[1];
                     var logo = (l.match(/tvg-logo="([^"]+)"/i) || ['', ''])[1];
                     var tvg_id = (l.match(/tvg-id="([^"]+)"/i) || ['', ''])[1];
                     var url = lines[i + 1] ? lines[i + 1].trim() : '';
-                    if (url.indexOf('http') === 0) {
+                    if (url && url.indexOf('http') === 0) {
                         if (!groups_data[group]) groups_data[group] = [];
-                        groups_data[group].push({ name: name, url: url, logo: logo, tvg_id: tvg_id });
+                        var item = { name: name, url: url, logo: logo, tvg_id: tvg_id };
+                        groups_data[group].push(item);
+                        groups_data['УСІ КАНАЛИ'].push(item);
                     }
                 }
             }
@@ -176,7 +180,9 @@
                 var row = $('<div class="iptv-item"><div class="channel-row">' +
                     '<img class="channel-logo" src="' + c.logo + '" onerror="this.src=\'https://via.placeholder.com/40?text=TV\'">' +
                     '<div class="channel-title">' + c.name + '</div></div></div>');
-                row.on('click', function () { Lampa.Player.play({ url: c.url, title: c.name }); });
+                row.on('click', function () { 
+                    if(Lampa.Player) Lampa.Player.play({ url: c.url, title: c.name }); 
+                });
                 row.on('hover:focus', function () { index_c = idx; _this.showDetails(c); });
                 colC.append(row);
             });
@@ -233,5 +239,5 @@
 
     if (window.app_ready) init();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') init(); });
-})();
-                
+
+})(window.jQuery, window.Lampa);
