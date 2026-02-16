@@ -958,71 +958,45 @@ body.applecation--zoom-enabled .full-start__background.loaded:not(.dim) {
     }  
   
    // Завантажуємо іконку студії/мережі    
-function loadNetworkIcon(activity, data) {  
-    const networkContainer = activity.render().find('.applecation__network');  
-    const showStudio = Lampa.Storage.get('applecation_show_studio', 'true');  
-      
-    if (showStudio === false || showStudio === 'false') {  
-        networkContainer.remove();  
-        return;  
-    }  
-      
-    const logos = [];  
-      
-    // Збираємо логотипи як раніше  
-    if (data.networks && data.networks.length) {  
-        data.networks.forEach(network => {  
-            if (network.logo_path) {  
-                const logoUrl = Lampa.Api.img(network.logo_path, 'w200');  
-                logos.push(`<img src="${logoUrl}" alt="${network.name}">`);  
-            }  
-        });  
-    }  
-      
-    if (data.production_companies && data.production_companies.length) {  
-        data.production_companies.forEach(company => {  
-            if (company.logo_path) {  
-                const logoUrl = Lampa.Api.img(company.logo_path, 'w200');  
-                logos.push(`<img src="${logoUrl}" alt="${company.name}">`);  
-            }  
-        });  
-    }  
-      
-    if (logos.length > 0) {  
-        networkContainer.html(logos.join(''));  
-          
-        // Анімація появи  
-        networkContainer.find('img').each((index, img) => {  
-            $(img).css({  
-                opacity: 0,  
-                transform: 'translateY(10px)'  
-            }).delay(index * 100).animate({  
-                opacity: 1,  
-                transform: 'translateY(0)'  
-            }, 300);  
-        });  
-    } else {  
-        networkContainer.remove();  
-    }  
-}
-function lazyLoadLogos(logos) {  
-    const observer = new IntersectionObserver((entries) => {  
-        entries.forEach(entry => {  
-            if (entry.isIntersecting) {  
-                const img = entry.target;  
-                img.src = img.dataset.src;  
-                observer.unobserve(img);  
-            }  
-        });  
-    });  
-      
-    logos.each(function() {  
-        const img = this;  
-        img.dataset.src = img.src;  
-        img.src = '';  
-        observer.observe(img);  
-    });  
-}
+function loadNetworkIcon(activity, data) {    
+    const networkContainer = activity.render().find('.applecation__network');    
+    
+    const showStudio = Lampa.Storage.get('applecation_show_studio', 'true');    
+    if (showStudio === false || showStudio === 'false') {    
+        networkContainer.remove();    
+        return;    
+    }    
+        
+    const logos = [];    
+        
+    // Для серіалів - збираємо всі телемережі    
+    if (data.networks && data.networks.length) {    
+        data.networks.forEach(network => {    
+            if (network.logo_path) {    
+                const logoUrl = Lampa.Api.img(network.logo_path, 'w200');    
+                logos.push(`<img src="${logoUrl}" alt="${network.name}">`);    
+            }    
+        });    
+    }    
+        
+    // Для фільмів - збираємо всі студії    
+    if (data.production_companies && data.production_companies.length) {    
+        data.production_companies.forEach(company => {    
+            if (company.logo_path) {    
+                const logoUrl = Lampa.Api.img(company.logo_path, 'w200');    
+                logos.push(`<img src="${logoUrl}" alt="${company.name}">`);    
+            }    
+        });    
+    }    
+        
+    // Відображаємо всі логотипи    
+    if (logos.length > 0) {    
+        networkContainer.html(logos.join(''));    
+    } else {    
+        networkContainer.remove();    
+    }    
+}  
+  
    // Заповнюємо мета інформацію (Тип/Жанр/піджанр)  
     function fillMetaInfo(activity, data) {  
         const metaTextContainer = activity.render().find('.applecation__meta-text');  
