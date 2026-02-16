@@ -99,10 +99,11 @@ const translations = {
                 width: auto;  
                 object-fit: contain;  
                 ${originalColors ? `  
-                    /* Чітка біла рамка без розмиття */  
-                    drop-shadow(0 0 0.5px rgba(255,255,255,0.8))  
-                    drop-shadow(0 0 1px rgba(255,255,255,0.6))  
-                    drop-shadow(0 0 1.5px rgba(255,255,255,0.4))  
+                    /* Посилена біла рамка для чорних логотипів */  
+                    drop-shadow(0 0 0.5px rgba(255,255,255,1))  
+                    drop-shadow(0 0 1px rgba(255,255,255,0.9))  
+                    drop-shadow(0 0 1.5px rgba(255,255,255,0.8))  
+                    drop-shadow(0 0 2px rgba(255,255,255,0.6))  
                 ` : `  
                     /* Стиль з плагіна Quality */  
                     filter: brightness(0) invert(1);  
