@@ -991,13 +991,20 @@ function loadNetworkIcon(activity, data) {
     if (logos.length > 0) {  
         networkContainer.html(logos.join(''));  
           
-        // Застосовуємо ліниве завантаження  
-        lazyLoadLogos(networkContainer.find('img'));  
+        // Анімація появи  
+        networkContainer.find('img').each((index, img) => {  
+            $(img).css({  
+                opacity: 0,  
+                transform: 'translateY(10px)'  
+            }).delay(index * 100).animate({  
+                opacity: 1,  
+                transform: 'translateY(0)'  
+            }, 300);  
+        });  
     } else {  
         networkContainer.remove();  
     }  
-}  
-  
+}
 function lazyLoadLogos(logos) {  
     const observer = new IntersectionObserver((entries) => {  
         entries.forEach(entry => {  
