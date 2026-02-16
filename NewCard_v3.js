@@ -87,7 +87,7 @@ const translations = {
     $('body').toggleClass('applecation--zoom-enabled', enabled);   
 }  
   
-   function updateLogoColors() {  
+  function updateLogoColors() {  
     const originalColors = Lampa.Storage.get('applecation_original_colors', true);  
     $('style[data-id="applecation_logo_colors"]').remove();  
       
@@ -99,17 +99,17 @@ const translations = {
                 width: auto;  
                 object-fit: contain;  
                 ${originalColors ? `  
-                    /* Максимально посилена біла рамка */  
-                   drop-shadow(0 0 2px rgba(255,255,255,0.6))  
-drop-shadow(0 0 4px rgba(255,255,255,0.52))  
-drop-shadow(0 0 6px rgba(255,255,255,0.44))  
-drop-shadow(0 0 8px rgba(255,255,255,0.28))
+                    filter:   
+                        drop-shadow(0 0 2px rgba(255,255,255,0.6))  
+                        drop-shadow(0 0 4px rgba(255,255,255,0.52))  
+                        drop-shadow(0 0 6px rgba(255,255,255,0.44))  
+                        drop-shadow(0 0 8px rgba(255,255,255,0.28))  
+                        drop-shadow(0 0 1px rgba(0,0,0,0.9))  
+                        drop-shadow(0 0 2px rgba(0,0,0,0.7));  
                 ` : `  
-                    /* Стиль з плагіна Quality без змін */  
                     filter: brightness(0) invert(1);  
                     opacity: 0.9;  
                     height: 1.8em;  
-                    width: auto;  
                     margin-top: -2px;  
                 `}  
             }  
