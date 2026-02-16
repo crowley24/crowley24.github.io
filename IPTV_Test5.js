@@ -1,6 +1,6 @@
 // ==Lampa==
-// name: IPTV PRO (EPG Fixed & Protected)
-// version: 13.2
+// name: IPTV PRO (EPG Robust)
+// version: 13.3
 // ==/Lampa==
 
 (function ($, Lampa) {
@@ -16,15 +16,12 @@
         
         var EPG_CACHE = {};
         var CH_IDS = { id2epg: {} };
-        var EPG_PATH = '';
 
         var config = {
             playlists: [{
                 name: 'TEST',
                 url: 'https://m3u.ch/pl/cbf67b9b46359837429e6deb5b384f9e_e2c018841bc8b4dd2110ddc53d611e72.m3u'
-            }],
-            // Спробуємо отримати загальний конфіг через проксі
-            epgApiUrl: 'https://cors.lampa.app/http://epg.rootu.top/api/channels.json'
+            }]
         };
 
         this.create = function () {
@@ -57,24 +54,8 @@
                     '</style>');
             }
 
-            this.initEPGMap();
             this.loadPlaylist();
             return root;
-        };
-
-        this.initEPGMap = function() {
-            $.ajax({
-                url: config.epgApiUrl,
-                method: 'GET',
-                dataType: 'json',
-                success: function(d) {
-                    if(d) {
-                        CH_IDS = d;
-                        if (d.epgPath) EPG_PATH = '/' + d.epgPath;
-                    }
-                },
-                error: function() { console.log('IPTV PRO: Map fail'); }
-            });
         };
 
         var chShortName = function(chName){
@@ -85,39 +66,57 @@
         };
 
         this.showDetails = function (channel) {
+            colE.find('#epg-title').text('Шукаю...');
             colE.empty();
             var content = $('<div class="details-box">' +
                 '<img src="' + channel.logo + '" style="width:100%; max-height:150px; object-fit:contain; margin-bottom:1rem; background:#000; padding:5px; border-radius:5px;">' +
                 '<div class="epg-title-big">' + channel.name + '</div>' +
                 '<div class="epg-now">В ЕФІРІ:</div>' +
-                '<div class="epg-prog-name" id="epg-title">Шукаю програму...</div>' +
+                '<div class="epg-prog-name" id="epg-title">Завантаження...</div>' +
                 '<div class="epg-bar"><div class="epg-bar-inner" id="epg-progress"></div></div>' +
             '</div>');
             colE.append(content);
 
-            var shortN = chShortName(channel.name);
-            // Пріоритет: tvg_id -> словник id2epg -> назва
-            var epgId = (CH_IDS.id2epg && CH_IDS.id2epg[channel.tvg_id]) || (CH_IDS.id2epg && CH_IDS.id2epg[shortN]) || channel.tvg_id || shortN;
-
+            var epgId = channel.tvg_id || chShortName(channel.name);
             var timeNow = Math.floor(Date.now() / 1000);
             var hourStart = Math.floor(timeNow / 3600) * 3600;
 
+            // Спроба отримати EPG через проксі Lampa з універсального джерела
             if (EPG_CACHE[epgId] && EPG_CACHE[epgId].hour === hourStart) {
                 renderEPG(EPG_CACHE[epgId].list);
             } else {
-                var url = 'https://cors.lampa.app/http://epg.rootu.top/api' + EPG_PATH + '/epg/' + encodeURIComponent(epgId) + '/hour/' + hourStart;
+                // Прямий запит до API з використанням CORS проксі
+                var url = 'https://cors.lampa.app/http://epg.rootu.top/api/epg/' + encodeURIComponent(epgId) + '/hour/' + hourStart;
+                
                 $.ajax({
                     url: url,
                     method: 'GET',
+                    timeout: 5000,
                     success: function (r) {
                         if (r && r.list && r.list.length) {
                             EPG_CACHE[epgId] = { hour: hourStart, list: r.list };
                             renderEPG(r.list);
                         } else {
-                            $('#epg-title').text('Програма недоступна');
+                            $('#epg-title').text('Програма відсутня');
                         }
                     },
-                    error: function () { $('#epg-title').text('Сервер EPG не відповідає'); }
+                    error: function () {
+                        // Якщо помилка, спробуємо знайти через стандартний EPG Lampa
+                        if (window.Lampa && Lampa.EPG) {
+                            Lampa.EPG.data({ id: channel.tvg_id, name: channel.name }, function (data) {
+                                if (data && data.program && data.program.length) {
+                                    var p = data.program.find(function(prog) { return timeNow >= prog.start && timeNow <= prog.stop; }) || data.program[0];
+                                    $('#epg-title').text(p.title);
+                                    var perc = ((timeNow - p.start) / (p.stop - p.start)) * 100;
+                                    $('#epg-progress').css('width', Math.min(100, perc) + '%');
+                                } else {
+                                    $('#epg-title').text('Програма недоступна');
+                                }
+                            });
+                        } else {
+                            $('#epg-title').text('Помилка завантаження');
+                        }
+                    }
                 });
             }
 
@@ -129,7 +128,7 @@
                     var perc = ((nowMin - current[0]) / current[1]) * 100;
                     $('#epg-progress').css('width', Math.min(100, Math.max(0, perc)) + '%');
                 } else {
-                    $('#epg-title').text('Кінець програми');
+                    $('#epg-title').text('Дані відсутні');
                 }
             }
         };
@@ -138,7 +137,8 @@
             $.ajax({
                 url: config.playlists[0].url,
                 method: 'GET',
-                success: function (str) { _this.parse(str); }
+                success: function (str) { _this.parse(str); },
+                error: function() { Lampa.Noty.show('Помилка завантаження плейлиста'); }
             });
         };
 
@@ -152,7 +152,7 @@
                     var group = (l.match(/group-title="([^"]+)"/i) || ['', 'УСІ КАНАЛИ'])[1];
                     var logo = (l.match(/tvg-logo="([^"]+)"/i) || ['', ''])[1];
                     var tvg_id = (l.match(/tvg-id="([^"]+)"/i) || ['', ''])[1];
-                    var url = lines[i + 1] ? lines[i + 1].trim() : '';
+                    var url = (lines[i+1] || "").trim();
                     if (url && url.indexOf('http') === 0) {
                         if (!groups_data[group]) groups_data[group] = [];
                         var item = { name: name, url: url, logo: logo, tvg_id: tvg_id };
@@ -178,7 +178,7 @@
             colC.empty(); current_list = list || [];
             current_list.forEach(function (c, idx) {
                 var row = $('<div class="iptv-item"><div class="channel-row">' +
-                    '<img class="channel-logo" src="' + c.logo + '" onerror="this.src=\'https://via.placeholder.com/40?text=TV\'">' +
+                    '<img class="channel-logo" src="' + (c.logo || '') + '" onerror="this.src=\'https://via.placeholder.com/40?text=TV\'">' +
                     '<div class="channel-title">' + c.name + '</div></div></div>');
                 row.on('click', function () { 
                     if(Lampa.Player) Lampa.Player.play({ url: c.url, title: c.name }); 
@@ -232,9 +232,13 @@
     function init() {
         if (!window.Lampa) return;
         Lampa.Component.add('iptv_pro', IPTVComponent);
-        var item = $('<li class="menu__item selector"><div class="menu__text">IPTV PRO</div></li>');
-        item.on('hover:enter', function () { Lampa.Activity.push({ title: 'IPTV PRO', component: 'iptv_pro' }); });
-        $('.menu .menu__list').append(item);
+        var setupMenu = function() {
+            if ($('.menu .menu__list').find('.js-iptv-pro').length) return;
+            var item = $('<li class="menu__item selector js-iptv-pro"><div class="menu__text">IPTV PRO</div></li>');
+            item.on('hover:enter', function () { Lampa.Activity.push({ title: 'IPTV PRO', component: 'iptv_pro' }); });
+            $('.menu .menu__list').append(item);
+        };
+        setupMenu();
     }
 
     if (window.app_ready) init();
