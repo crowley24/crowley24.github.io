@@ -965,9 +965,9 @@ function loadNetworkIcon(render, data) {
                   
                 let r = 0, g = 0, b = 0;  
                 let pixelCount = 0;  
-                let minBrightness = 255;  
+                let darkPixelCount = 0;  
                   
-                // Аналізуємо всю область логотипа, а не лише центр  
+                // Аналізуємо всю область логотипа  
                 for (let y = 0; y < canvas.height; y++) {  
                     for (let x = 0; x < canvas.width; x++) {  
                         const idx = (y * canvas.width + x) * 4;  
@@ -981,9 +981,9 @@ function loadNetworkIcon(render, data) {
                             b += data[idx + 2];  
                             pixelCount++;  
                               
-                            // Відстежуємо найтемніший піксель  
-                            if (brightness < minBrightness) {  
-                                minBrightness = brightness;  
+                            // Рахуємо дуже темні пікселі (яскравість < 20)  
+                            if (brightness < 20) {  
+                                darkPixelCount++;  
                             }  
                         }  
                     }  
@@ -997,8 +997,13 @@ function loadNetworkIcon(render, data) {
                     // Розраховуємо середню яскравість  
                     const avgBrightness = (0.299 * r + 0.587 * g + 0.114 * b);  
                       
-                    // Якщо середня яскравість < 35 АБО найтемніший піксель < 15, інвертуємо  
-                    if (avgBrightness < 35 || minBrightness < 15) {  
+                    // Відсоток темних пікселів  
+                    const darkPixelRatio = darkPixelCount / pixelCount;  
+                      
+                    // Інвертуємо тільки якщо:  
+                    // 1. Середня яскравість дуже низька (< 25)  
+                    // 2. Більше 70% пікселів дуже темні  
+                    if (avgBrightness < 25 && darkPixelRatio > 0.7) {  
                         const imgElement = networkContainer.find(`img[alt="${logo.name}"]`);  
                         imgElement.css({  
                             'filter': 'brightness(0) invert(1) contrast(1.2)',  
