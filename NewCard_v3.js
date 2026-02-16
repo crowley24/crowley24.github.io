@@ -100,11 +100,10 @@ const translations = {
                 object-fit: contain;  
                 ${originalColors ? `  
                     /* Максимально посилена біла рамка */  
-                    drop-shadow(0 0 0.5px rgba(255,255,255,1))  
-                    drop-shadow(0 0 1px rgba(255,255,255,1))  
-                    drop-shadow(0 0 1.5px rgba(255,255,255,1))  
-                    drop-shadow(0 0 2px rgba(255,255,255,0.9))  
-                    drop-shadow(0 0 3px rgba(255,255,255,0.8))  
+                   drop-shadow(0 0 2px rgba(255,255,255,0.6))  
+drop-shadow(0 0 4px rgba(255,255,255,0.52))  
+drop-shadow(0 0 6px rgba(255,255,255,0.44))  
+drop-shadow(0 0 8px rgba(255,255,255,0.28))
                 ` : `  
                     /* Стиль з плагіна Quality без змін */  
                     filter: brightness(0) invert(1);  
