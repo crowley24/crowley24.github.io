@@ -1025,78 +1025,77 @@ body.applecation--zoom-enabled .full-start__background.loaded:not(.dim) {
     }  
   
     // Оптимізована функція завантаження логотипа  
-    function loadLogo(event) {  
-        const data = event.data.movie;  
-        const activity = event.object.activity;  
-          
-        if (!data || !activity) return;  
+function loadLogo(event) {  
+    const data = event.data.movie;  
+    const activity = event.object.activity;  
+    if (!data || !activity) return;  
   
-        // Кешуємо рендер та контейнери  
-        const render = activity.render();  
-        const ratingsContainer = render.find('.applecation__ratings');  
-        const logoContainer = render.find('.applecation__logo');  
-        const titleElement = render.find('.full-start-new__title');  
+    // Кешуємо рендер та контейнери  
+    const render = activity.render();  
+    const ratingsContainer = render.find('.applecation__ratings');  
+    const logoContainer = render.find('.applecation__logo');  
+    const titleElement = render.find('.full-start-new__title');  
   
-        // Викликаємо функції з кешованими контейнерами  
-        fillRatings(ratingsContainer, data);  
-        fillMetaInfo(render, data);  
-        fillAdditionalInfo(render, data);  
+    // Викликаємо функції з кешованими контейнерами  
+    fillRatings(ratingsContainer, data);  
+    fillMetaInfo(render, data);  
+    fillAdditionalInfo(render, data);  
   
-        waitForBackgroundLoad(activity, () => {  
-            render.find('.applecation__meta').addClass('show');  
-            render.find('.applecation__info').addClass('show');  
-            render.find('.applecation__ratings').addClass('show');  
-            render.find('.applecation__description').addClass('show');  
-        });  
+    waitForBackgroundLoad(activity, () => {  
+        render.find('.applecation__meta').addClass('show');  
+        render.find('.applecation__info').addClass('show');  
+        render.find('.applecation__ratings').addClass('show');  
+        render.find('.applecation__description').addClass('show');  
+    });  
   
-        const mediaType = data.name ? 'tv' : 'movie';  
-        const currentLang = 'uk';  
-          
-        const apiUrl = Lampa.TMDB.api(  
-            `${mediaType}/${data.id}/images?api_key=${Lampa.TMDB.key()}`  
-        );  
+    const mediaType = data.name ? 'tv' : 'movie';  
+    const currentLang = 'uk';  
+      
+    const apiUrl = Lampa.TMDB.api(  
+        `${mediaType}/${data.id}/images?api_key=${Lampa.TMDB.key()}`  
+    );  
   
-        // Перевірка чи активна ще картка  
-        const currentActivity = Lampa.Activity.get();  
+    // Перевірка чи активна ще картка - ВИПРАВЛЕНО  
+    const currentActivity = Lampa.Activity.active();  
+    if (!currentActivity || currentActivity.component !== 'full') {  
+        return;  
+    }  
+  
+    $.get(apiUrl, (imagesData) => {  
+        // Ще раз перевіряємо активність - ВИПРАВЛЕНО  
+        const currentActivity = Lampa.Activity.active();  
         if (!currentActivity || currentActivity.component !== 'full') {  
             return;  
         }  
   
-        $.get(apiUrl, (imagesData) => {  
-            // Щоб раз перевіряємо активність  
-            const currentActivity = Lampa.Activity.get();  
-            if (!currentActivity || currentActivity.component !== 'full') {  
-                return;  
-            }  
+        const bestLogo = selectBestLogo(imagesData.logos, currentLang);  
   
-            const bestLogo = selectBestLogo(imagesData.logos, currentLang);  
+        if (bestLogo) {  
+            const logoPath = bestLogo.file_path;  
+            const quality = getLogoQuality();  
+            const logoUrl = Lampa.TMDB.image(`/t/p/${quality}${logoPath}`);  
   
-            if (bestLogo) {  
-                const logoPath = bestLogo.file_path;  
-                const quality = getLogoQuality();  
-                const logoUrl = Lampa.TMDB.image(`/t/p/${quality}${logoPath}`);  
-  
-                const img = new Image();  
-                img.onload = () => {  
-                    logoContainer.html(`<img src="${logoUrl}" alt="" />`);  
-                    waitForBackgroundLoad(activity, () => {  
-                        logoContainer.addClass('loaded');  
-                    });  
-                };  
-                img.src = logoUrl;  
-            } else {  
-                titleElement.show();  
+            const img = new Image();  
+            img.onload = () => {  
+                logoContainer.html(`<img src="${logoUrl}" alt="" />`);  
                 waitForBackgroundLoad(activity, () => {  
                     logoContainer.addClass('loaded');  
                 });  
-            }  
-        }).fail(() => {  
+            };  
+            img.src = logoUrl;  
+        } else {  
             titleElement.show();  
             waitForBackgroundLoad(activity, () => {  
                 logoContainer.addClass('loaded');  
             });  
+        }  
+    }).fail(() => {  
+        titleElement.show();  
+        waitForBackgroundLoad(activity, () => {  
+            logoContainer.addClass('loaded');  
         });  
-    }  
+    });  
+}  
   
     // Дебаунс для завантаження логотипів  
     let loadTimeout;  
