@@ -101,10 +101,10 @@ const translations = {
                 filter:   
                     /* Біла рамка тільки для оригінальних кольорів */  
                     ${originalColors ? `  
-                    drop-shadow(0 0 2px rgba(255,255,255,1))  
-                    drop-shadow(0 0 4px rgba(255,255,255,0.9))  
-                    drop-shadow(0 0 6px rgba(255,255,255,0.8))  
-                    drop-shadow(0 0 8px rgba(255,255,255,0.6))  
+                    drop-shadow(0 0 2px rgba(255,255,255,0.95))  
+                    drop-shadow(0 0 4px rgba(255,255,255,0.85))  
+                    drop-shadow(0 0 6px rgba(255,255,255,0.75))  
+                    drop-shadow(0 0 8px rgba(255,255,255,0.55))
                     ` : ''}  
                     /* Чорні тіні для контрасту в обох режимах */  
                     drop-shadow(0 0 1px rgba(0,0,0,0.9))  
