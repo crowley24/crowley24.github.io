@@ -257,11 +257,33 @@ Lampa.SettingsApi.addParam({
         $('body').addClass('applecation--ratings-' + Lampa.Storage.get('applecation_ratings_position', 'card'));
         applyScales();
     }
+    
+    // Ініціалізація кольорів логотипів  
+updateLogoColors();
 
     // Функція керування зумом
    function updateZoomState() {
     let enabled = Lampa.Storage.get('applecation_apple_zoom', true);
     $('body').toggleClass('applecation--zoom-enabled', enabled); 
+}
+
+    function updateLogoColors() {  
+    const originalColors = Lampa.Storage.get('applecation_original_colors', true);  
+    $('style[data-id="applecation_logo_colors"]').remove();  
+      
+    const colorStyles = `  
+        <style data-id="applecation_logo_colors">  
+            .applecation__network img {  
+                display: block;  
+                max-height: 1.4em;  
+                width: auto;  
+                object-fit: contain;  
+                ${originalColors ? '' : 'filter: brightness(0) invert(1);'}  
+            }  
+        </style>  
+    `;  
+      
+    $('body').append(colorStyles);  
 }
 
     // Применяем масштабирование контента
