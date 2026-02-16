@@ -99,11 +99,11 @@ const translations = {
                 width: auto;  
                 object-fit: contain;  
                 filter:   
-                    /* Біла рамка тільки для оригінальних кольорів */  
+                    /* Біла рамка тільки для оригінальних кольорів (трохи яскравіше) */  
                     ${originalColors ? `  
-                        drop-shadow(0 0 1px rgba(255,255,255,0.4))  
-                        drop-shadow(0 0 2px rgba(255,255,255,0.3))  
-                        drop-shadow(0 0 3px rgba(255,255,255,0.2))  
+                        drop-shadow(0 0 1px rgba(255,255,255,0.5))  
+                        drop-shadow(0 0 2px rgba(255,255,255,0.4))  
+                        drop-shadow(0 0 3px rgba(255,255,255,0.3))  
                     ` : ''}  
                     /* Чорні тіні для контрасту в обох режимах */  
                     drop-shadow(0 0 1px rgba(0,0,0,0.9))  
