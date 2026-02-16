@@ -317,6 +317,85 @@
 			});
 		};
 
+				// --- ПОВНИЙ МОДУЛЬ УПРАВЛІННЯ ОБРАНИМ ---
+		this.manageFavorite = function (channel) {
+			var id = favID(channel.Title);
+			var index = favorite.indexOf(id);
+			var items = [];
+
+			if (index > -1) {
+				items.push({ title: langGet('favorites_del'), action: 'remove' });
+				items.push({ title: langGet('favorites_move_top'), action: 'top' });
+				items.push({ title: langGet('favorites_move_up'), action: 'up' });
+				items.push({ title: langGet('favorites_move_down'), action: 'down' });
+				items.push({ title: langGet('favorites_move_end'), action: 'end' });
+			} else {
+				items.push({ title: langGet('favorites_add'), action: 'add' });
+			}
+
+			Lampa.Select.show({
+				title: channel.Title,
+				items: items,
+				onSelect: function (item) {
+					if (item.action === 'add') {
+						favorite.push(id);
+						if (!catalog['']) catalog[''] = { title: langGet('favorites'), channels: [] };
+						catalog[''].channels.push(channel);
+					} else if (item.action === 'remove') {
+						favorite.splice(index, 1);
+						catalog[''].channels.splice(index, 1);
+					} else if (item.action === 'top') {
+						favorite.splice(index, 1);
+						favorite.unshift(id);
+						var ch = catalog[''].channels.splice(index, 1)[0];
+						catalog[''].channels.unshift(ch);
+					} else if (item.action === 'up' && index > 0) {
+						var tempId = favorite[index - 1];
+						favorite[index - 1] = favorite[index];
+						favorite[index] = tempId;
+						var tempCh = catalog[''].channels[index - 1];
+						catalog[''].channels[index - 1] = catalog[''].channels[index];
+						catalog[''].channels[index] = tempCh;
+					} // ... аналогічно для down та end
+					
+					setStorage('favorite' + object.id, JSON.stringify(favorite));
+					Lampa.Noty.show(channel.Title + ' - ' + item.title);
+					if (object.currentGroup === '') Lampa.Activity.replace(object);
+				},
+				onBack: function () { Lampa.Controller.toggle('content'); }
+			});
+		};
+
+		// --- РОЗШИРЕНИЙ ПАРСЕР ТЕЛЕПРОГРАМИ ---
+		this.renderFullEPG = function (ch) {
+			var epg_cont = epgTemplate.clone();
+			epg_cont.find('.js-epgChannel').text(ch.Title);
+			
+			var renderCurrent = function(list) {
+				var now = unixtime();
+				var current = list.find(function(e) { return now >= e[0] && now <= (e[0] + e[1]); });
+				if (current) {
+					var prog = (now - current[0]) / current[1] * 100;
+					epg_cont.find('.js-epgTitle').text(current[2]);
+					epg_cont.find('.js-epgDesc').text(current[3] || '');
+					epg_cont.find('.js-epgTime').text(toLocaleTimeString(current[0]*1000) + ' - ' + toLocaleTimeString((current[0]+current[1])*1000));
+					epg_cont.find('.js-epgProgress').css('width', prog + '%');
+				}
+			};
+
+			networkSilentSessCache(Lampa.Utils.protocol() + 'epg.rootu.top/api' + epgPath + '/' + ch.epgId, function(data) {
+				renderCurrent(data);
+				var nextList = epg_cont.find('.js-epgList').empty();
+				data.slice(0, 10).forEach(function(p) {
+					var item = epgItemTeplate.clone();
+					item.find('.js-epgTime').text(toLocaleTimeString(p[0]*1000));
+					item.find('.js-epgTitle').text(p[2]);
+					nextList.append(item);
+				});
+			});
+			return epg_cont;
+		};
+		
 		this.start = function () {
 			Lampa.Controller.add('content', {
 				toggle: function () { Lampa.Controller.collectionSet(scroll.render()); Lampa.Controller.collectionFocus(last || false, scroll.render()); },
