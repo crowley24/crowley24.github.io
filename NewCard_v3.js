@@ -98,17 +98,19 @@ const translations = {
                 max-height: 1.4em;  
                 width: auto;  
                 object-fit: contain;  
-                filter:   
+                ${originalColors ? `  
                     /* Чітка біла рамка без розмиття */  
-                    ${originalColors ? `  
-                        drop-shadow(0 0 0.5px rgba(255,255,255,0.8))  
-                        drop-shadow(0 0 1px rgba(255,255,255,0.6))  
-                        drop-shadow(0 0 1.5px rgba(255,255,255,0.4))  
-                    ` : ''}  
-                    /* Чіткі чорні тіні для контрасту */  
-                    drop-shadow(0 0 0.5px rgba(0,0,0,0.9))  
-                    drop-shadow(0 0 1px rgba(0,0,0,0.7))  
-                    ${originalColors ? '' : 'brightness(0) invert(1)'};  
+                    drop-shadow(0 0 0.5px rgba(255,255,255,0.8))  
+                    drop-shadow(0 0 1px rgba(255,255,255,0.6))  
+                    drop-shadow(0 0 1.5px rgba(255,255,255,0.4))  
+                ` : `  
+                    /* Стиль з плагіна Quality */  
+                    filter: brightness(0) invert(1);  
+                    opacity: 0.9;  
+                    height: 1.8em;  
+                    width: auto;  
+                    margin-top: -2px;  
+                `}  
             }  
         </style>  
     `;  
