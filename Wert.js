@@ -4,66 +4,71 @@
     window.logoplugin = true;
 
     function applyStyles() {
-        var oldStyle = document.getElementById('lampa-fix-final-perfect');
+        var oldStyle = document.getElementById('lampa-no-line-fix');
         if (oldStyle) oldStyle.remove();
         
         var style = document.createElement('style');
-        style.id = 'lampa-fix-final-perfect';
+        style.id = 'lampa-no-line-fix';
         style.textContent = `
             @keyframes kenBurnsEffect {
                 0% { transform: scale(1); }
-                50% { transform: scale(1.1); }
+                50% { transform: scale(1.15); }
                 100% { transform: scale(1); }
             }
 
             @media screen and (max-width: 480px) {
                 .background, .notice-all { background-color: #000 !important; }
 
-                /* Головний контейнер постера */
+                /* Контейнер для картинки */
                 .full-start-new__poster {
                     position: relative !important;
-                    overflow: hidden !important; /* Тримаємо зум всередині */
+                    overflow: hidden !important; 
                     background: #000 !important;
-                    height: 65vh !important;
+                    height: 60vh !important;
                 }
 
-                /* Створюємо внутрішній шар, який буде анімуватися РАЗОМ з маскою */
-                .full-start-new__img {
-                    position: absolute !important;
-                    top: 0; left: 0; width: 100%; height: 100%;
-                    animation: kenBurnsEffect 25s ease-in-out infinite !important;
-                    border-radius: 0 !important;
-                    
-                    /* Маска з твого робочого прикладу, але на рівні контейнера */
-                    mask-image: linear-gradient(to bottom, 
-                        rgba(0, 0, 0, 1) 0%,
-                        rgba(0, 0, 0, 1) 50%,
-                        rgba(0, 0, 0, 0.7) 75%,
-                        rgba(0, 0, 0, 0.3) 90%,
-                        rgba(0, 0, 0, 0) 100%) !important;
-                    -webkit-mask-image: linear-gradient(to bottom, 
-                        rgba(0, 0, 0, 1) 0%,
-                        rgba(0, 0, 0, 1) 50%,
-                        rgba(0, 0, 0, 0.7) 75%,
-                        rgba(0, 0, 0, 0.3) 90%,
-                        rgba(0, 0, 0, 0) 100%) !important;
-                }
-
-                /* Сама картинка - тепер вона просто заповнює шар */
-                .full-start-new__poster img, .full-start__poster img {
+                /* Анімація тільки на картинку */
+                .full-start-new__poster img {
                     filter: none !important;
                     -webkit-filter: none !important;
                     width: 100% !important;
                     height: 100% !important;
                     object-fit: cover !important;
+                    animation: kenBurnsEffect 30s ease-in-out infinite !important;
                 }
 
-                /* Прибираємо всі "сміттєві" тіні та рамки Lampa */
+                /* СЕКРЕТ ТУТ: Замість маски використовуємо статичний оверлей */
+                /* Він ПЕРЕКРИВАЄ лінію і не рухається разом з картинкою */
+                .full-start-new__poster::after {
+                    content: '' !important;
+                    position: absolute !important;
+                    left: 0 !important;
+                    top: 0 !important;
+                    width: 100% !important;
+                    height: 100.5% !important; /* Трохи більше, щоб закрити шов */
+                    background: linear-gradient(to bottom, 
+                        rgba(0,0,0,0) 0%, 
+                        rgba(0,0,0,0) 40%, 
+                        rgba(0,0,0,0.4) 60%, 
+                        rgba(0,0,0,0.8) 85%, 
+                        #000 100%) !important;
+                    z-index: 2 !important;
+                    pointer-events: none !important;
+                }
+
+                /* Прибираємо маски з контейнера, які й створювали лінію */
+                .full-start-new__img {
+                    mask-image: none !important;
+                    -webkit-mask-image: none !important;
+                    border-radius: 0 !important;
+                }
+
+                /* Налаштування тексту та лого */
                 .full-start-new__right {
                     background: none !important;
                     border: none !important;
                     box-shadow: none !important;
-                    margin-top: -140px !important; /* Контент наповзає на постер */
+                    margin-top: -160px !important; 
                     z-index: 10 !important;
                     position: relative !important;
                 }
@@ -72,24 +77,19 @@
                     display: none !important;
                 }
 
-                /* Центрування всього */
                 .full-start-new__title, .full-start-new__tagline, .full-descr__text,
                 .full-start-new__buttons, .full-start-new__details {
                     display: flex !important;
                     justify-content: center !important;
-                    align-items: center !important;
                     text-align: center !important;
+                    width: 100% !important;
                     flex-direction: column !important;
                 }
 
                 .full-start-new__buttons, .full-start-new__details {
                     flex-direction: row !important;
                     flex-wrap: wrap !important;
-                    gap: 10px !important;
-                }
-
-                .full-start-new__head {
-                    text-shadow: 0 2px 10px rgba(0,0,0,1) !important;
+                    gap: 8px !important;
                 }
             }
         `;
@@ -104,9 +104,7 @@
                 var type = data.name ? 'tv' : 'movie';
                 var lang = Lampa.Storage.get('language') || 'uk';
                 
-                var url = Lampa.TMDB.api(type + '/' + data.id + '/images?api_key=' + Lampa.TMDB.key() + '&language=' + lang);
-                
-                $.get(url, function(res) {
+                $.get(Lampa.TMDB.api(type + '/' + data.id + '/images?api_key=' + Lampa.TMDB.key() + '&language=' + lang), function(res) {
                     let path = (res.logos && res.logos[0]) ? res.logos[0].file_path : null;
                     if (!path) {
                         $.get(Lampa.TMDB.api(type + '/' + data.id + '/images?api_key=' + Lampa.TMDB.key() + '&language=en'), function(resEn) {
@@ -117,7 +115,7 @@
 
                 function render(p) {
                     const img = Lampa.TMDB.image('/t/p/w300' + p.replace('.svg', '.png'));
-                    e.object.activity.render().find('.full-start-new__title').html('<img src="'+img+'" style="max-height:100px; position:relative; z-index:20;">');
+                    e.object.activity.render().find('.full-start-new__title').html('<img src="'+img+'" style="max-height:110px; z-index:20; position:relative;">');
                 }
             }
         });
@@ -126,21 +124,10 @@
     function start() {
         applyStyles();
         initLogoPlugin();
-        
-        setInterval(function() {
-            if (window.innerWidth <= 480 && window.lampa_settings) {
-                window.lampa_settings.blur_poster = false;
-            }
-        }, 1000);
-        
-        Lampa.Listener.follow('app', (e) => {
-            if (e.type === 'ready' || e.type === 'full') {
-                setTimeout(applyStyles, 200);
-            }
-        });
+        setInterval(() => { if(window.lampa_settings) window.lampa_settings.blur_poster = false; }, 1000);
+        Lampa.Listener.follow('app', (e) => { if (e.type === 'ready' || e.type === 'full') setTimeout(applyStyles, 200); });
     }
 
     if (window.appready) start();
     else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') start(); });
-
 })();
