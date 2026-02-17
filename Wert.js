@@ -8,7 +8,7 @@
         if (window.logoplugin) console.log('[combined-plugin]', ...args);
     }
 
-    // ===== ОСНОВНІ СТИЛІ ТА АНІМАЦІЯ =====
+    // ===== ОСНОВНІ СТИЛІ ТА ПЛАВНИЙ ГРАДІЄНТ =====
     function applyBaseStyles() {
         var oldStyle = document.getElementById('no-blur-plugin-styles');
         if (oldStyle) oldStyle.remove();
@@ -48,6 +48,7 @@
                     border: none !important;
                     box-shadow: none !important;
                     z-index: 2 !important;
+                    margin-top: -30px !important; /* Трохи піднімаємо контент вгору для м'якості */
                 }
 
                 .full-start-new__right::before, 
@@ -65,10 +66,21 @@
                     margin: 10px auto !important;
                 }
                 
+                /* ОНОВЛЕНИЙ М'ЯКИЙ ПЕРЕХІД (ГРАДІЄНТ) */
                 .full-start-new__poster img,
                 .full--poster {
-                    mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%) !important;
-                    -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%) !important;
+                    mask-image: linear-gradient(to bottom, 
+                        rgba(0,0,0,1) 0%, 
+                        rgba(0,0,0,1) 35%, 
+                        rgba(0,0,0,0.7) 60%, 
+                        rgba(0,0,0,0.3) 80%, 
+                        rgba(0,0,0,0) 100%) !important;
+                    -webkit-mask-image: linear-gradient(to bottom, 
+                        rgba(0,0,0,1) 0%, 
+                        rgba(0,0,0,1) 35%, 
+                        rgba(0,0,0,0.7) 60%, 
+                        rgba(0,0,0,0.3) 80%, 
+                        rgba(0,0,0,0) 100%) !important;
                 }
                 
                 .full-start-new__head {
@@ -93,41 +105,32 @@
         return true;
     }
 
-    // ===== ЛОГІКА ЗАВАНТАЖЕННЯ ЛОГОТИПІВ (З ПЕРЕВІРКОЮ МОВИ) =====
+    // Решта коду (getLogo, initLogoPlugin, і т.д.) залишається без змін
     function getLogo(type, id, callback) {
-        const languages = [Lampa.Storage.get('language'), 'en', '']; // Порядок: Поточна -> Англійська -> Будь-яка
-        
+        const languages = [Lampa.Storage.get('language'), 'en', ''];
         let attempt = (index) => {
             if (index >= languages.length) return;
-            
             let url = Lampa.TMDB.api(type + '/' + id + '/images?api_key=' + Lampa.TMDB.key() + (languages[index] ? '&language=' + languages[index] : ''));
-            
             $.get(url, function(data) {
-                if (data.logos && data.logos.length > 0) {
-                    callback(data.logos[0].file_path);
-                } else {
-                    attempt(index + 1); // Якщо не знайшли, пробуємо наступну мову
-                }
+                if (data.logos && data.logos.length > 0) callback(data.logos[0].file_path);
+                else attempt(index + 1);
             }).fail(() => attempt(index + 1));
         };
-        
         attempt(0);
     }
 
     function initLogoPlugin() {
         Lampa.Listener.follow('full', function(e) {
             if (window.innerWidth > 480 && e.type === 'complite') return;
-            
             if (e.type === 'complite') {
                 var data = e.data.movie;
                 var type = data.name ? 'tv' : 'movie';
-                
                 if (data.id) {
                     getLogo(type, data.id, function(path) {
                         const logoUrl = Lampa.TMDB.image('/t/p/w300' + path.replace('.svg', '.png'));
                         e.object.activity.render().find('.full-start-new__title').html(
                             '<div style="display: flex; justify-content: center; width: 100%;">' +
-                            '<img style="max-height: 120px; object-fit: contain;" src="' + logoUrl + '"/>' +
+                            '<img style="max-height: 125px; object-fit: contain;" src="' + logoUrl + '"/>' +
                             '</div>'
                         );
                     });
@@ -147,7 +150,6 @@
 
     function initMobileStyles() {
         if (window.innerWidth > 480) return;
-        
         const apply = () => {
             const titles = ['Рекомендации','Режиссер','Актеры','Подробно','Похожие','Коллекция'];
             document.querySelectorAll('.items-line__head').forEach(el => {
@@ -156,7 +158,6 @@
                 }
             });
         };
-
         Lampa.Listener.follow('app', (e) => {
             if (e.type === 'ready' || e.type === 'full') {
                 setTimeout(() => { apply(); applyBaseStyles(); }, 200);
@@ -173,6 +174,4 @@
     if (window.appready) startPlugin();
     else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') startPlugin(); });
 
-    // Запам'ятав ваші побажання щодо англійських логотипів. 
-    // Ви можете керувати збереженою інформацією тут: https://gemini.google.com/saved-info
 })();
