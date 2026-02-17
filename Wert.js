@@ -1,11 +1,12 @@
 (function() {
     'use strict';
 
-    // Ініціалізація налаштування
+    // 1. Ініціалізація сховища (якщо ще не встановлено)
     if (Lampa.Storage.get('mobile_interface_animation', 'unset') === 'unset') {
         Lampa.Storage.set('mobile_interface_animation', true);
     }
 
+    // 2. Функція застосування стилів (твій ідеальний фон + тригер анімації)
     function applyStyles() {
         var oldStyle = document.getElementById('mobile-interface-styles');
         if (oldStyle) oldStyle.remove();
@@ -22,17 +23,7 @@
 
             @media screen and (max-width: 480px) {
                 .background { background: #000 !important; }
-
-                .full-start__poster, .full-start-new__poster, 
-                .full-start__poster img, .full-start-new__poster img {
-                    filter: none !important;
-                    -webkit-filter: none !important;
-                }
-                
-                .full-start-new__poster {
-                    position: relative !important;
-                    overflow: visible !important;
-                }
+                .full-start-new__poster { position: relative !important; overflow: visible !important; }
                 
                 .full-start-new__poster img {
                     ${isAnimationEnabled ? 'animation: kenBurnsEffect 30s ease-in-out infinite !important;' : 'animation: none !important;'}
@@ -48,75 +39,63 @@
                 }
                 
                 .full-start-new__right {
-                    background: none !important;
-                    border: none !important;
-                    box-shadow: none !important;
-                    margin-top: -120px !important;
-                    z-index: 2 !important;
-                    display: flex !important;
-                    flex-direction: column !important;
-                    align-items: center !important;
+                    background: none !important; border: none !important; box-shadow: none !important;
+                    margin-top: -120px !important; z-index: 2 !important;
+                    display: flex !important; flex-direction: column !important; align-items: center !important;
                 }
-                
                 .full-start-new__right::before, .full-start-new__right::after { content: unset !important; }
-                
                 .full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 70px; }
                 .full-start-new__buttons, .full-start-new__details, .full-descr__text, .full-start-new__tagline {
-                    justify-content: center !important;
-                    text-align: center !important;
-                    display: flex !important;
+                    justify-content: center !important; text-align: center !important; display: flex !important;
                 }
             }
         `;
         document.head.appendChild(style);
     }
 
-    // Додавання меню налаштувань
-    function addSettings() {
-        // Слухаємо подію створення налаштувань
+    // 3. Створення нового пункту в меню налаштувань
+    function addSettingsMenu() {
+        // Додаємо опис розділу в офіційний список Lampa
+        Lampa.Settings.add({
+            name: 'mobile_interface',
+            type: 'button',
+            label: 'Мобільний інтерфейс',
+            icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" fill="white"/></svg>',
+        });
+
+        // Слухаємо, коли користувач відкриває цей розділ
         Lampa.Settings.listener.follow('open', function (e) {
-            if (e.name === 'main') {
-                var item = $('<div class="settings-folder selector" data-name="mobile_interface">' +
-                    '<div class="settings-folder__icon"><svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" fill="white"/></svg></div>' +
-                    '<div class="settings-folder__name">Мобільний інтерфейс</div>' +
-                '</div>');
-
-                item.on('hover:enter', function () {
-                    Lampa.Settings.create({
-                        title: 'Мобільний інтерфейс',
-                        items: [
-                            {
-                                title: 'Анімація постера',
-                                name: 'mobile_interface_animation',
-                                type: 'select',
-                                values: {
-                                    true: 'Увімкнено',
-                                    false: 'Вимкнено'
-                                },
-                                default: true
-                            }
-                        ],
-                        onBack: function() {
-                            applyStyles(); // Оновлюємо стилі при поверненні
-                            Lampa.Settings.main();
+            if (e.name === 'mobile_interface') {
+                Lampa.Settings.create({
+                    title: 'Мобільний інтерфейс',
+                    items: [
+                        {
+                            title: 'Анімація постера',
+                            name: 'mobile_interface_animation',
+                            type: 'select',
+                            values: {
+                                true: 'Увімкнено',
+                                false: 'Вимкнено'
+                            },
+                            default: true
                         }
-                    });
+                    ],
+                    onBack: function() {
+                        applyStyles(); // Оновлюємо стилі при зміні
+                        Lampa.Settings.main(); // Повертаємо в головне меню
+                    }
                 });
-
-                // Додаємо пункт меню перед розділом "Інше" або в кінець
-                var other = $('.settings-main .selector[data-name="more"]');
-                if (other.length) other.before(item);
-                else $('.settings-main').append(item);
             }
         });
     }
 
+    // 4. Логіка логотипів (твій оригінальний метод)
     function initLogo() {
         Lampa.Listener.follow('full', function(e) {
             if (window.innerWidth <= 480 && e.type === 'complite') {
                 var movie = e.data.movie;
                 var type = movie.name ? 'tv' : 'movie';
-                var lang = Lampa.Storage.get('language');
+                var lang = Lampa.Storage.get('language') || 'uk';
                 
                 var url = Lampa.TMDB.api(type + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key() + '&language=' + lang);
                 $.get(url, function(res) {
@@ -138,10 +117,10 @@
 
     function start() {
         applyStyles();
-        addSettings();
+        addSettingsMenu();
         initLogo();
         
-        // Вимикаємо стандартний блюр Lampa
+        // Вимикаємо стандартний блюр Lampa для мобільних
         setInterval(function() {
             if (window.innerWidth <= 480 && window.lampa_settings) {
                 window.lampa_settings.blur_poster = false;
@@ -149,6 +128,7 @@
         }, 1000);
     }
 
+    // Запуск плагіна
     if (window.appready) start();
     else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') start(); });
 
