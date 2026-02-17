@@ -4,106 +4,92 @@
     window.logoplugin = true;
 
     function applyStyles() {
-        var oldStyle = document.getElementById('lampa-fix-kenburns');
+        var oldStyle = document.getElementById('lampa-fix-final-perfect');
         if (oldStyle) oldStyle.remove();
         
         var style = document.createElement('style');
-        style.id = 'lampa-fix-kenburns';
+        style.id = 'lampa-fix-final-perfect';
         style.textContent = `
             @keyframes kenBurnsEffect {
                 0% { transform: scale(1); }
-                50% { transform: scale(1.15); }
+                50% { transform: scale(1.1); }
                 100% { transform: scale(1); }
             }
 
             @media screen and (max-width: 480px) {
-                /* Прибираємо стандартні обмеження */
-                .full-start__poster, .full-start-new__poster {
+                .background, .notice-all { background-color: #000 !important; }
+
+                /* Головний контейнер постера */
+                .full-start-new__poster {
                     position: relative !important;
-                    overflow: visible !important;
+                    overflow: hidden !important; /* Тримаємо зум всередині */
                     background: #000 !important;
+                    height: 65vh !important;
                 }
 
-                .background { background: #000 !important; }
+                /* Створюємо внутрішній шар, який буде анімуватися РАЗОМ з маскою */
+                .full-start-new__img {
+                    position: absolute !important;
+                    top: 0; left: 0; width: 100%; height: 100%;
+                    animation: kenBurnsEffect 25s ease-in-out infinite !important;
+                    border-radius: 0 !important;
+                    
+                    /* Маска з твого робочого прикладу, але на рівні контейнера */
+                    mask-image: linear-gradient(to bottom, 
+                        rgba(0, 0, 0, 1) 0%,
+                        rgba(0, 0, 0, 1) 50%,
+                        rgba(0, 0, 0, 0.7) 75%,
+                        rgba(0, 0, 0, 0.3) 90%,
+                        rgba(0, 0, 0, 0) 100%) !important;
+                    -webkit-mask-image: linear-gradient(to bottom, 
+                        rgba(0, 0, 0, 1) 0%,
+                        rgba(0, 0, 0, 1) 50%,
+                        rgba(0, 0, 0, 0.7) 75%,
+                        rgba(0, 0, 0, 0.3) 90%,
+                        rgba(0, 0, 0, 0) 100%) !important;
+                }
 
-                /* ПЕРША МАСКА ТА АНІМАЦІЯ (на саму картинку) */
-                .full-start-new__poster img, .full--poster, .full-start__poster img {
+                /* Сама картинка - тепер вона просто заповнює шар */
+                .full-start-new__poster img, .full-start__poster img {
                     filter: none !important;
                     -webkit-filter: none !important;
-                    
-                    /* Повертаємо анімацію наближення */
-                    animation: kenBurnsEffect 30s ease-in-out infinite !important;
-                    transform-origin: center center !important;
-
-                    /* Маска з твого робочого прикладу */
-                    mask-image: linear-gradient(to bottom, 
-                        rgba(0, 0, 0, 1) 0%,
-                        rgba(0, 0, 0, 1) 50%,
-                        rgba(0, 0, 0, 0.8) 70%,
-                        rgba(0, 0, 0, 0.4) 85%,
-                        rgba(0, 0, 0, 0) 100%) !important;
-                    -webkit-mask-image: linear-gradient(to bottom, 
-                        rgba(0, 0, 0, 1) 0%,
-                        rgba(0, 0, 0, 1) 50%,
-                        rgba(0, 0, 0, 0.8) 70%,
-                        rgba(0, 0, 0, 0.4) 85%,
-                        rgba(0, 0, 0, 0) 100%) !important;
+                    width: 100% !important;
+                    height: 100% !important;
+                    object-fit: cover !important;
                 }
 
-                /* ДРУГА МАСКА (на внутрішній контейнер - КЛЮЧ ДО ВІДСУТНОСТІ ЛІНІЇ) */
-                .full-start-new__img {
-                    border-radius: 0 !important;
-                    mask-image: linear-gradient(to bottom, 
-                        rgba(0, 0, 0, 0) 0%,
-                        rgba(0, 0, 0, 0.3) 5%,
-                        rgba(0, 0, 0, 0.6) 12%,
-                        rgba(0, 0, 0, 0.85) 20%,
-                        rgba(0, 0, 0, 1) 30%,
-                        rgba(0, 0, 0, 1) 70%,
-                        rgba(0, 0, 0, 0.8) 85%,
-                        rgba(0, 0, 0, 0.4) 95%,
-                        rgba(0, 0, 0, 0) 100%) !important;
-                    -webkit-mask-image: linear-gradient(to bottom, 
-                        rgba(0, 0, 0, 0) 0%,
-                        rgba(0, 0, 0, 0.3) 5%,
-                        rgba(0, 0, 0, 0.6) 12%,
-                        rgba(0, 0, 0, 0.85) 20%,
-                        rgba(0, 0, 0, 1) 30%,
-                        rgba(0, 0, 0, 1) 70%,
-                        rgba(0, 0, 0, 0.8) 85%,
-                        rgba(0, 0, 0, 0.4) 95%,
-                        rgba(0, 0, 0, 0) 100%) !important;
-                }
-
-                /* Контентна частина */
+                /* Прибираємо всі "сміттєві" тіні та рамки Lampa */
                 .full-start-new__right {
                     background: none !important;
                     border: none !important;
                     box-shadow: none !important;
-                    margin-top: -120px !important;
-                    z-index: 2 !important;
+                    margin-top: -140px !important; /* Контент наповзає на постер */
+                    z-index: 10 !important;
                     position: relative !important;
                 }
 
                 .full-start-new__right::before, .full-start-new__right::after {
                     display: none !important;
-                    content: unset !important;
                 }
 
-                /* Центрування тексту та кнопок */
+                /* Центрування всього */
                 .full-start-new__title, .full-start-new__tagline, .full-descr__text,
                 .full-start-new__buttons, .full-start-new__details {
                     display: flex !important;
                     justify-content: center !important;
                     align-items: center !important;
                     text-align: center !important;
-                    width: 100% !important;
+                    flex-direction: column !important;
                 }
 
                 .full-start-new__buttons, .full-start-new__details {
                     flex-direction: row !important;
                     flex-wrap: wrap !important;
                     gap: 10px !important;
+                }
+
+                .full-start-new__head {
+                    text-shadow: 0 2px 10px rgba(0,0,0,1) !important;
                 }
             }
         `;
@@ -131,7 +117,7 @@
 
                 function render(p) {
                     const img = Lampa.TMDB.image('/t/p/w300' + p.replace('.svg', '.png'));
-                    e.object.activity.render().find('.full-start-new__title').html('<img src="'+img+'" style="max-height:100px; z-index:10; position:relative;">');
+                    e.object.activity.render().find('.full-start-new__title').html('<img src="'+img+'" style="max-height:100px; position:relative; z-index:20;">');
                 }
             }
         });
