@@ -8,7 +8,7 @@
         if (window.logoplugin) console.log('[combined-plugin]', ...args);
     }
 
-    // ===== ОСНОВНІ СТИЛІ ТА ПЛАВНИЙ ГРАДІЄНТ =====
+    // ===== ОСНОВНІ СТИЛІ, АНІМАЦІЯ ТА ГРАДІЄНТ =====
     function applyBaseStyles() {
         var oldStyle = document.getElementById('no-blur-plugin-styles');
         if (oldStyle) oldStyle.remove();
@@ -16,6 +16,7 @@
         var style = document.createElement('style');
         style.id = 'no-blur-plugin-styles';
         style.textContent = `
+            /* Анімація наближення */
             @keyframes kenBurnsEffect {
                 0% { transform: scale(1); }
                 50% { transform: scale(1.12); }
@@ -37,23 +38,35 @@
                 .card--collection .card__img {
                     filter: none !important;
                     -webkit-filter: none !important;
+                    /* Додаємо ефект приближення */
                     animation: kenBurnsEffect 25s ease-in-out infinite !important;
                     transform-origin: center center !important;
                 }
                 
-                .background { background: #000 !important; }
+                .background {
+                    background: #000 !important;
+                }
                 
                 .full-start-new__right {
                     background: none !important;
                     border: none !important;
                     box-shadow: none !important;
                     z-index: 2 !important;
-                    margin-top: -30px !important; /* Трохи піднімаємо контент вгору для м'якості */
                 }
 
-                .full-start-new__right::before, 
-                .full-start-new__right::after {
-                    display: none !important;
+                /* Робимо перехід (градієнт) максимально м'яким */
+                .full-start-new__poster img,
+                .full--poster {
+                    mask-image: linear-gradient(to bottom, 
+                        rgba(0,0,0,1) 0%, 
+                        rgba(0,0,0,1) 40%, 
+                        rgba(0,0,0,0.6) 70%, 
+                        rgba(0,0,0,0) 100%) !important;
+                    -webkit-mask-image: linear-gradient(to bottom, 
+                        rgba(0,0,0,1) 0%, 
+                        rgba(0,0,0,1) 40%, 
+                        rgba(0,0,0,0.6) 70%, 
+                        rgba(0,0,0,0) 100%) !important;
                 }
                 
                 .full-start-new__title {
@@ -66,25 +79,8 @@
                     margin: 10px auto !important;
                 }
                 
-                /* ОНОВЛЕНИЙ М'ЯКИЙ ПЕРЕХІД (ГРАДІЄНТ) */
-                .full-start-new__poster img,
-                .full--poster {
-                    mask-image: linear-gradient(to bottom, 
-                        rgba(0,0,0,1) 0%, 
-                        rgba(0,0,0,1) 35%, 
-                        rgba(0,0,0,0.7) 60%, 
-                        rgba(0,0,0,0.3) 80%, 
-                        rgba(0,0,0,0) 100%) !important;
-                    -webkit-mask-image: linear-gradient(to bottom, 
-                        rgba(0,0,0,1) 0%, 
-                        rgba(0,0,0,1) 35%, 
-                        rgba(0,0,0,0.7) 60%, 
-                        rgba(0,0,0,0.3) 80%, 
-                        rgba(0,0,0,0) 100%) !important;
-                }
-                
                 .full-start-new__head {
-                    text-shadow: 2px 2px 4px rgba(0,0,0,0.9) !important;
+                    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9) !important;
                 }
                 
                 .full-start-new__right, .full-start__left, .full-descr__text, 
@@ -93,9 +89,8 @@
                     justify-content: center !important;
                     align-items: center !important;
                     text-align: center !important;
-                    flex-direction: column !important;
                 }
-                
+
                 .full-start-new__buttons, .full-start-new__details {
                     justify-content: center !important;
                 }
@@ -105,15 +100,23 @@
         return true;
     }
 
-    // Решта коду (getLogo, initLogoPlugin, і т.д.) залишається без змін
-    function getLogo(type, id, callback) {
-        const languages = [Lampa.Storage.get('language'), 'en', ''];
+    // ===== РОБОТА З ЛОГОТИПАМИ (UA -> EN) =====
+    function loadLogo(type, id, callback) {
+        const userLang = Lampa.Storage.get('language') || 'uk';
+        const urls = [
+            Lampa.TMDB.api(type + '/' + id + '/images?api_key=' + Lampa.TMDB.key() + '&language=' + userLang),
+            Lampa.TMDB.api(type + '/' + id + '/images?api_key=' + Lampa.TMDB.key() + '&language=en'),
+            Lampa.TMDB.api(type + '/' + id + '/images?api_key=' + Lampa.TMDB.key()) // без мови як останній шанс
+        ];
+
         let attempt = (index) => {
-            if (index >= languages.length) return;
-            let url = Lampa.TMDB.api(type + '/' + id + '/images?api_key=' + Lampa.TMDB.key() + (languages[index] ? '&language=' + languages[index] : ''));
-            $.get(url, function(data) {
-                if (data.logos && data.logos.length > 0) callback(data.logos[0].file_path);
-                else attempt(index + 1);
+            if (index >= urls.length) return;
+            $.get(urls[index], function(data) {
+                if (data.logos && data.logos.length > 0) {
+                    callback(data.logos[0].file_path);
+                } else {
+                    attempt(index + 1);
+                }
             }).fail(() => attempt(index + 1));
         };
         attempt(0);
@@ -121,16 +124,16 @@
 
     function initLogoPlugin() {
         Lampa.Listener.follow('full', function(e) {
-            if (window.innerWidth > 480 && e.type === 'complite') return;
+            if (window.innerWidth > 480) return;
             if (e.type === 'complite') {
                 var data = e.data.movie;
                 var type = data.name ? 'tv' : 'movie';
                 if (data.id) {
-                    getLogo(type, data.id, function(path) {
-                        const logoUrl = Lampa.TMDB.image('/t/p/w300' + path.replace('.svg', '.png'));
+                    loadLogo(type, data.id, function(path) {
+                        const imgUrl = Lampa.TMDB.image('/t/p/w300' + path.replace('.svg', '.png'));
                         e.object.activity.render().find('.full-start-new__title').html(
                             '<div style="display: flex; justify-content: center; width: 100%;">' +
-                            '<img style="max-height: 125px; object-fit: contain;" src="' + logoUrl + '"/>' +
+                            '<img style="max-height: 120px; object-fit: contain;" src="' + imgUrl + '"/>' +
                             '</div>'
                         );
                     });
@@ -139,39 +142,50 @@
         });
     }
 
+    // ===== РЕШТА ФУНКЦІЙ =====
     function initBlurPlugin() {
         applyBaseStyles();
         setInterval(function() {
             if (window.innerWidth <= 480 && window.lampa_settings) {
                 window.lampa_settings.blur_poster = false;
             }
-        }, 2000);
+        }, 1500);
     }
 
-    function initMobileStyles() {
+    function applyMobileStyles() {
         if (window.innerWidth > 480) return;
-        const apply = () => {
-            const titles = ['Рекомендации','Режиссер','Актеры','Подробно','Похожие','Коллекция'];
-            document.querySelectorAll('.items-line__head').forEach(el => {
-                if (titles.includes(el.textContent.trim()) || el.textContent.includes('Сезон')) {
-                    el.style.cssText = 'display:flex; justify-content:center; width:100%;';
-                }
-            });
-        };
-        Lampa.Listener.follow('app', (e) => {
-            if (e.type === 'ready' || e.type === 'full') {
-                setTimeout(() => { apply(); applyBaseStyles(); }, 200);
+        const sectionTitles = ['Рекомендации','Режиссер','Актеры','Подробно','Похожие','Коллекция'];
+        document.querySelectorAll('.items-line__head').forEach(element => {
+            const text = element.textContent.trim();
+            if (text && (sectionTitles.includes(text) || text.includes('Сезон'))) {
+                element.style.cssText = 'display:flex; justify-content:center; width:100%;';
+            }
+        });
+    }
+
+    function initAllPlugins() {
+        initBlurPlugin();
+        initLogoPlugin();
+        // Виклик стилів заголовків
+        applyMobileStyles();
+        Lampa.Listener.follow('app', function(e) {
+            if (e.type === 'full') {
+                setTimeout(applyMobileStyles, 100);
+                applyBaseStyles();
             }
         });
     }
 
     function startPlugin() {
-        initBlurPlugin();
-        initMobileStyles();
-        initLogoPlugin();
+        if (window.appready) initAllPlugins();
+        else {
+            Lampa.Listener.follow('app', function(e) {
+                if (e.type === 'ready') setTimeout(initAllPlugins, 500);
+            });
+        }
     }
 
-    if (window.appready) startPlugin();
-    else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') startPlugin(); });
+    if (typeof Lampa.Timer !== 'undefined') Lampa.Timer.add(500, startPlugin, true);
+    else setTimeout(startPlugin, 500);
 
 })();
