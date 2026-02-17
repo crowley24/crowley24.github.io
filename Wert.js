@@ -8,7 +8,7 @@
         if (window.logoplugin) console.log('[combined-plugin]', ...args);
     }
 
-    // ===== ОСНОВНІ СТИЛІ ТА АНІМАЦІЯ =====
+    // ===== ОСНОВНІ СТИЛІ =====
     function applyBaseStyles() {
         var oldStyle = document.getElementById('no-blur-plugin-styles');
         if (oldStyle) oldStyle.remove();
@@ -18,19 +18,21 @@
         style.textContent = `
             @keyframes kenBurnsEffect {
                 0% { transform: scale(1); }
-                50% { transform: scale(1.12); }
+                50% { transform: scale(1.1); }
                 100% { transform: scale(1); }
             }
 
             @media screen and (max-width: 480px) {
+                /* Прибираємо розмиття та налаштовуємо контейнер */
                 .full-start__poster,
                 .full-start-new__poster,
                 .screensaver__slides-slide {
                     overflow: hidden !important;
                     background: #000 !important;
-                    height: 65vh !important; /* Обмежуємо висоту постера для кращого вигляду */
+                    position: relative !important;
                 }
 
+                /* Анімація та чистий постер без масок */
                 .full-start__poster img,
                 .full-start-new__poster img,
                 .screensaver__slides-slide img,
@@ -40,18 +42,27 @@
                     -webkit-filter: none !important;
                     animation: kenBurnsEffect 25s ease-in-out infinite !important;
                     transform-origin: center center !important;
-                    
-                    /* М'яка маска: прибираємо лінію за рахунок розтягнутого градієнта */
-                    mask-image: linear-gradient(to bottom, 
-                        rgba(0,0,0,1) 0%, 
-                        rgba(0,0,0,1) 40%, 
-                        rgba(0,0,0,0.3) 85%, 
-                        rgba(0,0,0,0) 100%) !important;
-                    -webkit-mask-image: linear-gradient(to bottom, 
-                        rgba(0,0,0,1) 0%, 
-                        rgba(0,0,0,1) 40%, 
-                        rgba(0,0,0,0.3) 85%, 
-                        rgba(0,0,0,0) 100%) !important;
+                    mask-image: none !important;
+                    -webkit-mask-image: none !important;
+                }
+                
+                /* Створюємо ідеально м'який перехід через псевдоелемент поверх картинки */
+                .full-start-new__poster::after {
+                    content: '' !important;
+                    position: absolute !important;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    /* Градієнт: верх прозорий, низ плавно чорний */
+                    background: linear-gradient(to bottom, 
+                        rgba(0,0,0,0) 0%, 
+                        rgba(0,0,0,0) 30%, 
+                        rgba(0,0,0,0.6) 70%, 
+                        rgba(0,0,0,1) 95%, 
+                        #000 100%) !important;
+                    pointer-events: none !important;
+                    z-index: 1 !important;
                 }
                 
                 .background { background: #000 !important; }
@@ -61,10 +72,8 @@
                     border: none !important;
                     box-shadow: none !important;
                     z-index: 2 !important;
-                    /* Плавне підсвічування тексту знизу */
-                    background: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.8) 50%, rgba(0,0,0,0) 100%) !important;
-                    margin-top: -160px !important; /* Піднімаємо контент на постер */
-                    padding-top: 60px !important;
+                    margin-top: -140px !important; /* Піднімаємо текст на постер */
+                    position: relative !important;
                 }
 
                 .full-start-new__right::before, 
@@ -78,12 +87,12 @@
                     display: flex !important;
                     justify-content: center !important;
                     align-items: center !important;
-                    min-height: 70px !important;
-                    margin: 5px auto !important;
+                    min-height: 80px !important;
+                    margin: 10px auto !important;
                 }
                 
                 .full-start-new__head {
-                    text-shadow: 2px 2px 10px rgba(0,0,0,1) !important;
+                    text-shadow: 2px 2px 8px rgba(0,0,0,1) !important;
                 }
                 
                 .full-start-new__right, .full-start__left, .full-descr__text, 
@@ -97,13 +106,6 @@
                 
                 .full-start-new__buttons, .full-start-new__details {
                     justify-content: center !important;
-                    margin-top: 10px !important;
-                }
-                
-                .full-start-new__tagline {
-                    font-size: 1.1em !important;
-                    padding: 0 20px !important;
-                    margin-bottom: 10px !important;
                 }
             }
         `;
@@ -111,15 +113,13 @@
         return true;
     }
 
-    // ===== ЛОГІКА ЗАВАНТАЖЕННЯ ЛОГОТИПІВ =====
+    // ===== ЛОГІКА ЛОГОТИПІВ =====
     function getLogo(type, id, callback) {
         const languages = [Lampa.Storage.get('language'), 'en', '']; 
         
         let attempt = (index) => {
             if (index >= languages.length) return;
-            
             let url = Lampa.TMDB.api(type + '/' + id + '/images?api_key=' + Lampa.TMDB.key() + (languages[index] ? '&language=' + languages[index] : ''));
-            
             $.get(url, function(data) {
                 if (data.logos && data.logos.length > 0) {
                     callback(data.logos[0].file_path);
@@ -128,24 +128,21 @@
                 }
             }).fail(() => attempt(index + 1));
         };
-        
         attempt(0);
     }
 
     function initLogoPlugin() {
         Lampa.Listener.follow('full', function(e) {
             if (window.innerWidth > 480 && e.type === 'complite') return;
-            
             if (e.type === 'complite') {
                 var data = e.data.movie;
                 var type = data.name ? 'tv' : 'movie';
-                
                 if (data.id) {
                     getLogo(type, data.id, function(path) {
                         const logoUrl = Lampa.TMDB.image('/t/p/w300' + path.replace('.svg', '.png'));
                         e.object.activity.render().find('.full-start-new__title').html(
                             '<div style="display: flex; justify-content: center; width: 100%;">' +
-                            '<img style="max-height: 100px; max-width: 80%; object-fit: contain;" src="' + logoUrl + '"/>' +
+                            '<img style="max-height: 120px; object-fit: contain; z-index: 3;" src="' + logoUrl + '"/>' +
                             '</div>'
                         );
                     });
@@ -165,7 +162,6 @@
 
     function initMobileStyles() {
         if (window.innerWidth > 480) return;
-        
         const apply = () => {
             const titles = ['Рекомендации','Режиссер','Актеры','Подробно','Похожие','Коллекция','Рекомендації','Схожі'];
             document.querySelectorAll('.items-line__head').forEach(el => {
@@ -174,7 +170,6 @@
                 }
             });
         };
-
         Lampa.Listener.follow('app', (e) => {
             if (e.type === 'ready' || e.type === 'full') {
                 setTimeout(() => { apply(); applyBaseStyles(); }, 200);
