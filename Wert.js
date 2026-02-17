@@ -28,6 +28,7 @@
                 .screensaver__slides-slide {
                     overflow: hidden !important;
                     background: #000 !important;
+                    height: 65vh !important; /* Обмежуємо висоту постера для кращого вигляду */
                 }
 
                 .full-start__poster img,
@@ -39,6 +40,18 @@
                     -webkit-filter: none !important;
                     animation: kenBurnsEffect 25s ease-in-out infinite !important;
                     transform-origin: center center !important;
+                    
+                    /* М'яка маска: прибираємо лінію за рахунок розтягнутого градієнта */
+                    mask-image: linear-gradient(to bottom, 
+                        rgba(0,0,0,1) 0%, 
+                        rgba(0,0,0,1) 40%, 
+                        rgba(0,0,0,0.3) 85%, 
+                        rgba(0,0,0,0) 100%) !important;
+                    -webkit-mask-image: linear-gradient(to bottom, 
+                        rgba(0,0,0,1) 0%, 
+                        rgba(0,0,0,1) 40%, 
+                        rgba(0,0,0,0.3) 85%, 
+                        rgba(0,0,0,0) 100%) !important;
                 }
                 
                 .background { background: #000 !important; }
@@ -48,6 +61,10 @@
                     border: none !important;
                     box-shadow: none !important;
                     z-index: 2 !important;
+                    /* Плавне підсвічування тексту знизу */
+                    background: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.8) 50%, rgba(0,0,0,0) 100%) !important;
+                    margin-top: -160px !important; /* Піднімаємо контент на постер */
+                    padding-top: 60px !important;
                 }
 
                 .full-start-new__right::before, 
@@ -61,18 +78,12 @@
                     display: flex !important;
                     justify-content: center !important;
                     align-items: center !important;
-                    min-height: 80px !important;
-                    margin: 10px auto !important;
-                }
-                
-                .full-start-new__poster img,
-                .full--poster {
-                    mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%) !important;
-                    -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%) !important;
+                    min-height: 70px !important;
+                    margin: 5px auto !important;
                 }
                 
                 .full-start-new__head {
-                    text-shadow: 2px 2px 4px rgba(0,0,0,0.9) !important;
+                    text-shadow: 2px 2px 10px rgba(0,0,0,1) !important;
                 }
                 
                 .full-start-new__right, .full-start__left, .full-descr__text, 
@@ -86,6 +97,13 @@
                 
                 .full-start-new__buttons, .full-start-new__details {
                     justify-content: center !important;
+                    margin-top: 10px !important;
+                }
+                
+                .full-start-new__tagline {
+                    font-size: 1.1em !important;
+                    padding: 0 20px !important;
+                    margin-bottom: 10px !important;
                 }
             }
         `;
@@ -93,9 +111,9 @@
         return true;
     }
 
-    // ===== ЛОГІКА ЗАВАНТАЖЕННЯ ЛОГОТИПІВ (З ПЕРЕВІРКОЮ МОВИ) =====
+    // ===== ЛОГІКА ЗАВАНТАЖЕННЯ ЛОГОТИПІВ =====
     function getLogo(type, id, callback) {
-        const languages = [Lampa.Storage.get('language'), 'en', '']; // Порядок: Поточна -> Англійська -> Будь-яка
+        const languages = [Lampa.Storage.get('language'), 'en', '']; 
         
         let attempt = (index) => {
             if (index >= languages.length) return;
@@ -106,7 +124,7 @@
                 if (data.logos && data.logos.length > 0) {
                     callback(data.logos[0].file_path);
                 } else {
-                    attempt(index + 1); // Якщо не знайшли, пробуємо наступну мову
+                    attempt(index + 1);
                 }
             }).fail(() => attempt(index + 1));
         };
@@ -127,7 +145,7 @@
                         const logoUrl = Lampa.TMDB.image('/t/p/w300' + path.replace('.svg', '.png'));
                         e.object.activity.render().find('.full-start-new__title').html(
                             '<div style="display: flex; justify-content: center; width: 100%;">' +
-                            '<img style="max-height: 120px; object-fit: contain;" src="' + logoUrl + '"/>' +
+                            '<img style="max-height: 100px; max-width: 80%; object-fit: contain;" src="' + logoUrl + '"/>' +
                             '</div>'
                         );
                     });
@@ -149,7 +167,7 @@
         if (window.innerWidth > 480) return;
         
         const apply = () => {
-            const titles = ['Рекомендации','Режиссер','Актеры','Подробно','Похожие','Коллекция'];
+            const titles = ['Рекомендации','Режиссер','Актеры','Подробно','Похожие','Коллекция','Рекомендації','Схожі'];
             document.querySelectorAll('.items-line__head').forEach(el => {
                 if (titles.includes(el.textContent.trim()) || el.textContent.includes('Сезон')) {
                     el.style.cssText = 'display:flex; justify-content:center; width:100%;';
@@ -173,6 +191,4 @@
     if (window.appready) startPlugin();
     else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') startPlugin(); });
 
-    // Запам'ятав ваші побажання щодо англійських логотипів. 
-    // Ви можете керувати збереженою інформацією тут: https://gemini.google.com/saved-info
 })();
