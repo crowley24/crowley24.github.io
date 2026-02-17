@@ -4,11 +4,7 @@
     let observer;
     window.logoplugin = true;
 
-    function log(...args) {
-        if (window.logoplugin) console.log('[combined-plugin]', ...args);
-    }
-
-    // ===== ОСНОВНІ СТИЛІ (З ЛОГІКОЮ ВАШОГО ПРИКЛАДУ) =====
+    // ===== ОСНОВНІ СТИЛІ (ЛОГІКА ЯК У ТВОЄМУ ПРИКЛАДІ) =====
     function applyBaseStyles() {
         var oldStyle = document.getElementById('no-blur-plugin-styles');
         if (oldStyle) oldStyle.remove();
@@ -23,17 +19,22 @@
             }
 
             @media screen and (max-width: 480px) {
-                /* Налаштування фону та контейнерів */
-                .background { background: #000 !important; }
+                /* Головний фон сторінки */
+                .background, .notice-all { 
+                    background-color: #000 !important; 
+                }
 
+                /* Контейнер постера - робимо його видимим за межами */
                 .full-start__poster,
                 .full-start-new__poster {
                     position: relative !important;
-                    overflow: visible !important; /* Дозволяємо градієнту м'яко виходити */
+                    overflow: visible !important;
                     background: #000 !important;
+                    margin-bottom: 0 !important;
+                    z-index: 1 !important;
                 }
 
-                /* Прибираємо фільтри та додаємо анімацію */
+                /* Зображення з анімацією та складною маскою */
                 .full-start__poster img,
                 .full-start-new__poster img,
                 .screensaver__slides-slide img,
@@ -41,48 +42,36 @@
                     filter: none !important;
                     -webkit-filter: none !important;
                     animation: kenBurnsEffect 25s ease-in-out infinite !important;
-                }
-
-                /* СКЛАДНА МАСКА З ВАШОГО ПРИКЛАДУ (ПРИБИРАЄ ЛІНІЇ) */
-                .full-start-new__poster img,
-                .full--poster {
+                    
+                    /* Маска, що плавно зникає */
                     mask-image: linear-gradient(to bottom, 
-                        rgba(0, 0, 0, 1) 0%,
-                        rgba(0, 0, 0, 1) 50%,
-                        rgba(0, 0, 0, 0.8) 70%,
-                        rgba(0, 0, 0, 0.4) 85%,
-                        rgba(0, 0, 0, 0) 100%) !important;
+                        rgba(0,0,0,1) 0%, 
+                        rgba(0,0,0,1) 50%, 
+                        rgba(0,0,0,0.6) 75%, 
+                        rgba(0,0,0,0.2) 90%, 
+                        rgba(0,0,0,0) 100%) !important;
                     -webkit-mask-image: linear-gradient(to bottom, 
-                        rgba(0, 0, 0, 1) 0%,
-                        rgba(0, 0, 0, 1) 50%,
-                        rgba(0, 0, 0, 0.8) 70%,
-                        rgba(0, 0, 0, 0.4) 85%,
-                        rgba(0, 0, 0, 0) 100%) !important;
+                        rgba(0,0,0,1) 0%, 
+                        rgba(0,0,0,1) 50%, 
+                        rgba(0,0,0,0.6) 75%, 
+                        rgba(0,0,0,0.2) 90%, 
+                        rgba(0,0,0,0) 100%) !important;
                 }
 
-                /* Додатковий шар для повного розчинення */
-                .full-start-new__img {
-                    border-radius: 0 !important;
-                    mask-image: linear-gradient(to bottom, 
-                        rgba(0, 0, 0, 0) 0%,
-                        rgba(0, 0, 0, 1) 20%,
-                        rgba(0, 0, 0, 1) 80%,
-                        rgba(0, 0, 0, 0) 100%) !important;
-                    -webkit-mask-image: linear-gradient(to bottom, 
-                        rgba(0, 0, 0, 0) 0%,
-                        rgba(0, 0, 0, 1) 20%,
-                        rgba(0, 0, 0, 1) 80%,
-                        rgba(0, 0, 0, 0) 100%) !important;
-                }
-
-                /* Очищення блоку з контентом */
+                /* Блок з описом (ПРАВА ЧАСТИНА) - головний секрет тут */
                 .full-start-new__right {
                     background: none !important;
                     border: none !important;
                     box-shadow: none !important;
                     z-index: 2 !important;
-                    margin-top: -120px !important; /* Піднімаємо текст вище */
                     position: relative !important;
+                    
+                    /* Піднімаємо контент вгору на постер */
+                    margin-top: -150px !important; 
+                    padding-top: 50px !important;
+                    
+                    /* Додатковий градієнт для плавного переходу тексту */
+                    background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 40%) !important;
                 }
 
                 .full-start-new__right::before, 
@@ -90,26 +79,26 @@
                     display: none !important;
                 }
 
-                /* Центрування всього контенту */
-                .full-start-new__right, .full-start__left, .full-descr__text, 
-                .full-start-new__title, .full-start-new__tagline {
+                /* Центрування всього */
+                .full-start-new__title, .full-start-new__tagline, .full-descr__text {
                     display: flex !important;
-                    flex-direction: column !important;
                     justify-content: center !important;
                     align-items: center !important;
                     text-align: center !important;
+                    width: 100% !important;
                 }
 
                 .full-start-new__title {
-                    width: 100% !important;
                     min-height: 80px !important;
                     margin: 10px auto !important;
                 }
 
-                .full-start-new__head {
-                    text-shadow: 2px 2px 5px rgba(0,0,0,0.9) !important;
+                /* Тінь для тексту, щоб читався на фоні */
+                .full-start-new__head, .full-descr__text {
+                    text-shadow: 0 2px 10px rgba(0,0,0,1) !important;
                 }
 
+                /* Кнопки та деталі */
                 .full-start-new__buttons, .full-start-new__details {
                     justify-content: center !important;
                 }
@@ -119,7 +108,7 @@
         return true;
     }
 
-    // ===== ЛОГІКА ЛОГОТИПІВ =====
+    // ===== ЛОГІКА ЛОГОТИПІВ (З ПІДТРИМКОЮ АНГЛІЙСЬКОЇ) =====
     function getLogo(type, id, callback) {
         const languages = [Lampa.Storage.get('language'), 'en', '']; 
         let attempt = (index) => {
@@ -147,7 +136,7 @@
                         const logoUrl = Lampa.TMDB.image('/t/p/w300' + path.replace('.svg', '.png'));
                         e.object.activity.render().find('.full-start-new__title').html(
                             '<div style="display: flex; justify-content: center; width: 100%;">' +
-                            '<img style="max-height: 120px; object-fit: contain;" src="' + logoUrl + '"/>' +
+                            '<img style="max-height: 110px; object-fit: contain; z-index: 5;" src="' + logoUrl + '"/>' +
                             '</div>'
                         );
                     });
