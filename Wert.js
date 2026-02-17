@@ -3,12 +3,12 @@
 
     window.logoplugin = true;
 
-    // ===== СУПЕР-СТИЛІ ДЛЯ ПРИДУШЕННЯ ЛІНІЙ =====
-    function injectStyles() {
-        if (document.getElementById('lampa-ultimate-fix')) return;
+    function applyStyles() {
+        var oldStyle = document.getElementById('lampa-fix-kenburns');
+        if (oldStyle) oldStyle.remove();
         
-        const style = document.createElement('style');
-        style.id = 'lampa-ultimate-fix';
+        var style = document.createElement('style');
+        style.id = 'lampa-fix-kenburns';
         style.textContent = `
             @keyframes kenBurnsEffect {
                 0% { transform: scale(1); }
@@ -17,123 +17,144 @@
             }
 
             @media screen and (max-width: 480px) {
-                /* Повний запуск чорного фону */
-                .background, .notice-all, .full-start-new__img { 
-                    background-color: #000 !important; 
-                }
-
-                /* Контейнер постера */
+                /* Прибираємо стандартні обмеження */
                 .full-start__poster, .full-start-new__poster {
-                    overflow: hidden !important;
                     position: relative !important;
+                    overflow: visible !important;
                     background: #000 !important;
-                    height: 60vh !important; /* Обмежуємо висоту для кращого вигляду */
                 }
 
-                /* Картинка з анімацією */
-                .full-start-new__poster img, .full-start__poster img {
+                .background { background: #000 !important; }
+
+                /* ПЕРША МАСКА ТА АНІМАЦІЯ (на саму картинку) */
+                .full-start-new__poster img, .full--poster, .full-start__poster img {
                     filter: none !important;
                     -webkit-filter: none !important;
-                    animation: kenBurnsEffect 30s linear infinite !important;
-                    display: block !important;
-                    width: 100% !important;
-                    height: 100% !important;
-                    object-fit: cover !important;
+                    
+                    /* Повертаємо анімацію наближення */
+                    animation: kenBurnsEffect 30s ease-in-out infinite !important;
+                    transform-origin: center center !important;
+
+                    /* Маска з твого робочого прикладу */
+                    mask-image: linear-gradient(to bottom, 
+                        rgba(0, 0, 0, 1) 0%,
+                        rgba(0, 0, 0, 1) 50%,
+                        rgba(0, 0, 0, 0.8) 70%,
+                        rgba(0, 0, 0, 0.4) 85%,
+                        rgba(0, 0, 0, 0) 100%) !important;
+                    -webkit-mask-image: linear-gradient(to bottom, 
+                        rgba(0, 0, 0, 1) 0%,
+                        rgba(0, 0, 0, 1) 50%,
+                        rgba(0, 0, 0, 0.8) 70%,
+                        rgba(0, 0, 0, 0.4) 85%,
+                        rgba(0, 0, 0, 0) 100%) !important;
                 }
 
-                /* ФІЗИЧНИЙ ГРАДІЄНТ-КРИШКА (ПРИБИРАЄ ЛІНІЮ) */
-                .full-start-new__poster::after {
-                    content: '' !important;
-                    position: absolute !important;
-                    left: 0 !important;
-                    bottom: -2px !important; /* Трохи виходимо за край вниз */
-                    width: 100% !important;
-                    height: 50% !important; /* Перекриваємо нижню половину */
-                    background: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0.9) 80%, #000 100%) !important;
-                    z-index: 2 !important;
+                /* ДРУГА МАСКА (на внутрішній контейнер - КЛЮЧ ДО ВІДСУТНОСТІ ЛІНІЇ) */
+                .full-start-new__img {
+                    border-radius: 0 !important;
+                    mask-image: linear-gradient(to bottom, 
+                        rgba(0, 0, 0, 0) 0%,
+                        rgba(0, 0, 0, 0.3) 5%,
+                        rgba(0, 0, 0, 0.6) 12%,
+                        rgba(0, 0, 0, 0.85) 20%,
+                        rgba(0, 0, 0, 1) 30%,
+                        rgba(0, 0, 0, 1) 70%,
+                        rgba(0, 0, 0, 0.8) 85%,
+                        rgba(0, 0, 0, 0.4) 95%,
+                        rgba(0, 0, 0, 0) 100%) !important;
+                    -webkit-mask-image: linear-gradient(to bottom, 
+                        rgba(0, 0, 0, 0) 0%,
+                        rgba(0, 0, 0, 0.3) 5%,
+                        rgba(0, 0, 0, 0.6) 12%,
+                        rgba(0, 0, 0, 0.85) 20%,
+                        rgba(0, 0, 0, 1) 30%,
+                        rgba(0, 0, 0, 1) 70%,
+                        rgba(0, 0, 0, 0.8) 85%,
+                        rgba(0, 0, 0, 0.4) 95%,
+                        rgba(0, 0, 0, 0) 100%) !important;
                 }
 
-                /* Контент наповзає на постер */
+                /* Контентна частина */
                 .full-start-new__right {
-                    margin-top: -150px !important;
                     background: none !important;
-                    z-index: 3 !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                    margin-top: -120px !important;
+                    z-index: 2 !important;
                     position: relative !important;
                 }
 
                 .full-start-new__right::before, .full-start-new__right::after {
                     display: none !important;
+                    content: unset !important;
                 }
 
-                /* Центрування всього */
-                .full-start-new__title, .full-start-new__tagline, .full-descr__text, .full-start-new__details {
+                /* Центрування тексту та кнопок */
+                .full-start-new__title, .full-start-new__tagline, .full-descr__text,
+                .full-start-new__buttons, .full-start-new__details {
                     display: flex !important;
                     justify-content: center !important;
                     align-items: center !important;
                     text-align: center !important;
                     width: 100% !important;
-                    flex-direction: column !important;
                 }
 
-                .full-start-new__title img {
-                    max-height: 110px !important;
-                    margin-bottom: 10px !important;
+                .full-start-new__buttons, .full-start-new__details {
+                    flex-direction: row !important;
+                    flex-wrap: wrap !important;
+                    gap: 10px !important;
                 }
             }
         `;
         document.head.appendChild(style);
     }
 
-    // ===== ЛОГІКА ЛОГОТИПІВ =====
-    function loadLogo(movie) {
-        const type = movie.name ? 'tv' : 'movie';
-        const lang = Lampa.Storage.get('language') || 'uk';
-        
-        const getUrl = (l) => Lampa.TMDB.api(`${type}/${movie.id}/images?api_key=${Lampa.TMDB.key()}&language=${l}`);
-
-        $.get(getUrl(lang), (res) => {
-            let logo = res.logos && res.logos[0] ? res.logos[0].file_path : null;
-            if (!logo && lang !== 'en') {
-                $.get(getUrl('en'), (resEn) => {
-                    if (resEn.logos && resEn.logos[0]) renderLogo(resEn.logos[0].file_path);
+    function initLogoPlugin() {
+        Lampa.Listener.follow('full', function(e) {
+            if (window.innerWidth > 480) return;
+            if (e.type === 'complite') {
+                var data = e.data.movie;
+                var type = data.name ? 'tv' : 'movie';
+                var lang = Lampa.Storage.get('language') || 'uk';
+                
+                var url = Lampa.TMDB.api(type + '/' + data.id + '/images?api_key=' + Lampa.TMDB.key() + '&language=' + lang);
+                
+                $.get(url, function(res) {
+                    let path = (res.logos && res.logos[0]) ? res.logos[0].file_path : null;
+                    if (!path) {
+                        $.get(Lampa.TMDB.api(type + '/' + data.id + '/images?api_key=' + Lampa.TMDB.key() + '&language=en'), function(resEn) {
+                            if (resEn.logos && resEn.logos[0]) render(resEn.logos[0].file_path);
+                        });
+                    } else render(path);
                 });
-            } else if (logo) {
-                renderLogo(logo);
-            }
-        });
 
-        function renderLogo(path) {
-            const img = Lampa.TMDB.image('/t/p/w300' + path.replace('.svg', '.png'));
-            $('.full-start-new__title').html(`<img src="${img}" style="z-index:10; position:relative;">`);
-        }
-    }
-
-    // ===== СПОСТЕРЕЖЕННЯ ЗА ЗМІНАМИ (ЩОБ СТИЛІ НЕ ЗЛІТАЛИ) =====
-    function startObserver() {
-        const observer = new MutationObserver(() => {
-            if (window.innerWidth <= 480) {
-                injectStyles();
-                // Примусово вимикаємо блюр в налаштуваннях
-                if (window.lampa_settings) window.lampa_settings.blur_poster = false;
-            }
-        });
-
-        observer.observe(document.body, { childList: true, subtree: true });
-    }
-
-    function init() {
-        injectStyles();
-        startObserver();
-
-        Lampa.Listener.follow('full', (e) => {
-            if (e.type === 'complite' && window.innerWidth <= 480) {
-                loadLogo(e.data.movie);
-                setTimeout(injectStyles, 100);
+                function render(p) {
+                    const img = Lampa.TMDB.image('/t/p/w300' + p.replace('.svg', '.png'));
+                    e.object.activity.render().find('.full-start-new__title').html('<img src="'+img+'" style="max-height:100px; z-index:10; position:relative;">');
+                }
             }
         });
     }
 
-    if (window.appready) init();
-    else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') init(); });
+    function start() {
+        applyStyles();
+        initLogoPlugin();
+        
+        setInterval(function() {
+            if (window.innerWidth <= 480 && window.lampa_settings) {
+                window.lampa_settings.blur_poster = false;
+            }
+        }, 1000);
+        
+        Lampa.Listener.follow('app', (e) => {
+            if (e.type === 'ready' || e.type === 'full') {
+                setTimeout(applyStyles, 200);
+            }
+        });
+    }
+
+    if (window.appready) start();
+    else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') start(); });
 
 })();
