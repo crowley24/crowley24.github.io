@@ -72,43 +72,36 @@
     }
 
     // Додавання меню налаштувань
-    function addSettings() {
-        // Слухаємо подію створення налаштувань
-        Lampa.Settings.listener.follow('open', function (e) {
-            if (e.name === 'main') {
-                var item = $('<div class="settings-folder selector" data-name="mobile_interface">' +
-                    '<div class="settings-folder__icon"><svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" fill="white"/></svg></div>' +
-                    '<div class="settings-folder__name">Мобільний інтерфейс</div>' +
-                '</div>');
-
-                item.on('hover:enter', function () {
-                    Lampa.Settings.create({
-                        title: 'Мобільний інтерфейс',
-                        items: [
-                            {
-                                title: 'Анімація постера',
-                                name: 'mobile_interface_animation',
-                                type: 'select',
-                                values: {
-                                    true: 'Увімкнено',
-                                    false: 'Вимкнено'
-                                },
-                                default: true
-                            }
-                        ],
-                        onBack: function() {
-                            applyStyles(); // Оновлюємо стилі при поверненні
-                            Lampa.Settings.main();
-                        }
-                    });
-                });
-
-                // Додаємо пункт меню перед розділом "Інше" або в кінець
-                var other = $('.settings-main .selector[data-name="more"]');
-                if (other.length) other.before(item);
-                else $('.settings-main').append(item);
-            }
-        });
+    function addSettings() {  
+    Lampa.Settings.listener.follow('open', function (e) {  
+        if (e.name === 'main') {  
+            var item = $('<div class="settings-folder selector" data-component="mobile_interface">' +  
+                '<div class="settings-folder__icon">...</div>' +  
+                '<div class="settings-folder__name">Мобільний інтерфейс</div>' +  
+                '</div>');  
+  
+            item.on('hover:enter', function () {  
+                Lampa.Settings.create({  
+                    title: 'Мобільний інтерфейс',  
+                    items: [{  
+                        title: 'Анімація постера',  
+                        name: 'mobile_interface_animation',  
+                        type: 'select',  
+                        values: { true: 'Увімкнено', false: 'Вимкнено' },  
+                        default: true  
+                    }],  
+                    onBack: function () {  
+                        applyStyles();  
+                        Lampa.Settings.main();  
+                    }  
+                });  
+            });  
+  
+            var other = e.body.find('.selector[data-component="more"]');  
+            if (other.length) other.before(item);  
+            else e.body.find('.scroll__body').append(item);  
+        }  
+    });  
     }
 
     function initLogo() {
