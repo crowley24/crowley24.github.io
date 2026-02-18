@@ -1,12 +1,11 @@
 (function() {  
     'use strict';  
   
-    // Ініціалізація налаштування, якщо ще не встановлено  
+    // Ініціалізація налаштування  
     if (Lampa.Storage.get('mobile_interface_animation', 'unset') === 'unset') {  
         Lampa.Storage.set('mobile_interface_animation', true);  
     }  
   
-    // Застосування стилів  
     function applyStyles() {  
         var oldStyle = document.getElementById('mobile-interface-styles');  
         if (oldStyle) oldStyle.remove();  
@@ -72,9 +71,14 @@
         document.head.appendChild(style);  
     }  
   
-    // Додавання налаштувань через SettingsApi  
     function addSettings() {  
-        // Запобігання дублюванню компонента  
+        // Перевіряємо, чи SettingsApi вже доступний  
+        if (!Lampa.SettingsApi) {  
+            console.warn('[MobileInterface] Lampa.SettingsApi not ready, retrying...');  
+            setTimeout(addSettings, 500);  
+            return;  
+        }  
+        // Запобігання дублюванню  
         if (Lampa.SettingsApi.getComponents().mobile_interface) return;  
   
         Lampa.SettingsApi.addComponent({  
@@ -101,9 +105,9 @@
         });  
     }  
   
-    // Підміна заголовка на логотип TMDB  
     function initLogo() {  
         Lampa.Listener.follow('full', function(e) {  
+            console.log('[MobileInterface] full event:', e.type, e.data);  
             if (window.innerWidth <= 480 && e.type === 'complite') {  
                 var movie = e.data.movie;  
                 var type = movie.name ? 'tv' : 'movie';  
@@ -121,19 +125,22 @@
   
                 function render(p) {  
                     const imgUrl = Lampa.TMDB.image('/t/p/w300' + p.replace('.svg', '.png'));  
-                    e.object.activity.render().find('.full-start-new__title').html('<img src="'+imgUrl+'" style="max-height: 120px; object-fit: contain; position: relative; z-index: 10;">');  
+                    var $title = e.object.activity.render().find('.full-start-new__title');  
+                    if ($title.length) {  
+                        $title.html('<img src="'+imgUrl+'" style="max-height: 120px; object-fit: contain; position: relative; z-index: 10;">');  
+                    } else {  
+                        console.warn('[MobileInterface] .full-start-new__title not found');  
+                    }  
                 }  
             }  
         });  
     }  
   
-    // Старт плагіна  
     function start() {  
         applyStyles();  
         addSettings();  
         initLogo();  
   
-        // Вимикаємо стандартний блюр Lampa  
         setInterval(function() {  
             if (window.innerWidth <= 480 && window.lampa_settings) {  
                 window.lampa_settings.blur_poster = false;  
@@ -141,7 +148,6 @@
         }, 1000);  
     }  
   
-    // Запуск після готовності додатку  
     if (window.appready) start();  
     else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') start(); });  
 })();
