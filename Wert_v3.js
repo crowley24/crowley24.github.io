@@ -30,7 +30,7 @@
         'UKR': pluginPath + 'UKR.svg'
     };
 
-    // 2. Стилі
+    // 2. Стилі (Оновлено для преміальних рейтингів)
     function applyStyles() {
         var oldStyle = document.getElementById('mobile-interface-styles');
         if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
@@ -52,19 +52,56 @@
         css += '.full-start-new__img { border-radius: 0 !important; mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 30%, rgba(0,0,0,1) 70%, rgba(0,0,0,0) 100%) !important; -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 30%, rgba(0,0,0,1) 70%, rgba(0,0,0,0) 100%) !important; } ';
         css += '.full-start-new__right { background: none !important; border: none !important; box-shadow: none !important; margin-top: -120px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
         css += '.full-start-new__right::before, .full-start-new__right::after { content: unset !important; } ';
-        css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 70px; } ';
+        css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 70px; margin-bottom: 10px; } ';
         css += '.full-start-new__buttons, .full-start-new__details, .full-descr__text, .full-start-new__tagline { justify-content: center !important; text-align: center !important; display: flex !important; } ';
         css += '.quality-badges-container { display: flex; align-items: center; justify-content: center; gap: 0.6em; margin: 12px 0; flex-wrap: wrap; width: 100%; min-height: 2em; } ';
         css += '.quality-badge { height: 1.3em; opacity: 0; animation: qb_in 0.4s ease forwards; display: flex; align-items: center; } ';
         css += '.studio-logo { height: 1.8em !important; margin-right: 4px; } ';
         css += '.quality-badge img { height: 100%; width: auto; display: block; } ';
+        
+        // НОВІ ПРЕМІУМ СТИЛІ РЕЙТИНГІВ
+        css += '.premium-ratings { display: flex; gap: 8px; justify-content: center; margin-bottom: 10px; width: 100%; animation: qb_in 0.6s ease; } ';
+        css += '.rating-pill { display: flex; align-items: center; padding: 4px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.15); font-weight: 700; font-size: 13px; color: #fff; } ';
+        css += '.rating-pill.imdb { border-color: rgba(245, 197, 24, 0.5); } ';
+        css += '.rating-pill.imdb span { color: #f5c518; } ';
+        css += '.rating-pill.tmdb { border-color: rgba(1, 210, 119, 0.5); } ';
+        css += '.rating-pill.tmdb span { color: #01d277; } ';
+        css += '.rating-pill.kp { border-color: rgba(255, 102, 0, 0.5); } ';
+        css += '.rating-pill.kp span { color: #ff6600; } ';
+        css += '.rating-pill img { height: 12px; margin-right: 6px; } ';
         css += '} ';
 
         style.textContent = css;
         document.head.appendChild(style);
     }
 
-    // 3. Рендер логотипів студій
+    // Рендер преміальних рейтингів
+    function renderPremiumRatings(container, movie) {
+        $('.premium-ratings').remove();
+        var ratingsHtml = $('<div class="premium-ratings"></div>');
+        
+        var r = {
+            imdb: movie.vote_average_imdb || (movie.source == 'tmdb' ? '' : movie.imdb_rating),
+            tmdb: movie.vote_average,
+            kp: movie.vote_average_kp || movie.kp_rating
+        };
+
+        if (r.imdb && r.imdb > 0) {
+            ratingsHtml.append('<div class="rating-pill imdb"><img src="https://upload.wikimedia.org/wikipedia/commons/6/69/IMDB_Logo_2016.svg"><span>' + parseFloat(r.imdb).toFixed(1) + '</span></div>');
+        }
+        if (r.tmdb && r.tmdb > 0) {
+            ratingsHtml.append('<div class="rating-pill tmdb"><img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_square_2-d537fb228cf3ded904ef09b136fe3fec72548ebc1fea3fbbd1ad9e36364db38b.svg"><span>' + Math.round(r.tmdb * 10) + '%</span></div>');
+        }
+        if (r.kp && r.kp > 0) {
+            ratingsHtml.append('<div class="rating-pill kp"><span>КP: ' + parseFloat(r.kp).toFixed(1) + '</span></div>');
+        }
+
+        if (ratingsHtml.children().length > 0) {
+            container.append(ratingsHtml);
+        }
+    }
+
+    // 3. Рендер логотипів студій (без змін)
     function renderStudioLogos(container, data) {
         if (!Lampa.Storage.get('mobile_interface_studios')) return;
         var logos = [];
@@ -105,7 +142,7 @@
         });
     }
 
-    // 4. Аналіз якості з сортуванням
+    // 4. Аналіз якості з сортуванням (без змін)
     function getBest(results) {
         var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
         var resOrder = ['HD', 'FULL HD', '2K', '4K'];
@@ -188,7 +225,7 @@
         });
     }
 
-    // 6. Логіка завантаження Лого фільму та Якості з ПОРЯДКОМ
+    // 6. Логіка завантаження Лого фільму, Рейтингів та Якості
     function initLogoAndBadges() {
         Lampa.Listener.follow('full', function (e) {
             if (window.innerWidth <= 480 && (e.type === 'complite' || e.type === 'complete')) {
@@ -196,6 +233,7 @@
                 var $render = e.object.activity.render();
                 var $details = $render.find('.full-start-new__details');
                 var $title = $render.find('.full-start-new__title');
+                var $right = $render.find('.full-start-new__right');
 
                 var lang = Lampa.Storage.get('language') || 'uk';
                 var type = movie.name ? 'tv' : 'movie';
@@ -211,7 +249,9 @@
 
                 function renderLogo(p) {
                     var imgUrl = Lampa.TMDB.image('/t/p/w300' + p.replace('.svg', '.png'));
-                    $title.html('<img src="' + imgUrl + '" style="max-height: 120px; object-fit: contain; position: relative; z-index: 10;">');
+                    $title.html('<img src="' + imgUrl + '" style="max-height: 110px; object-fit: contain; position: relative; z-index: 10;">');
+                    // Додаємо рейтинги одразу під логотипом
+                    renderPremiumRatings($title, movie);
                 }
 
                 if ($details.length) {
@@ -227,10 +267,9 @@
                                 var best = getBest(response.Results);
                                 var badgeList = [];
                                 
-                                // ПОРЯДОК: 4K -> DV -> HDR -> AUDIO -> DUB -> UKR
                                 if (best.resolution) badgeList.push(best.resolution);
                                 if (best.dolbyVision) badgeList.push('Dolby Vision');
-                                if (best.hdr && !best.dolbyVision) badgeList.push('HDR'); // DV вже включає HDR зазвичай
+                                if (best.hdr && !best.dolbyVision) badgeList.push('HDR');
                                 if (best.audio) badgeList.push(best.audio);
                                 if (best.dub) badgeList.push('DUB');
                                 if (best.ukr) badgeList.push('UKR');
@@ -258,4 +297,3 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
-                                    
