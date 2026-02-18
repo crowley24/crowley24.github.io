@@ -30,7 +30,7 @@
         'UKR': pluginPath + 'UKR.svg'
     };
 
-    // 2. Функція застосування стилів (ES5)
+    // 2. Стилі
     function applyStyles() {
         var oldStyle = document.getElementById('mobile-interface-styles');
         if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
@@ -64,7 +64,7 @@
         document.head.appendChild(style);
     }
 
-    // 3. Рендер логотипів студій (з аналізом яскравості)
+    // 3. Рендер логотипів студій
     function renderStudioLogos(container, data) {
         if (!Lampa.Storage.get('mobile_interface_studios')) return;
         var logos = [];
@@ -105,13 +105,13 @@
         });
     }
 
-    // 4. Глибокий аналіз якості (назва + ffprobe)
+    // 4. Аналіз якості з сортуванням
     function getBest(results) {
         var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
         var resOrder = ['HD', 'FULL HD', '2K', '4K'];
         var audioOrder = ['2.0', '4.0', '5.1', '7.1'];
         
-        var limit = Math.min(results.length, 20);
+        var limit = Math.min(results.length, 30);
         for (var i = 0; i < limit; i++) {
             var item = results[i];
             var title = (item.Title || '').toLowerCase();
@@ -127,7 +127,6 @@
 
             if (foundRes && (!best.resolution || resOrder.indexOf(foundRes) > resOrder.indexOf(best.resolution))) best.resolution = foundRes;
 
-            // Аналіз FFPROBE (якщо є технічні дані)
             if (item.ffprobe && Array.isArray(item.ffprobe)) {
                 item.ffprobe.forEach(function(stream) {
                     if (stream.codec_type === 'video') {
@@ -145,7 +144,6 @@
             if (title.indexOf('vision') >= 0 || title.indexOf('dovi') >= 0 || title.indexOf(' dv ') >= 0) best.dolbyVision = true;
             if (title.indexOf('hdr') >= 0) best.hdr = true;
             
-            // Якщо ffprobe не дав звуку, шукаємо в назві
             if (!best.audio) {
                 var fA = null;
                 if (title.indexOf('7.1') >= 0) fA = '7.1';
@@ -190,7 +188,7 @@
         });
     }
 
-    // 6. Логіка завантаження Лого фільму та Якості
+    // 6. Логіка завантаження Лого фільму та Якості з ПОРЯДКОМ
     function initLogoAndBadges() {
         Lampa.Listener.follow('full', function (e) {
             if (window.innerWidth <= 480 && (e.type === 'complite' || e.type === 'complete')) {
@@ -203,7 +201,6 @@
                 var type = movie.name ? 'tv' : 'movie';
                 var apiKey = Lampa.TMDB.key();
                 
-                // Запит логотипу (TMDB)
                 $.ajax({
                     url: 'https://api.themoviedb.org/3/' + type + '/' + movie.id + '/images?api_key=' + apiKey + '&language=' + lang,
                     success: function(res) {
@@ -217,7 +214,6 @@
                     $title.html('<img src="' + imgUrl + '" style="max-height: 120px; object-fit: contain; position: relative; z-index: 10;">');
                 }
 
-                // Рендер значків під логотипом
                 if ($details.length) {
                     $('.quality-badges-container').remove();
                     $details.after('<div class="quality-badges-container"></div>');
@@ -229,14 +225,21 @@
                         Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function (response) {
                             if (response && response.Results) {
                                 var best = getBest(response.Results);
-                                var badges = [];
-                                if (best.ukr) badges.push(createBadgeImg('UKR', badges.length));
-                                if (best.dub) badges.push(createBadgeImg('DUB', badges.length));
-                                if (best.resolution) badges.push(createBadgeImg(best.resolution, badges.length));
-                                if (best.dolbyVision) badges.push(createBadgeImg('Dolby Vision', badges.length));
-                                if (best.hdr) badges.push(createBadgeImg('HDR', badges.length));
-                                if (best.audio) badges.push(createBadgeImg(best.audio, badges.length));
-                                container.append(badges.join(''));
+                                var badgeList = [];
+                                
+                                // ПОРЯДОК: 4K -> DV -> HDR -> AUDIO -> DUB -> UKR
+                                if (best.resolution) badgeList.push(best.resolution);
+                                if (best.dolbyVision) badgeList.push('Dolby Vision');
+                                if (best.hdr && !best.dolbyVision) badgeList.push('HDR'); // DV вже включає HDR зазвичай
+                                if (best.audio) badgeList.push(best.audio);
+                                if (best.dub) badgeList.push('DUB');
+                                if (best.ukr) badgeList.push('UKR');
+
+                                var htmlBadges = badgeList.map(function(type, i) {
+                                    return createBadgeImg(type, i);
+                                });
+                                
+                                container.append(htmlBadges.join(''));
                             }
                         });
                     }
@@ -249,10 +252,10 @@
         applyStyles();
         addSettings();
         initLogoAndBadges();
-        // Прибираємо стандартний блюр Lampa для мобілок
         setInterval(function () { if (window.innerWidth <= 480 && window.lampa_settings) window.lampa_settings.blur_poster = false; }, 1000);
     }
 
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
+                                    
