@@ -6,9 +6,6 @@
         Lampa.Storage.set('mobile_interface_animation', true);  
     }  
   
-    // Реєструємо шаблон одразу, щоб уникнути "template not found"  
-    Lampa.Template.add('settings_mobile_interface', `<div></div>`);  
-  
     function applyStyles() {  
         var oldStyle = document.getElementById('mobile-interface-styles');  
         if (oldStyle) oldStyle.remove();  
@@ -75,40 +72,27 @@
     }  
   
     function addSettings() {  
-        Lampa.Settings.listener.follow('open', function (e) {  
-            if (e.name === 'main') {  
-                // Запобігання дублюванню пункту  
-                if (e.body.find('[data-component="mobile_interface"]').length) return;  
+        // Реєстрація компонента (аналогічно до NewCard)  
+        Lampa.SettingsApi.addComponent({  
+            component: 'mobile_interface',  
+            icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" fill="white"/></svg>',  
+            name: 'Мобільний інтерфейс'  
+        });  
   
-                var item = $('<div class="settings-folder selector" data-component="mobile_interface">' +  
-                    '<div class="settings-folder__icon"><svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" fill="white"/></svg></div>' +  
-                    '<div class="settings-folder__name">Мобільний інтерфейс</div>' +  
-                    '</div>');  
-  
-                item.on('hover:enter', function () {  
-                    console.log('[MobileInterface] Opening settings');  
-                    Lampa.Settings.create({  
-                        title: 'Мобільний інтерфейс',  
-                        component: 'mobile_interface', // завантажує шаблон settings_mobile_interface  
-                        items: [  
-                            {  
-                                title: 'Анімація постера',  
-                                name: 'mobile_interface_animation',  
-                                type: 'select',  
-                                values: { true: 'Увімкнено', false: 'Вимкнено' },  
-                                default: true  
-                            }  
-                        ],  
-                        onBack: function () {  
-                            applyStyles();  
-                            Lampa.Settings.main();  
-                        }  
-                    });  
-                });  
-  
-                var other = e.body.find('[data-component="more"]');  
-                if (other.length) other.before(item);  
-                else e.body.find('.scroll__body').append(item);  
+        // Параметр анімації (аналогічно до applecation_apple_zoom в NewCard)  
+        Lampa.SettingsApi.addParam({  
+            component: 'mobile_interface',  
+            param: {  
+                name: 'mobile_interface_animation',  
+                type: 'trigger',  
+                default: true  
+            },  
+            field: {  
+                name: 'Анімація постера',  
+                description: 'Повільна анімація наближення фонового зображення'  
+            },  
+            onChange: function(value) {  
+                applyStyles();  
             }  
         });  
     }  
