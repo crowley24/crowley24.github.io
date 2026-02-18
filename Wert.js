@@ -1,9 +1,13 @@
 (function() {  
     'use strict';  
   
+    // Ініціалізація налаштування  
     if (Lampa.Storage.get('mobile_interface_animation', 'unset') === 'unset') {  
         Lampa.Storage.set('mobile_interface_animation', true);  
     }  
+  
+    // Реєструємо шаблон одразу, щоб уникнути "template not found"  
+    Lampa.Template.add('settings_mobile_interface', `<div></div>`);  
   
     function applyStyles() {  
         var oldStyle = document.getElementById('mobile-interface-styles');  
@@ -70,9 +74,6 @@
         document.head.appendChild(style);  
     }  
   
-    // Реєструємо мінімальний шаблон, щоб Lampa.Settings.create не видавав помилку  
-    Lampa.Template.add('settings_mobile_interface', '<div></div>');  
-  
     function addSettings() {  
         Lampa.Settings.listener.follow('open', function (e) {  
             if (e.name === 'main') {  
@@ -85,18 +86,16 @@
                     '</div>');  
   
                 item.on('hover:enter', function () {  
+                    console.log('[MobileInterface] Opening settings');  
                     Lampa.Settings.create({  
                         title: 'Мобільний інтерфейс',  
-                        component: 'mobile_interface',  
+                        component: 'mobile_interface', // завантажує шаблон settings_mobile_interface  
                         items: [  
                             {  
                                 title: 'Анімація постера',  
                                 name: 'mobile_interface_animation',  
                                 type: 'select',  
-                                values: {  
-                                    true: 'Увімкнено',  
-                                    false: 'Вимкнено'  
-                                },  
+                                values: { true: 'Увімкнено', false: 'Вимкнено' },  
                                 default: true  
                             }  
                         ],  
