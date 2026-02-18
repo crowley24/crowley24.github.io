@@ -15,6 +15,9 @@
     });
 
     var pluginPath = 'https://crowley24.github.io/Icons/';
+    // Шлях до іконки TMDB (використовуємо офіційний кольоровий логотип у форматі SVG або PNG)
+    var tmdbIcon = 'https://www.themoviedb.org/assets/2/v4/logos/v2/blue_square_1-5bd747f6295153148b40ad93d2b397e0137f3972b6103d19001f7a16bad3272d.svg';
+
     var svgIcons = {
         '4K': pluginPath + '4K.svg',
         '2K': pluginPath + '2K.svg',
@@ -30,7 +33,6 @@
         'UKR': pluginPath + 'UKR.svg'
     };
 
-    // Допоміжна функція для кольору рейтингу
     function getRatingClass(rating) {
         var r = parseFloat(rating);
         if (r >= 7) return 'rating-high';
@@ -63,14 +65,18 @@
         css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 70px; } ';
         css += '.full-start-new__buttons, .full-start-new__details, .full-descr__text, .full-start-new__tagline { justify-content: center !important; text-align: center !important; display: flex !important; } ';
         
-        // Покращення слогану
         css += '.full-start-new__tagline { font-style: italic; opacity: 0.8; font-size: 0.95em; margin-bottom: 12px !important; color: #fff; } ';
 
-        // Стилі рейтингу
-        css += '.rating-badge { display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 6px; font-weight: bold; color: #fff; margin-right: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); font-size: 0.9em; } ';
-        css += '.rating-high { background: rgba(76, 175, 80, 0.2); border-color: #4caf50; color: #4caf50; } ';
-        css += '.rating-mid { background: rgba(255, 193, 7, 0.2); border-color: #ffc107; color: #ffc107; } ';
-        css += '.rating-low { background: rgba(244, 67, 54, 0.2); border-color: #f44336; color: #f44336; } ';
+        // Приховуємо стандартний рейтинг Lampa, щоб не дублювався
+        css += '.full-start-new__details > span:first-child:not(.rating-badge) { display: none !important; } ';
+        css += '.full-start-new__details .tmdb_rating { display: none !important; } ';
+
+        // Стилі рейтингу з логотипом
+        css += '.rating-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-weight: bold; color: #fff; margin-right: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); font-size: 0.9em; height: 1.6em; } ';
+        css += '.rating-badge img { height: 0.8em; margin-right: 6px; border-radius: 1px; } ';
+        css += '.rating-high { background: rgba(76, 175, 80, 0.25); border-color: #4caf50; color: #4caf50; } ';
+        css += '.rating-mid { background: rgba(255, 193, 7, 0.25); border-color: #ffc107; color: #ffc107; } ';
+        css += '.rating-low { background: rgba(244, 67, 54, 0.25); border-color: #f44336; color: #f44336; } ';
 
         css += '.quality-badges-container { display: flex; align-items: center; justify-content: center; gap: 0.6em; margin: 12px 0; flex-wrap: wrap; width: 100%; min-height: 2em; } ';
         css += '.quality-badge { height: 1.3em; opacity: 0; animation: qb_in 0.4s ease forwards; display: flex; align-items: center; } ';
@@ -182,7 +188,7 @@
         return '<div class="quality-badge" style="animation-delay: ' + delay + '"><img src="' + iconPath + '" draggable="false"></div>';
     }
 
-    // 5. Реєстрація налаштувань (без змін)
+    // 5. Реєстрація налаштувань
     function addSettings() {
         Lampa.SettingsApi.addComponent({
             component: 'mobile_interface',
@@ -215,15 +221,13 @@
                 var $details = $render.find('.full-start-new__details');
                 var $title = $render.find('.full-start-new__title');
 
-                // ПРИКРАШАЄМО РЕЙТИНГ
+                // РЕНДЕР РЕЙТИНГУ З ЛОГО ТА ПРИХОВУВАННЯМ ЗАЙВОГО
                 var vote = (movie.vote_average || 0).toFixed(1);
                 if (vote > 0) {
                     var rClass = getRatingClass(vote);
-                    var $rating = $details.find('.rating, .full-start-new__rating');
-                    var html = '<span class="rating-badge ' + rClass + '">' + vote + '</span>';
-                    
-                    if ($rating.length) $rating.html(html);
-                    else $details.prepend(html);
+                    $('.rating-badge').remove(); // Чистимо старі, якщо є
+                    var html = '<div class="rating-badge ' + rClass + '"><img src="' + tmdbIcon + '">' + vote + '</div>';
+                    $details.prepend(html);
                 }
 
                 var lang = Lampa.Storage.get('language') || 'uk';
@@ -286,3 +290,4 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
+                                    
