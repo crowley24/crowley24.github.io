@@ -1,4 +1,3 @@
-
 (function () {
     'use strict';
 
@@ -7,7 +6,7 @@
         { id: 'mobile_interface_animation', default: true },
         { id: 'mobile_interface_studios', default: true },
         { id: 'mobile_interface_quality', default: true },
-        { id: 'mobile_interface_premium_rating', default: true } // Новий пункт
+        { id: 'mobile_interface_premium_rating', default: true }
     ];
 
     settings_list.forEach(function (opt) {
@@ -34,15 +33,14 @@
         'tmdb': 'https://lampame.github.io/my/img/rating/tmdb.svg'
     };
 
-    // Допоміжна функція для кольорів рейтингу
-    function getRatingClass(val) {
-        if (!val || isNaN(val)) return '';
-        if (val >= 7) return 'rating--green';
-        if (val >= 5) return 'rating--orange';
-        return 'rating--red';
+    function getRatingColor(val) {
+        if (!val || isNaN(val)) return '#fff';
+        if (val >= 7.5) return '#2ecc71'; // Соковитий зелений
+        if (val >= 6) return '#f1c40f';  // Золотий
+        return '#e74c3c'; // Червоний
     }
 
-    // 2. Стилі (Оновлено для преміальних рейтингів)
+    // 2. Стилі (PREMIUM LOOK)
     function applyStyles() {
         var oldStyle = document.getElementById('mobile-interface-styles');
         if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
@@ -54,37 +52,74 @@
         var css = '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } } ';
         css += '@keyframes qb_in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } ';
         
-        // Преміальні стилі рейтингів
-        css += '.full-start__rate { display: flex; align-items: center; background: rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 6px; margin-right: 8px; font-weight: bold; border: 1px solid rgba(255,255,255,0.15); } ';
-        css += '.full-start__rate img { height: 14px; margin-left: 5px; filter: grayscale(1); opacity: 0.8; } ';
-        css += '.rating--green { color: #2ecc71 !important; border-color: rgba(46, 204, 113, 0.4) !important; } ';
-        css += '.rating--orange { color: #f1c40f !important; border-color: rgba(241, 196, 15, 0.4) !important; } ';
-        css += '.rating--red { color: #e74c3c !important; border-color: rgba(231, 76, 60, 0.4) !important; } ';
+        // --- ПРЕМІАЛЬНІ РЕЙТИНГИ ---
+        css += '.full-start__rate { ';
+        css += '  display: flex !important; align-items: center; ';
+        css += '  background: rgba(255, 255, 255, 0.08) !important; ';
+        css += '  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); ';
+        css += '  padding: 5px 10px !important; border-radius: 8px !important; ';
+        css += '  margin: 0 5px !important; font-size: 1.1em !important; ';
+        css += '  box-shadow: 0 4px 15px rgba(0,0,0,0.3); ';
+        css += '  border: 1px solid rgba(255,255,255,0.1) !important; ';
+        css += '  position: relative; overflow: hidden; ';
+        css += '} ';
         
+        // Кольорова лінія знизу для акценту (як у дорогих UI)
+        css += '.full-start__rate::after { ';
+        css += '  content: ""; position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; ';
+        css += '  background: var(--rating-color, #fff); opacity: 0.8; ';
+        css += '} ';
+
+        css += '.full-start__rate div:first-child { font-weight: 800 !important; color: #fff !important; text-shadow: 0 1px 2px rgba(0,0,0,0.5); } ';
+        css += '.full-start__rate img { height: 16px !important; margin-left: 6px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); } ';
+        
+        // --- Мобільні адаптації ---
         css += '@media screen and (max-width: 480px) { ';
-        css += '.background { background: #000 !important; } ';
-        css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; touch-action: none !important; pointer-events: none !important; } ';
-        css += '.full-start-new__poster img { ';
+        css += '  .background { background: #000 !important; } ';
+        css += '  .full-start-new__poster img { ';
         css += (isAnimationEnabled ? 'animation: kenBurnsEffect 30s ease-in-out infinite !important; ' : 'animation: none !important; ');
-        css += 'transform-origin: center center !important; ';
-        css += 'mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.8) 70%, rgba(0,0,0,0.4) 85%, rgba(0,0,0,0) 100%) !important; ';
-        css += '-webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.8) 70%, rgba(0,0,0,0.4) 85%, rgba(0,0,0,0) 100%) !important; } ';
-        css += '.full-start-new__img { border-radius: 0 !important; mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 30%, rgba(0,0,0,1) 70%, rgba(0,0,0,0) 100%) !important; -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 30%, rgba(0,0,0,1) 70%, rgba(0,0,0,0) 100%) !important; } ';
-        css += '.full-start-new__right { background: none !important; border: none !important; box-shadow: none !important; margin-top: -120px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
-        css += '.full-start-new__rate-line { justify-content: center !important; margin: 10px 0 !important; } '; // Центрування рейтингів
-        css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 70px; } ';
-        css += '.full-start-new__buttons, .full-start-new__details, .full-descr__text, .full-start-new__tagline { justify-content: center !important; text-align: center !important; display: flex !important; } ';
-        css += '.quality-badges-container { display: flex; align-items: center; justify-content: center; gap: 0.6em; margin: 12px 0; flex-wrap: wrap; width: 100%; min-height: 2em; } ';
-        css += '.quality-badge { height: 1.3em; opacity: 0; animation: qb_in 0.4s ease forwards; display: flex; align-items: center; } ';
-        css += '.studio-logo { height: 1.8em !important; margin-right: 4px; } ';
-        css += '.quality-badge img { height: 100%; width: auto; display: block; } ';
+        css += '    mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 100%) !important; ';
+        css += '  } ';
+        css += '  .full-start-new__right { margin-top: -100px !important; align-items: center !important; } ';
+        css += '  .full-start-new__rate-line { display: flex; justify-content: center; width: 100%; margin: 15px 0 !important; } ';
+        css += '  .quality-badges-container { display: flex; justify-content: center; gap: 8px; margin: 15px 0; } ';
+        css += '  .quality-badge { height: 1.4em; } ';
         css += '} ';
 
         style.textContent = css;
         document.head.appendChild(style);
     }
 
-    // 3. Рендер логотипів студій (без змін)
+    // 3. Функція оновлення рейтингів
+    function upgradeDefaultRatings(render) {
+        if (!Lampa.Storage.get('mobile_interface_premium_rating')) return;
+
+        render.find('.full-start__rate').each(function() {
+            var $this = $(this);
+            var $valDiv = $this.find('div').first();
+            var text = $valDiv.text().replace(',', '.').trim();
+            var val = parseFloat(text);
+
+            if (!isNaN(val)) {
+                $valDiv.text(val === 10 ? '10' : val.toFixed(1));
+                // Встановлюємо змінну кольору для CSS лінії
+                $this[0].style.setProperty('--rating-color', getRatingColor(val));
+            }
+
+            // Очищення та заміна іконок
+            var $iconDiv = $this.find('div').last();
+            if ($this.hasClass('rate--imdb') || $this.text().toLowerCase().indexOf('imdb') >= 0) {
+                $this.addClass('rate--imdb');
+                $iconDiv.html('<img src="' + svgIcons.imdb + '">');
+            } else if ($this.hasClass('rate--tmdb') || $this.text().toLowerCase().indexOf('tmdb') >= 0) {
+                $this.addClass('rate--tmdb');
+                $iconDiv.html('<img src="' + svgIcons.tmdb + '">');
+            }
+        });
+    }
+
+    // --- Решта функцій (Studio Logos, Parser, Settings) залишаються без змін для стабільності ---
+    
     function renderStudioLogos(container, data) {
         if (!Lampa.Storage.get('mobile_interface_studios')) return;
         var logos = [];
@@ -125,58 +160,22 @@
         });
     }
 
-    // Логіка преміальної стилізації стандартних рейтингів
-    function upgradeDefaultRatings(render) {
-        if (!Lampa.Storage.get('mobile_interface_premium_rating')) return;
-
-        render.find('.full-start__rate').each(function() {
-            var $this = $(this);
-            var $valDiv = $this.find('div').first();
-            var text = $valDiv.text().replace(',', '.').trim();
-            var val = parseFloat(text);
-
-            // 1. Фікс 10.0 -> 10
-            if (val === 10) $valDiv.text('10');
-            else if (!isNaN(val)) $valDiv.text(val.toFixed(1));
-
-            // 2. Кольорове оформлення
-            $this.removeClass('rating--green rating--orange rating--red');
-            $this.addClass(getRatingClass(val));
-
-            // 3. Заміна тексту на іконку для джерела
-            var $sourceDiv = $this.find('.source--name');
-            if ($this.hasClass('rate--imdb') || $this.text().toLowerCase().indexOf('imdb') >= 0) {
-                $this.addClass('rate--imdb');
-                $this.find('div').last().html('<img src="' + svgIcons.imdb + '">');
-            } else if ($this.hasClass('rate--tmdb') || $this.text().toLowerCase().indexOf('tmdb') >= 0) {
-                $this.addClass('rate--tmdb');
-                $this.find('div').last().html('<img src="' + svgIcons.tmdb + '">');
-            }
-        });
-    }
-
-    // 4. Аналіз якості (без змін)
     function getBest(results) {
         var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
         var resOrder = ['HD', 'FULL HD', '2K', '4K'];
         var audioOrder = ['2.0', '4.0', '5.1', '7.1'];
-        
         var limit = Math.min(results.length, 30);
         for (var i = 0; i < limit; i++) {
             var item = results[i];
             var title = (item.Title || '').toLowerCase();
-
             if (title.indexOf('ukr') >= 0 || title.indexOf('укр') >= 0 || title.indexOf('ua') >= 0) best.ukr = true;
             if (title.indexOf('dub') >= 0 || title.indexOf('дубл') >= 0) best.dub = true;
-
             var foundRes = null;
             if (title.indexOf('4k') >= 0 || title.indexOf('2160') >= 0 || title.indexOf('uhd') >= 0) foundRes = '4K';
             else if (title.indexOf('2k') >= 0 || title.indexOf('1440') >= 0) foundRes = '2K';
             else if (title.indexOf('1080') >= 0 || title.indexOf('fhd') >= 0 || title.indexOf('full hd') >= 0) foundRes = 'FULL HD';
             else if (title.indexOf('720') >= 0 || title.indexOf('hd') >= 0) foundRes = 'HD';
-
             if (foundRes && (!best.resolution || resOrder.indexOf(foundRes) > resOrder.indexOf(best.resolution))) best.resolution = foundRes;
-
             if (item.ffprobe && Array.isArray(item.ffprobe)) {
                 item.ffprobe.forEach(function(stream) {
                     if (stream.codec_type === 'video') {
@@ -190,10 +189,8 @@
                     }
                 });
             }
-
             if (title.indexOf('vision') >= 0 || title.indexOf('dovi') >= 0 || title.indexOf(' dv ') >= 0) best.dolbyVision = true;
             if (title.indexOf('hdr') >= 0) best.hdr = true;
-            
             if (!best.audio) {
                 var fA = null;
                 if (title.indexOf('7.1') >= 0) fA = '7.1';
@@ -214,21 +211,18 @@
         return '<div class="quality-badge" style="animation-delay: ' + delay + '"><img src="' + iconPath + '" draggable="false"></div>';
     }
 
-    // 5. Реєстрація налаштувань (Оновлено)
     function addSettings() {
         Lampa.SettingsApi.addComponent({
             component: 'mobile_interface',
             icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" fill="white"/></svg>',
             name: 'Мобільний інтерфейс'
         });
-
         var params = [
             { id: 'mobile_interface_animation', label: 'Анімація постера', desc: 'Ефект наближення фону' },
             { id: 'mobile_interface_studios', label: 'Логотипи студій', desc: 'Показувати іконки Netflix, Disney тощо' },
             { id: 'mobile_interface_quality', label: 'Значки якості', desc: 'Показувати 4K, HDR, UKR (потрібен парсер)' },
-            { id: 'mobile_interface_premium_rating', label: 'Преміальні рейтинги', desc: 'Кольорові оцінки IMDb/TMDB з логотипами' }
+            { id: 'mobile_interface_premium_rating', label: 'Преміальні рейтинги', desc: 'Netflix Style: Glassmorphism та акцентні лінії' }
         ];
-
         params.forEach(function (p) {
             Lampa.SettingsApi.addParam({
                 component: 'mobile_interface',
@@ -239,7 +233,6 @@
         });
     }
 
-    // 6. Логіка завантаження Лого фільму та Якості
     function initLogoAndBadges() {
         Lampa.Listener.follow('full', function (e) {
             if (window.innerWidth <= 480 && (e.type === 'complite' || e.type === 'complete')) {
@@ -248,10 +241,7 @@
                 var $details = $render.find('.full-start-new__details');
                 var $title = $render.find('.full-start-new__title');
 
-                // Модифікуємо рейтинги після їх появи
-                setTimeout(function() {
-                    upgradeDefaultRatings($render);
-                }, 10);
+                setTimeout(function() { upgradeDefaultRatings($render); }, 50);
 
                 var lang = Lampa.Storage.get('language') || 'uk';
                 var type = movie.name ? 'tv' : 'movie';
@@ -267,33 +257,26 @@
 
                 function renderLogo(p) {
                     var imgUrl = Lampa.TMDB.image('/t/p/w300' + p.replace('.svg', '.png'));
-                    $title.html('<img src="' + imgUrl + '" style="max-height: 120px; object-fit: contain; position: relative; z-index: 10;">');
+                    $title.html('<img src="' + imgUrl + '" style="max-height: 100px; object-fit: contain; position: relative; z-index: 10; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));">');
                 }
 
                 if ($details.length) {
                     $('.quality-badges-container').remove();
                     $details.after('<div class="quality-badges-container"></div>');
                     var container = $('.quality-badges-container');
-                    
                     renderStudioLogos(container, movie);
-
                     if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Storage.field('parser_use')) {
                         Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function (response) {
                             if (response && response.Results) {
                                 var best = getBest(response.Results);
                                 var badgeList = [];
-                                
                                 if (best.resolution) badgeList.push(best.resolution);
                                 if (best.dolbyVision) badgeList.push('Dolby Vision');
                                 if (best.hdr && !best.dolbyVision) badgeList.push('HDR');
                                 if (best.audio) badgeList.push(best.audio);
                                 if (best.dub) badgeList.push('DUB');
                                 if (best.ukr) badgeList.push('UKR');
-
-                                var htmlBadges = badgeList.map(function(type, i) {
-                                    return createBadgeImg(type, i);
-                                });
-                                
+                                var htmlBadges = badgeList.map(function(type, i) { return createBadgeImg(type, i); });
                                 container.append(htmlBadges.join(''));
                             }
                         });
@@ -313,3 +296,4 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
+                            
