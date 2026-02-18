@@ -72,14 +72,17 @@
     }  
   
     function addSettings() {  
-        // Перевіряємо, чи SettingsApi вже доступний  
-        if (!Lampa.SettingsApi) {  
-            console.warn('[MobileInterface] Lampa.SettingsApi not ready, retrying...');  
-            setTimeout(addSettings, 500);  
+        // Перевірка готовності SettingsApi  
+        if (!Lampa.SettingsApi || !Lampa.SettingsApi.getComponents) {  
+            console.warn('[MobileInterface] SettingsApi not ready, retry in 300ms');  
+            setTimeout(addSettings, 300);  
             return;  
         }  
         // Запобігання дублюванню  
-        if (Lampa.SettingsApi.getComponents().mobile_interface) return;  
+        if (Lampa.SettingsApi.getComponents().mobile_interface) {  
+            console.log('[MobileInterface] Component already registered');  
+            return;  
+        }  
   
         Lampa.SettingsApi.addComponent({  
             component: 'mobile_interface',  
@@ -93,25 +96,31 @@
                 name: 'mobile_interface_animation',  
                 type: 'select',  
                 default: true,  
-                values: {  
-                    true: 'Увімкнено',  
-                    false: 'Вимкнено'  
-                }  
+                values: { true: 'Увімкнено', false: 'Вимкнено' }  
             },  
-            field: {  
-                name: 'Анімація постера'  
-            },  
+            field: { name: 'Анімація постера' },  
             onChange: () => applyStyles()  
         });  
+  
+        console.log('[MobileInterface] Component registered, forcing settings main update');  
+        // Примусове оновлення головного меню налаштувань, якщо воно вже рендериться  
+        if (Lampa.Settings.main && Lampa.Settings.main().update) {  
+            Lampa.Settings.main().update();  
+        }  
     }  
   
     function initLogo() {  
         Lampa.Listener.follow('full', function(e) {  
-            console.log('[MobileInterface] full event:', e.type, e.data);  
-            if (window.innerWidth <= 480 && e.type === 'complite') {  
+            console.log('[MobileInterface] full event:', e.type, e.data ? e.data.movie : 'no movie');  
+            // Підтримка як 'complite', так і 'complete'  
+            if (window.innerWidth <= 480 && (e.type === 'complite' || e.type === 'complete')) {  
                 var movie = e.data.movie;  
+                if (!movie || !movie.id) {  
+                    console.warn('[MobileInterface] No movie data');  
+                    return;  
+                }  
                 var type = movie.name ? 'tv' : 'movie';  
-                var lang = Lampa.Storage.get('language');  
+                var lang = Lampa.Storage.get('language') || 'en';  
   
                 var url = Lampa.TMDB.api(type + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key() + '&language=' + lang);  
                 $.get(url, function(res) {  
@@ -121,6 +130,8 @@
                             if (resEn.logos && resEn.logos[0]) render(resEn.logos[0].file_path);  
                         });  
                     } else render(path);  
+                }).fail(function() {  
+                    console.warn('[MobileInterface] TMDB images request failed');  
                 });  
   
                 function render(p) {  
@@ -128,6 +139,7 @@
                     var $title = e.object.activity.render().find('.full-start-new__title');  
                     if ($title.length) {  
                         $title.html('<img src="'+imgUrl+'" style="max-height: 120px; object-fit: contain; position: relative; z-index: 10;">');  
+                        console.log('[MobileInterface] Logo rendered');  
                     } else {  
                         console.warn('[MobileInterface] .full-start-new__title not found');  
                     }  
@@ -137,6 +149,7 @@
     }  
   
     function start() {  
+        console.log('[MobileInterface] Plugin start');  
         applyStyles();  
         addSettings();  
         initLogo();  
@@ -148,6 +161,14 @@
         }, 1000);  
     }  
   
-    if (window.appready) start();  
-    else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') start(); });  
+    // Надійний запуск: чекаємо на app:ready  
+    if (window.appready) {  
+        start();  
+    } else {  
+        Lampa.Listener.follow('app', function (e) {  
+            if (e.type === 'ready') {  
+                start();  
+            }  
+        });  
+    }  
 })();
