@@ -59,11 +59,11 @@
         css += '.quality-badge { height: 1.3em; opacity: 0; animation: qb_in 0.4s ease forwards; display: flex; align-items: center; } ';  
         css += '.studio-logo { height: 1.8em !important; margin-right: 4px; } ';  
         css += '.quality-badge img { height: 100%; width: auto; display: block; } ';  
-        // --- Додано: преміальні стилі для рейтингів ---  
-        css += '.full-start__ratings { background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05)); backdrop-filter: blur(10px); border-radius: 1em; padding: 0.8em 1.2em; border: 1px solid rgba(255,255,255,0.15); } ';  
-        css += '.full-start__rating-value { font-size: 3.2em; font-weight: 700; text-shadow: 0 2px 8px rgba(0,0,0,0.4); animation: fadeInScale 0.6s ease-out; } ';  
-        css += '.full-start__rating[data-high="true"] .full-start__rating-value { color: #ffd700; } ';  
-        css += '.full-start__rating[data-mid="true"] .full-start__rating-value { color: #c0c0c0; } ';  
+        // --- Преміальні стилі для рейтингів ---  
+        css += '.full-start-new__rate-line { background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05)) !important; backdrop-filter: blur(10px) !important; border-radius: 1em !important; padding: 0.8em 1.2em !important; border: 1px solid rgba(255,255,255,0.15) !important; } ';  
+        css += '.full-start__rate > div:first-child { font-size: 3.2em !important; font-weight: 700 !important; text-shadow: 0 2px 8px rgba(0,0,0,0.4) !important; animation: fadeInScale 0.6s ease-out !important; } ';  
+        css += '.full-start__rate[data-high="true"] > div:first-child { color: #ffd700 !important; } ';  
+        css += '.full-start__rate[data-mid="true"] > div:first-child { color: #c0c0c0 !important; } ';  
         // --- Кінець доданого ---  
         css += '} ';  
   
@@ -221,10 +221,10 @@
                     $title.html('<img src="' + imgUrl + '" style="max-height: 120px; object-fit: contain; position: relative; z-index: 10;">');  
                 }  
   
-                // --- Додано: преміальні атрибути для рейтингів ---  
-                var $ratings = $render.find('.full-start__rating');  
-                $ratings.each(function () {  
-                    var val = parseFloat($(this).find('.full-start__rating-value').text());  
+                // --- Преміальні атрибути для рейтингів ---  
+                var $rates = $render.find('.full-start__rate');  
+                $rates.each(function () {  
+                    var val = parseFloat($(this).find('> div:first-child').text());  
                     if (val >= 8) $(this).attr('data-high', 'true');  
                     else if (val >= 6) $(this).attr('data-mid', 'true');  
                 });  
