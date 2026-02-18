@@ -30,6 +30,14 @@
         'UKR': pluginPath + 'UKR.svg'
     };
 
+    // Допоміжна функція для кольору рейтингу
+    function getRatingClass(rating) {
+        var r = parseFloat(rating);
+        if (r >= 7) return 'rating-high';
+        if (r >= 5) return 'rating-mid';
+        return 'rating-low';
+    }
+
     // 2. Стилі
     function applyStyles() {
         var oldStyle = document.getElementById('mobile-interface-styles');
@@ -54,6 +62,16 @@
         css += '.full-start-new__right::before, .full-start-new__right::after { content: unset !important; } ';
         css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 70px; } ';
         css += '.full-start-new__buttons, .full-start-new__details, .full-descr__text, .full-start-new__tagline { justify-content: center !important; text-align: center !important; display: flex !important; } ';
+        
+        // Покращення слогану
+        css += '.full-start-new__tagline { font-style: italic; opacity: 0.8; font-size: 0.95em; margin-bottom: 12px !important; color: #fff; } ';
+
+        // Стилі рейтингу
+        css += '.rating-badge { display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 6px; font-weight: bold; color: #fff; margin-right: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); font-size: 0.9em; } ';
+        css += '.rating-high { background: rgba(76, 175, 80, 0.2); border-color: #4caf50; color: #4caf50; } ';
+        css += '.rating-mid { background: rgba(255, 193, 7, 0.2); border-color: #ffc107; color: #ffc107; } ';
+        css += '.rating-low { background: rgba(244, 67, 54, 0.2); border-color: #f44336; color: #f44336; } ';
+
         css += '.quality-badges-container { display: flex; align-items: center; justify-content: center; gap: 0.6em; margin: 12px 0; flex-wrap: wrap; width: 100%; min-height: 2em; } ';
         css += '.quality-badge { height: 1.3em; opacity: 0; animation: qb_in 0.4s ease forwards; display: flex; align-items: center; } ';
         css += '.studio-logo { height: 1.8em !important; margin-right: 4px; } ';
@@ -64,7 +82,7 @@
         document.head.appendChild(style);
     }
 
-    // 3. Рендер логотипів студій
+    // 3. Рендер логотипів студій (без змін)
     function renderStudioLogos(container, data) {
         if (!Lampa.Storage.get('mobile_interface_studios')) return;
         var logos = [];
@@ -105,7 +123,7 @@
         });
     }
 
-    // 4. Аналіз якості з сортуванням
+    // 4. Аналіз якості з сортуванням (без змін)
     function getBest(results) {
         var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
         var resOrder = ['HD', 'FULL HD', '2K', '4K'];
@@ -164,7 +182,7 @@
         return '<div class="quality-badge" style="animation-delay: ' + delay + '"><img src="' + iconPath + '" draggable="false"></div>';
     }
 
-    // 5. Реєстрація налаштувань
+    // 5. Реєстрація налаштувань (без змін)
     function addSettings() {
         Lampa.SettingsApi.addComponent({
             component: 'mobile_interface',
@@ -188,7 +206,7 @@
         });
     }
 
-    // 6. Логіка завантаження Лого фільму та Якості з ПОРЯДКОМ
+    // 6. Логіка завантаження Лого фільму та Якості
     function initLogoAndBadges() {
         Lampa.Listener.follow('full', function (e) {
             if (window.innerWidth <= 480 && (e.type === 'complite' || e.type === 'complete')) {
@@ -196,6 +214,17 @@
                 var $render = e.object.activity.render();
                 var $details = $render.find('.full-start-new__details');
                 var $title = $render.find('.full-start-new__title');
+
+                // ПРИКРАШАЄМО РЕЙТИНГ
+                var vote = (movie.vote_average || 0).toFixed(1);
+                if (vote > 0) {
+                    var rClass = getRatingClass(vote);
+                    var $rating = $details.find('.rating, .full-start-new__rating');
+                    var html = '<span class="rating-badge ' + rClass + '">' + vote + '</span>';
+                    
+                    if ($rating.length) $rating.html(html);
+                    else $details.prepend(html);
+                }
 
                 var lang = Lampa.Storage.get('language') || 'uk';
                 var type = movie.name ? 'tv' : 'movie';
@@ -227,10 +256,9 @@
                                 var best = getBest(response.Results);
                                 var badgeList = [];
                                 
-                                // ПОРЯДОК: 4K -> DV -> HDR -> AUDIO -> DUB -> UKR
                                 if (best.resolution) badgeList.push(best.resolution);
                                 if (best.dolbyVision) badgeList.push('Dolby Vision');
-                                if (best.hdr && !best.dolbyVision) badgeList.push('HDR'); // DV вже включає HDR зазвичай
+                                if (best.hdr && !best.dolbyVision) badgeList.push('HDR'); 
                                 if (best.audio) badgeList.push(best.audio);
                                 if (best.dub) badgeList.push('DUB');
                                 if (best.ukr) badgeList.push('UKR');
@@ -258,4 +286,3 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
-                                    
