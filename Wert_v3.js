@@ -15,7 +15,6 @@
     });
 
     var pluginPath = 'https://crowley24.github.io/Icons/';
-    // Шлях до іконки TMDB (використовуємо офіційний кольоровий логотип у форматі SVG або PNG)
     var tmdbIcon = 'https://www.themoviedb.org/assets/2/v4/logos/v2/blue_square_1-5bd747f6295153148b40ad93d2b397e0137f3972b6103d19001f7a16bad3272d.svg';
 
     var svgIcons = {
@@ -64,19 +63,18 @@
         css += '.full-start-new__right::before, .full-start-new__right::after { content: unset !important; } ';
         css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 70px; } ';
         css += '.full-start-new__buttons, .full-start-new__details, .full-descr__text, .full-start-new__tagline { justify-content: center !important; text-align: center !important; display: flex !important; } ';
-        
         css += '.full-start-new__tagline { font-style: italic; opacity: 0.8; font-size: 0.95em; margin-bottom: 12px !important; color: #fff; } ';
 
-        // Приховуємо стандартний рейтинг Lampa, щоб не дублювався
-        css += '.full-start-new__details > span:first-child:not(.rating-badge) { display: none !important; } ';
-        css += '.full-start-new__details .tmdb_rating { display: none !important; } ';
-
-        // Стилі рейтингу з логотипом
-        css += '.rating-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-weight: bold; color: #fff; margin-right: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); font-size: 0.9em; height: 1.6em; } ';
-        css += '.rating-badge img { height: 0.8em; margin-right: 6px; border-radius: 1px; } ';
-        css += '.rating-high { background: rgba(76, 175, 80, 0.25); border-color: #4caf50; color: #4caf50; } ';
-        css += '.rating-mid { background: rgba(255, 193, 7, 0.25); border-color: #ffc107; color: #ffc107; } ';
-        css += '.rating-low { background: rgba(244, 67, 54, 0.25); border-color: #f44336; color: #f44336; } ';
+        // Стилізація стандартного рейтингу TMDB
+        css += '.full-start-new__details .tmdb_rating, .full-start-new__details span.rating-premium { ';
+        css += 'display: inline-flex !important; align-items: center !important; padding: 2px 8px !important; border-radius: 6px !important; ';
+        css += 'font-weight: bold !important; color: #fff !important; margin-right: 8px !important; ';
+        css += 'background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); font-size: 0.9em !important; height: 1.6em !important; } ';
+        
+        css += '.rating-premium img { height: 0.8em; margin-right: 6px; border-radius: 1px; } ';
+        css += '.rating-high { background: rgba(76, 175, 80, 0.25) !important; border-color: #4caf50 !important; color: #4caf50 !important; } ';
+        css += '.rating-mid { background: rgba(255, 193, 7, 0.25) !important; border-color: #ffc107 !important; color: #ffc107 !important; } ';
+        css += '.rating-low { background: rgba(244, 67, 54, 0.25) !important; border-color: #f44336 !important; color: #f44336 !important; } ';
 
         css += '.quality-badges-container { display: flex; align-items: center; justify-content: center; gap: 0.6em; margin: 12px 0; flex-wrap: wrap; width: 100%; min-height: 2em; } ';
         css += '.quality-badge { height: 1.3em; opacity: 0; animation: qb_in 0.4s ease forwards; display: flex; align-items: center; } ';
@@ -212,7 +210,7 @@
         });
     }
 
-    // 6. Логіка завантаження Лого фільму та Якості
+    // 6. Логіка завантаження
     function initLogoAndBadges() {
         Lampa.Listener.follow('full', function (e) {
             if (window.innerWidth <= 480 && (e.type === 'complite' || e.type === 'complete')) {
@@ -221,13 +219,22 @@
                 var $details = $render.find('.full-start-new__details');
                 var $title = $render.find('.full-start-new__title');
 
-                // РЕНДЕР РЕЙТИНГУ З ЛОГО ТА ПРИХОВУВАННЯМ ЗАЙВОГО
+                // ПРЕМИАЛЬНИЙ РЕЙТИНГ (РЕДАГУЄМО СТАНДАРТНИЙ)
                 var vote = (movie.vote_average || 0).toFixed(1);
                 if (vote > 0) {
                     var rClass = getRatingClass(vote);
-                    $('.rating-badge').remove(); // Чистимо старі, якщо є
-                    var html = '<div class="rating-badge ' + rClass + '"><img src="' + tmdbIcon + '">' + vote + '</div>';
-                    $details.prepend(html);
+                    // Знаходимо стандартний рейтинг Lampa або створюємо свій, якщо його немає
+                    var $rating = $details.find('.tmdb_rating, span:contains("' + vote + '")').first();
+                    
+                    if ($rating.length) {
+                        $rating.addClass('rating-premium ' + rClass).html('<img src="' + tmdbIcon + '">' + vote);
+                    } else {
+                        $details.prepend('<span class="rating-premium ' + rClass + '"><img src="' + tmdbIcon + '">' + vote + '</span>');
+                    }
+                    // Видаляємо текст "TMDB", який може бути поруч у деяких темах
+                    $details.contents().filter(function() {
+                        return this.nodeType === 3 && (this.nodeValue.indexOf('TMDB') !== -1 || this.nodeValue.indexOf('tmdb') !== -1);
+                    }).remove();
                 }
 
                 var lang = Lampa.Storage.get('language') || 'uk';
@@ -290,4 +297,4 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
-                                    
+                
