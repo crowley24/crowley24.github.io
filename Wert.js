@@ -1,7 +1,6 @@
 (function () {
     'use strict';
 
-    // 1. Ініціалізація налаштувань (ES5 сумісність)
     var settings_list = [
         { id: 'mobile_interface_animation', default: true },
         { id: 'mobile_interface_studios', default: true },
@@ -30,7 +29,6 @@
         'UKR': pluginPath + 'UKR.svg'
     };
 
-    // 2. Функція застосування стилів (Без зворотніх лапок)
     function applyStyles() {
         var oldStyle = document.getElementById('mobile-interface-styles');
         if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
@@ -64,7 +62,6 @@
         document.head.appendChild(style);
     }
 
-    // 3. Студії та Якість
     function renderStudioLogos(container, data) {
         if (!Lampa.Storage.get('mobile_interface_studios')) return;
         var logos = [];
@@ -85,7 +82,6 @@
         logos.forEach(function (logo) {
             var imgId = 'logo_' + Math.random().toString(36).substr(2, 9);
             container.append('<div class="quality-badge studio-logo" id="' + imgId + '"><img src="' + logo.url + '" title="' + logo.name + '"></div>');
-
             var img = new Image();
             img.crossOrigin = 'anonymous';
             img.onload = function () {
@@ -96,9 +92,7 @@
                 try {
                     var pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
                     var r = 0, g = 0, b = 0, cnt = 0;
-                    for (var i = 0; i < pixels.length; i += 4) {
-                        if (pixels[i + 3] > 50) { r += pixels[i]; g += pixels[i + 1]; b += pixels[i + 2]; cnt++; }
-                    }
+                    for (var i = 0; i < pixels.length; i += 4) { if (pixels[i + 3] > 50) { r += pixels[i]; g += pixels[i + 1]; b += pixels[i + 2]; cnt++; } }
                     if (cnt > 0 && (0.299 * (r / cnt) + 0.587 * (g / cnt) + 0.114 * (b / cnt)) < 40) {
                         $('#' + imgId + ' img').css({ 'filter': 'brightness(0) invert(1)', 'opacity': '0.9' });
                     }
@@ -123,7 +117,6 @@
         return best;
     }
 
-    // 4. Налаштування
     function addSettings() {
         Lampa.SettingsApi.addComponent({
             component: 'mobile_interface',
@@ -147,7 +140,6 @@
         });
     }
 
-    // 5. Логіка Logo та Badges
     function initLogoAndBadges() {
         Lampa.Listener.follow('full', function (e) {
             if (window.innerWidth <= 480 && (e.type === 'complite' || e.type === 'complete')) {
@@ -156,28 +148,33 @@
                 var $details = $render.find('.full-start-new__details');
                 var $title = $render.find('.full-start-new__title');
 
+                // Прямий запит до TMDB API без обгортки (для надійності)
                 var lang = Lampa.Storage.get('language') || 'uk';
                 var type = movie.name ? 'tv' : 'movie';
-                
-                Lampa.TMDB.api(type + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key() + '&language=' + lang, function (res) {
-                    var path = (res.logos && res.logos[0]) ? res.logos[0].file_path : null;
-                    if (!path) {
-                        Lampa.TMDB.api(type + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key() + '&language=en', function (resEn) {
-                            if (resEn.logos && resEn.logos[0]) renderLogo(resEn.logos[0].file_path);
-                        });
-                    } else renderLogo(path);
-                });
+                var apiKey = Lampa.TMDB.key();
+                var baseUrl = 'https://api.themoviedb.org/3/';
 
-                function renderLogo(p) {
-                    var imgUrl = Lampa.TMDB.image('/t/p/w300' + p.replace('.svg', '.png'));
-                    $title.html('<img src="' + imgUrl + '" style="max-height: 120px; object-fit: contain; position: relative; z-index: 10;">');
+                function getLogo(l) {
+                    $.ajax({
+                        url: baseUrl + type + '/' + movie.id + '/images?api_key=' + apiKey + '&language=' + l,
+                        type: 'GET',
+                        success: function(res) {
+                            if (res.logos && res.logos.length > 0) {
+                                var imgUrl = Lampa.TMDB.image('/t/p/w300' + res.logos[0].file_path.replace('.svg', '.png'));
+                                $title.html('<img src="' + imgUrl + '" style="max-height: 120px; object-fit: contain; position: relative; z-index: 10;">');
+                            } else if (l !== 'en') {
+                                getLogo('en'); // Якщо немає нашої, беремо англійську
+                            }
+                        }
+                    });
                 }
+
+                getLogo(lang);
 
                 if ($details.length) {
                     $('.quality-badges-container').remove();
                     $details.after('<div class="quality-badges-container"></div>');
                     var container = $('.quality-badges-container');
-
                     renderStudioLogos(container, movie);
 
                     if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Storage.field('parser_use')) {
