@@ -30,7 +30,7 @@
         'UKR': pluginPath + 'UKR.svg'
     };
 
-    // 2. Стилі (Оновлено для преміальних рейтингів)
+    // 2. Стилі
     function applyStyles() {
         var oldStyle = document.getElementById('mobile-interface-styles');
         if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
@@ -52,56 +52,30 @@
         css += '.full-start-new__img { border-radius: 0 !important; mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 30%, rgba(0,0,0,1) 70%, rgba(0,0,0,0) 100%) !important; -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 30%, rgba(0,0,0,1) 70%, rgba(0,0,0,0) 100%) !important; } ';
         css += '.full-start-new__right { background: none !important; border: none !important; box-shadow: none !important; margin-top: -120px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
         css += '.full-start-new__right::before, .full-start-new__right::after { content: unset !important; } ';
-        css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 70px; margin-bottom: 10px; } ';
+        css += '.full-start-new__title { width: 100%; display: flex; flex-direction: column; align-items: center; min-height: 70px; } ';
+        css += '.full-start-new__title img { max-height: 110px; object-fit: contain; margin-bottom: 15px; } ';
         css += '.full-start-new__buttons, .full-start-new__details, .full-descr__text, .full-start-new__tagline { justify-content: center !important; text-align: center !important; display: flex !important; } ';
         css += '.quality-badges-container { display: flex; align-items: center; justify-content: center; gap: 0.6em; margin: 12px 0; flex-wrap: wrap; width: 100%; min-height: 2em; } ';
         css += '.quality-badge { height: 1.3em; opacity: 0; animation: qb_in 0.4s ease forwards; display: flex; align-items: center; } ';
         css += '.studio-logo { height: 1.8em !important; margin-right: 4px; } ';
         css += '.quality-badge img { height: 100%; width: auto; display: block; } ';
-        
-        // НОВІ ПРЕМІУМ СТИЛІ РЕЙТИНГІВ
-        css += '.premium-ratings { display: flex; gap: 8px; justify-content: center; margin-bottom: 10px; width: 100%; animation: qb_in 0.6s ease; } ';
-        css += '.rating-pill { display: flex; align-items: center; padding: 4px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.15); font-weight: 700; font-size: 13px; color: #fff; } ';
-        css += '.rating-pill.imdb { border-color: rgba(245, 197, 24, 0.5); } ';
-        css += '.rating-pill.imdb span { color: #f5c518; } ';
-        css += '.rating-pill.tmdb { border-color: rgba(1, 210, 119, 0.5); } ';
-        css += '.rating-pill.tmdb span { color: #01d277; } ';
-        css += '.rating-pill.kp { border-color: rgba(255, 102, 0, 0.5); } ';
-        css += '.rating-pill.kp span { color: #ff6600; } ';
-        css += '.rating-pill img { height: 12px; margin-right: 6px; } ';
+
+        // ПРЕМІАЛЬНІ РЕЙТИНГИ (Стандартні елементи Лампи)
+        css += '.full-start-new__rating { display: flex !important; justify-content: center !important; gap: 8px !important; margin: 10px 0 !important; padding: 0 !important; border: none !important; background: none !important; } ';
+        css += '.full-start-new__rating > div { display: flex !important; align-items: center !important; padding: 5px 12px !important; border-radius: 12px !important; font-weight: 800 !important; font-size: 14px !important; border: 1.5px solid rgba(255,255,255,0.2) !important; background: rgba(255, 255, 255, 0.08) !important; color: #fff !important; } ';
+        css += '.full-start-new__rating .tmdb { border-color: rgba(1, 210, 119, 0.5) !important; color: #01d277 !important; } ';
+        css += '.full-start-new__rating .tmdb::before { content: "TMDB"; background: #01d277; color: #000; padding: 1px 4px; border-radius: 3px; font-size: 9px; margin-right: 6px; font-weight: 900; } ';
+        css += '.full-start-new__rating .imdb { border-color: rgba(245, 197, 24, 0.5) !important; color: #f5c518 !important; } ';
+        css += '.full-start-new__rating .imdb::before { content: "IMDb"; background: #f5c518; color: #000; padding: 1px 4px; border-radius: 3px; font-size: 9px; margin-right: 6px; font-weight: 900; } ';
+        css += '.full-start-new__rating .kp { border-color: rgba(255, 102, 0, 0.5) !important; color: #ff6600 !important; } ';
+        css += '.full-start-new__rating .kp::before { content: "КП"; background: #ff6600; color: #fff; padding: 1px 4px; border-radius: 3px; font-size: 9px; margin-right: 6px; font-weight: 900; } ';
         css += '} ';
 
         style.textContent = css;
         document.head.appendChild(style);
     }
 
-    // Рендер преміальних рейтингів
-    function renderPremiumRatings(container, movie) {
-        $('.premium-ratings').remove();
-        var ratingsHtml = $('<div class="premium-ratings"></div>');
-        
-        var r = {
-            imdb: movie.vote_average_imdb || (movie.source == 'tmdb' ? '' : movie.imdb_rating),
-            tmdb: movie.vote_average,
-            kp: movie.vote_average_kp || movie.kp_rating
-        };
-
-        if (r.imdb && r.imdb > 0) {
-            ratingsHtml.append('<div class="rating-pill imdb"><img src="https://upload.wikimedia.org/wikipedia/commons/6/69/IMDB_Logo_2016.svg"><span>' + parseFloat(r.imdb).toFixed(1) + '</span></div>');
-        }
-        if (r.tmdb && r.tmdb > 0) {
-            ratingsHtml.append('<div class="rating-pill tmdb"><img src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_square_2-d537fb228cf3ded904ef09b136fe3fec72548ebc1fea3fbbd1ad9e36364db38b.svg"><span>' + Math.round(r.tmdb * 10) + '%</span></div>');
-        }
-        if (r.kp && r.kp > 0) {
-            ratingsHtml.append('<div class="rating-pill kp"><span>КP: ' + parseFloat(r.kp).toFixed(1) + '</span></div>');
-        }
-
-        if (ratingsHtml.children().length > 0) {
-            container.append(ratingsHtml);
-        }
-    }
-
-    // 3. Рендер логотипів студій (без змін)
+    // 3. Рендер логотипів студій
     function renderStudioLogos(container, data) {
         if (!Lampa.Storage.get('mobile_interface_studios')) return;
         var logos = [];
@@ -142,7 +116,7 @@
         });
     }
 
-    // 4. Аналіз якості з сортуванням (без змін)
+    // 4. Аналіз якості з сортуванням
     function getBest(results) {
         var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
         var resOrder = ['HD', 'FULL HD', '2K', '4K'];
@@ -233,8 +207,7 @@
                 var $render = e.object.activity.render();
                 var $details = $render.find('.full-start-new__details');
                 var $title = $render.find('.full-start-new__title');
-                var $right = $render.find('.full-start-new__right');
-
+                
                 var lang = Lampa.Storage.get('language') || 'uk';
                 var type = movie.name ? 'tv' : 'movie';
                 var apiKey = Lampa.TMDB.key();
@@ -249,9 +222,11 @@
 
                 function renderLogo(p) {
                     var imgUrl = Lampa.TMDB.image('/t/p/w300' + p.replace('.svg', '.png'));
-                    $title.html('<img src="' + imgUrl + '" style="max-height: 110px; object-fit: contain; position: relative; z-index: 10;">');
-                    // Додаємо рейтинги одразу під логотипом
-                    renderPremiumRatings($title, movie);
+                    $title.html('<img src="' + imgUrl + '">');
+                    
+                    // Переміщуємо стандартний рейтинг Лампи під логотип
+                    var $rating = $render.find('.full-start-new__rating');
+                    $title.append($rating);
                 }
 
                 if ($details.length) {
