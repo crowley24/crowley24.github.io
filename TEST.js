@@ -1,7 +1,6 @@
 (function() {
     "use strict";
 
-    // 1. Створюємо "невидимий щит" негайно
     var hideLampaStyle = document.createElement('style');
     hideLampaStyle.innerHTML = `
         /* Приховуємо головний прелоадер та заставку Lampa */
@@ -48,19 +47,16 @@
                 welcomeDiv.style.opacity = '0';
                 setTimeout(function() {
                     if (welcomeDiv.parentNode) welcomeDiv.parentNode.removeChild(welcomeDiv);
-                    // Видаляємо стиль приховування, щоб Lampa з'явилася
                     if (hideLampaStyle.parentNode) hideLampaStyle.parentNode.removeChild(hideLampaStyle);
                 }, 600);
             };
 
-            // Тримаємо заставку 4 секунди, щоб Lampa встигла завантажитися "під нею"
             setTimeout(removeWelcome, 4000); 
             
             window.addEventListener('keydown', removeWelcome);
             window.addEventListener('click', removeWelcome);
         };
 
-        // Запускаємо якнайшвидше
         if (document.body) init();
         else document.addEventListener('DOMContentLoaded', init);
     }
