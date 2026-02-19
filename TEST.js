@@ -1,48 +1,57 @@
-!function() {
+(function() {
     "use strict";
     if (!window.welcomeplugin) {
         window.welcomeplugin = true;
+        
         var style = document.createElement('style');
         style.type = 'text/css';
-        style.innerHTML = `
-            .welcome {
-                position: fixed;
-                top: 0; left: 0; right: 0; bottom: 0;
-                z-index: 9999;
-                background: #000000 url('https://i.ibb.co/d0HFCFpP/IMG-20260218-142212-039.jpg') no-repeat 50% 50%;
-                background-size: cover;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                transition: opacity 0.5s ease; /* Плавне зникнення */
-            }
-            .welcome-text {
-                color: white;
-                font-size: 48px;
-                font-family: Arial, sans-serif;
-                text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-                background: rgba(0,0,0,0.3);
-                padding: 20px 40px;
-                border-radius: 10px;
-                text-align: center;
-            }
-        `;
+        // Використовуємо звичайні лапки для сумісності з ES5
+        style.innerHTML = 
+            '.welcome {' +
+                'position: fixed;' +
+                'top: 0; left: 0; right: 0; bottom: 0;' +
+                'z-index: 9999;' +
+                'background: #000000 url("https://i.ibb.co/d0HFCFpP/IMG-20260218-142212-039.jpg") no-repeat 50% 50%;' +
+                'background-size: cover;' +
+                'display: flex;' +
+                'align-items: center;' +
+                'justify-content: center;' +
+                'transition: opacity 0.5s ease;' +
+            '}' +
+            '.welcome-text {' +
+                'color: white;' +
+                'font-size: 48px;' +
+                'font-family: Arial, sans-serif;' +
+                'text-shadow: 2px 2px 4px rgba(0,0,0,0.5);' +
+                'background: rgba(0,0,0,0.3);' +
+                'padding: 20px 40px;' +
+                'border-radius: 10px;' +
+                'text-align: center;' +
+            '}';
+            
         document.getElementsByTagName('head')[0].appendChild(style);
         
         var welcomeDiv = document.createElement('div');
         welcomeDiv.className = 'welcome';
+        
         var textDiv = document.createElement('div');
         textDiv.className = 'welcome-text';
         textDiv.textContent = 'Welcome Lampa Max🍿';
+        
         welcomeDiv.appendChild(textDiv);
         document.body.appendChild(welcomeDiv);
 
-        // Видалення заставки через 3 секунди
-        setTimeout(function() {
-            welcomeDiv.style.opacity = '0'; // Плавне згасання
+        // Функція видалення
+        var removeWelcome = function() {
+            welcomeDiv.style.opacity = '0';
             setTimeout(function() {
-                welcomeDiv.remove(); // Повне видалення з коду
+                if (welcomeDiv.parentNode) {
+                    welcomeDiv.parentNode.removeChild(welcomeDiv);
+                }
             }, 500);
-        }, 3000); 
+        };
+
+        // Таймер на 3 секунди
+        setTimeout(removeWelcome, 3000); 
     }
-}();
+})();
