@@ -26,7 +26,7 @@
         '2.0': pluginPath + '2.0.svg', 'DUB': pluginPath + 'DUB.svg', 'UKR': pluginPath + 'UKR.svg'
     };
 
-    // 2. Стилі
+    // 2. Стилі (Максимальна видимість)
     function applyStyles() {
         var oldStyle = document.getElementById('mobile-interface-styles');
         if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
@@ -56,8 +56,14 @@
         
         css += '.studio-item { height: 2.2em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
         css += '.quality-item { height: 1.25em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
-        /* Додано drop-shadow для видимості темних логотипів на темному фоні */
-        css += '.studio-item img, .quality-item img { height: 100%; width: auto; object-fit: contain; filter: drop-shadow(0px 0px 1px rgba(255,255,255,0.5)); } ';
+        
+        /* Екстремальний фільтр для темних логотипів: контур + яскравість */
+        css += '.studio-item img { ';
+        css += 'height: 100%; width: auto; object-fit: contain; ';
+        css += 'filter: drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff) drop-shadow(0 0 3px rgba(255,255,255,0.5)) brightness(1.3); ';
+        css += '} ';
+        
+        css += '.quality-item img { height: 100%; width: auto; object-fit: contain; } ';
         css += '} ';
 
         style.textContent = css;
@@ -153,7 +159,6 @@
                                 var logoUrl = Lampa.Api.img(s.logo_path, 'w200');
                                 var $item = $('<div class="studio-item"><img src="' + logoUrl + '"></div>');
                                 $infoBlock.find('.studio-row').append($item);
-                                // ПРОБЛЕМНИЙ БЛОК АНАЛІЗУ ПІКСЕЛІВ ВИДАЛЕНО
                             }
                         });
                     }
@@ -249,5 +254,4 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
-
-                            
+                
