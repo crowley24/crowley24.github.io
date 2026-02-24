@@ -26,7 +26,7 @@
         '2.0': pluginPath + '2.0.svg', 'DUB': pluginPath + 'DUB.svg', 'UKR': pluginPath + 'UKR.svg'
     };
 
-    // 2. Стилі (Виправлено розміри логотипів студій)
+    // 2. Стилі (Виправлено розміри студій та стиль напису)
     function applyStyles() {
         var oldStyle = document.getElementById('mobile-interface-styles');
         if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
@@ -39,20 +39,24 @@
         css += '@keyframes qb_in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } ';
         css += '@media screen and (max-width: 480px) { ';
         css += '.background { background: #000 !important; } ';
-        css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 60vh !important; } ';
+        css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 62vh !important; pointer-events: none !important; } ';
         css += '.full-start-new__poster img { ';
         css += (isAnimationEnabled ? 'animation: kenBurnsEffect 30s ease-in-out infinite !important; ' : 'animation: none !important; ');
         css += 'transform-origin: center center !important; transition: opacity 1.5s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
         css += 'mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.8) 70%, rgba(0,0,0,0.4) 85%, rgba(0,0,0,0) 100%) !important; ';
         css += '-webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.8) 70%, rgba(0,0,0,0.4) 85%, rgba(0,0,0,0) 100%) !important; } ';
-        css += '.full-start-new__right { background: none !important; margin-top: -120px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
-        css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 70px; margin-bottom: 10px; } ';
+        css += '.full-start-new__right { background: none !important; margin-top: -130px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; border: none !important; box-shadow: none !important; } ';
+        css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 80px; margin-bottom: 5px; } ';
         
-        // Виправлення контейнера студій
-        css += '.quality-badges-container { display: flex; align-items: center; justify-content: center; gap: 0.5em; margin: 10px 0; flex-wrap: wrap; width: 100%; position: relative; z-index: 5; } ';
-        css += '.quality-badge { height: 1.2em; display: flex; align-items: center; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
-        css += '.quality-badge.studio-logo { height: 1.5em !important; } '; // Обмеження висоти студій
+        // Оригінальний стиль напису під назвою
+        css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.8 !important; font-size: 1.1em !important; margin-bottom: 15px !important; color: #fff !important; text-align: center !important; width: 100% !important; display: block !important; text-shadow: 0 2px 4px rgba(0,0,0,0.5); } ';
+
+        // Збільшені логотипи студій
+        css += '.quality-badges-container { display: flex; align-items: center; justify-content: center; gap: 0.8em; margin: 15px 0; flex-wrap: wrap; width: 100%; position: relative; z-index: 5; } ';
+        css += '.quality-badge { height: 1.4em; display: flex; align-items: center; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
+        css += '.quality-badge.studio-logo { height: 2.2em !important; } '; 
         css += '.quality-badge img { height: 100%; width: auto; display: block; object-fit: contain; } ';
+        css += '.full-start-new__buttons, .full-start-new__details { justify-content: center !important; text-align: center !important; } ';
         css += '} ';
 
         style.textContent = css;
@@ -122,7 +126,7 @@
                     var r = 0, g = 0, b = 0, cnt = 0;
                     for (var i = 0; i < pixels.length; i += 4) { if (pixels[i + 3] > 50) { r += pixels[i]; g += pixels[i + 1]; b += pixels[i + 2]; cnt++; } }
                     if (cnt > 0 && (0.299 * (r / cnt) + 0.587 * (g / cnt) + 0.114 * (b / cnt)) < 40) {
-                        $('#' + imgId + ' img').css({ 'filter': 'brightness(0) invert(1)', 'opacity': '0.9' });
+                        $('#' + imgId + ' img').css({ 'filter': 'brightness(0) invert(1)', 'opacity': '0.95' });
                     }
                 } catch (e) { }
             };
@@ -260,7 +264,7 @@
                         
                         if (bestLogo) {
                             var imgUrl = Lampa.TMDB.image('/t/p/w300' + bestLogo.file_path.replace('.svg', '.png'));
-                            $title.html('<img src="' + imgUrl + '" style="max-height: 100px; object-fit: contain; position: relative; z-index: 10;">');
+                            $title.html('<img src="' + imgUrl + '" style="max-height: 110px; object-fit: contain; position: relative; z-index: 10;">');
                         }
                         if (res.backdrops && res.backdrops.length > 1) {
                             startSlideshow($poster, res.backdrops.slice(0, 15));
@@ -305,4 +309,4 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
-                    
+                
