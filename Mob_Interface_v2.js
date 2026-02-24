@@ -26,7 +26,7 @@
         '2.0': pluginPath + '2.0.svg', 'DUB': pluginPath + 'DUB.svg', 'UKR': pluginPath + 'UKR.svg'
     };
 
-    // 2. Стилі (Максимальна видимість)
+    // 2. Стилі з м'якою підсвіткою
     function applyStyles() {
         var oldStyle = document.getElementById('mobile-interface-styles');
         if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
@@ -57,10 +57,10 @@
         css += '.studio-item { height: 2.2em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
         css += '.quality-item { height: 1.25em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
         
-        /* Екстремальний фільтр для темних логотипів: контур + яскравість */
+        /* Змінено на м'який "димчастий" ареол для балансу кольорових та темних лого */
         css += '.studio-item img { ';
         css += 'height: 100%; width: auto; object-fit: contain; ';
-        css += 'filter: drop-shadow(1px 0 0 #fff) drop-shadow(-1px 0 0 #fff) drop-shadow(0 1px 0 #fff) drop-shadow(0 -1px 0 #fff) drop-shadow(0 0 3px rgba(255,255,255,0.5)) brightness(1.3); ';
+        css += 'filter: drop-shadow(0px 0px 4px rgba(255,255,255,0.4)) drop-shadow(0px 0px 1px rgba(255,255,255,0.6)); ';
         css += '} ';
         
         css += '.quality-item img { height: 100%; width: auto; object-fit: contain; } ';
@@ -254,4 +254,3 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
-                
