@@ -6,6 +6,7 @@
         { id: 'mobile_interface_animation', default: true },
         { id: 'mobile_interface_studios', default: true },
         { id: 'mobile_interface_quality', default: true },
+        { id: 'mobile_interface_adaptive_color', default: true }, // Нове налаштування
         { id: 'mobile_interface_slideshow', default: true },
         { id: 'mobile_interface_slideshow_time', default: '10000' }, 
         { id: 'mobile_interface_slideshow_quality', default: 'w780' }
@@ -26,7 +27,7 @@
         '2.0': pluginPath + '2.0.svg', 'DUB': pluginPath + 'DUB.svg', 'UKR': pluginPath + 'UKR.svg'
     };
 
-    // 2. Стилі (Виправлено розміри студій та стиль напису)
+    // 2. Стилі
     function applyStyles() {
         var oldStyle = document.getElementById('mobile-interface-styles');
         if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
@@ -35,156 +36,182 @@
         var style = document.createElement('style');
         style.id = 'mobile-interface-styles';
         
-        var css = '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.15); } 100% { transform: scale(1); } } ';
+        var css = '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } } ';
         css += '@keyframes qb_in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } ';
         css += '@media screen and (max-width: 480px) { ';
-        css += '.background { background: #000 !important; } ';
-        css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 62vh !important; pointer-events: none !important; } ';
+        css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 60vh !important; pointer-events: none !important; } ';
         css += '.full-start-new__poster img { ';
-        css += (isAnimationEnabled ? 'animation: kenBurnsEffect 30s ease-in-out infinite !important; ' : 'animation: none !important; ');
+        css += (isAnimationEnabled ? 'animation: kenBurnsEffect 25s ease-in-out infinite !important; ' : '');
         css += 'transform-origin: center center !important; transition: opacity 1.5s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
-        css += 'mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.8) 70%, rgba(0,0,0,0.4) 85%, rgba(0,0,0,0) 100%) !important; ';
-        css += '-webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.8) 70%, rgba(0,0,0,0.4) 85%, rgba(0,0,0,0) 100%) !important; } ';
-        css += '.full-start-new__right { background: none !important; margin-top: -130px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; border: none !important; box-shadow: none !important; } ';
-        css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 80px; margin-bottom: 5px; } ';
+        css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
         
-        // Оригінальний стиль напису під назвою
-        css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.8 !important; font-size: 1.1em !important; margin-bottom: 15px !important; color: #fff !important; text-align: center !important; width: 100% !important; display: block !important; text-shadow: 0 2px 4px rgba(0,0,0,0.5); } ';
+        css += '.full-start-new__right { background: none !important; margin-top: -110px !important; z-index: 2 !important; align-items: center !important; } ';
+        css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 85px; margin-bottom: 5px; } ';
+        css += '.full-start-new__title img { max-height: 100px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); } ';
+        
+        css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 15px !important; color: #fff; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); transition: color 0.5s ease; } ';
 
-        // Збільшені логотипи студій
-        css += '.quality-badges-container { display: flex; align-items: center; justify-content: center; gap: 0.8em; margin: 15px 0; flex-wrap: wrap; width: 100%; position: relative; z-index: 5; } ';
-        css += '.quality-badge { height: 1.4em; display: flex; align-items: center; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
-        css += '.quality-badge.studio-logo { height: 2.2em !important; } '; 
-        css += '.quality-badge img { height: 100%; width: auto; display: block; object-fit: contain; } ';
-        css += '.full-start-new__buttons, .full-start-new__details { justify-content: center !important; text-align: center !important; } ';
+        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 12px; margin: 15px 0; width: 100%; } ';
+        css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%; } ';
+        
+        css += '.studio-item { height: 2.2em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
+        css += '.quality-item { height: 1.25em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
+        css += '.studio-item img { height: 100%; width: auto; object-fit: contain; } ';
+        css += '.quality-item img { height: 100%; width: auto; object-fit: contain; filter: brightness(0) invert(1); transition: filter 0.5s ease; } ';
+        
+        // Клас для адаптивного кольору значків
+        css += '.quality-item.colored img { filter: drop-shadow(0 0 1px var(--adaptive-color)) drop-shadow(0 0 1px var(--adaptive-color)) brightness(1.2); } ';
         css += '} ';
 
         style.textContent = css;
         document.head.appendChild(style);
     }
 
-    function startSlideshow($poster, backdrops) {
-        if (!Lampa.Storage.get('mobile_interface_slideshow') || backdrops.length < 2) return;
-        
-        var index = 0;
-        var interval = parseInt(Lampa.Storage.get('mobile_interface_slideshow_time', '10000'));
-        var quality = Lampa.Storage.get('mobile_interface_slideshow_quality', 'w780');
-        
-        clearInterval(slideshowTimer);
-
-        slideshowTimer = setInterval(function() {
-            index++;
-            if (index >= backdrops.length) index = 0;
-
-            var imgUrl = Lampa.TMDB.image('/t/p/' + quality + backdrops[index].file_path);
-            var $currentImg = $poster.find('img').first();
-            
-            var nextImg = new Image();
-            nextImg.onload = function() {
-                var $newImg = $('<img src="' + imgUrl + '" style="opacity: 0; z-index: -1;">');
-                $poster.append($newImg);
-                
-                setTimeout(function() {
-                    $newImg.css('opacity', '1');
-                    $currentImg.css('opacity', '0');
-                    setTimeout(function() { $currentImg.remove(); }, 1600);
-                }, 100);
-            };
-            nextImg.src = imgUrl;
-        }, interval);
-    }
-
-    function renderStudioLogos(container, data) {
-        if (!Lampa.Storage.get('mobile_interface_studios')) return;
-        var logos = [];
-        var sources = [data.networks, data.production_companies];
-        sources.forEach(function (source) {
-            if (source && source.length) {
-                source.forEach(function (item) {
-                    if (item.logo_path) {
-                        var logoUrl = Lampa.Api.img(item.logo_path, 'w200');
-                        var exists = false;
-                        for(var i=0; i<logos.length; i++) { if(logos[i].url === logoUrl) exists = true; }
-                        if (!exists) logos.push({ url: logoUrl, name: item.name });
-                    }
-                });
+    // 3. Функція видобутку домінуючого кольору
+    function extractColor(img, callback) {
+        var canvas = document.createElement('canvas');
+        var ctx = canvas.getContext('2d');
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        ctx.drawImage(img, 0, 0);
+        try {
+            var data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            var r = 0, g = 0, b = 0, count = 0;
+            for (var i = 0; i < data.length; i += 20) { // крок 20 для швидкості
+                if (data[i + 3] > 150) { // ігноруємо прозорість
+                    r += data[i]; g += data[i + 1]; b += data[i + 2];
+                    count++;
+                }
             }
-        });
-
-        logos.forEach(function (logo) {
-            var imgId = 'logo_' + Math.random().toString(36).substr(2, 9);
-            container.append('<div class="quality-badge studio-logo" id="' + imgId + '"><img src="' + logo.url + '" title="' + logo.name + '"></div>');
-            var img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.onload = function () {
-                var canvas = document.createElement('canvas');
-                var ctx = canvas.getContext('2d');
-                canvas.width = this.width; canvas.height = this.height;
-                ctx.drawImage(this, 0, 0);
-                try {
-                    var pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-                    var r = 0, g = 0, b = 0, cnt = 0;
-                    for (var i = 0; i < pixels.length; i += 4) { if (pixels[i + 3] > 50) { r += pixels[i]; g += pixels[i + 1]; b += pixels[i + 2]; cnt++; } }
-                    if (cnt > 0 && (0.299 * (r / cnt) + 0.587 * (g / cnt) + 0.114 * (b / cnt)) < 40) {
-                        $('#' + imgId + ' img').css({ 'filter': 'brightness(0) invert(1)', 'opacity': '0.95' });
-                    }
-                } catch (e) { }
-            };
-            img.src = logo.url;
-        });
+            if (count > 0) {
+                r = Math.floor(r / count); g = Math.floor(g / count); b = Math.floor(b / count);
+                // Робимо колір трохи яскравішим для ефекту
+                var max = Math.max(r, g, b);
+                if (max < 150) { 
+                    var factor = 150 / max;
+                    r = Math.min(255, Math.floor(r * factor));
+                    g = Math.min(255, Math.floor(g * factor));
+                    b = Math.min(255, Math.floor(b * factor));
+                }
+                callback('rgb(' + r + ',' + g + ',' + b + ')');
+            }
+        } catch (e) { console.log('Color extract failed', e); }
     }
 
+    // 4. Логіка якості
     function getBest(results) {
-        var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
+        var best = { resolution: null, hdr: false, dolbyVision: false, dub: false, ukr: false };
         var resOrder = ['HD', 'FULL HD', '2K', '4K'];
-        var audioOrder = ['2.0', '4.0', '5.1', '7.1'];
-        var limit = Math.min(results.length, 30);
-        for (var i = 0; i < limit; i++) {
-            var item = results[i];
-            var title = (item.Title || '').toLowerCase();
-            if (title.indexOf('ukr') >= 0 || title.indexOf('укр') >= 0 || title.indexOf('ua') >= 0) best.ukr = true;
-            if (title.indexOf('dub') >= 0 || title.indexOf('дубл') >= 0) best.dub = true;
-            var foundRes = null;
-            if (title.indexOf('4k') >= 0 || title.indexOf('2160') >= 0 || title.indexOf('uhd') >= 0) foundRes = '4K';
-            else if (title.indexOf('2k') >= 0 || title.indexOf('1440') >= 0) foundRes = '2K';
-            else if (title.indexOf('1080') >= 0 || title.indexOf('fhd') >= 0 || title.indexOf('full hd') >= 0) foundRes = 'FULL HD';
-            else if (title.indexOf('720') >= 0 || title.indexOf('hd') >= 0) foundRes = 'HD';
+        for (var i = 0; i < Math.min(results.length, 30); i++) {
+            var title = (results[i].Title || '').toLowerCase();
+            if (title.indexOf('ukr') >= 0 || title.indexOf('ua') >= 0) best.ukr = true;
+            if (title.indexOf('dub') >= 0) best.dub = true;
+            var foundRes = title.indexOf('4k') >= 0 ? '4K' : title.indexOf('2k') >= 0 ? '2K' : title.indexOf('1080') >= 0 ? 'FULL HD' : title.indexOf('720') >= 0 ? 'HD' : null;
             if (foundRes && (!best.resolution || resOrder.indexOf(foundRes) > resOrder.indexOf(best.resolution))) best.resolution = foundRes;
-            if (item.ffprobe && Array.isArray(item.ffprobe)) {
-                item.ffprobe.forEach(function(stream) {
-                    if (stream.codec_type === 'video') {
-                        if (stream.side_data_list && JSON.stringify(stream.side_data_list).indexOf('Vision') >= 0) best.dolbyVision = true;
-                        if (stream.color_transfer === 'smpte2084' || stream.color_transfer === 'arib-std-b67') best.hdr = true;
-                    }
-                    if (stream.codec_type === 'audio' && stream.channels) {
-                        var ch = parseInt(stream.channels);
-                        var aud = (ch >= 8) ? '7.1' : (ch >= 6) ? '5.1' : (ch >= 4) ? '4.0' : '2.0';
-                        if (!best.audio || audioOrder.indexOf(aud) > audioOrder.indexOf(best.audio)) best.audio = aud;
-                    }
-                });
-            }
-            if (title.indexOf('vision') >= 0 || title.indexOf('dovi') >= 0 || title.indexOf(' dv ') >= 0) best.dolbyVision = true;
+            if (title.indexOf('vision') >= 0 || title.indexOf('dovi') >= 0) best.dolbyVision = true;
             if (title.indexOf('hdr') >= 0) best.hdr = true;
-            if (!best.audio) {
-                var fA = null;
-                if (title.indexOf('7.1') >= 0) fA = '7.1';
-                else if (title.indexOf('5.1') >= 0 || title.indexOf('6ch') >= 0 || title.indexOf('ac3') >= 0) fA = '5.1';
-                else if (title.indexOf('4.0') >= 0) fA = '4.0';
-                else if (title.indexOf('2.0') >= 0 || title.indexOf('2ch') >= 0) fA = '2.0';
-                if (fA && (!best.audio || audioOrder.indexOf(fA) > audioOrder.indexOf(best.audio))) best.audio = fA;
-            }
         }
         if (best.dolbyVision) best.hdr = true;
         return best;
     }
 
-    function createBadgeImg(type, index) {
-        var iconPath = svgIcons[type];
-        if (!iconPath) return '';
-        var delay = (index * 0.08) + 's';
-        return '<div class="quality-badge" style="animation-delay: ' + delay + '"><img src="' + iconPath + '" draggable="false"></div>';
+    // 5. Слайд-шоу
+    function startSlideshow($poster, backdrops) {
+        if (!Lampa.Storage.get('mobile_interface_slideshow') || backdrops.length < 2) return;
+        var index = 0;
+        clearInterval(slideshowTimer);
+        slideshowTimer = setInterval(function() {
+            index = (index + 1) % backdrops.length;
+            var imgUrl = Lampa.TMDB.image('/t/p/' + Lampa.Storage.get('mobile_interface_slideshow_quality') + backdrops[index].file_path);
+            var $current = $poster.find('img').first();
+            var next = new Image();
+            next.onload = function() {
+                var $next = $('<img src="' + imgUrl + '" style="opacity:0; position:absolute; width:100%; height:100%; object-fit:cover;">');
+                $poster.append($next);
+                setTimeout(function(){ $next.css('opacity', 1); $current.css('opacity', 0); setTimeout(function(){ $current.remove(); }, 1500); }, 100);
+            };
+            next.src = imgUrl;
+        }, parseInt(Lampa.Storage.get('mobile_interface_slideshow_time')));
     }
 
+    // 6. Основна ініціалізація
+    function initPlugin() {
+        Lampa.Listener.follow('full', function (e) {
+            if (e.type === 'destroy') clearInterval(slideshowTimer);
+            if (window.innerWidth <= 480 && (e.type === 'complite' || e.type === 'complete')) {
+                var movie = e.data.movie;
+                var $render = e.object.activity.render();
+                var $details = $render.find('.full-start-new__details');
+
+                $.ajax({
+                    url: 'https://api.themoviedb.org/3/' + (movie.name ? 'tv' : 'movie') + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key(),
+                    success: function(res) {
+                        var lang = Lampa.Storage.get('language') || 'uk';
+                        var logo = res.logos.filter(l => l.iso_639_1 === lang)[0] || res.logos.filter(l => l.iso_639_1 === 'en')[0] || res.logos[0];
+                        if (logo) {
+                            var logoUrl = Lampa.TMDB.image('/t/p/w300' + logo.file_path.replace('.svg', '.png'));
+                            var $logoImg = $('<img src="' + logoUrl + '" crossOrigin="Anonymous">');
+                            $render.find('.full-start-new__title').html($logoImg);
+                            
+                            // Адаптивний колір
+                            if (Lampa.Storage.get('mobile_interface_adaptive_color')) {
+                                $logoImg.on('load', function() {
+                                    extractColor(this, function(color) {
+                                        $('.quality-row').css('--adaptive-color', color);
+                                        $('.quality-item').addClass('colored');
+                                        $('.full-start-new__tagline').css('color', color);
+                                    });
+                                });
+                            }
+                        }
+                        if (res.backdrops.length > 1) startSlideshow($render.find('.full-start-new__poster'), res.backdrops.slice(0, 15));
+                    }
+                });
+
+                if ($details.length) {
+                    $('.plugin-info-block').remove();
+                    var $info = $('<div class="plugin-info-block"><div class="studio-row"></div><div class="quality-row"></div></div>');
+                    $details.after($info);
+
+                    if (Lampa.Storage.get('mobile_interface_studios')) {
+                        var studios = (movie.networks || []).concat(movie.production_companies || []);
+                        var added = [];
+                        studios.forEach(s => {
+                            if (s.logo_path && added.indexOf(s.logo_path) === -1) {
+                                added.push(s.logo_path);
+                                var $s = $('<div class="studio-item"><img src="' + Lampa.Api.img(s.logo_path, 'w200') + '" crossOrigin="Anonymous"></div>');
+                                $info.find('.studio-row').append($s);
+                                var sImg = $s.find('img')[0];
+                                sImg.onload = function() {
+                                    var canv = document.createElement('canvas');
+                                    var cx = canv.getContext('2d');
+                                    cx.drawImage(sImg, 0, 0, 1, 1);
+                                    if (cx.getImageData(0,0,1,1).data[0] < 40) $(sImg).css('filter', 'brightness(0) invert(1)');
+                                };
+                            }
+                        });
+                    }
+
+                    if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Parser.get) {
+                        Lampa.Parser.get({ search: movie.title || movie.name, movie: movie }, function(res) {
+                            if (res && res.Results) {
+                                var b = getBest(res.Results);
+                                var qList = [];
+                                if (b.resolution) qList.push(b.resolution);
+                                if (b.dolbyVision) qList.push('Dolby Vision'); else if (b.hdr) qList.push('HDR');
+                                if (b.dub) qList.push('DUB'); if (b.ukr) qList.push('UKR');
+                                qList.forEach((t, i) => {
+                                    if (svgIcons[t]) $info.find('.quality-row').append('<div class="quality-item" style="animation-delay:'+(i*0.1)+'s"><img src="'+svgIcons[t]+'"></div>');
+                                });
+                            }
+                        });
+                    }
+                }
+            }
+        });
+    }
+
+    // 7. Налаштування
     function addSettings() {
         Lampa.SettingsApi.addComponent({
             component: 'mobile_interface',
@@ -194,15 +221,20 @@
 
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
+            param: { name: 'mobile_interface_adaptive_color', type: 'trigger', default: true },
+            field: { name: 'Адаптивні кольори', description: 'Підфарбовувати значки в колір логотипа фільму' }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
             param: { name: 'mobile_interface_animation', type: 'trigger', default: true },
-            field: { name: 'Анімація постера', description: 'Ефект наближення фону' },
-            onChange: function () { applyStyles(); }
+            field: { name: 'Анімація постера', description: 'Ефект наближення фону' }
         });
 
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { name: 'mobile_interface_slideshow', type: 'trigger', default: true },
-            field: { name: 'Слайд-шоу фону', description: 'Автоматична зміна зображень фону' }
+            field: { name: 'Слайд-шоу фону', description: 'Автоматична зміна зображень' }
         });
 
         Lampa.SettingsApi.addParam({
@@ -213,100 +245,29 @@
                 values: { '10000': '10 сек', '15000': '15 сек', '20000': '20 сек' }, 
                 default: '10000' 
             },
-            field: { name: 'Інтервал слайд-шоу', description: 'Час між зміною зображень' }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { 
-                name: 'mobile_interface_slideshow_quality', 
-                type: 'select', 
-                values: { 'w300': '300p', 'w780': '780p', 'w1280': '1280p', 'original': 'Оригінал' }, 
-                default: 'w780' 
-            },
-            field: { name: 'Якість слайд-шоу', description: 'Роздільна здатність картинок' }
+            field: { name: 'Інтервал слайд-шоу' }
         });
 
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { name: 'mobile_interface_studios', type: 'trigger', default: true },
-            field: { name: 'Логотипи студій', description: 'Показувати іконки Netflix, Disney тощо' }
+            field: { name: 'Логотипи студій' }
         });
 
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { name: 'mobile_interface_quality', type: 'trigger', default: true },
-            field: { name: 'Значки якості', description: 'Показувати 4K, HDR, UKR' }
-        });
-    }
-
-    function initLogoAndBadges() {
-        Lampa.Listener.follow('full', function (e) {
-            if (e.type === 'destroy') clearInterval(slideshowTimer);
-
-            if (window.innerWidth <= 480 && (e.type === 'complite' || e.type === 'complete')) {
-                var movie = e.data.movie;
-                var $render = e.object.activity.render();
-                var $poster = $render.find('.full-start-new__poster');
-                var $details = $render.find('.full-start-new__details');
-                var $title = $render.find('.full-start-new__title');
-
-                var lang = Lampa.Storage.get('language') || 'uk';
-                var type = movie.name ? 'tv' : 'movie';
-                var apiKey = Lampa.TMDB.key();
-                
-                $.ajax({
-                    url: 'https://api.themoviedb.org/3/' + type + '/' + movie.id + '/images?api_key=' + apiKey,
-                    success: function(res) {
-                        var bestLogo = res.logos.filter(function(l) { return l.iso_639_1 === lang; })[0] || 
-                                       res.logos.filter(function(l) { return l.iso_639_1 === 'en'; })[0] || 
-                                       res.logos[0];
-                        
-                        if (bestLogo) {
-                            var imgUrl = Lampa.TMDB.image('/t/p/w300' + bestLogo.file_path.replace('.svg', '.png'));
-                            $title.html('<img src="' + imgUrl + '" style="max-height: 110px; object-fit: contain; position: relative; z-index: 10;">');
-                        }
-                        if (res.backdrops && res.backdrops.length > 1) {
-                            startSlideshow($poster, res.backdrops.slice(0, 15));
-                        }
-                    }
-                });
-
-                if ($details.length) {
-                    $('.quality-badges-container').remove();
-                    $details.after('<div class="quality-badges-container"></div>');
-                    var container = $('.quality-badges-container');
-                    renderStudioLogos(container, movie);
-
-                    if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Storage.field('parser_use')) {
-                        Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function (response) {
-                            if (response && response.Results) {
-                                var best = getBest(response.Results);
-                                var badgeList = [];
-                                if (best.resolution) badgeList.push(best.resolution);
-                                if (best.dolbyVision) badgeList.push('Dolby Vision');
-                                if (best.hdr && !best.dolbyVision) badgeList.push('HDR'); 
-                                if (best.audio) badgeList.push(best.audio);
-                                if (best.dub) badgeList.push('DUB');
-                                if (best.ukr) badgeList.push('UKR');
-                                var htmlBadges = badgeList.map(function(type, i) { return createBadgeImg(type, i); });
-                                container.append(htmlBadges.join(''));
-                            }
-                        });
-                    }
-                }
-            }
+            field: { name: 'Значки якості' }
         });
     }
 
     function start() {
         applyStyles();
         addSettings();
-        initLogoAndBadges();
-        setInterval(function () { if (window.innerWidth <= 480 && window.lampa_settings) window.lampa_settings.blur_poster = false; }, 1000);
+        initPlugin();
+        setInterval(function () { if (window.innerWidth <= 480 && window.lampa_settings) window.lampa_settings.blur_poster = false; }, 2000);
     }
 
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
-                
