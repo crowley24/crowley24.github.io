@@ -26,7 +26,7 @@
         '2.0': pluginPath + '2.0.svg', 'DUB': pluginPath + 'DUB.svg', 'UKR': pluginPath + 'UKR.svg'
     };
 
-    // 2. Стилі з преміальним золотистим світінням
+    // 2. Стилі з чітким контуром без розмиття
     function applyStyles() {
         var oldStyle = document.getElementById('mobile-interface-styles');
         if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
@@ -57,10 +57,10 @@
         css += '.studio-item { height: 2.2em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
         css += '.quality-item { height: 1.25em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
         
-        /* Використання теплого золотистого ареолу для кращого балансу */
+        /* Чіткий контур: прибрали blur, додали контрастності темним лого */
         css += '.studio-item img { ';
         css += 'height: 100%; width: auto; object-fit: contain; ';
-        css += 'filter: drop-shadow(0px 0px 3px rgba(255, 230, 180, 0.4)) drop-shadow(0px 0px 1px rgba(255, 255, 255, 0.2)); ';
+        css += 'filter: drop-shadow(0.5px 0.5px 0px rgba(255,255,255,0.8)) drop-shadow(-0.5px -0.5px 0px rgba(255,255,255,0.8)) contrast(1.1); ';
         css += '} ';
         
         css += '.quality-item img { height: 100%; width: auto; object-fit: contain; } ';
@@ -254,4 +254,4 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
-
+            
