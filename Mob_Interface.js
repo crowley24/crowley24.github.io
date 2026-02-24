@@ -7,8 +7,8 @@
         { id: 'mobile_interface_studios', default: true },
         { id: 'mobile_interface_quality', default: true },
         { id: 'mobile_interface_slideshow', default: true },
-        { id: 'mobile_interface_slideshow_time', default: '8000' }, // Нове: тривалість
-        { id: 'mobile_interface_slideshow_quality', default: 'w780' } // Нове: якість
+        { id: 'mobile_interface_slideshow_time', default: '10000' }, 
+        { id: 'mobile_interface_slideshow_quality', default: 'w780' }
     ];
 
     settings_list.forEach(function (opt) {
@@ -26,7 +26,7 @@
         '2.0': pluginPath + '2.0.svg', 'DUB': pluginPath + 'DUB.svg', 'UKR': pluginPath + 'UKR.svg'
     };
 
-    // 2. Стилі
+    // 2. Стилі (Виправлено розміри логотипів студій)
     function applyStyles() {
         var oldStyle = document.getElementById('mobile-interface-styles');
         if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
@@ -39,29 +39,31 @@
         css += '@keyframes qb_in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } ';
         css += '@media screen and (max-width: 480px) { ';
         css += '.background { background: #000 !important; } ';
-        css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; } ';
+        css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 60vh !important; } ';
         css += '.full-start-new__poster img { ';
         css += (isAnimationEnabled ? 'animation: kenBurnsEffect 30s ease-in-out infinite !important; ' : 'animation: none !important; ');
-        css += 'transform-origin: center center !important; transition: opacity 1.5s ease-in-out !important; ';
+        css += 'transform-origin: center center !important; transition: opacity 1.5s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
         css += 'mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.8) 70%, rgba(0,0,0,0.4) 85%, rgba(0,0,0,0) 100%) !important; ';
         css += '-webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.8) 70%, rgba(0,0,0,0.4) 85%, rgba(0,0,0,0) 100%) !important; } ';
         css += '.full-start-new__right { background: none !important; margin-top: -120px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
-        css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 70px; } ';
-        css += '.quality-badges-container { display: flex; align-items: center; justify-content: center; gap: 0.6em; margin: 12px 0; flex-wrap: wrap; width: 100%; } ';
-        css += '.quality-badge { height: 1.3em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
-        css += '.studio-logo { height: 1.8em !important; margin-right: 4px; } ';
+        css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 70px; margin-bottom: 10px; } ';
+        
+        // Виправлення контейнера студій
+        css += '.quality-badges-container { display: flex; align-items: center; justify-content: center; gap: 0.5em; margin: 10px 0; flex-wrap: wrap; width: 100%; position: relative; z-index: 5; } ';
+        css += '.quality-badge { height: 1.2em; display: flex; align-items: center; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
+        css += '.quality-badge.studio-logo { height: 1.5em !important; } '; // Обмеження висоти студій
+        css += '.quality-badge img { height: 100%; width: auto; display: block; object-fit: contain; } ';
         css += '} ';
 
         style.textContent = css;
         document.head.appendChild(style);
     }
 
-    // --- Функція Слайд-шоу ---
     function startSlideshow($poster, backdrops) {
         if (!Lampa.Storage.get('mobile_interface_slideshow') || backdrops.length < 2) return;
         
         var index = 0;
-        var interval = parseInt(Lampa.Storage.get('mobile_interface_slideshow_time', '8000'));
+        var interval = parseInt(Lampa.Storage.get('mobile_interface_slideshow_time', '10000'));
         var quality = Lampa.Storage.get('mobile_interface_slideshow_quality', 'w780');
         
         clearInterval(slideshowTimer);
@@ -75,7 +77,7 @@
             
             var nextImg = new Image();
             nextImg.onload = function() {
-                var $newImg = $('<img src="' + imgUrl + '" style="opacity: 0; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1;">');
+                var $newImg = $('<img src="' + imgUrl + '" style="opacity: 0; z-index: -1;">');
                 $poster.append($newImg);
                 
                 setTimeout(function() {
@@ -88,7 +90,6 @@
         }, interval);
     }
 
-    // 3. Рендер логотипів студій (без змін)
     function renderStudioLogos(container, data) {
         if (!Lampa.Storage.get('mobile_interface_studios')) return;
         var logos = [];
@@ -129,7 +130,6 @@
         });
     }
 
-    // 4. Аналіз якості (без змін)
     function getBest(results) {
         var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
         var resOrder = ['HD', 'FULL HD', '2K', '4K'];
@@ -181,7 +181,6 @@
         return '<div class="quality-badge" style="animation-delay: ' + delay + '"><img src="' + iconPath + '" draggable="false"></div>';
     }
 
-    // 5. Реєстрація налаштувань
     function addSettings() {
         Lampa.SettingsApi.addComponent({
             component: 'mobile_interface',
@@ -207,8 +206,8 @@
             param: { 
                 name: 'mobile_interface_slideshow_time', 
                 type: 'select', 
-                values: { '5000': '5 сек', '8000': '8 сек', '10000': '10 сек', '15000': '15 сек', '20000': '20 сек', '30000': '30 сек' }, 
-                default: '8000' 
+                values: { '10000': '10 сек', '15000': '15 сек', '20000': '20 сек' }, 
+                default: '10000' 
             },
             field: { name: 'Інтервал слайд-шоу', description: 'Час між зміною зображень' }
         });
@@ -218,10 +217,10 @@
             param: { 
                 name: 'mobile_interface_slideshow_quality', 
                 type: 'select', 
-                values: { 'w300': 'Низька (300p)', 'w780': 'Середня (780p)', 'w1280': 'Висока (1280p)', 'original': 'Оригінальна' }, 
+                values: { 'w300': '300p', 'w780': '780p', 'w1280': '1280p', 'original': 'Оригінал' }, 
                 default: 'w780' 
             },
-            field: { name: 'Якість слайд-шоу', description: 'Роздільна здатність фонових картинок' }
+            field: { name: 'Якість слайд-шоу', description: 'Роздільна здатність картинок' }
         });
 
         Lampa.SettingsApi.addParam({
@@ -233,11 +232,10 @@
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { name: 'mobile_interface_quality', type: 'trigger', default: true },
-            field: { name: 'Значки якості', description: 'Показувати 4K, HDR, UKR (потрібен парсер)' }
+            field: { name: 'Значки якості', description: 'Показувати 4K, HDR, UKR' }
         });
     }
 
-    // 6. Логіка завантаження Лого та Слайд-шоу
     function initLogoAndBadges() {
         Lampa.Listener.follow('full', function (e) {
             if (e.type === 'destroy') clearInterval(slideshowTimer);
@@ -262,7 +260,7 @@
                         
                         if (bestLogo) {
                             var imgUrl = Lampa.TMDB.image('/t/p/w300' + bestLogo.file_path.replace('.svg', '.png'));
-                            $title.html('<img src="' + imgUrl + '" style="max-height: 120px; object-fit: contain; position: relative; z-index: 10;">');
+                            $title.html('<img src="' + imgUrl + '" style="max-height: 100px; object-fit: contain; position: relative; z-index: 10;">');
                         }
                         if (res.backdrops && res.backdrops.length > 1) {
                             startSlideshow($poster, res.backdrops.slice(0, 15));
@@ -307,4 +305,4 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
-                        
+                    
