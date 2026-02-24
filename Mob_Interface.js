@@ -6,7 +6,9 @@
         { id: 'mobile_interface_animation', default: true },
         { id: 'mobile_interface_studios', default: true },
         { id: 'mobile_interface_quality', default: true },
-        { id: 'mobile_interface_slideshow', default: true } // Нове налаштування
+        { id: 'mobile_interface_slideshow', default: true },
+        { id: 'mobile_interface_slideshow_time', default: '8000' }, // Нове: тривалість
+        { id: 'mobile_interface_slideshow_quality', default: 'w780' } // Нове: якість
     ];
 
     settings_list.forEach(function (opt) {
@@ -15,21 +17,13 @@
         }
     });
 
-    var slideshowTimer; // Глобальний таймер для слайд-шоу
+    var slideshowTimer; 
     var pluginPath = 'https://crowley24.github.io/Icons/';
     var svgIcons = {
-        '4K': pluginPath + '4K.svg',
-        '2K': pluginPath + '2K.svg',
-        'FULL HD': pluginPath + 'FULL HD.svg',
-        'HD': pluginPath + 'HD.svg',
-        'HDR': pluginPath + 'HDR.svg',
-        'Dolby Vision': pluginPath + 'Dolby Vision.svg',
-        '7.1': pluginPath + '7.1.svg',
-        '5.1': pluginPath + '5.1.svg',
-        '4.0': pluginPath + '4.0.svg',
-        '2.0': pluginPath + '2.0.svg',
-        'DUB': pluginPath + 'DUB.svg',
-        'UKR': pluginPath + 'UKR.svg'
+        '4K': pluginPath + '4K.svg', '2K': pluginPath + '2K.svg', 'FULL HD': pluginPath + 'FULL HD.svg',
+        'HD': pluginPath + 'HD.svg', 'HDR': pluginPath + 'HDR.svg', 'Dolby Vision': pluginPath + 'Dolby Vision.svg',
+        '7.1': pluginPath + '7.1.svg', '5.1': pluginPath + '5.1.svg', '4.0': pluginPath + '4.0.svg',
+        '2.0': pluginPath + '2.0.svg', 'DUB': pluginPath + 'DUB.svg', 'UKR': pluginPath + 'UKR.svg'
     };
 
     // 2. Стилі
@@ -45,22 +39,17 @@
         css += '@keyframes qb_in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } ';
         css += '@media screen and (max-width: 480px) { ';
         css += '.background { background: #000 !important; } ';
-        css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; touch-action: none !important; pointer-events: none !important; background: #000; } ';
+        css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; } ';
         css += '.full-start-new__poster img { ';
         css += (isAnimationEnabled ? 'animation: kenBurnsEffect 30s ease-in-out infinite !important; ' : 'animation: none !important; ');
         css += 'transform-origin: center center !important; transition: opacity 1.5s ease-in-out !important; ';
         css += 'mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.8) 70%, rgba(0,0,0,0.4) 85%, rgba(0,0,0,0) 100%) !important; ';
         css += '-webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 50%, rgba(0,0,0,0.8) 70%, rgba(0,0,0,0.4) 85%, rgba(0,0,0,0) 100%) !important; } ';
-        css += '.full-start-new__img { border-radius: 0 !important; mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 30%, rgba(0,0,0,1) 70%, rgba(0,0,0,0) 100%) !important; -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 30%, rgba(0,0,0,1) 70%, rgba(0,0,0,0) 100%) !important; } ';
-        css += '.full-start-new__right { background: none !important; border: none !important; box-shadow: none !important; margin-top: -120px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
-        css += '.full-start-new__right::before, .full-start-new__right::after { content: unset !important; } ';
+        css += '.full-start-new__right { background: none !important; margin-top: -120px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
         css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 70px; } ';
-        css += '.full-start-new__buttons, .full-start-new__details, .full-descr__text, .full-start-new__tagline { justify-content: center !important; text-align: center !important; display: flex !important; } ';
-        css += '.full-start-new__tagline { font-style: italic; opacity: 0.8; font-size: 0.95em; margin-bottom: 12px !important; color: #fff; } ';
-        css += '.quality-badges-container { display: flex; align-items: center; justify-content: center; gap: 0.6em; margin: 12px 0; flex-wrap: wrap; width: 100%; min-height: 2em; } ';
-        css += '.quality-badge { height: 1.3em; opacity: 0; animation: qb_in 0.4s ease forwards; display: flex; align-items: center; } ';
+        css += '.quality-badges-container { display: flex; align-items: center; justify-content: center; gap: 0.6em; margin: 12px 0; flex-wrap: wrap; width: 100%; } ';
+        css += '.quality-badge { height: 1.3em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
         css += '.studio-logo { height: 1.8em !important; margin-right: 4px; } ';
-        css += '.quality-badge img { height: 100%; width: auto; display: block; } ';
         css += '} ';
 
         style.textContent = css;
@@ -72,29 +61,31 @@
         if (!Lampa.Storage.get('mobile_interface_slideshow') || backdrops.length < 2) return;
         
         var index = 0;
+        var interval = parseInt(Lampa.Storage.get('mobile_interface_slideshow_time', '8000'));
+        var quality = Lampa.Storage.get('mobile_interface_slideshow_quality', 'w780');
+        
         clearInterval(slideshowTimer);
 
         slideshowTimer = setInterval(function() {
             index++;
             if (index >= backdrops.length) index = 0;
 
-            var imgUrl = Lampa.TMDB.image('/t/p/w780' + backdrops[index].file_path);
-            var $currentImg = $poster.find('img');
+            var imgUrl = Lampa.TMDB.image('/t/p/' + quality + backdrops[index].file_path);
+            var $currentImg = $poster.find('img').first();
             
             var nextImg = new Image();
             nextImg.onload = function() {
-                var $newImg = $('<img src="' + imgUrl + '" style="opacity: 0; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;">');
+                var $newImg = $('<img src="' + imgUrl + '" style="opacity: 0; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1;">');
                 $poster.append($newImg);
                 
                 setTimeout(function() {
                     $newImg.css('opacity', '1');
-                    setTimeout(function() {
-                        $currentImg.remove();
-                    }, 1500);
+                    $currentImg.css('opacity', '0');
+                    setTimeout(function() { $currentImg.remove(); }, 1600);
                 }, 100);
             };
             nextImg.src = imgUrl;
-        }, 8000);
+        }, interval);
     }
 
     // 3. Рендер логотипів студій (без змін)
@@ -198,20 +189,51 @@
             name: 'Мобільний інтерфейс'
         });
 
-        var params = [
-            { id: 'mobile_interface_animation', label: 'Анімація постера', desc: 'Ефект наближення фону' },
-            { id: 'mobile_interface_slideshow', label: 'Слайд-шоу фону', desc: 'Автоматична зміна зображень фону' },
-            { id: 'mobile_interface_studios', label: 'Логотипи студій', desc: 'Показувати іконки Netflix, Disney тощо' },
-            { id: 'mobile_interface_quality', label: 'Значки якості', desc: 'Показувати 4K, HDR, UKR (потрібен парсер)' }
-        ];
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: { name: 'mobile_interface_animation', type: 'trigger', default: true },
+            field: { name: 'Анімація постера', description: 'Ефект наближення фону' },
+            onChange: function () { applyStyles(); }
+        });
 
-        params.forEach(function (p) {
-            Lampa.SettingsApi.addParam({
-                component: 'mobile_interface',
-                param: { name: p.id, type: 'trigger', default: true },
-                field: { name: p.label, description: p.desc },
-                onChange: function () { applyStyles(); }
-            });
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: { name: 'mobile_interface_slideshow', type: 'trigger', default: true },
+            field: { name: 'Слайд-шоу фону', description: 'Автоматична зміна зображень фону' }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: { 
+                name: 'mobile_interface_slideshow_time', 
+                type: 'select', 
+                values: { '5000': '5 сек', '8000': '8 сек', '10000': '10 сек', '15000': '15 сек', '20000': '20 сек', '30000': '30 сек' }, 
+                default: '8000' 
+            },
+            field: { name: 'Інтервал слайд-шоу', description: 'Час між зміною зображень' }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: { 
+                name: 'mobile_interface_slideshow_quality', 
+                type: 'select', 
+                values: { 'w300': 'Низька (300p)', 'w780': 'Середня (780p)', 'w1280': 'Висока (1280p)', 'original': 'Оригінальна' }, 
+                default: 'w780' 
+            },
+            field: { name: 'Якість слайд-шоу', description: 'Роздільна здатність фонових картинок' }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: { name: 'mobile_interface_studios', type: 'trigger', default: true },
+            field: { name: 'Логотипи студій', description: 'Показувати іконки Netflix, Disney тощо' }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: { name: 'mobile_interface_quality', type: 'trigger', default: true },
+            field: { name: 'Значки якості', description: 'Показувати 4K, HDR, UKR (потрібен парсер)' }
         });
     }
 
@@ -231,11 +253,9 @@
                 var type = movie.name ? 'tv' : 'movie';
                 var apiKey = Lampa.TMDB.key();
                 
-                // Завантаження зображень (Лого + Фони для слайд-шоу)
                 $.ajax({
                     url: 'https://api.themoviedb.org/3/' + type + '/' + movie.id + '/images?api_key=' + apiKey,
                     success: function(res) {
-                        // Логіка Лого
                         var bestLogo = res.logos.filter(function(l) { return l.iso_639_1 === lang; })[0] || 
                                        res.logos.filter(function(l) { return l.iso_639_1 === 'en'; })[0] || 
                                        res.logos[0];
@@ -244,10 +264,8 @@
                             var imgUrl = Lampa.TMDB.image('/t/p/w300' + bestLogo.file_path.replace('.svg', '.png'));
                             $title.html('<img src="' + imgUrl + '" style="max-height: 120px; object-fit: contain; position: relative; z-index: 10;">');
                         }
-
-                        // Логіка Слайд-шоу
                         if (res.backdrops && res.backdrops.length > 1) {
-                            startSlideshow($poster, res.backdrops.slice(0, 10));
+                            startSlideshow($poster, res.backdrops.slice(0, 15));
                         }
                     }
                 });
@@ -256,7 +274,6 @@
                     $('.quality-badges-container').remove();
                     $details.after('<div class="quality-badges-container"></div>');
                     var container = $('.quality-badges-container');
-                    
                     renderStudioLogos(container, movie);
 
                     if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Storage.field('parser_use')) {
@@ -290,4 +307,4 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
-                               
+                        
