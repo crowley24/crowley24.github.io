@@ -1,6 +1,7 @@
 (function () {
     'use strict';
 
+    // 1. ПОВНИЙ СПИСОК НАЛАШТУВАНЬ
     var settings_list = [
         { id: 'mobile_interface_animation', default: true },
         { id: 'mobile_interface_studios', default: true },
@@ -25,6 +26,7 @@
         '2.0': pluginPath + '2.0.svg', 'DUB': pluginPath + 'DUB.svg', 'UKR': pluginPath + 'UKR.svg'
     };
 
+    // 2. СТИЛІ З ЕФЕКТОМ М'ЯКОЇ ПІДСВІТКИ (БЕЗ РІЗКИХ РАМОК)
     function applyStyles() {
         var oldStyle = document.getElementById('mobile-interface-styles');
         if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
@@ -44,20 +46,23 @@
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%) !important; } ';
         
         css += '.full-start-new__right { background: none !important; margin-top: -120px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
-        css += '.full-start-new__title img { max-height: 90px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.8)); } ';
+        css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 80px; margin-bottom: 5px; } ';
+        css += '.full-start-new__title img { max-height: 90px; object-fit: contain; filter: drop-shadow(0 0 10px rgba(0,0,0,0.8)); } ';
         
-        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 12px; margin: 20px 0; width: 100%; } ';
-        css += '.studio-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%; padding: 0 10px; } ';
+        css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 15px !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
+
+        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 15px; margin: 25px 0; width: 100%; } ';
+        css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%; } ';
         
-        /* ЕФЕКТ МАТОВОЇ ПІДСВІТКИ БЕЗ ЖОРСТКИХ РАМОК */
+        /* ЕЛЕМЕНТ СТУДІЇ: М'яка біла хмара для видимості країв */
         css += '.studio-item { \
             display: flex; \
             align-items: center; \
             justify-content: center; \
-            padding: 6px 14px; \
-            background: rgba(255, 255, 255, 0.85); \
-            border-radius: 6px; \
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.4); \
+            padding: 6px 16px; \
+            background: rgba(255, 255, 255, 0.88); \
+            border-radius: 8px; \
+            box-shadow: 0 0 12px rgba(255, 255, 255, 0.3); \
             opacity: 0; \
             animation: qb_in 0.5s ease forwards; \
             min-width: 80px; \
@@ -65,22 +70,21 @@
 
         css += '.studio-item img { \
             max-height: 24px; \
-            max-width: 100px; \
+            max-width: 110px; \
             width: auto; \
             object-fit: contain; \
-            /* Видаляємо інверсію, щоб зберегти оригінальні кольори на світлому фоні */ \
             filter: none !important; \
         } ';
         
-        css += '.quality-row { display: flex; justify-content: center; gap: 12px; margin-top: 5px; } ';
-        css += '.quality-item { height: 1.2em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
-        css += '.quality-item img { height: 100%; } ';
+        css += '.quality-item { height: 1.3em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
+        css += '.quality-item img { height: 100%; width: auto; object-fit: contain; } ';
         css += '} ';
 
         style.textContent = css;
         document.head.appendChild(style);
     }
 
+    // 3. АНАЛІЗ ЯКОСТІ
     function getBest(results) {
         var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
         var resOrder = ['HD', 'FULL HD', '2K', '4K'];
@@ -103,6 +107,7 @@
         return best;
     }
 
+    // 4. СЛАЙД-ШОУ
     function startSlideshow($poster, backdrops) {
         if (!Lampa.Storage.get('mobile_interface_slideshow') || backdrops.length < 2) return;
         var index = 0;
@@ -127,6 +132,7 @@
         }, interval);
     }
 
+    // 5. ОСНОВНА ЛОГІКА
     function initPlugin() {
         Lampa.Listener.follow('full', function (e) {
             if (e.type === 'destroy') clearInterval(slideshowTimer);
@@ -191,6 +197,7 @@
         });
     }
 
+    // 6. ПОВНІ НАЛАШТУВАННЯ В МЕНЮ
     function addSettings() {
         Lampa.SettingsApi.addComponent({
             component: 'mobile_interface',
@@ -201,13 +208,48 @@
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { name: 'mobile_interface_animation', type: 'trigger', default: true },
-            field: { name: 'Анімація постера', description: 'Ефект наближення фону' }
+            field: { name: 'Анімація постера', description: 'Ефект наближення фону' },
+            onChange: function () { applyStyles(); }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: { name: 'mobile_interface_slideshow', type: 'trigger', default: true },
+            field: { name: 'Слайд-шоу фону', description: 'Автоматична зміна зображень фону' }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: { 
+                name: 'mobile_interface_slideshow_time', 
+                type: 'select', 
+                values: { '10000': '10 сек', '15000': '15 сек', '20000': '20 сек' }, 
+                default: '10000' 
+            },
+            field: { name: 'Інтервал слайд-шоу', description: 'Час між зміною зображень' }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: { 
+                name: 'mobile_interface_slideshow_quality', 
+                type: 'select', 
+                values: { 'w300': '300p', 'w780': '780p', 'w1280': '1280p', 'original': 'Оригінал' }, 
+                default: 'w780' 
+            },
+            field: { name: 'Якість слайд-шоу', description: 'Роздільна здатність картинок' }
         });
 
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { name: 'mobile_interface_studios', type: 'trigger', default: true },
             field: { name: 'Логотипи студій', description: 'Показувати іконки студій' }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: { name: 'mobile_interface_quality', type: 'trigger', default: true },
+            field: { name: 'Значки якості', description: 'Показувати 4K, HDR, UKR' }
         });
     }
 
