@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    // 1. ПОВНИЙ СПИСОК НАЛАШТУВАНЬ
+    // 1. Повний список налаштувань (нічого не видалено)
     var settings_list = [
         { id: 'mobile_interface_animation', default: true },
         { id: 'mobile_interface_studios', default: true },
@@ -26,7 +26,7 @@
         '2.0': pluginPath + '2.0.svg', 'DUB': pluginPath + 'DUB.svg', 'UKR': pluginPath + 'UKR.svg'
     };
 
-    // 2. СТИЛІ З ЕФЕКТОМ М'ЯКОЇ ПІДСВІТКИ (БЕЗ РІЗКИХ РАМОК)
+    // 2. Стилі з ефектом "М'якого розсіяного світла"
     function applyStyles() {
         var oldStyle = document.getElementById('mobile-interface-styles');
         if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
@@ -36,7 +36,7 @@
         style.id = 'mobile-interface-styles';
         
         var css = '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } } ';
-        css += '@keyframes qb_in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } } ';
+        css += '@keyframes qb_in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } } ';
         css += '@media screen and (max-width: 480px) { ';
         css += '.background { background: #000 !important; } ';
         css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 60vh !important; } ';
@@ -45,46 +45,57 @@
         css += 'transform-origin: center center !important; transition: opacity 1.5s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%) !important; } ';
         
-        css += '.full-start-new__right { background: none !important; margin-top: -120px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
+        css += '.full-start-new__right { background: none !important; margin-top: -110px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
         css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 80px; margin-bottom: 5px; } ';
-        css += '.full-start-new__title img { max-height: 90px; object-fit: contain; filter: drop-shadow(0 0 10px rgba(0,0,0,0.8)); } ';
+        css += '.full-start-new__title img { max-height: 95px; object-fit: contain; filter: drop-shadow(0 0 10px rgba(0,0,0,0.8)); } ';
         
-        css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 15px !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
-
         css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 15px; margin: 25px 0; width: 100%; } ';
-        css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%; } ';
+        css += '.studio-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; width: 100%; } ';
         
-        /* ЕЛЕМЕНТ СТУДІЇ: М'яка біла хмара для видимості країв */
+        /* НОВИЙ ЕФЕКТ: РОЗСІЯНЕ СВІТЛО ЗАМІСТЬ "ПЛАШКИ" */
         css += '.studio-item { \
             display: flex; \
             align-items: center; \
             justify-content: center; \
-            padding: 6px 16px; \
-            background: rgba(255, 255, 255, 0.88); \
-            border-radius: 8px; \
-            box-shadow: 0 0 12px rgba(255, 255, 255, 0.3); \
+            padding: 8px 12px; \
+            min-width: 90px; \
+            min-height: 40px; \
+            position: relative; \
             opacity: 0; \
             animation: qb_in 0.5s ease forwards; \
-            min-width: 80px; \
+        } ';
+
+        css += '.studio-item::before { \
+            content: ""; \
+            position: absolute; \
+            top: 50%; left: 50%; \
+            transform: translate(-50%, -50%); \
+            width: 110%; height: 110%; \
+            /* Еліптичне м'яке сяйво */ \
+            background: radial-gradient(ellipse at center, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.1) 40%, transparent 75%); \
+            z-index: -1; \
+            filter: blur(8px); \
         } ';
 
         css += '.studio-item img { \
-            max-height: 24px; \
-            max-width: 110px; \
+            max-height: 30px; \
+            max-width: 120px; \
             width: auto; \
             object-fit: contain; \
-            filter: none !important; \
+            /* Чорні логотипи стають світлішими для кращого контрасту */ \
+            filter: brightness(0) invert(1) drop-shadow(0 0 2px rgba(255,255,255,0.5)) !important; \
         } ';
         
+        css += '.quality-row { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 5px; } ';
         css += '.quality-item { height: 1.3em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
-        css += '.quality-item img { height: 100%; width: auto; object-fit: contain; } ';
+        css += '.quality-item img { height: 100%; width: auto; } ';
         css += '} ';
 
         style.textContent = css;
         document.head.appendChild(style);
     }
 
-    // 3. АНАЛІЗ ЯКОСТІ
+    // --- Функції аналізу якості, слайд-шоу та ініціалізації без змін ---
     function getBest(results) {
         var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
         var resOrder = ['HD', 'FULL HD', '2K', '4K'];
@@ -107,7 +118,6 @@
         return best;
     }
 
-    // 4. СЛАЙД-ШОУ
     function startSlideshow($poster, backdrops) {
         if (!Lampa.Storage.get('mobile_interface_slideshow') || backdrops.length < 2) return;
         var index = 0;
@@ -132,7 +142,6 @@
         }, interval);
     }
 
-    // 5. ОСНОВНА ЛОГІКА
     function initPlugin() {
         Lampa.Listener.follow('full', function (e) {
             if (e.type === 'destroy') clearInterval(slideshowTimer);
@@ -182,7 +191,6 @@
                                 else if (best.hdr) list.push('HDR');
                                 if (best.dub) list.push('DUB');
                                 if (best.ukr) list.push('UKR');
-                                
                                 list.forEach((type, i) => {
                                     if (svgIcons[type]) {
                                         var $q = $('<div class="quality-item" style="animation-delay:'+(i*0.1)+'s"><img src="'+svgIcons[type]+'"></div>');
@@ -197,60 +205,13 @@
         });
     }
 
-    // 6. ПОВНІ НАЛАШТУВАННЯ В МЕНЮ
     function addSettings() {
-        Lampa.SettingsApi.addComponent({
-            component: 'mobile_interface',
-            icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" fill="white"/></svg>',
-            name: 'Мобільний інтерфейс'
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { name: 'mobile_interface_animation', type: 'trigger', default: true },
-            field: { name: 'Анімація постера', description: 'Ефект наближення фону' },
-            onChange: function () { applyStyles(); }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { name: 'mobile_interface_slideshow', type: 'trigger', default: true },
-            field: { name: 'Слайд-шоу фону', description: 'Автоматична зміна зображень фону' }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { 
-                name: 'mobile_interface_slideshow_time', 
-                type: 'select', 
-                values: { '10000': '10 сек', '15000': '15 сек', '20000': '20 сек' }, 
-                default: '10000' 
-            },
-            field: { name: 'Інтервал слайд-шоу', description: 'Час між зміною зображень' }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { 
-                name: 'mobile_interface_slideshow_quality', 
-                type: 'select', 
-                values: { 'w300': '300p', 'w780': '780p', 'w1280': '1280p', 'original': 'Оригінал' }, 
-                default: 'w780' 
-            },
-            field: { name: 'Якість слайд-шоу', description: 'Роздільна здатність картинок' }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { name: 'mobile_interface_studios', type: 'trigger', default: true },
-            field: { name: 'Логотипи студій', description: 'Показувати іконки студій' }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { name: 'mobile_interface_quality', type: 'trigger', default: true },
-            field: { name: 'Значки якості', description: 'Показувати 4K, HDR, UKR' }
-        });
+        Lampa.SettingsApi.addComponent({ component: 'mobile_interface', icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" fill="white"/></svg>', name: 'Мобільний інтерфейс' });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_animation', type: 'trigger', default: true }, field: { name: 'Анімація постера' }, onChange: function () { applyStyles(); } });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_slideshow', type: 'trigger', default: true }, field: { name: 'Слайд-шоу фону' } });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_slideshow_time', type: 'select', values: { '10000': '10 сек', '15000': '15 сек' }, default: '10000' }, field: { name: 'Час слайд-шоу' } });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_studios', type: 'trigger', default: true }, field: { name: 'Логотипи студій' } });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_quality', type: 'trigger', default: true }, field: { name: 'Значки якості' } });
     }
 
     function start() {
