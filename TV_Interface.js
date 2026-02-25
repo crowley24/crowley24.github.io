@@ -20,22 +20,12 @@
     function addSettings() {
         const defaults = { 'applecation_logo_scale': '100', 'applecation_text_scale': '100' };  
         Object.keys(defaults).forEach(key => { if (Lampa.Storage.get(key) === undefined) Lampa.Storage.set(key, defaults[key]); });  
-
+        
         Lampa.SettingsApi.addComponent({ component: 'applecation_settings', name: 'NewCard', icon: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" stroke="white" fill="none" stroke-width="5"/></svg>` });  
         
         const scaleVals = { '70':'70%','85':'85%','100':'100%','115':'115%','130':'130%' };
-        Lampa.SettingsApi.addParam({
-            component: 'applecation_settings',
-            param: { name: 'applecation_logo_scale', type: 'select', values: scaleVals, default: '100' },
-            field: { name: 'Розмір логотипу' },
-            onChange: applyScales
-        });
-        Lampa.SettingsApi.addParam({
-            component: 'applecation_settings',
-            param: { name: 'applecation_text_scale', type: 'select', values: scaleVals, default: '100' },
-            field: { name: 'Розмір тексту' },
-            onChange: applyScales
-        });
+        Lampa.SettingsApi.addParam({ component: 'applecation_settings', param: { name: 'applecation_logo_scale', type: 'select', values: scaleVals, default: '100' }, field: { name: 'Розмір логотипу' }, onChange: applyScales });
+        Lampa.SettingsApi.addParam({ component: 'applecation_settings', param: { name: 'applecation_text_scale', type: 'select', values: scaleVals, default: '100' }, field: { name: 'Розмір тексту' }, onChange: applyScales });
         applyScales();
     }
 
@@ -57,14 +47,13 @@
                 <div class="applecation__meta-row">
                     <span class="applecation__studios"></span>
                     <span class="applecation__info-text"></span>
-                    <span class="full-start__pg"></span>
                 </div>
 
                 <div class="applecation__descr"></div>
 
                 <div class="applecation__btns">
                     <div class="full-start__button selector button--play">
-                        ${ICONS.play} <span>Дивитися</span>
+                        ${ICONS.play} <span>Онлайн</span>
                     </div>
                     <div class="full-start__button selector view--trailer">${ICONS.trailer}</div>
                     <div class="full-start__button selector button--book">${ICONS.book}</div>
@@ -72,7 +61,7 @@
                     <div class="full-start__button selector button--options">${ICONS.options}</div>
                 </div>
             </div>
-            <div class="full-start-new__right" style="display: none !important;"></div>
+            <div class="full-start-new__right hide-this-completely"></div>
         </div>`;  
         Lampa.Template.add('full_start_new', template);  
     }  
@@ -81,17 +70,33 @@
         const styles = `
         <style>
             :root { --apple-logo-scale: 1; --apple-text-scale: 1; }
-            .applecation .full-start-new__right { display: none !important; }
-            
+
+            /* ПРИБИРАЄМО ПОЛОСУ ТА ПРАВУ ПАНЕЛЬ НАЗАВЖДИ */
+            .applecation .full-start-new__right, 
+            .applecation .full-start-new__split,
+            .hide-this-completely { 
+                display: none !important; 
+                width: 0 !important; 
+                border: none !important; 
+                opacity: 0 !important;
+                pointer-events: none !important;
+            }
+
+            .applecation .full-start-new__body { 
+                width: 100% !important; 
+                background: none !important; 
+            }
+
             .applecation__body { 
                 height: 100vh; display: flex; flex-direction: column; justify-content: flex-end; 
                 padding: 0 5% 7% 5%;
                 background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.2) 60%, transparent 100%);
+                width: 100% !important;
             }
 
             .applecation__logo img { 
                 max-width: calc(500px * var(--apple-logo-scale)); 
-                max-height: calc(200px * var(--apple-logo-scale)); 
+                max-height: calc(180px * var(--apple-logo-scale)); 
                 object-fit: contain; object-position: left bottom;
             }
 
@@ -102,33 +107,41 @@
             .applecation__studios img { max-height: 22px; filter: drop-shadow(0 0 2px #000); }
 
             .applecation__descr {
-                max-width: 800px; margin-bottom: 20px; line-height: 1.4;
-                font-size: calc(1.05em * var(--apple-text-scale));
+                max-width: 850px; margin-bottom: 25px; line-height: 1.5;
+                font-size: calc(1em * var(--apple-text-scale));
                 color: rgba(255,255,255,0.8);
-                display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+                display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
             }
 
-            .applecation__btns { display: flex; align-items: center; gap: 20px; }
+            .applecation__btns { display: flex; align-items: center; gap: 25px; }
             
             /* Кнопка "Дивитися" */
             .button--play { 
                 background: #fff !important; color: #000 !important; 
-                padding: 10px 25px !important; border-radius: 10px !important; 
-                font-weight: bold; display: flex; align-items: center; gap: 8px;
+                padding: 10px 30px !important; border-radius: 12px !important; 
+                font-weight: bold; display: flex; align-items: center; gap: 10px;
+                border: none !important;
             }
 
-            /* Звичайні кнопки (без кіл) */
+            /* Кнопки без кіл (просто іконки) */
             .applecation .full-start__button { 
                 background: none !important; border: none !important; 
                 padding: 5px !important; color: #fff !important;
-                transition: transform 0.2s;
+                box-shadow: none !important;
             }
 
+            /* Ефект фокусу */
             .applecation .full-start__button.focus { 
-                transform: scale(1.2); 
-                filter: drop-shadow(0 0 5px rgba(255,255,255,0.5));
+                transform: scale(1.3) !important; 
+                color: #fff !important;
+                filter: drop-shadow(0 0 8px rgba(255,255,255,0.8)) !important;
             }
-            .button--play.focus { background: #e0e0e0 !important; transform: scale(1.05) !important; }
+            .button--play.focus { 
+                background: #e0e0e0 !important; 
+                color: #000 !important; 
+                transform: scale(1.05) !important;
+                filter: none !important;
+            }
         </style>`;  
         $('body').append(styles);  
     }  
