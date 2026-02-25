@@ -255,109 +255,109 @@
     }  
   
     function loadLogo(event) {  
-    var data = event.data.movie;  
-    var activity = event.object.activity;  
-    if (!data || !activity) return;  
-      
-    var render = activity.render();  
-    var logoContainer = render.find('.applecation__logo');  
-    var titleElement = render.find('.full-start-new__title');  
-      
-    fillMetaInfo(render, data);  
-    fillAdditionalInfo(render, data);  
-      
-    waitForBackgroundLoad(activity, function () {  
-        render.find('.applecation__meta, .applecation__info, .applecation__description').addClass('show');  
-    });  
-      
-    var cacheKey = data.id + '_' + (data.name ? 'tv' : 'movie');  
-    if (logoCache.has(cacheKey)) {  
-        return applyLogoData(logoCache.get(cacheKey), logoContainer, titleElement, activity);  
-    }  
-      
-    var mediaType = data.name ? 'tv' : 'movie';  
-    var apiUrl = Lampa.TMDB.api(mediaType + '/' + data.id + '/images?api_key=' + Lampa.TMDB.key());  
-      
-    if (!Lampa.Activity.active() || Lampa.Activity.active().component !== 'full') return;  
-      
-    $.get(apiUrl, function (imagesData) {  
-        logoCache.set(cacheKey, imagesData);  
-        if (Lampa.Activity.active() && Lampa.Activity.active().component === 'full') {  
-            applyLogoData(imagesData, logoContainer, titleElement, activity);  
-        }  
-    }).fail(function () {  
-        titleElement.show();  
+        var data = event.data.movie;  
+        var activity = event.object.activity;  
+        if (!data || !activity) return;  
+          
+        var render = activity.render();  
+        var logoContainer = render.find('.applecation__logo');  
+        var titleElement = render.find('.full-start-new__title');  
+          
+        fillMetaInfo(render, data);  
+        fillAdditionalInfo(render, data);  
+          
         waitForBackgroundLoad(activity, function () {  
-            logoContainer.addClass('loaded');  
+            render.find('.applecation__meta, .applecation__info, .applecation__description').addClass('show');  
         });  
-    });  
-}  
-  
-function applyLogoData(imagesData, logoContainer, titleElement, activity) {  
-    var bestLogo = selectBestLogo(imagesData.logos, LANG);  
-    if (bestLogo) {  
-        var logoUrl = Lampa.TMDB.image('/t/p/' + getLogoQuality() + bestLogo.file_path);  
-        var img = new Image();  
-        img.onload = function () {  
-            logoContainer.html('<img src="' + logoUrl + '" alt="" />');  
+          
+        var cacheKey = data.id + '_' + (data.name ? 'tv' : 'movie');  
+        if (logoCache.has(cacheKey)) {  
+            return applyLogoData(logoCache.get(cacheKey), logoContainer, titleElement, activity);  
+        }  
+          
+        var mediaType = data.name ? 'tv' : 'movie';  
+        var apiUrl = Lampa.TMDB.api(mediaType + '/' + data.id + '/images?api_key=' + Lampa.TMDB.key());  
+          
+        if (!Lampa.Activity.active() || Lampa.Activity.active().component !== 'full') return;  
+          
+        $.get(apiUrl, function (imagesData) {  
+            logoCache.set(cacheKey, imagesData);  
+            if (Lampa.Activity.active() && Lampa.Activity.active().component === 'full') {  
+                applyLogoData(imagesData, logoContainer, titleElement, activity);  
+            }  
+        }).fail(function () {  
+            titleElement.show();  
             waitForBackgroundLoad(activity, function () {  
                 logoContainer.addClass('loaded');  
             });  
-        };  
-        img.src = logoUrl;  
-    } else {  
-        titleElement.show();  
-        waitForBackgroundLoad(activity, function () {  
-            logoContainer.addClass('loaded');  
         });  
     }  
-}  
   
-// Дебаунс для завантаження логотипів  
-var loadTimeout;  
-function attachLogoLoader() {  
-    Lampa.Listener.follow('full', function (event) {  
-        if (event.type === 'complite') {  
-            clearTimeout(loadTimeout);  
-            loadTimeout = setTimeout(function () {  
-                loadLogo(event);  
-            }, 150);  
-        }  
-    });  
-}  
-  
-// Реєстрація маніфесту  
-function registerPlugin() {  
-    var pluginManifest = {  
-        type: 'other',  
-        version: '1.1.0',  
-        name: 'NewCard',  
-        description: 'Новий дизайн картки фільму/серіалу.',  
-        author: '',  
-        icon: PLUGIN_ICON  
-    };  
-    if (Lampa.Manifest) {  
-        if (!Lampa.Manifest.plugins) Lampa.Manifest.plugins = {};  
-        if (Array.isArray(Lampa.Manifest.plugins)) {  
-            Lampa.Manifest.plugins.push(pluginManifest);  
+    function applyLogoData(imagesData, logoContainer, titleElement, activity) {  
+        var bestLogo = selectBestLogo(imagesData.logos, LANG);  
+        if (bestLogo) {  
+            var logoUrl = Lampa.TMDB.image('/t/p/' + getLogoQuality() + bestLogo.file_path);  
+            var img = new Image();  
+            img.onload = function () {  
+                logoContainer.html('<img src="' + logoUrl + '" alt="" />');  
+                waitForBackgroundLoad(activity, function () {  
+                    logoContainer.addClass('loaded');  
+                });  
+            };  
+            img.src = logoUrl;  
         } else {  
-            Lampa.Manifest.plugins.newcard = pluginManifest;  
+            titleElement.show();  
+            waitForBackgroundLoad(activity, function () {  
+                logoContainer.addClass('loaded');
+                 });  
         }  
     }  
-}  
   
-// Запуск плагіна  
-function startPlugin() {  
-    registerPlugin();  
-    initializePlugin();  
-}  
+    // Дебаунс для завантаження логотипів  
+    var loadTimeout;  
+    function attachLogoLoader() {  
+        Lampa.Listener.follow('full', function (event) {  
+            if (event.type === 'complite') {  
+                clearTimeout(loadTimeout);  
+                loadTimeout = setTimeout(function () {  
+                    loadLogo(event);  
+                }, 150);  
+            }  
+        });  
+    }  
   
-if (window.appready) {  
-    startPlugin();  
-} else {  
-    Lampa.Listener.follow('app', function (event) {  
-        if (event.type === 'ready') startPlugin();  
-    });  
-}  
+    // Реєстрація маніфесту  
+    function registerPlugin() {  
+        var pluginManifest = {  
+            type: 'other',  
+            version: '1.1.0',  
+            name: 'NewCard',  
+            description: 'Новий дизайн картки фільму/серіалу.',  
+            author: '',  
+            icon: PLUGIN_ICON  
+        };  
+        if (Lampa.Manifest) {  
+            if (!Lampa.Manifest.plugins) Lampa.Manifest.plugins = {};  
+            if (Array.isArray(Lampa.Manifest.plugins)) {  
+                Lampa.Manifest.plugins.push(pluginManifest);  
+            } else {  
+                Lampa.Manifest.plugins.newcard = pluginManifest;  
+            }  
+        }  
+    }  
+  
+    // Запуск плагіна  
+    function startPlugin() {  
+        registerPlugin();  
+        initializePlugin();  
+    }  
+  
+    if (window.appready) {  
+        startPlugin();  
+    } else {  
+        Lampa.Listener.follow('app', function (event) {  
+            if (event.type === 'ready') startPlugin();  
+        });  
+    }  
   
 })();
