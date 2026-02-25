@@ -74,14 +74,15 @@
     function getBest(results) {
         var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
         var resOrder = ['HD', 'FULL HD', '2K', '4K'];
-        // Збільшуємо ліміт перевірки торрентів до 100 для кращого пошуку міток
         var limit = Math.min(results.length, 100);
+        
         for (var i = 0; i < limit; i++) {
             var item = results[i];
             var title = (item.Title || item.title || '').toLowerCase();
             
-            if (title.indexOf('ukr') >= 0 || title.indexOf('укр') >= 0 || title.indexOf('ua') >= 0 || title.indexOf('.ua') >= 0) best.ukr = true;
-            if (title.indexOf('dub') >= 0 || title.indexOf('дубл') >= 0) best.dub = true;
+            // Покращений пошук UKR за допомогою регулярного виразу
+            if (/(ukr|укр|ua|\.ua|ukrainian)/i.test(title)) best.ukr = true;
+            if (/(dub|дубл)/i.test(title)) best.dub = true;
             
             var foundRes = null;
             if (title.indexOf('4k') >= 0 || title.indexOf('2160') >= 0 || title.indexOf('uhd') >= 0) foundRes = '4K';
@@ -166,30 +167,27 @@
                     }
 
                     if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Parser.get) {
-                        // Використовуємо більш точний пошук
                         var query = movie.title || movie.name || movie.original_title || movie.original_name;
                         Lampa.Parser.get({ search: query, movie: movie }, function(res) {
                             var results = res.Results || res.results || (Array.isArray(res) ? res : []);
                             
-                            if (results && results.length) {
-                                var best = getBest(results);
-                                var list = [];
-                                if (best.resolution) list.push(best.resolution);
-                                if (best.dolbyVision) list.push('Dolby Vision');
-                                else if (best.hdr) list.push('HDR');
-                                if (best.dub) list.push('DUB');
-                                if (best.ukr) list.push('UKR');
-                                
-                                // Очищуємо перед рендером значків
-                                $infoBlock.find('.quality-row').empty();
-                                
-                                list.forEach((type, i) => {
-                                    if (svgIcons[type]) {
-                                        var $q = $('<div class="quality-item" style="animation-delay:'+(i*0.1)+'s"><img src="'+svgIcons[type]+'"></div>');
-                                        $infoBlock.find('.quality-row').append($q);
-                                    }
-                                });
-                            }
+                            // Завжди перевіряємо результати
+                            var best = getBest(results);
+                            var list = [];
+                            if (best.resolution) list.push(best.resolution);
+                            if (best.dolbyVision) list.push('Dolby Vision');
+                            else if (best.hdr) list.push('HDR');
+                            if (best.dub) list.push('DUB');
+                            if (best.ukr) list.push('UKR');
+                            
+                            $infoBlock.find('.quality-row').empty();
+                            
+                            list.forEach((type, i) => {
+                                if (svgIcons[type]) {
+                                    var $q = $('<div class="quality-item" style="animation-delay:'+(i*0.1)+'s"><img src="'+svgIcons[type]+'"></div>');
+                                    $infoBlock.find('.quality-row').append($q);
+                                }
+                            });
                         });
                     }
                 }
@@ -215,17 +213,6 @@
             component: 'mobile_interface',
             param: { name: 'mobile_interface_slideshow', type: 'trigger', default: true },
             field: { name: 'Слайд-шоу фону', description: 'Автоматична зміна зображень фону' }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { 
-                name: 'mobile_interface_slideshow_time', 
-                type: 'select', 
-                values: { '10000': '10 сек', '15000': '15 сек', '20000': '20 сек' }, 
-                default: '10000' 
-            },
-            field: { name: 'Інтервал слайд-шоу' }
         });
 
         Lampa.SettingsApi.addParam({
