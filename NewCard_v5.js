@@ -8,7 +8,7 @@
         { id: 'tv_interface_quality', default: true },
         { id: 'tv_interface_slideshow', default: true },
         { id: 'tv_interface_slideshow_time', default: '10000' }, 
-        { id: 'tv_interface_slideshow_quality', default: 'original' } // Для ТВ краще оригінальна якість
+        { id: 'tv_interface_slideshow_quality', default: 'original' }
     ];
 
     settings_list.forEach(function (opt) {
@@ -35,35 +35,47 @@
         var style = document.createElement('style');
         style.id = 'tv-interface-styles';
         
-        var css = '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } } ';
-        css += '@keyframes qb_in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } } ';
+        var css = '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.06); } 100% { transform: scale(1); } } ';
+        css += '@keyframes qb_in { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } } ';
         
-        // Видалено обмеження 480px, додано стилі для великого екрану
-        css += '.full-start-new__poster { position: fixed !important; top: 0; left: 0; width: 100%; height: 100% !important; z-index: -1; pointer-events: none !important; background: #000; } ';
-        css += '.full-start-new__poster img { ';
+        /* Ховаємо стандартний статичний постер Lampa, щоб він не заважав */
+        css += '.full-start-new__poster img:first-child:not(.plugin-slide) { display: none !important; } ';
+        
+        /* Розтягуємо контейнер фону на весь екран */
+        css += '.full-start-new__poster { ';
+        css += 'position: fixed !important; top: 0; left: 0; width: 100vw !important; height: 100vh !important; ';
+        css += 'z-index: -1 !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; background: #000 !important; } ';
+        
+        /* Стилі для зображень слайд-шоу */
+        css += '.full-start-new__poster img.plugin-slide { ';
+        css += 'position: absolute !important; top: 0; left: 0; width: 100% !important; height: 100% !important; object-fit: cover !important; ';
         css += (isAnimationEnabled ? 'animation: kenBurnsEffect 30s ease-in-out infinite !important; ' : '');
-        css += 'position: absolute; width: 100%; height: 100%; object-fit: cover; transition: opacity 2s ease-in-out !important; ';
-        css += 'mask-image: linear-gradient(to right, #000 20%, transparent 100%), linear-gradient(to bottom, #000 50%, transparent 100%) !important; ';
-        css += '-webkit-mask-image: linear-gradient(to right, #000 20%, transparent 100%), linear-gradient(to bottom, #000 50%, transparent 100%) !important; } ';
+        css += 'transition: opacity 2s ease-in-out !important; ';
+        css += 'mask-image: linear-gradient(to right, #000 20%, transparent 90%), linear-gradient(to bottom, #000 50%, transparent 100%) !important; ';
+        css += '-webkit-mask-image: linear-gradient(to right, #000 20%, transparent 90%), linear-gradient(to bottom, #000 50%, transparent 100%) !important; } ';
         
-        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; margin-top: 20px; width: 100%; } ';
-        css += '.studio-row, .quality-row { display: flex; justify-content: flex-start; align-items: center; flex-wrap: wrap; gap: 15px; } ';
+        /* Прозорість та накладання контенту */
+        css += '.full-start-new__right { background: none !important; z-index: 2 !important; position: relative !important; } ';
+        css += '.full-start-new__title img { max-width: 450px; max-height: 180px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.8)); } ';
+
+        /* Інфо-блоки студій та якості */
+        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; margin-top: 30px; } ';
+        css += '.studio-row, .quality-row { display: flex; gap: 15px; flex-wrap: wrap; align-items: center; } ';
         
-        css += '.studio-item { height: 45px; opacity: 0; animation: qb_in 0.5s ease forwards; padding: 8px 15px; border-radius: 10px; display: flex; align-items: center; ';
+        css += '.studio-item { height: 42px; padding: 6px 14px; border-radius: 10px; display: flex; align-items: center; ';
         if (bgOpacity !== '0') {
             css += 'background: rgba(255, 255, 255, ' + bgOpacity + '); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); ';
         }
-        css += '} ';
+        css += 'animation: qb_in 0.6s ease forwards; } ';
 
-        css += '.quality-item { height: 30px; opacity: 0; animation: qb_in 0.5s ease forwards; } ';
-        css += '.studio-item img { height: 100%; filter: brightness(1.2); } ';
-        css += '.quality-item img { height: 100%; } ';
+        css += '.quality-item { height: 30px; animation: qb_in 0.6s ease forwards; } ';
+        css += '.studio-item img { height: 100%; width: auto; filter: brightness(1.1); } ';
+        css += '.quality-item img { height: 100%; width: auto; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); } ';
 
         style.textContent = css;
         document.head.appendChild(style);
     }
 
-    // [Логіка getBest залишається без змін, вона універсальна]
     function getBest(results) {
         var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
         var resOrder = ['HD', 'FULL HD', '2K', '4K'];
@@ -101,40 +113,57 @@
     }
 
     function startSlideshow($poster, backdrops) {
-        if (!Lampa.Storage.get('tv_interface_slideshow') || backdrops.length < 2) return;
+        if (!Lampa.Storage.get('tv_interface_slideshow') || backdrops.length < 1) return;
         var index = 0;
         var interval = parseInt(Lampa.Storage.get('tv_interface_slideshow_time', '10000'));
         var quality = Lampa.Storage.get('tv_interface_slideshow_quality', 'original');
+        
         clearInterval(slideshowTimer);
-        slideshowTimer = setInterval(function() {
-            index = (index + 1) % backdrops.length;
-            var imgUrl = Lampa.TMDB.image('/t/p/' + quality + backdrops[index].file_path);
-            var $currentImg = $poster.find('img').first();
-            var nextImg = new Image();
-            nextImg.onload = function() {
-                var $newImg = $('<img src="' + imgUrl + '" style="opacity: 0; z-index: -1;">');
-                $poster.append($newImg);
-                setTimeout(function() {
-                    $newImg.css('opacity', '1');
-                    $currentImg.css('opacity', '0');
-                    setTimeout(function() { $currentImg.remove(); }, 2000);
-                }, 100);
-            };
-            nextImg.src = imgUrl;
-        }, interval);
+        
+        // Функція для додавання нового слайду
+        function addSlide(url, isFirst) {
+            var $newImg = $('<img src="' + url + '" class="plugin-slide" style="opacity: ' + (isFirst ? '1' : '0') + '; z-index: ' + (isFirst ? '1' : '0') + ';">');
+            $poster.append($newImg);
+        }
+
+        // Завантажуємо перше зображення відразу
+        var firstUrl = Lampa.TMDB.image('/t/p/' + quality + backdrops[0].file_path);
+        addSlide(firstUrl, true);
+
+        if (backdrops.length > 1) {
+            slideshowTimer = setInterval(function() {
+                index = (index + 1) % backdrops.length;
+                var imgUrl = Lampa.TMDB.image('/t/p/' + quality + backdrops[index].file_path);
+                var $currentImg = $poster.find('img.plugin-slide').last();
+                
+                var nextImg = new Image();
+                nextImg.onload = function() {
+                    var $newImg = $('<img src="' + imgUrl + '" class="plugin-slide" style="opacity: 0; z-index: 0;">');
+                    $poster.append($newImg);
+                    setTimeout(function() {
+                        $newImg.css('opacity', '1');
+                        setTimeout(function() { 
+                            $poster.find('img.plugin-slide').not($newImg).remove(); 
+                        }, 2000);
+                    }, 100);
+                };
+                nextImg.src = imgUrl;
+            }, interval);
+        }
     }
 
     function initPlugin() {
         Lampa.Listener.follow('full', function (e) {
             if (e.type === 'destroy') clearInterval(slideshowTimer);
-            
-            // Видалено перевірку innerWidth <= 480
             if (e.type === 'complite' || e.type === 'complete') {
                 var movie = e.data.movie;
                 var $render = e.object.activity.render();
                 var $details = $render.find('.full-start-new__details');
-                
-                // Отримання Логотипу та Слайдшоу
+                var $poster = $render.find('.full-start-new__poster');
+
+                // Очищуємо старі слайди при переході
+                $poster.find('img.plugin-slide').remove();
+
                 $.ajax({
                     url: 'https://api.themoviedb.org/3/' + (movie.name ? 'tv' : 'movie') + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key(),
                     success: function(res) {
@@ -142,16 +171,18 @@
                         var logo = res.logos.filter(l => l.iso_639_1 === lang)[0] || res.logos.filter(l => l.iso_639_1 === 'en')[0] || res.logos[0];
                         if (logo) {
                             var imgUrl = Lampa.TMDB.image('/t/p/w500' + logo.file_path.replace('.svg', '.png'));
-                            $render.find('.full-start-new__title').html('<img src="' + imgUrl + '" style="max-width: 400px; max-height: 150px;">');
+                            $render.find('.full-start-new__title').html('<img src="' + imgUrl + '">');
                         }
-                        if (res.backdrops && res.backdrops.length > 1) startSlideshow($render.find('.full-start-new__poster'), res.backdrops.slice(0, 15));
+                        if (res.backdrops && res.backdrops.length > 0) {
+                            startSlideshow($poster, res.backdrops.slice(0, 15));
+                        }
                     }
                 });
 
                 if ($details.length) {
                     $('.plugin-info-block').remove();
                     var $infoBlock = $('<div class="plugin-info-block"><div class="studio-row"></div><div class="quality-row"></div></div>');
-                    $details.append($infoBlock); // Додаємо всередину деталей для TV
+                    $details.append($infoBlock);
 
                     if (Lampa.Storage.get('tv_interface_studios')) {
                         var studios = (movie.networks || []).concat(movie.production_companies || []);
@@ -201,14 +232,14 @@
         Lampa.SettingsApi.addParam({
             component: 'tv_interface',
             param: { name: 'tv_interface_animation', type: 'trigger', default: true },
-            field: { name: 'Анімація фону', description: 'Повільне наближення (Ken Burns)' },
+            field: { name: 'Анімація фону', description: 'Ефект наближення Ken Burns' },
             onChange: function () { applyStyles(); }
         });
 
         Lampa.SettingsApi.addParam({
             component: 'tv_interface',
             param: { name: 'tv_interface_slideshow', type: 'trigger', default: true },
-            field: { name: 'Слайд-шоу', description: 'Зміна фонових кадрів фільму' }
+            field: { name: 'Слайд-шоу', description: 'Автозміна кадрів фільму на фоні' }
         });
 
         Lampa.SettingsApi.addParam({
@@ -216,17 +247,17 @@
             param: { 
                 name: 'tv_interface_studios_bg_opacity', 
                 type: 'select', 
-                values: { '0': 'Вимкнено', '0.15': 'Легка', '0.3': 'Середня' }, 
+                values: { '0': 'Вимкнено', '0.1': 'Мінімальна', '0.2': 'Середня', '0.4': 'Густа' }, 
                 default: '0.15' 
             },
-            field: { name: 'Підкладка студій', description: 'Прозорість фону під логотипами' },
+            field: { name: 'Фон студій', description: 'Прозорість підкладки логотипів' },
             onChange: function () { applyStyles(); }
         });
 
         Lampa.SettingsApi.addParam({
             component: 'tv_interface',
             param: { name: 'tv_interface_quality', type: 'trigger', default: true },
-            field: { name: 'Інфо-іконки', description: 'Показувати 4K, HDR, Audio, UKR' }
+            field: { name: 'Значки якості', description: 'Відображати 4K, HDR, Звук' }
         });
     }
 
@@ -234,6 +265,10 @@
         applyStyles();
         addSettings();
         initPlugin();
+        // Вимикаємо стандартний блюр Lampa для чіткості слайдів
+        setInterval(function () { 
+            if (window.lampa_settings) window.lampa_settings.blur_poster = false; 
+        }, 2000);
     }
 
     if (window.appready) start();
