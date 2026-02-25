@@ -7,6 +7,7 @@
         { id: 'mobile_interface_studios_bg_opacity', default: '0.15' },
         { id: 'mobile_interface_quality', default: true },
         { id: 'mobile_interface_slideshow', default: true },
+        { id: 'mobile_interface_parallax', default: false },
         { id: 'mobile_interface_slideshow_time', default: '10000' }, 
         { id: 'mobile_interface_slideshow_quality', default: 'w780' }
     ];
@@ -35,26 +36,25 @@
         var style = document.createElement('style');
         style.id = 'mobile-interface-styles';
         
-        var css = '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } } ';
+        var css = '@keyframes kenBurnsEffect { 0% { transform: scale(1.1); } 50% { transform: scale(1.2); } 100% { transform: scale(1.1); } } ';
         css += '@keyframes qb_in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } ';
         css += '@media screen and (max-width: 480px) { ';
         css += '.background { background: #000 !important; } ';
         css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 60vh !important; pointer-events: none !important; } ';
         css += '.full-start-new__poster img { ';
+        // Збільшуємо scale до 1.1, щоб при паралаксі не було видно країв
+        css += 'transform: scale(1.1); ';
         css += (isAnimationEnabled ? 'animation: kenBurnsEffect 25s ease-in-out infinite !important; ' : '');
-        css += 'transform-origin: center center !important; transition: opacity 1.5s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
+        css += 'transform-origin: center center !important; transition: opacity 1.5s ease-in-out, transform 0.2s ease-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
         
         css += '.full-start-new__right { background: none !important; margin-top: -110px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
         css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 80px; margin-bottom: 5px; } ';
         css += '.full-start-new__title img { max-height: 100px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); } ';
         
-        css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 15px !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
-
         css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 15px 0; width: 100%; } ';
         css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%; } ';
         
-        // Підкладка з урахуванням вимкнення
         css += '.studio-item { height: 3.2em; opacity: 0; animation: qb_in 0.4s ease forwards; padding: 6px 12px; border-radius: 12px; display: flex; align-items: center; justify-content: center; ';
         if (bgOpacity !== '0') {
             css += 'background: rgba(255, 255, 255, ' + bgOpacity + '); ';
@@ -70,6 +70,33 @@
 
         style.textContent = css;
         document.head.appendChild(style);
+    }
+
+    // 3. Логіка Паралаксу
+    function initParallax() {
+        if (!Lampa.Storage.get('mobile_interface_parallax')) return;
+
+        function handleOrientation(event) {
+            var x = event.gamma; // -90 to 90
+            var y = event.beta;  // -180 to 180
+
+            // Обмежуємо чутливість (макс зміщення 15px)
+            var moveX = Math.min(Math.max(x / 4, -15), 15);
+            var moveY = Math.min(Math.max((y - 45) / 4, -15), 15); // 45 - середній кут тримання телефону
+
+            $('.full-start-new__poster img').css('transform', 'scale(1.15) translate3d(' + moveX + 'px, ' + moveY + 'px, 0)');
+        }
+
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+            // Для iOS: потрібен клік для активації
+            $('body').one('click', function() {
+                DeviceOrientationEvent.requestPermission().then(response => {
+                    if (response === 'granted') window.addEventListener('deviceorientation', handleOrientation);
+                });
+            });
+        } else {
+            window.addEventListener('deviceorientation', handleOrientation);
+        }
     }
 
     function getBest(results) {
@@ -125,12 +152,17 @@
 
     function initPlugin() {
         Lampa.Listener.follow('full', function (e) {
-            if (e.type === 'destroy') clearInterval(slideshowTimer);
+            if (e.type === 'destroy') {
+                clearInterval(slideshowTimer);
+                window.removeEventListener('deviceorientation', null);
+            }
             if (window.innerWidth <= 480 && (e.type === 'complite' || e.type === 'complete')) {
                 var movie = e.data.movie;
                 var $render = e.object.activity.render();
                 var $details = $render.find('.full-start-new__details');
                 
+                initParallax();
+
                 $.ajax({
                     url: 'https://api.themoviedb.org/3/' + (movie.name ? 'tv' : 'movie') + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key(),
                     success: function(res) {
@@ -195,26 +227,9 @@
 
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
-            param: { name: 'mobile_interface_animation', type: 'trigger', default: true },
-            field: { name: 'Анімація постера', description: 'Ефект наближення фону' },
+            param: { name: 'mobile_interface_parallax', type: 'trigger', default: false },
+            field: { name: 'Паралакс-ефект', description: 'Рух фону при нахилі телефону' },
             onChange: function () { applyStyles(); }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { name: 'mobile_interface_slideshow', type: 'trigger', default: true },
-            field: { name: 'Слайд-шоу фону', description: 'Автоматична зміна зображень фону' }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { 
-                name: 'mobile_interface_slideshow_time', 
-                type: 'select', 
-                values: { '10000': '10 сек', '15000': '15 сек', '20000': '20 сек' }, 
-                default: '10000' 
-            },
-            field: { name: 'Інтервал слайд-шоу' }
         });
 
         Lampa.SettingsApi.addParam({
@@ -231,8 +246,26 @@
 
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
-            param: { name: 'mobile_interface_quality', type: 'trigger', default: true },
-            field: { name: 'Значки якості', description: 'Показувати 4K, HDR, UKR' }
+            param: { name: 'mobile_interface_animation', type: 'trigger', default: true },
+            field: { name: 'Анімація постера', description: 'Ефект наближення фону' },
+            onChange: function () { applyStyles(); }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: { name: 'mobile_interface_slideshow', type: 'trigger', default: true },
+            field: { name: 'Слайд-шоу фону', description: 'Автоматична зміна зображень' }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: { 
+                name: 'mobile_interface_slideshow_time', 
+                type: 'select', 
+                values: { '10000': '10 сек', '15000': '15 сек', '20000': '20 сек' }, 
+                default: '10000' 
+            },
+            field: { name: 'Інтервал слайд-шоу' }
         });
     }
 
@@ -248,3 +281,4 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
+                                       
