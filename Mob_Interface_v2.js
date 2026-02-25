@@ -1,7 +1,6 @@
 (function () {
     'use strict';
 
-    // 1. Ініціалізація всіх налаштувань
     var settings_list = [
         { id: 'mobile_interface_animation', default: true },
         { id: 'mobile_interface_studios', default: true },
@@ -26,7 +25,6 @@
         '2.0': pluginPath + '2.0.svg', 'DUB': pluginPath + 'DUB.svg', 'UKR': pluginPath + 'UKR.svg'
     };
 
-    // 2. Стилі з посиленим лінійним підсвічуванням
     function applyStyles() {
         var oldStyle = document.getElementById('mobile-interface-styles');
         if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
@@ -36,57 +34,53 @@
         style.id = 'mobile-interface-styles';
         
         var css = '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } } ';
-        css += '@keyframes qb_in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } ';
+        css += '@keyframes qb_in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } } ';
         css += '@media screen and (max-width: 480px) { ';
         css += '.background { background: #000 !important; } ';
-        css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 60vh !important; pointer-events: none !important; } ';
+        css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 60vh !important; } ';
         css += '.full-start-new__poster img { ';
         css += (isAnimationEnabled ? 'animation: kenBurnsEffect 25s ease-in-out infinite !important; ' : '');
         css += 'transform-origin: center center !important; transition: opacity 1.5s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
-        css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
+        css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%) !important; } ';
         
-        css += '.full-start-new__right { background: none !important; margin-top: -110px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
-        css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 80px; margin-bottom: 5px; } ';
-        css += '.full-start-new__title img { max-height: 100px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); } ';
+        css += '.full-start-new__right { background: none !important; margin-top: -120px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
+        css += '.full-start-new__title img { max-height: 90px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.8)); } ';
         
-        css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 15px !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
-
-        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 15px; margin: 25px 0; width: 100%; } ';
-        css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px; width: 100%; } ';
+        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 12px; margin: 20px 0; width: 100%; } ';
+        css += '.studio-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%; padding: 0 10px; } ';
         
-        /* ПІДКЛАДКА ЛОГО: Лінійне світіння, щоб було видно краї */
+        /* ЕФЕКТ МАТОВОЇ ПІДСВІТКИ БЕЗ ЖОРСТКИХ РАМОК */
         css += '.studio-item { \
             display: flex; \
             align-items: center; \
             justify-content: center; \
-            padding: 8px 22px; \
-            min-width: 110px; \
-            min-height: 48px; \
-            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 25%, rgba(255,255,255,0.28) 50%, rgba(255,255,255,0.18) 75%, transparent 100%); \
-            border-top: 1px solid rgba(255,255,255,0.12); \
-            border-bottom: 1px solid rgba(255,255,255,0.12); \
-            border-radius: 24px; \
+            padding: 6px 14px; \
+            background: rgba(255, 255, 255, 0.85); \
+            border-radius: 6px; \
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.4); \
             opacity: 0; \
-            animation: qb_in 0.4s ease forwards; \
+            animation: qb_in 0.5s ease forwards; \
+            min-width: 80px; \
         } ';
 
         css += '.studio-item img { \
-            max-height: 28px; \
-            max-width: 130px; \
+            max-height: 24px; \
+            max-width: 100px; \
             width: auto; \
             object-fit: contain; \
-            filter: drop-shadow(0px 1px 2px rgba(0,0,0,0.7)); \
+            /* Видаляємо інверсію, щоб зберегти оригінальні кольори на світлому фоні */ \
+            filter: none !important; \
         } ';
         
-        css += '.quality-item { height: 1.3em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
-        css += '.quality-item img { height: 100%; width: auto; object-fit: contain; } ';
+        css += '.quality-row { display: flex; justify-content: center; gap: 12px; margin-top: 5px; } ';
+        css += '.quality-item { height: 1.2em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
+        css += '.quality-item img { height: 100%; } ';
         css += '} ';
 
         style.textContent = css;
         document.head.appendChild(style);
     }
 
-    // 3. Аналіз якості з результатів пошуку
     function getBest(results) {
         var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
         var resOrder = ['HD', 'FULL HD', '2K', '4K'];
@@ -109,7 +103,6 @@
         return best;
     }
 
-    // 4. Слайд-шоу фону
     function startSlideshow($poster, backdrops) {
         if (!Lampa.Storage.get('mobile_interface_slideshow') || backdrops.length < 2) return;
         var index = 0;
@@ -134,7 +127,6 @@
         }, interval);
     }
 
-    // 5. Основна ініціалізація
     function initPlugin() {
         Lampa.Listener.follow('full', function (e) {
             if (e.type === 'destroy') clearInterval(slideshowTimer);
@@ -199,7 +191,6 @@
         });
     }
 
-    // 6. Додавання компонентів налаштувань
     function addSettings() {
         Lampa.SettingsApi.addComponent({
             component: 'mobile_interface',
@@ -210,20 +201,13 @@
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { name: 'mobile_interface_animation', type: 'trigger', default: true },
-            field: { name: 'Анімація постера', description: 'Ефект наближення фону' },
-            onChange: function () { applyStyles(); }
+            field: { name: 'Анімація постера', description: 'Ефект наближення фону' }
         });
 
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { name: 'mobile_interface_studios', type: 'trigger', default: true },
             field: { name: 'Логотипи студій', description: 'Показувати іконки студій' }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { name: 'mobile_interface_quality', type: 'trigger', default: true },
-            field: { name: 'Значки якості', description: 'Показувати 4K, HDR, UKR' }
         });
     }
 
