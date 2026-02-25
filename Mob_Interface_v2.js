@@ -51,33 +51,32 @@
         
         css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 15px !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
 
-        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 20px 0; width: 100%; } ';
-        css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; width: 100%; } ';
+        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 18px; margin: 25px 0; width: 100%; } ';
+        css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 20px; width: 100%; } ';
         
-        /* ОНОВЛЕНО: ГРАДІЄНТНЕ СВІТІННЯ ДЛЯ ЛОГО */
+        /* ПОСИЛЕНЕ ГРАДІЄНТНЕ СВІТІННЯ */
         css += '.studio-item { \
             display: flex; \
             align-items: center; \
             justify-content: center; \
-            padding: 8px 16px; \
-            min-width: 60px; \
-            min-height: 40px; \
-            /* Радіальне світіння за логотипом */ \
-            background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.05) 50%, transparent 85%); \
-            border-radius: 50%; \
+            padding: 12px 20px; \
+            min-width: 80px; \
+            min-height: 50px; \
+            /* Ширше та яскравіше радіальне світіння */ \
+            background: radial-gradient(circle, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.08) 45%, transparent 75%); \
             opacity: 0; \
             animation: qb_in 0.4s ease forwards; \
         } ';
 
         css += '.studio-item img { \
-            max-height: 26px; \
+            max-height: 30px; \
             width: auto; \
             object-fit: contain; \
-            /* Чітка тінь замість розмиття для розділення деталей */ \
-            filter: drop-shadow(0px 1px 1px rgba(0,0,0,0.5)); \
+            /* Тінь для чіткості контурів логотипа */ \
+            filter: drop-shadow(0px 1px 2px rgba(0,0,0,0.4)); \
         } ';
         
-        css += '.quality-item { height: 1.25em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
+        css += '.quality-item { height: 1.3em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
         css += '.quality-item img { height: 100%; width: auto; object-fit: contain; } ';
         css += '} ';
 
@@ -146,7 +145,7 @@
                     url: 'https://api.themoviedb.org/3/' + (movie.name ? 'tv' : 'movie') + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key(),
                     success: function(res) {
                         var lang = Lampa.Storage.get('language') || 'uk';
-                        // Пріоритет: українське лого -> англійське -> перше доступне
+                        // Використовуємо англійське лого, якщо українське відсутнє (згідно з вашими правилами)
                         var logo = res.logos.filter(l => l.iso_639_1 === lang)[0] || res.logos.filter(l => l.iso_639_1 === 'en')[0] || res.logos[0];
                         if (logo) {
                             var imgUrl = Lampa.TMDB.image('/t/p/w300' + logo.file_path.replace('.svg', '.png'));
