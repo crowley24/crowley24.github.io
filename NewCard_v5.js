@@ -35,60 +35,63 @@
         var style = document.createElement('style');
         style.id = 'tv-interface-styles';
         
-        var css = '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } } ';
-        css += '@keyframes qb_in { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } } ';
+        var css = '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } } ';
+        css += '@keyframes fadeInSlide { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } } ';
         
-        // Стилі для фонового постера
-        css += '.full-start-new__poster { position: absolute !important; overflow: hidden !important; background: #000; z-index: 0; width: 100% !important; height: 100% !important; top: 0; left: 0; pointer-events: none !important; } ';
+        // Фон та градієнт
+        css += '.full-start-new__poster { position: fixed !important; overflow: hidden !important; background: #000; z-index: 0; width: 100% !important; height: 100% !important; top: 0; left: 0; pointer-events: none !important; } ';
+        css += '.full-start-new__poster::after { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to right, rgba(0,0,0,0.9) 10%, rgba(0,0,0,0.4) 40%, transparent 100%), linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 30%); z-index: 1; } ';
+        
         css += '.full-start-new__poster img { ';
-        css += (isAnimationEnabled ? 'animation: kenBurnsEffect 30s ease-in-out infinite !important; ' : '');
-        css += 'transform-origin: center center !important; transition: opacity 2s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
-        css += 'mask-image: linear-gradient(to right, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%), linear-gradient(to bottom, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 100%) !important; ';
-        css += '-webkit-mask-image: linear-gradient(to right, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%), linear-gradient(to bottom, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 100%) !important; } ';
+        css += (isAnimationEnabled ? 'animation: kenBurnsEffect 40s linear infinite !important; ' : '');
+        css += 'position: absolute; width: 100%; height: 100%; object-fit: cover; transition: opacity 2s ease-in-out !important; } ';
         
-        // Контейнер з інформацією
-        css += '.full-start-new__right { z-index: 2 !important; position: relative; background: none !important; } ';
-        css += '.full-start-new__title img { max-height: 120px; width: auto; filter: drop-shadow(0 0 15px rgba(0,0,0,0.8)); } ';
+        // Головний контейнер (Netflix/AppleTV Style)
+        css += '.full-start-new__right { z-index: 2 !important; position: relative; background: none !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; padding-left: 60px !important; padding-top: 5vh !important; text-align: left !important; width: 50% !important; } ';
         
-        // Блок іконок та студій
-        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: flex-start; gap: 20px; margin: 25px 0; } ';
-        css += '.studio-row, .quality-row { display: flex; align-items: center; flex-wrap: wrap; gap: 15px; } ';
+        // Логотип фільму
+        css += '.full-start-new__title { width: 100%; display: flex; justify-content: flex-start; margin-bottom: 20px; animation: fadeInSlide 0.8s ease-out forwards; } ';
+        css += '.full-start-new__title img { max-height: 180px; max-width: 450px; object-fit: contain; filter: drop-shadow(0 0 20px rgba(0,0,0,0.5)); } ';
         
-        css += '.studio-item { height: 45px; opacity: 0; animation: qb_in 0.5s ease forwards; padding: 8px 15px; border-radius: 10px; display: flex; align-items: center; justify-content: center; ';
+        // Мета-інформація (Блок під назвою)
+        css += '.plugin-info-block { display: flex; flex-direction: column; gap: 20px; animation: fadeInSlide 1s ease-out forwards; } ';
+        css += '.studio-row, .quality-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; } ';
+        
+        // Студії
+        css += '.studio-item { height: 42px; padding: 6px 14px; border-radius: 8px; display: flex; align-items: center; justify-content: center; ';
         if (bgOpacity !== '0') {
-            css += 'background: rgba(255, 255, 255, ' + bgOpacity + '); ';
-            css += 'backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); ';
+            css += 'background: rgba(255, 255, 255, ' + bgOpacity + '); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); ';
         }
         css += '} ';
+        css += '.studio-item img { height: 100%; width: auto; filter: brightness(1.1); } ';
 
-        css += '.quality-item { height: 30px; opacity: 0; animation: qb_in 0.5s ease forwards; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); } ';
-        css += '.studio-item img { height: 100%; width: auto; object-fit: contain; } ';
+        // Значки якості
+        css += '.quality-item { height: 26px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); } ';
         css += '.quality-item img { height: 100%; width: auto; } ';
+
+        // Опис фільму (якщо він є, робимо його вужчим для стилю)
+        css += '.full-start-new__descr { max-width: 450px; font-size: 1.2em; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); margin-top: 20px !important; } ';
 
         style.textContent = css;
         document.head.appendChild(style);
     }
 
+    // Функція пошуку найкращої якості залишається без змін...
     function getBest(results) {
         var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
         var resOrder = ['HD', 'FULL HD', '2K', '4K'];
         var audioOrder = ['2.0', '4.0', '5.1', '7.1'];
-        
         var limit = Math.min(results.length, 25);
         for (var i = 0; i < limit; i++) {
             var item = results[i];
             var title = (item.Title || '').toLowerCase();
-
             if (title.indexOf('ukr') >= 0 || title.indexOf('укр') >= 0 || title.indexOf('ua') >= 0) best.ukr = true;
-
             var foundRes = null;
             if (title.indexOf('4k') >= 0 || title.indexOf('2160') >= 0 || title.indexOf('uhd') >= 0) foundRes = '4K';
             else if (title.indexOf('2k') >= 0 || title.indexOf('1440') >= 0) foundRes = '2K';
             else if (title.indexOf('1080') >= 0 || title.indexOf('fhd') >= 0 || title.indexOf('full hd') >= 0) foundRes = 'FULL HD';
             else if (title.indexOf('720') >= 0 || title.indexOf('hd') >= 0) foundRes = 'HD';
-
             if (foundRes && (!best.resolution || resOrder.indexOf(foundRes) > resOrder.indexOf(best.resolution))) best.resolution = foundRes;
-
             if (item.ffprobe && Array.isArray(item.ffprobe)) {
                 item.ffprobe.forEach(function(stream) {
                     if (stream.codec_type === 'video') {
@@ -122,7 +125,7 @@
             var $currentImg = $poster.find('img').first();
             var nextImg = new Image();
             nextImg.onload = function() {
-                var $newImg = $('<img src="' + imgUrl + '" style="opacity: 0; z-index: -1;">');
+                var $newImg = $('<img src="' + imgUrl + '" style="opacity: 0;">');
                 $poster.append($newImg);
                 setTimeout(function() {
                     $newImg.css('opacity', '1');
@@ -186,7 +189,7 @@
                                 
                                 list.forEach((type, i) => {
                                     if (svgIcons[type]) {
-                                        var $q = $('<div class="quality-item" style="animation-delay:'+(i*0.1)+'s"><img src="'+svgIcons[type]+'"></div>');
+                                        var $q = $('<div class="quality-item"><img src="'+svgIcons[type]+'"></div>');
                                         $infoBlock.find('.quality-row').append($q);
                                     }
                                 });
@@ -202,13 +205,13 @@
         Lampa.SettingsApi.addComponent({
             component: 'tv_interface',
             icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z" fill="white"/></svg>',
-            name: 'TV Інтерфейс (Про)'
+            name: 'TV Cinema Mode'
         });
 
         Lampa.SettingsApi.addParam({
             component: 'tv_interface',
             param: { name: 'tv_interface_animation', type: 'trigger', default: true },
-            field: { name: 'Анімація фону', description: 'М’який Ken Burns ефект' },
+            field: { name: 'Анімація фону', description: 'Кінематографічне наближення' },
             onChange: function () { applyStyles(); }
         });
 
@@ -221,30 +224,13 @@
         Lampa.SettingsApi.addParam({
             component: 'tv_interface',
             param: { 
-                name: 'tv_interface_slideshow_time', 
-                type: 'select', 
-                values: { '10000': '10 сек', '15000': '15 сек', '20000': '20 сек', '30000': '30 сек' }, 
-                default: '15000' 
-            },
-            field: { name: 'Швидкість слайд-шоу' }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'tv_interface',
-            param: { 
                 name: 'tv_interface_studios_bg_opacity', 
                 type: 'select', 
                 values: { '0': 'Прозорий', '0.15': 'Легкий', '0.3': 'Середній' }, 
                 default: '0.15' 
             },
-            field: { name: 'Підкладка студій' },
+            field: { name: 'Підкладка для логотипів' },
             onChange: function () { applyStyles(); }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'tv_interface',
-            param: { name: 'tv_interface_quality', type: 'trigger', default: true },
-            field: { name: 'Значки якості', description: 'Показувати 4K, HDR, Звук, UKR' }
         });
     }
 
@@ -252,7 +238,6 @@
         applyStyles();
         addSettings();
         initPlugin();
-        // Вимикаємо стандартне розмиття постера для чіткості на ТВ
         setInterval(function () { 
             if (window.lampa_settings) window.lampa_settings.blur_poster = false; 
         }, 3000);
