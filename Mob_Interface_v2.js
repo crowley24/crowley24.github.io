@@ -1,7 +1,6 @@
 (function () {
     'use strict';
 
-    // 1. Ініціалізація налаштувань (включаючи втрачені параметри слайд-шоу)
     var settings_list = [
         { id: 'mobile_interface_animation', default: true },
         { id: 'mobile_interface_studios', default: true },
@@ -27,7 +26,6 @@
         '2.0': pluginPath + '2.0.svg', 'DUB': pluginPath + 'DUB.svg', 'UKR': pluginPath + 'UKR.svg'
     };
 
-    // 2. Стилі інтерфейсу
     function applyStyles() {
         var oldStyle = document.getElementById('mobile-interface-styles');
         if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
@@ -56,13 +54,15 @@
         css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 15px 0; width: 100%; } ';
         css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%; } ';
         
-        // Студії з підкладкою
+        // Підкладка з урахуванням вимкнення
         css += '.studio-item { height: 3.2em; opacity: 0; animation: qb_in 0.4s ease forwards; padding: 6px 12px; border-radius: 12px; display: flex; align-items: center; justify-content: center; ';
-        css += 'background: rgba(255, 255, 255, ' + bgOpacity + '); ';
-        css += 'backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); ';
-        css += 'box-shadow: 0 2px 10px rgba(0,0,0,0.2); } ';
+        if (bgOpacity !== '0') {
+            css += 'background: rgba(255, 255, 255, ' + bgOpacity + '); ';
+            css += 'backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); ';
+            css += 'box-shadow: 0 2px 10px rgba(0,0,0,0.2); ';
+        }
+        css += '} ';
 
-        // Якість з тінню для видимості (як в оригіналі)
         css += '.quality-item { height: 1.4em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
         css += '.studio-item img { height: 100%; width: auto; object-fit: contain; filter: contrast(1.1); } ';
         css += '.quality-item img { height: 100%; width: auto; object-fit: contain; filter: drop-shadow(0px 0px 1px rgba(255,255,255,0.4)); } ';
@@ -72,7 +72,6 @@
         document.head.appendChild(style);
     }
 
-    // 3. Аналіз доступної якості
     function getBest(results) {
         var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
         var resOrder = ['HD', 'FULL HD', '2K', '4K'];
@@ -100,7 +99,6 @@
         return best;
     }
 
-    // 4. Слайд-шоу
     function startSlideshow($poster, backdrops) {
         if (!Lampa.Storage.get('mobile_interface_slideshow') || backdrops.length < 2) return;
         var index = 0;
@@ -125,7 +123,6 @@
         }, interval);
     }
 
-    // 5. Функція рендеру
     function initPlugin() {
         Lampa.Listener.follow('full', function (e) {
             if (e.type === 'destroy') clearInterval(slideshowTimer);
@@ -189,7 +186,6 @@
         });
     }
 
-    // 6. Повне меню налаштувань (повернуто все!)
     function addSettings() {
         Lampa.SettingsApi.addComponent({
             component: 'mobile_interface',
@@ -218,18 +214,7 @@
                 values: { '10000': '10 сек', '15000': '15 сек', '20000': '20 сек' }, 
                 default: '10000' 
             },
-            field: { name: 'Інтервал слайд-шоу', description: 'Час між зміною зображень' }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { 
-                name: 'mobile_interface_slideshow_quality', 
-                type: 'select', 
-                values: { 'w300': '300p', 'w780': '780p', 'original': 'Оригінал' }, 
-                default: 'w780' 
-            },
-            field: { name: 'Якість слайд-шоу', description: 'Роздільна здатність картинок' }
+            field: { name: 'Інтервал слайд-шоу' }
         });
 
         Lampa.SettingsApi.addParam({
@@ -237,17 +222,17 @@
             param: { 
                 name: 'mobile_interface_studios_bg_opacity', 
                 type: 'select', 
-                values: { '0.05': 'Мінімальна', '0.15': 'Легка', '0.3': 'Середня', '0.5': 'Густа' }, 
+                values: { '0': 'Вимкнено', '0.05': 'Мінімальна', '0.15': 'Легка', '0.3': 'Середня', '0.5': 'Густа' }, 
                 default: '0.15' 
             },
-            field: { name: 'Фон студій', description: 'Інтенсивність підкладки під логотипами' },
+            field: { name: 'Фон студій', description: 'Інтенсивність підкладки для логотипів' },
             onChange: function () { applyStyles(); }
         });
 
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { name: 'mobile_interface_quality', type: 'trigger', default: true },
-            field: { name: 'Значки якості', description: 'Показувати 4K, HDR, UKR тощо' }
+            field: { name: 'Значки якості', description: 'Показувати 4K, HDR, UKR' }
         });
     }
 
