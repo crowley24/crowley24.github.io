@@ -74,24 +74,28 @@
     function getBest(results) {
         var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
         var resOrder = ['HD', 'FULL HD', '2K', '4K'];
-        var limit = Math.min(results.length, 100);
-        
+        var audioOrder = ['2.0', '4.0', '5.1', '7.1'];
+        var limit = Math.min(results.length, 30);
         for (var i = 0; i < limit; i++) {
             var item = results[i];
-            var title = (item.Title || item.title || '').toLowerCase();
-            
-            // Покращений пошук UKR за допомогою регулярного виразу
-            if (/(ukr|укр|ua|\.ua|ukrainian)/i.test(title)) best.ukr = true;
-            if (/(dub|дубл)/i.test(title)) best.dub = true;
+            var title = (item.Title || '').toLowerCase();
+            if (title.indexOf('ukr') >= 0 || title.indexOf('укр') >= 0 || title.indexOf('ua') >= 0) best.ukr = true;
+            if (title.indexOf('dub') >= 0 || title.indexOf('дубл') >= 0) best.dub = true;
             
             var foundRes = null;
-            if (title.indexOf('4k') >= 0 || title.indexOf('2160') >= 0 || title.indexOf('uhd') >= 0) foundRes = '4K';
+            if (title.indexOf('4k') >= 0 || title.indexOf('2160') >= 0) foundRes = '4K';
             else if (title.indexOf('2k') >= 0 || title.indexOf('1440') >= 0) foundRes = '2K';
             else if (title.indexOf('1080') >= 0 || title.indexOf('fhd') >= 0) foundRes = 'FULL HD';
             else if (title.indexOf('720') >= 0 || title.indexOf('hd') >= 0) foundRes = 'HD';
-            
             if (foundRes && (!best.resolution || resOrder.indexOf(foundRes) > resOrder.indexOf(best.resolution))) best.resolution = foundRes;
-            
+
+            var foundAudio = null;
+            if (title.indexOf('7.1') >= 0) foundAudio = '7.1';
+            else if (title.indexOf('5.1') >= 0) foundAudio = '5.1';
+            else if (title.indexOf('4.0') >= 0) foundAudio = '4.0';
+            else if (title.indexOf('2.0') >= 0 || title.indexOf('stereo') >= 0) foundAudio = '2.0';
+            if (foundAudio && (!best.audio || audioOrder.indexOf(foundAudio) > audioOrder.indexOf(best.audio))) best.audio = foundAudio;
+
             if (item.ffprobe) {
                 var str = JSON.stringify(item.ffprobe);
                 if (str.indexOf('Vision') >= 0) best.dolbyVision = true;
@@ -167,27 +171,24 @@
                     }
 
                     if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Parser.get) {
-                        var query = movie.title || movie.name || movie.original_title || movie.original_name;
-                        Lampa.Parser.get({ search: query, movie: movie }, function(res) {
-                            var results = res.Results || res.results || (Array.isArray(res) ? res : []);
-                            
-                            // Завжди перевіряємо результати
-                            var best = getBest(results);
-                            var list = [];
-                            if (best.resolution) list.push(best.resolution);
-                            if (best.dolbyVision) list.push('Dolby Vision');
-                            else if (best.hdr) list.push('HDR');
-                            if (best.dub) list.push('DUB');
-                            if (best.ukr) list.push('UKR');
-                            
-                            $infoBlock.find('.quality-row').empty();
-                            
-                            list.forEach((type, i) => {
-                                if (svgIcons[type]) {
-                                    var $q = $('<div class="quality-item" style="animation-delay:'+(i*0.1)+'s"><img src="'+svgIcons[type]+'"></div>');
-                                    $infoBlock.find('.quality-row').append($q);
-                                }
-                            });
+                        Lampa.Parser.get({ search: movie.title || movie.name, movie: movie }, function(res) {
+                            if (res && res.Results) {
+                                var best = getBest(res.Results);
+                                var list = [];
+                                if (best.resolution) list.push(best.resolution);
+                                if (best.dolbyVision) list.push('Dolby Vision');
+                                else if (best.hdr) list.push('HDR');
+                                if (best.audio) list.push(best.audio);
+                                if (best.dub) list.push('DUB');
+                                if (best.ukr) list.push('UKR');
+                                
+                                list.forEach((type, i) => {
+                                    if (svgIcons[type]) {
+                                        var $q = $('<div class="quality-item" style="animation-delay:'+(i*0.1)+'s"><img src="'+svgIcons[type]+'"></div>');
+                                        $infoBlock.find('.quality-row').append($q);
+                                    }
+                                });
+                            }
                         });
                     }
                 }
@@ -218,6 +219,17 @@
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { 
+                name: 'mobile_interface_slideshow_time', 
+                type: 'select', 
+                values: { '10000': '10 сек', '15000': '15 сек', '20000': '20 сек' }, 
+                default: '10000' 
+            },
+            field: { name: 'Інтервал слайд-шоу' }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: { 
                 name: 'mobile_interface_studios_bg_opacity', 
                 type: 'select', 
                 values: { '0': 'Вимкнено', '0.05': 'Мінімальна', '0.15': 'Легка', '0.3': 'Середня', '0.5': 'Густа' }, 
@@ -230,7 +242,7 @@
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { name: 'mobile_interface_quality', type: 'trigger', default: true },
-            field: { name: 'Значки якості', description: 'Показувати 4K, HDR, UKR' }
+            field: { name: 'Значки якості', description: 'Показувати 4K, HDR, UKR, Audio' }
         });
     }
 
