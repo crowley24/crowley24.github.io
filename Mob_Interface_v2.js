@@ -67,10 +67,31 @@
         css += '.studio-row,.quality-row{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:14px;width:100%;}';
 
         /* ===== ОНОВЛЕНІ ЛОГО ===== */
-        css += '.studio-item{display:flex;align-items:center;justify-content:center;min-height:48px;padding:10px 18px;background:rgba(255,255,255,0.14);border-radius:14px;backdrop-filter:blur(6px);opacity:0;animation:qb_in .4s ease forwards;transition:transform .2s ease, background .2s ease;}';
-        css += '.studio-item:hover{transform:scale(1.05);background:rgba(255,255,255,0.22);}';
-        css += '.studio-item img{max-height:36px;width:auto;object-fit:contain;filter:drop-shadow(0 0 6px rgba(255,255,255,.7)) drop-shadow(0 0 3px rgba(255,255,255,.5));}';
+        css += '.studio-item{\
+display:flex;\
+align-items:center;\
+justify-content:center;\
+min-height:42px;\
+padding:8px 14px;\
+background:linear-gradient(145deg, rgba(20,30,60,0.95), rgba(10,15,30,0.95));\
+border:1px solid rgba(70,120,255,0.25);\
+border-radius:12px;\
+opacity:0;\
+animation:qb_in .4s ease forwards;\
+transition:transform .2s ease, background .2s ease;\
+}';
 
+css += '.studio-item:hover{\
+transform:scale(1.04);\
+background:linear-gradient(145deg, rgba(30,50,110,0.95), rgba(15,25,60,0.95));\
+}';
+
+css += '.studio-item img{\
+max-height:28px;\
+width:auto;\
+object-fit:contain;\
+filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6));\
+}';
         css += '.quality-item{height:1.25em;opacity:0;animation:qb_in .4s ease forwards;}';
         css += '.quality-item img{height:100%;width:auto;object-fit:contain;}';
 
