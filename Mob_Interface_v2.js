@@ -1,11 +1,11 @@
 (function () {
     'use strict';
 
-    // 1. Ініціалізація налаштувань
     var settings_list = [
         { id: 'mobile_interface_animation', default: true },
         { id: 'mobile_interface_studios', default: true },
-        { id: 'mobile_interface_studios_bg_opacity', default: '0.1' }, // Новий стандарт
+        { id: 'mobile_interface_studios_bg_opacity', default: '0.1' },
+        { id: 'mobile_interface_studios_contrast', default: '1.2' }, // Нове налаштування
         { id: 'mobile_interface_quality', default: true },
         { id: 'mobile_interface_slideshow', default: true },
         { id: 'mobile_interface_slideshow_time', default: '10000' }, 
@@ -27,13 +27,14 @@
         '2.0': pluginPath + '2.0.svg', 'DUB': pluginPath + 'DUB.svg', 'UKR': pluginPath + 'UKR.svg'
     };
 
-    // 2. Стилі
     function applyStyles() {
         var oldStyle = document.getElementById('mobile-interface-styles');
         if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
 
         var isAnimationEnabled = Lampa.Storage.get('mobile_interface_animation');
         var bgOpacity = Lampa.Storage.get('mobile_interface_studios_bg_opacity', '0');
+        var stContrast = Lampa.Storage.get('mobile_interface_studios_contrast', '1.2');
+        
         var style = document.createElement('style');
         style.id = 'mobile-interface-styles';
         
@@ -56,7 +57,6 @@
         css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 15px 0; width: 100%; } ';
         css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 12px; width: 100%; } ';
         
-        // Новий стиль для студій: Прямокутна плашка замість плями
         css += '.studio-item { height: 3.2em; opacity: 0; animation: qb_in 0.4s ease forwards; padding: 6px 12px; border-radius: 12px; display: flex; align-items: center; justify-content: center; ';
         if (bgOpacity !== '0') {
             css += 'background: rgba(255, 255, 255, ' + bgOpacity + '); ';
@@ -64,8 +64,11 @@
         }
         css += '} ';
 
+        // Застосування контрасту та фільтрів до логотипів студій
+        css += '.studio-item img { height: 100%; width: auto; object-fit: contain; ';
+        css += 'filter: contrast(' + stContrast + ') brightness(1.1) drop-shadow(0px 0px 0.5px rgba(255,255,255,0.8)); } ';
+
         css += '.quality-item { height: 1.4em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
-        css += '.studio-item img { height: 100%; width: auto; object-fit: contain; } ';
         css += '.quality-item img { height: 100%; width: auto; object-fit: contain; } ';
         css += '} ';
 
@@ -73,7 +76,6 @@
         document.head.appendChild(style);
     }
 
-    // 3. Аналіз якості
     function getBest(results) {
         var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
         var resOrder = ['HD', 'FULL HD', '2K', '4K'];
@@ -101,7 +103,6 @@
         return best;
     }
 
-    // 4. Слайд-шоу
     function startSlideshow($poster, backdrops) {
         if (!Lampa.Storage.get('mobile_interface_slideshow') || backdrops.length < 2) return;
         var index = 0;
@@ -126,7 +127,6 @@
         }, interval);
     }
 
-    // 5. Основна логіка
     function initPlugin() {
         Lampa.Listener.follow('full', function (e) {
             if (e.type === 'destroy') clearInterval(slideshowTimer);
@@ -191,7 +191,6 @@
         });
     }
 
-    // 6. Реєстрація налаштувань
     function addSettings() {
         Lampa.SettingsApi.addComponent({
             component: 'mobile_interface',
@@ -215,40 +214,25 @@
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { 
-                name: 'mobile_interface_slideshow_time', 
-                type: 'select', 
-                values: { '10000': '10 сек', '15000': '15 сек', '20000': '20 сек' }, 
-                default: '10000' 
-            },
-            field: { name: 'Інтервал слайд-шоу', description: 'Час між зміною зображень' }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { 
-                name: 'mobile_interface_slideshow_quality', 
-                type: 'select', 
-                values: { 'w300': '300p', 'w780': '780p', 'w1280': '1280p', 'original': 'Оригінал' }, 
-                default: 'w780' 
-            },
-            field: { name: 'Якість слайд-шоу', description: 'Роздільна здатність картинок' }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { name: 'mobile_interface_studios', type: 'trigger', default: true },
-            field: { name: 'Логотипи студій', description: 'Показувати іконки Netflix, Disney тощо' }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { 
                 name: 'mobile_interface_studios_bg_opacity', 
                 type: 'select', 
-                values: { '0': 'Вимкнено', '0.1': '10% (Легко)', '0.2': '20% (Середньо)', '0.4': '40% (Яскраво)' }, 
+                values: { '0': 'Вимкнено', '0.1': '10%', '0.2': '20%', '0.4': '40%' }, 
                 default: '0.1' 
             },
-            field: { name: 'Підкладка логотипів', description: 'Яскравість плашок під студіями' },
+            field: { name: 'Підкладка логотипів', description: 'Прозорість фону під студіями' },
+            onChange: function () { applyStyles(); }
+        });
+
+        // НОВИЙ ПАРАМЕТР КОНТРАСТУ
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: { 
+                name: 'mobile_interface_studios_contrast', 
+                type: 'select', 
+                values: { '1.0': 'Нормальний', '1.2': 'Трохи вище', '1.5': 'Високий', '2.0': 'Максимальний' }, 
+                default: '1.2' 
+            },
+            field: { name: 'Контраст логотипів', description: 'Зробити іконки студій чіткішими' },
             onChange: function () { applyStyles(); }
         });
 
