@@ -54,18 +54,31 @@
         css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 12px; margin: 15px 0; width: 100%; } ';
         css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%; } ';
         
-        css += '.studio-item { height: 2.2em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
-        css += '.quality-item { height: 1.25em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
-        
-        /* ОНОВЛЕНО: Спеціальний фільтр для логотипів студій */
+        /* ОНОВЛЕНО: Підкладка для студій */
+        css += '.studio-item { \
+            display: flex; \
+            align-items: center; \
+            justify-content: center; \
+            height: 42px; \
+            padding: 0 12px; \
+            background: rgba(255, 255, 255, 0.12); \
+            background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 100%); \
+            border: 1px solid rgba(255, 255, 255, 0.15); \
+            border-radius: 10px; \
+            backdrop-filter: blur(5px); \
+            -webkit-backdrop-filter: blur(5px); \
+            opacity: 0; \
+            animation: qb_in 0.4s ease forwards; \
+        } ';
+
         css += '.studio-item img { \
-            height: 100%; \
+            max-height: 24px; \
             width: auto; \
             object-fit: contain; \
-            /* Подвійний drop-shadow створює білий контур навколо чорних об\'єктів, роблячи їх видимими, але не міняє колір яскравих лого */\
-            filter: drop-shadow(1px 1px 0px rgba(255,255,255,0.8)) drop-shadow(-1px -1px 0px rgba(255,255,255,0.8)) drop-shadow(0px 0px 4px rgba(255,255,255,0.5)); \
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2)); \
         } ';
         
+        css += '.quality-item { height: 1.25em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
         css += '.quality-item img { height: 100%; width: auto; object-fit: contain; filter: drop-shadow(0px 0px 1px rgba(255,255,255,0.5)); } ';
         css += '} ';
 
@@ -139,6 +152,7 @@
                     url: 'https://api.themoviedb.org/3/' + (movie.name ? 'tv' : 'movie') + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key(),
                     success: function(res) {
                         var lang = Lampa.Storage.get('language') || 'uk';
+                        // За вашим запитом: якщо немає українського лого, беремо англійське
                         var logo = res.logos.filter(l => l.iso_639_1 === lang)[0] || res.logos.filter(l => l.iso_639_1 === 'en')[0] || res.logos[0];
                         if (logo) {
                             var imgUrl = Lampa.TMDB.image('/t/p/w300' + logo.file_path.replace('.svg', '.png'));
@@ -257,4 +271,3 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
-                    
