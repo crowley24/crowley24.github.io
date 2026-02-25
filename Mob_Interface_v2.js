@@ -7,7 +7,6 @@
         { id: 'mobile_interface_studios_bg_opacity', default: '0.15' },
         { id: 'mobile_interface_quality', default: true },
         { id: 'mobile_interface_slideshow', default: true },
-        { id: 'mobile_interface_parallax', default: false },
         { id: 'mobile_interface_slideshow_time', default: '10000' }, 
         { id: 'mobile_interface_slideshow_quality', default: 'w780' }
     ];
@@ -36,22 +35,22 @@
         var style = document.createElement('style');
         style.id = 'mobile-interface-styles';
         
-        var css = '@keyframes kenBurnsEffect { 0% { transform: scale(1.1); } 50% { transform: scale(1.2); } 100% { transform: scale(1.1); } } ';
+        var css = '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } } ';
         css += '@keyframes qb_in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } ';
         css += '@media screen and (max-width: 480px) { ';
         css += '.background { background: #000 !important; } ';
         css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 60vh !important; pointer-events: none !important; } ';
         css += '.full-start-new__poster img { ';
-        // Збільшуємо scale до 1.1, щоб при паралаксі не було видно країв
-        css += 'transform: scale(1.1); ';
         css += (isAnimationEnabled ? 'animation: kenBurnsEffect 25s ease-in-out infinite !important; ' : '');
-        css += 'transform-origin: center center !important; transition: opacity 1.5s ease-in-out, transform 0.2s ease-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
+        css += 'transform-origin: center center !important; transition: opacity 1.5s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
         
         css += '.full-start-new__right { background: none !important; margin-top: -110px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
         css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 80px; margin-bottom: 5px; } ';
         css += '.full-start-new__title img { max-height: 100px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); } ';
         
+        css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 15px !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
+
         css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 15px 0; width: 100%; } ';
         css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%; } ';
         
@@ -72,48 +71,26 @@
         document.head.appendChild(style);
     }
 
-    // 3. Логіка Паралаксу
-    function initParallax() {
-        if (!Lampa.Storage.get('mobile_interface_parallax')) return;
-
-        function handleOrientation(event) {
-            var x = event.gamma; // -90 to 90
-            var y = event.beta;  // -180 to 180
-
-            // Обмежуємо чутливість (макс зміщення 15px)
-            var moveX = Math.min(Math.max(x / 4, -15), 15);
-            var moveY = Math.min(Math.max((y - 45) / 4, -15), 15); // 45 - середній кут тримання телефону
-
-            $('.full-start-new__poster img').css('transform', 'scale(1.15) translate3d(' + moveX + 'px, ' + moveY + 'px, 0)');
-        }
-
-        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-            // Для iOS: потрібен клік для активації
-            $('body').one('click', function() {
-                DeviceOrientationEvent.requestPermission().then(response => {
-                    if (response === 'granted') window.addEventListener('deviceorientation', handleOrientation);
-                });
-            });
-        } else {
-            window.addEventListener('deviceorientation', handleOrientation);
-        }
-    }
-
     function getBest(results) {
         var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
         var resOrder = ['HD', 'FULL HD', '2K', '4K'];
-        var limit = Math.min(results.length, 30);
+        // Збільшуємо ліміт перевірки торрентів до 100 для кращого пошуку міток
+        var limit = Math.min(results.length, 100);
         for (var i = 0; i < limit; i++) {
             var item = results[i];
-            var title = (item.Title || '').toLowerCase();
-            if (title.indexOf('ukr') >= 0 || title.indexOf('укр') >= 0 || title.indexOf('ua') >= 0) best.ukr = true;
+            var title = (item.Title || item.title || '').toLowerCase();
+            
+            if (title.indexOf('ukr') >= 0 || title.indexOf('укр') >= 0 || title.indexOf('ua') >= 0 || title.indexOf('.ua') >= 0) best.ukr = true;
             if (title.indexOf('dub') >= 0 || title.indexOf('дубл') >= 0) best.dub = true;
+            
             var foundRes = null;
-            if (title.indexOf('4k') >= 0 || title.indexOf('2160') >= 0) foundRes = '4K';
+            if (title.indexOf('4k') >= 0 || title.indexOf('2160') >= 0 || title.indexOf('uhd') >= 0) foundRes = '4K';
             else if (title.indexOf('2k') >= 0 || title.indexOf('1440') >= 0) foundRes = '2K';
             else if (title.indexOf('1080') >= 0 || title.indexOf('fhd') >= 0) foundRes = 'FULL HD';
             else if (title.indexOf('720') >= 0 || title.indexOf('hd') >= 0) foundRes = 'HD';
+            
             if (foundRes && (!best.resolution || resOrder.indexOf(foundRes) > resOrder.indexOf(best.resolution))) best.resolution = foundRes;
+            
             if (item.ffprobe) {
                 var str = JSON.stringify(item.ffprobe);
                 if (str.indexOf('Vision') >= 0) best.dolbyVision = true;
@@ -152,17 +129,12 @@
 
     function initPlugin() {
         Lampa.Listener.follow('full', function (e) {
-            if (e.type === 'destroy') {
-                clearInterval(slideshowTimer);
-                window.removeEventListener('deviceorientation', null);
-            }
+            if (e.type === 'destroy') clearInterval(slideshowTimer);
             if (window.innerWidth <= 480 && (e.type === 'complite' || e.type === 'complete')) {
                 var movie = e.data.movie;
                 var $render = e.object.activity.render();
                 var $details = $render.find('.full-start-new__details');
                 
-                initParallax();
-
                 $.ajax({
                     url: 'https://api.themoviedb.org/3/' + (movie.name ? 'tv' : 'movie') + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key(),
                     success: function(res) {
@@ -194,15 +166,22 @@
                     }
 
                     if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Parser.get) {
-                        Lampa.Parser.get({ search: movie.title || movie.name, movie: movie }, function(res) {
-                            if (res && res.Results) {
-                                var best = getBest(res.Results);
+                        // Використовуємо більш точний пошук
+                        var query = movie.title || movie.name || movie.original_title || movie.original_name;
+                        Lampa.Parser.get({ search: query, movie: movie }, function(res) {
+                            var results = res.Results || res.results || (Array.isArray(res) ? res : []);
+                            
+                            if (results && results.length) {
+                                var best = getBest(results);
                                 var list = [];
                                 if (best.resolution) list.push(best.resolution);
                                 if (best.dolbyVision) list.push('Dolby Vision');
                                 else if (best.hdr) list.push('HDR');
                                 if (best.dub) list.push('DUB');
                                 if (best.ukr) list.push('UKR');
+                                
+                                // Очищуємо перед рендером значків
+                                $infoBlock.find('.quality-row').empty();
                                 
                                 list.forEach((type, i) => {
                                     if (svgIcons[type]) {
@@ -227,9 +206,26 @@
 
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
-            param: { name: 'mobile_interface_parallax', type: 'trigger', default: false },
-            field: { name: 'Паралакс-ефект', description: 'Рух фону при нахилі телефону' },
+            param: { name: 'mobile_interface_animation', type: 'trigger', default: true },
+            field: { name: 'Анімація постера', description: 'Ефект наближення фону' },
             onChange: function () { applyStyles(); }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: { name: 'mobile_interface_slideshow', type: 'trigger', default: true },
+            field: { name: 'Слайд-шоу фону', description: 'Автоматична зміна зображень фону' }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: { 
+                name: 'mobile_interface_slideshow_time', 
+                type: 'select', 
+                values: { '10000': '10 сек', '15000': '15 сек', '20000': '20 сек' }, 
+                default: '10000' 
+            },
+            field: { name: 'Інтервал слайд-шоу' }
         });
 
         Lampa.SettingsApi.addParam({
@@ -246,26 +242,8 @@
 
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
-            param: { name: 'mobile_interface_animation', type: 'trigger', default: true },
-            field: { name: 'Анімація постера', description: 'Ефект наближення фону' },
-            onChange: function () { applyStyles(); }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { name: 'mobile_interface_slideshow', type: 'trigger', default: true },
-            field: { name: 'Слайд-шоу фону', description: 'Автоматична зміна зображень' }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { 
-                name: 'mobile_interface_slideshow_time', 
-                type: 'select', 
-                values: { '10000': '10 сек', '15000': '15 сек', '20000': '20 сек' }, 
-                default: '10000' 
-            },
-            field: { name: 'Інтервал слайд-шоу' }
+            param: { name: 'mobile_interface_quality', type: 'trigger', default: true },
+            field: { name: 'Значки якості', description: 'Показувати 4K, HDR, UKR' }
         });
     }
 
@@ -281,4 +259,3 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
-                                       
