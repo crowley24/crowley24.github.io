@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    // 1. Ініціалізація налаштувань
+    // 1. Ініціалізація налаштувань (включаючи втрачені параметри слайд-шоу)
     var settings_list = [
         { id: 'mobile_interface_animation', default: true },
         { id: 'mobile_interface_studios', default: true },
@@ -49,22 +49,23 @@
         
         css += '.full-start-new__right { background: none !important; margin-top: -110px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
         css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 80px; margin-bottom: 5px; } ';
-        css += '.full-start-new__title img { max-height: 110px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); } ';
+        css += '.full-start-new__title img { max-height: 100px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); } ';
         
         css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 15px !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
 
         css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 15px 0; width: 100%; } ';
         css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%; } ';
         
-        // Плашка з ефектом матового скла для логотипів
+        // Студії з підкладкою
         css += '.studio-item { height: 3.2em; opacity: 0; animation: qb_in 0.4s ease forwards; padding: 6px 12px; border-radius: 12px; display: flex; align-items: center; justify-content: center; ';
         css += 'background: rgba(255, 255, 255, ' + bgOpacity + '); ';
         css += 'backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); ';
         css += 'box-shadow: 0 2px 10px rgba(0,0,0,0.2); } ';
 
+        // Якість з тінню для видимості (як в оригіналі)
         css += '.quality-item { height: 1.4em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
         css += '.studio-item img { height: 100%; width: auto; object-fit: contain; filter: contrast(1.1); } ';
-        css += '.quality-item img { height: 100%; width: auto; object-fit: contain; } ';
+        css += '.quality-item img { height: 100%; width: auto; object-fit: contain; filter: drop-shadow(0px 0px 1px rgba(255,255,255,0.4)); } ';
         css += '} ';
 
         style.textContent = css;
@@ -99,7 +100,7 @@
         return best;
     }
 
-    // 4. Слайд-шоу фонових зображень
+    // 4. Слайд-шоу
     function startSlideshow($poster, backdrops) {
         if (!Lampa.Storage.get('mobile_interface_slideshow') || backdrops.length < 2) return;
         var index = 0;
@@ -124,7 +125,7 @@
         }, interval);
     }
 
-    // 5. Основна функція рендеру
+    // 5. Функція рендеру
     function initPlugin() {
         Lampa.Listener.follow('full', function (e) {
             if (e.type === 'destroy') clearInterval(slideshowTimer);
@@ -133,7 +134,6 @@
                 var $render = e.object.activity.render();
                 var $details = $render.find('.full-start-new__details');
                 
-                // Завантаження лого фільму та слайдшоу
                 $.ajax({
                     url: 'https://api.themoviedb.org/3/' + (movie.name ? 'tv' : 'movie') + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key(),
                     success: function(res) {
@@ -152,7 +152,6 @@
                     var $infoBlock = $('<div class="plugin-info-block"><div class="studio-row"></div><div class="quality-row"></div></div>');
                     $details.after($infoBlock);
 
-                    // Рендер студій
                     if (Lampa.Storage.get('mobile_interface_studios')) {
                         var studios = (movie.networks || []).concat(movie.production_companies || []);
                         var addedLogos = [];
@@ -165,7 +164,6 @@
                         });
                     }
 
-                    // Рендер якості
                     if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Parser.get) {
                         Lampa.Parser.get({ search: movie.title || movie.name, movie: movie }, function(res) {
                             if (res && res.Results) {
@@ -191,7 +189,7 @@
         });
     }
 
-    // 6. Меню налаштувань
+    // 6. Повне меню налаштувань (повернуто все!)
     function addSettings() {
         Lampa.SettingsApi.addComponent({
             component: 'mobile_interface',
@@ -204,6 +202,34 @@
             param: { name: 'mobile_interface_animation', type: 'trigger', default: true },
             field: { name: 'Анімація постера', description: 'Ефект наближення фону' },
             onChange: function () { applyStyles(); }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: { name: 'mobile_interface_slideshow', type: 'trigger', default: true },
+            field: { name: 'Слайд-шоу фону', description: 'Автоматична зміна зображень фону' }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: { 
+                name: 'mobile_interface_slideshow_time', 
+                type: 'select', 
+                values: { '10000': '10 сек', '15000': '15 сек', '20000': '20 сек' }, 
+                default: '10000' 
+            },
+            field: { name: 'Інтервал слайд-шоу', description: 'Час між зміною зображень' }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: { 
+                name: 'mobile_interface_slideshow_quality', 
+                type: 'select', 
+                values: { 'w300': '300p', 'w780': '780p', 'original': 'Оригінал' }, 
+                default: 'w780' 
+            },
+            field: { name: 'Якість слайд-шоу', description: 'Роздільна здатність картинок' }
         });
 
         Lampa.SettingsApi.addParam({
@@ -221,7 +247,7 @@
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { name: 'mobile_interface_quality', type: 'trigger', default: true },
-            field: { name: 'Значки якості', description: 'Показувати 4K, HDR, DUB тощо' }
+            field: { name: 'Значки якості', description: 'Показувати 4K, HDR, UKR тощо' }
         });
     }
 
