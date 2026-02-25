@@ -18,13 +18,6 @@
     });
 
     var slideshowTimer; 
-    var pluginPath = 'https://crowley24.github.io/Icons/';
-    var svgIcons = {
-        '4K': pluginPath + '4K.svg', '2K': pluginPath + '2K.svg', 'FULL HD': pluginPath + 'FULL HD.svg',
-        'HD': pluginPath + 'HD.svg', 'HDR': pluginPath + 'HDR.svg', 'Dolby Vision': pluginPath + 'Dolby Vision.svg',
-        '7.1': pluginPath + '7.1.svg', '5.1': pluginPath + '5.1.svg', '4.0': pluginPath + '4.0.svg',
-        '2.0': pluginPath + '2.0.svg', 'DUB': pluginPath + 'DUB.svg', 'UKR': pluginPath + 'UKR.svg'
-    };
 
     function applyStyles() {
         var oldStyle = document.getElementById('mobile-interface-styles');
@@ -52,19 +45,41 @@
         css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 15px !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
 
         css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 15px 0; width: 100%; } ';
-        css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%; } ';
+        css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px; width: 100%; } ';
         
         css += '.studio-item { height: 3.2em; opacity: 0; animation: qb_in 0.4s ease forwards; padding: 6px 12px; border-radius: 12px; display: flex; align-items: center; justify-content: center; ';
         if (bgOpacity !== '0') {
             css += 'background: rgba(255, 255, 255, ' + bgOpacity + '); ';
             css += 'backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); ';
-            css += 'box-shadow: 0 2px 10px rgba(0,0,0,0.2); ';
         }
         css += '} ';
 
-        css += '.quality-item { height: 1.4em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
-        css += '.studio-item img { height: 100%; width: auto; object-fit: contain; filter: contrast(1.1); } ';
-        css += '.quality-item img { height: 100%; width: auto; object-fit: contain; filter: drop-shadow(0px 0px 1px rgba(255,255,255,0.4)); } ';
+        // НОВИЙ СТИЛЬ ДЛЯ МІТОК ЯКОСТІ (ЗОЛОТИЙ)
+        css += '.quality-item { ';
+        css += '  position: relative; ';
+        css += '  opacity: 0; animation: qb_in 0.4s ease forwards; ';
+        css += '  background: #111; '; // Темний фон
+        css += '  border: 1.5px solid #FFD700; '; // Золота рамка
+        css += '  border-radius: 3px; ';
+        css += '  padding: 2px 6px; ';
+        css += '  color: #FFD700; '; // Золотий колір тексту
+        css += '  font-weight: 900; ';
+        css += '  font-size: 0.85em; ';
+        css += '  text-transform: uppercase; ';
+        css += '  box-shadow: 0 0 4px rgba(255, 215, 0, 0.3); ';
+        css += '  display: flex; align-items: center; justify-content: center; ';
+        css += '  min-width: 35px; height: 1.4em; ';
+        css += '} ';
+        
+        // Маленький підпис знизу для HDR
+        css += '.quality-item-hdr { padding-bottom: 5px; } ';
+        css += '.quality-item-hdr::after { ';
+        css += '  content: "High Dynamic Range"; ';
+        css += '  position: absolute; bottom: 1px; left: 0; width: 100%; ';
+        css += '  font-size: 4px; text-align: center; font-weight: 400; opacity: 0.8; ';
+        css += '} ';
+
+        css += '.studio-item img { height: 100%; width: auto; object-fit: contain; } ';
         css += '} ';
 
         style.textContent = css;
@@ -72,30 +87,20 @@
     }
 
     function getBest(results) {
-        var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
+        var best = { resolution: null, hdr: false, dolbyVision: false, dub: false, ukr: false };
         var resOrder = ['HD', 'FULL HD', '2K', '4K'];
-        var audioOrder = ['2.0', '4.0', '5.1', '7.1'];
         var limit = Math.min(results.length, 30);
         for (var i = 0; i < limit; i++) {
             var item = results[i];
             var title = (item.Title || '').toLowerCase();
             if (title.indexOf('ukr') >= 0 || title.indexOf('укр') >= 0 || title.indexOf('ua') >= 0) best.ukr = true;
             if (title.indexOf('dub') >= 0 || title.indexOf('дубл') >= 0) best.dub = true;
-            
             var foundRes = null;
             if (title.indexOf('4k') >= 0 || title.indexOf('2160') >= 0) foundRes = '4K';
             else if (title.indexOf('2k') >= 0 || title.indexOf('1440') >= 0) foundRes = '2K';
             else if (title.indexOf('1080') >= 0 || title.indexOf('fhd') >= 0) foundRes = 'FULL HD';
             else if (title.indexOf('720') >= 0 || title.indexOf('hd') >= 0) foundRes = 'HD';
             if (foundRes && (!best.resolution || resOrder.indexOf(foundRes) > resOrder.indexOf(best.resolution))) best.resolution = foundRes;
-
-            var foundAudio = null;
-            if (title.indexOf('7.1') >= 0) foundAudio = '7.1';
-            else if (title.indexOf('5.1') >= 0) foundAudio = '5.1';
-            else if (title.indexOf('4.0') >= 0) foundAudio = '4.0';
-            else if (title.indexOf('2.0') >= 0 || title.indexOf('stereo') >= 0) foundAudio = '2.0';
-            if (foundAudio && (!best.audio || audioOrder.indexOf(foundAudio) > audioOrder.indexOf(best.audio))) best.audio = foundAudio;
-
             if (item.ffprobe) {
                 var str = JSON.stringify(item.ffprobe);
                 if (str.indexOf('Vision') >= 0) best.dolbyVision = true;
@@ -176,17 +181,14 @@
                                 var best = getBest(res.Results);
                                 var list = [];
                                 if (best.resolution) list.push(best.resolution);
-                                if (best.dolbyVision) list.push('Dolby Vision');
+                                if (best.dolbyVision) list.push('DV');
                                 else if (best.hdr) list.push('HDR');
-                                if (best.audio) list.push(best.audio);
-                                if (best.dub) list.push('DUB');
                                 if (best.ukr) list.push('UKR');
                                 
                                 list.forEach((type, i) => {
-                                    if (svgIcons[type]) {
-                                        var $q = $('<div class="quality-item" style="animation-delay:'+(i*0.1)+'s"><img src="'+svgIcons[type]+'"></div>');
-                                        $infoBlock.find('.quality-row').append($q);
-                                    }
+                                    var extraClass = (type === 'HDR') ? ' quality-item-hdr' : '';
+                                    var $q = $('<div class="quality-item'+extraClass+'" style="animation-delay:'+(i*0.1)+'s"><span>'+type+'</span></div>');
+                                    $infoBlock.find('.quality-row').append($q);
                                 });
                             }
                         });
@@ -242,7 +244,7 @@
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { name: 'mobile_interface_quality', type: 'trigger', default: true },
-            field: { name: 'Значки якості', description: 'Показувати 4K, HDR, UKR, Audio' }
+            field: { name: 'Значки якості', description: 'Показувати 4K, HDR, UKR' }
         });
     }
 
@@ -258,3 +260,4 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
+
