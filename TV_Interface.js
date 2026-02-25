@@ -12,7 +12,7 @@
     const PLUGIN_ICON = '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="30" width="80" height="40" rx="5" fill="hsl(0, 0%, 30%)"/><circle cx="50" cy="50" r="10" fill="white"/></svg>';
 
     function initializePlugin() {  
-        // ПРИБРАНО if (!Lampa.Platform.screen('tv')), щоб працювало на телефонах
+        // ПРАЦЮЄ І НА ТВ, І НА ТЕЛЕФОНІ
         addCustomTemplate();  
         addStyles();  
         addSettings();
@@ -20,7 +20,7 @@
     }  
 
     function addSettings() {
-        const defaults = { 'applecation_logo_scale': '100', 'applecation_text_scale': '100', 'applecation_show_studio': true };  
+        const defaults = { 'applecation_logo_scale': '100', 'applecation_text_scale': '100', 'applecation_apple_zoom': true };  
         Object.keys(defaults).forEach(key => { if (Lampa.Storage.get(key) === undefined) Lampa.Storage.set(key, defaults[key]); });  
 
         Lampa.SettingsApi.addComponent({ component: 'applecation_settings', name: 'NewCard', icon: PLUGIN_ICON });  
@@ -50,7 +50,7 @@
 
                 <div class="applecation__description"></div>
 
-                <div class="full-start-new__buttons applecation__btns">
+                <div class="full-start-new__buttons applecation__buttons-row">
                     <div class="full-start__button selector button--play">
                         ${ICONS.play} <span>Дивитися</span>
                     </div>
@@ -60,7 +60,7 @@
                     <div class="full-start__button selector button--options">${ICONS.options}</div>
                 </div>
             </div>
-            <div class="full-start-new__right apple-hide-panel"></div> 
+            <div class="full-start-new__right apple-hidden-panel"></div>
         </div>`;  
         Lampa.Template.add('full_start_new', template);  
     }  
@@ -69,14 +69,10 @@
         const styles = `
         <style>
             :root { --apple-logo-scale: 1; --apple-text-scale: 1; }
-
-            /* ПРИБИРАЄМО ПОЛОСУ ТА ПРАВУ ПАНЕЛЬ */
-            .applecation .apple-hide-panel,
-            .applecation .full-start-new__split { 
-                display: none !important; 
-                width: 0 !important; 
-                border: none !important; 
-            }
+            
+            /* Прибираємо полосу справа */
+            .applecation .apple-hidden-panel,
+            .applecation .full-start-new__split { display: none !important; width: 0 !important; border: none !important; }
 
             .applecation__body { 
                 height: 100vh; display: flex; flex-direction: column; justify-content: flex-end; 
@@ -87,15 +83,8 @@
 
             .applecation__logo img { 
                 max-width: calc(480px * var(--apple-logo-scale)); 
-                max-height: calc(180px * var(--apple-logo-scale)); 
+                max-height: calc(200px * var(--apple-logo-scale)); 
                 object-fit: contain; object-position: left bottom;
-            }
-
-            /* Адаптація для телефону */
-            @media screen and (max-width: 900px) {
-                .applecation__logo img { max-width: 280px; }
-                .applecation__body { padding-bottom: 25px; }
-                .applecation__btns { gap: 10px !important; }
             }
 
             .applecation__premium-meta { 
@@ -104,32 +93,32 @@
             }
 
             .applecation__description {
-                max-width: 800px; margin-bottom: 25px; line-height: 1.4;
-                font-size: calc(1em * var(--apple-text-scale));
-                color: rgba(255,255,255,0.8);
+                max-width: 750px; margin-bottom: 25px; line-height: 1.5;
+                font-size: calc(1.05em * var(--apple-text-scale));
+                color: rgba(255,255,255,0.85);
                 display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
             }
 
-            /* ПОВЕРНЕННЯ КНОПОК */
-            .applecation .full-start-new__buttons { 
-                display: flex !important; align-items: center !important; gap: 20px !important; 
-            }
-
+            .applecation__buttons-row { display: flex !important; align-items: center !important; gap: 15px !important; }
+            
             .button--play { 
                 background: #fff !important; color: #000 !important; 
-                padding: 10px 25px !important; border-radius: 10px !important; 
-                font-weight: 700 !important; display: flex; align-items: center; gap: 8px;
+                padding: 12px 35px !important; border-radius: 12px !important; 
+                font-weight: 700 !important; display: flex; align-items: center; gap: 10px;
             }
 
+            /* Кнопки без кіл, як ви просили раніше */
             .applecation .full-start__button { 
                 background: none !important; border: none !important; 
                 color: #fff !important; padding: 5px !important;
+                display: flex !important; align-items: center; justify-content: center;
             }
 
             .applecation .full-start__button.focus { 
-                transform: scale(1.2) !important; 
-                filter: drop-shadow(0 0 5px rgba(255,255,255,0.5)) !important;
+                transform: scale(1.3) !important; 
+                filter: drop-shadow(0 0 5px rgba(255,255,255,0.8)) !important;
             }
+            .button--play.focus { background: #e0e0e0 !important; transform: scale(1.05) !important; filter: none !important; }
         </style>`;  
         $('body').append(styles);  
     }  
@@ -140,12 +129,12 @@
 
         const year = (data.release_date || data.first_air_date || '').split('-')[0];
         const genres = data.genres?.slice(0, 2).map(g => g.name).join(' · ');
-        const time = data.runtime ? `${Math.floor(data.runtime / 60)}г ${data.runtime % 60}хв` : '';
-        render.find('.applecation__line-meta').text(`${year} · ${genres} · ${time}`);
+        const runtime = data.runtime ? `${Math.floor(data.runtime / 60)}г ${data.runtime % 60}хв` : '';
+        render.find('.applecation__line-meta').text(`${year} · ${genres} · ${runtime}`);
         render.find('.applecation__description').text(data.overview);
 
         const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 2);
-        render.find('.applecation__studios').html(studios.map(s => `<img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}" style="max-height:22px; margin-right:8px;">`).join(''));
+        render.find('.applecation__studios').html(studios.map(s => `<img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}" style="max-height:24px; margin-right:8px;">`).join(''));
 
         $.get(Lampa.TMDB.api(`${data.name ? 'tv' : 'movie'}/${data.id}/images?api_key=${Lampa.TMDB.key()}`), (d) => {
             const best = d.logos.find(l => l.iso_639_1 === 'uk') || d.logos.find(l => l.iso_639_1 === 'en') || d.logos[0];
