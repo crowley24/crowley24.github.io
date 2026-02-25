@@ -1,6 +1,7 @@
 (function () {
     'use strict';
 
+    // 1. Ініціалізація налаштувань
     var settings_list = [
         { id: 'mobile_interface_animation', default: true },
         { id: 'mobile_interface_studios', default: true },
@@ -25,6 +26,7 @@
         '2.0': pluginPath + '2.0.svg', 'DUB': pluginPath + 'DUB.svg', 'UKR': pluginPath + 'UKR.svg'
     };
 
+    // 2. Стилі
     function applyStyles() {
         var oldStyle = document.getElementById('mobile-interface-styles');
         if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
@@ -52,22 +54,27 @@
         css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 20px 0; width: 100%; } ';
         css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; width: 100%; } ';
         
-        /* ЧИСТИЙ ТА СУЧАСНИЙ ВИГЛЯД ЛОГОТИПІВ */
+        /* ОНОВЛЕНО: ГРАДІЄНТНЕ СВІТІННЯ ДЛЯ ЛОГО */
         css += '.studio-item { \
             display: flex; \
             align-items: center; \
-            height: 30px; \
+            justify-content: center; \
+            padding: 8px 16px; \
+            min-width: 60px; \
+            min-height: 40px; \
+            /* Радіальне світіння за логотипом */ \
+            background: radial-gradient(circle, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.05) 50%, transparent 85%); \
+            border-radius: 50%; \
             opacity: 0; \
             animation: qb_in 0.4s ease forwards; \
         } ';
 
         css += '.studio-item img { \
-            height: 100%; \
+            max-height: 26px; \
             width: auto; \
             object-fit: contain; \
-            /* Фільтр: робить чорне білим, але зберігає кольори (якщо вони яскраві) */ \
-            filter: brightness(0) invert(1) drop-shadow(0 0 2px rgba(255,255,255,0.2)); \
-            mix-blend-mode: screen; \
+            /* Чітка тінь замість розмиття для розділення деталей */ \
+            filter: drop-shadow(0px 1px 1px rgba(0,0,0,0.5)); \
         } ';
         
         css += '.quality-item { height: 1.25em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
@@ -78,6 +85,7 @@
         document.head.appendChild(style);
     }
 
+    // 3. Аналіз якості
     function getBest(results) {
         var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
         var resOrder = ['HD', 'FULL HD', '2K', '4K'];
@@ -100,6 +108,7 @@
         return best;
     }
 
+    // 4. Слайд-шоу
     function startSlideshow($poster, backdrops) {
         if (!Lampa.Storage.get('mobile_interface_slideshow') || backdrops.length < 2) return;
         var index = 0;
@@ -124,6 +133,7 @@
         }, interval);
     }
 
+    // 5. Основна логіка
     function initPlugin() {
         Lampa.Listener.follow('full', function (e) {
             if (e.type === 'destroy') clearInterval(slideshowTimer);
@@ -136,6 +146,7 @@
                     url: 'https://api.themoviedb.org/3/' + (movie.name ? 'tv' : 'movie') + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key(),
                     success: function(res) {
                         var lang = Lampa.Storage.get('language') || 'uk';
+                        // Пріоритет: українське лого -> англійське -> перше доступне
                         var logo = res.logos.filter(l => l.iso_639_1 === lang)[0] || res.logos.filter(l => l.iso_639_1 === 'en')[0] || res.logos[0];
                         if (logo) {
                             var imgUrl = Lampa.TMDB.image('/t/p/w300' + logo.file_path.replace('.svg', '.png'));
@@ -188,6 +199,7 @@
         });
     }
 
+    // 6. Реєстрація налаштувань
     function addSettings() {
         Lampa.SettingsApi.addComponent({
             component: 'mobile_interface',
