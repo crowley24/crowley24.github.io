@@ -5,7 +5,7 @@
     var settings_list = [
         { id: 'mobile_interface_animation', default: true },
         { id: 'mobile_interface_studios', default: true },
-        { id: 'mobile_interface_studios_bg_opacity', default: '0' }, // Змінено на список значень
+        { id: 'mobile_interface_studios_bg_opacity', default: '0.1' }, // Новий стандарт
         { id: 'mobile_interface_quality', default: true },
         { id: 'mobile_interface_slideshow', default: true },
         { id: 'mobile_interface_slideshow_time', default: '10000' }, 
@@ -49,22 +49,23 @@
         
         css += '.full-start-new__right { background: none !important; margin-top: -110px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
         css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 80px; margin-bottom: 5px; } ';
-        css += '.full-start-new__title img { max-height: 100px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); } ';
+        css += '.full-start-new__title img { max-height: 110px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); } ';
         
         css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 15px !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
 
-        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 12px; margin: 15px 0; width: 100%; } ';
-        css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%; } ';
+        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 15px 0; width: 100%; } ';
+        css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 12px; width: 100%; } ';
         
-        // Збільшений розмір студій (2.8em замість 2.2em) та налаштування фону
-        css += '.studio-item { height: 2.8em; opacity: 0; animation: qb_in 0.4s ease forwards; padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; ';
+        // Новий стиль для студій: Прямокутна плашка замість плями
+        css += '.studio-item { height: 3.2em; opacity: 0; animation: qb_in 0.4s ease forwards; padding: 6px 12px; border-radius: 12px; display: flex; align-items: center; justify-content: center; ';
         if (bgOpacity !== '0') {
-            css += 'background: radial-gradient(circle, rgba(255,255,255,' + bgOpacity + ') 0%, rgba(255,255,255,0) 85%); ';
+            css += 'background: rgba(255, 255, 255, ' + bgOpacity + '); ';
+            css += 'backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); ';
         }
         css += '} ';
 
-        css += '.quality-item { height: 1.35em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
-        css += '.studio-item img { height: 100%; width: auto; object-fit: contain; filter: drop-shadow(0px 0px 1px rgba(255,255,255,0.4)); } ';
+        css += '.quality-item { height: 1.4em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
+        css += '.studio-item img { height: 100%; width: auto; object-fit: contain; } ';
         css += '.quality-item img { height: 100%; width: auto; object-fit: contain; } ';
         css += '} ';
 
@@ -239,16 +240,15 @@
             field: { name: 'Логотипи студій', description: 'Показувати іконки Netflix, Disney тощо' }
         });
 
-        // ПАРАМЕТР ІНТЕНСИВНОСТІ ПІДКЛАДКИ
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { 
                 name: 'mobile_interface_studios_bg_opacity', 
                 type: 'select', 
-                values: { '0': 'Вимкнено', '0.2': '20%', '0.4': '40%', '0.6': '60%' }, 
-                default: '0' 
+                values: { '0': 'Вимкнено', '0.1': '10% (Легко)', '0.2': '20% (Середньо)', '0.4': '40% (Яскраво)' }, 
+                default: '0.1' 
             },
-            field: { name: 'Підкладка логотипів', description: 'Яскравість світлого фону під студіями' },
+            field: { name: 'Підкладка логотипів', description: 'Яскравість плашок під студіями' },
             onChange: function () { applyStyles(); }
         });
 
