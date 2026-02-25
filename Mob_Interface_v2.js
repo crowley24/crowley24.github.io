@@ -5,7 +5,7 @@
     var settings_list = [
         { id: 'mobile_interface_animation', default: true },
         { id: 'mobile_interface_studios', default: true },
-        { id: 'mobile_interface_studios_bg', default: false }, // Нове налаштування
+        { id: 'mobile_interface_studios_bg_opacity', default: '0' }, // Змінено на список значень
         { id: 'mobile_interface_quality', default: true },
         { id: 'mobile_interface_slideshow', default: true },
         { id: 'mobile_interface_slideshow_time', default: '10000' }, 
@@ -33,7 +33,7 @@
         if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
 
         var isAnimationEnabled = Lampa.Storage.get('mobile_interface_animation');
-        var isStudioBgEnabled = Lampa.Storage.get('mobile_interface_studios_bg');
+        var bgOpacity = Lampa.Storage.get('mobile_interface_studios_bg_opacity', '0');
         var style = document.createElement('style');
         style.id = 'mobile-interface-styles';
         
@@ -56,15 +56,16 @@
         css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 12px; margin: 15px 0; width: 100%; } ';
         css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%; } ';
         
-        // Стиль для студій з можливістю підкладки
-        css += '.studio-item { height: 2.2em; opacity: 0; animation: qb_in 0.4s ease forwards; padding: 4px 8px; border-radius: 6px; ';
-        if (isStudioBgEnabled) {
-            css += 'background: radial-gradient(circle, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0) 80%); ';
+        // Збільшений розмір студій (2.8em замість 2.2em) та налаштування фону
+        css += '.studio-item { height: 2.8em; opacity: 0; animation: qb_in 0.4s ease forwards; padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; ';
+        if (bgOpacity !== '0') {
+            css += 'background: radial-gradient(circle, rgba(255,255,255,' + bgOpacity + ') 0%, rgba(255,255,255,0) 85%); ';
         }
         css += '} ';
 
-        css += '.quality-item { height: 1.25em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
-        css += '.studio-item img, .quality-item img { height: 100%; width: auto; object-fit: contain; filter: drop-shadow(0px 0px 1px rgba(255,255,255,0.5)); } ';
+        css += '.quality-item { height: 1.35em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
+        css += '.studio-item img { height: 100%; width: auto; object-fit: contain; filter: drop-shadow(0px 0px 1px rgba(255,255,255,0.4)); } ';
+        css += '.quality-item img { height: 100%; width: auto; object-fit: contain; } ';
         css += '} ';
 
         style.textContent = css;
@@ -238,11 +239,16 @@
             field: { name: 'Логотипи студій', description: 'Показувати іконки Netflix, Disney тощо' }
         });
 
-        // НОВИЙ ПАРАМЕТР
+        // ПАРАМЕТР ІНТЕНСИВНОСТІ ПІДКЛАДКИ
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
-            param: { name: 'mobile_interface_studios_bg', type: 'trigger', default: false },
-            field: { name: 'Підкладка логотипів', description: 'Світлий фон для кращої видимості темних логотипів' },
+            param: { 
+                name: 'mobile_interface_studios_bg_opacity', 
+                type: 'select', 
+                values: { '0': 'Вимкнено', '0.2': '20%', '0.4': '40%', '0.6': '60%' }, 
+                default: '0' 
+            },
+            field: { name: 'Підкладка логотипів', description: 'Яскравість світлого фону під студіями' },
             onChange: function () { applyStyles(); }
         });
 
