@@ -1,7 +1,6 @@
 (function () {
     'use strict';
 
-    // 1. Ініціалізація налаштувань
     var settings_list = [
         { id: 'mobile_interface_animation', default: true },
         { id: 'mobile_interface_studios', default: true },
@@ -26,7 +25,6 @@
         '2.0': pluginPath + '2.0.svg', 'DUB': pluginPath + 'DUB.svg', 'UKR': pluginPath + 'UKR.svg'
     };
 
-    // 2. Стилі
     function applyStyles() {
         var oldStyle = document.getElementById('mobile-interface-styles');
         if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
@@ -51,42 +49,35 @@
         
         css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 15px !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
 
-        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 12px; margin: 15px 0; width: 100%; } ';
-        css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%; } ';
+        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 20px 0; width: 100%; } ';
+        css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 15px; width: 100%; } ';
         
-        /* ОНОВЛЕНО: Підкладка для студій */
+        /* ЧИСТИЙ ТА СУЧАСНИЙ ВИГЛЯД ЛОГОТИПІВ */
         css += '.studio-item { \
             display: flex; \
             align-items: center; \
-            justify-content: center; \
-            height: 42px; \
-            padding: 0 12px; \
-            background: rgba(255, 255, 255, 0.12); \
-            background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 100%); \
-            border: 1px solid rgba(255, 255, 255, 0.15); \
-            border-radius: 10px; \
-            backdrop-filter: blur(5px); \
-            -webkit-backdrop-filter: blur(5px); \
+            height: 30px; \
             opacity: 0; \
             animation: qb_in 0.4s ease forwards; \
         } ';
 
         css += '.studio-item img { \
-            max-height: 24px; \
+            height: 100%; \
             width: auto; \
             object-fit: contain; \
-            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2)); \
+            /* Фільтр: робить чорне білим, але зберігає кольори (якщо вони яскраві) */ \
+            filter: brightness(0) invert(1) drop-shadow(0 0 2px rgba(255,255,255,0.2)); \
+            mix-blend-mode: screen; \
         } ';
         
         css += '.quality-item { height: 1.25em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
-        css += '.quality-item img { height: 100%; width: auto; object-fit: contain; filter: drop-shadow(0px 0px 1px rgba(255,255,255,0.5)); } ';
+        css += '.quality-item img { height: 100%; width: auto; object-fit: contain; } ';
         css += '} ';
 
         style.textContent = css;
         document.head.appendChild(style);
     }
 
-    // 3. Аналіз якості
     function getBest(results) {
         var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
         var resOrder = ['HD', 'FULL HD', '2K', '4K'];
@@ -102,11 +93,6 @@
             else if (title.indexOf('1080') >= 0 || title.indexOf('fhd') >= 0) foundRes = 'FULL HD';
             else if (title.indexOf('720') >= 0 || title.indexOf('hd') >= 0) foundRes = 'HD';
             if (foundRes && (!best.resolution || resOrder.indexOf(foundRes) > resOrder.indexOf(best.resolution))) best.resolution = foundRes;
-            if (item.ffprobe) {
-                var str = JSON.stringify(item.ffprobe);
-                if (str.indexOf('Vision') >= 0) best.dolbyVision = true;
-                if (str.indexOf('smpte2084') >= 0) best.hdr = true;
-            }
             if (title.indexOf('vision') >= 0 || title.indexOf('dovi') >= 0) best.dolbyVision = true;
             if (title.indexOf('hdr') >= 0) best.hdr = true;
         }
@@ -114,7 +100,6 @@
         return best;
     }
 
-    // 4. Слайд-шоу
     function startSlideshow($poster, backdrops) {
         if (!Lampa.Storage.get('mobile_interface_slideshow') || backdrops.length < 2) return;
         var index = 0;
@@ -139,7 +124,6 @@
         }, interval);
     }
 
-    // 5. Основна логіка
     function initPlugin() {
         Lampa.Listener.follow('full', function (e) {
             if (e.type === 'destroy') clearInterval(slideshowTimer);
@@ -152,7 +136,6 @@
                     url: 'https://api.themoviedb.org/3/' + (movie.name ? 'tv' : 'movie') + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key(),
                     success: function(res) {
                         var lang = Lampa.Storage.get('language') || 'uk';
-                        // За вашим запитом: якщо немає українського лого, беремо англійське
                         var logo = res.logos.filter(l => l.iso_639_1 === lang)[0] || res.logos.filter(l => l.iso_639_1 === 'en')[0] || res.logos[0];
                         if (logo) {
                             var imgUrl = Lampa.TMDB.image('/t/p/w300' + logo.file_path.replace('.svg', '.png'));
@@ -205,7 +188,6 @@
         });
     }
 
-    // 6. Реєстрація налаштувань
     function addSettings() {
         Lampa.SettingsApi.addComponent({
             component: 'mobile_interface',
