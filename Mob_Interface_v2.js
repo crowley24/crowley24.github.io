@@ -43,7 +43,8 @@
         css += '.full-start-new__poster img { ';
         css += (isAnimationEnabled ? 'animation: kenBurnsEffect 25s ease-in-out infinite !important; ' : '');
         css += 'transform-origin: center center !important; transition: opacity 1.5s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
-        css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
+        // Змінено градієнт для швидшого переходу (з 80% до 100% замість 55%)
+        css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 80%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 80%, transparent 100%) !important; } ';
         
         css += '.full-start-new__right { background: none !important; margin-top: -110px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
         css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 80px; margin-bottom: 5px; } ';
@@ -179,12 +180,13 @@
                             if (res && res.Results) {
                                 var best = getBest(res.Results);
                                 var list = [];
-                                if (best.ukr) list.push('UKR');
+                                
                                 if (best.resolution) list.push(best.resolution);
                                 if (best.dolbyVision) list.push('Dolby Vision');
                                 else if (best.hdr) list.push('HDR');
                                 if (best.audio) list.push(best.audio);
                                 if (best.dub) list.push('DUB');
+                                if (best.ukr) list.push('UKR');
                                 
                                 list.forEach((type, i) => {
                                     if (svgIcons[type]) {
@@ -246,7 +248,7 @@
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { name: 'mobile_interface_quality', type: 'trigger', default: true },
-            field: { name: 'Значки якості', description: 'Показувати 4K, HDR, UKR, Audio' }
+            field: { name: 'Значки якості', description: 'Показувати 4K, HDR, Audio, UKR' }
         });
     }
 
@@ -262,4 +264,3 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
-                                
