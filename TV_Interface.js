@@ -9,7 +9,10 @@
         trailer: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 6H3C1.9 6 1 6.9 1 8V16C1 17.1 1.9 18 3 18H21C22.1 18 23 17.1 23 16V8C23 6.9 22.1 6 21 6Z" stroke="currentColor" stroke-width="2"/><path d="M10 9L15 12L10 15V9Z" fill="currentColor"/></svg>`
     };
 
+    const PLUGIN_ICON = '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="30" width="80" height="40" rx="5" fill="hsl(0, 0%, 30%)"/><circle cx="50" cy="50" r="10" fill="white"/></svg>';
+
     function initializePlugin() {  
+        // ПРИБРАНО ОБМЕЖЕННЯ ТВ — тепер працює всюди
         addCustomTemplate();  
         addStyles();  
         addSettings();
@@ -17,8 +20,30 @@
     }  
 
     function addSettings() {
-        const defaults = { 'applecation_logo_scale': '100', 'applecation_text_scale': '100' };  
+        const defaults = {  
+            'applecation_logo_scale': '100', 'applecation_text_scale': '100', 
+            'applecation_spacing_scale': '100', 'applecation_show_studio': true, 'applecation_apple_zoom': true 
+        };  
         Object.keys(defaults).forEach(key => { if (Lampa.Storage.get(key) === undefined) Lampa.Storage.set(key, defaults[key]); });  
+
+        Lampa.SettingsApi.addComponent({ component: 'applecation_settings', name: 'NewCard', icon: PLUGIN_ICON });  
+
+        const scaleVals = { '70':'70%','80':'80%','90':'90%','100':'Стандарт','110':'110%','120':'120%','130':'130%' };
+        
+        Lampa.SettingsApi.addParam({
+            component: 'applecation_settings',
+            param: { name: 'applecation_logo_scale', type: 'select', values: scaleVals, default: '100' },
+            field: { name: 'Розмір логотипу' },
+            onChange: applyScales
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'applecation_settings',
+            param: { name: 'applecation_text_scale', type: 'select', values: scaleVals, default: '100' },
+            field: { name: 'Розмір тексту' },
+            onChange: applyScales
+        });
+
         applyScales();
     }
 
@@ -36,12 +61,15 @@
                     <div class="applecation__logo"></div>
                     <div class="full-start-new__title" style="display: none;">{title}</div>
                 </div>
+
                 <div class="applecation__premium-meta">
                     <span class="applecation__studios"></span>
                     <span class="applecation__line-meta"></span>
                     <span class="full-start__pg"></span>
                 </div>
+
                 <div class="applecation__description"></div>
+
                 <div class="full-start-new__buttons applecation__buttons-row">
                     <div class="full-start__button selector button--play">
                         ${ICONS.play} <span>Дивитися</span>
@@ -52,7 +80,7 @@
                     <div class="full-start__button selector button--options">${ICONS.options}</div>
                 </div>
             </div>
-            <div class="full-start-new__right" style="background: transparent !important; border: none !important;"></div>
+            <div class="full-start-new__right apple-hidden-panel" style="display: none !important; width: 0 !important;"></div>
         </div>`;  
         Lampa.Template.add('full_start_new', template);  
     }  
@@ -62,26 +90,14 @@
         <style>
             :root { --apple-logo-scale: 1; --apple-text-scale: 1; }
             
-            /* ПРИБИРАЄМО СТАНДАРТНІ ФІЛЬТРИ ТА ПОЛОСУ */
-            .applecation.full-start-new { background: none !important; }
+            /* Прибираємо розділювач (полосу) */
             .applecation .full-start-new__split { display: none !important; }
-            
-            /* Новий чистий градієнт Apple style */
+
             .applecation__body { 
                 height: 100vh; display: flex; flex-direction: column; justify-content: flex-end; 
                 padding: 0 5% 8% 5%;
-                background: linear-gradient(to top, 
-                    rgba(0,0,0,1) 0%, 
-                    rgba(0,0,0,0.8) 20%, 
-                    rgba(0,0,0,0) 60%
-                ) !important;
+                background: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.3) 60%, transparent 100%);
                 width: 100% !important;
-                position: relative; z-index: 10;
-            }
-
-            /* Корекція фонового зображення, щоб воно було яскравішим */
-            .applecation .full-start__background {
-                filter: contrast(1.1) brightness(1.1) !important;
             }
 
             .applecation__logo img { 
@@ -90,9 +106,12 @@
                 object-fit: contain; object-position: left bottom;
             }
 
+            /* Адаптація для телефонів (горизонтальний режим) */
             @media screen and (max-width: 900px) {
                 .applecation__logo img { max-width: 250px; }
                 .applecation__body { padding-bottom: 25px; }
+                .applecation__buttons-row { gap: 10px !important; }
+                .applecation__description { -webkit-line-clamp: 2 !important; }
             }
 
             .applecation__premium-meta { 
@@ -100,6 +119,8 @@
                 font-size: calc(1.1em * var(--apple-text-scale)); color: #fff;
             }
 
+            .applecation__line-meta { color: rgba(255,255,255,0.7); }
+            
             .applecation__description {
                 max-width: 750px; margin-bottom: 25px; line-height: 1.5;
                 font-size: calc(1.05em * var(--apple-text-scale));
@@ -118,12 +139,13 @@
             .applecation .full-start__button { 
                 background: none !important; border: none !important; 
                 color: rgba(255,255,255,0.7) !important; padding: 5px !important;
+                display: flex !important; align-items: center; justify-content: center;
             }
 
             .applecation .full-start__button.focus { 
                 transform: scale(1.3) !important; 
                 color: #fff !important;
-                filter: drop-shadow(0 0 8px rgba(255,255,255,0.8)) !important;
+                filter: drop-shadow(0 0 5px rgba(255,255,255,0.8)) !important;
             }
             .button--play.focus { background: #e0e0e0 !important; transform: scale(1.05) !important; filter: none !important; }
         </style>`;  
