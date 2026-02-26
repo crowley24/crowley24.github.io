@@ -51,25 +51,21 @@
         
         css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 15px !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
 
-        // --- ЕЛЕГАНТНІ КНОПКИ (APPLE TV STYLE) ---
-        css += '.full-start-new__buttons { display: flex !important; justify-content: center !important; gap: 12px !important; width: 100% !important; margin-top: 25px !important; flex-wrap: wrap !important; } ';
-        css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; padding: 5px !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; width: 70px !important; min-width: 0 !important; transition: transform 0.2s ease, opacity 0.2s ease !important; } ';
-        css += '.full-start-new .full-start__button svg { width: 26px !important; height: 26px !important; margin-bottom: 6px !important; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)) !important; fill: #fff !important; } ';
-        css += '.full-start-new .full-start__button span { font-size: 10px !important; font-weight: 500 !important; text-transform: uppercase !important; letter-spacing: 0.4px !important; color: #fff !important; opacity: 0.6 !important; margin: 0 !important; text-align: center !important; white-space: nowrap !important; } ';
+        // --- УЛЬТРА-КОМПАКТНІ КНОПКИ (ORIGINAL LAMPA SIZE) ---
+        css += '.full-start-new__buttons { display: flex !important; justify-content: center !important; gap: 8px !important; width: 100% !important; margin-top: 15px !important; flex-wrap: wrap !important; } ';
+        css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; padding: 4px !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; width: 54px !important; min-width: 0 !important; transition: transform 0.2s ease, opacity 0.2s ease !important; } ';
+        css += '.full-start-new .full-start__button svg { width: 22px !important; height: 22px !important; margin-bottom: 4px !important; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5)) !important; fill: #fff !important; } ';
+        css += '.full-start-new .full-start__button span { font-size: 8px !important; font-weight: 500 !important; text-transform: uppercase !important; letter-spacing: 0.3px !important; color: #fff !important; opacity: 0.5 !important; margin: 0 !important; text-align: center !important; white-space: nowrap !important; } ';
         
-        css += '.full-start-new .full-start__button:first-child svg { opacity: 1 !important; transform: scale(1.05); } ';
-        css += '.full-start-new .full-start__button:first-child span { opacity: 1 !important; font-weight: 700 !important; } ';
-        css += '.full-start-new .full-start__button:active { transform: scale(0.9); opacity: 0.5; } ';
-        // ----------------------------------------
+        css += '.full-start-new .full-start__button:active { transform: scale(0.85); opacity: 0.4; } ';
+        // ---------------------------------------------------
 
         css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 15px 0; width: 100%; } ';
         css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px; width: 100%; } ';
 
         css += '.studio-item { height: 3.2em; opacity: 0; animation: qb_in 0.4s ease forwards; padding: 6px 12px; border-radius: 12px; display: flex; align-items: center; justify-content: center; ';
         if (bgOpacity !== '0') {
-            css += 'background: rgba(255, 255, 255, ' + bgOpacity + '); ';
-            css += 'backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); ';
-            css += 'box-shadow: 0 2px 10px rgba(0,0,0,0.2); ';
+            css += 'background: rgba(255, 255, 255, ' + bgOpacity + '); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: 0 2px 10px rgba(0,0,0,0.2); ';
         }
         css += '} ';
         css += '.quality-item { height: 2.2em; opacity: 0; animation: qb_in 0.4s ease forwards; } '; 
@@ -86,22 +82,17 @@
         var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
         var resOrder = ['HD', 'FULL HD', '2K', '4K'];
         var audioOrder = ['2.0', '4.0', '5.1', '7.1'];
-        
         var limit = Math.min(results.length, 20);
         for (var i = 0; i < limit; i++) {
             var item = results[i];
             var title = (item.Title || '').toLowerCase();
-
             if (title.indexOf('ukr') >= 0 || title.indexOf('укр') >= 0 || title.indexOf('ua') >= 0) best.ukr = true;
-
             var foundRes = null;
             if (title.indexOf('4k') >= 0 || title.indexOf('2160') >= 0 || title.indexOf('uhd') >= 0) foundRes = '4K';
             else if (title.indexOf('2k') >= 0 || title.indexOf('1440') >= 0) foundRes = '2K';
             else if (title.indexOf('1080') >= 0 || title.indexOf('fhd') >= 0 || title.indexOf('full hd') >= 0) foundRes = 'FULL HD';
             else if (title.indexOf('720') >= 0 || title.indexOf('hd') >= 0) foundRes = 'HD';
-
             if (foundRes && (!best.resolution || resOrder.indexOf(foundRes) > resOrder.indexOf(best.resolution))) best.resolution = foundRes;
-
             if (item.ffprobe && Array.isArray(item.ffprobe)) {
                 item.ffprobe.forEach(function(stream) {
                     if (stream.codec_type === 'video') {
@@ -137,11 +128,7 @@
             nextImg.onload = function() {
                 var $newImg = $('<img src="' + imgUrl + '" style="opacity: 0; z-index: -1;">');
                 $poster.append($newImg);
-                setTimeout(function() {
-                    $newImg.css('opacity', '1');
-                    $currentImg.css('opacity', '0');
-                    setTimeout(function() { $currentImg.remove(); }, 1500);
-                }, 100);
+                setTimeout(function() { $newImg.css('opacity', '1'); $currentImg.css('opacity', '0'); setTimeout(function() { $currentImg.remove(); }, 1500); }, 100);
             };
             nextImg.src = imgUrl;
         }, interval);
@@ -190,14 +177,12 @@
                             if (res && res.Results) {
                                 var best = getBest(res.Results);
                                 var list = [];
-                                
                                 if (best.resolution) list.push(best.resolution);
                                 if (best.dolbyVision) list.push('Dolby Vision');
                                 else if (best.hdr) list.push('HDR');
                                 if (best.audio) list.push(best.audio);
                                 if (best.dub) list.push('DUB');
                                 if (best.ukr) list.push('UKR');
-                                
                                 list.forEach((type, i) => {
                                     if (svgIcons[type]) {
                                         var $q = $('<div class="quality-item" style="animation-delay:'+(i*0.1)+'s"><img src="'+svgIcons[type]+'"></div>');
@@ -218,60 +203,18 @@
             icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" fill="white"/></svg>',
             name: 'Мобільний інтерфейс'
         });
-
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { name: 'mobile_interface_animation', type: 'trigger', default: true },
-            field: { name: 'Анімація постера', description: 'Ефект наближення фону' },
-            onChange: function () { applyStyles(); }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { name: 'mobile_interface_slideshow', type: 'trigger', default: true },
-            field: { name: 'Слайд-шоу фону', description: 'Автоматична зміна зображень фону' }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { 
-                name: 'mobile_interface_slideshow_time', 
-                type: 'select', 
-                values: { '10000': '10 сек', '15000': '15 сек', '20000': '20 сек' }, 
-                default: '10000' 
-            },
-            field: { name: 'Інтервал слайд-шоу' }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { 
-                name: 'mobile_interface_studios_bg_opacity', 
-                type: 'select', 
-                values: { '0': 'Вимкнено', '0.05': 'Мінімальна', '0.15': 'Легка', '0.3': 'Середня', '0.5': 'Густа' }, 
-                default: '0.15' 
-            },
-            field: { name: 'Фон студій', description: 'Інтенсивність підкладки для логотипів' },
-            onChange: function () { applyStyles(); }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { name: 'mobile_interface_quality', type: 'trigger', default: true },
-            field: { name: 'Значки якості', description: 'Показувати 4K, HDR, Audio, UKR' }
-        });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_animation', type: 'trigger', default: true }, field: { name: 'Анімація постера' }, onChange: function () { applyStyles(); } });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_slideshow', type: 'trigger', default: true }, field: { name: 'Слайд-шоу фону' } });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_quality', type: 'trigger', default: true }, field: { name: 'Значки якості' } });
     }
 
     function start() {
         applyStyles();
         addSettings();
         initPlugin();
-        setInterval(function () { 
-            if (window.innerWidth <= 480 && window.lampa_settings) window.lampa_settings.blur_poster = false; 
-        }, 2000);
+        setInterval(function () { if (window.innerWidth <= 480 && window.lampa_settings) window.lampa_settings.blur_poster = false; }, 2000);
     }
 
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
-                    
