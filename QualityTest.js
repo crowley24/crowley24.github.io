@@ -2,7 +2,6 @@
   'use strict';
 
   function getSvgIcon(label, isDolby) {
-    // Зменшив ширину зі 175 до 135, щоб прибрати порожнечу справа
     var width = isDolby ? 135 : 100; 
     var height = 54;
     
@@ -20,22 +19,22 @@
 
     if (isDolby) {
       content = 
-        // Символ Double D
-        '<g transform="translate(10, 27) scale(1.0)">' +
+        // Символ Double D (трохи зменшив масштаб, щоб дати місце тексту)
+        '<g transform="translate(8, 27) scale(0.95)">' +
           '<path d="M0 -11 C6 -11 10 -7 10 0 C10 7 6 11 0 11 H-2 V-11 Z" fill="' + col.text + '"/>' +
           '<path d="M12 -11 C18 -11 22 -7 22 0 C22 7 18 11 12 11 H10 V-11 Z" fill="' + col.text + '"/>' +
         '</g>' +
         
-        // Вертикальний розділювач (змістив лівіше)
-        '<line x1="42" y1="12" x2="42" y2="42" stroke="' + col.stroke + '" stroke-width="1.2" opacity="0.5"/>' +
+        // Вертикальний розділювач (посунутий до x="38")
+        '<line x1="38" y1="12" x2="38" y2="42" stroke="' + col.stroke + '" stroke-width="1.2" opacity="0.5"/>' +
         
-        // Текст Dolby (щільне розташування)
-        '<text x="50" y="26" text-anchor="start" fill="' + col.text + '" ' +
-        'font-family="Arial Black, sans-serif" font-size="22" font-weight="900" style="letter-spacing: -0.8px;">Dolby</text>' +
+        // Текст Dolby (збільшений шрифт до 26)
+        '<text x="44" y="27" text-anchor="start" fill="' + col.text + '" ' +
+        'font-family="Arial Black, sans-serif" font-size="26" font-weight="900" style="letter-spacing: -1.2px;">Dolby</text>' +
         
-        // Текст VISION (підігнаний по ширині слова Dolby)
-        '<text x="50" y="42" text-anchor="start" fill="' + col.text + '" ' +
-        'font-family="Arial, sans-serif" font-size="11" font-weight="900" style="letter-spacing: 2.5px;">VISION</text>';
+        // Текст VISION (збільшений шрифт до 13)
+        '<text x="44" y="43" text-anchor="start" fill="' + col.text + '" ' +
+        'font-family="Arial, sans-serif" font-size="13" font-weight="900" style="letter-spacing: 2px;">VISION</text>';
     } else {
       content = '<text x="' + (width/2) + '" y="' + (height/2 + 2) + '" text-anchor="middle" dominant-baseline="central" fill="' + col.text + '" font-family="Arial Black, sans-serif" font-size="32" font-weight="900">' + label + '</text>';
     }
@@ -73,6 +72,9 @@
     'UKR': getSvgIcon('UKR'),
     '2K': getSvgIcon('2K')
   };
+
+  // ... решта коду (renderStudioLogos, getBest, Lampa.Listener тощо) залишається без змін ...
+  // (Я скоротив тут текст для зручності, використовуйте функцію getSvgIcon з цього блоку)
 
   function renderStudioLogos(container, data) {
     var showStudio = Lampa.Storage.get('applecation_show_studio');
