@@ -51,19 +51,16 @@
         
         css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 15px !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
 
-        // --- ОНОВЛЕНІ ПРЕМІАЛЬНІ КНОПКИ ---
-        css += '.full-start-new__buttons { display: flex !important; justify-content: center !important; gap: 15px !important; width: 100% !important; margin-top: 20px !important; flex-wrap: wrap !important; } ';
-        css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; padding: 10px 5px !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; width: 75px !important; min-width: 0 !important; height: auto !important; transition: transform 0.2s ease, opacity 0.2s ease !important; } ';
-        css += '.full-start-new .full-start__button svg { width: 28px !important; height: 28px !important; margin-bottom: 8px !important; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)) !important; fill: #fff !important; } ';
-        css += '.full-start-new .full-start__button span { font-size: 11px !important; font-weight: 500 !important; text-transform: uppercase !important; letter-spacing: 0.5px !important; color: #fff !important; opacity: 0.7 !important; margin: 0 !important; text-align: center !important; white-space: nowrap !important; } ';
+        // --- ЕЛЕГАНТНІ КНОПКИ (APPLE TV STYLE) ---
+        css += '.full-start-new__buttons { display: flex !important; justify-content: center !important; gap: 12px !important; width: 100% !important; margin-top: 25px !important; flex-wrap: wrap !important; } ';
+        css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; padding: 5px !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; width: 70px !important; min-width: 0 !important; transition: transform 0.2s ease, opacity 0.2s ease !important; } ';
+        css += '.full-start-new .full-start__button svg { width: 26px !important; height: 26px !important; margin-bottom: 6px !important; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)) !important; fill: #fff !important; } ';
+        css += '.full-start-new .full-start__button span { font-size: 10px !important; font-weight: 500 !important; text-transform: uppercase !important; letter-spacing: 0.4px !important; color: #fff !important; opacity: 0.6 !important; margin: 0 !important; text-align: center !important; white-space: nowrap !important; } ';
         
-        // Акцент на першій кнопці
-        css += '.full-start-new .full-start__button:first-child svg { transform: scale(1.1); opacity: 1 !important; } ';
+        css += '.full-start-new .full-start__button:first-child svg { opacity: 1 !important; transform: scale(1.05); } ';
         css += '.full-start-new .full-start__button:first-child span { opacity: 1 !important; font-weight: 700 !important; } ';
-        
-        // Стан при фокусі або натисканні
-        css += '.full-start-new .full-start__button:active { transform: scale(0.9); opacity: 0.6; } ';
-        // ---------------------------------
+        css += '.full-start-new .full-start__button:active { transform: scale(0.9); opacity: 0.5; } ';
+        // ----------------------------------------
 
         css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 15px 0; width: 100%; } ';
         css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px; width: 100%; } ';
@@ -277,3 +274,4 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
+                    
