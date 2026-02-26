@@ -4,7 +4,6 @@
     var settings_list = [
         { id: 'mobile_interface_animation', default: true },
         { id: 'mobile_interface_studios', default: true },
-        { id: 'mobile_interface_studios_bg_opacity', default: '0.15' },
         { id: 'mobile_interface_quality', default: true },
         { id: 'mobile_interface_slideshow', default: true },
         { id: 'mobile_interface_slideshow_time', default: '10000' }, 
@@ -31,7 +30,6 @@
         if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
 
         var isAnimationEnabled = Lampa.Storage.get('mobile_interface_animation');
-        var bgOpacity = Lampa.Storage.get('mobile_interface_studios_bg_opacity', '0.15');
         var style = document.createElement('style');
         style.id = 'mobile-interface-styles';
         
@@ -51,7 +49,10 @@
         
         css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 15px !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
 
-        // --- УЛЬТРА-КОМПАКТНІ КНОПКИ ---
+        // Приховуємо стандартний блок деталей Lampa, щоб не дублювати
+        css += '.full-start-new__details { display: none !important; } ';
+
+        // УЛЬТРА-КОМПАКТНІ КНОПКИ
         css += '.full-start-new__buttons { display: flex !important; justify-content: center !important; gap: 8px !important; width: 100% !important; margin-top: 15px !important; flex-wrap: wrap !important; } ';
         css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; padding: 4px !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; width: 54px !important; min-width: 0 !important; transition: transform 0.2s ease, opacity 0.2s ease !important; } ';
         css += '.full-start-new .full-start__button svg { width: 22px !important; height: 22px !important; margin-bottom: 4px !important; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5)) !important; fill: #fff !important; } ';
@@ -59,15 +60,17 @@
         css += '.full-start-new .full-start__button:active { transform: scale(0.85); opacity: 0.4; } ';
 
         css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 15px 0; width: 100%; } ';
-        css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px; width: 100%; } ';
+        
+        // НОВИЙ КОМПАКТНИЙ ІНФО-РЯДОК (Рік, Країна, Жанр)
+        css += '.mobile-info-row { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.7); text-transform: uppercase; letter-spacing: 0.5px; margin: 5px 20px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); } ';
+        css += '.mobile-info-item:not(:last-child):after { content: "•"; margin-left: 6px; opacity: 0.5; } ';
 
-        css += '.studio-item { height: 3.2em; opacity: 0; animation: qb_in 0.4s ease forwards; padding: 6px 12px; border-radius: 12px; display: flex; align-items: center; justify-content: center; ';
-        if (bgOpacity !== '0') {
-            css += 'background: rgba(255, 255, 255, ' + bgOpacity + '); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: 0 2px 10px rgba(0,0,0,0.2); ';
-        }
-        css += '} ';
+        css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%; } ';
+        
+        // ОНОВЛЕНІ ЛОГОТИПИ СТУДІЙ (без плашок, розумна інверсія)
+        css += '.studio-item { height: 2.2em; opacity: 0; animation: qb_in 0.4s ease forwards; padding: 0; background: none !important; backdrop-filter: none !important; box-shadow: none !important; mix-blend-mode: exclusion; /* Це інвертує чорний у білий, зберігаючи кольори інших */ } ';
         css += '.quality-item { height: 2.2em; opacity: 0; animation: qb_in 0.4s ease forwards; } '; 
-        css += '.studio-item img { height: 100%; width: auto; object-fit: contain; filter: contrast(1.1); } ';
+        css += '.studio-item img { height: 100%; width: auto; object-fit: contain; filter: contrast(1.1); /* Трохи піднімаємо контраст */ } ';
         css += '.quality-item img { height: 100%; width: auto; object-fit: contain; filter: drop-shadow(0px 1px 3px rgba(0,0,0,0.5)); } ';
         
         css += '} ';
@@ -158,6 +161,16 @@
                     var $infoBlock = $('<div class="plugin-info-block"><div class="studio-row"></div><div class="quality-row"></div></div>');
                     $details.after($infoBlock);
 
+                    // ФОРМУЄМО ТА ДОДАЄМО КОМПАКТНИЙ ІНФО-РЯДОК
+                    var infoHtml = '<div class="mobile-info-row">';
+                    if (movie.year || movie.first_air_date) infoHtml += '<span class="mobile-info-item">' + (movie.year || movie.first_air_date.split('-')[0]) + '</span>';
+                    if (movie.production_countries && movie.production_countries.length) infoHtml += '<span class="mobile-info-item">' + movie.production_countries[0].iso_3166_1 + '</span>';
+                    if (movie.genres && movie.genres.length) infoHtml += '<span class="mobile-info-item">' + movie.genres.slice(0, 2).map(g => g.name).join(', ') + '</span>';
+                    if (movie.runtime) infoHtml += '<span class="mobile-info-item">' + Lampa.Utils.secondsToTime(movie.runtime * 60) + '</span>';
+                    infoHtml += '</div>';
+                    
+                    $render.find('.full-start-new__title').after(infoHtml);
+
                     if (Lampa.Storage.get('mobile_interface_studios')) {
                         var studios = (movie.networks || []).concat(movie.production_companies || []);
                         var addedLogos = [];
@@ -228,13 +241,8 @@
 
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
-            param: { 
-                name: 'mobile_interface_studios_bg_opacity', 
-                type: 'select', 
-                values: { '0': 'Вимкнено', '0.05': 'Мінімальна', '0.15': 'Легка', '0.3': 'Середня', '0.5': 'Густа' }, 
-                default: '0.15' 
-            },
-            field: { name: 'Фон студій', description: 'Інтенсивність підкладки для логотипів' },
+            param: { name: 'mobile_interface_studios', type: 'trigger', default: true },
+            field: { name: 'Логотипи студій', description: 'Показувати лого мереж та компаній' },
             onChange: function () { applyStyles(); }
         });
 
