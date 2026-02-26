@@ -60,11 +60,11 @@
             css += 'box-shadow: 0 2px 10px rgba(0,0,0,0.2); ';
         }
         css += '} ';
+        css += '.quality-item { height: 2.2em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
 
-        css += '.quality-item { height: 1.4em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
-        css += '.studio-item img { height: 100%; width: auto; object-fit: contain; filter: contrast(1.1); } ';
-        css += '.quality-item img { height: 100%; width: auto; object-fit: contain; filter: drop-shadow(0px 0px 1px rgba(255,255,255,0.4)); } ';
-        css += '} ';
+css += '.studio-item img { height: 100%; width: auto; object-fit: contain; filter: contrast(1.1); } ';
+css += '.quality-item img { height: 100%; width: auto; object-fit: contain; filter: drop-shadow(0px 1px 3px rgba(0,0,0,0.5)); } ';
+         css += '} ';
 
         style.textContent = css;
         document.head.appendChild(style);
