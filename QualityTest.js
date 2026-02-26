@@ -1,43 +1,41 @@
 (function () {
   'use strict';
 
-  // Функція для створення іконок з точною геометрією
+  // Функція для створення іконок з точною геометрією як на фото
   function getSvgIcon(label, isDolby) {
     var bgTop = '#f9d976';    
     var bgBottom = '#b2822b'; 
     var textColor = '#1a1102'; 
     var strokeColor = '#5c3d05';
 
-    // Пропорції вузьких плашок
-    var width = isDolby ? 145 : 90;
+    // Ширина плашки: Dolby ширша, звичайні — стандартні
+    var width = isDolby ? 140 : 95;
     var height = 50;
     var rectWidth = width - 8;
     var rectHeight = height - 8;
     var content = '';
     
-  if (isDolby) {
-
-  var dSize = 30;
-  var visionSize = 11;
-
-  content =
-    '<g transform="translate(12, 28)">' +
-
-      // Великий подвійний D
-      '<path d="M0 -14 H8 C18 -14 18 6 8 6 H0 Z" fill="' + textColor + '"/>' +
-      '<path d="M26 -14 H18 C8 -14 8 6 18 6 H26 Z" fill="' + textColor + '"/>' +
-
-      // Dolby
-      '<text x="88" y="0" text-anchor="middle" fill="' + textColor + '" ' +
-      'font-family="Arial Black, Arial, sans-serif" font-size="' + dSize + '" font-weight="900">Dolby</text>' +
-
-      // VISION
-      '<text x="82" y="16" text-anchor="middle" fill="' + textColor + '" ' +
-      'font-family="Arial, sans-serif" font-size="' + visionSize + '" font-weight="900" letter-spacing="5">VISION</text>' +
-
-    '</g>';
+    if (isDolby) {
+      // Малюємо логотип Dolby Vision за зразком
+      content = 
+        // Символ Double D (ліва частина)
+        '<path d="M14 16 C19 16 22 19 22 25 C22 31 19 34 14 34 H12 V16 Z" fill="' + textColor + '"/>' +
+        // Символ Double D (права частина)
+        '<path d="M24 16 C19 16 16 19 16 25 C16 31 19 34 24 34 H26 V16 Z" fill="' + textColor + '"/>' +
+        
+        // Вертикальна лінія-розділювач
+        '<line x1="38" y1="12" x2="38" y2="38" stroke="' + strokeColor + '" stroke-width="1.2" opacity="0.6"/>' +
+        
+        // Текст Dolby (верхній рядок)
+        '<text x="44" y="24" text-anchor="start" fill="' + textColor + '" ' +
+        'font-family="Arial Black, Arial, sans-serif" font-size="19" font-weight="900">Dolby</text>' +
+        
+        // Текст VISION (нижній рядок)
+        '<text x="44" y="38" text-anchor="start" fill="' + textColor + '" ' +
+        'font-family="Arial, sans-serif" font-size="11" font-weight="900" letter-spacing="2.5">VISION</text>';
     } else {
-      content = '<text x="' + (width/2) + '" y="' + (height/2 + 1) + '" text-anchor="middle" dominant-baseline="central" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="32" font-weight="900">' + label + '</text>';
+      // Звичайний текст для 4K, HDR, UKR тощо
+      content = '<text x="' + (width/2) + '" y="' + (height/2 + 2) + '" text-anchor="middle" dominant-baseline="central" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="30" font-weight="900">' + label + '</text>';
     }
 
     var svg = '<svg width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '" xmlns="http://www.w3.org/2000/svg">' +
@@ -47,8 +45,8 @@
           '<stop offset="100%" style="stop-color:' + bgBottom + ';stop-opacity:1" />' +
         '</linearGradient>' +
       '</defs>' +
-      '<rect x="4" y="4" width="' + rectWidth + '" height="' + rectHeight + '" rx="2" ' +
-      'fill="url(#gold_grad_' + label.replace(/[^a-z0-9]/gi, '') + ')" stroke="' + strokeColor + '" stroke-width="1.2"/>' +
+      '<rect x="4" y="4" width="' + rectWidth + '" height="' + rectHeight + '" rx="5" ' +
+      'fill="url(#gold_grad_' + label.replace(/[^a-z0-9]/gi, '') + ')" stroke="' + strokeColor + '" stroke-width="1.5"/>' +
       content + 
     '</svg>';
 
@@ -69,7 +67,7 @@
     '2K': getSvgIcon('2K')
   };
 
-  // --- Логіка відображення ---
+  // --- Логіка відображення студій ---
 
   function renderStudioLogos(container, data) {
     var showStudio = Lampa.Storage.get('applecation_show_studio');
@@ -116,6 +114,8 @@
     });
   }
 
+  // --- Аналіз результатів парсера ---
+
   function getBest(results) {
     var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
     var resOrder = ['HD', 'FULL HD', '2K', '4K'];
@@ -130,6 +130,7 @@
       else if (title.indexOf('1080') >= 0 || title.indexOf('full hd') >= 0) foundRes = 'FULL HD';
       else if (title.indexOf('720') >= 0 || title.indexOf('hd') >= 0) foundRes = 'HD';
       if (foundRes && (!best.resolution || resOrder.indexOf(foundRes) > resOrder.indexOf(best.resolution))) best.resolution = foundRes;
+      
       if (item.ffprobe && Array.isArray(item.ffprobe)) {
         item.ffprobe.forEach(function(stream) {
           if (stream.codec_type === 'video') {
@@ -168,7 +169,10 @@
   }
 
   function processCards() {
-    $('.card:not(.qb-processed)').addClass('qb-processed').each(function() {
+    var cards = $('.card:not(.qb-processed)');
+    if (!cards.length) return;
+    
+    cards.addClass('qb-processed').each(function() {
       var card = $(this);
       var movie = card.data('item');
       if (movie && Lampa.Storage.field('parser_use')) {
@@ -179,6 +183,8 @@
     });
   }
 
+  // --- Слухач відкриття картки ---
+
   Lampa.Listener.follow('full', function(e) {
     if (e.type !== 'complite') return;
     var details = $('.full-start-new__details');
@@ -186,7 +192,9 @@
         if (!$('.quality-badges-container').length) details.after('<div class="quality-badges-container"></div>');
         var container = $('.quality-badges-container');
         container.empty();
+        
         renderStudioLogos(container, e.data.movie);
+        
         Lampa.Parser.get({ search: e.data.movie.title || e.data.movie.name, movie: e.data.movie, page: 1 }, function(response) {
             if (response && response.Results) {
                 var best = getBest(response.Results);
@@ -205,13 +213,15 @@
 
   setInterval(processCards, 3000);
 
+  // --- Стилі ---
   var style = '<style>\
-    .quality-badges-container { display: flex; align-items: center; gap: 0.3em; margin: 0.4em 0; min-height: 1.6em; flex-wrap: wrap; }\
-    .quality-badge { height: 1.4em; opacity: 0; transform: translateY(5px); animation: qb_in 0.4s ease forwards; }\
-    .card-quality-badges { position: absolute; top: 0.2em; right: 0.2em; display: flex; flex-direction: row; gap: 0.08em; z-index: 5; }\
-    .card-quality-badge { height: 1em; opacity: 0; transform: translateY(3px); animation: qb_in 0.3s ease forwards; }\
+    .quality-badges-container { display: flex; align-items: center; gap: 0.4em; margin: 0.5em 0; min-height: 1.8em; flex-wrap: wrap; }\
+    .quality-badge { height: 1.6em; opacity: 0; transform: translateY(5px); animation: qb_in 0.4s ease forwards; }\
+    .card-quality-badges { position: absolute; top: 0.3em; right: 0.3em; display: flex; flex-direction: row; gap: 0.15em; z-index: 5; }\
+    .card-quality-badge { height: 1.1em; opacity: 0; transform: translateY(3px); animation: qb_in 0.3s ease forwards; }\
     @keyframes qb_in { to { opacity: 1; transform: translateY(0); } }\
-    .quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2)); }\
+    .quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4)); }\
+    .studio-logo { margin-right: 0.3em; }\
   </style>';
   $('body').append(style);
 
