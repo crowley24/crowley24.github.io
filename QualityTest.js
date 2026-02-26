@@ -15,13 +15,28 @@
     var rectHeight = height - 8;
     var content = '';
     
-    if (isDolby) {
-  content = '<g transform="translate(10, 26)">' +
-            '<path d="M0 -11H5C9 -11 9 1 5 1H0V-11ZM15 -11C19 -11 19 1 15 1H10V-11H15Z" fill="' + textColor + '"/>' +
-            '<text x="78" y="0" text-anchor="middle" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="26" font-weight="900">Dolby</text>' +
-            '<text x="72" y="15" text-anchor="middle" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="11" font-weight="900" letter-spacing="4">VISION</text>' +
-            '</g>';
-    }
+  if (isDolby) {
+
+  var dSize = 30;
+  var visionSize = 11;
+
+  content =
+    '<g transform="translate(12, 28)">' +
+
+      // Великий подвійний D
+      '<path d="M0 -14 H8 C18 -14 18 6 8 6 H0 Z" fill="' + textColor + '"/>' +
+      '<path d="M26 -14 H18 C8 -14 8 6 18 6 H26 Z" fill="' + textColor + '"/>' +
+
+      // Dolby
+      '<text x="88" y="0" text-anchor="middle" fill="' + textColor + '" ' +
+      'font-family="Arial Black, Arial, sans-serif" font-size="' + dSize + '" font-weight="900">Dolby</text>' +
+
+      // VISION
+      '<text x="82" y="16" text-anchor="middle" fill="' + textColor + '" ' +
+      'font-family="Arial, sans-serif" font-size="' + visionSize + '" font-weight="900" letter-spacing="5">VISION</text>' +
+
+    '</g>';
+  }
     } else {
       content = '<text x="' + (width/2) + '" y="' + (height/2 + 1) + '" text-anchor="middle" dominant-baseline="central" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="32" font-weight="900">' + label + '</text>';
     }
