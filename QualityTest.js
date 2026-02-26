@@ -36,7 +36,6 @@
       'font-family="Arial, sans-serif" font-size="' + visionSize + '" font-weight="900" letter-spacing="5">VISION</text>' +
 
     '</g>';
-  }
     } else {
       content = '<text x="' + (width/2) + '" y="' + (height/2 + 1) + '" text-anchor="middle" dominant-baseline="central" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="32" font-weight="900">' + label + '</text>';
     }
