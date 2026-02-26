@@ -2,7 +2,7 @@
   'use strict';
 
   function getSvgIcon(label, isDolby) {
-    var width = isDolby ? 170 : 100; // Трохи збільшена ширина для кращого відступу справа
+    var width = isDolby ? 175 : 100; 
     var height = 54;
     
     var col = {
@@ -19,22 +19,22 @@
 
     if (isDolby) {
       content = 
-        // Символ Double D (зліва)
-        '<g transform="translate(14, 27) scale(1.05)">' +
+        // Символ Double D (трохи зміщений вліво для балансу)
+        '<g transform="translate(12, 27) scale(1.1)">' +
           '<path d="M0 -11 C6 -11 10 -7 10 0 C10 7 6 11 0 11 H-2 V-11 Z" fill="' + col.text + '"/>' +
           '<path d="M12 -11 C18 -11 22 -7 22 0 C22 7 18 11 12 11 H10 V-11 Z" fill="' + col.text + '"/>' +
         '</g>' +
         
         // Вертикальний розділювач
-        '<line x1="48" y1="12" x2="48" y2="42" stroke="' + col.stroke + '" stroke-width="1.2" opacity="0.5"/>' +
+        '<line x1="48" y1="12" x2="48" y2="42" stroke="' + col.stroke + '" stroke-width="1.3" opacity="0.6"/>' +
         
-        // Текст Dolby (зміщений вправо на x="62")
-        '<text x="62" y="26" text-anchor="start" fill="' + col.text + '" ' +
-        'font-family="Arial Black, sans-serif" font-size="23" font-weight="900" style="letter-spacing: -0.5px;">Dolby</text>' +
+        // Текст Dolby (великий, заповнює верх)
+        '<text x="58" y="26" text-anchor="start" fill="' + col.text + '" ' +
+        'font-family="Arial Black, sans-serif" font-size="26" font-weight="900" style="letter-spacing: -1px;">Dolby</text>' +
         
-        // Текст VISION (зміщений вправо на x="62")
-        '<text x="62" y="42" text-anchor="start" fill="' + col.text + '" ' +
-        'font-family="Arial, sans-serif" font-size="12" font-weight="900" style="letter-spacing: 3.2px;">VISION</text>';
+        // Текст VISION (максимально розтягнутий вправо)
+        '<text x="58" y="43" text-anchor="start" fill="' + col.text + '" ' +
+        'font-family="Arial, sans-serif" font-size="13" font-weight="900" style="letter-spacing: 5px;">VISION</text>';
     } else {
       content = '<text x="' + (width/2) + '" y="' + (height/2 + 2) + '" text-anchor="middle" dominant-baseline="central" fill="' + col.text + '" font-family="Arial Black, sans-serif" font-size="32" font-weight="900">' + label + '</text>';
     }
@@ -51,8 +51,8 @@
           '<stop offset="100%" style="stop-color:' + col.gloss + ';stop-opacity:0" />' +
         '</linearGradient>' +
       '</defs>' +
-      '<rect x="4" y="4" width="' + (width-8) + '" height="' + (height-8) + '" rx="8" fill="url(#grad_' + id + ')" stroke="' + col.stroke + '" stroke-width="1.5"/>' +
-      '<rect x="6" y="6" width="' + (width-12) + '" height="' + (height/2-6) + '" rx="5" fill="url(#gloss_' + id + ')"/>' +
+      '<rect x="4" y="4" width="' + (width-8) + '" height="' + (height-8) + '" rx="9" fill="url(#grad_' + id + ')" stroke="' + col.stroke + '" stroke-width="1.6"/>' +
+      '<rect x="6" y="6" width="' + (width-12) + '" height="' + (height/2-6) + '" rx="6" fill="url(#gloss_' + id + ')"/>' +
       content + 
     '</svg>';
 
@@ -109,7 +109,7 @@
               r += pixels[i]; g += pixels[i + 1]; b += pixels[i + 2]; count++;
             }
           }
-          if (count > 0 && (0.299 * (r/count) + 0.587 * (g/count) + 0.114 * (b/count)) < 40) {
+          if (count > 0 && (0.299 * (r/count) + 0.587 * (g/count) + 0.114 * (b/count)) < 45) {
             $('#' + imgId + ' img').css('filter', 'brightness(0) invert(1) drop-shadow(0 1px 2px rgba(0,0,0,0.5))');
           }
         } catch (e) {}
@@ -209,12 +209,12 @@
   setInterval(processCards, 3000);
 
   var style = '<style>\
-    .quality-badges-container { display: flex; align-items: center; gap: 0.6em; margin: 0.8em 0; min-height: 2.3em; flex-wrap: wrap; }\
+    .quality-badges-container { display: flex; align-items: center; gap: 0.6em; margin: 1em 0; min-height: 2.4em; flex-wrap: wrap; }\
     .quality-badge { height: 2.2em; opacity: 0; transform: scale(0.8); animation: qb_pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }\
-    .card-quality-badges { position: absolute; top: 0.4em; right: 0.4em; display: flex; flex-direction: row; gap: 0.25em; z-index: 5; }\
-    .card-quality-badge { height: 1.45em; opacity: 0; transform: scale(0.8); animation: qb_pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }\
+    .card-quality-badges { position: absolute; top: 0.4em; right: 0.4em; display: flex; flex-direction: row; gap: 0.3em; z-index: 5; }\
+    .card-quality-badge { height: 1.5em; opacity: 0; transform: scale(0.8); animation: qb_pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }\
     @keyframes qb_pop { to { opacity: 1; transform: scale(1); } }\
-    .quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.85)); }\
+    .quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; filter: drop-shadow(0 3px 10px rgba(0,0,0,0.9)); }\
     .studio-logo { margin-right: 0.6em; }\
   </style>';
   $('body').append(style);
