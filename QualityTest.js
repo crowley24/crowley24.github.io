@@ -1,35 +1,37 @@
 (function () {
   'use strict';
 
-  // Функція для генерації прямокутних SVG іконок
+  // Функція для генерації прямокутних SVG іконок з вирівнюванням
   function getSvgIcon(label, isDolby) {
     var bgTop = '#f9d976';    
     var bgBottom = '#b2822b'; 
     var textColor = '#1a1102'; 
     var strokeColor = '#7a5416';
-
+    
+    // Якщо це Dolby, робимо плашку ширшою (160), інакше стандарт (120)
+    var width = isDolby ? 160 : 120;
+    var rectWidth = width - 10;
     var content = '';
     
     if (isDolby) {
-      // Логотип Dolby Vision: Подвійне D + текст
-      content = '<g transform="translate(12, 32)">' +
-                '<path d="M0 0H6C11 0 11 14 6 14H0V0ZM22 0C27 0 27 14 22 14H16V0H22Z" fill="' + textColor + '" opacity="0.9"/>' +
-                '<text x="62" y="12" text-anchor="middle" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="26" font-weight="900">Dolby</text>' +
+      // Вирівняний логотип Dolby Vision: Подвійне D + текст
+      content = '<g transform="translate(15, 40)">' +
+                '<path d="M0 -10H5C9 -10 9 4 5 4H0V-10ZM16 -10C20 -10 20 4 16 4H11V-10H16Z" fill="' + textColor + '"/>' +
+                '<text x="75" y="0" text-anchor="middle" dominant-baseline="central" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="30" font-weight="900">Dolby</text>' +
                 '</g>';
     } else {
-      // Центрований великий текст для інших іконок
-      content = '<text x="60" y="62" text-anchor="middle" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="44" font-weight="900">' + label + '</text>';
+      // Ідеально центрований текст для інших іконок
+      content = '<text x="60" y="40" text-anchor="middle" dominant-baseline="central" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="44" font-weight="900">' + label + '</text>';
     }
 
-    var svg = '<svg width="120" height="80" viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg">' +
+    var svg = '<svg width="' + width + '" height="80" viewBox="0 0 ' + width + ' 80" xmlns="http://www.w3.org/2000/svg">' +
       '<defs>' +
         '<linearGradient id="gold_grad_' + label.replace(/[^a-z0-9]/gi, '') + '" x1="0%" y1="0%" x2="0%" y2="100%">' +
           '<stop offset="0%" style="stop-color:' + bgTop + ';stop-opacity:1" />' +
           '<stop offset="100%" style="stop-color:' + bgBottom + ';stop-opacity:1" />' +
         '</linearGradient>' +
       '</defs>' +
-      // ПРЯМОКУТНА ФОРМА (rx="8" - легке закруглення кутів)
-      '<rect x="5" y="5" width="110" height="70" rx="8" ' +
+      '<rect x="5" y="5" width="' + rectWidth + '" height="70" rx="8" ' +
       'fill="url(#gold_grad_' + label.replace(/[^a-z0-9]/gi, '') + ')" stroke="' + strokeColor + '" stroke-width="2.5"/>' +
       content + 
     '</svg>';
@@ -188,12 +190,12 @@
   setInterval(processCards, 3000);
 
   var style = '<style>\
-    .quality-badges-container { display: flex; align-items: center; gap: 0.6em; margin: 1em 0; min-height: 2.8em; flex-wrap: wrap; }\
-    .quality-badge { height: 2.5em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; }\
+    .quality-badges-container { display: flex; align-items: center; gap: 0.5em; margin: 1em 0; min-height: 2.8em; flex-wrap: wrap; }\
+    .quality-badge { height: 2.3em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; }\
     .card-quality-badges { position: absolute; top: 0.4em; right: 0.4em; display: flex; flex-direction: row; gap: 0.2em; z-index: 5; }\
-    .card-quality-badge { height: 1.8em; opacity: 0; transform: translateY(5px); animation: qb_in 0.3s ease forwards; }\
+    .card-quality-badge { height: 1.6em; opacity: 0; transform: translateY(5px); animation: qb_in 0.3s ease forwards; }\
     @keyframes qb_in { to { opacity: 1; transform: translateY(0); } }\
-    .quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; filter: drop-shadow(0 3px 5px rgba(0,0,0,0.6)); }\
+    .quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }\
   </style>';
   $('body').append(style);
 
