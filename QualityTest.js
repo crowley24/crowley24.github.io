@@ -7,45 +7,56 @@
       Lampa.Storage.set('applecation_show_studio', true);
   }
 
-  // Спільні елементи для дизайну (градієнти та фільтри)
-  var svgDefs = '<defs>' +
-    '<linearGradient id="redGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#a31d1d;stop-opacity:1" /><stop offset="100%" style="stop-color:#5e0b0b;stop-opacity:1" /></linearGradient>' +
-    '<linearGradient id="goldGrad" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:#f9d976;stop-opacity:1" /><stop offset="100%" style="stop-color:#b2822b;stop-opacity:1" /></linearGradient>' +
-    '<filter id="shadow"><feDropShadow dx="0" dy="1" stdDeviation="1" flood-opacity="0.5"/></filter>' +
-  '</defs>';
+  // Функція для генерації SVG коду в преміальному золотому стилі
+  function getSvgIcon(label, sublabel) {
+    var bgTop = '#f9d976';    // Світле золото
+    var bgBottom = '#b2822b'; // Темне золото (бронза)
+    var textColor = '#2a1b02'; // Майже чорний для контрасту
+    var strokeColor = '#7a5416'; // Контур
 
-  function createSvgIcon(content, isGold) {
-    var bg = isGold ? 'url(#goldGrad)' : 'url(#redGrad)';
-    var stroke = isGold ? '#7a5416' : '#f03e3e';
-    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
-      '<svg width="120" height="100" viewBox="0 0 120 100" xmlns="http://www.w3.org/2000/svg">' + 
-      svgDefs + 
-      '<path d="M10 15C10 8 16 5 25 5H95C104 5 110 8 110 15V70C110 85 95 95 60 95C25 95 10 85 10 70V15Z" fill="' + bg + '" stroke="' + stroke + '" stroke-width="2" filter="url(#shadow)"/>' +
-      content + 
-      '</svg>'
-    );
+    var svg = '<svg width="120" height="100" viewBox="0 0 120 100" xmlns="http://www.w3.org/2000/svg">' +
+      '<defs>' +
+        '<linearGradient id="gold_grad_' + label.replace(/[^a-z0-9]/gi, '') + '" x1="0%" y1="0%" x2="0%" y2="100%">' +
+          '<stop offset="0%" style="stop-color:' + bgTop + ';stop-opacity:1" />' +
+          '<stop offset="100%" style="stop-color:' + bgBottom + ';stop-opacity:1" />' +
+        '</linearGradient>' +
+      '</defs>' +
+      // Форма щита з твого фото
+      '<path d="M10 15C10 8 16 5 25 5H95C104 5 110 8 110 15V70C110 85 95 95 60 95C25 95 10 85 10 70V15Z" ' +
+      'fill="url(#gold_grad_' + label.replace(/[^a-z0-9]/gi, '') + ')" stroke="' + strokeColor + '" stroke-width="1.5"/>' +
+      // Основний текст
+      '<text x="60" y="' + (sublabel ? '48' : '58') + '" text-anchor="middle" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="' + (label.length > 4 ? '20' : '32') + '" font-weight="900">' + label + '</text>' +
+      // Підпис (якщо є)
+      (sublabel ? '<text x="60" y="76" text-anchor="middle" fill="' + textColor + '" fill-opacity="0.7" font-family="Arial, sans-serif" font-size="14" font-weight="bold" letter-spacing="0.5">' + sublabel + '</text>' : '') +
+    '</svg>';
+
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   }
 
+  // Словник іконок - тепер всі золоті
   var svgIcons = {
-    '4K': createSvgIcon('<text x="60" y="48" text-anchor="middle" fill="white" font-family="Arial" font-size="32" font-weight="bold">4K</text><text x="60" y="75" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-family="Arial" font-size="14" font-weight="bold">ULTRA HD</text>'),
-    'FULL HD': createSvgIcon('<text x="60" y="48" text-anchor="middle" fill="white" font-family="Arial" font-size="24" font-weight="bold">1080P</text><text x="60" y="75" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-family="Arial" font-size="16" font-weight="bold">FULL HD</text>'),
-    'HD': createSvgIcon('<text x="60" y="48" text-anchor="middle" fill="white" font-family="Arial" font-size="28" font-weight="bold">720P</text><text x="60" y="75" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-family="Arial" font-size="18" font-weight="bold">HD</text>'),
-    'HDR': createSvgIcon('<text x="60" y="58" text-anchor="middle" fill="white" font-family="Arial" font-size="36" font-weight="bold">HDR</text>'),
-    'Dolby Vision': createSvgIcon('<path d="M35 30H45C52 30 52 40 45 40H35V30ZM75 30C82 30 82 40 75 40H65V30H75Z" fill="black" opacity="0.2"/><text x="60" y="45" text-anchor="middle" fill="#2a1b02" font-family="Arial" font-size="22" font-weight="bold">Dolby</text><text x="60" y="75" text-anchor="middle" fill="#2a1b02" font-family="Arial" font-size="18" letter-spacing="3">VISION</text>', true),
-    '7.1': createSvgIcon('<text x="60" y="58" text-anchor="middle" fill="white" font-family="Arial" font-size="36" font-weight="bold">7.1</text>'),
-    '5.1': createSvgIcon('<text x="60" y="58" text-anchor="middle" fill="white" font-family="Arial" font-size="36" font-weight="bold">5.1</text>'),
-    '2.0': createSvgIcon('<text x="60" y="58" text-anchor="middle" fill="white" font-family="Arial" font-size="36" font-weight="bold">2.0</text>'),
-    'DUB': createSvgIcon('<text x="60" y="58" text-anchor="middle" fill="white" font-family="Arial" font-size="32" font-weight="bold">DUB</text>'),
-    'UKR': createSvgIcon('<text x="60" y="58" text-anchor="middle" fill="white" font-family="Arial" font-size="32" font-weight="bold">UKR</text>')
+    '4K': getSvgIcon('4K', 'ULTRA HD'),
+    'FULL HD': getSvgIcon('1080P', 'FULL HD'),
+    'HD': getSvgIcon('720P', 'HD'),
+    'HDR': getSvgIcon('HDR', 'HIGH DYNAMIC'),
+    'Dolby Vision': getSvgIcon('Dolby', 'VISION'),
+    '7.1': getSvgIcon('7.1', 'CHANNELS'),
+    '5.1': getSvgIcon('5.1', 'CHANNELS'),
+    '2.0': getSvgIcon('2.0', 'STEREO'),
+    'DUB': getSvgIcon('DUB', 'STUDIO'),
+    'UKR': getSvgIcon('UKR', 'LANGUAGE'),
+    '2K': getSvgIcon('2K', 'QUAD HD')
   };
 
-  // --- Решта коду плагіна (без змін в логіці) ---
+  // --- Рендеринг та логіка плагіна ---
 
   function renderStudioLogos(container, data) {
     var showStudio = Lampa.Storage.get('applecation_show_studio');
     if (showStudio === false || showStudio === 'false') return;
+
     var logos = [];
     var sources = [data.networks, data.production_companies];
+
     sources.forEach(function(source) {
       if (source && source.length) {
         source.forEach(function(item) {
@@ -58,12 +69,11 @@
         });
       }
     });
+
     logos.forEach(function(logo) {
       var imgId = 'logo_' + Math.random().toString(36).substr(2, 9);
-      var html = '<div class="quality-badge studio-logo" id="' + imgId + '">' +
-                   '<img src="' + logo.url + '" title="' + logo.name + '" style="height: 1.8em; width: auto; opacity: 1;">' +
-                 '</div>';
-      container.append(html);
+      container.append('<div class="quality-badge studio-logo" id="' + imgId + '"><img src="' + logo.url + '" style="height: 1.8em; width: auto;"></div>');
+
       var img = new Image();
       img.crossOrigin = 'anonymous';
       img.onload = function() {
@@ -74,20 +84,16 @@
         try {
           var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
           var pixels = imageData.data;
-          var r = 0, g = 0, b = 0, pixelCount = 0, darkPixelCount = 0;
+          var r = 0, g = 0, b = 0, pixelCount = 0;
           for (var i = 0; i < pixels.length; i += 4) {
             if (pixels[i + 3] > 50) {
-              var br = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
               r += pixels[i]; g += pixels[i + 1]; b += pixels[i + 2];
               pixelCount++;
-              if (br < 25) darkPixelCount++;
             }
           }
           if (pixelCount > 0) {
-            var avgBr = (0.299 * (r/pixelCount) + 0.587 * (g/pixelCount) + 0.114 * (b/pixelCount));
-            if (avgBr < 30 && (darkPixelCount / pixelCount) > 0.6) {
-              $('#' + imgId + ' img').css({'filter': 'brightness(0) invert(1) contrast(1.2)', 'opacity': '0.9'});
-            }
+            var brightness = (0.299 * (r/pixelCount) + 0.587 * (g/pixelCount) + 0.114 * (b/pixelCount));
+            if (brightness < 35) $('#' + imgId + ' img').css('filter', 'brightness(0) invert(1)');
           }
         } catch (e) {}
       };
@@ -99,20 +105,22 @@
     var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
     var resOrder = ['HD', 'FULL HD', '2K', '4K'];
     var audioOrder = ['2.0', '4.0', '5.1', '7.1'];
+    
     var limit = Math.min(results.length, 20);
     for (var i = 0; i < limit; i++) {
       var item = results[i];
       var title = (item.Title || '').toLowerCase();
       if (title.indexOf('ukr') >= 0 || title.indexOf('укр') >= 0 || title.indexOf('ua') >= 0) best.ukr = true;
       var foundRes = null;
-      if (title.indexOf('4k') >= 0 || title.indexOf('2160') >= 0 || title.indexOf('uhd') >= 0) foundRes = '4K';
-      else if (title.indexOf('1080') >= 0 || title.indexOf('fhd') >= 0 || title.indexOf('full hd') >= 0) foundRes = 'FULL HD';
+      if (title.indexOf('4k') >= 0 || title.indexOf('2160') >= 0) foundRes = '4K';
+      else if (title.indexOf('1080') >= 0 || title.indexOf('full hd') >= 0) foundRes = 'FULL HD';
       else if (title.indexOf('720') >= 0 || title.indexOf('hd') >= 0) foundRes = 'HD';
       if (foundRes && (!best.resolution || resOrder.indexOf(foundRes) > resOrder.indexOf(best.resolution))) best.resolution = foundRes;
+      
       if (item.ffprobe && Array.isArray(item.ffprobe)) {
         item.ffprobe.forEach(function(stream) {
           if (stream.codec_type === 'video') {
-            if (stream.side_data_list && JSON.stringify(stream.side_data_list).indexOf('Vision') >= 0) best.dolbyVision = true;
+            if (JSON.stringify(stream.side_data_list || []).indexOf('Vision') >= 0) best.dolbyVision = true;
             if (stream.color_transfer === 'smpte2084') best.hdr = true;
           }
           if (stream.codec_type === 'audio' && stream.channels) {
@@ -135,15 +143,15 @@
     if (!iconPath) return '';
     var className = isCard ? 'card-quality-badge' : 'quality-badge';
     var delay = (index * 0.08) + 's';
-    return '<div class="' + className + '" style="animation-delay: ' + delay + '"><img src="' + iconPath + '" draggable="false"></div>';
+    return '<div class="' + className + '" style="animation-delay: ' + delay + '"><img src="' + iconPath + '"></div>';
   }
 
   function addCardBadges(card, best) {
     if (card.find('.card-quality-badges').length) return;
-    var badges = [];
-    if (best.ukr) badges.push(createBadgeImg('UKR', true, badges.length));
-    if (best.resolution) badges.push(createBadgeImg(best.resolution, true, badges.length));
-    if (badges.length) card.find('.card__view').append('<div class="card-quality-badges">' + badges.join('') + '</div>');
+    var b = [];
+    if (best.ukr) b.push(createBadgeImg('UKR', true, b.length));
+    if (best.resolution) b.push(createBadgeImg(best.resolution, true, b.length));
+    if (b.length) card.find('.card__view').append('<div class="card-quality-badges">' + b.join('') + '</div>');
   }
 
   function processCards() {
@@ -185,15 +193,13 @@
   setInterval(processCards, 3000);
 
   var style = '<style>\
-    .quality-badges-container { display: flex; align-items: center; gap: 0.8em; margin: 0.8em 0; min-height: 2em; flex-wrap: wrap; }\
-    .quality-badge { height: 1.8em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; display: flex; align-items: center; }\
-    .studio-logo { height: 2.2em !important; margin-right: 4px; }\
-    .card-quality-badges { position: absolute; top: 0.3em; right: 0.3em; display: flex; flex-direction: row; gap: 0.2em; pointer-events: none; z-index: 5; }\
-    .card-quality-badge { height: 1.4em; opacity: 0; transform: translateY(5px); animation: qb_in 0.3s ease forwards; }\
+    .quality-badges-container { display: flex; align-items: center; gap: 0.8em; margin: 0.8em 0; min-height: 2.5em; flex-wrap: wrap; }\
+    .quality-badge { height: 2.2em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; }\
+    .card-quality-badges { position: absolute; top: 0.3em; right: 0.3em; display: flex; flex-direction: row; gap: 0.2em; z-index: 5; }\
+    .card-quality-badge { height: 1.6em; opacity: 0; transform: translateY(5px); animation: qb_in 0.3s ease forwards; }\
     @keyframes qb_in { to { opacity: 1; transform: translateY(0); } }\
-    .quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; }\
+    .quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6)); }\
   </style>';
   $('body').append(style);
 
 })();
-                          
