@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  // Функція для створення SVG іконок у золотому стилі (без нижніх написів)
+  // Функція для генерації прямокутних SVG іконок
   function getSvgIcon(label, isDolby) {
     var bgTop = '#f9d976';    
     var bgBottom = '#b2822b'; 
@@ -11,22 +11,25 @@
     var content = '';
     
     if (isDolby) {
-      // Спеціальний дизайн для Dolby з подвійним D як на фото
-      content = '<path d="M32 35H38C43 35 43 45 38 45H32V35ZM52 35C57 35 57 45 52 45H46V35H52Z" fill="' + textColor + '" opacity="0.9"/>' +
-                '<text x="72" y="58" text-anchor="middle" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="28" font-weight="900">Dolby</text>';
+      // Логотип Dolby Vision: Подвійне D + текст
+      content = '<g transform="translate(12, 32)">' +
+                '<path d="M0 0H6C11 0 11 14 6 14H0V0ZM22 0C27 0 27 14 22 14H16V0H22Z" fill="' + textColor + '" opacity="0.9"/>' +
+                '<text x="62" y="12" text-anchor="middle" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="26" font-weight="900">Dolby</text>' +
+                '</g>';
     } else {
-      // Звичайний великий текст для інших іконок
-      content = '<text x="60" y="62" text-anchor="middle" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="42" font-weight="900">' + label + '</text>';
+      // Центрований великий текст для інших іконок
+      content = '<text x="60" y="62" text-anchor="middle" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="44" font-weight="900">' + label + '</text>';
     }
 
-    var svg = '<svg width="120" height="100" viewBox="0 0 120 100" xmlns="http://www.w3.org/2000/svg">' +
+    var svg = '<svg width="120" height="80" viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg">' +
       '<defs>' +
         '<linearGradient id="gold_grad_' + label.replace(/[^a-z0-9]/gi, '') + '" x1="0%" y1="0%" x2="0%" y2="100%">' +
           '<stop offset="0%" style="stop-color:' + bgTop + ';stop-opacity:1" />' +
           '<stop offset="100%" style="stop-color:' + bgBottom + ';stop-opacity:1" />' +
         '</linearGradient>' +
       '</defs>' +
-      '<path d="M10 15C10 8 16 5 25 5H95C104 5 110 8 110 15V70C110 85 95 95 60 95C25 95 10 85 10 70V15Z" ' +
+      // ПРЯМОКУТНА ФОРМА (rx="8" - легке закруглення кутів)
+      '<rect x="5" y="5" width="110" height="70" rx="8" ' +
       'fill="url(#gold_grad_' + label.replace(/[^a-z0-9]/gi, '') + ')" stroke="' + strokeColor + '" stroke-width="2.5"/>' +
       content + 
     '</svg>';
@@ -48,7 +51,7 @@
     '2K': getSvgIcon('2K')
   };
 
-  // --- Логіка та рендеринг ---
+  // --- Логіка відображення ---
 
   function renderStudioLogos(container, data) {
     var showStudio = Lampa.Storage.get('applecation_show_studio');
@@ -185,12 +188,12 @@
   setInterval(processCards, 3000);
 
   var style = '<style>\
-    .quality-badges-container { display: flex; align-items: center; gap: 0.8em; margin: 1em 0; min-height: 3.2em; flex-wrap: wrap; }\
-    .quality-badge { height: 2.8em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; }\
-    .card-quality-badges { position: absolute; top: 0.4em; right: 0.4em; display: flex; flex-direction: row; gap: 0.3em; z-index: 5; }\
-    .card-quality-badge { height: 2.2em; opacity: 0; transform: translateY(5px); animation: qb_in 0.3s ease forwards; }\
+    .quality-badges-container { display: flex; align-items: center; gap: 0.6em; margin: 1em 0; min-height: 2.8em; flex-wrap: wrap; }\
+    .quality-badge { height: 2.5em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; }\
+    .card-quality-badges { position: absolute; top: 0.4em; right: 0.4em; display: flex; flex-direction: row; gap: 0.2em; z-index: 5; }\
+    .card-quality-badge { height: 1.8em; opacity: 0; transform: translateY(5px); animation: qb_in 0.3s ease forwards; }\
     @keyframes qb_in { to { opacity: 1; transform: translateY(0); } }\
-    .quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.7)); }\
+    .quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; filter: drop-shadow(0 3px 5px rgba(0,0,0,0.6)); }\
   </style>';
   $('body').append(style);
 
