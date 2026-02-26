@@ -1,12 +1,23 @@
 (function () {
   'use strict';
 
-  // Функція для генерації SVG з великим текстом
-  function getSvgIcon(label, sublabel) {
+  // Функція для створення SVG іконок у золотому стилі (без нижніх написів)
+  function getSvgIcon(label, isDolby) {
     var bgTop = '#f9d976';    
     var bgBottom = '#b2822b'; 
     var textColor = '#1a1102'; 
     var strokeColor = '#7a5416';
+
+    var content = '';
+    
+    if (isDolby) {
+      // Спеціальний дизайн для Dolby з подвійним D як на фото
+      content = '<path d="M32 35H38C43 35 43 45 38 45H32V35ZM52 35C57 35 57 45 52 45H46V35H52Z" fill="' + textColor + '" opacity="0.9"/>' +
+                '<text x="72" y="58" text-anchor="middle" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="28" font-weight="900">Dolby</text>';
+    } else {
+      // Звичайний великий текст для інших іконок
+      content = '<text x="60" y="62" text-anchor="middle" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="42" font-weight="900">' + label + '</text>';
+    }
 
     var svg = '<svg width="120" height="100" viewBox="0 0 120 100" xmlns="http://www.w3.org/2000/svg">' +
       '<defs>' +
@@ -16,31 +27,28 @@
         '</linearGradient>' +
       '</defs>' +
       '<path d="M10 15C10 8 16 5 25 5H95C104 5 110 8 110 15V70C110 85 95 95 60 95C25 95 10 85 10 70V15Z" ' +
-      'fill="url(#gold_grad_' + label.replace(/[^a-z0-9]/gi, '') + ')" stroke="' + strokeColor + '" stroke-width="2"/>' +
-      // ОСНОВНИЙ ТЕКСТ: Збільшено розмір (font-size) та піднято трохи вище (y="45")
-      '<text x="60" y="46" text-anchor="middle" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="38" font-weight="900">' + label + '</text>' +
-      // НИЖНІЙ ТЕКСТ: Збільшено та зроблено жирнішим
-      (sublabel ? '<text x="60" y="78" text-anchor="middle" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="16" font-weight="900" letter-spacing="0.2">' + sublabel + '</text>' : '') +
+      'fill="url(#gold_grad_' + label.replace(/[^a-z0-9]/gi, '') + ')" stroke="' + strokeColor + '" stroke-width="2.5"/>' +
+      content + 
     '</svg>';
 
     return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   }
 
   var svgIcons = {
-    '4K': getSvgIcon('4K', 'UHD'),
-    'FULL HD': getSvgIcon('1080', 'FHD'),
-    'HD': getSvgIcon('720', 'HD'),
-    'HDR': getSvgIcon('HDR', 'HIGH'),
-    'Dolby Vision': getSvgIcon('DV', 'VISION'),
-    '7.1': getSvgIcon('7.1', 'AUD'),
-    '5.1': getSvgIcon('5.1', 'AUD'),
-    '2.0': getSvgIcon('2.0', 'STR'),
-    'DUB': getSvgIcon('DUB', 'STUDIO'),
-    'UKR': getSvgIcon('UKR', 'LANG'),
-    '2K': getSvgIcon('2K', 'QHD')
+    '4K': getSvgIcon('4K'),
+    'FULL HD': getSvgIcon('1080'),
+    'HD': getSvgIcon('720'),
+    'HDR': getSvgIcon('HDR'),
+    'Dolby Vision': getSvgIcon('Dolby', true),
+    '7.1': getSvgIcon('7.1'),
+    '5.1': getSvgIcon('5.1'),
+    '2.0': getSvgIcon('2.0'),
+    'DUB': getSvgIcon('DUB'),
+    'UKR': getSvgIcon('UKR'),
+    '2K': getSvgIcon('2K')
   };
 
-  // --- Решта коду без змін, крім стилів внизу ---
+  // --- Логіка та рендеринг ---
 
   function renderStudioLogos(container, data) {
     var showStudio = Lampa.Storage.get('applecation_show_studio');
@@ -61,7 +69,7 @@
     });
     logos.forEach(function(logo) {
       var imgId = 'logo_' + Math.random().toString(36).substr(2, 9);
-      container.append('<div class="quality-badge studio-logo" id="' + imgId + '"><img src="' + logo.url + '" style="height: 2em; width: auto;"></div>');
+      container.append('<div class="quality-badge studio-logo" id="' + imgId + '"><img src="' + logo.url + '" style="height: 2.2em; width: auto;"></div>');
       var img = new Image();
       img.crossOrigin = 'anonymous';
       img.onload = function() {
@@ -72,16 +80,14 @@
         try {
           var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
           var pixels = imageData.data;
-          var r = 0, g = 0, b = 0, pixelCount = 0;
+          var r = 0, g = 0, b = 0, count = 0;
           for (var i = 0; i < pixels.length; i += 4) {
             if (pixels[i + 3] > 50) {
-              r += pixels[i]; g += pixels[i + 1]; b += pixels[i + 2];
-              pixelCount++;
+              r += pixels[i]; g += pixels[i + 1]; b += pixels[i + 2]; count++;
             }
           }
-          if (pixelCount > 0) {
-            var brightness = (0.299 * (r/pixelCount) + 0.587 * (g/pixelCount) + 0.114 * (b/pixelCount));
-            if (brightness < 35) $('#' + imgId + ' img').css('filter', 'brightness(0) invert(1)');
+          if (count > 0 && (0.299 * (r/count) + 0.587 * (g/count) + 0.114 * (b/count)) < 35) {
+            $('#' + imgId + ' img').css('filter', 'brightness(0) invert(1)');
           }
         } catch (e) {}
       };
@@ -179,12 +185,12 @@
   setInterval(processCards, 3000);
 
   var style = '<style>\
-    .quality-badges-container { display: flex; align-items: center; gap: 0.6em; margin: 0.8em 0; min-height: 2.8em; flex-wrap: wrap; }\
-    .quality-badge { height: 2.4em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; }\
-    .card-quality-badges { position: absolute; top: 0.3em; right: 0.3em; display: flex; flex-direction: row; gap: 0.2em; z-index: 5; }\
-    .card-quality-badge { height: 1.8em; opacity: 0; transform: translateY(5px); animation: qb_in 0.3s ease forwards; }\
+    .quality-badges-container { display: flex; align-items: center; gap: 0.8em; margin: 1em 0; min-height: 3.2em; flex-wrap: wrap; }\
+    .quality-badge { height: 2.8em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; }\
+    .card-quality-badges { position: absolute; top: 0.4em; right: 0.4em; display: flex; flex-direction: row; gap: 0.3em; z-index: 5; }\
+    .card-quality-badge { height: 2.2em; opacity: 0; transform: translateY(5px); animation: qb_in 0.3s ease forwards; }\
     @keyframes qb_in { to { opacity: 1; transform: translateY(0); } }\
-    .quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6)); }\
+    .quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.7)); }\
   </style>';
   $('body').append(style);
 
