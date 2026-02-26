@@ -1,18 +1,12 @@
 (function () {
   'use strict';
 
-  var pluginPath = 'https://crowley24.github.io/Icons/';
-  
-  if (Lampa.Storage.get('applecation_show_studio') === null) {
-      Lampa.Storage.set('applecation_show_studio', true);
-  }
-
-  // Функція для генерації SVG коду в преміальному золотому стилі
+  // Функція для генерації SVG з великим текстом
   function getSvgIcon(label, sublabel) {
-    var bgTop = '#f9d976';    // Світле золото
-    var bgBottom = '#b2822b'; // Темне золото (бронза)
-    var textColor = '#2a1b02'; // Майже чорний для контрасту
-    var strokeColor = '#7a5416'; // Контур
+    var bgTop = '#f9d976';    
+    var bgBottom = '#b2822b'; 
+    var textColor = '#1a1102'; 
+    var strokeColor = '#7a5416';
 
     var svg = '<svg width="120" height="100" viewBox="0 0 120 100" xmlns="http://www.w3.org/2000/svg">' +
       '<defs>' +
@@ -21,42 +15,38 @@
           '<stop offset="100%" style="stop-color:' + bgBottom + ';stop-opacity:1" />' +
         '</linearGradient>' +
       '</defs>' +
-      // Форма щита з твого фото
       '<path d="M10 15C10 8 16 5 25 5H95C104 5 110 8 110 15V70C110 85 95 95 60 95C25 95 10 85 10 70V15Z" ' +
-      'fill="url(#gold_grad_' + label.replace(/[^a-z0-9]/gi, '') + ')" stroke="' + strokeColor + '" stroke-width="1.5"/>' +
-      // Основний текст
-      '<text x="60" y="' + (sublabel ? '48' : '58') + '" text-anchor="middle" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="' + (label.length > 4 ? '20' : '32') + '" font-weight="900">' + label + '</text>' +
-      // Підпис (якщо є)
-      (sublabel ? '<text x="60" y="76" text-anchor="middle" fill="' + textColor + '" fill-opacity="0.7" font-family="Arial, sans-serif" font-size="14" font-weight="bold" letter-spacing="0.5">' + sublabel + '</text>' : '') +
+      'fill="url(#gold_grad_' + label.replace(/[^a-z0-9]/gi, '') + ')" stroke="' + strokeColor + '" stroke-width="2"/>' +
+      // ОСНОВНИЙ ТЕКСТ: Збільшено розмір (font-size) та піднято трохи вище (y="45")
+      '<text x="60" y="46" text-anchor="middle" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="38" font-weight="900">' + label + '</text>' +
+      // НИЖНІЙ ТЕКСТ: Збільшено та зроблено жирнішим
+      (sublabel ? '<text x="60" y="78" text-anchor="middle" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="16" font-weight="900" letter-spacing="0.2">' + sublabel + '</text>' : '') +
     '</svg>';
 
     return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   }
 
-  // Словник іконок - тепер всі золоті
   var svgIcons = {
-    '4K': getSvgIcon('4K', 'ULTRA HD'),
-    'FULL HD': getSvgIcon('1080P', 'FULL HD'),
-    'HD': getSvgIcon('720P', 'HD'),
-    'HDR': getSvgIcon('HDR', 'HIGH DYNAMIC'),
-    'Dolby Vision': getSvgIcon('Dolby', 'VISION'),
-    '7.1': getSvgIcon('7.1', 'CHANNELS'),
-    '5.1': getSvgIcon('5.1', 'CHANNELS'),
-    '2.0': getSvgIcon('2.0', 'STEREO'),
+    '4K': getSvgIcon('4K', 'UHD'),
+    'FULL HD': getSvgIcon('1080', 'FHD'),
+    'HD': getSvgIcon('720', 'HD'),
+    'HDR': getSvgIcon('HDR', 'HIGH'),
+    'Dolby Vision': getSvgIcon('DV', 'VISION'),
+    '7.1': getSvgIcon('7.1', 'AUD'),
+    '5.1': getSvgIcon('5.1', 'AUD'),
+    '2.0': getSvgIcon('2.0', 'STR'),
     'DUB': getSvgIcon('DUB', 'STUDIO'),
-    'UKR': getSvgIcon('UKR', 'LANGUAGE'),
-    '2K': getSvgIcon('2K', 'QUAD HD')
+    'UKR': getSvgIcon('UKR', 'LANG'),
+    '2K': getSvgIcon('2K', 'QHD')
   };
 
-  // --- Рендеринг та логіка плагіна ---
+  // --- Решта коду без змін, крім стилів внизу ---
 
   function renderStudioLogos(container, data) {
     var showStudio = Lampa.Storage.get('applecation_show_studio');
     if (showStudio === false || showStudio === 'false') return;
-
     var logos = [];
     var sources = [data.networks, data.production_companies];
-
     sources.forEach(function(source) {
       if (source && source.length) {
         source.forEach(function(item) {
@@ -69,11 +59,9 @@
         });
       }
     });
-
     logos.forEach(function(logo) {
       var imgId = 'logo_' + Math.random().toString(36).substr(2, 9);
-      container.append('<div class="quality-badge studio-logo" id="' + imgId + '"><img src="' + logo.url + '" style="height: 1.8em; width: auto;"></div>');
-
+      container.append('<div class="quality-badge studio-logo" id="' + imgId + '"><img src="' + logo.url + '" style="height: 2em; width: auto;"></div>');
       var img = new Image();
       img.crossOrigin = 'anonymous';
       img.onload = function() {
@@ -105,7 +93,6 @@
     var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
     var resOrder = ['HD', 'FULL HD', '2K', '4K'];
     var audioOrder = ['2.0', '4.0', '5.1', '7.1'];
-    
     var limit = Math.min(results.length, 20);
     for (var i = 0; i < limit; i++) {
       var item = results[i];
@@ -116,7 +103,6 @@
       else if (title.indexOf('1080') >= 0 || title.indexOf('full hd') >= 0) foundRes = 'FULL HD';
       else if (title.indexOf('720') >= 0 || title.indexOf('hd') >= 0) foundRes = 'HD';
       if (foundRes && (!best.resolution || resOrder.indexOf(foundRes) > resOrder.indexOf(best.resolution))) best.resolution = foundRes;
-      
       if (item.ffprobe && Array.isArray(item.ffprobe)) {
         item.ffprobe.forEach(function(stream) {
           if (stream.codec_type === 'video') {
@@ -193,10 +179,10 @@
   setInterval(processCards, 3000);
 
   var style = '<style>\
-    .quality-badges-container { display: flex; align-items: center; gap: 0.8em; margin: 0.8em 0; min-height: 2.5em; flex-wrap: wrap; }\
-    .quality-badge { height: 2.2em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; }\
+    .quality-badges-container { display: flex; align-items: center; gap: 0.6em; margin: 0.8em 0; min-height: 2.8em; flex-wrap: wrap; }\
+    .quality-badge { height: 2.4em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; }\
     .card-quality-badges { position: absolute; top: 0.3em; right: 0.3em; display: flex; flex-direction: row; gap: 0.2em; z-index: 5; }\
-    .card-quality-badge { height: 1.6em; opacity: 0; transform: translateY(5px); animation: qb_in 0.3s ease forwards; }\
+    .card-quality-badge { height: 1.8em; opacity: 0; transform: translateY(5px); animation: qb_in 0.3s ease forwards; }\
     @keyframes qb_in { to { opacity: 1; transform: translateY(0); } }\
     .quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6)); }\
   </style>';
