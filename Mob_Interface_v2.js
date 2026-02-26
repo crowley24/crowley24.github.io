@@ -51,7 +51,6 @@
         
         css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 15px !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
 
-        // --- УЛЬТРА-КОМПАКТНІ КНОПКИ ---
         css += '.full-start-new__buttons { display: flex !important; justify-content: center !important; gap: 8px !important; width: 100% !important; margin-top: 15px !important; flex-wrap: wrap !important; } ';
         css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; padding: 4px !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; width: 54px !important; min-width: 0 !important; transition: transform 0.2s ease, opacity 0.2s ease !important; } ';
         css += '.full-start-new .full-start__button svg { width: 22px !important; height: 22px !important; margin-bottom: 4px !important; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5)) !important; fill: #fff !important; } ';
@@ -74,6 +73,71 @@
 
         style.textContent = css;
         document.head.appendChild(style);
+    }
+
+    // Нова функція рендеру студій з інтелектуальним аналізом кольору
+    function renderStudioLogos(container, data) {
+        var showStudio = Lampa.Storage.get('mobile_interface_studios');
+        if (showStudio === false || showStudio === 'false') return;
+
+        var logos = [];
+        var sources = [data.networks, data.production_companies];
+
+        sources.forEach(function(source) {
+            if (source && source.length) {
+                source.forEach(function(item) {
+                    if (item.logo_path) {
+                        var logoUrl = Lampa.Api.img(item.logo_path, 'w200');
+                        if (!logos.find(function(l) { return l.url === logoUrl; })) {
+                            logos.push({ url: logoUrl, name: item.name });
+                        }
+                    }
+                });
+            }
+        });
+
+        logos.forEach(function(logo) {
+            var imgId = 'logo_' + Math.random().toString(36).substr(2, 9);
+            var html = '<div class="studio-item" id="' + imgId + '">' +
+                           '<img src="' + logo.url + '" title="' + logo.name + '">' +
+                       '</div>';
+            container.append(html);
+
+            var img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = function() {
+                var canvas = document.createElement('canvas');
+                var ctx = canvas.getContext('2d');
+                canvas.width = this.width;
+                canvas.height = this.height;
+                ctx.drawImage(this, 0, 0);
+                try {
+                    var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    var pixels = imageData.data;
+                    var r = 0, g = 0, b = 0, pixelCount = 0, darkPixelCount = 0;
+                    for (var i = 0; i < pixels.length; i += 4) {
+                        var alpha = pixels[i + 3];
+                        if (alpha > 50) {
+                            var brightness = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
+                            r += pixels[i]; g += pixels[i + 1]; b += pixels[i + 2];
+                            pixelCount++;
+                            if (brightness < 25) darkPixelCount++;
+                        }
+                    }
+                    if (pixelCount > 0) {
+                        var avgBrightness = (0.299 * (r/pixelCount) + 0.587 * (g/pixelCount) + 0.114 * (b/pixelCount));
+                        var darkRatio = darkPixelCount / pixelCount;
+                        if (avgBrightness < 30 && darkRatio > 0.6) {
+                            $('#' + imgId + ' img').css({
+                                'filter': 'brightness(0) invert(1) contrast(1.2)',
+                                'opacity': '0.9'
+                            });
+                        }
+                    }
+                } catch (e) { console.log('Mobile Interface: Canvas error', e); }
+            };
+            img.src = logo.url;
+        });
     }
 
     function getBest(results) {
@@ -158,17 +222,8 @@
                     var $infoBlock = $('<div class="plugin-info-block"><div class="studio-row"></div><div class="quality-row"></div></div>');
                     $details.after($infoBlock);
 
-                    if (Lampa.Storage.get('mobile_interface_studios')) {
-                        var studios = (movie.networks || []).concat(movie.production_companies || []);
-                        var addedLogos = [];
-                        studios.forEach(s => {
-                            if (s.logo_path && addedLogos.indexOf(s.logo_path) === -1) {
-                                addedLogos.push(s.logo_path);
-                                var logoUrl = Lampa.Api.img(s.logo_path, 'w200');
-                                $infoBlock.find('.studio-row').append('<div class="studio-item"><img src="' + logoUrl + '"></div>');
-                            }
-                        });
-                    }
+                    // Виклик нової функції для рендеру логотипів
+                    renderStudioLogos($infoBlock.find('.studio-row'), movie);
 
                     if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Parser.get) {
                         Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
@@ -224,6 +279,12 @@
                 default: '10000' 
             },
             field: { name: 'Інтервал слайд-шоу' }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'mobile_interface',
+            param: { name: 'mobile_interface_studios', type: 'trigger', default: true },
+            field: { name: 'Логотипи студій', description: 'Показувати лого мереж та компаній' }
         });
 
         Lampa.SettingsApi.addParam({
