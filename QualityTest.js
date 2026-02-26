@@ -1,30 +1,33 @@
 (function () {
   'use strict';
 
+  // Функція для генерації компактних прямокутних SVG іконок
   function getSvgIcon(label, isDolby) {
     var bgTop = '#f9d976';    
     var bgBottom = '#b2822b'; 
     var textColor = '#1a1102'; 
-    var strokeColor = '#5c3d05'; // Темніша обводка для чіткості
+    var strokeColor = '#5c3d05';
 
-    var width = isDolby ? 150 : 100; // Трохи розширив для Vision
-    var height = 55; // Зробив ще вужчими по висоті
+    // Вужча висота (50) та адаптивна ширина
+    var width = isDolby ? 140 : 90;
+    var height = 50;
     var rectWidth = width - 8;
     var rectHeight = height - 8;
     var content = '';
     
     if (isDolby) {
-      // ТОЧНА КОПІЯ DOLBY VISION З ФОТО
-      content = '<g transform="translate(12, 26)">' +
-                // Символ DD
-                '<path d="M0 -10H5C9 -10 9 2 5 2H0V-10ZM13 -10C17 -10 17 2 13 2H9V-10H13Z" fill="' + textColor + '"/>' +
-                // Напис Dolby
-                '<text x="75" y="-1" text-anchor="middle" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="28" font-weight="900">Dolby</text>' +
-                // Великий та розріджений VISION
-                '<text x="70" y="16" text-anchor="middle" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="14" font-weight="900" letter-spacing="4">VISION</text>' +
+      // ГЕОМЕТРІЯ DOLBY VISION (Максимальна схожість з фото)
+      content = '<g transform="translate(10, 26)">' +
+                // Масивний подвійний D символ (збільшений масштаб)
+                '<path d="M0 -11H5C9 -11 9 1 5 1H0V-11ZM15 -11C19 -11 19 1 15 1H10V-11H15Z" fill="' + textColor + '"/>' +
+                // Основний напис Dolby
+                '<text x="78" y="0" text-anchor="middle" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="26" font-weight="900">Dolby</text>' +
+                // Розтягнутий напис VISION знизу
+                '<text x="72" y="15" text-anchor="middle" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="11" font-weight="900" letter-spacing="4">VISION</text>' +
                 '</g>';
     } else {
-      content = '<text x="' + (width/2) + '" y="' + (height/2 + 2) + '" text-anchor="middle" dominant-baseline="central" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="34" font-weight="900">' + label + '</text>';
+      // Центрований текст для 4K, HDR, UKR тощо
+      content = '<text x="' + (width/2) + '" y="' + (height/2 + 1) + '" text-anchor="middle" dominant-baseline="central" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="32" font-weight="900">' + label + '</text>';
     }
 
     var svg = '<svg width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '" xmlns="http://www.w3.org/2000/svg">' +
@@ -34,6 +37,7 @@
           '<stop offset="100%" style="stop-color:' + bgBottom + ';stop-opacity:1" />' +
         '</linearGradient>' +
       '</defs>' +
+      // Прямокутник з мінімальним закругленням (rx="2")
       '<rect x="4" y="4" width="' + rectWidth + '" height="' + rectHeight + '" rx="2" ' +
       'fill="url(#gold_grad_' + label.replace(/[^a-z0-9]/gi, '') + ')" stroke="' + strokeColor + '" stroke-width="1.5"/>' +
       content + 
@@ -56,7 +60,8 @@
     '2K': getSvgIcon('2K')
   };
 
-  // --- Логіка відображення ---
+  // --- Логіка відображення студій та автоматичного вибору якості ---
+
   function renderStudioLogos(container, data) {
     var showStudio = Lampa.Storage.get('applecation_show_studio');
     if (showStudio === false || showStudio === 'false') return;
@@ -76,7 +81,7 @@
     });
     logos.forEach(function(logo) {
       var imgId = 'logo_' + Math.random().toString(36).substr(2, 9);
-      container.append('<div class="quality-badge studio-logo" id="' + imgId + '"><img src="' + logo.url + '" style="height: 1.6em; width: auto;"></div>');
+      container.append('<div class="quality-badge studio-logo" id="' + imgId + '"><img src="' + logo.url + '" style="height: 1.5em; width: auto;"></div>');
       var img = new Image();
       img.crossOrigin = 'anonymous';
       img.onload = function() {
@@ -192,14 +197,13 @@
   setInterval(processCards, 3000);
 
   var style = '<style>\
-    .quality-badges-container { display: flex; align-items: center; gap: 0.35em; margin: 0.6em 0; min-height: 2em; flex-wrap: wrap; }\
-    .quality-badge { height: 1.6em; opacity: 0; transform: translateY(6px); animation: qb_in 0.4s ease forwards; }\
-    .card-quality-badges { position: absolute; top: 0.3em; right: 0.3em; display: flex; flex-direction: row; gap: 0.12em; z-index: 5; }\
-    .card-quality-badge { height: 1.2em; opacity: 0; transform: translateY(4px); animation: qb_in 0.3s ease forwards; }\
+    .quality-badges-container { display: flex; align-items: center; gap: 0.3em; margin: 0.5em 0; min-height: 1.8em; flex-wrap: wrap; }\
+    .quality-badge { height: 1.5em; opacity: 0; transform: translateY(6px); animation: qb_in 0.4s ease forwards; }\
+    .card-quality-badges { position: absolute; top: 0.3em; right: 0.3em; display: flex; flex-direction: row; gap: 0.1em; z-index: 5; }\
+    .card-quality-badge { height: 1.1em; opacity: 0; transform: translateY(4px); animation: qb_in 0.3s ease forwards; }\
     @keyframes qb_in { to { opacity: 1; transform: translateY(0); } }\
-    .quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3)); }\
+    .quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)); }\
   </style>';
   $('body').append(style);
 
 })();
-  
