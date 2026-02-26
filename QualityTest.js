@@ -1,39 +1,41 @@
 (function () {
   'use strict';
 
-  // Функція для генерації вужчих прямокутних SVG іконок
+  // Функція для генерації вужчих по висоті SVG іконок
   function getSvgIcon(label, isDolby) {
     var bgTop = '#f9d976';    
     var bgBottom = '#b2822b'; 
     var textColor = '#1a1102'; 
     var strokeColor = '#7a5416';
     
-    // Зменшена ширина: 100 для звичайних, 140 для Dolby
+    // Ширина: 100 для звичайних, 140 для Dolby. Висота тепер 60 замість 80.
     var width = isDolby ? 140 : 100;
+    var height = 60;
     var rectWidth = width - 10;
+    var rectHeight = height - 10;
     var content = '';
     
     if (isDolby) {
-      // Дизайн Dolby Vision з написом VISION знизу
-      content = '<g transform="translate(10, 35)">' +
-                '<path d="M0 -12H4C7 -12 7 0 4 0H0V-12ZM13 -12C16 -12 16 0 13 0H9V-12H13Z" fill="' + textColor + '"/>' +
-                '<text x="65" y="-3" text-anchor="middle" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="28" font-weight="900">Dolby</text>' +
-                '<text x="65" y="16" text-anchor="middle" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="12" font-weight="900" letter-spacing="1.5">VISION</text>' +
+      // Оновлений дизайн Dolby Vision: чіткіший напис VISION
+      content = '<g transform="translate(12, 28)">' +
+                '<path d="M0 -10H4C7 -10 7 0 4 0H0V-10ZM12 -10C15 -10 15 0 12 0H9V-10H12Z" fill="' + textColor + '"/>' +
+                '<text x="68" y="-2" text-anchor="middle" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="26" font-weight="900">Dolby</text>' +
+                '<text x="68" y="15" text-anchor="middle" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="13" font-weight="900" letter-spacing="2">VISION</text>' +
                 '</g>';
     } else {
-      // Центрований текст для звичайних іконок
-      content = '<text x="' + (width/2) + '" y="42" text-anchor="middle" dominant-baseline="central" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="42" font-weight="900">' + label + '</text>';
+      // Текст для звичайних іконок, центрований у вужчій плашці
+      content = '<text x="' + (width/2) + '" y="' + (height/2 + 2) + '" text-anchor="middle" dominant-baseline="central" fill="' + textColor + '" font-family="Arial, sans-serif" font-size="36" font-weight="900">' + label + '</text>';
     }
 
-    var svg = '<svg width="' + width + '" height="80" viewBox="0 0 ' + width + ' 80" xmlns="http://www.w3.org/2000/svg">' +
+    var svg = '<svg width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '" xmlns="http://www.w3.org/2000/svg">' +
       '<defs>' +
         '<linearGradient id="gold_grad_' + label.replace(/[^a-z0-9]/gi, '') + '" x1="0%" y1="0%" x2="0%" y2="100%">' +
           '<stop offset="0%" style="stop-color:' + bgTop + ';stop-opacity:1" />' +
           '<stop offset="100%" style="stop-color:' + bgBottom + ';stop-opacity:1" />' +
         '</linearGradient>' +
       '</defs>' +
-      '<rect x="5" y="5" width="' + rectWidth + '" height="70" rx="6" ' +
-      'fill="url(#gold_grad_' + label.replace(/[^a-z0-9]/gi, '') + ')" stroke="' + strokeColor + '" stroke-width="2.5"/>' +
+      '<rect x="5" y="5" width="' + rectWidth + '" height="' + rectHeight + '" rx="5" ' +
+      'fill="url(#gold_grad_' + label.replace(/[^a-z0-9]/gi, '') + ')" stroke="' + strokeColor + '" stroke-width="2"/>' +
       content + 
     '</svg>';
 
@@ -54,8 +56,7 @@
     '2K': getSvgIcon('2K')
   };
 
-  // --- Логіка без змін ---
-
+  // --- Рендеринг студій ---
   function renderStudioLogos(container, data) {
     var showStudio = Lampa.Storage.get('applecation_show_studio');
     if (showStudio === false || showStudio === 'false') return;
@@ -75,7 +76,7 @@
     });
     logos.forEach(function(logo) {
       var imgId = 'logo_' + Math.random().toString(36).substr(2, 9);
-      container.append('<div class="quality-badge studio-logo" id="' + imgId + '"><img src="' + logo.url + '" style="height: 2.2em; width: auto;"></div>');
+      container.append('<div class="quality-badge studio-logo" id="' + imgId + '"><img src="' + logo.url + '" style="height: 1.8em; width: auto;"></div>');
       var img = new Image();
       img.crossOrigin = 'anonymous';
       img.onload = function() {
@@ -191,12 +192,12 @@
   setInterval(processCards, 3000);
 
   var style = '<style>\
-    .quality-badges-container { display: flex; align-items: center; gap: 0.4em; margin: 1em 0; min-height: 2.8em; flex-wrap: wrap; }\
-    .quality-badge { height: 2.3em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; }\
-    .card-quality-badges { position: absolute; top: 0.4em; right: 0.4em; display: flex; flex-direction: row; gap: 0.15em; z-index: 5; }\
-    .card-quality-badge { height: 1.5em; opacity: 0; transform: translateY(5px); animation: qb_in 0.3s ease forwards; }\
+    .quality-badges-container { display: flex; align-items: center; gap: 0.4em; margin: 0.8em 0; min-height: 2.2em; flex-wrap: wrap; }\
+    .quality-badge { height: 1.8em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; }\
+    .card-quality-badges { position: absolute; top: 0.3em; right: 0.3em; display: flex; flex-direction: row; gap: 0.15em; z-index: 5; }\
+    .card-quality-badge { height: 1.3em; opacity: 0; transform: translateY(5px); animation: qb_in 0.3s ease forwards; }\
     @keyframes qb_in { to { opacity: 1; transform: translateY(0); } }\
-    .quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }\
+    .quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4)); }\
   </style>';
   $('body').append(style);
 
