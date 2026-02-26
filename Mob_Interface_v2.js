@@ -18,7 +18,7 @@
     });
 
     var slideshowTimer; 
-    var pluginPath = 'https://crowley24.github.io/Icons/';
+    var pluginPath = 'https://crowley24.github.io/NewIcons/';
     var svgIcons = {
         '4K': pluginPath + '4K.svg', '2K': pluginPath + '2K.svg', 'FULL HD': pluginPath + 'FULL HD.svg',
         'HD': pluginPath + 'HD.svg', 'HDR': pluginPath + 'HDR.svg', 'Dolby Vision': pluginPath + 'Dolby Vision.svg',
@@ -37,22 +37,36 @@
         
         var css = '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } } ';
         css += '@keyframes qb_in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } ';
+        
         css += '@media screen and (max-width: 480px) { ';
         css += '.background { background: #000 !important; } ';
         css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 60vh !important; pointer-events: none !important; } ';
         css += '.full-start-new__poster img { ';
         css += (isAnimationEnabled ? 'animation: kenBurnsEffect 25s ease-in-out infinite !important; ' : '');
-        css += 'transform-origin: center center !important; transition: opacity 1.5s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; } ';
+        css += 'transform-origin: center center !important; transition: opacity 1.5s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
+        css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
         
         css += '.full-start-new__right { background: none !important; margin-top: -110px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
         css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 80px; margin-bottom: 5px; } ';
         css += '.full-start-new__title img { max-height: 100px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); } ';
-        
         css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 15px !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
 
-        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 15px 0; width: 100%; } ';
-        css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%; } ';
+        // --- СТИЛІ КНОПОК APPLE TV ---
+        css += '.full-start-new__buttons { display: flex !important; justify-content: center !important; gap: 10px !important; width: 100% !important; margin-top: 20px !important; flex-wrap: wrap !important; } ';
+        css += '.full-start-new .full-start__button { background: rgba(255,255,255,0.12) !important; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-radius: 14px !important; height: 48px !important; padding: 0 20px !important; display: flex !important; align-items: center !important; justify-content: center !important; border: 1px solid rgba(255,255,255,0.1) !important; width: auto !important; min-width: 50px !important; } ';
+        css += '.full-start-new .full-start__button span { font-weight: 600 !important; text-transform: none !important; margin-left: 8px !important; font-size: 1.1em !important; } ';
+        css += '.full-start-new .full-start__button svg { width: 20px !important; height: 20px !important; } ';
         
+        // Головна кнопка (Дивитися)
+        css += '.full-start-new .full-start__button.view--torrent, .full-start-new .full-start__button:first-child:not(.button--options) { background: #fff !important; color: #000 !important; border: none !important; padding: 0 28px !important; } ';
+        css += '.full-start-new .full-start__button.view--torrent svg, .full-start-new .full-start__button:first-child svg { fill: #000 !important; } ';
+        
+        // Кнопка з трьома крапками (Опції)
+        css += '.full-start-new .full-start__button.button--options { width: 48px !important; padding: 0 !important; } ';
+        
+        // --- ІНФО-БЛОКИ (СТУДІЇ ТА ЯКІСТЬ) ---
+        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 15px 0; width: 100%; } ';
+        css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px; width: 100%; } ';
         css += '.studio-item { height: 3.2em; opacity: 0; animation: qb_in 0.4s ease forwards; padding: 6px 12px; border-radius: 12px; display: flex; align-items: center; justify-content: center; ';
         if (bgOpacity !== '0') {
             css += 'background: rgba(255, 255, 255, ' + bgOpacity + '); ';
@@ -60,36 +74,32 @@
             css += 'box-shadow: 0 2px 10px rgba(0,0,0,0.2); ';
         }
         css += '} ';
-
-        css += '.quality-item { height: 1.4em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
+        css += '.quality-item { height: 2.2em; opacity: 0; animation: qb_in 0.4s ease forwards; } '; 
         css += '.studio-item img { height: 100%; width: auto; object-fit: contain; filter: contrast(1.1); } ';
-        css += '.quality-item img { height: 100%; width: auto; object-fit: contain; filter: drop-shadow(0px 0px 1px rgba(255,255,255,0.4)); } ';
+        css += '.quality-item img { height: 100%; width: auto; object-fit: contain; filter: drop-shadow(0px 1px 3px rgba(0,0,0,0.5)); } ';
+        
         css += '} ';
 
         style.textContent = css;
         document.head.appendChild(style);
     }
 
+    // Решта функцій (getBest, startSlideshow) залишаються без змін...
     function getBest(results) {
         var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
         var resOrder = ['HD', 'FULL HD', '2K', '4K'];
         var audioOrder = ['2.0', '4.0', '5.1', '7.1'];
-        
         var limit = Math.min(results.length, 20);
         for (var i = 0; i < limit; i++) {
             var item = results[i];
             var title = (item.Title || '').toLowerCase();
-
             if (title.indexOf('ukr') >= 0 || title.indexOf('укр') >= 0 || title.indexOf('ua') >= 0) best.ukr = true;
-
             var foundRes = null;
             if (title.indexOf('4k') >= 0 || title.indexOf('2160') >= 0 || title.indexOf('uhd') >= 0) foundRes = '4K';
             else if (title.indexOf('2k') >= 0 || title.indexOf('1440') >= 0) foundRes = '2K';
             else if (title.indexOf('1080') >= 0 || title.indexOf('fhd') >= 0 || title.indexOf('full hd') >= 0) foundRes = 'FULL HD';
             else if (title.indexOf('720') >= 0 || title.indexOf('hd') >= 0) foundRes = 'HD';
-
             if (foundRes && (!best.resolution || resOrder.indexOf(foundRes) > resOrder.indexOf(best.resolution))) best.resolution = foundRes;
-
             if (item.ffprobe && Array.isArray(item.ffprobe)) {
                 item.ffprobe.forEach(function(stream) {
                     if (stream.codec_type === 'video') {
@@ -143,6 +153,13 @@
                 var $render = e.object.activity.render();
                 var $details = $render.find('.full-start-new__details');
                 
+                // Додаємо клас для кнопок, щоб стилізувати опції (три крапки)
+                $render.find('.full-start__button').each(function() {
+                    if ($(this).find('svg').length && !$(this).find('span').length) {
+                        $(this).addClass('button--options');
+                    }
+                });
+
                 $.ajax({
                     url: 'https://api.themoviedb.org/3/' + (movie.name ? 'tv' : 'movie') + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key(),
                     success: function(res) {
@@ -178,14 +195,12 @@
                             if (res && res.Results) {
                                 var best = getBest(res.Results);
                                 var list = [];
-                                
                                 if (best.resolution) list.push(best.resolution);
                                 if (best.dolbyVision) list.push('Dolby Vision');
                                 else if (best.hdr) list.push('HDR');
                                 if (best.audio) list.push(best.audio);
                                 if (best.dub) list.push('DUB');
                                 if (best.ukr) list.push('UKR');
-                                
                                 list.forEach((type, i) => {
                                     if (svgIcons[type]) {
                                         var $q = $('<div class="quality-item" style="animation-delay:'+(i*0.1)+'s"><img src="'+svgIcons[type]+'"></div>');
@@ -206,43 +221,28 @@
             icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" fill="white"/></svg>',
             name: 'Мобільний інтерфейс'
         });
-
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { name: 'mobile_interface_animation', type: 'trigger', default: true },
             field: { name: 'Анімація постера', description: 'Ефект наближення фону' },
             onChange: function () { applyStyles(); }
         });
-
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { name: 'mobile_interface_slideshow', type: 'trigger', default: true },
             field: { name: 'Слайд-шоу фону', description: 'Автоматична зміна зображень фону' }
         });
-
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
-            param: { 
-                name: 'mobile_interface_slideshow_time', 
-                type: 'select', 
-                values: { '10000': '10 сек', '15000': '15 сек', '20000': '20 сек' }, 
-                default: '10000' 
-            },
+            param: { name: 'mobile_interface_slideshow_time', type: 'select', values: { '10000': '10 сек', '15000': '15 сек', '20000': '20 сек' }, default: '10000' },
             field: { name: 'Інтервал слайд-шоу' }
         });
-
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
-            param: { 
-                name: 'mobile_interface_studios_bg_opacity', 
-                type: 'select', 
-                values: { '0': 'Вимкнено', '0.05': 'Мінімальна', '0.15': 'Легка', '0.3': 'Середня', '0.5': 'Густа' }, 
-                default: '0.15' 
-            },
+            param: { name: 'mobile_interface_studios_bg_opacity', type: 'select', values: { '0': 'Вимкнено', '0.05': 'Мінімальна', '0.15': 'Легка', '0.3': 'Середня', '0.5': 'Густа' }, default: '0.15' },
             field: { name: 'Фон студій', description: 'Інтенсивність підкладки для логотипів' },
             onChange: function () { applyStyles(); }
         });
-
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { name: 'mobile_interface_quality', type: 'trigger', default: true },
@@ -262,4 +262,3 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
-                    
