@@ -42,7 +42,8 @@
         css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 60vh !important; pointer-events: none !important; } ';
         css += '.full-start-new__poster img { ';
         css += (isAnimationEnabled ? 'animation: kenBurnsEffect 25s ease-in-out infinite !important; ' : '');
-        css += 'transform-origin: center center !important; transition: opacity 1.5s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; } ';
+        css += 'transform-origin: center center !important; transition: opacity 1.5s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
+        css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
         
         css += '.full-start-new__right { background: none !important; margin-top: -110px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
         css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 80px; margin-bottom: 5px; } ';
@@ -60,11 +61,11 @@
             css += 'box-shadow: 0 2px 10px rgba(0,0,0,0.2); ';
         }
         css += '} ';
-        css += '.quality-item { height: 2.2em; opacity: 0; animation: qb_in 0.4s ease forwards; } ';
-
-css += '.studio-item img { height: 100%; width: auto; object-fit: contain; filter: contrast(1.1); } ';
-css += '.quality-item img { height: 100%; width: auto; object-fit: contain; filter: drop-shadow(0px 1px 3px rgba(0,0,0,0.5)); } ';
-         css += '} ';
+        css += '.quality-item { height: 2.2em; opacity: 0; animation: qb_in 0.4s ease forwards; } '; 
+        css += '.studio-item img { height: 100%; width: auto; object-fit: contain; filter: contrast(1.1); } ';
+        css += '.quality-item img { height: 100%; width: auto; object-fit: contain; filter: drop-shadow(0px 1px 3px rgba(0,0,0,0.5)); } ';
+        
+        css += '} ';
 
         style.textContent = css;
         document.head.appendChild(style);
@@ -184,7 +185,7 @@ css += '.quality-item img { height: 100%; width: auto; object-fit: contain; filt
                                 else if (best.hdr) list.push('HDR');
                                 if (best.audio) list.push(best.audio);
                                 if (best.dub) list.push('DUB');
-                                if (best.ukr) list.push('UKR');
+                                if (best.ukr) list.push('UKR'); // Тепер UKR завжди останній
                                 
                                 list.forEach((type, i) => {
                                     if (svgIcons[type]) {
@@ -262,4 +263,4 @@ css += '.quality-item img { height: 100%; width: auto; object-fit: contain; filt
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
-                    
+                        
