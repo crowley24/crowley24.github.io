@@ -59,20 +59,17 @@
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
         
         css += '.full-start-new__right { background: none !important; margin-top: -110px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
-        css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 80px; margin-bottom: 5px; } ';
-        css += '.full-start-new__title img { max-height: 100px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); } ';
+        css += '.full-start-new__title { width: 100%; display: flex; flex-direction: column; align-items: center; min-height: 80px; margin-bottom: 5px; } ';
+        css += '.full-start-new__title img { max-height: 100px; max-width: 80%; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); } ';
         
-        /* РЕЙТИНГИ */
-        css += '.plugin-ratings-row { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 8px 0; font-size: ' + rSize + '; } ';
-        css += '.plugin-rating-item { display: flex; align-items: center; gap: 4px; font-weight: bold; color: #fff; } ';
-        css += '.plugin-rating-item img { height: 1.1em; width: auto; } ';
+        /* ВИПРАВЛЕНІ РЕЙТИНГИ: ТЕПЕР ПІД ЛОГО */
+        css += '.plugin-ratings-row { display: flex; justify-content: center; align-items: center; gap: 15px; margin: 10px 0 5px; font-size: ' + rSize + '; width: 100%; } ';
+        css += '.plugin-rating-item { display: flex; align-items: center; gap: 6px; font-weight: bold; color: #fff; } ';
+        css += '.plugin-rating-item img { height: 1.2em; width: auto; object-fit: contain; } ';
 
         css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 15px !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
         css += '.full-start-new__buttons { display: flex !important; justify-content: center !important; gap: 8px !important; width: 100% !important; margin-top: 15px !important; flex-wrap: wrap !important; } ';
-        css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; padding: 4px !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; width: 54px !important; min-width: 0 !important; transition: transform 0.2s ease, opacity 0.2s ease !important; } ';
-        css += '.full-start-new .full-start__button svg { width: 22px !important; height: 22px !important; margin-bottom: 4px !important; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5)) !important; fill: #fff !important; } ';
-        css += '.full-start-new .full-start__button span { font-size: 8px !important; font-weight: 500 !important; text-transform: uppercase !important; letter-spacing: 0.3px !important; color: #fff !important; opacity: 0.5 !important; margin: 0 !important; text-align: center !important; white-space: nowrap !important; } ';
-
+        
         css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 15px 0; width: 100%; } ';
         css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px; width: 100%; } ';
         css += '.studio-item { height: 3.2em; opacity: 0; animation: qb_in 0.4s ease forwards; padding: 6px 12px; border-radius: 12px; display: flex; align-items: center; justify-content: center; ';
@@ -107,7 +104,7 @@
                 cnt += r.counter;
             }
         });
-        if (cnt >= 15) {
+        if (cnt >= 10) {
             var isTv = e.object.method === 'tv';
             var avg = isTv ? 7.4 : 6.5;
             var m = isTv ? 60 : 200;
@@ -118,6 +115,7 @@
 
     function renderRatings(container, e) {
         if (!Lampa.Storage.get('mobile_interface_ratings')) return;
+        container.find('.plugin-ratings-row').remove();
         var movie = e.data.movie;
         var $row = $('<div class="plugin-ratings-row"></div>');
         
@@ -233,10 +231,15 @@
                     success: function(res) {
                         var lang = Lampa.Storage.get('language') || 'uk';
                         var logo = res.logos.filter(l => l.iso_639_1 === lang)[0] || res.logos.filter(l => l.iso_639_1 === 'en')[0] || res.logos[0];
+                        var $titleCont = $render.find('.full-start-new__title');
+                        
                         if (logo) {
-                            $render.find('.full-start-new__title').html('<img src="' + Lampa.TMDB.image('/t/p/w300' + logo.file_path.replace('.svg', '.png')) + '">');
+                            $titleCont.html('<img src="' + Lampa.TMDB.image('/t/p/w300' + logo.file_path.replace('.svg', '.png')) + '">');
                         }
-                        renderRatings($render.find('.full-start-new__title'), e);
+                        
+                        // Рейтинги малюються ВСЕРЕДИНІ title-контейнера, що гарантує перенос рядка
+                        renderRatings($titleCont, e);
+                        
                         if (res.backdrops && res.backdrops.length > 1) startSlideshow($render.find('.full-start-new__poster'), res.backdrops.slice(0, 15));
                     }
                 });
@@ -272,7 +275,7 @@
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { name: 'mobile_interface_ratings', type: 'trigger', default: true },
-            field: { name: 'Рейтинги', description: 'Показувати TMDB та Lampa (CUB) під лого' }
+            field: { name: 'Рейтинги', description: 'Показувати TMDB та Lampa (CUB) строго під лого' }
         });
 
         Lampa.SettingsApi.addParam({
@@ -347,4 +350,4 @@
 
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
-    })();
+})();
