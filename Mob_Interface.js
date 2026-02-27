@@ -39,28 +39,28 @@
         css += '@keyframes qb_in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } ';
         css += '@media screen and (max-width: 480px) { ';
         
-        /* ХОВАЄМО СТАТУС ("Випущено") */
+        /* ПРИХОВУЄМО ЗАЙВЕ */
         css += '.full-start__status, .full-start-new__status { display: none !important; } ';
         
-        /* ГОЛОВНИЙ ТРЮК: ПЕРЕТВОРЮЄМО ПРАВУ ЧАСТИНУ НА ГРІД */
-        css += '.full-start-new__right { display: grid !important; grid-template-columns: 1fr !important; justify-items: center !important; text-align: center !important; background: none !important; margin-top: -110px !important; z-index: 2 !important; } ';
+        /* ОБ'ЄДНАННЯ В ОДИН РЯДОК (Центрування віку та жанрів) */
+        css += '.full-info-combined { display: flex !important; align-items: center !important; justify-content: center !important; flex-wrap: wrap !important; gap: 10px !important; width: 100% !important; margin: 10px 0 !important; color: #fff !important; } ';
         
-        /* СТВОРЮЄМО УЯВНИЙ РЯДОК ДЛЯ ВІКУ ТА ДЕТАЛЕЙ */
-        css += '.full-start-new__details { grid-row: 3 !important; order: 3 !important; display: flex !important; align-items: center !important; justify-content: center !important; gap: 8px !important; margin-top: 5px !important; font-size: 1.1em !important; } ';
+        /* СТИЛЬ ВІКУ */
+        css += '.full-info-combined .full-start__age { position: static !important; display: inline-block !important; border: 1px solid rgba(255,255,255,0.4) !important; padding: 1px 6px !important; border-radius: 4px !important; font-size: 0.9em !important; line-height: 1.4 !important; margin: 0 !important; height: auto !important; } ';
         
-        /* ПЕРЕМІЩУЄМО ВІК ПЕРЕД ДЕТАЛЯМИ ВІЗУАЛЬНО */
-        css += '.full-start__age { grid-row: 3 !important; order: 2 !important; position: static !important; margin: 0 !important; display: inline-flex !important; border: 1px solid rgba(255,255,255,0.4) !important; padding: 0 6px !important; border-radius: 4px !important; height: 1.4em !important; line-height: 1.4 !important; align-items: center !important; } ';
+        /* СТИЛЬ ЖАНРІВ ТА ЧАСУ */
+        css += '.full-info-combined .full-start-new__details { position: static !important; display: inline-flex !important; margin: 0 !important; font-size: 1em !important; opacity: 0.9 !important; white-space: nowrap !important; } ';
 
-        /* КОНТЕЙНЕР ДЛЯ РЕЙТИНГІВ (TMDB/IMDB) */
-        css += '.full-start__rates { grid-row: 2 !important; order: 1 !important; margin-bottom: 10px !important; } ';
-
+        /* ЗАГАЛЬНА КАРТКА */
+        css += '.background { background: #000 !important; } ';
         css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 60vh !important; } ';
         css += '.full-start-new__poster img { ' + (isAnimationEnabled ? 'animation: kenBurnsEffect 25s ease-in-out infinite !important; ' : '') + 'width: 100%; height: 100%; object-fit: cover; mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
         
-        css += '.full-start-new__title { grid-row: 1 !important; width: 100%; display: flex; justify-content: center; min-height: 80px; margin-bottom: 10px; } ';
+        css += '.full-start-new__right { background: none !important; margin-top: -110px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
+        css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 80px; margin-bottom: 5px; } ';
         css += '.full-start-new__title img { max-height: 100px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); } ';
         
-        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 15px 0; width: 100%; grid-row: 5 !important; } ';
+        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 15px 0; width: 100%; } ';
         css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px; } ';
 
         css += '.studio-item { height: 3.2em; padding: 6px 12px; border-radius: 12px; display: flex; align-items: center; background: rgba(255, 255, 255, ' + bgOpacity + '); backdrop-filter: blur(8px); } ';
@@ -72,7 +72,6 @@
         document.head.appendChild(style);
     }
 
-    /* Інші ваші функції: renderStudioLogos, getBest, startSlideshow залишаються без змін */
     function renderStudioLogos(container, data) {
         var showStudio = Lampa.Storage.get('mobile_interface_studios');
         if (showStudio === false || showStudio === 'false') return;
@@ -134,11 +133,18 @@
                 var movie = e.data.movie;
                 var $render = e.object.activity.render();
                 
-                // Переміщуємо вік фізично ПЕРЕД деталями для коректної роботи Grid
-                var $age = $render.find('.full-start__age');
+                // СТВОРЕННЯ ОБ'ЄДНАНОГО РЯДКА (JS ФІКС)
                 var $details = $render.find('.full-start-new__details');
-                if ($age.length && $details.length) {
-                    $age.insertBefore($details);
+                var $age = $render.find('.full-start__age');
+                
+                if ($details.length && $age.length) {
+                    $('.full-info-combined').remove(); // Видаляємо дублі
+                    var $combined = $('<div class="full-info-combined"></div>');
+                    $combined.append($age.clone());
+                    $combined.append($details.clone());
+                    
+                    $details.replaceWith($combined);
+                    $age.hide(); // Ховаємо оригінальний вік зліва
                 }
 
                 $.ajax({
@@ -154,14 +160,30 @@
                     }
                 });
 
-                // Додаємо блок інфо
-                if ($details.length) {
-                    $('.plugin-info-block').remove();
-                    var $infoBlock = $('<div class="plugin-info-block"><div class="studio-row"></div><div class="quality-row"></div></div>');
-                    $details.after($infoBlock);
-                    renderStudioLogos($infoBlock.find('.studio-row'), movie);
-                    // ... (тут логіка пошуку якості getBest)
-                }
+                // Блок студій та якості під рядком інфо
+                setTimeout(function() {
+                    var $anchor = $render.find('.full-info-combined');
+                    if ($anchor.length) {
+                        $('.plugin-info-block').remove();
+                        var $infoBlock = $('<div class="plugin-info-block"><div class="studio-row"></div><div class="quality-row"></div></div>');
+                        $anchor.after($infoBlock);
+                        renderStudioLogos($infoBlock.find('.studio-row'), movie);
+                        
+                        if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Parser.get) {
+                            Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
+                                if (res && res.Results) {
+                                    var best = getBest(res.Results);
+                                    var list = [];
+                                    if (best.resolution) list.push(best.resolution);
+                                    if (best.dub) list.push('DUB'); if (best.ukr) list.push('UKR');
+                                    list.forEach(type => {
+                                        if (svgIcons[type]) $infoBlock.find('.quality-row').append('<div class="quality-item"><img src="'+svgIcons[type]+'"></div>');
+                                    });
+                                }
+                            });
+                        }
+                    }
+                }, 400);
             }
         });
     }
@@ -175,4 +197,3 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
-                                                                                      
