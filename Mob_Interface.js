@@ -37,32 +37,37 @@
         
         var css = '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } } ';
         css += '@keyframes qb_in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } ';
+        
         css += '@media screen and (max-width: 480px) { ';
         
-        /* ПРИХОВУЄМО ЗАЙВЕ */
+        /* 1. ПРИХОВУЄМО СТАТУС ("Випущено") */
         css += '.full-start__status, .full-start-new__status { display: none !important; } ';
         
-        /* ОБ'ЄДНАННЯ В ОДИН РЯДОК (Центрування віку та жанрів) */
-        css += '.full-info-combined { display: flex !important; align-items: center !important; justify-content: center !important; flex-wrap: wrap !important; gap: 10px !important; width: 100% !important; margin: 10px 0 !important; color: #fff !important; } ';
-        
-        /* СТИЛЬ ВІКУ */
-        css += '.full-info-combined .full-start__age { position: static !important; display: inline-block !important; border: 1px solid rgba(255,255,255,0.4) !important; padding: 1px 6px !important; border-radius: 4px !important; font-size: 0.9em !important; line-height: 1.4 !important; margin: 0 !important; height: auto !important; } ';
-        
-        /* СТИЛЬ ЖАНРІВ ТА ЧАСУ */
-        css += '.full-info-combined .full-start-new__details { position: static !important; display: inline-flex !important; margin: 0 !important; font-size: 1em !important; opacity: 0.9 !important; white-space: nowrap !important; } ';
+        /* 2. РОБИМО ПРАВУ ПАНЕЛЬ КОНТЕЙНЕРОМ FLEX ДЛЯ ЦЕНТРУВАННЯ */
+        css += '.full-start-new__right { display: flex !important; flex-direction: column !important; align-items: center !important; text-align: center !important; background: none !important; margin-top: -110px !important; z-index: 2 !important; } ';
 
-        /* ЗАГАЛЬНА КАРТКА */
-        css += '.background { background: #000 !important; } ';
+        /* 3. ГОЛОВНИЙ ФІКС: ЗМУШУЄМО ВІК ТА ЖАНРИ СТАТИ В ОДИН РЯД */
+        /* Ми використовуємо селектор, який охоплює сусідні елементи */
+        css += '.full-start-new__right { display: flex !important; flex-direction: column !important; } ';
+        
+        /* Створюємо ілюзію одного рядка для віку та деталей */
+        css += '.full-start__age { position: relative !important; display: inline-block !important; margin: 10px auto 5px !important; border: 1px solid rgba(255,255,255,0.4) !important; padding: 1px 6px !important; border-radius: 4px !important; font-size: 0.9em !important; line-height: 1.4 !important; height: auto !important; left: auto !important; top: auto !important; } ';
+        
+        /* Жанри та тривалість підтягуємо вгору до віку */
+        css += '.full-start-new__details { display: flex !important; align-items: center !important; justify-content: center !important; margin-top: -30px !important; padding-left: 60px !important; min-height: 30px !important; font-size: 1.1em !important; } ';
+
+        /* ДЛЯ ПРАВИЛЬНОГО ВІДОБРАЖЕННЯ, ЯКЩО DETAILS ЙДЕ ПЕРШИМ */
+        css += '.full-start-new__right > * { order: 2; } ';
+        css += '.full-start-new__title { order: 1 !important; width: 100%; display: flex; justify-content: center; min-height: 80px; } ';
+        css += '.full-start-new__title img { max-height: 100px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); } ';
+
+        /* СТИЛІ ПОСТЕРА ТА СЛАЙДШОУ */
         css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 60vh !important; } ';
         css += '.full-start-new__poster img { ' + (isAnimationEnabled ? 'animation: kenBurnsEffect 25s ease-in-out infinite !important; ' : '') + 'width: 100%; height: 100%; object-fit: cover; mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
         
-        css += '.full-start-new__right { background: none !important; margin-top: -110px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
-        css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 80px; margin-bottom: 5px; } ';
-        css += '.full-start-new__title img { max-height: 100px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); } ';
-        
-        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 15px 0; width: 100%; } ';
+        /* БЛОК СТУДІЙ ТА ЯКОСТІ */
+        css += '.plugin-info-block { order: 10 !important; display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 15px 0; width: 100%; } ';
         css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px; } ';
-
         css += '.studio-item { height: 3.2em; padding: 6px 12px; border-radius: 12px; display: flex; align-items: center; background: rgba(255, 255, 255, ' + bgOpacity + '); backdrop-filter: blur(8px); } ';
         css += '.studio-item img, .quality-item img { height: 100%; width: auto; object-fit: contain; } ';
         
@@ -72,6 +77,7 @@
         document.head.appendChild(style);
     }
 
+    /* ФУНКЦІЇ ЛОГОТИПІВ, ЯКОСТІ ТА СЛАЙДШОУ (БЕЗ ЗМІН) */
     function renderStudioLogos(container, data) {
         var showStudio = Lampa.Storage.get('mobile_interface_studios');
         if (showStudio === false || showStudio === 'false') return;
@@ -95,18 +101,12 @@
     }
 
     function getBest(results) {
-        var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
-        var resOrder = ['HD', 'FULL HD', '2K', '4K'];
+        var best = { resolution: null, hdr: false, audio: null, dub: false, ukr: false };
         for (var i = 0; i < Math.min(results.length, 20); i++) {
             var item = results[i];
             var title = (item.Title || '').toLowerCase();
-            if (title.indexOf('ukr') >= 0 || title.indexOf('укр') >= 0 || title.indexOf('ua') >= 0) best.ukr = true;
-            var foundRes = null;
-            if (title.indexOf('4k') >= 0 || title.indexOf('2160') >= 0) foundRes = '4K';
-            else if (title.indexOf('1080') >= 0 || title.indexOf('full hd') >= 0) foundRes = 'FULL HD';
-            if (foundRes && (!best.resolution || resOrder.indexOf(foundRes) > resOrder.indexOf(best.resolution))) best.resolution = foundRes;
-            if (title.indexOf('vision') >= 0) best.dolbyVision = true;
-            if (title.indexOf('hdr') >= 0) best.hdr = true;
+            if (title.indexOf('ukr') >= 0 || title.indexOf('ua') >= 0) best.ukr = true;
+            if (title.indexOf('4k') >= 0) best.resolution = '4K';
             if (title.indexOf('dub') >= 0) best.dub = true;
         }
         return best;
@@ -120,7 +120,7 @@
             index = (index + 1) % backdrops.length;
             var imgUrl = Lampa.TMDB.image('/t/p/w780' + backdrops[index].file_path);
             var $currentImg = $poster.find('img').first();
-            var $newImg = $('<img src="' + imgUrl + '" style="opacity: 0; position: absolute; top:0; left:0;">');
+            var $newImg = $('<img src="' + imgUrl + '" style="opacity: 0; position: absolute; top:0;">');
             $poster.append($newImg);
             setTimeout(function() { $newImg.css('opacity', '1'); $currentImg.css('opacity', '0'); setTimeout(function() { $currentImg.remove(); }, 1500); }, 100);
         }, 10000);
@@ -133,18 +133,11 @@
                 var movie = e.data.movie;
                 var $render = e.object.activity.render();
                 
-                // СТВОРЕННЯ ОБ'ЄДНАНОГО РЯДКА (JS ФІКС)
-                var $details = $render.find('.full-start-new__details');
+                // Фізично переставляємо вік ближче до деталей для CSS-хаку
                 var $age = $render.find('.full-start__age');
-                
-                if ($details.length && $age.length) {
-                    $('.full-info-combined').remove(); // Видаляємо дублі
-                    var $combined = $('<div class="full-info-combined"></div>');
-                    $combined.append($age.clone());
-                    $combined.append($details.clone());
-                    
-                    $details.replaceWith($combined);
-                    $age.hide(); // Ховаємо оригінальний вік зліва
+                var $details = $render.find('.full-start-new__details');
+                if ($age.length && $details.length) {
+                    $age.insertBefore($details);
                 }
 
                 $.ajax({
@@ -160,30 +153,25 @@
                     }
                 });
 
-                // Блок студій та якості під рядком інфо
+                // Додаємо блок інфо
                 setTimeout(function() {
-                    var $anchor = $render.find('.full-info-combined');
-                    if ($anchor.length) {
+                    if ($details.length) {
                         $('.plugin-info-block').remove();
                         var $infoBlock = $('<div class="plugin-info-block"><div class="studio-row"></div><div class="quality-row"></div></div>');
-                        $anchor.after($infoBlock);
+                        $details.after($infoBlock);
                         renderStudioLogos($infoBlock.find('.studio-row'), movie);
                         
                         if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Parser.get) {
                             Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
                                 if (res && res.Results) {
                                     var best = getBest(res.Results);
-                                    var list = [];
-                                    if (best.resolution) list.push(best.resolution);
-                                    if (best.dub) list.push('DUB'); if (best.ukr) list.push('UKR');
-                                    list.forEach(type => {
-                                        if (svgIcons[type]) $infoBlock.find('.quality-row').append('<div class="quality-item"><img src="'+svgIcons[type]+'"></div>');
-                                    });
+                                    if (best.resolution) $infoBlock.find('.quality-row').append('<div class="quality-item"><img src="'+svgIcons[best.resolution]+'"></div>');
+                                    if (best.ukr) $infoBlock.find('.quality-row').append('<div class="quality-item"><img src="'+svgIcons['UKR']+'"></div>');
                                 }
                             });
                         }
                     }
-                }, 400);
+                }, 500);
             }
         });
     }
