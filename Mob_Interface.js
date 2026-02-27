@@ -1,6 +1,9 @@
 (function () {
     'use strict';
 
+    /**
+     * ПЕРЕМІННІ ТА КЕШУВАННЯ
+     */
     var logoCache = {}; 
     var slideshowTimer; 
     var pluginPath = 'https://crowley24.github.io/NewIcons/';
@@ -46,6 +49,9 @@
         cub: 'https://raw.githubusercontent.com/yumata/lampa/9381985ad4371d2a7d5eb5ca8e3daf0f32669eb7/img/logo-icon.svg'
     };
 
+    /**
+     * СТИЛІ ІНТЕРФЕЙСУ (CSS)
+     */
     function applyStyles() {
         var oldStyle = document.getElementById('mobile-interface-styles');
         if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
@@ -60,8 +66,10 @@
         var style = document.createElement('style');
         style.id = 'mobile-interface-styles';
         
-        var css = '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } } ';
+        var css = '';
+        css += '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } } ';
         css += '@keyframes qb_in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } ';
+        
         css += '@media screen and (max-width: 480px) { ';
         css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="rating-count"], [class*="status"] { display:none !important; } ';
         css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';
@@ -98,6 +106,9 @@
         document.head.appendChild(style);
     }
 
+    /**
+     * ЛОГІКА РЕЙТИНГІВ
+     */
     function getRatingColor(val) {
         var n = parseFloat(val);
         if (n >= 7.5) return '#2ecc71';
@@ -133,6 +144,9 @@
         $target.after($row);
     }
 
+    /**
+     * ЛОГІКА СТУДІЙ ТА ЯКОСТІ
+     */
     function renderStudioLogos(container, data) {
         if (!Lampa.Storage.get('mobile_interface_studios')) return;
         var logos = [];
@@ -144,6 +158,7 @@
                 }
             });
         });
+
         logos.forEach(function(logo) {
             var id = 'lg_' + Math.random().toString(36).substr(2, 9);
             container.append('<div class="studio-item" id="'+id+'"><img src="'+logo.url+'"></div>');
@@ -175,13 +190,17 @@
         return best;
     }
 
+    /**
+     * TMDB: ЛОГО ТА СЛАЙДШОУ
+     */
     function loadMovieLogo(movie, $container) {
         var movieId = movie.id + (movie.name ? '_tv' : '_movie');
         if (logoCache[movieId]) { $container.html('<img src="' + logoCache[movieId] + '">'); return; }
         $.ajax({
             url: 'https://api.themoviedb.org/3/' + (movie.name ? 'tv' : 'movie') + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key(),
             success: function(res) {
-                var lang = Lampa.Storage.get('language') || 'uk', logo = res.logos.filter(l => l.iso_639_1 === lang)[0] || res.logos.filter(l => l.iso_639_1 === 'en')[0] || res.logos[0];
+                var lang = Lampa.Storage.get('language') || 'uk';
+                var logo = res.logos.filter(l => l.iso_639_1 === lang)[0] || res.logos.filter(l => l.iso_639_1 === 'en')[0] || res.logos[0];
                 if (logo) {
                     var url = Lampa.TMDB.image('/t/p/' + Lampa.Storage.get('mobile_interface_logo_quality', 'w500') + logo.file_path.replace('.svg', '.png'));
                     logoCache[movieId] = url; $container.html('<img src="' + url + '">');
@@ -207,6 +226,9 @@
         }, parseInt(Lampa.Storage.get('mobile_interface_slideshow_time', '10000')));
     }
 
+    /**
+     * ІНІЦІАЛІЗАЦІЯ ПОДІЙ
+     */
     function init() {
         Lampa.Listener.follow('full', function (e) {
             if (e.type === 'destroy') clearInterval(slideshowTimer);
@@ -233,6 +255,9 @@
         });
     }
 
+    /**
+     * ПАНЕЛЬ НАЛАШТУВАНЬ
+     */
     function setupSettings() {
         Lampa.SettingsApi.addComponent({ component: 'mobile_interface', name: 'Мобільний інтерфейс', icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" fill="white"/></svg>' });
 
@@ -243,8 +268,23 @@
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_logo_size_v2', type: 'select', values: { '60': '60px', '80': '80px', '100': '100px', '120': '120px' }, default: '90' }, field: { name: 'Висота логотипу' }, onChange: applyStyles });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_logo_quality', type: 'select', values: { 'w300': '300px', 'w500': '500px', 'original': 'Оригінал' }, default: 'w500' }, field: { name: 'Якість логотипу' } });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_show_tagline', type: 'trigger', default: true }, field: { name: 'Показувати слоган' }, onChange: applyStyles });
-        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_blocks_gap', type: 'select', values: { '5px': 'Малі', '8px': 'Середні', '12px': 'Великі', '18px': 'Просторі' }, default: '8px' }, field: { name: 'Відступи між блоками' }, onChange: applyStyles });
-        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_ratings_size', type: 'select', values: { '0.4em': '0.4', '0.45em': '0.45', '0.5em': '0.5' }, default: '0.45em' }, field: { name: 'Розмір рейтингів' }, onChange: applyStyles });
+        
+        // Оновлені відступи
+        Lampa.SettingsApi.addParam({ 
+            component: 'mobile_interface', 
+            param: { name: 'mobile_interface_blocks_gap', type: 'select', values: { '8px': 'Компактний', '12px': 'Стандартний', '18px': 'Просторий', '24px': 'Панорамний' }, default: '8px' }, 
+            field: { name: 'Відступи між блоками' }, 
+            onChange: applyStyles 
+        });
+
+        // Оновлені розміри рейтингу
+        Lampa.SettingsApi.addParam({ 
+            component: 'mobile_interface', 
+            param: { name: 'mobile_interface_ratings_size', type: 'select', values: { '0.4em': 'Малий', '0.45em': 'Середній', '0.5em': 'Великий', '0.55em': 'Максимальний' }, default: '0.45em' }, 
+            field: { name: 'Розмір рейтингів' }, 
+            onChange: applyStyles 
+        });
+
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_studios', type: 'trigger', default: true }, field: { name: 'Показувати студії' } });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_studios_bg_opacity', type: 'select', values: { '0': 'Вимкнено', '0.15': 'Світлий', '0.3': 'Середній', '0.5': 'Темний' }, default: '0.15' }, field: { name: 'Фон студій' }, onChange: applyStyles });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_quality', type: 'trigger', default: true }, field: { name: 'Показувати якість' } });
@@ -258,3 +298,4 @@
     if (window.appready) startPlugin();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') startPlugin(); });
 })();
+            
