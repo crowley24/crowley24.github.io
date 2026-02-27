@@ -10,7 +10,7 @@
         { id: 'mobile_interface_slideshow_time', default: '10000' }, 
         { id: 'mobile_interface_slideshow_quality', default: 'w780' },
         { id: 'mobile_interface_ratings', default: true },
-        { id: 'mobile_interface_ratings_size', default: '0.7em' } // Зменшено за замовчуванням
+        { id: 'mobile_interface_ratings_size', default: '0.7em' }
     ];
 
     settings_list.forEach(function (opt) {
@@ -62,10 +62,12 @@
         css += '.full-start-new__title { width: 100%; display: flex; flex-direction: column; align-items: center; min-height: 80px; margin-bottom: 5px; } ';
         css += '.full-start-new__title img { max-height: 100px; max-width: 80%; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); } ';
         
-        /* КОМПАКТНІ РЕЙТИНГИ */
-        css += '.plugin-ratings-row { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 8px 0 2px; font-size: ' + rSize + '; width: 100%; } ';
-        css += '.plugin-rating-item { display: flex; align-items: center; gap: 5px; font-weight: bold; color: #fff; line-height: 1; } ';
+        /* РЯДОК МЕТАДАННИХ: РЕЙТИНГ + ЧАС + ЖАНРИ */
+        css += '.plugin-ratings-row { display: flex; justify-content: center; align-items: center; gap: 8px; margin: 8px 0 2px; font-size: ' + rSize + '; width: 100%; color: rgba(255,255,255,0.7); flex-wrap: wrap; } ';
+        css += '.plugin-rating-item { display: flex; align-items: center; gap: 4px; font-weight: bold; color: #fff; } ';
         css += '.plugin-rating-item img { height: 1em; width: auto; object-fit: contain; } ';
+        css += '.plugin-meta-divider { opacity: 0.4; } ';
+        css += '.plugin-meta-info { white-space: nowrap; } ';
 
         css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 15px !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
         css += '.full-start-new__buttons { display: flex !important; justify-content: center !important; gap: 8px !important; width: 100% !important; margin-top: 15px !important; flex-wrap: wrap !important; } ';
@@ -78,8 +80,6 @@
         }
         css += '} ';
         css += '.quality-item { height: 2.2em; opacity: 0; animation: qb_in 0.4s ease forwards; } '; 
-        css += '.studio-item img { height: 100%; width: auto; object-fit: contain; } ';
-        css += '.quality-item img { height: 100%; width: auto; object-fit: contain; } ';
         css += '} ';
 
         style.textContent = css;
@@ -92,6 +92,18 @@
         if (n >= 5) return '#feca57';
         if (n > 0) return '#ff4d4d';
         return '#fff';
+    }
+
+    function formatTime(movie) {
+        if (movie.runtime) {
+            var hours = Math.floor(movie.runtime / 60);
+            var mins = movie.runtime % 60;
+            return (hours > 0 ? hours + 'г ' : '') + mins + 'хв';
+        }
+        if (movie.number_of_seasons) {
+            return movie.number_of_seasons + ' сезон' + (movie.number_of_seasons > 1 ? 'ів' : '');
+        }
+        return '';
     }
 
     function getCubRating(e) {
@@ -119,6 +131,7 @@
         var movie = e.data.movie;
         var $row = $('<div class="plugin-ratings-row"></div>');
         
+        // Рейтинги
         var tmdb = parseFloat(movie.vote_average || 0).toFixed(1);
         if (tmdb > 0) {
             $row.append('<div class="plugin-rating-item"><img src="'+ratingIcons.tmdb+'"><span style="color:'+getRatingColor(tmdb)+'">'+tmdb+'</span></div>');
@@ -127,6 +140,20 @@
         var cub = getCubRating(e);
         if (cub) {
             $row.append('<div class="plugin-rating-item"><img src="'+ratingIcons.cub+'"><span style="color:'+getRatingColor(cub)+'">'+cub+'</span></div>');
+        }
+
+        // Тривалість
+        var time = formatTime(movie);
+        if (time) {
+            if ($row.children().length > 0) $row.append('<span class="plugin-meta-divider">•</span>');
+            $row.append('<span class="plugin-meta-info">' + time + '</span>');
+        }
+
+        // Жанри (перші два)
+        if (movie.genres && movie.genres.length > 0) {
+            var genres = movie.genres.slice(0, 2).map(function(g) { return g.name; }).join(', ');
+            if ($row.children().length > 0) $row.append('<span class="plugin-meta-divider">•</span>');
+            $row.append('<span class="plugin-meta-info">' + genres + '</span>');
         }
 
         if ($row.children().length > 0) container.append($row);
@@ -274,7 +301,7 @@
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { name: 'mobile_interface_ratings', type: 'trigger', default: true },
-            field: { name: 'Рейтинги', description: 'Показувати TMDB та Lampa (CUB) під лого' }
+            field: { name: 'Метадані', description: 'Рейтинги, тривалість та жанри під лого' }
         });
 
         Lampa.SettingsApi.addParam({
@@ -285,7 +312,7 @@
                 values: { '0.5em': 'XXS', '0.6em': 'XS', '0.7em': 'S (Стандарт)', '0.9em': 'M', '1.1em': 'L' }, 
                 default: '0.7em' 
             },
-            field: { name: 'Розмір рейтингів' },
+            field: { name: 'Розмір метаданих' },
             onChange: function () { applyStyles(); }
         });
 
@@ -336,18 +363,3 @@
             param: { name: 'mobile_interface_quality', type: 'trigger', default: true },
             field: { name: 'Значки якості', description: 'Показувати 4K, HDR, Audio, UKR' }
         });
-    }
-
-    function start() {
-        applyStyles();
-        addSettings();
-        initPlugin();
-        setInterval(function () { 
-            if (window.innerWidth <= 480 && window.lampa_settings) window.lampa_settings.blur_poster = false; 
-        }, 2000);
-    }
-
-    if (window.appready) start();
-    else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
-})();
-            
