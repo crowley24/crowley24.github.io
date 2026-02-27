@@ -48,8 +48,8 @@
         css += '@keyframes qb_in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } ';
         css += '@media screen and (max-width: 480px) { ';
 
-        // Приховуємо непотрібне (вік, статус, старі рейтинги), але залишаємо кнопки та їх написи
-        css += '.full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="status"], .rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';
+        // ПРИХОВУЄМО ЖАНРИ ТА ТРИВАЛІСТЬ (чистимо простір)
+        css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="status"], .rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';
 
         css += '.background { background: #000 !important; } ';
         css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 60vh !important; pointer-events: none !important; } ';
@@ -62,16 +62,19 @@
         css += '.full-start-new__title { width: 100%; display: flex; flex-direction: column; align-items: center; min-height: 80px; margin-bottom: 0px; } ';
         css += '.full-start-new__title img { max-height: 100px; max-width: 80%; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); } ';
         
-        // Рейтинги під таглайном
+        // РЕЙТИНГИ ПІД ТАГЛАЙНОМ
         css += '.plugin-ratings-row { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 10px 0 5px; font-size: ' + rSize + '; width: 100%; } ';
         css += '.plugin-rating-item { display: flex; align-items: center; gap: 5px; font-weight: bold; color: #fff; line-height: 1; } ';
         css += '.plugin-rating-item img { height: 1em; width: auto; object-fit: contain; } ';
 
         css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 0 !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
-        css += '.full-start-new__buttons { display: flex !important; justify-content: center !important; gap: 8px !important; width: 100% !important; margin-top: 10px !important; flex-wrap: wrap !important; } ';
         
-        // Компактний блок інфо (студії та якість)
-        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 5px 0 15px; width: 100%; } ';
+        // КНОПКИ ТА НАПИСИ ПІД НИМИ
+        css += '.full-start-new__buttons { display: flex !important; justify-content: center !important; gap: 8px !important; width: 100% !important; margin-top: 15px !important; flex-wrap: wrap !important; } ';
+        css += '.full-start-new__buttons .btn__text { display: block !important; } '; // Примусово показуємо текст під кнопками
+
+        // СТУДІЇ ТА ЯКІСТЬ (прибираємо порожнечу)
+        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 10px 0; width: 100%; } ';
         css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px; width: 100%; } ';
         css += '.studio-item { height: 3.2em; opacity: 0; animation: qb_in 0.4s ease forwards; padding: 6px 12px; border-radius: 12px; display: flex; align-items: center; justify-content: center; ';
         if (bgOpacity !== '0') {
@@ -355,4 +358,3 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
-                    
