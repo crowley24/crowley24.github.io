@@ -39,8 +39,8 @@
         css += '@keyframes qb_in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } ';
         css += '@media screen and (max-width: 480px) { ';
         
-        /* ПРИХОВУВАННЯ МЕТА-ДАНИХ (Вік, Статус, Жанри, Тривалість) */
-        css += '.full-start__details, .full-start__tagline { display: none !important; } ';
+        /* ПРИМУСОВЕ ПРИХОВУВАННЯ МЕТА-ДАНИХ */
+        css += '.full-start__details, .full-start__tagline, .full-start-new__details, .full-start__details span, .full-start__details div { display: none !important; visibility: hidden !important; height: 0 !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; } ';
         
         css += '.background { background: #000 !important; } ';
         css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 60vh !important; pointer-events: none !important; } ';
@@ -203,8 +203,10 @@
             if (window.innerWidth <= 480 && (e.type === 'complite' || e.type === 'complete')) {
                 var movie = e.data.movie;
                 var $render = e.object.activity.render();
-                var $details = $render.find('.full-start-new__details');
                 
+                // Примусове видалення елементів через JS для надійності
+                $render.find('.full-start__details, .full-start__tagline').remove();
+
                 $.ajax({
                     url: 'https://api.themoviedb.org/3/' + (movie.name ? 'tv' : 'movie') + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key(),
                     success: function(res) {
@@ -218,10 +220,13 @@
                     }
                 });
 
+                var $details = $render.find('.full-start-new__right'); 
                 if ($details.length) {
                     $('.plugin-info-block').remove();
                     var $infoBlock = $('<div class="plugin-info-block"><div class="studio-row"></div><div class="quality-row"></div></div>');
-                    $details.after($infoBlock);
+                    
+                    // Вставляємо перед кнопками
+                    $render.find('.full-start-new__buttons').before($infoBlock);
 
                     renderStudioLogos($infoBlock.find('.studio-row'), movie);
 
@@ -318,4 +323,4 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
-        
+    
