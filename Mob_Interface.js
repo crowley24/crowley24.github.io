@@ -63,20 +63,20 @@
         css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: auto; margin-bottom: 0px; } ';
         css += '.full-start-new__title img { max-height: 100px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); } ';
         
-        // Відступ знизу зроблено мінімальним (2px)
-        css += '.plugin-ratings-row { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 12px 0 2px; font-size: calc(' + rSize + ' * 2.8); width: 100%; } ';
+        // Збільшили margin зверху (18px), щоб опустити рейтинг нижче
+        css += '.plugin-ratings-row { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 18px 0 0px; font-size: calc(' + rSize + ' * 2.8); width: 100%; } ';
         css += '.plugin-rating-item { display: flex; align-items: center; gap: 5px; font-weight: 600; color: #fff; line-height: 1; } ';
         css += '.plugin-rating-item img { height: 1em; width: auto; object-fit: contain; } ';
 
-        css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 5px !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
+        css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 2px !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
         
         css += '.full-start-new__buttons { display: flex !important; justify-content: center !important; gap: 8px !important; width: 100% !important; margin-top: 15px !important; flex-wrap: wrap !important; } ';
         css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; padding: 4px !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; width: 54px !important; min-width: 0 !important; transition: transform 0.2s ease !important; } ';
         css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 22px !important; height: 22px !important; margin-bottom: 4px !important; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5)) !important; fill: #fff !important; } ';
         css += '.full-start-new .full-start__button span { display: block !important; font-size: 8px !important; font-weight: 500 !important; text-transform: uppercase !important; letter-spacing: 0.3px !important; color: #fff !important; opacity: 0.6 !important; margin: 0 !important; text-align: center !important; white-space: nowrap !important; } ';
 
-        // ЗМІНЕНО: margin: -10px 0 10px — підтягуємо блок вгору
-        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 12px; margin: -10px 0 10px; width: 100%; padding: 0 !important; } ';
+        // Ще сильніше підтягнули блок студій вгору (-14px)
+        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 12px; margin: -14px 0 10px; width: 100%; padding: 0 !important; } ';
         css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px; width: 100%; } ';
         css += '.studio-item { height: 3.2em; opacity: 0; animation: qb_in 0.4s ease forwards; padding: 6px 12px; border-radius: 12px; display: flex; align-items: center; justify-content: center; ';
         if (bgOpacity !== '0') {
@@ -342,7 +342,8 @@
             field: { name: 'Значки якості' }
         });
     }
-function start() {
+
+    function start() {
         applyStyles();
         addSettings();
         initPlugin();
