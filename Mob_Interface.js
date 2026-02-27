@@ -48,8 +48,8 @@
         css += '@keyframes qb_in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } ';
         css += '@media screen and (max-width: 480px) { ';
 
-        // ПРИХОВУЄМО ТІЛЬКИ ЗАЙВЕ (Жанри, тривалість, вік)
-        css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="status"], .rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';
+        css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="status"] { display:none !important; } ';
+        css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';
 
         css += '.background { background: #000 !important; } ';
         css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 60vh !important; pointer-events: none !important; } ';
@@ -59,23 +59,20 @@
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
         
         css += '.full-start-new__right { background: none !important; margin-top: -110px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
-        css += '.full-start-new__title { width: 100%; display: flex; flex-direction: column; align-items: center; min-height: 80px; margin-bottom: 0px; } ';
+        css += '.full-start-new__title { width: 100%; display: flex; flex-direction: column; align-items: center; min-height: 80px; margin-bottom: 5px; } ';
         css += '.full-start-new__title img { max-height: 100px; max-width: 80%; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); } ';
         
-        // РЕЙТИНГИ (Збільшено для відповідності написам під кнопками)
         css += '.plugin-ratings-row { display: flex; justify-content: center; align-items: center; gap: 15px; margin: 12px 0 5px; font-size: calc(' + rSize + ' * 2.3); width: 100%; } ';
         css += '.plugin-rating-item { display: flex; align-items: center; gap: 6px; font-weight: bold; color: #fff; line-height: 1; } ';
         css += '.plugin-rating-item img { height: 1.1em; width: auto; object-fit: contain; } ';
 
         css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.1em !important; margin: 8px 0 0 !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
         
-        // КНОПКИ (Повернено написи під іконки)
         css += '.full-start-new__buttons { display: flex !important; justify-content: center !important; gap: 10px !important; width: 100% !important; margin-top: 15px !important; flex-wrap: wrap !important; } ';
         css += '.full-start-new__buttons .full-start__button { display: flex !important; flex-direction: column !important; align-items: center !important; background: none !important; padding: 5px !important; min-width: 65px !important; } ';
         css += '.full-start-new__buttons .btn__text { display: block !important; font-size: 0.7em !important; margin-top: 5px !important; opacity: 0.8 !important; text-transform: uppercase; } ';
         css += '.full-start-new__buttons svg, .full-start-new__buttons img { width: 24px !important; height: 24px !important; } ';
 
-        // СТУДІЇ (Прибрано порожнечу)
         css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 5px 0 15px; width: 100%; } ';
         css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px; width: 100%; } ';
         css += '.studio-item { height: 3.2em; opacity: 0; animation: qb_in 0.4s ease forwards; padding: 6px 12px; border-radius: 12px; display: flex; align-items: center; justify-content: center; ';
@@ -359,4 +356,3 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
-                                           
