@@ -39,8 +39,8 @@
         css += '@keyframes qb_in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } ';
         css += '@media screen and (max-width: 480px) { ';
         
-        /* ПРИМУСОВЕ ПРИХОВУВАННЯ МЕТА-ДАНИХ */
-        css += '.full-start__details, .full-start__tagline, .full-start-new__details, .full-start__details span, .full-start__details div { display: none !important; visibility: hidden !important; height: 0 !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; } ';
+        /* ТОТАЛЬНЕ ПРИХОВУВАННЯ МЕТА-ДАНИХ (Вік, Статус, Жанри, Час) */
+        css += '.full-start__details, .full-start__tagline, .full-start__age, .full-start__status, .full-start-new__details { display: none !important; opacity: 0 !important; visibility: hidden !important; pointer-events: none !important; height: 0 !important; margin: 0 !important; padding: 0 !important; } ';
         
         css += '.background { background: #000 !important; } ';
         css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 60vh !important; pointer-events: none !important; } ';
@@ -204,8 +204,13 @@
                 var movie = e.data.movie;
                 var $render = e.object.activity.render();
                 
-                // Примусове видалення елементів через JS для надійності
-                $render.find('.full-start__details, .full-start__tagline').remove();
+                // Радикальне видалення через JS з повтором (на випадок асинхронного малювання Lampa)
+                var clearMeta = function() {
+                    $render.find('.full-start__details, .full-start__tagline, .full-start__age, .full-start__status').remove();
+                };
+                clearMeta();
+                setTimeout(clearMeta, 100);
+                setTimeout(clearMeta, 500);
 
                 $.ajax({
                     url: 'https://api.themoviedb.org/3/' + (movie.name ? 'tv' : 'movie') + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key(),
@@ -224,8 +229,6 @@
                 if ($details.length) {
                     $('.plugin-info-block').remove();
                     var $infoBlock = $('<div class="plugin-info-block"><div class="studio-row"></div><div class="quality-row"></div></div>');
-                    
-                    // Вставляємо перед кнопками
                     $render.find('.full-start-new__buttons').before($infoBlock);
 
                     renderStudioLogos($infoBlock.find('.studio-row'), movie);
@@ -323,4 +326,3 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
-    
