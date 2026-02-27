@@ -39,7 +39,7 @@
         css += '@keyframes qb_in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } ';
         css += '@media screen and (max-width: 480px) { ';
 
-        /* === ТВОЄ РІШЕННЯ: ПРИХОВУВАННЯ МЕТАДАНИХ === */
+        /* ТВОЄ РІШЕННЯ: ПРИХОВУЄМО МЕТАДАНІ */
         css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="status"] { display:none !important; } ';
 
         css += '.background { background: #000 !important; } ';
@@ -52,13 +52,6 @@
         css += '.full-start-new__right { background: none !important; margin-top: -60px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
         css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 80px; margin-bottom: 5px; } ';
         css += '.full-start-new__title img { max-height: 100px; object-fit: contain; filter: drop-shadow(0 0 10px rgba(0,0,0,0.7)); } ';
-        
-        css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 15px !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
-
-        css += '.full-start-new__buttons { display: flex !important; justify-content: center !important; gap: 8px !important; width: 100% !important; margin-top: 15px !important; flex-wrap: wrap !important; } ';
-        css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; padding: 4px !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; width: 54px !important; min-width: 0 !important; transition: transform 0.2s ease, opacity 0.2s ease !important; } ';
-        css += '.full-start-new .full-start__button svg { width: 22px !important; height: 22px !important; margin-bottom: 4px !important; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5)) !important; fill: #fff !important; } ';
-        css += '.full-start-new .full-start__button span { font-size: 8px !important; font-weight: 500 !important; text-transform: uppercase !important; letter-spacing: 0.3px !important; color: #fff !important; opacity: 0.5 !important; margin: 0 !important; text-align: center !important; white-space: nowrap !important; } ';
         
         css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 10px 0; width: 100%; } ';
         css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px; width: 100%; } ';
@@ -88,9 +81,7 @@
                 source.forEach(function(item) {
                     if (item.logo_path) {
                         var logoUrl = Lampa.Api.img(item.logo_path, 'w200');
-                        if (!logos.find(function(l) { return l.url === logoUrl; })) {
-                            logos.push({ url: logoUrl, name: item.name });
-                        }
+                        if (!logos.find(function(l) { return l.url === logoUrl; })) logos.push({ url: logoUrl, name: item.name });
                     }
                 });
             }
@@ -128,33 +119,54 @@
     function getBest(results) {
         var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
         var resOrder = ['HD', 'FULL HD', '2K', '4K'];
+        var audioOrder = ['2.0', '4.0', '5.1', '7.1'];
         for (var i = 0; i < Math.min(results.length, 20); i++) {
             var item = results[i];
             var title = (item.Title || '').toLowerCase();
-            if (title.indexOf('ukr') >= 0 || title.indexOf('ua') >= 0) best.ukr = true;
+            if (title.indexOf('ukr') >= 0 || title.indexOf('укр') >= 0 || title.indexOf('ua') >= 0) best.ukr = true;
+            
             var foundRes = null;
             if (title.indexOf('4k') >= 0 || title.indexOf('2160') >= 0) foundRes = '4K';
+            else if (title.indexOf('2k') >= 0 || title.indexOf('1440') >= 0) foundRes = '2K';
             else if (title.indexOf('1080') >= 0 || title.indexOf('full hd') >= 0) foundRes = 'FULL HD';
+            else if (title.indexOf('720') >= 0 || title.indexOf('hd') >= 0) foundRes = 'HD';
             if (foundRes && (!best.resolution || resOrder.indexOf(foundRes) > resOrder.indexOf(best.resolution))) best.resolution = foundRes;
-            if (title.indexOf('vision') >= 0) best.dolbyVision = true;
+
+            if (item.ffprobe && Array.isArray(item.ffprobe)) {
+                item.ffprobe.forEach(function(stream) {
+                    if (stream.codec_type === 'video') {
+                        if (JSON.stringify(stream.side_data_list || '').indexOf('Vision') >= 0) best.dolbyVision = true;
+                        if (stream.color_transfer === 'smpte2084') best.hdr = true;
+                    }
+                    if (stream.codec_type === 'audio' && stream.channels) {
+                        var ch = parseInt(stream.channels);
+                        var aud = (ch >= 8) ? '7.1' : (ch >= 6) ? '5.1' : (ch >= 4) ? '4.0' : '2.0';
+                        if (!best.audio || audioOrder.indexOf(aud) > audioOrder.indexOf(best.audio)) best.audio = aud;
+                    }
+                });
+            }
+            if (title.indexOf('vision') >= 0 || title.indexOf('dv') >= 0) best.dolbyVision = true;
             if (title.indexOf('hdr') >= 0) best.hdr = true;
-            if (title.indexOf('dub') >= 0) best.dub = true;
+            if (title.indexOf('dub') >= 0 || title.indexOf('дубл') >= 0) best.dub = true;
         }
+        if (best.dolbyVision) best.hdr = false; // Пріоритет DV
         return best;
     }
 
     function startSlideshow($poster, backdrops) {
         if (!Lampa.Storage.get('mobile_interface_slideshow') || backdrops.length < 2) return;
         var index = 0;
+        var interval = parseInt(Lampa.Storage.get('mobile_interface_slideshow_time', '10000'));
+        var quality = Lampa.Storage.get('mobile_interface_slideshow_quality', 'w780');
         clearInterval(slideshowTimer);
         slideshowTimer = setInterval(function() {
             index = (index + 1) % backdrops.length;
-            var imgUrl = Lampa.TMDB.image('/t/p/w780' + backdrops[index].file_path);
+            var imgUrl = Lampa.TMDB.image('/t/p/' + quality + backdrops[index].file_path);
             var $currentImg = $poster.find('img').first();
             var $newImg = $('<img src="' + imgUrl + '" style="opacity: 0; position: absolute; top:0;">');
             $poster.append($newImg);
             setTimeout(function() { $newImg.css('opacity', '1'); $currentImg.css('opacity', '0'); setTimeout(function() { $currentImg.remove(); }, 1500); }, 100);
-        }, parseInt(Lampa.Storage.get('mobile_interface_slideshow_time', '10000')));
+        }, interval);
     }
 
     function initPlugin() {
@@ -164,9 +176,6 @@
                 var movie = e.data.movie;
                 var $render = e.object.activity.render();
                 
-                // Прибираємо старі блоки
-                $('.plugin-info-block').remove();
-
                 $.ajax({
                     url: 'https://api.themoviedb.org/3/' + (movie.name ? 'tv' : 'movie') + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key(),
                     success: function(res) {
@@ -181,19 +190,29 @@
                 });
 
                 setTimeout(function() {
+                    $('.plugin-info-block').remove();
                     var $title = $render.find('.full-start-new__title');
                     if ($title.length) {
                         var $infoBlock = $('<div class="plugin-info-block"><div class="studio-row"></div><div class="quality-row"></div></div>');
                         $title.after($infoBlock);
-                        
                         renderStudioLogos($infoBlock.find('.studio-row'), movie);
 
                         if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Parser.get) {
                             Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
                                 if (res && res.Results) {
                                     var best = getBest(res.Results);
-                                    if (best.resolution) $infoBlock.find('.quality-row').append('<div class="quality-item"><img src="'+svgIcons[best.resolution]+'"></div>');
-                                    if (best.ukr) $infoBlock.find('.quality-row').append('<div class="quality-item"><img src="'+svgIcons['UKR']+'"></div>');
+                                    var list = [];
+                                    if (best.resolution) list.push(best.resolution);
+                                    if (best.dolbyVision) list.push('Dolby Vision');
+                                    else if (best.hdr) list.push('HDR');
+                                    if (best.audio) list.push(best.audio);
+                                    if (best.dub) list.push('DUB');
+                                    if (best.ukr) list.push('UKR');
+                                    list.forEach((type, i) => {
+                                        if (svgIcons[type]) {
+                                            $infoBlock.find('.quality-row').append('<div class="quality-item" style="animation-delay:'+(i*0.1)+'s"><img src="'+svgIcons[type]+'"></div>');
+                                        }
+                                    });
                                 }
                             });
                         }
@@ -209,8 +228,11 @@
             icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" fill="white"/></svg>',
             name: 'Мобільний інтерфейс'
         });
-        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_animation', type: 'trigger', default: true }, field: { name: 'Анімація постера' } });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_animation', type: 'trigger', default: true }, field: { name: 'Анімація постера' }, onChange: function () { applyStyles(); } });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_slideshow', type: 'trigger', default: true }, field: { name: 'Слайд-шоу фону' } });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_slideshow_time', type: 'select', values: { '10000': '10 сек', '15000': '15 сек', '20000': '20 сек' }, default: '10000' }, field: { name: 'Інтервал слайд-шоу' } });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_studios', type: 'trigger', default: true }, field: { name: 'Логотипи студій' } });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_studios_bg_opacity', type: 'select', values: { '0': 'Вимкнено', '0.05': 'Мінімальна', '0.15': 'Легка', '0.3': 'Середня', '0.5': 'Густа' }, default: '0.15' }, field: { name: 'Фон студій' }, onChange: function () { applyStyles(); } });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_quality', type: 'trigger', default: true }, field: { name: 'Значки якості' } });
     }
 
