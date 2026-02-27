@@ -39,8 +39,8 @@
         css += '@keyframes qb_in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } ';
         css += '@media screen and (max-width: 480px) { ';
         
-        /* КАРДИНАЛЬНЕ ВИДАЛЕННЯ ВСІЄЇ МЕТА-ІНФОРМАЦІЇ */
-        css += '.full-start__details, .full-start__tagline, .full-start__age, .full-start__status, .full-start-new__details, [class*="full-start__age"] { display: none !important; opacity: 0 !important; visibility: hidden !important; height: 0 !important; width: 0 !important; margin: 0 !important; padding: 0 !important; position: absolute !important; z-index: -1 !important; pointer-events: none !important; } ';
+        /* ГЛОБАЛЬНЕ ТА ПРИМУСОВЕ ПРИХОВУВАННЯ */
+        css += '.full-start__details, .full-start__tagline, .full-start__age, .full-start__status, .full-start-new__details, [class*="age"], [class*="rating"] { display: none !important; opacity: 0 !important; visibility: hidden !important; height: 0 !important; width: 0 !important; margin: 0 !important; padding: 0 !important; position: absolute !important; pointer-events: none !important; overflow: hidden !important; } ';
         
         css += '.background { background: #000 !important; } ';
         css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 60vh !important; pointer-events: none !important; } ';
@@ -75,6 +75,21 @@
 
         style.textContent = css;
         document.head.appendChild(style);
+    }
+
+    // ФУНКЦІЯ ПРИМУСОВОЇ ОЧИСТКИ
+    function killAgeRating($context) {
+        var selectors = [
+            '.full-start__age', 
+            '.full-start__status', 
+            '.full-start__details', 
+            '[class*="age"]', 
+            '[class*="rating"]',
+            '.full-start-new__details'
+        ];
+        selectors.forEach(function(sel) {
+            $context.find(sel).remove();
+        });
     }
 
     function renderStudioLogos(container, data) {
@@ -204,13 +219,14 @@
                 var movie = e.data.movie;
                 var $render = e.object.activity.render();
                 
-                // Агресивне видалення через JS (охоплює всі можливі класи рейтингу)
-                var clearMeta = function() {
-                    $render.find('.full-start__details, .full-start__tagline, .full-start__age, .full-start__status, [class*="full-start__age"]').remove();
-                };
-                clearMeta();
-                setTimeout(clearMeta, 200);
-                setTimeout(clearMeta, 800);
+                // ЗАПУСКАЄМО СПОСТЕРІГАЧ, ЩОБ ПРИБИРАТИ ВІК В РЕАЛЬНОМУ ЧАСІ
+                var observer = new MutationObserver(function(mutations) {
+                    killAgeRating($render);
+                });
+                observer.observe($render[0], { childList: true, subtree: true });
+                
+                // Первинна зачистка
+                killAgeRating($render);
 
                 $.ajax({
                     url: 'https://api.themoviedb.org/3/' + (movie.name ? 'tv' : 'movie') + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key(),
@@ -326,4 +342,3 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
-            
