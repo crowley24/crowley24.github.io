@@ -52,41 +52,39 @@
         css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';
 
         css += '.background { background: #000 !important; } ';
-        css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 55vh !important; pointer-events: none !important; } ';
+        css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 60vh !important; pointer-events: none !important; } ';
         css += '.full-start-new__poster img { ';
         css += (isAnimationEnabled ? 'animation: kenBurnsEffect 25s ease-in-out infinite !important; ' : '');
         css += 'transform-origin: center center !important; transition: opacity 1.5s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
         
-        css += '.full-start-new__right { background: none !important; margin-top: -90px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; padding: 0 10px !important; } ';
+        css += '.full-start-new__right { background: none !important; margin-top: -110px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
         
-        // ТИТУЛ (Логотип)
-        css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; height: 60px !important; min-height: 60px !important; margin-bottom: 0px !important; overflow: visible !important; } ';
-        css += '.full-start-new__title img { max-height: 60px !important; width: auto; object-fit: contain; filter: drop-shadow(0 0 5px rgba(0,0,0,0.7)); } ';
+        // ВИПРАВЛЕНО: Прибрано мінімальну висоту та відступ знизу заголовка
+        css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: auto; margin-bottom: 0px; } ';
+        css += '.full-start-new__title img { max-height: 100px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); } ';
         
-        // РЕЙТИНГИ
-        css += '.plugin-ratings-row { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 2px 0 !important; font-size: calc(' + rSize + ' * 2.4); width: 100%; } ';
-        css += '.plugin-rating-item { display: flex; align-items: center; gap: 4px; font-weight: 700; color: #fff; } ';
-        css += '.plugin-rating-item img { height: 0.85em; width: auto; } ';
+        // ВИПРАВЛЕНО: Зменшено відступи навколо рейтингів (margin)
+        css += '.plugin-ratings-row { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 5px 0 2px; font-size: calc(' + rSize + ' * 2.8); width: 100%; } ';
+        css += '.plugin-rating-item { display: flex; align-items: center; gap: 5px; font-weight: 600; color: #fff; line-height: 1; } ';
+        css += '.plugin-rating-item img { height: 1em; width: auto; object-fit: contain; } ';
 
-        // ТЕГЛАЙН
-        css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.7 !important; font-size: 0.85em !important; margin: 0 0 6px !important; color: #fff !important; text-align: center !important; line-height: 1.2; } ';
+        css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 10px !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
         
-        // КНОПКИ
-        css += '.full-start-new__buttons { display: flex !important; justify-content: center !important; gap: 4px !important; width: 100% !important; margin-top: 4px !important; } ';
-        css += '.full-start-new .full-start__button { background: none !important; border: none !important; padding: 2px !important; display: flex !important; flex-direction: column !important; align-items: center !important; width: 48px !important; min-width: 0 !important; } ';
-        css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 18px !important; height: 18px !important; margin-bottom: 2px !important; } ';
-        css += '.full-start-new .full-start__button span { display: block !important; font-size: 7px !important; font-weight: 500 !important; text-transform: uppercase !important; color: #fff !important; opacity: 0.5 !important; margin: 0 !important; white-space: nowrap; } ';
+        css += '.full-start-new__buttons { display: flex !important; justify-content: center !important; gap: 8px !important; width: 100% !important; margin-top: 15px !important; flex-wrap: wrap !important; } ';
+        css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; padding: 4px !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; width: 54px !important; min-width: 0 !important; transition: transform 0.2s ease !important; } ';
+        css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 22px !important; height: 22px !important; margin-bottom: 4px !important; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5)) !important; fill: #fff !important; } ';
+        css += '.full-start-new .full-start__button span { display: block !important; font-size: 8px !important; font-weight: 500 !important; text-transform: uppercase !important; letter-spacing: 0.3px !important; color: #fff !important; opacity: 0.6 !important; margin: 0 !important; text-align: center !important; white-space: nowrap !important; } ';
 
-        // ІНФО-БЛОК (Студії та якість)
-        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 8px 0 !important; width: 100%; } ';
-        css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 4px; width: 100%; } ';
-        css += '.studio-item { height: 2.2em; opacity: 0; animation: qb_in 0.4s ease forwards; padding: 3px 8px; border-radius: 8px; display: flex; align-items: center; justify-content: center; ';
+        // ВИПРАВЛЕНО: Зменшено верхній margin блоку інфо, щоб підтягнути студії вище
+        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 8px 0 15px; width: 100%; } ';
+        css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px; width: 100%; } ';
+        css += '.studio-item { height: 3.2em; opacity: 0; animation: qb_in 0.4s ease forwards; padding: 6px 12px; border-radius: 12px; display: flex; align-items: center; justify-content: center; ';
         if (bgOpacity !== '0') {
-            css += 'background: rgba(255, 255, 255, ' + bgOpacity + '); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); ';
+            css += 'background: rgba(255, 255, 255, ' + bgOpacity + '); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: 0 2px 10px rgba(0,0,0,0.2); ';
         }
         css += '} ';
-        css += '.quality-item { height: 1.7em; opacity: 0; animation: qb_in 0.4s ease forwards; } '; 
+        css += '.quality-item { height: 2.2em; opacity: 0; animation: qb_in 0.4s ease forwards; } '; 
         css += '.studio-item img, .quality-item img { height: 100%; width: auto; object-fit: contain; } ';
         css += '} ';
 
@@ -124,7 +122,7 @@
     function renderRatings(container, e) {
         if (!Lampa.Storage.get('mobile_interface_ratings')) return;
         container.find('.plugin-ratings-row').remove();
-        var $title = container.find('.full-start-new__title');
+        var $tagline = container.find('.full-start-new__tagline');
         var $row = $('<div class="plugin-ratings-row"></div>');
         
         var movie = e.data.movie;
@@ -139,7 +137,8 @@
         }
 
         if ($row.children().length > 0) {
-            $title.after($row);
+            if ($tagline.length) $tagline.after($row);
+            else container.find('.full-start-new__title').after($row);
         }
     }
 
@@ -245,7 +244,7 @@
                         if (logo) {
                             $render.find('.full-start-new__title').html('<img src="' + Lampa.TMDB.image('/t/p/w300' + logo.file_path.replace('.svg', '.png')) + '">');
                         }
-                        setTimeout(function(){ renderRatings($render.find('.full-start-new__right'), e); }, 100);
+                        setTimeout(function(){ renderRatings($render.find('.full-start-new__right'), e); }, 200);
                         if (res.backdrops && res.backdrops.length > 1) startSlideshow($render.find('.full-start-new__poster'), res.backdrops.slice(0, 15));
                     }
                 });
@@ -354,6 +353,6 @@
         }, 2000);
     }
 
-    if (window.appready) start();
+   if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
