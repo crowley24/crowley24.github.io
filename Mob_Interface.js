@@ -39,12 +39,13 @@
         css += '@keyframes qb_in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } ';
         css += '@media screen and (max-width: 480px) { ';
         
-        /* ПРИХОВУЄМО СТАТУС */
+        /* ПРИХОВУЄМО СТАТУС ТА ОРИГІНАЛЬНІ БЛОКИ, ЯКЩО ВОНИ НЕ В ПРАВИЛЬНОМУ МІСЦІ */
         css += '.full-start__status, .full-start-new__status { display: none !important; } ';
         
-        /* СТИЛІ ДЛЯ ОБ'ЄДНАНОГО РЯДКА (ВІК + ЖАНРИ + ЧАС) */
-        css += '.unified-info-row { display: flex !important; align-items: center !important; justify-content: center !important; flex-wrap: wrap !important; gap: 8px !important; margin: 10px 0 !important; width: 100%; font-size: 1.1em; color: #fff; } ';
-        css += '.unified-info-row .full-start__age { position: static !important; margin: 0 !important; border: 1px solid rgba(255,255,255,0.4); padding: 0 5px; border-radius: 4px; line-height: 1.4; height: auto; display: inline-block !important; } ';
+        /* СТИЛІ ДЛЯ НОВОГО ОБ'ЄДНАНОГО РЯДКА */
+        css += '.unified-line { display: flex !important; align-items: center !important; justify-content: center !important; flex-wrap: wrap !important; gap: 10px !important; width: 100% !important; margin: 10px 0 !important; font-size: 1.1em !important; color: #fff !important; } ';
+        css += '.unified-line .full-start__age { position: static !important; margin: 0 !important; border: 1px solid rgba(255,255,255,0.4) !important; padding: 0 6px !important; border-radius: 4px !important; display: inline-block !important; height: auto !important; line-height: 1.4 !important; } ';
+        css += '.unified-line .details-content { display: flex; align-items: center; gap: 8px; opacity: 0.9; } ';
 
         css += '.background { background: #000 !important; } ';
         css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 60vh !important; pointer-events: none !important; } ';
@@ -56,25 +57,22 @@
         css += '.full-start-new__right { background: none !important; margin-top: -110px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
         css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: 80px; margin-bottom: 5px; } ';
         css += '.full-start-new__title img { max-height: 100px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); } ';
-        
-        css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 15px !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
+        css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 15px !important; color: #fff !important; text-align: center !important; } ';
 
         css += '.full-start-new__buttons { display: flex !important; justify-content: center !important; gap: 8px !important; width: 100% !important; margin-top: 15px !important; flex-wrap: wrap !important; } ';
-        css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; padding: 4px !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; width: 54px !important; min-width: 0 !important; transition: transform 0.2s ease, opacity 0.2s ease !important; } ';
-        css += '.full-start-new .full-start__button svg { width: 22px !important; height: 22px !important; margin-bottom: 4px !important; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5)) !important; fill: #fff !important; } ';
-        css += '.full-start-new .full-start__button span { font-size: 8px !important; font-weight: 500 !important; text-transform: uppercase !important; letter-spacing: 0.3px !important; color: #fff !important; opacity: 0.5 !important; margin: 0 !important; text-align: center !important; white-space: nowrap !important; } ';
+        css += '.full-start-new .full-start__button { background: none !important; border: none !important; padding: 4px !important; display: flex !important; flex-direction: column !important; align-items: center !important; width: 54px !important; min-width: 0 !important; } ';
+        css += '.full-start-new .full-start__button svg { width: 22px !important; height: 22px !important; fill: #fff !important; } ';
+        css += '.full-start-new .full-start__button span { font-size: 8px !important; color: #fff !important; opacity: 0.5 !important; } ';
 
         css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 15px 0; width: 100%; } ';
         css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px; width: 100%; } ';
-
         css += '.studio-item { height: 3.2em; opacity: 0; animation: qb_in 0.4s ease forwards; padding: 6px 12px; border-radius: 12px; display: flex; align-items: center; justify-content: center; ';
         if (bgOpacity !== '0') {
-            css += 'background: rgba(255, 255, 255, ' + bgOpacity + '); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: 0 2px 10px rgba(0,0,0,0.2); ';
+            css += 'background: rgba(255, 255, 255, ' + bgOpacity + '); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); ';
         }
         css += '} ';
         css += '.quality-item { height: 2.2em; opacity: 0; animation: qb_in 0.4s ease forwards; } '; 
-        css += '.studio-item img { height: 100%; width: auto; object-fit: contain; filter: contrast(1.1); } ';
-        css += '.quality-item img { height: 100%; width: auto; object-fit: contain; filter: drop-shadow(0px 1px 3px rgba(0,0,0,0.5)); } ';
+        css += '.studio-item img, .quality-item img { height: 100%; width: auto; object-fit: contain; } ';
         
         css += '} ';
 
@@ -99,35 +97,9 @@
                 });
             }
         });
-
         logos.forEach(function(logo) {
             var imgId = 'logo_' + Math.random().toString(36).substr(2, 9);
-            var html = '<div class="studio-item" id="' + imgId + '"><img src="' + logo.url + '" title="' + logo.name + '"></div>';
-            container.append(html);
-            var img = new Image();
-            img.crossOrigin = 'anonymous';
-            img.onload = function() {
-                var canvas = document.createElement('canvas');
-                var ctx = canvas.getContext('2d');
-                canvas.width = this.width; canvas.height = this.height;
-                ctx.drawImage(this, 0, 0);
-                try {
-                    var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    var pixels = imageData.data;
-                    var r = 0, g = 0, b = 0, pixelCount = 0, darkPixelCount = 0;
-                    for (var i = 0; i < pixels.length; i += 4) {
-                        if (pixels[i+3] > 50) {
-                            var br = 0.299*pixels[i] + 0.587*pixels[i+1] + 0.114*pixels[i+2];
-                            r += pixels[i]; g += pixels[i+1]; b += pixels[i+2];
-                            pixelCount++; if (br < 25) darkPixelCount++;
-                        }
-                    }
-                    if (pixelCount > 0 && (br/pixelCount < 30 || darkPixelCount/pixelCount > 0.6)) {
-                        $('#' + imgId + ' img').css({'filter': 'brightness(0) invert(1) contrast(1.2)', 'opacity': '0.9'});
-                    }
-                } catch (e) {}
-            };
-            img.src = logo.url;
+            container.append('<div class="studio-item" id="' + imgId + '"><img src="' + logo.url + '"></div>');
         });
     }
 
@@ -135,56 +107,48 @@
         var best = { resolution: null, hdr: false, dolbyVision: false, audio: null, dub: false, ukr: false };
         var resOrder = ['HD', 'FULL HD', '2K', '4K'];
         var audioOrder = ['2.0', '4.0', '5.1', '7.1'];
-        var limit = Math.min(results.length, 20);
-        for (var i = 0; i < limit; i++) {
+        for (var i = 0; i < Math.min(results.length, 20); i++) {
             var item = results[i];
             var title = (item.Title || '').toLowerCase();
             if (title.indexOf('ukr') >= 0 || title.indexOf('укр') >= 0 || title.indexOf('ua') >= 0) best.ukr = true;
             var foundRes = null;
-            if (title.indexOf('4k') >= 0 || title.indexOf('2160') >= 0 || title.indexOf('uhd') >= 0) foundRes = '4K';
-            else if (title.indexOf('2k') >= 0 || title.indexOf('1440') >= 0) foundRes = '2K';
-            else if (title.indexOf('1080') >= 0 || title.indexOf('fhd') >= 0 || title.indexOf('full hd') >= 0) foundRes = 'FULL HD';
-            else if (title.indexOf('720') >= 0 || title.indexOf('hd') >= 0) foundRes = 'HD';
+            if (title.indexOf('4k') >= 0 || title.indexOf('2160') >= 0) foundRes = '4K';
+            else if (title.indexOf('1080') >= 0 || title.indexOf('full hd') >= 0) foundRes = 'FULL HD';
             if (foundRes && (!best.resolution || resOrder.indexOf(foundRes) > resOrder.indexOf(best.resolution))) best.resolution = foundRes;
-            if (item.ffprobe && Array.isArray(item.ffprobe)) {
-                item.ffprobe.forEach(function(stream) {
-                    if (stream.codec_type === 'video') {
-                        if (stream.side_data_list && JSON.stringify(stream.side_data_list).indexOf('Vision') >= 0) best.dolbyVision = true;
-                        if (stream.color_transfer === 'smpte2084' || stream.color_transfer === 'arib-std-b67') best.hdr = true;
-                    }
-                    if (stream.codec_type === 'audio' && stream.channels) {
-                        var ch = parseInt(stream.channels);
-                        var aud = (ch >= 8) ? '7.1' : (ch >= 6) ? '5.1' : (ch >= 4) ? '4.0' : '2.0';
-                        if (!best.audio || audioOrder.indexOf(aud) > audioOrder.indexOf(best.audio)) best.audio = aud;
-                    }
-                });
-            }
-            if (title.indexOf('vision') >= 0 || title.indexOf('dovi') >= 0 || title.indexOf(' dv ') >= 0) best.dolbyVision = true;
+            if (title.indexOf('vision') >= 0) best.dolbyVision = true;
             if (title.indexOf('hdr') >= 0) best.hdr = true;
-            if (title.indexOf('dub') >= 0 || title.indexOf('дубл') >= 0) best.dub = true;
+            if (title.indexOf('dub') >= 0) best.dub = true;
         }
-        if (best.dolbyVision) best.hdr = true;
         return best;
     }
 
     function startSlideshow($poster, backdrops) {
         if (!Lampa.Storage.get('mobile_interface_slideshow') || backdrops.length < 2) return;
         var index = 0;
-        var interval = parseInt(Lampa.Storage.get('mobile_interface_slideshow_time', '10000'));
-        var quality = Lampa.Storage.get('mobile_interface_slideshow_quality', 'w780');
         clearInterval(slideshowTimer);
         slideshowTimer = setInterval(function() {
             index = (index + 1) % backdrops.length;
-            var imgUrl = Lampa.TMDB.image('/t/p/' + quality + backdrops[index].file_path);
+            var imgUrl = Lampa.TMDB.image('/t/p/w780' + backdrops[index].file_path);
             var $currentImg = $poster.find('img').first();
-            var nextImg = new Image();
-            nextImg.onload = function() {
-                var $newImg = $('<img src="' + imgUrl + '" style="opacity: 0; z-index: -1;">');
-                $poster.append($newImg);
-                setTimeout(function() { $newImg.css('opacity', '1'); $currentImg.css('opacity', '0'); setTimeout(function() { $currentImg.remove(); }, 1500); }, 100);
-            };
-            nextImg.src = imgUrl;
-        }, interval);
+            var $newImg = $('<img src="' + imgUrl + '" style="opacity: 0;">');
+            $poster.append($newImg);
+            setTimeout(function() { $newImg.css('opacity', '1'); $currentImg.css('opacity', '0'); setTimeout(function() { $currentImg.remove(); }, 1500); }, 100);
+        }, 10000);
+    }
+
+    function unifyElements($render) {
+        var $details = $render.find('.full-start-new__details');
+        var $age = $render.find('.full-start__age');
+        
+        if ($details.length && $age.length && !$render.find('.unified-line').length) {
+            var $line = $('<div class="unified-line"></div>');
+            var $ageClone = $age.clone().show();
+            var $detailsContent = $('<div class="details-content"></div>').append($details.contents());
+            
+            $line.append($ageClone).append($detailsContent);
+            $details.replaceWith($line);
+            $age.hide();
+        }
     }
 
     function initPlugin() {
@@ -193,17 +157,11 @@
             if (window.innerWidth <= 480 && (e.type === 'complite' || e.type === 'complete')) {
                 var movie = e.data.movie;
                 var $render = e.object.activity.render();
-                
-                // ОБ'ЄДНАННЯ В ОДИН РЯДОК
-                var $details = $render.find('.full-start-new__details');
-                var $age = $render.find('.full-start__age');
-                if ($details.length) {
-                    $('.unified-info-row').remove();
-                    var $unifiedRow = $('<div class="unified-info-row"></div>');
-                    if ($age.length) { $unifiedRow.append($age.clone()); $age.hide(); }
-                    $unifiedRow.append($details.contents());
-                    $details.replaceWith($unifiedRow);
-                }
+
+                // Постійний нагляд за появою елементів
+                var observer = new MutationObserver(function() { unifyElements($render); });
+                observer.observe($render[0], { childList: true, subtree: true });
+                unifyElements($render);
 
                 $.ajax({
                     url: 'https://api.themoviedb.org/3/' + (movie.name ? 'tv' : 'movie') + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key(),
@@ -218,32 +176,30 @@
                     }
                 });
 
-                var $anchor = $('.unified-info-row');
-                if ($anchor.length) {
-                    $('.plugin-info-block').remove();
-                    var $infoBlock = $('<div class="plugin-info-block"><div class="studio-row"></div><div class="quality-row"></div></div>');
-                    $anchor.after($infoBlock);
-                    renderStudioLogos($infoBlock.find('.studio-row'), movie);
+                setTimeout(function() {
+                    var $target = $render.find('.unified-line').length ? $render.find('.unified-line') : $render.find('.full-start-new__details');
+                    if ($target.length) {
+                        $('.plugin-info-block').remove();
+                        var $infoBlock = $('<div class="plugin-info-block"><div class="studio-row"></div><div class="quality-row"></div></div>');
+                        $target.after($infoBlock);
+                        renderStudioLogos($infoBlock.find('.studio-row'), movie);
 
-                    if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Parser.get) {
-                        Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
-                            if (res && res.Results) {
-                                var best = getBest(res.Results);
-                                var list = [];
-                                if (best.resolution) list.push(best.resolution);
-                                if (best.dolbyVision) list.push('Dolby Vision'); else if (best.hdr) list.push('HDR');
-                                if (best.audio) list.push(best.audio);
-                                if (best.dub) list.push('DUB'); if (best.ukr) list.push('UKR');
-                                list.forEach((type, i) => {
-                                    if (svgIcons[type]) {
-                                        var $q = $('<div class="quality-item" style="animation-delay:'+(i*0.1)+'s"><img src="'+svgIcons[type]+'"></div>');
-                                        $infoBlock.find('.quality-row').append($q);
-                                    }
-                                });
-                            }
-                        });
+                        if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Parser.get) {
+                            Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
+                                if (res && res.Results) {
+                                    var best = getBest(res.Results);
+                                    var list = [];
+                                    if (best.resolution) list.push(best.resolution);
+                                    if (best.dolbyVision) list.push('Dolby Vision'); else if (best.hdr) list.push('HDR');
+                                    if (best.dub) list.push('DUB'); if (best.ukr) list.push('UKR');
+                                    list.forEach(type => {
+                                        if (svgIcons[type]) $infoBlock.find('.quality-row').append('<div class="quality-item"><img src="'+svgIcons[type]+'"></div>');
+                                    });
+                                }
+                            });
+                        }
                     }
-                }
+                }, 500);
             }
         });
     }
@@ -254,50 +210,18 @@
             icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" fill="white"/></svg>',
             name: 'Мобільний інтерфейс'
         });
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { name: 'mobile_interface_animation', type: 'trigger', default: true },
-            field: { name: 'Анімація постера', description: 'Ефект наближення фону' },
-            onChange: function () { applyStyles(); }
-        });
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { name: 'mobile_interface_slideshow', type: 'trigger', default: true },
-            field: { name: 'Слайд-шоу фону', description: 'Автоматична зміна зображень фону' }
-        });
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { name: 'mobile_interface_slideshow_time', type: 'select', values: { '10000': '10 сек', '15000': '15 сек', '20000': '20 сек' }, default: '10000' },
-            field: { name: 'Інтервал слайд-шоу' }
-        });
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { name: 'mobile_interface_studios', type: 'trigger', default: true },
-            field: { name: 'Логотипи студій', description: 'Показувати лого мереж та компаній' }
-        });
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { name: 'mobile_interface_studios_bg_opacity', type: 'select', values: { '0': 'Вимкнено', '0.05': 'Мінімальна', '0.15': 'Легка', '0.3': 'Середня', '0.5': 'Густа' }, default: '0.15' },
-            field: { name: 'Фон студій', description: 'Інтенсивність підкладки для логотипів' },
-            onChange: function () { applyStyles(); }
-        });
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { name: 'mobile_interface_quality', type: 'trigger', default: true },
-            field: { name: 'Значки якості', description: 'Показувати 4K, HDR, Audio, UKR' }
-        });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_animation', type: 'trigger', default: true }, field: { name: 'Анімація постера' } });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_studios', type: 'trigger', default: true }, field: { name: 'Логотипи студій' } });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_quality', type: 'trigger', default: true }, field: { name: 'Значки якості' } });
     }
 
     function start() {
         applyStyles();
         addSettings();
         initPlugin();
-        setInterval(function () { 
-            if (window.innerWidth <= 480 && window.lampa_settings) window.lampa_settings.blur_poster = false; 
-        }, 2000);
+        setInterval(function () { if (window.innerWidth <= 480 && window.lampa_settings) window.lampa_settings.blur_poster = false; }, 2000);
     }
 
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
-                                                                                                                 
