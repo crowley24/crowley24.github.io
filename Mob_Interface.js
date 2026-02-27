@@ -145,7 +145,7 @@
     }
 
     /**
-     * ЛОГІКА СТУДІЙ ТА ЯКОСТІ (ПОВНА ВЕРСІЯ)
+     * ЛОГІКА СТУДІЙ ТА ЯКОСТІ
      */
     function renderStudioLogos(container, data) {
         if (!Lampa.Storage.get('mobile_interface_studios')) return;
@@ -226,9 +226,6 @@
         }, parseInt(Lampa.Storage.get('mobile_interface_slideshow_time', '10000')));
     }
 
-    /**
-     * ІНІЦІАЛІЗАЦІЯ
-     */
     function init() {
         Lampa.Listener.follow('full', function (e) {
             if (e.type === 'destroy') clearInterval(slideshowTimer);
@@ -266,9 +263,10 @@
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_slideshow_time', type: 'select', values: { '10000': '10с', '15000': '15с', '20000': '20с' }, default: '10000' }, field: { name: 'Інтервал слайд-шоу' } });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_slideshow_quality', type: 'select', values: { 'w300': '300px', 'w780': '780px', 'w1280': '1280px', 'original': 'Оригінал' }, default: 'w780' }, field: { name: 'Якість фону слайд-шоу' } });
         
+        // Оновлені класичні назви для тих самих значень розмірів
         Lampa.SettingsApi.addParam({ 
             component: 'mobile_interface', 
-            param: { name: 'mobile_interface_logo_size_v2', type: 'select', values: { '100': 'Помірний', '125': 'Виражений', '150': 'Масштабний', '180': 'Ультимативний' }, default: '125' }, 
+            param: { name: 'mobile_interface_logo_size_v2', type: 'select', values: { '125': 'Малий', '150': 'Середній', '180': 'Стандартний', '210': 'Великий' }, default: '125' }, 
             field: { name: 'Висота логотипу' }, 
             onChange: applyStyles 
         });
@@ -290,4 +288,4 @@
     if (window.appready) startPlugin();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') startPlugin(); });
 })();
-        
+                    
