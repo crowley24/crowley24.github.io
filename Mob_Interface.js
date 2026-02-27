@@ -15,8 +15,6 @@
         }
     });
 
-    var pluginPath = 'https://crowley24.github.io/NewIcons/';
-
     /* ================= СТИЛІ ================= */
 
     function applyStyles() {
@@ -40,19 +38,21 @@
 
         css += '@media screen and (max-width: 480px) {';
 
-        /* 🔥 ПОВНЕ ПРИХОВУВАННЯ МЕТАДАНИХ */
-        css += '.full-start-new__details { display:none !important; }';
-        css += '.full-start__age { display:none !important; }';
-        css += '.full-start-new__age { display:none !important; }';
-        css += '.full-start-new__status { display:none !important; }';
-        css += '.full-start__pg { display:none !important; }';
-        css += '[class*="age"] { display:none !important; }';
-        css += '[class*="pg"] { display:none !important; }';
+        /* ================= ПРИХОВУВАННЯ МЕТАДАНИХ ================= */
 
-        /* Прибираємо рядок з часом і жанрами */
+        css += '.full-start-new__details { display:none !important; }';
         css += '.full-start__info { display:none !important; }';
 
-        /* Права панель піднімається */
+        css += '.full-start__age, .full-start-new__age { display:none !important; }';
+
+        css += '.full-start__status, .full-start-new__status { display:none !important; }';
+
+        css += '[class*="age"] { display:none !important; }';
+        css += '[class*="pg"] { display:none !important; }';
+        css += '[class*="status"] { display:none !important; }';
+
+        /* ================= ПІДЙОМ КОНТЕНТУ ================= */
+
         css += '.full-start-new__right {';
         css += 'display:flex !important;';
         css += 'flex-direction:column !important;';
@@ -61,7 +61,8 @@
         css += 'z-index:2 !important;';
         css += '}';
 
-        /* Постер */
+        /* ================= ПОСТЕР ================= */
+
         css += '.full-start-new__poster {';
         css += 'position:relative !important;';
         css += 'overflow:hidden !important;';
@@ -80,7 +81,8 @@
         css += '-webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 60%,transparent 100%) !important;';
         css += '}';
 
-        /* Логотип */
+        /* ================= НАЗВА ================= */
+
         css += '.full-start-new__title {';
         css += 'width:100%;';
         css += 'display:flex;';
@@ -94,7 +96,8 @@
         css += 'filter:drop-shadow(0 0 10px rgba(0,0,0,0.7));';
         css += '}';
 
-        /* Студії */
+        /* ================= СТУДІЇ ================= */
+
         css += '.plugin-info-block {';
         css += 'display:flex;';
         css += 'justify-content:center;';
