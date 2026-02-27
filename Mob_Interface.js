@@ -94,7 +94,7 @@
             css += 'background: rgba(255, 255, 255, ' + bgOpacity + '); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); ';
         }
         css += '} ';
-        css += '.quality-item { height: 2.8em; opacity: 0; animation: qb_in 0.4s ease forwards; } '; 
+        css += '.quality-item { height: 2.2em; opacity: 0; animation: qb_in 0.4s ease forwards; } '; 
         css += '.studio-item img, .quality-item img { height: 100%; width: auto; object-fit: contain; } ';
         css += '.full-start-new__buttons { display: flex !important; justify-content: center !important; gap: 10px !important; width: 100% !important; margin-top: 5px !important; order: 6; } ';
         css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; display: flex !important; flex-direction: column !important; align-items: center !important; width: 60px !important; } ';
