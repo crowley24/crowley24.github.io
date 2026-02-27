@@ -39,8 +39,11 @@
         css += '@keyframes qb_in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } ';
         css += '@media screen and (max-width: 480px) { ';
         
-        /* ТОТАЛЬНЕ ПРИХОВУВАННЯ ЧЕРЕЗ CSS (з запасом на всі класи) */
-        css += '.full-start__details, .full-start__tagline, .full-start__age, .full-start__status, .full-start-new__details, [class*="age"], [class*="rating"], .full-rating { display: none !important; opacity: 0 !important; visibility: hidden !important; height: 0 !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; pointer-events: none !important; } ';
+        /* ВИДАЛЯЄМО ТІЛЬКИ ЗАЙВЕ. Рейтинг залишаємо видимим */
+        css += '.full-start__tagline, .full-start__status, .full-start-new__details { display: none !important; } ';
+        css += '.full-start__details { display: flex !important; justify-content: center !important; margin-bottom: 10px !important; } ';
+        /* Ховаємо все всередині details, крім самого рейтингу */
+        css += '.full-start__details > span:not([class*="rating"]):not(.rating), .full-start__details > div:not([class*="rating"]):not(.rating) { display: none !important; } ';
         
         css += '.background { background: #000 !important; } ';
         css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 60vh !important; pointer-events: none !important; } ';
@@ -77,17 +80,18 @@
         document.head.appendChild(style);
     }
 
-    // МАКСИМАЛЬНО АГРЕСИВНА ОЧИСТКА ВІКУ
-    function killAgeRating($context) {
-        // Видалення за класами
-        $context.find('.full-start__age, .full-start__status, [class*="age"], [class*="rating"], .full-rating').remove();
-        
-        // Пошук елементів за вмістом тексту (на випадок, якщо Lampa вставляє вік просто в span)
-        $context.find('span, div').each(function() {
-            var txt = $(this).text().trim();
-            // Якщо текст схожий на рейтинг (12+, 16+, 18+, або просто цифра з плюсом)
-            if (/^\d+\+$/.test(txt) || txt.indexOf('+') !== -1 && txt.length < 5) {
-                $(this).remove();
+    // ТУТ МИ ВИДАЛЯЄМО ТІЛЬКИ ВІКОВИЙ РЕЙТИНГ
+    function killAgeOnly($context) {
+        $context.find('span, div, .full-start__age').each(function() {
+            var $el = $(this);
+            var txt = $el.text().trim();
+            // Якщо елемент містить знак "+" (наприклад 16+) і це НЕ блок рейтингу
+            if (txt.indexOf('+') !== -1 && !$el.hasClass('rating') && $el.parents('.rating').length === 0) {
+                $el.hide().css('display', 'none'); 
+            }
+            // Видаляємо також жанри та тривалість, якщо вони не в рейтингу
+            if ($el.hasClass('full-start__details') === false && $el.closest('.rating').length === 0) {
+                 if (txt.indexOf('хв') !== -1 || txt.indexOf('•') !== -1) $el.hide();
             }
         });
     }
@@ -219,13 +223,12 @@
                 var movie = e.data.movie;
                 var $render = e.object.activity.render();
                 
-                // СПОСТЕРІГАЧ ДЛЯ ВИДАЛЕННЯ БУДЬ-ЯКОГО ТЕКСТУ З "+"
                 var observer = new MutationObserver(function() {
-                    killAgeRating($render);
+                    killAgeOnly($render);
                 });
                 observer.observe($render[0], { childList: true, subtree: true });
                 
-                killAgeRating($render);
+                killAgeOnly($render);
 
                 $.ajax({
                     url: 'https://api.themoviedb.org/3/' + (movie.name ? 'tv' : 'movie') + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key(),
@@ -341,4 +344,3 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
-    
