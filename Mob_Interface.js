@@ -62,7 +62,6 @@
         css += '.full-start-new__title { width: 100%; display: flex; flex-direction: column; align-items: center; min-height: 80px; margin-bottom: 5px; } ';
         css += '.full-start-new__title img { max-height: 100px; max-width: 80%; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); } ';
         
-        /* КОМПАКТНІ РЕЙТИНГИ */
         css += '.plugin-ratings-row { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 8px 0 2px; font-size: ' + rSize + '; width: 100%; } ';
         css += '.plugin-rating-item { display: flex; align-items: center; gap: 5px; font-weight: bold; color: #fff; line-height: 1; } ';
         css += '.plugin-rating-item img { height: 1em; width: auto; object-fit: contain; } ';
@@ -282,7 +281,7 @@
             param: { 
                 name: 'mobile_interface_ratings_size', 
                 type: 'select', 
-                values: { '0.4em': 'Зроби менший', '0.45em': 'Стандартний', '0.5em': 'Більший' }, 
+                values: { '0.4em': '0.4', '0.45em': '0.45', '0.5em': '0.5', '0.55em': '0.55' }, 
                 default: '0.45em' 
             },
             field: { name: 'Розмір рейтингів' },
