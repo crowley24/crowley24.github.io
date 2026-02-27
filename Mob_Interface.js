@@ -39,8 +39,8 @@
         css += '@keyframes qb_in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } ';
         css += '@media screen and (max-width: 480px) { ';
         
-        /* ГЛОБАЛЬНЕ ТА ПРИМУСОВЕ ПРИХОВУВАННЯ */
-        css += '.full-start__details, .full-start__tagline, .full-start__age, .full-start__status, .full-start-new__details, [class*="age"], [class*="rating"] { display: none !important; opacity: 0 !important; visibility: hidden !important; height: 0 !important; width: 0 !important; margin: 0 !important; padding: 0 !important; position: absolute !important; pointer-events: none !important; overflow: hidden !important; } ';
+        /* ТОТАЛЬНЕ ПРИХОВУВАННЯ ЧЕРЕЗ CSS (з запасом на всі класи) */
+        css += '.full-start__details, .full-start__tagline, .full-start__age, .full-start__status, .full-start-new__details, [class*="age"], [class*="rating"], .full-rating { display: none !important; opacity: 0 !important; visibility: hidden !important; height: 0 !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; pointer-events: none !important; } ';
         
         css += '.background { background: #000 !important; } ';
         css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 60vh !important; pointer-events: none !important; } ';
@@ -77,18 +77,18 @@
         document.head.appendChild(style);
     }
 
-    // ФУНКЦІЯ ПРИМУСОВОЇ ОЧИСТКИ
+    // МАКСИМАЛЬНО АГРЕСИВНА ОЧИСТКА ВІКУ
     function killAgeRating($context) {
-        var selectors = [
-            '.full-start__age', 
-            '.full-start__status', 
-            '.full-start__details', 
-            '[class*="age"]', 
-            '[class*="rating"]',
-            '.full-start-new__details'
-        ];
-        selectors.forEach(function(sel) {
-            $context.find(sel).remove();
+        // Видалення за класами
+        $context.find('.full-start__age, .full-start__status, [class*="age"], [class*="rating"], .full-rating').remove();
+        
+        // Пошук елементів за вмістом тексту (на випадок, якщо Lampa вставляє вік просто в span)
+        $context.find('span, div').each(function() {
+            var txt = $(this).text().trim();
+            // Якщо текст схожий на рейтинг (12+, 16+, 18+, або просто цифра з плюсом)
+            if (/^\d+\+$/.test(txt) || txt.indexOf('+') !== -1 && txt.length < 5) {
+                $(this).remove();
+            }
         });
     }
 
@@ -219,13 +219,12 @@
                 var movie = e.data.movie;
                 var $render = e.object.activity.render();
                 
-                // ЗАПУСКАЄМО СПОСТЕРІГАЧ, ЩОБ ПРИБИРАТИ ВІК В РЕАЛЬНОМУ ЧАСІ
-                var observer = new MutationObserver(function(mutations) {
+                // СПОСТЕРІГАЧ ДЛЯ ВИДАЛЕННЯ БУДЬ-ЯКОГО ТЕКСТУ З "+"
+                var observer = new MutationObserver(function() {
                     killAgeRating($render);
                 });
                 observer.observe($render[0], { childList: true, subtree: true });
                 
-                // Первинна зачистка
                 killAgeRating($render);
 
                 $.ajax({
@@ -342,3 +341,4 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
+    
