@@ -63,8 +63,8 @@
         css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: auto; margin-bottom: 0px; } ';
         css += '.full-start-new__title img { max-height: 100px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); } ';
         
-        // ЗМІНЕНО: margin: 12px 0 0px — прибрали відступ знизу зовсім
-        css += '.plugin-ratings-row { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 12px 0 0px; font-size: calc(' + rSize + ' * 2.8); width: 100%; } ';
+        // Відступ знизу зроблено мінімальним (2px)
+        css += '.plugin-ratings-row { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 12px 0 2px; font-size: calc(' + rSize + ' * 2.8); width: 100%; } ';
         css += '.plugin-rating-item { display: flex; align-items: center; gap: 5px; font-weight: 600; color: #fff; line-height: 1; } ';
         css += '.plugin-rating-item img { height: 1em; width: auto; object-fit: contain; } ';
 
@@ -75,8 +75,8 @@
         css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 22px !important; height: 22px !important; margin-bottom: 4px !important; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5)) !important; fill: #fff !important; } ';
         css += '.full-start-new .full-start__button span { display: block !important; font-size: 8px !important; font-weight: 500 !important; text-transform: uppercase !important; letter-spacing: 0.3px !important; color: #fff !important; opacity: 0.6 !important; margin: 0 !important; text-align: center !important; white-space: nowrap !important; } ';
 
-        // ЗМІНЕНО: margin: 4px 0 15px — максимально підняли блок студій до рейтингів
-        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 4px 0 15px; width: 100%; } ';
+        // ЗМІНЕНО: margin: -10px 0 10px — підтягуємо блок вгору
+        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 12px; margin: -10px 0 10px; width: 100%; padding: 0 !important; } ';
         css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px; width: 100%; } ';
         css += '.studio-item { height: 3.2em; opacity: 0; animation: qb_in 0.4s ease forwards; padding: 6px 12px; border-radius: 12px; display: flex; align-items: center; justify-content: center; ';
         if (bgOpacity !== '0') {
@@ -342,7 +342,6 @@
             field: { name: 'Значки якості' }
         });
     }
-
 function start() {
         applyStyles();
         addSettings();
