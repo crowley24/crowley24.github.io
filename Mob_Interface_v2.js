@@ -38,6 +38,10 @@
         var css = '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } } ';
         css += '@keyframes qb_in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } ';
         css += '@media screen and (max-width: 480px) { ';
+
+        /* ПРИХОВУВАННЯ МЕТАДАНИХ: ВІК, СТАТУС, ЧАС, ЖАНРИ */
+        css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="status"] { display:none !important; } ';
+
         css += '.background { background: #000 !important; } ';
         css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 60vh !important; pointer-events: none !important; } ';
         css += '.full-start-new__poster img { ';
@@ -75,7 +79,6 @@
         document.head.appendChild(style);
     }
 
-    // Нова функція рендеру студій з інтелектуальним аналізом кольору
     function renderStudioLogos(container, data) {
         var showStudio = Lampa.Storage.get('mobile_interface_studios');
         if (showStudio === false || showStudio === 'false') return;
@@ -222,7 +225,6 @@
                     var $infoBlock = $('<div class="plugin-info-block"><div class="studio-row"></div><div class="quality-row"></div></div>');
                     $details.after($infoBlock);
 
-                    // Виклик нової функції для рендеру логотипів
                     renderStudioLogos($infoBlock.find('.studio-row'), movie);
 
                     if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Parser.get) {
