@@ -10,7 +10,7 @@
         { id: 'mobile_interface_slideshow_time', default: '10000' }, 
         { id: 'mobile_interface_slideshow_quality', default: 'w780' },
         { id: 'mobile_interface_ratings', default: true },
-        { id: 'mobile_interface_ratings_size', default: '0.65em' }
+        { id: 'mobile_interface_ratings_size', default: '0.55em' }
     ];
 
     settings_list.forEach(function (opt) {
@@ -39,7 +39,7 @@
 
         var isAnimationEnabled = Lampa.Storage.get('mobile_interface_animation');
         var bgOpacity = Lampa.Storage.get('mobile_interface_studios_bg_opacity', '0.15');
-        var rSize = Lampa.Storage.get('mobile_interface_ratings_size', '0.65em');
+        var rSize = Lampa.Storage.get('mobile_interface_ratings_size', '0.55em');
         
         var style = document.createElement('style');
         style.id = 'mobile-interface-styles';
@@ -282,8 +282,8 @@
             param: { 
                 name: 'mobile_interface_ratings_size', 
                 type: 'select', 
-                values: { '0.45em': 'XXS', '0.65em': 'Стандартний', '0.8em': 'S' }, 
-                default: '0.65em' 
+                values: { '0.4em': 'XXS', '0.55em': 'Стандартний', '0.65em': 'S' }, 
+                default: '0.55em' 
             },
             field: { name: 'Розмір рейтингів' },
             onChange: function () { applyStyles(); }
