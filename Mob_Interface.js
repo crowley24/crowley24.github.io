@@ -57,10 +57,10 @@
         css += '.full-start-new .full-start__button span { font-size: 8px !important; font-weight: 500 !important; text-transform: uppercase !important; letter-spacing: 0.3px !important; color: #fff !important; opacity: 0.5 !important; margin: 0 !important; text-align: center !important; white-space: nowrap !important; } ';  
         css += '.full-start-new .full-start__button:active { transform: scale(0.85); opacity: 0.4; } ';  
   
-        // Нові стилі для преміальних метаданих  
-        css += '.premium-metadata { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 4px 12px; font-size: 0.9em; color: #fff; opacity: 0.9; text-align: center; line-height: 1.4; padding: 8px 0; } ';  
-        css += '.meta-separator { opacity: 0.5; margin: 0 2px; } ';  
-        css += '.premium-metadata > * { display: inline-block; } ';  
+        // Приховуємо оригінальний блок деталей та додаємо новий стиль  
+        css += '.full-start-new__details { display: none !important; } ';  
+        css += '.mobile-custom-details { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 4px 12px; font-size: 0.9em; color: #fff; opacity: 0.9; text-align: center; line-height: 1.4; padding: 8px 0; margin-bottom: 1em; } ';  
+        css += '.mobile-meta-separator { opacity: 0.5; margin: 0 2px; } ';  
   
         css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 15px 0; width: 100%; } ';  
         css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px; width: 100%; } ';  
@@ -219,59 +219,51 @@
                             $render.find('.full-start-new__title').html('<img src="' + imgUrl + '">');  
                         }  
                         if (res.backdrops && res.backdrops.length > 1) startSlideshow($render.find('.full-start-new__poster'), res.backdrops.slice(0, 15));  
-  }  
+                    }  
                 });  
   
                 if ($details.length) {  
                     $('.plugin-info-block').remove();  
                       
-                    var $detailsContent = $details.find('.full-start-new__details');  
+                    // Приховуємо оригінальний блок  
+                    $details.hide();  
                       
-                    // Створюємо observer для відстеження змін  
-                    var observer = new MutationObserver(function(mutations) {  
-                        mutations.forEach(function(mutation) {  
-                            if (mutation.type === 'childList' && $detailsContent.children().length > 0) {  
-                                updateMetadata();  
-                                observer.disconnect(); // Відключаємо після першого оновлення  
-                            }  
-                        });  
-                    });  
+                    // Створюємо новий блок для метаданих  
+                    var metadata = [];  
                       
-                    function updateMetadata() {  
-                        var metadata = [];  
-                          
-                        // Віковий рейтинг  
-                        var pg = Lampa.TMDB.parsePG ? Lampa.TMDB.parsePG(movie) : '';  
-                        if (pg) metadata.push(pg);  
-                          
-                        // Жанри (до 3)  
-                        if (movie.genres && movie.genres.length) {  
-                            var genres = movie.genres.slice(0, 3).map(g => g.name).join(' • ');  
-                            metadata.push(genres);  
-                        }  
-                          
-                        // Тривалість  
-                        if (movie.runtime) {  
-                            var hours = Math.floor(movie.runtime / 60);  
-                            var minutes = movie.runtime % 60;  
-                            var duration = hours > 0 ? hours + 'год ' + minutes + 'хв' : minutes + 'хв';  
-                            metadata.push(duration);  
-                        }  
-                          
-                        if (metadata.length > 0) {  
-                            $detailsContent.html('<div class="premium-metadata">' + metadata.join(' <span class="meta-separator">•</span> ') + '</div>');  
-                        }  
+                    // Віковий рейтинг  
+                    var pg = Lampa.TMDB.parsePG ? Lampa.TMDB.parsePG(movie) : '';  
+                    if (pg) metadata.push(pg);  
+                      
+                    // Жанри (до 3)  
+                    if (movie.genres && movie.genres.length) {  
+                        var genres = movie.genres.slice(0, 3).map(g => g.name).join(' • ');  
+                        metadata.push(genres);  
                     }  
                       
-                    // Починаємо спостереження  
-                    observer.observe($detailsContent[0], { childList: true, subtree: true });  
+                    // Тривалість  
+                    if (movie.runtime) {  
+                        var hours = Math.floor(movie.runtime / 60);  
+                        var minutes = movie.runtime % 60;  
+                        var duration = hours > 0 ? hours + 'год ' + minutes + 'хв' : minutes + 'хв';  
+                        metadata.push(duration);  
+                    }  
                       
-                    // Спроба оновити одразу  
-                    updateMetadata();  
+                    // Додаємо наш блок з метаданими  
+                    if (metadata.length > 0) {  
+                        var $customDetails = $('<div class="mobile-custom-details">' + metadata.join(' <span class="mobile-meta-separator">•</span> ') + '</div>');  
+                        $details.after($customDetails);  
+                    }  
                       
                     // Додаємо плагін-блок для студій та якості  
                     var $infoBlock = $('<div class="plugin-info-block"><div class="studio-row"></div><div class="quality-row"></div></div>');  
-                    $details.after($infoBlock);  
+                      
+                    // Вставляємо після наших метаданих, якщо вони є, або після оригінального блоку  
+                    if (metadata.length > 0) {  
+                        $('.mobile-custom-details').after($infoBlock);  
+                    } else {  
+                        $details.after($infoBlock);  
+                    }  
   
                     renderStudioLogos($infoBlock.find('.studio-row'), movie);  
   
