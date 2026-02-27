@@ -10,7 +10,7 @@
         { id: 'mobile_interface_slideshow_time', default: '10000' }, 
         { id: 'mobile_interface_slideshow_quality', default: 'w780' },
         { id: 'mobile_interface_ratings', default: true },
-        { id: 'mobile_interface_ratings_size', default: '0.7em' }
+        { id: 'mobile_interface_ratings_size', default: '0.7em' } // Зменшено за замовчуванням
     ];
 
     settings_list.forEach(function (opt) {
@@ -62,11 +62,10 @@
         css += '.full-start-new__title { width: 100%; display: flex; flex-direction: column; align-items: center; min-height: 80px; margin-bottom: 5px; } ';
         css += '.full-start-new__title img { max-height: 100px; max-width: 80%; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); } ';
         
-        css += '.plugin-ratings-row { display: flex; justify-content: center; align-items: center; gap: 8px; margin: 8px 0 2px; font-size: ' + rSize + '; width: 100%; color: rgba(255,255,255,0.7); flex-wrap: wrap; } ';
-        css += '.plugin-rating-item { display: flex; align-items: center; gap: 4px; font-weight: bold; color: #fff; } ';
+        /* КОМПАКТНІ РЕЙТИНГИ */
+        css += '.plugin-ratings-row { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 8px 0 2px; font-size: ' + rSize + '; width: 100%; } ';
+        css += '.plugin-rating-item { display: flex; align-items: center; gap: 5px; font-weight: bold; color: #fff; line-height: 1; } ';
         css += '.plugin-rating-item img { height: 1em; width: auto; object-fit: contain; } ';
-        css += '.plugin-meta-divider { opacity: 0.4; } ';
-        css += '.plugin-meta-info { white-space: nowrap; } ';
 
         css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 15px !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
         css += '.full-start-new__buttons { display: flex !important; justify-content: center !important; gap: 8px !important; width: 100% !important; margin-top: 15px !important; flex-wrap: wrap !important; } ';
@@ -79,6 +78,8 @@
         }
         css += '} ';
         css += '.quality-item { height: 2.2em; opacity: 0; animation: qb_in 0.4s ease forwards; } '; 
+        css += '.studio-item img { height: 100%; width: auto; object-fit: contain; } ';
+        css += '.quality-item img { height: 100%; width: auto; object-fit: contain; } ';
         css += '} ';
 
         style.textContent = css;
@@ -91,18 +92,6 @@
         if (n >= 5) return '#feca57';
         if (n > 0) return '#ff4d4d';
         return '#fff';
-    }
-
-    function formatTime(movie) {
-        if (movie.runtime) {
-            var hours = Math.floor(movie.runtime / 60);
-            var mins = movie.runtime % 60;
-            return (hours > 0 ? hours + 'г ' : '') + mins + 'хв';
-        }
-        if (movie.number_of_seasons) {
-            return movie.number_of_seasons + ' сезон' + (movie.number_of_seasons > 1 ? 'ів' : '');
-        }
-        return '';
     }
 
     function getCubRating(e) {
@@ -138,18 +127,6 @@
         var cub = getCubRating(e);
         if (cub) {
             $row.append('<div class="plugin-rating-item"><img src="'+ratingIcons.cub+'"><span style="color:'+getRatingColor(cub)+'">'+cub+'</span></div>');
-        }
-
-        var time = formatTime(movie);
-        if (time) {
-            if ($row.children().length > 0) $row.append('<span class="plugin-meta-divider">•</span>');
-            $row.append('<span class="plugin-meta-info">' + time + '</span>');
-        }
-
-        if (movie.genres && movie.genres.length > 0) {
-            var genres = movie.genres.slice(0, 2).map(function(g) { return g.name; }).join(', ');
-            if ($row.children().length > 0) $row.append('<span class="plugin-meta-divider">•</span>');
-            $row.append('<span class="plugin-meta-info">' + genres + '</span>');
         }
 
         if ($row.children().length > 0) container.append($row);
@@ -209,8 +186,8 @@
             var foundRes = title.indexOf('4k') >= 0 ? '4K' : title.indexOf('2k') >= 0 ? '2K' : title.indexOf('1080') >= 0 ? 'FULL HD' : title.indexOf('720') >= 0 ? 'HD' : null;
             if (foundRes && (!best.resolution || resOrder.indexOf(foundRes) > resOrder.indexOf(best.resolution))) best.resolution = foundRes;
             if (item.ffprobe) {
-                JSON.stringify(item.ffprobe).indexOf('Vision') >= 0 ? (best.dolbyVision = true) : null;
-                item.ffprobe.forEach(function(s) { 
+                JSON.stringify(item.ffprobe).indexOf('Vision') >= 0 ? best.dolbyVision = true : null;
+                item.ffprobe.forEach(s => { 
                     if (s.codec_type === 'audio' && s.channels) {
                         var aud = s.channels >= 8 ? '7.1' : s.channels >= 6 ? '5.1' : s.channels >= 4 ? '4.0' : '2.0';
                         if (!best.audio || audioOrder.indexOf(aud) > audioOrder.indexOf(best.audio)) best.audio = aud;
@@ -253,7 +230,7 @@
                     url: 'https://api.themoviedb.org/3/' + (movie.name ? 'tv' : 'movie') + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key(),
                     success: function(res) {
                         var lang = Lampa.Storage.get('language') || 'uk';
-                        var logo = res.logos.filter(function(l) { return l.iso_639_1 === lang; })[0] || res.logos.filter(function(l) { return l.iso_639_1 === 'en'; })[0] || res.logos[0];
+                        var logo = res.logos.filter(l => l.iso_639_1 === lang)[0] || res.logos.filter(l => l.iso_639_1 === 'en')[0] || res.logos[0];
                         var $titleCont = $render.find('.full-start-new__title');
                         
                         if (logo) {
@@ -278,9 +255,7 @@
                                 if (best.resolution) list.push(best.resolution);
                                 if (best.dolbyVision) list.push('Dolby Vision'); else if (best.hdr) list.push('HDR');
                                 if (best.audio) list.push(best.audio); if (best.dub) list.push('DUB'); if (best.ukr) list.push('UKR');
-                                list.forEach(function(type, i) {
-                                    if (svgIcons[type]) $infoBlock.find('.quality-row').append('<div class="quality-item" style="animation-delay:'+(i*0.1)+'s"><img src="'+svgIcons[type]+'"></div>');
-                                });
+                                list.forEach((type, i) => svgIcons[type] ? $infoBlock.find('.quality-row').append('<div class="quality-item" style="animation-delay:'+(i*0.1)+'s"><img src="'+svgIcons[type]+'"></div>') : null);
                             }
                         });
                     }
@@ -299,7 +274,7 @@
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { name: 'mobile_interface_ratings', type: 'trigger', default: true },
-            field: { name: 'Метадані', description: 'Рейтинги, тривалість та жанри під лого' }
+            field: { name: 'Рейтинги', description: 'Показувати TMDB та Lampa (CUB) під лого' }
         });
 
         Lampa.SettingsApi.addParam({
@@ -307,10 +282,10 @@
             param: { 
                 name: 'mobile_interface_ratings_size', 
                 type: 'select', 
-                values: { '0.5em': 'XXS', '0.6em': 'XS', '0.7em': 'S (Стандарт)', '0.9em': 'M', '1.1em': 'L' }, 
+                values: { '0.5em': 'XXS', '0.7em': 'Стандартний', '0.9em': 'S' }, 
                 default: '0.7em' 
             },
-            field: { name: 'Розмір метаданих' },
+            field: { name: 'Розмір рейтингів' },
             onChange: function () { applyStyles(); }
         });
 
@@ -361,4 +336,17 @@
             param: { name: 'mobile_interface_quality', type: 'trigger', default: true },
             field: { name: 'Значки якості', description: 'Показувати 4K, HDR, Audio, UKR' }
         });
-   
+    }
+
+    function start() {
+        applyStyles();
+        addSettings();
+        initPlugin();
+        setInterval(function () { 
+            if (window.innerWidth <= 480 && window.lampa_settings) window.lampa_settings.blur_poster = false; 
+        }, 2000);
+    }
+
+    if (window.appready) start();
+    else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
+})();
