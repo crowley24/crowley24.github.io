@@ -48,8 +48,8 @@
         css += '@keyframes qb_in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } } ';
         css += '@media screen and (max-width: 480px) { ';
 
-        css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="status"] { display:none !important; } ';
-        css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';
+        // Приховуємо непотрібне (вік, статус, старі рейтинги), але залишаємо кнопки та їх написи
+        css += '.full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="status"], .rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';
 
         css += '.background { background: #000 !important; } ';
         css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 60vh !important; pointer-events: none !important; } ';
@@ -59,17 +59,19 @@
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
         
         css += '.full-start-new__right { background: none !important; margin-top: -110px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
-        css += '.full-start-new__title { width: 100%; display: flex; flex-direction: column; align-items: center; min-height: 80px; margin-bottom: 5px; } ';
+        css += '.full-start-new__title { width: 100%; display: flex; flex-direction: column; align-items: center; min-height: 80px; margin-bottom: 0px; } ';
         css += '.full-start-new__title img { max-height: 100px; max-width: 80%; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); } ';
         
-        css += '.plugin-ratings-row { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 8px 0 2px; font-size: ' + rSize + '; width: 100%; } ';
+        // Рейтинги під таглайном
+        css += '.plugin-ratings-row { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 10px 0 5px; font-size: ' + rSize + '; width: 100%; } ';
         css += '.plugin-rating-item { display: flex; align-items: center; gap: 5px; font-weight: bold; color: #fff; line-height: 1; } ';
         css += '.plugin-rating-item img { height: 1em; width: auto; object-fit: contain; } ';
 
-        css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 15px !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
-        css += '.full-start-new__buttons { display: flex !important; justify-content: center !important; gap: 8px !important; width: 100% !important; margin-top: 15px !important; flex-wrap: wrap !important; } ';
+        css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 0 !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
+        css += '.full-start-new__buttons { display: flex !important; justify-content: center !important; gap: 8px !important; width: 100% !important; margin-top: 10px !important; flex-wrap: wrap !important; } ';
         
-        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 15px 0; width: 100%; } ';
+        // Компактний блок інфо (студії та якість)
+        css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 5px 0 15px; width: 100%; } ';
         css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px; width: 100%; } ';
         css += '.studio-item { height: 3.2em; opacity: 0; animation: qb_in 0.4s ease forwards; padding: 6px 12px; border-radius: 12px; display: flex; align-items: center; justify-content: center; ';
         if (bgOpacity !== '0') {
@@ -115,9 +117,10 @@
     function renderRatings(container, e) {
         if (!Lampa.Storage.get('mobile_interface_ratings')) return;
         container.find('.plugin-ratings-row').remove();
-        var movie = e.data.movie;
+        var $tagline = container.find('.full-start-new__tagline');
         var $row = $('<div class="plugin-ratings-row"></div>');
         
+        var movie = e.data.movie;
         var tmdb = parseFloat(movie.vote_average || 0).toFixed(1);
         if (tmdb > 0) {
             $row.append('<div class="plugin-rating-item"><img src="'+ratingIcons.tmdb+'"><span style="color:'+getRatingColor(tmdb)+'">'+tmdb+'</span></div>');
@@ -128,7 +131,10 @@
             $row.append('<div class="plugin-rating-item"><img src="'+ratingIcons.cub+'"><span style="color:'+getRatingColor(cub)+'">'+cub+'</span></div>');
         }
 
-        if ($row.children().length > 0) container.append($row);
+        if ($row.children().length > 0) {
+            if ($tagline.length) $tagline.after($row);
+            else container.find('.full-start-new__title').after($row);
+        }
     }
 
     function renderStudioLogos(container, data) {
@@ -236,7 +242,7 @@
                             $titleCont.html('<img src="' + Lampa.TMDB.image('/t/p/w300' + logo.file_path.replace('.svg', '.png')) + '">');
                         }
                         
-                        renderRatings($titleCont, e);
+                        setTimeout(function(){ renderRatings($render.find('.full-start-new__right'), e); }, 100);
                         
                         if (res.backdrops && res.backdrops.length > 1) startSlideshow($render.find('.full-start-new__poster'), res.backdrops.slice(0, 15));
                     }
@@ -291,14 +297,14 @@
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { name: 'mobile_interface_animation', type: 'trigger', default: true },
-            field: { name: 'Анімація постера', description: 'Ефект наближення фону' },
+            field: { name: 'Анімація постера' },
             onChange: function () { applyStyles(); }
         });
 
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { name: 'mobile_interface_slideshow', type: 'trigger', default: true },
-            field: { name: 'Слайд-шоу фону', description: 'Автоматична зміна зображень фону' }
+            field: { name: 'Слайд-шоу фону' }
         });
 
         Lampa.SettingsApi.addParam({
@@ -315,7 +321,7 @@
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { name: 'mobile_interface_studios', type: 'trigger', default: true },
-            field: { name: 'Логотипи студій', description: 'Показувати лого мереж та компаній' }
+            field: { name: 'Логотипи студій' }
         });
 
         Lampa.SettingsApi.addParam({
@@ -326,14 +332,14 @@
                 values: { '0': 'Вимкнено', '0.05': 'Мінімальна', '0.15': 'Легка', '0.3': 'Середня', '0.5': 'Густа' }, 
                 default: '0.15' 
             },
-            field: { name: 'Фон студій', description: 'Інтенсивність підкладки для логотипів' },
+            field: { name: 'Фон студій' },
             onChange: function () { applyStyles(); }
         });
 
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { name: 'mobile_interface_quality', type: 'trigger', default: true },
-            field: { name: 'Значки якості', description: 'Показувати 4K, HDR, Audio, UKR' }
+            field: { name: 'Значки якості' }
         });
     }
 
@@ -349,3 +355,4 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
+                    
