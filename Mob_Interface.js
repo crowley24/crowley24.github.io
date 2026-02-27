@@ -13,7 +13,7 @@
         { id: 'mobile_interface_slideshow', default: true },
         { id: 'mobile_interface_slideshow_time', default: '10000' },
         { id: 'mobile_interface_slideshow_quality', default: 'w780' },
-        { id: 'mobile_interface_logo_size_v2', default: '120' }, // Збільшено дефолт
+        { id: 'mobile_interface_logo_size_v2', default: '125' },
         { id: 'mobile_interface_logo_quality', default: 'w500' },
         { id: 'mobile_interface_show_tagline', default: true },
         { id: 'mobile_interface_blocks_gap', default: '8px' },
@@ -59,7 +59,7 @@
         var isAnimationEnabled = Lampa.Storage.get('mobile_interface_animation');
         var bgOpacity = Lampa.Storage.get('mobile_interface_studios_bg_opacity', '0.15');
         var rSize = Lampa.Storage.get('mobile_interface_ratings_size', '0.45em');
-        var lHeight = Lampa.Storage.get('mobile_interface_logo_size_v2', '120'); 
+        var lHeight = Lampa.Storage.get('mobile_interface_logo_size_v2', '125'); 
         var showTagline = Lampa.Storage.get('mobile_interface_show_tagline');
         var blocksGap = Lampa.Storage.get('mobile_interface_blocks_gap', '8px');
         
@@ -79,14 +79,10 @@
         css += (isAnimationEnabled ? 'animation: kenBurnsEffect 25s ease-in-out infinite !important; ' : '');
         css += 'transform-origin: center center !important; transition: opacity 1.5s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%) !important; } ';
-        
-        // Покращено блок контейнера для логотипа
         css += '.full-start-new__right { background: none !important; margin-top: -160px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; padding: 0 10px !important; gap: ' + blocksGap + ' !important; } ';
         css += '.full-start-new__right > div:first-child { margin: 0 !important; font-size: 0.9em !important; opacity: 0.8; order: 1; } ';
-        
         css += '.full-start-new__title { width: 100% !important; display: flex !important; justify-content: center !important; align-items: center !important; margin: 5px 0 !important; min-height: 60px; order: 2; overflow: visible !important; } ';
         css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 90vw !important; object-fit: contain !important; filter: drop-shadow(0 0 15px rgba(0,0,0,0.8)); margin: 0 !important; } ';
-        
         css += '.full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; opacity: 0.85 !important; font-size: 1.1em !important; margin: 0 !important; color: #fff !important; text-align: center !important; order: 3; } ';
         css += '.plugin-ratings-row { display: flex; justify-content: center; align-items: center; gap: 15px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.8); width: 100%; order: 4; } ';
         css += '.plugin-rating-item { display: flex; align-items: center; gap: 6px; font-weight: 700; color: #fff; } ';
@@ -149,7 +145,7 @@
     }
 
     /**
-     * ЛОГІКА СТУДІЙ ТА ЯКОСТІ
+     * ЛОГІКА СТУДІЙ ТА ЯКОСТІ (ПОВНА ВЕРСІЯ)
      */
     function renderStudioLogos(container, data) {
         if (!Lampa.Storage.get('mobile_interface_studios')) return;
@@ -231,7 +227,7 @@
     }
 
     /**
-     * ІНІЦІАЛІЗАЦІЯ ПОДІЙ
+     * ІНІЦІАЛІЗАЦІЯ
      */
     function init() {
         Lampa.Listener.follow('full', function (e) {
@@ -270,8 +266,12 @@
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_slideshow_time', type: 'select', values: { '10000': '10с', '15000': '15с', '20000': '20с' }, default: '10000' }, field: { name: 'Інтервал слайд-шоу' } });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_slideshow_quality', type: 'select', values: { 'w300': '300px', 'w780': '780px', 'w1280': '1280px', 'original': 'Оригінал' }, default: 'w780' }, field: { name: 'Якість фону слайд-шоу' } });
         
-        // Розширено варіанти розміру логотипу
-        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_logo_size_v2', type: 'select', values: { '80': 'Малий', '100': 'Середній', '120': 'Великий', '150': 'Величезний' }, default: '120' }, field: { name: 'Висота логотипу' }, onChange: applyStyles });
+        Lampa.SettingsApi.addParam({ 
+            component: 'mobile_interface', 
+            param: { name: 'mobile_interface_logo_size_v2', type: 'select', values: { '100': 'Помірний', '125': 'Виражений', '150': 'Масштабний', '180': 'Ультимативний' }, default: '125' }, 
+            field: { name: 'Висота логотипу' }, 
+            onChange: applyStyles 
+        });
         
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_logo_quality', type: 'select', values: { 'w300': '300px', 'w500': '500px', 'original': 'Оригінал' }, default: 'w500' }, field: { name: 'Якість логотипу' } });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_show_tagline', type: 'trigger', default: true }, field: { name: 'Показувати слоган' }, onChange: applyStyles });
@@ -290,4 +290,4 @@
     if (window.appready) startPlugin();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') startPlugin(); });
 })();
-                                
+        
