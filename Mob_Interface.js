@@ -62,7 +62,6 @@
         css += '.full-start-new__title { width: 100%; display: flex; flex-direction: column; align-items: center; min-height: 80px; margin-bottom: 5px; } ';
         css += '.full-start-new__title img { max-height: 100px; max-width: 80%; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); } ';
         
-        /* РЯДОК МЕТАДАННИХ: РЕЙТИНГ + ЧАС + ЖАНРИ */
         css += '.plugin-ratings-row { display: flex; justify-content: center; align-items: center; gap: 8px; margin: 8px 0 2px; font-size: ' + rSize + '; width: 100%; color: rgba(255,255,255,0.7); flex-wrap: wrap; } ';
         css += '.plugin-rating-item { display: flex; align-items: center; gap: 4px; font-weight: bold; color: #fff; } ';
         css += '.plugin-rating-item img { height: 1em; width: auto; object-fit: contain; } ';
@@ -131,7 +130,6 @@
         var movie = e.data.movie;
         var $row = $('<div class="plugin-ratings-row"></div>');
         
-        // Рейтинги
         var tmdb = parseFloat(movie.vote_average || 0).toFixed(1);
         if (tmdb > 0) {
             $row.append('<div class="plugin-rating-item"><img src="'+ratingIcons.tmdb+'"><span style="color:'+getRatingColor(tmdb)+'">'+tmdb+'</span></div>');
@@ -142,14 +140,12 @@
             $row.append('<div class="plugin-rating-item"><img src="'+ratingIcons.cub+'"><span style="color:'+getRatingColor(cub)+'">'+cub+'</span></div>');
         }
 
-        // Тривалість
         var time = formatTime(movie);
         if (time) {
             if ($row.children().length > 0) $row.append('<span class="plugin-meta-divider">•</span>');
             $row.append('<span class="plugin-meta-info">' + time + '</span>');
         }
 
-        // Жанри (перші два)
         if (movie.genres && movie.genres.length > 0) {
             var genres = movie.genres.slice(0, 2).map(function(g) { return g.name; }).join(', ');
             if ($row.children().length > 0) $row.append('<span class="plugin-meta-divider">•</span>');
@@ -213,8 +209,8 @@
             var foundRes = title.indexOf('4k') >= 0 ? '4K' : title.indexOf('2k') >= 0 ? '2K' : title.indexOf('1080') >= 0 ? 'FULL HD' : title.indexOf('720') >= 0 ? 'HD' : null;
             if (foundRes && (!best.resolution || resOrder.indexOf(foundRes) > resOrder.indexOf(best.resolution))) best.resolution = foundRes;
             if (item.ffprobe) {
-                JSON.stringify(item.ffprobe).indexOf('Vision') >= 0 ? best.dolbyVision = true : null;
-                item.ffprobe.forEach(s => { 
+                JSON.stringify(item.ffprobe).indexOf('Vision') >= 0 ? (best.dolbyVision = true) : null;
+                item.ffprobe.forEach(function(s) { 
                     if (s.codec_type === 'audio' && s.channels) {
                         var aud = s.channels >= 8 ? '7.1' : s.channels >= 6 ? '5.1' : s.channels >= 4 ? '4.0' : '2.0';
                         if (!best.audio || audioOrder.indexOf(aud) > audioOrder.indexOf(best.audio)) best.audio = aud;
@@ -257,7 +253,7 @@
                     url: 'https://api.themoviedb.org/3/' + (movie.name ? 'tv' : 'movie') + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key(),
                     success: function(res) {
                         var lang = Lampa.Storage.get('language') || 'uk';
-                        var logo = res.logos.filter(l => l.iso_639_1 === lang)[0] || res.logos.filter(l => l.iso_639_1 === 'en')[0] || res.logos[0];
+                        var logo = res.logos.filter(function(l) { return l.iso_639_1 === lang; })[0] || res.logos.filter(function(l) { return l.iso_639_1 === 'en'; })[0] || res.logos[0];
                         var $titleCont = $render.find('.full-start-new__title');
                         
                         if (logo) {
@@ -282,7 +278,9 @@
                                 if (best.resolution) list.push(best.resolution);
                                 if (best.dolbyVision) list.push('Dolby Vision'); else if (best.hdr) list.push('HDR');
                                 if (best.audio) list.push(best.audio); if (best.dub) list.push('DUB'); if (best.ukr) list.push('UKR');
-                                list.forEach((type, i) => svgIcons[type] ? $infoBlock.find('.quality-row').append('<div class="quality-item" style="animation-delay:'+(i*0.1)+'s"><img src="'+svgIcons[type]+'"></div>') : null);
+                                list.forEach(function(type, i) {
+                                    if (svgIcons[type]) $infoBlock.find('.quality-row').append('<div class="quality-item" style="animation-delay:'+(i*0.1)+'s"><img src="'+svgIcons[type]+'"></div>');
+                                });
                             }
                         });
                     }
@@ -363,3 +361,4 @@
             param: { name: 'mobile_interface_quality', type: 'trigger', default: true },
             field: { name: 'Значки якості', description: 'Показувати 4K, HDR, Audio, UKR' }
         });
+   
