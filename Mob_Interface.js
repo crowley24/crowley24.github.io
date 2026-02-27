@@ -24,7 +24,7 @@
     var slideshowTimer; 
     var pluginPath = 'https://crowley24.github.io/NewIcons/';
     
-    // Іконки якості
+    // Іконки якості (кодеки, мова, роздільна здатність)
     var svgIcons = {
         '4K': pluginPath + '4K.svg', '2K': pluginPath + '2K.svg', 'FULL HD': pluginPath + 'FULL HD.svg',
         'HD': pluginPath + 'HD.svg', 'HDR': pluginPath + 'HDR.svg', 'Dolby Vision': pluginPath + 'Dolby Vision.svg',
@@ -32,7 +32,7 @@
         '2.0': pluginPath + '2.0.svg', 'DUB': pluginPath + 'DUB.svg', 'UKR': pluginPath + 'UKR.svg'
     };
 
-    // Іконки рейтингів
+    // Іконки системних рейтингів
     var ratingIcons = {
         tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',
         cub: 'https://raw.githubusercontent.com/yumata/lampa/9381985ad4371d2a7d5eb5ca8e3daf0f32669eb7/img/logo-icon.svg'
@@ -55,11 +55,11 @@
         
         css += '@media screen and (max-width: 480px) { ';
         
-        // Приховування зайвих стандартних елементів
+        // Приховування стандартної інформації Lampa для чистоти інтерфейсу
         css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="status"] { display:none !important; } ';
         css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';
 
-        // Стилі постера та фону
+        // Фон та постер (ефект Ken Burns та маска)
         css += '.background { background: #000 !important; } ';
         css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 60vh !important; pointer-events: none !important; } ';
         css += '.full-start-new__poster img { ';
@@ -67,28 +67,28 @@
         css += 'transform-origin: center center !important; transition: opacity 1.5s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
         
-        // Позиціонування контенту
+        // Позиціонування блоку з назвою та кнопками
         css += '.full-start-new__right { background: none !important; margin-top: -110px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; } ';
         
-        // Стилі логотипу фільму
+        // Логотип фільму
         css += '.full-start-new__title { width: 100%; display: flex; justify-content: center; min-height: auto; margin-bottom: 0px; } ';
         css += '.full-start-new__title img { max-height: 100px; max-width: 85%; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); image-rendering: -webkit-optimize-contrast; } ';
         
-        // Стилі блоку рейтингів
+        // Рядок рейтингів
         css += '.plugin-ratings-row { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 18px 0 2px; font-size: calc(' + rSize + ' * 2.8); width: 100%; } ';
         css += '.plugin-rating-item { display: flex; align-items: center; gap: 5px; font-weight: 600; color: #fff; line-height: 1; } ';
         css += '.plugin-rating-item img { height: 1em; width: auto; object-fit: contain; } ';
 
-        // Слоган
+        // Слоган фільму
         css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 2px !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
         
-        // Кнопки
+        // Кнопки дій (Дивитись, Трейлер тощо)
         css += '.full-start-new__buttons { display: flex !important; justify-content: center !important; gap: 8px !important; width: 100% !important; margin-top: 15px !important; flex-wrap: wrap !important; } ';
         css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; padding: 4px !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; width: 54px !important; min-width: 0 !important; transition: transform 0.2s ease !important; } ';
         css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 22px !important; height: 22px !important; margin-bottom: 4px !important; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5)) !important; fill: #fff !important; } ';
         css += '.full-start-new .full-start__button span { display: block !important; font-size: 8px !important; font-weight: 500 !important; text-transform: uppercase !important; letter-spacing: 0.3px !important; color: #fff !important; opacity: 0.6 !important; margin: 0 !important; text-align: center !important; white-space: nowrap !important; } ';
 
-        // Блок інфо (студії та якість)
+        // Блок студій та якості
         css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: 12px; margin: -14px 0 10px; width: 100%; padding: 0 !important; } ';
         css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px; width: 100%; } ';
         
@@ -106,7 +106,7 @@
         document.head.appendChild(style);
     }
 
-    // 3. Допоміжні функції
+    // 3. Допоміжні функції (Колір, Розрахунок CUB)
     function getRatingColor(val) {
         var n = parseFloat(val);
         if (n >= 7) return '#2ecc71';
@@ -134,7 +134,7 @@
         return null;
     }
 
-    // 4. Функції рендерингу
+    // 4. Функції рендерингу елементів
     function renderRatings(container, e) {
         if (!Lampa.Storage.get('mobile_interface_ratings')) return;
         container.find('.plugin-ratings-row').remove();
@@ -200,7 +200,6 @@
                             pixelCount++;
                         }
                     }
-                    // Якщо логотип занадто темний, інвертуємо його для видимості
                     if (pixelCount > 0 && (0.299*(r/pixelCount)+0.587*(g/pixelCount)+0.114*(b/pixelCount)) < 35) {
                         $('#' + imgId + ' img').css({'filter': 'brightness(0) invert(1) contrast(1.2)', 'opacity': '0.9'});
                     }
@@ -246,7 +245,8 @@
         
         slideshowTimer = setInterval(function() {
             index = (index + 1) % backdrops.length;
-            var imgUrl = Lampa.TMDB.image('/t/p/' + Lampa.Storage.get('mobile_interface_slideshow_quality', 'w780') + backdrops[index].file_path);
+            var q = Lampa.Storage.get('mobile_interface_slideshow_quality', 'w780');
+            var imgUrl = Lampa.TMDB.image('/t/p/' + q + backdrops[index].file_path);
             var $currentImg = $poster.find('img').first();
             
             var nextImg = new Image();
@@ -263,7 +263,7 @@
         }, interval);
     }
 
-    // 5. Основна логіка плагіна
+    // 5. Основна ініціалізація
     function initPlugin() {
         Lampa.Listener.follow('full', function (e) {
             if (e.type === 'destroy') clearInterval(slideshowTimer);
@@ -324,7 +324,7 @@
         });
     }
 
-    // 6. Налаштування
+    // 6. Реєстрація налаштувань
     function addSettings() {
         Lampa.SettingsApi.addComponent({
             component: 'mobile_interface',
@@ -347,18 +347,6 @@
             component: 'mobile_interface',
             param: { name: 'mobile_interface_ratings', type: 'trigger', default: true },
             field: { name: 'Рейтинги' }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: { 
-                name: 'mobile_interface_ratings_size', 
-                type: 'select', 
-                values: { '0.4em': '0.4', '0.45em': '0.45', '0.5em': '0.5', '0.55em': '0.55' }, 
-                default: '0.45em' 
-            },
-            field: { name: 'Розмір рейтингів' },
-            onChange: function () { applyStyles(); }
         });
 
         Lampa.SettingsApi.addParam({
