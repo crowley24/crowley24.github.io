@@ -219,38 +219,55 @@
                             $render.find('.full-start-new__title').html('<img src="' + imgUrl + '">');  
                         }  
                         if (res.backdrops && res.backdrops.length > 1) startSlideshow($render.find('.full-start-new__poster'), res.backdrops.slice(0, 15));  
-                    }  
+  }  
                 });  
   
                 if ($details.length) {  
                     $('.plugin-info-block').remove();  
                       
-                    // Модифікуємо існуючий блок деталей  
                     var $detailsContent = $details.find('.full-start-new__details');  
-                    var metadata = [];  
                       
-                    // Віковий рейтинг  
-                    var pg = Lampa.TMDB.parsePG ? Lampa.TMDB.parsePG(movie) : '';  
-                    if (pg) metadata.push(pg);  
+                    // Створюємо observer для відстеження змін  
+                    var observer = new MutationObserver(function(mutations) {  
+                        mutations.forEach(function(mutation) {  
+                            if (mutation.type === 'childList' && $detailsContent.children().length > 0) {  
+                                updateMetadata();  
+                                observer.disconnect(); // Відключаємо після першого оновлення  
+                            }  
+                        });  
+                    });  
                       
-                    // Жанри (до 3)  
-                    if (movie.genres && movie.genres.length) {  
-                        var genres = movie.genres.slice(0, 3).map(g => g.name).join(' • ');  
-                        metadata.push(genres);  
+                    function updateMetadata() {  
+                        var metadata = [];  
+                          
+                        // Віковий рейтинг  
+                        var pg = Lampa.TMDB.parsePG ? Lampa.TMDB.parsePG(movie) : '';  
+                        if (pg) metadata.push(pg);  
+                          
+                        // Жанри (до 3)  
+                        if (movie.genres && movie.genres.length) {  
+                            var genres = movie.genres.slice(0, 3).map(g => g.name).join(' • ');  
+                            metadata.push(genres);  
+                        }  
+                          
+                        // Тривалість  
+                        if (movie.runtime) {  
+                            var hours = Math.floor(movie.runtime / 60);  
+                            var minutes = movie.runtime % 60;  
+                            var duration = hours > 0 ? hours + 'год ' + minutes + 'хв' : minutes + 'хв';  
+                            metadata.push(duration);  
+                        }  
+                          
+                        if (metadata.length > 0) {  
+                            $detailsContent.html('<div class="premium-metadata">' + metadata.join(' <span class="meta-separator">•</span> ') + '</div>');  
+                        }  
                     }  
                       
-                    // Тривалість  
-                    if (movie.runtime) {  
-                        var hours = Math.floor(movie.runtime / 60);  
-                        var minutes = movie.runtime % 60;  
-                        var duration = hours > 0 ? hours + 'год ' + minutes + 'хв' : minutes + 'хв';  
-                        metadata.push(duration);  
-                    }  
+                    // Починаємо спостереження  
+                    observer.observe($detailsContent[0], { childList: true, subtree: true });  
                       
-                    // Замінюємо вміст на новий формат  
-                    if (metadata.length > 0) {  
-                        $detailsContent.html('<div class="premium-metadata">' + metadata.join(' <span class="meta-separator">•</span> ') + '</div>');  
-                    }  
+                    // Спроба оновити одразу  
+                    updateMetadata();  
                       
                     // Додаємо плагін-блок для студій та якості  
                     var $infoBlock = $('<div class="plugin-info-block"><div class="studio-row"></div><div class="quality-row"></div></div>');  
@@ -351,4 +368,3 @@
     if (window.appready) start();  
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });  
 })();
-  
