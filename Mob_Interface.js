@@ -10,7 +10,7 @@
         { id: 'mobile_interface_slideshow_time', default: '10000' }, 
         { id: 'mobile_interface_slideshow_quality', default: 'w780' },
         { id: 'mobile_interface_ratings', default: true },
-        { id: 'mobile_interface_ratings_size', default: '0.9em' }
+        { id: 'mobile_interface_ratings_size', default: '0.7em' } // Зменшено за замовчуванням
     ];
 
     settings_list.forEach(function (opt) {
@@ -39,7 +39,7 @@
 
         var isAnimationEnabled = Lampa.Storage.get('mobile_interface_animation');
         var bgOpacity = Lampa.Storage.get('mobile_interface_studios_bg_opacity', '0.15');
-        var rSize = Lampa.Storage.get('mobile_interface_ratings_size', '0.9em');
+        var rSize = Lampa.Storage.get('mobile_interface_ratings_size', '0.7em');
         
         var style = document.createElement('style');
         style.id = 'mobile-interface-styles';
@@ -62,10 +62,10 @@
         css += '.full-start-new__title { width: 100%; display: flex; flex-direction: column; align-items: center; min-height: 80px; margin-bottom: 5px; } ';
         css += '.full-start-new__title img { max-height: 100px; max-width: 80%; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.6)); } ';
         
-        /* ВИПРАВЛЕНІ РЕЙТИНГИ: ТЕПЕР ПІД ЛОГО */
-        css += '.plugin-ratings-row { display: flex; justify-content: center; align-items: center; gap: 15px; margin: 10px 0 5px; font-size: ' + rSize + '; width: 100%; } ';
-        css += '.plugin-rating-item { display: flex; align-items: center; gap: 6px; font-weight: bold; color: #fff; } ';
-        css += '.plugin-rating-item img { height: 1.2em; width: auto; object-fit: contain; } ';
+        /* КОМПАКТНІ РЕЙТИНГИ */
+        css += '.plugin-ratings-row { display: flex; justify-content: center; align-items: center; gap: 12px; margin: 8px 0 2px; font-size: ' + rSize + '; width: 100%; } ';
+        css += '.plugin-rating-item { display: flex; align-items: center; gap: 5px; font-weight: bold; color: #fff; line-height: 1; } ';
+        css += '.plugin-rating-item img { height: 1em; width: auto; object-fit: contain; } ';
 
         css += '.full-start-new__tagline { font-style: italic !important; opacity: 0.9 !important; font-size: 1.05em !important; margin: 5px 0 15px !important; color: #fff !important; text-align: center !important; text-shadow: 0 2px 4px rgba(0,0,0,0.8); } ';
         css += '.full-start-new__buttons { display: flex !important; justify-content: center !important; gap: 8px !important; width: 100% !important; margin-top: 15px !important; flex-wrap: wrap !important; } ';
@@ -237,7 +237,6 @@
                             $titleCont.html('<img src="' + Lampa.TMDB.image('/t/p/w300' + logo.file_path.replace('.svg', '.png')) + '">');
                         }
                         
-                        // Рейтинги малюються ВСЕРЕДИНІ title-контейнера, що гарантує перенос рядка
                         renderRatings($titleCont, e);
                         
                         if (res.backdrops && res.backdrops.length > 1) startSlideshow($render.find('.full-start-new__poster'), res.backdrops.slice(0, 15));
@@ -275,7 +274,7 @@
         Lampa.SettingsApi.addParam({
             component: 'mobile_interface',
             param: { name: 'mobile_interface_ratings', type: 'trigger', default: true },
-            field: { name: 'Рейтинги', description: 'Показувати TMDB та Lampa (CUB) строго під лого' }
+            field: { name: 'Рейтинги', description: 'Показувати TMDB та Lampa (CUB) під лого' }
         });
 
         Lampa.SettingsApi.addParam({
@@ -283,8 +282,8 @@
             param: { 
                 name: 'mobile_interface_ratings_size', 
                 type: 'select', 
-                values: { '0.7em': 'XS', '0.9em': 'S (Стандарт)', '1.1em': 'M', '1.3em': 'L' }, 
-                default: '0.9em' 
+                values: { '0.5em': 'XXS', '0.6em': 'XS', '0.7em': 'S (Стандарт)', '0.9em': 'M', '1.1em': 'L' }, 
+                default: '0.7em' 
             },
             field: { name: 'Розмір рейтингів' },
             onChange: function () { applyStyles(); }
@@ -351,3 +350,4 @@
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
 })();
+            
