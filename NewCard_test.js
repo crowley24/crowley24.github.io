@@ -1,116 +1,109 @@
 (function () {
     'use strict';
 
-    var logoCache = {};
+    var logoCache = {}; 
     var pluginPath = 'https://crowley24.github.io/NewIcons/';
-
-    // Налаштування (можна розширити)
-    var settings_list = [
-        { id: 'tv_interface_logo_size', default: '250' },
-        { id: 'tv_interface_show_studios', default: true }
-    ];
-
-    /**
-     * СТИЛІ ДЛЯ ТВ ТА ПК
-     */
+    
     function applyStyles() {
         var oldStyle = document.getElementById('tv-interface-styles');
         if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
-
-        var lHeight = Lampa.Storage.get('tv_interface_logo_size', '250');
 
         var style = document.createElement('style');
         style.id = 'tv-interface-styles';
         
         var css = `
-            /* Вимикаємо стандартні елементи, які нам заважають */
-            .full-start-new__details, .full-start__info { display: none !important; }
-
             @media screen and (min-width: 481px) {
-                /* Контейнер всієї сторінки фільму */
-                .full-start-new {
-                    display: flex !important;
-                    flex-direction: row-reverse !important; /* Постер справа, інфо зліва */
-                    height: 100vh !important;
-                    background: #141414 !important;
-                }
+                /* 1. ПОВНІСТЮ ВИДАЛЯЄМО ПОСТЕР ЗЛІВА */
+                .full-start-new__left { display: none !important; } 
 
-                /* Фон з картинкою (права частина) */
+                /* 2. РОБОТА З ФОНОМ (Backdrop) */
                 .full-start-new__poster {
-                    flex: 1 1 60% !important;
+                    position: absolute !important;
+                    top: 0; right: 0; bottom: 0;
+                    width: 100% !important;
                     height: 100% !important;
-                    position: relative !important;
-                    mask-image: linear-gradient(to left, #000 70%, transparent 100%) !important;
-                    -webkit-mask-image: linear-gradient(to left, #000 70%, transparent 100%) !important;
+                    z-index: 1 !important;
+                    /* Плавний градієнт: зліва повна темрява під текст, справа — картинка */
+                    mask-image: linear-gradient(to right, #000 0%, #000 25%, transparent 100%) !important;
+                    -webkit-mask-image: linear-gradient(to right, #000 0%, #000 25%, transparent 100%) !important;
+                }
+                .full-start-new__poster img { 
+                    object-fit: cover !important; 
+                    width: 100% !important; 
+                    height: 100% !important;
+                    object-position: top right !important;
                 }
 
-                /* Блок з описом (ліва частина) */
+                /* 3. ОСНОВНИЙ БЛОК ІНФОРМАЦІЇ */
                 .full-start-new__right {
-                    flex: 1 1 40% !important;
+                    position: relative;
+                    z-index: 2 !important;
+                    width: 45% !important; /* Займаємо ліву частину екрана */
+                    padding-left: 60px !important;
                     display: flex !important;
                     flex-direction: column !important;
                     justify-content: center !important;
-                    align-items: flex-start !important;
-                    padding: 0 5% !important;
-                    z-index: 10 !important;
+                    height: 100vh !important;
                     background: none !important;
                     margin: 0 !important;
                 }
 
-                /* Логотип фільму */
+                /* 4. ЛОГОТИП ЗАМІСТЬ ТЕКСТУ */
                 .full-start-new__title {
-                    width: 100% !important;
-                    text-align: left !important;
+                    font-size: 0 !important;
                     margin-bottom: 20px !important;
+                    text-align: left !important;
                 }
-
                 .full-start-new__title img {
-                    max-height: ${lHeight}px !important;
+                    max-height: 180px !important;
                     max-width: 100% !important;
-                    object-fit: contain !important;
-                    filter: drop-shadow(0 0 20px rgba(0,0,0,0.5));
+                    filter: drop-shadow(0 0 20px rgba(0,0,0,0.8));
                 }
 
-                /* Рейтинги та мета-дані */
-                .plugin-ratings-row {
-                    display: flex;
-                    gap: 20px;
-                    font-size: 1.4em;
-                    margin-bottom: 20px;
+                /* Ховаємо зайві дрібні деталі, які ми замінимо */
+                .full-start-new__details, .full-start-new__age { display: none !important; }
+                
+                /* Опис та кнопки */
+                .full-start-new__tagline { 
+                    font-size: 1.4rem !important; 
+                    max-width: 80% !important; 
+                    text-align: left !important;
+                    margin-bottom: 30px !important;
                 }
-
-                /* Студії в ряд */
-                .studio-row {
-                    display: flex;
-                    gap: 15px;
-                    margin-top: 20px;
-                    flex-wrap: wrap;
-                }
-
-                .studio-item {
-                    height: 40px;
-                    background: rgba(255,255,255,0.1);
-                    padding: 5px 15px;
-                    border-radius: 8px;
-                }
-
-                .studio-item img { height: 100%; }
+                .full-start-new__buttons { justify-content: flex-start !important; }
             }
         `;
-
         style.textContent = css;
         document.head.appendChild(style);
     }
 
-    // Тут ми можемо перевикористати твої функції loadMovieLogo та renderRatings
-    // з попереднього плагіна, просто змінивши цільові класи.
-
-    function startPlugin() {
-        applyStyles();
-        // Ініціалізація логіки (Lampa.Listener.follow('full', ...))
+    function loadMovieLogo(movie, $container) {
+        var movieId = movie.id + (movie.name ? '_tv' : '_movie');
+        if (logoCache[movieId]) { $container.html('<img src="' + logoCache[movieId] + '">'); return; }
+        
+        $.ajax({
+            url: 'https://api.themoviedb.org/3/' + (movie.name ? 'tv' : 'movie') + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key(),
+            success: function(res) {
+                var lang = Lampa.Storage.get('language') || 'uk';
+                // Використовуємо англійське лого, якщо українського немає [cite: 2026-02-17]
+                var logo = res.logos.filter(l => l.iso_639_1 === lang)[0] || res.logos.filter(l => l.iso_639_1 === 'en')[0] || res.logos[0];
+                if (logo) {
+                    var url = Lampa.TMDB.image('/t/p/w500' + logo.file_path.replace('.svg', '.png'));
+                    logoCache[movieId] = url; $container.html('<img src="' + url + '">');
+                }
+            }
+        });
     }
 
-    if (window.appready) startPlugin();
-    else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') startPlugin(); });
+    function init() {
+        Lampa.Listener.follow('full', function (e) {
+            if (window.innerWidth > 480 && (e.type === 'complite' || e.type === 'complete')) {
+                var movie = e.data.movie, $render = e.object.activity.render();
+                loadMovieLogo(movie, $render.find('.full-start-new__title'));
+            }
+        });
+    }
 
+    if (window.appready) { applyStyles(); init(); }
+    else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') { applyStyles(); init(); } });
 })();
