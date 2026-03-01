@@ -12,7 +12,8 @@
     const PLUGIN_ICON = '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="30" width="80" height="40" rx="5" fill="hsl(0, 0%, 30%)"/><circle cx="50" cy="50" r="10" fill="white"/></svg>';
 
     function initializePlugin() {  
-        // Перевірку на TV видалено для підтримки ноутбуків
+        // Видалено обмеження if (!Lampa.Platform.screen('tv'))
+        console.log('Applecation Plugin: Initializing...');
         addCustomTemplate();  
         addStyles();  
         addSettings();
@@ -105,7 +106,10 @@
                 height: 100vh; display: flex; flex-direction: column; justify-content: flex-end; 
                 padding: 0 5% 10% 5%;
                 background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 50%, transparent 100%);
+                pointer-events: none; /* Пропускає кліки крізь фон на кнопки */
             }
+            .applecation__body > * { pointer-events: auto; } /* Повертає кліки кнопкам */
+            
             .applecation__logo img { 
                 max-width: calc(480px * var(--apple-logo-scale)); 
                 max-height: calc(200px * var(--apple-logo-scale)); 
@@ -126,13 +130,14 @@
                 display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
             }
 
-            .applecation__buttons-row { display: flex; align-items: center; gap: 20px; }
+            .applecation__buttons-row { display: flex; align-items: center; gap: 20px; position: relative; z-index: 10; }
             
             .button--play { 
                 background: #fff !important; color: #000 !important; 
                 padding: 12px 35px !important; border-radius: 12px !important; 
                 font-weight: 700 !important; text-transform: none;
                 transition: transform 0.2s, background 0.2s;
+                cursor: pointer;
             }
 
             .applecation .full-start__button { 
@@ -143,18 +148,18 @@
                 cursor: pointer;
             }
 
-            .applecation .full-start__button.focus, 
+            /* Ефект для пульта (focus) та мишки (hover) */
+            .applecation .full-start__button.focus,
             .applecation .full-start__button:hover { 
                 transform: scale(1.3); 
                 color: #fff !important;
-                background: none !important;
                 filter: drop-shadow(0 0 8px rgba(255,255,255,0.9)) !important; 
             }
 
             .button--play.focus,
             .button--play:hover { 
                 background: #e0e0e0 !important; 
-                transform: scale(1.05);
+                transform: scale(1.05) !important;
                 filter: none !important;
             }
 
@@ -187,9 +192,14 @@
     }  
 
     function attachLogoLoader() {  
-        Lampa.Listener.follow('full', (e) => { if (e.type === 'complite') setTimeout(() => loadLogo(e), 10); });  
+        Lampa.Listener.follow('full', (e) => { 
+            if (e.type === 'complite') {
+                setTimeout(() => loadLogo(e), 50); 
+            }
+        });  
     }  
 
+    // Ініціалізація
     if (window.appready) initializePlugin();  
     else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') initializePlugin(); });  
 })();
