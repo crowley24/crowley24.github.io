@@ -4,16 +4,26 @@
     function addStyles() {
         const styles = `
         <style>
+            /* Приховуємо зайве, але не видаляємо з DOM, щоб не було помилок */
+            .full-start-new__left, 
+            .full-start-new__title, 
+            .full-start-new__tagline,
+            .full-start-new__details > div:not(.applecation__content) { 
+                display: none !important; 
+            }
+
             .full-start-new, .full-start-new__right, .full-start-new__details {
                 background: none !important;
                 background-color: transparent !important;
                 box-shadow: none !important;
             }
-            .full-start-new__left, .full-start-new__title, .full-start-new__tagline { display: none !important; }
 
+            /* Apple TV Style Контейнер */
             .applecation {
                 background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 50%, transparent 100%) !important;
                 height: 100vh !important;
+                position: relative;
+                z-index: 10;
             }
 
             .applecation .full-start-new__right {
@@ -45,6 +55,7 @@
                 font-size: 1.2em;
                 margin-bottom: 12px;
                 font-weight: 500;
+                text-shadow: 0 1px 3px rgba(0,0,0,0.5);
             }
             .rate-pill {
                 background: #ffad08;
@@ -67,7 +78,11 @@
                 text-shadow: 0 1px 2px rgba(0,0,0,0.5);
             }
 
-            .full-start-new__buttons { display: flex !important; gap: 15px !important; }
+            .full-start-new__buttons { 
+                display: flex !important; 
+                gap: 15px !important; 
+                margin-top: 10px;
+            }
             .full-start-new__buttons .full-start__button {
                 background: rgba(255,255,255,0.1) !important;
                 border: none !important;
@@ -75,9 +90,8 @@
                 backdrop-filter: blur(10px);
                 padding: 14px 28px !important;
                 display: flex !important;
-                align-items: center;
-                justify-content: center;
                 transition: all 0.2s ease !important;
+                color: #fff !important;
             }
             .full-start-new__buttons .full-start__button.focus {
                 background: #fff !important;
@@ -90,12 +104,11 @@
 
     function selectBestLogo(logos) {
         const lang = Lampa.Storage.get('language') || 'uk';
-        // Використовуємо англійське лого, якщо українського немає [cite: 2026-02-17]
+        // Використовуємо UA, якщо немає — EN [cite: 2026-02-17]
         return (logos || []).find(l => l.iso_639_1 === lang) || (logos || []).find(l => l.iso_639_1 === 'en') || (logos ? logos[0] : null);
     }
 
     function loadData(event) {
-        // Додано перевірку, щоб уникнути помилки "undefined"
         if (!event.data || !event.data.movie) return;
 
         const data = event.data.movie;
@@ -105,7 +118,6 @@
         const metaContainer = render.find('.applecation__meta');
         const descContainer = render.find('.applecation__description');
 
-        // Мета-дані
         const year = (data.release_date || data.first_air_date || '').split('-')[0];
         const rating = data.vote_average ? data.vote_average.toFixed(1) : '';
         const genres = (data.genres || []).slice(0, 2).map(g => g.name).join(' · ');
@@ -118,7 +130,6 @@
 
         descContainer.text(data.overview || '');
 
-        // Логотип через TMDB
         const mediaType = (data.number_of_seasons || data.first_air_date) ? 'tv' : 'movie';
         const apiUrl = Lampa.TMDB.api(`${mediaType}/${data.id}/images?api_key=${Lampa.TMDB.key()}`);
 
@@ -136,17 +147,19 @@
     }
 
     function init() {
-        // Оновлений шаблон
+        // Зберігаємо структуру Lampa, додаючи свій контейнер всередину
         Lampa.Template.add('full_start_new', `
             <div class="full-start-new applecation">
                 <div class="full-start-new__right">
-                    <div class="applecation__content">
-                        <div class="applecation__logo"></div>
-                        <div class="applecation__meta"></div>
-                        <div class="applecation__description"></div>
-                        <div class="full-start-new__buttons">
-                            <div class="full-start__button selector button--play"><span>#{title_watch}</span></div>
-                            <div class="full-start__button selector button--book"><span>#{title_add_to_favorite}</span></div>
+                    <div class="full-start-new__details">
+                        <div class="applecation__content">
+                            <div class="applecation__logo"></div>
+                            <div class="applecation__meta"></div>
+                            <div class="applecation__description"></div>
+                            <div class="full-start-new__buttons">
+                                <div class="full-start__button selector button--play"><span>#{title_watch}</span></div>
+                                <div class="full-start__button selector button--book"><span>#{title_add_to_favorite}</span></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -155,10 +168,10 @@
 
         addStyles();
 
-        // Використовуємо 'complite' для безпечного заповнення даних після рендеру
         Lampa.Listener.follow('full', (e) => {
             if (e.type === 'complite') {
-                setTimeout(() => loadData(e), 10);
+                // Мінімальна затримка для стабільності
+                setTimeout(() => loadData(e), 50);
             }
         });
     }
