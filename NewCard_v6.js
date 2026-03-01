@@ -3,180 +3,157 @@
 
     var logoCache = {};
 
-    function initialize() {
-        addCustomTemplate();
-        addStyles();
-        attachListeners();
-    }
+    function applyStyles() {
+        var styleId = 'lampa-apple-tv-safe-v1';
+        if (document.getElementById(styleId)) return;
 
-    function addCustomTemplate() {
-        // Повністю замінюємо стандартний шаблон Lampa на структуру Apple TV
-        var template = `
-        <div class="full-start-new apple-style">
-            <div class="apple-style__body">
-                <div class="apple-style__content">
-                    <div class="apple-style__logo-block">
-                        <div class="apple-style__logo"></div>
-                        <div class="full-start-new__title" style="display: none;">{title}</div>
-                    </div>
-
-                    <div class="apple-style__meta">
-                        <span class="apple-style__rating"></span>
-                        <span class="apple-style__info"></span>
-                    </div>
-
-                    <div class="apple-style__description">
-                        <div class="apple-style__plot"></div>
-                    </div>
-
-                    <div class="full-start-new__buttons apple-style__buttons">
-                        </div>
-                </div>
-            </div>
-        </div>`;
-        Lampa.Template.add('full_start_new', template);
-    }
-
-    function addStyles() {
-        var style = `
-        <style>
-            .apple-style__body {
-                position: relative;
-                height: 100vh;
-                display: flex;
-                flex-direction: column;
-                justify-content: flex-end; /* Все концентрується внизу */
-                padding: 0 5% 60px 5%;
-                background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 40%, transparent 100%);
-                z-index: 2;
-                box-sizing: border-box;
+        var style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+            /* Головний контейнер - адаптація під Apple TV */
+            .full-start-new__right {
+                display: flex !important;
+                flex-direction: column !important;
+                justify-content: flex-end !important;
+                height: 100vh !important;
+                padding: 0 5% 50px 5% !important;
+                background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, transparent 100%) !important;
+                box-sizing: border-box !important;
+                position: relative !important;
+                z-index: 10;
             }
 
-            .apple-style__content {
-                display: flex;
-                flex-direction: column;
-                gap: 15px;
-                max-width: 800px;
+            /* Ховаємо зайве, що заважає стилю Apple */
+            .full-start-new__left, .full-start-new__tagline, .full-start-new__status { 
+                display: none !important; 
             }
 
-            .apple-style__logo img {
+            /* Логотип фільму */
+            .apple-logo-container img {
                 max-width: 450px;
-                max-height: 160px;
+                max-height: 150px;
                 object-fit: contain;
                 object-position: left bottom;
+                margin-bottom: 10px;
                 filter: drop-shadow(0 0 15px rgba(0,0,0,0.5));
             }
 
-            .apple-style__meta {
+            /* Мета-дані (Рейтинг, рік, жанр) */
+            .apple-meta-row {
                 display: flex;
                 align-items: center;
                 gap: 15px;
-                font-size: 1.3rem;
-                font-weight: 500;
+                margin-bottom: 15px;
+                font-size: 1.2rem;
                 color: #fff;
             }
 
-            .apple-style__rating {
+            .apple-rating-pill {
                 background: #ffad08;
                 color: #000;
-                padding: 2px 8px;
-                border-radius: 4px;
+                padding: 2px 10px;
+                border-radius: 6px;
                 font-weight: 900;
+                font-size: 1rem;
             }
 
-            .apple-style__info { color: rgba(255,255,255,0.8); }
-
-            .apple-style__plot {
-                font-size: 1.15rem;
-                line-height: 1.5;
-                color: rgba(255,255,255,0.7);
-                display: -webkit-box;
-                -webkit-line-clamp: 3; /* Строго 3 рядки */
-                -webkit-box-orient: vertical;
-                overflow: hidden;
+            /* Опис: обмеження 3 рядки */
+            .full-start-new__description {
+                font-size: 1.1rem !important;
+                line-height: 1.5 !important;
+                color: rgba(255,255,255,0.7) !important;
+                max-width: 750px !important;
+                margin: 0 0 20px 0 !important;
+                display: -webkit-box !important;
+                -webkit-line-clamp: 3 !important;
+                -webkit-box-orient: vertical !important;
+                overflow: hidden !important;
+                height: auto !important;
             }
 
-            .apple-style__buttons {
+            /* Кнопки в ряд */
+            .full-start-new__buttons {
                 display: flex !important;
-                flex-wrap: wrap;
+                flex-wrap: wrap !important;
                 gap: 15px !important;
-                margin: 10px 0 0 0 !important;
-                justify-content: flex-start !important;
+                margin: 0 !important;
             }
 
-            /* Стиль основної кнопки */
-            .apple-style .full-start__button {
+            .full-start-new__buttons .full-start__button {
                 background: rgba(255,255,255,0.1) !important;
                 border: none !important;
-                border-radius: 10px !important;
-                padding: 12px 25px !important;
-                transition: all 0.3s ease;
+                border-radius: 12px !important;
+                transition: transform 0.2s !important;
             }
 
-            .apple-style .full-start__button.focus {
+            .full-start-new__buttons .full-start__button.focus {
                 background: #fff !important;
                 color: #000 !important;
-                transform: scale(1.05);
+                transform: scale(1.08) !important;
             }
-
-            /* Прибираємо стандартний фон Lampa, щоб не заважав нашому */
-            .full-start-new__right { background: none !important; }
-        </style>`;
-        $('body').append(style);
+        `;
+        document.head.appendChild(style);
     }
 
-    function loadData(event) {
-        var data = event.data.movie;
-        var render = event.object.activity.render();
-        if (!data) return;
+    function injectAppleElements($right, movie) {
+        // Чистимо старі ін'єкції, якщо вони є
+        $right.find('.apple-logo-container, .apple-meta-row').remove();
 
-        // Наповнюємо мета-дані
-        var year = (data.release_date || data.first_air_date || '').split('-')[0];
-        var genres = data.genres ? data.genres.slice(0, 2).map(g => g.name).join(' · ') : '';
-        var runtime = data.runtime ? Math.floor(data.runtime / 60) + 'г ' + (data.runtime % 60) + 'хв' : '';
-        
-        render.find('.apple-style__info').text(`${year}  ·  ${genres}  ·  ${runtime}`);
-        render.find('.apple-style__plot').text(data.overview);
-        
-        if (data.vote_average) {
-            render.find('.apple-style__rating').text(data.vote_average.toFixed(1));
-        } else {
-            render.find('.apple-style__rating').hide();
-        }
+        var year = (movie.release_date || movie.first_air_date || '').split('-')[0];
+        var genres = (movie.genres || []).slice(0, 2).map(g => g.name).join(' · ');
+        var rating = movie.vote_average ? movie.vote_average.toFixed(1) : '';
 
-        // Завантаження логотипу
-        var movieId = data.id + (data.name ? '_tv' : '_movie');
+        // Створюємо блок лого та мета-даних
+        var $appleHeader = $(`
+            <div class="apple-logo-container"></div>
+            <div class="apple-meta-row">
+                ${rating ? `<span class="apple-rating-pill">${rating} TMDB</span>` : ''}
+                <span>${year}</span>
+                <span>${genres}</span>
+            </div>
+        `);
+
+        // Вставляємо на початок правої панелі
+        $right.prepend($appleHeader);
+
+        // Завантажуємо лого
+        var movieId = movie.id + (movie.name ? '_tv' : '_movie');
         if (logoCache[movieId]) {
-            render.find('.apple-style__logo').html(`<img src="${logoCache[movieId]}">`);
+            $right.find('.apple-logo-container').html(`<img src="${logoCache[movieId]}">`);
         } else {
             $.ajax({
-                url: Lampa.TMDB.api((data.name ? 'tv' : 'movie') + '/' + data.id + '/images?api_key=' + Lampa.TMDB.key()),
+                url: Lampa.TMDB.api((movie.name ? 'tv' : 'movie') + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key()),
                 success: function (res) {
                     var lang = Lampa.Storage.get('language') || 'uk';
-                    // Пріоритет: UK -> EN -> Будь-яке [cite: 2026-02-17]
                     var best = res.logos.find(l => l.iso_639_1 === lang) || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];
                     if (best) {
                         var url = Lampa.TMDB.image('/t/p/w500' + best.file_path);
                         logoCache[movieId] = url;
-                        render.find('.apple-style__logo').html(`<img src="${url}">`);
+                        $right.find('.apple-logo-container').html(`<img src="${url}">`);
+                        $right.find('.full-start-new__title').hide();
                     } else {
-                        render.find('.full-start-new__title').show();
+                        $right.find('.full-start-new__title').show();
                     }
                 }
             });
         }
     }
 
-    function attachListeners() {
+    function init() {
+        applyStyles();
+        
         Lampa.Listener.follow('full', function (e) {
             if (e.type === 'complite' || e.type === 'complete') {
-                // Невеликий таймаут, щоб DOM встиг перемалюватися
-                setTimeout(function() { loadData(e); }, 10);
+                var $right = e.object.activity.render().find('.full-start-new__right');
+                // Використовуємо таймаут, щоб дати Lampa закінчити свої маніпуляції
+                setTimeout(function() {
+                    injectAppleElements($right, e.data.movie);
+                }, 50);
             }
         });
     }
 
-    if (window.appready) initialize();
-    else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') initialize(); });
+    if (window.appready) init();
+    else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') init(); });
 
 })();
