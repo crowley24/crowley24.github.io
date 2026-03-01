@@ -32,7 +32,7 @@
         addStyles();    
         addSettings();  
         attachLogoLoader();    
-    }  
+    }    
   
     function addSettings() {  
         var defaults = {    
@@ -80,40 +80,47 @@
     }  
   
     function addCustomTemplate() {    
-        var template = '<div class="full-start-new applecation">' +   
-            '<div class="applecation__body">' +   
-                '<div class="applecation__logo-container">' +  
-                    '<div class="applecation__logo"></div>' +  
-                    '<div class="full-start-new__title" style="display: none;">{title}</div>' +  
-                '</div>' +  
-                '<div class="applecation__premium-meta">' +  
-                    '<span class="applecation__studios"></span>' +  
-                    '<span class="applecation__line-meta"></span>' +  
-                    '<span class="full-start__pg"></span>' +  
-                '</div>' +  
-                '<div class="applecation__description-container">' +  
-                    '<div class="applecation__description"></div>' +  
-                '</div>' +  
-                '<div class="full-start-new__buttons applecation__buttons-row">' +  
-                    '<div class="full-start__button selector button--play">' +  
-                        ICONS.play + ' <span>Дивитися</span>' +  
+        var template = '<div class="full-start-new applecation">' +  
+            '<div class="full-start-new__body">' +  
+                '<div class="full-start-new__left">' +  
+                    '<div class="full-start-new__poster">' +  
+                        '<img class="full-start-new__img full--poster" />' +  
                     '</div>' +  
-                    '<div class="full-start__button selector view--trailer">' + ICONS.trailer + '</div>' +  
-                    '<div class="full-start__button selector button--book">' + ICONS.book + '</div>' +  
-                    '<div class="full-start__button selector button--reaction">' + ICONS.reaction + '</div>' +  
-                    '<div class="full-start__button selector button--options">' + ICONS.options + '</div>' +  
+                '</div>' +  
+                '<div class="full-start-new__right">' +  
+                    '<div class="full-start-new__head"></div>' +  
+                    '<div class="full-start-new__title applecation__logo"></div>' +  
+                    '<div class="full-start-new__tagline full--tagline"></div>' +  
+                    '<div class="applecation__line-meta"></div>' +  
+                    '<div class="applecation__description"></div>' +  
+                    '<div class="applecation__studios"></div>' +  
+                    '<div class="full-start-new__buttons">' +  
+                        '<div class="full-start__button selector button--play">' +  
+                            '<svg><use xlink:href="#sprite-play"></use></svg>' +  
+                            '<span>#{title_watch}</span>' +  
+                        '</div>' +  
+                        '<div class="full-start__button selector button--book">' +  
+                            '<svg><use xlink:href="#sprite-bookmark"></use></svg>' +  
+                            '<span>#{settings_input_links}</span>' +  
+                        '</div>' +  
+                        '<div class="full-start__button selector button--reaction">' +  
+                            '<svg><use xlink:href="#sprite-reaction"></use></svg>' +  
+                            '<span>#{title_reactions}</span>' +  
+                        '</div>' +  
+                        '<div class="full-start__button selector button--options">' +  
+                            '<svg><use xlink:href="#sprite-dots"></use></svg>' +  
+                        '</div>' +  
+                    '</div>' +  
                 '</div>' +  
             '</div>' +  
-            '<div class="hide buttons--container">' +    
-                '<div class="full-start__button view--torrent">' + ICONS.play + '</div>' +  
-            '</div>' +  
-        '</div>';    
-          
-        Lampa.Template.add('full_start_new', template);    
+        '</div>';  
+  
+        Lampa.Template.add('full_start_new', template);  
     }  
   
     function addStyles() {    
-        var styles = '<style>' +  
+        var styles = document.createElement('style');    
+        styles.innerHTML = '<style>' +  
             '/* Приховуємо стандартний фон Lampa */' +  
             '.applecation .background,' +  
             '.applecation .background__one,' +  
@@ -127,51 +134,73 @@
             '.applecation .full-start__background {' +  
                 'display: none !important;' +  
             '}' +  
-            ':root { --apple-logo-scale: 1; --apple-text-scale: 1; }' +  
-            '.applecation__body { ' +  
-                'height: 100vh; display: flex; flex-direction: column; justify-content: flex-end; ' +  
-                'padding: 0 5% 10% 5%;' +  
-                'background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 50%, transparent 100%);' +  
+            '.applecation .full-start-new__right {' +  
+                'background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 40%, rgba(0,0,0,0.4) 70%, transparent 100%) !important;' +  
+                'padding: 3em 2em;' +  
+                'margin-top: -15vh;' +  
             '}' +  
-            '.applecation__logo img { ' +  
-                'max-width: calc(480px * var(--apple-logo-scale)); ' +  
-                'max-height: calc(200px * var(--apple-logo-scale)); ' +  
-                'object-fit: contain; object-position: left bottom;' +  
+            '.applecation__logo {' +  
+                'text-align: center;' +  
+                'margin-bottom: 1.5em;' +  
+                'transform: scale(var(--apple-logo-scale, 1));' +  
             '}' +  
-            '.applecation__premium-meta { ' +  
-                'display: flex; align-items: center; gap: 12px; margin: 20px 0 10px 0;' +  
-                'font-size: calc(1.1em * var(--apple-text-scale));' +  
-                'font-weight: 500; color: #fff;' +  
+            '.applecation__logo img {' +  
+                'max-height: 120px;' +  
+                'object-fit: contain;' +  
+                'filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));' +  
             '}' +  
-            '.applecation__line-meta { color: rgba(255,255,255,0.7); }' +  
-            '.applecation__studios img { max-height: 24px; margin-right: 8px; filter: drop-shadow(0 0 2px rgba(0,0,0,0.5)); }' +  
+            '.applecation__line-meta {' +  
+                'text-align: center;' +  
+                'font-size: calc(1.1em * var(--apple-text-scale, 1));' +  
+                'color: rgba(255,255,255,0.9);' +  
+                'margin-bottom: 1.2em;' +  
+                'font-weight: 500;' +  
+            '}' +  
             '.applecation__description {' +  
                 'max-width: 700px; line-height: 1.5; margin-bottom: 25px;' +  
-                'font-size: calc(1.05em * var(--apple-text-scale));' +  
+                'font-size: calc(1.05em * var(--apple-text-scale, 1));' +  
                 'color: rgba(255,255,255,0.85);' +  
                 'display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;' +  
+                'text-align: center;' +  
             '}' +  
-            '.applecation__buttons-row { display: flex; align-items: center; gap: 20px; }' +  
-            '.button--play { ' +  
-                'background: #fff !important; color: #000 !important; ' +  
-                'padding: 12px 35px !important; border-radius: 12px !important; ' +  
+            '.applecation__studios {' +  
+                'text-align: center;' +  
+                'margin-bottom: 2em;' +  
+                'display: flex;' +  
+                'justify-content: center;' +  
+                'align-items: center;' +  
+                'gap: 1.5em;' +  
+                'flex-wrap: wrap;' +  
+            '}' +  
+            '.applecation__studios img {' +  
+                'height: 2.5em;' +  
+                'object-fit: contain;' +  
+                'filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.3));' +  
+                'opacity: 0.8;' +  
+            '}' +  
+            '.applecation .full-start-new__buttons {' +  
+                'display: flex; justify-content: center; align-items: center; gap: 20px;' +  
+            '}' +  
+            '.button--play {' +  
+                'background: #fff !important; color: #000 !important;' +  
+                'padding: 12px 35px !important; border-radius: 12px !important;' +  
                 'font-weight: 700 !important; text-transform: none;' +  
                 'transition: transform 0.2s, background 0.2s;' +  
             '}' +  
-            '.applecation .full-start__button { ' +  
-                'background: none !important; border: none !important; ' +  
+            '.applecation .full-start__button {' +  
+                'background: none !important; border: none !important;' +  
                 'color: rgba(255,255,255,0.6) !important; padding: 10px !important;' +  
                 'display: flex; justify-content: center; align-items: center;' +  
                 'transition: transform 0.2s, color 0.2s;' +  
             '}' +  
-            '.applecation .full-start__button.focus { ' +  
-                'transform: scale(1.3); ' +  
+            '.applecation .full-start__button.focus {' +  
+                'transform: scale(1.3);' +  
                 'color: #fff !important;' +  
                 'background: none !important;' +  
-                'filter: drop-shadow(0 0 8px rgba(255,255,255,0.9)) !important; ' +  
+                'filter: drop-shadow(0 0 8px rgba(255,255,255,0.9)) !important;' +  
             '}' +  
-            '.button--play.focus { ' +  
-                'background: #e0e0e0 !important; ' +  
+            '.button--play.focus {' +  
+                'background: #e0e0e0 !important;' +  
                 'transform: scale(1.05);' +  
                 'filter: none !important;' +  
             '}' +  
@@ -179,7 +208,7 @@
             'body.applecation--zoom-enabled .full-start__background.loaded { animation: appleKenBurns 40s ease-out forwards !important; }' +  
         '</style>';    
           
-        $('body').append(styles);    
+        document.body.appendChild(styles);    
     }  
   
     function loadLogo(event) {    
@@ -214,8 +243,13 @@
         });    
     }  
   
-    if (window.appready) initializePlugin();    
-    else Lampa.Listener.follow('app', function (e) {   
-        if (e.type === 'ready') initializePlugin();   
-    });    
+    // Перевіряємо версію Lampa та ініціалізуємо плагін  
+    if (typeof Lampa !== 'undefined' && Lampa.Manifest && Lampa.Manifest.app_digital >= 300) {  
+        if (window.appready) initializePlugin();    
+        else Lampa.Listener.follow('app', function (e) {   
+            if (e.type === 'ready') initializePlugin();   
+        });    
+    } else {  
+        console.warn('NewCard: Lampa не знайдено або версія несумісна');  
+    }  
 })();
