@@ -16,6 +16,7 @@
     }
 
     function addCustomTemplate() {
+        // Ми інтегруємо Apple-дизайн всередину структури, яку розуміє ядро Lampa
         const template = `
         <div class="full-start-new applecation">
             <div class="applecation__body">
@@ -42,14 +43,11 @@
                     <div class="full-start__button selector button--options">${ICONS.options}</div>
                 </div>
 
+                <div class="full-start__info hide" style="display:none"></div>
+                <div class="full-start__details hide" style="display:none"></div>
+                <div class="full-start__descr hide" style="display:none"></div>
+                <div class="full-start__right hide" style="display:none"></div>
                 <div class="full-start__left hide" style="display:none"></div>
-                <div class="full-start__right hide" style="display:none">
-                    <div class="full-start__info"></div>
-                    <div class="full-start__details"></div>
-                    <div class="full-start__descr"></div>
-                    <div class="full-start__review"></div>
-                    <div class="full-start__channels"></div>
-                </div>
             </div>
             <div class="hide buttons--container">
                 <div class="full-start__button view--torrent">${ICONS.play}</div>
@@ -67,43 +65,46 @@
             .applecation__premium-meta { display: flex; align-items: center; gap: 12px; margin: 20px 0 10px 0; font-size: calc(1.1em * var(--apple-text-scale)); color: #fff; }
             .applecation__description { max-width: 700px; line-height: 1.5; margin-bottom: 25px; font-size: calc(1.05em * var(--apple-text-scale)); color: rgba(255,255,255,0.85); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
             .applecation__buttons-row { display: flex; align-items: center; gap: 20px; }
-            .button--play { background: #fff !important; color: #000 !important; padding: 12px 35px !important; border-radius: 12px !important; font-weight: 700 !important; }
-            .applecation .full-start__button { background: none !important; border: none !important; color: rgba(255,255,255,0.6) !important; padding: 10px !important; cursor: pointer; }
+            .button--play { background: #fff !important; color: #000 !important; padding: 12px 35px !important; border-radius: 12px !important; font-weight: 700 !important; cursor: pointer; }
+            .applecation .full-start__button { background: none !important; border: none !important; color: rgba(255,255,255,0.6) !important; padding: 10px !important; cursor: pointer; transition: 0.2s; }
             .applecation .full-start__button.focus { transform: scale(1.2); color: #fff !important; filter: drop-shadow(0 0 8px rgba(255,255,255,0.9)); }
         </style>`;
         if (!$('#apple-styles').length) $('body').append('<style id="apple-styles">' + styles + '</style>');
     }
 
     function loadLogo(event) {
-        try {
-            const data = event.data.movie;
-            const render = event.object.activity.render();
-            if (!data || !render) return;
+        // Додаємо перевірку наявності об'єктів, щоб не "валити" скрипт
+        if (!event.object || !event.object.activity) return;
+        
+        const data = event.data.movie;
+        const render = event.object.activity.render();
+        if (!data || !render) return;
 
-            // Заповнення мета-даних
-            const year = (data.release_date || data.first_air_date || '').split('-')[0];
-            const genres = data.genres ? data.genres.slice(0, 2).map(g => g.name).join(' · ') : '';
-            render.find('.applecation__line-meta').text(`${year}  ·  ${genres}`);
-            render.find('.applecation__description').text(data.overview || '');
+        const year = (data.release_date || data.first_air_date || '').split('-')[0];
+        const genres = data.genres ? data.genres.slice(0, 2).map(g => g.name).join(' · ') : '';
+        render.find('.applecation__line-meta').text(year + (genres ? '  ·  ' + genres : ''));
+        render.find('.applecation__description').text(data.overview || '');
 
-            // Безпечний запит через Lampa.Network (обхід CORS)
-            const url = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());
-            
-            Lampa.Network.native(url, (json) => {
-                if (json && json.logos && json.logos.length) {
-                    const best = json.logos.find(l => l.iso_639_1 === 'uk') || json.logos.find(l => l.iso_639_1 === 'en') || json.logos[0];
-                    render.find('.applecation__logo').html('<img src="' + Lampa.TMDB.image('/t/p/w500' + best.file_path) + '">');
-                } else {
-                    render.find('.full-start-new__title').show();
-                }
-            }, () => render.find('.full-start-new__title').show());
-        } catch (e) { console.error('Apple plugin error:', e); }
+        // Використовуємо Lampa.Network.native для завантаження зображень без CORS проблем
+        const url = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());
+        
+        Lampa.Network.native(url, (json) => {
+            if (json && json.logos && json.logos.length) {
+                const best = json.logos.find(l => l.iso_639_1 === 'uk') || json.logos.find(l => l.iso_639_1 === 'en') || json.logos[0];
+                if (best) render.find('.applecation__logo').html('<img src="' + Lampa.TMDB.image('/t/p/w500' + best.file_path) + '">');
+            } else {
+                render.find('.full-start-new__title').show();
+            }
+        }, () => {
+            render.find('.full-start-new__title').show();
+        });
     }
 
     function attachLogoLoader() {
         Lampa.Listener.follow('full', (e) => {
             if (e.type === 'complite') {
-                setTimeout(() => loadLogo(e), 100);
+                // Збільшуємо затримку для браузера, щоб встигли відпрацювати інші плагіни (реакції тощо)
+                setTimeout(() => loadLogo(e), 200);
             }
         });
     }
