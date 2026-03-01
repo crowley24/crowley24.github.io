@@ -139,27 +139,37 @@
     }  
 
     function loadLogo(event) {  
-        const data = event.data.movie, render = event.object.activity.render();  
-        if (!data) return;
+    const data = event.data.movie, render = event.object.activity.render();  
+    if (!data) return;
 
-        const year = (data.release_date || data.first_air_date || '').split('-')[0];
-        const genres = data.genres?.slice(0, 2).map(g => g.name).join(' · ');
-        const runtime = data.runtime ? \`\${Math.floor(data.runtime / 60)}г \${data.runtime % 60}хв\` : '';
-        render.find('.applecation__line-meta').text(\`\${year} · \${genres} · \${runtime}\`);
-        render.find('.applecation__description').text(data.overview);
+    const year = (data.release_date || data.first_air_date || '').split('-')[0];
+    const genres = data.genres?.slice(0, 2).map(g => g.name).join(' · ');
+    const runtime = data.runtime 
+        ? `${Math.floor(data.runtime / 60)}г ${data.runtime % 60}хв` 
+        : '';
 
-        $.get(Lampa.TMDB.api(\`\${data.name ? 'tv' : 'movie'}/\${data.id}/images?api_key=\${Lampa.TMDB.key()}\`), (d) => {
-            const best = d.logos.find(l => l.iso_639_1 === 'uk') || 
-                         d.logos.find(l => l.iso_639_1 === 'en') || 
-                         d.logos[0];
+    render.find('.applecation__line-meta')
+          .text(`${year} · ${genres} · ${runtime}`);
+
+    render.find('.applecation__description')
+          .text(data.overview);
+
+    $.get(
+        Lampa.TMDB.api(`${data.name ? 'tv' : 'movie'}/${data.id}/images?api_key=${Lampa.TMDB.key()}`),
+        (d) => {
+            const best =
+                d.logos.find(l => l.iso_639_1 === 'uk') ||
+                d.logos.find(l => l.iso_639_1 === 'en') ||
+                d.logos[0];
+
             if (best)
                 render.find('.applecation__logo')
-                      .html(\`<img src="\${Lampa.TMDB.image('/t/p/w500' + best.file_path)}">\`);
+                      .html(`<img src="${Lampa.TMDB.image('/t/p/w500' + best.file_path)}">`);
             else
                 render.find('.full-start-new__title').show();
-        });
-    }  
-
+        }
+    );
+    }
     function attachLogoLoader() {  
         Lampa.Listener.follow('full', (e) => { 
             if (e.type === 'complite') 
