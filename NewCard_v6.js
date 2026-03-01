@@ -1,28 +1,27 @@
 (function () {    
     'use strict';    
   
-    var ICONS = {  
-        play: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 5.14V19.14L19 12.14L8 5.14Z" fill="currentColor"/></svg>',  
-        book: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 3H7C5.9 3 5 3.9 5 5V21L12 18L19 21V5C19 3.9 18.1 3 17 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',  
-        reaction: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" stroke="currentColor" stroke-width="2"/></svg>',  
-        options: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="2" fill="currentColor"/><circle cx="5" cy="12" r="2" fill="currentColor"/><circle cx="19" cy="12" r="2" fill="currentColor"/></svg>',  
-        trailer: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 6H3C1.9 6 1 6.9 1 8V16C1 17.1 1.9 18 3 18H21C22.1 18 23 17.1 23 16V8C23 6.9 22.1 6 21 6Z" stroke="currentColor" stroke-width="2"/><path d="M10 9L15 12L10 15V9Z" fill="currentColor"/></svg>'  
-    };  
-  
-    var PLUGIN_ICON = '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="30" width="80" height="40" rx="5" fill="hsl(0, 0%, 30%)"/><circle cx="50" cy="50" r="10" fill="white"/></svg>';  
-  
+    // Перевіряємо наявність залежностей перед ініціалізацією  
     function initializePlugin() {    
-        // Перевіряємо наявність залежностей  
+        // Перевіряємо наявність Lampa  
         if (typeof Lampa === 'undefined') {  
             console.error('NewCard: Lampa не знайдено');  
             return;  
         }  
           
+        // Перевіряємо наявність jQuery  
         if (typeof $ === 'undefined') {  
             console.error('NewCard: jQuery не знайдено');  
             return;  
         }  
           
+        // Перевіряємо версію Lampa  
+        if (!Lampa.Manifest || Lampa.Manifest.app_digital < 300) {  
+            console.warn('NewCard: Потрібна Lampa версії 3.0+');  
+            return;  
+        }  
+          
+        // Перевіряємо платформу  
         if (!Lampa.Platform.screen('tv')) return;    
           
         // Додаємо клас для ідентифікації активного плагіна  
@@ -44,7 +43,7 @@
             if (Lampa.Storage.get(key) === undefined) Lampa.Storage.set(key, defaults[key]);   
         });  
   
-        Lampa.SettingsApi.addComponent({ component: 'applecation_settings', name: 'NewCard', icon: PLUGIN_ICON });    
+        Lampa.SettingsApi.addComponent({ component: 'applecation_settings', name: 'NewCard', icon: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="30" width="80" height="40" rx="5" fill="hsl(0, 0%, 30%)"/><circle cx="50" cy="50" r="10" fill="white"/></svg>' });    
   
         var scaleVals = { '70':'70%','80':'80%','90':'90%','100':'Стандарт','110':'110%','120':'120%','130':'130%' };  
           
@@ -77,9 +76,10 @@
         var root = document.documentElement;  
         root.style.setProperty('--apple-logo-scale', parseInt(Lampa.Storage.get('applecation_logo_scale')) / 100);  
         root.style.setProperty('--apple-text-scale', parseInt(Lampa.Storage.get('applecation_text_scale')) / 100);  
+        root.style.setProperty('--apple-spacing-scale', parseInt(Lampa.Storage.get('applecation_spacing_scale')) / 100);  
     }  
   
-    function addCustomTemplate() {    
+    function addCustomTemplate() {  
         var template = '<div class="full-start-new applecation">' +  
             '<div class="full-start-new__body">' +  
                 '<div class="full-start-new__left">' +  
@@ -90,9 +90,19 @@
                 '<div class="full-start-new__right">' +  
                     '<div class="full-start-new__head"></div>' +  
                     '<div class="full-start-new__title applecation__logo"></div>' +  
-                    '<div class="full-start-new__tagline full--tagline"></div>' +  
-                    '<div class="applecation__line-meta"></div>' +  
-                    '<div class="applecation__description"></div>' +  
+                    '<div class="full-start-new__tagline full--tagline applecation__line-meta"></div>' +  
+                    '<div class="full-start-new__rate-line">' +  
+                        '<div class="full-start__rate rate--tmdb"><div>{rating}</div><div class="source--name">TMDB</div></div>' +  
+                        '<div class="full-start__rate rate--imdb hide"><div></div><div>IMDB</div></div>' +  
+                        '<div class="full-start__rate rate--kp hide"><div></div><div>KP</div></div>' +  
+                        '<div class="full-start__pg hide"></div>' +  
+                        '<div class="full-start__status hide"></div>' +  
+                    '</div>' +  
+                    '<div class="full-start-new__details hide"></div>' +  
+                    '<div class="full-start-new__reactions">' +  
+                        '<div>#{reactions_none}</div>' +  
+                    '</div>' +  
+                    '<div class="full-start-new__description applecation__description"></div>' +  
                     '<div class="applecation__studios"></div>' +  
                     '<div class="full-start-new__buttons">' +  
                         '<div class="full-start__button selector button--play">' +  
@@ -100,12 +110,21 @@
                             '<span>#{title_watch}</span>' +  
                         '</div>' +  
                         '<div class="full-start__button selector button--book">' +  
-                            '<svg><use xlink:href="#sprite-bookmark"></use></svg>' +  
+                            '<svg width="21" height="32" viewBox="0 0 21 32" fill="none" xmlns="http://www.w3.org/2000/svg">' +  
+                                '<path d="M2 1.5H19C19.2761 1.5 19.5 1.72386 19.5 2V27.9618C19.5 28.3756 19.0261 28.6103 18.697 28.3595L12.6212 23.7303C11.3682 22.7757 9.63183 22.7757 8.37885 23.7303L2.30302 28.3595C1.9739 28.6103 1.5 28.3756 1.5 27.9618V2C1.5 1.72386 1.72386 1.5 2 1.5Z" stroke="currentColor" stroke-width="2.5"/>' +  
+                            '</svg>' +  
                             '<span>#{settings_input_links}</span>' +  
                         '</div>' +  
                         '<div class="full-start__button selector button--reaction">' +  
                             '<svg><use xlink:href="#sprite-reaction"></use></svg>' +  
                             '<span>#{title_reactions}</span>' +  
+                        '</div>' +  
+                        '<div class="full-start__button selector button--subscribe hide">' +  
+                            '<svg viewBox="0 0 25 30" fill="none" xmlns="http://www.w3.org/2000/svg">' +  
+                                '<path d="M6.01892 24C6.27423 27.3562 9.07836 30 12.5 30C15.9216 30 18.7257 27.3562 18.981 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z" fill="currentColor"></path>' +  
+                                '<path d="M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z" stroke="currentColor" stroke-width="2.6"></path>' +  
+                            '</svg>' +  
+                            '<span>#{title_subscribe}</span>' +  
                         '</div>' +  
                         '<div class="full-start__button selector button--options">' +  
                             '<svg><use xlink:href="#sprite-dots"></use></svg>' +  
@@ -113,13 +132,23 @@
                     '</div>' +  
                 '</div>' +  
             '</div>' +  
+            '<div class="hide buttons--container">' +  
+                '<div class="full-start__button view--torrent hide">' +  
+                    '<svg><use xlink:href="#sprite-torrent"></use></svg>' +  
+                    '<span>#{full_torrents}</span>' +  
+                '</div>' +  
+                '<div class="full-start__button selector view--trailer">' +  
+                    '<svg><use xlink:href="#sprite-trailer"></use></svg>' +  
+                    '<span>#{full_trailers}</span>' +  
+                '</div>' +  
+            '</div>' +  
         '</div>';  
   
         Lampa.Template.add('full_start_new', template);  
     }  
   
-    function addStyles() {    
-        var styles = document.createElement('style');    
+    function addStyles() {  
+        var styles = document.createElement('style');  
         styles.innerHTML = '<style>' +  
             '/* Приховуємо стандартний фон Lampa */' +  
             '.applecation .background,' +  
@@ -128,87 +157,64 @@
             '.applecation .background__fade {' +  
                 'display: none !important;' +  
             '}' +  
+            '' +  
             'body.applecation--active {' +  
                 'background: #000 !important;' +  
             '}' +  
+            '' +  
             '.applecation .full-start__background {' +  
                 'display: none !important;' +  
             '}' +  
+            '' +  
             '.applecation .full-start-new__right {' +  
-                'background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 40%, rgba(0,0,0,0.4) 70%, transparent 100%) !important;' +  
-                'padding: 3em 2em;' +  
+                'background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 50%, rgba(0,0,0,0.5) 100%) !important;' +  
+                'padding: 2em;' +  
                 'margin-top: -15vh;' +  
             '}' +  
+            '' +  
             '.applecation__logo {' +  
-                'text-align: center;' +  
-                'margin-bottom: 1.5em;' +  
-                'transform: scale(var(--apple-logo-scale, 1));' +  
+                'transform: scale(var(--apple-logo-scale));' +  
+                'transition: transform 0.3s ease;' +  
             '}' +  
-            '.applecation__logo img {' +  
-                'max-height: 120px;' +  
-                'object-fit: contain;' +  
-                'filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));' +  
-            '}' +  
+            '' +  
             '.applecation__line-meta {' +  
-                'text-align: center;' +  
-                'font-size: calc(1.1em * var(--apple-text-scale, 1));' +  
-                'color: rgba(255,255,255,0.9);' +  
-                'margin-bottom: 1.2em;' +  
-                'font-weight: 500;' +  
+                'font-size: calc(1.1em * var(--apple-text-scale));' +  
+                'color: rgba(255,255,255,0.8);' +  
+                'margin-bottom: 1em;' +  
             '}' +  
+            '' +  
             '.applecation__description {' +  
-                'max-width: 700px; line-height: 1.5; margin-bottom: 25px;' +  
-                'font-size: calc(1.05em * var(--apple-text-scale, 1));' +  
-                'color: rgba(255,255,255,0.85);' +  
-                'display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;' +  
-                'text-align: center;' +  
+                'font-size: calc(0.95em * var(--apple-text-scale));' +  
+                'line-height: 1.6;' +  
+                'color: rgba(255,255,255,0.7);' +  
+                'margin-bottom: 1.5em;' +  
+                'max-width: 600px;' +  
             '}' +  
+            '' +  
             '.applecation__studios {' +  
-                'text-align: center;' +  
-                'margin-bottom: 2em;' +  
                 'display: flex;' +  
-                'justify-content: center;' +  
-                'align-items: center;' +  
-                'gap: 1.5em;' +  
-                'flex-wrap: wrap;' +  
+                'gap: 1em;' +  
+                'margin-bottom: 1.5em;' +  
+                'min-height: 40px;' +  
             '}' +  
+            '' +  
             '.applecation__studios img {' +  
-                'height: 2.5em;' +  
+                'height: 40px;' +  
                 'object-fit: contain;' +  
-                'filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.3));' +  
+                'filter: brightness(0) invert(1);' +  
                 'opacity: 0.8;' +  
             '}' +  
-            '.applecation .full-start-new__buttons {' +  
-                'display: flex; justify-content: center; align-items: center; gap: 20px;' +  
+            '' +  
+            '@keyframes appleKenBurns {' +  
+                '0% { transform: scale(1); }' +  
+                '100% { transform: scale(1.12); }' +  
             '}' +  
-            '.button--play {' +  
-                'background: #fff !important; color: #000 !important;' +  
-                'padding: 12px 35px !important; border-radius: 12px !important;' +  
-                'font-weight: 700 !important; text-transform: none;' +  
-                'transition: transform 0.2s, background 0.2s;' +  
+            '' +  
+            'body.applecation--zoom-enabled .full-start-new__poster img {' +  
+                'animation: appleKenBurns 40s ease-out forwards;' +  
             '}' +  
-            '.applecation .full-start__button {' +  
-                'background: none !important; border: none !important;' +  
-                'color: rgba(255,255,255,0.6) !important; padding: 10px !important;' +  
-                'display: flex; justify-content: center; align-items: center;' +  
-                'transition: transform 0.2s, color 0.2s;' +  
-            '}' +  
-            '.applecation .full-start__button.focus {' +  
-                'transform: scale(1.3);' +  
-                'color: #fff !important;' +  
-                'background: none !important;' +  
-                'filter: drop-shadow(0 0 8px rgba(255,255,255,0.9)) !important;' +  
-            '}' +  
-            '.button--play.focus {' +  
-                'background: #e0e0e0 !important;' +  
-                'transform: scale(1.05);' +  
-                'filter: none !important;' +  
-            '}' +  
-            '@keyframes appleKenBurns { 0% { transform: scale(1); } 100% { transform: scale(1.12); } }' +  
-            'body.applecation--zoom-enabled .full-start__background.loaded { animation: appleKenBurns 40s ease-out forwards !important; }' +  
-        '</style>';    
-          
-        document.body.appendChild(styles);    
+        '</style>';  
+        document.head.appendChild(styles);  
     }  
   
     function loadLogo(event) {    
@@ -235,7 +241,7 @@
             if (best) render.find('.applecation__logo').html('<img src="' + Lampa.TMDB.image('/t/p/w500' + best.file_path) + '">');  
             else render.find('.full-start-new__title').show();  
         });  
-    }  
+    }    
   
     function attachLogoLoader() {    
         Lampa.Listener.follow('full', function (e) {   
@@ -243,13 +249,12 @@
         });    
     }  
   
-    // Перевіряємо версію Lampa та ініціалізуємо плагін  
-    if (typeof Lampa !== 'undefined' && Lampa.Manifest && Lampa.Manifest.app_digital >= 300) {  
-        if (window.appready) initializePlugin();    
-        else Lampa.Listener.follow('app', function (e) {   
+    // Правильна ініціалізація плагіна  
+    if (window.appready) {  
+        initializePlugin();  
+    } else {  
+        Lampa.Listener.follow('app', function (e) {   
             if (e.type === 'ready') initializePlugin();   
         });    
-    } else {  
-        console.warn('NewCard: Lampa не знайдено або версія несумісна');  
     }  
 })();
