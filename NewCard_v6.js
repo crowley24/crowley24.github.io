@@ -1,65 +1,58 @@
 (function () {
     'use strict';
 
-    var logoCache = {};
+    let logoCache = new Map();
 
-    function applyStyles() {
-        var styleId = 'lampa-apple-tv-force-v5';
-        if (document.getElementById(styleId)) return;
-
-        var style = document.createElement('style');
-        style.id = styleId;
-        style.textContent = `
-            /* 1. ПРИМУСОВЕ ПРИХОВУВАННЯ СТАНДАРТНИХ ЕЛЕМЕНТІВ */
-            .full-start-new__title, .full-start-new__left, .full-start-new__tagline, 
-            .full-start-new__status, .full-start-new__info {
-                display: none !important;
-            }
-
-            /* 2. ОЧИЩЕННЯ ФОНУ (Тотально) */
-            .full-start-new, .full-start-new__details, .full-start-new__right {
+    function addStyles() {
+        const styles = `
+        <style>
+            /* 1. ОЧИЩЕННЯ СТАНДАРТУ */
+            .full-start-new, .full-start-new__right, .full-start-new__details {
                 background: none !important;
                 background-color: transparent !important;
                 box-shadow: none !important;
-                border: none !important;
-                -webkit-mask-image: none !important;
             }
+            .full-start-new__left, .full-start-new__title, .full-start-new__tagline { display: none !important; }
 
-            /* 3. APPLE TV ЛЕЙАУТ */
-            .full-start-new__right {
-                display: flex !important;
-                flex-direction: column !important;
-                justify-content: flex-end !important;
+            /* 2. ГОЛОВНИЙ ЕКРАН */
+            .applecation {
+                background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 40%, transparent 100%) !important;
                 height: 100vh !important;
-                padding: 0 5% 80px 5% !important;
-                background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 40%, transparent 100%) !important;
-                box-sizing: border-box !important;
-                position: absolute !important;
-                top: 0; left: 0; right: 0; bottom: 0;
-                z-index: 100 !important;
             }
 
-            /* 4. ЛОГОТИП ТА ТЕКСТ */
-            .apple-logo-container img {
+            .applecation .full-start-new__right {
+                display: flex !important;
+                align-items: flex-end !important;
+                padding: 0 5% 60px 5% !important;
+                height: 100vh !important;
+            }
+
+            /* 3. ЛОГОТИП */
+            .applecation__logo {
+                margin-bottom: 15px;
+                opacity: 0;
+                transform: translateY(20px);
+                transition: all 0.6s ease;
+            }
+            .applecation__logo.loaded { opacity: 1; transform: translateY(0); }
+            .applecation__logo img {
                 max-width: 450px;
                 max-height: 150px;
                 object-fit: contain;
-                object-position: left bottom;
-                filter: drop-shadow(0 0 20px rgba(0,0,0,0.8));
-                margin-bottom: 10px;
+                filter: drop-shadow(0 0 15px rgba(0,0,0,0.7));
             }
 
-            .apple-meta-row {
+            /* 4. МЕТА-ДАНІ ТА РЕЙТИНГ */
+            .applecation__meta {
                 display: flex;
                 align-items: center;
                 gap: 15px;
-                margin-bottom: 15px;
-                font-size: 1.3rem;
                 color: #fff;
-                text-shadow: 0 2px 4px rgba(0,0,0,0.9);
+                font-size: 1.3em;
+                margin-bottom: 10px;
+                text-shadow: 0 2px 4px rgba(0,0,0,0.8);
             }
-
-            .apple-rating-pill {
+            .rate-pill {
                 background: #ffad08;
                 color: #000;
                 padding: 2px 10px;
@@ -67,96 +60,105 @@
                 font-weight: 900;
             }
 
-            .full-start-new__description {
-                background: none !important;
-                padding: 0 !important;
-                font-size: 1.2rem !important;
-                color: rgba(255,255,255,0.85) !important;
-                max-width: 750px !important;
-                display: -webkit-box !important;
-                -webkit-line-clamp: 3 !important;
-                -webkit-box-orient: vertical !important;
-                overflow: hidden !important;
-                margin-bottom: 30px !important;
+            /* 5. ОПИС (Apple Style) */
+            .applecation__description {
+                color: rgba(255, 255, 255, 0.8);
+                font-size: 1.15em;
+                line-height: 1.5;
+                margin-bottom: 25px;
+                max-width: 750px;
+                display: -webkit-box;
+                -webkit-line-clamp: 3;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
             }
 
-            /* 5. КНОПКИ */
-            .full-start-new__buttons {
-                display: flex !important;
-                gap: 15px !important;
-                background: none !important;
-            }
-
+            /* 6. КНОПКИ */
+            .full-start-new__buttons { display: flex !important; gap: 15px !important; margin-top: 20px !important; }
             .full-start-new__buttons .full-start__button {
                 background: rgba(255,255,255,0.12) !important;
+                border: none !important;
                 border-radius: 12px !important;
                 backdrop-filter: blur(15px);
-                border: none !important;
+                padding: 12px 25px !important;
+                height: auto !important;
+                transition: all 0.2s ease !important;
             }
-
             .full-start-new__buttons .full-start__button.focus {
                 background: #fff !important;
                 color: #000 !important;
-                transform: scale(1.1) !important;
+                transform: scale(1.08) !important;
             }
-        `;
-        document.head.appendChild(style);
+        </style>`;
+        $('body').append(styles);
     }
 
-    function injectElements($container, movie) {
-        if ($container.find('.apple-logo-container').length) return;
+    function selectBestLogo(logos) {
+        const lang = Lampa.Storage.get('language') || 'uk';
+        // Пріоритет: UA -> EN -> Будь-яке [cite: 2026-02-17]
+        return logos.find(l => l.iso_639_1 === lang) || logos.find(l => l.iso_639_1 === 'en') || logos[0];
+    }
 
-        var year = (movie.release_date || movie.first_air_date || '').split('-')[0];
-        var genres = (movie.genres || []).slice(0, 2).map(g => g.name).join(' · ');
-        var rating = movie.vote_average ? movie.vote_average.toFixed(1) : '';
+    function loadData(event) {
+        const data = event.data.movie;
+        const render = event.object.activity.render();
+        const logoContainer = render.find('.applecation__logo');
+        const metaContainer = render.find('.applecation__meta');
+        const descContainer = render.find('.applecation__description');
 
-        var $appleHeader = $(`
-            <div class="apple-logo-container"></div>
-            <div class="apple-meta-row">
-                ${rating ? `<span class="apple-rating-pill">${rating} TMDB</span>` : ''}
-                <span>${year}</span>
-                <span>${genres}</span>
-            </div>
+        // Заповнюємо мета
+        const year = (data.release_date || data.first_air_date || '').split('-')[0];
+        const rating = data.vote_average ? data.vote_average.toFixed(1) : '';
+        const genres = (data.genres || []).slice(0, 2).map(g => g.name).join(' · ');
+
+        metaContainer.html(`
+            ${rating ? `<span class="rate-pill">${rating}</span>` : ''}
+            <span>${year}</span>
+            <span>${genres}</span>
         `);
 
-        $container.prepend($appleHeader);
+        descContainer.text(data.overview);
 
-        var movieId = movie.id + (movie.name ? '_tv' : '_movie');
-        $.ajax({
-            url: Lampa.TMDB.api((movie.name ? 'tv' : 'movie') + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key()),
-            success: function (res) {
-                var lang = Lampa.Storage.get('language') || 'uk';
-                // Використовуємо UA лого, якщо немає — EN [cite: 2026-02-17]
-                var best = res.logos.find(l => l.iso_639_1 === lang) || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];
-                if (best) {
-                    $container.find('.apple-logo-container').html(`<img src="${Lampa.TMDB.image('/t/p/w500' + best.file_path)}">`);
-                }
+        // Завантажуємо лого
+        const mediaType = data.name ? 'tv' : 'movie';
+        const apiUrl = Lampa.TMDB.api(`${mediaType}/${data.id}/images?api_key=${Lampa.TMDB.key()}`);
+
+        $.get(apiUrl, (res) => {
+            const bestLogo = selectBestLogo(res.logos);
+            if (bestLogo) {
+                const url = Lampa.TMDB.image(`/t/p/w500${bestLogo.file_path}`);
+                logoContainer.html(`<img src="${url}" />`).addClass('loaded');
+            } else {
+                logoContainer.html(`<h1 style="font-size:3em;margin:0">${data.title || data.name}</h1>`).addClass('loaded');
             }
         });
     }
 
     function init() {
-        applyStyles();
+        Lampa.Template.add('full_start_new', `
+            <div class="full-start-new applecation">
+                <div class="full-start-new__right">
+                    <div class="applecation__content">
+                        <div class="applecation__logo"></div>
+                        <div class="applecation__meta"></div>
+                        <div class="applecation__description"></div>
+                        <div class="full-start-new__buttons">
+                            <div class="full-start__button selector button--play"><span>#{title_watch}</span></div>
+                            <div class="full-start__button selector button--book"><span>#{settings_input_links}</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `);
 
-        // Observer для відстеження появи картки
-        var observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                if (mutation.addedNodes.length) {
-                    var $full = $('.full-start-new__right');
-                    if ($full.length && Lampa.Activity.active().component === 'full') {
-                        var data = Lampa.Activity.active().activity.data;
-                        if (data && data.movie) {
-                            injectElements($full, data.movie);
-                        }
-                    }
-                }
-            });
+        addStyles();
+
+        Lampa.Listener.follow('full', (e) => {
+            if (e.type === 'complite') loadData(e);
         });
-
-        observer.observe(document.body, { childList: true, subtree: true });
     }
 
     if (window.appready) init();
-    else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') init(); });
+    else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') init(); });
 
 })();
