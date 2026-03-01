@@ -4,11 +4,11 @@
     var logoCache = {}; 
 
     function applyStyles() {
-        var oldStyle = document.getElementById('tv-interface-styles-v4');
+        var oldStyle = document.getElementById('tv-interface-styles-v5');
         if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
 
         var style = document.createElement('style');
-        style.id = 'tv-interface-styles-v4';
+        style.id = 'tv-interface-styles-v5';
         
         var css = `
             @media screen and (min-width: 481px) {
@@ -27,62 +27,60 @@
                 .full-start-new__right {
                     position: relative;
                     z-index: 2 !important;
-                    width: 55% !important;
-                    padding-left: 5% !important;
+                    width: 50% !important;
+                    padding: 60px 0 40px 5% !important; /* Відступи зверху та знизу */
                     display: flex !important;
                     flex-direction: column !important;
-                    justify-content: center !important;
+                    justify-content: space-between !important; /* Кнопки вниз, лого вгору */
                     height: 100vh !important;
                     background: none !important;
+                    box-sizing: border-box !important;
                 }
 
-                /* Логотип */
+                /* Контейнер для лого та тексту */
+                .plugin-tv-header-group {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                }
+
                 .full-start-new__title {
                     font-size: 0 !important;
-                    margin: 0 0 10px 0 !important;
-                    text-align: left !important;
+                    margin: 0 !important;
                 }
                 .full-start-new__title img {
-                    max-height: 160px !important;
+                    max-height: 150px !important;
                     max-width: 450px !important;
                     filter: drop-shadow(0 0 20px rgba(0,0,0,0.8));
-                }
-
-                /* Блок опису */
-                .plugin-tv-content {
-                    order: 2; /* Гарантуємо порядок */
-                    margin-bottom: 25px;
                 }
 
                 .plugin-tv-meta {
                     font-size: 1.3rem;
                     font-weight: 500;
-                    margin-bottom: 8px;
+                    color: rgba(255,255,255,0.8);
                     display: flex;
                     gap: 15px;
-                    color: #fff;
                 }
 
                 .plugin-tv-plot {
                     font-size: 1.15rem;
                     line-height: 1.4;
-                    opacity: 0.8;
-                    max-width: 85%;
-                    color: #fff;
+                    color: rgba(255,255,255,0.7);
+                    max-width: 90%;
                     display: -webkit-box;
-                    -webkit-line-clamp: 3;
+                    -webkit-line-clamp: 3; /* Строго 3 рядки, щоб не тиснути на кнопки */
                     -webkit-box-orient: vertical;
                     overflow: hidden;
+                    margin-top: 10px;
                 }
 
-                /* Кнопки переносимо вниз */
+                /* Кнопки ЗАВЖДИ в самому низу */
                 .full-start-new__buttons {
-                    order: 3 !important;
-                    margin-top: 10px !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
                     justify-content: flex-start !important;
                 }
 
-                /* Ховаємо стандартні елементи */
                 .full-start-new__tagline, .full-start-new__details, .full-start-new__status { display: none !important; }
             }
         `;
@@ -90,19 +88,15 @@
         document.head.appendChild(style);
     }
 
-    function formatTime(mins) {
-        return mins ? Math.floor(mins / 60) + 'г ' + (mins % 60) + 'хв' : '';
-    }
-
-    function renderInfo(movie, $container) {
-        $container.find('.plugin-tv-content').remove();
+    function renderContent(movie, $container) {
+        $container.find('.plugin-tv-header-group').remove();
         
         var year = (movie.release_date || movie.first_air_date || '').split('-')[0];
         var genres = (movie.genres || []).slice(0, 2).map(g => g.name).join(' • ');
-        var runtime = formatTime(movie.runtime || movie.episode_run_time);
+        var runtime = movie.runtime ? Math.floor(movie.runtime / 60) + 'г ' + (movie.runtime % 60) + 'хв' : '';
         
-        var html = $(`
-            <div class="plugin-tv-content">
+        var group = $(`
+            <div class="plugin-tv-header-group">
                 <div class="plugin-tv-meta">
                     ${year ? '<span>' + year + '</span>' : ''}
                     ${genres ? '<span>' + genres + '</span>' : ''}
@@ -112,28 +106,24 @@
             </div>
         `);
 
-        // Вставляємо ПЕРЕД кнопками
-        html.insertBefore($container.find('.full-start-new__buttons'));
+        // Вставляємо групу ПІСЛЯ логотипу (титулу)
+        group.insertAfter($container.find('.full-start-new__title'));
     }
 
     function loadLogo(movie, $container) {
         var movieId = movie.id + (movie.name ? '_tv' : '_movie');
-        var $img = $container.find('.full-start-new__title img');
-        if (!$img.length) {
-            $container.find('.full-start-new__title').prepend('<img src="" style="opacity:0; transition: opacity 0.5s">');
-            $img = $container.find('.full-start-new__title img');
-        }
+        var $title = $container.find('.full-start-new__title');
+        
+        if (!$title.find('img').length) $title.prepend('<img src="" style="opacity:0; transition: opacity 0.5s">');
+        var $img = $title.find('img');
 
-        if (logoCache[movieId]) {
-            $img.attr('src', logoCache[movieId]).css('opacity', 1);
-            return;
-        }
+        if (logoCache[movieId]) { $img.attr('src', logoCache[movieId]).css('opacity', 1); return; }
 
         $.ajax({
             url: 'https://api.themoviedb.org/3/' + (movie.name ? 'tv' : 'movie') + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key(),
             success: function(res) {
                 var lang = Lampa.Storage.get('language') || 'uk';
-                // Якщо українського лого немає, використовуємо англійське [cite: 2026-02-17]
+                // Використовуємо англійське лого, якщо немає українського [cite: 2026-02-17]
                 var logo = res.logos.filter(l => l.iso_639_1 === lang)[0] || res.logos.filter(l => l.iso_639_1 === 'en')[0] || res.logos[0];
                 if (logo) {
                     var url = Lampa.TMDB.image('/t/p/w500' + logo.file_path.replace('.svg', '.png'));
@@ -150,7 +140,7 @@
                 var movie = e.data.movie;
                 var $right = e.object.activity.render().find('.full-start-new__right');
                 
-                renderInfo(movie, $right);
+                renderContent(movie, $right);
                 loadLogo(movie, $right);
             }
         });
