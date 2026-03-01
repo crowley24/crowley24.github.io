@@ -12,7 +12,6 @@
     function initializePlugin() {
         addCustomTemplate();
         addStyles();
-        addSettings();
         attachLogoLoader();
     }
 
@@ -48,7 +47,12 @@
                     <div class="full-start__info"></div>
                     <div class="full-start__details"></div>
                     <div class="full-start__descr"></div>
+                    <div class="full-start__review"></div>
+                    <div class="full-start__channels"></div>
                 </div>
+            </div>
+            <div class="hide buttons--container">
+                <div class="full-start__button view--torrent">${ICONS.play}</div>
             </div>
         </div>`;
         Lampa.Template.add('full_start_new', template);
@@ -58,25 +62,16 @@
         const styles = `
         <style>
             :root { --apple-logo-scale: 1; --apple-text-scale: 1; }
-            .applecation__body { 
-                height: 100vh; display: flex; flex-direction: column; justify-content: flex-end; 
-                padding: 0 5% 10% 5%; position: relative; z-index: 10;
-                background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 50%, transparent 100%);
-            }
-            .applecation__logo img { 
-                max-width: calc(480px * var(--apple-logo-scale)); 
-                max-height: calc(180px * var(--apple-logo-scale)); 
-                object-fit: contain; object-position: left bottom;
-            }
+            .applecation__body { height: 100vh; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 5% 10% 5%; position: relative; z-index: 10; background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 50%, transparent 100%); }
+            .applecation__logo img { max-width: calc(480px * var(--apple-logo-scale)); max-height: calc(180px * var(--apple-logo-scale)); object-fit: contain; object-position: left bottom; }
             .applecation__premium-meta { display: flex; align-items: center; gap: 12px; margin: 20px 0 10px 0; font-size: calc(1.1em * var(--apple-text-scale)); color: #fff; }
-            .applecation__line-meta { color: rgba(255,255,255,0.7); }
             .applecation__description { max-width: 700px; line-height: 1.5; margin-bottom: 25px; font-size: calc(1.05em * var(--apple-text-scale)); color: rgba(255,255,255,0.85); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
             .applecation__buttons-row { display: flex; align-items: center; gap: 20px; }
             .button--play { background: #fff !important; color: #000 !important; padding: 12px 35px !important; border-radius: 12px !important; font-weight: 700 !important; }
-            .applecation .full-start__button { background: none !important; border: none !important; color: rgba(255,255,255,0.6) !important; padding: 10px !important; transition: 0.2s; cursor: pointer; }
+            .applecation .full-start__button { background: none !important; border: none !important; color: rgba(255,255,255,0.6) !important; padding: 10px !important; cursor: pointer; }
             .applecation .full-start__button.focus { transform: scale(1.2); color: #fff !important; filter: drop-shadow(0 0 8px rgba(255,255,255,0.9)); }
         </style>`;
-        $('body').append(styles);
+        if (!$('#apple-styles').length) $('body').append('<style id="apple-styles">' + styles + '</style>');
     }
 
     function loadLogo(event) {
@@ -91,7 +86,7 @@
             render.find('.applecation__line-meta').text(`${year}  ·  ${genres}`);
             render.find('.applecation__description').text(data.overview || '');
 
-            // Безпечний запит логотипу
+            // Безпечний запит через Lampa.Network (обхід CORS)
             const url = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());
             
             Lampa.Network.native(url, (json) => {
@@ -101,23 +96,13 @@
                 } else {
                     render.find('.full-start-new__title').show();
                 }
-            }, () => {
-                render.find('.full-start-new__title').show();
-            });
-        } catch (e) {
-            console.log('Apple Plugin Error:', e);
-        }
-    }
-
-    function addSettings() {
-        // Спрощені налаштування для браузера
-        Lampa.SettingsApi.addComponent({ component: 'apple_settings', name: 'Apple UI', icon: '<svg>...</svg>' });
+            }, () => render.find('.full-start-new__title').show());
+        } catch (e) { console.error('Apple plugin error:', e); }
     }
 
     function attachLogoLoader() {
         Lampa.Listener.follow('full', (e) => {
             if (e.type === 'complite') {
-                // Використовуємо невелику затримку, щоб DOM встиг відмалюватися
                 setTimeout(() => loadLogo(e), 100);
             }
         });
