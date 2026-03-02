@@ -11,7 +11,6 @@
             var size = Lampa.Storage.get(KEY_SIZE, '1.5');
             var scale = Lampa.Storage.get(KEY_WIDTH, '1.0');
             var radius = Lampa.Storage.get(KEY_RADIUS, '20');
-
             clock.css({
                 'font-size': size + 'em',
                 'transform': 'scaleX(' + scale + ')',
@@ -21,31 +20,27 @@
         }
     }
 
-    // Полностью переписанный компонент для мобильного интерфейса
     Lampa.Component.add('bubble_clock_menu', function (object) {
         var _this = this;
         var scroll = new Lampa.Scroll({mask: true, over: true});
-        
+        var items = [
+            { title: 'Розмір шрифту', name: KEY_SIZE, default: '1.5' },
+            { title: 'Ширина (Scale)', name: KEY_WIDTH, default: '1.0' },
+            { title: 'Скруглення (Bubble)', name: KEY_RADIUS, default: '20' }
+        ];
+
         this.create = function () {
-            // Контейнер, который мобильная Lampa точно "увидит"
             this.list = $('<div class="category-full"></div>');
-
-            var params = [
-                { title: 'Размер шрифта', name: KEY_SIZE, default: '1.5' },
-                { title: 'Ширина (Scale)', name: KEY_WIDTH, default: '1.0' },
-                { title: 'Скругление (Bubble)', name: KEY_RADIUS, default: '20' }
-            ];
-
-            params.forEach(function (item) {
+            
+            items.forEach(function (item) {
                 var value = Lampa.Storage.get(item.name, item.default);
-                var row = $('<div class="settings-param selector" style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1);">' +
+                var row = $('<div class="settings-param selector" style="display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer;">' +
                     '<div class="settings-param__name">' + item.title + '</div>' +
                     '<div class="settings-param__value" style="color: #ff9100; font-size: 1.2em;">' + value + '</div>' +
                 '</div>');
 
-                // Обработка клика и для ТВ (пульт) и для телефона (тач)
-                row.on('click tap hover:enter', function () {
-                    Lampa.Input.box('Значение', value, function (new_val) {
+                row.on('hover:enter click', function () {
+                    Lampa.Input.box(item.title, value, function (new_val) {
                         if (new_val) {
                             Lampa.Storage.set(item.name, new_val);
                             row.find('.settings-param__value').text(new_val);
@@ -53,6 +48,7 @@
                         }
                     }, false, { type: 'number' });
                 });
+
                 _this.list.append(row);
             });
 
@@ -60,21 +56,28 @@
         };
 
         this.render = function () {
-            // Важно: принудительно заставляем Lampa сфокусироваться на списке
-            setTimeout(function(){
-                Lampa.Controller.add('content', {
-                    toggle: function(){
-                        Lampa.Controller.collectionSet(_this.render());
-                        Lampa.Controller.toggle('content');
-                    },
-                    up: function(){},
-                    down: function(){},
-                    back: function(){ Lampa.Controller.toggle('settings'); }
-                });
-                Lampa.Controller.toggle('content');
-            }, 50);
-
             return scroll.render();
+        };
+
+        // Додаємо обробку фокусу для пультів та сенсорів
+        this.start = function () {
+            Lampa.Controller.add('content', {
+                toggle: function () {
+                    Lampa.Controller.collectionSet(scroll.render());
+                    Lampa.Controller.toggle('content');
+                },
+                up: function () { scroll.step(-1); },
+                down: function () { scroll.step(1); },
+                back: function () { Lampa.Controller.toggle('settings'); }
+            });
+            Lampa.Controller.toggle('content');
+        };
+
+        this.pause = function () {};
+        this.stop = function () {};
+        this.destroy = function () {
+            scroll.destroy();
+            _this.list.remove();
         };
     });
 
@@ -103,7 +106,7 @@
     function init() {
         Lampa.SettingsApi.addComponent({
             component: 'bubble_clock_menu',
-            name: 'Часы Bubble',
+            name: 'Часи Bubble',
             icon: '<svg height="24" viewBox="0 0 24 24" width="24" fill="#fff"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8zm.5-13H11v6l5.2 3.1.8-1.2-4.5-2.7V7z"/></svg>'
         });
         createClock();
