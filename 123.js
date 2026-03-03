@@ -101,6 +101,30 @@
     }  
   
     function init() {  
+        // Реєструємо значення за замовчуванням  
+        Lampa.Params.select(KEY_SIZE, {  
+            '1.0': '1.0',  
+            '1.5': '1.5',   
+            '2.0': '2.0',  
+            '2.5': '2.5',  
+            '3.0': '3.0'  
+        }, '1.5');  
+  
+        Lampa.Params.select(KEY_WIDTH, {  
+            '0.5': '0.5',  
+            '1.0': '1.0',  
+            '1.5': '1.5',  
+            '2.0': '2.0'  
+        }, '1.0');  
+  
+        Lampa.Params.select(KEY_RADIUS, {  
+            '10': '10',  
+            '15': '15',  
+            '20': '20',  
+            '25': '25',  
+            '30': '30'  
+        }, '20');  
+  
         Lampa.SettingsApi.addComponent({  
             component: 'bubble_clock_menu',  
             name: 'Часы Bubble',  
