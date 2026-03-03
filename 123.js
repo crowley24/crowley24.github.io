@@ -5,14 +5,12 @@
     var KEY_WIDTH = 'bubble_clock_scale';  
     var KEY_RADIUS = 'bubble_clock_radius';  
   
-    // Список налаштувань за замовчуванням  
     var settings_list = [  
         { id: KEY_SIZE, default: '1.5' },  
         { id: KEY_WIDTH, default: '1.0' },  
         { id: KEY_RADIUS, default: '20' }  
     ];  
   
-    // Ініціалізація значень за замовчуванням  
     settings_list.forEach(function (opt) {  
         if (Lampa.Storage.get(opt.id, 'unset') === 'unset') {  
             Lampa.Storage.set(opt.id, opt.default);  
@@ -35,7 +33,6 @@
         }  
     }  
   
-    // Компонент для мобільного інтерфейсу  
     Lampa.Component.add('bubble_clock_menu', function (object) {  
         var _this = this;  
         var scroll = new Lampa.Scroll({mask: true, over: true});  
@@ -105,7 +102,6 @@
         applyStyles();  
     }  
   
-    // Налаштування плагіна  
     function setupSettings() {  
         Lampa.SettingsApi.addComponent({  
             component: 'bubble_clock_menu',  
