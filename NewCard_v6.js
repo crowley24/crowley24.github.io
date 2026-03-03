@@ -4,25 +4,21 @@
     const logoCache = {};
 
     function applyStyles() {
-        const oldStyle = document.getElementById('apple-tv-fix-styles-v4');
+        const oldStyle = document.getElementById('apple-tv-final-fix');
         if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
 
         const style = document.createElement('style');
-        style.id = 'apple-tv-fix-styles-v4';
+        style.id = 'apple-tv-final-fix';
         style.textContent = `
             @media screen and (min-width: 481px) {
-                /* Приховуємо зайві елементи */
-                .full-start-new__left, .full-start-new__bg { display: none !important; }
-                
-                /* Очищуємо контейнери від чорних підкладок */
-                .full-start-new, 
-                .full-start-new__right, 
-                .full-start-new__details {
+                /* 1. ПОВНЕ ОЧИЩЕННЯ ФОНІВ ТА ЗАЙВИХ ЕЛЕМЕНТІВ */
+                .full-start-new__left, .full-start-new__bg, .full-start-new__details { display: none !important; }
+                .full-start-new, .full-start-new__right {
                     background: none !important;
                     background-color: transparent !important;
                 }
 
-                /* НАЛАШТУВАННЯ ФОНУ: Робимо його світлішим */
+                /* 2. ЯСКРАВИЙ ФОН: Прибираємо агресивні маски */
                 .full-start-new__poster {
                     position: absolute !important;
                     top: 0; right: 0; bottom: 0; left: 0;
@@ -30,66 +26,73 @@
                     z-index: 1 !important;
                     background-size: cover !important;
                     background-position: center 20% !important;
-                    /* Полегшена маска: менше чорного зліва, більше прозорості */
-                    mask-image: linear-gradient(to right, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 30%, rgba(0,0,0,0.1) 70%, transparent 100%) !important;
-                    -webkit-mask-image: linear-gradient(to right, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 30%, rgba(0,0,0,0.1) 70%, transparent 100%) !important;
+                    /* Мінімальне затемнення лише зліва для читабельності тексту */
+                    mask-image: linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,0.4) 40%, rgba(0,0,0,0.1) 80%, rgba(0,0,0,0) 100%) !important;
+                    -webkit-mask-image: linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,0.4) 40%, rgba(0,0,0,0.1) 80%, rgba(0,0,0,0) 100%) !important;
                 }
 
-                /* Контентна частина */
+                /* 3. ФІКСОВАНЕ ПОЗИЦІЮВАННЯ КОНТЕНТУ */
                 .full-start-new__right {
-                    position: relative !important;
+                    position: absolute !important;
+                    bottom: 0 !important;
+                    left: 0 !important;
                     z-index: 10 !important;
+                    width: 60% !important;
+                    height: 100vh !important;
+                    padding: 0 0 40px 60px !important; /* 40px відступ знизу для кнопок */
                     display: flex !important;
                     flex-direction: column !important;
                     justify-content: flex-end !important;
-                    height: 100vh !important;
-                    padding: 0 0 5% 60px !important;
-                    width: 55% !important;
-                    /* Додаємо легке затемнення лише знизу під текстом */
-                    background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 30%) !important;
                 }
 
-                /* Графічне лого */
+                /* 4. ГРАФІЧНЕ ЛОГО */
                 .full-start-new__title {
                     font-size: 0 !important;
-                    margin-bottom: 15px !important;
+                    margin-bottom: 10px !important;
                 }
                 .full-start-new__title img {
-                    max-height: 160px !important;
-                    max-width: 450px !important;
+                    max-height: 140px !important;
+                    max-width: 400px !important;
                     object-fit: contain !important;
-                    /* Тінь для лого, щоб воно не зливалося зі світлим фоном */
-                    filter: drop-shadow(0 0 12px rgba(0,0,0,0.6));
+                    filter: drop-shadow(0 0 10px rgba(0,0,0,0.7));
                 }
 
-                /* Опис */
+                /* 5. ОПИС: Чіткий текст на фоні */
                 .full-start-new__tagline {
                     font-size: 1.2rem !important;
                     line-height: 1.4 !important;
                     margin: 10px 0 25px 0 !important;
-                    max-width: 700px !important;
+                    max-width: 800px !important;
                     color: #fff !important;
-                    text-shadow: 1px 1px 5px rgba(0,0,0,0.9) !important;
+                    text-shadow: 2px 2px 8px rgba(0,0,0,1) !important;
+                    display: -webkit-box !important;
+                    -webkit-line-clamp: 2 !important;
+                    -webkit-box-orient: vertical !important;
+                    overflow: hidden !important;
                 }
 
-                /* Кнопки */
+                /* 6. КНОПКИ: Завжди внизу */
                 .full-start-new__buttons {
                     display: flex !important;
-                    gap: 12px !important;
-                    background: none !important;
+                    flex-wrap: nowrap !important;
+                    align-items: center !important;
+                    gap: 15px !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
                 }
 
                 .full-start-new__buttons .button {
-                    background: rgba(255,255,255,0.15) !important;
+                    background: rgba(255,255,255,0.1) !important;
                     backdrop-filter: blur(10px) !important;
                     -webkit-backdrop-filter: blur(10px) !important;
                     border-radius: 12px !important;
                     color: #fff !important;
-                    border: 1px solid rgba(255,255,255,0.1) !important;
-                    padding: 10px 22px !important;
+                    padding: 12px 25px !important;
+                    border: 1px solid rgba(255,255,255,0.05) !important;
+                    transition: all 0.2s ease !important;
                 }
 
-                /* Перша кнопка завжди акцентна */
+                /* Акцент на першій кнопці */
                 .full-start-new__buttons .button:first-child {
                     background: #fff !important;
                     color: #000 !important;
@@ -99,7 +102,7 @@
                     transform: scale(1.08) !important;
                     background: #fff !important;
                     color: #000 !important;
-                    box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.6) !important;
                 }
             }
         `;
