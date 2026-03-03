@@ -4,91 +4,96 @@
     var logoCache = {}; 
 
     function applyStyles() {
-        var oldStyle = document.getElementById('tv-interface-styles-apple');
+        var oldStyle = document.getElementById('tv-interface-styles-apple-v2');
         if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
 
         var style = document.createElement('style');
-        style.id = 'tv-interface-styles-apple';
+        style.id = 'tv-interface-styles-apple-v2';
         
         var css = `
             @media screen and (min-width: 481px) {
-                /* Приховуємо стандартні елементи */
-                .full-start-new__left, .full-start-new__bg { display: none !important; } 
-
-                /* Контейнер картки */
-                .full-start-new {
-                    background: #000 !important;
-                    height: 100vh !important;
-                    overflow: hidden !important;
-                    display: flex !important;
-                    align-items: center !important;
-                    position: relative !important;
+                /* 1. Очищення стандартного фону Lampa */
+                .full-start-new, 
+                .full-start-new__right, 
+                .full-start-new__details,
+                .full-start-new__bg { 
+                    background: none !important; 
+                    background-color: transparent !important;
                 }
 
-                /* Фон (Fanart) */
+                /* 2. Видалення лівого постера */
+                .full-start-new__left { 
+                    display: none !important; 
+                } 
+
+                /* 3. Головний фон (Fanart) на весь екран */
                 .full-start-new__poster {
                     position: absolute !important;
-                    top: 0; right: 0; bottom: 0;
-                    width: 70% !important; /* Фон займає праву частину */
+                    top: 0 !important;
+                    right: 0 !important;
+                    bottom: 0 !important;
+                    left: 0 !important;
+                    width: 100% !important;
                     height: 100% !important;
                     z-index: 1 !important;
                     background-size: cover !important;
-                    mask-image: linear-gradient(to right, #000 0%, rgba(0,0,0,0.8) 20%, transparent 100%) !important;
-                    -webkit-mask-image: linear-gradient(to right, #000 0%, rgba(0,0,0,0.8) 20%, transparent 100%) !important;
+                    background-position: center 20% !important;
+                    /* Ефект розмиття до чорного зліва направо */
+                    mask-image: linear-gradient(to right, #000 0%, #000 20%, rgba(0,0,0,0.5) 50%, transparent 100%) !important;
+                    -webkit-mask-image: linear-gradient(to right, #000 0%, #000 20%, rgba(0,0,0,0.5) 50%, transparent 100%) !important;
                 }
 
-                /* Контентна частина */
+                /* 4. Контентна частина (Текст та кнопки) */
                 .full-start-new__right {
-                    position: relative;
+                    position: relative !important;
                     z-index: 10 !important;
-                    width: 45% !important;
+                    width: 50% !important;
                     padding-left: 60px !important;
-                    background: none !important;
                     display: flex !important;
                     flex-direction: column !important;
                     justify-content: center !important;
+                    height: 100vh !important;
                 }
 
-                /* Логотип фільму */
+                /* 5. Графічне лого замість тексту */
                 .full-start-new__title {
                     font-size: 0 !important;
-                    margin-bottom: 30px !important;
+                    margin-bottom: 25px !important;
                     text-align: left !important;
                 }
                 .full-start-new__title img {
                     max-height: 180px !important;
-                    max-width: 100% !important;
+                    max-width: 450px !important;
                     object-fit: contain !important;
-                    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+                    filter: drop-shadow(0 0 15px rgba(0,0,0,0.7));
                 }
 
-                /* Опис (Tagline / Details) */
+                /* 6. Опис та метадані */
                 .full-start-new__tagline {
-                    font-size: 1.4rem !important;
-                    line-height: 1.5 !important;
-                    margin-bottom: 25px !important;
-                    max-width: 100% !important;
-                    opacity: 0.8;
-                    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+                    font-size: 1.5rem !important;
+                    line-height: 1.4 !important;
+                    margin-bottom: 20px !important;
+                    max-width: 90% !important;
+                    opacity: 0.9;
+                    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
                 }
 
-                /* Стилізація кнопок (Apple Style) */
+                /* 7. Стиль кнопок (Скляний ефект) */
                 .full-start-new__buttons {
-                    display: flex !important;
-                    gap: 15px !important;
+                    margin-top: 20px !important;
                 }
                 .full-start-new__buttons .button {
-                    background: rgba(255, 255, 255, 0.1) !important;
-                    backdrop-filter: blur(10px) !important;
+                    background: rgba(255, 255, 255, 0.15) !important;
+                    backdrop-filter: blur(15px) !important;
+                    -webkit-backdrop-filter: blur(15px) !important;
                     border-radius: 12px !important;
-                    border: none !important;
-                    padding: 12px 25px !important;
-                    transition: transform 0.2s !important;
+                    border: 1px solid rgba(255,255,255,0.1) !important;
+                    transition: all 0.3s ease !important;
                 }
                 .full-start-new__buttons .button:focus {
                     background: #fff !important;
                     color: #000 !important;
-                    transform: scale(1.05) !important;
+                    transform: scale(1.08) !important;
                 }
             }
         `;
@@ -97,28 +102,29 @@
     }
 
     function loadMovieLogo(movie, $container) {
-        var movieId = (movie.id || movie.tmdb_id) + (movie.name ? '_tv' : '_movie');
-        if (logoCache[movieId]) {
-            $container.html('<img src="' + logoCache[movieId] + '">');
+        var id = movie.id || movie.tmdb_id;
+        var type = movie.name ? 'tv' : 'movie';
+        var cacheKey = id + '_' + type;
+
+        if (logoCache[cacheKey]) {
+            $container.html('<img src="' + logoCache[cacheKey] + '">');
             return;
         }
         
-        // Використовуємо Lampa.TMDB.key() або стандартний ключ
-        var key = Lampa.TMDB.key ? Lampa.TMDB.key() : '4ef0dcc2d9cb505a8d034e351483952a';
-        
+        var api_key = Lampa.TMDB.key();
         $.ajax({
-            url: 'https://api.themoviedb.org/3/' + (movie.name ? 'tv' : 'movie') + '/' + (movie.id || movie.tmdb_id) + '/images?api_key=' + key,
+            url: 'https://api.themoviedb.org/3/' + type + '/' + id + '/images?api_key=' + api_key,
             success: function(res) {
                 if (res.logos && res.logos.length > 0) {
                     var lang = Lampa.Storage.get('language') || 'uk';
-                    // Пріоритет: обрана мова -> англійська -> перше ліпше
+                    // Пріоритет: Поточна мова -> Англійська -> Будь-яка перша [cite: 2026-02-17]
                     var logo = res.logos.find(l => l.iso_639_1 === lang) || 
                                res.logos.find(l => l.iso_639_1 === 'en') || 
                                res.logos[0];
                     
                     if (logo) {
                         var url = 'https://image.tmdb.org/t/p/w500' + logo.file_path;
-                        logoCache[movieId] = url;
+                        logoCache[cacheKey] = url;
                         $container.html('<img src="' + url + '">');
                     }
                 }
@@ -132,10 +138,10 @@
                 var movie = e.data.movie;
                 var $render = e.object.activity.render();
                 
-                // Чекаємо мікротаск, щоб Lampa встигла відрендерити DOM
+                // Невелика затримка для стабільності рендеру
                 setTimeout(function() {
                     loadMovieLogo(movie, $render.find('.full-start-new__title'));
-                }, 10);
+                }, 50);
             }
         });
     }
