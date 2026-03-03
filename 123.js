@@ -5,6 +5,20 @@
     var KEY_WIDTH = 'bubble_clock_scale';  
     var KEY_RADIUS = 'bubble_clock_radius';  
   
+    // Список налаштувань за замовчуванням  
+    var settings_list = [  
+        { id: KEY_SIZE, default: '1.5' },  
+        { id: KEY_WIDTH, default: '1.0' },  
+        { id: KEY_RADIUS, default: '20' }  
+    ];  
+  
+    // Ініціалізація значень за замовчуванням  
+    settings_list.forEach(function (opt) {  
+        if (Lampa.Storage.get(opt.id, 'unset') === 'unset') {  
+            Lampa.Storage.set(opt.id, opt.default);  
+        }  
+    });  
+  
     function applyStyles() {  
         var clock = $('#custom-bubble-clock');  
         if (clock.length) {  
@@ -21,13 +35,12 @@
         }  
     }  
   
-    // Полностью переписанный компонент для мобильного интерфейса  
+    // Компонент для мобільного інтерфейсу  
     Lampa.Component.add('bubble_clock_menu', function (object) {  
         var _this = this;  
         var scroll = new Lampa.Scroll({mask: true, over: true});  
           
         this.create = function () {  
-            // Контейнер, который мобильная Lampa точно "увидит"  
             this.list = $('<div class="category-full"></div>');  
   
             var params = [  
@@ -43,7 +56,6 @@
                     '<div class="settings-param__value" style="color: #ff9100; font-size: 1.2em;">' + value + '</div>' +  
                 '</div>');  
   
-                // Обработка клика и для ТВ (пульт) и для телефона (тач)  
                 row.on('click tap hover:enter', function () {  
                     Lampa.Input.box('Значение', value, function (new_val) {  
                         if (new_val) {  
@@ -55,26 +67,18 @@
                 });  
   
                 this.list.append(row);  
-            });  
+            }.bind(this));  
   
-            return this.list;  
+            return scroll.render();  
         };  
-  
+          
         this.toggle = function () {  
-            Lampa.Controller.add('content', {  
-                toggle: function () {  
-                    Lampa.Controller.collectionSet(_this.render());  
-                    Lampa.Controller.toggle('content');  
-                },  
-                up: function () {},  
-                down: function () {},  
-                back: function () {  
-                    Lampa.Controller.toggle('settings');  
-                }  
-            });  
+            Lampa.Controller.collectionSet(this.render());  
+            Lampa.Controller.toggle('content');  
         };  
-  
+          
         this.render = function () {  
+            scroll.append(this.list);  
             return scroll.render();  
         };  
     });  
@@ -101,48 +105,27 @@
         applyStyles();  
     }  
   
-    function init() {  
-        // Спочатку реєструємо значення за замовчуванням  
-        if (typeof Lampa.Params !== 'undefined') {  
-            Lampa.Params.select(KEY_SIZE, {  
-                '1.0': '1.0',  
-                '1.5': '1.5',   
-                '2.0': '2.0',  
-                '2.5': '2.5',  
-                '3.0': '3.0'  
-            }, '1.5');  
-  
-            Lampa.Params.select(KEY_WIDTH, {  
-                '0.5': '0.5',  
-                '1.0': '1.0',  
-                '1.5': '1.5',  
-                '2.0': '2.0'  
-            }, '1.0');  
-  
-            Lampa.Params.select(KEY_RADIUS, {  
-                '10': '10',  
-                '15': '15',  
-                '20': '20',  
-                '25': '25',  
-                '30': '30'  
-            }, '20');  
-        }  
-  
-        // Тепер додаємо компонент  
+    // Налаштування плагіна  
+    function setupSettings() {  
         Lampa.SettingsApi.addComponent({  
             component: 'bubble_clock_menu',  
             name: 'Часы Bubble',  
             icon: '<svg height="24" viewBox="0 0 24 24" width="24" fill="#fff"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8zm.5-13H11v6l5.2 3.1.8-1.2-4.5-2.7V7z"/></svg>'  
         });  
   
-        // І тільки потім додаємо параметри  
         Lampa.SettingsApi.addParam({  
             component: 'bubble_clock_menu',  
             param: {  
                 name: KEY_SIZE,  
-                type: 'input',  
-                default: '1.5',  
-                placeholder: '1.5'  
+                type: 'select',  
+                values: {  
+                    '1.0': '1.0',  
+                    '1.5': '1.5',  
+                    '2.0': '2.0',  
+                    '2.5': '2.5',  
+                    '3.0': '3.0'  
+                },  
+                default: '1.5'  
             },  
             field: {  
                 name: 'Размер шрифта',  
@@ -155,9 +138,14 @@
             component: 'bubble_clock_menu',  
             param: {  
                 name: KEY_WIDTH,  
-                type: 'input',  
-                default: '1.0',  
-                placeholder: '1.0'  
+                type: 'select',  
+                values: {  
+                    '0.5': '0.5',  
+                    '1.0': '1.0',  
+                    '1.5': '1.5',  
+                    '2.0': '2.0'  
+                },  
+                default: '1.0'  
             },  
             field: {  
                 name: 'Ширина (Scale)',  
@@ -170,9 +158,15 @@
             component: 'bubble_clock_menu',  
             param: {  
                 name: KEY_RADIUS,  
-                type: 'input',  
-                default: '20',  
-                placeholder: '20'  
+                type: 'select',  
+                values: {  
+                    '10': '10',  
+                    '15': '15',  
+                    '20': '20',  
+                    '25': '25',  
+                    '30': '30'  
+                },  
+                default: '20'  
             },  
             field: {  
                 name: 'Скруглення (Bubble)',  
@@ -180,13 +174,17 @@
             },  
             onChange: applyStyles  
         });  
+    }  
   
+    function init() {  
         createClock();  
     }  
   
-    if (window.Lampa) {  
-        Lampa.Listener.follow('app', function (e) {  
-            if (e.type === 'ready') init();  
-        });  
+    function startPlugin() {  
+        setupSettings();  
+        init();  
     }  
+  
+    if (window.appready) startPlugin();  
+    else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') startPlugin(); });  
 })();
