@@ -5,6 +5,10 @@
     var KEY_WIDTH  = 'bubble_clock_scale';
     var KEY_RADIUS = 'bubble_clock_radius';
 
+    /* =========================
+       СТИЛІ
+    ========================= */
+
     function applyStyles() {
         var clock = $('#custom-bubble-clock');
         if (!clock.length) return;
@@ -21,6 +25,10 @@
 
         clock.find('.clock-unit').css('border-radius', radius + 'px');
     }
+
+    /* =========================
+       ГОДИННИК
+    ========================= */
 
     function createClock() {
 
@@ -53,7 +61,60 @@
         applyStyles();
     }
 
-    function createSettingsButton() {
+    /* =========================
+       МЕНЮ
+    ========================= */
+
+    Lampa.Component.add('bubble_clock_menu', function () {
+
+        var component = this;
+        var scroll = new Lampa.Scroll({ mask: true, over: true });
+        var list = $('<div class="category-full"></div>');
+
+        this.create = function () {
+
+            var items = [
+                { title: 'Размер шрифта', key: KEY_SIZE, def: '1.5' },
+                { title: 'Ширина (Scale)', key: KEY_WIDTH, def: '1.0' },
+                { title: 'Скругление', key: KEY_RADIUS, def: '20' }
+            ];
+
+            items.forEach(function (item) {
+
+                var value = Lampa.Storage.get(item.key, item.def);
+
+                var row = $(
+                    '<div class="settings-param selector" style="padding:15px;border-bottom:1px solid rgba(255,255,255,0.1);">' +
+                        '<div class="settings-param__name">' + item.title + '</div>' +
+                        '<div class="settings-param__value" style="color:#ff9100;">' + value + '</div>' +
+                    '</div>'
+                );
+
+                row.on('click', function () {
+                    Lampa.Input.box('Введите значение', value, function (v) {
+                        if (!v) return;
+                        Lampa.Storage.set(item.key, v);
+                        row.find('.settings-param__value').text(v);
+                        applyStyles();
+                    }, false, { type: 'number' });
+                });
+
+                list.append(row);
+            });
+
+            scroll.append(list);
+        };
+
+        this.render = function () {
+            return scroll.render();
+        };
+    });
+
+    /* =========================
+       INIT
+    ========================= */
+
+    function init() {
 
         Lampa.SettingsApi.addComponent({
             component: 'bubble_clock_menu',
@@ -61,51 +122,7 @@
             icon: '<svg height="24" viewBox="0 0 24 24" width="24" fill="#fff"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.4 0-8-3.6-8-8s3.6-8 8-8 8 3.6 8 8-3.6 8-8 8zm.5-13H11v6l5.2 3.1.8-1.2-4.5-2.7V7z"/></svg>'
         });
 
-        Lampa.Component.add('bubble_clock_menu', function () {
-
-            this.create = function () {
-
-                var list = $('<div class="category-full"></div>');
-
-                var items = [
-                    { title: 'Размер шрифта', key: KEY_SIZE, def: '1.5' },
-                    { title: 'Ширина (Scale)', key: KEY_WIDTH, def: '1.0' },
-                    { title: 'Скругление', key: KEY_RADIUS, def: '20' }
-                ];
-
-                items.forEach(function (item) {
-
-                    var value = Lampa.Storage.get(item.key, item.def);
-
-                    var row = $(
-                        '<div class="settings-param selector" style="padding:15px;border-bottom:1px solid rgba(255,255,255,0.1);">' +
-                            '<div class="settings-param__name">' + item.title + '</div>' +
-                            '<div class="settings-param__value" style="color:#ff9100;">' + value + '</div>' +
-                        '</div>'
-                    );
-
-                    row.on('click', function () {
-                        Lampa.Input.box('Введите значение', value, function (v) {
-                            if (!v) return;
-                            Lampa.Storage.set(item.key, v);
-                            row.find('.settings-param__value').text(v);
-                            applyStyles();
-                        }, false, { type: 'number' });
-                    });
-
-                    list.append(row);
-                });
-
-                this.render = function () {
-                    return list;
-                };
-            };
-        });
-    }
-
-    function init() {
         createClock();
-        createSettingsButton();
     }
 
     if (window.Lampa) {
