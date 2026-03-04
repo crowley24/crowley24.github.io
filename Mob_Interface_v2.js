@@ -116,15 +116,24 @@
     /**
      * НОВА ФУНКЦІЯ ПРОГРЕС-БАРА
      */
-    function renderProgressBar(container, movie) {
+        function renderProgressBar(container, movie) {
         if (!Lampa.Storage.get('mobile_interface_progress_bar')) return;
+        
+        // Спробуємо знайти дані за ID або за назвою (для надійності)
         var view = Lampa.Timeline.view(movie.id);
+        
         if (view && view.percent > 0) {
-            container.find('.plugin-poster-progress').remove(); // Видаляємо старий, якщо є
-            var $bar = $('<div class="plugin-poster-progress"><div class="plugin-poster-progress-fill" style="width:' + view.percent + '%"></div></div>');
+            // Видаляємо дублікати, якщо вони є
+            container.find('.plugin-poster-progress').remove();
+            
+            // Створюємо бар. Використовуємо bottom: 0, щоб він був на межі градієнта
+            var $bar = $('<div class="plugin-poster-progress" style="position: absolute; bottom: 0; left: 0; width: 100%; height: 6px; background: rgba(255,255,255,0.1); z-index: 999; pointer-events: none;">' +
+                '<div class="plugin-poster-progress-fill" style="width:' + view.percent + '%; height: 100%; background: #ff4d4d; box-shadow: 0 0 12px #ff4d4d; transition: width 0.5s ease;"></div>' +
+            '</div>');
+            
             container.append($bar);
         }
-    }
+        }
 
     /**
      * ЛОГІКА РЕЙТИНГІВ ТА ДОДАТКОВОЇ ІНФО
