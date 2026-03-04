@@ -1,29 +1,35 @@
 // ==Lampa==
-// name: NewCard Apple Layout (Safe)
-// version: 2.0.0
+// name: NewCard Apple Layout
+// version: 2.1.0
 // author: Eugene
 // ==/Lampa==
 
 (function () {
     'use strict';
 
-    const PLUGIN_ID = 'applecation_safe';
-
+    const COMPONENT = 'applecation_settings';
     let logoCache = new Map();
 
-    /* -------------------- CSS -------------------- */
+    /* -------------------- DEFAULTS -------------------- */
+
+    const DEFAULTS = {
+        enable: true,
+        show_logo: true,
+        show_description: true
+    };
+
+    /* -------------------- STYLES -------------------- */
 
     function addStyles() {
         if ($('#applecation-style').length) return;
 
         $('body').append(`
         <style id="applecation-style">
-            .applecation-layout .full-start__body {
+            .applecation-layout .full-start__body{
                 display:flex;
-                justify-content:flex-start;
             }
 
-            .applecation-left {
+            .applecation-left{
                 width:40%;
                 padding:3em;
                 display:flex;
@@ -32,37 +38,33 @@
                 z-index:2;
             }
 
-            .applecation-left .apple-logo {
+            .apple-logo{
                 margin-bottom:2em;
                 opacity:0;
                 transform:translateY(20px);
-                transition:all .4s ease;
+                transition:.4s;
             }
 
-            .applecation-left .apple-logo.loaded {
+            .apple-logo.loaded{
                 opacity:1;
                 transform:translateY(0);
             }
 
-            .applecation-left .apple-logo img{
+            .apple-logo img{
                 max-width:80%;
                 max-height:180px;
             }
 
-            .applecation-left .apple-meta{
+            .apple-meta{
                 font-size:1.1em;
                 margin-bottom:1em;
                 opacity:.8;
             }
 
-            .applecation-left .apple-desc{
+            .apple-desc{
                 margin-top:1.5em;
                 line-height:1.6;
                 opacity:.85;
-            }
-
-            .applecation-layout .full-start__right{
-                width:60%;
             }
 
             .applecation-layout .full-start__title{
@@ -72,26 +74,71 @@
         `);
     }
 
-    /* -------------------- Logo Loader -------------------- */
+    /* -------------------- SETTINGS -------------------- */
+
+    function addSettings() {
+
+        Lampa.SettingsApi.addComponent({
+            component: COMPONENT,
+            name: 'NewCard Apple Layout',
+            icon: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>'
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: COMPONENT,
+            param: {
+                name: 'applecation_enable',
+                type: 'trigger',
+                default: DEFAULTS.enable
+            },
+            field: {
+                name: 'Увімкнути Apple Layout'
+            }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: COMPONENT,
+            param: {
+                name: 'applecation_show_logo',
+                type: 'trigger',
+                default: DEFAULTS.show_logo
+            },
+            field: {
+                name: 'Показувати логотип'
+            }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: COMPONENT,
+            param: {
+                name: 'applecation_show_description',
+                type: 'trigger',
+                default: DEFAULTS.show_description
+            },
+            field: {
+                name: 'Показувати опис'
+            }
+        });
+    }
+
+    /* -------------------- LOGO -------------------- */
 
     function selectBestLogo(logos) {
         if (!logos || !logos.length) return null;
 
-        const find = (l) =>
-            logos
-                .filter(a => a.iso_639_1 === l)
-                .sort((a, b) => b.vote_average - a.vote_average)[0];
-
-        return find('uk') || find('en') || logos[0] || null;
+        return logos
+            .filter(l => l.iso_639_1 === 'uk' || l.iso_639_1 === 'en')
+            .sort((a, b) => b.vote_average - a.vote_average)[0] || logos[0];
     }
 
     function loadLogo(movie, container) {
-        if (!movie || !movie.id) return;
+
+        if (!Lampa.Storage.get('applecation_show_logo')) return;
 
         const type = movie.name ? 'tv' : 'movie';
-        const cacheKey = type + '_' + movie.id;
+        const key = type + '_' + movie.id;
 
-        const renderLogo = (res) => {
+        function render(res){
             if (!res || !res.logos) return;
 
             const best = selectBestLogo(res.logos);
@@ -100,36 +147,33 @@
             const url = Lampa.TMDB.image('/t/p/w500' + best.file_path);
 
             const img = new Image();
-            img.onload = function () {
-                container.html(`<img src="${url}">`);
+            img.onload = function(){
+                container.html('<img src="'+url+'">');
                 container.addClass('loaded');
             };
             img.src = url;
-        };
+        }
 
-        if (logoCache.has(cacheKey)) {
-            renderLogo(logoCache.get(cacheKey));
-        } else {
-            const url = `${type}/${movie.id}/images?api_key=${Lampa.TMDB.key()}`;
-            $.get(Lampa.TMDB.api(url), function (res) {
-                logoCache.set(cacheKey, res);
-                renderLogo(res);
+        if (logoCache.has(key)) render(logoCache.get(key));
+        else {
+            $.get(Lampa.TMDB.api(`${type}/${movie.id}/images?api_key=${Lampa.TMDB.key()}`), function(res){
+                logoCache.set(key, res);
+                render(res);
             });
         }
     }
 
-    /* -------------------- Layout Builder -------------------- */
+    /* -------------------- BUILD LAYOUT -------------------- */
 
-    function buildLayout(e) {
+    function build(e) {
+
+        if (!Lampa.Storage.get('applecation_enable')) return;
         if (!e.object || !e.object.activity) return;
 
-        const activity = e.object.activity;
-        const render = activity.render();
+        const render = e.object.activity.render();
         const movie = e.data.movie;
 
         if (!render || !movie) return;
-
-        // Захист від повторного запуску
         if (render.hasClass('applecation-layout')) return;
 
         render.addClass('applecation-layout');
@@ -140,11 +184,13 @@
         const desc = $('<div class="apple-desc"></div>');
 
         const year = (movie.release_date || movie.first_air_date || '').split('-')[0];
-        const genres = (movie.genres || []).slice(0, 2).map(g => g.name).join(' · ');
+        const genres = (movie.genres || []).slice(0,2).map(g=>g.name).join(' · ');
         const type = movie.name ? 'Серіал' : 'Фільм';
 
-        meta.text(`${type} · ${year} ${genres ? '· ' + genres : ''}`);
-        desc.text(movie.overview || '');
+        meta.text(`${type} · ${year}${genres ? ' · '+genres : ''}`);
+
+        if (Lampa.Storage.get('applecation_show_description'))
+            desc.text(movie.overview || '');
 
         left.append(logo);
         left.append(meta);
@@ -155,22 +201,23 @@
         loadLogo(movie, logo);
     }
 
-    /* -------------------- Init -------------------- */
+    /* -------------------- INIT -------------------- */
 
-    function initialize() {
+    function init(){
         addStyles();
+        addSettings();
 
-        Lampa.Listener.follow('full', function (e) {
-            if (e.type === 'complite') {
-                setTimeout(() => buildLayout(e), 50);
+        Lampa.Listener.follow('full', function(e){
+            if(e.type === 'complite'){
+                setTimeout(()=>build(e), 50);
             }
         });
     }
 
-    if (window.appready) initialize();
+    if(window.appready) init();
     else {
-        Lampa.Listener.follow('app', function (e) {
-            if (e.type === 'ready') initialize();
+        Lampa.Listener.follow('app', function(e){
+            if(e.type === 'ready') init();
         });
     }
 
