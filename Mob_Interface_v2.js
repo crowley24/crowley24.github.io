@@ -20,8 +20,7 @@
         { id: 'mobile_interface_ratings_size', default: '0.45em' },
         { id: 'mobile_interface_studios', default: true },
         { id: 'mobile_interface_studios_bg_opacity', default: '0.15' },
-        { id: 'mobile_interface_quality', default: true },
-        { id: 'mobile_interface_progress_bar', default: true } // Додано параметр
+        { id: 'mobile_interface_quality', default: true }
     ];
 
     settings_list.forEach(function (opt) {
@@ -80,20 +79,25 @@
         css += (isAnimationEnabled ? 'animation: kenBurnsEffect 25s ease-in-out infinite !important; ' : '');
         css += 'transform-origin: center center !important; transition: opacity 1.5s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%) !important; } ';
-        
-        // Стилі прогрес-бара
-        css += '.plugin-poster-progress { position: absolute; bottom: 0; left: 0; width: 100%; height: 4px; background: rgba(255,255,255,0.15); z-index: 10; } ';
-        css += '.plugin-poster-progress-fill { height: 100%; background: #ff4d4d; box-shadow: 0 0 10px rgba(255,77,77,0.5); } ';
-
         css += '.full-start-new__right { background: none !important; margin-top: -160px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; padding: 0 10px !important; gap: ' + blocksGap + ' !important; } ';
-        css += '.full-start-new__right > div:first-child { margin: 0 !important; font-size: 0.9em !important; opacity: 0.8; order: 1; } ';
+        
+        // Нові стилі для МЕТА-ДАНИХ (Netflix Style)
+        css += '.plugin-meta-line { display: flex; gap: 8px; order: 1; margin-bottom: 2px; } ';
+        css += '.plugin-meta-item { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 1px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; } ';
+        css += '.full-start-new__right > div:first-child { display: none !important; } '; // Ховаємо оригінальний текст року
+
         css += '.full-start-new__title { width: 100% !important; display: flex !important; justify-content: center !important; align-items: center !important; margin: 5px 0 !important; min-height: 60px; order: 2; overflow: visible !important; } ';
         css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 90vw !important; object-fit: contain !important; filter: drop-shadow(0 0 15px rgba(0,0,0,0.8)); margin: 0 !important; } ';
         css += '.full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; opacity: 0.85 !important; font-size: 1.1em !important; margin: 0 !important; color: #fff !important; text-align: center !important; order: 3; } ';
-        css += '.plugin-ratings-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 12px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.8); width: 100%; order: 4; } ';
-        css += '.plugin-rating-item, .plugin-extra-info { display: flex; align-items: center; gap: 6px; font-weight: 700; color: #fff; } ';
+        
+        // Оновлений стиль для РЕЙТИНГІВ ТА ІНФО
+        css += '.plugin-ratings-row { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 0 !important; width: 100%; order: 4; } ';
+        css += '.plugin-ratings-logos { display: flex; justify-content: center; align-items: center; gap: 12px; font-size: calc(' + rSize + ' * 2.8); } ';
+        css += '.plugin-rating-item { display: flex; align-items: center; gap: 6px; font-weight: 700; color: #fff; } ';
         css += '.plugin-rating-item img { height: 1.1em; width: auto; } ';
-        css += '.plugin-extra-info { font-weight: 400; opacity: 0.9; } ';
+        css += '.plugin-extra-info { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 400; opacity: 0.8; color: #fff; } ';
+        css += '.plugin-extra-info .dot { width: 3px; height: 3px; background: rgba(255,255,255,0.5); border-radius: 50%; } ';
+
         css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: ' + blocksGap + '; margin: 0 !important; width: 100%; order: 5; } ';
         css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px; width: 100%; } ';
         css += '.studio-item { height: 3.2em !important; opacity: 0; animation: qb_in 0.4s ease forwards; padding: 5px 12px; border-radius: 10px; display: flex; align-items: center; justify-content: center; ';
@@ -112,28 +116,6 @@
         style.textContent = css;
         document.head.appendChild(style);
     }
-
-    /**
-     * НОВА ФУНКЦІЯ ПРОГРЕС-БАРА
-     */
-        function renderProgressBar(container, movie) {
-        if (!Lampa.Storage.get('mobile_interface_progress_bar')) return;
-        
-        // Спробуємо знайти дані за ID або за назвою (для надійності)
-        var view = Lampa.Timeline.view(movie.id);
-        
-        if (view && view.percent > 0) {
-            // Видаляємо дублікати, якщо вони є
-            container.find('.plugin-poster-progress').remove();
-            
-            // Створюємо бар. Використовуємо bottom: 0, щоб він був на межі градієнта
-            var $bar = $('<div class="plugin-poster-progress" style="position: absolute; bottom: 0; left: 0; width: 100%; height: 6px; background: rgba(255,255,255,0.1); z-index: 999; pointer-events: none;">' +
-                '<div class="plugin-poster-progress-fill" style="width:' + view.percent + '%; height: 100%; background: #ff4d4d; box-shadow: 0 0 12px #ff4d4d; transition: width 0.5s ease;"></div>' +
-            '</div>');
-            
-            container.append($bar);
-        }
-        }
 
     /**
      * ЛОГІКА РЕЙТИНГІВ ТА ДОДАТКОВОЇ ІНФО
@@ -168,20 +150,37 @@
     }
 
     function renderRatings(container, e) {
-        container.find('.plugin-ratings-row').remove();
-        var $row = $('<div class="plugin-ratings-row"></div>');
+        container.find('.plugin-ratings-row, .plugin-meta-line').remove();
         var movie = e.data.movie;
         
-        var tmdb = parseFloat(movie.vote_average || 0).toFixed(1);
-        if (tmdb > 0) $row.append('<div class="plugin-rating-item"><img src="'+ratingIcons.tmdb+'"> <span style="color:'+getRatingColor(tmdb)+'">'+tmdb+'</span></div>');
-        var cub = getCubRating(e);
-        if (cub) $row.append('<div class="plugin-rating-item"><img src="' + ratingIcons.cub + '"> <span style="color:' + getRatingColor(cub) + '">' + cub + '</span></div>');
+        // 1. Рік та Країна (Netflix капсули) - додаємо ВГОРУ
+        var year = movie.release_date ? movie.release_date.split('-')[0] : (movie.first_air_date ? movie.first_air_date.split('-')[0] : '');
+        var country = movie.production_countries && movie.production_countries.length ? movie.production_countries[0].iso_3166_1 : '';
+        if (year || country) {
+            var $meta = $('<div class="plugin-meta-line"></div>');
+            if (year) $meta.append('<div class="plugin-meta-item">' + year + '</div>');
+            if (country) $meta.append('<div class="plugin-meta-item">' + country + '</div>');
+            container.prepend($meta);
+        }
+
+        // 2. Блок рейтингів та інфо
+        var $row = $('<div class="plugin-ratings-row"><div class="plugin-ratings-logos"></div></div>');
         
+        // Логотипи рейтингів
+        var tmdb = parseFloat(movie.vote_average || 0).toFixed(1);
+        if (tmdb > 0) $row.find('.plugin-ratings-logos').append('<div class="plugin-rating-item"><img src="'+ratingIcons.tmdb+'"> <span style="color:'+getRatingColor(tmdb)+'">'+tmdb+'</span></div>');
+        var cub = getCubRating(e);
+        if (cub) $row.find('.plugin-ratings-logos').append('<div class="plugin-rating-item"><img src="' + ratingIcons.cub + '"> <span style="color:' + getRatingColor(cub) + '">' + cub + '</span></div>');
+        
+        // Тривалість та Жанр (через крапку)
         var runtime = formatRuntime(movie.runtime || movie.episode_run_time);
         var genres = (movie.genres || []).slice(0, 1).map(function(g){ return g.name; }).join(', ');
         if (runtime || genres) {
-            var info = (runtime ? runtime : '') + (runtime && genres ? ' • ' : '') + (genres ? genres : '');
-            $row.append('<div class="plugin-extra-info">' + info + '</div>');
+            var $info = $('<div class="plugin-extra-info"></div>');
+            if (runtime) $info.append('<span>' + runtime + '</span>');
+            if (runtime && genres) $info.append('<span class="dot"></span>');
+            if (genres) $info.append('<span>' + genres + '</span>');
+            $row.append($info);
         }
 
         var $target = container.find('.full-start-new__tagline');
@@ -190,7 +189,7 @@
     }
 
     /**
-     * ЛОГІКА СТУДІЙ ТА ЯКОСТІ
+     * ЛОГІКА СТУДІЙ ТА ЯКОСТІ (БЕЗ ЗМІН)
      */
     function renderStudioLogos(container, data) {
         if (!Lampa.Storage.get('mobile_interface_studios')) return;
@@ -236,7 +235,7 @@
     }
 
     /**
-     * TMDB: ЛОГО ТА СЛАЙДШОУ
+     * TMDB: ЛОГО ТА СЛАЙДШОУ (БЕЗ ЗМІН)
      */
     function loadMovieLogo(movie, $container) {
         var movieId = movie.id + (movie.name ? '_tv' : '_movie');
@@ -276,18 +275,12 @@
             if (e.type === 'destroy') clearInterval(slideshowTimer);
             if (window.innerWidth <= 480 && (e.type === 'complite' || e.type === 'complete')) {
                 var movie = e.data.movie, $render = e.object.activity.render();
-                
                 loadMovieLogo(movie, $render.find('.full-start-new__title'));
                 renderRatings($render.find('.full-start-new__right'), e);
-                
-                // Виклик прогрес-бара
-                renderProgressBar($render.find('.full-start-new__poster'), movie);
-                
                 $('.plugin-info-block').remove();
                 var $info = $('<div class="plugin-info-block"><div class="studio-row"></div><div class="quality-row"></div></div>');
                 $render.find('.full-start-new__right').append($info);
                 renderStudioLogos($info.find('.studio-row'), movie);
-                
                 if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Parser.get) {
                     Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
                         if (res && res.Results) {
@@ -304,13 +297,12 @@
     }
 
     /**
-     * ПАНЕЛЬ НАЛАШТУВАНЬ
+     * ПАНЕЛЬ НАЛАШТУВАНЬ (БЕЗ ЗМІН)
      */
-     function setupSettings() {
+    function setupSettings() {
         Lampa.SettingsApi.addComponent({ component: 'mobile_interface', name: 'Мобільний інтерфейс', icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" fill="white"/></svg>' });
 
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_animation', type: 'trigger', default: true }, field: { name: 'Анімація постера' }, onChange: applyStyles });
-        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_progress_bar', type: 'trigger', default: true }, field: { name: 'Прогрес перегляду (лінія)' } }); // Додано в налаштування
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_slideshow', type: 'trigger', default: true }, field: { name: 'Слайд-шоу постера' } });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_slideshow_time', type: 'select', values: { '10000': '10с', '15000': '15с', '20000': '20с' }, default: '10000' }, field: { name: 'Інтервал слайд-шоу' } });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_slideshow_quality', type: 'select', values: { 'w300': '300px', 'w780': '780px', 'w1280': '1280px', 'original': 'Оригінал' }, default: 'w780' }, field: { name: 'Якість фону слайд-шоу' } });
@@ -332,3 +324,4 @@
     if (window.appready) startPlugin();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') startPlugin(); });
 })();
+    
