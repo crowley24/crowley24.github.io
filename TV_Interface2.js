@@ -19,7 +19,6 @@
         attachLogoLoader();  
     }  
 
-    // --- ПОВЕРНЕННЯ НАЛАШТУВАНЬ ТА МАСШТАБУВАННЯ ---
     function addSettings() {
         const defaults = {  
             'applecation_logo_scale': '100', 'applecation_text_scale': '100', 
@@ -34,21 +33,21 @@
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: { name: 'applecation_logo_scale', type: 'select', values: scaleVals, default: '100' },
-            field: { name: 'Розмір логотипу', description: 'Змінює масштаб логотипу фільму' },
+            field: { name: 'Розмір логотипу' },
             onChange: applyScales
         });
 
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: { name: 'applecation_text_scale', type: 'select', values: scaleVals, default: '100' },
-            field: { name: 'Розмір тексту', description: 'Змінює масштаб метаданих та опису' },
+            field: { name: 'Розмір тексту' },
             onChange: applyScales
         });
 
         Lampa.SettingsApi.addParam({
             component: 'applecation_settings',
             param: { name: 'applecation_apple_zoom', type: 'trigger', default: true },
-            field: { name: 'Анімація фону', description: 'Плавний зум постеру при відкритті' },
+            field: { name: 'Анімація фону' },
             onChange: (v) => $('body').toggleClass('applecation--zoom-enabled', v)
         });
 
@@ -62,7 +61,6 @@
         root.style.setProperty('--apple-text-scale', parseInt(Lampa.Storage.get('applecation_text_scale')) / 100);
     }
 
-    // --- ОНОВЛЕНИЙ ШАБЛОН ---
     function addCustomTemplate() {  
         const template = `
         <div class="full-start-new applecation">  
@@ -86,10 +84,10 @@
                     <div class="full-start__button selector button--play">
                         ${ICONS.play} <span>Дивитися</span>
                     </div>
-                    <div class="full-start__button selector view--trailer button--round">${ICONS.trailer}</div>
-                    <div class="full-start__button selector button--book button--round">${ICONS.book}</div>
-                    <div class="full-start__button selector button--reaction button--round">${ICONS.reaction}</div>
-                    <div class="full-start__button selector button--options button--round">${ICONS.options}</div>
+                    <div class="full-start__button selector view--trailer">${ICONS.trailer}</div>
+                    <div class="full-start__button selector button--book">${ICONS.book}</div>
+                    <div class="full-start__button selector button--reaction">${ICONS.reaction}</div>
+                    <div class="full-start__button selector button--options">${ICONS.options}</div>
                 </div>
             </div>
             <div class="hide buttons--container">  
@@ -103,46 +101,73 @@
         const styles = `
         <style>
             :root { --apple-logo-scale: 1; --apple-text-scale: 1; }
+
+            /* ПРИБИРАЄМО СМУГУ: Вимикаємо стандартні градієнти-маски Lampa */
+            .full-start__background:after, 
+            .full-start__background:before {
+                display: none !important;
+            }
+
             .applecation__body { 
                 height: 100vh; display: flex; flex-direction: column; justify-content: flex-end; 
                 padding: 0 5% 10% 5%;
-                background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 50%, transparent 100%);
+                background: transparent !important; /* Робимо фон світлим (без фільтра) */
+                position: relative;
+                z-index: 10;
             }
+
             .applecation__logo img { 
                 max-width: calc(480px * var(--apple-logo-scale)); 
                 max-height: calc(200px * var(--apple-logo-scale)); 
                 object-fit: contain; object-position: left bottom;
             }
-            /* Преміальні метадані */
+
             .applecation__premium-meta { 
                 display: flex; align-items: center; gap: 12px; margin: 20px 0 10px 0;
                 font-size: calc(1.1em * var(--apple-text-scale));
                 font-weight: 500; color: #fff;
+                text-shadow: 0 1px 3px rgba(0,0,0,0.5);
             }
-            .applecation__line-meta { color: rgba(255,255,255,0.7); }
+
+            .applecation__line-meta { color: rgba(255,255,255,0.9); }
             .applecation__studios img { max-height: 24px; margin-right: 8px; filter: drop-shadow(0 0 2px rgba(0,0,0,0.5)); }
             
             .applecation__description {
                 max-width: 700px; line-height: 1.5; margin-bottom: 25px;
                 font-size: calc(1.05em * var(--apple-text-scale));
-                color: rgba(255,255,255,0.85);
+                color: #fff;
+                text-shadow: 0 1px 3px rgba(0,0,0,0.5);
                 display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
             }
 
-            /* Кнопки */
-            .applecation__buttons-row { display: flex; align-items: center; gap: 15px; }
+            .applecation__buttons-row { display: flex; align-items: center; gap: 20px; }
+            
             .button--play { 
                 background: #fff !important; color: #000 !important; 
                 padding: 12px 35px !important; border-radius: 12px !important; 
                 font-weight: 700 !important; text-transform: none;
+                transition: transform 0.2s, background 0.2s;
             }
-            .button--round { 
-                width: 56px !important; height: 56px !important; border-radius: 50% !important; 
-                background: rgba(255,255,255,0.12) !important; padding: 0 !important;
+
+            .applecation .full-start__button { 
+                background: none !important; border: none !important; 
+                color: rgba(255,255,255,0.7) !important; padding: 10px !important;
                 display: flex; justify-content: center; align-items: center;
+                transition: transform 0.2s, color 0.2s;
             }
-            .full-start__button.focus { transform: scale(1.08); background: rgba(255,255,255,0.25) !important; border: none !important; }
-            .button--play.focus { background: #e0e0e0 !important; }
+
+            .applecation .full-start__button.focus { 
+                transform: scale(1.3); 
+                color: #fff !important;
+                background: none !important;
+                filter: drop-shadow(0 0 8px rgba(255,255,255,0.9)) !important; 
+            }
+
+            .button--play.focus { 
+                background: #e0e0e0 !important; 
+                transform: scale(1.05);
+                filter: none !important; 
+            }
 
             @keyframes appleKenBurns { 0% { transform: scale(1); } 100% { transform: scale(1.12); } }
             body.applecation--zoom-enabled .full-start__background.loaded { animation: appleKenBurns 40s ease-out forwards !important; }
@@ -154,20 +179,17 @@
         const data = event.data.movie, render = event.object.activity.render();  
         if (!data) return;
 
-        // Рендер преміальних метаданих (Рік · Жанри · Час)
         const year = (data.release_date || data.first_air_date || '').split('-')[0];
         const genres = data.genres?.slice(0, 2).map(g => g.name).join(' · ');
         const runtime = data.runtime ? `${Math.floor(data.runtime / 60)}г ${data.runtime % 60}хв` : '';
         render.find('.applecation__line-meta').text(`${year}  ·  ${genres}  ·  ${runtime}`);
         render.find('.applecation__description').text(data.overview);
 
-        // Студії
         if (Lampa.Storage.get('applecation_show_studio')) {
             const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 2);
             render.find('.applecation__studios').html(studios.map(s => `<img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}">`).join(''));
         }
 
-        // Логотип (з вашим пріоритетом UA -> EN) [cite: 2026-02-17]
         $.get(Lampa.TMDB.api(`${data.name ? 'tv' : 'movie'}/${data.id}/images?api_key=${Lampa.TMDB.key()}`), (d) => {
             const best = d.logos.find(l => l.iso_639_1 === 'uk') || d.logos.find(l => l.iso_639_1 === 'en') || d.logos[0];
             if (best) render.find('.applecation__logo').html(`<img src="${Lampa.TMDB.image('/t/p/w500' + best.file_path)}">`);
@@ -182,4 +204,3 @@
     if (window.appready) initializePlugin();  
     else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') initializePlugin(); });  
 })();
-
