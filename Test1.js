@@ -65,24 +65,26 @@
     function addCustomTemplate() {    
         const template = `  
         <div class="full-start-new cardify">    
-            <div class="full-start-new__right">  
-                <div class="cardify__left">  
-                    <div class="full-start-new__head"></div>  
-                    <div class="full-start-new__title">{title}</div>  
-                    <div class="full-start-new__rate-line rate-fix">  
-                        <div class="full-start-new__rate">  
-                            <div class="full-start-new__rating--imdb hide"></div>  
-                            <div class="full-start-new__rating--kp hide"></div>  
+            <div class="full-start__details">  
+                <div class="full-start-new__right">  
+                    <div class="cardify__left">  
+                        <div class="full-start-new__head"></div>  
+                        <div class="full-start-new__title">{title}</div>  
+                        <div class="full-start-new__rate-line rate-fix">  
+                            <div class="full-start-new__rate">  
+                                <div class="full-start-new__rating--imdb hide"></div>  
+                                <div class="full-start-new__rating--kp hide"></div>  
+                            </div>  
                         </div>  
+                        <div class="cardify__details">  
+                            <div class="full-start-new__info"></div>  
+                            <div class="full-start-new__descr"></div>  
+                        </div>  
+                        <div class="full-start-new__buttons"></div>  
                     </div>  
-                    <div class="cardify__details">  
-                        <div class="full-start-new__info"></div>  
-                        <div class="full-start-new__descr"></div>  
+                    <div class="cardify__right">  
+                        <div class="full-start__background"></div>  
                     </div>  
-                    <div class="full-start-new__buttons"></div>  
-                </div>  
-                <div class="cardify__right">  
-                    <div class="full-start__background"></div>  
                 </div>  
             </div>  
         </div>`;    
@@ -92,19 +94,19 @@
     function addStyles() {    
         const styles = `  
         <style>  
+        .cardify .full-start__details {  
+            position: relative;  
+            height: 100vh;  
+            overflow: hidden;  
+        }  
+  
         .cardify .full-start-new__right {  
             display: -webkit-box;  
             display: -webkit-flex;  
             display: -moz-box;  
             display: -ms-flexbox;  
             display: flex;  
-            -webkit-box-align: end;  
-            -webkit-align-items: flex-end;  
-            -moz-box-align: end;  
-            -ms-flex-align: end;  
-            align-items: flex-end;  
-            position: relative;  
-            height: 100vh;  
+            height: 100%;  
         }  
   
         .cardify__left {  
@@ -113,7 +115,24 @@
             -moz-box-flex: 1;  
             -ms-flex-positive: 1;  
             flex-grow: 1;  
-            padding: 4em 5em 4em 5em;  
+            display: -webkit-box;  
+            display: -webkit-flex;  
+            display: -moz-box;  
+            display: -ms-flexbox;  
+            display: flex;  
+            -webkit-box-orient: vertical;  
+            -webkit-box-direction: normal;  
+            -webkit-flex-direction: column;  
+            -moz-box-orient: vertical;  
+            -moz-box-direction: normal;  
+            -ms-flex-direction: column;  
+            flex-direction: column;  
+            -webkit-box-pack: end;  
+            -webkit-justify-content: flex-end;  
+            -moz-box-pack: end;  
+            -ms-flex-pack: end;  
+            justify-content: flex-end;  
+            padding: 0 5% 10% 5%;  
             position: relative;  
             z-index: 2;  
         }  
@@ -133,11 +152,15 @@
             -ms-flex-negative: 0;  
             flex-shrink: 0;  
             position: relative;  
-            width: 55%;  
         }  
   
-        .cardify__details {  
-            margin-top: 1.5em;  
+        .cardify__right .full-start__background {  
+            position: absolute;  
+            top: 0;  
+            left: 0;  
+            width: 100%;  
+            height: 100%;  
+            z-index: 1;  
         }  
   
         .cardify-effects-overlay {  
@@ -150,41 +173,35 @@
             z-index: 0;  
             background-color: transparent;  
             background-image: linear-gradient(225deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 55%);  
-            transition: background-color 0.4s ease;  
-        }  
-  
-        .cardify .full-start__background {  
-            position: absolute;  
-            top: 0;  
-            left: 0;  
-            width: 100%;  
-            height: 100%;  
-            z-index: 1;  
         }  
   
         .cardify .full-start-new__title {  
-            font-size: 3.5em;  
+            font-size: 4em;  
             font-weight: 700;  
-            line-height: 1.1;  
             margin-bottom: 0.5em;  
+            line-height: 1.1;  
         }  
   
         .cardify .full-start-new__title img {  
-            max-width: 400px;  
             max-height: 120px;  
+            max-width: 400px;  
             object-fit: contain;  
-            object-position: left;  
+        }  
+  
+        .cardify .full-start-new__rate-line {  
+            margin-bottom: 1em;  
         }  
   
         .cardify .full-start-new__info {  
             font-size: 1.2em;  
-            margin-bottom: 1em;  
+            margin-bottom: 0.5em;  
             opacity: 0.8;  
         }  
   
         .cardify .full-start-new__descr {  
             font-size: 1.1em;  
-            line-height: 1.5;  
+            line-height: 1.4;  
+            margin-bottom: 1.5em;  
             max-width: 600px;  
             display: -webkit-box;  
             -webkit-line-clamp: 3;  
@@ -192,30 +209,34 @@
             overflow: hidden;  
         }  
   
-        /* Адаптивність для мобільних */  
+        .cardify .full-start-new__buttons {  
+            display: -webkit-box;  
+            display: -webkit-flex;  
+            display: -moz-box;  
+            display: -ms-flexbox;  
+            display: flex;  
+            gap: 1em;  
+        }  
+  
+        /* Адаптивність */  
         @media screen and (max-width: 768px) {  
-            .cardify__left {  
-                padding: 2em 3em 2em 3em;  
-            }  
-              
             .cardify .full-start-new__title {  
                 font-size: 2.5em;  
             }  
               
             .cardify .full-start-new__title img {  
-                max-width: 300px;  
                 max-height: 80px;  
+                max-width: 250px;  
             }  
               
-            .cardify__right {  
-                width: 40%;  
+            .cardify__left {  
+                padding: 0 3% 8% 3%;  
             }  
         }  
   
-        /* Горизонтальна орієнтація */  
         @media screen and (orientation: landscape) and (max-width: 1024px) {  
             .cardify__left {  
-                padding: 2em 3em 2em 3em;  
+                padding: 0 3% 5% 3%;  
             }  
               
             .cardify .full-start-new__title {  
@@ -223,32 +244,12 @@
             }  
               
             .cardify .full-start-new__title img {  
-                max-width: 250px;  
                 max-height: 60px;  
+                max-width: 200px;  
             }  
               
             .cardify .full-start-new__descr {  
                 -webkit-line-clamp: 2;  
-            }  
-        }  
-  
-        /* Дуже малі екрани */  
-        @media screen and (max-width: 480px) {  
-            .cardify__left {  
-                padding: 1.5em 2em 1.5em 2em;  
-            }  
-              
-            .cardify .full-start-new__title {  
-                font-size: 1.8em;  
-            }  
-              
-            .cardify .full-start-new__title img {  
-                max-width: 200px;  
-                max-height: 50px;  
-            }  
-              
-            .cardify__right {  
-                width: 30%;  
             }  
         }  
         </style>`;    
@@ -271,10 +272,7 @@
             return;  
         }  
   
-        // Додаємо overlay для ефекту  
-        if (!$('.cardify-effects-overlay').length) {  
-            $('body').append('<div class="cardify-effects-overlay"></div>');  
-        }  
+        console.log('Cardify Layout: Movie data:', data.title || data.name, data.id);  
   
         // Заповнюємо метадані  
         const year = (data.release_date || data.first_air_date || '').split('-')[0];  
