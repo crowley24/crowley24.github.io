@@ -1,12 +1,55 @@
 (function () {    
     'use strict';    
   
+    const PLUGIN_ICON = '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="30" width="80" height="40" rx="5" fill="hsl(0, 0%, 30%)"/><circle cx="50" cy="50" r="10" fill="white"/></svg>';  
+  
     function initializePlugin() {    
         console.log('Logo Replacer: Plugin initialized');  
+        addSettings();  
         attachLogoLoader();    
     }    
   
+    function addSettings() {  
+        // Встановлюємо значення за замовчуванням  
+        if (Lampa.Storage.get('logo_replacer_enabled') === undefined) {  
+            Lampa.Storage.set('logo_replacer_enabled', true);  
+        }  
+  
+        // Додаємо компонент налаштувань  
+        Lampa.SettingsApi.addComponent({   
+            component: 'logo_replacer_settings',   
+            name: 'Logo Replacer',   
+            icon: PLUGIN_ICON   
+        });    
+  
+        // Додаємо параметр для увімкнення/вимкнення логотипів  
+        Lampa.SettingsApi.addParam({  
+            component: 'logo_replacer_settings',  
+            param: {   
+                name: 'logo_replacer_enabled',   
+                type: 'trigger',   
+                default: true   
+            },  
+            field: {   
+                name: 'Замінювати назви на логотипи'   
+            },  
+            onChange: (value) => {  
+                console.log('Logo Replacer: Setting changed to:', value);  
+                // Перезавантажуємо поточну сторінку для застосування змін  
+                if (Lampa.Activity.last()) {  
+                    Lampa.Activity.last().reload();  
+                }  
+            }  
+        });  
+    }  
+  
     function loadLogo(event) {    
+        // Перевіряємо, чи увімкнені логотипи в налаштуваннях  
+        if (!Lampa.Storage.get('logo_replacer_enabled')) {  
+            console.log('Logo Replacer: Logos disabled in settings');  
+            return;  
+        }  
+  
         console.log('Logo Replacer: loadLogo called', event);  
           
         const data = event.data.movie;  
