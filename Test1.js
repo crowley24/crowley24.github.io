@@ -1,62 +1,61 @@
 (function () {
-    // 1. Створюємо новий шаблон, де все згруповано ліворуч
-    Lampa.Template.add('apple_tv_full_custom', `
-        <div class="full-start-new apple-style">
-            <div class="full-start-new__background"></div>
-            <div class="full-start-new__details">
-                <div class="apple-left-panel">
-                    <div class="apple-logo-block"></div>
-                    <div class="apple-metadata">
-                        <span class="apple-rating">{rating}</span>
-                        <span class="apple-year">{year}</span>
-                    </div>
-                    <div class="apple-buttons-placeholder"></div>
-                </div>
-            </div>
-        </div>
+    // 1. СТИЛІ: Фіксуємо ліву панель та градієнт
+    Lampa.Utils.putStyle('apple_tv_interface', `
+        .full-start-new {
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: flex-end !important;
+            align-items: flex-start !important;
+            padding: 0 0 5% 5% !important;
+            height: 100% !important;
+            width: 100% !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            z-index: 10 !important;
+            background: linear-gradient(to right, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, transparent 100%) !important;
+        }
+        .full-start__poster, .full-start__details { display: none !important; } /* Прибираємо стандарт */
+        
+        .apple-tv-content { width: 50%; z-index: 20; }
+        .apple-tv-logo img { max-width: 450px; height: auto; margin-bottom: 20px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
+        .apple-tv-title { font-size: 3.5rem; font-weight: bold; margin-bottom: 20px; }
+        .apple-tv-buttons { display: flex; gap: 10px; }
     `);
 
-    // 2. Додаємо стилі для лівої орієнтації
-    Lampa.Utils.putStyle('apple_tv_css', `
-        .apple-style { display: flex; align-items: flex-end; padding: 5%; }
-        .apple-left-panel { width: 50%; z-index: 10; }
-        .apple-logo-block img { max-width: 450px; height: auto; margin-bottom: 20px; }
-        .apple-metadata { margin-bottom: 25px; font-size: 1.4rem; display: flex; gap: 15px; }
-        .apple-rating { background: #fff; color: #000; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
-    `);
-
-    // 3. Використовуємо метод перехоплення компонента (як у робочому плагіні)
+    // 2. ЛОГІКА: Пошук логотипа (UA -> EN) та підміна екрана
     Lampa.Listener.follow('full', function (e) {
         if (e.type === 'complite') {
             var movie = e.data.movie;
             var container = e.object.render();
-            
-            // Отримуємо логотип за вашим правилом (UA -> EN)
             var type = movie.number_of_seasons ? 'tv' : 'movie';
+            
+            // Запит до TMDB за картинками
             Lampa.Api.sources.tmdb.get(type + '/' + movie.id + '/images', {}, function(data) {
+                // Пріоритет: UA -> EN -> Будь-який
                 var logo = data.logos.find(l => l.iso_639_1 === 'uk') || 
                            data.logos.find(l => l.iso_639_1 === 'en') || 
                            data.logos[0];
                 
-                var logoUrl = logo ? 'https://image.tmdb.org/t/p/w500' + logo.file_path : '';
+                var logoUrl = logo ? 'https://image.tmdb.org/t/p/w500' + logo.file_path : null;
 
-                // Пряма заміна HTML вмісту (той самий метод)
-                var newContent = Lampa.Template.get('apple_tv_full_custom', {
-                    rating: movie.vote_average ? movie.vote_average.toFixed(1) : '0.0',
-                    year: new Date(movie.release_date || movie.first_air_date).getFullYear()
-                });
+                // Створюємо нову розмітку
+                var html = $(`
+                    <div class="full-start-new">
+                        <div class="apple-tv-content">
+                            <div class="apple-tv-logo">
+                                ${logoUrl ? `<img src="${logoUrl}">` : `<div class="apple-tv-title">${movie.title || movie.name}</div>`}
+                            </div>
+                            <div class="apple-tv-buttons"></div>
+                        </div>
+                    </div>
+                `);
 
-                if (logoUrl) {
-                    newContent.find('.apple-logo-block').html('<img src="' + logoUrl + '">');
-                } else {
-                    newContent.find('.apple-logo-block').html('<h1>' + (movie.title || movie.name) + '</h1>');
-                }
-
-                // Переносимо кнопки
-                newContent.find('.apple-buttons-placeholder').append(e.object.buttons.render());
+                // Переміщуємо кнопки зі стандартного інтерфейсу
+                html.find('.apple-tv-buttons').append(container.find('.full-start__buttons'));
                 
-                // Фінальна заміна всього блоку
-                container.find('.full-start').html(newContent);
+                // Очищуємо та вставляємо новий інтерфейс
+                container.find('.full-start').after(html);
             });
         }
     });
