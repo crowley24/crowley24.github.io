@@ -1,55 +1,51 @@
 (function () {
     'use strict';
 
-    function initLogoPlugin() {
+    function startPlugin() {
         Lampa.Listener.follow('full', function (e) {
             if (e.type === 'ready') {
-                var card = e.object; // Дані фільму
-                var container = e.body; // DOM елемент картки
+                var card = e.object;
+                var body = e.body;
                 
-                // Знаходимо заголовок
-                var titleElement = container.find('.full-start__title');
-                
-                // Шукаємо логотип: спочатку в основних даних, потім у вкладених
-                var logoPath = card.data.logo || 
-                               (card.data.tmdb_data && card.data.tmdb_data.logo) ||
-                               (card.data.external && card.data.external.logo);
+                // 1. Шукаємо контейнер заголовка
+                var titleElement = body.find('.full-start__title');
+                if (!titleElement.length) return;
 
-                if (logoPath && titleElement.length) {
-                    // Формуємо URL. Якщо шлях від TMDB, додаємо базовий URL
+                // 2. Шукаємо логотип (пріоритет: card.data -> tmdb_data -> external)
+                var logoPath = '';
+                if (card.data.logo) {
+                    logoPath = card.data.logo;
+                } else if (card.data.tmdb_data && card.data.tmdb_data.logo) {
+                    logoPath = card.data.tmdb_data.logo;
+                } else if (card.data.videos && card.data.videos.logo) {
+                    logoPath = card.data.videos.logo;
+                }
+
+                // 3. Якщо лого знайдено — замінюємо текст
+                if (logoPath) {
                     var imgUrl = logoPath.indexOf('http') === -1 
                         ? 'https://image.tmdb.org/t/p/w500' + logoPath 
                         : logoPath;
 
-                    // Створюємо картинку-логотип
-                    var logoImg = $('<img class="custom-movie-logo" src="' + imgUrl + '">');
+                    // Використовуємо вбудований у Lampa метод для створення елементів
+                    var img = $('<img class="full-start__logo" src="' + imgUrl + '" style="max-width: 100%; max-height: 140px; object-fit: contain; margin-bottom: 15px; display: block;">');
 
-                    // Стилізація для гарного вигляду
-                    logoImg.on('load', function() {
-                        titleElement.html(logoImg);
-                        logoImg.css({
-                            'max-width': '100%',
-                            'max-height': '120px',
-                            'object-fit': 'contain',
-                            'margin-bottom': '10px'
-                        });
+                    img.on('load', function() {
+                        titleElement.html(img);
                     });
 
-                    // Якщо картинка не завантажилась (наприклад, 404), лишаємо текст
-                    logoImg.on('error', function() {
-                        console.log('Logo not found, keeping text title');
+                    img.on('error', function() {
+                        console.log('Lampa Logo Plugin: Failed to load logo, keeping text.');
                     });
                 }
             }
         });
     }
 
-    // Очікуємо повної готовності Lampa
-    if (window.appready) initLogoPlugin();
-    else {
-        Lampa.Listener.follow('app', function (e) {
-            if (e.type === 'ready') initLogoPlugin();
-        });
+    // Очікування ініціалізації Lampa
+    if (window.Lampa) {
+        startPlugin();
+    } else {
+        window.addEventListener('lampa:ready', startPlugin);
     }
 })();
-
