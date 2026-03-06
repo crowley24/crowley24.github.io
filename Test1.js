@@ -3,39 +3,32 @@
   
     const PLUGIN_ICON = '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="30" width="80" height="40" rx="5" fill="hsl(0, 0%, 30%)"/><circle cx="50" cy="50" r="10" fill="white"/></svg>';  
   
-    const ICONS = {  
-        play: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 5.14V19.14L19 12.14L8 5.14Z" fill="currentColor"/></svg>`,  
-        book: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 3H7C5.9 3 5 3.9 5 5V21L12 18L19 21V5C19 3.9 18.1 3 17 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,  
-        reaction: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" stroke="currentColor" stroke-width="2"/></svg>`,  
-        options: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="2" fill="currentColor"/><circle cx="5" cy="12" r="2" fill="currentColor"/><circle cx="19" cy="12" r="2" fill="currentColor"/></svg>`,  
-        trailer: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 6H3C1.9 6 1 6.9 1 8V16C1 17.1 1.9 18 3 18H21C22.1 18 23 17.1 23 16V8C23 6.9 22.1 6 21 6Z" stroke="currentColor" stroke-width="2"/><path d="M10 9L15 12L10 15V9Z" fill="currentColor"/></svg>`  
-    };  
-  
     function initializePlugin() {    
-        console.log('Netflix Single: Plugin initialized');  
+        console.log('Cardify Layout: Plugin initialized');  
         addSettings();  
+        addCustomTemplate();  
         addStyles();  
         attachLogoLoader();    
     }    
   
     function addSettings() {  
-        if (Lampa.Storage.get('netflix_single_enabled') === undefined) {  
-            Lampa.Storage.set('netflix_single_enabled', true);  
+        if (Lampa.Storage.get('cardify_layout_enabled') === undefined) {  
+            Lampa.Storage.set('cardify_layout_enabled', true);  
         }  
-        if (Lampa.Storage.get('netflix_logo_rotate') === undefined) {  
-            Lampa.Storage.set('netflix_logo_rotate', true);  
+        if (Lampa.Storage.get('cardify_logo_rotate') === undefined) {  
+            Lampa.Storage.set('cardify_logo_rotate', true);  
         }  
   
         Lampa.SettingsApi.addComponent({   
-            component: 'netflix_single_settings',   
-            name: 'Netflix Single',   
+            component: 'cardify_layout_settings',   
+            name: 'Cardify Layout',   
             icon: PLUGIN_ICON   
         });    
   
         Lampa.SettingsApi.addParam({  
-            component: 'netflix_single_settings',  
+            component: 'cardify_layout_settings',  
             param: {   
-                name: 'netflix_single_enabled',   
+                name: 'cardify_layout_enabled',   
                 type: 'trigger',   
                 default: true   
             },  
@@ -43,7 +36,7 @@
                 name: 'Netflix стиль інтерфейсу'   
             },  
             onChange: (value) => {  
-                console.log('Netflix Single: Setting changed to:', value);  
+                console.log('Cardify Layout: Setting changed to:', value);  
                 if (Lampa.Activity.last()) {  
                     Lampa.Activity.last().reload();  
                 }  
@@ -51,9 +44,9 @@
         });  
   
         Lampa.SettingsApi.addParam({  
-            component: 'netflix_single_settings',  
+            component: 'cardify_layout_settings',  
             param: {   
-                name: 'netflix_logo_rotate',   
+                name: 'cardify_logo_rotate',   
                 type: 'trigger',   
                 default: true   
             },  
@@ -61,7 +54,7 @@
                 name: 'Змінювати логотип при кожному відкритті'   
             },  
             onChange: (value) => {  
-                console.log('Netflix Single: Rotation setting changed to:', value);  
+                console.log('Cardify Layout: Rotation setting changed to:', value);  
                 if (Lampa.Activity.last()) {  
                     Lampa.Activity.last().reload();  
                 }  
@@ -69,282 +62,248 @@
         });  
     }  
   
+    function addCustomTemplate() {    
+        const template = `  
+        <div class="full-start-new cardify">    
+            <div class="full-start-new__right">  
+                <div class="cardify__left">  
+                    <div class="full-start-new__head"></div>  
+                    <div class="full-start-new__title">{title}</div>  
+                    <div class="full-start-new__rate-line rate-fix">  
+                        <div class="full-start-new__rate">  
+                            <div class="full-start-new__rating--imdb hide"></div>  
+                            <div class="full-start-new__rating--kp hide"></div>  
+                        </div>  
+                    </div>  
+                    <div class="cardify__details">  
+                        <div class="full-start-new__info"></div>  
+                        <div class="full-start-new__descr"></div>  
+                    </div>  
+                    <div class="full-start-new__buttons"></div>  
+                </div>  
+                <div class="cardify__right">  
+                    <div class="full-start__background"></div>  
+                </div>  
+            </div>  
+        </div>`;    
+        Lampa.Template.add('full_start_new', template);    
+    }  
+  
     function addStyles() {    
         const styles = `  
         <style>  
-        body.netflix-single-enabled .full-start-new {  
-            position: relative !important;  
-            height: 100vh !important;  
-            display: flex !important;  
-            align-items: flex-end !important;  
-            padding-left: 5% !important;  
-            overflow: hidden !important;  
+        .cardify .full-start-new__right {  
+            display: -webkit-box;  
+            display: -webkit-flex;  
+            display: -moz-box;  
+            display: -ms-flexbox;  
+            display: flex;  
+            -webkit-box-align: end;  
+            -webkit-align-items: flex-end;  
+            -moz-box-align: end;  
+            -ms-flex-align: end;  
+            align-items: flex-end;  
+            position: relative;  
+            height: 100vh;  
         }  
   
-        /* Фонове зображення через псевдо-елемент */  
-        body.netflix-single-enabled .full-start-new::before {  
-            content: '' !important;  
-            position: absolute !important;  
-            top: 0 !important;  
-            left: 0 !important;  
-            right: 0 !important;  
-            bottom: 0 !important;  
-            background: inherit !important;  
-            background-size: cover !important;  
-            background-position: center !important;  
-            z-index: 1 !important;  
+        .cardify__left {  
+            -webkit-box-flex: 1;  
+            -webkit-flex-grow: 1;  
+            -moz-box-flex: 1;  
+            -ms-flex-positive: 1;  
+            flex-grow: 1;  
+            padding: 4em 5em 4em 5em;  
+            position: relative;  
+            z-index: 2;  
         }  
   
-        /* Градієнтний overlay */  
-        body.netflix-single-enabled .full-start-new::after {  
-            content: '' !important;  
-            position: absolute !important;  
-            top: 0 !important;  
-            left: 0 !important;  
-            right: 0 !important;  
-            bottom: 0 !important;  
-            background: linear-gradient(90deg,  
-                rgba(0, 0, 0, 1) 0%,  
-                rgba(0, 0, 0, 0.8) 25%,  
-                rgba(0, 0, 0, 0.4) 50%,  
-                rgba(0, 0, 0, 0) 100%  
-            ) !important;  
-            z-index: 2 !important;  
+        .cardify__right {  
+            display: -webkit-box;  
+            display: -webkit-flex;  
+            display: -moz-box;  
+            display: -ms-flexbox;  
+            display: flex;  
+            -webkit-box-align: center;  
+            -webkit-align-items: center;  
+            -moz-box-align: center;  
+            -ms-flex-align: center;  
+            align-items: center;  
+            -webkit-flex-shrink: 0;  
+            -ms-flex-negative: 0;  
+            flex-shrink: 0;  
+            position: relative;  
+            width: 55%;  
         }  
   
-        /* Контент поверх фону */  
-        body.netflix-single-enabled .full-start__body {  
-            position: relative !important;  
-            z-index: 3 !important;  
-            max-width: 45% !important;  
-            padding-bottom: 10% !important;  
-            background: none !important;  
+        .cardify__details {  
+            margin-top: 1.5em;  
         }  
   
-        body.netflix-single-enabled .full-start__title img {  
-            max-width: 400px !important;  
-            max-height: 120px !important;  
-            object-fit: contain !important;  
-            object-position: left !important;  
+        .cardify-effects-overlay {  
+            position: fixed;  
+            top: 0;  
+            left: 0;  
+            width: 100vw;  
+            height: 100vh;  
+            pointer-events: none;  
+            z-index: 0;  
+            background-color: transparent;  
+            background-image: linear-gradient(225deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 55%);  
+            transition: background-color 0.4s ease;  
         }  
   
-        body.netflix-single-enabled .full-start__title {  
-            font-size: 3em !important;  
-            font-weight: 700 !important;  
-            color: #fff !important;  
-            margin-bottom: 0.5em !important;  
-            line-height: 1.1 !important;  
+        .cardify .full-start__background {  
+            position: absolute;  
+            top: 0;  
+            left: 0;  
+            width: 100%;  
+            height: 100%;  
+            z-index: 1;  
         }  
   
-        body.netflix-single-enabled .full-start__info {  
-            font-size: 1.2em !important;  
-            color: rgba(255,255,255,0.8) !important;  
-            margin-bottom: 0.5em !important;  
-            font-weight: 500 !important;  
+        .cardify .full-start-new__title {  
+            font-size: 3.5em;  
+            font-weight: 700;  
+            line-height: 1.1;  
+            margin-bottom: 0.5em;  
         }  
   
-        body.netflix-single-enabled .full-start__descr {  
-            font-size: 1.1em !important;  
-            line-height: 1.6 !important;  
-            color: rgba(255,255,255,0.9) !important;  
-            max-width: 600px !important;  
-            display: -webkit-box !important;  
-            -webkit-line-clamp: 3 !important;  
-            -webkit-box-orient: vertical !important;  
-            overflow: hidden !important;  
+        .cardify .full-start-new__title img {  
+            max-width: 400px;  
+            max-height: 120px;  
+            object-fit: contain;  
+            object-position: left;  
         }  
   
-        body.netflix-single-enabled .full-start-new__buttons {  
-            display: flex !important;  
-            align-items: center !important;  
-            gap: 15px !important;  
-            margin-top: 2em !important;  
+        .cardify .full-start-new__info {  
+            font-size: 1.2em;  
+            margin-bottom: 1em;  
+            opacity: 0.8;  
         }  
   
-        body.netflix-single-enabled .button--play {  
-            background: #fff !important;  
-            color: #000 !important;  
-            padding: 12px 24px !important;  
-            border-radius: 8px !important;  
-            font-weight: 600 !important;  
-            transition: transform 0.2s, background 0.2s !important;  
+        .cardify .full-start-new__descr {  
+            font-size: 1.1em;  
+            line-height: 1.5;  
+            max-width: 600px;  
+            display: -webkit-box;  
+            -webkit-line-clamp: 3;  
+            -webkit-box-orient: vertical;  
+            overflow: hidden;  
         }  
   
-        body.netflix-single-enabled .button--play:hover {  
-            background: #e0e0e0 !important;  
-            transform: scale(1.05) !important;  
-        }  
-  
-        body.netflix-single-enabled .full-start__button:not(.button--play) {  
-            background: rgba(255,255,255,0.2) !important;  
-            border: none !important;  
-            color: rgba(255,255,255,0.8) !important;  
-            width: 50px !important;  
-            height: 50px !important;  
-            border-radius: 50% !important;  
-            display: flex !important;  
-            justify-content: center !important;  
-            align-items: center !important;  
-            transition: transform 0.2s, background 0.2s !important;  
-        }  
-  
-        body.netflix-single-enabled .full-start__button:not(.button--play):hover {  
-            background: rgba(255,255,255,0.3) !important;  
-            color: #fff !important;  
-            transform: scale(1.1) !important;  
-        }  
-  
-        /* Мобільні пристрої */  
+        /* Адаптивність для мобільних */  
         @media screen and (max-width: 768px) {  
-            body.netflix-single-enabled .full-start-new {  
-                padding: 3% 4% !important;  
+            .cardify__left {  
+                padding: 2em 3em 2em 3em;  
             }  
               
-            body.netflix-single-enabled .full-start__body {  
-                max-width: 60% !important;  
-                padding-bottom: 8% !important;  
+            .cardify .full-start-new__title {  
+                font-size: 2.5em;  
             }  
               
-            body.netflix-single-enabled .full-start__title img {  
-                max-height: 80px !important;  
-                max-width: 300px !important;  
+            .cardify .full-start-new__title img {  
+                max-width: 300px;  
+                max-height: 80px;  
             }  
               
-            body.netflix-single-enabled .full-start__title {  
-                font-size: 2.2em !important;  
-            }  
-              
-            body.netflix-single-enabled .full-start__descr {  
-                -webkit-line-clamp: 2 !important;  
+            .cardify__right {  
+                width: 40%;  
             }  
         }  
   
-        /* Горизонтальна орієнтація мобільних */  
+        /* Горизонтальна орієнтація */  
         @media screen and (orientation: landscape) and (max-width: 1024px) {  
-            body.netflix-single-enabled .full-start-new {  
-                padding: 2% 4% !important;  
-                align-items: center !important;  
+            .cardify__left {  
+                padding: 2em 3em 2em 3em;  
             }  
               
-            body.netflix-single-enabled .full-start__body {  
-                max-width: 50% !important;  
-                padding-bottom: 5% !important;  
+            .cardify .full-start-new__title {  
+                font-size: 2em;  
             }  
               
-            body.netflix-single-enabled .full-start__title img {  
-                max-height: 60px !important;  
-                max-width: 300px !important;  
+            .cardify .full-start-new__title img {  
+                max-width: 250px;  
+                max-height: 60px;  
             }  
               
-            body.netflix-single-enabled .full-start__title {  
-                font-size: 1.8em !important;  
-                margin-bottom: 0.3em !important;  
-            }  
-              
-            body.netflix-single-enabled .full-start__descr {  
-                -webkit-line-clamp: 2 !important;  
-                font-size: 1em !important;  
-            }  
-              
-            body.netflix-single-enabled .full-start__info {  
-                font-size: 1em !important;  
-                margin-bottom: 0.3em !important;  
-            }  
-              
-            body.netflix-single-enabled .full-start-new__buttons {  
-                margin-top: 1em !important;  
-                gap: 10px !important;  
-            }  
-              
-            body.netflix-single-enabled .button--play {  
-                padding: 8px 16px !important;  
-                font-size: 0.9em !important;  
-            }  
-              
-            body.netflix-single-enabled .full-start__button:not(.button--play) {  
-                width: 40px !important;  
-                height: 40px !important;  
-                padding: 8px !important;  
+            .cardify .full-start-new__descr {  
+                -webkit-line-clamp: 2;  
             }  
         }  
   
-        /* Додатковий медіа-запит для дуже малих екранів в горизонті */  
-        @media screen and (orientation: landscape) and (max-height: 500px) {  
-            body.netflix-single-enabled .full-start__title img {  
-                max-height: 50px !important;  
+        /* Дуже малі екрани */  
+        @media screen and (max-width: 480px) {  
+            .cardify__left {  
+                padding: 1.5em 2em 1.5em 2em;  
             }  
               
-            body.netflix-single-enabled .full-start__title {  
-                font-size: 1.6em !important;  
+            .cardify .full-start-new__title {  
+                font-size: 1.8em;  
             }  
               
-            body.netflix-single-enabled .full-start__descr {  
-                -webkit-line-clamp: 1 !important;  
+            .cardify .full-start-new__title img {  
+                max-width: 200px;  
+                max-height: 50px;  
             }  
-        }  
-  
-        /* Анімація фону */  
-        @keyframes netflixKenBurns {  
-            0% { transform: scale(1); }  
-            100% { transform: scale(1.1); }  
-        }  
-  
-        body.netflix-single-enabled.netflix--zoom-enabled .full-start-new::before {  
-            animation: netflixKenBurns 30s ease-out forwards !important;  
+              
+            .cardify__right {  
+                width: 30%;  
+            }  
         }  
         </style>`;    
         $('body').append(styles);  
     }  
   
     function loadLogo(event) {    
-        if (!Lampa.Storage.get('netflix_single_enabled')) {  
-            console.log('Netflix Single: Layout disabled in settings');  
+        if (!Lampa.Storage.get('cardify_layout_enabled')) {  
+            console.log('Cardify Layout: Layout disabled in settings');  
             return;  
         }  
   
-        console.log('Netflix Single: loadLogo called', event);  
+        console.log('Cardify Layout: loadLogo called', event);  
           
         const data = event.data.movie;  
         const render = event.object.activity.render();  
           
         if (!data) {  
-            console.log('Netflix Single: No movie data found');  
+            console.log('Cardify Layout: No movie data found');  
             return;  
         }  
   
-        console.log('Netflix Single: Movie data:', data.title || data.name, data.id);  
-  
-        // Додаємо клас для активації стилів  
-        $('body').addClass('netflix-single-enabled');  
+        // Додаємо overlay для ефекту  
+        if (!$('.cardify-effects-overlay').length) {  
+            $('body').append('<div class="cardify-effects-overlay"></div>');  
+        }  
   
         // Заповнюємо метадані  
         const year = (data.release_date || data.first_air_date || '').split('-')[0];  
         const genres = data.genres?.slice(0, 2).map(g => g.name).join(' · ');  
         const runtime = data.runtime ? `${Math.floor(data.runtime / 60)}г ${data.runtime % 60}хв` : '';  
           
-        render.find('.full-start__info').text(`${year}  ·  ${genres}  ·  ${runtime}`);  
-        render.find('.full-start__descr').text(data.overview || '');  
+        render.find('.full-start-new__info').text(`${year}  ·  ${genres}  ·  ${runtime}`);  
+        render.find('.full-start-new__descr').text(data.overview || '');  
   
         // Обробка логотипу  
-        const titleElement = render.find('.full-start__title');  
+        const titleElement = render.find('.full-start-new__title');  
         if (!titleElement.length) {  
-            console.log('Netflix Single: No title element found');  
+            console.log('Cardify Layout: No title element found');  
             return;  
         }  
   
         const apiUrl = Lampa.TMDB.api(`${data.name ? 'tv' : 'movie'}/${data.id}/images?api_key=${Lampa.TMDB.key()}`);  
-        console.log('Netflix Single: Requesting logos from:', apiUrl);  
+        console.log('Cardify Layout: Requesting logos from:', apiUrl);  
           
         $.get(apiUrl, (d) => {  
-            console.log('Netflix Single: TMDB response:', d);  
+            console.log('Cardify Layout: TMDB response:', d);  
               
             if (!d.logos || !d.logos.length) {  
-                console.log('Netflix Single: No logos found');  
+                console.log('Cardify Layout: No logos found');  
                 return;  
             }  
   
             let selectedLogo;  
-            const rotateEnabled = Lampa.Storage.get('netflix_logo_rotate');  
+            const rotateEnabled = Lampa.Storage.get('cardify_logo_rotate');  
               
             if (rotateEnabled) {  
                 selectedLogo = getNextLogo(data.id, d.logos);  
@@ -353,70 +312,71 @@
                               d.logos.find(l => l.iso_639_1 === 'en');  
             }  
               
-            console.log('Netflix Single: Selected logo:', selectedLogo);  
+            console.log('Cardify Layout: Selected logo:', selectedLogo);  
               
             if (selectedLogo) {  
                 const logoUrl = Lampa.TMDB.image('/t/p/w500' + selectedLogo.file_path);  
-                console.log('Netflix Single: Logo URL:', logoUrl);  
+                console.log('Cardify Layout: Logo URL:', logoUrl);  
                   
                 titleElement.html(`<img src="${logoUrl}" alt="${data.title || data.name}">`);  
-                console.log('Netflix Single: Logo inserted successfully');  
+                console.log('Cardify Layout: Logo inserted successfully');  
             }  
         }).fail((xhr, status, error) => {  
-            console.log('Netflix Single: TMDB request failed:', status, error);  
+            console.log('Cardify Layout: TMDB request failed:', status, error);  
         });  
     }  
- function getNextLogo(movieId, logos) {  
-    const historyKey = `netflix_single_logo_history_${movieId}`;  
-    let logoHistory = Lampa.Storage.get(historyKey) || [];  
-      
-    const filteredLogos = logos.filter(l => l.iso_639_1 === 'uk' || l.iso_639_1 === 'en');  
-    const prioritizedLogos = [  
-        ...filteredLogos.filter(l => l.iso_639_1 === 'uk'),  
-        ...filteredLogos.filter(l => l.iso_639_1 === 'en')  
-    ];  
   
-    let nextLogo = null;  
-    for (const logo of prioritizedLogos) {  
-        if (!logoHistory.includes(logo.file_path)) {  
-            nextLogo = logo;  
-            break;  
+    function getNextLogo(movieId, logos) {  
+        const historyKey = `cardify_logo_history_${movieId}`;  
+        let logoHistory = Lampa.Storage.get(historyKey) || [];  
+          
+        const filteredLogos = logos.filter(l => l.iso_639_1 === 'uk' || l.iso_639_1 === 'en');  
+        const prioritizedLogos = [  
+            ...filteredLogos.filter(l => l.iso_639_1 === 'uk'),  
+            ...filteredLogos.filter(l => l.iso_639_1 === 'en')  
+        ];  
+  
+        let nextLogo = null;  
+        for (const logo of prioritizedLogos) {  
+            if (!logoHistory.includes(logo.file_path)) {  
+                nextLogo = logo;  
+                break;  
+            }  
         }  
+  
+        if (!nextLogo && prioritizedLogos.length > 0) {  
+            logoHistory = [];  
+            nextLogo = prioritizedLogos[0];  
+        }  
+  
+        if (nextLogo) {  
+            logoHistory.push(nextLogo.file_path);  
+            Lampa.Storage.set(historyKey, logoHistory);  
+        }  
+  
+        return nextLogo;  
     }  
   
-    if (!nextLogo && prioritizedLogos.length > 0) {  
-        logoHistory = [];  
-        nextLogo = prioritizedLogos[0];  
+    function attachLogoLoader() {    
+        console.log('Cardify Layout: Attaching logo loader');  
+        Lampa.Listener.follow('full', (e) => {   
+            console.log('Cardify Layout: Full event:', e.type);  
+            if (e.type === 'complite') {  
+                setTimeout(() => loadLogo(e), 10);  
+            }  
+        });    
+    }    
+  
+    if (window.appready) {  
+        console.log('Cardify Layout: App ready, initializing');  
+        initializePlugin();    
+    } else {  
+        console.log('Cardify Layout: Waiting for app ready');  
+        Lampa.Listener.follow('app', (e) => {   
+            if (e.type === 'ready') {  
+                console.log('Cardify Layout: App ready event received');  
+                initializePlugin();  
+            }  
+        });    
     }  
-  
-    if (nextLogo) {  
-        logoHistory.push(nextLogo.file_path);  
-        Lampa.Storage.set(historyKey, logoHistory);  
-    }  
-  
-    return nextLogo;  
-}  
-  
-function attachLogoLoader() {    
-    console.log('Netflix Single: Attaching logo loader');  
-    Lampa.Listener.follow('full', (e) => {   
-        console.log('Netflix Single: Full event:', e.type);  
-        if (e.type === 'complite') {  
-            setTimeout(() => loadLogo(e), 10);  
-        }  
-    });    
-}    
-  
-if (window.appready) {  
-    console.log('Netflix Single: App ready, initializing');  
-    initializePlugin();    
-} else {  
-    console.log('Netflix Single: Waiting for app ready');  
-    Lampa.Listener.follow('app', (e) => {   
-        if (e.type === 'ready') {  
-            console.log('Netflix Single: App ready event received');  
-            initializePlugin();  
-        }  
-    });    
-}  
 })();
