@@ -38,7 +38,6 @@
             }  
         });  
   
-        // Нова опція для ротації логотипів  
         Lampa.SettingsApi.addParam({  
             component: 'logo_replacer_settings',  
             param: {   
@@ -104,13 +103,12 @@
             const rotateEnabled = Lampa.Storage.get('logo_replacer_rotate');  
               
             if (rotateEnabled) {  
-                // Логіка ротації логотипів  
+                // Логіка ротації логотипів (тільки українські та англійські)  
                 selectedLogo = getNextLogo(data.id, d.logos);  
             } else {  
-                // Оригінальна логіка пріоритету  
+                // Оригінальна логіка пріоритету (тільки українські та англійські)  
                 selectedLogo = d.logos.find(l => l.iso_639_1 === 'uk') ||   
-                              d.logos.find(l => l.iso_639_1 === 'en') ||   
-                              d.logos[0];  
+                              d.logos.find(l => l.iso_639_1 === 'en');  
             }  
               
             console.log('Logo Replacer: Selected logo:', selectedLogo);  
@@ -134,12 +132,16 @@
         const historyKey = `logo_history_${movieId}`;  
         let logoHistory = Lampa.Storage.get(historyKey) || [];  
           
-        // Фільтруємо логотипи за пріоритетом мов (український, англійський, інші)  
+        // Фільтруємо логотипи - тільки українські та англійські  
+        const filteredLogos = logos.filter(l => l.iso_639_1 === 'uk' || l.iso_639_1 === 'en');  
+          
+        // Пріоритезація: спочатку українські, потім англійські  
         const prioritizedLogos = [  
-            ...logos.filter(l => l.iso_639_1 === 'uk'),  
-            ...logos.filter(l => l.iso_639_1 === 'en'),  
-            ...logos.filter(l => l.iso_639_1 !== 'uk' && l.iso_639_1 !== 'en')  
+            ...filteredLogos.filter(l => l.iso_639_1 === 'uk'),  
+            ...filteredLogos.filter(l => l.iso_639_1 === 'en')  
         ];  
+  
+        console.log('Logo Replacer: Filtered logos count:', prioritizedLogos.length);  
   
         // Знаходимо наступний логотип, який ще не був показаний  
         let nextLogo = null;  
