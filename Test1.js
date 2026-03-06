@@ -1,48 +1,63 @@
 (function () {
-    // 1. Оновлені стилі (додаємо !important, щоб Lampa не перебила їх)
-    Lampa.Utils.putStyle('apple_tv_v2', `
-        .apple-full {
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100% !important;
-            height: 100% !important;
-            z-index: 100 !important;
-            background: #000 !important;
-            display: block !important;
-        }
-        /* ... інші стилі залишаємо ... */
+    // 1. Створюємо новий шаблон, де все згруповано ліворуч
+    Lampa.Template.add('apple_tv_full_custom', `
+        <div class="full-start-new apple-style">
+            <div class="full-start-new__background"></div>
+            <div class="full-start-new__details">
+                <div class="apple-left-panel">
+                    <div class="apple-logo-block"></div>
+                    <div class="apple-metadata">
+                        <span class="apple-rating">{rating}</span>
+                        <span class="apple-year">{year}</span>
+                    </div>
+                    <div class="apple-buttons-placeholder"></div>
+                </div>
+            </div>
+        </div>
     `);
 
+    // 2. Додаємо стилі для лівої орієнтації
+    Lampa.Utils.putStyle('apple_tv_css', `
+        .apple-style { display: flex; align-items: flex-end; padding: 5%; }
+        .apple-left-panel { width: 50%; z-index: 10; }
+        .apple-logo-block img { max-width: 450px; height: auto; margin-bottom: 20px; }
+        .apple-metadata { margin-bottom: 25px; font-size: 1.4rem; display: flex; gap: 15px; }
+        .apple-rating { background: #fff; color: #000; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+    `);
+
+    // 3. Використовуємо метод перехоплення компонента (як у робочому плагіні)
     Lampa.Listener.follow('full', function (e) {
         if (e.type === 'complite') {
-            // Спробуємо знайти конкретний елемент, який Lampa точно створює
-            var scroll = e.object.render().find('.scroll-content');
+            var movie = e.data.movie;
+            var container = e.object.render();
             
-            if (scroll.length > 0) {
-                var movie = e.data.movie;
+            // Отримуємо логотип за вашим правилом (UA -> EN)
+            var type = movie.number_of_seasons ? 'tv' : 'movie';
+            Lampa.Api.sources.tmdb.get(type + '/' + movie.id + '/images', {}, function(data) {
+                var logo = data.logos.find(l => l.iso_639_1 === 'uk') || 
+                           data.logos.find(l => l.iso_639_1 === 'en') || 
+                           data.logos[0];
                 
-                fetchLogo(movie, function(logoUrl) {
-                    var html = `
-                        <div class="apple-full">
-                            <div class="apple-full__bg" style="background-image: url(${movie.background_image || movie.backdrop_path})"></div>
-                            <div class="apple-full__shadow"></div>
-                            <div class="apple-full__content">
-                                <div class="apple-full__logo">
-                                    ${logoUrl ? `<img src="${logoUrl}">` : `<h1>${movie.title || movie.name}</h1>`}
-                                </div>
-                                <div class="apple-full__buttons"></div>
-                            </div>
-                        </div>
-                    `;
-                    
-                    // Це "агресивний" метод: ми повністю затираємо все всередині компонента
-                    e.object.render().html(html);
-                    
-                    // Повертаємо кнопки на місце
-                    e.object.render().find('.apple-full__buttons').append(e.object.buttons.render());
+                var logoUrl = logo ? 'https://image.tmdb.org/t/p/w500' + logo.file_path : '';
+
+                // Пряма заміна HTML вмісту (той самий метод)
+                var newContent = Lampa.Template.get('apple_tv_full_custom', {
+                    rating: movie.vote_average ? movie.vote_average.toFixed(1) : '0.0',
+                    year: new Date(movie.release_date || movie.first_air_date).getFullYear()
                 });
-            }
+
+                if (logoUrl) {
+                    newContent.find('.apple-logo-block').html('<img src="' + logoUrl + '">');
+                } else {
+                    newContent.find('.apple-logo-block').html('<h1>' + (movie.title || movie.name) + '</h1>');
+                }
+
+                // Переносимо кнопки
+                newContent.find('.apple-buttons-placeholder').append(e.object.buttons.render());
+                
+                // Фінальна заміна всього блоку
+                container.find('.full-start').html(newContent);
+            });
         }
     });
 })();
