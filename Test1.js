@@ -167,48 +167,55 @@
             padding: 12px 24px !important;  
             border-radius: 8px !important;  
             font-weight: 600 !important;  
-            font-size: 1.1em !important;  
+            transition: transform 0.2s, background 0.2s !important;  
+        }  
+  
+        body.netflix-single-enabled .button--play:hover {  
+            background: #e0e0e0 !important;  
+            transform: scale(1.05) !important;  
         }  
   
         body.netflix-single-enabled .full-start__button:not(.button--play) {  
             background: rgba(255,255,255,0.2) !important;  
             border: none !important;  
-            color: #fff !important;  
-            padding: 12px !important;  
+            color: rgba(255,255,255,0.8) !important;  
+            width: 50px !important;  
+            height: 50px !important;  
             border-radius: 50% !important;  
-            width: 48px !important;  
-            height: 48px !important;  
+            display: flex !important;  
+            justify-content: center !important;  
+            align-items: center !important;  
+            transition: transform 0.2s, background 0.2s !important;  
         }  
   
-        /* Приховуємо стандартний фон */  
-        body.netflix-single-enabled .full-start__background {  
-            display: none !important;  
+        body.netflix-single-enabled .full-start__button:not(.button--play):hover {  
+            background: rgba(255,255,255,0.3) !important;  
+            color: #fff !important;  
+            transform: scale(1.1) !important;  
         }  
   
-        /* Адаптивність для мобільних пристроїв */  
+        /* Мобільні пристрої */  
         @media screen and (max-width: 768px) {  
             body.netflix-single-enabled .full-start-new {  
-                padding: 5% 4% !important;  
+                padding: 3% 4% !important;  
             }  
               
             body.netflix-single-enabled .full-start__body {  
-                max-width: 100% !important;  
+                max-width: 60% !important;  
+                padding-bottom: 8% !important;  
             }  
               
             body.netflix-single-enabled .full-start__title img {  
-                max-width: 300px !important;  
                 max-height: 80px !important;  
+                max-width: 300px !important;  
             }  
               
             body.netflix-single-enabled .full-start__title {  
-                font-size: 2em !important;  
+                font-size: 2.2em !important;  
             }  
-        }  
-  
-        /* Планшети */  
-        @media screen and (min-width: 769px) and (max-width: 1024px) {  
-            body.netflix-single-enabled .full-start__body {  
-                max-width: 55% !important;  
+              
+            body.netflix-single-enabled .full-start__descr {  
+                -webkit-line-clamp: 2 !important;  
             }  
         }  
   
@@ -359,71 +366,57 @@
             console.log('Netflix Single: TMDB request failed:', status, error);  
         });  
     }  
+ function getNextLogo(movieId, logos) {  
+    const historyKey = `netflix_single_logo_history_${movieId}`;  
+    let logoHistory = Lampa.Storage.get(historyKey) || [];  
+      
+    const filteredLogos = logos.filter(l => l.iso_639_1 === 'uk' || l.iso_639_1 === 'en');  
+    const prioritizedLogos = [  
+        ...filteredLogos.filter(l => l.iso_639_1 === 'uk'),  
+        ...filteredLogos.filter(l => l.iso_639_1 === 'en')  
+    ];  
   
-    function getNextLogo(movieId, logos) {  
-        const historyKey = `netflix_single_logo_history_${movieId}`;  
-        let logoHistory = Lampa.Storage.get(historyKey) || [];  
-          
-        const filteredLogos = logos.filter(l => l.iso_639_1 === 'uk' || l.iso_639_1 === 'en');  
-        const prioritizedLogos = [  
-            ...filteredLogos.filter(l => l.iso_639_1 === 'uk'),  
-            ...filteredLogos.filter(l => l.iso_639_1 === 'en')  
-        ];  
-  
-        let nextLogo = null;  
-        for (const logo of prioritizedLogos) {  
-            if (!logoHistory.includes(logo.file_path)) {  
-                nextLogo = logo;  
-                break;  
-            }  
+    let nextLogo = null;  
+    for (const logo of prioritizedLogos) {  
+        if (!logoHistory.includes(logo.file_path)) {  
+            nextLogo = logo;  
+            break;  
         }  
-  
-        if (!nextLogo && prioritizedLogos.length > 0) {  
-            logoHistory = [];  
-            nextLogo = prioritizedLogos[0];  
-        }  
-  
-        if (nextLogo) {  
-            logoHistory.push(nextLogo.file_path);  
-            Lampa.Storage.set(historyKey, logoHistory);  
-        }  
-  
-        return nextLogo;  
     }  
   
-    function attachLogoLoader() {    
-        console.log('Netflix Single: Attaching logo loader');  
-        Lampa.Listener.follow('full', (e) => {   
-            console.log('Netflix Single: Full event:', e.type);  
-            if (e.type === 'complite') {  
-                setTimeout(() => loadLogo(e), 10);  
-            }  
-        });    
-    }    
-  
-    if (window.appready) {  
-        console.log('Netflix Single: App ready, initializing');  
-        initializePlugin();    
-    } else {  
-        console.log('Netflix Single: Waiting for app ready');  
-        Lampa.Listener.follow('app', (e) => {   
-            if (e.type === 'ready') {  
-                console.log('Netflix Single: App ready event received');  
-                initializePlugin();  
-            }  
-        });    
-  }    
-  
-    if (window.appready) {  
-        console.log('Netflix Single: App ready, initializing');  
-        initializePlugin();    
-    } else {  
-        console.log('Netflix Single: Waiting for app ready');  
-        Lampa.Listener.follow('app', (e) => {   
-            if (e.type === 'ready') {  
-                console.log('Netflix Single: App ready event received');  
-                initializePlugin();  
-            }  
-        });    
+    if (!nextLogo && prioritizedLogos.length > 0) {  
+        logoHistory = [];  
+        nextLogo = prioritizedLogos[0];  
     }  
+  
+    if (nextLogo) {  
+        logoHistory.push(nextLogo.file_path);  
+        Lampa.Storage.set(historyKey, logoHistory);  
+    }  
+  
+    return nextLogo;  
+}  
+  
+function attachLogoLoader() {    
+    console.log('Netflix Single: Attaching logo loader');  
+    Lampa.Listener.follow('full', (e) => {   
+        console.log('Netflix Single: Full event:', e.type);  
+        if (e.type === 'complite') {  
+            setTimeout(() => loadLogo(e), 10);  
+        }  
+    });    
+}    
+  
+if (window.appready) {  
+    console.log('Netflix Single: App ready, initializing');  
+    initializePlugin();    
+} else {  
+    console.log('Netflix Single: Waiting for app ready');  
+    Lampa.Listener.follow('app', (e) => {   
+        if (e.type === 'ready') {  
+            console.log('Netflix Single: App ready event received');  
+            initializePlugin();  
+        }  
+    });    
+}  
 })();
