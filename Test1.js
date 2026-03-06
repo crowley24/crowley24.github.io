@@ -4,7 +4,7 @@
     const PLUGIN_ICON = '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="30" width="80" height="40" rx="5" fill="hsl(0, 0%, 30%)"/><circle cx="50" cy="50" r="10" fill="white"/></svg>';  
   
     function initializePlugin() {    
-        console.log('Cardify Layout: Plugin initialized');  
+        console.log('Netflix Layout: Plugin initialized');  
         addSettings();  
         addCustomTemplate();  
         addStyles();  
@@ -12,23 +12,23 @@
     }    
   
     function addSettings() {  
-        if (Lampa.Storage.get('cardify_layout_enabled') === undefined) {  
-            Lampa.Storage.set('cardify_layout_enabled', true);  
+        if (Lampa.Storage.get('netflix_layout_enabled') === undefined) {  
+            Lampa.Storage.set('netflix_layout_enabled', true);  
         }  
-        if (Lampa.Storage.get('cardify_logo_rotate') === undefined) {  
-            Lampa.Storage.set('cardify_logo_rotate', true);  
+        if (Lampa.Storage.get('netflix_logo_rotate') === undefined) {  
+            Lampa.Storage.set('netflix_logo_rotate', true);  
         }  
   
         Lampa.SettingsApi.addComponent({   
-            component: 'cardify_layout_settings',   
-            name: 'Cardify Layout',   
+            component: 'netflix_layout_settings',   
+            name: 'Netflix Layout',   
             icon: PLUGIN_ICON   
         });    
   
         Lampa.SettingsApi.addParam({  
-            component: 'cardify_layout_settings',  
+            component: 'netflix_layout_settings',  
             param: {   
-                name: 'cardify_layout_enabled',   
+                name: 'netflix_layout_enabled',   
                 type: 'trigger',   
                 default: true   
             },  
@@ -36,7 +36,7 @@
                 name: 'Netflix стиль інтерфейсу'   
             },  
             onChange: (value) => {  
-                console.log('Cardify Layout: Setting changed to:', value);  
+                console.log('Netflix Layout: Setting changed to:', value);  
                 if (Lampa.Activity.last()) {  
                     Lampa.Activity.last().reload();  
                 }  
@@ -44,9 +44,9 @@
         });  
   
         Lampa.SettingsApi.addParam({  
-            component: 'cardify_layout_settings',  
+            component: 'netflix_layout_settings',  
             param: {   
-                name: 'cardify_logo_rotate',   
+                name: 'netflix_logo_rotate',   
                 type: 'trigger',   
                 default: true   
             },  
@@ -54,7 +54,7 @@
                 name: 'Змінювати логотип при кожному відкритті'   
             },  
             onChange: (value) => {  
-                console.log('Cardify Layout: Rotation setting changed to:', value);  
+                console.log('Netflix Layout: Rotation setting changed to:', value);  
                 if (Lampa.Activity.last()) {  
                     Lampa.Activity.last().reload();  
                 }  
@@ -84,12 +84,13 @@
                     </div>  
                     <div class="cardify__right">  
                         <div class="full-start__background"></div>  
+                        <div class="cardify-effects-overlay"></div>  
                     </div>  
                 </div>  
             </div>  
         </div>`;    
         Lampa.Template.add('full_start_new', template);    
-    }  
+    }    
   
     function addStyles() {    
         const styles = `  
@@ -154,15 +155,6 @@
             position: relative;  
         }  
   
-        .cardify__right .full-start__background {  
-            position: absolute;  
-            top: 0;  
-            left: 0;  
-            width: 100%;  
-            height: 100%;  
-            z-index: 1;  
-        }  
-  
         .cardify-effects-overlay {  
             position: fixed;  
             top: 0;  
@@ -178,13 +170,13 @@
         .cardify .full-start-new__title {  
             font-size: 4em;  
             font-weight: 700;  
-            margin-bottom: 0.5em;  
             line-height: 1.1;  
+            margin-bottom: 0.5em;  
         }  
   
         .cardify .full-start-new__title img {  
             max-height: 120px;  
-            max-width: 400px;  
+            max-width: 100%;  
             object-fit: contain;  
         }  
   
@@ -201,12 +193,13 @@
         .cardify .full-start-new__descr {  
             font-size: 1.1em;  
             line-height: 1.4;  
-            margin-bottom: 1.5em;  
-            max-width: 600px;  
+            max-height: 4.2em;  
+            overflow: hidden;  
             display: -webkit-box;  
             -webkit-line-clamp: 3;  
             -webkit-box-orient: vertical;  
-            overflow: hidden;  
+            margin-bottom: 1.5em;  
+            opacity: 0.9;  
         }  
   
         .cardify .full-start-new__buttons {  
@@ -215,25 +208,38 @@
             display: -moz-box;  
             display: -ms-flexbox;  
             display: flex;  
+            -webkit-box-align: center;  
+            -webkit-align-items: center;  
+            -moz-box-align: center;  
+            -ms-flex-align: center;  
+            align-items: center;  
             gap: 1em;  
         }  
   
-        /* Адаптивність */  
+        /* Мобільна адаптивність */  
         @media screen and (max-width: 768px) {  
+            .cardify__left {  
+                padding: 0 3% 15% 3%;  
+            }  
+              
             .cardify .full-start-new__title {  
                 font-size: 2.5em;  
             }  
               
             .cardify .full-start-new__title img {  
                 max-height: 80px;  
-                max-width: 250px;  
             }  
               
-            .cardify__left {  
-                padding: 0 3% 8% 3%;  
+            .cardify .full-start-new__info {  
+                font-size: 1em;  
+            }  
+              
+            .cardify .full-start-new__descr {  
+                font-size: 0.9em;  
             }  
         }  
   
+        /* Горизонтальна орієнтація */  
         @media screen and (orientation: landscape) and (max-width: 1024px) {  
             .cardify__left {  
                 padding: 0 3% 5% 3%;  
@@ -245,34 +251,34 @@
               
             .cardify .full-start-new__title img {  
                 max-height: 60px;  
-                max-width: 200px;  
             }  
               
             .cardify .full-start-new__descr {  
                 -webkit-line-clamp: 2;  
+                max-height: 2.8em;  
             }  
         }  
         </style>`;    
-        $('body').append(styles);  
-    }  
+        $('body').append(styles);    
+    }    
   
     function loadLogo(event) {    
-        if (!Lampa.Storage.get('cardify_layout_enabled')) {  
-            console.log('Cardify Layout: Layout disabled in settings');  
+        if (!Lampa.Storage.get('netflix_layout_enabled')) {  
+            console.log('Netflix Layout: Layout disabled in settings');  
             return;  
         }  
   
-        console.log('Cardify Layout: loadLogo called', event);  
+        console.log('Netflix Layout: loadLogo called', event);  
           
         const data = event.data.movie;  
         const render = event.object.activity.render();  
           
         if (!data) {  
-            console.log('Cardify Layout: No movie data found');  
+            console.log('Netflix Layout: No movie data found');  
             return;  
         }  
   
-        console.log('Cardify Layout: Movie data:', data.title || data.name, data.id);  
+        console.log('Netflix Layout: Movie data:', data.title || data.name, data.id);  
   
         // Заповнюємо метадані  
         const year = (data.release_date || data.first_air_date || '').split('-')[0];  
@@ -285,23 +291,23 @@
         // Обробка логотипу  
         const titleElement = render.find('.full-start-new__title');  
         if (!titleElement.length) {  
-            console.log('Cardify Layout: No title element found');  
+            console.log('Netflix Layout: No title element found');  
             return;  
         }  
   
         const apiUrl = Lampa.TMDB.api(`${data.name ? 'tv' : 'movie'}/${data.id}/images?api_key=${Lampa.TMDB.key()}`);  
-        console.log('Cardify Layout: Requesting logos from:', apiUrl);  
+        console.log('Netflix Layout: Requesting logos from:', apiUrl);  
           
         $.get(apiUrl, (d) => {  
-            console.log('Cardify Layout: TMDB response:', d);  
+            console.log('Netflix Layout: TMDB response:', d);  
               
             if (!d.logos || !d.logos.length) {  
-                console.log('Cardify Layout: No logos found');  
+                console.log('Netflix Layout: No logos found');  
                 return;  
             }  
   
             let selectedLogo;  
-            const rotateEnabled = Lampa.Storage.get('cardify_logo_rotate');  
+            const rotateEnabled = Lampa.Storage.get('netflix_logo_rotate');  
               
             if (rotateEnabled) {  
                 selectedLogo = getNextLogo(data.id, d.logos);  
@@ -310,22 +316,22 @@
                               d.logos.find(l => l.iso_639_1 === 'en');  
             }  
               
-            console.log('Cardify Layout: Selected logo:', selectedLogo);  
+            console.log('Netflix Layout: Selected logo:', selectedLogo);  
               
             if (selectedLogo) {  
                 const logoUrl = Lampa.TMDB.image('/t/p/w500' + selectedLogo.file_path);  
-                console.log('Cardify Layout: Logo URL:', logoUrl);  
+                console.log('Netflix Layout: Logo URL:', logoUrl);  
                   
                 titleElement.html(`<img src="${logoUrl}" alt="${data.title || data.name}">`);  
-                console.log('Cardify Layout: Logo inserted successfully');  
+                console.log('Netflix Layout: Logo inserted successfully');  
             }  
         }).fail((xhr, status, error) => {  
-            console.log('Cardify Layout: TMDB request failed:', status, error);  
+            console.log('Netflix Layout: TMDB request failed:', status, error);  
         });  
     }  
   
     function getNextLogo(movieId, logos) {  
-        const historyKey = `cardify_logo_history_${movieId}`;  
+        const historyKey = `netflix_logo_history_${movieId}`;  
         let logoHistory = Lampa.Storage.get(historyKey) || [];  
           
         const filteredLogos = logos.filter(l => l.iso_639_1 === 'uk' || l.iso_639_1 === 'en');  
@@ -356,9 +362,9 @@
     }  
   
     function attachLogoLoader() {    
-        console.log('Cardify Layout: Attaching logo loader');  
+        console.log('Netflix Layout: Attaching logo loader');  
         Lampa.Listener.follow('full', (e) => {   
-            console.log('Cardify Layout: Full event:', e.type);  
+            console.log('Netflix Layout: Full event:', e.type);  
             if (e.type === 'complite') {  
                 setTimeout(() => loadLogo(e), 10);  
             }  
@@ -366,13 +372,13 @@
     }    
   
     if (window.appready) {  
-        console.log('Cardify Layout: App ready, initializing');  
+        console.log('Netflix Layout: App ready, initializing');  
         initializePlugin();    
     } else {  
-        console.log('Cardify Layout: Waiting for app ready');  
+        console.log('Netflix Layout: Waiting for app ready');  
         Lampa.Listener.follow('app', (e) => {   
             if (e.type === 'ready') {  
-                console.log('Cardify Layout: App ready event received');  
+                console.log('Netflix Layout: App ready event received');  
                 initializePlugin();  
             }  
         });    
