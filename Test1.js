@@ -1,58 +1,69 @@
 (function () {
-    // --- 1. Стилі інтерфейсу (Apple TV Style) ---
-    Lampa.Utils.putStyle('apple_tv_interface', `
-        .custom-full {
+    // 1. Стилі для лівої панелі та градієнта
+    Lampa.Utils.putStyle('apple_tv_left_only', `
+        .apple-full {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 10;
+            z-index: 100;
+            background-color: #1a1a1a;
+        }
+        .apple-full__bg {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
             background-size: cover;
-            background-position: center;
+            background-position: center center;
         }
-        .custom-full__overlay {
+        .apple-full__shadow {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 50%, transparent 100%),
-                        linear-gradient(to right, rgba(0,0,0,0.8) 0%, transparent 60%);
+            background: linear-gradient(to right, rgba(0,0,0,0.9) 20%, rgba(0,0,0,0.4) 50%, transparent 100%);
         }
-        .custom-full__content {
+        .apple-full__content {
             position: absolute;
-            bottom: 10%;
             left: 5%;
-            width: 40%;
-            z-index: 2;
+            bottom: 10%;
+            width: 45%;
+            z-index: 10;
         }
-        .custom-full__logo {
-            max-width: 100%;
+        .apple-full__logo img {
+            max-width: 450px;
+            max-height: 200px;
             margin-bottom: 20px;
+            filter: drop-shadow(0 0 15px rgba(0,0,0,0.5));
         }
-        .custom-full__logo img {
-            max-width: 400px;
-            height: auto;
-        }
-        .custom-full__title {
+        .apple-full__title {
             font-size: 3.5rem;
             font-weight: bold;
-            margin-bottom: 15px;
-        }
-        .custom-full__descr {
-            font-size: 1.2rem;
-            line-height: 1.5;
             margin-bottom: 20px;
-            display: -webkit-box;
-            -webkit-line-clamp: 4;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
+        }
+        .apple-full__meta {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            font-size: 1.2rem;
+            color: #ccc;
+        }
+        .apple-full__rate {
+            background: #fff;
+            color: #000;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
         }
     `);
 
-    // --- 2. Функція пошуку логотипа (UA -> EN -> Any) ---
-    function getLogo(movie, callback) {
+    // 2. Логіка пошуку логотипа (UA -> EN)
+    function fetchLogo(movie, callback) {
         let type = movie.number_of_seasons ? 'tv' : 'movie';
         Lampa.Api.sources.tmdb.get(type + '/' + movie.id + '/images', {}, (data) => {
             let logo = data.logos.find(l => l.iso_639_1 === 'uk') || 
@@ -62,30 +73,39 @@
         });
     }
 
-    // --- 3. Основна логіка підміни ---
+    // 3. Підміна інтерфейсу
     Lampa.Listener.follow('full', (e) => {
         if (e.type === 'complite') {
             let movie = e.data.movie;
             let container = e.object.render();
             
-            getLogo(movie, (logoUrl) => {
-                let html = `
-                    <div class="custom-full" style="background-image: url(${movie.background_image || movie.backdrop_path})">
-                        <div class="custom-full__overlay"></div>
-                        <div class="custom-full__content">
-                            <div class="custom-full__logo">
-                                ${logoUrl ? `<img src="${logoUrl}" alt="logo">` : `<div class="custom-full__title">${movie.title || movie.name}</div>`}
+            fetchLogo(movie, (logoUrl) => {
+                let rating = movie.vote_average ? movie.vote_average.toFixed(1) : '0.0';
+                let year = new Date(movie.release_date || movie.first_air_date).getFullYear() || '';
+
+                let html = $(`
+                    <div class="apple-full">
+                        <div class="apple-full__bg" style="background-image: url(${movie.background_image || movie.backdrop_path})"></div>
+                        <div class="apple-full__shadow"></div>
+                        <div class="apple-full__content">
+                            <div class="apple-full__logo">
+                                ${logoUrl ? `<img src="${logoUrl}">` : `<div class="apple-full__title">${movie.title || movie.name}</div>`}
                             </div>
-                            <div class="custom-full__descr">${movie.overview}</div>
-                            <div class="custom-full__buttons"></div>
+                            <div class="apple-full__meta">
+                                <span class="apple-full__rate">${rating} TMDB</span>
+                                <span>${year}</span>
+                                <span>${movie.runtime ? movie.runtime + ' хв' : ''}</span>
+                            </div>
+                            <div class="apple-full__buttons"></div>
                         </div>
                     </div>
-                `;
+                `);
+
+                // Переміщуємо стандартні кнопки Lampa в наш новий блок
+                html.find('.apple-full__buttons').append(container.find('.full-start__buttons'));
                 
-                let newView = $(html);
-                // Переносимо оригінальні кнопки Lampa в наш контейнер
-                newView.find('.custom-full__buttons').append(container.find('.full-start__buttons'));
-                container.empty().append(newView);
+                // Очищуємо стару картку і вставляємо нашу
+                container.find('.full-start').empty().append(html);
             });
         }
     });
