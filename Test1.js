@@ -128,7 +128,7 @@
             object-position: left !important;  
         }  
   
-        body.netflix-single-enabled .full-start__title:not(:has(img)) {  
+        body.netflix-single-enabled .full-start__title {  
             font-size: 3em !important;  
             font-weight: 700 !important;  
             color: #fff !important;  
@@ -200,7 +200,7 @@
                 max-height: 80px !important;  
             }  
               
-            body.netflix-single-enabled .full-start__title:not(:has(img)) {  
+            body.netflix-single-enabled .full-start__title {  
                 font-size: 2em !important;  
             }  
         }  
@@ -213,21 +213,66 @@
         }  
   
         /* Горизонтальна орієнтація мобільних */  
-        @media screen and (max-height: 600px) and (orientation: landscape) {  
+        @media screen and (orientation: landscape) and (max-width: 1024px) {  
             body.netflix-single-enabled .full-start-new {  
                 padding: 2% 4% !important;  
+                align-items: center !important;  
+            }  
+              
+            body.netflix-single-enabled .full-start__body {  
+                max-width: 50% !important;  
+                padding-bottom: 5% !important;  
             }  
               
             body.netflix-single-enabled .full-start__title img {  
                 max-height: 60px !important;  
+                max-width: 300px !important;  
             }  
               
-            body.netflix-single-enabled .full-start__title:not(:has(img)) {  
+            body.netflix-single-enabled .full-start__title {  
                 font-size: 1.8em !important;  
+                margin-bottom: 0.3em !important;  
             }  
               
             body.netflix-single-enabled .full-start__descr {  
                 -webkit-line-clamp: 2 !important;  
+                font-size: 1em !important;  
+            }  
+              
+            body.netflix-single-enabled .full-start__info {  
+                font-size: 1em !important;  
+                margin-bottom: 0.3em !important;  
+            }  
+              
+            body.netflix-single-enabled .full-start-new__buttons {  
+                margin-top: 1em !important;  
+                gap: 10px !important;  
+            }  
+              
+            body.netflix-single-enabled .button--play {  
+                padding: 8px 16px !important;  
+                font-size: 0.9em !important;  
+            }  
+              
+            body.netflix-single-enabled .full-start__button:not(.button--play) {  
+                width: 40px !important;  
+                height: 40px !important;  
+                padding: 8px !important;  
+            }  
+        }  
+  
+        /* Додатковий медіа-запит для дуже малих екранів в горизонті */  
+        @media screen and (orientation: landscape) and (max-height: 500px) {  
+            body.netflix-single-enabled .full-start__title img {  
+                max-height: 50px !important;  
+            }  
+              
+            body.netflix-single-enabled .full-start__title {  
+                font-size: 1.6em !important;  
+            }  
+              
+            body.netflix-single-enabled .full-start__descr {  
+                -webkit-line-clamp: 1 !important;  
             }  
         }  
   
@@ -355,6 +400,19 @@
             }  
         });    
     }    
+  
+    if (window.appready) {  
+        console.log('Netflix Single: App ready, initializing');  
+        initializePlugin();    
+    } else {  
+        console.log('Netflix Single: Waiting for app ready');  
+        Lampa.Listener.follow('app', (e) => {   
+            if (e.type === 'ready') {  
+                console.log('Netflix Single: App ready event received');  
+                initializePlugin();  
+            }  
+        });    
+  }    
   
     if (window.appready) {  
         console.log('Netflix Single: App ready, initializing');  
