@@ -1,16 +1,58 @@
 (function () {  
     'use strict';  
   
-    // Головна функція ініціалізації  
+    const PLUGIN_NAME = 'Clean & Apple Style';
+    const PLUGIN_ID = 'clean_apple_style';
+
     function initializePlugin() {  
-        console.log('LeftTitle', 'v1.0.0');  
+        console.log('LeftTitle with Logos', 'v1.3.1');  
           
         addCustomTemplate();  
         addStyles();  
+        addSettings();
         attachLoader();  
     }  
+
+    function addSettings() {
+        const defaults = {
+            'cas_logo_scale': '100',
+            'cas_bg_animation': true
+        };
+
+        Object.keys(defaults).forEach(key => {
+            if (Lampa.Storage.get(key) === undefined) Lampa.Storage.set(key, defaults[key]);
+        });
+
+        Lampa.SettingsApi.addComponent({
+            component: PLUGIN_ID,
+            name: PLUGIN_NAME,
+            icon: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#fff"><rect x="10" y="30" width="80" height="40" rx="5" fill="rgba(255,255,255,0.2)"/><circle cx="50" cy="50" r="12" fill="white"/></svg>'
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: PLUGIN_ID,
+            param: { name: 'cas_logo_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' }, default: '100' },
+            field: { name: 'Розмір логотипу' },
+            onChange: applySettings
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: PLUGIN_ID,
+            param: { name: 'cas_bg_animation', type: 'trigger', default: true },
+            field: { name: 'Анімація фону (Zoom)' },
+            onChange: applySettings
+        });
+
+        applySettings();
+    }
+
+    function applySettings() {
+        const root = document.documentElement;
+        const scale = parseInt(Lampa.Storage.get('cas_logo_scale') || 100) / 100;
+        root.style.setProperty('--cas-logo-scale', scale);
+        $('body').toggleClass('cas--zoom-enabled', !!Lampa.Storage.get('cas_bg_animation'));
+    }
   
-    // Спрощений шаблон з назвою зліва  
     function addCustomTemplate() {  
         const template = `<div class="full-start-new left-title">  
         <div class="full-start-new__body">  
@@ -22,7 +64,10 @@
   
             <div class="full-start-new__right">  
                 <div class="left-title__content">  
-                    <div class="full-start-new__title">{title}</div>  
+                    <div class="cas-logo-container" style="margin-bottom: 20px;">
+                        <div class="cas-logo"></div>
+                        <div class="full-start-new__title">{title}</div>  
+                    </div>
                       
                     <div class="full-start-new__head"></div>  
                     <div class="full-start-new__details"></div>  
@@ -101,73 +146,45 @@
         Lampa.Template.add('full_start_new', template);  
     }  
   
-    // Мінімальні CSS стилі для розташування назви зліва  
     function addStyles() {  
         const styles = `<style>  
-/* Основний контейнер з назвою зліва */  
-.left-title {  
-    transition: all .3s;  
-}  
-  
-.left-title .full-start-new__body {  
-    height: 80vh;  
-}  
-  
-.left-title .full-start-new__right {  
-    display: flex;  
-    align-items: flex-end;  
-}  
-  
-/* Контейнер для контенту з назвою зліва */  
-.left-title__content {  
-    flex-grow: 1;  
-    display: flex;  
-    flex-direction: column;  
-    justify-content: flex-end;  
-}  
-  
-/* Стилі назви фільму зліва */  
+:root { --cas-logo-scale: 1; }
+
+.left-title .full-start-new__body { height: 80vh; }  
+.left-title .full-start-new__right { display: flex; align-items: flex-end; }  
+.left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; }  
+
 .left-title .full-start-new__title {  
-    font-size: 2.5em;  
-    font-weight: 700;  
-    line-height: 1.2;  
-    margin-bottom: 0.5em;  
-    text-shadow: 0 0 0.1em rgba(0, 0, 0, 0.3);  
-    color: #fff;  
+    font-size: 2.5em; font-weight: 700; line-height: 1.2; margin-bottom: 0.5em;  
+    text-shadow: 0 0 0.1em rgba(0, 0, 0, 0.3); color: #fff;  
 }  
+
+/* Приховуємо статус та реакції */
+.left-title .full-start-new__reactions,
+.left-title .full-start-new__rate-line,
+.left-title .full-start__status,
+.left-title .rating--modss {
+    display: none !important;
+}
+
+.cas-logo img {
+    max-width: calc(450px * var(--cas-logo-scale));
+    max-height: calc(180px * var(--cas-logo-scale));
+    object-fit: contain; object-position: left bottom;
+    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+}
+
+@keyframes casKenBurns { 0% { transform: scale(1); } 100% { transform: scale(1.15); } }
+body.cas--zoom-enabled .full-start__background.loaded { 
+    animation: casKenBurns 45s ease-out forwards !important; 
+}
+
+.left-title .full-start-new__head, .left-title .full-start-new__details { margin-bottom: 1em; }  
+.left-title .full-start-new__buttons { margin-top: 1em; }  
   
-/* Гарантуємо, що контент буде зліва */  
-.left-title .full-start-new__head,  
-.left-title .full-start-new__details {  
-    margin-bottom: 1em;  
-}  
-  
-/* Кнопки під назвою */  
-.left-title .full-start-new__buttons {  
-    margin-top: 1em;  
-}  
-  
-/* Реакції зправа */  
-.left-title .full-start-new__reactions {  
-    margin-left: 2em;  
-    flex-shrink: 0;  
-}  
-  
-/* Адаптивність для мобільних */  
 @media screen and (max-width: 767px) {  
-    .left-title .full-start-new__right {  
-        flex-direction: column;  
-        align-items: flex-start;  
-    }  
-      
-    .left-title .full-start-new__reactions {  
-        margin-left: 0;  
-        margin-top: 1em;  
-    }  
-      
-    .left-title .full-start-new__title {  
-        font-size: 2em;  
-    }  
+    .left-title .full-start-new__right { flex-direction: column; align-items: flex-start; }  
+    .left-title .full-start-new__title { font-size: 2em; }  
 }  
 </style>`;  
   
@@ -175,54 +192,56 @@
         $('body').append(Lampa.Template.get('left_title_css', {}, true));  
     }  
   
-    // Простий завантажувач для карток  
     function attachLoader() {  
         Lampa.Listener.follow('full', (event) => {  
             if (event.type === 'complite') {  
-                // Немає потреби в додатковій логіці - шаблон вже змінено  
-                console.log('LeftTitle: Карта завантажена з назвою зліва');  
+                const data = event.data.movie;
+                const render = event.object.activity.render();
+                
+                if (data && data.id) {
+                    const url = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());
+                    
+                    $.get(url, (res) => {
+                        const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || 
+                                         res.logos.find(l => l.iso_639_1 === 'en') || 
+                                         res.logos[0];
+
+                        if (bestLogo) {
+                            const logoUrl = Lampa.TMDB.image('/t/p/w500' + bestLogo.file_path);
+                            render.find('.cas-logo').html('<img src="' + logoUrl + '">');
+                            render.find('.full-start-new__title').hide();
+                        } else {
+                            render.find('.cas-logo').empty();
+                            render.find('.full-start-new__title').show();
+                        }
+                    }).fail(() => {
+                        render.find('.full-start-new__title').show();
+                    });
+                }
             }  
         });  
     }  
   
-    // Реєстрація плагіна  
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other',  
-            version: '1.0.0',  
-            name: 'LeftTitle',  
-            description: 'Розташування назви фільму зліва в картці.',  
-            author: '',  
-            icon: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#333"><rect x="10" y="30" width="60" height="8" rx="2"/><rect x="10" y="45" width="40" height="6" rx="2"/><rect x="10" y="58" width="50" height="6" rx="2"/></svg>'  
+            type: 'other', version: '1.3.1', name: PLUGIN_NAME,  
+            description: 'Логотипи та анімація без зайвих статусів.', author: '',  
+            icon: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#fff"><rect x="10" y="30" width="80" height="40" rx="5" fill="rgba(255,255,255,0.2)"/><circle cx="50" cy="50" r="12" fill="white"/></svg>'
         };  
   
         if (Lampa.Manifest) {  
-            if (!Lampa.Manifest.plugins) {  
-                Lampa.Manifest.plugins = {};  
-            }  
-              
-            if (Array.isArray(Lampa.Manifest.plugins)) {  
-                Lampa.Manifest.plugins.push(pluginManifest);  
-            } else {  
-                Lampa.Manifest.plugins['lefttitle'] = pluginManifest;  
-            }  
+            if (!Lampa.Manifest.plugins) Lampa.Manifest.plugins = {};  
+            if (Array.isArray(Lampa.Manifest.plugins)) Lampa.Manifest.plugins.push(pluginManifest);  
+            else Lampa.Manifest.plugins['clean_apple'] = pluginManifest;  
         }  
     }  
   
-    // Запуск плагіна  
     function startPlugin() {  
         registerPlugin();  
         initializePlugin();  
     }  
   
-    if (window.appready) {  
-        startPlugin();  
-    } else {  
-        Lampa.Listener.follow('app', (event) => {  
-            if (event.type === 'ready') {  
-                startPlugin();  
-            }  
-        });  
-    }  
+    if (window.appready) startPlugin();  
+    else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') startPlugin(); });  
   
-})();  
+})();
