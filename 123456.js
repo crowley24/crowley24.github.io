@@ -2,7 +2,7 @@
 (function() {
     'use strict';
 
-    var PLUGIN_VERSION = '1.3';
+    var PLUGIN_VERSION = '1.56';
 
     // Polyfills для совместимости со старыми устройствами
     if (!Array.prototype.forEach) {
@@ -643,13 +643,19 @@
         });
     }
 
-    function applyButtonAnimation(buttons) {
+    function applyButtonAnimation(buttons, opacityOnly) {
+        var animName = opacityOnly ? 'button-fade-in-opacity' : 'button-fade-in';
         buttons.forEach(function(btn, index) {
             btn.css({
                 'opacity': '0',
-                'animation': 'button-fade-in 0.4s ease forwards',
+                'animation': animName + ' 0.4s ease forwards',
                 'animation-delay': (index * 0.08) + 's'
             });
+            if (opacityOnly) {
+                btn.one('animationend', function() {
+                    $(this).css({ 'opacity': '1', 'animation': '', 'animation-delay': '' });
+                });
+            }
         });
     }
 
@@ -697,7 +703,7 @@
             targetContainer.append(btn);
             if (!btn.hasClass('hidden')) visibleButtons.push(btn);
         });
-        applyButtonAnimation(visibleButtons);
+        applyButtonAnimation(visibleButtons, currentContainer.hasClass('applecation'));
         var editBtn = targetContainer.find('.button--edit-order');
         if (editBtn.length) {
             editBtn.detach();
@@ -1045,6 +1051,12 @@
         var targetContainer = container.find('.full-start-new__buttons');
         if (!targetContainer.length) return false;
         currentContainer = container;
+        var isApplecation = container.hasClass('applecation');
+        if (!isApplecation) {
+            var scopeEl = targetContainer.parent();
+            if (!scopeEl.length) scopeEl = container;
+            scopeEl.addClass('buttons-plugin-scope');
+        }
         container.find('.button--play, .button--edit-order').remove();
         var categories = categorizeButtons(container);
         var allButtons = []
@@ -1137,7 +1149,7 @@
         targetContainer.removeClass('icons-only always-text');
         if (viewmode === 'icons') targetContainer.addClass('icons-only');
         if (viewmode === 'always') targetContainer.addClass('always-text');
-        applyButtonAnimation(visibleButtons);
+        applyButtonAnimation(visibleButtons, isApplecation);
         setTimeout(function() {
             setupButtonNavigation(container);
         }, 100);
@@ -1168,92 +1180,93 @@
         }, 50);
     }
 
-function init() {  
-    var storedVersion = Lampa.Storage.get('buttons_plugin_version', '');  
-    if (storedVersion !== PLUGIN_VERSION) {  
-        Lampa.Storage.set('buttons_plugin_version', PLUGIN_VERSION);  
-    }  
-      
-    // Безпечна перевірка шаблону  
-    var template = '';  
-    try {  
-        template = Lampa.Template.get('full_start_new', '') || '';  
-    } catch (e) {  
-        console.error('Buttons plugin: Error getting template', e);  
-        template = '';  
-    }  
-      
-    var hasLeftTitle = template.indexOf('left-title') !== -1;  
-    var hasApplecation = template.indexOf('applecation') !== -1;  
-      
-    // Сумісні CSS стилі  
-    var bodyStyle = (hasLeftTitle || hasApplecation) ?   
-        'align-items: flex-end !important;' :   
-        'align-items: stretch !important;';  
-      
-    var rightStyle = (hasLeftTitle || hasApplecation) ?   
-        'display: flex !important; flex-direction: row !important; align-items: flex-end !important;' :   
-        'display: flex !important; flex-direction: column !important; align-self: stretch !important; min-height: 0;';  
-      
-    var titleStyle = (hasLeftTitle || hasApplecation) ?   
-        'margin-top: 0 !important; margin-bottom: 1em !important;' :   
-        'margin-top: auto !important;';  
-      
-    var style = $('<style>' +  
-        '@keyframes button-fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }' +  
-        '.full-start-new__body { ' + bodyStyle + ' }' +  
-        '.full-start-new__right { ' + rightStyle + ' }' +  
-        '.full-start-new__title { ' + titleStyle + ' }' +  
-        '.full-start-new__buttons { display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; gap: 0.5em !important; }' +  
-        '.full-start-new__buttons .full-start__button { opacity: 0; }' +  
-        '.full-start__button.hidden { display: none !important; }' +  
-        '.full-start-new__buttons.buttons-loading .full-start__button { visibility: hidden !important; }' +  
-        '.menu-edit-list { max-width: 100%; overflow: hidden; box-sizing: border-box; }' +  
-        '.menu-edit-list__item { display: grid; grid-template-columns: 2.5em minmax(0, 1fr) 2.4em 2.4em 2.4em 2.4em 2.4em; align-items: center; gap: 0.35em; padding: 0.2em 0; box-sizing: border-box; }' +  
-        '.menu-edit-list__item .menu-edit-list__icon { width: 2.5em; min-width: 2.5em; height: 2.5em; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }' +  
-        '.menu-edit-list__item .menu-edit-list__icon svg { width: 1.4em; height: 1.4em; }' +  
-        '.menu-edit-list__item .menu-edit-list__title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--buttons-plugin-modal-font, inherit); font-size: var(--buttons-plugin-modal-font-size, inherit); }' +  
-        '.menu-edit-list__item .menu-edit-list__move, .menu-edit-list__item .menu-edit-list__change-name, .menu-edit-list__item .menu-edit-list__change-icon, .menu-edit-list__item .menu-edit-list__toggle { width: 2.4em; min-width: 2.4em; height: 2.4em; display: flex; align-items: center; justify-content: center; box-sizing: border-box; border: 2px solid transparent; border-radius: 0.3em; }' +  
-        '.menu-edit-list__item .menu-edit-list__move svg { width: 1.2em; height: 0.75em; }' +  
-        '.menu-edit-list__item .menu-edit-list__toggle svg { width: 1.2em; height: 1.2em; }' +  
-        '.menu-edit-list__item .menu-edit-list__change-name svg, .menu-edit-list__item .menu-edit-list__change-icon svg { width: 1.2em; height: 1.2em; }' +  
-        '.viewmode-switch, .folder-reset-button { max-width: 100%; box-sizing: border-box; white-space: normal; word-break: break-word; font-family: var(--buttons-plugin-modal-font, inherit); font-size: var(--buttons-plugin-modal-font-size, inherit); }' +  
-        '.folder-reset-button { background: rgba(200,100,100,0.3); margin-top: 1em; border-radius: 0.3em; border: 3px solid transparent; }' +  
-        '.folder-reset-button.focus { border-color: rgba(255,255,255,0.8); }' +  
-        '.menu-edit-list__move.focus, .menu-edit-list__change-name.focus, .menu-edit-list__change-icon.focus, .menu-edit-list__toggle.focus { border-color: rgba(255,255,255,0.8); }' +  
-        '.full-start-new__buttons.icons-only .full-start__button span { display: none; }' +  
-        '.full-start-new__buttons.always-text .full-start__button span { display: block !important; }' +  
-        '.viewmode-switch { background: rgba(66, 133, 244, 0.5); color: #fff; margin: 0.5em 0 1em 0; border-radius: 0.3em; border: 3px solid transparent; }' +  
-        '.viewmode-switch.focus { border-color: rgba(255,255,255,0.8); }' +  
-        '.menu-edit-list__item-hidden { opacity: 0.5; }' +  
-        '.icon-picker-default { display: flex; align-items: center; gap: 0.5em; padding: 0.35em 0.5em; min-height: 2.5em; margin-bottom: 0.5em; border-radius: 0.3em; background: rgba(255,255,255,0.08); border: 3px solid transparent; box-sizing: border-box; font-family: var(--buttons-plugin-modal-font, inherit); font-size: var(--buttons-plugin-modal-font-size, inherit); }' +  
-        '.icon-picker-default.focus { border-color: rgba(255,255,255,0.8); }' +  
-        '.icon-picker-default__preview { width: 2.5em; height: 2.5em; min-width: 2.5em; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }' +  
-        '.icon-picker-default__preview svg { width: 1.5em; height: 1.5em; }' +  
-        '.icon-picker-wrap { width: 100%; display: grid; grid-template-columns: repeat(auto-fill, minmax(2.5em, 1fr)); gap: 0.35em; align-content: start; }' +  
-        '.icon-picker-wrap .icon-picker-default, .icon-picker-wrap .icon-picker-switch-wrap, .icon-picker-wrap .icon-picker-load-status { grid-column: 1 / -1; }' +  
-        '.icon-picker-view-lampa .icon-picker-cell-alt { display: none !important; }' +  
-        '.icon-picker-view-alt .icon-picker-cell-lampa { display: none !important; }' +  
-        '.icon-picker-switch-wrap { display: flex; width: 100%; align-items: stretch; gap: 0.35em; margin-bottom: 0; }' +  
-        '.icon-picker-tab { flex: 1; display: flex; align-items: center; justify-content: center; padding: 0.75em; border-radius: 0.3em; background: rgba(255,255,255,0.08); text-align: center; min-width: 0; border: 3px solid transparent; box-sizing: border-box; font-family: var(--buttons-plugin-modal-font, inherit); font-size: var(--buttons-plugin-modal-font-size, inherit); }' +  
-        '.icon-picker-tab--active { background: rgba(66, 133, 244, 0.6); }' +  
-        '.icon-picker-tab.focus { border-color: rgba(255,255,255,0.8); }' +  
-        '.icon-picker-load-status { font-size: 0.9em; color: rgba(255,255,255,0.7); margin-top: 0.25em; font-family: var(--buttons-plugin-modal-font, inherit); }' +  
-        '.icon-picker-grid__cell { display: flex; align-items: center; justify-content: center; padding: 0.35em; min-height: 2.5em; border: 2px solid transparent; border-radius: 0.3em; box-sizing: border-box; }' +  
-        '.icon-picker-grid__cell.focus { border-color: rgba(255,255,255,0.8); }' +  
-        '.icon-picker-grid__cell svg { width: 1.5em; height: 1.5em; }' +  
-        '.name-picker-ok { font-family: var(--buttons-plugin-modal-font, inherit); font-size: var(--buttons-plugin-modal-font-size, inherit); }' +  
-        '</style>');  
-      
-    $('body').append(style); 
+    function init() {
+        var storedVersion = Lampa.Storage.get('buttons_plugin_version', '');
+        if (storedVersion !== PLUGIN_VERSION) {
+            Lampa.Storage.set('buttons_plugin_version', PLUGIN_VERSION);
+        }
+        var style = $('<style>' +
+            '@keyframes button-fade-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }' +
+            '@keyframes button-fade-in-opacity { from { opacity: 0; } to { opacity: 1; } }' +
+            /* Скрытие кнопок до применения плагина (и в Lampa, и в applecation) */
+            '.full-start-new__buttons.buttons-loading .full-start__button { visibility: hidden !important; }' +
+            /* С applecation: только скрытие/иконки/загрузка, layout не трогаем */
+            '.applecation .full-start-new__buttons .full-start__button { opacity: 0; }' +
+            '.applecation .full-start__button.hidden { display: none !important; }' +
+            '.applecation .full-start-new__buttons.buttons-loading .full-start__button { visibility: hidden !important; }' +
+            '.applecation .full-start-new__buttons.icons-only .full-start__button span { display: none; }' +
+            '.applecation .full-start-new__buttons.always-text .full-start__button span { display: block !important; }' +
+            /* Без applecation: полный layout контейнера кнопок */
+            '.buttons-plugin-scope .full-start-new__buttons { display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; gap: 0.5em !important; }' +
+            '.buttons-plugin-scope .full-start-new__buttons .full-start__button { opacity: 0; }' +
+            '.buttons-plugin-scope .full-start__button.hidden { display: none !important; }' +
+            '.buttons-plugin-scope .full-start-new__buttons.buttons-loading .full-start__button { visibility: hidden !important; }' +
+            '.menu-edit-list { max-width: 100%; overflow: hidden; box-sizing: border-box; }' +
+            '.menu-edit-list__item { display: grid; grid-template-columns: 2.5em minmax(0, 1fr) 2.4em 2.4em 2.4em 2.4em 2.4em; align-items: center; gap: 0.35em; padding: 0.2em 0; box-sizing: border-box; }' +
+            '.menu-edit-list__item .menu-edit-list__icon { width: 2.5em; min-width: 2.5em; height: 2.5em; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }' +
+            '.menu-edit-list__item .menu-edit-list__icon svg { width: 1.4em; height: 1.4em; }' +
+            '.menu-edit-list__item .menu-edit-list__title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--buttons-plugin-modal-font, inherit); font-size: var(--buttons-plugin-modal-font-size, inherit); }' +
+            '.menu-edit-list__item .menu-edit-list__move, .menu-edit-list__item .menu-edit-list__change-name, .menu-edit-list__item .menu-edit-list__change-icon, .menu-edit-list__item .menu-edit-list__toggle { width: 2.4em; min-width: 2.4em; height: 2.4em; display: flex; align-items: center; justify-content: center; box-sizing: border-box; border: 2px solid transparent; border-radius: 0.3em; }' +
+            '.menu-edit-list__item .menu-edit-list__move svg { width: 1.2em; height: 0.75em; }' +
+            '.menu-edit-list__item .menu-edit-list__toggle svg { width: 1.2em; height: 1.2em; }' +
+            '.menu-edit-list__item .menu-edit-list__change-name svg, .menu-edit-list__item .menu-edit-list__change-icon svg { width: 1.2em; height: 1.2em; }' +
+            '.viewmode-switch, .folder-reset-button { max-width: 100%; box-sizing: border-box; white-space: normal; word-break: break-word; font-family: var(--buttons-plugin-modal-font, inherit); font-size: var(--buttons-plugin-modal-font-size, inherit); }' +
+            '.folder-reset-button { background: rgba(200,100,100,0.3); margin-top: 1em; border-radius: 0.3em; border: 3px solid transparent; }' +
+            '.folder-reset-button.focus { border-color: rgba(255,255,255,0.8); }' +
+            '.menu-edit-list__move.focus, .menu-edit-list__change-name.focus, .menu-edit-list__change-icon.focus, .menu-edit-list__toggle.focus { border-color: rgba(255,255,255,0.8); }' +
+            '.buttons-plugin-scope .full-start-new__buttons.icons-only .full-start__button span { display: none; }' +
+            '.buttons-plugin-scope .full-start-new__buttons.always-text .full-start__button span { display: block !important; }' +
+            '.viewmode-switch { background: rgba(66, 133, 244, 0.5); color: #fff; margin: 0.5em 0 1em 0; border-radius: 0.3em; border: 3px solid transparent; }' +
+            '.viewmode-switch.focus { border-color: rgba(255,255,255,0.8); }' +
+            '.menu-edit-list__item-hidden { opacity: 0.5; }' +
+            '.icon-picker-default { display: flex; align-items: center; gap: 0.5em; padding: 0.35em 0.5em; min-height: 2.5em; margin-bottom: 0.5em; border-radius: 0.3em; background: rgba(255,255,255,0.08); border: 3px solid transparent; box-sizing: border-box; font-family: var(--buttons-plugin-modal-font, inherit); font-size: var(--buttons-plugin-modal-font-size, inherit); }' +
+            '.icon-picker-default.focus { border-color: rgba(255,255,255,0.8); }' +
+            '.icon-picker-default__preview { width: 2.5em; height: 2.5em; min-width: 2.5em; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }' +
+            '.icon-picker-default__preview svg { width: 1.5em; height: 1.5em; }' +
+            '.icon-picker-wrap { width: 100%; display: grid; grid-template-columns: repeat(auto-fill, minmax(2.5em, 1fr)); gap: 0.35em; align-content: start; }' +
+            '.icon-picker-wrap .icon-picker-default, .icon-picker-wrap .icon-picker-switch-wrap, .icon-picker-wrap .icon-picker-load-status { grid-column: 1 / -1; }' +
+            '.icon-picker-view-lampa .icon-picker-cell-alt { display: none !important; }' +
+            '.icon-picker-view-alt .icon-picker-cell-lampa { display: none !important; }' +
+            '.icon-picker-switch-wrap { display: flex; width: 100%; align-items: stretch; gap: 0.35em; margin-bottom: 0; }' +
+            '.icon-picker-tab { flex: 1; display: flex; align-items: center; justify-content: center; padding: 0.75em; border-radius: 0.3em; background: rgba(255,255,255,0.08); text-align: center; min-width: 0; border: 3px solid transparent; box-sizing: border-box; font-family: var(--buttons-plugin-modal-font, inherit); font-size: var(--buttons-plugin-modal-font-size, inherit); }' +
+            '.icon-picker-tab--active { background: rgba(66, 133, 244, 0.6); }' +
+            '.icon-picker-tab.focus { border-color: rgba(255,255,255,0.8); }' +
+            '.icon-picker-load-status { font-size: 0.9em; color: rgba(255,255,255,0.7); margin-top: 0.25em; font-family: var(--buttons-plugin-modal-font, inherit); }' +
+            '.icon-picker-grid__cell { display: flex; align-items: center; justify-content: center; padding: 0.35em; min-height: 2.5em; border: 2px solid transparent; border-radius: 0.3em; box-sizing: border-box; }' +
+            '.icon-picker-grid__cell.focus { border-color: rgba(255,255,255,0.8); }' +
+            '.icon-picker-grid__cell svg { width: 1.5em; height: 1.5em; }' +
+            '.name-picker-ok { font-family: var(--buttons-plugin-modal-font, inherit); font-size: var(--buttons-plugin-modal-font-size, inherit); }' +
+            /* Режим «без постера»: только когда карточка не applecation; опускание кнопок, «Подробно» под кнопки */
+            'body.buttons-plugin--poster-off .full-start-new:not(.applecation) .full-start-new__body { height: 80vh !important; min-height: 80vh !important; }' +
+            'body.buttons-plugin--poster-off .full-start-new:not(.applecation) .full-start-new__right { display: flex !important; flex-direction: column !important; justify-content: flex-end !important; }' +
+            'body.buttons-plugin--poster-off .full-start-new:not(.applecation) .full-start-new__head { display: none !important; }' +
+            'body.buttons-plugin--poster-off .full-start-new:not(.applecation) .full-start-new__rate-line { margin-bottom: 0.4em !important; }' +
+            'body.buttons-plugin--poster-off .full-start-new:not(.applecation) .full-start-new__details { margin-bottom: 0.2em !important; }' +
+            'body.buttons-plugin--poster-off .full-start:not(.applecation) .scroll__body, body.buttons-plugin--poster-off .full:not(.applecation) .scroll__body { padding-bottom: 50vh !important; }' +
+            'body.buttons-plugin--poster-off .full-start:not(.applecation) .scroll__body > .items-line:last-of-type, body.buttons-plugin--poster-off .full:not(.applecation) .scroll__body > .items-line:last-of-type { margin-bottom: 40vh !important; }' +
+            'body.buttons-plugin--poster-off .full-start:not(.applecation) [class*="description"], body.buttons-plugin--poster-off .full:not(.applecation) [class*="description"] { margin-bottom: 40vh !important; }' +
+            '</style>');
+        $('body').append(style);
+
+        function syncPosterOffClass() {
+            var showPoster = Lampa.Storage.get('card_interface_poster', Lampa.Storage.get('card_interfice_poster', true));
+            $('body').toggleClass('buttons-plugin--poster-off', !showPoster);
+        }
+        syncPosterOffClass();
+        setInterval(syncPosterOffClass, 1000);
 
         Lampa.Listener.follow('full', function(e) {
             if (e.type !== 'complite') return;
+            syncPosterOffClass();
             var container = e.object.activity.render();
             var targetContainer = container.find('.full-start-new__buttons');
             if (targetContainer.length) {
                 targetContainer.addClass('buttons-loading');
             }
+            setTimeout(function() {
+                var tc = container.find('.full-start-new__buttons');
+                if (tc.length) tc.addClass('buttons-loading');
+            }, 0);
             setTimeout(function() {
                 try {
                     if (!container.data('buttons-processed')) {
