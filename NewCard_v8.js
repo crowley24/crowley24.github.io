@@ -10,7 +10,9 @@
         book: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 3H7C5.9 3 5 3.9 5 5V21L12 18L19 21V5C19 3.9 18.1 3 17 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
         reaction: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" stroke="currentColor" stroke-width="2"/></svg>`,
         options: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="2" fill="currentColor"/><circle cx="5" cy="12" r="2" fill="currentColor"/><circle cx="19" cy="12" r="2" fill="currentColor"/></svg>`,
-        trailer: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 6H3C1.9 6 1 6.9 1 8V16C1 17.1 1.9 18 3 18H21C22.1 18 23 17.1 23 16V8C23 6.9 22.1 6 21 6Z" stroke="currentColor" stroke-width="2"/><path d="M10 9L15 12L10 15V9Z" fill="currentColor"/></svg>`
+        trailer: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 6H3C1.9 6 1 6.9 1 8V16C1 17.1 1.9 18 3 18H21C22.1 18 23 17.1 23 16V8C23 6.9 22.1 6 21 6Z" stroke="currentColor" stroke-width="2"/><path d="M10 9L15 12L10 15V9Z" fill="currentColor"/></svg>`,
+        tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',
+        cub: 'https://raw.githubusercontent.com/yumata/lampa/9381985ad4371d2a7d5eb5ca8e3daf0f32669eb7/img/logo-icon.svg'
     };
 
     const QUALITY_ICONS = {
@@ -54,12 +56,6 @@
 
         Lampa.SettingsApi.addParam({
             component: PLUGIN_ID,
-            param: { name: 'cas_logo_quality', type: 'select', values: { 'w300':'Low (300px)','w500':'Medium (500px)','original':'Original (SVG/PNG)' }, default: 'w500' },
-            field: { name: 'Якість логотипу' }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: PLUGIN_ID,
             param: { name: 'cas_blocks_gap', type: 'select', values: { '15':'Тісно','30':'Стандарт','45':'Просторе' }, default: '30' },
             field: { name: 'Відступи між блоками (px)' },
             onChange: applySettings
@@ -74,7 +70,7 @@
         Lampa.SettingsApi.addParam({
             component: PLUGIN_ID,            
             param: { name: 'cas_show_quality', type: 'trigger', default: true },
-            field: { name: 'Показувати якість (4K, HDR...)' }
+            field: { name: 'Показувати якість' }
         });
 
         Lampa.SettingsApi.addParam({
@@ -95,6 +91,20 @@
         root.style.setProperty('--cas-blocks-gap', gap + 'px');
         $('body').toggleClass('cas--zoom-enabled', !!Lampa.Storage.get('cas_bg_animation'));
     }
+
+    function getRatingColor(val) {
+        const n = parseFloat(val);
+        if (n >= 7.5) return '#2ecc71';
+        if (n >= 6) return '#feca57';
+        return '#ff4d4d';
+    }
+
+    function formatTime(mins) {
+        if (!mins) return '';
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        return (h > 0 ? h + 'г ' : '') + m + 'хв';
+    }
   
     function addCustomTemplate() {  
         const template = `<div class="full-start-new left-title cas-apple-style">  
@@ -105,15 +115,20 @@
   
             <div class="full-start-new__right">  
                 <div class="left-title__content">  
-                    <div class="cas-logo-container" style="margin-bottom: var(--cas-blocks-gap);">
+                    <div class="cas-logo-container" style="margin-bottom: 10px;">
                         <div class="cas-logo"></div>
                         <div class="full-start-new__title">{title}</div>  
                     </div>
-                      
-                    <div class="full-start-new__head"></div>  
-                    <div class="full-start-new__details"></div>  
 
-                    <div class="cas-extra-info" style="margin: 15px 0; display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                    <div class="cas-ratings-line" style="display: flex; align-items: center; gap: 15px; margin-bottom: var(--cas-blocks-gap); font-weight: 600; font-size: 1.1em; color: rgba(255,255,255,0.9);">
+                        <div class="cas-rate-items" style="display: flex; align-items: center; gap: 12px;"></div>
+                        <div class="cas-meta-info" style="opacity: 0.7; font-weight: 400;"></div>
+                    </div>
+                      
+                    <div class="full-start-new__head hide"></div>  
+                    <div class="full-start-new__details hide"></div>  
+
+                    <div class="cas-extra-info" style="margin: 0 0 20px 0; display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
                         <div class="cas-studios-row" style="display: flex; gap: 10px;"></div>
                         <div class="cas-quality-row" style="display: flex; gap: 8px;"></div>
                     </div>
@@ -122,19 +137,15 @@
                         <div class="full-start__button selector button--play">  
                             ${ICONS.play} <span>#{title_watch}</span>  
                         </div>  
-                        
                         <div class="full-start__button selector view--trailer">
                             ${ICONS.trailer} <span>#{full_trailers}</span>
                         </div>
-
                         <div class="full-start__button selector button--book">
                             ${ICONS.book} <span>#{settings_input_links}</span>
                         </div>  
-  
                         <div class="full-start__button selector button--reaction">
                             ${ICONS.reaction} <span>#{title_reactions}</span>
                         </div>  
-  
                         <div class="full-start__button selector button--options">
                             ${ICONS.options}
                         </div>  
@@ -160,15 +171,9 @@
     function addStyles() {  
         const styles = `<style>  
 :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; }
-
 .left-title .full-start-new__body { height: 85vh; }  
 .left-title .full-start-new__right { display: flex; align-items: flex-end; padding-left: 5%; }  
 .left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 50px; }  
-
-.left-title .full-start-new__reactions,
-.left-title .full-start-new__rate-line,
-.left-title .full-start__status,
-.left-title .rating--modss { display: none !important; }
 
 .cas-logo img {
     max-width: calc(480px * var(--cas-logo-scale));
@@ -177,36 +182,23 @@
     filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
 }
 
-/* Стилі для студій та якості */
-.cas-studio-item { height: 25px; opacity: 0.8; filter: brightness(0) invert(1); }
-.cas-studio-item img { height: 100%; width: auto; }
-.cas-quality-item { height: 18px; }
-.cas-quality-item img { height: 100%; width: auto; }
+.cas-rate-item { display: flex; align-items: center; gap: 6px; }
+.cas-rate-item img { height: 14px; width: auto; }
 
-.applecation__buttons-row { display: flex; align-items: center; gap: 15px; margin-top: 25px; flex-wrap: wrap; }
+.cas-studio-item { height: 25px; filter: brightness(0) invert(1); opacity: 0.8; }
+.cas-studio-item img { height: 100%; }
+.cas-quality-item { height: 18px; }
+.cas-quality-item img { height: 100%; }
 
 .cas-apple-style .full-start__button {  
-    background: rgba(255,255,255,0.08) !important; border: none !important;  
-    color: rgba(255,255,255,0.8) !important; 
-    padding: 12px 20px !important;
-    border-radius: 12px !important;
-    display: flex; justify-content: center; align-items: center; gap: 10px;
-    font-size: 1.1em; font-weight: 500;
-    transition: all 0.25s ease;
+    background: rgba(255,255,255,0.08) !important; border: none !important; color: rgba(255,255,255,0.8) !important; 
+    padding: 12px 20px !important; border-radius: 12px !important; display: flex; align-items: center; gap: 10px;
+    font-size: 1.1em; transition: all 0.25s ease;
 }
-
-.cas-apple-style .full-start__button.focus {  
-    transform: scale(1.1);  
-    background: rgba(255,255,255,0.2) !important;
-    color: #fff !important;
-    filter: drop-shadow(0 0 10px rgba(255,255,255,0.3)) !important;  
-}
+.cas-apple-style .full-start__button.focus { transform: scale(1.1); background: rgba(255,255,255,0.2) !important; color: #fff !important; }
 
 @keyframes casKenBurns { 0% { transform: scale(1); } 100% { transform: scale(1.15); } }
-body.cas--zoom-enabled .full-start__background.loaded { 
-    animation: casKenBurns 45s ease-out forwards !important; 
-}
-
+body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 45s ease-out forwards !important; }
 .left-title .full-start-new__title { font-size: 2.5em; font-weight: 700; color: #fff; }  
 </style>`;  
   
@@ -219,48 +211,60 @@ body.cas--zoom-enabled .full-start__background.loaded {
             if (event.type === 'complite') {  
                 const data = event.data.movie;
                 const render = event.object.activity.render();
-                const qualitySize = Lampa.Storage.get('cas_logo_quality', 'w500');
 
                 if (data && data.id) {
-                    // 1. Завантаження логотипу фільму
+                    // 1. Логотип
                     $.get(Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key()), (res) => {
                         const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];
                         if (bestLogo) {
-                            render.find('.cas-logo').html('<img src="' + Lampa.TMDB.image('/t/p/' + qualitySize + bestLogo.file_path) + '">');
+                            render.find('.cas-logo').html('<img src="' + Lampa.TMDB.image('/t/p/w500' + bestLogo.file_path) + '">');
                             render.find('.full-start-new__title').hide();
-                        } else {
-                            render.find('.full-start-new__title').show();
                         }
                     });
 
-                    // 2. Студії
+                    // 2. Рейтинги та Мета (Час, Жанр)
+                    let ratesHtml = '';
+                    const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
+                    if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
+                    
+                    // Розрахунок CUB
+                    if (event.data.reactions && event.data.reactions.result) {
+                        let sum = 0, cnt = 0;
+                        const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };
+                        event.data.reactions.result.forEach(r => { if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; } });
+                        if (cnt >= 5) {
+                            const cubV = (( (data.name?7.4:6.5) * (data.name?50:150) + sum) / ((data.name?50:150) + cnt)).toFixed(1);
+                            ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;
+                        }
+                    }
+                    render.find('.cas-rate-items').html(ratesHtml);
+
+                    const time = formatTime(data.runtime || data.episode_run_time);
+                    const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');
+                    render.find('.cas-meta-info').text((time ? time + (genre ? ' • ' : '') : '') + genre);
+
+                    // 3. Студії
                     if (Lampa.Storage.get('cas_show_studios')) {
                         const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 3);
-                        let html = '';
-                        studios.forEach(s => {
-                            html += `<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}"></div>`;
-                        });
-                        render.find('.cas-studios-row').html(html);
+                        render.find('.cas-studios-row').html(studios.map(s => `<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}"></div>`).join(''));
                     }
 
-                    // 3. Якість (через парсер)
+                    // 4. Якість
                     if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {
                         Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {
                             if (res && res.Results) {
-                                const best = { res: '', hdr: false, ukr: false };
-                                res.Results.slice(0, 10).forEach(item => {
-                                    const t = item.Title.toLowerCase();
-                                    if (t.includes('4k')) best.res = '4K';
-                                    else if (!best.res && t.includes('1080')) best.res = 'FULL HD';
-                                    if (t.includes('hdr') || t.includes('vision')) best.hdr = true;
-                                    if (t.includes('ukr') || t.includes('укр')) best.ukr = true;
+                                const b = { res: '', hdr: false, ukr: false };
+                                res.Results.slice(0, 10).forEach(i => {
+                                    const t = i.Title.toLowerCase();
+                                    if (t.includes('4k')) b.res = '4K'; else if (!b.res && t.includes('1080')) b.res = 'FULL HD';
+                                    if (t.includes('hdr') || t.includes('vision')) b.hdr = true;
+                                    if (t.includes('ukr') || t.includes('укр')) b.ukr = true;
                                 });
-
-                                let qHtml = '';
-                                if (best.res) qHtml += `<div class="cas-quality-item"><img src="${QUALITY_ICONS[best.res]}"></div>`;
-                                if (best.hdr) qHtml += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;
-                                if (best.ukr) qHtml += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;
-                                render.find('.cas-quality-row').html(qHtml);
+                                let qH = '';
+                                if (b.res) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS[b.res]}"></div>`;
+                                if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;
+                                if (b.ukr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;
+                                render.find('.cas-quality-row').html(qH);
                             }
                         });
                     }
@@ -273,4 +277,3 @@ body.cas--zoom-enabled .full-start__background.loaded {
     else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') initializePlugin(); });  
   
 })();
-                        
