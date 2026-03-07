@@ -3,14 +3,14 @@
   
     // Головна функція ініціалізації  
     function initializePlugin() {  
-        console.log('LeftTitle', 'v1.0.0');  
+        console.log('LeftTitle', 'v1.1.0');  
           
         addCustomTemplate();  
         addStyles();  
         attachLoader();  
     }  
   
-    // Спрощений шаблон з назвою зліва  
+    // Спрощений шаблон (структура збережена для стабільності, але зайве приховано стилями)  
     function addCustomTemplate() {  
         const template = `<div class="full-start-new left-title">  
         <div class="full-start-new__body">  
@@ -49,14 +49,6 @@
                                 <path d="M25.3493 16.976L24.258 14.3423L16.959 17.3666L15.7196 14.375L13.0859 15.4659L15.4161 21.0916L25.3493 16.976Z" fill="currentColor"/>  
                             </svg>  
                             <span>#{title_reactions}</span>  
-                        </div>  
-  
-                        <div class="full-start__button selector button--subscribe hide">  
-                            <svg width="25" height="30" viewBox="0 0 25 30" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                <path d="M6.01892 24C6.27423 27.3562 9.07836 30 12.5 30C15.9216 30 18.7257 27.3562 18.981 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z" fill="currentColor"/>  
-                                <path d="M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z" stroke="currentColor" stroke-width="2.5"/>  
-                            </svg>  
-                            <span>#{title_subscribe}</span>  
                         </div>  
   
                         <div class="full-start__button selector button--options">  
@@ -101,24 +93,20 @@
         Lampa.Template.add('full_start_new', template);  
     }  
   
-    // Мінімальні CSS стилі для розташування назви зліва  
     function addStyles() {  
         const styles = `<style>  
-/* Основний контейнер з назвою зліва */  
-.left-title {  
-    transition: all .3s;  
-}  
-  
+/* Базові стилі контейнера */  
 .left-title .full-start-new__body {  
     height: 80vh;  
+    display: flex;  
 }  
   
 .left-title .full-start-new__right {  
     display: flex;  
     align-items: flex-end;  
+    padding-bottom: 5em; /* Підняв трохи вище від низу */  
 }  
   
-/* Контейнер для контенту з назвою зліва */  
 .left-title__content {  
     flex-grow: 1;  
     display: flex;  
@@ -126,61 +114,35 @@
     justify-content: flex-end;  
 }  
   
-/* Стилі назви фільму зліва */  
 .left-title .full-start-new__title {  
-    font-size: 2.5em;  
+    font-size: 2.8em;  
     font-weight: 700;  
-    line-height: 1.2;  
-    margin-bottom: 0.5em;  
-    text-shadow: 0 0 0.1em rgba(0, 0, 0, 0.3);  
+    margin-bottom: 0.3em;  
     color: #fff;  
+    text-shadow: 0 2px 10px rgba(0,0,0,0.5);  
 }  
   
-/* Гарантуємо, що контент буде зліва */  
-.left-title .full-start-new__head,  
-.left-title .full-start-new__details {  
-    margin-bottom: 1em;  
+/* --- ПРИХОВУВАННЯ НЕПОТРІБНИХ ЕЛЕМЕНТІВ --- */  
+.left-title .full-start-new__reactions,  
+.left-title .full-start-new__rate-line,  
+.left-title .full-start__status,  
+.left-title .rating--modss {  
+    display: none !important;  
+    opacity: 0 !important;  
+    visibility: hidden !important;  
+    height: 0 !important;  
+    margin: 0 !important;  
+    padding: 0 !important;  
 }  
+/* ----------------------------------------- */  
   
-/* Кнопки під назвою */  
-.left-title .full-start-new__buttons {  
-    margin-top: 1em;  
-}  
+/* Налаштування фону */  
+.left-title .background__overlay { opacity: 0.15 !important; }  
+.left-title .full-start__background { filter: brightness(0.7) !important; }  
   
-/* Реакції зправа */  
-.left-title .full-start-new__reactions {  
-    margin-left: 2em;  
-    flex-shrink: 0;  
-}  
-  
-/* Зменшення затемнення фонового зображення */  
-.left-title .full-start__background::after {  
-    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.3)) !important;  
-}  
-  
-.left-title .background__overlay {  
-    opacity: 0.2 !important;  
-}  
-  
-.left-title .full-start__background {  
-    filter: brightness(0.8) !important;  
-}  
-  
-/* Адаптивність для мобільних */  
 @media screen and (max-width: 767px) {  
-    .left-title .full-start-new__right {  
-        flex-direction: column;  
-        align-items: flex-start;  
-    }  
-      
-    .left-title .full-start-new__reactions {  
-        margin-left: 0;  
-        margin-top: 1em;  
-    }  
-      
-    .left-title .full-start-new__title {  
-        font-size: 2em;  
-    }  
+    .left-title .full-start-new__title { font-size: 1.8em; }  
+    .left-title .full-start-new__right { padding-bottom: 2em; }  
 }  
 </style>`;  
   
@@ -188,54 +150,36 @@
         $('body').append(Lampa.Template.get('left_title_css', {}, true));  
     }  
   
-    // Простий завантажувач для карток  
     function attachLoader() {  
         Lampa.Listener.follow('full', (event) => {  
             if (event.type === 'complite') {  
-                // Немає потреби в додатковій логіці - шаблон вже змінено  
-                console.log('LeftTitle: Карта завантажена з назвою зліва');  
+                console.log('LeftTitle: Clean view applied');  
             }  
         });  
     }  
   
-    // Реєстрація плагіна  
     function registerPlugin() {  
         const pluginManifest = {  
             type: 'other',  
-            version: '1.0.0',  
-            name: 'LeftTitle',  
-            description: 'Розташування назви фільму зліва в картці.',  
-            author: '',  
-            icon: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#333"><rect x="10" y="30" width="60" height="8" rx="2"/><rect x="10" y="45" width="40" height="6" rx="2"/><rect x="10" y="58" width="50" height="6" rx="2"/></svg>'  
+            version: '1.1.0',  
+            name: 'LeftTitle Clean',  
+            description: 'Назва зліва без статусу та реакцій.',  
+            author: 'Gemini',  
+            icon: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#fff"><rect x="10" y="30" width="50" height="8" rx="2"/></svg>'  
         };  
   
-        if (Lampa.Manifest) {  
-            if (!Lampa.Manifest.plugins) {  
-                Lampa.Manifest.plugins = {};  
-            }  
-              
-            if (Array.isArray(Lampa.Manifest.plugins)) {  
-                Lampa.Manifest.plugins.push(pluginManifest);  
-            } else {  
-                Lampa.Manifest.plugins['lefttitle'] = pluginManifest;  
-            }  
+        if (window.Lampa && Lampa.Manifest) {  
+            Lampa.Manifest.plugins = Lampa.Manifest.plugins || {};  
+            Lampa.Manifest.plugins['lefttitle'] = pluginManifest;  
         }  
     }  
   
-    // Запуск плагіна  
     function startPlugin() {  
         registerPlugin();  
         initializePlugin();  
     }  
   
-    if (window.appready) {  
-        startPlugin();  
-    } else {  
-        Lampa.Listener.follow('app', (event) => {  
-            if (event.type === 'ready') {  
-                startPlugin();  
-            }  
-        });  
-    }  
+    if (window.appready) startPlugin();  
+    else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') startPlugin(); });  
   
 })();
