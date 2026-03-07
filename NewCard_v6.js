@@ -4,9 +4,8 @@
     const PLUGIN_NAME = 'Clean & Apple Style';
     const PLUGIN_ID = 'clean_apple_style';
 
-    // Головна функція ініціалізації  
     function initializePlugin() {  
-        console.log('LeftTitle with Logos', 'v1.3.0');  
+        console.log('LeftTitle with Logos', 'v1.3.1');  
           
         addCustomTemplate();  
         addStyles();  
@@ -14,7 +13,6 @@
         attachLoader();  
     }  
 
-    // Додаємо налаштування в меню Lampa
     function addSettings() {
         const defaults = {
             'cas_logo_scale': '100',
@@ -55,7 +53,6 @@
         $('body').toggleClass('cas--zoom-enabled', !!Lampa.Storage.get('cas_bg_animation'));
     }
   
-    // Оригінальний шаблон + контейнер для лого
     function addCustomTemplate() {  
         const template = `<div class="full-start-new left-title">  
         <div class="full-start-new__body">  
@@ -149,7 +146,6 @@
         Lampa.Template.add('full_start_new', template);  
     }  
   
-    // Оригінальні CSS + Нові правила для лого та анімації
     function addStyles() {  
         const styles = `<style>  
 :root { --cas-logo-scale: 1; }
@@ -163,7 +159,14 @@
     text-shadow: 0 0 0.1em rgba(0, 0, 0, 0.3); color: #fff;  
 }  
 
-/* Логотипи */
+/* Приховуємо статус та реакції */
+.left-title .full-start-new__reactions,
+.left-title .full-start-new__rate-line,
+.left-title .full-start__status,
+.left-title .rating--modss {
+    display: none !important;
+}
+
 .cas-logo img {
     max-width: calc(450px * var(--cas-logo-scale));
     max-height: calc(180px * var(--cas-logo-scale));
@@ -171,7 +174,6 @@
     filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
 }
 
-/* Анімація Ken Burns */
 @keyframes casKenBurns { 0% { transform: scale(1); } 100% { transform: scale(1.15); } }
 body.cas--zoom-enabled .full-start__background.loaded { 
     animation: casKenBurns 45s ease-out forwards !important; 
@@ -179,11 +181,9 @@ body.cas--zoom-enabled .full-start__background.loaded {
 
 .left-title .full-start-new__head, .left-title .full-start-new__details { margin-bottom: 1em; }  
 .left-title .full-start-new__buttons { margin-top: 1em; }  
-.left-title .full-start-new__reactions { margin-left: 2em; flex-shrink: 0; }  
   
 @media screen and (max-width: 767px) {  
     .left-title .full-start-new__right { flex-direction: column; align-items: flex-start; }  
-    .left-title .full-start-new__reactions { margin-left: 0; margin-top: 1em; }  
     .left-title .full-start-new__title { font-size: 2em; }  
 }  
 </style>`;  
@@ -192,7 +192,6 @@ body.cas--zoom-enabled .full-start__background.loaded {
         $('body').append(Lampa.Template.get('left_title_css', {}, true));  
     }  
   
-    // Завантажувач даних (лого TMDB)
     function attachLoader() {  
         Lampa.Listener.follow('full', (event) => {  
             if (event.type === 'complite') {  
@@ -223,11 +222,10 @@ body.cas--zoom-enabled .full-start__background.loaded {
         });  
     }  
   
-    // Реєстрація плагіна  
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.3.0', name: PLUGIN_NAME,  
-            description: 'Логотипи, анімація та налаштування розміру.', author: '',  
+            type: 'other', version: '1.3.1', name: PLUGIN_NAME,  
+            description: 'Логотипи та анімація без зайвих статусів.', author: '',  
             icon: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#fff"><rect x="10" y="30" width="80" height="40" rx="5" fill="rgba(255,255,255,0.2)"/><circle cx="50" cy="50" r="12" fill="white"/></svg>'
         };  
   
@@ -238,7 +236,6 @@ body.cas--zoom-enabled .full-start__background.loaded {
         }  
     }  
   
-    // Запуск  
     function startPlugin() {  
         registerPlugin();  
         initializePlugin();  
