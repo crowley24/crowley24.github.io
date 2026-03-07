@@ -74,12 +74,24 @@
                       
                     <div class="full-start-new__buttons applecation__buttons-row">  
                         <div class="full-start__button selector button--play">  
-                            ${ICONS.play} <span>Дивитися</span>  
+                            ${ICONS.play} <span>#{title_watch}</span>  
                         </div>  
-                        <div class="full-start__button selector view--trailer">${ICONS.trailer}</div>
-                        <div class="full-start__button selector button--book">${ICONS.book}</div>  
-                        <div class="full-start__button selector button--reaction">${ICONS.reaction}</div>  
-                        <div class="full-start__button selector button--options">${ICONS.options}</div>  
+                        
+                        <div class="full-start__button selector view--trailer">
+                            ${ICONS.trailer} <span>#{full_trailers}</span>
+                        </div>
+
+                        <div class="full-start__button selector button--book">
+                            ${ICONS.book} <span>#{settings_input_links}</span>
+                        </div>  
+  
+                        <div class="full-start__button selector button--reaction">
+                            ${ICONS.reaction} <span>#{title_reactions}</span>
+                        </div>  
+  
+                        <div class="full-start__button selector button--options">
+                            ${ICONS.options}
+                        </div>  
                     </div>  
                 </div>  
   
@@ -90,7 +102,9 @@
         </div>  
   
         <div class="hide buttons--container">  
-            <div class="full-start__button view--torrent hide">${ICONS.play}</div>   
+            <div class="full-start__button selector view--torrent">
+                ${ICONS.play} <span>#{full_torrents}</span>
+            </div>   
         </div>  
     </div>`;  
   
@@ -119,26 +133,25 @@
     filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
 }
 
-/* ОДНАКОВИЙ СТИЛЬ ДЛЯ ВСІХ КНОПОК */
-.applecation__buttons-row { display: flex; align-items: center; gap: 20px; margin-top: 25px; }
+/* ОДНАКОВИЙ СТИЛЬ ДЛЯ ВСІХ КНОПОК З НАПИСАМИ */
+.applecation__buttons-row { display: flex; align-items: center; gap: 15px; margin-top: 25px; flex-wrap: wrap; }
 
 .cas-apple-style .full-start__button {  
-    background: none !important; border: none !important;  
-    color: rgba(255,255,255,0.7) !important; 
-    padding: 10px 15px !important;
+    background: rgba(255,255,255,0.08) !important; border: none !important;  
+    color: rgba(255,255,255,0.8) !important; 
+    padding: 12px 20px !important;
+    border-radius: 12px !important;
     display: flex; justify-content: center; align-items: center; gap: 10px;
     font-size: 1.1em; font-weight: 500;
     transition: all 0.25s ease;
 }
 
-/* Спеціальний відступ для кнопки з текстом */
-.cas-apple-style .button--play { padding-left: 0 !important; }
-
 /* Ефект при фокусі */
 .cas-apple-style .full-start__button.focus {  
-    transform: scale(1.15);  
+    transform: scale(1.1);  
+    background: rgba(255,255,255,0.2) !important;
     color: #fff !important;
-    filter: drop-shadow(0 0 10px rgba(255,255,255,0.8)) !important;  
+    filter: drop-shadow(0 0 10px rgba(255,255,255,0.3)) !important;  
 }
 
 /* Анімація Ken Burns */
