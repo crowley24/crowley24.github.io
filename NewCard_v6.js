@@ -104,69 +104,59 @@
     // Мінімальні CSS стилі для розташування назви зліва  
     function addStyles() {  
         const styles = `<style>  
-/* Основний контейнер з назвою зліва */  
-.left-title {  
-    transition: all .3s;  
+/* Посилюємо селектор через body, щоб перебити інші плагіни */
+body .left-title .full-start-new__body {  
+    height: 80vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-end !important;
+}  
+
+body .left-title .full-start-new__right {  
+    display: flex !important;  
+    align-items: flex-end !important;
+    justify-content: flex-start !important; /* Примусово вліво */
+    width: 100% !important;
+    text-align: left !important;
 }  
   
-.left-title .full-start-new__body {  
-    height: 80vh;  
+/* Контейнер для контенту */
+body .left-title__content {  
+    flex-grow: 1 !important;  
+    display: flex !important;  
+    flex-direction: column !important;  
+    justify-content: flex-end !important;
+    align-items: flex-start !important; /* Текст і кнопки строго вліво */
 }  
   
-.left-title .full-start-new__right {  
-    display: flex;  
-    align-items: flex-end;  
+/* Назва фільму */
+body .left-title .full-start-new__title {  
+    font-size: 2.5em !important;  
+    text-align: left !important;
+    margin-left: 0 !important;
+    margin-right: auto !important;
 }  
   
-/* Контейнер для контенту з назвою зліва */  
-.left-title__content {  
-    flex-grow: 1;  
-    display: flex;  
-    flex-direction: column;  
-    justify-content: flex-end;  
-}  
+/* Кнопки - саме тутButtonsManager зазвичай псує верстку */
+body .left-title .full-start-new__buttons {  
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: flex-start !important; /* Тільки вліво! */
+    margin-top: 1em !important;
+    width: 100% !important;
+}
+
+/* Скидаємо можливе центрування від ButtonsManager для самих кнопок */
+body .left-title .full-start-new__buttons .full-start__button {
+    margin-left: 0 !important;
+    margin-right: 10px !important;
+}
   
-/* Стилі назви фільму зліва */  
-.left-title .full-start-new__title {  
-    font-size: 2.5em;  
-    font-weight: 700;  
-    line-height: 1.2;  
-    margin-bottom: 0.5em;  
-    text-shadow: 0 0 0.1em rgba(0, 0, 0, 0.3);  
-    color: #fff;  
-}  
-  
-/* Гарантуємо, що контент буде зліва */  
-.left-title .full-start-new__head,  
-.left-title .full-start-new__details {  
-    margin-bottom: 1em;  
-}  
-  
-/* Кнопки під назвою */  
-.left-title .full-start-new__buttons {  
-    margin-top: 1em;  
-}  
-  
-/* Реакції зправа */  
-.left-title .full-start-new__reactions {  
-    margin-left: 2em;  
-    flex-shrink: 0;  
-}  
-  
-/* Адаптивність для мобільних */  
+/* Адаптивність */
 @media screen and (max-width: 767px) {  
-    .left-title .full-start-new__right {  
-        flex-direction: column;  
-        align-items: flex-start;  
-    }  
-      
-    .left-title .full-start-new__reactions {  
-        margin-left: 0;  
-        margin-top: 1em;  
-    }  
-      
-    .left-title .full-start-new__title {  
-        font-size: 2em;  
+    body .left-title .full-start-new__right {  
+        flex-direction: column !important;  
+        align-items: flex-start !important;  
     }  
 }  
 </style>`;  
