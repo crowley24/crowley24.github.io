@@ -4,7 +4,6 @@
     const PLUGIN_NAME = 'Clean & Apple Style';
     const PLUGIN_ID = 'clean_apple_style';
 
-    // Нові SVG іконки з наданого коду
     const ICONS = {
         play: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 5.14V19.14L19 12.14L8 5.14Z" fill="currentColor"/></svg>`,
         book: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 3H7C5.9 3 5 3.9 5 5V21L12 18L19 21V5C19 3.9 18.1 3 17 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
@@ -65,7 +64,7 @@
   
             <div class="full-start-new__right">  
                 <div class="left-title__content">  
-                    <div class="cas-logo-container" style="margin-bottom: 25px;">
+                    <div class="cas-logo-container" style="margin-bottom: 30px;">
                         <div class="cas-logo"></div>
                         <div class="full-start-new__title">{title}</div>  
                     </div>
@@ -77,13 +76,9 @@
                         <div class="full-start__button selector button--play">  
                             ${ICONS.play} <span>Дивитися</span>  
                         </div>  
-                        
                         <div class="full-start__button selector view--trailer">${ICONS.trailer}</div>
-
                         <div class="full-start__button selector button--book">${ICONS.book}</div>  
-  
                         <div class="full-start__button selector button--reaction">${ICONS.reaction}</div>  
-  
                         <div class="full-start__button selector button--options">${ICONS.options}</div>  
                     </div>  
                 </div>  
@@ -108,9 +103,9 @@
 
 .left-title .full-start-new__body { height: 85vh; }  
 .left-title .full-start-new__right { display: flex; align-items: flex-end; padding-left: 5%; }  
-.left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 40px; }  
+.left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 50px; }  
 
-/* Приховування зайвого */
+/* Приховування статусів та реакцій */
 .left-title .full-start-new__reactions,
 .left-title .full-start-new__rate-line,
 .left-title .full-start__status,
@@ -124,37 +119,26 @@
     filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
 }
 
-/* НОВИЙ СТИЛЬ КНОПОК ЯК У ПЛАГІНІ */
-.applecation__buttons-row { display: flex; align-items: center; gap: 15px; margin-top: 20px; }
+/* ОДНАКОВИЙ СТИЛЬ ДЛЯ ВСІХ КНОПОК */
+.applecation__buttons-row { display: flex; align-items: center; gap: 20px; margin-top: 25px; }
 
-/* Головна кнопка */
-.cas-apple-style .button--play {  
-    background: #fff !important; color: #000 !important;  
-    padding: 12px 35px !important; border-radius: 12px !important;  
-    font-weight: 700 !important; text-transform: none;
-    display: flex; align-items: center; gap: 8px;
-    transition: transform 0.2s, background 0.2s;
-}
-
-/* Мінімалістичні іконки */
-.cas-apple-style .full-start__button:not(.button--play) {  
+.cas-apple-style .full-start__button {  
     background: none !important; border: none !important;  
-    color: rgba(255,255,255,0.6) !important; padding: 10px !important;
-    display: flex; justify-content: center; align-items: center;
-    transition: transform 0.2s, color 0.2s;
+    color: rgba(255,255,255,0.7) !important; 
+    padding: 10px 15px !important;
+    display: flex; justify-content: center; align-items: center; gap: 10px;
+    font-size: 1.1em; font-weight: 500;
+    transition: all 0.25s ease;
 }
 
-/* Фокус на кнопках */
-.cas-apple-style .full-start__button.focus:not(.button--play) {  
-    transform: scale(1.3);  
+/* Спеціальний відступ для кнопки з текстом */
+.cas-apple-style .button--play { padding-left: 0 !important; }
+
+/* Ефект при фокусі */
+.cas-apple-style .full-start__button.focus {  
+    transform: scale(1.15);  
     color: #fff !important;
-    filter: drop-shadow(0 0 8px rgba(255,255,255,0.9)) !important;  
-}
-
-.cas-apple-style .button--play.focus {  
-    background: #e0e0e0 !important;  
-    transform: scale(1.05);
-    filter: none !important; 
+    filter: drop-shadow(0 0 10px rgba(255,255,255,0.8)) !important;  
 }
 
 /* Анімація Ken Burns */
