@@ -1,185 +1,187 @@
-(function () {  
-    'use strict';  
-  
-    // Головна функція ініціалізації  
-    function initializePlugin() {  
-        console.log('LeftTitle', 'v1.1.0');  
-          
-        addCustomTemplate();  
-        addStyles();  
-        attachLoader();  
-    }  
-  
-    // Спрощений шаблон (структура збережена для стабільності, але зайве приховано стилями)  
-    function addCustomTemplate() {  
-        const template = `<div class="full-start-new left-title">  
-        <div class="full-start-new__body">  
-            <div class="full-start-new__left hide">  
-                <div class="full-start-new__poster">  
-                    <img class="full-start-new__img full--poster" />  
-                </div>  
-            </div>  
-  
-            <div class="full-start-new__right">  
-                <div class="left-title__content">  
-                    <div class="full-start-new__title">{title}</div>  
-                      
-                    <div class="full-start-new__head"></div>  
-                    <div class="full-start-new__details"></div>  
-                      
-                    <div class="full-start-new__buttons">  
-                        <div class="full-start__button selector button--play">  
-                            <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                <circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/>  
-                                <path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/>  
-                            </svg>  
-                            <span>#{title_watch}</span>  
-                        </div>  
-  
-                        <div class="full-start__button selector button--book">  
-                            <svg width="21" height="32" viewBox="0 0 21 32" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                <path d="M2 1.5H19C19.2761 1.5 19.5 1.72386 19.5 2V27.9618C19.5 28.3756 19.0261 28.6103 18.697 28.3595L12.6212 23.7303C11.3682 22.7757 9.63183 22.7757 8.37885 23.7303L2.30302 28.3595C1.9739 28.6103 1.5 28.3756 1.5 27.9618V2C1.5 1.72386 1.72386 1.5 2 1.5Z" stroke="currentColor" stroke-width="2.5"/>  
-                            </svg>  
-                            <span>#{settings_input_links}</span>  
-                        </div>  
-  
-                        <div class="full-start__button selector button--reaction">  
-                            <svg width="38" height="34" viewBox="0 0 38 34" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                <path d="M37.208 10.9742C37.1364 10.8013 37.0314 10.6441 36.899 10.5117C36.7666 10.3794 36.6095 10.2744 36.4365 10.2028L12.0658 0.108375C11.7166 -0.0361828 11.3242 -0.0361227 10.9749 0.108542C10.6257 0.253206 10.3482 0.530634 10.2034 0.879836L0.108666 25.2507C0.0369593 25.4236 3.37953e-05 25.609 2.3187e-08 25.7962C-3.37489e-05 25.9834 0.0368249 26.1688 0.108469 26.3418C0.180114 26.5147 0.28514 26.6719 0.417545 26.8042C0.54995 26.9366 0.707139 27.0416 0.880127 27.1131L17.2452 33.8917C17.5945 34.0361 17.9869 34.0361 18.3362 33.8917L29.6574 29.2017C29.8304 29.1301 29.9875 29.0251 30.1199 28.8928C30.2523 28.7604 30.3573 28.6032 30.4289 28.4303L37.2078 12.065C37.2795 11.8921 37.3164 11.7068 37.3165 11.5196C37.3165 11.3325 37.2796 11.1471 37.208 10.9742ZM20.425 29.9407L21.8784 26.4316L25.3873 27.885L20.425 29.9407ZM28.3407 26.0222L21.6524 23.252C21.3031 23.1075 20.9107 23.1076 20.5615 23.2523C20.2123 23.3969 19.9348 23.6743 19.79 24.0235L17.0194 30.7123L3.28783 25.0247L12.2918 3.28773L34.0286 12.2912L28.3407 26.0222Z" fill="currentColor"/>  
-                                <path d="M25.3493 16.976L24.258 14.3423L16.959 17.3666L15.7196 14.375L13.0859 15.4659L15.4161 21.0916L25.3493 16.976Z" fill="currentColor"/>  
-                            </svg>  
-                            <span>#{title_reactions}</span>  
-                        </div>  
-  
-                        <div class="full-start__button selector button--options">  
-                            <svg width="38" height="10" viewBox="0 0 38 10" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                <circle cx="4.88968" cy="4.98563" r="4.75394" fill="currentColor"/>  
-                                <circle cx="18.9746" cy="4.98563" r="4.75394" fill="currentColor"/>  
-                                <circle cx="33.0596" cy="4.98563" r="4.75394" fill="currentColor"/>  
-                            </svg>  
-                        </div>  
-                    </div>  
-                </div>  
-  
-                <div class="full-start-new__reactions selector">  
-                    <div>#{reactions_none}</div>  
-                </div>  
-                  
-                <div class="full-start-new__rate-line">  
-                    <div class="full-start__status hide"></div>  
-                </div>  
-                  
-                <div class="rating--modss" style="display: none;"></div>  
-            </div>  
-        </div>  
-  
-        <div class="hide buttons--container">  
-            <div class="full-start__button view--torrent hide">  
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="50px" height="50px">  
-                    <path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2z M40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4 S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851 c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29 c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862-4.993-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8 c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722 C42.541,30.867,41.756,30.963,40.5,30.963z" fill="currentColor"/>  
-                </svg>  
-                <span>#{full_torrents}</span>  
-            </div>  
-      
-            <div class="full-start__button selector view--trailer">  
-                <svg height="70" viewBox="0 0 80 70" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                    <path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/>  
-                </svg>  
-                <span>#{full_trailers}</span>  
-            </div>  
-        </div>  
-    </div>`;  
-  
-        Lampa.Template.add('full_start_new', template);  
-    }  
-  
-    function addStyles() {  
-        const styles = `<style>  
-/* Базові стилі контейнера */  
-.left-title .full-start-new__body {  
-    height: 80vh;  
-    display: flex;  
-}  
-  
-.left-title .full-start-new__right {  
-    display: flex;  
-    align-items: flex-end;  
-    padding-bottom: 5em; /* Підняв трохи вище від низу */  
-}  
-  
-.left-title__content {  
-    flex-grow: 1;  
-    display: flex;  
-    flex-direction: column;  
-    justify-content: flex-end;  
-}  
-  
-.left-title .full-start-new__title {  
-    font-size: 2.8em;  
-    font-weight: 700;  
-    margin-bottom: 0.3em;  
-    color: #fff;  
-    text-shadow: 0 2px 10px rgba(0,0,0,0.5);  
-}  
-  
-/* --- ПРИХОВУВАННЯ НЕПОТРІБНИХ ЕЛЕМЕНТІВ --- */  
-.left-title .full-start-new__reactions,  
-.left-title .full-start-new__rate-line,  
-.left-title .full-start__status,  
-.left-title .rating--modss {  
-    display: none !important;  
-    opacity: 0 !important;  
-    visibility: hidden !important;  
-    height: 0 !important;  
-    margin: 0 !important;  
-    padding: 0 !important;  
-}  
-/* ----------------------------------------- */  
-  
-/* Налаштування фону */  
-.left-title .background__overlay { opacity: 0.15 !important; }  
-.left-title .full-start__background { filter: brightness(0.7) !important; }  
-  
-@media screen and (max-width: 767px) {  
-    .left-title .full-start-new__title { font-size: 1.8em; }  
-    .left-title .full-start-new__right { padding-bottom: 2em; }  
-}  
-</style>`;  
-  
-        Lampa.Template.add('left_title_css', styles);  
-        $('body').append(Lampa.Template.get('left_title_css', {}, true));  
-    }  
-  
-    function attachLoader() {  
-        Lampa.Listener.follow('full', (event) => {  
-            if (event.type === 'complite') {  
-                console.log('LeftTitle: Clean view applied');  
-            }  
-        });  
-    }  
-  
-    function registerPlugin() {  
-        const pluginManifest = {  
-            type: 'other',  
-            version: '1.1.0',  
-            name: 'LeftTitle Clean',  
-            description: 'Назва зліва без статусу та реакцій.',  
-            author: 'Gemini',  
-            icon: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#fff"><rect x="10" y="30" width="50" height="8" rx="2"/></svg>'  
-        };  
-  
-        if (window.Lampa && Lampa.Manifest) {  
-            Lampa.Manifest.plugins = Lampa.Manifest.plugins || {};  
-            Lampa.Manifest.plugins['lefttitle'] = pluginManifest;  
-        }  
-    }  
-  
-    function startPlugin() {  
-        registerPlugin();  
-        initializePlugin();  
-    }  
-  
-    if (window.appready) startPlugin();  
-    else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') startPlugin(); });  
-  
+(function () {
+    'use strict';
+
+    const PLUGIN_NAME = 'Clean & Apple Style';
+    const PLUGIN_ID = 'clean_apple_style';
+    const PLUGIN_ICON = '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#fff"><rect x="10" y="30" width="80" height="40" rx="5" fill="rgba(255,255,255,0.2)"/><circle cx="50" cy="50" r="12" fill="white"/></svg>';
+
+    function initializePlugin() {
+        console.log(PLUGIN_NAME, 'v1.2.0 Init');
+        
+        addCustomTemplate();
+        addStyles();
+        addSettings();
+        attachEvents();
+    }
+
+    function addSettings() {
+        // Дефолтні налаштування
+        const defaults = {
+            'cas_logo_scale': '100',
+            'cas_bg_animation': true
+        };
+
+        Object.keys(defaults).forEach(key => {
+            if (Lampa.Storage.get(key) === undefined) Lampa.Storage.set(key, defaults[key]);
+        });
+
+        // Реєстрація пункту в налаштуваннях Lampa
+        Lampa.SettingsApi.addComponent({
+            component: PLUGIN_ID,
+            name: PLUGIN_NAME,
+            icon: PLUGIN_ICON
+        });
+
+        const scaleVals = { '70':'70%','80':'80%','90':'90%','100':'Стандарт','110':'110%','120':'120%','130':'130%' };
+
+        Lampa.SettingsApi.addParam({
+            component: PLUGIN_ID,
+            param: { name: 'cas_logo_scale', type: 'select', values: scaleVals, default: '100' },
+            field: { name: 'Розмір логотипу' },
+            onChange: applySettings
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: PLUGIN_ID,
+            param: { name: 'cas_bg_animation', type: 'trigger', default: true },
+            field: { name: 'Анімація фону (Zoom)' },
+            onChange: applySettings
+        });
+
+        applySettings();
+    }
+
+    function applySettings() {
+        const root = document.documentElement;
+        const scale = parseInt(Lampa.Storage.get('cas_logo_scale')) / 100;
+        root.style.setProperty('--cas-logo-scale', scale);
+        
+        $('body').toggleClass('cas--zoom-enabled', Lampa.Storage.get('cas_bg_animation'));
+    }
+
+    function addCustomTemplate() {
+        const template = `
+        <div class="full-start-new left-title cas-wrapper">
+            <div class="full-start-new__body cas-body">
+                <div class="cas-content">
+                    <div class="cas-logo-container">
+                        <div class="cas-logo"></div>
+                        <div class="full-start-new__title cas-text-title">{title}</div>
+                    </div>
+
+                    <div class="full-start-new__details"></div>
+
+                    <div class="full-start-new__buttons">
+                        <div class="full-start__button selector button--play">
+                            <svg width="28" height="29" viewBox="0 0 28 29" fill="none"><circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/><path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/></svg>
+                            <span>#{title_watch}</span>
+                        </div>
+                        <div class="full-start__button selector button--book">
+                            <svg width="21" height="32" viewBox="0 0 21 32" fill="none"><path d="M2 1.5H19V27.9618C19.5 28.3756 18.697 28.3595 12.6212 23.7303C11.3682 22.7757 9.63183 22.7757 8.37885 23.7303L2.30302 28.3595C1.5 28.3756 1.5 27.9618V2Z" stroke="currentColor" stroke-width="2.5"/></svg>
+                        </div>
+                        <div class="full-start__button selector button--trailer">
+                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M21 6H3C1.9 6 1 6.9 1 8V16C1 17.1 1.9 18 3 18H21C22.1 18 23 17.1 23 16V8C23 6.9 22.1 6 21 6Z" stroke="currentColor" stroke-width="2"/><path d="M10 9L15 12L10 15V9Z" fill="currentColor"/></svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="full-start-new__reactions selector" style="display:none"></div>
+                <div class="full-start-new__rate-line" style="display:none"></div>
+            </div>
+        </div>`;
+
+        Lampa.Template.add('full_start_new', template);
+    }
+
+    function addStyles() {
+        const styles = `
+        <style>
+            :root { --cas-logo-scale: 1; }
+            
+            .cas-body {
+                height: 100vh;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-end;
+                padding: 0 5% 8% 5% !important;
+                background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 60%);
+            }
+
+            .cas-logo-container { margin-bottom: 20px; }
+
+            .cas-logo img {
+                max-width: calc(450px * var(--cas-logo-scale));
+                max-height: calc(180px * var(--cas-logo-scale));
+                object-fit: contain;
+                object-position: left bottom;
+                filter: drop-shadow(0 0 10px rgba(0,0,0,0.3));
+            }
+
+            .cas-text-title {
+                font-size: 3em;
+                font-weight: 800;
+                text-shadow: 0 2px 15px rgba(0,0,0,0.8);
+            }
+
+            /* Анімація фону Ken Burns */
+            @keyframes casKenBurns {
+                0% { transform: scale(1); }
+                100% { transform: scale(1.15); }
+            }
+
+            body.cas--zoom-enabled .full-start__background.loaded {
+                animation: casKenBurns 45s ease-out forwards !important;
+            }
+
+            /* Приховуємо все зайве, що просив користувач */
+            .left-title .full-start-new__reactions,
+            .left-title .full-start-new__rate-line,
+            .left-title .rating--modss,
+            .left-title .full-start__status {
+                display: none !important;
+            }
+
+            /* Корекція кнопок */
+            .cas-content .full-start-new__buttons { display: flex; gap: 15px; align-items: center; }
+            .cas-content .full-start__button { background: rgba(255,255,255,0.1); border-radius: 10px; }
+            .cas-content .full-start__button.focus { background: #fff; color: #000; transform: scale(1.1); }
+        </style>`;
+        $('body').append(styles);
+    }
+
+    function loadMediaData(event) {
+        const data = event.data.movie;
+        const render = event.object.activity.render();
+        if (!data) return;
+
+        // Пошук логотипу через TMDB API
+        const url = Lampa.TMDB.api(`${data.name ? 'tv' : 'movie'}/${data.id}/images?api_key=${Lampa.TMDB.key()}`);
+        
+        $.get(url, (res) => {
+            const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || 
+                             res.logos.find(l => l.iso_639_1 === 'en') || 
+                             res.logos[0];
+
+            if (bestLogo) {
+                const logoUrl = Lampa.TMDB.image('/t/p/w500' + bestLogo.file_path);
+                render.find('.cas-logo').html(\`<img src="\${logoUrl}">\`);
+                render.find('.cas-text-title').hide(); // Ховаємо текст, якщо є лого
+            } else {
+                render.find('.cas-text-title').show();
+            }
+        });
+    }
+
+    function attachEvents() {
+        Lampa.Listener.follow('full', (e) => {
+            if (e.type === 'complite') {
+                setTimeout(() => loadMediaData(e), 50);
+            }
+        });
+    }
+
+    // Запуск плагіна
+    if (window.appready) initializePlugin();
+    else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') initializePlugin(); });
+
 })();
