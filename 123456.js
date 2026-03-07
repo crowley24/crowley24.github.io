@@ -1174,21 +1174,23 @@
         Lampa.Storage.set('buttons_plugin_version', PLUGIN_VERSION);  
     }  
       
-    // Перевірка наявності конфліктуючих плагінів  
-    var template = Lampa.Template.get('full_start_new', '');  
-    var hasLeftTitle = template.includes('left-title');  
-    var hasApplecation = template.includes('applecation');  
+    // Отримуємо шаблон (додаємо перевірку, щоб це точно був рядок)
+    var template = Lampa.Template.get('full_start_new', '') || '';  
+    
+    // ЗАМІНА .includes на .indexOf
+    var hasLeftTitle = template.indexOf('left-title') !== -1;  
+    var hasApplecation = template.indexOf('applecation') !== -1;  
       
     // Сумісні CSS стилі  
-    var bodyStyle = hasLeftTitle || hasApplecation ?   
+    var bodyStyle = (hasLeftTitle || hasApplecation) ?   
         'align-items: flex-end !important;' :   
         'align-items: stretch !important;';  
       
-    var rightStyle = hasLeftTitle || hasApplecation ?   
+    var rightStyle = (hasLeftTitle || hasApplecation) ?   
         'display: flex !important; flex-direction: row !important; align-items: flex-end !important;' :   
         'display: flex !important; flex-direction: column !important; align-self: stretch !important; min-height: 0;';  
       
-    var titleStyle = hasLeftTitle || hasApplecation ?   
+    var titleStyle = (hasLeftTitle || hasApplecation) ?   
         'margin-top: 0 !important; margin-bottom: 1em !important;' :   
         'margin-top: auto !important;';  
       
@@ -1197,11 +1199,11 @@
         '.full-start-new__body { ' + bodyStyle + ' }' +  
         '.full-start-new__right { ' + rightStyle + ' }' +  
         '.full-start-new__title { ' + titleStyle + ' }' +  
-        // решта CSS стилів без змін  
+        // ... решта ваших стилів ...
         '</style>');  
     $('body').append(style);
 
-        Lampa.Listener.follow('full', function(e) {
+           Lampa.Listener.follow('full', function(e) {
             if (e.type !== 'complite') return;
             var container = e.object.activity.render();
             var targetContainer = container.find('.full-start-new__buttons');
