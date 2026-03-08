@@ -81,7 +81,7 @@
         const m = mins % 60;
         return (h > 0 ? h + 'г ' : '') + m + 'хв';
     }
-  
+
     function addCustomTemplate() {  
         const template = `<div class="full-start-new left-title cas-apple-style">  
         <div class="full-start-new__body">  
@@ -91,7 +91,7 @@
   
             <div class="full-start-new__right">  
                 <div class="left-title__content">  
-                    <div class="cas-logo-container" style="margin-bottom: 10px;">
+                    <div class="cas-logo-container" style="margin-bottom: 30px;">
                         <div class="cas-logo"></div>
                         <div class="full-start-new__title">{title}</div>  
                     </div>
@@ -117,8 +117,8 @@
                 </div>  
   
                 <div class="full-start-new__reactions selector"><div>#{reactions_none}</div></div>  
-                <div class="full-start-new__rate-line"><div class="full-start__status"></div></div>  
-                <div class="rating--modss"></div>  
+                <div class="full-start-new__rate-line"><div class="full-start__status hide"></div></div>  
+                <div class="rating--modss" style="display: none;"></div>  
             </div>  
         </div>  
   
@@ -151,8 +151,33 @@
 .cas-studio-item img { height: 100%; }
 .cas-quality-item { height: 18px; display: flex; align-items: center; }
 .cas-quality-item img { height: 100%; width: auto; }
-.cas-apple-style .full-start__button { background: rgba(255,255,255,0.08) !important; border: none !important; color: rgba(255,255,255,0.8) !important; padding: 12px 20px !important; border-radius: 12px !important; display: flex; align-items: center; gap: 10px; font-size: 1.1em; transition: all 0.25s ease; }
-.cas-apple-style .full-start__button.focus { transform: scale(1.1); background: rgba(255,255,255,0.2) !important; color: #fff !important; }
+
+/* НОВИЙ СТИЛЬ КНОПОК: ПРОЗОРІ, БЕЗ ФОНУ, ЗІ СВІТІННЯМ */
+.applecation__buttons-row { display: flex; align-items: center; gap: 15px; margin-top: 25px; flex-wrap: wrap; }
+
+.cas-apple-style .full-start__button {  
+    background: none !important; border: none !important;  
+    color: rgba(255,255,255,0.7) !important; 
+    padding: 10px 15px !important;
+    border-radius: 12px !important;
+    display: flex; justify-content: center; align-items: center; gap: 10px;
+    font-size: 1.1em; font-weight: 500;
+    transition: all 0.25s ease;
+    /* Тінь для іконок і тексту для читабельності */
+    text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+}
+
+/* Ефект при фокусі */
+.cas-apple-style .full-start__button.focus {  
+    transform: scale(1.1);  
+    background: none !important; /* Фон залишається прозорим */
+    color: #fff !important;
+    /* Біле світіння навколо кнопки */
+    box-shadow: 0 0 15px rgba(255,255,255,0.3) !important;
+    /* Світіння іконок і тексту */
+    filter: drop-shadow(0 0 8px rgba(255,255,255,0.7)) !important;  
+}
 
 /* ОНОВЛЕНА ЖИВА АНІМАЦІЯ */
 @keyframes casKenBurns { 
@@ -171,7 +196,7 @@ body.cas--zoom-enabled .full-start__background.loaded {
   
         Lampa.Template.add('left_title_css', styles);  
         $('body').append(Lampa.Template.get('left_title_css', {}, true));  
-    }  
+    }    
   
     function attachLoader() {  
         Lampa.Listener.follow('full', (event) => {  
