@@ -265,9 +265,9 @@
     opacity: 0.95;
 }
 
-/* --- ІКОНКИ ЯКОСТІ (ТУТ ЗМІНЮВАТИ РОЗМІР) --- */
+/* --- ІКОНКИ ЯКОСТІ --- */
 .cas-quality-item { 
-    height: 18px !important; /* <--- Поставте 18px для збільшення */
+    height: 18px !important; 
     display: flex; align-items: center; margin-left: 4px;
 }
 .cas-quality-item img { height: 100% !important; width: auto !important; }
@@ -310,6 +310,7 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
         Lampa.Template.add('left_title_css', styles);  
         $('body').append(Lampa.Template.get('left_title_css', {}, true));  
     }
+
     function attachLoader() {  
         Lampa.Listener.follow('full', (event) => {  
             if (event.type === 'complite') {  
@@ -382,14 +383,20 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
                         render.find('.cas-studios-row').html(studios.map(s => `<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}"></div>`).join(''));
                     }
 
+                    // --- ВСТАВКА ОНОВЛЕНОГО БЛОКУ ПАРСЕРА ЯКОСТІ ---
                     if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {
                         Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {
-                            if (res && res.Results) {
+                            const items = res.Results || res; 
+                            
+                            if (items && Array.isArray(items) && items.length > 0) {
                                 const b = { res: '', hdr: false, dv: false, ukr: false };
-                                res.Results.slice(0, 15).forEach(i => {
-                                    const t = i.Title.toLowerCase();
+                                
+                                items.slice(0, 15).forEach(i => {
+                                    const t = (i.Title || i.title || '').toLowerCase();
+                                    
                                     if (t.includes('4k') || t.includes('2160')) b.res = '4K'; 
                                     else if (!b.res && (t.includes('1080') || t.includes('fhd'))) b.res = 'FULL HD';
+                                    
                                     if (t.includes('hdr')) b.hdr = true;
                                     if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) b.dv = true;
                                     if (t.includes('ukr') || t.includes('укр')) b.ukr = true;
@@ -400,7 +407,11 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
                                 if (b.dv) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;
                                 else if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;
                                 if (b.ukr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;
-                                if (qH && (time || genre)) qH = '<span style="opacity: 0.5; margin: 0 5px;">•</span>' + qH;
+                                
+                                if (qH && (time || genre)) {
+                                    qH = '<span style="opacity: 0.5; margin: 0 5px;">•</span>' + qH;
+                                }
+                                
                                 render.find('.cas-quality-row').html(qH);
                             }
                         });
