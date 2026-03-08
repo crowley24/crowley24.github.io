@@ -257,26 +257,34 @@
 .cas-animated .cas-studios-row { opacity: 1; transform: translateY(0); transition-delay: 0.18s; }
 .cas-animated .full-start-new__buttons { opacity: 1; transform: translateY(0); transition-delay: 0.24s; }
 
-/* --- ФІКСОВАНИЙ РОЗМІР ЛОГОТИПУ НАЗВИ (ВИПРАВЛЕНО) --- */
+/* --- ЛОГОТИП НАЗВИ (ФІКСОВАНИЙ) --- */
 .cas-logo img {
     display: block;
     max-width: calc(450px * var(--cas-logo-scale));
     max-height: calc(180px * var(--cas-logo-scale));
-    width: auto !important;
-    height: auto !important;
-    object-fit: contain; 
-    object-position: left bottom;
+    width: auto !important; height: auto !important;
+    object-fit: contain; object-position: left bottom;
     filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
 }
 
-/* --- СТУДІЇ ТА ЯКІСТЬ --- */
-.cas-studio-item { height: 18px !important; display: flex; align-items: center; margin-right: 10px; }
+/* --- ЛОГОТИПИ СТУДІЙ (ВИПРАВЛЕННЯ ВИДИМОСТІ) --- */
+.cas-studio-item { height: 18px !important; display: flex; align-items: center; margin-right: 12px; }
 .cas-studio-item img { 
     height: 100% !important; width: auto !important; object-fit: contain;
-    filter: brightness(1.3) contrast(1.1);
+    /* Фільтр створює тонкий світлий контур 0.8px. 
+       Це робить чорне видимим на чорному, не розмиваючи картинку. */
+    filter: 
+        drop-shadow(0.8px 0.8px 0px rgba(255,255,255,0.4)) 
+        drop-shadow(-0.8px -0.8px 0px rgba(255,255,255,0.4))
+        brightness(1.1);
 }
 
-.cas-quality-item { height: 14px !important; display: flex; align-items: center; }
+/* --- ІКОНКИ ЯКОСТІ: ТУТ ЗМІНЮЄТЬСЯ РОЗМІР --- */
+.cas-quality-item { 
+    height: 16px !important; /* <--- ЗМІНІТЬ ЦЕ ЧИСЛО ДЛЯ РОЗМІРУ ІКОНОК ЯКОСТІ */
+    display: flex; 
+    align-items: center; 
+}
 .cas-quality-item img { height: 100% !important; width: auto !important; }
 
 /* --- КНОПКИ ЗІ СВІТІННЯМ --- */
