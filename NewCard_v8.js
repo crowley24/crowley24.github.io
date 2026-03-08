@@ -1,7 +1,7 @@
 (function () {  
     'use strict';  
   
-    const PLUGIN_NAME = 'Clean & Apple Style Full';
+    const PLUGIN_NAME = 'Clean & Apple Style Fixed';
     const PLUGIN_ID = 'clean_apple_style';
     const ASSETS_PATH = 'https://crowley24.github.io/NewIcons/';
 
@@ -36,7 +36,7 @@
             'cas_show_studios': true, 
             'cas_show_quality': true, 
             'cas_blocks_gap': '30',
-            'cas_custom_buttons': false // За замовчуванням вимкнено
+            'cas_custom_buttons': false 
         };
         Object.keys(defaults).forEach(key => { if (Lampa.Storage.get(key) === undefined) Lampa.Storage.set(key, defaults[key]); });
 
@@ -154,9 +154,9 @@
     function addStyles() {  
         const styles = `<style>  
 :root { --cas-logo-scale: 1; --cas-btn-scale: 1; --cas-blocks-gap: 30px; }
-.left-title .full-start-new__body { height: 85vh; }  
-.left-title .full-start-new__right { display: flex; align-items: flex-end; padding-left: 5%; }  
-.left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 50px; }  
+.left-title .full-start-new__body { height: 85vh; min-height: 400px; }  
+.left-title .full-start-new__right { display: flex; align-items: flex-end; padding-left: 5%; position: relative; width: 100%; height: 100%; }  
+.left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 50px; position: relative; z-index: 10; }  
 
 /* Приховуємо стандартні елементи Lampa */
 .cas-apple-wrapper .full-start-new__reactions,
@@ -176,43 +176,46 @@
 
 /* Рядок кнопок */
 .applecation__buttons-row { 
-    display: flex; align-items: center; 
-    gap: calc(20px * var(--cas-btn-scale)); 
-    margin-top: 15px; 
-    flex-wrap: wrap; 
+    display: flex !important; align-items: center !important; 
+    gap: calc(15px * var(--cas-btn-scale)) !important; 
+    margin-top: 20px !important; 
+    flex-wrap: wrap !important; 
 }
 
-/* СТИЛЬ КНОПОК: APPLE STYLE (Тільки коли увімкнено) */
-body.cas--custom-buttons .cas-apple-wrapper .full-start__button {  
-    background: transparent !important; 
-    border: none !important;  
-    box-shadow: none !important;
-    color: rgba(255,255,255,0.5) !important; 
-    padding: 10px 15px !important;
-    display: flex; justify-content: center; align-items: center; 
-    gap: 10px;
-    font-size: calc(1.2em * var(--cas-btn-scale)); 
-    font-weight: 600;
-    transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1), color 0.2s !important;
-    will-change: transform; 
-}
-
-body.cas--custom-buttons .cas-apple-wrapper .full-start__button.focus {  
-    transform: scale(1.15) !important; 
-    color: #fff !important;
-    filter: drop-shadow(0 0 8px rgba(255,255,255,0.6));
-}
-
-body.cas--custom-buttons .cas-apple-wrapper .full-start__button svg {
-    width: calc(26px * var(--cas-btn-scale));
-    height: calc(26px * var(--cas-btn-scale));
-}
-
-/* СТАНДАРТНИЙ СТИЛЬ КНОПОК (Якщо Apple Style вимкнено) */
-body:not(.cas--custom-buttons) .cas-apple-wrapper .full-start__button {
+/* ЗАГАЛЬНИЙ ВИГЛЯД КНОПОК */
+.cas-apple-wrapper .full-start__button {
+    display: flex !important; 
+    align-items: center !important; 
+    justify-content: center !important;
     font-size: calc(1.1em * var(--cas-btn-scale));
 }
 
+.cas-apple-wrapper .full-start__button svg {
+    width: calc(24px * var(--cas-btn-scale));
+    height: calc(24px * var(--cas-btn-scale));
+    margin-right: 10px;
+}
+
+/* APPLE STYLE (Коли увімкнено) */
+body.cas--custom-buttons .cas-apple-wrapper .full-start__button {  
+    background: rgba(255,255,255,0.05) !important; 
+    border: none !important;  
+    box-shadow: none !important;
+    color: rgba(255,255,255,0.6) !important; 
+    padding: 12px 20px !important;
+    border-radius: 12px !important;
+    font-weight: 600;
+    transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1), background 0.2s, color 0.2s !important;
+}
+
+body.cas--custom-buttons .cas-apple-wrapper .full-start__button.focus {  
+    transform: scale(1.1) !important; 
+    background: #fff !important;
+    color: #000 !important;
+    filter: drop-shadow(0 0 15px rgba(255,255,255,0.4));
+}
+
+/* Ken Burns Анімація */
 @keyframes casKenBurns { 
     0% { transform: scale(1); } 
     50% { transform: scale(1.1); } 
@@ -235,7 +238,6 @@ body.cas--zoom-enabled .full-start__background.loaded {
                 const data = event.data.movie;
                 const render = event.object.activity.render();
                 if (data && data.id) {
-                    // Завантаження логотипу
                     $.get(Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key()), (res) => {
                         const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];
                         if (bestLogo) {
@@ -246,7 +248,6 @@ body.cas--zoom-enabled .full-start__background.loaded {
                         }
                     });
 
-                    // Рейтинги
                     let ratesHtml = '';
                     const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
                     if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
@@ -262,18 +263,15 @@ body.cas--zoom-enabled .full-start__background.loaded {
                     }
                     render.find('.cas-rate-items').html(ratesHtml);
 
-                    // Мета-дані (Час + Жанр)
                     const time = formatTime(data.runtime || data.episode_run_time);
                     const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');
                     render.find('.cas-meta-info').text((time ? time + (genre ? ' • ' : '') : '') + genre);
                     
-                    // Студії
                     if (Lampa.Storage.get('cas_show_studios')) {
                         const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 3);
                         render.find('.cas-studios-row').html(studios.map(s => `<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}"></div>`).join(''));
                     }
 
-                    // Якість (через парсер)
                     if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {
                         Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {
                             if (res && res.Results) {
