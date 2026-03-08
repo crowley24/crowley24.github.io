@@ -152,7 +152,7 @@
 .cas-quality-item { height: 18px; display: flex; align-items: center; }
 .cas-quality-item img { height: 100%; width: auto; }
 
-/* КНОПКИ БЕЗ ФОНУ ТА ФОРМИ */
+/* КНОПКИ: ПОВНІСТЮ ПРОЗОРІ, БЕЗ ЖОДНИХ ГРАДІЄНТІВ */
 .applecation__buttons-row { display: flex; align-items: center; gap: 15px; margin-top: 25px; flex-wrap: wrap; }
 
 .cas-apple-style .full-start__button {  
@@ -160,27 +160,27 @@
     background-color: transparent !important;
     border: none !important;  
     box-shadow: none !important;
-    color: rgba(255,255,255,0.6) !important; 
+    color: rgba(255,255,255,0.5) !important; /* Трохи тьмяніші у спокої */
     padding: 10px 15px !important;
     display: flex; justify-content: center; align-items: center; gap: 10px;
     font-size: 1.15em; font-weight: 500;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    /* Базова тінь для читабельності */
-    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    text-shadow: 0 2px 5px rgba(0,0,0,0.9); /* Чітка тінь букв для читабельності */
 }
 
-/* ПОТУЖНЕ СВІТІННЯ ПРИ ФОКУСІ */
+/* СВІТІННЯ ТІЛЬКИ КОНТУРІВ ТЕКСТУ ТА ІКОНОК */
 .cas-apple-style .full-start__button.focus {  
-    transform: scale(1.18);  
+    transform: scale(1.2);  
     background: transparent !important;
+    background-color: transparent !important;
     color: #fff !important;
-    /* Багатошарове світіння: ядро + ореол */
-    filter: drop-shadow(0 0 5px rgba(255,255,255,1)) 
-            drop-shadow(0 0 15px rgba(255,255,255,0.6))
-            drop-shadow(0 0 30px rgba(255,255,255,0.3)) !important;  
     
-    /* Легкий відблиск по центру для об'єму (без овалу) */
-    background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%) !important;
+    /* Світяться тільки самі літери та іконки */
+    filter: drop-shadow(0 0 4px rgba(255,255,255,1)) 
+            drop-shadow(0 0 12px rgba(255,255,255,0.8))
+            drop-shadow(0 0 25px rgba(255,255,255,0.4)) !important;  
+    
+    box-shadow: none !important;
 }
 
 /* ОНОВЛЕНА ЖИВА АНІМАЦІЯ */
