@@ -232,100 +232,90 @@
     }  
 function addStyles() {  
         const styles = `<style>  
-:root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.2em; }
+:root { --cas-logo-scale: 1; --cas-blocks-gap: 25px; --cas-meta-size: 1.1em; }
 
-/* ГОЛОВНИЙ ФІКС: Контейнер всієї картки */
-.full-start-new { 
-    position: relative; 
-    z-index: 10; 
-    isolation: isolate; /* Створює новий контекст накладання */
+/* Повертаємо стабільність сітці */
+.left-title .full-start-new__body { 
+    height: 85vh; 
+    display: flex; 
+    flex-direction: column; 
+    justify-content: flex-end; 
+    position: relative;
 }
 
-/* ФОН - робимо його справді фоновим */
+/* Контент - чітко над фоном */
+.left-title .full-start-new__right { 
+    position: relative; 
+    z-index: 10; 
+    padding-bottom: 5vh; 
+}
+
+/* Фікс розмірів логотипу */
+.cas-logo { margin-bottom: 15px; }
+.cas-logo img {
+    max-width: 400px; /* Фіксований ліміт, щоб не "розносило" */
+    max-height: 160px;
+    object-fit: contain; 
+    object-position: left bottom;
+    filter: drop-shadow(0 0 15px rgba(0,0,0,0.7));
+}
+
+/* Назва фільму (якщо немає лого) */
+.left-title .full-start-new__title {  
+    font-size: 2.5em; font-weight: 700; 
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8); 
+    max-width: 60%;
+}
+
+/* Слайд-шоу шари */
 .full-start__background {
     position: absolute !important;
-    top: 0; left: 0; right: 0; bottom: 0;
-    z-index: -1 !important; /* ВІД'ЄМНИЙ ІНДЕКС - це гарантія */
-    pointer-events: none;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 0 !important;
     overflow: hidden;
 }
 
 .cas-bg-overlay {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
-    opacity: 0;
-    z-index: -1; /* Також за контентом */
-    transition: opacity 2.5s ease-in-out;
+    z-index: 1;
 }
 
-/* КОНТЕНТ - примусово попереду */
-.full-start-new__body { 
-    position: relative; 
-    z-index: 100 !important; 
-    height: 85vh; 
-    display: flex; 
-    flex-direction: column; 
-    justify-content: flex-end;
-}
-
-.left-title .full-start-new__right { 
-    position: relative; 
-    z-index: 101 !important; 
-    display: flex; 
-    align-items: flex-end; 
-    padding-bottom: 5vh; 
-}
-
-.left-title__content { 
-    position: relative; 
-    z-index: 102 !important; 
-}
-
-/* Лого та Текст */
-.cas-logo { position: relative; z-index: 110; margin-bottom: 15px; }
-.cas-logo img {
-    max-width: calc(450px * var(--cas-logo-scale));
-    max-height: calc(180px * var(--cas-logo-scale));
-    object-fit: contain; object-position: left bottom;
-    filter: drop-shadow(0 0 20px rgba(0,0,0,0.8));
-}
-
-.left-title .full-start-new__title {  
-    font-size: 2.8em; font-weight: 700; 
-    text-shadow: 0 2px 15px rgba(0, 0, 0, 0.9); 
-    color: #fff;
-}
-
-/* Кнопки */
-.full-start-new__buttons { 
-    position: relative !important; 
-    z-index: 120 !important; 
-}
-
-/* Приховування зайвого */
-.left-title .full-start-new__reactions,
-.left-title .full-start-new__rate-line,
-.left-title .full-start__status,
-.left-title .rating--modss,
-.left-title .full-start-new__head,
-.left-title .full-start-new__details {
-    display: none !important;
-}
-
+/* Анімація Ken Burns - ПРИМУСОВО для обох шарів */
 @keyframes casKenBurns { 
     0% { transform: scale(1); } 
-    50% { transform: scale(1.1); } 
+    50% { transform: scale(1.12); } 
     100% { transform: scale(1); } 
 }
 
-body.cas--zoom-enabled .full-start__background img,
-body.cas--zoom-enabled .cas-bg-overlay img { 
-    animation: casKenBurns 45s ease-in-out infinite !important; 
+/* Застосовуємо анімацію безпосередньо до тегів img всередині фону */
+.full-start__background img, 
+.cas-bg-overlay img { 
+    width: 100%; height: 100%; object-fit: cover;
+    animation: casKenBurns 40s ease-in-out infinite !important; 
+    will-change: transform;
+}
+
+/* Рейтинги та іконки (фікс розмірів) */
+.cas-ratings-line { 
+    display: flex; align-items: center; gap: 15px; 
+    margin-bottom: var(--cas-blocks-gap); 
+    font-size: var(--cas-meta-size);
+}
+.cas-rate-item img { height: 1em; width: auto; vertical-align: middle; }
+.cas-studio-item { height: 18px !important; }
+.cas-studio-item img { height: 100% !important; width: auto !important; }
+
+/* Ховаємо оригінальні елементи */
+.left-title .full-start-new__reactions, .left-title .rating--modss, .left-title .full-start-new__details {
+    display: none !important;
 }
 </style>`;  
   
         Lampa.Template.add('left_title_css', styles);  
-        $('body').append(Lampa.Template.get('left_title_css', {}, true));  
+        if (!$('style[data-template="left_title_css"]').length) {
+            $('body').append(Lampa.Template.get('left_title_css', {}, true));
+        }
     }
  function attachLoader() {  
         Lampa.Listener.follow('full', (event) => {  
