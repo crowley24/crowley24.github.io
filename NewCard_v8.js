@@ -303,9 +303,7 @@ body.cas--zoom-enabled .full-start__background.loaded {
                 const data = event.data.movie;
                 const render = event.object.activity.render();
                 
-                // Знаходимо контейнер фону
-                const bgContainer = render.find('.full-start__background');
-                let bgImg = bgContainer.find('img');
+                const bgImg = render.find('.full-start__background img, img.full-start__background');
                 
                 if (data && data.id) {
                     const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());
@@ -326,23 +324,20 @@ body.cas--zoom-enabled .full-start__background.loaded {
                             render.find('.full-start-new__title').show();
                         }
 
-                        // --- Логіка Слайд-шоу (Cross-fade без затемнення) ---
+                        // --- Логіка Слайд-шоу (ВИПРАВЛЕНО) ---
                         if (res.backdrops && res.backdrops.length > 1 && bgImg.length) {
                             let currentIndex = 0;
                             const backdrops = res.backdrops.slice(0, 15);
                             
                             if (window.casBgInterval) clearInterval(window.casBgInterval);
 
-                            // Початкові налаштування основної картинки
+                            // Встановлюємо плавний перехід ОДИН РАЗ
                             bgImg.css({
-                                'transition': 'opacity 2s ease-in-out',
-                                'opacity': '1',
-                                'position': 'relative',
-                                'z-index': '2'
+                                'transition': 'opacity 1.5s ease-in-out',
+                                'opacity': '1'
                             });
 
                             window.casBgInterval = setInterval(() => {
-                                // Якщо вийшли з картки — зупиняємо таймер
                                 if (!bgImg.closest('body').length) {
                                     clearInterval(window.casBgInterval);
                                     return;
@@ -350,41 +345,21 @@ body.cas--zoom-enabled .full-start__background.loaded {
 
                                 currentIndex = (currentIndex + 1) % backdrops.length;
                                 const newBgUrl = Lampa.TMDB.image('/t/p/original' + backdrops[currentIndex].file_path);
+                                
+                                // Створюємо невидимий елемент Image для попереднього завантаження в пам'ять
+                                const tempImg = new Image();
+                                tempImg.src = newBgUrl;
+                                tempImg.onload = function() {
+                                    // ТІЛЬКИ коли картинка повністю завантажилася в кеш браузера — змінюємо src
+                                    // Це прибирає ефект "чорного екрану" або "тусклості"
+                                    bgImg.attr('src', newBgUrl);
+                                };
 
-                                // Створюємо новий елемент, який з'явиться під поточною картинкою
-                                const nextImg = $('<img src="' + newBgUrl + '">').css({
-                                    'position': 'absolute',
-                                    'top': '0',
-                                    'left': '0',
-                                    'width': '100%',
-                                    'height': '100%',
-                                    'object-fit': 'cover',
-                                    'opacity': '0',
-                                    'transition': 'opacity 2s ease-in-out',
-                                    'z-index': '1'
-                                });
-
-                                bgContainer.append(nextImg);
-
-                                nextImg.on('load', function() {
-                                    // Плавна зміна: старий шар зникає, новий з'являється
-                                    nextImg.css('opacity', '1');
-                                    bgImg.css('opacity', '0');
-
-                                    // Після завершення анімації (2с) видаляємо стару картинку
-                                    setTimeout(() => {
-                                        bgImg.remove();
-                                        // Нова картинка стає основною для наступного циклу
-                                        bgImg = nextImg;
-                                        bgImg.css('z-index', '2');
-                                    }, 2000);
-                                });
-
-                            }, 8000); // Інтервал 8 секунд
+                            }, 7000); 
                         }
                     });
 
-                    // --- Рейтинги, Студії та Якість ---
+                    // --- Решта коду (Рейтинги, Студії, Якість) залишається без змін ---
                     let ratesHtml = '';
                     const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
                     if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
