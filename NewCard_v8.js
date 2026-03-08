@@ -20,7 +20,6 @@
         'UKR': ASSETS_PATH + 'UKR.svg'
     };
 
-    // Іконка налаштувань у формі картки
     const SETTINGS_ICON = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
         <rect x="15" y="20" width="70" height="60" rx="8" stroke="white" stroke-width="6" fill="none" opacity="0.4"/>
         <rect x="25" y="32" width="50" height="28" rx="4" fill="white"/>
@@ -79,12 +78,7 @@
             param: { 
                 name: 'cas_meta_size', 
                 type: 'select', 
-                values: { 
-                    '1.2': 'Малий', 
-                    '1.3': 'Стандартний', 
-                    '1.4': 'Збільшений', 
-                    '1.5': 'Великий' 
-                }, 
+                values: { '1.2': 'Малий', '1.3': 'Стандартний', '1.4': 'Збільшений', '1.5': 'Великий' }, 
                 default: '1.3' 
             },
             field: { name: 'Розмір шрифту' },
@@ -203,22 +197,6 @@
                 <div class="rating--modss" style="display: none;"></div>  
             </div>  
         </div>  
-  
-        <div class="hide buttons--container">  
-            <div class="full-start__button view--torrent hide">  
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="50px" height="50px">  
-                    <path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2z M40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4 S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851 c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29 c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862-4.993-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8 c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722 C42.541,30.867,41.756,30.963,40.5,30.963z" fill="currentColor"/>  
-                </svg>  
-                <span>#{full_torrents}</span>  
-            </div>   
-    
-            <div class="full-start__button selector view--trailer">  
-                <svg height="70" viewBox="0 0 80 70" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                    <path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/>  
-                </svg>  
-                <span>#{full_trailers}</span>  
-            </div>  
-        </div>  
     </div>`;  
   
         Lampa.Template.add('full_start_new', template);  
@@ -271,9 +249,9 @@
 .cas-studio-item { height: 20px !important; display: flex; align-items: center; }
 .cas-studio-item img { height: 100% !important; width: auto !important; object-fit: contain; }
 
-/* ОБ'ЄМНІ ТА БІЛЬШІ ІКОНКИ ЯКОСТІ */
+/* КОРЕКЦІЯ ІКОНОК ЯКОСТІ */
 .cas-quality-item { 
-    height: 1.6em; /* Збільшено розмір (було 1.2em) */
+    height: 1.45em; /* Зменшено з 1.6em для акуратності */
     display: flex; 
     align-items: center; 
     position: relative;
@@ -282,11 +260,10 @@
 .cas-quality-item img { 
     height: 100%; 
     width: auto; 
-    /* Додаємо глибину через м'яку тінь */
-    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5)); 
+    /* Тінь видалено за запитом */
 }
 
-/* Ефект блиску зверху для об'єму */
+/* М'який відблиск для об'єму без тіні */
 .cas-quality-item::after {
     content: '';
     position: absolute;
@@ -294,8 +271,8 @@
     left: 0;
     width: 100%;
     height: 50%;
-    background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 100%);
-    border-radius: 2px; /* Підлаштувати під форму іконок, якщо потрібно */
+    background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 100%);
+    border-radius: 2px;
     pointer-events: none;
 }
 
@@ -305,11 +282,6 @@ body.cas--zoom-enabled .full-start__background.loaded {
 }
 
 .left-title .full-start-new__buttons { margin-top: 1em; }  
-  
-@media screen and (max-width: 767px) {  
-    .left-title .full-start-new__right { flex-direction: column; align-items: flex-start; }  
-    .left-title .full-start-new__title { font-size: 2em; }  
-}  
 </style>`;  
   
         Lampa.Template.add('left_title_css', styles);  
@@ -396,8 +368,8 @@ body.cas--zoom-enabled .full-start__background.loaded {
   
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.4.4', name: PLUGIN_NAME,  
-            description: 'Кастомізація картки: логотипи, студії та об\'ємна якість.', author: '',  
+            type: 'other', version: '1.4.5', name: PLUGIN_NAME,  
+            description: 'Кастомізація картки: логотипи, студії та пласкі об\'ємні іконки.', author: '',  
             icon: SETTINGS_ICON
         };  
   
