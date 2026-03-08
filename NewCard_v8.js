@@ -51,8 +51,8 @@
             'cas_logo_scale': '100',
             'cas_logo_quality': 'original',
             'cas_bg_animation': true,
-            'cas_blocks_gap': '20',
-            'cas_meta_size': '1.3',
+            'cas_blocks_gap': '30',
+            'cas_meta_size': '1.2',
             'cas_show_studios': true,
             'cas_show_quality': true
         };
@@ -69,12 +69,7 @@
 
         Lampa.SettingsApi.addParam({
             component: PLUGIN_ID,
-            param: { 
-                name: 'cas_logo_quality', 
-                type: 'select', 
-                values: { 'w300':'300px', 'w500':'500px', 'original':'Original' }, 
-                default: 'original' 
-            },
+            param: { name: 'cas_logo_quality', type: 'select', values: { 'w300':'300px', 'w500':'500px', 'original':'Original' }, default: 'original' },
             field: { name: 'Якість логотипу' },
             onChange: applySettings
         });
@@ -88,20 +83,15 @@
 
         Lampa.SettingsApi.addParam({
             component: PLUGIN_ID,
-            param: { 
-                name: 'cas_meta_size', 
-                type: 'select', 
-                values: { '1.2': 'Малий', '1.3': 'Стандартний', '1.4': 'Збільшений', '1.5': 'Великий' }, 
-                default: '1.3' 
-            },
-            field: { name: 'Розмір шрифту' },
+            param: { name: 'cas_meta_size', type: 'select', values: { '1.1':'Дрібний', '1.2': 'Стандарт', '1.3': 'Середній', '1.4': 'Великий' }, default: '1.2' },
+            field: { name: 'Розмір тексту' },
             onChange: applySettings
         });
 
         Lampa.SettingsApi.addParam({
             component: PLUGIN_ID,
-            param: { name: 'cas_blocks_gap', type: 'select', values: { '15':'Тісно','20':'Стандарт','25':'Просторе' }, default: '20' },
-            field: { name: 'Відступи між блоками' },
+            param: { name: 'cas_blocks_gap', type: 'select', values: { '20':'Вузько','30':'Стандарт','40':'Широко' }, default: '30' },
+            field: { name: 'Відступи' },
             onChange: applySettings
         });
 
@@ -121,24 +111,18 @@
     function applySettings() {
         const root = document.documentElement;
         const scale = parseInt(Lampa.Storage.get('cas_logo_scale') || 100) / 100;
-        const gap = Lampa.Storage.get('cas_blocks_gap') || '20';
-        const metaSize = Lampa.Storage.get('cas_meta_size') || '1.3';
+        const gap = Lampa.Storage.get('cas_blocks_gap') || '30';
+        const metaSize = Lampa.Storage.get('cas_meta_size') || '1.2';
         
         root.style.setProperty('--cas-logo-scale', scale);
         root.style.setProperty('--cas-blocks-gap', gap + 'px');
         root.style.setProperty('--cas-meta-size', metaSize + 'em');
         $('body').toggleClass('cas--zoom-enabled', !!Lampa.Storage.get('cas_bg_animation'));
     }
-  
+
     function addCustomTemplate() {  
         const template = `<div class="full-start-new left-title">  
         <div class="full-start-new__body">  
-            <div class="full-start-new__left hide">  
-                <div class="full-start-new__poster">  
-                    <img class="full-start-new__img full--poster" />  
-                </div>  
-            </div>  
-  
             <div class="full-start-new__right">  
                 <div class="left-title__content">  
                     <div class="cas-logo-container" style="margin-bottom: var(--cas-blocks-gap);">
@@ -154,9 +138,6 @@
 
                     <div class="cas-studios-row" style="margin-bottom: var(--cas-blocks-gap); display: flex; gap: 15px; align-items: center;"></div>
 
-                    <div class="full-start-new__head hide"></div>  
-                    <div class="full-start-new__details hide"></div>  
-                      
                     <div class="full-start-new__buttons">  
                         <div class="full-start__button selector button--play">  
                             <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg">  
@@ -172,169 +153,110 @@
                             </svg>  
                             <span>#{settings_input_links}</span>  
                         </div>  
-  
-                        <div class="full-start__button selector button--reaction">  
-                            <svg width="38" height="34" viewBox="0 0 38 34" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                <path d="M37.208 10.9742C37.1364 10.8013 37.0314 10.6441 36.899 10.5117C36.7666 10.3794 36.6095 10.2744 36.4365 10.2028L12.0658 0.108375C11.7166 -0.0361828 11.3242 -0.0361227 10.9749 0.108542C10.6257 0.253206 10.3482 0.530634 10.2034 0.879836L0.108666 25.2507C0.0369593 25.4236 3.37953e-05 25.609 2.3187e-08 25.7962C-3.37489e-05 25.9834 0.0368249 26.1688 0.108469 26.3418C0.180114 26.5147 0.28514 26.6719 0.417545 26.8042C0.54995 26.9366 0.707139 27.0416 0.880127 27.1131L17.2452 33.8917C17.5945 34.0361 17.9869 34.0361 18.3362 33.8917L29.6574 29.2017C29.8304 29.1301 29.9875 29.0251 30.1199 28.8928C30.2523 28.7604 30.3573 28.6032 30.4289 28.4303L37.2078 12.065C37.2795 11.8921 37.3164 11.7068 37.3165 11.5196C37.3165 11.3325 37.2796 11.1471 37.208 10.9742ZM20.425 29.9407L21.8784 26.4316L25.3873 27.885L20.425 29.9407ZM28.3407 26.0222L21.6524 23.252C21.3031 23.1075 20.9107 23.1076 20.5615 23.2523C20.2123 23.3969 19.9348 23.6743 19.79 24.0235L17.0194 30.7123L3.28783 25.0247L12.2918 3.28773L34.0286 12.2912L28.3407 26.0222Z" fill="currentColor"/>  
-                                <path d="M25.3493 16.976L24.258 14.3423L16.959 17.3666L15.7196 14.375L13.0859 15.4659L15.4161 21.0916L25.3493 16.976Z" fill="currentColor"/>  
-                            </svg>  
-                            <span>#{title_reactions}</span>  
-                        </div>  
-  
-                        <div class="full-start__button selector button--subscribe hide">  
-                            <svg width="25" height="30" viewBox="0 0 25 30" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                <path d="M6.01892 24C6.27423 27.3562 9.07836 30 12.5 30C15.9216 30 18.7257 27.3562 18.981 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z" fill="currentColor"/>  
-                                <path d="M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z" stroke="currentColor" stroke-width="2.5"/>  
-                            </svg>  
-                            <span>#{title_subscribe}</span>  
-                        </div>  
-  
-                        <div class="full-start__button selector button--options">  
-                            <svg width="38" height="10" viewBox="0 0 38 10" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                <circle cx="4.88968" cy="4.98563" r="4.75394" fill="currentColor"/>  
-                                <circle cx="18.9746" cy="4.98563" r="4.75394" fill="currentColor"/>  
-                                <circle cx="33.0596" cy="4.98563" r="4.75394" fill="currentColor"/>  
-                            </svg>  
-                        </div>  
                     </div>  
                 </div>  
-  
-                <div class="full-start-new__reactions selector">  
-                    <div>#{reactions_none}</div>  
-                </div>  
-                  
-                <div class="full-start-new__rate-line">  
-                    <div class="full-start__status hide"></div>  
-                </div>  
-                  
-                <div class="rating--modss" style="display: none;"></div>  
-            </div>  
-        </div>  
-  
-        <div class="hide buttons--container">  
-            <div class="full-start__button view--torrent hide">  
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="50px" height="50px">  
-                    <path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2z M40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4 S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851 c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29 c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862-4.993-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8 c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722 C42.541,30.867,41.756,30.963,40.5,30.963z" fill="currentColor"/>  
-                </svg>  
-                <span>#{full_torrents}</span>  
-            </div>   
-    
-            <div class="full-start__button selector view--trailer">  
-                <svg height="70" viewBox="0 0 80 70" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                    <path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/>  
-                </svg>  
-                <span>#{full_trailers}</span>  
             </div>  
         </div>  
     </div>`;  
   
         Lampa.Template.add('full_start_new', template);  
-    }  
-function addStyles() {  
+    }
+
+    function addStyles() {  
         const styles = `<style>  
-:root { --cas-logo-scale: 1; --cas-blocks-gap: 25px; --cas-meta-size: 1.1em; }
+:root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.2em; }
 
-/* Повертаємо стабільність сітці */
-.left-title .full-start-new__body { 
-    height: 85vh; 
-    display: flex; 
-    flex-direction: column; 
-    justify-content: flex-end; 
-    position: relative;
-}
+/* Оригінальна верстка контенту */
+.left-title .full-start-new__body { height: 85vh; position: relative; z-index: 10; }  
+.left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 2vh; height: 100%; }  
+.left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; }  
 
-/* Контент - чітко над фоном */
-.left-title .full-start-new__right { 
-    position: relative; 
-    z-index: 10; 
-    padding-bottom: 5vh; 
-}
-
-/* Фікс розмірів логотипу */
-.cas-logo { margin-bottom: 15px; }
-.cas-logo img {
-    max-width: 400px; /* Фіксований ліміт, щоб не "розносило" */
-    max-height: 160px;
-    object-fit: contain; 
-    object-position: left bottom;
-    filter: drop-shadow(0 0 15px rgba(0,0,0,0.7));
-}
-
-/* Назва фільму (якщо немає лого) */
 .left-title .full-start-new__title {  
-    font-size: 2.5em; font-weight: 700; 
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8); 
-    max-width: 60%;
+    font-size: 2.5em; font-weight: 700; line-height: 1.2; margin-bottom: 0.5em;  
+    text-shadow: 0 0 0.1em rgba(0, 0, 0, 0.3); color: #fff;  
+}  
+
+/* Стилі для лого */
+.cas-logo img {
+    max-width: calc(450px * var(--cas-logo-scale));
+    max-height: calc(180px * var(--cas-logo-scale));
+    object-fit: contain; object-position: left bottom;
+    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
 }
 
-/* Слайд-шоу шари */
-.full-start__background {
-    position: absolute !important;
-    top: 0; left: 0; width: 100%; height: 100%;
-    z-index: 0 !important;
-    overflow: hidden;
-}
-
-.cas-bg-overlay {
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    z-index: 1;
-}
-
-/* Анімація Ken Burns - ПРИМУСОВО для обох шарів */
-@keyframes casKenBurns { 
-    0% { transform: scale(1); } 
-    50% { transform: scale(1.12); } 
-    100% { transform: scale(1); } 
-}
-
-/* Застосовуємо анімацію безпосередньо до тегів img всередині фону */
-.full-start__background img, 
-.cas-bg-overlay img { 
-    width: 100%; height: 100%; object-fit: cover;
-    animation: casKenBurns 40s ease-in-out infinite !important; 
-    will-change: transform;
-}
-
-/* Рейтинги та іконки (фікс розмірів) */
+/* Оригінальні мета-дані */
 .cas-ratings-line { 
     display: flex; align-items: center; gap: 15px; 
     margin-bottom: var(--cas-blocks-gap); 
-    font-size: var(--cas-meta-size);
+    font-weight: 600; font-size: var(--cas-meta-size); 
+    color: rgba(255,255,255,0.9); flex-wrap: wrap; 
 }
-.cas-rate-item img { height: 1em; width: auto; vertical-align: middle; }
-.cas-studio-item { height: 18px !important; }
+.cas-rate-item { display: flex; align-items: center; gap: 6px; }
+.cas-rate-item img { height: 1.1em; width: auto; }
+.cas-studio-item { height: 20px !important; display: flex; align-items: center; }
 .cas-studio-item img { height: 100% !important; width: auto !important; }
 
-/* Ховаємо оригінальні елементи */
-.left-title .full-start-new__reactions, .left-title .rating--modss, .left-title .full-start-new__details {
+/* Анімація Ken Burns */
+@keyframes casKenBurns { 
+    0% { transform: scale(1); } 
+    50% { transform: scale(1.1); } 
+    100% { transform: scale(1); } 
+}
+
+/* Застосовуємо анімацію до ВСІХ картинок у фоні */
+body.cas--zoom-enabled .full-start__background img,
+body.cas--zoom-enabled .cas-bg-overlay img { 
+    animation: casKenBurns 45s ease-in-out infinite !important; 
+}
+
+/* Фон та Оверлей для слайд-шоу */
+.full-start__background { 
+    position: absolute !important; 
+    top: 0; left: 0; width: 100%; height: 100%; 
+    z-index: 1 !important; 
+}
+.cas-bg-overlay { 
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+    z-index: 2; pointer-events: none; 
+}
+.full-start-new__body { z-index: 10 !important; }
+
+.left-title .full-start-new__buttons { margin-top: 1em; position: relative; z-index: 20; }  
+
+/* Приховування стандартних елементів */
+.left-title .full-start-new__reactions,
+.left-title .full-start-new__rate-line,
+.left-title .full-start__status,
+.left-title .rating--modss,
+.left-title .full-start-new__head,
+.left-title .full-start-new__details {
     display: none !important;
 }
+
+@media screen and (max-width: 767px) {  
+    .left-title .full-start-new__right { flex-direction: column; align-items: flex-start; }  
+    .left-title .full-start-new__title { font-size: 2em; }  
+}  
 </style>`;  
   
         Lampa.Template.add('left_title_css', styles);  
-        if (!$('style[data-template="left_title_css"]').length) {
-            $('body').append(Lampa.Template.get('left_title_css', {}, true));
-        }
+        $('body').append(Lampa.Template.get('left_title_css', {}, true));  
     }
- function attachLoader() {  
+
+    function attachLoader() {  
         Lampa.Listener.follow('full', (event) => {  
             if (event.type === 'complite') {  
                 const data = event.data.movie;
                 const render = event.object.activity.render();
-                
-                // Знаходимо контейнер та основне зображення фону
                 const bgContainer = render.find('.full-start__background');
                 let bgImg = bgContainer.find('img');
-                
-                // Якщо картинки немає в блоці, шукаємо її як сам блок (залежить від версії Lampa)
                 if (!bgImg.length && bgContainer.is('img')) bgImg = bgContainer;
 
                 if (data && data.id) {
                     const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());
                     
                     $.get(imagesUrl, (res) => {
-                        // --- Логотип (без змін) ---
+                        // Логотип
                         const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || 
                                          res.logos.find(l => l.iso_639_1 === 'en') || 
                                          res.logos[0];
@@ -346,23 +268,20 @@ function addStyles() {
                             render.find('.full-start-new__title').hide();
                         }
 
-                        // --- Слайд-шоу (Cross-fade) ---
+                        // Слайд-шоу
                         if (res.backdrops && res.backdrops.length > 1 && bgContainer.length) {
                             let currentIndex = 0;
                             const backdrops = res.backdrops.slice(0, 15);
-                            
                             if (window.casBgInterval) clearInterval(window.casBgInterval);
 
-                            // Створюємо оверлей, якщо його немає
                             if (!bgContainer.find('.cas-bg-overlay').length) {
-    bgContainer.append('<div class="cas-bg-overlay" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;z-index:-1;"><img style="width:100%;height:100%;object-fit:cover;"></div>');
-}
+                                bgContainer.append('<div class="cas-bg-overlay" style="opacity:0; transition: opacity 2s ease-in-out;"><img style="width:100%; height:100%; object-fit:cover;"></div>');
+                            }
                             
                             const overlay = bgContainer.find('.cas-bg-overlay');
                             const overlayImg = overlay.find('img');
 
                             window.casBgInterval = setInterval(() => {
-                                // Перевірка, чи картка ще відкрита
                                 if (!document.body.contains(bgContainer[0])) {
                                     clearInterval(window.casBgInterval);
                                     return;
@@ -371,33 +290,26 @@ function addStyles() {
                                 currentIndex = (currentIndex + 1) % backdrops.length;
                                 const nextImgUrl = Lampa.TMDB.image('/t/p/original' + backdrops[currentIndex].file_path);
                                 
-                                // Створюємо тимчасовий об'єкт Image для передзавантаження
                                 const tempImg = new Image();
                                 tempImg.src = nextImgUrl;
                                 tempImg.onload = function() {
-                                    // 1. Ставимо нову картинку на оверлей
                                     overlayImg.attr('src', nextImgUrl);
-                                    // 2. Плавно показуємо оверлей поверх основної картинки
                                     overlay.css('opacity', '1');
                                     
-                                    // 3. Через час анімації (2с) робимо підміну на нижньому шарі
                                     setTimeout(() => {
                                         bgImg.attr('src', nextImgUrl);
-                                        // 4. Миттєво ховаємо оверлей (він тепер ідентичний фону)
                                         overlay.css({'transition': 'none', 'opacity': '0'});
-                                        // 5. Повертаємо плавність для наступного циклу
                                         setTimeout(() => overlay.css('transition', 'opacity 2s ease-in-out'), 50);
                                     }, 2100);
                                 };
-
-                            }, 8000); // Інтервал 8 секунд
+                            }, 8000);
                         }
                     });
 
-                    // --- Рейтинги та інше (залишаємо без змін) ---
+                    // Рейтинги та мета
                     let ratesHtml = '';
                     const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
-                    if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
+                    if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span>${tmdbV}</span></div>`;
                     
                     if (event.data.reactions && event.data.reactions.result) {
                         let sum = 0, cnt = 0;
@@ -405,7 +317,7 @@ function addStyles() {
                         event.data.reactions.result.forEach(r => { if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; } });
                         if (cnt >= 5) {
                             const cubV = (((data.name?7.4:6.5)*(data.name?50:150)+sum)/((data.name?50:150)+cnt)).toFixed(1);
-                            ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;
+                            ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span>${cubV}</span></div>`;
                         }
                     }
                     render.find('.cas-rate-items').html(ratesHtml);
@@ -448,8 +360,8 @@ function addStyles() {
   
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.4.4', name: PLUGIN_NAME,  
-            description: 'Кастомізація картки: логотипи, студії та вибір якості зображень.', author: '',  
+            type: 'other', version: '1.4.5', name: PLUGIN_NAME,  
+            description: 'Кастомізація картки з підтримкою слайд-шоу та Ken Burns.', author: '',  
             icon: SETTINGS_ICON
         };  
   
