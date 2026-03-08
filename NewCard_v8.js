@@ -244,35 +244,52 @@
     --cas-logo-scale: 1; 
     --cas-blocks-gap: 30px; 
     --cas-meta-size: 1.2em;
-    --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); /* Преміальна крива швидкості */
+    --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); /* Преміальна крива руху */
 }
 
-/* Контейнери для анімації */
-.cas-logo, .cas-ratings-line, .cas-studios-row, .full-start-new__buttons {
+/* --- Секція анімації (нова логіка) --- */
+.cas-logo, 
+.cas-ratings-line, 
+.cas-studios-row, 
+.left-title .full-start-new__buttons {
     opacity: 0;
     transform: translateY(20px);
-    filter: blur(10px);
     transition: 
         opacity 0.8s var(--cas-anim-curve), 
-        transform 0.8s var(--cas-anim-curve), 
-        filter 0.8s var(--cas-anim-curve);
+        transform 0.8s var(--cas-anim-curve);
 }
 
-/* Клас активації анімації */
-.cas-animated .cas-logo { opacity: 1; transform: translateY(0); filter: blur(0); transition-delay: 0.1s; }
-.cas-animated .cas-ratings-line { opacity: 1; transform: translateY(0); filter: blur(0); transition-delay: 0.25s; }
-.cas-animated .cas-studios-row { opacity: 1; transform: translateY(0); filter: blur(0); transition-delay: 0.4s; }
-.cas-animated .full-start-new__buttons { opacity: 1; transform: translateY(0); filter: blur(0); transition-delay: 0.55s; }
+/* Послідовна поява через затримки */
+.cas-animated .cas-logo { opacity: 1; transform: translateY(0); transition-delay: 0.1s; }
+.cas-animated .cas-ratings-line { opacity: 1; transform: translateY(0); transition-delay: 0.25s; }
+.cas-animated .cas-studios-row { opacity: 1; transform: translateY(0); transition-delay: 0.4s; }
+.cas-animated .full-start-new__buttons { opacity: 1; transform: translateY(0); transition-delay: 0.55s; }
+/* ------------------------------------ */
 
 .left-title .full-start-new__body { height: 85vh; }  
-.left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 5vh; }  
+.left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 2vh; }  
 .left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; }  
+
+.left-title .full-start-new__title {  
+    font-size: 2.5em; font-weight: 700; line-height: 1.2; margin-bottom: 0.5em;  
+    text-shadow: 0 0 0.1em rgba(0, 0, 0, 0.3); color: #fff;  
+}  
+
+/* Приховуємо зайве (як ви просили) */
+.left-title .full-start-new__reactions,
+.left-title .full-start-new__rate-line,
+.left-title .full-start__status,
+.left-title .rating--modss,
+.left-title .full-start-new__head,
+.left-title .full-start-new__details {
+    display: none !important;
+}
 
 .cas-logo img {
     max-width: calc(450px * var(--cas-logo-scale));
     max-height: calc(180px * var(--cas-logo-scale));
     object-fit: contain; object-position: left bottom;
-    filter: drop-shadow(0 0 15px rgba(0,0,0,0.4));
+    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
 }
 
 .cas-ratings-line { 
@@ -280,30 +297,38 @@
     align-items: center; 
     gap: 15px; 
     margin-bottom: var(--cas-blocks-gap); 
-    font-weight: 500; 
+    font-weight: 600; 
     font-size: var(--cas-meta-size); 
     color: rgba(255,255,255,0.9); 
+    flex-wrap: wrap; 
 }
 
-.cas-studio-item { height: 22px !important; opacity: 0.8; transition: opacity 0.3s; }
-.cas-studio-item:hover { opacity: 1; }
-.cas-studio-item img { height: 100% !important; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
+.cas-rate-item { display: flex; align-items: center; gap: 6px; }
+.cas-rate-item img { height: 1.1em; width: auto; }
+.cas-rate-item span { line-height: 1; }
 
-/* Ken Burns ефект для фону */
-@keyframes casKenBurns { 
-    0% { transform: scale(1.0); } 
-    50% { transform: scale(1.08); } 
-    100% { transform: scale(1.0); } 
-}
+.cas-studio-item { height: 20px !important; display: flex; align-items: center; }
+.cas-studio-item img { height: 100% !important; width: auto !important; object-fit: contain; }
+
+.cas-quality-item { height: 1.2em; display: flex; align-items: center; }
+.cas-quality-item img { height: 100%; width: auto; }
+
+@keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 body.cas--zoom-enabled .full-start__background.loaded { 
     animation: casKenBurns 45s ease-in-out infinite !important; 
 }
+
+.left-title .full-start-new__buttons { margin-top: 1em; }  
+  
+@media screen and (max-width: 767px) {  
+    .left-title .full-start-new__right { flex-direction: column; align-items: flex-start; }  
+    .left-title .full-start-new__title { font-size: 2em; }  
+}  
 </style>`;  
   
         Lampa.Template.add('left_title_css', styles);  
         $('body').append(Lampa.Template.get('left_title_css', {}, true));  
-    }  
-
+    }
     function attachLoader() {  
         Lampa.Listener.follow('full', (event) => {  
             if (event.type === 'complite') {  
