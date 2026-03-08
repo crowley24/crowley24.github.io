@@ -153,8 +153,19 @@
 .cas-quality-item img { height: 100%; width: auto; }
 .cas-apple-style .full-start__button { background: rgba(255,255,255,0.08) !important; border: none !important; color: rgba(255,255,255,0.8) !important; padding: 12px 20px !important; border-radius: 12px !important; display: flex; align-items: center; gap: 10px; font-size: 1.1em; transition: all 0.25s ease; }
 .cas-apple-style .full-start__button.focus { transform: scale(1.1); background: rgba(255,255,255,0.2) !important; color: #fff !important; }
-@keyframes casKenBurns { 0% { transform: scale(1); } 100% { transform: scale(1.15); } }
-body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 45s ease-out forwards !important; }
+
+/* ОНОВЛЕНА ЖИВА АНІМАЦІЯ */
+@keyframes casKenBurns { 
+    0% { transform: scale(1) translate(0, 0); } 
+    50% { transform: scale(1.12) translate(-1%, -1%); }
+    100% { transform: scale(1) translate(0, 0); } 
+}
+
+body.cas--zoom-enabled .full-start__background.loaded { 
+    animation: casKenBurns 40s ease-in-out infinite !important; 
+    transition: opacity 1s ease !important;
+}
+
 .left-title .full-start-new__title { font-size: 2.5em; font-weight: 700; color: #fff; }  
 </style>`;  
   
