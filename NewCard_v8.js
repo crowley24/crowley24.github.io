@@ -29,7 +29,15 @@
     }  
 
     function addSettings() {
-        const defaults = { 'cas_logo_scale': '100', 'cas_btn_scale': '100', 'cas_bg_animation': true, 'cas_show_studios': true, 'cas_show_quality': true, 'cas_blocks_gap': '30' };
+        const defaults = { 
+            'cas_logo_scale': '100', 
+            'cas_btn_scale': '100', 
+            'cas_bg_animation': true, 
+            'cas_show_studios': true, 
+            'cas_show_quality': true, 
+            'cas_blocks_gap': '30',
+            'cas_custom_buttons': true
+        };
         Object.keys(defaults).forEach(key => { if (Lampa.Storage.get(key) === undefined) Lampa.Storage.set(key, defaults[key]); });
 
         Lampa.SettingsApi.addComponent({
@@ -38,17 +46,11 @@
             icon: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#fff"><rect x="10" y="30" width="80" height="40" rx="5" fill="rgba(255,255,255,0.2)"/><circle cx="50" cy="50" r="12" fill="white"/></svg>'
         });
 
+        // Основні налаштування
         Lampa.SettingsApi.addParam({
             component: PLUGIN_ID,
             param: { name: 'cas_logo_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' }, default: '100' },
             field: { name: 'Розмір логотипу' },
-            onChange: applySettings
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: PLUGIN_ID,
-            param: { name: 'cas_btn_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' }, default: '100' },
-            field: { name: 'Розмір кнопок' },
             onChange: applySettings
         });
 
@@ -63,6 +65,27 @@
         Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_show_quality', type: 'trigger', default: true }, field: { name: 'Показувати якість' } });
         Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_bg_animation', type: 'trigger', default: true }, field: { name: 'Анімація фону' }, onChange: applySettings });
 
+        // ПУНКТ МЕДІА КНОПКИ
+        Lampa.SettingsApi.addParam({
+            component: PLUGIN_ID,
+            param: { name: 'cas_media_btns_group', type: 'static' },
+            field: { name: '--- Медіа кнопки ---' }
+        });
+
+        Lampa.SettingsApi.addParam({ 
+            component: PLUGIN_ID, 
+            param: { name: 'cas_custom_buttons', type: 'trigger', default: true }, 
+            field: { name: 'Стильні кнопки (Apple)' }, 
+            onChange: applySettings 
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: PLUGIN_ID,
+            param: { name: 'cas_btn_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' }, default: '100' },
+            field: { name: 'Розмір кнопок' },
+            onChange: applySettings
+        });
+
         applySettings();
     }
 
@@ -71,10 +94,14 @@
         const lScale = parseInt(Lampa.Storage.get('cas_logo_scale') || 100) / 100;
         const bScale = parseInt(Lampa.Storage.get('cas_btn_scale') || 100) / 100;
         const gap = Lampa.Storage.get('cas_blocks_gap') || '30';
+        
         root.style.setProperty('--cas-logo-scale', lScale);
         root.style.setProperty('--cas-btn-scale', bScale);
         root.style.setProperty('--cas-blocks-gap', gap + 'px');
+        
         $('body').toggleClass('cas--zoom-enabled', !!Lampa.Storage.get('cas_bg_animation'));
+        // Перемикач стилю кнопок через клас на body
+        $('body').toggleClass('cas--custom-buttons', !!Lampa.Storage.get('cas_custom_buttons'));
     }
 
     function getRatingColor(val) {
@@ -158,6 +185,7 @@
 .cas-quality-item { height: 20px; display: flex; align-items: center; }
 .cas-quality-item img { height: 100%; width: auto; }
 
+/* БАЗОВІ ВІДСТУПИ КНОПОК ПРИ ЗМІНІ РОЗМІРУ */
 .applecation__buttons-row { 
     display: flex; align-items: center; 
     gap: calc(25px * var(--cas-btn-scale)); 
@@ -165,7 +193,8 @@
     flex-wrap: wrap; 
 }
 
-.cas-apple-style .full-start__button {  
+/* ЗАСТОСОВУЄМО ТІЛЬКИ ЯКЩО ВКЛЮЧЕНО В НАЛАШТУВАННЯХ */
+body.cas--custom-buttons .cas-apple-style .full-start__button {  
     background: transparent !important; 
     background-color: transparent !important;
     border: none !important;  
@@ -181,7 +210,7 @@
     text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
-.cas-apple-style .full-start__button.focus {  
+body.cas--custom-buttons .cas-apple-style .full-start__button.focus {  
     transform: scale(1.2) !important; 
     background: transparent !important;
     color: #fff !important;
@@ -189,7 +218,7 @@
     z-index: 10;
 }
 
-.cas-apple-style .full-start__button svg {
+body.cas--custom-buttons .cas-apple-style .full-start__button svg {
     width: calc(28px * var(--cas-btn-scale));
     height: calc(28px * var(--cas-btn-scale));
 }
