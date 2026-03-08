@@ -243,20 +243,18 @@
     --cas-logo-scale: 1; 
     --cas-blocks-gap: 30px; 
     --cas-meta-size: 1.2em;
-    --cas-anim-curve: cubic-bezier(0.25, 1, 0.5, 1); /* Швидка преміальна крива */
-    --cas-glow-color: rgba(255, 255, 255, 0.8); /* Яскравіше світіння */
+    --cas-anim-curve: cubic-bezier(0.25, 1, 0.5, 1);
+    --cas-glow-color: rgba(255, 255, 255, 0.9); /* Колір "неонового" світіння */
 }
 
-/* --- Секція прискореної анімації --- */
+/* --- ПРИСКОРЕНА АНІМАЦІЯ ПОЯВИ --- */
 .cas-logo, 
 .cas-ratings-line, 
 .cas-studios-row, 
 .full-start-new__buttons {
     opacity: 0;
     transform: translateY(12px);
-    transition: 
-        opacity 0.4s var(--cas-anim-curve), 
-        transform 0.4s var(--cas-anim-curve);
+    transition: opacity 0.4s var(--cas-anim-curve), transform 0.4s var(--cas-anim-curve);
 }
 
 .cas-animated .cas-logo { opacity: 1; transform: translateY(0); transition-delay: 0.05s; }
@@ -315,56 +313,57 @@ body.cas--zoom-enabled .full-start__background.loaded {
     animation: casKenBurns 45s ease-in-out infinite !important; 
 }
 
-/* --- ПОВНІСТЮ ПРОЗОРІ КНОПКИ ЗІ СВІТІННЯМ (ВИПРАВЛЕНО) --- */
+/* --- КНОПКИ БЕЗ ПРЯМОКУТНИКІВ: СВІТІННЯ КОНТЕНТУ --- */
 .left-title .full-start-new__buttons { 
     margin-top: 1.5em; 
     display: flex; 
-    gap: 15px; 
-    flex-wrap: wrap;
+    gap: 25px; /* Більший відступ між кнопками, бо немає рамок */
 }  
 
 .left-title .full-start-new__buttons .full-start__button {
-    /* Примусово прибираємо стандартний фон та скруглення Lampa */
-    background: transparent !important; 
-    border-radius: 0 !important; 
-    
-    /* Додаємо легку рамку в звичайному стані */
-    border: 1px solid rgba(255,255,255,0.2); 
-    color: rgba(255,255,255,0.8);
-    
-    /* Плавність переходів */
-    transition: 
-        border-color 0.3s var(--cas-anim-curve), 
-        box-shadow 0.3s var(--cas-anim-curve), 
-        color 0.3s var(--cas-anim-curve),
-        transform 0.2s ease;
-    
-    /* Прибираємо стандартні відступи Lampa, якщо вони заважають */
-    padding: 10px 20px !important;
+    background: transparent !important; /* Жодного фону */
+    border: none !important; /* Жодних рамок (прямокутників) */
+    box-shadow: none !important; /* Жодних тіней блоку */
+    border-radius: 0 !important;
+    color: rgba(255,255,255,0.6); /* Напівпрозорі в спокої */
+    padding: 10px 0 !important; /* Відступи тільки зверху/знизу */
     height: auto !important;
-    line-height: 1 !important;
+    transition: 
+        color 0.3s var(--cas-anim-curve), 
+        filter 0.3s var(--cas-anim-curve), 
+        transform 0.3s var(--cas-anim-curve);
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
-/* Стан фокусу/наведення (Рамка + Світіння) */
+/* Ефект при фокусі */
 .left-title .full-start-new__buttons .full-start__button:hover,
 .left-title .full-start-new__buttons .full-start__button.focus {
-    background: transparent !important; /* Гарантуємо відсутність фону */
-    border-color: #fff !important; /* Біла рамка при фокусі */
-    color: #fff;
+    color: #fff !important; /* Яскраво-білий текст та іконка */
+    transform: scale(1.1); /* Легке збільшення всієї кнопки */
     
-    /* Ефект світіння (Neon Glow) */
-    box-shadow: 
-        0 0 15px var(--cas-glow-color), 
-        0 0 30px rgba(255, 255, 255, 0.3);
-        
-    transform: translateY(-2px); /* Легке спливання */
+    /* Світіння за контуром іконки та тексту (drop-shadow замість box-shadow) */
+    filter: drop-shadow(0 0 8px var(--cas-glow-color)) drop-shadow(0 0 2px #fff);
 }
 
 /* Стан натискання */
 .left-title .full-start-new__buttons .full-start__button:active {
-    transform: translateY(1px) scale(0.97); /* Ефект фізичного натискання */
-    box-shadow: 0 0 8px var(--cas-glow-color); /* Зменшуємо світіння */
+    transform: scale(0.95);
+    filter: drop-shadow(0 0 4px var(--cas-glow-color));
     transition-duration: 0.1s;
+}
+
+/* Стилізація іконок всередині кнопок */
+.left-title .full-start__button svg {
+    width: 24px;
+    height: 24px;
+    transition: transform 0.3s var(--cas-anim-curve);
+}
+
+.left-title .full-start__button span {
+    font-size: 1.1em;
+    font-weight: 500;
 }
 /* ------------------------------------ */
   
@@ -384,9 +383,7 @@ body.cas--zoom-enabled .full-start__background.loaded {
                 const data = event.data.movie;
                 const render = event.object.activity.render();
                 
-                // Миттєве скидання анімації
                 render.find('.left-title__content').removeClass('cas-animated');
-                
                 const bgImg = render.find('.full-start__background img, img.full-start__background');
                 
                 if (data && data.id) {
@@ -403,11 +400,9 @@ body.cas--zoom-enabled .full-start__background.loaded {
                             const logoUrl = Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path);
                             logoContainer.html('<img src="' + logoUrl + '">');
                         } else {
-                            // Якщо логотипа немає, створюємо текстову назву динамічно
                             logoContainer.html('<div class="full-start-new__title">' + (data.title || data.name) + '</div>');
                         }
 
-                        // Слайд-шоу фону
                         if (window.casBgInterval) clearInterval(window.casBgInterval);
                         const slideshowEnabled = Lampa.Storage.get('cas_slideshow_enabled');
 
@@ -430,7 +425,6 @@ body.cas--zoom-enabled .full-start__background.loaded {
                         }
                     });
 
-                    // Рейтинги
                     let ratesHtml = '';
                     const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
                     if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
@@ -446,18 +440,15 @@ body.cas--zoom-enabled .full-start__background.loaded {
                     }
                     render.find('.cas-rate-items').html(ratesHtml);
 
-                    // Мета-дані (час та жанр)
                     const time = formatTime(data.runtime || data.episode_run_time);
                     const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');
                     render.find('.cas-meta-info').text((time ? time + (genre ? ' • ' : '') : '') + genre);
 
-                    // Студії
                     if (Lampa.Storage.get('cas_show_studios')) {
                         const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 3);
                         render.find('.cas-studios-row').html(studios.map(s => `<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}"></div>`).join(''));
                     }
 
-                    // Якість
                     if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {
                         Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {
                             if (res && res.Results) {
@@ -483,7 +474,6 @@ body.cas--zoom-enabled .full-start__background.loaded {
                     }
                 }
 
-                // Запуск анімації з дуже короткою затримкою для чистоти рендеру
                 setTimeout(() => {
                     render.find('.left-title__content').addClass('cas-animated');
                 }, 100);
@@ -493,8 +483,8 @@ body.cas--zoom-enabled .full-start__background.loaded {
   
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.4.8', name: PLUGIN_NAME,  
-            description: 'Кастомізація картки: логотипи, анімована назва та прозорі кнопки.', author: '',  
+            type: 'other', version: '1.4.9', name: PLUGIN_NAME,  
+            description: 'Кастомізація картки: невидимі кнопки зі світінням іконок.', author: '',  
             icon: SETTINGS_ICON
         };  
   
