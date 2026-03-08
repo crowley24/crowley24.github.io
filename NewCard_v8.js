@@ -49,7 +49,6 @@
     function addSettings() {
         const defaults = {
             'cas_logo_scale': '100',
-            'cas_button_scale': '1.0',
             'cas_bg_animation': true,
             'cas_blocks_gap': '20',
             'cas_meta_size': '1.3',
@@ -71,18 +70,6 @@
             component: PLUGIN_ID,
             param: { name: 'cas_logo_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' }, default: '100' },
             field: { name: 'Розмір логотипу' },
-            onChange: applySettings
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: PLUGIN_ID,
-            param: { 
-                name: 'cas_button_scale', 
-                type: 'select', 
-                values: { '0.8': 'Дрібні', '0.9': 'Зменшені', '1.0': 'Стандарт', '1.1': 'Збільшені', '1.2': 'Великі' }, 
-                default: '1.0' 
-            },
-            field: { name: 'Розмір кнопок' },
             onChange: applySettings
         });
 
@@ -120,13 +107,11 @@
 
     function applySettings() {
         const root = document.documentElement;
-        const logoScale = parseInt(Lampa.Storage.get('cas_logo_scale') || 100) / 100;
-        const btnScale = Lampa.Storage.get('cas_button_scale') || '1.0';
+        const scale = parseInt(Lampa.Storage.get('cas_logo_scale') || 100) / 100;
         const gap = Lampa.Storage.get('cas_blocks_gap') || '20';
         const metaSize = Lampa.Storage.get('cas_meta_size') || '1.3';
         
-        root.style.setProperty('--cas-logo-scale', logoScale);
-        root.style.setProperty('--cas-btn-scale', btnScale);
+        root.style.setProperty('--cas-logo-scale', scale);
         root.style.setProperty('--cas-blocks-gap', gap + 'px');
         root.style.setProperty('--cas-meta-size', metaSize + 'em');
         $('body').toggleClass('cas--zoom-enabled', !!Lampa.Storage.get('cas_bg_animation'));
@@ -150,7 +135,7 @@
                       
                     <div class="cas-ratings-line">
                         <div class="cas-rate-items" style="display: flex; align-items: center; gap: 12px;"></div>
-                        <div class="cas-meta-info" style="opacity: 0.9; font-weight: 400;"></div>
+                        <div class="cas-meta-info" style="opacity: 0.7; font-weight: 400;"></div>
                         <div class="cas-quality-row" style="display: flex; gap: 8px; align-items: center;"></div>
                     </div>
 
@@ -182,8 +167,34 @@
                             </svg>  
                             <span>#{title_reactions}</span>  
                         </div>  
+  
+                        <div class="full-start__button selector button--subscribe hide">  
+                            <svg width="25" height="30" viewBox="0 0 25 30" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                                <path d="M6.01892 24C6.27423 27.3562 9.07836 30 12.5 30C15.9216 30 18.7257 27.3562 18.981 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z" fill="currentColor"/>  
+                                <path d="M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z" stroke="currentColor" stroke-width="2.5"/>  
+                            </svg>  
+                            <span>#{title_subscribe}</span>  
+                        </div>  
+  
+                        <div class="full-start__button selector button--options">  
+                            <svg width="38" height="10" viewBox="0 0 38 10" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                                <circle cx="4.88968" cy="4.98563" r="4.75394" fill="currentColor"/>  
+                                <circle cx="18.9746" cy="4.98563" r="4.75394" fill="currentColor"/>  
+                                <circle cx="33.0596" cy="4.98563" r="4.75394" fill="currentColor"/>  
+                            </svg>  
+                        </div>  
                     </div>  
                 </div>  
+  
+                <div class="full-start-new__reactions selector">  
+                    <div>#{reactions_none}</div>  
+                </div>  
+                  
+                <div class="full-start-new__rate-line">  
+                    <div class="full-start__status hide"></div>  
+                </div>  
+                  
+                <div class="rating--modss" style="display: none;"></div>  
             </div>  
         </div>  
     </div>`;  
@@ -193,7 +204,7 @@
   
     function addStyles() {  
         const styles = `<style>  
-:root { --cas-logo-scale: 1; --cas-btn-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.2em; }
+:root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.2em; }
 
 .left-title .full-start-new__body { height: 80vh; }  
 .left-title .full-start-new__right { display: flex; align-items: flex-end; }  
@@ -201,28 +212,8 @@
 
 .left-title .full-start-new__title {  
     font-size: 2.5em; font-weight: 700; line-height: 1.2; margin-bottom: 0.5em;  
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); color: #fff;  
+    text-shadow: 0 0 0.1em rgba(0, 0, 0, 0.3); color: #fff;  
 }  
-
-/* КНОПКИ */
-.left-title .full-start-new__buttons { 
-    display: flex !important; 
-    gap: 15px; 
-    margin-top: 1.2em; 
-    align-items: center;
-}
-
-.left-title .full-start__button { 
-    display: flex !important; 
-    align-items: center; 
-    transform: scale(var(--cas-btn-scale));
-    transform-origin: left bottom;
-    transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-
-.left-title .full-start__button.focus {
-    transform: scale(calc(var(--cas-btn-scale) * 1.1));
-}
 
 .left-title .full-start-new__reactions,
 .left-title .full-start-new__rate-line,
@@ -247,9 +238,8 @@
     margin-bottom: var(--cas-blocks-gap); 
     font-weight: 600; 
     font-size: var(--cas-meta-size); 
-    color: #fff; 
+    color: rgba(255,255,255,0.9); 
     flex-wrap: wrap; 
-    text-shadow: 0 1px 4px rgba(0,0,0,0.6);
 }
 
 .cas-rate-item { display: flex; align-items: center; gap: 6px; }
@@ -257,34 +247,60 @@
 .cas-rate-item span { line-height: 1; }
 
 .cas-studio-item { height: 20px !important; display: flex; align-items: center; }
-.cas-studio-item img { height: 100% !important; width: auto !important; }
+.cas-studio-item img { height: 100% !important; width: auto !important; object-fit: contain; }
 
+/* ОНОВЛЕНІ БЕЙДЖІ ЯКОСТІ: ПЛАНИЙ ОБ'ЄМ ТА СКЛЯНИЙ ВІДБЛИСК */
 .cas-quality-item { 
     height: 1.45em; 
     display: flex; 
     align-items: center; 
     position: relative;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+    overflow: hidden;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.05); /* Легка підкладка для об'єму */
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.2), 0 2px 4px rgba(0,0,0,0.3);
 }
 
 .cas-quality-item img { 
     height: 100%; 
     width: auto; 
     display: block;
+    z-index: 1;
 }
 
+/* Скляний градієнт зверху для 3D ефекту */
 .cas-quality-item::after {
     content: '';
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.05) 100%);
+    background: linear-gradient(
+        180deg, 
+        rgba(255,255,255,0.18) 0%, 
+        rgba(255,255,255,0.05) 45%, 
+        rgba(0,0,0,0.05) 50%, 
+        rgba(0,0,0,0.1) 100%
+    );
     pointer-events: none;
+    z-index: 2;
 }
 
-@keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } }
+/* Внутрішнє світіння країв */
+.cas-quality-item::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 3;
+}
+
+@keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 body.cas--zoom-enabled .full-start__background.loaded { 
     animation: casKenBurns 45s ease-in-out infinite !important; 
 }
+
+.left-title .full-start-new__buttons { margin-top: 1em; }  
 </style>`;  
   
         Lampa.Template.add('left_title_css', styles);  
@@ -371,8 +387,8 @@ body.cas--zoom-enabled .full-start__background.loaded {
   
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.4.9', name: PLUGIN_NAME,  
-            description: 'Кастомізація картки: чистий стиль, масштабовані кнопки.', author: '',  
+            type: 'other', version: '1.4.6', name: PLUGIN_NAME,  
+            description: 'Кастомізація картки: логотипи, студії та об\'ємні скляні іконки.', author: '',  
             icon: SETTINGS_ICON
         };  
   
