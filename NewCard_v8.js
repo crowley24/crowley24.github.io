@@ -247,13 +247,9 @@
     --cas-glow-color: rgba(255, 255, 255, 0.8); 
 }
 
-/* --- Анімація появи (як у вашому коді) --- */
-.cas-logo, 
-.cas-ratings-line, 
-.cas-studios-row, 
-.left-title .full-start-new__buttons {
-    opacity: 0;
-    transform: translateY(12px);
+/* --- ПОЯВА ЕЛЕМЕНТІВ --- */
+.cas-logo, .cas-ratings-line, .cas-studios-row, .left-title .full-start-new__buttons {
+    opacity: 0; transform: translateY(12px);
     transition: opacity 0.4s var(--cas-anim-curve), transform 0.4s var(--cas-anim-curve);
 }
 .cas-animated .cas-logo { opacity: 1; transform: translateY(0); transition-delay: 0.05s; }
@@ -261,83 +257,58 @@
 .cas-animated .cas-studios-row { opacity: 1; transform: translateY(0); transition-delay: 0.18s; }
 .cas-animated .full-start-new__buttons { opacity: 1; transform: translateY(0); transition-delay: 0.24s; }
 
-.left-title .full-start-new__body { height: 85vh; }  
-.left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 2vh; }  
-.left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; }  
-
-/* --- Логотипи студій (Кольорові, але видимі на чорному) --- */
-.cas-studio-item { height: 20px !important; display: flex; align-items: center; }
+/* --- ЛОГОТИПИ СТУДІЙ: ЧІТКІ ТА ВИДИМІ --- */
+.cas-studio-item { height: 18px !important; display: flex; align-items: center; margin-right: 10px; }
 .cas-studio-item img { 
+    height: 100% !important; width: auto !important; object-fit: contain;
+    /* Замість розмитої обводки використовуємо фільтр, що робить темні логотипи сіро-білими, 
+       зберігаючи їхню векторну чіткість без "ореолу" */
+    filter: brightness(1.5) contrast(1.2) drop-shadow(0px 0px 0.5px rgba(255,255,255,0.8));
+}
+
+/* --- ІКОНКИ ЯКОСТІ (4K, HDR ТОЩО) — ПРИМУСОВО МАЛЕНЬКІ --- */
+.cas-quality-item { 
+    height: 14px !important; /* Робимо їх врівень з текстом мета-даних */
+    display: flex; 
+    align-items: center; 
+}
+.cas-quality-item img { 
     height: 100% !important; 
     width: auto !important; 
-    object-fit: contain;
-    /* Додаємо світлий контур навколо логотипу, щоб його було видно на чорному, 
-       але кольори залишалися оригінальними */
-    filter: drop-shadow(1px 1px 0px rgba(255,255,255,0.5)) drop-shadow(-1px -1px 0px rgba(255,255,255,0.5));
+    display: block;
 }
 
-/* --- Кнопки (Стиль без рамок + Ваші розміри) --- */
-.left-title .full-start-new__buttons { 
-    margin-top: 1em; 
-    display: flex; 
-    gap: 25px; 
-}  
-
+/* --- КНОПКИ: ВАШІ РОЗМІРИ + ЧІТКЕ СВІТІННЯ --- */
+.left-title .full-start-new__buttons { margin-top: 1.2em; display: flex; gap: 20px; }  
 .left-title .full-start-new__buttons .full-start__button {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
-    color: rgba(255,255,255,0.6); 
-    padding: 0 !important; /* Прибираємо падінги, щоб не роздувати кнопку */
-    height: auto !important;
+    background: transparent !important; border: none !important;
+    color: rgba(255,255,255,0.6); padding: 0 !important;
+    height: auto !important; display: flex; align-items: center; gap: 10px;
     transition: color 0.2s var(--cas-anim-curve), filter 0.2s var(--cas-anim-curve), transform 0.2s var(--cas-anim-curve);
-    display: flex;
-    align-items: center;
-    gap: 10px;
 }
 
-/* Ефект при фокусі */
-.left-title .full-start-new__buttons .full-start__button:hover,
 .left-title .full-start-new__buttons .full-start__button.focus {
-    color: #fff !important;
-    transform: scale(1.08); 
-    filter: drop-shadow(0 0 1px rgba(255,255,255,0.9)) drop-shadow(0 0 10px var(--cas-glow-color));
+    color: #fff !important; transform: scale(1.08); 
+    filter: drop-shadow(0 0 1px white) drop-shadow(0 0 8px var(--cas-glow-color));
 }
 
-/* ПРИМУСОВЕ ПОВЕРНЕННЯ РОЗМІРУ ІКОНОК (як у вашому прикладі) */
-.left-title .full-start__button svg { 
-    width: 28px !important; /* Стандартний розмір з вашого шаблону */
-    height: 28px !important; 
-}
+/* РОЗМІР ІКОНОК У КНОПКАХ (Play, Book тощо) */
+.left-title .full-start__button svg { width: 26px !important; height: 26px !important; }
+.left-title .full-start__button span { font-size: 1.1em; font-weight: 500; }
 
-/* --- Інші елементи (як у вашому коді) --- */
-.left-title .full-start-new__reactions,
-.left-title .full-start-new__rate-line,
-.left-title .full-start__status,
-.left-title .rating--modss,
-.left-title .full-start-new__head,
-.left-title .full-start-new__details { display: none !important; }
-
-.cas-logo img {
-    max-width: calc(450px * var(--cas-logo-scale));
-    max-height: calc(180px * var(--cas-logo-scale));
-    object-fit: contain; object-position: left bottom;
-    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
-}
-
-.cas-ratings-line { display: flex; align-items: center; gap: 15px; margin-bottom: var(--cas-blocks-gap); font-weight: 600; font-size: var(--cas-meta-size); color: rgba(255,255,255,0.9); flex-wrap: wrap; }
-.cas-rate-item { display: flex; align-items: center; gap: 6px; }
+/* --- РЕЙТИНГИ ТА МЕТА --- */
+.cas-ratings-line { display: flex; align-items: center; gap: 12px; margin-bottom: var(--cas-blocks-gap); font-weight: 600; font-size: var(--cas-meta-size); color: rgba(255,255,255,0.9); }
 .cas-rate-item img { height: 1.1em; width: auto; }
 
-@keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-body.cas--zoom-enabled .full-start__background.loaded { 
-    animation: casKenBurns 45s ease-in-out infinite !important; 
-}
+/* ПРИХОВУВАННЯ ЗАЙВОГО */
+.left-title .full-start-new__body { height: 85vh; }
+.left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 2vh; }
+.left-title .full-start-new__reactions, .left-title .full-start-new__rate-line, .left-title .full-start__status, .left-title .rating--modss, .left-title .full-start-new__head, .left-title .full-start-new__details { display: none !important; }
 
-@media screen and (max-width: 767px) {  
-    .left-title .full-start-new__right { flex-direction: column; align-items: flex-start; }  
-}  
+@keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 45s ease-in-out infinite !important; }
+
+@media screen and (max-width: 767px) { .left-title .full-start-new__right { flex-direction: column; align-items: flex-start; } }
 </style>`;  
   
         Lampa.Template.add('left_title_css', styles);  
