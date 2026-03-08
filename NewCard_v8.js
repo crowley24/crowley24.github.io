@@ -55,7 +55,8 @@
             'cas_blocks_gap': '20',
             'cas_meta_size': '1.3',
             'cas_show_studios': true,
-            'cas_show_quality': true
+            'cas_show_quality': true,
+            'cas_show_rating': true
         };
 
         Object.keys(defaults).forEach(key => {
@@ -121,6 +122,9 @@
 
         Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_show_studios', type: 'trigger', default: true }, field: { name: 'Показувати студії' } });
         Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_show_quality', type: 'trigger', default: true }, field: { name: 'Показувати якість' } });
+        
+        // Новий параметр для рейтингів
+        Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_show_rating', type: 'trigger', default: true }, field: { name: 'Показувати рейтинги' } });
 
         applySettings();
     }
@@ -359,17 +363,20 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
                         }
                     });
 
+                    // РЕЙТИНГИ
                     let ratesHtml = '';
-                    const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
-                    if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
-                    
-                    if (event.data.reactions && event.data.reactions.result) {
-                        let sum = 0, cnt = 0;
-                        const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };
-                        event.data.reactions.result.forEach(r => { if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; } });
-                        if (cnt >= 5) {
-                            const cubV = (((data.name?7.4:6.5)*(data.name?50:150)+sum)/((data.name?50:150)+cnt)).toFixed(1);
-                            ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;
+                    if (Lampa.Storage.get('cas_show_rating')) {
+                        const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
+                        if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
+                        
+                        if (event.data.reactions && event.data.reactions.result) {
+                            let sum = 0, cnt = 0;
+                            const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };
+                            event.data.reactions.result.forEach(r => { if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; } });
+                            if (cnt >= 5) {
+                                const cubV = (((data.name?7.4:6.5)*(data.name?50:150)+sum)/((data.name?50:150)+cnt)).toFixed(1);
+                                ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;
+                            }
                         }
                     }
                     render.find('.cas-rate-items').html(ratesHtml);
@@ -383,20 +390,15 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
                         render.find('.cas-studios-row').html(studios.map(s => `<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}"></div>`).join(''));
                     }
 
-                    // --- ВСТАВКА ОНОВЛЕНОГО БЛОКУ ПАРСЕРА ЯКОСТІ ---
                     if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {
                         Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {
                             const items = res.Results || res; 
-                            
                             if (items && Array.isArray(items) && items.length > 0) {
                                 const b = { res: '', hdr: false, dv: false, ukr: false };
-                                
                                 items.slice(0, 15).forEach(i => {
                                     const t = (i.Title || i.title || '').toLowerCase();
-                                    
                                     if (t.includes('4k') || t.includes('2160')) b.res = '4K'; 
                                     else if (!b.res && (t.includes('1080') || t.includes('fhd'))) b.res = 'FULL HD';
-                                    
                                     if (t.includes('hdr')) b.hdr = true;
                                     if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) b.dv = true;
                                     if (t.includes('ukr') || t.includes('укр')) b.ukr = true;
@@ -407,11 +409,7 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
                                 if (b.dv) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;
                                 else if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;
                                 if (b.ukr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;
-                                
-                                if (qH && (time || genre)) {
-                                    qH = '<span style="opacity: 0.5; margin: 0 5px;">•</span>' + qH;
-                                }
-                                
+                                if (qH && (time || genre)) qH = '<span style="opacity: 0.5; margin: 0 5px;">•</span>' + qH;
                                 render.find('.cas-quality-row').html(qH);
                             }
                         });
@@ -427,7 +425,7 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
   
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.4.9', name: PLUGIN_NAME,  
+            type: 'other', version: '1.5.0', name: PLUGIN_NAME,  
             description: 'Кастомізація картки: невидимі кнопки зі світінням іконок.', author: '',  
             icon: SETTINGS_ICON
         };  
