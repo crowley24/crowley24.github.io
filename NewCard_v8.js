@@ -311,21 +311,24 @@ body.cas--zoom-enabled .cas-bg-overlay {
         Lampa.Template.add('left_title_css', styles);  
         $('body').append(Lampa.Template.get('left_title_css', {}, true));  
     }
-  function attachLoader() {  
+ function attachLoader() {  
         Lampa.Listener.follow('full', (event) => {  
             if (event.type === 'complite') {  
                 const data = event.data.movie;
                 const render = event.object.activity.render();
                 
-                // Знаходимо контейнер фону та основну картинку
+                // Знаходимо контейнер та основне зображення фону
                 const bgContainer = render.find('.full-start__background');
-                const bgImg = bgContainer.find('img');
+                let bgImg = bgContainer.find('img');
                 
+                // Якщо картинки немає в блоці, шукаємо її як сам блок (залежить від версії Lampa)
+                if (!bgImg.length && bgContainer.is('img')) bgImg = bgContainer;
+
                 if (data && data.id) {
                     const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());
                     
                     $.get(imagesUrl, (res) => {
-                        // --- Логіка Логотипу ---
+                        // --- Логотип (без змін) ---
                         const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || 
                                          res.logos.find(l => l.iso_639_1 === 'en') || 
                                          res.logos[0];
@@ -335,29 +338,27 @@ body.cas--zoom-enabled .cas-bg-overlay {
                             const logoUrl = Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path);
                             render.find('.cas-logo').html('<img src="' + logoUrl + '">');
                             render.find('.full-start-new__title').hide();
-                        } else {
-                            render.find('.cas-logo').empty();
-                            render.find('.full-start-new__title').show();
                         }
 
-                        // --- Витончене Слайд-шоу (Cross-fade) ---
+                        // --- Слайд-шоу (Cross-fade) ---
                         if (res.backdrops && res.backdrops.length > 1 && bgContainer.length) {
                             let currentIndex = 0;
                             const backdrops = res.backdrops.slice(0, 15);
                             
                             if (window.casBgInterval) clearInterval(window.casBgInterval);
 
-                            // Створюємо "другий шар" для плавного накладання, якщо його ще немає
+                            // Створюємо оверлей, якщо його немає
                             if (!bgContainer.find('.cas-bg-overlay').length) {
-                                bgContainer.append('<div class="cas-bg-overlay" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;transition:opacity 2.5s ease-in-out;z-index:1;"><img></div>');
-                                bgImg.css('z-index', '0');
+                                bgContainer.css('position', 'relative');
+                                bgContainer.append('<div class="cas-bg-overlay" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;transition:opacity 2s ease-in-out;z-index:1;"><img style="width:100%;height:100%;object-fit:cover;"></div>');
                             }
                             
                             const overlay = bgContainer.find('.cas-bg-overlay');
                             const overlayImg = overlay.find('img');
 
                             window.casBgInterval = setInterval(() => {
-                                if (!$.contains(document, bgContainer[0])) {
+                                // Перевірка, чи картка ще відкрита
+                                if (!document.body.contains(bgContainer[0])) {
                                     clearInterval(window.casBgInterval);
                                     return;
                                 }
@@ -365,27 +366,30 @@ body.cas--zoom-enabled .cas-bg-overlay {
                                 currentIndex = (currentIndex + 1) % backdrops.length;
                                 const nextImgUrl = Lampa.TMDB.image('/t/p/original' + backdrops[currentIndex].file_path);
                                 
-                                // Завантажуємо наступну картинку на прихований шар
-                                overlayImg.attr('src', nextImgUrl);
-                                
-                                overlayImg.off('load').on('load', function() {
-                                    // Коли завантажилась — плавно проявляємо шар поверх старого
+                                // Створюємо тимчасовий об'єкт Image для передзавантаження
+                                const tempImg = new Image();
+                                tempImg.src = nextImgUrl;
+                                tempImg.onload = function() {
+                                    // 1. Ставимо нову картинку на оверлей
+                                    overlayImg.attr('src', nextImgUrl);
+                                    // 2. Плавно показуємо оверлей поверх основної картинки
                                     overlay.css('opacity', '1');
                                     
+                                    // 3. Через час анімації (2с) робимо підміну на нижньому шарі
                                     setTimeout(() => {
-                                        // Після завершення анімації копіюємо картинку на нижній шар і ховаємо верхній
                                         bgImg.attr('src', nextImgUrl);
+                                        // 4. Миттєво ховаємо оверлей (він тепер ідентичний фону)
                                         overlay.css({'transition': 'none', 'opacity': '0'});
-                                        // Повертаємо транзишн назад
-                                        setTimeout(() => overlay.css('transition', 'opacity 2.5s ease-in-out'), 50);
-                                    }, 2600); 
-                                });
+                                        // 5. Повертаємо плавність для наступного циклу
+                                        setTimeout(() => overlay.css('transition', 'opacity 2s ease-in-out'), 50);
+                                    }, 2100);
+                                };
 
-                            }, 8000); 
+                            }, 8000); // Інтервал 8 секунд
                         }
                     });
 
-                    // --- Решта коду (рейтинги, мета, якість) без змін ---
+                    // --- Рейтинги та інше (залишаємо без змін) ---
                     let ratesHtml = '';
                     const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
                     if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
@@ -400,7 +404,7 @@ body.cas--zoom-enabled .cas-bg-overlay {
                         }
                     }
                     render.find('.cas-rate-items').html(ratesHtml);
-
+                    
                     const time = formatTime(data.runtime || data.episode_run_time);
                     const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');
                     render.find('.cas-meta-info').text((time ? time + (genre ? ' • ' : '') : '') + genre);
@@ -422,7 +426,6 @@ body.cas--zoom-enabled .cas-bg-overlay {
                                     if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) b.dv = true;
                                     if (t.includes('ukr') || t.includes('укр')) b.ukr = true;
                                 });
-
                                 let qH = '';
                                 if (b.res) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS[b.res]}"></div>`;
                                 if (b.dv) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;
