@@ -212,7 +212,7 @@
 
 .left-title .full-start-new__title {  
     font-size: 2.5em; font-weight: 700; line-height: 1.2; margin-bottom: 0.5em;  
-    text-shadow: 0 0 0.1em rgba(0, 0, 0, 0.3); color: #fff;  
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5); color: #fff;  
 }  
 
 .left-title .full-start-new__reactions,
@@ -228,84 +228,95 @@
     max-width: calc(450px * var(--cas-logo-scale));
     max-height: calc(180px * var(--cas-logo-scale));
     object-fit: contain; object-position: left bottom;
-    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+    filter: drop-shadow(0 0 15px rgba(0,0,0,0.6));
 }
 
+/* ЗАГАЛЬНИЙ РЯДОК МЕТАДАНИХ */
 .cas-ratings-line { 
     display: flex; 
     align-items: center; 
-    gap: 15px; 
+    gap: 12px; 
     margin-bottom: var(--cas-blocks-gap); 
-    font-weight: 600; 
+    font-weight: 500; 
     font-size: var(--cas-meta-size); 
-    color: rgba(255,255,255,0.9); 
+    color: #fff; 
     flex-wrap: wrap; 
 }
 
-.cas-rate-item { display: flex; align-items: center; gap: 6px; }
-.cas-rate-item img { height: 1.1em; width: auto; }
-.cas-rate-item span { line-height: 1; }
+/* ЕФЕКТНИЙ РЕЙТИНГ (TMDB/CUB) */
+.cas-rate-item { 
+    display: flex; 
+    align-items: center; 
+    gap: 8px; 
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 8px;
+    border-radius: 6px;
+    backdrop-filter: blur(4px);
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.2), 0 2px 4px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.cas-rate-item img { height: 0.9em; width: auto; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
+.cas-rate-item span { line-height: 1; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
 
-.cas-studio-item { height: 20px !important; display: flex; align-items: center; }
-.cas-studio-item img { height: 100% !important; width: auto !important; object-fit: contain; }
+/* ТЕКСТОВА ІНФОРМАЦІЯ (ЧАС, ЖАНР) */
+.cas-meta-info {
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+    letter-spacing: 0.3px;
+    display: flex;
+    align-items: center;
+}
 
-/* ОНОВЛЕНІ БЕЙДЖІ ЯКОСТІ: ПЛАНИЙ ОБ'ЄМ ТА СКЛЯНИЙ ВІДБЛИСК */
+/* РОЗДІЛЮВАЧ */
+.cas-ratings-line span[style*="opacity: 0.5"] {
+    display: inline-block;
+    width: 4px;
+    height: 4px;
+    background: #fff;
+    border-radius: 50%;
+    margin: 0 10px !important;
+    font-size: 0 !important;
+    opacity: 0.6 !important;
+    box-shadow: 0 0 4px rgba(255,255,255,0.8);
+}
+
+/* БЕЙДЖІ ЯКОСТІ */
 .cas-quality-item { 
-    height: 1.45em; 
+    height: 1.4em; 
     display: flex; 
     align-items: center; 
     position: relative;
     overflow: hidden;
     border-radius: 4px;
-    background: rgba(255,255,255,0.05); /* Легка підкладка для об'єму */
-    box-shadow: inset 0 1px 1px rgba(255,255,255,0.2), 0 2px 4px rgba(0,0,0,0.3);
+    background: rgba(255,255,255,0.05);
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.2), 0 2px 5px rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.15);
 }
 
-.cas-quality-item img { 
-    height: 100%; 
-    width: auto; 
-    display: block;
-    z-index: 1;
-}
+.cas-quality-item img { height: 100%; width: auto; display: block; z-index: 1; }
 
-/* Скляний градієнт зверху для 3D ефекту */
 .cas-quality-item::after {
     content: '';
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: linear-gradient(
-        180deg, 
-        rgba(255,255,255,0.18) 0%, 
-        rgba(255,255,255,0.05) 45%, 
-        rgba(0,0,0,0.05) 50%, 
-        rgba(0,0,0,0.1) 100%
-    );
+    background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 45%, rgba(0,0,0,0.05) 50%, rgba(0,0,0,0.15) 100%);
     pointer-events: none;
     z-index: 2;
 }
 
-/* Внутрішнє світіння країв */
-.cas-quality-item::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 4px;
-    pointer-events: none;
-    z-index: 3;
-}
+.cas-studio-item { height: 22px !important; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+.cas-studio-item img { height: 100% !important; width: auto !important; }
 
-@keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+@keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } }
 body.cas--zoom-enabled .full-start__background.loaded { 
-    animation: casKenBurns 45s ease-in-out infinite !important; 
+    animation: casKenBurns 40s ease-in-out infinite !important; 
 }
 
-.left-title .full-start-new__buttons { margin-top: 1em; }  
+.left-title .full-start-new__buttons { margin-top: 1.2em; }  
 </style>`;  
   
         Lampa.Template.add('left_title_css', styles);  
         $('body').append(Lampa.Template.get('left_title_css', {}, true));  
-    }  
+    }
   
     function attachLoader() {  
         Lampa.Listener.follow('full', (event) => {  
