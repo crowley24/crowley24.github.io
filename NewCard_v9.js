@@ -51,6 +51,7 @@
             'cas_logo_scale': '100',
             'cas_logo_quality': 'original',
             'cas_bg_animation': true,
+            'cas_slideshow_enabled': true, // НОВЕ: Слайд-шоу
             'cas_blocks_gap': '20',
             'cas_meta_size': '1.3',
             'cas_show_studios': true,
@@ -108,8 +109,14 @@
         Lampa.SettingsApi.addParam({
             component: PLUGIN_ID,
             param: { name: 'cas_bg_animation', type: 'trigger', default: true },
-            field: { name: 'Анімація фону' },
+            field: { name: 'Анімація фону (Ken Burns)' },
             onChange: applySettings
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: PLUGIN_ID,
+            param: { name: 'cas_slideshow_enabled', type: 'trigger', default: true },
+            field: { name: 'Слайд-шоу фону' }
         });
 
         Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_show_studios', type: 'trigger', default: true }, field: { name: 'Показувати студії' } });
@@ -297,7 +304,8 @@ body.cas--zoom-enabled .full-start__background.loaded {
         Lampa.Template.add('left_title_css', styles);  
         $('body').append(Lampa.Template.get('left_title_css', {}, true));  
     }  
-  function attachLoader() {  
+
+    function attachLoader() {  
         Lampa.Listener.follow('full', (event) => {  
             if (event.type === 'complite') {  
                 const data = event.data.movie;
@@ -324,14 +332,15 @@ body.cas--zoom-enabled .full-start__background.loaded {
                             render.find('.full-start-new__title').show();
                         }
 
-                        // --- Логіка Слайд-шоу (ВИПРАВЛЕНО) ---
-                        if (res.backdrops && res.backdrops.length > 1 && bgImg.length) {
+                        // --- Логіка Слайд-шоу (З НОВИМ ІНТЕРВАЛОМ ТА ВКЛ/ВИКЛ) ---
+                        if (window.casBgInterval) clearInterval(window.casBgInterval);
+
+                        const slideshowEnabled = Lampa.Storage.get('cas_slideshow_enabled');
+
+                        if (slideshowEnabled && res.backdrops && res.backdrops.length > 1 && bgImg.length) {
                             let currentIndex = 0;
                             const backdrops = res.backdrops.slice(0, 15);
-                            
-                            if (window.casBgInterval) clearInterval(window.casBgInterval);
 
-                            // Встановлюємо плавний перехід ОДИН РАЗ
                             bgImg.css({
                                 'transition': 'opacity 1.5s ease-in-out',
                                 'opacity': '1'
@@ -346,20 +355,17 @@ body.cas--zoom-enabled .full-start__background.loaded {
                                 currentIndex = (currentIndex + 1) % backdrops.length;
                                 const newBgUrl = Lampa.TMDB.image('/t/p/original' + backdrops[currentIndex].file_path);
                                 
-                                // Створюємо невидимий елемент Image для попереднього завантаження в пам'ять
                                 const tempImg = new Image();
                                 tempImg.src = newBgUrl;
                                 tempImg.onload = function() {
-                                    // ТІЛЬКИ коли картинка повністю завантажилася в кеш браузера — змінюємо src
-                                    // Це прибирає ефект "чорного екрану" або "тусклості"
                                     bgImg.attr('src', newBgUrl);
                                 };
 
-                            }, 7000); 
+                            }, 15000); // Інтервал 15 секунд
                         }
                     });
 
-                    // --- Решта коду (Рейтинги, Студії, Якість) залишається без змін ---
+                    // --- Рейтинги, Студії, Якість ---
                     let ratesHtml = '';
                     const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
                     if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
@@ -414,7 +420,7 @@ body.cas--zoom-enabled .full-start__background.loaded {
   
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.4.4', name: PLUGIN_NAME,  
+            type: 'other', version: '1.4.5', name: PLUGIN_NAME,  
             description: 'Кастомізація картки: логотипи, студії та вибір якості зображень.', author: '',  
             icon: SETTINGS_ICON
         };  
