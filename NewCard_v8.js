@@ -43,7 +43,7 @@
         Lampa.SettingsApi.addComponent({
             component: PLUGIN_ID,
             name: PLUGIN_NAME,
-            icon: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#fff"><rect x="10" y="30" width="80" height="40" rx="5" fill="rgba(255,255,255,0.2)"/><circle cx="50" cy="50" r="12" fill="white"/></svg>'
+            icon: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#fff"><rect x="10" y="30" width="80" height="40" rx="5" fill="rgba(255,255,255,0.2)"/><circle cx="50" cy="50" r="12" fill="white"/></svg>`
         });
 
         Lampa.SettingsApi.addParam({
@@ -64,41 +64,18 @@
         Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_show_quality', type: 'trigger', default: true }, field: { name: 'Показувати якість' } });
         Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_bg_animation', type: 'trigger', default: true }, field: { name: 'Анімація фону' }, onChange: applySettings });
 
-        Lampa.SettingsApi.addParam({
-            component: PLUGIN_ID,
-            param: { name: 'cas_media_btns_group', type: 'static' },
-            field: { name: '--- Медіа кнопки ---' }
-        });
-
-        Lampa.SettingsApi.addParam({ 
-            component: PLUGIN_ID, 
-            param: { name: 'cas_custom_buttons', type: 'trigger', default: true }, 
-            field: { name: 'Стильні кнопки (Apple)' }, 
-            onChange: applySettings 
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: PLUGIN_ID,
-            param: { name: 'cas_btn_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' }, default: '100' },
-            field: { name: 'Розмір кнопок' },
-            onChange: applySettings
-        });
-
         applySettings();
     }
 
     function applySettings() {
         const root = document.documentElement;
         const lScale = parseInt(Lampa.Storage.get('cas_logo_scale') || 100) / 100;
-        const bScale = parseInt(Lampa.Storage.get('cas_btn_scale') || 100) / 100;
         const gap = Lampa.Storage.get('cas_blocks_gap') || '30';
         
         root.style.setProperty('--cas-logo-scale', lScale);
-        root.style.setProperty('--cas-btn-scale', bScale);
         root.style.setProperty('--cas-blocks-gap', gap + 'px');
         
         $('body').toggleClass('cas--zoom-enabled', !!Lampa.Storage.get('cas_bg_animation'));
-        $('body').toggleClass('cas--custom-buttons', !!Lampa.Storage.get('cas_custom_buttons'));
     }
 
     function getRatingColor(val) {
@@ -137,24 +114,13 @@
                     <div class="full-start-new__details hide"></div>  
 
                     <div class="cas-studios-row" style="margin: 0 0 20px 0; display: flex; gap: 10px;"></div>
-                      
-                    <div class="full-start-new__buttons applecation__buttons-row">  
-                        <div class="full-start__button selector button--play">${ICONS.play} <span>#{title_watch}</span></div>  
-                        <div class="full-start__button selector view--trailer">${ICONS.trailer} <span>#{full_trailers}</span></div>
-                        <div class="full-start__button selector button--book">${ICONS.book} <span>#{settings_input_links}</span></div>  
-                        <div class="full-start__button selector button--reaction">${ICONS.reaction} <span>#{title_reactions}</span></div>  
-                        <div class="full-start__button selector button--options">${ICONS.options}</div>  
+                    
                     </div>  
-                </div>  
   
                 <div class="full-start-new__reactions selector"><div>#{reactions_none}</div></div>  
                 <div class="full-start-new__rate-line"><div class="full-start__status hide"></div></div>  
                 <div class="rating--modss" style="display: none;"></div>  
             </div>  
-        </div>  
-  
-        <div class="hide buttons--container">  
-            <div class="full-start__button selector view--torrent">${ICONS.play} <span>#{full_torrents}</span></div>   
         </div>  
     </div>`;  
         Lampa.Template.add('full_start_new', template);  
@@ -162,7 +128,7 @@
   
     function addStyles() {  
         const styles = `<style>  
-:root { --cas-logo-scale: 1; --cas-btn-scale: 1; --cas-blocks-gap: 30px; }
+:root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; }
 
 .left-title .full-start-new__body { 
     height: 92vh; 
@@ -179,7 +145,7 @@
     display: flex; 
     flex-direction: column; 
     justify-content: flex-end; 
-    padding-bottom: 60px; /* Трохи підняв кнопки, щоб не були занадто низько */
+    padding-bottom: 100px; /* Підняв контент, оскільки кнопок більше немає */
 }  
 
 .cas-apple-style .full-start-new__reactions,
@@ -196,42 +162,6 @@
 .cas-studio-item img { height: 100% !important; width: auto !important; }
 .cas-quality-item { height: 20px; display: flex; align-items: center; }
 .cas-quality-item img { height: 100%; width: auto; }
-
-.applecation__buttons-row { 
-    display: flex; align-items: center; 
-    gap: calc(25px * var(--cas-btn-scale)); 
-    margin-top: 30px; 
-    flex-wrap: wrap; 
-}
-
-body.cas--custom-buttons .cas-apple-style .full-start__button {  
-    background: transparent !important; 
-    background-color: transparent !important;
-    border: none !important;  
-    box-shadow: none !important;
-    color: rgba(255,255,255,0.5) !important; 
-    padding: 12px 18px !important;
-    display: flex; justify-content: center; align-items: center; 
-    gap: calc(12px * var(--cas-btn-scale));
-    font-size: calc(1.3em * var(--cas-btn-scale)); 
-    font-weight: 600;
-    transition: transform 0.1s ease-out, color 0.1s ease-out !important;
-    will-change: transform; 
-    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-}
-
-body.cas--custom-buttons .cas-apple-style .full-start__button.focus {  
-    transform: scale(1.2) !important; 
-    background: transparent !important;
-    color: #fff !important;
-    filter: drop-shadow(0 0 8px rgba(255,255,255,0.9)) !important;
-    z-index: 10;
-}
-
-body.cas--custom-buttons .cas-apple-style .full-start__button svg {
-    width: calc(28px * var(--cas-btn-scale));
-    height: calc(28px * var(--cas-btn-scale));
-}
 
 @keyframes casKenBurns { 
     0% { transform: scale(1) translate(0, 0); } 
@@ -294,7 +224,8 @@ body.cas--zoom-enabled .full-start__background.loaded {
                                     const t = i.Title.toLowerCase();
                                     if (t.includes('4k')) b.res = '4K'; else if (!b.res && t.includes('1080')) b.res = 'FULL HD';
                                     if (t.includes('hdr')) b.hdr = true;
-                                    if (t.includes('vision') || t.includes(' dolby') || t.includes(' dv ')) b.dv = true;
+                                    // ПРАВКА: Покращене розпізнавання Dolby Vision
+                                    if (t.includes('vision') || t.includes('dolby') || t.includes(' dv ')) b.dv = true;
                                     if (t.includes('ukr') || t.includes('укр')) b.ukr = true;
                                 });
                                 let qH = '';
