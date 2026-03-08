@@ -297,23 +297,25 @@ body.cas--zoom-enabled .full-start__background.loaded {
         Lampa.Template.add('left_title_css', styles);  
         $('body').append(Lampa.Template.get('left_title_css', {}, true));  
     }  
-  
-    function attachLoader() {  
+  function attachLoader() {  
         Lampa.Listener.follow('full', (event) => {  
             if (event.type === 'complite') {  
                 const data = event.data.movie;
                 const render = event.object.activity.render();
                 
+                // Знаходимо саме картинку фону
+                const bgImg = render.find('.full-start__background img, img.full-start__background');
+                
                 if (data && data.id) {
-                    const url = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());
+                    const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());
                     
-                    $.get(url, (res) => {
+                    $.get(imagesUrl, (res) => {
+                        // --- Логіка Логотипу ---
                         const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || 
                                          res.logos.find(l => l.iso_639_1 === 'en') || 
                                          res.logos[0];
 
                         if (bestLogo) {
-                            // Використовуємо якість з налаштувань
                             const quality = Lampa.Storage.get('cas_logo_quality') || 'original';
                             const logoUrl = Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path);
                             render.find('.cas-logo').html('<img src="' + logoUrl + '">');
@@ -322,8 +324,45 @@ body.cas--zoom-enabled .full-start__background.loaded {
                             render.find('.cas-logo').empty();
                             render.find('.full-start-new__title').show();
                         }
+
+                        // --- Логіка Слайд-шоу ---
+                        if (res.backdrops && res.backdrops.length > 1 && bgImg.length) {
+                            let currentIndex = 0;
+                            const backdrops = res.backdrops.slice(0, 15); // 15 фото
+                            
+                            if (window.casBgInterval) clearInterval(window.casBgInterval);
+
+                            // Додаємо плавний перехід для картинки через CSS
+                            bgImg.css({
+                                'transition': 'opacity 1.5s ease-in-out',
+                                'opacity': '1'
+                            });
+
+                            window.casBgInterval = setInterval(() => {
+                                // Якщо ми вийшли з картки (елемента немає в DOM) - зупиняємо
+                                if (!bgImg.closest('body').length) {
+                                    clearInterval(window.casBgInterval);
+                                    return;
+                                }
+
+                                currentIndex = (currentIndex + 1) % backdrops.length;
+                                const newBgUrl = Lampa.TMDB.image('/t/p/original' + backdrops[currentIndex].file_path);
+                                
+                                // Ефект мерехтіння при зміні: прозорість 0 -> зміна src -> прозорість 1
+                                bgImg.css('opacity', '0.4'); 
+                                
+                                setTimeout(() => {
+                                    bgImg.attr('src', newBgUrl);
+                                    bgImg.on('load', function() {
+                                        $(this).css('opacity', '1');
+                                    });
+                                }, 1500);
+
+                            }, 7000); // Зміна кожні 7 секунд
+                        }
                     });
 
+                    // --- Рейтинги, Студії та Якість (без змін) ---
                     let ratesHtml = '';
                     const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
                     if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
@@ -356,7 +395,6 @@ body.cas--zoom-enabled .full-start__background.loaded {
                                     const t = i.Title.toLowerCase();
                                     if (t.includes('4k') || t.includes('2160')) b.res = '4K'; 
                                     else if (!b.res && (t.includes('1080') || t.includes('fhd'))) b.res = 'FULL HD';
-                                    
                                     if (t.includes('hdr')) b.hdr = true;
                                     if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) b.dv = true;
                                     if (t.includes('ukr') || t.includes('укр')) b.ukr = true;
@@ -367,7 +405,6 @@ body.cas--zoom-enabled .full-start__background.loaded {
                                 if (b.dv) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;
                                 else if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;
                                 if (b.ukr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;
-                                
                                 if (qH && (time || genre)) qH = '<span style="opacity: 0.5; margin: 0 5px;">•</span>' + qH;
                                 render.find('.cas-quality-row').html(qH);
                             }
@@ -376,7 +413,7 @@ body.cas--zoom-enabled .full-start__background.loaded {
                 }
             }  
         });  
-    }  
+    }
   
     function registerPlugin() {  
         const pluginManifest = {  
