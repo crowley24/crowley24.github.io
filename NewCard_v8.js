@@ -150,7 +150,7 @@
                 <div class="left-title__content">  
                     <div class="cas-logo-container" style="margin-bottom: var(--cas-blocks-gap);">
                         <div class="cas-logo"></div>
-                        </div>
+                    </div>
                       
                     <div class="cas-ratings-line">
                         <div class="cas-rate-items" style="display: flex; align-items: center; gap: 12px;"></div>
@@ -244,7 +244,7 @@
     --cas-blocks-gap: 30px; 
     --cas-meta-size: 1.2em;
     --cas-anim-curve: cubic-bezier(0.25, 1, 0.5, 1); /* Швидка преміальна крива */
-    --cas-glow-color: rgba(255, 255, 255, 0.6); /* Колір світіння кнопок */
+    --cas-glow-color: rgba(255, 255, 255, 0.8); /* Яскравіше світіння */
 }
 
 /* --- Секція прискореної анімації --- */
@@ -253,13 +253,12 @@
 .cas-studios-row, 
 .full-start-new__buttons {
     opacity: 0;
-    transform: translateY(12px); /* Менша амплітуда для швидкості */
+    transform: translateY(12px);
     transition: 
         opacity 0.4s var(--cas-anim-curve), 
         transform 0.4s var(--cas-anim-curve);
 }
 
-/* Послідовна поява з мінімальними затримками */
 .cas-animated .cas-logo { opacity: 1; transform: translateY(0); transition-delay: 0.05s; }
 .cas-animated .cas-ratings-line { opacity: 1; transform: translateY(0); transition-delay: 0.12s; }
 .cas-animated .cas-studios-row { opacity: 1; transform: translateY(0); transition-delay: 0.18s; }
@@ -269,7 +268,6 @@
 .left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 2vh; }  
 .left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; }  
 
-/* Назва, що створюється динамічно */
 .full-start-new__title {  
     font-size: 2.5em; font-weight: 700; line-height: 1.2; margin-bottom: 0.5em;  
     text-shadow: 0 0 0.1em rgba(0, 0, 0, 0.3); color: #fff;  
@@ -317,7 +315,7 @@ body.cas--zoom-enabled .full-start__background.loaded {
     animation: casKenBurns 45s ease-in-out infinite !important; 
 }
 
-/* --- ОНОВЛЕНІ КНОПКИ ЗІ СВІТІННЯМ --- */
+/* --- ПОВНІСТЮ ПРОЗОРІ КНОПКИ ЗІ СВІТІННЯМ (ВИПРАВЛЕНО) --- */
 .left-title .full-start-new__buttons { 
     margin-top: 1.5em; 
     display: flex; 
@@ -326,32 +324,47 @@ body.cas--zoom-enabled .full-start__background.loaded {
 }  
 
 .left-title .full-start-new__buttons .full-start__button {
-    background: transparent !important; /* Прибираємо фон */
-    border: 2px solid rgba(255,255,255,0.2); /* Легка рамка в звичайному стані */
-    color: #fff;
+    /* Примусово прибираємо стандартний фон та скруглення Lampa */
+    background: transparent !important; 
+    border-radius: 0 !important; 
+    
+    /* Додаємо легку рамку в звичайному стані */
+    border: 1px solid rgba(255,255,255,0.2); 
+    color: rgba(255,255,255,0.8);
+    
+    /* Плавність переходів */
     transition: 
         border-color 0.3s var(--cas-anim-curve), 
         box-shadow 0.3s var(--cas-anim-curve), 
+        color 0.3s var(--cas-anim-curve),
         transform 0.2s ease;
-    backdrop-filter: blur(5px); /* Легке розмиття фону під кнопкою */
+    
+    /* Прибираємо стандартні відступи Lampa, якщо вони заважають */
+    padding: 10px 20px !important;
+    height: auto !important;
+    line-height: 1 !important;
 }
 
-/* Стан фокусу/наведення (Світіння) */
+/* Стан фокусу/наведення (Рамка + Світіння) */
 .left-title .full-start-new__buttons .full-start__button:hover,
 .left-title .full-start-new__buttons .full-start__button.focus {
-    border-color: #fff; /* Біла рамка при фокусі */
-    /* Ефект світіння */
+    background: transparent !important; /* Гарантуємо відсутність фону */
+    border-color: #fff !important; /* Біла рамка при фокусі */
+    color: #fff;
+    
+    /* Ефект світіння (Neon Glow) */
     box-shadow: 
-        0 0 10px var(--cas-glow-color), 
-        0 0 20px rgba(255, 255, 255, 0.2),
-        inset 0 0 10px rgba(255, 255, 255, 0.1);
+        0 0 15px var(--cas-glow-color), 
+        0 0 30px rgba(255, 255, 255, 0.3);
+        
     transform: translateY(-2px); /* Легке спливання */
 }
 
 /* Стан натискання */
 .left-title .full-start-new__buttons .full-start__button:active {
-    transform: translateY(1px) scale(0.96); /* Ефект фізичного натискання */
-    box-shadow: 0 0 5px var(--cas-glow-color); /* Зменшуємо світіння */
+    transform: translateY(1px) scale(0.97); /* Ефект фізичного натискання */
+    box-shadow: 0 0 8px var(--cas-glow-color); /* Зменшуємо світіння */
+    transition-duration: 0.1s;
 }
 /* ------------------------------------ */
   
@@ -480,8 +493,8 @@ body.cas--zoom-enabled .full-start__background.loaded {
   
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.4.7', name: PLUGIN_NAME,  
-            description: 'Кастомізація картки: логотипи, анімована назва та кнопки зі світінням.', author: '',  
+            type: 'other', version: '1.4.8', name: PLUGIN_NAME,  
+            description: 'Кастомізація картки: логотипи, анімована назва та прозорі кнопки.', author: '',  
             icon: SETTINGS_ICON
         };  
   
