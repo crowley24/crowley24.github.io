@@ -162,9 +162,9 @@
                         <div class="cas-quality-row" style="display: flex; gap: 8px; align-items: center;"></div>
                     </div>
 
-                    <div class="cas-description" style="margin-bottom: var(--cas-blocks-gap);"></div>
-
                     <div class="cas-studios-row" style="margin-bottom: var(--cas-blocks-gap); display: flex; gap: 15px; align-items: center;"></div>
+
+                    <div class="cas-description" style="margin-bottom: var(--cas-blocks-gap);"></div>
 
                     <div class="full-start-new__head hide"></div>  
                     <div class="full-start-new__details hide"></div>  
@@ -248,7 +248,7 @@
 :root { 
     --cas-logo-scale: 1; 
     --cas-blocks-gap: 30px; 
-    --cas-meta-size: 1.2em;
+    --cas-meta-size: 1.3em;
     --cas-anim-curve: cubic-bezier(0.25, 1, 0.5, 1);
     --cas-glow-color: rgba(255, 255, 255, 0.8); 
 }
@@ -260,21 +260,21 @@
 }
 .cas-animated .cas-logo { opacity: 1; transform: translateY(0); transition-delay: 0.05s; }
 .cas-animated .cas-ratings-line { opacity: 1; transform: translateY(0); transition-delay: 0.12s; }
-.cas-animated .cas-description { opacity: 1; transform: translateY(0); transition-delay: 0.16s; }
-.cas-animated .cas-studios-row { opacity: 1; transform: translateY(0); transition-delay: 0.20s; }
-.cas-animated .full-start-new__buttons { opacity: 1; transform: translateY(0); transition-delay: 0.28s; }
+.cas-animated .cas-studios-row { opacity: 1; transform: translateY(0); transition-delay: 0.18s; }
+.cas-animated .cas-description { opacity: 1; transform: translateY(0); transition-delay: 0.24s; }
+.cas-animated .full-start-new__buttons { opacity: 1; transform: translateY(0); transition-delay: 0.32s; }
 
-/* --- ОПИС (SYNOPSIS) --- */
+/* --- ОПИС (SYNOPSIS) - АДАПТОВАНО ПІД МЕТА-ДАНІ --- */
 .cas-description {
-    max-width: 600px;
-    font-size: 1.1em;
-    line-height: 1.5;
+    max-width: 650px;
+    font-size: var(--cas-meta-size); /* Синхронізація з налаштуваннями */
+    line-height: 1.4;
     color: rgba(255,255,255,0.7);
+    font-weight: 400;
     display: -webkit-box;
-    -webkit-line-clamp: 4; /* Обмеження до 4 рядків */
+    -webkit-line-clamp: 4;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
 /* --- ІКОНКИ ТА СТУДІЇ --- */
@@ -307,7 +307,15 @@
     width: auto !important; height: auto !important;
     filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
 }
-.cas-ratings-line { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; font-weight: 600; font-size: var(--cas-meta-size); color: rgba(255,255,255,0.9); }
+.cas-ratings-line { 
+    display: flex; 
+    align-items: center; 
+    gap: 12px; 
+    margin-bottom: 15px; 
+    font-weight: 600; 
+    font-size: var(--cas-meta-size); 
+    color: rgba(255,255,255,0.9); 
+}
 .cas-rate-item img { height: 1.1em; width: auto; }
 
 .left-title .full-start-new__body { height: 85vh; }
@@ -332,7 +340,6 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
                 const bgImg = render.find('.full-start__background img, img.full-start__background');
                 
                 if (data && data.id) {
-                    // Завантаження ЛОГО та СЛАЙДШОУ
                     const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());
                     $.get(imagesUrl, (res) => {
                         const logoContainer = render.find('.cas-logo');
@@ -362,7 +369,7 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
 
                     // ОПИС
                     if (Lampa.Storage.get('cas_show_description')) {
-                        render.find('.cas-description').text(data.overview || '');
+                        render.find('.cas-description').text(data.overview || '').show();
                     } else {
                         render.find('.cas-description').hide();
                     }
@@ -425,8 +432,8 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
   
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.6.0', name: PLUGIN_NAME,  
-            description: 'Кастомізація картки: лого, опис, рейтинги та анімовані кнопки.', author: '',  
+            type: 'other', version: '1.7.0', name: PLUGIN_NAME,  
+            description: 'Кастомізація картки: опис адаптований до шрифту мета-даних.', author: '',  
             icon: SETTINGS_ICON
         };  
         if (Lampa.Manifest) {
