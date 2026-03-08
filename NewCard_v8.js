@@ -247,7 +247,7 @@
     --cas-glow-color: rgba(255, 255, 255, 0.8); 
 }
 
-/* --- АНІМАЦІЯ ПОЯВИ --- */
+/* --- АНІМАЦІЯ ТА СТРУКТУРА --- */
 .cas-logo, .cas-ratings-line, .cas-studios-row, .left-title .full-start-new__buttons {
     opacity: 0; transform: translateY(12px);
     transition: opacity 0.4s var(--cas-anim-curve), transform 0.4s var(--cas-anim-curve);
@@ -257,33 +257,18 @@
 .cas-animated .cas-studios-row { opacity: 1; transform: translateY(0); transition-delay: 0.18s; }
 .cas-animated .full-start-new__buttons { opacity: 1; transform: translateY(0); transition-delay: 0.24s; }
 
-/* --- ГОЛОВНИЙ ЛОГОТИП (НАЗВА) --- */
-.cas-logo img {
-    display: block;
-    max-width: calc(450px * var(--cas-logo-scale));
-    max-height: calc(180px * var(--cas-logo-scale));
-    width: auto !important; height: auto !important;
-    object-fit: contain; object-position: left bottom;
-    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
-}
-
-/* --- ЛОГОТИПИ СТУДІЙ (КРИШТАЛЕВА ЧІТКІСТЬ) --- */
-.cas-studio-item { height: 18px !important; display: flex; align-items: center; margin-right: 12px; }
+/* --- ЛОГОТИПИ СТУДІЙ: КОЛЬОРОВІ + ВИДИМІ ЧОРНІ ЕЛЕМЕНТИ --- */
+.cas-studio-item { height: 18px !important; display: flex; align-items: center; margin-right: 15px; }
 .cas-studio-item img { 
     height: 100% !important; width: auto !important; object-fit: contain;
-    /* ВИДАЛЕНО ВСІ ОБВОДКИ ТА ТІНІ. 
-       Використовуємо комбінацію фільтрів для висвітлення чорного:
-       contrast(0) invert(1) робить картинку білою, але ми додаємо напівпрозорість, 
-       щоб колір фону проступав крізь них, роблячи їх "скляними" та чіткими. */
-    filter: brightness(1.8) grayscale(0.2);
-    opacity: 0.9;
+    filter: invert(1) hue-rotate(180deg) brightness(1.1) contrast(1.1);
+    opacity: 0.95;
 }
 
-/* --- ІКОНКИ ЯКОСТІ: РОЗМІР ЗМІНЮВАТИ ТУТ --- */
+/* --- ІКОНКИ ЯКОСТІ (ТУТ ЗМІНЮВАТИ РОЗМІР) --- */
 .cas-quality-item { 
-    height: 18px !important; /* <--- ЗМІНІТЬ НА 16px АБО 18px, ЯКЩО ТРЕБА БІЛЬШЕ */
-    display: flex; 
-    align-items: center; 
+    height: 14px !important; /* <--- Поставте 18px для збільшення */
+    display: flex; align-items: center; margin-left: 4px;
 }
 .cas-quality-item img { height: 100% !important; width: auto !important; }
 
@@ -295,16 +280,20 @@
     height: auto !important; display: flex; align-items: center; gap: 10px;
     transition: color 0.2s var(--cas-anim-curve), filter 0.2s var(--cas-anim-curve), transform 0.2s var(--cas-anim-curve);
 }
-
 .left-title .full-start-new__buttons .full-start__button.focus {
     color: #fff !important; transform: scale(1.08); 
     filter: drop-shadow(0 0 1px white) drop-shadow(0 0 8px var(--cas-glow-color));
 }
-
 .left-title .full-start__button svg { width: 26px !important; height: 26px !important; }
 .left-title .full-start__button span { font-size: 1.1em; font-weight: 500; }
 
-/* --- СТРУКТУРА ТА МЕТА --- */
+/* --- ГОЛОВНИЙ ЛОГОТИП ТА ІНШЕ --- */
+.cas-logo img {
+    display: block; max-width: 450px; max-height: 180px;
+    width: auto !important; height: auto !important;
+    object-fit: contain; object-position: left bottom;
+    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+}
 .cas-ratings-line { display: flex; align-items: center; gap: 12px; margin-bottom: var(--cas-blocks-gap); font-weight: 600; font-size: var(--cas-meta-size); color: rgba(255,255,255,0.9); }
 .cas-rate-item img { height: 1.1em; width: auto; }
 
