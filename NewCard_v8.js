@@ -29,6 +29,25 @@
     }  
 
     function addSettings() {
+        const SUB_ID = PLUGIN_ID + '_btns';
+
+        // 1. РЕЄСТРУЄМО ПЛАГІНИ (Обидва)
+        Lampa.SettingsApi.addComponent({
+            component: PLUGIN_ID,
+            name: PLUGIN_NAME,
+            icon: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#fff"><rect x="10" y="30" width="80" height="40" rx="5" fill="rgba(255,255,255,0.2)"/><circle cx="50" cy="50" r="12" fill="white"/></svg>'
+        });
+
+        Lampa.SettingsApi.addComponent({
+            component: SUB_ID,
+            name: 'Медіа кнопки'
+        });
+
+        // ПРИХОВУЄМО ПІДМЕНЮ З ГОЛОВНОГО СПИСКУ (Магія)
+        setTimeout(() => {
+            $(`div[data-component="${SUB_ID}"]`).remove();
+        }, 100);
+
         const defaults = { 
             'cas_logo_scale': '100', 'cas_btn_scale': '100', 'cas_bg_animation': true, 
             'cas_show_studios': true, 'cas_show_quality': true, 'cas_blocks_gap': '30',
@@ -36,14 +55,7 @@
         };
         Object.keys(defaults).forEach(key => { if (Lampa.Storage.get(key) === undefined) Lampa.Storage.set(key, defaults[key]); });
 
-        // 1. ГОЛОВНИЙ ПУНКТ (тільки він буде в списку налаштувань)
-        Lampa.SettingsApi.addComponent({
-            component: PLUGIN_ID,
-            name: PLUGIN_NAME,
-            icon: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#fff"><rect x="10" y="30" width="80" height="40" rx="5" fill="rgba(255,255,255,0.2)"/><circle cx="50" cy="50" r="12" fill="white"/></svg>'
-        });
-
-        // 2. РЕЄСТРУЄМО ПАРАМЕТРИ ПЛАГІНА
+        // --- ПАРАМЕТРИ ГОЛОВНОГО МЕНЮ ---
         Lampa.SettingsApi.addParam({
             component: PLUGIN_ID,
             param: { name: 'cas_logo_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' }, default: '100' },
@@ -62,42 +74,32 @@
         Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_show_quality', type: 'trigger', default: true }, field: { name: 'Показувати якість' } });
         Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_bg_animation', type: 'trigger', default: true }, field: { name: 'Анімація фону' }, onChange: applySettings });
 
-        // ПУНКТ-ПЕРЕХІД (тип static + open)
+        // Пункт для переходу
         Lampa.SettingsApi.addParam({
             component: PLUGIN_ID,
-            param: { name: 'cas_btns_nav', type: 'static' },
+            param: { name: 'cas_open_btns', type: 'static' },
             field: { name: 'Медіа кнопки' },
             onRender: (item) => {
                 item.append('<div style="float:right; opacity:0.5">➔</div>');
                 item.on('hover:enter', () => {
-                    Lampa.Settings.main(PLUGIN_ID + '_inner_btns');
+                    Lampa.Settings.main(SUB_ID);
                 });
             }
         });
 
-        // 3. РЕЄСТРУЄМО ВНУТРІШНІЙ КОМПОНЕНТ (ВАЖЛИВО: без addComponent!)
-        // Ми просто додаємо параметри для умовного ID, і створюємо компонент вручну
+        // --- ПАРАМЕТРИ ПІДМЕНЮ (Медіа кнопки) ---
         Lampa.SettingsApi.addParam({ 
-            component: PLUGIN_ID + '_inner_btns', 
+            component: SUB_ID, 
             param: { name: 'cas_custom_buttons', type: 'trigger', default: true }, 
             field: { name: 'Стильні кнопки (Apple)' }, 
             onChange: applySettings 
         });
 
         Lampa.SettingsApi.addParam({
-            component: PLUGIN_ID + '_inner_btns',
+            component: SUB_ID,
             param: { name: 'cas_btn_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' }, default: '100' },
             field: { name: 'Розмір кнопок' },
             onChange: applySettings
-        });
-
-        // Реєструємо обробник для відображення цього підменю
-        Lampa.Component.add(PLUGIN_ID + '_inner_btns', function (object) {
-            this.create = function () {
-                let items = Lampa.SettingsApi.getParams(PLUGIN_ID + '_inner_btns');
-                let list = Lampa.SettingsApi.render(items);
-                return list;
-            };
         });
 
         applySettings();
@@ -117,7 +119,7 @@
         $('body').toggleClass('cas--custom-buttons', !!Lampa.Storage.get('cas_custom_buttons'));
     }
 
-    // --- Функції рендеру та шаблони (залишаються без змін) ---
+    // --- Логіка рендеру та шаблони (незмінні) ---
     function getRatingColor(val) { const n = parseFloat(val); return n >= 7.5 ? '#2ecc71' : n >= 6 ? '#feca57' : '#ff4d4d'; }
     function formatTime(mins) { if (!mins) return ''; const h = Math.floor(mins / 60); const m = mins % 60; return (h > 0 ? h + 'г ' : '') + m + 'хв'; }
 
