@@ -247,8 +247,11 @@
     --cas-glow-color: rgba(255, 255, 255, 0.8); 
 }
 
-/* --- АНІМАЦІЯ ПОЯВИ --- */
-.cas-logo, .cas-ratings-line, .cas-studios-row, .full-start-new__buttons {
+/* --- Анімація появи (як у вашому коді) --- */
+.cas-logo, 
+.cas-ratings-line, 
+.cas-studios-row, 
+.left-title .full-start-new__buttons {
     opacity: 0;
     transform: translateY(12px);
     transition: opacity 0.4s var(--cas-anim-curve), transform 0.4s var(--cas-anim-curve);
@@ -262,47 +265,20 @@
 .left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 2vh; }  
 .left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; }  
 
-/* --- ПРИХОВУВАННЯ ЗАЙВОГО --- */
-.left-title .full-start-new__reactions,
-.left-title .full-start-new__rate-line,
-.left-title .full-start__status,
-.left-title .rating--modss,
-.left-title .full-start-new__head,
-.left-title .full-start-new__details {
-    display: none !important;
-}
-
-/* --- ЛОГОТИП ФІЛЬМУ --- */
-.cas-logo img {
-    max-width: calc(450px * var(--cas-logo-scale));
-    max-height: calc(180px * var(--cas-logo-scale));
-    object-fit: contain; object-position: left bottom;
-    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
-}
-
-/* --- ЛОГОТИПИ СТУДІЙ (ВИПРАВЛЕННЯ ЧОРНОГО КОЛЬОРУ) --- */
-.cas-studio-item { 
-    height: 22px !important; 
-    display: flex; 
-    align-items: center; 
-    opacity: 0.8; 
-}
+/* --- Логотипи студій (Кольорові, але видимі на чорному) --- */
+.cas-studio-item { height: 20px !important; display: flex; align-items: center; }
 .cas-studio-item img { 
     height: 100% !important; 
     width: auto !important; 
-    object-fit: contain; 
-    /* Цей фільтр робить чорні логотипи білими, щоб їх було видно */
-    filter: brightness(0) invert(1) drop-shadow(0 0 2px rgba(0,0,0,0.5));
+    object-fit: contain;
+    /* Додаємо світлий контур навколо логотипу, щоб його було видно на чорному, 
+       але кольори залишалися оригінальними */
+    filter: drop-shadow(1px 1px 0px rgba(255,255,255,0.5)) drop-shadow(-1px -1px 0px rgba(255,255,255,0.5));
 }
 
-/* --- РЕЙТИНГИ ТА МЕТА --- */
-.cas-ratings-line { display: flex; align-items: center; gap: 15px; margin-bottom: var(--cas-blocks-gap); font-weight: 600; font-size: var(--cas-meta-size); color: rgba(255,255,255,0.9); flex-wrap: wrap; }
-.cas-rate-item { display: flex; align-items: center; gap: 6px; }
-.cas-rate-item img { height: 1.1em; width: auto; }
-
-/* --- КНОПКИ (ПОВЕРНЕННЯ РОЗМІРУ ТА ЧІТКЕ СВІТІННЯ) --- */
+/* --- Кнопки (Стиль без рамок + Ваші розміри) --- */
 .left-title .full-start-new__buttons { 
-    margin-top: 1.5em; 
+    margin-top: 1em; 
     display: flex; 
     gap: 25px; 
 }  
@@ -312,8 +288,8 @@
     border: none !important;
     box-shadow: none !important;
     border-radius: 0 !important;
-    color: rgba(255,255,255,0.7); 
-    padding: 8px 0 !important;
+    color: rgba(255,255,255,0.6); 
+    padding: 0 !important; /* Прибираємо падінги, щоб не роздувати кнопку */
     height: auto !important;
     transition: color 0.2s var(--cas-anim-curve), filter 0.2s var(--cas-anim-curve), transform 0.2s var(--cas-anim-curve);
     display: flex;
@@ -321,22 +297,42 @@
     gap: 10px;
 }
 
+/* Ефект при фокусі */
 .left-title .full-start-new__buttons .full-start__button:hover,
 .left-title .full-start-new__buttons .full-start__button.focus {
     color: #fff !important;
-    transform: scale(1.05); 
-    filter: drop-shadow(0 0 1px rgba(255,255,255,1)) drop-shadow(0 0 8px var(--cas-glow-color));
+    transform: scale(1.08); 
+    filter: drop-shadow(0 0 1px rgba(255,255,255,0.9)) drop-shadow(0 0 10px var(--cas-glow-color));
 }
 
-/* ПОВЕРТАЄМО МАЛЕНЬКИЙ РОЗМІР ІКОНОК ПРИМУСОВО */
+/* ПРИМУСОВЕ ПОВЕРНЕННЯ РОЗМІРУ ІКОНОК (як у вашому прикладі) */
 .left-title .full-start__button svg { 
-    width: 22px !important; 
-    height: 22px !important; 
+    width: 28px !important; /* Стандартний розмір з вашого шаблону */
+    height: 28px !important; 
 }
 
-.left-title .full-start__button span { 
-    font-size: 1.05em; 
-    font-weight: 500; 
+/* --- Інші елементи (як у вашому коді) --- */
+.left-title .full-start-new__reactions,
+.left-title .full-start-new__rate-line,
+.left-title .full-start__status,
+.left-title .rating--modss,
+.left-title .full-start-new__head,
+.left-title .full-start-new__details { display: none !important; }
+
+.cas-logo img {
+    max-width: calc(450px * var(--cas-logo-scale));
+    max-height: calc(180px * var(--cas-logo-scale));
+    object-fit: contain; object-position: left bottom;
+    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+}
+
+.cas-ratings-line { display: flex; align-items: center; gap: 15px; margin-bottom: var(--cas-blocks-gap); font-weight: 600; font-size: var(--cas-meta-size); color: rgba(255,255,255,0.9); flex-wrap: wrap; }
+.cas-rate-item { display: flex; align-items: center; gap: 6px; }
+.cas-rate-item img { height: 1.1em; width: auto; }
+
+@keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+body.cas--zoom-enabled .full-start__background.loaded { 
+    animation: casKenBurns 45s ease-in-out infinite !important; 
 }
 
 @media screen and (max-width: 767px) {  
