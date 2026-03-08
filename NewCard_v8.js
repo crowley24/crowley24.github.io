@@ -20,7 +20,6 @@
         'UKR': ASSETS_PATH + 'UKR.svg'
     };
 
-    // Іконка налаштувань у формі картки (Cinema Card Icon)
     const SETTINGS_ICON = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
         <rect x="15" y="20" width="70" height="60" rx="8" stroke="white" stroke-width="6" fill="none" opacity="0.4"/>
         <rect x="25" y="32" width="50" height="28" rx="4" fill="white"/>
@@ -142,7 +141,7 @@
                     <div class="cas-ratings-line">
                         <div class="cas-rate-items" style="display: flex; align-items: center; gap: 12px;"></div>
                         <div class="cas-meta-info" style="opacity: 0.7; font-weight: 400;"></div>
-                        <div class="cas-quality-row" style="display: flex; gap: 8px; align-items: center;"></div>
+                        <div class="cas-quality-row" style="display: flex; gap: 10px; align-items: center;"></div>
                     </div>
 
                     <div class="cas-studios-row" style="margin-bottom: var(--cas-blocks-gap); display: flex; gap: 15px; align-items: center;"></div>
@@ -174,14 +173,6 @@
                             <span>#{title_reactions}</span>  
                         </div>  
   
-                        <div class="full-start__button selector button--subscribe hide">  
-                            <svg width="25" height="30" viewBox="0 0 25 30" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                <path d="M6.01892 24C6.27423 27.3562 9.07836 30 12.5 30C15.9216 30 18.7257 27.3562 18.981 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z" fill="currentColor"/>  
-                                <path d="M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z" stroke="currentColor" stroke-width="2.5"/>  
-                            </svg>  
-                            <span>#{title_subscribe}</span>  
-                        </div>  
-  
                         <div class="full-start__button selector button--options">  
                             <svg width="38" height="10" viewBox="0 0 38 10" fill="none" xmlns="http://www.w3.org/2000/svg">  
                                 <circle cx="4.88968" cy="4.98563" r="4.75394" fill="currentColor"/>  
@@ -195,28 +186,6 @@
                 <div class="full-start-new__reactions selector">  
                     <div>#{reactions_none}</div>  
                 </div>  
-                  
-                <div class="full-start-new__rate-line">  
-                    <div class="full-start__status hide"></div>  
-                </div>  
-                  
-                <div class="rating--modss" style="display: none;"></div>  
-            </div>  
-        </div>  
-  
-        <div class="hide buttons--container">  
-            <div class="full-start__button view--torrent hide">  
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="50px" height="50px">  
-                    <path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2z M40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4 S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851 c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29 c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862-4.993-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8 c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722 C42.541,30.867,41.756,30.963,40.5,30.963z" fill="currentColor"/>  
-                </svg>  
-                <span>#{full_torrents}</span>  
-            </div>   
-    
-            <div class="full-start__button selector view--trailer">  
-                <svg height="70" viewBox="0 0 80 70" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                    <path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/>  
-                </svg>  
-                <span>#{full_trailers}</span>  
             </div>  
         </div>  
     </div>`;  
@@ -228,9 +197,9 @@
         const styles = `<style>  
 :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.2em; }
 
-.left-title .full-start-new__body { height: 80vh; }  
+.left-title .full-start-new__body { height: 75vh; }  /* Зменшив висоту для притиснення до низу */
 .left-title .full-start-new__right { display: flex; align-items: flex-end; }  
-.left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; }  
+.left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 20px; }  
 
 .left-title .full-start-new__title {  
     font-size: 2.5em; font-weight: 700; line-height: 1.2; margin-bottom: 0.5em;  
@@ -266,20 +235,23 @@
 
 .cas-rate-item { display: flex; align-items: center; gap: 6px; }
 .cas-rate-item img { height: 1.1em; width: auto; }
-.cas-rate-item span { line-height: 1; }
 
 .cas-studio-item { height: 20px !important; display: flex; align-items: center; }
 .cas-studio-item img { height: 100% !important; width: auto !important; object-fit: contain; }
 
-.cas-quality-item { height: 1.2em; display: flex; align-items: center; }
-.cas-quality-item img { height: 100%; width: auto; }
-
-@keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-body.cas--zoom-enabled .full-start__background.loaded { 
-    animation: casKenBurns 45s ease-in-out infinite !important; 
+/* Збільшені та об'ємні іконки якості */
+.cas-quality-item { height: 1.5em; display: flex; align-items: center; }
+.cas-quality-item img { 
+    height: 100%; width: auto; 
+    filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.8)) drop-shadow(0px 0px 1px rgba(255,255,255,0.2));
 }
 
-.left-title .full-start-new__buttons { margin-top: 1em; }  
+@keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+body.cas--zoom-enabled .full-start__background.loaded {  
+    animation: casKenBurns 45s ease-in-out infinite !important;  
+}
+
+.left-title .full-start-new__buttons { margin-top: 0.5em; margin-bottom: 0; }  
   
 @media screen and (max-width: 767px) {  
     .left-title .full-start-new__right { flex-direction: column; align-items: flex-start; }  
@@ -371,7 +343,7 @@ body.cas--zoom-enabled .full-start__background.loaded {
   
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.4.3', name: PLUGIN_NAME,  
+            type: 'other', version: '1.4.4', name: PLUGIN_NAME,  
             description: 'Кастомізація картки: логотипи, студії та динамічна якість.', author: '',  
             icon: SETTINGS_ICON
         };  
