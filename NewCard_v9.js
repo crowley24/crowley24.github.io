@@ -267,7 +267,7 @@
 
 /* --- ІКОНКИ ЯКОСТІ (ТУТ ЗМІНЮВАТИ РОЗМІР) --- */
 .cas-quality-item { 
-    height: 14px !important; /* <--- Поставте 18px для збільшення */
+    height: 18px !important; /* <--- Поставте 18px для збільшення */
     display: flex; align-items: center; margin-left: 4px;
 }
 .cas-quality-item img { height: 100% !important; width: auto !important; }
