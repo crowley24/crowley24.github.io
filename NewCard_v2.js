@@ -3,7 +3,7 @@
 
     const PLUGIN_NAME = 'NewCard';
     const PLUGIN_ID = 'new_card_style';
-    const ASSETS_PATH = 'https://crowley24.github.io/NewIcons/';
+    const ASSETS_PATH = 'https://crowley38.github.io/NewIcons/';
 
     const ICONS = {
         tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',
@@ -215,7 +215,8 @@
 .cas-rate-item img { height: 1.1em; }
 
 .left-title .full-start-new__body { height: 85vh; }
-.left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 5vh; padding-left: 4%; }
+/* ЗМІНЕНО: Контент опущено максимально вниз (2vh замість 5vh) */
+.left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 2vh; padding-left: 4%; }
 .left-title .full-start-new__reactions, .left-title .full-start-new__rate-line, .left-title .full-start__status, .left-title .rating--modss, .left-title .full-start-new__head, .left-title .full-start-new__details { display: none !important; }
 
 @keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
@@ -276,7 +277,6 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
                     }
                     render.find('.cas-rate-items').html(ratesHtml);
 
-                    // ВИПРАВЛЕНО: Тільки тривалість та жанр
                     const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));
                     const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');
                     render.find('.cas-meta-info').text((time ? time + (genre ? ' • ' : '') : '') + genre);
