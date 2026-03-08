@@ -152,31 +152,32 @@
 .cas-quality-item { height: 18px; display: flex; align-items: center; }
 .cas-quality-item img { height: 100%; width: auto; }
 
-/* НОВИЙ СТИЛЬ КНОПОК: ПРОЗОРІ, БЕЗ ФОНУ, ЗІ СВІТІННЯМ */
+/* ПОВНЕ ВИДАЛЕННЯ СТАНДАРТНОГО ФОНУ ТА ФОРМИ КНОПОК */
 .applecation__buttons-row { display: flex; align-items: center; gap: 15px; margin-top: 25px; flex-wrap: wrap; }
 
 .cas-apple-style .full-start__button {  
-    background: none !important; border: none !important;  
+    background: transparent !important; 
+    background-color: transparent !important;
+    border: none !important;  
+    box-shadow: none !important; /* Прибираємо стандартну тінь/овал */
     color: rgba(255,255,255,0.7) !important; 
     padding: 10px 15px !important;
     border-radius: 12px !important;
     display: flex; justify-content: center; align-items: center; gap: 10px;
     font-size: 1.1em; font-weight: 500;
-    transition: all 0.25s ease;
-    /* Тінь для іконок і тексту для читабельності */
-    text-shadow: 0 1px 3px rgba(0,0,0,0.3);
-    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
 }
 
-/* Ефект при фокусі */
+/* Ефект при фокусі - тільки світіння тексту та іконки */
 .cas-apple-style .full-start__button.focus {  
-    transform: scale(1.1);  
-    background: none !important; /* Фон залишається прозорим */
+    transform: scale(1.15);  
+    background: transparent !important;
+    background-color: transparent !important;
     color: #fff !important;
-    /* Біле світіння навколо кнопки */
-    box-shadow: 0 0 15px rgba(255,255,255,0.3) !important;
-    /* Світіння іконок і тексту */
-    filter: drop-shadow(0 0 8px rgba(255,255,255,0.7)) !important;  
+    /* Замість овалу робимо розсіяне світіння самого контенту */
+    filter: drop-shadow(0 0 10px rgba(255,255,255,0.8)) !important;  
+    box-shadow: none !important;
 }
 
 /* ОНОВЛЕНА ЖИВА АНІМАЦІЯ */
@@ -196,7 +197,7 @@ body.cas--zoom-enabled .full-start__background.loaded {
   
         Lampa.Template.add('left_title_css', styles);  
         $('body').append(Lampa.Template.get('left_title_css', {}, true));  
-    }    
+    }
   
     function attachLoader() {  
         Lampa.Listener.follow('full', (event) => {  
