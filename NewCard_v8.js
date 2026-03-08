@@ -70,12 +70,7 @@
 
         Lampa.SettingsApi.addParam({
             component: PLUGIN_ID,
-            param: { 
-                name: 'cas_logo_quality', 
-                type: 'select', 
-                values: { 'w300':'300px', 'w500':'500px', 'original':'Original' }, 
-                default: 'original' 
-            },
+            param: { name: 'cas_logo_quality', type: 'select', values: { 'w300':'300px', 'w500':'500px', 'original':'Original' }, default: 'original' },
             field: { name: 'Якість логотипу' },
             onChange: applySettings
         });
@@ -89,12 +84,7 @@
 
         Lampa.SettingsApi.addParam({
             component: PLUGIN_ID,
-            param: { 
-                name: 'cas_meta_size', 
-                type: 'select', 
-                values: { '1.2': 'Малий', '1.3': 'Стандартний', '1.4': 'Збільшений', '1.5': 'Великий' }, 
-                default: '1.3' 
-            },
+            param: { name: 'cas_meta_size', type: 'select', values: { '1.2': 'Малий', '1.3': 'Стандартний', '1.4': 'Збільшений', '1.5': 'Великий' }, default: '1.3' },
             field: { name: 'Розмір шрифту' },
             onChange: applySettings
         });
@@ -247,7 +237,7 @@
     --cas-glow-color: rgba(255, 255, 255, 0.8); 
 }
 
-/* --- АНІМАЦІЯ --- */
+/* --- АНІМАЦІЯ ТА СТРУКТУРА --- */
 .cas-logo, .cas-ratings-line, .cas-studios-row, .left-title .full-start-new__buttons {
     opacity: 0; transform: translateY(12px);
     transition: opacity 0.4s var(--cas-anim-curve), transform 0.4s var(--cas-anim-curve);
@@ -257,28 +247,21 @@
 .cas-animated .cas-studios-row { opacity: 1; transform: translateY(0); transition-delay: 0.18s; }
 .cas-animated .full-start-new__buttons { opacity: 1; transform: translateY(0); transition-delay: 0.24s; }
 
-/* --- ЛОГОТИПИ СТУДІЙ: ПРЕМІАЛЬНА КОЛЬОРОВА ЧІТКІСТЬ --- */
-.cas-studios-row {
-    margin-bottom: var(--cas-blocks-gap);
-    display: flex; gap: 12px; align-items: center;
-}
-.cas-studio-item { 
-    height: 18px !important; display: flex; align-items: center; 
-    background: #fff; padding: 2px 8px; border-radius: 4px; opacity: 0.9; 
-}
+/* --- ЛОГОТИПИ СТУДІЙ: ЧІТКІ ТА БІЛІ --- */
+.cas-studios-row { margin-bottom: var(--cas-blocks-gap); display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+.cas-studio-item { height: 18px !important; display: flex; align-items: center; }
 .cas-studio-item img { 
     height: 100% !important; width: auto !important; object-fit: contain;
-    mix-blend-mode: screen; filter: contrast(1.1); 
+    /* Роблять логотип білим, зберігаючи форму */
+    filter: brightness(0) invert(1) drop-shadow(0 0 1px rgba(0,0,0,0.5));
+    opacity: 0.85;
 }
 
-/* --- ІКОНКИ ЯКОСТІ: ТУТ ЗМІНЮВАТИ РОЗМІР --- */
-.cas-quality-item { 
-    height: 14px !important; /* <--- Поставте 18px для збільшення */
-    display: flex; align-items: center; margin-left: 4px;
-}
+/* --- ІКОНКИ ЯКОСТІ --- */
+.cas-quality-item { height: 14px !important; display: flex; align-items: center; margin-left: 4px; }
 .cas-quality-item img { height: 100% !important; width: auto !important; }
 
-/* --- КНОПКИ ЗІ СВІТІННЯМ --- */
+/* --- КНОПКИ --- */
 .left-title .full-start-new__buttons { margin-top: 1.2em; display: flex; gap: 20px; }  
 .left-title .full-start-new__buttons .full-start__button {
     background: transparent !important; border: none !important;
@@ -293,12 +276,14 @@
 .left-title .full-start__button svg { width: 26px !important; height: 26px !important; }
 .left-title .full-start__button span { font-size: 1.1em; font-weight: 500; }
 
-/* --- ГОЛОВНИЙ ЛОГОТИП ТА ІНШЕ --- */
+/* --- ГОЛОВНИЙ ЛОГОТИП --- */
 .cas-logo img {
-    display: block; max-width: calc(450px * var(--cas-logo-scale)); max-height: calc(180px * var(--cas-logo-scale));
+    display: block; max-width: 450px; max-height: 180px;
     width: auto !important; height: auto !important;
     object-fit: contain; object-position: left bottom;
     filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+    transform: scale(var(--cas-logo-scale));
+    transform-origin: left bottom;
 }
 .cas-ratings-line { display: flex; align-items: center; gap: 12px; margin-bottom: var(--cas-blocks-gap); font-weight: 600; font-size: var(--cas-meta-size); color: rgba(255,255,255,0.9); }
 .cas-rate-item img { height: 1.1em; width: auto; }
@@ -316,7 +301,6 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
         Lampa.Template.add('left_title_css', styles);  
         $('body').append(Lampa.Template.get('left_title_css', {}, true));  
     }
-
     function attachLoader() {  
         Lampa.Listener.follow('full', (event) => {  
             if (event.type === 'complite') {  
@@ -386,7 +370,10 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
 
                     if (Lampa.Storage.get('cas_show_studios')) {
                         const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 3);
-                        render.find('.cas-studios-row').html(studios.map(s => `<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}"></div>`).join(''));
+                        render.find('.cas-studios-row').html(studios.map(s => `
+                            <div class="cas-studio-item">
+                                <img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}">
+                            </div>`).join(''));
                     }
 
                     if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {
