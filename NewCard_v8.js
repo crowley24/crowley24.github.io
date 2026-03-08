@@ -56,7 +56,8 @@
             'cas_meta_size': '1.3',
             'cas_show_studios': true,
             'cas_show_quality': true,
-            'cas_show_rating': true
+            'cas_show_rating': true,
+            'cas_show_description': true
         };
 
         Object.keys(defaults).forEach(key => {
@@ -122,9 +123,8 @@
 
         Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_show_studios', type: 'trigger', default: true }, field: { name: 'Показувати студії' } });
         Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_show_quality', type: 'trigger', default: true }, field: { name: 'Показувати якість' } });
-        
-        // Новий параметр для рейтингів
         Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_show_rating', type: 'trigger', default: true }, field: { name: 'Показувати рейтинги' } });
+        Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_show_description', type: 'trigger', default: true }, field: { name: 'Опис фільму' } });
 
         applySettings();
     }
@@ -161,6 +161,8 @@
                         <div class="cas-meta-info" style="opacity: 0.7; font-weight: 400;"></div>
                         <div class="cas-quality-row" style="display: flex; gap: 8px; align-items: center;"></div>
                     </div>
+
+                    <div class="cas-description" style="margin-bottom: var(--cas-blocks-gap);"></div>
 
                     <div class="cas-studios-row" style="margin-bottom: var(--cas-blocks-gap); display: flex; gap: 15px; align-items: center;"></div>
 
@@ -252,31 +254,40 @@
 }
 
 /* --- АНІМАЦІЯ ТА СТРУКТУРА --- */
-.cas-logo, .cas-ratings-line, .cas-studios-row, .left-title .full-start-new__buttons {
+.cas-logo, .cas-ratings-line, .cas-description, .cas-studios-row, .left-title .full-start-new__buttons {
     opacity: 0; transform: translateY(12px);
     transition: opacity 0.4s var(--cas-anim-curve), transform 0.4s var(--cas-anim-curve);
 }
 .cas-animated .cas-logo { opacity: 1; transform: translateY(0); transition-delay: 0.05s; }
 .cas-animated .cas-ratings-line { opacity: 1; transform: translateY(0); transition-delay: 0.12s; }
-.cas-animated .cas-studios-row { opacity: 1; transform: translateY(0); transition-delay: 0.18s; }
-.cas-animated .full-start-new__buttons { opacity: 1; transform: translateY(0); transition-delay: 0.24s; }
+.cas-animated .cas-description { opacity: 1; transform: translateY(0); transition-delay: 0.16s; }
+.cas-animated .cas-studios-row { opacity: 1; transform: translateY(0); transition-delay: 0.20s; }
+.cas-animated .full-start-new__buttons { opacity: 1; transform: translateY(0); transition-delay: 0.28s; }
 
-/* --- ЛОГОТИПИ СТУДІЙ: КОЛЬОРОВІ + ВИДИМІ ЧОРНІ ЕЛЕМЕНТИ --- */
+/* --- ОПИС (SYNOPSIS) --- */
+.cas-description {
+    max-width: 600px;
+    font-size: 1.1em;
+    line-height: 1.5;
+    color: rgba(255,255,255,0.7);
+    display: -webkit-box;
+    -webkit-line-clamp: 4; /* Обмеження до 4 рядків */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* --- ІКОНКИ ТА СТУДІЇ --- */
 .cas-studio-item { height: 18px !important; display: flex; align-items: center; margin-right: 15px; }
 .cas-studio-item img { 
-    height: 100% !important; width: auto !important; object-fit: contain;
+    height: 100% !important; width: auto !important; 
     filter: invert(1) hue-rotate(180deg) brightness(1.1) contrast(1.1);
     opacity: 0.95;
 }
-
-/* --- ІКОНКИ ЯКОСТІ --- */
-.cas-quality-item { 
-    height: 18px !important; 
-    display: flex; align-items: center; margin-left: 4px;
-}
+.cas-quality-item { height: 18px !important; display: flex; align-items: center; margin-left: 4px; }
 .cas-quality-item img { height: 100% !important; width: auto !important; }
 
-/* --- КНОПКИ ЗІ СВІТІННЯМ --- */
+/* --- КНОПКИ --- */
 .left-title .full-start-new__buttons { margin-top: 1.2em; display: flex; gap: 20px; }  
 .left-title .full-start-new__buttons .full-start__button {
     background: transparent !important; border: none !important;
@@ -289,26 +300,22 @@
     filter: drop-shadow(0 0 1px white) drop-shadow(0 0 8px var(--cas-glow-color));
 }
 .left-title .full-start__button svg { width: 26px !important; height: 26px !important; }
-.left-title .full-start__button span { font-size: 1.1em; font-weight: 500; }
 
-/* --- ГОЛОВНИЙ ЛОГОТИП ТА ІНШЕ --- */
+/* --- ЛОГО ТА МЕТА --- */
 .cas-logo img {
     display: block; max-width: 450px; max-height: 180px;
     width: auto !important; height: auto !important;
-    object-fit: contain; object-position: left bottom;
     filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
 }
-.cas-ratings-line { display: flex; align-items: center; gap: 12px; margin-bottom: var(--cas-blocks-gap); font-weight: 600; font-size: var(--cas-meta-size); color: rgba(255,255,255,0.9); }
+.cas-ratings-line { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; font-weight: 600; font-size: var(--cas-meta-size); color: rgba(255,255,255,0.9); }
 .cas-rate-item img { height: 1.1em; width: auto; }
 
 .left-title .full-start-new__body { height: 85vh; }
-.left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 2vh; }
+.left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 5vh; padding-left: 4%; }
 .left-title .full-start-new__reactions, .left-title .full-start-new__rate-line, .left-title .full-start__status, .left-title .rating--modss, .left-title .full-start-new__head, .left-title .full-start-new__details { display: none !important; }
 
 @keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 45s ease-in-out infinite !important; }
-
-@media screen and (max-width: 767px) { .left-title .full-start-new__right { flex-direction: column; align-items: flex-start; } }
 </style>`;  
   
         Lampa.Template.add('left_title_css', styles);  
@@ -325,35 +332,25 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
                 const bgImg = render.find('.full-start__background img, img.full-start__background');
                 
                 if (data && data.id) {
+                    // Завантаження ЛОГО та СЛАЙДШОУ
                     const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());
-                    
                     $.get(imagesUrl, (res) => {
                         const logoContainer = render.find('.cas-logo');
-                        const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || 
-                                         res.logos.find(l => l.iso_639_1 === 'en') || 
-                                         res.logos[0];
+                        const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];
 
                         if (bestLogo) {
                             const quality = Lampa.Storage.get('cas_logo_quality') || 'original';
-                            const logoUrl = Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path);
-                            logoContainer.html('<img src="' + logoUrl + '">');
+                            logoContainer.html('<img src="' + Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path) + '">');
                         } else {
-                            logoContainer.html('<div class="full-start-new__title">' + (data.title || data.name) + '</div>');
+                            logoContainer.html('<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">' + (data.title || data.name) + '</div>');
                         }
 
                         if (window.casBgInterval) clearInterval(window.casBgInterval);
-                        const slideshowEnabled = Lampa.Storage.get('cas_slideshow_enabled');
-
-                        if (slideshowEnabled && res.backdrops && res.backdrops.length > 1 && bgImg.length) {
+                        if (Lampa.Storage.get('cas_slideshow_enabled') && res.backdrops && res.backdrops.length > 1 && bgImg.length) {
                             let currentIndex = 0;
                             const backdrops = res.backdrops.slice(0, 15);
-                            bgImg.css({ 'transition': 'opacity 1.5s ease-in-out', 'opacity': '1' });
-
                             window.casBgInterval = setInterval(() => {
-                                if (!bgImg.closest('body').length) {
-                                    clearInterval(window.casBgInterval);
-                                    return;
-                                }
+                                if (!bgImg.closest('body').length) { clearInterval(window.casBgInterval); return; }
                                 currentIndex = (currentIndex + 1) % backdrops.length;
                                 const newBgUrl = Lampa.TMDB.image('/t/p/original' + backdrops[currentIndex].file_path);
                                 const tempImg = new Image();
@@ -363,12 +360,18 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
                         }
                     });
 
+                    // ОПИС
+                    if (Lampa.Storage.get('cas_show_description')) {
+                        render.find('.cas-description').text(data.overview || '');
+                    } else {
+                        render.find('.cas-description').hide();
+                    }
+
                     // РЕЙТИНГИ
                     let ratesHtml = '';
                     if (Lampa.Storage.get('cas_show_rating')) {
                         const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
                         if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
-                        
                         if (event.data.reactions && event.data.reactions.result) {
                             let sum = 0, cnt = 0;
                             const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };
@@ -403,7 +406,6 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
                                     if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) b.dv = true;
                                     if (t.includes('ukr') || t.includes('укр')) b.ukr = true;
                                 });
-
                                 let qH = '';
                                 if (b.res) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS[b.res]}"></div>`;
                                 if (b.dv) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;
@@ -416,32 +418,24 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
                     }
                 }
 
-                setTimeout(() => {
-                    render.find('.left-title__content').addClass('cas-animated');
-                }, 100);
+                setTimeout(() => { render.find('.left-title__content').addClass('cas-animated'); }, 100);
             }  
         });  
     }
   
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.5.0', name: PLUGIN_NAME,  
-            description: 'Кастомізація картки: невидимі кнопки зі світінням іконок.', author: '',  
+            type: 'other', version: '1.6.0', name: PLUGIN_NAME,  
+            description: 'Кастомізація картки: лого, опис, рейтинги та анімовані кнопки.', author: '',  
             icon: SETTINGS_ICON
         };  
-  
-        if (Lampa.Manifest) {  
-            if (!Lampa.Manifest.plugins) Lampa.Manifest.plugins = {};  
-            Lampa.Manifest.plugins['new_card_style'] = pluginManifest;  
-        }  
+        if (Lampa.Manifest) {
+            if (!Lampa.Manifest.plugins) Lampa.Manifest.plugins = {};
+            Lampa.Manifest.plugins[PLUGIN_ID] = pluginManifest;
+        }
     }  
   
-    function startPlugin() {  
-        registerPlugin();  
-        initializePlugin();  
-    }  
-  
+    function startPlugin() { registerPlugin(); initializePlugin(); }
     if (window.appready) startPlugin();  
     else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') startPlugin(); });  
-  
 })();
