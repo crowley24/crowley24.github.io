@@ -27,6 +27,8 @@
         <rect x="60" y="66" width="15" height="6" rx="3" fill="white" opacity="0.6"/>
     </svg>`;
 
+    let slideshowInterval;
+
     function getRatingColor(val) {
         const n = parseFloat(val);
         return n >= 7.5 ? '#2ecc71' : n >= 6 ? '#feca57' : '#ff4d4d';
@@ -51,6 +53,7 @@
             'cas_logo_scale': '100',
             'cas_logo_quality': 'original',
             'cas_bg_animation': true,
+            'cas_bg_slideshow': true,
             'cas_blocks_gap': '20',
             'cas_meta_size': '1.3',
             'cas_show_studios': true,
@@ -108,8 +111,14 @@
         Lampa.SettingsApi.addParam({
             component: PLUGIN_ID,
             param: { name: 'cas_bg_animation', type: 'trigger', default: true },
-            field: { name: 'Анімація фону' },
+            field: { name: 'Анімація фону (Zoom)' },
             onChange: applySettings
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: PLUGIN_ID,
+            param: { name: 'cas_bg_slideshow', type: 'trigger', default: true },
+            field: { name: 'Слайдшоу фону (Fanart)' }
         });
 
         Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_show_studios', type: 'trigger', default: true }, field: { name: 'Показувати студії' } });
@@ -128,6 +137,24 @@
         root.style.setProperty('--cas-blocks-gap', gap + 'px');
         root.style.setProperty('--cas-meta-size', metaSize + 'em');
         $('body').toggleClass('cas--zoom-enabled', !!Lampa.Storage.get('cas_bg_animation'));
+    }
+
+    function runSlideshow(backdrops) {
+        clearInterval(slideshowInterval);
+        if (!Lampa.Storage.get('cas_bg_slideshow') || !backdrops || backdrops.length < 2) return;
+
+        let index = 0;
+        slideshowInterval = setInterval(() => {
+            const bg = $('.full-start__background img');
+            if (!bg.length) return clearInterval(slideshowInterval);
+            
+            index = (index + 1) % backdrops.length;
+            const newSrc = Lampa.TMDB.image('/t/p/original' + backdrops[index].file_path);
+            
+            bg.fadeOut(800, function() {
+                $(this).attr('src', newSrc).fadeIn(800);
+            });
+        }, 10000);
     }
   
     function addCustomTemplate() {  
@@ -282,8 +309,8 @@
 .cas-quality-item img { height: 100%; width: auto; }
 
 @keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-body.cas--zoom-enabled .full-start__background.loaded { 
-    animation: casKenBurns 45s ease-in-out infinite !important; 
+body.cas--zoom-enabled .full-start__background.loaded {  
+    animation: casKenBurns 45s ease-in-out infinite !important;  
 }
 
 .left-title .full-start-new__buttons { margin-top: 1em; }  
@@ -313,7 +340,6 @@ body.cas--zoom-enabled .full-start__background.loaded {
                                          res.logos[0];
 
                         if (bestLogo) {
-                            // Використовуємо якість з налаштувань
                             const quality = Lampa.Storage.get('cas_logo_quality') || 'original';
                             const logoUrl = Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path);
                             render.find('.cas-logo').html('<img src="' + logoUrl + '">');
@@ -321,6 +347,11 @@ body.cas--zoom-enabled .full-start__background.loaded {
                         } else {
                             render.find('.cas-logo').empty();
                             render.find('.full-start-new__title').show();
+                        }
+
+                        // Запуск слайдшоу
+                        if (res.backdrops && res.backdrops.length > 1) {
+                            runSlideshow(res.backdrops.slice(0, 10));
                         }
                     });
 
@@ -374,14 +405,15 @@ body.cas--zoom-enabled .full-start__background.loaded {
                         });
                     }
                 }
-            }  
+            } 
+            if (event.type === 'destroy') clearInterval(slideshowInterval);
         });  
     }  
   
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.4.4', name: PLUGIN_NAME,  
-            description: 'Кастомізація картки: логотипи, студії та вибір якості зображень.', author: '',  
+            type: 'other', version: '1.4.5', name: PLUGIN_NAME,  
+            description: 'Кастомізація картки: логотипи, слайдшоу фону та вибір якості.', author: '',  
             icon: SETTINGS_ICON
         };  
   
