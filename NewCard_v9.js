@@ -303,7 +303,6 @@ body.cas--zoom-enabled .full-start__background.loaded {
                 const data = event.data.movie;
                 const render = event.object.activity.render();
                 
-                // Знаходимо саме картинку фону
                 const bgImg = render.find('.full-start__background img, img.full-start__background');
                 
                 if (data && data.id) {
@@ -325,21 +324,20 @@ body.cas--zoom-enabled .full-start__background.loaded {
                             render.find('.full-start-new__title').show();
                         }
 
-                        // --- Логіка Слайд-шоу ---
+                        // --- Логіка Слайд-шоу (ВИПРАВЛЕНО) ---
                         if (res.backdrops && res.backdrops.length > 1 && bgImg.length) {
                             let currentIndex = 0;
-                            const backdrops = res.backdrops.slice(0, 15); // 15 фото
+                            const backdrops = res.backdrops.slice(0, 15);
                             
                             if (window.casBgInterval) clearInterval(window.casBgInterval);
 
-                            // Додаємо плавний перехід для картинки через CSS
+                            // Встановлюємо плавний перехід ОДИН РАЗ
                             bgImg.css({
                                 'transition': 'opacity 1.5s ease-in-out',
                                 'opacity': '1'
                             });
 
                             window.casBgInterval = setInterval(() => {
-                                // Якщо ми вийшли з картки (елемента немає в DOM) - зупиняємо
                                 if (!bgImg.closest('body').length) {
                                     clearInterval(window.casBgInterval);
                                     return;
@@ -348,21 +346,20 @@ body.cas--zoom-enabled .full-start__background.loaded {
                                 currentIndex = (currentIndex + 1) % backdrops.length;
                                 const newBgUrl = Lampa.TMDB.image('/t/p/original' + backdrops[currentIndex].file_path);
                                 
-                                // Ефект мерехтіння при зміні: прозорість 0 -> зміна src -> прозорість 1
-                                bgImg.css('opacity', '0.4'); 
-                                
-                                setTimeout(() => {
+                                // Створюємо невидимий елемент Image для попереднього завантаження в пам'ять
+                                const tempImg = new Image();
+                                tempImg.src = newBgUrl;
+                                tempImg.onload = function() {
+                                    // ТІЛЬКИ коли картинка повністю завантажилася в кеш браузера — змінюємо src
+                                    // Це прибирає ефект "чорного екрану" або "тусклості"
                                     bgImg.attr('src', newBgUrl);
-                                    bgImg.on('load', function() {
-                                        $(this).css('opacity', '1');
-                                    });
-                                }, 1500);
+                                };
 
-                            }, 7000); // Зміна кожні 7 секунд
+                            }, 7000); 
                         }
                     });
 
-                    // --- Рейтинги, Студії та Якість (без змін) ---
+                    // --- Решта коду (Рейтинги, Студії, Якість) залишається без змін ---
                     let ratesHtml = '';
                     const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
                     if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
