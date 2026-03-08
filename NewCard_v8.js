@@ -240,31 +240,39 @@
   
     function addStyles() {  
         const styles = `<style>  
-:root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.2em; }
+:root { 
+    --cas-logo-scale: 1; 
+    --cas-blocks-gap: 30px; 
+    --cas-meta-size: 1.2em;
+    --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); /* Преміальна крива швидкості */
+}
+
+/* Контейнери для анімації */
+.cas-logo, .cas-ratings-line, .cas-studios-row, .full-start-new__buttons {
+    opacity: 0;
+    transform: translateY(20px);
+    filter: blur(10px);
+    transition: 
+        opacity 0.8s var(--cas-anim-curve), 
+        transform 0.8s var(--cas-anim-curve), 
+        filter 0.8s var(--cas-anim-curve);
+}
+
+/* Клас активації анімації */
+.cas-animated .cas-logo { opacity: 1; transform: translateY(0); filter: blur(0); transition-delay: 0.1s; }
+.cas-animated .cas-ratings-line { opacity: 1; transform: translateY(0); filter: blur(0); transition-delay: 0.25s; }
+.cas-animated .cas-studios-row { opacity: 1; transform: translateY(0); filter: blur(0); transition-delay: 0.4s; }
+.cas-animated .full-start-new__buttons { opacity: 1; transform: translateY(0); filter: blur(0); transition-delay: 0.55s; }
 
 .left-title .full-start-new__body { height: 85vh; }  
-.left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 2vh; }  
+.left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 5vh; }  
 .left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; }  
-
-.left-title .full-start-new__title {  
-    font-size: 2.5em; font-weight: 700; line-height: 1.2; margin-bottom: 0.5em;  
-    text-shadow: 0 0 0.1em rgba(0, 0, 0, 0.3); color: #fff;  
-}  
-
-.left-title .full-start-new__reactions,
-.left-title .full-start-new__rate-line,
-.left-title .full-start__status,
-.left-title .rating--modss,
-.left-title .full-start-new__head,
-.left-title .full-start-new__details {
-    display: none !important;
-}
 
 .cas-logo img {
     max-width: calc(450px * var(--cas-logo-scale));
     max-height: calc(180px * var(--cas-logo-scale));
     object-fit: contain; object-position: left bottom;
-    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+    filter: drop-shadow(0 0 15px rgba(0,0,0,0.4));
 }
 
 .cas-ratings-line { 
@@ -272,33 +280,24 @@
     align-items: center; 
     gap: 15px; 
     margin-bottom: var(--cas-blocks-gap); 
-    font-weight: 600; 
+    font-weight: 500; 
     font-size: var(--cas-meta-size); 
     color: rgba(255,255,255,0.9); 
-    flex-wrap: wrap; 
 }
 
-.cas-rate-item { display: flex; align-items: center; gap: 6px; }
-.cas-rate-item img { height: 1.1em; width: auto; }
-.cas-rate-item span { line-height: 1; }
+.cas-studio-item { height: 22px !important; opacity: 0.8; transition: opacity 0.3s; }
+.cas-studio-item:hover { opacity: 1; }
+.cas-studio-item img { height: 100% !important; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
 
-.cas-studio-item { height: 20px !important; display: flex; align-items: center; }
-.cas-studio-item img { height: 100% !important; width: auto !important; object-fit: contain; }
-
-.cas-quality-item { height: 1.2em; display: flex; align-items: center; }
-.cas-quality-item img { height: 100%; width: auto; }
-
-@keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+/* Ken Burns ефект для фону */
+@keyframes casKenBurns { 
+    0% { transform: scale(1.0); } 
+    50% { transform: scale(1.08); } 
+    100% { transform: scale(1.0); } 
+}
 body.cas--zoom-enabled .full-start__background.loaded { 
     animation: casKenBurns 45s ease-in-out infinite !important; 
 }
-
-.left-title .full-start-new__buttons { margin-top: 1em; }  
-  
-@media screen and (max-width: 767px) {  
-    .left-title .full-start-new__right { flex-direction: column; align-items: flex-start; }  
-    .left-title .full-start-new__title { font-size: 2em; }  
-}  
 </style>`;  
   
         Lampa.Template.add('left_title_css', styles);  
@@ -311,13 +310,15 @@ body.cas--zoom-enabled .full-start__background.loaded {
                 const data = event.data.movie;
                 const render = event.object.activity.render();
                 
+                // Скидаємо стан анімації перед початком завантаження нових даних
+                render.find('.left-title__content').removeClass('cas-animated');
+                
                 const bgImg = render.find('.full-start__background img, img.full-start__background');
                 
                 if (data && data.id) {
                     const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());
                     
                     $.get(imagesUrl, (res) => {
-                        // --- Логіка Логотипу ---
                         const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || 
                                          res.logos.find(l => l.iso_639_1 === 'en') || 
                                          res.logos[0];
@@ -332,40 +333,31 @@ body.cas--zoom-enabled .full-start__background.loaded {
                             render.find('.full-start-new__title').show();
                         }
 
-                        // --- Логіка Слайд-шоу (З НОВИМ ІНТЕРВАЛОМ ТА ВКЛ/ВИКЛ) ---
+                        // Слайд-шоу фону (15 секунд)
                         if (window.casBgInterval) clearInterval(window.casBgInterval);
-
                         const slideshowEnabled = Lampa.Storage.get('cas_slideshow_enabled');
 
                         if (slideshowEnabled && res.backdrops && res.backdrops.length > 1 && bgImg.length) {
                             let currentIndex = 0;
                             const backdrops = res.backdrops.slice(0, 15);
 
-                            bgImg.css({
-                                'transition': 'opacity 1.5s ease-in-out',
-                                'opacity': '1'
-                            });
+                            bgImg.css({ 'transition': 'opacity 1.5s ease-in-out', 'opacity': '1' });
 
                             window.casBgInterval = setInterval(() => {
                                 if (!bgImg.closest('body').length) {
                                     clearInterval(window.casBgInterval);
                                     return;
                                 }
-
                                 currentIndex = (currentIndex + 1) % backdrops.length;
                                 const newBgUrl = Lampa.TMDB.image('/t/p/original' + backdrops[currentIndex].file_path);
-                                
                                 const tempImg = new Image();
                                 tempImg.src = newBgUrl;
-                                tempImg.onload = function() {
-                                    bgImg.attr('src', newBgUrl);
-                                };
-
-                            }, 15000); // Інтервал 15 секунд
+                                tempImg.onload = () => bgImg.attr('src', newBgUrl);
+                            }, 15000); 
                         }
                     });
 
-                    // --- Рейтинги, Студії, Якість ---
+                    // Рейтинги
                     let ratesHtml = '';
                     const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
                     if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
@@ -381,15 +373,18 @@ body.cas--zoom-enabled .full-start__background.loaded {
                     }
                     render.find('.cas-rate-items').html(ratesHtml);
 
+                    // Мета-дані (час та жанр)
                     const time = formatTime(data.runtime || data.episode_run_time);
                     const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');
                     render.find('.cas-meta-info').text((time ? time + (genre ? ' • ' : '') : '') + genre);
 
+                    // Студії
                     if (Lampa.Storage.get('cas_show_studios')) {
                         const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 3);
                         render.find('.cas-studios-row').html(studios.map(s => `<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}"></div>`).join(''));
                     }
 
+                    // Якість (4K, HDR, UKR)
                     if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {
                         Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {
                             if (res && res.Results) {
@@ -414,6 +409,11 @@ body.cas--zoom-enabled .full-start__background.loaded {
                         });
                     }
                 }
+
+                // КУЛЬМІНАЦІЯ: Запускаємо преміальну анімацію появи
+                setTimeout(() => {
+                    render.find('.left-title__content').addClass('cas-animated');
+                }, 200);
             }  
         });  
     }
