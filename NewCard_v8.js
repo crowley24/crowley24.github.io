@@ -230,20 +230,28 @@
   
         Lampa.Template.add('full_start_new', template);  
     }  
-  
-    function addStyles() {  
+  function addStyles() {  
         const styles = `<style>  
 :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.2em; }
 
-.left-title .full-start-new__body { height: 85vh; }  
-.left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 2vh; }  
-.left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; }  
+/* Гарантуємо, що контент завжди ПОВЕРХ фону */
+.left-title .full-start-new__right { 
+    position: relative; 
+    z-index: 10; 
+    display: flex; 
+    align-items: flex-end; 
+    padding-bottom: 2vh; 
+}
+
+.left-title .full-start-new__body { height: 85vh; position: relative; z-index: 5; }
+.left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; }
 
 .left-title .full-start-new__title {  
     font-size: 2.5em; font-weight: 700; line-height: 1.2; margin-bottom: 0.5em;  
-    text-shadow: 0 0 0.1em rgba(0, 0, 0, 0.3); color: #fff;  
-}  
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.8); color: #fff;  
+}
 
+/* Ховаємо зайве */
 .left-title .full-start-new__reactions,
 .left-title .full-start-new__rate-line,
 .left-title .full-start__status,
@@ -257,31 +265,14 @@
     max-width: calc(450px * var(--cas-logo-scale));
     max-height: calc(180px * var(--cas-logo-scale));
     object-fit: contain; object-position: left bottom;
-    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+    filter: drop-shadow(0 0 15px rgba(0,0,0,0.7));
 }
 
-.cas-ratings-line { 
-    display: flex; 
-    align-items: center; 
-    gap: 15px; 
-    margin-bottom: var(--cas-blocks-gap); 
-    font-weight: 600; 
-    font-size: var(--cas-meta-size); 
-    color: rgba(255,255,255,0.9); 
-    flex-wrap: wrap; 
+/* Контейнер фону — на самий задній план */
+.full-start__background {
+    z-index: 1 !important;
 }
 
-.cas-rate-item { display: flex; align-items: center; gap: 6px; }
-.cas-rate-item img { height: 1.1em; width: auto; }
-.cas-rate-item span { line-height: 1; }
-
-.cas-studio-item { height: 20px !important; display: flex; align-items: center; }
-.cas-studio-item img { height: 100% !important; width: auto !important; object-fit: contain; }
-
-.cas-quality-item { height: 1.2em; display: flex; align-items: center; }
-.cas-quality-item img { height: 100%; width: auto; }
-
-/* Стилі для витонченого слайд-шоу */
 .cas-bg-overlay img, .full-start__background img { 
     width: 100%; 
     height: 100%; 
@@ -289,8 +280,9 @@
 }
 
 .cas-bg-overlay {
-    pointer-events: none; /* Щоб шар не заважав клікам */
+    pointer-events: none;
     overflow: hidden;
+    z-index: 2; /* Трохи вище основного фото, але нижче тексту */
 }
 
 @keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
@@ -300,12 +292,19 @@ body.cas--zoom-enabled .cas-bg-overlay {
     animation: casKenBurns 45s ease-in-out infinite !important; 
 }
 
-.left-title .full-start-new__buttons { margin-top: 1em; }  
-  
-@media screen and (max-width: 767px) {  
-    .left-title .full-start-new__right { flex-direction: column; align-items: flex-start; }  
-    .left-title .full-start-new__title { font-size: 2em; }  
-}  
+/* Рейтинги та мета */
+.cas-ratings-line { 
+    display: flex; align-items: center; gap: 15px; 
+    margin-bottom: var(--cas-blocks-gap); 
+    font-weight: 600; font-size: var(--cas-meta-size); 
+    color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+.cas-rate-item { display: flex; align-items: center; gap: 6px; }
+.cas-rate-item img { height: 1.1em; width: auto; }
+.cas-studio-item { height: 20px !important; display: flex; align-items: center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+.cas-studio-item img { height: 100% !important; width: auto !important; }
+
+.left-title .full-start-new__buttons { position: relative; z-index: 20; margin-top: 1em; }
 </style>`;  
   
         Lampa.Template.add('left_title_css', styles);  
