@@ -20,7 +20,7 @@
         'UKR': ASSETS_PATH + 'UKR.svg'
     };
 
-    // Іконка налаштувань у формі картки (Cinema Card Icon)
+    // Іконка налаштувань у формі картки
     const SETTINGS_ICON = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
         <rect x="15" y="20" width="70" height="60" rx="8" stroke="white" stroke-width="6" fill="none" opacity="0.4"/>
         <rect x="25" y="32" width="50" height="28" rx="4" fill="white"/>
@@ -271,8 +271,33 @@
 .cas-studio-item { height: 20px !important; display: flex; align-items: center; }
 .cas-studio-item img { height: 100% !important; width: auto !important; object-fit: contain; }
 
-.cas-quality-item { height: 1.2em; display: flex; align-items: center; }
-.cas-quality-item img { height: 100%; width: auto; }
+/* ОБ'ЄМНІ ТА БІЛЬШІ ІКОНКИ ЯКОСТІ */
+.cas-quality-item { 
+    height: 1.6em; /* Збільшено розмір (було 1.2em) */
+    display: flex; 
+    align-items: center; 
+    position: relative;
+}
+
+.cas-quality-item img { 
+    height: 100%; 
+    width: auto; 
+    /* Додаємо глибину через м'яку тінь */
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5)); 
+}
+
+/* Ефект блиску зверху для об'єму */
+.cas-quality-item::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 50%;
+    background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 100%);
+    border-radius: 2px; /* Підлаштувати під форму іконок, якщо потрібно */
+    pointer-events: none;
+}
 
 @keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 body.cas--zoom-enabled .full-start__background.loaded { 
@@ -371,8 +396,8 @@ body.cas--zoom-enabled .full-start__background.loaded {
   
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.4.3', name: PLUGIN_NAME,  
-            description: 'Кастомізація картки: логотипи, студії та динамічна якість.', author: '',  
+            type: 'other', version: '1.4.4', name: PLUGIN_NAME,  
+            description: 'Кастомізація картки: логотипи, студії та об\'ємна якість.', author: '',  
             icon: SETTINGS_ICON
         };  
   
