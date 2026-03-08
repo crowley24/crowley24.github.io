@@ -20,7 +20,6 @@
         'UKR': ASSETS_PATH + 'UKR.svg'
     };
 
-    // Іконка налаштувань у формі картки (Cinema Card Icon)
     const SETTINGS_ICON = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
         <rect x="15" y="20" width="70" height="60" rx="8" stroke="white" stroke-width="6" fill="none" opacity="0.4"/>
         <rect x="25" y="32" width="50" height="28" rx="4" fill="white"/>
@@ -262,6 +261,15 @@
     font-size: var(--cas-meta-size); 
     color: rgba(255,255,255,0.9); 
     flex-wrap: wrap; 
+    /* Анімація появи */
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.cas-ratings-line.visible {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .cas-rate-item { display: flex; align-items: center; gap: 6px; }
@@ -271,7 +279,19 @@
 .cas-studio-item { height: 20px !important; display: flex; align-items: center; }
 .cas-studio-item img { height: 100% !important; width: auto !important; object-fit: contain; }
 
-.cas-quality-item { height: 1.2em; display: flex; align-items: center; }
+/* Скляний ефект для іконок якості */
+.cas-quality-item { 
+    height: 1.4em; 
+    display: flex; 
+    align-items: center; 
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    padding: 1px 5px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
 .cas-quality-item img { height: 100%; width: auto; }
 
 @keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
@@ -290,7 +310,7 @@ body.cas--zoom-enabled .full-start__background.loaded {
         Lampa.Template.add('left_title_css', styles);  
         $('body').append(Lampa.Template.get('left_title_css', {}, true));  
     }  
-  
+
     function attachLoader() {  
         Lampa.Listener.follow('full', (event) => {  
             if (event.type === 'complite') {  
@@ -350,7 +370,9 @@ body.cas--zoom-enabled .full-start__background.loaded {
                                     
                                     if (t.includes('hdr')) b.hdr = true;
                                     if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) b.dv = true;
-                                    if (t.includes('ukr') || t.includes('укр')) b.ukr = true;
+                                    
+                                    // Покращена перевірка на UA/UKR
+                                    if (t.match(/ukr|укр|\bua\b/i)) b.ukr = true;
                                 });
 
                                 let qH = '';
@@ -362,7 +384,12 @@ body.cas--zoom-enabled .full-start__background.loaded {
                                 if (qH && (time || genre)) qH = '<span style="opacity: 0.5; margin: 0 5px;">•</span>' + qH;
                                 render.find('.cas-quality-row').html(qH);
                             }
+                            // Анімація після завантаження парсером
+                            render.find('.cas-ratings-line').addClass('visible');
                         });
+                    } else {
+                        // Анімація, якщо якість вимкнена
+                        render.find('.cas-ratings-line').addClass('visible');
                     }
                 }
             }  
@@ -371,7 +398,7 @@ body.cas--zoom-enabled .full-start__background.loaded {
   
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.4.3', name: PLUGIN_NAME,  
+            type: 'other', version: '1.4.4', name: PLUGIN_NAME,  
             description: 'Кастомізація картки: логотипи, студії та динамічна якість.', author: '',  
             icon: SETTINGS_ICON
         };  
