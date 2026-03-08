@@ -44,7 +44,7 @@
             'cas_logo_scale': '100',
             'cas_bg_animation': true,
             'cas_blocks_gap': '30',
-            'cas_meta_size': '1.1',
+            'cas_meta_size': '1.1', // Тепер це мінімальний розмір
             'cas_show_studios': true,
             'cas_show_quality': true
         };
@@ -68,7 +68,17 @@
 
         Lampa.SettingsApi.addParam({
             component: PLUGIN_ID,
-            param: { name: 'cas_meta_size', type: 'select', values: { '0.9':'Дрібний','1.0':'Стандарт','1.1':'Збільшений','1.2':'Великий' }, default: '1.1' },
+            param: { 
+                name: 'cas_meta_size', 
+                type: 'select', 
+                values: { 
+                    '1.1': 'Малий', 
+                    '1.2': 'Стандартний', 
+                    '1.3': 'Збільшений', 
+                    '1.4': 'Великий' 
+                }, 
+                default: '1.2' 
+            },
             field: { name: 'Розмір шрифту метаданих' },
             onChange: applySettings
         });
@@ -97,7 +107,7 @@
         const root = document.documentElement;
         const scale = parseInt(Lampa.Storage.get('cas_logo_scale') || 100) / 100;
         const gap = Lampa.Storage.get('cas_blocks_gap') || '30';
-        const metaSize = Lampa.Storage.get('cas_meta_size') || '1.1';
+        const metaSize = Lampa.Storage.get('cas_meta_size') || '1.2';
         
         root.style.setProperty('--cas-logo-scale', scale);
         root.style.setProperty('--cas-blocks-gap', gap + 'px');
@@ -208,7 +218,7 @@
   
     function addStyles() {  
         const styles = `<style>  
-:root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.1em; }
+:root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.2em; }
 
 .left-title .full-start-new__body { height: 80vh; }  
 .left-title .full-start-new__right { display: flex; align-items: flex-end; }  
@@ -247,13 +257,13 @@
 }
 
 .cas-rate-item { display: flex; align-items: center; gap: 6px; }
-.cas-rate-item img { height: 16px; width: auto; }
+.cas-rate-item img { height: 1.1em; width: auto; }
 .cas-rate-item span { line-height: 1; }
 
 .cas-studio-item { height: 28px !important; filter: brightness(0) invert(1); opacity: 0.8; }
 .cas-studio-item img { height: 100% !important; width: auto !important; }
 
-.cas-quality-item { height: 20px; display: flex; align-items: center; }
+.cas-quality-item { height: 1.2em; display: flex; align-items: center; }
 .cas-quality-item img { height: 100%; width: auto; }
 
 @keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
@@ -331,25 +341,18 @@ body.cas--zoom-enabled .full-start__background.loaded {
                                 const b = { res: '', hdr: false, dv: false, ukr: false };
                                 res.Results.slice(0, 15).forEach(i => {
                                     const t = i.Title.toLowerCase();
-                                    // Резолюція
                                     if (t.includes('4k') || t.includes('2160')) b.res = '4K'; 
                                     else if (!b.res && (t.includes('1080') || t.includes('fhd'))) b.res = 'FULL HD';
                                     
-                                    // HDR та Dolby Vision
                                     if (t.includes('hdr')) b.hdr = true;
                                     if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) b.dv = true;
-                                    
-                                    // Мова
                                     if (t.includes('ukr') || t.includes('укр')) b.ukr = true;
                                 });
 
                                 let qH = '';
                                 if (b.res) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS[b.res]}"></div>`;
-                                
-                                // Пріоритет Dolby Vision над HDR
                                 if (b.dv) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;
                                 else if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;
-                                
                                 if (b.ukr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;
                                 
                                 if (qH && (time || genre)) qH = '<span style="opacity: 0.5; margin: 0 5px;">•</span>' + qH;
@@ -364,7 +367,7 @@ body.cas--zoom-enabled .full-start__background.loaded {
   
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.4.0', name: PLUGIN_NAME,  
+            type: 'other', version: '1.4.1', name: PLUGIN_NAME,  
             description: 'Логотипи, анімація та динамічні метадані (DV/HDR/UKR).', author: '',  
             icon: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#fff"><rect x="10" y="30" width="80" height="40" rx="5" fill="rgba(255,255,255,0.2)"/><circle cx="50" cy="50" r="12" fill="white"/></svg>'
         };  
