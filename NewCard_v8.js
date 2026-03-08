@@ -163,9 +163,25 @@
     function addStyles() {  
         const styles = `<style>  
 :root { --cas-logo-scale: 1; --cas-btn-scale: 1; --cas-blocks-gap: 30px; }
-.left-title .full-start-new__body { height: 85vh; }  
-.left-title .full-start-new__right { display: flex; align-items: flex-end; padding-left: 5%; }  
-.left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 50px; }  
+
+/* Опускаємо весь контент донизу екрана */
+.left-title .full-start-new__body { 
+    height: 92vh; 
+}  
+
+.left-title .full-start-new__right { 
+    display: flex; 
+    align-items: flex-end; 
+    padding-left: 5%; 
+}  
+
+.left-title__content { 
+    flex-grow: 1; 
+    display: flex; 
+    flex-direction: column; 
+    justify-content: flex-end; 
+    padding-bottom: 35px; /* Мінімальний відступ від нижньої межі */
+}  
 
 .cas-apple-style .full-start-new__reactions,
 .cas-apple-style .full-start-new__rate-line,
@@ -239,7 +255,6 @@ body.cas--zoom-enabled .full-start__background.loaded {
                 const data = event.data.movie;
                 const render = event.object.activity.render();
                 if (data && data.id) {
-                    // ЛОГОТИП
                     $.get(Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key()), (res) => {
                         const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];
                         if (bestLogo) {
@@ -248,7 +263,6 @@ body.cas--zoom-enabled .full-start__background.loaded {
                         }
                     });
 
-                    // РЕЙТИНГИ (TMDB + CUB) - ЛОГІКА З ВАШОГО КОДУ
                     let ratesHtml = '';
                     const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
                     if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
@@ -264,18 +278,15 @@ body.cas--zoom-enabled .full-start__background.loaded {
                     }
                     render.find('.cas-rate-items').html(ratesHtml);
 
-                    // МЕТАДАНІ
                     const time = formatTime(data.runtime || data.episode_run_time);
                     const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');
                     render.find('.cas-meta-info').text((time ? time + (genre ? ' • ' : '') : '') + genre);
                     
-                    // СТУДІЇ
                     if (Lampa.Storage.get('cas_show_studios')) {
                         const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 3);
                         render.find('.cas-studios-row').html(studios.map(s => `<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}"></div>`).join(''));
                     }
 
-                    // ЯКІСТЬ ТА ПАРСЕР
                     if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {
                         Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {
                             if (res && res.Results) {
