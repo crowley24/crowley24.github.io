@@ -244,13 +244,14 @@
     --cas-blocks-gap: 30px; 
     --cas-meta-size: 1.2em;
     --cas-anim-curve: cubic-bezier(0.25, 1, 0.5, 1); /* Швидка преміальна крива */
+    --cas-glow-color: rgba(255, 255, 255, 0.6); /* Колір світіння кнопок */
 }
 
 /* --- Секція прискореної анімації --- */
 .cas-logo, 
 .cas-ratings-line, 
 .cas-studios-row, 
-.left-title .full-start-new__buttons {
+.full-start-new__buttons {
     opacity: 0;
     transform: translateY(12px); /* Менша амплітуда для швидкості */
     transition: 
@@ -316,7 +317,43 @@ body.cas--zoom-enabled .full-start__background.loaded {
     animation: casKenBurns 45s ease-in-out infinite !important; 
 }
 
-.left-title .full-start-new__buttons { margin-top: 1em; }  
+/* --- ОНОВЛЕНІ КНОПКИ ЗІ СВІТІННЯМ --- */
+.left-title .full-start-new__buttons { 
+    margin-top: 1.5em; 
+    display: flex; 
+    gap: 15px; 
+    flex-wrap: wrap;
+}  
+
+.left-title .full-start-new__buttons .full-start__button {
+    background: transparent !important; /* Прибираємо фон */
+    border: 2px solid rgba(255,255,255,0.2); /* Легка рамка в звичайному стані */
+    color: #fff;
+    transition: 
+        border-color 0.3s var(--cas-anim-curve), 
+        box-shadow 0.3s var(--cas-anim-curve), 
+        transform 0.2s ease;
+    backdrop-filter: blur(5px); /* Легке розмиття фону під кнопкою */
+}
+
+/* Стан фокусу/наведення (Світіння) */
+.left-title .full-start-new__buttons .full-start__button:hover,
+.left-title .full-start-new__buttons .full-start__button.focus {
+    border-color: #fff; /* Біла рамка при фокусі */
+    /* Ефект світіння */
+    box-shadow: 
+        0 0 10px var(--cas-glow-color), 
+        0 0 20px rgba(255, 255, 255, 0.2),
+        inset 0 0 10px rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px); /* Легке спливання */
+}
+
+/* Стан натискання */
+.left-title .full-start-new__buttons .full-start__button:active {
+    transform: translateY(1px) scale(0.96); /* Ефект фізичного натискання */
+    box-shadow: 0 0 5px var(--cas-glow-color); /* Зменшуємо світіння */
+}
+/* ------------------------------------ */
   
 @media screen and (max-width: 767px) {  
     .left-title .full-start-new__right { flex-direction: column; align-items: flex-start; }  
@@ -443,8 +480,8 @@ body.cas--zoom-enabled .full-start__background.loaded {
   
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.4.6', name: PLUGIN_NAME,  
-            description: 'Кастомізація картки: логотипи, студії та динамічна назва.', author: '',  
+            type: 'other', version: '1.4.7', name: PLUGIN_NAME,  
+            description: 'Кастомізація картки: логотипи, анімована назва та кнопки зі світінням.', author: '',  
             icon: SETTINGS_ICON
         };  
   
