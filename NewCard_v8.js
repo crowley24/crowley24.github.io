@@ -152,32 +152,35 @@
 .cas-quality-item { height: 18px; display: flex; align-items: center; }
 .cas-quality-item img { height: 100%; width: auto; }
 
-/* ПОВНЕ ВИДАЛЕННЯ СТАНДАРТНОГО ФОНУ ТА ФОРМИ КНОПОК */
+/* КНОПКИ БЕЗ ФОНУ ТА ФОРМИ */
 .applecation__buttons-row { display: flex; align-items: center; gap: 15px; margin-top: 25px; flex-wrap: wrap; }
 
 .cas-apple-style .full-start__button {  
     background: transparent !important; 
     background-color: transparent !important;
     border: none !important;  
-    box-shadow: none !important; /* Прибираємо стандартну тінь/овал */
-    color: rgba(255,255,255,0.7) !important; 
+    box-shadow: none !important;
+    color: rgba(255,255,255,0.6) !important; 
     padding: 10px 15px !important;
-    border-radius: 12px !important;
     display: flex; justify-content: center; align-items: center; gap: 10px;
-    font-size: 1.1em; font-weight: 500;
-    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    font-size: 1.15em; font-weight: 500;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Базова тінь для читабельності */
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
 }
 
-/* Ефект при фокусі - тільки світіння тексту та іконки */
+/* ПОТУЖНЕ СВІТІННЯ ПРИ ФОКУСІ */
 .cas-apple-style .full-start__button.focus {  
-    transform: scale(1.15);  
+    transform: scale(1.18);  
     background: transparent !important;
-    background-color: transparent !important;
     color: #fff !important;
-    /* Замість овалу робимо розсіяне світіння самого контенту */
-    filter: drop-shadow(0 0 10px rgba(255,255,255,0.8)) !important;  
-    box-shadow: none !important;
+    /* Багатошарове світіння: ядро + ореол */
+    filter: drop-shadow(0 0 5px rgba(255,255,255,1)) 
+            drop-shadow(0 0 15px rgba(255,255,255,0.6))
+            drop-shadow(0 0 30px rgba(255,255,255,0.3)) !important;  
+    
+    /* Легкий відблиск по центру для об'єму (без овалу) */
+    background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%) !important;
 }
 
 /* ОНОВЛЕНА ЖИВА АНІМАЦІЯ */
