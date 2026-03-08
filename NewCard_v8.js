@@ -164,7 +164,6 @@
         const styles = `<style>  
 :root { --cas-logo-scale: 1; --cas-btn-scale: 1; --cas-blocks-gap: 30px; }
 
-/* Опускаємо весь контент донизу екрана */
 .left-title .full-start-new__body { 
     height: 92vh; 
 }  
@@ -180,7 +179,7 @@
     display: flex; 
     flex-direction: column; 
     justify-content: flex-end; 
-    padding-bottom: 35px; /* Мінімальний відступ від нижньої межі */
+    padding-bottom: 60px; /* Трохи підняв кнопки, щоб не були занадто низько */
 }  
 
 .cas-apple-style .full-start-new__reactions,
@@ -290,16 +289,18 @@ body.cas--zoom-enabled .full-start__background.loaded {
                     if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {
                         Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {
                             if (res && res.Results) {
-                                const b = { res: '', hdr: false, ukr: false };
+                                const b = { res: '', hdr: false, dv: false, ukr: false };
                                 res.Results.slice(0, 10).forEach(i => {
                                     const t = i.Title.toLowerCase();
                                     if (t.includes('4k')) b.res = '4K'; else if (!b.res && t.includes('1080')) b.res = 'FULL HD';
-                                    if (t.includes('hdr') || t.includes('vision')) b.hdr = true;
+                                    if (t.includes('hdr')) b.hdr = true;
+                                    if (t.includes('vision') || t.includes(' dolby') || t.includes(' dv ')) b.dv = true;
                                     if (t.includes('ukr') || t.includes('укр')) b.ukr = true;
                                 });
                                 let qH = '';
                                 if (b.res) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS[b.res]}"></div>`;
-                                if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;
+                                if (b.dv) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;
+                                else if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;
                                 if (b.ukr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;
                                 if (qH && (time || genre)) qH = '<span style="opacity: 0.5; margin: 0 5px;">•</span>' + qH;
                                 render.find('.cas-quality-row').html(qH);
