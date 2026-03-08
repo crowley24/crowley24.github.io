@@ -28,73 +28,64 @@
         attachLoader();  
     }  
 
-    function addSettings() {
-        const defaults = { 
-            'cas_logo_scale': '100', 'cas_btn_scale': '100', 'cas_bg_animation': true, 
-            'cas_show_studios': true, 'cas_show_quality': true, 'cas_blocks_gap': '30',
-            'cas_custom_buttons': true
-        };
-        Object.keys(defaults).forEach(key => { if (Lampa.Storage.get(key) === undefined) Lampa.Storage.set(key, defaults[key]); });
-
-        // Головний компонент
-        Lampa.SettingsApi.addComponent({
-            component: PLUGIN_ID,
-            name: PLUGIN_NAME,
-            icon: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#fff"><rect x="10" y="30" width="80" height="40" rx="5" fill="rgba(255,255,255,0.2)"/><circle cx="50" cy="50" r="12" fill="white"/></svg>'
-        });
-
-        // Дочірній компонент для кнопок (він не з'явиться в загальному списку)
-        Lampa.SettingsApi.addComponent({
-            component: PLUGIN_ID + '_btns',
-            name: 'Медіа кнопки'
-        });
-
-        // ПАРАМЕТРИ ГОЛОВНОГО МЕНЮ
-        Lampa.SettingsApi.addParam({
-            component: PLUGIN_ID,
-            param: { name: 'cas_logo_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' }, default: '100' },
-            field: { name: 'Розмір логотипу' },
-            onChange: applySettings
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: PLUGIN_ID,
-            param: { name: 'cas_blocks_gap', type: 'select', values: { '15':'Тісно','30':'Стандарт','45':'Просторе' }, default: '30' },
-            field: { name: 'Відступи між блоками (px)' },
-            onChange: applySettings
-        });
-
-        Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_show_studios', type: 'trigger', default: true }, field: { name: 'Показувати студії' } });
-        Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_show_quality', type: 'trigger', default: true }, field: { name: 'Показувати якість' } });
-        Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_bg_animation', type: 'trigger', default: true }, field: { name: 'Анімація фону' }, onChange: applySettings });
-
-        // КНОПКА ВІДКРИТТЯ ПІДМЕНЮ
-        Lampa.SettingsApi.addParam({
-            component: PLUGIN_ID,
-            param: { name: 'cas_open_btns', type: 'open' },
-            field: { name: 'Медіа кнопки' },
-            onChange: () => {
-                Lampa.Settings.main(PLUGIN_ID + '_btns'); // Викликаємо відкриття вікна кнопок
-            }
-        });
-
-        // НАЛАШТУВАННЯ ВСЕРЕДИНІ ПІДМЕНЮ
-        Lampa.SettingsApi.addParam({ 
-            component: PLUGIN_ID + '_btns', 
-            param: { name: 'cas_custom_buttons', type: 'trigger', default: true }, 
-            field: { name: 'Стильні кнопки (Apple)' }, 
-            onChange: applySettings 
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: PLUGIN_ID + '_btns',
-            param: { name: 'cas_btn_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' }, default: '100' },
-            field: { name: 'Розмір кнопок' },
-            onChange: applySettings
-        });
-
-        applySettings();
-    }
+    function addSettings() {  
+    const defaults = {   
+        'cas_logo_scale': '100', 'cas_btn_scale': '100', 'cas_bg_animation': true,   
+        'cas_show_studios': true, 'cas_show_quality': true, 'cas_blocks_gap': '30',  
+        'cas_custom_buttons': true  
+    };  
+    Object.keys(defaults).forEach(key => { if (Lampa.Storage.get(key) === undefined) Lampa.Storage.set(key, defaults[key]); });  
+  
+    // Головний компонент плагіна  
+    Lampa.SettingsApi.addComponent({  
+        component: PLUGIN_ID,  
+        name: PLUGIN_NAME,  
+        icon: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#fff"><rect x="10" y="30" width="80" height="40" rx="5" fill="rgba(255,255,255,0.2)"/><circle cx="50" cy="50" r="12" fill="white"/></svg>'  
+    });  
+  
+    // ПАРАМЕТРИ ГОЛОВНОГО МЕНЮ  
+    Lampa.SettingsApi.addParam({  
+        component: PLUGIN_ID,  
+        param: { name: 'cas_logo_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' }, default: '100' },  
+        field: { name: 'Розмір логотипу' },  
+        onChange: applySettings  
+    });  
+  
+    Lampa.SettingsApi.addParam({  
+        component: PLUGIN_ID,  
+        param: { name: 'cas_blocks_gap', type: 'select', values: { '15':'Тісно','30':'Стандарт','45':'Просторе' }, default: '30' },  
+        field: { name: 'Відступи між блоками (px)' },  
+        onChange: applySettings  
+    });  
+  
+    Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_show_studios', type: 'trigger', default: true }, field: { name: 'Показувати студії' } });  
+    Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_show_quality', type: 'trigger', default: true }, field: { name: 'Показувати якість' } });  
+    Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_bg_animation', type: 'trigger', default: true }, field: { name: 'Анімація фону' }, onChange: applySettings });  
+  
+    // Роздільник для медіа кнопок  
+    Lampa.SettingsApi.addParam({  
+        component: PLUGIN_ID,  
+        param: { name: 'cas_buttons_separator', type: 'static' },  
+        field: { name: 'Медіа кнопки' }  
+    });  
+  
+    // НАЛАШТУВАННЯ МЕДІА КНОПОК (прямо в головному компоненті)  
+    Lampa.SettingsApi.addParam({   
+        component: PLUGIN_ID,   
+        param: { name: 'cas_custom_buttons', type: 'trigger', default: true },   
+        field: { name: 'Стильні кнопки (Apple)' },   
+        onChange: applySettings   
+    });  
+  
+    Lampa.SettingsApi.addParam({  
+        component: PLUGIN_ID,  
+        param: { name: 'cas_btn_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' }, default: '100' },  
+        field: { name: 'Розмір кнопок' },  
+        onChange: applySettings  
+    });  
+  
+    applySettings();  
+}
 
     function applySettings() {
         const root = document.documentElement;
