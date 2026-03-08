@@ -158,7 +158,7 @@
                         <div class="cas-quality-row" style="display: flex; gap: 8px; align-items: center;"></div>
                     </div>
 
-                    <div class="cas-studios-row" style="margin-bottom: var(--cas-blocks-gap); display: flex; gap: 15px; align-items: center;"></div>
+                    <div class="cas-studios-row"></div>
 
                     <div class="full-start-new__head hide"></div>  
                     <div class="full-start-new__details hide"></div>  
@@ -247,7 +247,7 @@
     --cas-glow-color: rgba(255, 255, 255, 0.8); 
 }
 
-/* --- АНІМАЦІЯ ТА СТРУКТУРА --- */
+/* --- АНІМАЦІЯ --- */
 .cas-logo, .cas-ratings-line, .cas-studios-row, .left-title .full-start-new__buttons {
     opacity: 0; transform: translateY(12px);
     transition: opacity 0.4s var(--cas-anim-curve), transform 0.4s var(--cas-anim-curve);
@@ -257,15 +257,21 @@
 .cas-animated .cas-studios-row { opacity: 1; transform: translateY(0); transition-delay: 0.18s; }
 .cas-animated .full-start-new__buttons { opacity: 1; transform: translateY(0); transition-delay: 0.24s; }
 
-/* --- ЛОГОТИПИ СТУДІЙ: КОЛЬОРОВІ + ВИДИМІ ЧОРНІ ЕЛЕМЕНТИ --- */
-.cas-studio-item { height: 18px !important; display: flex; align-items: center; margin-right: 15px; }
+/* --- ЛОГОТИПИ СТУДІЙ: ПРЕМІАЛЬНА КОЛЬОРОВА ЧІТКІСТЬ --- */
+.cas-studios-row {
+    margin-bottom: var(--cas-blocks-gap);
+    display: flex; gap: 12px; align-items: center;
+}
+.cas-studio-item { 
+    height: 18px !important; display: flex; align-items: center; 
+    background: #fff; padding: 2px 8px; border-radius: 4px; opacity: 0.9; 
+}
 .cas-studio-item img { 
     height: 100% !important; width: auto !important; object-fit: contain;
-    filter: invert(1) hue-rotate(180deg) brightness(1.1) contrast(1.1);
-    opacity: 0.95;
+    mix-blend-mode: screen; filter: contrast(1.1); 
 }
 
-/* --- ІКОНКИ ЯКОСТІ (ТУТ ЗМІНЮВАТИ РОЗМІР) --- */
+/* --- ІКОНКИ ЯКОСТІ: ТУТ ЗМІНЮВАТИ РОЗМІР --- */
 .cas-quality-item { 
     height: 14px !important; /* <--- Поставте 18px для збільшення */
     display: flex; align-items: center; margin-left: 4px;
@@ -289,7 +295,7 @@
 
 /* --- ГОЛОВНИЙ ЛОГОТИП ТА ІНШЕ --- */
 .cas-logo img {
-    display: block; max-width: 450px; max-height: 180px;
+    display: block; max-width: calc(450px * var(--cas-logo-scale)); max-height: calc(180px * var(--cas-logo-scale));
     width: auto !important; height: auto !important;
     object-fit: contain; object-position: left bottom;
     filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
@@ -310,6 +316,7 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
         Lampa.Template.add('left_title_css', styles);  
         $('body').append(Lampa.Template.get('left_title_css', {}, true));  
     }
+
     function attachLoader() {  
         Lampa.Listener.follow('full', (event) => {  
             if (event.type === 'complite') {  
