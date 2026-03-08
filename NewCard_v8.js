@@ -230,28 +230,79 @@
   
         Lampa.Template.add('full_start_new', template);  
     }  
-  function addStyles() {  
+function addStyles() {  
         const styles = `<style>  
 :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.2em; }
 
-/* Гарантуємо, що контент завжди ПОВЕРХ фону */
-.left-title .full-start-new__right { 
+/* ГОЛОВНИЙ ФІКС: Контейнер всієї картки */
+.full-start-new { 
     position: relative; 
     z-index: 10; 
+    isolation: isolate; /* Створює новий контекст накладання */
+}
+
+/* ФОН - робимо його справді фоновим */
+.full-start__background {
+    position: absolute !important;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: -1 !important; /* ВІД'ЄМНИЙ ІНДЕКС - це гарантія */
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.cas-bg-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    opacity: 0;
+    z-index: -1; /* Також за контентом */
+    transition: opacity 2.5s ease-in-out;
+}
+
+/* КОНТЕНТ - примусово попереду */
+.full-start-new__body { 
+    position: relative; 
+    z-index: 100 !important; 
+    height: 85vh; 
+    display: flex; 
+    flex-direction: column; 
+    justify-content: flex-end;
+}
+
+.left-title .full-start-new__right { 
+    position: relative; 
+    z-index: 101 !important; 
     display: flex; 
     align-items: flex-end; 
-    padding-bottom: 2vh; 
+    padding-bottom: 5vh; 
 }
 
-.left-title .full-start-new__body { height: 85vh; position: relative; z-index: 5; }
-.left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; }
+.left-title__content { 
+    position: relative; 
+    z-index: 102 !important; 
+}
+
+/* Лого та Текст */
+.cas-logo { position: relative; z-index: 110; margin-bottom: 15px; }
+.cas-logo img {
+    max-width: calc(450px * var(--cas-logo-scale));
+    max-height: calc(180px * var(--cas-logo-scale));
+    object-fit: contain; object-position: left bottom;
+    filter: drop-shadow(0 0 20px rgba(0,0,0,0.8));
+}
 
 .left-title .full-start-new__title {  
-    font-size: 2.5em; font-weight: 700; line-height: 1.2; margin-bottom: 0.5em;  
-    text-shadow: 0 0 10px rgba(0, 0, 0, 0.8); color: #fff;  
+    font-size: 2.8em; font-weight: 700; 
+    text-shadow: 0 2px 15px rgba(0, 0, 0, 0.9); 
+    color: #fff;
 }
 
-/* Ховаємо зайве */
+/* Кнопки */
+.full-start-new__buttons { 
+    position: relative !important; 
+    z-index: 120 !important; 
+}
+
+/* Приховування зайвого */
 .left-title .full-start-new__reactions,
 .left-title .full-start-new__rate-line,
 .left-title .full-start__status,
@@ -261,50 +312,16 @@
     display: none !important;
 }
 
-.cas-logo img {
-    max-width: calc(450px * var(--cas-logo-scale));
-    max-height: calc(180px * var(--cas-logo-scale));
-    object-fit: contain; object-position: left bottom;
-    filter: drop-shadow(0 0 15px rgba(0,0,0,0.7));
+@keyframes casKenBurns { 
+    0% { transform: scale(1); } 
+    50% { transform: scale(1.1); } 
+    100% { transform: scale(1); } 
 }
 
-/* Контейнер фону — на самий задній план */
-.full-start__background {
-    z-index: 1 !important;
-}
-
-.cas-bg-overlay img, .full-start__background img { 
-    width: 100%; 
-    height: 100%; 
-    object-fit: cover; 
-}
-
-.cas-bg-overlay {
-    pointer-events: none;
-    overflow: hidden;
-    z-index: 2; /* Трохи вище основного фото, але нижче тексту */
-}
-
-@keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-
-body.cas--zoom-enabled .full-start__background.loaded,
-body.cas--zoom-enabled .cas-bg-overlay { 
+body.cas--zoom-enabled .full-start__background img,
+body.cas--zoom-enabled .cas-bg-overlay img { 
     animation: casKenBurns 45s ease-in-out infinite !important; 
 }
-
-/* Рейтинги та мета */
-.cas-ratings-line { 
-    display: flex; align-items: center; gap: 15px; 
-    margin-bottom: var(--cas-blocks-gap); 
-    font-weight: 600; font-size: var(--cas-meta-size); 
-    color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-}
-.cas-rate-item { display: flex; align-items: center; gap: 6px; }
-.cas-rate-item img { height: 1.1em; width: auto; }
-.cas-studio-item { height: 20px !important; display: flex; align-items: center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
-.cas-studio-item img { height: 100% !important; width: auto !important; }
-
-.left-title .full-start-new__buttons { position: relative; z-index: 20; margin-top: 1em; }
 </style>`;  
   
         Lampa.Template.add('left_title_css', styles);  
