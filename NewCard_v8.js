@@ -5,16 +5,6 @@
     const PLUGIN_ID = 'clean_apple_style';
     const ASSETS_PATH = 'https://crowley24.github.io/NewIcons/';
 
-    const ICONS = {
-        play: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 5.14V19.14L19 12.14L8 5.14Z" fill="currentColor"/></svg>`,
-        book: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 3H7C5.9 3 5 3.9 5 5V21L12 18L19 21V5C19 3.9 18.1 3 17 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
-        reaction: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z" stroke="currentColor" stroke-width="2"/></svg>`,
-        options: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="2" fill="currentColor"/><circle cx="5" cy="12" r="2" fill="currentColor"/><circle cx="19" cy="12" r="2" fill="currentColor"/></svg>`,
-        trailer: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 6H3C1.9 6 1 6.9 1 8V16C1 17.1 1.9 18 3 18H21C22.1 18 23 17.1 23 16V8C23 6.9 22.1 6 21 6Z" stroke="currentColor" stroke-width="2"/><path d="M10 9L15 12L10 15V9Z" fill="currentColor"/></svg>`,
-        tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',
-        cub: 'https://raw.githubusercontent.com/yumata/lampa/9381985ad4371d2a7d5eb5ca8e3daf0f32669eb7/img/logo-icon.svg'
-    };
-
     const QUALITY_ICONS = {
         '4K': ASSETS_PATH + '4K.svg', '2K': ASSETS_PATH + '2K.svg', 'FULL HD': ASSETS_PATH + 'FULL HD.svg',
         'HD': ASSETS_PATH + 'HD.svg', 'HDR': ASSETS_PATH + 'HDR.svg', 'Dolby Vision': ASSETS_PATH + 'Dolby Vision.svg',
@@ -29,18 +19,22 @@
     }  
 
     function addSettings() {
-        const defaults = { 
-            'cas_logo_scale': '100', 
-            'cas_bg_animation': true, 
-            'cas_show_studios': true, 
+        const defaults = {
+            'cas_logo_scale': '100',
+            'cas_bg_animation': true,
+            'cas_blocks_gap': '30',
+            'cas_show_studios': true,
             'cas_show_quality': true
         };
-        Object.keys(defaults).forEach(key => { if (Lampa.Storage.get(key) === undefined) Lampa.Storage.set(key, defaults[key]); });
+
+        Object.keys(defaults).forEach(key => {
+            if (Lampa.Storage.get(key) === undefined) Lampa.Storage.set(key, defaults[key]);
+        });
 
         Lampa.SettingsApi.addComponent({
             component: PLUGIN_ID,
             name: PLUGIN_NAME,
-            icon: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#fff"><rect x="10" y="30" width="80" height="40" rx="5" fill="rgba(255,255,255,0.2)"/><circle cx="50" cy="50" r="12" fill="white"/></svg>`
+            icon: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#fff"><rect x="10" y="30" width="80" height="40" rx="5" fill="rgba(255,255,255,0.2)"/><circle cx="50" cy="50" r="12" fill="white"/></svg>'
         });
 
         Lampa.SettingsApi.addParam({
@@ -50,131 +44,229 @@
             onChange: applySettings
         });
 
+        Lampa.SettingsApi.addParam({
+            component: PLUGIN_ID,
+            param: { name: 'cas_blocks_gap', type: 'select', values: { '15':'Тісно','30':'Стандарт','45':'Просторе' }, default: '30' },
+            field: { name: 'Відступи між блоками' },
+            onChange: applySettings
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: PLUGIN_ID,
+            param: { name: 'cas_bg_animation', type: 'trigger', default: true },
+            field: { name: 'Анімація фону (Zoom)' },
+            onChange: applySettings
+        });
+
         Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_show_studios', type: 'trigger', default: true }, field: { name: 'Показувати студії' } });
         Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_show_quality', type: 'trigger', default: true }, field: { name: 'Показувати якість' } });
-        Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_bg_animation', type: 'trigger', default: true }, field: { name: 'Анімація фону' }, onChange: applySettings });
 
         applySettings();
     }
 
     function applySettings() {
         const root = document.documentElement;
-        const lScale = parseInt(Lampa.Storage.get('cas_logo_scale') || 100) / 100;
-        root.style.setProperty('--cas-logo-scale', lScale);
+        const scale = parseInt(Lampa.Storage.get('cas_logo_scale') || 100) / 100;
+        const gap = Lampa.Storage.get('cas_blocks_gap') || '30';
+        
+        root.style.setProperty('--cas-logo-scale', scale);
+        root.style.setProperty('--cas-blocks-gap', gap + 'px');
         $('body').toggleClass('cas--zoom-enabled', !!Lampa.Storage.get('cas_bg_animation'));
     }
-
-    function formatTime(mins) {
-        if (!mins) return '';
-        const h = Math.floor(mins / 60);
-        const m = mins % 60;
-        return (h > 0 ? h + 'г ' : '') + m + 'хв';
-    }
-
+  
     function addCustomTemplate() {  
         const template = `<div class="full-start-new left-title">  
         <div class="full-start-new__body">  
             <div class="full-start-new__left hide">  
-                <div class="full-start-new__poster"><img class="full-start-new__img full--poster" /></div>  
+                <div class="full-start-new__poster">  
+                    <img class="full-start-new__img full--poster" />  
+                </div>  
             </div>  
+  
             <div class="full-start-new__right">  
                 <div class="left-title__content">  
-                    <div class="cas-logo-container" style="margin-bottom: 25px;">
+                    <div class="cas-logo-container" style="margin-bottom: var(--cas-blocks-gap);">
                         <div class="cas-logo"></div>
                         <div class="full-start-new__title">{title}</div>  
                     </div>
-                    <div class="cas-ratings-line" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px; font-weight: 600; font-size: 1.1em; color: rgba(255,255,255,0.9); flex-wrap: wrap;">
-                        <div class="cas-rate-items" style="display: flex; align-items: center; gap: 12px;"></div>
-                        <div class="cas-meta-info" style="opacity: 0.7; font-weight: 400;"></div>
+                      
+                    <div class="cas-info-line" style="display: flex; align-items: center; gap: 10px; margin-bottom: var(--cas-blocks-gap); flex-wrap: wrap;">
                         <div class="cas-quality-row" style="display: flex; gap: 8px; align-items: center;"></div>
                     </div>
-                    <div class="cas-studios-row" style="margin: 0 0 20px 0; display: flex; gap: 10px;"></div>
+
+                    <div class="cas-studios-row" style="margin-bottom: var(--cas-blocks-gap); display: flex; gap: 15px;"></div>
+
+                    <div class="full-start-new__head"></div>  
+                    <div class="full-start-new__details"></div>  
+                      
                     <div class="full-start-new__buttons">  
-                        <div class="full-start__button selector button--play"><span>#{title_watch}</span></div>  
-                        <div class="full-start__button selector view--trailer"><span>#{full_trailers}</span></div>
-                        <div class="full-start__button selector button--book"><span>#{settings_input_links}</span></div>  
-                        <div class="full-start__button selector button--reaction"><span>#{title_reactions}</span></div>  
-                        <div class="full-start__button selector button--options">${ICONS.options}</div>  
+                        <div class="full-start__button selector button--play">  
+                            <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                                <circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/>  
+                                <path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/>  
+                            </svg>  
+                            <span>#{title_watch}</span>  
+                        </div>  
+  
+                        <div class="full-start__button selector button--book">  
+                            <svg width="21" height="32" viewBox="0 0 21 32" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                                <path d="M2 1.5H19C19.2761 1.5 19.5 1.72386 19.5 2V27.9618C19.5 28.3756 19.0261 28.6103 18.697 28.3595L12.6212 23.7303C11.3682 22.7757 9.63183 22.7757 8.37885 23.7303L2.30302 28.3595C1.9739 28.6103 1.5 28.3756 1.5 27.9618V2C1.5 1.72386 1.72386 1.5 2 1.5Z" stroke="currentColor" stroke-width="2.5"/>  
+                            </svg>  
+                            <span>#{settings_input_links}</span>  
+                        </div>  
+  
+                        <div class="full-start__button selector button--reaction">  
+                            <svg width="38" height="34" viewBox="0 0 38 34" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                                <path d="M37.208 10.9742C37.1364 10.8013 37.0314 10.6441 36.899 10.5117C36.7666 10.3794 36.6095 10.2744 36.4365 10.2028L12.0658 0.108375C11.7166 -0.0361828 11.3242 -0.0361227 10.9749 0.108542C10.6257 0.253206 10.3482 0.530634 10.2034 0.879836L0.108666 25.2507C0.0369593 25.4236 3.37953e-05 25.609 2.3187e-08 25.7962C-3.37489e-05 25.9834 0.0368249 26.1688 0.108469 26.3418C0.180114 26.5147 0.28514 26.6719 0.417545 26.8042C0.54995 26.9366 0.707139 27.0416 0.880127 27.1131L17.2452 33.8917C17.5945 34.0361 17.9869 34.0361 18.3362 33.8917L29.6574 29.2017C29.8304 29.1301 29.9875 29.0251 30.1199 28.8928C30.2523 28.7604 30.3573 28.6032 30.4289 28.4303L37.2078 12.065C37.2795 11.8921 37.3164 11.7068 37.3165 11.5196C37.3165 11.3325 37.2796 11.1471 37.208 10.9742ZM20.425 29.9407L21.8784 26.4316L25.3873 27.885L20.425 29.9407ZM28.3407 26.0222L21.6524 23.252C21.3031 23.1075 20.9107 23.1076 20.5615 23.2523C20.2123 23.3969 19.9348 23.6743 19.79 24.0235L17.0194 30.7123L3.28783 25.0247L12.2918 3.28773L34.0286 12.2912L28.3407 26.0222Z" fill="currentColor"/>  
+                                <path d="M25.3493 16.976L24.258 14.3423L16.959 17.3666L15.7196 14.375L13.0859 15.4659L15.4161 21.0916L25.3493 16.976Z" fill="currentColor"/>  
+                            </svg>  
+                            <span>#{title_reactions}</span>  
+                        </div>  
+  
+                        <div class="full-start__button selector button--subscribe hide">  
+                            <svg width="25" height="30" viewBox="0 0 25 30" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                                <path d="M6.01892 24C6.27423 27.3562 9.07836 30 12.5 30C15.9216 30 18.7257 27.3562 18.981 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z" fill="currentColor"/>  
+                                <path d="M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z" stroke="currentColor" stroke-width="2.5"/>  
+                            </svg>  
+                            <span>#{title_subscribe}</span>  
+                        </div>  
+  
+                        <div class="full-start__button selector button--options">  
+                            <svg width="38" height="10" viewBox="0 0 38 10" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                                <circle cx="4.88968" cy="4.98563" r="4.75394" fill="currentColor"/>  
+                                <circle cx="18.9746" cy="4.98563" r="4.75394" fill="currentColor"/>  
+                                <circle cx="33.0596" cy="4.98563" r="4.75394" fill="currentColor"/>  
+                            </svg>  
+                        </div>  
                     </div>  
                 </div>  
+  
+                <div class="full-start-new__reactions selector">  
+                    <div>#{reactions_none}</div>  
+                </div>  
+                  
+                <div class="full-start-new__rate-line">  
+                    <div class="full-start__status hide"></div>  
+                </div>  
+                  
+                <div class="rating--modss" style="display: none;"></div>  
+            </div>  
+        </div>  
+  
+        <div class="hide buttons--container">  
+            <div class="full-start__button view--torrent hide">  
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="50px" height="50px">  
+                    <path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2z M40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4 S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851 c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29 c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862-4.993-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8 c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722 C42.541,30.867,41.756,30.963,40.5,30.963z" fill="currentColor"/>  
+                </svg>  
+                <span>#{full_torrents}</span>  
+            </div>   
+    
+            <div class="full-start__button selector view--trailer">  
+                <svg height="70" viewBox="0 0 80 70" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                    <path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/>  
+                </svg>  
+                <span>#{full_trailers}</span>  
             </div>  
         </div>  
     </div>`;  
+  
         Lampa.Template.add('full_start_new', template);  
     }  
   
     function addStyles() {  
         const styles = `<style>  
-:root { --cas-logo-scale: 1; }
-.left-title .full-start-new__body { height: 92vh; }  
-.left-title .full-start-new__right { display: flex; align-items: flex-end; padding-left: 5%; }  
-.left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 50px; }  
+:root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; }
 
-.cas-logo img { max-width: calc(480px * var(--cas-logo-scale)); max-height: calc(180px * var(--cas-logo-scale)); object-fit: contain; object-position: left bottom; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
-.cas-rate-item { display: flex; align-items: center; gap: 6px; }
-.cas-rate-item img { height: 16px; width: auto; }
+.left-title .full-start-new__body { height: 80vh; }  
+.left-title .full-start-new__right { display: flex; align-items: flex-end; }  
+.left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; }  
+
+.left-title .full-start-new__title {  
+    font-size: 2.5em; font-weight: 700; line-height: 1.2; margin-bottom: 0.5em;  
+    text-shadow: 0 0 0.1em rgba(0, 0, 0, 0.3); color: #fff;  
+}  
+
+.left-title .full-start-new__reactions,
+.left-title .full-start-new__rate-line,
+.left-title .full-start__status,
+.left-title .rating--modss {
+    display: none !important;
+}
+
+.cas-logo img {
+    max-width: calc(450px * var(--cas-logo-scale));
+    max-height: calc(180px * var(--cas-logo-scale));
+    object-fit: contain; object-position: left bottom;
+    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+}
+
 .cas-studio-item { height: 28px !important; filter: brightness(0) invert(1); opacity: 0.8; }
 .cas-studio-item img { height: 100% !important; width: auto !important; }
 .cas-quality-item { height: 20px; display: flex; align-items: center; }
 .cas-quality-item img { height: 100%; width: auto; }
 
-/* Стандартні кнопки Lampa */
-.full-start-new__buttons { display: flex; align-items: center; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
-
-@keyframes casKenBurns { 
-    0% { transform: scale(1) translate(0, 0); } 
-    50% { transform: scale(1.12) translate(-1%, -1%); }
-    100% { transform: scale(1) translate(0, 0); } 
+@keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+body.cas--zoom-enabled .full-start__background.loaded { 
+    animation: casKenBurns 45s ease-in-out infinite !important; 
 }
-body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 45s ease-in-out infinite !important; }
 
-.left-title .full-start-new__title { font-size: 2.8em; font-weight: 700; color: #fff; }  
+.left-title .full-start-new__head, .left-title .full-start-new__details { margin-bottom: 1em; }  
+.left-title .full-start-new__buttons { margin-top: 1em; }  
+  
+@media screen and (max-width: 767px) {  
+    .left-title .full-start-new__right { flex-direction: column; align-items: flex-start; }  
+    .left-title .full-start-new__title { font-size: 2em; }  
+}  
 </style>`;  
+  
         Lampa.Template.add('left_title_css', styles);  
         $('body').append(Lampa.Template.get('left_title_css', {}, true));  
-    }
+    }  
   
     function attachLoader() {  
         Lampa.Listener.follow('full', (event) => {  
             if (event.type === 'complite') {  
                 const data = event.data.movie;
                 const render = event.object.activity.render();
+                
                 if (data && data.id) {
-                    $.get(Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key()), (res) => {
-                        const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];
+                    const url = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());
+                    
+                    $.get(url, (res) => {
+                        const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || 
+                                         res.logos.find(l => l.iso_639_1 === 'en') || 
+                                         res.logos[0];
+
                         if (bestLogo) {
-                            render.find('.cas-logo').html('<img src="' + Lampa.TMDB.image('/t/p/w500' + bestLogo.file_path) + '">');
+                            const logoUrl = Lampa.TMDB.image('/t/p/w500' + bestLogo.file_path);
+                            render.find('.cas-logo').html('<img src="' + logoUrl + '">');
                             render.find('.full-start-new__title').hide();
+                        } else {
+                            render.find('.cas-logo').empty();
+                            render.find('.full-start-new__title').show();
                         }
                     });
 
-                    const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
-                    if (tmdbV > 0) render.find('.cas-rate-items').html(`<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span>${tmdbV}</span></div>`);
-                    
-                    const time = formatTime(data.runtime || data.episode_run_time);
-                    const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');
-                    render.find('.cas-meta-info').text((time ? time + (genre ? ' • ' : '') : '') + genre);
-                    
+                    // Студії
                     if (Lampa.Storage.get('cas_show_studios')) {
                         const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 3);
                         render.find('.cas-studios-row').html(studios.map(s => `<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}"></div>`).join(''));
                     }
 
+                    // Якість
                     if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {
                         Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {
                             if (res && res.Results) {
-                                const b = { res: '', hdr: false, dv: false, ukr: false };
-                                res.Results.slice(0, 15).forEach(i => {
+                                const b = { res: '', hdr: false, ukr: false };
+                                res.Results.slice(0, 10).forEach(i => {
                                     const t = i.Title.toLowerCase();
-                                    if (t.includes('4k')) b.res = '4K';
-                                    if (t.includes('hdr')) b.hdr = true;
-                                    if (t.includes('vision') || t.includes('dolby') || t.includes(' dv ')) b.dv = true;
+                                    if (t.includes('4k')) b.res = '4K'; else if (!b.res && t.includes('1080')) b.res = 'FULL HD';
+                                    if (t.includes('hdr') || t.includes('vision')) b.hdr = true;
                                     if (t.includes('ukr') || t.includes('укр')) b.ukr = true;
                                 });
                                 let qH = '';
                                 if (b.res) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS[b.res]}"></div>`;
-                                if (b.dv) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;
-                                else if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;
+                                if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;
                                 if (b.ukr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;
                                 render.find('.cas-quality-row').html(qH);
                             }
@@ -184,7 +276,26 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
             }  
         });  
     }  
-
-    if (window.appready) initializePlugin();  
-    else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') initializePlugin(); });  
+  
+    function registerPlugin() {  
+        const pluginManifest = {  
+            type: 'other', version: '1.3.2', name: PLUGIN_NAME,  
+            description: 'Логотипи, анімація та інфо-блоки.', author: '',  
+            icon: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#fff"><rect x="10" y="30" width="80" height="40" rx="5" fill="rgba(255,255,255,0.2)"/><circle cx="50" cy="50" r="12" fill="white"/></svg>'
+        };  
+  
+        if (Lampa.Manifest) {  
+            if (!Lampa.Manifest.plugins) Lampa.Manifest.plugins = {};  
+            Lampa.Manifest.plugins['clean_apple'] = pluginManifest;  
+        }  
+    }  
+  
+    function startPlugin() {  
+        registerPlugin();  
+        initializePlugin();  
+    }  
+  
+    if (window.appready) startPlugin();  
+    else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') startPlugin(); });  
+  
 })();
