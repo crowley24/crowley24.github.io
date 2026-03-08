@@ -18,7 +18,7 @@
     const QUALITY_ICONS = {
         '4K': ASSETS_PATH + '4K.svg', '2K': ASSETS_PATH + '2K.svg', 'FULL HD': ASSETS_PATH + 'FULL HD.svg',
         'HD': ASSETS_PATH + 'HD.svg', 'HDR': ASSETS_PATH + 'HDR.svg', 'Dolby Vision': ASSETS_PATH + 'Dolby Vision.svg',
-        'DUB': ASSETS_PATH + 'DUB.svg', 'UKR': ASSETS_PATH + 'UKR.svg'
+        'UKR': ASSETS_PATH + 'UKR.svg'
     };
 
     function initializePlugin() {  
@@ -31,12 +31,9 @@
     function addSettings() {
         const defaults = { 
             'cas_logo_scale': '100', 
-            'cas_btn_scale': '100', 
             'cas_bg_animation': true, 
             'cas_show_studios': true, 
-            'cas_show_quality': true, 
-            'cas_blocks_gap': '30',
-            'cas_custom_buttons': true
+            'cas_show_quality': true
         };
         Object.keys(defaults).forEach(key => { if (Lampa.Storage.get(key) === undefined) Lampa.Storage.set(key, defaults[key]); });
 
@@ -53,13 +50,6 @@
             onChange: applySettings
         });
 
-        Lampa.SettingsApi.addParam({
-            component: PLUGIN_ID,
-            param: { name: 'cas_blocks_gap', type: 'select', values: { '15':'Тісно','30':'Стандарт','45':'Просторе' }, default: '30' },
-            field: { name: 'Відступи між блоками (px)' },
-            onChange: applySettings
-        });
-
         Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_show_studios', type: 'trigger', default: true }, field: { name: 'Показувати студії' } });
         Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_show_quality', type: 'trigger', default: true }, field: { name: 'Показувати якість' } });
         Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_bg_animation', type: 'trigger', default: true }, field: { name: 'Анімація фону' }, onChange: applySettings });
@@ -70,17 +60,8 @@
     function applySettings() {
         const root = document.documentElement;
         const lScale = parseInt(Lampa.Storage.get('cas_logo_scale') || 100) / 100;
-        const gap = Lampa.Storage.get('cas_blocks_gap') || '30';
-        
         root.style.setProperty('--cas-logo-scale', lScale);
-        root.style.setProperty('--cas-blocks-gap', gap + 'px');
-        
         $('body').toggleClass('cas--zoom-enabled', !!Lampa.Storage.get('cas_bg_animation'));
-    }
-
-    function getRatingColor(val) {
-        const n = parseFloat(val);
-        return n >= 7.5 ? '#2ecc71' : n >= 6 ? '#feca57' : '#ff4d4d';
     }
 
     function formatTime(mins) {
@@ -91,35 +72,31 @@
     }
 
     function addCustomTemplate() {  
-        const template = `<div class="full-start-new left-title cas-apple-style">  
+        const template = `<div class="full-start-new left-title">  
         <div class="full-start-new__body">  
             <div class="full-start-new__left hide">  
                 <div class="full-start-new__poster"><img class="full-start-new__img full--poster" /></div>  
             </div>  
-  
             <div class="full-start-new__right">  
                 <div class="left-title__content">  
-                    <div class="cas-logo-container" style="margin-bottom: 30px;">
+                    <div class="cas-logo-container" style="margin-bottom: 25px;">
                         <div class="cas-logo"></div>
                         <div class="full-start-new__title">{title}</div>  
                     </div>
-
-                    <div class="cas-ratings-line" style="display: flex; align-items: center; gap: 15px; margin-bottom: var(--cas-blocks-gap); font-weight: 600; font-size: 1.1em; color: rgba(255,255,255,0.9); flex-wrap: wrap;">
+                    <div class="cas-ratings-line" style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px; font-weight: 600; font-size: 1.1em; color: rgba(255,255,255,0.9); flex-wrap: wrap;">
                         <div class="cas-rate-items" style="display: flex; align-items: center; gap: 12px;"></div>
                         <div class="cas-meta-info" style="opacity: 0.7; font-weight: 400;"></div>
                         <div class="cas-quality-row" style="display: flex; gap: 8px; align-items: center;"></div>
                     </div>
-                      
-                    <div class="full-start-new__head hide"></div>  
-                    <div class="full-start-new__details hide"></div>  
-
                     <div class="cas-studios-row" style="margin: 0 0 20px 0; display: flex; gap: 10px;"></div>
-                    
+                    <div class="full-start-new__buttons">  
+                        <div class="full-start__button selector button--play"><span>#{title_watch}</span></div>  
+                        <div class="full-start__button selector view--trailer"><span>#{full_trailers}</span></div>
+                        <div class="full-start__button selector button--book"><span>#{settings_input_links}</span></div>  
+                        <div class="full-start__button selector button--reaction"><span>#{title_reactions}</span></div>  
+                        <div class="full-start__button selector button--options">${ICONS.options}</div>  
                     </div>  
-  
-                <div class="full-start-new__reactions selector"><div>#{reactions_none}</div></div>  
-                <div class="full-start-new__rate-line"><div class="full-start__status hide"></div></div>  
-                <div class="rating--modss" style="display: none;"></div>  
+                </div>  
             </div>  
         </div>  
     </div>`;  
@@ -128,32 +105,10 @@
   
     function addStyles() {  
         const styles = `<style>  
-:root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; }
-
-.left-title .full-start-new__body { 
-    height: 92vh; 
-}  
-
-.left-title .full-start-new__right { 
-    display: flex; 
-    align-items: flex-end; 
-    padding-left: 5%; 
-}  
-
-.left-title__content { 
-    flex-grow: 1; 
-    display: flex; 
-    flex-direction: column; 
-    justify-content: flex-end; 
-    padding-bottom: 100px; /* Підняв контент, оскільки кнопок більше немає */
-}  
-
-.cas-apple-style .full-start-new__reactions,
-.cas-apple-style .full-start-new__rate-line,
-.cas-apple-style .full-start__status,
-.cas-apple-style .rating--modss,
-.cas-apple-style .full-start-new__head,
-.cas-apple-style .full-start-new__details { display: none !important; opacity: 0 !important; position: absolute !important; }
+:root { --cas-logo-scale: 1; }
+.left-title .full-start-new__body { height: 92vh; }  
+.left-title .full-start-new__right { display: flex; align-items: flex-end; padding-left: 5%; }  
+.left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 50px; }  
 
 .cas-logo img { max-width: calc(480px * var(--cas-logo-scale)); max-height: calc(180px * var(--cas-logo-scale)); object-fit: contain; object-position: left bottom; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
 .cas-rate-item { display: flex; align-items: center; gap: 6px; }
@@ -163,14 +118,15 @@
 .cas-quality-item { height: 20px; display: flex; align-items: center; }
 .cas-quality-item img { height: 100%; width: auto; }
 
+/* Стандартні кнопки Lampa */
+.full-start-new__buttons { display: flex; align-items: center; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+
 @keyframes casKenBurns { 
     0% { transform: scale(1) translate(0, 0); } 
     50% { transform: scale(1.12) translate(-1%, -1%); }
     100% { transform: scale(1) translate(0, 0); } 
 }
-body.cas--zoom-enabled .full-start__background.loaded { 
-    animation: casKenBurns 45s ease-in-out infinite !important; 
-}
+body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 45s ease-in-out infinite !important; }
 
 .left-title .full-start-new__title { font-size: 2.8em; font-weight: 700; color: #fff; }  
 </style>`;  
@@ -192,21 +148,9 @@ body.cas--zoom-enabled .full-start__background.loaded {
                         }
                     });
 
-                    let ratesHtml = '';
                     const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
-                    if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
+                    if (tmdbV > 0) render.find('.cas-rate-items').html(`<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span>${tmdbV}</span></div>`);
                     
-                    if (event.data.reactions && event.data.reactions.result) {
-                        let sum = 0, cnt = 0;
-                        const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };
-                        event.data.reactions.result.forEach(r => { if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; } });
-                        if (cnt >= 5) {
-                            const cubV = (((data.name?7.4:6.5)*(data.name?50:150)+sum)/((data.name?50:150)+cnt)).toFixed(1);
-                            ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;
-                        }
-                    }
-                    render.find('.cas-rate-items').html(ratesHtml);
-
                     const time = formatTime(data.runtime || data.episode_run_time);
                     const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');
                     render.find('.cas-meta-info').text((time ? time + (genre ? ' • ' : '') : '') + genre);
@@ -220,11 +164,10 @@ body.cas--zoom-enabled .full-start__background.loaded {
                         Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {
                             if (res && res.Results) {
                                 const b = { res: '', hdr: false, dv: false, ukr: false };
-                                res.Results.slice(0, 10).forEach(i => {
+                                res.Results.slice(0, 15).forEach(i => {
                                     const t = i.Title.toLowerCase();
-                                    if (t.includes('4k')) b.res = '4K'; else if (!b.res && t.includes('1080')) b.res = 'FULL HD';
+                                    if (t.includes('4k')) b.res = '4K';
                                     if (t.includes('hdr')) b.hdr = true;
-                                    // ПРАВКА: Покращене розпізнавання Dolby Vision
                                     if (t.includes('vision') || t.includes('dolby') || t.includes(' dv ')) b.dv = true;
                                     if (t.includes('ukr') || t.includes('укр')) b.ukr = true;
                                 });
@@ -233,7 +176,6 @@ body.cas--zoom-enabled .full-start__background.loaded {
                                 if (b.dv) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;
                                 else if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;
                                 if (b.ukr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;
-                                if (qH && (time || genre)) qH = '<span style="opacity: 0.5; margin: 0 5px;">•</span>' + qH;
                                 render.find('.cas-quality-row').html(qH);
                             }
                         });
@@ -245,5 +187,4 @@ body.cas--zoom-enabled .full-start__background.loaded {
 
     if (window.appready) initializePlugin();  
     else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') initializePlugin(); });  
-  
 })();
