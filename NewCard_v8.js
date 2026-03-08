@@ -361,7 +361,7 @@ body.cas--zoom-enabled .full-start__background.loaded {
                                     bgImg.attr('src', newBgUrl);
                                 };
 
-                            }, 10000); // Інтервал 10 секунд
+                            }, 15000); // Інтервал 15 секунд
                         }
                     });
 
