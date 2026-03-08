@@ -120,12 +120,6 @@
     function addCustomTemplate() {  
         const template = `<div class="full-start-new left-title">  
         <div class="full-start-new__body">  
-            <div class="full-start-new__left hide">  
-                <div class="full-start-new__poster">  
-                    <img class="full-start-new__img full--poster" />  
-                </div>  
-            </div>  
-  
             <div class="full-start-new__right">  
                 <div class="left-title__content">  
                     <div class="cas-logo-container" style="margin-bottom: var(--cas-blocks-gap);">
@@ -140,13 +134,10 @@
                     </div>
 
                     <div class="cas-studios-row" style="margin-bottom: var(--cas-blocks-gap); display: flex; gap: 15px; align-items: center;"></div>
-
-                    <div class="full-start-new__head hide"></div>  
-                    <div class="full-start-new__details hide"></div>  
                       
                     <div class="full-start-new__buttons">  
                         <div class="full-start__button selector button--play">  
-                            <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                            <svg width="28" height="29" viewBox="0 0 28 29" fill="none">  
                                 <circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/>  
                                 <path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/>  
                             </svg>  
@@ -154,51 +145,24 @@
                         </div>  
   
                         <div class="full-start__button selector button--book">  
-                            <svg width="21" height="32" viewBox="0 0 21 32" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                            <svg width="21" height="32" viewBox="0 0 21 32" fill="none">  
                                 <path d="M2 1.5H19C19.2761 1.5 19.5 1.72386 19.5 2V27.9618C19.5 28.3756 19.0261 28.6103 18.697 28.3595L12.6212 23.7303C11.3682 22.7757 9.63183 22.7757 8.37885 23.7303L2.30302 28.3595C1.9739 28.6103 1.5 28.3756 1.5 27.9618V2C1.5 1.72386 1.72386 1.5 2 1.5Z" stroke="currentColor" stroke-width="2.5"/>  
                             </svg>  
                             <span>#{settings_input_links}</span>  
                         </div>  
   
-                        <div class="full-start__button selector button--reaction">  
-                            <svg width="38" height="34" viewBox="0 0 38 34" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                <path d="M37.208 10.9742C37.1364 10.8013 37.0314 10.6441 36.899 10.5117C36.7666 10.3794 36.6095 10.2744 36.4365 10.2028L12.0658 0.108375C11.7166 -0.0361828 11.3242 -0.0361227 10.9749 0.108542C10.6257 0.253206 10.3482 0.530634 10.2034 0.879836L0.108666 25.2507C0.0369593 25.4236 3.37953e-05 25.609 2.3187e-08 25.7962C-3.37489e-05 25.9834 0.0368249 26.1688 0.108469 26.3418C0.180114 26.5147 0.28514 26.6719 0.417545 26.8042C0.54995 26.9366 0.707139 27.0416 0.880127 27.1131L17.2452 33.8917C17.5945 34.0361 17.9869 34.0361 18.3362 33.8917L29.6574 29.2017C29.8304 29.1301 29.9875 29.0251 30.1199 28.8928C30.2523 28.7604 30.3573 28.6032 30.4289 28.4303L37.2078 12.065C37.2795 11.8921 37.3164 11.7068 37.3165 11.5196C37.3165 11.3325 37.2796 11.1471 37.208 10.9742ZM20.425 29.9407L21.8784 26.4316L25.3873 27.885L20.425 29.9407ZM28.3407 26.0222L21.6524 23.252C21.3031 23.1075 20.9107 23.1076 20.5615 23.2523C20.2123 23.3969 19.9348 23.6743 19.79 24.0235L17.0194 30.7123L3.28783 25.0247L12.2918 3.28773L34.0286 12.2912L28.3407 26.0222Z" fill="currentColor"/>  
-                                <path d="M25.3493 16.976L24.258 14.3423L16.959 17.3666L15.7196 14.375L13.0859 15.4659L15.4161 21.0916L25.3493 16.976Z" fill="currentColor"/>  
-                            </svg>  
-                            <span>#{title_reactions}</span>  
-                        </div>  
-  
-                        <div class="full-start__button selector button--subscribe hide">  
-                            <svg width="25" height="30" viewBox="0 0 25 30" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                <path d="M6.01892 24C6.27423 27.3562 9.07836 30 12.5 30C15.9216 30 18.7257 27.3562 18.981 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z" fill="currentColor"/>  
-                                <path d="M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z" stroke="currentColor" stroke-width="2.5"/>  
-                            </svg>  
-                            <span>#{title_subscribe}</span>  
-                        </div>  
-  
                         <div class="full-start__button selector button--options">  
-                            <svg width="38" height="10" viewBox="0 0 38 10" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                <circle cx="4.88968" cy="4.98563" r="4.75394" fill="currentColor"/>  
-                                <circle cx="18.9746" cy="4.98563" r="4.75394" fill="currentColor"/>  
-                                <circle cx="33.0596" cy="4.98563" r="4.75394" fill="currentColor"/>  
+                            <svg width="38" height="10" viewBox="0 0 38 10" fill="none">  
+                                <circle cx="4.8" cy="5" r="4.7" fill="currentColor"/>  
+                                <circle cx="19" cy="5" r="4.7" fill="currentColor"/>  
+                                <circle cx="33" cy="5" r="4.7" fill="currentColor"/>  
                             </svg>  
                         </div>  
                     </div>  
                 </div>  
-  
-                <div class="full-start-new__reactions selector">  
-                    <div>#{reactions_none}</div>  
-                </div>  
-                  
-                <div class="full-start-new__rate-line">  
-                    <div class="full-start__status hide"></div>  
-                </div>  
-                  
-                <div class="rating--modss" style="display: none;"></div>  
             </div>  
         </div>  
     </div>`;  
-  
         Lampa.Template.add('full_start_new', template);  
     }  
   
@@ -232,58 +196,40 @@
 }
 
 .cas-ratings-line { 
-    display: flex; 
-    align-items: center; 
-    gap: 15px; 
+    display: flex; align-items: center; gap: 15px; 
     margin-bottom: var(--cas-blocks-gap); 
-    font-weight: 600; 
-    font-size: var(--cas-meta-size); 
-    color: rgba(255,255,255,0.9); 
-    flex-wrap: wrap; 
+    font-weight: 600; font-size: var(--cas-meta-size); 
+    color: rgba(255,255,255,0.9); flex-wrap: wrap; 
 }
 
 .cas-rate-item { display: flex; align-items: center; gap: 6px; }
 .cas-rate-item img { height: 1.1em; width: auto; }
-.cas-rate-item span { line-height: 1; }
 
 .cas-studio-item { height: 20px !important; display: flex; align-items: center; }
 .cas-studio-item img { height: 100% !important; width: auto !important; object-fit: contain; }
 
-/* КОРЕКЦІЯ ІКОНОК ЯКОСТІ */
+/* ЧИСТІ ІКОНКИ ЯКОСТІ БЕЗ РАМОК ТА ТІНЕЙ */
 .cas-quality-item { 
-    height: 1.45em; /* Зменшено з 1.6em для акуратності */
-    display: flex; 
-    align-items: center; 
-    position: relative;
+    height: 1.35em; /* Трохи зменшено за запитом */
+    display: flex; align-items: center; 
+    background: none !important; border: none !important; 
+    position: relative; padding: 0; margin: 0;
 }
 
 .cas-quality-item img { 
-    height: 100%; 
-    width: auto; 
-    /* Тінь видалено за запитом */
+    height: 100%; width: auto; 
+    display: block;
+    filter: none !important; /* Повне видалення тіней та ефектів */
 }
 
-/* М'який відблиск для об'єму без тіні */
-.cas-quality-item::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 50%;
-    background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0) 100%);
-    border-radius: 2px;
-    pointer-events: none;
-}
+.cas-quality-item::after { display: none !important; }
 
-@keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+@keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
 body.cas--zoom-enabled .full-start__background.loaded { 
     animation: casKenBurns 45s ease-in-out infinite !important; 
 }
-
 .left-title .full-start-new__buttons { margin-top: 1em; }  
 </style>`;  
-  
         Lampa.Template.add('left_title_css', styles);  
         $('body').append(Lampa.Template.get('left_title_css', {}, true));  
     }  
@@ -296,18 +242,12 @@ body.cas--zoom-enabled .full-start__background.loaded {
                 
                 if (data && data.id) {
                     const url = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());
-                    
                     $.get(url, (res) => {
-                        const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || 
-                                         res.logos.find(l => l.iso_639_1 === 'en') || 
-                                         res.logos[0];
-
+                        const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];
                         if (bestLogo) {
-                            const logoUrl = Lampa.TMDB.image('/t/p/w500' + bestLogo.file_path);
-                            render.find('.cas-logo').html('<img src="' + logoUrl + '">');
+                            render.find('.cas-logo').html('<img src="' + Lampa.TMDB.image('/t/p/w500' + bestLogo.file_path) + '">');
                             render.find('.full-start-new__title').hide();
                         } else {
-                            render.find('.cas-logo').empty();
                             render.find('.full-start-new__title').show();
                         }
                     });
@@ -315,49 +255,29 @@ body.cas--zoom-enabled .full-start__background.loaded {
                     let ratesHtml = '';
                     const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
                     if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
-                    
-                    if (event.data.reactions && event.data.reactions.result) {
-                        let sum = 0, cnt = 0;
-                        const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };
-                        event.data.reactions.result.forEach(r => { if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; } });
-                        if (cnt >= 5) {
-                            const cubV = (((data.name?7.4:6.5)*(data.name?50:150)+sum)/((data.name?50:150)+cnt)).toFixed(1);
-                            ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;
-                        }
-                    }
                     render.find('.cas-rate-items').html(ratesHtml);
 
                     const time = formatTime(data.runtime || data.episode_run_time);
                     const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');
                     render.find('.cas-meta-info').text((time ? time + (genre ? ' • ' : '') : '') + genre);
 
-                    if (Lampa.Storage.get('cas_show_studios')) {
-                        const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 3);
-                        render.find('.cas-studios-row').html(studios.map(s => `<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}"></div>`).join(''));
-                    }
-
                     if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {
                         Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {
                             if (res && res.Results) {
-                                const b = { res: '', hdr: false, dv: false, ukr: false };
+                                const b = { res: '', dv: false, ukr: false };
                                 res.Results.slice(0, 15).forEach(i => {
                                     const t = i.Title.toLowerCase();
-                                    if (t.includes('4k') || t.includes('2160')) b.res = '4K'; 
-                                    else if (!b.res && (t.includes('1080') || t.includes('fhd'))) b.res = 'FULL HD';
-                                    
-                                    if (t.includes('hdr')) b.hdr = true;
-                                    if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) b.dv = true;
+                                    if (t.includes('4k')) b.res = '4K'; 
+                                    else if (!b.res && t.includes('1080')) b.res = 'FULL HD';
+                                    if (t.includes('dv') || t.includes('vision')) b.dv = true;
                                     if (t.includes('ukr') || t.includes('укр')) b.ukr = true;
                                 });
 
                                 let qH = '';
                                 if (b.res) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS[b.res]}"></div>`;
                                 if (b.dv) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;
-                                else if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;
                                 if (b.ukr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;
-                                
-                                if (qH && (time || genre)) qH = '<span style="opacity: 0.5; margin: 0 5px;">•</span>' + qH;
-                                render.find('.cas-quality-row').html(qH);
+                                if (qH) render.find('.cas-quality-row').html('<span style="opacity: 0.5; margin: 0 5px;">•</span>' + qH);
                             }
                         });
                     }
@@ -367,24 +287,12 @@ body.cas--zoom-enabled .full-start__background.loaded {
     }  
   
     function registerPlugin() {  
-        const pluginManifest = {  
-            type: 'other', version: '1.4.5', name: PLUGIN_NAME,  
-            description: 'Кастомізація картки: логотипи, студії та пласкі об\'ємні іконки.', author: '',  
-            icon: SETTINGS_ICON
-        };  
-  
-        if (Lampa.Manifest) {  
-            if (!Lampa.Manifest.plugins) Lampa.Manifest.plugins = {};  
-            Lampa.Manifest.plugins['new_card_style'] = pluginManifest;  
-        }  
+        const pluginManifest = { type: 'other', version: '1.4.6', name: PLUGIN_NAME, icon: SETTINGS_ICON };  
+        if (Lampa.Manifest) Lampa.Manifest.plugins['new_card_style'] = pluginManifest;  
     }  
   
-    function startPlugin() {  
-        registerPlugin();  
-        initializePlugin();  
-    }  
+    function startPlugin() { registerPlugin(); initializePlugin(); }  
   
     if (window.appready) startPlugin();  
     else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') startPlugin(); });  
-  
 })();
