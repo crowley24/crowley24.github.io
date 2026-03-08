@@ -146,55 +146,62 @@
 
 .cas-logo img { max-width: calc(480px * var(--cas-logo-scale)); max-height: calc(180px * var(--cas-logo-scale)); object-fit: contain; object-position: left bottom; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
 .cas-rate-item { display: flex; align-items: center; gap: 6px; }
-.cas-rate-item img { height: 14px; width: auto; }
-.cas-studio-item { height: 25px; filter: brightness(0) invert(1); opacity: 0.8; }
+.cas-rate-item img { height: 16px; width: auto; }
+.cas-studio-item { height: 28px; filter: brightness(0) invert(1); opacity: 0.8; }
 .cas-studio-item img { height: 100%; }
-.cas-quality-item { height: 18px; display: flex; align-items: center; }
+.cas-quality-item { height: 20px; display: flex; align-items: center; }
 .cas-quality-item img { height: 100%; width: auto; }
 
-/* ШВИДКІ ТА ЛЕГКІ КНОПКИ */
-.applecation__buttons-row { display: flex; align-items: center; gap: 15px; margin-top: 25px; flex-wrap: wrap; }
+/* КНОПКИ: МАКСИМАЛЬНА ШВИДКІСТЬ ТА ЗБІЛЬШЕНИЙ РОЗМІР */
+.applecation__buttons-row { display: flex; align-items: center; gap: 25px; margin-top: 30px; flex-wrap: wrap; }
 
 .cas-apple-style .full-start__button {  
     background: transparent !important; 
     background-color: transparent !important;
     border: none !important;  
     box-shadow: none !important;
-    color: rgba(255,255,255,0.45) !important; 
-    padding: 8px 12px !important;
-    display: flex; justify-content: center; align-items: center; gap: 8px;
-    font-size: 1.15em; font-weight: 500;
-    /* Надшвидкий перехід */
-    transition: transform 0.15s ease-out, color 0.15s ease-out, filter 0.15s ease-out !important;
-    will-change: transform, filter; 
+    color: rgba(255,255,255,0.5) !important; 
+    padding: 12px 18px !important;
+    display: flex; justify-content: center; align-items: center; gap: 12px;
+    /* ЗБІЛЬШЕНИЙ ТЕКСТ */
+    font-size: 1.3em; 
+    font-weight: 600;
+    /* МИТТЄВИЙ ПЕРЕХІД ЯК У СТАНДАРТІ */
+    transition: transform 0.1s ease-out, color 0.1s ease-out !important;
+    will-change: transform; 
     text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
-/* МИТТЄВИЙ ФОКУС ТА СВІТІННЯ */
+/* ФОКУС: ВЕЛИКИЙ РОЗМІР ТА ЧІТКЕ СВІТІННЯ */
 .cas-apple-style .full-start__button.focus {  
-    transform: scale(1.15) !important; 
+    transform: scale(1.25) !important; 
     background: transparent !important;
     color: #fff !important;
     
-    /* Соковите світіння контурів */
-    filter: drop-shadow(0 0 4px rgba(255,255,255,1)) 
-            drop-shadow(0 0 12px rgba(255,255,255,0.6)) !important;
+    /* Оптимізоване світіння (менше шарів для швидкості) */
+    filter: drop-shadow(0 0 8px rgba(255,255,255,0.9)) !important;
     
     box-shadow: none !important;
     z-index: 10;
 }
 
-/* ЖИВА АНІМАЦІЯ ФОНУ (БЕЗ ЗМІН) */
+/* ІКОНКИ В КНОПКАХ ТЕЖ БІЛЬШІ */
+.cas-apple-style .full-start__button svg {
+    width: 28px;
+    height: 28px;
+}
+
+/* ЖИВА АНІМАЦІЯ ФОНУ */
 @keyframes casKenBurns { 
     0% { transform: scale(1) translate(0, 0); } 
     50% { transform: scale(1.12) translate(-1%, -1%); }
     100% { transform: scale(1) translate(0, 0); } 
 }
 body.cas--zoom-enabled .full-start__background.loaded { 
-    animation: casKenBurns 40s ease-in-out infinite !important; 
+    animation: casKenBurns 45s ease-in-out infinite !important; 
 }
 
-.left-title .full-start-new__title { font-size: 2.5em; font-weight: 700; color: #fff; }  
+.left-title .full-start-new__title { font-size: 2.8em; font-weight: 700; color: #fff; }  
 </style>`;  
   
         Lampa.Template.add('left_title_css', styles);  
