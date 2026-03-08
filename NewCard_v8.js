@@ -297,19 +297,20 @@ body.cas--zoom-enabled .full-start__background.loaded {
         Lampa.Template.add('left_title_css', styles);  
         $('body').append(Lampa.Template.get('left_title_css', {}, true));  
     }  
-  
-    function attachLoader() {  
+  function attachLoader() {  
         Lampa.Listener.follow('full', (event) => {  
             if (event.type === 'complite') {  
                 const data = event.data.movie;
                 const render = event.object.activity.render();
-                const bgElement = render.find('.full-start__background'); // Знаходимо стандартний блок фону
+                
+                // Знаходимо саме картинку фону
+                const bgImg = render.find('.full-start__background img, img.full-start__background');
                 
                 if (data && data.id) {
                     const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());
                     
                     $.get(imagesUrl, (res) => {
-                        // --- Логіка Логотипу (залишається як була) ---
+                        // --- Логіка Логотипу ---
                         const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || 
                                          res.logos.find(l => l.iso_639_1 === 'en') || 
                                          res.logos[0];
@@ -324,17 +325,22 @@ body.cas--zoom-enabled .full-start__background.loaded {
                             render.find('.full-start-new__title').show();
                         }
 
-                        // --- Логіка Слайд-шоу бекграундів ---
-                        if (res.backdrops && res.backdrops.length > 1) {
+                        // --- Логіка Слайд-шоу ---
+                        if (res.backdrops && res.backdrops.length > 1 && bgImg.length) {
                             let currentIndex = 0;
-                            const backdrops = res.backdrops.slice(0, 10); // Беремо перші 10 для економії пам'яті
+                            const backdrops = res.backdrops.slice(0, 15); // 15 фото
                             
-                            // Очищуємо попередній таймер, якщо він був (важливо для стабільності)
                             if (window.casBgInterval) clearInterval(window.casBgInterval);
 
+                            // Додаємо плавний перехід для картинки через CSS
+                            bgImg.css({
+                                'transition': 'opacity 1.5s ease-in-out',
+                                'opacity': '1'
+                            });
+
                             window.casBgInterval = setInterval(() => {
-                                // Перевіряємо, чи ми все ще на цій сторінці (чи існує елемент у DOM)
-                                if (!$.contains(document, bgElement[0])) {
+                                // Якщо ми вийшли з картки (елемента немає в DOM) - зупиняємо
+                                if (!bgImg.closest('body').length) {
                                     clearInterval(window.casBgInterval);
                                     return;
                                 }
@@ -342,21 +348,21 @@ body.cas--zoom-enabled .full-start__background.loaded {
                                 currentIndex = (currentIndex + 1) % backdrops.length;
                                 const newBgUrl = Lampa.TMDB.image('/t/p/original' + backdrops[currentIndex].file_path);
                                 
-                                // М'яка зміна через прозорість (якщо ядро підтримує класи завантаження)
-                                bgElement.css('transition', 'background-image 1.5s ease-in-out');
-                                bgElement.css('background-image', 'url(' + newBgUrl + ')');
+                                // Ефект мерехтіння при зміні: прозорість 0 -> зміна src -> прозорість 1
+                                bgImg.css('opacity', '0.4'); 
                                 
-                                // Якщо фон — це <img> всередині блоку
-                                const imgTag = bgElement.find('img');
-                                if (imgTag.length) {
-                                    imgTag.css('transition', 'opacity 1.5s ease-in-out');
-                                    imgTag.attr('src', newBgUrl);
-                                }
-                            }, 8000); // Зміна кожні 8 секунд
+                                setTimeout(() => {
+                                    bgImg.attr('src', newBgUrl);
+                                    bgImg.on('load', function() {
+                                        $(this).css('opacity', '1');
+                                    });
+                                }, 1500);
+
+                            }, 7000); // Зміна кожні 7 секунд
                         }
                     });
 
-                    // Решта вашого коду (рейтинги, студії, якість) залишається без змін
+                    // --- Рейтинги, Студії та Якість (без змін) ---
                     let ratesHtml = '';
                     const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
                     if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
@@ -399,7 +405,6 @@ body.cas--zoom-enabled .full-start__background.loaded {
                                 if (b.dv) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;
                                 else if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;
                                 if (b.ukr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;
-                                
                                 if (qH && (time || genre)) qH = '<span style="opacity: 0.5; margin: 0 5px;">•</span>' + qH;
                                 render.find('.cas-quality-row').html(qH);
                             }
@@ -408,7 +413,7 @@ body.cas--zoom-enabled .full-start__background.loaded {
                 }
             }  
         });  
-    }  
+    }
   
     function registerPlugin() {  
         const pluginManifest = {  
