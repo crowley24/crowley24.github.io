@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    const PLUGIN_NAME = 'NewCard Full + Slideshow';
+    const PLUGIN_NAME = 'NewCard Ultimate + Slideshow';
     const PLUGIN_ID = 'new_card_style';
     const ASSETS_PATH = 'https://crowley24.github.io/NewIcons/';
     let slideshowTimer;
@@ -21,13 +21,6 @@
         'UKR': ASSETS_PATH + 'UKR.svg'
     };
 
-    const SETTINGS_ICON = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-        <rect x="15" y="20" width="70" height="60" rx="8" stroke="white" stroke-width="6" fill="none" opacity="0.4"/>
-        <rect x="25" y="32" width="50" height="28" rx="4" fill="white"/>
-        <rect x="25" y="66" width="30" height="6" rx="3" fill="white" opacity="0.6"/>
-        <rect x="60" y="66" width="15" height="6" rx="3" fill="white" opacity="0.6"/>
-    </svg>`;
-
     function getRatingColor(val) {
         const n = parseFloat(val);
         return n >= 7.5 ? '#2ecc71' : n >= 6 ? '#feca57' : '#ff4d4d';
@@ -40,43 +33,45 @@
         return (h > 0 ? h + 'г ' : '') + m + 'хв';
     }
 
-    // --- ЛОГІКА СЛАЙД-ШОУ (Додано) ---
+    // --- РОБОЧЕ СЛАЙД-ШОУ ---
     function startPosterSlideshow(items) {
         if (!Lampa.Storage.get('cas_slideshow_enabled')) return;
         let index = 0;
         if (slideshowTimer) clearInterval(slideshowTimer);
 
         slideshowTimer = setInterval(() => {
+            const $bgContainer = $('.full-start__background');
+            if (!$bgContainer.length) return;
+
             index = (index + 1) % items.length;
             const imgUrl = Lampa.TMDB.image('/t/p/w1280' + items[index].file_path);
-            const $bg = $('.full-start__background');
-            if (!$bg.length) return;
-
+            
             const nextImg = new Image();
             nextImg.onload = function() {
-                const $next = $('<div class="full-start__background loaded slideshow-layer"></div>').css({
+                const $nextLayer = $('<div class="full-start__background loaded slideshow-layer"></div>').css({
                     'background-image': 'url(' + imgUrl + ')',
                     'opacity': '0',
-                    'transition': 'opacity 2s ease-in-out',
-                    'z-index': '0',
                     'position': 'absolute',
-                    'top': '0', 'left': '0', 'width': '100%', 'height': '100%', 'background-size': 'cover'
+                    'top': '0', 'left': '0', 'width': '100%', 'height': '100%',
+                    'background-size': 'cover',
+                    'transition': 'opacity 2s ease-in-out',
+                    'z-index': '1'
                 });
-                $bg.parent().append($next);
+
+                $bgContainer.after($nextLayer);
+                
                 setTimeout(() => {
-                    $next.css('opacity', '1');
-                    setTimeout(() => { $('.slideshow-layer').not($next).remove(); }, 2000);
+                    $nextLayer.css('opacity', '1');
+                    setTimeout(() => {
+                        // Робимо новий шар основним і видаляємо старі
+                        $bgContainer.css('background-image', 'url(' + imgUrl + ')');
+                        $('.slideshow-layer').not($nextLayer).remove();
+                        $nextLayer.remove(); 
+                    }, 2000);
                 }, 100);
             };
             nextImg.src = imgUrl;
         }, parseInt(Lampa.Storage.get('cas_slideshow_time') || '10000'));
-    }
-
-    function initializePlugin() {
-        addCustomTemplate();
-        addStyles();
-        addSettings();
-        attachLoader();
     }
 
     function addSettings() {
@@ -84,50 +79,59 @@
             'cas_logo_scale': '100',
             'cas_logo_quality': 'original',
             'cas_bg_animation': true,
-            'cas_blocks_gap': '20',
-            'cas_meta_size': '1.3',
+            'cas_show_ratings': true,
             'cas_show_studios': true,
             'cas_show_quality': true,
             'cas_slideshow_enabled': true,
-            'cas_slideshow_time': '10000'
+            'cas_slideshow_time': '10000',
+            'cas_meta_size': '1.3'
         };
 
         Object.keys(defaults).forEach(key => {
             if (Lampa.Storage.get(key) === undefined) Lampa.Storage.set(key, defaults[key]);
         });
 
-        Lampa.SettingsApi.addComponent({ component: PLUGIN_ID, name: PLUGIN_NAME, icon: SETTINGS_ICON });
-
-        Lampa.SettingsApi.addParam({
+        Lampa.SettingsApi.addComponent({
             component: PLUGIN_ID,
-            param: { name: 'cas_logo_quality', type: 'select', values: { 'w300':'300px', 'w500':'500px', 'original':'Original' }, default: 'original' },
-            field: { name: 'Якість логотипу' }
+            name: PLUGIN_NAME,
+            icon: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="15" y="20" width="70" height="60" rx="8" stroke="white" stroke-width="6" fill="none" opacity="0.4"/><rect x="25" y="32" width="50" height="28" rx="4" fill="white"/></svg>`
         });
 
         Lampa.SettingsApi.addParam({
             component: PLUGIN_ID,
-            param: { name: 'cas_logo_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' }, default: '100' },
+            param: { name: 'cas_slideshow_enabled', type: 'trigger', default: true },
+            field: { name: 'Слайд-шоу фону', description: 'Автоматична зміна кадрів на фоні' }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: PLUGIN_ID,
+            param: { name: 'cas_slideshow_time', type: 'select', values: { '7000':'7 сек', '10000':'10 сек', '15000':'15 сек', '20000':'20 сек' }, default: '10000' },
+            field: { name: 'Інтервал слайд-шоу' }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: PLUGIN_ID,
+            param: { name: 'cas_show_ratings', type: 'trigger', default: true },
+            field: { name: 'Відображати рейтинги' }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: PLUGIN_ID,
+            param: { name: 'cas_show_studios', type: 'trigger', default: true },
+            field: { name: 'Відображати лого студій' }
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: PLUGIN_ID,
+            param: { name: 'cas_logo_scale', type: 'select', values: { '80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' }, default: '100' },
             field: { name: 'Розмір логотипу' },
             onChange: applySettings
         });
 
         Lampa.SettingsApi.addParam({
             component: PLUGIN_ID,
-            param: { name: 'cas_meta_size', type: 'select', values: { '1.2': 'Малий', '1.3': 'Стандартний', '1.4': 'Збільшений', '1.5': 'Великий' }, default: '1.3' },
-            field: { name: 'Розмір шрифту' },
-            onChange: applySettings
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: PLUGIN_ID,
-            param: { name: 'cas_slideshow_enabled', type: 'trigger', default: true },
-            field: { name: 'Слайд-шоу фону' }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: PLUGIN_ID,
             param: { name: 'cas_bg_animation', type: 'trigger', default: true },
-            field: { name: 'Анімація фону' },
+            field: { name: 'Анімація фону (Наїзд)' },
             onChange: applySettings
         });
 
@@ -136,109 +140,41 @@
 
     function applySettings() {
         const root = document.documentElement;
-        const scale = parseInt(Lampa.Storage.get('cas_logo_scale') || 100) / 100;
-        const gap = Lampa.Storage.get('cas_blocks_gap') || '20';
-        const metaSize = Lampa.Storage.get('cas_meta_size') || '1.3';
-        root.style.setProperty('--cas-logo-scale', scale);
-        root.style.setProperty('--cas-blocks-gap', gap + 'px');
-        root.style.setProperty('--cas-meta-size', metaSize + 'em');
+        root.style.setProperty('--cas-logo-scale', (parseInt(Lampa.Storage.get('cas_logo_scale') || 100) / 100));
+        root.style.setProperty('--cas-meta-size', (Lampa.Storage.get('cas_meta_size') || '1.3') + 'em');
         $('body').toggleClass('cas--zoom-enabled', !!Lampa.Storage.get('cas_bg_animation'));
     }
 
     function addCustomTemplate() {  
         const template = `<div class="full-start-new left-title">  
         <div class="full-start-new__body">  
-            <div class="full-start-new__left hide">  
-                <div class="full-start-new__poster">  
-                    <img class="full-start-new__img full--poster" />  
-                </div>  
-            </div>  
-  
             <div class="full-start-new__right">  
                 <div class="left-title__content">  
-                    <div class="cas-logo-container" style="margin-bottom: var(--cas-blocks-gap);">
+                    <div class="cas-logo-container" style="margin-bottom: 25px;">
                         <div class="cas-logo"></div>
                         <div class="full-start-new__title">{title}</div>  
                     </div>
                       
                     <div class="cas-ratings-line">
-                        <div class="cas-rate-items" style="display: flex; align-items: center; gap: 12px;"></div>
-                        <div class="cas-meta-info" style="opacity: 0.7; font-weight: 400;"></div>
-                        <div class="cas-quality-row" style="display: flex; gap: 8px; align-items: center;"></div>
+                        <div class="cas-rate-items"></div>
+                        <div class="cas-meta-info" style="opacity: 0.7;"></div>
+                        <div class="cas-quality-row"></div>
                     </div>
 
-                    <div class="cas-studios-row" style="margin-bottom: var(--cas-blocks-gap); display: flex; gap: 15px; align-items: center;"></div>
+                    <div class="cas-studios-row" style="margin-bottom: 25px; display: flex; gap: 15px;"></div>
 
-                    <div class="full-start-new__head hide"></div>  
-                    <div class="full-start-new__details hide"></div>  
-                      
                     <div class="full-start-new__buttons">  
                         <div class="full-start__button selector button--play">  
-                            <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                <circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/>  
-                                <path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/>  
-                            </svg>  
+                            <svg width="28" height="29" viewBox="0 0 28 29" fill="none"><circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/><path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/></svg>  
                             <span>#{title_watch}</span>  
                         </div>  
-  
-                        <div class="full-start__button selector button--book">  
-                            <svg width="21" height="32" viewBox="0 0 21 32" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                <path d="M2 1.5H19C19.2761 1.5 19.5 1.72386 19.5 2V27.9618C19.5 28.3756 19.0261 28.6103 18.697 28.3595L12.6212 23.7303C11.3682 22.7757 9.63183 22.7757 8.37885 23.7303L2.30302 28.3595C1.9739 28.6103 1.5 28.3756 1.5 27.9618V2C1.5 1.72386 1.72386 1.5 2 1.5Z" stroke="currentColor" stroke-width="2.5"/>  
-                            </svg>  
-                            <span>#{settings_input_links}</span>  
-                        </div>  
-  
-                        <div class="full-start__button selector button--reaction">  
-                            <svg width="38" height="34" viewBox="0 0 38 34" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                <path d="M37.208 10.9742C37.1364 10.8013 37.0314 10.6441 36.899 10.5117C36.7666 10.3794 36.6095 10.2744 36.4365 10.2028L12.0658 0.108375C11.7166 -0.0361828 11.3242 -0.0361227 10.9749 0.108542C10.6257 0.253206 10.3482 0.530634 10.2034 0.879836L0.108666 25.2507C0.0369593 25.4236 3.37953e-05 25.609 2.3187e-08 25.7962C-3.37489e-05 25.9834 0.0368249 26.1688 0.108469 26.3418C0.180114 26.5147 0.28514 26.6719 0.417545 26.8042C0.54995 26.9366 0.707139 27.0416 0.880127 27.1131L17.2452 33.8917C17.5945 34.0361 17.9869 34.0361 18.3362 33.8917L29.6574 29.2017C29.8304 29.1301 29.9875 29.0251 30.1199 28.8928C30.2523 28.7604 30.3573 28.6032 30.4289 28.4303L37.2078 12.065C37.2795 11.8921 37.3164 11.7068 37.3165 11.5196C37.3165 11.3325 37.2796 11.1471 37.208 10.9742ZM20.425 29.9407L21.8784 26.4316L25.3873 27.885L20.425 29.9407ZM28.3407 26.0222L21.6524 23.252C21.3031 23.1075 20.9107 23.1076 20.5615 23.2523C20.2123 23.3969 19.9348 23.6743 19.79 24.0235L17.0194 30.7123L3.28783 25.0247L12.2918 3.28773L34.0286 12.2912L28.3407 26.0222Z" fill="currentColor"/>  
-                                <path d="M25.3493 16.976L24.258 14.3423L16.959 17.3666L15.7196 14.375L13.0859 15.4659L15.4161 21.0916L25.3493 16.976Z" fill="currentColor"/>  
-                            </svg>  
-                            <span>#{title_reactions}</span>  
-                        </div>  
-  
-                        <div class="full-start__button selector button--subscribe hide">  
-                            <svg width="25" height="30" viewBox="0 0 25 30" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                <path d="M6.01892 24C6.27423 27.3562 9.07836 30 12.5 30C15.9216 30 18.7257 27.3562 18.981 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z" fill="currentColor"/>  
-                                <path d="M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z" stroke="currentColor" stroke-width="2.5"/>  
-                            </svg>  
-                            <span>#{title_subscribe}</span>  
-                        </div>  
-  
-                        <div class="full-start__button selector button--options">  
-                            <svg width="38" height="10" viewBox="0 0 38 10" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                <circle cx="4.88968" cy="4.98563" r="4.75394" fill="currentColor"/>  
-                                <circle cx="18.9746" cy="4.98563" r="4.75394" fill="currentColor"/>  
-                                <circle cx="33.0596" cy="4.98563" r="4.75394" fill="currentColor"/>  
-                            </svg>  
+                        <div class="full-start__button selector button--book"><span>#{settings_input_links}</span></div>  
+                        <div class="full-start__button selector button--reaction"><span>#{title_reactions}</span></div>
+                        <div class="full-start__button selector button--options">
+                            <svg width="38" height="10" viewBox="0 0 38 10" fill="none"><circle cx="5" cy="5" r="4.5" fill="currentColor"/><circle cx="19" cy="5" r="4.5" fill="currentColor"/><circle cx="33" cy="5" r="4.5" fill="currentColor"/></svg>
                         </div>  
                     </div>  
                 </div>  
-  
-                <div class="full-start-new__reactions selector">  
-                    <div>#{reactions_none}</div>  
-                </div>  
-                  
-                <div class="full-start-new__rate-line">  
-                    <div class="full-start__status hide"></div>  
-                </div>  
-                  
-                <div class="rating--modss" style="display: none;"></div>  
-            </div>  
-        </div>  
-  
-        <div class="hide buttons--container">  
-            <div class="full-start__button view--torrent hide">  
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="50px" height="50px">  
-                    <path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2z M40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4 S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851 c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29 c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862-4.993-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8 c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722 C42.541,30.867,41.756,30.963,40.5,30.963z" fill="currentColor"/>  
-                </svg>  
-                <span>#{full_torrents}</span>  
-            </div>   
-    
-            <div class="full-start__button selector view--trailer">  
-                <svg height="70" viewBox="0 0 80 70" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                    <path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/>  
-                </svg>  
-                <span>#{full_trailers}</span>  
             </div>  
         </div>  
     </div>`;  
@@ -247,84 +183,78 @@
 
     function addStyles() {  
         const styles = `<style>  
-            :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.2em; }
-            .left-title .full-start-new__body { height: 85vh; }  
-            .left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 2vh; }  
-            .left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; }  
-            .left-title .full-start-new__title { font-size: 2.5em; font-weight: 700; line-height: 1.2; margin-bottom: 0.5em; text-shadow: 0 0 0.1em rgba(0, 0, 0, 0.3); color: #fff; }  
-            .cas-logo img { max-width: calc(450px * var(--cas-logo-scale)); max-height: calc(180px * var(--cas-logo-scale)); object-fit: contain; object-position: left bottom; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
-            .cas-ratings-line { display: flex; align-items: center; gap: 15px; margin-bottom: var(--cas-blocks-gap); font-weight: 600; font-size: var(--cas-meta-size); color: rgba(255,255,255,0.9); flex-wrap: wrap; }
+            .left-title .full-start-new__body { height: 85vh; display: flex; align-items: flex-end; }  
+            .cas-logo img { max-width: calc(450px * var(--cas-logo-scale)); max-height: calc(180px * var(--cas-logo-scale)); object-fit: contain; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
+            .cas-ratings-line { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; font-size: var(--cas-meta-size); font-weight: 600; }
             .cas-rate-item { display: flex; align-items: center; gap: 6px; }
-            .cas-rate-item img { height: 1.1em; width: auto; }
-            .cas-studio-item { height: 20px !important; display: flex; align-items: center; }
-            .cas-studio-item img { height: 100% !important; width: auto !important; object-fit: contain; }
-            .cas-quality-item { height: 1.2em; display: flex; align-items: center; }
-            .cas-quality-item img { height: 100%; width: auto; }
-            @keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-            body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 45s ease-in-out infinite !important; }
+            .cas-rate-item img { height: 1.1em; }
+            .cas-studio-item img { height: 22px; width: auto; opacity: 0.9; }
+            .cas-quality-item img { height: 1.3em; }
+            @keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } }
+            body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 40s ease-in-out infinite !important; }
         </style>`;  
-        Lampa.Template.add('left_title_css', styles);  
-        $('body').append(Lampa.Template.get('left_title_css', {}, true));  
+        $('body').append(styles);  
     }  
 
     function attachLoader() {  
         Lampa.Listener.follow('full', (event) => {  
-            if (event.type === 'destroy') { if (slideshowTimer) clearInterval(slideshowTimer); }
+            if (event.type === 'destroy') clearInterval(slideshowTimer);
+
             if (event.type === 'complite') {  
                 const data = event.data.movie;
                 const render = event.object.activity.render();
+                
                 if (data && data.id) {
-                    const url = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());
-                    $.get(url, (res) => {
+                    Lampa.TMDB.get((data.name ? 'tv/' : 'movie/') + data.id + '/images', {}, (res) => {
+                        // Логотип
                         const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];
                         if (bestLogo) {
-                            const logoUrl = Lampa.TMDB.image('/t/p/' + (Lampa.Storage.get('cas_logo_quality') || 'original') + bestLogo.file_path);
+                            const logoUrl = Lampa.TMDB.image('/t/p/original' + bestLogo.file_path);
                             render.find('.cas-logo').html('<img src="' + logoUrl + '">');
                             render.find('.full-start-new__title').hide();
-                        } else { render.find('.cas-logo').empty(); render.find('.full-start-new__title').show(); }
-                        if (res.backdrops && res.backdrops.length > 1) startPosterSlideshow(res.backdrops.slice(0, 15));
+                        }
+
+                        // Слайд-шоу
+                        if (res.backdrops && res.backdrops.length > 1) {
+                            startPosterSlideshow(res.backdrops.slice(0, 15));
+                        }
                     });
 
-                    let ratesHtml = '';
-                    const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
-                    if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
-                    if (event.data.reactions && event.data.reactions.result) {
-                        let sum = 0, cnt = 0;
-                        const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };
-                        event.data.reactions.result.forEach(r => { if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; } });
-                        if (cnt >= 5) {
-                            const cubV = (((data.name?7.4:6.5)*(data.name?50:150)+sum)/((data.name?50:150)+cnt)).toFixed(1);
-                            ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;
+                    // Рейтинги (якщо увімкнено)
+                    if (Lampa.Storage.get('cas_show_ratings')) {
+                        let ratesHtml = '';
+                        const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
+                        if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
+                        
+                        // Додаємо CUB якщо є реакції
+                        if (event.data.reactions && event.data.reactions.result) {
+                            let sum = 0, cnt = 0;
+                            event.data.reactions.result.forEach(r => { if (r.counter) { sum += (r.counter * 10); cnt += r.counter; } });
+                            if (cnt > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span>${(sum/cnt).toFixed(1)}</span></div>`;
                         }
+                        render.find('.cas-rate-items').html(ratesHtml);
                     }
-                    render.find('.cas-rate-items').html(ratesHtml);
-                    const time = formatTime(data.runtime || data.episode_run_time);
-                    const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');
-                    render.find('.cas-meta-info').text((time ? time + (genre ? ' • ' : '') : '') + genre);
 
+                    // Студії
                     if (Lampa.Storage.get('cas_show_studios')) {
-                        const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 3);
+                        const sSource = data.networks || data.production_companies || [];
+                        const studios = sSource.filter(s => s.logo_path).slice(0, 3);
                         render.find('.cas-studios-row').html(studios.map(s => `<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}"></div>`).join(''));
                     }
 
+                    // Мета
+                    const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');
+                    render.find('.cas-meta-info').text(formatTime(data.runtime || data.episode_run_time) + ' • ' + genre);
+
+                    // Якість через Парсер
                     if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {
                         Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {
                             if (res && res.Results) {
-                                const b = { res: '', hdr: false, dv: false, ukr: false };
-                                res.Results.slice(0, 15).forEach(i => {
-                                    const t = i.Title.toLowerCase();
-                                    if (t.includes('4k') || t.includes('2160')) b.res = '4K'; 
-                                    else if (!b.res && (t.includes('1080') || t.includes('fhd'))) b.res = 'FULL HD';
-                                    if (t.includes('hdr')) b.hdr = true;
-                                    if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) b.dv = true;
-                                    if (t.includes('ukr') || t.includes('укр')) b.ukr = true;
-                                });
                                 let qH = '';
-                                if (b.res) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS[b.res]}"></div>`;
-                                if (b.dv) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;
-                                else if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;
-                                if (b.ukr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;
-                                if (qH && (time || genre)) qH = '<span style="opacity: 0.5; margin: 0 5px;">•</span>' + qH;
+                                const t = res.Results.map(i => i.Title.toLowerCase()).join(' ');
+                                if (t.includes('4k')) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['4K']}"></div>`;
+                                if (t.includes('hdr')) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;
+                                if (t.includes('ukr')) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;
                                 render.find('.cas-quality-row').html(qH);
                             }
                         });
@@ -335,9 +265,10 @@
     }  
 
     function startPlugin() {  
-        const pluginManifest = { type: 'other', version: '1.4.5', name: PLUGIN_NAME, description: 'Кастомізація картки + Слайд-шоу фону.', author: '', icon: SETTINGS_ICON };  
-        if (Lampa.Manifest) { if (!Lampa.Manifest.plugins) Lampa.Manifest.plugins = {}; Lampa.Manifest.plugins['new_card_style'] = pluginManifest; }  
-        initializePlugin();  
+        addCustomTemplate();  
+        addStyles();  
+        addSettings();  
+        attachLoader();  
     }  
   
     if (window.appready) startPlugin();  
