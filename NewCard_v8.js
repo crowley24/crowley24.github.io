@@ -5,6 +5,10 @@
     const PLUGIN_ID = 'clean_apple_style';
     const ASSETS_PATH = 'https://crowley24.github.io/NewIcons/';
 
+    const ICONS = {
+        tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg'
+    };
+
     const QUALITY_ICONS = {
         '4K': ASSETS_PATH + '4K.svg', '2K': ASSETS_PATH + '2K.svg', 'FULL HD': ASSETS_PATH + 'FULL HD.svg',
         'HD': ASSETS_PATH + 'HD.svg', 'HDR': ASSETS_PATH + 'HDR.svg', 'Dolby Vision': ASSETS_PATH + 'Dolby Vision.svg',
@@ -73,6 +77,13 @@
         root.style.setProperty('--cas-blocks-gap', gap + 'px');
         $('body').toggleClass('cas--zoom-enabled', !!Lampa.Storage.get('cas_bg_animation'));
     }
+
+    function formatTime(mins) {
+        if (!mins) return '';
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        return (h > 0 ? h + 'г ' : '') + m + 'хв';
+    }
   
     function addCustomTemplate() {  
         const template = `<div class="full-start-new left-title">  
@@ -90,7 +101,9 @@
                         <div class="full-start-new__title">{title}</div>  
                     </div>
                       
-                    <div class="cas-info-line" style="display: flex; align-items: center; gap: 10px; margin-bottom: var(--cas-blocks-gap); flex-wrap: wrap;">
+                    <div class="cas-info-line" style="display: flex; align-items: center; gap: 15px; margin-bottom: var(--cas-blocks-gap); flex-wrap: wrap; font-weight: 600; font-size: 1.1em; color: rgba(255,255,255,0.9);">
+                        <div class="cas-rate-items" style="display: flex; align-items: center; gap: 10px;"></div>
+                        <div class="cas-meta-info" style="opacity: 0.7; font-weight: 400;"></div>
                         <div class="cas-quality-row" style="display: flex; gap: 8px; align-items: center;"></div>
                     </div>
 
@@ -177,9 +190,9 @@
         const styles = `<style>  
 :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; }
 
-.left-title .full-start-new__body { height: 80vh; }  
-.left-title .full-start-new__right { display: flex; align-items: flex-end; }  
-.left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; }  
+.left-title .full-start-new__body { height: 85vh; }  
+.left-title .full-start-new__right { display: flex; align-items: flex-end; padding-left: 5%; }  
+.left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 50px; }  
 
 .left-title .full-start-new__title {  
     font-size: 2.5em; font-weight: 700; line-height: 1.2; margin-bottom: 0.5em;  
@@ -200,6 +213,8 @@
     filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
 }
 
+.cas-rate-item { display: flex; align-items: center; gap: 6px; }
+.cas-rate-item img { height: 16px; width: auto; }
 .cas-studio-item { height: 28px !important; filter: brightness(0) invert(1); opacity: 0.8; }
 .cas-studio-item img { height: 100% !important; width: auto !important; }
 .cas-quality-item { height: 20px; display: flex; align-items: center; }
@@ -247,6 +262,15 @@ body.cas--zoom-enabled .full-start__background.loaded {
                         }
                     });
 
+                    // Рейтинги
+                    const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
+                    if (tmdbV > 0) render.find('.cas-rate-items').html(`<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span>${tmdbV}</span></div>`);
+                    
+                    // Мета-інфо (один рядок: час • жанр)
+                    const time = formatTime(data.runtime || data.episode_run_time);
+                    const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');
+                    render.find('.cas-meta-info').text((time ? time + (genre ? ' • ' : '') : '') + genre);
+
                     // Студії
                     if (Lampa.Storage.get('cas_show_studios')) {
                         const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 3);
@@ -257,16 +281,18 @@ body.cas--zoom-enabled .full-start__background.loaded {
                     if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {
                         Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {
                             if (res && res.Results) {
-                                const b = { res: '', hdr: false, ukr: false };
-                                res.Results.slice(0, 10).forEach(i => {
+                                const b = { res: '', hdr: false, dv: false, ukr: false };
+                                res.Results.slice(0, 15).forEach(i => {
                                     const t = i.Title.toLowerCase();
                                     if (t.includes('4k')) b.res = '4K'; else if (!b.res && t.includes('1080')) b.res = 'FULL HD';
-                                    if (t.includes('hdr') || t.includes('vision')) b.hdr = true;
+                                    if (t.includes('hdr')) b.hdr = true;
+                                    if (t.includes('vision') || t.includes('dolby') || t.includes(' dv ')) b.dv = true;
                                     if (t.includes('ukr') || t.includes('укр')) b.ukr = true;
                                 });
                                 let qH = '';
                                 if (b.res) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS[b.res]}"></div>`;
-                                if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;
+                                if (b.dv) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;
+                                else if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;
                                 if (b.ukr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;
                                 render.find('.cas-quality-row').html(qH);
                             }
@@ -276,10 +302,10 @@ body.cas--zoom-enabled .full-start__background.loaded {
             }  
         });  
     }  
-  
+
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.3.2', name: PLUGIN_NAME,  
+            type: 'other', version: '1.3.3', name: PLUGIN_NAME,  
             description: 'Логотипи, анімація та інфо-блоки.', author: '',  
             icon: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#fff"><rect x="10" y="30" width="80" height="40" rx="5" fill="rgba(255,255,255,0.2)"/><circle cx="50" cy="50" r="12" fill="white"/></svg>'
         };  
