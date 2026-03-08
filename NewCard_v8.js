@@ -257,28 +257,29 @@
 .cas-animated .cas-studios-row { opacity: 1; transform: translateY(0); transition-delay: 0.18s; }
 .cas-animated .full-start-new__buttons { opacity: 1; transform: translateY(0); transition-delay: 0.24s; }
 
-/* --- ЛОГОТИПИ СТУДІЙ: ЧІТКІ ТА ВИДИМІ --- */
+/* --- ФІКСОВАНИЙ РОЗМІР ЛОГОТИПУ НАЗВИ (ВИПРАВЛЕНО) --- */
+.cas-logo img {
+    display: block;
+    max-width: calc(450px * var(--cas-logo-scale));
+    max-height: calc(180px * var(--cas-logo-scale));
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain; 
+    object-position: left bottom;
+    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+}
+
+/* --- СТУДІЇ ТА ЯКІСТЬ --- */
 .cas-studio-item { height: 18px !important; display: flex; align-items: center; margin-right: 10px; }
 .cas-studio-item img { 
     height: 100% !important; width: auto !important; object-fit: contain;
-    /* Замість розмитої обводки використовуємо фільтр, що робить темні логотипи сіро-білими, 
-       зберігаючи їхню векторну чіткість без "ореолу" */
-    filter: brightness(1.5) contrast(1.2) drop-shadow(0px 0px 0.5px rgba(255,255,255,0.8));
+    filter: brightness(1.3) contrast(1.1);
 }
 
-/* --- ІКОНКИ ЯКОСТІ (4K, HDR ТОЩО) — ПРИМУСОВО МАЛЕНЬКІ --- */
-.cas-quality-item { 
-    height: 14px !important; /* Робимо їх врівень з текстом мета-даних */
-    display: flex; 
-    align-items: center; 
-}
-.cas-quality-item img { 
-    height: 100% !important; 
-    width: auto !important; 
-    display: block;
-}
+.cas-quality-item { height: 14px !important; display: flex; align-items: center; }
+.cas-quality-item img { height: 100% !important; width: auto !important; }
 
-/* --- КНОПКИ: ВАШІ РОЗМІРИ + ЧІТКЕ СВІТІННЯ --- */
+/* --- КНОПКИ ЗІ СВІТІННЯМ --- */
 .left-title .full-start-new__buttons { margin-top: 1.2em; display: flex; gap: 20px; }  
 .left-title .full-start-new__buttons .full-start__button {
     background: transparent !important; border: none !important;
@@ -292,15 +293,13 @@
     filter: drop-shadow(0 0 1px white) drop-shadow(0 0 8px var(--cas-glow-color));
 }
 
-/* РОЗМІР ІКОНОК У КНОПКАХ (Play, Book тощо) */
 .left-title .full-start__button svg { width: 26px !important; height: 26px !important; }
 .left-title .full-start__button span { font-size: 1.1em; font-weight: 500; }
 
-/* --- РЕЙТИНГИ ТА МЕТА --- */
+/* --- СТРУКТУРА --- */
 .cas-ratings-line { display: flex; align-items: center; gap: 12px; margin-bottom: var(--cas-blocks-gap); font-weight: 600; font-size: var(--cas-meta-size); color: rgba(255,255,255,0.9); }
 .cas-rate-item img { height: 1.1em; width: auto; }
 
-/* ПРИХОВУВАННЯ ЗАЙВОГО */
 .left-title .full-start-new__body { height: 85vh; }
 .left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 2vh; }
 .left-title .full-start-new__reactions, .left-title .full-start-new__rate-line, .left-title .full-start__status, .left-title .rating--modss, .left-title .full-start-new__head, .left-title .full-start-new__details { display: none !important; }
