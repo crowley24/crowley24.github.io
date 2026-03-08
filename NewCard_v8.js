@@ -258,7 +258,6 @@
 .cas-animated .cas-studios-row { opacity: 1; transform: translateY(0); transition-delay: 0.18s; }
 .cas-animated .full-start-new__buttons { opacity: 1; transform: translateY(0); transition-delay: 0.24s; }
 
-/* --- ОСНОВНИЙ ПЛЕЙСХОЛДЕР --- */
 .left-title .full-start-new__body { height: 85vh; }  
 .left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 2vh; }  
 .left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; }  
@@ -273,20 +272,35 @@
     display: none !important;
 }
 
-/* --- ЛОГОТИП ТА МЕТА --- */
+/* --- ЛОГОТИП ФІЛЬМУ --- */
 .cas-logo img {
     max-width: calc(450px * var(--cas-logo-scale));
     max-height: calc(180px * var(--cas-logo-scale));
     object-fit: contain; object-position: left bottom;
     filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
 }
+
+/* --- ЛОГОТИПИ СТУДІЙ (ВИПРАВЛЕННЯ ЧОРНОГО КОЛЬОРУ) --- */
+.cas-studio-item { 
+    height: 22px !important; 
+    display: flex; 
+    align-items: center; 
+    opacity: 0.8; 
+}
+.cas-studio-item img { 
+    height: 100% !important; 
+    width: auto !important; 
+    object-fit: contain; 
+    /* Цей фільтр робить чорні логотипи білими, щоб їх було видно */
+    filter: brightness(0) invert(1) drop-shadow(0 0 2px rgba(0,0,0,0.5));
+}
+
+/* --- РЕЙТИНГИ ТА МЕТА --- */
 .cas-ratings-line { display: flex; align-items: center; gap: 15px; margin-bottom: var(--cas-blocks-gap); font-weight: 600; font-size: var(--cas-meta-size); color: rgba(255,255,255,0.9); flex-wrap: wrap; }
 .cas-rate-item { display: flex; align-items: center; gap: 6px; }
 .cas-rate-item img { height: 1.1em; width: auto; }
-.cas-studio-item { height: 20px !important; display: flex; align-items: center; }
-.cas-studio-item img { height: 100% !important; width: auto !important; object-fit: contain; }
 
-/* --- КНОПКИ: ЧІТКЕ СВІТІННЯ КОНТЕНТУ (ОНОВЛЕНО) --- */
+/* --- КНОПКИ (ПОВЕРНЕННЯ РОЗМІРУ ТА ЧІТКЕ СВІТІННЯ) --- */
 .left-title .full-start-new__buttons { 
     margin-top: 1.5em; 
     display: flex; 
@@ -298,30 +312,32 @@
     border: none !important;
     box-shadow: none !important;
     border-radius: 0 !important;
-    color: rgba(255,255,255,0.6); 
-    padding: 10px 0 !important;
+    color: rgba(255,255,255,0.7); 
+    padding: 8px 0 !important;
     height: auto !important;
-    transition: color 0.25s var(--cas-anim-curve), filter 0.25s var(--cas-anim-curve), transform 0.25s var(--cas-anim-curve);
+    transition: color 0.2s var(--cas-anim-curve), filter 0.2s var(--cas-anim-curve), transform 0.2s var(--cas-anim-curve);
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
 }
 
 .left-title .full-start-new__buttons .full-start__button:hover,
 .left-title .full-start-new__buttons .full-start__button.focus {
     color: #fff !important;
-    transform: scale(1.08); 
-    /* Подвійний фільтр для чіткості та сяйва */
-    filter: drop-shadow(0 0 1px rgba(255,255,255,0.9)) drop-shadow(0 0 10px var(--cas-glow-color));
+    transform: scale(1.05); 
+    filter: drop-shadow(0 0 1px rgba(255,255,255,1)) drop-shadow(0 0 8px var(--cas-glow-color));
 }
 
-.left-title .full-start-new__buttons .full-start__button:active {
-    transform: scale(0.95);
-    filter: drop-shadow(0 0 4px var(--cas-glow-color));
+/* ПОВЕРТАЄМО МАЛЕНЬКИЙ РОЗМІР ІКОНОК ПРИМУСОВО */
+.left-title .full-start__button svg { 
+    width: 22px !important; 
+    height: 22px !important; 
 }
 
-.left-title .full-start__button svg { width: 24px; height: 24px; }
-.left-title .full-start__button span { font-size: 1.1em; font-weight: 500; }
+.left-title .full-start__button span { 
+    font-size: 1.05em; 
+    font-weight: 500; 
+}
 
 @media screen and (max-width: 767px) {  
     .left-title .full-start-new__right { flex-direction: column; align-items: flex-start; }  
@@ -331,7 +347,6 @@
         Lampa.Template.add('left_title_css', styles);  
         $('body').append(Lampa.Template.get('left_title_css', {}, true));  
     }
-
     function attachLoader() {  
         Lampa.Listener.follow('full', (event) => {  
             if (event.type === 'complite') {  
