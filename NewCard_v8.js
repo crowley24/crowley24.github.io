@@ -244,33 +244,26 @@
     --cas-blocks-gap: 30px; 
     --cas-meta-size: 1.2em;
     --cas-anim-curve: cubic-bezier(0.25, 1, 0.5, 1);
-    --cas-glow-color: rgba(255, 255, 255, 0.9); /* Колір "неонового" світіння */
+    --cas-glow-color: rgba(255, 255, 255, 0.8); 
 }
 
-/* --- ПРИСКОРЕНА АНІМАЦІЯ ПОЯВИ --- */
-.cas-logo, 
-.cas-ratings-line, 
-.cas-studios-row, 
-.full-start-new__buttons {
+/* --- АНІМАЦІЯ ПОЯВИ --- */
+.cas-logo, .cas-ratings-line, .cas-studios-row, .full-start-new__buttons {
     opacity: 0;
     transform: translateY(12px);
     transition: opacity 0.4s var(--cas-anim-curve), transform 0.4s var(--cas-anim-curve);
 }
-
 .cas-animated .cas-logo { opacity: 1; transform: translateY(0); transition-delay: 0.05s; }
 .cas-animated .cas-ratings-line { opacity: 1; transform: translateY(0); transition-delay: 0.12s; }
 .cas-animated .cas-studios-row { opacity: 1; transform: translateY(0); transition-delay: 0.18s; }
 .cas-animated .full-start-new__buttons { opacity: 1; transform: translateY(0); transition-delay: 0.24s; }
 
+/* --- ОСНОВНИЙ ПЛЕЙСХОЛДЕР --- */
 .left-title .full-start-new__body { height: 85vh; }  
 .left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 2vh; }  
 .left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; }  
 
-.full-start-new__title {  
-    font-size: 2.5em; font-weight: 700; line-height: 1.2; margin-bottom: 0.5em;  
-    text-shadow: 0 0 0.1em rgba(0, 0, 0, 0.3); color: #fff;  
-}  
-
+/* --- ПРИХОВУВАННЯ ЗАЙВОГО --- */
 .left-title .full-start-new__reactions,
 .left-title .full-start-new__rate-line,
 .left-title .full-start__status,
@@ -280,96 +273,58 @@
     display: none !important;
 }
 
+/* --- ЛОГОТИП ТА МЕТА --- */
 .cas-logo img {
     max-width: calc(450px * var(--cas-logo-scale));
     max-height: calc(180px * var(--cas-logo-scale));
     object-fit: contain; object-position: left bottom;
     filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
 }
-
-.cas-ratings-line { 
-    display: flex; 
-    align-items: center; 
-    gap: 15px; 
-    margin-bottom: var(--cas-blocks-gap); 
-    font-weight: 600; 
-    font-size: var(--cas-meta-size); 
-    color: rgba(255,255,255,0.9); 
-    flex-wrap: wrap; 
-}
-
+.cas-ratings-line { display: flex; align-items: center; gap: 15px; margin-bottom: var(--cas-blocks-gap); font-weight: 600; font-size: var(--cas-meta-size); color: rgba(255,255,255,0.9); flex-wrap: wrap; }
 .cas-rate-item { display: flex; align-items: center; gap: 6px; }
 .cas-rate-item img { height: 1.1em; width: auto; }
-.cas-rate-item span { line-height: 1; }
-
 .cas-studio-item { height: 20px !important; display: flex; align-items: center; }
 .cas-studio-item img { height: 100% !important; width: auto !important; object-fit: contain; }
 
-.cas-quality-item { height: 1.2em; display: flex; align-items: center; }
-.cas-quality-item img { height: 100%; width: auto; }
-
-@keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-body.cas--zoom-enabled .full-start__background.loaded { 
-    animation: casKenBurns 45s ease-in-out infinite !important; 
-}
-
-/* --- КНОПКИ БЕЗ ПРЯМОКУТНИКІВ: СВІТІННЯ КОНТЕНТУ --- */
+/* --- КНОПКИ: ЧІТКЕ СВІТІННЯ КОНТЕНТУ (ОНОВЛЕНО) --- */
 .left-title .full-start-new__buttons { 
     margin-top: 1.5em; 
     display: flex; 
-    gap: 25px; /* Більший відступ між кнопками, бо немає рамок */
+    gap: 25px; 
 }  
 
 .left-title .full-start-new__buttons .full-start__button {
-    background: transparent !important; /* Жодного фону */
-    border: none !important; /* Жодних рамок (прямокутників) */
-    box-shadow: none !important; /* Жодних тіней блоку */
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
     border-radius: 0 !important;
-    color: rgba(255,255,255,0.6); /* Напівпрозорі в спокої */
-    padding: 10px 0 !important; /* Відступи тільки зверху/знизу */
+    color: rgba(255,255,255,0.6); 
+    padding: 10px 0 !important;
     height: auto !important;
-    transition: 
-        color 0.3s var(--cas-anim-curve), 
-        filter 0.3s var(--cas-anim-curve), 
-        transform 0.3s var(--cas-anim-curve);
+    transition: color 0.25s var(--cas-anim-curve), filter 0.25s var(--cas-anim-curve), transform 0.25s var(--cas-anim-curve);
     display: flex;
     align-items: center;
     gap: 12px;
 }
 
-/* Ефект при фокусі */
 .left-title .full-start-new__buttons .full-start__button:hover,
 .left-title .full-start-new__buttons .full-start__button.focus {
-    color: #fff !important; /* Яскраво-білий текст та іконка */
-    transform: scale(1.1); /* Легке збільшення всієї кнопки */
-    
-    /* Світіння за контуром іконки та тексту (drop-shadow замість box-shadow) */
-    filter: drop-shadow(0 0 8px var(--cas-glow-color)) drop-shadow(0 0 2px #fff);
+    color: #fff !important;
+    transform: scale(1.08); 
+    /* Подвійний фільтр для чіткості та сяйва */
+    filter: drop-shadow(0 0 1px rgba(255,255,255,0.9)) drop-shadow(0 0 10px var(--cas-glow-color));
 }
 
-/* Стан натискання */
 .left-title .full-start-new__buttons .full-start__button:active {
     transform: scale(0.95);
     filter: drop-shadow(0 0 4px var(--cas-glow-color));
-    transition-duration: 0.1s;
 }
 
-/* Стилізація іконок всередині кнопок */
-.left-title .full-start__button svg {
-    width: 24px;
-    height: 24px;
-    transition: transform 0.3s var(--cas-anim-curve);
-}
+.left-title .full-start__button svg { width: 24px; height: 24px; }
+.left-title .full-start__button span { font-size: 1.1em; font-weight: 500; }
 
-.left-title .full-start__button span {
-    font-size: 1.1em;
-    font-weight: 500;
-}
-/* ------------------------------------ */
-  
 @media screen and (max-width: 767px) {  
     .left-title .full-start-new__right { flex-direction: column; align-items: flex-start; }  
-    .left-title .full-start-new__title { font-size: 2em; }  
 }  
 </style>`;  
   
