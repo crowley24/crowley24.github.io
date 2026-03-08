@@ -62,25 +62,29 @@
     Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_show_quality', type: 'trigger', default: true }, field: { name: 'Показувати якість' } });  
     Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_bg_animation', type: 'trigger', default: true }, field: { name: 'Анімація фону' }, onChange: applySettings });  
   
-    // Роздільник для медіа кнопок  
+    // Спеціальний параметр для медіа кнопок з вкладеними налаштуваннями  
     Lampa.SettingsApi.addParam({  
         component: PLUGIN_ID,  
-        param: { name: 'cas_buttons_separator', type: 'static' },  
+        param: {   
+            name: 'cas_media_buttons',  
+            type: 'subtitle',  // Спробуємо тип 'subtitle'  
+            default: true  
+        },  
         field: { name: 'Медіа кнопки' }  
     });  
   
-    // НАЛАШТУВАННЯ МЕДІА КНОПОК (прямо в головному компоненті)  
+    // Вкладені налаштування кнопок (з відступом)  
     Lampa.SettingsApi.addParam({   
         component: PLUGIN_ID,   
         param: { name: 'cas_custom_buttons', type: 'trigger', default: true },   
-        field: { name: 'Стильні кнопки (Apple)' },   
+        field: { name: '  Стильні кнопки (Apple)' },  // Додаємо відступ пробілами  
         onChange: applySettings   
     });  
   
     Lampa.SettingsApi.addParam({  
         component: PLUGIN_ID,  
         param: { name: 'cas_btn_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' }, default: '100' },  
-        field: { name: 'Розмір кнопок' },  
+        field: { name: '  Розмір кнопок' },  // Додаємо відступ пробілами  
         onChange: applySettings  
     });  
   
