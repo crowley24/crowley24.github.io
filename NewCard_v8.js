@@ -29,7 +29,7 @@
     }  
 
     function addSettings() {
-        const defaults = { 'cas_logo_scale': '100', 'cas_bg_animation': true, 'cas_show_studios': true, 'cas_show_quality': true, 'cas_blocks_gap': '30' };
+        const defaults = { 'cas_logo_scale': '100', 'cas_btn_scale': '100', 'cas_bg_animation': true, 'cas_show_studios': true, 'cas_show_quality': true, 'cas_blocks_gap': '30' };
         Object.keys(defaults).forEach(key => { if (Lampa.Storage.get(key) === undefined) Lampa.Storage.set(key, defaults[key]); });
 
         Lampa.SettingsApi.addComponent({
@@ -47,13 +47,18 @@
 
         Lampa.SettingsApi.addParam({
             component: PLUGIN_ID,
-            param: { name: 'cas_blocks_gap', type: 'select', values: { '15':'Тісно','30':'Стандарт','45':'Просторе' }, default: '30' },
-            field: { name: 'Відступи між блоками (px)' },
+            param: { name: 'cas_btn_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' }, default: '100' },
+            field: { name: 'Розмір кнопок' },
             onChange: applySettings
         });
 
-        Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_show_studios', type: 'trigger', default: true }, field: { name: 'Показувати студії' } });
-        Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_show_quality', type: 'trigger', default: true }, field: { name: 'Показувати якість' } });
+        Lampa.SettingsApi.addParam({
+            component: PLUGIN_ID,
+            param: { name: 'cas_blocks_gap', type: 'select', values: { '15':'Тісно','30':'Стандарт','45':'Просторе' }, default: '30' },
+            field: { name: 'Відступи (px)' },
+            onChange: applySettings
+        });
+
         Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_bg_animation', type: 'trigger', default: true }, field: { name: 'Анімація фону' }, onChange: applySettings });
 
         applySettings();
@@ -61,18 +66,10 @@
 
     function applySettings() {
         const root = document.documentElement;
-        const scale = parseInt(Lampa.Storage.get('cas_logo_scale') || 100) / 100;
-        const gap = Lampa.Storage.get('cas_blocks_gap') || '30';
-        root.style.setProperty('--cas-logo-scale', scale);
-        root.style.setProperty('--cas-blocks-gap', gap + 'px');
+        root.style.setProperty('--cas-logo-scale', (Lampa.Storage.get('cas_logo_scale') || 100) / 100);
+        root.style.setProperty('--cas-btn-scale', (Lampa.Storage.get('cas_btn_scale') || 100) / 100);
+        root.style.setProperty('--cas-blocks-gap', (Lampa.Storage.get('cas_blocks_gap') || 30) + 'px');
         $('body').toggleClass('cas--zoom-enabled', !!Lampa.Storage.get('cas_bg_animation'));
-    }
-
-    function getRatingColor(val) {
-        const n = parseFloat(val);
-        if (n >= 7.5) return '#2ecc71';
-        if (n >= 6) return '#feca57';
-        return '#ff4d4d';
     }
 
     function formatTime(mins) {
@@ -82,31 +79,26 @@
         return (h > 0 ? h + 'г ' : '') + m + 'хв';
     }
 
+    function getRatingColor(val) {
+        const n = parseFloat(val);
+        return n >= 7.5 ? '#2ecc71' : n >= 6 ? '#feca57' : '#ff4d4d';
+    }
+  
     function addCustomTemplate() {  
         const template = `<div class="full-start-new left-title cas-apple-style">  
         <div class="full-start-new__body">  
-            <div class="full-start-new__left hide">  
-                <div class="full-start-new__poster"><img class="full-start-new__img full--poster" /></div>  
-            </div>  
-  
             <div class="full-start-new__right">  
                 <div class="left-title__content">  
-                    <div class="cas-logo-container" style="margin-bottom: 30px;">
+                    <div class="cas-logo-container" style="margin-bottom: 10px;">
                         <div class="cas-logo"></div>
                         <div class="full-start-new__title">{title}</div>  
                     </div>
-
                     <div class="cas-ratings-line" style="display: flex; align-items: center; gap: 15px; margin-bottom: var(--cas-blocks-gap); font-weight: 600; font-size: 1.1em; color: rgba(255,255,255,0.9); flex-wrap: wrap;">
                         <div class="cas-rate-items" style="display: flex; align-items: center; gap: 12px;"></div>
                         <div class="cas-meta-info" style="opacity: 0.7; font-weight: 400;"></div>
                         <div class="cas-quality-row" style="display: flex; gap: 8px; align-items: center;"></div>
                     </div>
-                      
-                    <div class="full-start-new__head hide"></div>  
-                    <div class="full-start-new__details hide"></div>  
-
                     <div class="cas-studios-row" style="margin: 0 0 20px 0; display: flex; gap: 10px;"></div>
-                      
                     <div class="full-start-new__buttons applecation__buttons-row">  
                         <div class="full-start__button selector button--play">${ICONS.play} <span>#{title_watch}</span></div>  
                         <div class="full-start__button selector view--trailer">${ICONS.trailer} <span>#{full_trailers}</span></div>
@@ -115,98 +107,66 @@
                         <div class="full-start__button selector button--options">${ICONS.options}</div>  
                     </div>  
                 </div>  
-  
-                <div class="full-start-new__reactions selector"><div>#{reactions_none}</div></div>  
-                <div class="full-start-new__rate-line"><div class="full-start__status hide"></div></div>  
-                <div class="rating--modss" style="display: none;"></div>  
+                <div class="full-start-new__reactions hide" style="display:none"></div>  
+                <div class="full-start-new__rate-line hide" style="display:none"></div>  
             </div>  
         </div>  
-  
-        <div class="hide buttons--container">  
-            <div class="full-start__button selector view--torrent">${ICONS.play} <span>#{full_torrents}</span></div>   
-        </div>  
     </div>`;  
-  
         Lampa.Template.add('full_start_new', template);  
     }  
   
     function addStyles() {  
         const styles = `<style>  
-:root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; }
-.left-title .full-start-new__body { height: 85vh; }  
-.left-title .full-start-new__right { display: flex; align-items: flex-end; padding-left: 5%; }  
+:root { --cas-logo-scale: 1; --cas-btn-scale: 1; --cas-blocks-gap: 30px; }
+.cas-apple-style .full-start-new__head, .cas-apple-style .full-start-new__details, .cas-apple-style .rating--modss { display: none !important; }
+
+.left-title .full-start-new__right { display: flex; align-items: flex-end; padding-left: 5%; height: 85vh; }  
 .left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 50px; }  
 
-.cas-apple-style .full-start-new__reactions,
-.cas-apple-style .full-start-new__rate-line,
-.cas-apple-style .full-start__status,
-.cas-apple-style .rating--modss,
-.cas-apple-style .full-start-new__head,
-.cas-apple-style .full-start-new__details { display: none !important; opacity: 0 !important; position: absolute !important; }
+.cas-logo img { max-width: calc(480px * var(--cas-logo-scale)); max-height: calc(180px * var(--cas-logo-scale)); object-fit: contain; object-position: left bottom; }
+.cas-rate-item img { height: 14px; width: auto; vertical-align: middle; }
+.cas-studio-item { height: 25px; filter: brightness(0) invert(1); opacity: 0.8; }
+.cas-quality-item { height: 18px; display: flex; }
 
-.cas-logo img { max-width: calc(480px * var(--cas-logo-scale)); max-height: calc(180px * var(--cas-logo-scale)); object-fit: contain; object-position: left bottom; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); }
-.cas-rate-item { display: flex; align-items: center; gap: 6px; }
-.cas-rate-item img { height: 16px; width: auto; }
-.cas-studio-item { height: 28px; filter: brightness(0) invert(1); opacity: 0.8; }
-.cas-studio-item img { height: 100%; }
-.cas-quality-item { height: 20px; display: flex; align-items: center; }
-.cas-quality-item img { height: 100%; width: auto; }
-
-/* КНОПКИ: МАКСИМАЛЬНА ШВИДКІСТЬ ТА ЗБІЛЬШЕНИЙ РОЗМІР */
-.applecation__buttons-row { display: flex; align-items: center; gap: 25px; margin-top: 30px; flex-wrap: wrap; }
-
-.cas-apple-style .full-start__button {  
-    background: transparent !important; 
-    background-color: transparent !important;
-    border: none !important;  
-    box-shadow: none !important;
-    color: rgba(255,255,255,0.5) !important; 
-    padding: 12px 18px !important;
-    display: flex; justify-content: center; align-items: center; gap: 12px;
-    /* ЗБІЛЬШЕНИЙ ТЕКСТ */
-    font-size: 1.3em; 
-    font-weight: 600;
-    /* МИТТЄВИЙ ПЕРЕХІД ЯК У СТАНДАРТІ */
-    transition: transform 0.1s ease-out, color 0.1s ease-out !important;
-    will-change: transform; 
-    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+/* КНОПКИ - ОПТИМІЗАЦІЯ ПЕРЕХОДУ */
+.applecation__buttons-row { 
+    display: flex; align-items: center; 
+    gap: calc(20px * var(--cas-btn-scale)); 
+    margin-top: 25px; 
+    transform-origin: left bottom;
+    scale: var(--cas-btn-scale);
 }
 
-/* ФОКУС: ВЕЛИКИЙ РОЗМІР ТА ЧІТКЕ СВІТІННЯ */
+.cas-apple-style .full-start__button {  
+    background: transparent !important; border: none !important;  
+    color: #fff !important; 
+    opacity: 0.45; /* Використовуємо opacity для легкості */
+    padding: 10px 15px !important;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 1.2em; font-weight: 600;
+    transition: transform 0.12s ease-out, opacity 0.12s ease-out !important;
+    will-change: transform, opacity;
+}
+
+/* ЕФЕКТ ПРИ ФОКУСІ */
 .cas-apple-style .full-start__button.focus {  
-    transform: scale(1.25) !important; 
-    background: transparent !important;
-    color: #fff !important;
-    
-    /* Оптимізоване світіння (менше шарів для швидкості) */
-    filter: drop-shadow(0 0 8px rgba(255,255,255,0.9)) !important;
-    
-    box-shadow: none !important;
+    transform: scale(1.15) !important; 
+    opacity: 1 !important;
+    /* Світіння додаємо як статичний фільтр, щоб не перераховувати його анімацію */
+    filter: drop-shadow(0 0 10px rgba(255,255,255,0.8)) !important;
     z-index: 10;
 }
 
-/* ІКОНКИ В КНОПКАХ ТЕЖ БІЛЬШІ */
-.cas-apple-style .full-start__button svg {
-    width: 28px;
-    height: 28px;
-}
+.cas-apple-style .full-start__button svg { width: 26px; height: 26px; }
 
-/* ЖИВА АНІМАЦІЯ ФОНУ */
-@keyframes casKenBurns { 
-    0% { transform: scale(1) translate(0, 0); } 
-    50% { transform: scale(1.12) translate(-1%, -1%); }
-    100% { transform: scale(1) translate(0, 0); } 
-}
-body.cas--zoom-enabled .full-start__background.loaded { 
-    animation: casKenBurns 45s ease-in-out infinite !important; 
-}
+@keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 40s ease-in-out infinite !important; }
 
-.left-title .full-start-new__title { font-size: 2.8em; font-weight: 700; color: #fff; }  
+.left-title .full-start-new__title { font-size: 2.5em; font-weight: 700; color: #fff; }  
 </style>`;  
-  
         Lampa.Template.add('left_title_css', styles);  
         $('body').append(Lampa.Template.get('left_title_css', {}, true));  
-    }
+    }  
   
     function attachLoader() {  
         Lampa.Listener.follow('full', (event) => {  
@@ -229,7 +189,7 @@ body.cas--zoom-enabled .full-start__background.loaded {
                         const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };
                         event.data.reactions.result.forEach(r => { if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; } });
                         if (cnt >= 5) {
-                            const cubV = (( (data.name?7.4:6.5) * (data.name?50:150) + sum) / ((data.name?50:150) + cnt)).toFixed(1);
+                            const cubV = (((data.name?7.4:6.5)*(data.name?50:150)+sum)/((data.name?50:150)+cnt)).toFixed(1);
                             ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;
                         }
                     }
