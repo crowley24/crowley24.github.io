@@ -49,7 +49,6 @@
     function addSettings() {
         const defaults = {
             'cas_logo_scale': '100',
-            'cas_logo_quality': 'w500',
             'cas_bg_animation': true,
             'cas_blocks_gap': '20',
             'cas_meta_size': '1.3',
@@ -72,21 +71,6 @@
             param: { name: 'cas_logo_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' }, default: '100' },
             field: { name: 'Розмір логотипу' },
             onChange: applySettings
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: PLUGIN_ID,
-            param: { 
-                name: 'cas_logo_quality', 
-                type: 'select', 
-                values: { 
-                    'w300': '300px (Швидко)', 
-                    'w500': '500px (Стандарт)', 
-                    'original': 'Original (Найкраща)' 
-                }, 
-                default: 'w500' 
-            },
-            field: { name: 'Якість логотипу' }
         });
 
         Lampa.SettingsApi.addParam({
@@ -321,10 +305,8 @@ body.cas--zoom-enabled .full-start__background.loaded {
                                          res.logos[0];
 
                         if (bestLogo) {
-                            const quality = Lampa.Storage.get('cas_logo_quality') || 'w500';
-                            const prefix = quality === 'original' ? '/original' : '/t/p/' + quality;
-                            const logoUrl = Lampa.TMDB.image(prefix + bestLogo.file_path);
-                            
+                            // Змінено w500 на original для покращення якості
+                            const logoUrl = Lampa.TMDB.image('/t/p/original' + bestLogo.file_path);
                             render.find('.cas-logo').html('<img src="' + logoUrl + '">');
                             render.find('.full-start-new__title').hide();
                         } else {
@@ -389,7 +371,7 @@ body.cas--zoom-enabled .full-start__background.loaded {
   
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.4.4', name: PLUGIN_NAME,  
+            type: 'other', version: '1.4.3', name: PLUGIN_NAME,  
             description: 'Кастомізація картки: логотипи, студії та динамічна якість.', author: '',  
             icon: SETTINGS_ICON
         };  
