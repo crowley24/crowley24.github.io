@@ -44,6 +44,7 @@
             'cas_logo_scale': '100',
             'cas_bg_animation': true,
             'cas_blocks_gap': '30',
+            'cas_meta_size': '1.1',
             'cas_show_studios': true,
             'cas_show_quality': true
         };
@@ -62,6 +63,13 @@
             component: PLUGIN_ID,
             param: { name: 'cas_logo_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' }, default: '100' },
             field: { name: 'Розмір логотипу' },
+            onChange: applySettings
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: PLUGIN_ID,
+            param: { name: 'cas_meta_size', type: 'select', values: { '0.9':'Дрібний','1.0':'Стандарт','1.1':'Збільшений','1.2':'Великий' }, default: '1.1' },
+            field: { name: 'Розмір шрифту метаданих' },
             onChange: applySettings
         });
 
@@ -89,9 +97,11 @@
         const root = document.documentElement;
         const scale = parseInt(Lampa.Storage.get('cas_logo_scale') || 100) / 100;
         const gap = Lampa.Storage.get('cas_blocks_gap') || '30';
+        const metaSize = Lampa.Storage.get('cas_meta_size') || '1.1';
         
         root.style.setProperty('--cas-logo-scale', scale);
         root.style.setProperty('--cas-blocks-gap', gap + 'px');
+        root.style.setProperty('--cas-meta-size', metaSize + 'em');
         $('body').toggleClass('cas--zoom-enabled', !!Lampa.Storage.get('cas_bg_animation'));
     }
   
@@ -111,7 +121,7 @@
                         <div class="full-start-new__title">{title}</div>  
                     </div>
                       
-                    <div class="cas-ratings-line" style="display: flex; align-items: center; gap: 15px; margin-bottom: var(--cas-blocks-gap); font-weight: 600; font-size: 1.1em; color: rgba(255,255,255,0.9); flex-wrap: wrap;">
+                    <div class="cas-ratings-line">
                         <div class="cas-rate-items" style="display: flex; align-items: center; gap: 12px;"></div>
                         <div class="cas-meta-info" style="opacity: 0.7; font-weight: 400;"></div>
                         <div class="cas-quality-row" style="display: flex; gap: 8px; align-items: center;"></div>
@@ -198,7 +208,7 @@
   
     function addStyles() {  
         const styles = `<style>  
-:root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; }
+:root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.1em; }
 
 .left-title .full-start-new__body { height: 80vh; }  
 .left-title .full-start-new__right { display: flex; align-items: flex-end; }  
@@ -225,10 +235,24 @@
     filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
 }
 
+.cas-ratings-line { 
+    display: flex; 
+    align-items: center; 
+    gap: 15px; 
+    margin-bottom: var(--cas-blocks-gap); 
+    font-weight: 600; 
+    font-size: var(--cas-meta-size); 
+    color: rgba(255,255,255,0.9); 
+    flex-wrap: wrap; 
+}
+
 .cas-rate-item { display: flex; align-items: center; gap: 6px; }
 .cas-rate-item img { height: 16px; width: auto; }
+.cas-rate-item span { line-height: 1; }
+
 .cas-studio-item { height: 28px !important; filter: brightness(0) invert(1); opacity: 0.8; }
 .cas-studio-item img { height: 100% !important; width: auto !important; }
+
 .cas-quality-item { height: 20px; display: flex; align-items: center; }
 .cas-quality-item img { height: 100%; width: auto; }
 
@@ -300,20 +324,32 @@ body.cas--zoom-enabled .full-start__background.loaded {
                         render.find('.cas-studios-row').html(studios.map(s => `<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}"></div>`).join(''));
                     }
 
-                    // 4. Динамічна якість
+                    // 4. Динамічна якість (з Dolby Vision)
                     if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {
                         Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {
                             if (res && res.Results) {
-                                const b = { res: '', hdr: false, ukr: false };
-                                res.Results.slice(0, 10).forEach(i => {
+                                const b = { res: '', hdr: false, dv: false, ukr: false };
+                                res.Results.slice(0, 15).forEach(i => {
                                     const t = i.Title.toLowerCase();
-                                    if (t.includes('4k')) b.res = '4K'; else if (!b.res && t.includes('1080')) b.res = 'FULL HD';
-                                    if (t.includes('hdr') || t.includes('vision')) b.hdr = true;
+                                    // Резолюція
+                                    if (t.includes('4k') || t.includes('2160')) b.res = '4K'; 
+                                    else if (!b.res && (t.includes('1080') || t.includes('fhd'))) b.res = 'FULL HD';
+                                    
+                                    // HDR та Dolby Vision
+                                    if (t.includes('hdr')) b.hdr = true;
+                                    if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) b.dv = true;
+                                    
+                                    // Мова
                                     if (t.includes('ukr') || t.includes('укр')) b.ukr = true;
                                 });
+
                                 let qH = '';
                                 if (b.res) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS[b.res]}"></div>`;
-                                if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;
+                                
+                                // Пріоритет Dolby Vision над HDR
+                                if (b.dv) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;
+                                else if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;
+                                
                                 if (b.ukr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;
                                 
                                 if (qH && (time || genre)) qH = '<span style="opacity: 0.5; margin: 0 5px;">•</span>' + qH;
@@ -328,8 +364,8 @@ body.cas--zoom-enabled .full-start__background.loaded {
   
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.3.3', name: PLUGIN_NAME,  
-            description: 'Логотипи, анімація та інфо-блоки.', author: '',  
+            type: 'other', version: '1.4.0', name: PLUGIN_NAME,  
+            description: 'Логотипи, анімація та динамічні метадані (DV/HDR/UKR).', author: '',  
             icon: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#fff"><rect x="10" y="30" width="80" height="40" rx="5" fill="rgba(255,255,255,0.2)"/><circle cx="50" cy="50" r="12" fill="white"/></svg>'
         };  
   
