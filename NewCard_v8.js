@@ -303,6 +303,7 @@ body.cas--zoom-enabled .full-start__background.loaded {
                 const data = event.data.movie;
                 const render = event.object.activity.render();
                 
+                // Знаходимо саме картинку фону
                 const bgImg = render.find('.full-start__background img, img.full-start__background');
                 
                 if (data && data.id) {
@@ -324,20 +325,21 @@ body.cas--zoom-enabled .full-start__background.loaded {
                             render.find('.full-start-new__title').show();
                         }
 
-                        // --- Логіка Слайд-шоу (ВИПРАВЛЕНО) ---
+                        // --- Логіка Слайд-шоу (ПЛАВНИЙ ПЕРЕХІД) ---
                         if (res.backdrops && res.backdrops.length > 1 && bgImg.length) {
                             let currentIndex = 0;
                             const backdrops = res.backdrops.slice(0, 15);
                             
                             if (window.casBgInterval) clearInterval(window.casBgInterval);
 
-                            // Встановлюємо плавний перехід ОДИН РАЗ
+                            // Додаємо CSS для плавної анімації прозорості
                             bgImg.css({
                                 'transition': 'opacity 1.5s ease-in-out',
                                 'opacity': '1'
                             });
 
                             window.casBgInterval = setInterval(() => {
+                                // Перевірка: чи ми все ще в картці фільму
                                 if (!bgImg.closest('body').length) {
                                     clearInterval(window.casBgInterval);
                                     return;
@@ -346,20 +348,26 @@ body.cas--zoom-enabled .full-start__background.loaded {
                                 currentIndex = (currentIndex + 1) % backdrops.length;
                                 const newBgUrl = Lampa.TMDB.image('/t/p/original' + backdrops[currentIndex].file_path);
                                 
-                                // Створюємо невидимий елемент Image для попереднього завантаження в пам'ять
+                                // 1. Попереднє завантаження картинки в кеш
                                 const tempImg = new Image();
                                 tempImg.src = newBgUrl;
                                 tempImg.onload = function() {
-                                    // ТІЛЬКИ коли картинка повністю завантажилася в кеш браузера — змінюємо src
-                                    // Це прибирає ефект "чорного екрану" або "тусклості"
-                                    bgImg.attr('src', newBgUrl);
+                                    // 2. Починаємо плавну зміну: спочатку легке розчинення (не до 0, щоб не було чорноти)
+                                    bgImg.css('opacity', '0.1'); 
+                                    
+                                    // 3. Через 600мс (коли анімація opacity дійшла до мінімуму) змінюємо src
+                                    setTimeout(() => {
+                                        bgImg.attr('src', newBgUrl);
+                                        // 4. Повертаємо видимість на 100%
+                                        bgImg.css('opacity', '1');
+                                    }, 600);
                                 };
 
-                            }, 7000); 
+                            }, 8000); // Кожні 8 секунд
                         }
                     });
 
-                    // --- Решта коду (Рейтинги, Студії, Якість) залишається без змін ---
+                    // --- Рейтинги, Студії та Якість (твоя робоча логіка) ---
                     let ratesHtml = '';
                     const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
                     if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
