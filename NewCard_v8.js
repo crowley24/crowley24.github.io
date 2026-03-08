@@ -51,7 +51,7 @@
             'cas_logo_scale': '100',
             'cas_logo_quality': 'original',
             'cas_bg_animation': true,
-            'cas_slideshow_enabled': true, // НОВЕ: Слайд-шоу
+            'cas_slideshow_enabled': true,
             'cas_blocks_gap': '20',
             'cas_meta_size': '1.3',
             'cas_show_studios': true,
@@ -150,8 +150,7 @@
                 <div class="left-title__content">  
                     <div class="cas-logo-container" style="margin-bottom: var(--cas-blocks-gap);">
                         <div class="cas-logo"></div>
-                        <div class="full-start-new__title">{title}</div>  
-                    </div>
+                        </div>
                       
                     <div class="cas-ratings-line">
                         <div class="cas-rate-items" style="display: flex; align-items: center; gap: 12px;"></div>
@@ -244,38 +243,37 @@
     --cas-logo-scale: 1; 
     --cas-blocks-gap: 30px; 
     --cas-meta-size: 1.2em;
-    --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); /* Преміальна крива руху */
+    --cas-anim-curve: cubic-bezier(0.25, 1, 0.5, 1); /* Швидка преміальна крива */
 }
 
-/* --- Секція анімації (нова логіка) --- */
+/* --- Секція прискореної анімації --- */
 .cas-logo, 
 .cas-ratings-line, 
 .cas-studios-row, 
 .left-title .full-start-new__buttons {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(12px); /* Менша амплітуда для швидкості */
     transition: 
-        opacity 0.8s var(--cas-anim-curve), 
-        transform 0.8s var(--cas-anim-curve);
+        opacity 0.4s var(--cas-anim-curve), 
+        transform 0.4s var(--cas-anim-curve);
 }
 
-/* Послідовна поява через затримки */
-.cas-animated .cas-logo { opacity: 1; transform: translateY(0); transition-delay: 0.1s; }
-.cas-animated .cas-ratings-line { opacity: 1; transform: translateY(0); transition-delay: 0.25s; }
-.cas-animated .cas-studios-row { opacity: 1; transform: translateY(0); transition-delay: 0.4s; }
-.cas-animated .full-start-new__buttons { opacity: 1; transform: translateY(0); transition-delay: 0.55s; }
-/* ------------------------------------ */
+/* Послідовна поява з мінімальними затримками */
+.cas-animated .cas-logo { opacity: 1; transform: translateY(0); transition-delay: 0.05s; }
+.cas-animated .cas-ratings-line { opacity: 1; transform: translateY(0); transition-delay: 0.12s; }
+.cas-animated .cas-studios-row { opacity: 1; transform: translateY(0); transition-delay: 0.18s; }
+.cas-animated .full-start-new__buttons { opacity: 1; transform: translateY(0); transition-delay: 0.24s; }
 
 .left-title .full-start-new__body { height: 85vh; }  
 .left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 2vh; }  
 .left-title__content { flex-grow: 1; display: flex; flex-direction: column; justify-content: flex-end; }  
 
-.left-title .full-start-new__title {  
+/* Назва, що створюється динамічно */
+.full-start-new__title {  
     font-size: 2.5em; font-weight: 700; line-height: 1.2; margin-bottom: 0.5em;  
     text-shadow: 0 0 0.1em rgba(0, 0, 0, 0.3); color: #fff;  
 }  
 
-/* Приховуємо зайве (як ви просили) */
 .left-title .full-start-new__reactions,
 .left-title .full-start-new__rate-line,
 .left-title .full-start__status,
@@ -329,13 +327,14 @@ body.cas--zoom-enabled .full-start__background.loaded {
         Lampa.Template.add('left_title_css', styles);  
         $('body').append(Lampa.Template.get('left_title_css', {}, true));  
     }
+
     function attachLoader() {  
         Lampa.Listener.follow('full', (event) => {  
             if (event.type === 'complite') {  
                 const data = event.data.movie;
                 const render = event.object.activity.render();
                 
-                // Скидаємо стан анімації перед початком завантаження нових даних
+                // Миттєве скидання анімації
                 render.find('.left-title__content').removeClass('cas-animated');
                 
                 const bgImg = render.find('.full-start__background img, img.full-start__background');
@@ -344,6 +343,7 @@ body.cas--zoom-enabled .full-start__background.loaded {
                     const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());
                     
                     $.get(imagesUrl, (res) => {
+                        const logoContainer = render.find('.cas-logo');
                         const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || 
                                          res.logos.find(l => l.iso_639_1 === 'en') || 
                                          res.logos[0];
@@ -351,21 +351,19 @@ body.cas--zoom-enabled .full-start__background.loaded {
                         if (bestLogo) {
                             const quality = Lampa.Storage.get('cas_logo_quality') || 'original';
                             const logoUrl = Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path);
-                            render.find('.cas-logo').html('<img src="' + logoUrl + '">');
-                            render.find('.full-start-new__title').hide();
+                            logoContainer.html('<img src="' + logoUrl + '">');
                         } else {
-                            render.find('.cas-logo').empty();
-                            render.find('.full-start-new__title').show();
+                            // Якщо логотипа немає, створюємо текстову назву динамічно
+                            logoContainer.html('<div class="full-start-new__title">' + (data.title || data.name) + '</div>');
                         }
 
-                        // Слайд-шоу фону (15 секунд)
+                        // Слайд-шоу фону
                         if (window.casBgInterval) clearInterval(window.casBgInterval);
                         const slideshowEnabled = Lampa.Storage.get('cas_slideshow_enabled');
 
                         if (slideshowEnabled && res.backdrops && res.backdrops.length > 1 && bgImg.length) {
                             let currentIndex = 0;
                             const backdrops = res.backdrops.slice(0, 15);
-
                             bgImg.css({ 'transition': 'opacity 1.5s ease-in-out', 'opacity': '1' });
 
                             window.casBgInterval = setInterval(() => {
@@ -409,7 +407,7 @@ body.cas--zoom-enabled .full-start__background.loaded {
                         render.find('.cas-studios-row').html(studios.map(s => `<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}"></div>`).join(''));
                     }
 
-                    // Якість (4K, HDR, UKR)
+                    // Якість
                     if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {
                         Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {
                             if (res && res.Results) {
@@ -435,18 +433,18 @@ body.cas--zoom-enabled .full-start__background.loaded {
                     }
                 }
 
-                // КУЛЬМІНАЦІЯ: Запускаємо преміальну анімацію появи
+                // Запуск анімації з дуже короткою затримкою для чистоти рендеру
                 setTimeout(() => {
                     render.find('.left-title__content').addClass('cas-animated');
-                }, 200);
+                }, 100);
             }  
         });  
     }
   
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.4.5', name: PLUGIN_NAME,  
-            description: 'Кастомізація картки: логотипи, студії та вибір якості зображень.', author: '',  
+            type: 'other', version: '1.4.6', name: PLUGIN_NAME,  
+            description: 'Кастомізація картки: логотипи, студії та динамічна назва.', author: '',  
             icon: SETTINGS_ICON
         };  
   
