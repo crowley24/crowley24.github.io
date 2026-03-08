@@ -303,7 +303,7 @@ body.cas--zoom-enabled .full-start__background.loaded {
                 const data = event.data.movie;
                 const render = event.object.activity.render();
                 
-                // Знаходимо саме картинку фону
+                // Знаходимо основний елемент фону
                 const bgImg = render.find('.full-start__background img, img.full-start__background');
                 
                 if (data && data.id) {
@@ -325,21 +325,21 @@ body.cas--zoom-enabled .full-start__background.loaded {
                             render.find('.full-start-new__title').show();
                         }
 
-                        // --- Логіка Слайд-шоу (ПЛАВНИЙ ПЕРЕХІД) ---
+                        // --- Логіка Слайд-шоу (Ефект BLUR) ---
                         if (res.backdrops && res.backdrops.length > 1 && bgImg.length) {
                             let currentIndex = 0;
                             const backdrops = res.backdrops.slice(0, 15);
                             
                             if (window.casBgInterval) clearInterval(window.casBgInterval);
 
-                            // Додаємо CSS для плавної анімації прозорості
+                            // Готуємо базові стилі для плавних переходів фільтра
                             bgImg.css({
-                                'transition': 'opacity 1.5s ease-in-out',
-                                'opacity': '1'
+                                'transition': 'filter 1.2s ease-in-out, transform 1.2s ease-in-out',
+                                'filter': 'blur(0px)',
+                                'transform': 'scale(1)'
                             });
 
                             window.casBgInterval = setInterval(() => {
-                                // Перевірка: чи ми все ще в картці фільму
                                 if (!bgImg.closest('body').length) {
                                     clearInterval(window.casBgInterval);
                                     return;
@@ -348,26 +348,33 @@ body.cas--zoom-enabled .full-start__background.loaded {
                                 currentIndex = (currentIndex + 1) % backdrops.length;
                                 const newBgUrl = Lampa.TMDB.image('/t/p/original' + backdrops[currentIndex].file_path);
                                 
-                                // 1. Попереднє завантаження картинки в кеш
+                                // Попереднє завантаження наступного кадру
                                 const tempImg = new Image();
                                 tempImg.src = newBgUrl;
                                 tempImg.onload = function() {
-                                    // 2. Починаємо плавну зміну: спочатку легке розчинення (не до 0, щоб не було чорноти)
-                                    bgImg.css('opacity', '0.1'); 
+                                    // 1. Поступово розмиваємо стару картинку та трохи "зумимо" її
+                                    bgImg.css({
+                                        'filter': 'blur(15px)',
+                                        'transform': 'scale(1.08)'
+                                    });
                                     
-                                    // 3. Через 600мс (коли анімація opacity дійшла до мінімуму) змінюємо src
+                                    // 2. Коли картинка розмита (через 1 сек), міняємо джерело
                                     setTimeout(() => {
                                         bgImg.attr('src', newBgUrl);
-                                        // 4. Повертаємо видимість на 100%
-                                        bgImg.css('opacity', '1');
-                                    }, 600);
+                                        
+                                        // 3. Повертаємо чіткість
+                                        bgImg.css({
+                                            'filter': 'blur(0px)',
+                                            'transform': 'scale(1)'
+                                        });
+                                    }, 1000); 
                                 };
 
-                            }, 8000); // Кожні 8 секунд
+                            }, 9000); // Збільшено інтервал, щоб око відпочивало між переходами
                         }
                     });
 
-                    // --- Рейтинги, Студії та Якість (твоя робоча логіка) ---
+                    // --- Рейтинги, Студії та Якість (твоя оригінальна логіка) ---
                     let ratesHtml = '';
                     const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
                     if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
