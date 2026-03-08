@@ -94,7 +94,7 @@
                 values: { '1.2': 'Малий', '1.3': 'Стандартний', '1.4': 'Збільшений', '1.5': 'Великий' }, 
                 default: '1.3' 
             },
-            field: { name: 'Розмір шрифту метаданих' },
+            field: { name: 'Розмір шрифту' },
             onChange: applySettings
         });
 
@@ -182,34 +182,8 @@
                             </svg>  
                             <span>#{title_reactions}</span>  
                         </div>  
-  
-                        <div class="full-start__button selector button--subscribe hide">  
-                            <svg width="25" height="30" viewBox="0 0 25 30" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                <path d="M6.01892 24C6.27423 27.3562 9.07836 30 12.5 30C15.9216 30 18.7257 27.3562 18.981 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z" fill="currentColor"/>  
-                                <path d="M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z" stroke="currentColor" stroke-width="2.5"/>  
-                            </svg>  
-                            <span>#{title_subscribe}</span>  
-                        </div>  
-  
-                        <div class="full-start__button selector button--options">  
-                            <svg width="38" height="10" viewBox="0 0 38 10" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                <circle cx="4.88968" cy="4.98563" r="4.75394" fill="currentColor"/>  
-                                <circle cx="18.9746" cy="4.98563" r="4.75394" fill="currentColor"/>  
-                                <circle cx="33.0596" cy="4.98563" r="4.75394" fill="currentColor"/>  
-                            </svg>  
-                        </div>  
                     </div>  
                 </div>  
-  
-                <div class="full-start-new__reactions selector">  
-                    <div>#{reactions_none}</div>  
-                </div>  
-                  
-                <div class="full-start-new__rate-line">  
-                    <div class="full-start__status hide"></div>  
-                </div>  
-                  
-                <div class="rating--modss" style="display: none;"></div>  
             </div>  
         </div>  
     </div>`;  
@@ -230,7 +204,7 @@
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); color: #fff;  
 }  
 
-/* СТИЛІЗАЦІЯ КНОПОК */
+/* КНОПКИ */
 .left-title .full-start-new__buttons { 
     display: flex !important; 
     gap: 15px; 
@@ -243,11 +217,11 @@
     align-items: center; 
     transform: scale(var(--cas-btn-scale));
     transform-origin: left bottom;
-    transition: transform 0.25s cubic-bezier(0.23, 1, 0.32, 1), background-color 0.25s ease;
+    transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .left-title .full-start__button.focus {
-    transform: scale(calc(var(--cas-btn-scale) * 1.08));
+    transform: scale(calc(var(--cas-btn-scale) * 1.1));
 }
 
 .left-title .full-start-new__reactions,
@@ -279,10 +253,10 @@
 }
 
 .cas-rate-item { display: flex; align-items: center; gap: 6px; }
-.cas-rate-item img { height: 1.1em; width: auto; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4)); }
+.cas-rate-item img { height: 1.1em; width: auto; }
 .cas-rate-item span { line-height: 1; }
 
-.cas-studio-item { height: 20px !important; display: flex; align-items: center; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4)); }
+.cas-studio-item { height: 20px !important; display: flex; align-items: center; }
 .cas-studio-item img { height: 100% !important; width: auto !important; }
 
 .cas-quality-item { 
@@ -303,9 +277,8 @@
     content: '';
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 100%);
+    background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.05) 100%);
     pointer-events: none;
-    border-radius: 2px;
 }
 
 @keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } }
@@ -398,8 +371,8 @@ body.cas--zoom-enabled .full-start__background.loaded {
   
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.4.8', name: PLUGIN_NAME,  
-            description: 'Кастомізація картки: чистий стиль, масштабовані кнопки та швидка анімація.', author: '',  
+            type: 'other', version: '1.4.9', name: PLUGIN_NAME,  
+            description: 'Кастомізація картки: чистий стиль, масштабовані кнопки.', author: '',  
             icon: SETTINGS_ICON
         };  
   
