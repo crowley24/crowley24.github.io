@@ -365,9 +365,8 @@ body.cas--zoom-enabled .cas-bg-overlay img {
 
                             // Створюємо оверлей, якщо його немає
                             if (!bgContainer.find('.cas-bg-overlay').length) {
-                                bgContainer.css('position', 'relative');
-                                bgContainer.append('<div class="cas-bg-overlay" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;transition:opacity 2.5s ease-in-out;z-index:2;"><img style="width:100%;height:100%;object-fit:cover;"></div>');
-                            }
+    bgContainer.append('<div class="cas-bg-overlay" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;z-index:-1;"><img style="width:100%;height:100%;object-fit:cover;"></div>');
+}
                             
                             const overlay = bgContainer.find('.cas-bg-overlay');
                             const overlayImg = overlay.find('img');
