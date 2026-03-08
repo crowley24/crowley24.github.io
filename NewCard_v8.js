@@ -44,7 +44,7 @@
             'cas_logo_scale': '100',
             'cas_bg_animation': true,
             'cas_blocks_gap': '30',
-            'cas_meta_size': '1.1', // Тепер це мінімальний розмір
+            'cas_meta_size': '1.2',
             'cas_show_studios': true,
             'cas_show_quality': true
         };
@@ -137,7 +137,7 @@
                         <div class="cas-quality-row" style="display: flex; gap: 8px; align-items: center;"></div>
                     </div>
 
-                    <div class="cas-studios-row" style="margin-bottom: var(--cas-blocks-gap); display: flex; gap: 15px;"></div>
+                    <div class="cas-studios-row" style="margin-bottom: var(--cas-blocks-gap); display: flex; gap: 15px; align-items: center;"></div>
 
                     <div class="full-start-new__head hide"></div>  
                     <div class="full-start-new__details hide"></div>  
@@ -260,8 +260,9 @@
 .cas-rate-item img { height: 1.1em; width: auto; }
 .cas-rate-item span { line-height: 1; }
 
-.cas-studio-item { height: 28px !important; filter: brightness(0) invert(1); opacity: 0.8; }
-.cas-studio-item img { height: 100% !important; width: auto !important; }
+/* СТУДІЇ: Оригінальний вигляд + зменшений розмір */
+.cas-studio-item { height: 20px !important; display: flex; align-items: center; }
+.cas-studio-item img { height: 100% !important; width: auto !important; object-fit: contain; }
 
 .cas-quality-item { height: 1.2em; display: flex; align-items: center; }
 .cas-quality-item img { height: 100%; width: auto; }
@@ -367,7 +368,7 @@ body.cas--zoom-enabled .full-start__background.loaded {
   
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.4.1', name: PLUGIN_NAME,  
+            type: 'other', version: '1.4.2', name: PLUGIN_NAME,  
             description: 'Логотипи, анімація та динамічні метадані (DV/HDR/UKR).', author: '',  
             icon: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#fff"><rect x="10" y="30" width="80" height="40" rx="5" fill="rgba(255,255,255,0.2)"/><circle cx="50" cy="50" r="12" fill="white"/></svg>'
         };  
