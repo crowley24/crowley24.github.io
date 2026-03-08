@@ -1,8 +1,8 @@
 (function () {
     'use strict';
 
-    const PLUGIN_NAME = 'Clean & Apple Style';
-    const PLUGIN_ID = 'clean_apple_style';
+    const PLUGIN_NAME = 'NewCard';
+    const PLUGIN_ID = 'new_card_style';
     const ASSETS_PATH = 'https://crowley24.github.io/NewIcons/';
 
     const ICONS = {
@@ -19,6 +19,14 @@
         'Dolby Vision': ASSETS_PATH + 'Dolby Vision.svg',
         'UKR': ASSETS_PATH + 'UKR.svg'
     };
+
+    // Іконка налаштувань у формі картки (Cinema Card Icon)
+    const SETTINGS_ICON = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <rect x="15" y="20" width="70" height="60" rx="8" stroke="white" stroke-width="6" fill="none" opacity="0.4"/>
+        <rect x="25" y="32" width="50" height="28" rx="4" fill="white"/>
+        <rect x="25" y="66" width="30" height="6" rx="3" fill="white" opacity="0.6"/>
+        <rect x="60" y="66" width="15" height="6" rx="3" fill="white" opacity="0.6"/>
+    </svg>`;
 
     function getRatingColor(val) {
         const n = parseFloat(val);
@@ -56,7 +64,7 @@
         Lampa.SettingsApi.addComponent({
             component: PLUGIN_ID,
             name: PLUGIN_NAME,
-            icon: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#fff"><rect x="10" y="30" width="80" height="40" rx="5" fill="rgba(255,255,255,0.2)"/><circle cx="50" cy="50" r="12" fill="white"/></svg>'
+            icon: SETTINGS_ICON
         });
 
         Lampa.SettingsApi.addParam({
@@ -260,7 +268,6 @@
 .cas-rate-item img { height: 1.1em; width: auto; }
 .cas-rate-item span { line-height: 1; }
 
-/* СТУДІЇ: Оригінальний вигляд + зменшений розмір */
 .cas-studio-item { height: 20px !important; display: flex; align-items: center; }
 .cas-studio-item img { height: 100% !important; width: auto !important; object-fit: contain; }
 
@@ -308,7 +315,6 @@ body.cas--zoom-enabled .full-start__background.loaded {
                         }
                     });
 
-                    // 1. Рейтинги (TMDB + CUB)
                     let ratesHtml = '';
                     const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
                     if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
@@ -324,18 +330,15 @@ body.cas--zoom-enabled .full-start__background.loaded {
                     }
                     render.find('.cas-rate-items').html(ratesHtml);
 
-                    // 2. Мета-інфо (Час + Жанр)
                     const time = formatTime(data.runtime || data.episode_run_time);
                     const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');
                     render.find('.cas-meta-info').text((time ? time + (genre ? ' • ' : '') : '') + genre);
 
-                    // 3. Студії
                     if (Lampa.Storage.get('cas_show_studios')) {
                         const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 3);
                         render.find('.cas-studios-row').html(studios.map(s => `<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}"></div>`).join(''));
                     }
 
-                    // 4. Динамічна якість (з Dolby Vision)
                     if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {
                         Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {
                             if (res && res.Results) {
@@ -368,14 +371,14 @@ body.cas--zoom-enabled .full-start__background.loaded {
   
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.4.2', name: PLUGIN_NAME,  
-            description: 'Логотипи, анімація та динамічні метадані (DV/HDR/UKR).', author: '',  
-            icon: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#fff"><rect x="10" y="30" width="80" height="40" rx="5" fill="rgba(255,255,255,0.2)"/><circle cx="50" cy="50" r="12" fill="white"/></svg>'
+            type: 'other', version: '1.4.3', name: PLUGIN_NAME,  
+            description: 'Кастомізація картки: логотипи, студії та динамічна якість.', author: '',  
+            icon: SETTINGS_ICON
         };  
   
         if (Lampa.Manifest) {  
             if (!Lampa.Manifest.plugins) Lampa.Manifest.plugins = {};  
-            Lampa.Manifest.plugins['clean_apple'] = pluginManifest;  
+            Lampa.Manifest.plugins['new_card_style'] = pluginManifest;  
         }  
     }  
   
