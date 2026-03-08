@@ -36,20 +36,14 @@
         };
         Object.keys(defaults).forEach(key => { if (Lampa.Storage.get(key) === undefined) Lampa.Storage.set(key, defaults[key]); });
 
-        // 1. Створюємо основний компонент налаштувань
+        // Основний компонент плагіна
         Lampa.SettingsApi.addComponent({
             component: PLUGIN_ID,
             name: PLUGIN_NAME,
             icon: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#fff"><rect x="10" y="30" width="80" height="40" rx="5" fill="rgba(255,255,255,0.2)"/><circle cx="50" cy="50" r="12" fill="white"/></svg>'
         });
 
-        // 2. Створюємо під-компонент для медіа кнопок
-        Lampa.SettingsApi.addComponent({
-            component: PLUGIN_ID + '_buttons',
-            name: 'Медіа кнопки'
-        });
-
-        // Параметри головного меню
+        // 1. ПАРАМЕТРИ ГОЛОВНОГО МЕНЮ ПЛАГІНА
         Lampa.SettingsApi.addParam({
             component: PLUGIN_ID,
             param: { name: 'cas_logo_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' }, default: '100' },
@@ -68,14 +62,25 @@
         Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_show_quality', type: 'trigger', default: true }, field: { name: 'Показувати якість' } });
         Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_bg_animation', type: 'trigger', default: true }, field: { name: 'Анімація фону' }, onChange: applySettings });
 
-        // КНОПКА-ПЕРЕХІД ДО ПІДМЕНЮ
+        // 2. ПУНКТ-ПЕРЕХІД ДО ПІДМЕНЮ (знаходиться в середині головних налаштувань)
         Lampa.SettingsApi.addParam({
             component: PLUGIN_ID,
-            param: { name: PLUGIN_ID + '_buttons', type: 'submenu' },
-            field: { name: 'Медіа кнопки' }
+            param: { name: 'cas_btns_submenu', type: 'title' },
+            field: { name: 'Медіа кнопки' },
+            onRender: (item) => {
+                item.css('cursor', 'pointer').append('<div style="position:absolute;right:1.5em;opacity:0.5">➔</div>');
+                item.on('hover:enter', () => {
+                    Lampa.Settings.main(PLUGIN_ID + '_buttons'); // Перехід до компонента кнопок
+                });
+            }
         });
 
-        // Вміст підменю Медіа кнопки
+        // 3. ОКРЕМИЙ КОМПОНЕНТ ДЛЯ КНОПОК (не відображається в головному списку Lampa, бо ми не реєструємо його через addComponent у глобальному списку)
+        Lampa.SettingsApi.addComponent({
+            component: PLUGIN_ID + '_buttons',
+            name: 'Налаштування кнопок'
+        });
+
         Lampa.SettingsApi.addParam({ 
             component: PLUGIN_ID + '_buttons', 
             param: { name: 'cas_custom_buttons', type: 'trigger', default: true }, 
@@ -218,7 +223,6 @@ body.cas--custom-buttons .cas-apple-style .full-start__button.focus {
     z-index: 10;
 }
 
-/* ЗАГАЛЬНИЙ РОЗМІР ІКОНОК (ПРАЦЮЄ І ДЛЯ СТАНДАРТНИХ КНОПОК) */
 .cas-apple-style .full-start__button svg {
     width: calc(28px * var(--cas-btn-scale));
     height: calc(28px * var(--cas-btn-scale));
@@ -252,6 +256,7 @@ body.cas--zoom-enabled .full-start__background.loaded {
                             render.find('.full-start-new__title').hide();
                         }
                     });
+                    
                     let ratesHtml = '';
                     const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
                     if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
@@ -265,6 +270,7 @@ body.cas--zoom-enabled .full-start__background.loaded {
                         }
                     }
                     render.find('.cas-rate-items').html(ratesHtml);
+                    
                     const time = formatTime(data.runtime || data.episode_run_time);
                     const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');
                     render.find('.cas-meta-info').text((time ? time + (genre ? ' • ' : '') : '') + genre);
@@ -273,6 +279,7 @@ body.cas--zoom-enabled .full-start__background.loaded {
                         const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 3);
                         render.find('.cas-studios-row').html(studios.map(s => `<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}"></div>`).join(''));
                     }
+                    
                     if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {
                         Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {
                             if (res && res.Results) {
