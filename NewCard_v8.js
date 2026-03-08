@@ -152,7 +152,7 @@
 .cas-quality-item { height: 18px; display: flex; align-items: center; }
 .cas-quality-item img { height: 100%; width: auto; }
 
-/* КНОПКИ: ПОВНІСТЮ ПРОЗОРІ, БЕЗ ЖОДНИХ ГРАДІЄНТІВ */
+/* ШВИДКІ ТА ЛЕГКІ КНОПКИ */
 .applecation__buttons-row { display: flex; align-items: center; gap: 15px; margin-top: 25px; flex-wrap: wrap; }
 
 .cas-apple-style .full-start__button {  
@@ -160,39 +160,38 @@
     background-color: transparent !important;
     border: none !important;  
     box-shadow: none !important;
-    color: rgba(255,255,255,0.5) !important; /* Трохи тьмяніші у спокої */
-    padding: 10px 15px !important;
-    display: flex; justify-content: center; align-items: center; gap: 10px;
+    color: rgba(255,255,255,0.45) !important; 
+    padding: 8px 12px !important;
+    display: flex; justify-content: center; align-items: center; gap: 8px;
     font-size: 1.15em; font-weight: 500;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    text-shadow: 0 2px 5px rgba(0,0,0,0.9); /* Чітка тінь букв для читабельності */
+    /* Надшвидкий перехід */
+    transition: transform 0.15s ease-out, color 0.15s ease-out, filter 0.15s ease-out !important;
+    will-change: transform, filter; 
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
-/* СВІТІННЯ ТІЛЬКИ КОНТУРІВ ТЕКСТУ ТА ІКОНОК */
+/* МИТТЄВИЙ ФОКУС ТА СВІТІННЯ */
 .cas-apple-style .full-start__button.focus {  
-    transform: scale(1.2);  
+    transform: scale(1.15) !important; 
     background: transparent !important;
-    background-color: transparent !important;
     color: #fff !important;
     
-    /* Світяться тільки самі літери та іконки */
+    /* Соковите світіння контурів */
     filter: drop-shadow(0 0 4px rgba(255,255,255,1)) 
-            drop-shadow(0 0 12px rgba(255,255,255,0.8))
-            drop-shadow(0 0 25px rgba(255,255,255,0.4)) !important;  
+            drop-shadow(0 0 12px rgba(255,255,255,0.6)) !important;
     
     box-shadow: none !important;
+    z-index: 10;
 }
 
-/* ОНОВЛЕНА ЖИВА АНІМАЦІЯ */
+/* ЖИВА АНІМАЦІЯ ФОНУ (БЕЗ ЗМІН) */
 @keyframes casKenBurns { 
     0% { transform: scale(1) translate(0, 0); } 
     50% { transform: scale(1.12) translate(-1%, -1%); }
     100% { transform: scale(1) translate(0, 0); } 
 }
-
 body.cas--zoom-enabled .full-start__background.loaded { 
     animation: casKenBurns 40s ease-in-out infinite !important; 
-    transition: opacity 1s ease !important;
 }
 
 .left-title .full-start-new__title { font-size: 2.5em; font-weight: 700; color: #fff; }  
