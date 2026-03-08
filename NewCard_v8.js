@@ -43,8 +43,8 @@
         const defaults = {
             'cas_logo_scale': '100',
             'cas_bg_animation': true,
-            'cas_blocks_gap': '30',
-            'cas_meta_size': '1.2',
+            'cas_blocks_gap': '20',
+            'cas_meta_size': '1.3',
             'cas_show_studios': true,
             'cas_show_quality': true
         };
@@ -72,20 +72,20 @@
                 name: 'cas_meta_size', 
                 type: 'select', 
                 values: { 
-                    '1.1': 'Малий', 
-                    '1.2': 'Стандартний', 
-                    '1.3': 'Збільшений', 
-                    '1.4': 'Великий' 
+                    '1.2': 'Малий', 
+                    '1.3': 'Стандартний', 
+                    '1.4': 'Збільшений', 
+                    '1.5': 'Великий' 
                 }, 
-                default: '1.2' 
+                default: '1.3' 
             },
-            field: { name: 'Розмір шрифту метаданих' },
+            field: { name: 'Розмір шрифту' },
             onChange: applySettings
         });
 
         Lampa.SettingsApi.addParam({
             component: PLUGIN_ID,
-            param: { name: 'cas_blocks_gap', type: 'select', values: { '15':'Тісно','30':'Стандарт','45':'Просторе' }, default: '30' },
+            param: { name: 'cas_blocks_gap', type: 'select', values: { '15':'Тісно','20':'Стандарт','25':'Просторе' }, default: '20' },
             field: { name: 'Відступи між блоками' },
             onChange: applySettings
         });
@@ -93,7 +93,7 @@
         Lampa.SettingsApi.addParam({
             component: PLUGIN_ID,
             param: { name: 'cas_bg_animation', type: 'trigger', default: true },
-            field: { name: 'Анімація фону (Zoom)' },
+            field: { name: 'Анімація фону' },
             onChange: applySettings
         });
 
@@ -106,8 +106,8 @@
     function applySettings() {
         const root = document.documentElement;
         const scale = parseInt(Lampa.Storage.get('cas_logo_scale') || 100) / 100;
-        const gap = Lampa.Storage.get('cas_blocks_gap') || '30';
-        const metaSize = Lampa.Storage.get('cas_meta_size') || '1.2';
+        const gap = Lampa.Storage.get('cas_blocks_gap') || '20';
+        const metaSize = Lampa.Storage.get('cas_meta_size') || '1.3';
         
         root.style.setProperty('--cas-logo-scale', scale);
         root.style.setProperty('--cas-blocks-gap', gap + 'px');
