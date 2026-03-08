@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    const PLUGIN_NAME = 'NewCard Original Fix';
+    const PLUGIN_NAME = 'NewCard';
     const PLUGIN_ID = 'new_card_style';
     const ASSETS_PATH = 'https://crowley24.github.io/NewIcons/';
 
