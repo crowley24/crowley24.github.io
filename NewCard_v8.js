@@ -49,6 +49,7 @@
     function addSettings() {
         const defaults = {
             'cas_logo_scale': '100',
+            'cas_logo_quality': 'original',
             'cas_bg_animation': true,
             'cas_blocks_gap': '20',
             'cas_meta_size': '1.3',
@@ -68,6 +69,18 @@
 
         Lampa.SettingsApi.addParam({
             component: PLUGIN_ID,
+            param: { 
+                name: 'cas_logo_quality', 
+                type: 'select', 
+                values: { 'w300':'300px', 'w500':'500px', 'original':'Original' }, 
+                default: 'original' 
+            },
+            field: { name: 'Якість логотипу' },
+            onChange: applySettings
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: PLUGIN_ID,
             param: { name: 'cas_logo_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' }, default: '100' },
             field: { name: 'Розмір логотипу' },
             onChange: applySettings
@@ -78,12 +91,7 @@
             param: { 
                 name: 'cas_meta_size', 
                 type: 'select', 
-                values: { 
-                    '1.2': 'Малий', 
-                    '1.3': 'Стандартний', 
-                    '1.4': 'Збільшений', 
-                    '1.5': 'Великий' 
-                }, 
+                values: { '1.2': 'Малий', '1.3': 'Стандартний', '1.4': 'Збільшений', '1.5': 'Великий' }, 
                 default: '1.3' 
             },
             field: { name: 'Розмір шрифту' },
@@ -305,8 +313,9 @@ body.cas--zoom-enabled .full-start__background.loaded {
                                          res.logos[0];
 
                         if (bestLogo) {
-                            // Змінено w500 на original для покращення якості
-                            const logoUrl = Lampa.TMDB.image('/t/p/original' + bestLogo.file_path);
+                            // Використовуємо якість з налаштувань
+                            const quality = Lampa.Storage.get('cas_logo_quality') || 'original';
+                            const logoUrl = Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path);
                             render.find('.cas-logo').html('<img src="' + logoUrl + '">');
                             render.find('.full-start-new__title').hide();
                         } else {
@@ -371,8 +380,8 @@ body.cas--zoom-enabled .full-start__background.loaded {
   
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.4.3', name: PLUGIN_NAME,  
-            description: 'Кастомізація картки: логотипи, студії та динамічна якість.', author: '',  
+            type: 'other', version: '1.4.4', name: PLUGIN_NAME,  
+            description: 'Кастомізація картки: логотипи, студії та вибір якості зображень.', author: '',  
             icon: SETTINGS_ICON
         };  
   
