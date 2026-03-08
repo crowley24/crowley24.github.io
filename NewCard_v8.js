@@ -51,6 +51,7 @@
             'cas_logo_scale': '100',
             'cas_logo_quality': 'original',
             'cas_bg_animation': true,
+            'cas_slideshow_enabled': true, // НОВЕ: Слайд-шоу
             'cas_blocks_gap': '20',
             'cas_meta_size': '1.3',
             'cas_show_studios': true,
@@ -108,8 +109,14 @@
         Lampa.SettingsApi.addParam({
             component: PLUGIN_ID,
             param: { name: 'cas_bg_animation', type: 'trigger', default: true },
-            field: { name: 'Анімація фону' },
+            field: { name: 'Анімація фону (Ken Burns)' },
             onChange: applySettings
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: PLUGIN_ID,
+            param: { name: 'cas_slideshow_enabled', type: 'trigger', default: true },
+            field: { name: 'Слайд-шоу фону' }
         });
 
         Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_show_studios', type: 'trigger', default: true }, field: { name: 'Показувати студії' } });
@@ -297,13 +304,13 @@ body.cas--zoom-enabled .full-start__background.loaded {
         Lampa.Template.add('left_title_css', styles);  
         $('body').append(Lampa.Template.get('left_title_css', {}, true));  
     }  
-  function attachLoader() {  
+
+    function attachLoader() {  
         Lampa.Listener.follow('full', (event) => {  
             if (event.type === 'complite') {  
                 const data = event.data.movie;
                 const render = event.object.activity.render();
                 
-                // Знаходимо основний елемент фону
                 const bgImg = render.find('.full-start__background img, img.full-start__background');
                 
                 if (data && data.id) {
@@ -325,18 +332,18 @@ body.cas--zoom-enabled .full-start__background.loaded {
                             render.find('.full-start-new__title').show();
                         }
 
-                        // --- Логіка Слайд-шоу (Ефект BLUR) ---
-                        if (res.backdrops && res.backdrops.length > 1 && bgImg.length) {
+                        // --- Логіка Слайд-шоу (З НОВИМ ІНТЕРВАЛОМ ТА ВКЛ/ВИКЛ) ---
+                        if (window.casBgInterval) clearInterval(window.casBgInterval);
+
+                        const slideshowEnabled = Lampa.Storage.get('cas_slideshow_enabled');
+
+                        if (slideshowEnabled && res.backdrops && res.backdrops.length > 1 && bgImg.length) {
                             let currentIndex = 0;
                             const backdrops = res.backdrops.slice(0, 15);
-                            
-                            if (window.casBgInterval) clearInterval(window.casBgInterval);
 
-                            // Готуємо базові стилі для плавних переходів фільтра
                             bgImg.css({
-                                'transition': 'filter 1.2s ease-in-out, transform 1.2s ease-in-out',
-                                'filter': 'blur(0px)',
-                                'transform': 'scale(1)'
+                                'transition': 'opacity 1.5s ease-in-out',
+                                'opacity': '1'
                             });
 
                             window.casBgInterval = setInterval(() => {
@@ -348,33 +355,17 @@ body.cas--zoom-enabled .full-start__background.loaded {
                                 currentIndex = (currentIndex + 1) % backdrops.length;
                                 const newBgUrl = Lampa.TMDB.image('/t/p/original' + backdrops[currentIndex].file_path);
                                 
-                                // Попереднє завантаження наступного кадру
                                 const tempImg = new Image();
                                 tempImg.src = newBgUrl;
                                 tempImg.onload = function() {
-                                    // 1. Поступово розмиваємо стару картинку та трохи "зумимо" її
-                                    bgImg.css({
-                                        'filter': 'blur(15px)',
-                                        'transform': 'scale(1.08)'
-                                    });
-                                    
-                                    // 2. Коли картинка розмита (через 1 сек), міняємо джерело
-                                    setTimeout(() => {
-                                        bgImg.attr('src', newBgUrl);
-                                        
-                                        // 3. Повертаємо чіткість
-                                        bgImg.css({
-                                            'filter': 'blur(0px)',
-                                            'transform': 'scale(1)'
-                                        });
-                                    }, 1000); 
+                                    bgImg.attr('src', newBgUrl);
                                 };
 
-                            }, 9000); // Збільшено інтервал, щоб око відпочивало між переходами
+                            }, 10000); // Інтервал 10 секунд
                         }
                     });
 
-                    // --- Рейтинги, Студії та Якість (твоя оригінальна логіка) ---
+                    // --- Рейтинги, Студії, Якість ---
                     let ratesHtml = '';
                     const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
                     if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
@@ -429,7 +420,7 @@ body.cas--zoom-enabled .full-start__background.loaded {
   
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.4.4', name: PLUGIN_NAME,  
+            type: 'other', version: '1.4.5', name: PLUGIN_NAME,  
             description: 'Кастомізація картки: логотипи, студії та вибір якості зображень.', author: '',  
             icon: SETTINGS_ICON
         };  
