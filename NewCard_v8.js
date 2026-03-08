@@ -90,14 +90,16 @@
                         <div class="full-start-new__title">{title}</div>  
                     </div>
                       
-                    <div class="cas-info-line" style="display: flex; align-items: center; gap: 10px; margin-bottom: var(--cas-blocks-gap); flex-wrap: wrap;">
+                    <div class="cas-info-line" style="display: flex; align-items: center; gap: 15px; margin-bottom: var(--cas-blocks-gap); flex-wrap: nowrap; overflow: hidden;">
+                        <div class="cas-ratings-row" style="display: flex; gap: 10px; font-weight: bold; color: #ffc107;"></div>
+                        <div class="cas-meta-items" style="display: flex; gap: 10px; align-items: center; color: rgba(255,255,255,0.8);"></div>
                         <div class="cas-quality-row" style="display: flex; gap: 8px; align-items: center;"></div>
                     </div>
 
                     <div class="cas-studios-row" style="margin-bottom: var(--cas-blocks-gap); display: flex; gap: 15px;"></div>
 
-                    <div class="full-start-new__head"></div>  
-                    <div class="full-start-new__details"></div>  
+                    <div class="full-start-new__head" style="display:none"></div>  
+                    <div class="full-start-new__details" style="display:none"></div>  
                       
                     <div class="full-start-new__buttons">  
                         <div class="full-start__button selector button--play">  
@@ -205,6 +207,10 @@
 .cas-quality-item { height: 20px; display: flex; align-items: center; }
 .cas-quality-item img { height: 100%; width: auto; }
 
+.cas-info-line { font-size: 1.4rem; }
+.cas-ratings-row { display: flex; align-items: center; }
+.cas-meta-items { font-size: 1.3rem; }
+
 @keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 body.cas--zoom-enabled .full-start__background.loaded { 
     animation: casKenBurns 45s ease-in-out infinite !important; 
@@ -230,8 +236,8 @@ body.cas--zoom-enabled .full-start__background.loaded {
                 const render = event.object.activity.render();
                 
                 if (data && data.id) {
+                    // Логотип
                     const url = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());
-                    
                     $.get(url, (res) => {
                         const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || 
                                          res.logos.find(l => l.iso_639_1 === 'en') || 
@@ -246,6 +252,21 @@ body.cas--zoom-enabled .full-start__background.loaded {
                             render.find('.full-start-new__title').show();
                         }
                     });
+
+                    // Рейтинги
+                    let rH = '';
+                    if (data.vote_average) rH += `<span>TMDB: ${data.vote_average.toFixed(1)}</span>`;
+                    if (data.kp_rating) rH += `<span>КП: ${parseFloat(data.kp_rating).toFixed(1)}</span>`;
+                    render.find('.cas-ratings-row').html(rH);
+
+                    // Мета-дані (Рік, Тривалість, Жанр)
+                    let year = data.release_date || data.first_air_date || '';
+                    let time = data.runtime ? data.runtime + ' хв.' : '';
+                    let genre = data.genres && data.genres.length ? data.genres[0].name : '';
+                    let mH = `${year ? '<span>' + year.split('-')[0] + '</span>' : ''}`;
+                    if (time) mH += `<span>•</span><span>${time}</span>`;
+                    if (genre) mH += `<span>•</span><span>${genre}</span>`;
+                    render.find('.cas-meta-items').html(mH);
 
                     // Студії
                     if (Lampa.Storage.get('cas_show_studios')) {
@@ -279,8 +300,8 @@ body.cas--zoom-enabled .full-start__background.loaded {
   
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.3.2', name: PLUGIN_NAME,  
-            description: 'Логотипи, анімація та інфо-блоки.', author: '',  
+            type: 'other', version: '1.4.0', name: PLUGIN_NAME,  
+            description: 'Логотипи, рейтинги та інфо-блоки в один ряд.', author: '',  
             icon: '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#fff"><rect x="10" y="30" width="80" height="40" rx="5" fill="rgba(255,255,255,0.2)"/><circle cx="50" cy="50" r="12" fill="white"/></svg>'
         };  
   
