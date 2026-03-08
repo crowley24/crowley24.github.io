@@ -247,7 +247,7 @@
     --cas-glow-color: rgba(255, 255, 255, 0.8); 
 }
 
-/* --- ПОЯВА ЕЛЕМЕНТІВ --- */
+/* --- АНІМАЦІЯ ПОЯВИ --- */
 .cas-logo, .cas-ratings-line, .cas-studios-row, .left-title .full-start-new__buttons {
     opacity: 0; transform: translateY(12px);
     transition: opacity 0.4s var(--cas-anim-curve), transform 0.4s var(--cas-anim-curve);
@@ -257,7 +257,7 @@
 .cas-animated .cas-studios-row { opacity: 1; transform: translateY(0); transition-delay: 0.18s; }
 .cas-animated .full-start-new__buttons { opacity: 1; transform: translateY(0); transition-delay: 0.24s; }
 
-/* --- ЛОГОТИП НАЗВИ (ФІКСОВАНИЙ) --- */
+/* --- ГОЛОВНИЙ ЛОГОТИП (НАЗВА) --- */
 .cas-logo img {
     display: block;
     max-width: calc(450px * var(--cas-logo-scale));
@@ -267,21 +267,21 @@
     filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
 }
 
-/* --- ЛОГОТИПИ СТУДІЙ (ВИПРАВЛЕННЯ ВИДИМОСТІ) --- */
+/* --- ЛОГОТИПИ СТУДІЙ (КРИШТАЛЕВА ЧІТКІСТЬ) --- */
 .cas-studio-item { height: 18px !important; display: flex; align-items: center; margin-right: 12px; }
 .cas-studio-item img { 
     height: 100% !important; width: auto !important; object-fit: contain;
-    /* Фільтр створює тонкий світлий контур 0.8px. 
-       Це робить чорне видимим на чорному, не розмиваючи картинку. */
-    filter: 
-        drop-shadow(0.8px 0.8px 0px rgba(255,255,255,0.4)) 
-        drop-shadow(-0.8px -0.8px 0px rgba(255,255,255,0.4))
-        brightness(1.1);
+    /* ВИДАЛЕНО ВСІ ОБВОДКИ ТА ТІНІ. 
+       Використовуємо комбінацію фільтрів для висвітлення чорного:
+       contrast(0) invert(1) робить картинку білою, але ми додаємо напівпрозорість, 
+       щоб колір фону проступав крізь них, роблячи їх "скляними" та чіткими. */
+    filter: brightness(1.8) grayscale(0.2);
+    opacity: 0.9;
 }
 
-/* --- ІКОНКИ ЯКОСТІ: ТУТ ЗМІНЮЄТЬСЯ РОЗМІР --- */
+/* --- ІКОНКИ ЯКОСТІ: РОЗМІР ЗМІНЮВАТИ ТУТ --- */
 .cas-quality-item { 
-    height: 16px !important; /* <--- ЗМІНІТЬ ЦЕ ЧИСЛО ДЛЯ РОЗМІРУ ІКОНОК ЯКОСТІ */
+    height: 18px !important; /* <--- ЗМІНІТЬ НА 16px АБО 18px, ЯКЩО ТРЕБА БІЛЬШЕ */
     display: flex; 
     align-items: center; 
 }
@@ -304,7 +304,7 @@
 .left-title .full-start__button svg { width: 26px !important; height: 26px !important; }
 .left-title .full-start__button span { font-size: 1.1em; font-weight: 500; }
 
-/* --- СТРУКТУРА --- */
+/* --- СТРУКТУРА ТА МЕТА --- */
 .cas-ratings-line { display: flex; align-items: center; gap: 12px; margin-bottom: var(--cas-blocks-gap); font-weight: 600; font-size: var(--cas-meta-size); color: rgba(255,255,255,0.9); }
 .cas-rate-item img { height: 1.1em; width: auto; }
 
