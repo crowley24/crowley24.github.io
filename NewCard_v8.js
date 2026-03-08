@@ -49,6 +49,7 @@
     function addSettings() {
         const defaults = {
             'cas_logo_scale': '100',
+            'cas_button_scale': '1.0',
             'cas_bg_animation': true,
             'cas_blocks_gap': '20',
             'cas_meta_size': '1.3',
@@ -76,12 +77,24 @@
         Lampa.SettingsApi.addParam({
             component: PLUGIN_ID,
             param: { 
+                name: 'cas_button_scale', 
+                type: 'select', 
+                values: { '0.8': 'Дрібні', '0.9': 'Зменшені', '1.0': 'Стандарт', '1.1': 'Збільшені', '1.2': 'Великі' }, 
+                default: '1.0' 
+            },
+            field: { name: 'Розмір кнопок' },
+            onChange: applySettings
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: PLUGIN_ID,
+            param: { 
                 name: 'cas_meta_size', 
                 type: 'select', 
                 values: { '1.2': 'Малий', '1.3': 'Стандартний', '1.4': 'Збільшений', '1.5': 'Великий' }, 
                 default: '1.3' 
             },
-            field: { name: 'Розмір шрифту' },
+            field: { name: 'Розмір шрифту метаданих' },
             onChange: applySettings
         });
 
@@ -107,11 +120,13 @@
 
     function applySettings() {
         const root = document.documentElement;
-        const scale = parseInt(Lampa.Storage.get('cas_logo_scale') || 100) / 100;
+        const logoScale = parseInt(Lampa.Storage.get('cas_logo_scale') || 100) / 100;
+        const btnScale = Lampa.Storage.get('cas_button_scale') || '1.0';
         const gap = Lampa.Storage.get('cas_blocks_gap') || '20';
         const metaSize = Lampa.Storage.get('cas_meta_size') || '1.3';
         
-        root.style.setProperty('--cas-logo-scale', scale);
+        root.style.setProperty('--cas-logo-scale', logoScale);
+        root.style.setProperty('--cas-btn-scale', btnScale);
         root.style.setProperty('--cas-blocks-gap', gap + 'px');
         root.style.setProperty('--cas-meta-size', metaSize + 'em');
         $('body').toggleClass('cas--zoom-enabled', !!Lampa.Storage.get('cas_bg_animation'));
@@ -204,7 +219,7 @@
   
     function addStyles() {  
         const styles = `<style>  
-:root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.2em; }
+:root { --cas-logo-scale: 1; --cas-btn-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.2em; }
 
 .left-title .full-start-new__body { height: 80vh; }  
 .left-title .full-start-new__right { display: flex; align-items: flex-end; }  
@@ -215,11 +230,26 @@
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); color: #fff;  
 }  
 
-/* ПОВЕРНЕННЯ ВИДИМОСТІ КНОПОК ТА СЕКЦІЙ */
-.left-title .full-start-new__buttons { display: flex !important; gap: 15px; margin-top: 1.2em; }
-.left-title .full-start__button { display: flex !important; align-items: center; }
+/* СТИЛІЗАЦІЯ КНОПОК */
+.left-title .full-start-new__buttons { 
+    display: flex !important; 
+    gap: 15px; 
+    margin-top: 1.2em; 
+    align-items: center;
+}
 
-/* ПРИХОВУЄМО ТІЛЬКИ НЕПОТРІБНЕ */
+.left-title .full-start__button { 
+    display: flex !important; 
+    align-items: center; 
+    transform: scale(var(--cas-btn-scale));
+    transform-origin: left bottom;
+    transition: transform 0.25s cubic-bezier(0.23, 1, 0.32, 1), background-color 0.25s ease;
+}
+
+.left-title .full-start__button.focus {
+    transform: scale(calc(var(--cas-btn-scale) * 1.08));
+}
+
 .left-title .full-start-new__reactions,
 .left-title .full-start-new__rate-line,
 .left-title .full-start__status,
@@ -255,7 +285,6 @@
 .cas-studio-item { height: 20px !important; display: flex; align-items: center; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4)); }
 .cas-studio-item img { height: 100% !important; width: auto !important; }
 
-/* ЯКІСТЬ: ОБ'ЄМ БЕЗ ПІДКЛАДКИ */
 .cas-quality-item { 
     height: 1.45em; 
     display: flex; 
@@ -270,7 +299,6 @@
     display: block;
 }
 
-/* Скляний відблиск прямо поверх іконки */
 .cas-quality-item::after {
     content: '';
     position: absolute;
@@ -370,8 +398,8 @@ body.cas--zoom-enabled .full-start__background.loaded {
   
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.4.7', name: PLUGIN_NAME,  
-            description: 'Кастомізація картки: чистий стиль з об\'ємними іконками.', author: '',  
+            type: 'other', version: '1.4.8', name: PLUGIN_NAME,  
+            description: 'Кастомізація картки: чистий стиль, масштабовані кнопки та швидка анімація.', author: '',  
             icon: SETTINGS_ICON
         };  
   
