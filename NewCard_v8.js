@@ -145,16 +145,25 @@
 
         let index = 0;
         slideshowInterval = setInterval(() => {
-            const bg = $('.full-start__background img');
-            if (!bg.length) return clearInterval(slideshowInterval);
+            // Використовуємо універсальний селектор для пошуку фону
+            const bgImg = $('.full-start__background img, .full-start__poster img.full--poster');
+            if (!bgImg.length) return clearInterval(slideshowInterval);
             
             index = (index + 1) % backdrops.length;
             const newSrc = Lampa.TMDB.image('/t/p/original' + backdrops[index].file_path);
             
-            bg.fadeOut(800, function() {
-                $(this).attr('src', newSrc).fadeIn(800);
-            });
-        }, 10000);
+            // Плавне перемикання
+            bgImg.css('transition', 'opacity 0.8s ease-in-out');
+            bgImg.css('opacity', '0');
+            
+            setTimeout(() => {
+                bgImg.attr('src', newSrc);
+                bgImg.one('load', function() {
+                    $(this).css('opacity', '1');
+                });
+            }, 800);
+            
+        }, 10000); // 10 секунд
     }
   
     function addCustomTemplate() {  
@@ -349,7 +358,7 @@ body.cas--zoom-enabled .full-start__background.loaded {
                             render.find('.full-start-new__title').show();
                         }
 
-                        // Запуск слайдшоу
+                        // Запуск слайдшоу (тільки якщо є більше ніж 1 backdrop)
                         if (res.backdrops && res.backdrops.length > 1) {
                             runSlideshow(res.backdrops.slice(0, 10));
                         }
@@ -406,13 +415,16 @@ body.cas--zoom-enabled .full-start__background.loaded {
                     }
                 }
             } 
-            if (event.type === 'destroy') clearInterval(slideshowInterval);
+            // Очищення при знищенні компонента
+            if (event.type === 'destroy') {
+                clearInterval(slideshowInterval);
+            }
         });  
     }  
   
     function registerPlugin() {  
         const pluginManifest = {  
-            type: 'other', version: '1.4.5', name: PLUGIN_NAME,  
+            type: 'other', version: '1.4.6', name: PLUGIN_NAME,  
             description: 'Кастомізація картки: логотипи, слайдшоу фону та вибір якості.', author: '',  
             icon: SETTINGS_ICON
         };  
