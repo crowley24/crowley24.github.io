@@ -180,7 +180,12 @@
         const styles = `<style>  
 :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.25, 1, 0.5, 1); }
 
-/* GPU Fix for UI */
+/* Плавна зміна фону для запобігання тормозам */
+.full-start__background img, img.full-start__background { 
+    transition: opacity 1s ease-in-out !important; 
+    will-change: opacity, transform;
+}
+
 .cas-logo, .cas-ratings-line, .cas-description, .cas-studios-row, .full-start-new__buttons { 
     backface-visibility: hidden; transform: translateZ(0); 
     opacity: 0; transform: translateY(12px);
@@ -217,14 +222,15 @@
 .left-title .full-start-new__body { height: 85vh; }
 .left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 5vh; padding-left: 4%; }
 
-/* ПРИХОВУЄМО ОПИС ЛАМПИ ЗНИЗУ ТА ІНШІ ЗАЙВІ БЛОКИ */
-.left-title .full-description, 
-.left-title .full-start-new__reactions, 
-.left-title .full-start-new__rate-line, 
-.left-title .full-start__status, 
-.left-title .rating--modss, 
-.left-title .full-start-new__head, 
-.left-title .full-start-new__details { display: none !important; }
+/* ПОВНЕ ПРИХОВУВАННЯ СТАНДАРТНИХ БЛОКІВ */
+.left-title .full-start-new__head,
+.left-title .full-start__details,
+.left-title .full-start-new__details,
+.left-title .full-description,
+.left-title .full-start-new__reactions,
+.left-title .full-start-new__rate-line,
+.left-title .full-start__status,
+.left-title .rating--modss { display: none !important; visibility: hidden !important; height: 0 !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; }
 
 @keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 45s ease-in-out infinite !important; }
@@ -240,6 +246,9 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
                 const render = event.object.activity.render();
                 render.find('.left-title__content').removeClass('cas-animated');
                 
+                // Примусово ховаємо блок детально в самому DOM
+                render.find('.full-start__details').attr('style', 'display: none !important');
+
                 if (data && data.id) {
                     const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());
                     $.getJSON(imagesUrl, (res) => {
@@ -257,8 +266,14 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
                             window.casBgInterval = setInterval(() => {
                                 const bg = render.find('.full-start__background img, img.full-start__background');
                                 if (!bg.length) return clearInterval(window.casBgInterval);
-                                idx = (idx + 1) % Math.min(res.backdrops.length, 15);
-                                bg.attr('src', Lampa.TMDB.image('/t/p/original' + res.backdrops[idx].file_path));
+                                
+                                // М'яка зміна фону через opacity
+                                bg.css('opacity', '0');
+                                setTimeout(() => {
+                                    idx = (idx + 1) % Math.min(res.backdrops.length, 15);
+                                    bg.attr('src', Lampa.TMDB.image('/t/p/original' + res.backdrops[idx].file_path));
+                                    bg.on('load', function() { $(this).css('opacity', '1'); });
+                                }, 800);
                             }, 15000);
                         }
                     });
