@@ -11,7 +11,6 @@
         var images_cache = Lampa.Storage.get('cas_images_cache') || {};
         var cache_lifetime = 1000 * 60 * 60 * 24;
         var _this = this;
-
         this.create = function () {
             this.buildButtons();
             this.loadImages();
