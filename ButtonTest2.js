@@ -1,9 +1,9 @@
 (function() {
     'use strict';
 
-    var PLUGIN_VERSION = '1.75_full_restored';
+    var PLUGIN_VERSION = '1.80_final_fixed';
 
-    // --- Polyfills ---
+    // Polyfills
     if (!Array.prototype.forEach) {
         Array.prototype.forEach = function(callback, thisArg) {
             var T, k;
@@ -38,7 +38,6 @@
     var currentButtons = [];
     var currentContainer = null;
 
-    // --- Сховище ---
     function getCustomOrder() { return Lampa.Storage.get('button_custom_order', []); }
     function setCustomOrder(order) { Lampa.Storage.set('button_custom_order', order); }
     function getHiddenButtons() { return Lampa.Storage.get('button_hidden', []); }
@@ -48,17 +47,17 @@
     function getButtonScale() { return Lampa.Storage.get('button_scale_factor', '1.0'); }
     function setButtonScale(scale) { Lampa.Storage.set('button_scale_factor', scale); }
 
-    // --- Ідентифікація (Покращено для Shots) ---
     function getButtonId(button) {
         var classes = button.attr('class') || '';
         var span = button.find('span').first();
         var text = (span.attr('data-original-text') || span.text() || '').trim().replace(/\s+/g, '_');
-        
-        // Спеціальні випадки для популярних кнопок
-        if (classes.indexOf('modss') !== -1 || text.indexOf('MODS') !== -1) return 'modss_online_button';
-        if (classes.indexOf('shots') !== -1 || text.toLowerCase() === 'shots') return 'shots_button';
-        
-        var id = (text ? 'btn_' + text : 'cls_' + classes.replace(/\s+/g, '_').substring(0, 20));
+        var subtitle = button.attr('data-subtitle') || '';
+        if (classes.indexOf('modss') !== -1 || text.indexOf('MODS') !== -1 || text.indexOf('MOD') !== -1) return 'modss_online_button';
+        if (classes.indexOf('showy') !== -1 || text.indexOf('Showy') !== -1) return 'showy_online_button';
+        if (classes.indexOf('shots') !== -1) return 'btn_Shots';
+        var viewClasses = classes.split(' ').filter(function(c) { return c.indexOf('view--') === 0 || c.indexOf('button--') === 0; }).join('_');
+        var id = (viewClasses || 'btn') + '_' + text;
+        if (subtitle) id += '_' + subtitle.replace(/\s+/g, '_').substring(0, 30);
         return id;
     }
 
@@ -81,54 +80,75 @@
         return false;
     }
 
-    // --- Основна логіка ---
     function applyChanges() {
         if (!currentContainer) return;
         var targetContainer = currentContainer.find('.full-start-new__buttons');
         if (!targetContainer.length) return;
-
-        // Збираємо категорії
-        var allButtons = [];
-        targetContainer.find('.full-start__button').each(function() {
-            var $btn = $(this);
-            if (!isExcluded($btn)) {
-                if (!$btn.hasClass('selector')) $btn.addClass('selector');
-                allButtons.push($btn);
-            }
-        });
-
-        // Сортування за кастомним порядком
-        var customOrder = getCustomOrder();
-        if (customOrder.length) {
-            allButtons.sort(function(a, b) {
-                var indexA = customOrder.indexOf(getButtonId(a));
-                var indexB = customOrder.indexOf(getButtonId(b));
-                if (indexA === -1) indexA = 999;
-                if (indexB === -1) indexB = 999;
-                return indexA - indexB;
-            });
-        }
-
-        currentButtons = allButtons;
+        var categories = categorizeButtons(currentContainer);
+        var all = [].concat(categories.online, categories.torrent, categories.trailer, categories.favorite, categories.subscribe, categories.book, categories.reaction, categories.other, categories.any);
+        currentButtons = sortByCustomOrder(all);
         targetContainer.find('.full-start__button').not('.button--edit-order').detach();
-        
         currentButtons.forEach(function(btn) { targetContainer.append(btn); });
-
         var editBtn = targetContainer.find('.button--edit-order');
         if (editBtn.length) targetContainer.append(editBtn.detach());
-
-        // Застосовуємо приховання, назви та вид
         applyHiddenButtons(currentButtons);
         applyCustomLabels(currentButtons);
-        
         var viewmode = Lampa.Storage.get('buttons_viewmode', 'default');
         targetContainer.removeClass('icons-only always-text');
         if (viewmode === 'icons') targetContainer.addClass('icons-only');
         if (viewmode === 'always') targetContainer.addClass('always-text');
+        
+        // Застосування масштабу
+        targetContainer.css('--btn-scale', getButtonScale());
+        
+        saveOrder();
+    }
 
-        // Масштаб
-        var scale = getButtonScale();
-        targetContainer.css('--btn-scale', scale);
+    function categorizeButtons(container) {
+        var allButtons = container.find('.full-start__button').not('.button--edit-order, .button--play');
+        var categories = { online: [], torrent: [], trailer: [], favorite: [], subscribe: [], book: [], reaction: [], other: [], any: [] };
+        var processedIds = {};
+        allButtons.each(function() {
+            var $btn = $(this);
+            if (isExcluded($btn)) return;
+            var btnId = getButtonId($btn);
+            if (processedIds[btnId]) return;
+            processedIds[btnId] = true;
+            var type = getButtonType($btn);
+            if (categories[type]) categories[type].push($btn);
+            else categories.any.push($btn); // Додаємо сюди все, що не розпізнано
+            if (!$btn.hasClass('selector')) $btn.addClass('selector');
+        });
+        return categories;
+    }
+
+    function sortByCustomOrder(buttons) {
+        var customOrder = getCustomOrder();
+        var priority = [];
+        var regular = [];
+        buttons.forEach(function(btn) {
+            if (getButtonId(btn) === 'modss_online_button') priority.push(btn);
+            else regular.push(btn);
+        });
+        if (!customOrder.length) {
+            regular.sort(function(a, b) {
+                var typeOrder = ['online', 'torrent', 'trailer', 'favorite', 'subscribe', 'book', 'reaction', 'other', 'any'];
+                return typeOrder.indexOf(getButtonType(a)) - typeOrder.indexOf(getButtonType(b));
+            });
+            return priority.concat(regular);
+        }
+        var sorted = [];
+        var remaining = regular.slice();
+        customOrder.forEach(function(id) {
+            for (var i = 0; i < remaining.length; i++) {
+                if (getButtonId(remaining[i]) === id) {
+                    sorted.push(remaining[i]);
+                    remaining.splice(i, 1);
+                    break;
+                }
+            }
+        });
+        return priority.concat(sorted).concat(remaining);
     }
 
     function applyHiddenButtons(buttons) {
@@ -152,25 +172,30 @@
         });
     }
 
-    // --- Редактор ---
+    function saveOrder() {
+        var order = currentButtons.map(function(btn) { return getButtonId(btn); });
+        setCustomOrder(order);
+    }
+
     function openEditDialog() {
         var list = $('<div class="menu-edit-list"></div>');
+        var hidden = getHiddenButtons();
         var modes = ['default', 'icons', 'always'];
-        var modeLabels = {default: 'Стандартний', icons: 'Тільки іконки', always: 'З текстом'};
+        var labels = {default: 'Стандартний', icons: 'Тільки іконки', always: 'З текстом'};
         var currentMode = Lampa.Storage.get('buttons_viewmode', 'default');
 
-        var modeBtn = $('<div class="selector viewmode-switch"><div style="text-align: center; padding: 1em;">Вид кнопок: ' + modeLabels[currentMode] + '</div></div>');
+        var modeBtn = $('<div class="selector viewmode-switch"><div style="text-align: center; padding: 1em;">Вид кнопок: ' + labels[currentMode] + '</div></div>');
         modeBtn.on('hover:enter', function() {
             currentMode = modes[(modes.indexOf(currentMode) + 1) % modes.length];
             Lampa.Storage.set('buttons_viewmode', currentMode);
-            $(this).find('div').text('Вид кнопок: ' + modeLabels[currentMode]);
+            $(this).find('div').text('Вид кнопок: ' + labels[currentMode]);
             applyChanges();
         });
         list.append(modeBtn);
 
         currentButtons.forEach(function(btn) {
             var btnId = getButtonId(btn);
-            var isHidden = getHiddenButtons().indexOf(btnId) !== -1;
+            var isHidden = hidden.indexOf(btnId) !== -1;
             var item = $('<div class="menu-edit-list__item">' +
                 '<div class="menu-edit-list__icon"></div>' +
                 '<div class="menu-edit-list__title">' + (getCustomLabels()[btnId] || btn.find('span').text().trim() || 'Кнопка') + '</div>' +
@@ -197,12 +222,24 @@
 
             item.find('.move-up').on('hover:enter', function() {
                 var prev = item.prev('.menu-edit-list__item');
-                if (prev.length) { item.insertBefore(prev); updateOrderFromUI(); }
+                if (prev.length) {
+                    item.insertBefore(prev);
+                    var idx = currentButtons.indexOf(btn);
+                    currentButtons.splice(idx, 1);
+                    currentButtons.splice(idx - 1, 0, btn);
+                    saveOrder();
+                }
             });
 
             item.find('.move-down').on('hover:enter', function() {
                 var next = item.next('.menu-edit-list__item');
-                if (next.length) { item.insertAfter(next); updateOrderFromUI(); }
+                if (next.length) {
+                    item.insertAfter(next);
+                    var idx = currentButtons.indexOf(btn);
+                    currentButtons.splice(idx, 1);
+                    currentButtons.splice(idx + 1, 0, btn);
+                    saveOrder();
+                }
             });
 
             item.find('.toggle').on('hover:enter', function() {
@@ -219,21 +256,9 @@
             list.append(item);
         });
 
-        function updateOrderFromUI() {
-            var order = [];
-            list.find('.menu-edit-list__item').each(function() {
-                var currentTitle = $(this).find('.menu-edit-list__title').text().replace(/\s+/g, '_');
-                // Знаходимо ID за текстом або класом
-                var foundBtn = currentButtons.find(function(b) { return getButtonId(b).indexOf(currentTitle) !== -1; });
-                if (foundBtn) order.push(getButtonId(foundBtn));
-            });
-            setCustomOrder(order);
-            applyChanges();
-        }
-
         // ПУНКТ РОЗМІР КНОПОК
         var scales = ['0.8', '0.9', '1.0', '1.1', '1.2'];
-        var scaleLabels = {'0.8': 'Дуже малі', '0.9': 'Малі', '1.0': 'Норма', '1.1': 'Великі', '1.2': 'Макс'};
+        var scaleLabels = {'0.8': 'Маленький', '0.9': 'Зменшений', '1.0': 'Нормальний', '1.1': 'Збільшений', '1.2': 'Великий'};
         var currentScale = getButtonScale();
         var scaleBtn = $('<div class="selector viewmode-switch" style="background: rgba(255,255,255,0.05); margin-top: 10px;"><div style="text-align: center; padding: 1em;">Розмір кнопок: ' + scaleLabels[currentScale] + '</div></div>');
         scaleBtn.on('hover:enter', function() {
@@ -251,6 +276,7 @@
             Lampa.Storage.set('button_hidden', []);
             Lampa.Storage.set('button_custom_labels', {});
             Lampa.Storage.set('button_scale_factor', '1.0');
+            Lampa.Modal.close();
             location.reload();
         });
         list.append(resetBtn);
@@ -261,20 +287,23 @@
             size: 'small',
             onBack: function() {
                 Lampa.Modal.close();
-                setTimeout(function() { Lampa.Controller.toggle('full_start'); }, 100);
+                setTimeout(function() {
+                    Lampa.Controller.toggle('full_start');
+                }, 100);
             }
         });
     }
 
     function init() {
         var style = $('<style>' +
-            '.menu-edit-list__item { display: grid; grid-template-columns: 2.5em 1fr 2.4em 2.4em 2.4em 2.4em; align-items: center; gap: 0.5em; padding: 0.3em 0; border-bottom: 1px dashed rgba(255,255,255,0.1); }' +
+            '.menu-edit-list__item { display: grid; grid-template-columns: 2.5em 1fr 2.4em 2.4em 2.4em 2.4em; align-items: center; gap: 0.5em; padding: 0.3em 0; }' +
             '.menu-edit-list__icon svg { width: 1.4em; height: 1.4em; }' +
-            '.menu-edit-list__item-hidden { opacity: 0.3; }' +
+            '.menu-edit-list__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }' +
+            '.menu-edit-list__item-hidden { opacity: 0.4; }' +
             '.selector.focus { border-radius: 4px; background: rgba(255,255,255,0.1) !important; }' +
-            '.viewmode-switch { background: rgba(66, 133, 244, 0.2); margin-bottom: 5px; border-radius: 4px; }' +
+            '.viewmode-switch { background: rgba(66, 133, 244, 0.3); margin-bottom: 5px; border-radius: 4px; }' +
             '.folder-reset-button { background: rgba(200, 50, 50, 0.2); margin-top: 10px; border-radius: 4px; }' +
-            '.full-start-new__buttons { --btn-scale: 1.0; display: flex !important; flex-wrap: wrap !important; gap: 8px !important; }' +
+            '.full-start-new__buttons { --btn-scale: 1.0; display: flex !important; flex-wrap: wrap !important; gap: calc(8px * var(--btn-scale)) !important; }' +
             '.full-start-new__buttons .full-start__button { transform: scale(var(--btn-scale)); transform-origin: left center; }' +
             '.icons-only span { display: none !important; }' +
             '.always-text span { display: block !important; }' +
@@ -290,16 +319,18 @@
             if (target.length && !currentContainer.data('buttons-processed')) {
                 currentContainer.data('buttons-processed', true);
                 
-                // Кнопка редагування (іконка олівця)
-                var editBtn = $('<div class="full-start__button selector button--edit-order"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:1.5em; height:1.5em;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></div>');
+                var editBtn = $('<div class="full-start__button selector button--edit-order"><svg viewBox="0 0 30 29" fill="none"><use xlink:href="#sprite-edit"></use></svg></div>');
                 editBtn.on('hover:enter', openEditDialog);
                 target.append(editBtn);
 
                 applyChanges();
-                setTimeout(function() { Lampa.Controller.toggle('full_start'); }, 200);
+                setTimeout(function() {
+                    Lampa.Controller.toggle('full_start');
+                }, 200);
             }
         });
     }
 
     init();
 })();
+                      
