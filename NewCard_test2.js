@@ -22,7 +22,6 @@
             setTimeout(function(){
                 info.addClass('cas-animated');
             }, 10);
-
             return html;
         };
 
