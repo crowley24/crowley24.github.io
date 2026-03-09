@@ -1,82 +1,101 @@
 (function () {
     'use strict';
 
-    function LampaSortingPlugin() {
-        // Ключ для збереження налаштувань у пам'яті Lampa
-        const STORAGE_KEY = 'lampa_custom_button_sorting';
-        
-        // 1. Ініціалізація налаштувань
+    function LampaAdvancedSorting() {
+        const STORAGE_KEY = 'lampa_btn_config';
+        let config = Lampa.Storage.get(STORAGE_KEY, {});
+
         this.init = function () {
+            // Додаємо в налаштування
             Lampa.Settings.add({
-                title: 'Сортування кнопок',
+                title: 'Конструктор кнопок',
                 type: 'button',
-                icon: '<svg height="24" viewBox="0 0 24 24" width="24"><path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z" fill="white"/></svg>',
-                onRender: (item) => {
-                    item.find('.settings-item__name').text('Налаштувати порядок та назви');
-                },
-                onClick: () => {
-                    this.openMenu();
-                }
+                icon: '<svg height="24" viewBox="0 0 24 24" width="24" fill="white"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>',
+                onRender: (item) => { item.find('.settings-item__name').text('Редагувати назви та порядок'); },
+                onClick: () => { this.openEditor(); }
             });
 
-            // Слухаємо відкриття картки фільму
+            // Стежимо за карткою фільму
             Lampa.Events.on('full:open', (event) => {
-                this.applySorting(event.object.render());
+                this.bindObserver(event.object.render());
             });
         };
 
-        // 2. Логіка застосування сортування в картці
-        this.applySorting = function (container) {
-            const buttonContainer = container.find('.full-start-new__buttons');
-            if (!buttonContainer.length) return;
-
-            const savedData = Lampa.Storage.get(STORAGE_KEY, '{}');
-            
-            // "Вартовий" для динамічних кнопок
-            let debounce;
-            const observer = new MutationObserver(() => {
-                clearTimeout(debounce);
-                debounce = setTimeout(() => {
-                    let buttons = buttonContainer.find('.button').toArray();
-                    
-                    // Сортуємо згідно зі збереженим порядком
-                    buttons.sort((a, b) => {
-                        let orderA = savedData[a.innerText.trim()]?.order || 999;
-                        let orderB = savedData[b.innerText.trim()]?.order || 999;
-                        return orderA - orderB;
-                    });
-
-                    buttons.forEach(btn => {
-                        let originalName = btn.innerText.trim();
-                        if (savedData[originalName]?.newName) {
-                            btn.innerText = savedData[originalName].newName;
-                        }
-                        buttonContainer.append(btn);
-                    });
-                }, 300);
+        this.openEditor = function () {
+            let items = [];
+            Object.keys(config).forEach(id => {
+                items.push({
+                    title: config[id].newName || id,
+                    subtitle: 'Оригінал: ' + id + ' | Порядок: ' + (config[id].order || 'не вказано'),
+                    id: id
+                });
             });
 
-            observer.observe(buttonContainer[0], { childList: true });
-        };
+            if (items.length === 0) {
+                Lampa.Noty.show('Спочатку відкрийте будь-який фільм, щоб плагін "побачив" кнопки');
+                return;
+            }
 
-        // 3. Вікно керування кнопками (Спрощена версія меню)
-        this.openMenu = function () {
             Lampa.Select.show({
-                title: 'Керування кнопками',
-                items: [
-                    { title: 'Очистити налаштування', action: 'reset' }
-                ],
+                title: 'Оберіть кнопку для редагування',
+                items: items,
                 onSelect: (item) => {
-                    if (item.action === 'reset') {
-                        Lampa.Storage.set(STORAGE_KEY, {});
-                        Lampa.Noty.show('Налаштування скинуто');
-                    }
+                    this.editButton(item.id);
                 }
             });
+        };
+
+        this.editButton = function (id) {
+            Lampa.Input.edit({
+                title: 'Нова назва для ' + id,
+                value: config[id].newName || id,
+                free: true
+            }, (new_name) => {
+                Lampa.Input.edit({
+                    title: 'Порядок (число)',
+                    value: config[id].order || '10',
+                    free: true
+                }, (new_order) => {
+                    config[id] = {
+                        newName: new_name,
+                        order: parseInt(new_order) || 10
+                    };
+                    Lampa.Storage.set(STORAGE_KEY, config);
+                    Lampa.Noty.show('Збережено!');
+                });
+            });
+        };
+
+        this.bindObserver = function (container) {
+            const btnBox = container.find('.full-start-new__buttons');
+            if (!btnBox.length) return;
+
+            const observer = new MutationObserver(() => {
+                let btns = btnBox.find('.button').toArray();
+                
+                // Реєструємо нові кнопки, якщо їх ще немає в базі
+                btns.forEach(b => {
+                    let name = b.innerText.trim();
+                    if (name && !config[name]) {
+                        config[name] = { newName: name, order: 100 };
+                        Lampa.Storage.set(STORAGE_KEY, config);
+                    }
+                });
+
+                // Сортуємо та перейменовуємо
+                btns.sort((a, b) => (config[a.innerText.trim()]?.order || 100) - (config[b.innerText.trim()]?.order || 100));
+                btns.forEach(b => {
+                    let cfg = config[b.innerText.trim()];
+                    if (cfg && cfg.newName) b.innerText = cfg.newName;
+                    btnBox.append(b);
+                });
+            });
+
+            observer.observe(btnBox[0], { childList: true });
         };
     }
 
-    const plugin = new LampaSortingPlugin();
-    if (window.appready) plugin.init();
-    else Lampa.Listener.follow('app', e => { if (e.type == 'ready') plugin.init(); });
+    const sortPlugin = new LampaAdvancedSorting();
+    if (window.appready) sortPlugin.init();
+    else Lampa.Listener.follow('app', e => { if (e.type == 'ready') sortPlugin.init(); });
 })();
