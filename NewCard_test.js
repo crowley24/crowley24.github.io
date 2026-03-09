@@ -4,6 +4,7 @@
     const PLUGIN_NAME = 'NewCard';
     const PLUGIN_ID = 'new_card_style';
     const ASSETS_PATH = 'https://crowley38.github.io/Icons/';
+    const CACHE_LIFETIME = 1000 * 60 * 60 * 24; // 24 години
 
     const ICONS = {
         tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',
@@ -197,8 +198,8 @@
     display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
 }
 
-.cas-studio-item img { height: 18px; filter: invert(1) brightness(1.1); opacity: 0.95; }
-.cas-quality-item img { height: 18px; }
+.cas-studio-item img { height: 15px; filter: invert(1) brightness(1.1); opacity: 0.95; }
+.cas-quality-item img { height: 15px; }
 
 .left-title .full-start-new__buttons { margin-top: 1.2em; display: flex; gap: 20px; }  
 .left-title .full-start-new__buttons .full-start__button {
@@ -215,7 +216,6 @@
 .cas-rate-item img { height: 1.1em; }
 
 .left-title .full-start-new__body { height: 85vh; }
-/* ЗМІНЕНО: Контент опущено максимально вниз (2vh замість 5vh) */
 .left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 2vh; padding-left: 4%; }
 .left-title .full-start-new__reactions, .left-title .full-start-new__rate-line, .left-title .full-start__status, .left-title .rating--modss, .left-title .full-start-new__head, .left-title .full-start-new__details { display: none !important; }
 
@@ -226,6 +226,26 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
         $('body').append(Lampa.Template.get('left_title_css', {}, true));  
     }
 
+    function getCachedData(id) {
+        const cache = Lampa.Storage.get('cas_images_cache') || {};
+        const item = cache[id];
+        if (item && (Date.now() - item.time < CACHE_LIFETIME)) return item.data;
+        return null;
+    }
+
+    function setCachedData(id, data) {
+        const cache = Lampa.Storage.get('cas_images_cache') || {};
+        cache[id] = { time: Date.now(), data: data };
+        Lampa.Storage.set('cas_images_cache', cache);
+    }
+
+    function stopSlideshow() {
+        if (window.casBgInterval) {
+            clearInterval(window.casBgInterval);
+            window.casBgInterval = null;
+        }
+    }
+
     function attachLoader() {  
         Lampa.Listener.follow('full', (event) => {  
             if (event.type === 'complite') {  
@@ -233,9 +253,15 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
                 const render = event.object.activity.render();
                 render.find('.left-title__content').removeClass('cas-animated');
                 
+                event.object.activity.onBeforeDestroy = () => {
+                    stopSlideshow();
+                };
+
                 if (data && data.id) {
-                    const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());
-                    $.getJSON(imagesUrl, (res) => {
+                    const cacheId = 'tmdb_' + data.id;
+                    const cached = getCachedData(cacheId);
+
+                    const processImages = (res) => {
                         const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];
                         if (bestLogo) {
                             const quality = Lampa.Storage.get('cas_logo_quality') || 'original';
@@ -244,17 +270,27 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
                             render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);
                         }
 
-                        if (window.casBgInterval) clearInterval(window.casBgInterval);
+                        stopSlideshow();
                         if (Lampa.Storage.get('cas_slideshow_enabled') && res.backdrops?.length > 1) {
                             let idx = 0;
                             window.casBgInterval = setInterval(() => {
                                 const bg = render.find('.full-start__background img, img.full-start__background');
-                                if (!bg.length) return clearInterval(window.casBgInterval);
+                                if (!bg.length) return stopSlideshow();
                                 idx = (idx + 1) % Math.min(res.backdrops.length, 15);
                                 bg.attr('src', Lampa.TMDB.image('/t/p/original' + res.backdrops[idx].file_path));
                             }, 15000);
                         }
-                    });
+                    };
+
+                    if (cached) {
+                        processImages(cached);
+                    } else {
+                        const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());
+                        $.getJSON(imagesUrl, (res) => {
+                            setCachedData(cacheId, res);
+                            processImages(res);
+                        });
+                    }
 
                     if (Lampa.Storage.get('cas_show_description')) {
                         render.find('.cas-description').text(data.overview || '').show();
@@ -263,16 +299,18 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
                     }
 
                     let ratesHtml = '';
-                    const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
-                    if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
-                    
-                    if (event.data.reactions && event.data.reactions.result) {
-                        let sum = 0, cnt = 0;
-                        const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };
-                        event.data.reactions.result.forEach(r => { if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; } });
-                        if (cnt >= 5) {
-                            const cubV = (((data.name?7.4:6.5)*(data.name?50:150)+sum)/((data.name?50:150)+cnt)).toFixed(1);
-                            ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;
+                    if (Lampa.Storage.get('cas_show_rating')) {
+                        const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
+                        if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
+                        
+                        if (event.data.reactions && event.data.reactions.result) {
+                            let sum = 0, cnt = 0;
+                            const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };
+                            event.data.reactions.result.forEach(r => { if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; } });
+                            if (cnt >= 5) {
+                                const cubV = (((data.name?7.4:6.5)*(data.name?50:150)+sum)/((data.name?50:150)+cnt)).toFixed(1);
+                                ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;
+                            }
                         }
                     }
                     render.find('.cas-rate-items').html(ratesHtml);
@@ -283,7 +321,9 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
 
                     if (Lampa.Storage.get('cas_show_studios')) {
                         const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 3);
-                        render.find('.cas-studios-row').html(studios.map(s => `<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}"></div>`).join(''));
+                        render.find('.cas-studios-row').html(studios.map(s => `<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}"></div>`).join('')).show();
+                    } else {
+                        render.find('.cas-studios-row').hide();
                     }
 
                     if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {
@@ -293,7 +333,7 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
                                 const b = { res: '', hdr: false, dv: false, ukr: false };
                                 items.slice(0, 15).forEach(i => {
                                     const t = (i.Title || i.title || '').toLowerCase();
-                                    if (t.includes('4k') || t.includes('2160')) b.res = '4K';
+                                  if (t.includes('4k') || t.includes('2160')) b.res = '4K';
                                     else if (!b.res && (t.includes('1080') || t.includes('fhd'))) b.res = 'FULL HD';
                                     if (t.includes('hdr')) b.hdr = true;
                                     if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) b.dv = true;
@@ -304,9 +344,11 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
                                 if (b.dv) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;
                                 else if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;
                                 if (b.ukr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;
-                                if (qH) render.find('.cas-quality-row').html('<span style="opacity: 0.5; margin: 0 5px;">•</span>' + qH);
+                                if (qH) render.find('.cas-quality-row').html('<span style="opacity: 0.5; margin: 0 5px;">•</span>' + qH).show();
                             }
                         });
+                    } else {
+                        render.find('.cas-quality-row').hide();
                     }
                 }
                 setTimeout(() => render.find('.left-title__content').addClass('cas-animated'), 150);
