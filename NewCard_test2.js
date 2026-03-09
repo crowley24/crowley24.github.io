@@ -199,7 +199,7 @@
 }
 
 .cas-studio-item img { height: 18px; filter: invert(1) brightness(1.1); opacity: 0.95; }
-.cas-quality-item img { height: 18px; }
+.cas-quality-item img { height: 16px; }
 
 .left-title .full-start-new__buttons { margin-top: 1.2em; display: flex; gap: 20px; }  
 .left-title .full-start-new__buttons .full-start__button {
