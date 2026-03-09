@@ -1,137 +1,82 @@
 (function () {
     'use strict';
 
-    // 1. Сховище налаштувань (Порядок, Назви, Видимість)
-    var Storage = {
-        set: function(key, value) { Lampa.Storage.set('custom_btns_' + key, JSON.stringify(value)); },
-        get: function(key) { return JSON.parse(Lampa.Storage.get('custom_btns_' + key, '{}')); }
-    };
-
-    // Ініціалізація пам'яті, якщо вона порожня
-    if (!Lampa.Storage.get('custom_btns_order')) Storage.set('order', []);
-    if (!Lampa.Storage.get('custom_btns_names')) Storage.set('names', {});
-
-    // 2. Головна логіка плагіна
-    Lampa.Listener.follow('full', function(e) {
-        if (e.type !== 'complite') return;
-
-        var container = e.object.activity.render();
-        var targetContainer = container.find('.full-start-new__buttons');
-
-        if (targetContainer.length) {
-            
-            function buildInterface() {
-                var allButtons = [];
-                
-                // Збираємо та розгортаємо всі кнопки (навіть приховані)
-                container.find('.full-start__button').each(function() {
-                    var btn = $(this);
-                    if (btn.hasClass('button--play') || btn.hasClass('button--my-editor')) return;
-
-                    var children = btn.find('.full-start__button, [class*="--online"], [class*="--torrent"], [class*="--trailer"]');
-                    if (children.length) {
-                        children.each(function() { allButtons.push($(this).clone(true).removeClass('hidden')); });
-                    } else {
-                        allButtons.push(btn.clone(true).removeClass('hidden'));
-                    }
-                });
-
-                // Сортування за вашим правилом: Online -> Torrent -> Trailer -> Others
-                allButtons.sort(function(a, b) {
-                    var getRank = function(el) {
-                        var cls = el.attr('class').toLowerCase();
-                        if (cls.indexOf('online') !== -1) return 1;
-                        if (cls.indexOf('torrent') !== -1) return 2;
-                        if (cls.indexOf('trailer') !== -1) return 3;
-                        return 4;
-                    };
-                    return getRank(a) - getRank(b);
-                });
-
-                targetContainer.empty();
-                
-                // Виводимо кнопки та застосовуємо кастомні назви
-                allButtons.forEach(function(btn) {
-                    var id = btn.attr('class').replace(/\s+/g, '_');
-                    var span = btn.find('span');
-                    var customName = Storage.get('names')[id];
-                    if (customName) span.text(customName);
-                    targetContainer.append(btn);
-                });
-
-                // Додаємо кнопку Налаштувань (⚙️)
-                var editBtn = $('<div class="full-start__button selector button--my-editor"><span>⚙️ Налаштування</span></div>');
-                editBtn.on('hover:enter', function() { openComplexMenu(allButtons); });
-                targetContainer.append(editBtn);
-                
-                Lampa.Controller.ready();
-            }
-
-            buildInterface();
-
-            // "Вартовий", щоб кнопка не зникала при оновленні сторінки системою
-            var observer = new MutationObserver(function(mutations) {
-                if (targetContainer.find('.button--my-editor').length === 0) buildInterface();
+    function LampaSortingPlugin() {
+        // Ключ для збереження налаштувань у пам'яті Lampa
+        const STORAGE_KEY = 'lampa_custom_button_sorting';
+        
+        // 1. Ініціалізація налаштувань
+        this.init = function () {
+            Lampa.Settings.add({
+                title: 'Сортування кнопок',
+                type: 'button',
+                icon: '<svg height="24" viewBox="0 0 24 24" width="24"><path d="M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z" fill="white"/></svg>',
+                onRender: (item) => {
+                    item.find('.settings-item__name').text('Налаштувати порядок та назви');
+                },
+                onClick: () => {
+                    this.openMenu();
+                }
             });
-            observer.observe(targetContainer[0], { childList: true });
-        }
-    });
 
-    // 3. Функція для створення вікна як на ФОТО
-    function openComplexMenu(buttons) {
-        var items = buttons.map(function(btn) {
-            var name = btn.find('span').text().trim();
-            var id = btn.attr('class').replace(/\s+/g, '_');
+            // Слухаємо відкриття картки фільму
+            Lampa.Events.on('full:open', (event) => {
+                this.applySorting(event.object.render());
+            });
+        };
+
+        // 2. Логіка застосування сортування в картці
+        this.applySorting = function (container) {
+            const buttonContainer = container.find('.full-start-new__buttons');
+            if (!buttonContainer.length) return;
+
+            const savedData = Lampa.Storage.get(STORAGE_KEY, '{}');
             
-            // Створюємо структуру: [Іконка] Назва [Редагувати] [Вгору] [Вниз]
-            return {
-                title: name,
-                id: id,
-                // Використовуємо HTML для схожості з вашим прикладом
-                html: '<div class="custom-btn-row" style="display:flex; align-items:center; justify-content:space-between; width:100%">' +
-                        '<span>' + name + '</span>' +
-                        '<div style="display:flex; gap:15px">' +
-                            '<span>✏️</span>' +
-                            '<span>⬆️</span>' +
-                            '<span>⬇️</span>' +
-                        '</div>' +
-                      '</div>'
-            };
-        });
+            // "Вартовий" для динамічних кнопок
+            let debounce;
+            const observer = new MutationObserver(() => {
+                clearTimeout(debounce);
+                debounce = setTimeout(() => {
+                    let buttons = buttonContainer.find('.button').toArray();
+                    
+                    // Сортуємо згідно зі збереженим порядком
+                    buttons.sort((a, b) => {
+                        let orderA = savedData[a.innerText.trim()]?.order || 999;
+                        let orderB = savedData[b.innerText.trim()]?.order || 999;
+                        return orderA - orderB;
+                    });
 
-        Lampa.Select.show({
-            title: 'Порядок та назви кнопок',
-            items: items,
-            onSelect: function(item) {
-                // При натисканні на рядок відкриваємо дії
-                Lampa.Select.show({
-                    title: 'Дія для: ' + item.title,
-                    items: [
-                        {title: '✏️ Змінити назву', action: 'rename'},
-                        {title: '⬆️ Вгору (в розробці)', action: 'up'},
-                        {title: '⬇️ Вниз (в розробці)', action: 'down'},
-                        {title: '🔄 Скинути все', action: 'reset'}
-                    ],
-                    onSelect: function(a) {
-                        if (a.action === 'rename') {
-                            Lampa.Input.edit({title: 'Нова назва', value: item.title, free: true}, function(newVal) {
-                                if (newVal) {
-                                    var names = Storage.get('names');
-                                    names[item.id] = newVal;
-                                    Storage.set('names', names);
-                                    Lampa.Noty.show('Збережено. Оновіть картку.');
-                                }
-                            });
-                        } else if (a.action === 'reset') {
-                            Lampa.Storage.set('custom_btns_names', '{}');
-                            Lampa.Noty.show('Скинуто до стандартних');
+                    buttons.forEach(btn => {
+                        let originalName = btn.innerText.trim();
+                        if (savedData[originalName]?.newName) {
+                            btn.innerText = savedData[originalName].newName;
                         }
-                    },
-                    onBack: function() { Lampa.Controller.toggle('select'); }
-                });
-            },
-            onBack: function() { Lampa.Controller.toggle('full_start'); }
-        });
+                        buttonContainer.append(btn);
+                    });
+                }, 300);
+            });
+
+            observer.observe(buttonContainer[0], { childList: true });
+        };
+
+        // 3. Вікно керування кнопками (Спрощена версія меню)
+        this.openMenu = function () {
+            Lampa.Select.show({
+                title: 'Керування кнопками',
+                items: [
+                    { title: 'Очистити налаштування', action: 'reset' }
+                ],
+                onSelect: (item) => {
+                    if (item.action === 'reset') {
+                        Lampa.Storage.set(STORAGE_KEY, {});
+                        Lampa.Noty.show('Налаштування скинуто');
+                    }
+                }
+            });
+        };
     }
 
+    const plugin = new LampaSortingPlugin();
+    if (window.appready) plugin.init();
+    else Lampa.Listener.follow('app', e => { if (e.type == 'ready') plugin.init(); });
 })();
