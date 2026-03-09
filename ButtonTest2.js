@@ -1,9 +1,9 @@
 (function() {
     'use strict';
 
-    var PLUGIN_VERSION = '1.70_all_buttons_fixed';
+    var PLUGIN_VERSION = '1.75_full_restored';
 
-    // Polyfills
+    // --- Polyfills ---
     if (!Array.prototype.forEach) {
         Array.prototype.forEach = function(callback, thisArg) {
             var T, k;
@@ -25,8 +25,20 @@
     }
 
     var EXCLUDED_CLASSES = ['button--play', 'button--edit-order'];
-    
-    // Функції для роботи зі сховищем
+    var DEFAULT_GROUPS = [
+        { name: 'online', patterns: ['online', 'lampac', 'modss', 'showy'], label: 'Онлайн' },
+        { name: 'torrent', patterns: ['torrent'], label: 'Торренти' },
+        { name: 'trailer', patterns: ['trailer', 'rutube'], label: 'Трейлери' },
+        { name: 'favorite', patterns: ['favorite'], label: 'Избранное' },
+        { name: 'subscribe', patterns: ['subscribe'], label: 'Подписка' },
+        { name: 'book', patterns: ['book'], label: 'Закладки' },
+        { name: 'reaction', patterns: ['reaction'], label: 'Реакции' }
+    ];
+
+    var currentButtons = [];
+    var currentContainer = null;
+
+    // --- Сховище ---
     function getCustomOrder() { return Lampa.Storage.get('button_custom_order', []); }
     function setCustomOrder(order) { Lampa.Storage.set('button_custom_order', order); }
     function getHiddenButtons() { return Lampa.Storage.get('button_hidden', []); }
@@ -36,15 +48,29 @@
     function getButtonScale() { return Lampa.Storage.get('button_scale_factor', '1.0'); }
     function setButtonScale(scale) { Lampa.Storage.set('button_scale_factor', scale); }
 
-    // Універсальний ID: беремо текст, якщо немає - класи, якщо немає - іконку
+    // --- Ідентифікація (Покращено для Shots) ---
     function getButtonId(button) {
+        var classes = button.attr('class') || '';
         var span = button.find('span').first();
-        var text = (span.attr('data-original-text') || span.text() || '').trim();
-        var classes = (button.attr('class') || '').replace('selector', '').replace('focus', '').trim();
+        var text = (span.attr('data-original-text') || span.text() || '').trim().replace(/\s+/g, '_');
         
-        if (text) return 'btn_' + text.replace(/\s+/g, '_');
-        if (classes) return 'cls_' + classes.replace(/\s+/g, '_');
-        return 'hash_' + button.html().length; 
+        // Спеціальні випадки для популярних кнопок
+        if (classes.indexOf('modss') !== -1 || text.indexOf('MODS') !== -1) return 'modss_online_button';
+        if (classes.indexOf('shots') !== -1 || text.toLowerCase() === 'shots') return 'shots_button';
+        
+        var id = (text ? 'btn_' + text : 'cls_' + classes.replace(/\s+/g, '_').substring(0, 20));
+        return id;
+    }
+
+    function getButtonType(button) {
+        var classes = button.attr('class') || '';
+        for (var i = 0; i < DEFAULT_GROUPS.length; i++) {
+            var group = DEFAULT_GROUPS[i];
+            for (var j = 0; j < group.patterns.length; j++) {
+                if (classes.indexOf(group.patterns[j]) !== -1) return group.name;
+            }
+        }
+        return 'other';
     }
 
     function isExcluded(button) {
@@ -55,12 +81,13 @@
         return false;
     }
 
+    // --- Основна логіка ---
     function applyChanges() {
         if (!currentContainer) return;
         var targetContainer = currentContainer.find('.full-start-new__buttons');
         if (!targetContainer.length) return;
 
-        // Збираємо ВСІ кнопки без винятку
+        // Збираємо категорії
         var allButtons = [];
         targetContainer.find('.full-start__button').each(function() {
             var $btn = $(this);
@@ -70,7 +97,7 @@
             }
         });
 
-        // Сортування
+        // Сортування за кастомним порядком
         var customOrder = getCustomOrder();
         if (customOrder.length) {
             allButtons.sort(function(a, b) {
@@ -82,58 +109,68 @@
             });
         }
 
-        // Рендеринг
-        var editBtn = targetContainer.find('.button--edit-order');
+        currentButtons = allButtons;
         targetContainer.find('.full-start__button').not('.button--edit-order').detach();
         
-        allButtons.forEach(function(btn) {
-            targetContainer.append(btn);
-        });
+        currentButtons.forEach(function(btn) { targetContainer.append(btn); });
+
+        var editBtn = targetContainer.find('.button--edit-order');
         if (editBtn.length) targetContainer.append(editBtn.detach());
 
-        // Приховання та назви
-        var hidden = getHiddenButtons();
-        var labels = getCustomLabels();
-        allButtons.forEach(function(btn) {
-            var id = getButtonId(btn);
-            btn.toggleClass('hidden', hidden.indexOf(id) !== -1);
-            if (labels[id]) {
-                var span = btn.find('span').first();
-                if (span.length) {
-                    if (!span.attr('data-original-text')) span.attr('data-original-text', span.text().trim());
-                    span.text(labels[id]);
-                }
-            }
-        });
+        // Застосовуємо приховання, назви та вид
+        applyHiddenButtons(currentButtons);
+        applyCustomLabels(currentButtons);
+        
+        var viewmode = Lampa.Storage.get('buttons_viewmode', 'default');
+        targetContainer.removeClass('icons-only always-text');
+        if (viewmode === 'icons') targetContainer.addClass('icons-only');
+        if (viewmode === 'always') targetContainer.addClass('always-text');
 
         // Масштаб
         var scale = getButtonScale();
-        $('.full-start-new__buttons').css('--btn-scale', scale);
+        targetContainer.css('--btn-scale', scale);
     }
 
+    function applyHiddenButtons(buttons) {
+        var hidden = getHiddenButtons();
+        buttons.forEach(function(btn) {
+            btn.toggleClass('hidden', hidden.indexOf(getButtonId(btn)) !== -1);
+        });
+    }
+
+    function applyCustomLabels(buttons) {
+        var customLabels = getCustomLabels();
+        buttons.forEach(function(btn) {
+            var id = getButtonId(btn);
+            if (customLabels[id]) {
+                var span = btn.find('span').first();
+                if (span.length) {
+                    if (!span.attr('data-original-text')) span.attr('data-original-text', span.text().trim());
+                    span.text(customLabels[id]);
+                }
+            }
+        });
+    }
+
+    // --- Редактор ---
     function openEditDialog() {
         var list = $('<div class="menu-edit-list"></div>');
-        
-        // Перемикач виду
         var modes = ['default', 'icons', 'always'];
         var modeLabels = {default: 'Стандартний', icons: 'Тільки іконки', always: 'З текстом'};
         var currentMode = Lampa.Storage.get('buttons_viewmode', 'default');
-        var modeBtn = $('<div class="selector viewmode-switch"><div style="text-align: center; padding: 1em;">Вид: ' + modeLabels[currentMode] + '</div></div>');
+
+        var modeBtn = $('<div class="selector viewmode-switch"><div style="text-align: center; padding: 1em;">Вид кнопок: ' + modeLabels[currentMode] + '</div></div>');
         modeBtn.on('hover:enter', function() {
             currentMode = modes[(modes.indexOf(currentMode) + 1) % modes.length];
             Lampa.Storage.set('buttons_viewmode', currentMode);
-            $(this).find('div').text('Вид: ' + modeLabels[currentMode]);
+            $(this).find('div').text('Вид кнопок: ' + modeLabels[currentMode]);
             applyChanges();
         });
         list.append(modeBtn);
 
-        // Список кнопок для редагування
-        var targetContainer = currentContainer.find('.full-start-new__buttons');
-        targetContainer.find('.full-start__button').not('.button--edit-order').each(function() {
-            var btn = $(this);
+        currentButtons.forEach(function(btn) {
             var btnId = getButtonId(btn);
             var isHidden = getHiddenButtons().indexOf(btnId) !== -1;
-            
             var item = $('<div class="menu-edit-list__item">' +
                 '<div class="menu-edit-list__icon"></div>' +
                 '<div class="menu-edit-list__title">' + (getCustomLabels()[btnId] || btn.find('span').text().trim() || 'Кнопка') + '</div>' +
@@ -147,7 +184,7 @@
             if (isHidden) item.addClass('menu-edit-list__item-hidden');
 
             item.find('.menu-edit-list__change-name').on('hover:enter', function() {
-                Lampa.Input.edit({ title: 'Назва', value: item.find('.menu-edit-list__title').text(), free: true }, function(val) {
+                Lampa.Input.edit({ title: 'Назва кнопки', value: item.find('.menu-edit-list__title').text(), free: true }, function(val) {
                     if (val) {
                         var labels = getCustomLabels();
                         labels[btnId] = val;
@@ -183,18 +220,20 @@
         });
 
         function updateOrderFromUI() {
-            var newOrder = [];
+            var order = [];
             list.find('.menu-edit-list__item').each(function() {
-                var title = $(this).find('.menu-edit-list__title').text().replace(/\s+/g, '_');
-                newOrder.push('btn_' + title);
+                var currentTitle = $(this).find('.menu-edit-list__title').text().replace(/\s+/g, '_');
+                // Знаходимо ID за текстом або класом
+                var foundBtn = currentButtons.find(function(b) { return getButtonId(b).indexOf(currentTitle) !== -1; });
+                if (foundBtn) order.push(getButtonId(foundBtn));
             });
-            setCustomOrder(newOrder);
+            setCustomOrder(order);
             applyChanges();
         }
 
         // ПУНКТ РОЗМІР КНОПОК
         var scales = ['0.8', '0.9', '1.0', '1.1', '1.2'];
-        var scaleLabels = {'0.8': 'Міні', '0.9': 'Малі', '1.0': 'Норма', '1.1': 'Великі', '1.2': 'Макс'};
+        var scaleLabels = {'0.8': 'Дуже малі', '0.9': 'Малі', '1.0': 'Норма', '1.1': 'Великі', '1.2': 'Макс'};
         var currentScale = getButtonScale();
         var scaleBtn = $('<div class="selector viewmode-switch" style="background: rgba(255,255,255,0.05); margin-top: 10px;"><div style="text-align: center; padding: 1em;">Розмір кнопок: ' + scaleLabels[currentScale] + '</div></div>');
         scaleBtn.on('hover:enter', function() {
@@ -206,7 +245,6 @@
         });
         list.append(scaleBtn);
 
-        // Скинути налаштування
         var resetBtn = $('<div class="selector folder-reset-button"><div style="text-align: center; padding: 1em;">Скинути налаштування</div></div>');
         resetBtn.on('hover:enter', function() {
             Lampa.Storage.set('button_custom_order', []);
@@ -230,15 +268,14 @@
 
     function init() {
         var style = $('<style>' +
-            '.menu-edit-list__item { display: grid; grid-template-columns: 2.5em 1fr 2.4em 2.4em 2.4em 2.4em; align-items: center; gap: 0.5em; padding: 0.3em 0; border-bottom: 1px solid rgba(255,255,255,0.05); }' +
+            '.menu-edit-list__item { display: grid; grid-template-columns: 2.5em 1fr 2.4em 2.4em 2.4em 2.4em; align-items: center; gap: 0.5em; padding: 0.3em 0; border-bottom: 1px dashed rgba(255,255,255,0.1); }' +
             '.menu-edit-list__icon svg { width: 1.4em; height: 1.4em; }' +
-            '.menu-edit-list__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9em; }' +
-            '.menu-edit-list__item-hidden { opacity: 0.3; filter: grayscale(1); }' +
-            '.selector.focus { border-radius: 8px; background: rgba(255,255,255,0.15) !important; }' +
-            '.viewmode-switch { background: rgba(66, 133, 244, 0.2); margin-bottom: 5px; border-radius: 8px; }' +
-            '.folder-reset-button { background: rgba(200, 50, 50, 0.2); margin-top: 10px; border-radius: 8px; }' +
-            '.full-start-new__buttons { --btn-scale: 1.0; display: flex !important; flex-wrap: wrap !important; gap: calc(8px * var(--btn-scale)) !important; align-items: center; }' +
-            '.full-start-new__buttons .full-start__button { transform: scale(var(--btn-scale)); transform-origin: left center; margin-right: calc(2px * var(--btn-scale)); }' +
+            '.menu-edit-list__item-hidden { opacity: 0.3; }' +
+            '.selector.focus { border-radius: 4px; background: rgba(255,255,255,0.1) !important; }' +
+            '.viewmode-switch { background: rgba(66, 133, 244, 0.2); margin-bottom: 5px; border-radius: 4px; }' +
+            '.folder-reset-button { background: rgba(200, 50, 50, 0.2); margin-top: 10px; border-radius: 4px; }' +
+            '.full-start-new__buttons { --btn-scale: 1.0; display: flex !important; flex-wrap: wrap !important; gap: 8px !important; }' +
+            '.full-start-new__buttons .full-start__button { transform: scale(var(--btn-scale)); transform-origin: left center; }' +
             '.icons-only span { display: none !important; }' +
             '.always-text span { display: block !important; }' +
             '.full-start__button.hidden { display: none !important; }' +
@@ -266,4 +303,3 @@
 
     init();
 })();
-                                                    
