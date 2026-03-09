@@ -1,9 +1,9 @@
 (function() {
     'use strict';
 
-    var PLUGIN_VERSION = '2.0_minimal_premium';
+    var PLUGIN_VERSION = '1.56_light_fixed';
 
-    // --- Polyfills ---
+    // Polyfills (залишено без змін)
     if (!Array.prototype.forEach) {
         Array.prototype.forEach = function(callback, thisArg) {
             var T, k;
@@ -36,9 +36,9 @@
     ];
 
     var currentButtons = [];
+    var allButtonsOriginal = [];
     var currentContainer = null;
 
-    // --- Робота зі сховищем ---
     function getCustomOrder() { return Lampa.Storage.get('button_custom_order', []); }
     function setCustomOrder(order) { Lampa.Storage.set('button_custom_order', order); }
     function getHiddenButtons() { return Lampa.Storage.get('button_hidden', []); }
@@ -78,31 +78,23 @@
         return false;
     }
 
-    // --- Логіка відображення ---
     function applyChanges() {
         if (!currentContainer) return;
         var targetContainer = currentContainer.find('.full-start-new__buttons');
         if (!targetContainer.length) return;
-
         var categories = categorizeButtons(currentContainer);
         var all = [].concat(categories.online, categories.torrent, categories.trailer, categories.favorite, categories.subscribe, categories.book, categories.reaction, categories.other);
-        
         currentButtons = sortByCustomOrder(all);
         targetContainer.find('.full-start__button').not('.button--edit-order').detach();
-
         currentButtons.forEach(function(btn) { targetContainer.append(btn); });
-
         var editBtn = targetContainer.find('.button--edit-order');
         if (editBtn.length) targetContainer.append(editBtn.detach());
-
         applyHiddenButtons(currentButtons);
         applyCustomLabels(currentButtons);
-        
         var viewmode = Lampa.Storage.get('buttons_viewmode', 'default');
         targetContainer.removeClass('icons-only always-text');
         if (viewmode === 'icons') targetContainer.addClass('icons-only');
         if (viewmode === 'always') targetContainer.addClass('always-text');
-
         saveOrder();
     }
 
@@ -179,19 +171,18 @@
         setCustomOrder(order);
     }
 
-    // --- Модальне вікно редагування (МІНІМАЛІЗМ) ---
     function openEditDialog() {
         var list = $('<div class="menu-edit-list"></div>');
         var hidden = getHiddenButtons();
         var modes = ['default', 'icons', 'always'];
-        var labels = {default: 'СТАНДАРТНИЙ', icons: 'ТІЛЬКИ ІКОНКИ', always: 'З ТЕКСТОМ'};
+        var labels = {default: 'Стандартний', icons: 'Тільки іконки', always: 'З текстом'};
         var currentMode = Lampa.Storage.get('buttons_viewmode', 'default');
 
-        var modeBtn = $('<div class="selector viewmode-switch"><div style="text-align: center; padding: 1.2em;">' + labels[currentMode] + '</div></div>');
+        var modeBtn = $('<div class="selector viewmode-switch"><div style="text-align: center; padding: 1em;">Вид кнопок: ' + labels[currentMode] + '</div></div>');
         modeBtn.on('hover:enter', function() {
             currentMode = modes[(modes.indexOf(currentMode) + 1) % modes.length];
             Lampa.Storage.set('buttons_viewmode', currentMode);
-            $(this).find('div').text(labels[currentMode]);
+            $(this).find('div').text('Вид кнопок: ' + labels[currentMode]);
             applyChanges();
         });
         list.append(modeBtn);
@@ -199,13 +190,13 @@
         currentButtons.forEach(function(btn) {
             var btnId = getButtonId(btn);
             var isHidden = hidden.indexOf(btnId) !== -1;
-            var item = $('<div class="menu-edit-list__item selector">' +
+            var item = $('<div class="menu-edit-list__item">' +
                 '<div class="menu-edit-list__icon"></div>' +
                 '<div class="menu-edit-list__title">' + (getCustomLabels()[btnId] || btn.find('span').text().trim() || 'Кнопка') + '</div>' +
-                '<div class="menu-edit-list__change-name selector" title="Перейменувати"><svg viewBox="0 0 24 24" fill="none" width="18" height="18"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" stroke="currentColor" stroke-width="1.5"/></svg></div>' +
-                '<div class="menu-edit-list__move move-up selector" title="Вгору"><svg width="22" height="14" viewBox="0 0 22 14" fill="none"><path d="M2 12L11 3L20 12" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg></div>' +
-                '<div class="menu-edit-list__move move-down selector" title="Вниз"><svg width="22" height="14" viewBox="0 0 22 14" fill="none"><path d="M2 2L11 11L20 2" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg></div>' +
-                '<div class="menu-edit-list__toggle toggle selector" title="Показати/Приховати"><svg width="26" height="26" viewBox="0 0 26 26" fill="none"><rect x="1.8" y="1.7" width="21.7" height="21.7" rx="3.5" stroke="currentColor" stroke-width="3"/><path d="M7.4 12.9L10.8 16.3L18.1 9" stroke="currentColor" stroke-width="3" class="dot" opacity="' + (isHidden ? '0' : '1') + '" stroke-linecap="round"/></svg></div>' +
+                '<div class="menu-edit-list__change-name selector"><svg viewBox="0 0 24 24" fill="none" width="18" height="18"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" stroke="currentColor" stroke-width="1.5"/></svg></div>' +
+                '<div class="menu-edit-list__move move-up selector"><svg width="22" height="14" viewBox="0 0 22 14" fill="none"><path d="M2 12L11 3L20 12" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg></div>' +
+                '<div class="menu-edit-list__move move-down selector"><svg width="22" height="14" viewBox="0 0 22 14" fill="none"><path d="M2 2L11 11L20 2" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg></div>' +
+                '<div class="menu-edit-list__toggle toggle selector"><svg width="26" height="26" viewBox="0 0 26 26" fill="none"><rect x="1.8" y="1.7" width="21.7" height="21.7" rx="3.5" stroke="currentColor" stroke-width="3"/><path d="M7.4 12.9L10.8 16.3L18.1 9" stroke="currentColor" stroke-width="3" class="dot" opacity="' + (isHidden ? '0' : '1') + '" stroke-linecap="round"/></svg></div>' +
                 '</div>');
 
             item.find('.menu-edit-list__icon').append(btn.find('svg').clone());
@@ -259,7 +250,7 @@
             list.append(item);
         });
 
-        var resetBtn = $('<div class="selector folder-reset-button"><div style="text-align: center; padding: 1.2em;">Скинути налаштування</div></div>');
+        var resetBtn = $('<div class="selector folder-reset-button"><div style="text-align: center; padding: 1em;">Скинути налаштування</div></div>');
         resetBtn.on('hover:enter', function() {
             Lampa.Storage.set('button_custom_order', []);
             Lampa.Storage.set('button_hidden', []);
@@ -269,12 +260,14 @@
         });
         list.append(resetBtn);
 
+        // ФІКС: додано onBack для роботи кнопки "Назад"
         Lampa.Modal.open({ 
             title: 'Редактор кнопок', 
             html: list, 
             size: 'small',
             onBack: function() {
                 Lampa.Modal.close();
+                // Повертаємо фокус на кнопки картки
                 setTimeout(function() {
                     Lampa.Controller.toggle('full_start');
                 }, 100);
@@ -284,42 +277,17 @@
 
     function init() {
         var style = $('<style>' +
-            /* Загальний контейнер */
-            '.full-start-new__buttons { display: flex !important; flex-wrap: wrap !important; gap: 10px !important; padding: 10px 0; }' +
-            
-            /* Кнопки на картці (Glassmorphism) */
-            '.full-start__button { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 14px !important; background: rgba(255,255,255,0.04) !important; border: 1px solid rgba(255,255,255,0.06); overflow: hidden; backdrop-filter: blur(5px); }' +
-            '.full-start__button.focus { transform: scale(1.06); background: #fff !important; color: #000 !important; box-shadow: 0 10px 30px rgba(0,0,0,0.6); border-color: #fff; z-index: 10; }' +
-            
-            /* Елементи списку редактора (ЧИСТОТА ТА ВІДСТУПИ) */
-            '.menu-edit-list { padding: 5px; }' +
-            '.menu-edit-list__item { display: grid; grid-template-columns: 3.5em 1fr 2.8em 2.8em 2.8em 2.8em; align-items: center; gap: 8px; padding: 16px; margin-bottom: 8px; background: rgba(255,255,255,0.02); border-radius: 16px; border: 1px solid rgba(255,255,255,0.03); transition: all 0.25s; }' +
-            '.menu-edit-list__item.focus { background: rgba(255,255,255,0.08) !important; border-color: rgba(255,255,255,0.1); transform: translateX(5px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }' +
-            
-            /* Іконки в списку (МІНІМАЛІЗМ - прибрано рамки) */
-            '.menu-edit-list__icon { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; }' +
-            '.menu-edit-list__icon svg { width: 22px; height: 22px; fill: #fff; opacity: 0.9; }' +
-            '.menu-edit-list__title { font-size: 1.15em; font-weight: 400; color: rgba(255,255,255,0.9); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }' +
-            '.menu-edit-list__item-hidden { opacity: 0.25; filter: grayscale(1); }' +
-            
-            /* Кнопки керування в рядку */
-            '.menu-edit-list [class*="selector"] { display: flex; align-items: center; justify-content: center; height: 40px; border-radius: 10px; transition: all 0.2s; background: transparent; }' +
-            '.menu-edit-list [class*="selector"].focus { background: rgba(255,255,255,0.15) !important; color: #fff !important; }' +
-            
-            /* Спеціальні кнопки (М'які глибокі кольори) */
-            '.viewmode-switch { background: rgba(66, 133, 244, 0.4) !important; color: #fff !important; border-radius: 16px; font-weight: bold; letter-spacing: 1.5px; border: none !important; margin-bottom: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }' +
-            '.viewmode-switch.focus { background: #4285f4 !important; }' +
-            
-            '.folder-reset-button { background: rgba(234, 67, 53, 0.35) !important; color: #fff !important; margin-top: 25px; border: none !important; border-radius: 16px; opacity: 0.9; }' +
-            '.folder-reset-button.focus { background: #ea4335 !important; opacity: 1; transform: scale(1.02); }' +
-            
-            /* Модальне вікно (GLASSMORPHISM PREMIUM) */
-            '.modal--small .modal__content { background: rgba(18, 18, 18, 0.75) !important; backdrop-filter: blur(20px); border-radius: 30px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 25px 60px rgba(0,0,0,0.85); padding: 15px; }' +
-            
-            /* Режими */
+            '.menu-edit-list__item { display: grid; grid-template-columns: 2.5em 1fr 2.4em 2.4em 2.4em 2.4em; align-items: center; gap: 0.5em; padding: 0.3em 0; }' +
+            '.menu-edit-list__icon svg { width: 1.4em; height: 1.4em; }' +
+            '.menu-edit-list__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }' +
+            '.menu-edit-list__item-hidden { opacity: 0.4; }' +
+            '.selector.focus { border-radius: 4px; background: rgba(255,255,255,0.1); }' +
+            '.viewmode-switch { background: rgba(66, 133, 244, 0.3); margin-bottom: 10px; border-radius: 4px; }' +
+            '.folder-reset-button { background: rgba(200, 50, 50, 0.2); margin-top: 15px; border-radius: 4px; }' +
             '.icons-only span { display: none !important; }' +
-            '.always-text span { display: block !important; margin-top: 5px; font-size: 0.8em; }' +
-            '.full-start__button.hidden { display: none !important; }',
+            '.always-text span { display: block !important; }' +
+            '.full-start-new__buttons { display: flex !important; flex-wrap: wrap !important; gap: 8px !important; }' +
+            '.full-start__button.hidden { display: none !important; }' +
             '</style>');
         $('body').append(style);
 
@@ -331,15 +299,14 @@
             if (target.length && !currentContainer.data('buttons-processed')) {
                 currentContainer.data('buttons-processed', true);
                 
-                // Кнопка редагування (Стильна шестерня)
-                var editBtn = $('<div class="full-start__button selector button--edit-order" style="width: 3.5em; justify-content: center; flex-shrink: 0;"><svg size="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></div>');
+                var editBtn = $('<div class="full-start__button selector button--edit-order"><svg viewBox="0 0 30 29" fill="none"><use xlink:href="#sprite-edit"></use></svg></div>');
                 editBtn.on('hover:enter', openEditDialog);
                 target.append(editBtn);
 
                 applyChanges();
-                
+                // Примусова ініціалізація навігації
                 setTimeout(function() {
-                    try { Lampa.Controller.toggle('full_start'); } catch(i) {}
+                    Lampa.Controller.toggle('full_start');
                 }, 200);
             }
         });
