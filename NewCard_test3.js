@@ -174,11 +174,12 @@
   
     // Нова функція заповнення якості  
     function fillQuality(qualityContainer, data) {  
-        if (!Lampa.Storage.get('applecation_show_quality', true) || !Lampa.Parser.get) {  
-            qualityContainer.hide();  
-            return;  
-        }  
-  
+    if (!Lampa.Storage.get('applecation_show_quality', true)) {  
+        qualityContainer.hide();  
+        return;  
+    }  
+      
+    if (Lampa.Parser.get) {  
         Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {  
             const items = res.Results || res;  
             if (items && Array.isArray(items) && items.length > 0) {  
@@ -207,22 +208,49 @@
                 qualityContainer.hide();  
             }  
         });  
+    } else {  
+        qualityContainer.hide();  
+    }  
+}  
+  
+function fillDescription(descriptionContainer, data) {  
+    if (!Lampa.Storage.get('applecation_show_description', true)) {  
+        descriptionContainer.hide();  
+        return;  
     }  
   
-    // Нова функція заповнення опису  
-    function fillDescription(descriptionContainer, data) {  
-        if (!Lampa.Storage.get('applecation_show_description', true)) {  
-            descriptionContainer.hide();  
-            return;  
-        }  
-  
-        const description = data.overview || '';  
-        if (description) {  
-            descriptionContainer.text(description).show();  
-        } else {  
-            descriptionContainer.hide();  
-        }  
+    const description = data.overview || '';  
+    if (description) {  
+        descriptionContainer.text(description).show();  
+    } else {  
+        descriptionContainer.hide();  
     }  
+}  
+  
+function applyLogoData(imagesData, logoContainer, titleElement, activity) {  
+    const currentLang = 'uk';  
+    const bestLogo = selectBestLogo(imagesData.logos, currentLang);  
+  
+    if (bestLogo) {  
+        const logoPath = bestLogo.file_path;  
+        const quality = getLogoQuality();  
+        const logoUrl = Lampa.TMDB.image(`/t/p/${quality}${logoPath}`);  
+  
+        const img = new Image();  
+        img.onload = () => {  
+            logoContainer.html(`<img src="${logoUrl}" alt="" />`);  
+            waitForBackgroundLoad(activity, () => {  
+                logoContainer.addClass('loaded');  
+            });  
+        };  
+        img.src = logoUrl;  
+    } else {  
+        titleElement.show();  
+        waitForBackgroundLoad(activity, () => {  
+            logoContainer.addClass('loaded');  
+        });  
+    }  
+}  
   
     // Головна функція плагіна  
     function initializePlugin() {  
@@ -1266,66 +1294,71 @@ body.applecation--hide-ratings .applecation__ratings {
   
     // Оновлене заповнення рейтингів з жанрами та якістю в одному рядку  
     function fillRatings(ratingsContainer, data) {  
-        let ratesHtml = '';  
+    let ratesHtml = '';  
+      
+    if (Lampa.Storage.get('applecation_show_ratings', true)) {  
+        // TMDB рейтинг  
+        const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);  
+        if (tmdbV > 0) {  
+            ratesHtml += `<div class="applecation__rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;  
+        }  
           
-        if (Lampa.Storage.get('applecation_show_ratings', true)) {  
-            // TMDB рейтинг  
-            const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);  
-            if (tmdbV > 0) {  
-                ratesHtml += `<div class="applecation__rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;  
-            }  
-              
-            // CUB рейтинг  
-            if (data.reactions && data.reactions.result) {  
-                let sum = 0, cnt = 0;  
-                const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };  
-                data.reactions.result.forEach(r => {   
-                    if (r.counter) {   
-                        sum += (r.counter * coef[r.type]);   
-                        cnt += r.counter;   
-                    }   
-                });  
-                if (cnt >= 5) {  
-                    const cubV = (((data.name?7.4:6.5)*(data.name?50:150)+sum)/((data.name?50:150)+cnt)).toFixed(1);  
-                    ratesHtml += `<div class="applecation__rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;  
-                }  
-            }  
-  
-            // Додаємо жанр в той самий рядок  
-            if (data.genres && data.genres.length) {  
-                const mainGenre = data.genres[0].name;  
-                ratesHtml += `<div class="applecation__genre">${Lampa.Utils.capitalizeFirstLetter(mainGenre)}</div>`;  
-            }  
-  
-            // Додаємо якість в той самий рядок  
-            if (Lampa.Storage.get('applecation_show_quality', true) && Lampa.Parser.get) {  
-                Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {  
-                    const items = res.Results || res;  
-                    if (items && Array.isArray(items) && items.length > 0) {  
-                        const b = { res: '', hdr: false, dv: false, ukr: false };  
-                        items.slice(0, 15).forEach(i => {  
-                            const t = (i.Title || i.title || '').toLowerCase();  
-                            if (t.includes('4k') || t.includes('2160')) b.res = '4K';  
-                            else if (!b.res && (t.includes('1080') || t.includes('fhd'))) b.res = 'FULL HD';  
-                            if (t.includes('hdr')) b.hdr = true;  
-                            if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) b.dv = true;  
-                            if (t.includes('ukr') || t.includes('укр')) b.ukr = true;  
-                        });  
-  
-                        let qH = '';  
-                        if (b.res) qH += `<div class="applecation__quality-item"><img src="${QUALITY_ICONS[b.res]}"></div>`;  
-                        if (b.dv) qH += `<div class="applecation__quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;  
-                        else if (b.hdr) qH += `<div class="applecation__quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;  
-                        if (b.ukr) qH += `<div class="applecation__quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;  
-  
-                        if (qH) {  
-                            ratesHtml += `<div class="applecation__quality">${qH}</div>`;  
-                            ratingsContainer.find('.applecation__rate-items').html(ratesHtml);  
-                        }  
-                    }  
-                });  
+        // CUB рейтинг  
+        if (data.reactions && data.reactions.result) {  
+            let sum = 0, cnt = 0;  
+            const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };  
+            data.reactions.result.forEach(r => {   
+                if (r.counter) {   
+                    sum += (r.counter * coef[r.type]);   
+                    cnt += r.counter;   
+                }   
+            });  
+            if (cnt >= 5) {  
+                const cubV = (((data.name?7.4:6.5)*(data.name?50:150)+sum)/((data.name?50:150)+cnt)).toFixed(1);  
+                ratesHtml += `<div class="applecation__rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;  
             }  
         }  
+  
+        // Додаємо жанр в той самий рядок  
+        if (data.genres && data.genres.length) {  
+            const mainGenre = data.genres[0].name;  
+            ratesHtml += `<div class="applecation__genre">${Lampa.Utils.capitalizeFirstLetter(mainGenre)}</div>`;  
+        }  
+    }  
+  
+    // Спочатку встановлюємо базовий HTML  
+    ratingsContainer.find('.applecation__rate-items').html(ratesHtml);  
+  
+    // Потім додаємо якість асинхронно  
+    if (Lampa.Storage.get('applecation_show_quality', true) && Lampa.Parser.get) {  
+        Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {  
+            const items = res.Results || res;  
+            if (items && Array.isArray(items) && items.length > 0) {  
+                const b = { res: '', hdr: false, dv: false, ukr: false };  
+                items.slice(0, 15).forEach(i => {  
+                    const t = (i.Title || i.title || '').toLowerCase();  
+                    if (t.includes('4k') || t.includes('2160')) b.res = '4K';  
+                    else if (!b.res && (t.includes('1080') || t.includes('fhd'))) b.res = 'FULL HD';  
+                    if (t.includes('hdr')) b.hdr = true;  
+                    if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) b.dv = true;  
+                    if (t.includes('ukr') || t.includes('укр')) b.ukr = true;  
+                });  
+  
+                let qH = '';  
+                if (b.res) qH += `<div class="applecation__quality-item"><img src="${QUALITY_ICONS[b.res]}"></div>`;  
+                if (b.dv) qH += `<div class="applecation__quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;  
+                else if (b.hdr) qH += `<div class="applecation__quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;  
+                if (b.ukr) qH += `<div class="applecation__quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;  
+  
+                if (qH) {  
+                    // Додаємо якість до існуючого HTML  
+                    const currentHtml = ratingsContainer.find('.applecation__rate-items').html();  
+                    ratingsContainer.find('.applecation__rate-items').html(currentHtml + `<div class="applecation__quality">${qH}</div>`);  
+                }  
+            }  
+        });  
+    }  
+}  
           
         ratingsContainer.find('.applecation__rate-items').html(ratesHtml);  
     }  
