@@ -249,9 +249,7 @@
     /* Світіння для тексту та SVG іконок одночасно */
     filter: drop-shadow(0 0 4px rgba(255,255,255,0.8));
     text-shadow: 0 0 5px rgba(255,255,255,0.5);
-    border: 1px solid rgba(255,255,255,0.4); /* Тонка рамка в фокусі */
-    box-shadow: inset 0 0 4px rgba(255,255,255,0.2);
-  }
+    }
 
   .left-title .full-start__button svg { width: 26px !important; height: 26px !important; }  
   .cas-logo img { max-width: 450px; max-height: 180px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); transform: scale(var(--cas-logo-scale)); transform-origin: left bottom; }  
