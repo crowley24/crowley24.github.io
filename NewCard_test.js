@@ -12,8 +12,7 @@
         tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',  
         cub: 'https://raw.githubusercontent.com/yumata/lampa/9381985ad4371d2a7d5eb5ca8e3daf0f32669eb7/img/logo-icon.svg'  
     };  
-  
-    const QUALITY_ICONS = {  
+      const QUALITY_ICONS = {  
         '4K': ASSETS_PATH + '4K.svg',  
         '2K': ASSETS_PATH + '2K.svg',  
         'FULL HD': ASSETS_PATH + 'FULL HD.svg',  
