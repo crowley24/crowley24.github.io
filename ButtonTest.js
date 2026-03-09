@@ -37,10 +37,10 @@
                 Lampa.Storage.set('buttons_size', item.value);
                 
                 // Повертаємо фокус на кнопку
-                Lampa.Controller.focus(btn);
+                Lampa.Controller.focus(btn[0]);
             },
             onBack: function(){
-                Lampa.Controller.focus(btn);
+                Lampa.Controller.focus(btn[0]);
             }
         });
     }
