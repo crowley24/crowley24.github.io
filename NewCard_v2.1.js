@@ -234,9 +234,14 @@
       background: transparent !important; color: rgba(255,255,255,0.6) !important;  
       display: flex; align-items: center; gap: 10px; transition: all 0.2s var(--cas-anim-curve);  
   }  
-  .left-title .full-start-new__buttons .full-start__button.focus {  
-      color: #fff !important; transform: scale(1.08) translateZ(0); filter: drop-shadow(0 0 8px rgba(255,255,255,0.6));  
-  }  
+ .left-title .full-start-new__buttons .full-start__button.focus {  
+    color: #fff !important; 
+    transform: scale(1.12) translateZ(0); 
+    /* Робимо інтенсивне контурне світіння тексту та іконок */
+    text-shadow: 0 0 5px rgba(255,255,255,0.8), 0 0 10px rgba(255,255,255,0.4);
+    /* Додаємо легку тінь самому SVG (якщо іконка не є шрифтом) */
+    filter: drop-shadow(0 0 3px rgba(255,255,255,0.7)); 
+}
   .left-title .full-start__button svg { width: 26px !important; height: 26px !important; }  
   .cas-logo img { max-width: 450px; max-height: 180px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); transform: scale(var(--cas-logo-scale)); transform-origin: left bottom; }  
   .cas-ratings-line { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; font-size: var(--cas-meta-size); font-weight: 600; }  
