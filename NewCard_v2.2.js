@@ -234,13 +234,12 @@
       background: transparent !important; color: rgba(255,255,255,0.6) !important;  
       display: flex; align-items: center; gap: 10px; transition: all 0.2s var(--cas-anim-curve);  
   }  
-  .left-title .full-start-new__buttons .full-start__button.focus {  
-    color: #fff !important; 
-    transform: scale(1.15) translateZ(0); 
-    /* Цей фільтр тепер діє і на текст, і на іконку SVG */
-    filter: drop-shadow(0 0 4px rgba(255,255,255,0.9)) drop-shadow(0 0 1px rgba(255,255,255,1));
-    /* Додатково підсвітимо текст для надійності */
-    text-shadow: 0 0 5px rgba(255,255,255,0.5);
+  .left-title .full-start-new__buttons .full-start__button.focus {
+    color: #fff !important;
+    transform: scale(1.15) translateZ(0);
+    text-shadow: 0 0 8px rgba(255,255,255,0.9);
+    border: 1px solid rgba(255,255,255,0.5); /* Додаємо тонкий бортик */
+    box-shadow: inset 0 0 5px rgba(255,255,255,0.4); /* Внутрішнє світіння */
 }
   .left-title .full-start__button svg { width: 26px !important; height: 26px !important; }  
   .cas-logo img { max-width: 450px; max-height: 180px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); transform: scale(var(--cas-logo-scale)); transform-origin: left bottom; }  
