@@ -207,47 +207,59 @@
       function addStyles() {    
           const styles = `<style>    
   :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.25, 1, 0.5, 1); }  
-  /* Оптимізація GPU для старих Android */  
+  
   .full-start__background {   
       will-change: transform;   
       transform: translateZ(0);   
       backface-visibility: hidden;  
     }
+
   .cas-logo, .cas-ratings-line, .cas-description, .cas-studios-row, .full-start-new__buttons {   
       backface-visibility: hidden; transform: translateZ(0);   
       opacity: 0; transform: translateY(12px);  
       transition: opacity 0.4s var(--cas-anim-curve), transform 0.4s var(--cas-anim-curve);  
   }  
+
   .cas-animated .cas-logo { opacity: 1; transform: translateY(0); transition-delay: 0.05s; }  
   .cas-animated .cas-ratings-line { opacity: 1; transform: translateY(0); transition-delay: 0.12s; }  
   .cas-animated .cas-studios-row { opacity: 1; transform: translateY(0); transition-delay: 0.18s; }  
   .cas-animated .cas-description { opacity: 1; transform: translateY(0); transition-delay: 0.24s; }  
   .cas-animated .full-start-new__buttons { opacity: 1; transform: translateY(0); transition-delay: 0.32s; }  
+
   .cas-description {  
       max-width: 650px; font-size: var(--cas-meta-size); line-height: 1.4; color: rgba(255,255,255,0.7);  
       display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;  
   }  
+
   .cas-studio-item img { height: 15px; filter: invert(1) brightness(1.1); opacity: 0.95; }  
   .cas-quality-item img { height: 15px; }  
-  .left-title .full-start-new__buttons { margin-top: 1.2em; display: flex; gap: 20px; }    
+
+  .left-title .full-start-new__buttons { margin-top: 1.2em; display: flex; gap: 20px; }   
+  
   .left-title .full-start-new__buttons .full-start__button {  
       background: transparent !important; color: rgba(255,255,255,0.6) !important;  
-      display: flex; align-items: center; gap: 10px; transition: all 0.2s var(--cas-anim-curve);  
+      display: flex; align-items: center; gap: 10px; transition: all 0.2s var(--cas-anim-curve);
+      border-radius: 8px; border: 1px solid transparent; /* Заготовка для рамки */
   }  
+
+  /* Оновлений блок фокусу зі світінням */
   .left-title .full-start-new__buttons .full-start__button.focus {
     color: #fff !important;
     transform: scale(1.15) translateZ(0);
-    text-shadow: 0 0 8px rgba(255,255,255,0.9);
-    border: 1px solid rgba(255,255,255,0.5); /* Додаємо тонкий бортик */
-    box-shadow: inset 0 0 5px rgba(255,255,255,0.4); /* Внутрішнє світіння */
-}
+    /* Світіння для тексту та SVG іконок одночасно */
+    filter: drop-shadow(0 0 4px rgba(255,255,255,0.8));
+    text-shadow: 0 0 5px rgba(255,255,255,0.5);
+    border: 1px solid rgba(255,255,255,0.4); /* Тонка рамка в фокусі */
+    box-shadow: inset 0 0 4px rgba(255,255,255,0.2);
+  }
+
   .left-title .full-start__button svg { width: 26px !important; height: 26px !important; }  
   .cas-logo img { max-width: 450px; max-height: 180px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); transform: scale(var(--cas-logo-scale)); transform-origin: left bottom; }  
   .cas-ratings-line { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; font-size: var(--cas-meta-size); font-weight: 600; }  
   .cas-rate-item img { height: 1.1em; }  
   .left-title .full-start-new__body { height: 85vh; }  
   .left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 2vh; padding-left: 1.5%; }  
-  .left-title .full-start-new__reactions, .left-title .full-start-new__rate-line, .left-title .full-start__status, .left-title .rating--modss, .left-title .full-start-new__head, .left-title .full-start-new__details { display: none !important; }  
+  
   @keyframes casKenBurns {   
       0% { transform: scale(1) translateZ(0); }   
       50% { transform: scale(1.08) translateZ(0); }   
