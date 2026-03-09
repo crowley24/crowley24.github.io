@@ -235,7 +235,7 @@
       display: flex; align-items: center; gap: 10px; transition: all 0.2s var(--cas-anim-curve);  
   }  
   .left-title .full-start-new__buttons .full-start__button.focus {  
-      color: #fff !important; transform: scale(1.08) translateZ(0); filter: drop-shadow(0 0 8px rgba(255,255,255,0.6));  
+      color: #fff !important; transform: scale(1.12) translateZ(0); filter: drop-shadow(0 0 8px rgba(255,255,255,0.6));  
   }  
   .left-title .full-start__button svg { width: 26px !important; height: 26px !important; }  
   .cas-logo img { max-width: 450px; max-height: 180px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); transform: scale(var(--cas-logo-scale)); transform-origin: left bottom; }  
