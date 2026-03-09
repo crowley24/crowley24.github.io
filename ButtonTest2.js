@@ -1,9 +1,9 @@
 (function() {
     'use strict';
 
-    var PLUGIN_VERSION = '1.85_layout_fixed';
+    var PLUGIN_VERSION = '1.95_styles_only';
 
-    // Polyfills
+    // Polyfills (залишено без змін)
     if (!Array.prototype.forEach) {
         Array.prototype.forEach = function(callback, thisArg) {
             var T, k;
@@ -46,6 +46,9 @@
     function setCustomLabels(labels) { Lampa.Storage.set('button_custom_labels', labels); }
     function getButtonScale() { return Lampa.Storage.get('button_scale_factor', '1.0'); }
     function setButtonScale(scale) { Lampa.Storage.set('button_scale_factor', scale); }
+    // Нове для стилів
+    function getButtonStyle() { return Lampa.Storage.get('button_design_style', 'default'); }
+    function setButtonStyle(style) { Lampa.Storage.set('button_design_style', style); }
 
     function getButtonId(button) {
         var classes = button.attr('class') || '';
@@ -98,8 +101,9 @@
         if (viewmode === 'icons') targetContainer.addClass('icons-only');
         if (viewmode === 'always') targetContainer.addClass('always-text');
         
-        // Масштаб через змінну (використовуємо в CSS)
+        // Масштаб та Стиль через атрибути
         targetContainer.attr('data-scale', getButtonScale());
+        targetContainer.attr('data-style', getButtonStyle());
         
         saveOrder();
     }
@@ -256,11 +260,25 @@
             list.append(item);
         });
 
+        // НОВЕ: СТИЛІ КНОПОК
+        var styles = ['default', 'netflix', 'apple'];
+        var styleLabels = {default: 'Стандартні', netflix: 'Netflix', apple: 'Apple TV'};
+        var currentStyle = getButtonStyle();
+        var styleBtn = $('<div class="selector viewmode-switch" style="background: rgba(255,165,0,0.2); margin-top: 10px;"><div style="text-align: center; padding: 1em;">Стиль кнопок: ' + styleLabels[currentStyle] + '</div></div>');
+        styleBtn.on('hover:enter', function() {
+            var nextIdx = (styles.indexOf(currentStyle) + 1) % styles.length;
+            currentStyle = styles[nextIdx];
+            setButtonStyle(currentStyle);
+            $(this).find('div').text('Стиль кнопок: ' + styleLabels[currentStyle]);
+            applyChanges();
+        });
+        list.append(styleBtn);
+
         // ПУНКТ РОЗМІР КНОПОК
         var scales = ['0.8', '0.9', '1.0', '1.1', '1.2'];
         var scaleLabels = {'0.8': 'Маленький', '0.9': 'Зменшений', '1.0': 'Нормальний', '1.1': 'Збільшений', '1.2': 'Великий'};
         var currentScale = getButtonScale();
-        var scaleBtn = $('<div class="selector viewmode-switch" style="background: rgba(255,255,255,0.05); margin-top: 10px;"><div style="text-align: center; padding: 1em;">Розмір кнопок: ' + scaleLabels[currentScale] + '</div></div>');
+        var scaleBtn = $('<div class="selector viewmode-switch" style="background: rgba(255,255,255,0.05); margin-top: 5px;"><div style="text-align: center; padding: 1em;">Розмір кнопок: ' + scaleLabels[currentScale] + '</div></div>');
         scaleBtn.on('hover:enter', function() {
             var nextIdx = (scales.indexOf(currentScale) + 1) % scales.length;
             currentScale = scales[nextIdx];
@@ -276,6 +294,7 @@
             Lampa.Storage.set('button_hidden', []);
             Lampa.Storage.set('button_custom_labels', {});
             Lampa.Storage.set('button_scale_factor', '1.0');
+            Lampa.Storage.set('button_design_style', 'default');
             Lampa.Modal.close();
             location.reload();
         });
@@ -303,18 +322,24 @@
             '.selector.focus { border-radius: 4px; background: rgba(255,255,255,0.1) !important; }' +
             '.viewmode-switch { background: rgba(66, 133, 244, 0.3); margin-bottom: 5px; border-radius: 4px; }' +
             '.folder-reset-button { background: rgba(200, 50, 50, 0.2); margin-top: 10px; border-radius: 4px; }' +
-            // НОВИЙ CSS ДЛЯ КОРЕКТНОГО МАСШТАБУ
             '.full-start-new__buttons { display: flex !important; flex-wrap: wrap !important; gap: 8px !important; align-items: center !important; padding: 10px 0 !important; overflow: visible !important; }' +
             '.full-start-new__buttons[data-scale="0.8"] .full-start__button { transform: scale(0.8); margin: -2px; }' +
             '.full-start-new__buttons[data-scale="0.9"] .full-start__button { transform: scale(0.9); margin: -1px; }' +
             '.full-start-new__buttons[data-scale="1.0"] .full-start__button { transform: scale(1.0); }' +
             '.full-start-new__buttons[data-scale="1.1"] .full-start__button { transform: scale(1.1); margin: 2px; }' +
             '.full-start-new__buttons[data-scale="1.2"] .full-start__button { transform: scale(1.2); margin: 5px; }' +
-            '.full-start-new__buttons .full-start__button { transform-origin: center center; overflow: visible !important; }' +
+            '.full-start-new__buttons .full-start__button { transform-origin: center center; overflow: visible !important; transition: all 0.2s ease; }' +
             '.full-start-new__buttons .full-start__button span { white-space: nowrap !important; }' +
             '.icons-only span { display: none !important; }' +
             '.always-text span { display: block !important; }' +
             '.full-start__button.hidden { display: none !important; }' +
+            
+            // CSS ДЛЯ СТИЛІВ
+            '[data-style="netflix"] .full-start__button { border-radius: 2px !important; background: #222 !important; border: none !important; }' +
+            '[data-style="netflix"] .full-start__button.focus { background: #e50914 !important; transform: scale(1.15) !important; z-index: 10; }' +
+            '[data-style="apple"] .full-start__button { border-radius: 20px !important; background: rgba(255,255,255,0.1) !important; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05) !important; }' +
+            '[data-style="apple"] .full-start__button.focus { background: #fff !important; color: #000 !important; transform: translateY(-5px) scale(1.05) !important; }' +
+            '[data-style="apple"] .full-start__button.focus svg { fill: #000 !important; }' +
             '</style>');
         $('body').append(style);
 
