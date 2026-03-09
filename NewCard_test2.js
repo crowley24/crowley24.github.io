@@ -21,6 +21,12 @@
         'UKR': ASSETS_PATH + 'UKR.svg'
     };
 
+    // --- ВИПРАВЛЕННЯ: Хелпер для отримання значень з дефолтами ---
+    function getPref(key, defaultValue) {
+        let val = Lampa.Storage.get(key);
+        return (val === undefined || val === null) ? defaultValue : val;
+    }
+
     const SETTINGS_ICON = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="15" y="20" width="70" height="60" rx="8" stroke="white" stroke-width="6" fill="none" opacity="0.4"/><rect x="25" y="32" width="50" height="28" rx="4" fill="white"/><rect x="25" y="66" width="30" height="6" rx="3" fill="white" opacity="0.6"/><rect x="60" y="66" width="15" height="6" rx="3" fill="white" opacity="0.6"/></svg>`;
 
     function getRatingColor(val) {
@@ -103,14 +109,14 @@
 
     function applySettings() {
         const root = document.documentElement;
-        const scale = parseInt(Lampa.Storage.get('cas_logo_scale') || 100) / 100;
-        const gap = Lampa.Storage.get('cas_blocks_gap') || '20';
-        const metaSize = Lampa.Storage.get('cas_meta_size') || '1.3';
+        const scale = parseInt(getPref('cas_logo_scale', '100')) / 100;
+        const gap = getPref('cas_blocks_gap', '20');
+        const metaSize = getPref('cas_meta_size', '1.3');
         
         root.style.setProperty('--cas-logo-scale', scale);
         root.style.setProperty('--cas-blocks-gap', gap + 'px');
         root.style.setProperty('--cas-meta-size', metaSize + 'em');
-        $('body').toggleClass('cas--zoom-enabled', !!Lampa.Storage.get('cas_bg_animation'));
+        $('body').toggleClass('cas--zoom-enabled', !!getPref('cas_bg_animation', true));
     }
   
     function addCustomTemplate() {  
@@ -181,7 +187,13 @@
         const styles = `<style>  
 :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.25, 1, 0.5, 1); }
 
-/* GPU Fix for UI */
+/* Оптимізація GPU для старих Android */
+.full-start__background { 
+    will-change: transform; 
+    transform: translateZ(0); 
+    backface-visibility: hidden;
+}
+
 .cas-logo, .cas-ratings-line, .cas-description, .cas-studios-row, .full-start-new__buttons { 
     backface-visibility: hidden; transform: translateZ(0); 
     opacity: 0; transform: translateY(12px);
@@ -198,8 +210,8 @@
     display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
 }
 
-.cas-studio-item img { height: 18px; filter: invert(1) brightness(1.1); opacity: 0.95; }
-.cas-quality-item img { height: 16px; }
+.cas-studio-item img { height: 15px; filter: invert(1) brightness(1.1); opacity: 0.95; }
+.cas-quality-item img { height: 15px; }
 
 .left-title .full-start-new__buttons { margin-top: 1.2em; display: flex; gap: 20px; }  
 .left-title .full-start-new__buttons .full-start__button {
@@ -216,11 +228,15 @@
 .cas-rate-item img { height: 1.1em; }
 
 .left-title .full-start-new__body { height: 85vh; }
-.left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 2vh; padding-left: 4%; }
+.left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 2vh; padding-left: 1.5%; }
 .left-title .full-start-new__reactions, .left-title .full-start-new__rate-line, .left-title .full-start__status, .left-title .rating--modss, .left-title .full-start-new__head, .left-title .full-start-new__details { display: none !important; }
 
-@keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 45s ease-in-out infinite !important; }
+@keyframes casKenBurns { 
+    0% { transform: scale(1) translateZ(0); } 
+    50% { transform: scale(1.08) translateZ(0); } 
+    100% { transform: scale(1) translateZ(0); } 
+}
+body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 45s linear infinite !important; }
 </style>`;  
         Lampa.Template.add('left_title_css', styles);  
         $('body').append(Lampa.Template.get('left_title_css', {}, true));  
@@ -253,7 +269,9 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
                 const render = event.object.activity.render();
                 render.find('.left-title__content').removeClass('cas-animated');
                 
-                // Додаємо очистку при виході з картки
+                // Перевіряємо налаштування перед кожним рендером
+                applySettings();
+
                 event.object.activity.onBeforeDestroy = () => {
                     stopSlideshow();
                 };
@@ -265,14 +283,14 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
                     const processImages = (res) => {
                         const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];
                         if (bestLogo) {
-                            const quality = Lampa.Storage.get('cas_logo_quality') || 'original';
+                            const quality = getPref('cas_logo_quality', 'original');
                             render.find('.cas-logo').html(`<img src="${Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path)}">`);
                         } else {
                             render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);
                         }
 
                         stopSlideshow();
-                        if (Lampa.Storage.get('cas_slideshow_enabled') && res.backdrops?.length > 1) {
+                        if (getPref('cas_slideshow_enabled', true) && res.backdrops?.length > 1) {
                             let idx = 0;
                             window.casBgInterval = setInterval(() => {
                                 const bg = render.find('.full-start__background img, img.full-start__background');
@@ -293,23 +311,25 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
                         });
                     }
 
-                    if (Lampa.Storage.get('cas_show_description')) {
+                    if (getPref('cas_show_description', true)) {
                         render.find('.cas-description').text(data.overview || '').show();
                     } else {
                         render.find('.cas-description').hide();
                     }
 
                     let ratesHtml = '';
-                    const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
-                    if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
-                    
-                    if (event.data.reactions && event.data.reactions.result) {
-                        let sum = 0, cnt = 0;
-                        const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };
-                        event.data.reactions.result.forEach(r => { if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; } });
-                        if (cnt >= 5) {
-                            const cubV = (((data.name?7.4:6.5)*(data.name?50:150)+sum)/((data.name?50:150)+cnt)).toFixed(1);
-                            ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;
+                    if (getPref('cas_show_rating', true)) {
+                        const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);
+                        if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
+                        
+                        if (event.data.reactions && event.data.reactions.result) {
+                            let sum = 0, cnt = 0;
+                            const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };
+                            event.data.reactions.result.forEach(r => { if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; } });
+                            if (cnt >= 5) {
+                                const cubV = (((data.name?7.4:6.5)*(data.name?50:150)+sum)/((data.name?50:150)+cnt)).toFixed(1);
+                                ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;
+                            }
                         }
                     }
                     render.find('.cas-rate-items').html(ratesHtml);
@@ -318,12 +338,14 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
                     const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');
                     render.find('.cas-meta-info').text((time ? time + (genre ? ' • ' : '') : '') + genre);
 
-                    if (Lampa.Storage.get('cas_show_studios')) {
+                    if (getPref('cas_show_studios', true)) {
                         const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 3);
-                        render.find('.cas-studios-row').html(studios.map(s => `<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}"></div>`).join(''));
+                        render.find('.cas-studios-row').html(studios.map(s => `<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}"></div>`).join('')).show();
+                    } else {
+                        render.find('.cas-studios-row').hide();
                     }
 
-                    if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {
+                    if (getPref('cas_show_quality', true) && Lampa.Parser.get) {
                         Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {
                             const items = res.Results || res;
                             if (items && Array.isArray(items) && items.length > 0) {
@@ -341,9 +363,11 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
                                 if (b.dv) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;
                                 else if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;
                                 if (b.ukr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;
-                                if (qH) render.find('.cas-quality-row').html('<span style="opacity: 0.5; margin: 0 5px;">•</span>' + qH);
+                                if (qH) render.find('.cas-quality-row').html('<span style="opacity: 0.5; margin: 0 5px;">•</span>' + qH).show();
                             }
                         });
+                    } else {
+                        render.find('.cas-quality-row').hide();
                     }
                 }
                 setTimeout(() => render.find('.left-title__content').addClass('cas-animated'), 150);
