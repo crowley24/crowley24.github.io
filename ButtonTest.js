@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    // 1. Додаємо стилі для меню та розмірів кнопок
+    // 1. Стилі для розмірів кнопок та оформлення
     var style = `
         <style>
             .full-start-new__buttons.size-s .full-start__button { font-size: 12px !important; padding: 0.5em 1em !important; }
@@ -10,56 +10,11 @@
 
             .button--edit-settings { display: flex !important; align-items: center; justify-content: center; }
             .button--edit-settings svg { width: 1.5em; height: 1.5em; }
-
-            /* Стилі для покращеного меню налаштувань */
-            .custom-button-item { 
-                display: flex; 
-                align-items: center; 
-                justify-content: space-between; 
-                width: 100%; 
-                padding: 5px 0;
-            }
-            .custom-button-item__content { 
-                display: flex; 
-                align-items: center; 
-            }
-            .custom-button-item__icon { 
-                width: 1.8em; 
-                height: 1.8em; 
-                margin-right: 15px; 
-                display: flex; 
-                align-items: center; 
-                justify-content: center;
-            }
-            .custom-button-item__icon svg { 
-                width: 100%; 
-                height: 100%; 
-                fill: #fff !important; 
-            }
-            .custom-button-item__edit-icon { 
-                color: #ffde1a !important; 
-                font-size: 1.2em; 
-                opacity: 0.9;
-            }
         </style>
     `;
     $('body').append(style);
 
-    // Функція зміни назви
-    function runRename(item, container, btn) {
-        Lampa.Input.edit({
-            value: item.title_raw,
-            title: 'Нова назва'
-        }, function(new_name) {
-            if (new_name) {
-                Lampa.Storage.set('custom_label_' + item.className, new_name);
-                container.find('.' + item.className + ' span').text(new_name);
-            }
-            Lampa.Controller.focus(btn[0]);
-        });
-    }
-
-    // Функція вибору розміру
+    // 2. Функція вибору розміру (з галочкою ✅)
     function runSizeSelection(container, btn) {
         var current = Lampa.Storage.get('buttons_size', 'size-m');
         var sizes = [
@@ -71,7 +26,7 @@
         var sizeItems = sizes.map(function(s) {
             return {
                 title: s.title,
-                icon: s.value === current ? 'check' : '',
+                icon: s.value === current ? 'check' : '', // Позначаємо вибраний пункт
                 value: s.value
             };
         });
@@ -89,39 +44,39 @@
         });
     }
 
-    // Головне вікно налаштувань
+    // 3. Функція перейменування кнопки
+    function runRename(item, container, btn) {
+        Lampa.Input.edit({
+            value: item.title,
+            title: 'Змінити назву'
+        }, function(new_name) {
+            if (new_name) {
+                Lampa.Storage.set('custom_label_' + item.className, new_name);
+                container.find('.' + item.className + ' span').text(new_name);
+            }
+            Lampa.Controller.focus(btn[0]);
+        });
+    }
+
+    // 4. Головне вікно налаштувань
     function openMenu(container, btn) {
         var items = [];
 
-        // Збираємо всі існуючі кнопки
+        // Проходимо по кнопках і створюємо пункти меню
         container.find('.full-start__button').not('.button--edit-settings').each(function() {
             var el = $(this);
             var className = el.attr('class').split(' ').find(c => c.includes('--')) || 'default';
             var currentName = Lampa.Storage.get('custom_label_' + className, el.find('span').text().trim());
-            
-            // Клонуємо іконку та готуємо її для меню
-            var iconSvg = el.find('svg').clone();
-            iconSvg.css('fill', '#fff'); 
-            var iconHtml = iconSvg.prop('outerHTML') || '';
 
             items.push({
-                title: currentName,
-                html: `
-                    <div class="custom-button-item">
-                        <div class="custom-button-item__content">
-                            <div class="custom-button-item__icon">${iconHtml}</div>
-                            <span>${currentName || 'Без назви'}</span>
-                        </div>
-                        <i class="custom-button-item__edit-icon">edit</i>
-                    </div>
-                `,
+                title: currentName || 'Кнопка',
+                icon: 'edit', // Тестуємо відображення стандартної іконки олівця
                 action: 'rename',
-                className: className,
-                title_raw: currentName
+                className: className
             });
         });
 
-        // Додаємо розділ розміру
+        // Пункт розміру в кінці списку
         items.push({
             title: 'Розмір кнопок',
             icon: 'settings_overscan',
@@ -135,20 +90,17 @@
                 if (item.action === 'rename') runRename(item, container, btn);
                 else if (item.action === 'size') runSizeSelection(container, btn);
             },
-            onBack: function() {
-                Lampa.Controller.focus(btn[0]);
-            }
+            onBack: function() { Lampa.Controller.focus(btn[0]); }
         });
     }
 
-    // Слухач завантаження картки
+    // 5. Ініціалізація при завантаженні картки
     Lampa.Listener.follow('full', function (e) {
         if (e.type === 'complite') {
             var container = e.object.activity.render();
             var group = container.find('.full-start-new__buttons');
             
             setTimeout(function() {
-                // Застосовуємо збережені налаштування
                 group.addClass(Lampa.Storage.get('buttons_size', 'size-m'));
                 group.find('.full-start__button').each(function() {
                     var el = $(this);
@@ -158,12 +110,12 @@
                         if (saved) el.find('span').text(saved);
                     }
                 });
-            }, 60);
+            }, 50);
 
-            // Кнопка виклику налаштувань
+            // Додаємо кнопку налаштувань (шестерню)
             var btn = $(`
                 <div class="full-start__button selector button--edit-settings">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.24 2 14 2h-4c-.24 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.25.42.49.42h4c.24 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>
                 </div>
             `);
 
