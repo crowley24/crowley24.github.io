@@ -1,9 +1,9 @@
 (function() {
     'use strict';
 
-    var PLUGIN_VERSION = '1.56_light';
+    var PLUGIN_VERSION = '1.56_light_fixed';
 
-    // Polyfills для сумісності
+    // Polyfills (залишено без змін)
     if (!Array.prototype.forEach) {
         Array.prototype.forEach = function(callback, thisArg) {
             var T, k;
@@ -39,7 +39,6 @@
     var allButtonsOriginal = [];
     var currentContainer = null;
 
-    // --- Робота зі сховищем ---
     function getCustomOrder() { return Lampa.Storage.get('button_custom_order', []); }
     function setCustomOrder(order) { Lampa.Storage.set('button_custom_order', order); }
     function getHiddenButtons() { return Lampa.Storage.get('button_hidden', []); }
@@ -52,10 +51,8 @@
         var span = button.find('span').first();
         var text = (span.attr('data-original-text') || span.text() || '').trim().replace(/\s+/g, '_');
         var subtitle = button.attr('data-subtitle') || '';
-        
         if (classes.indexOf('modss') !== -1 || text.indexOf('MODS') !== -1 || text.indexOf('MOD') !== -1) return 'modss_online_button';
         if (classes.indexOf('showy') !== -1 || text.indexOf('Showy') !== -1) return 'showy_online_button';
-        
         var viewClasses = classes.split(' ').filter(function(c) { return c.indexOf('view--') === 0 || c.indexOf('button--') === 0; }).join('_');
         var id = (viewClasses || 'btn') + '_' + text;
         if (subtitle) id += '_' + subtitle.replace(/\s+/g, '_').substring(0, 30);
@@ -81,55 +78,39 @@
         return false;
     }
 
-    // --- Логіка відображення ---
     function applyChanges() {
         if (!currentContainer) return;
         var targetContainer = currentContainer.find('.full-start-new__buttons');
         if (!targetContainer.length) return;
-
         var categories = categorizeButtons(currentContainer);
         var all = [].concat(categories.online, categories.torrent, categories.trailer, categories.favorite, categories.subscribe, categories.book, categories.reaction, categories.other);
-        
         currentButtons = sortByCustomOrder(all);
         targetContainer.find('.full-start__button').not('.button--edit-order').detach();
-
-        var visibleButtons = [];
-        currentButtons.forEach(function(btn) {
-            targetContainer.append(btn);
-            if (!btn.hasClass('hidden')) visibleButtons.push(btn);
-        });
-
+        currentButtons.forEach(function(btn) { targetContainer.append(btn); });
         var editBtn = targetContainer.find('.button--edit-order');
         if (editBtn.length) targetContainer.append(editBtn.detach());
-
         applyHiddenButtons(currentButtons);
         applyCustomLabels(currentButtons);
-        
         var viewmode = Lampa.Storage.get('buttons_viewmode', 'default');
         targetContainer.removeClass('icons-only always-text');
         if (viewmode === 'icons') targetContainer.addClass('icons-only');
         if (viewmode === 'always') targetContainer.addClass('always-text');
-
         saveOrder();
-        setTimeout(function() { if (currentContainer) setupButtonNavigation(currentContainer); }, 100);
     }
 
     function categorizeButtons(container) {
         var allButtons = container.find('.full-start__button').not('.button--edit-order, .button--play');
         var categories = { online: [], torrent: [], trailer: [], favorite: [], subscribe: [], book: [], reaction: [], other: [] };
         var processedIds = {};
-
         allButtons.each(function() {
             var $btn = $(this);
             if (isExcluded($btn)) return;
             var btnId = getButtonId($btn);
             if (processedIds[btnId]) return;
             processedIds[btnId] = true;
-            
             var type = getButtonType($btn);
             if (categories[type]) categories[type].push($btn);
             else categories.other.push($btn);
-            
             if (!$btn.hasClass('selector')) $btn.addClass('selector');
         });
         return categories;
@@ -139,12 +120,10 @@
         var customOrder = getCustomOrder();
         var priority = [];
         var regular = [];
-
         buttons.forEach(function(btn) {
             if (getButtonId(btn) === 'modss_online_button') priority.push(btn);
             else regular.push(btn);
         });
-
         if (!customOrder.length) {
             regular.sort(function(a, b) {
                 var typeOrder = ['online', 'torrent', 'trailer', 'favorite', 'subscribe', 'book', 'reaction', 'other'];
@@ -152,7 +131,6 @@
             });
             return priority.concat(regular);
         }
-
         var sorted = [];
         var remaining = regular.slice();
         customOrder.forEach(function(id) {
@@ -193,7 +171,6 @@
         setCustomOrder(order);
     }
 
-    // --- Модальне вікно редагування ---
     function openEditDialog() {
         var list = $('<div class="menu-edit-list"></div>');
         var hidden = getHiddenButtons();
@@ -283,7 +260,19 @@
         });
         list.append(resetBtn);
 
-        Lampa.Modal.open({ title: 'Редактор кнопок', html: list, size: 'small' });
+        // ФІКС: додано onBack для роботи кнопки "Назад"
+        Lampa.Modal.open({ 
+            title: 'Редактор кнопок', 
+            html: list, 
+            size: 'small',
+            onBack: function() {
+                Lampa.Modal.close();
+                // Повертаємо фокус на кнопки картки
+                setTimeout(function() {
+                    Lampa.Controller.toggle('full_start');
+                }, 100);
+            }
+        });
     }
 
     function init() {
@@ -298,6 +287,7 @@
             '.icons-only span { display: none !important; }' +
             '.always-text span { display: block !important; }' +
             '.full-start-new__buttons { display: flex !important; flex-wrap: wrap !important; gap: 8px !important; }' +
+            '.full-start__button.hidden { display: none !important; }' +
             '</style>');
         $('body').append(style);
 
@@ -314,12 +304,12 @@
                 target.append(editBtn);
 
                 applyChanges();
+                // Примусова ініціалізація навігації
+                setTimeout(function() {
+                    Lampa.Controller.toggle('full_start');
+                }, 200);
             }
         });
-    }
-
-    function setupButtonNavigation(container) {
-        try { Lampa.Controller.toggle('full_start'); } catch(e) {}
     }
 
     init();
