@@ -3,7 +3,6 @@
 
     var STYLE_ID = 'lampa-custom-cards-style';
 
-    // 1. Ініціалізація параметрів
     var Settings = {
         radius: function() { return Lampa.Storage.get('custom_card_radius', '1.5'); },
         borderWidth: function() { return Lampa.Storage.get('custom_card_border_width', '2'); },
@@ -21,45 +20,51 @@
         var sc = Settings.focusScale();
 
         var css = `
-            /* Оптимізація карток */
+            /* Базовий стан картки */
             .card__view {
-                border: ${bW} solid transparent;
-                /* Анімуємо лише transform для плавності на ТБ */
-                transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1) !important;
+                /* Примусове використання GPU */
+                transform: translate3d(0,0,0);
+                backface-visibility: hidden;
+                
+                /* Використовуємо outline замість border, щоб не лагав layout */
+                outline: 0px solid transparent;
+                transition: transform 0.15s ease-out !important;
                 will-change: transform;
+                
                 border-radius: ${r} !important;
                 overflow: hidden !important;
+                background-color: #141414 !important;
             }
 
             .card__img { 
-                border-radius: ${r} !important; 
+                border-radius: ${r} !important;
+                /* Запобігаємо мерехтінню при масштабуванні */
+                transform: translate3d(0,0,0);
             }
 
-            /* Ефект при фокусі */
+            /* Стан ФОКУСУ */
             .card.focus .card__view { 
-                transform: scale(${sc}) !important; 
-                border-color: ${bC} !important;
-                /* Спрощена тінь без важких кольорових ореолів */
-                box-shadow: 0 10px 30px rgba(0,0,0,0.6) !important;
+                /* Тільки трансформація */
+                transform: scale(${sc}) translate3d(0,0,0) !important; 
+                
+                /* Рамка через box-shadow (працює швидше за border) */
+                box-shadow: inset 0 0 0 ${bW} ${bC}, 0 10px 20px rgba(0,0,0,0.5) !important;
                 z-index: 10;
             }
 
-            /* Вимикаємо стандартну рамку Lampa */
+            /* Повністю вимикаємо стандартні ефекти Lampa */
             .card.focus .card__view::after {
                 display: none !important;
             }
 
-            /* Оптимізація модальних вікон (без backdrop-filter для швидкості) */
+            /* Модалки: максимально легкі для рендеру */
             .settings__content, .selectbox__content, .modal__content {
                 border-radius: ${r} !important;
+                background: #1a1a1a !important;
                 border: 1px solid rgba(255,255,255,0.1) !important;
-                background-color: #1a1a1a !important; /* Насичений темний фон замість блюру */
-                box-shadow: 0 20px 40px rgba(0,0,0,0.8) !important;
-            }
-
-            /* Виправлення скруглення для внутрішніх елементів списків */
-            .selectbox__item, .settings-param {
-                border-radius: 0 !important;
+                box-shadow: 0 15px 30px rgba(0,0,0,0.7) !important;
+                /* Жодних блюрів та анімацій тут */
+                backdrop-filter: none !important;
             }
         `;
 
@@ -70,27 +75,24 @@
     }
 
     function init() {
-        // Додаємо розділ в налаштування
         Lampa.SettingsApi.addComponent({
             component: 'card_design',
-            icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/></svg>',
+            icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="4"/></svg>',
             name: 'Дизайн карточок'
         });
 
-        // Скруглення
         Lampa.SettingsApi.addParam({
             component: 'card_design',
             param: { 
                 name: 'custom_card_radius', 
                 type: 'select', 
-                values: { '0': 'Квадратні', '0.8': 'Легке', '1.5': 'Середнє', '2.2': 'Повне' }, 
+                values: { '0': 'Квадратні', '0.8': 'Легке', '1.5': 'Середнє', '2.2': 'Полное' }, 
                 default: '1.5' 
             },
-            field: { name: 'Скруглення (Radius)', description: 'Наскільки круглими будуть углы постеров' },
+            field: { name: 'Скруглення (Radius)', description: 'Наскільки круглыми будуть углы постеров' },
             onChange: applyStyles
         });
 
-        // Колір рамки
         Lampa.SettingsApi.addParam({
             component: 'card_design',
             param: { 
@@ -109,26 +111,24 @@
             onChange: applyStyles
         });
 
-        // Товщина рамки
         Lampa.SettingsApi.addParam({
             component: 'card_design',
             param: { 
                 name: 'custom_card_border_width', 
                 type: 'select', 
-                values: { '0': 'Без рамки', '2': 'Тонка', '4': 'Жирна' }, 
+                values: { '1': 'Дуже тонка', '2': 'Тонка', '3': 'Середня' }, 
                 default: '2' 
             },
             field: { name: 'Товщина рамки', description: 'Товщина кольорової лінії фокусу' },
             onChange: applyStyles
         });
 
-        // Масштаб при фокусі (додав як параметр, щоб ви могли зменшити, якщо ТБ все одно важко)
         Lampa.SettingsApi.addParam({
             component: 'card_design',
             param: { 
                 name: 'custom_card_scale', 
                 type: 'select', 
-                values: { '1.0': 'Без збільшення', '1.04': 'Мінімальне', '1.08': 'Стандарт', '1.12': 'Максимальне' }, 
+                values: { '1.0': 'Без збільшення', '1.04': 'Мінімальне', '1.06': 'Легке', '1.08': 'Стандарт' }, 
                 default: '1.08' 
             },
             field: { name: 'Масштаб при фокусі', description: 'Наскільки збільшується картка' },
@@ -138,7 +138,6 @@
         applyStyles();
     }
 
-    // Запуск плагіна
     if (window.appready) init();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') init(); });
 
