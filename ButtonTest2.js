@@ -1,7 +1,7 @@
 (function() {
     'use strict';
 
-    var PLUGIN_VERSION = '1.80_final_fixed';
+    var PLUGIN_VERSION = '1.85_layout_fixed';
 
     // Polyfills
     if (!Array.prototype.forEach) {
@@ -98,8 +98,8 @@
         if (viewmode === 'icons') targetContainer.addClass('icons-only');
         if (viewmode === 'always') targetContainer.addClass('always-text');
         
-        // Застосування масштабу
-        targetContainer.css('--btn-scale', getButtonScale());
+        // Масштаб через змінну (використовуємо в CSS)
+        targetContainer.attr('data-scale', getButtonScale());
         
         saveOrder();
     }
@@ -116,7 +116,7 @@
             processedIds[btnId] = true;
             var type = getButtonType($btn);
             if (categories[type]) categories[type].push($btn);
-            else categories.any.push($btn); // Додаємо сюди все, що не розпізнано
+            else categories.any.push($btn);
             if (!$btn.hasClass('selector')) $btn.addClass('selector');
         });
         return categories;
@@ -303,8 +303,15 @@
             '.selector.focus { border-radius: 4px; background: rgba(255,255,255,0.1) !important; }' +
             '.viewmode-switch { background: rgba(66, 133, 244, 0.3); margin-bottom: 5px; border-radius: 4px; }' +
             '.folder-reset-button { background: rgba(200, 50, 50, 0.2); margin-top: 10px; border-radius: 4px; }' +
-            '.full-start-new__buttons { --btn-scale: 1.0; display: flex !important; flex-wrap: wrap !important; gap: calc(8px * var(--btn-scale)) !important; }' +
-            '.full-start-new__buttons .full-start__button { transform: scale(var(--btn-scale)); transform-origin: left center; }' +
+            // НОВИЙ CSS ДЛЯ КОРЕКТНОГО МАСШТАБУ
+            '.full-start-new__buttons { display: flex !important; flex-wrap: wrap !important; gap: 8px !important; align-items: center !important; padding: 10px 0 !important; overflow: visible !important; }' +
+            '.full-start-new__buttons[data-scale="0.8"] .full-start__button { transform: scale(0.8); margin: -2px; }' +
+            '.full-start-new__buttons[data-scale="0.9"] .full-start__button { transform: scale(0.9); margin: -1px; }' +
+            '.full-start-new__buttons[data-scale="1.0"] .full-start__button { transform: scale(1.0); }' +
+            '.full-start-new__buttons[data-scale="1.1"] .full-start__button { transform: scale(1.1); margin: 2px; }' +
+            '.full-start-new__buttons[data-scale="1.2"] .full-start__button { transform: scale(1.2); margin: 5px; }' +
+            '.full-start-new__buttons .full-start__button { transform-origin: center center; overflow: visible !important; }' +
+            '.full-start-new__buttons .full-start__button span { white-space: nowrap !important; }' +
             '.icons-only span { display: none !important; }' +
             '.always-text span { display: block !important; }' +
             '.full-start__button.hidden { display: none !important; }' +
@@ -333,4 +340,3 @@
 
     init();
 })();
-                      
