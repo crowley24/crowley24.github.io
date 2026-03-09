@@ -181,7 +181,13 @@
         const styles = `<style>  
 :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.25, 1, 0.5, 1); }
 
-/* GPU Fix for UI */
+/* Оптимізація GPU для старих Android */
+.full-start__background { 
+    will-change: transform; 
+    transform: translateZ(0); 
+    backface-visibility: hidden;
+}
+
 .cas-logo, .cas-ratings-line, .cas-description, .cas-studios-row, .full-start-new__buttons { 
     backface-visibility: hidden; transform: translateZ(0); 
     opacity: 0; transform: translateY(12px);
@@ -219,8 +225,12 @@
 .left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 2vh; padding-left: 1.5%; }
 .left-title .full-start-new__reactions, .left-title .full-start-new__rate-line, .left-title .full-start__status, .left-title .rating--modss, .left-title .full-start-new__head, .left-title .full-start-new__details { display: none !important; }
 
-@keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
-body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 45s ease-in-out infinite !important; }
+@keyframes casKenBurns { 
+    0% { transform: scale(1) translateZ(0); } 
+    50% { transform: scale(1.08) translateZ(0); } 
+    100% { transform: scale(1) translateZ(0); } 
+}
+body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 45s linear infinite !important; }
 </style>`;  
         Lampa.Template.add('left_title_css', styles);  
         $('body').append(Lampa.Template.get('left_title_css', {}, true));  
@@ -313,7 +323,7 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
                             }
                         }
                     }
-                     render.find('.cas-rate-items').html(ratesHtml);
+                    render.find('.cas-rate-items').html(ratesHtml);
 
                     const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));
                     const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');
