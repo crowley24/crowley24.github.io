@@ -8,7 +8,6 @@
     // Простий кеш без LRU накладних витрат  
     const imageCache = new Map();  
     const CACHE_LIFETIME = 1000 * 60 * 60 * 24;  
-  
     const ICONS = {  
         tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',  
         cub: 'https://raw.githubusercontent.com/yumata/lampa/9381985ad4371d2a7d5eb5ca8e3daf0f32669eb7/img/logo-icon.svg'  
