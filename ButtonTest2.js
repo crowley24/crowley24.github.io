@@ -45,285 +45,236 @@
         return $editBtn;  
     }  
   
-    // Модальне вікно редагування з виправленою структурою  
+    // Модальне вікно редагування  
     function showEditModal() {  
-        const modal = $(`  
-            <div class="buttons-edit-modal">  
-                <div class="buttons-edit-modal__content">  
-                    <div class="buttons-edit-modal__header">  
-                        <h3>Редагування кнопок</h3>  
-                        <div class="buttons-edit-modal__close">×</div>  
-                    </div>  
-                    <div class="buttons-edit-modal__body">  
-                        <div class="buttons-edit-list"></div>  
-                    </div>  
-                    <div class="buttons-edit-modal__footer">  
-                        <button class="buttons-edit-modal__button">Зберегти</button>  
-                    </div>  
-                </div>  
-            </div>  
-        `);  
+        // Видаляємо існуюче модальне вікно  
+        $('.buttons-edit-modal').remove();  
   
-        // Додаємо всі кнопки до списку  
-        const $list = modal.find('.buttons-edit-list');  
-        currentButtons.forEach(($btn, index) => {  
-            const btnId = getButtonId($btn);  
-            const btnText = $btn.text().trim();  
-            const isHidden = $btn.hasClass('hidden');  
-              
-            const $item = $(`  
-                <div class="menu-edit-list__item ${isHidden ? 'menu-edit-list__item-hidden' : ''}" data-index="${index}">  
-                    <div class="menu-edit-list__drag">⋮⋮</div>  
-                    <div class="menu-edit-list__title">${btnText}</div>  
-                    <div class="menu-edit-list__actions">  
-                        <div class="menu-edit-list__change-name" title="Змінити назву">✏️</div>  
-                        <div class="menu-edit-list__toggle" title="Приховати/показати">${isHidden ? '👁️' : '🙈'}</div>  
-                    </div>  
-                </div>  
-            `);  
+        const $modal = $('<div class="buttons-edit-modal">' +  
+            '<div class="buttons-edit-modal__content">' +  
+                '<div class="buttons-edit-modal__header">' +  
+                    '<h3>Редагування кнопок</h3>' +  
+                    '<div class="buttons-edit-modal__close">×</div>' +  
+                '</div>' +  
+                '<div class="buttons-edit-modal__body">' +  
+                    '<div class="menu-edit-list"></div>' +  
+                '</div>' +  
+                '<div class="buttons-edit-modal__footer">' +  
+                    '<div class="buttons-edit-modal__button">Зберегти</div>' +  
+                '</div>' +  
+            '</div>' +  
+            '<div class="buttons-edit-modal__overlay"></div>' +  
+        '</div>');  
+  
+        // Створюємо список кнопок для редагування  
+        const $list = $modal.find('.menu-edit-list');  
+        currentButtons.forEach(function($button, index) {  
+            const buttonId = getButtonId($button);  
+            const buttonText = $button.find('span').text() || $button.text();  
+            const isHidden = $button.hasClass('hidden');  
+            const customName = Lampa.Storage.get('button_name_' + buttonId) || buttonText;  
+  
+            const $item = $('<div class="menu-edit-list__item' + (isHidden ? ' menu-edit-list__item-hidden' : '') + '" data-index="' + index + '">' +  
+                '<div class="menu-edit-list__move">⋮⋮</div>' +  
+                '<div class="menu-edit-list__name">' + customName + '</div>' +  
+                '<div class="menu-edit-list__change-name">✏️</div>' +  
+                '<div class="menu-edit-list__toggle">' + (isHidden ? '👁️' : '🙈') + '</div>' +  
+            '</div>');  
   
             // Обробники подій  
+            $item.find('.menu-edit-list__move').on('mousedown', function(e) {  
+                e.preventDefault();  
+                draggedElement = $item;  
+                $item.addClass('dragging');  
+            });  
+  
             $item.find('.menu-edit-list__change-name').on('click', function() {  
-                changeButtonText($btn, $item);  
+                const newName = prompt('Введіть нову назву кнопки:', customName);  
+                if (newName && newName.trim()) {  
+                    Lampa.Storage.set('button_name_' + buttonId, newName.trim());  
+                    $item.find('.menu-edit-list__name').text(newName.trim());  
+                }  
             });  
   
             $item.find('.menu-edit-list__toggle').on('click', function() {  
-                toggleButtonVisibility($btn, $item);  
+                $button.toggleClass('hidden');  
+                $item.toggleClass('menu-edit-list__item-hidden');  
+                $(this).text($button.hasClass('hidden') ? '👁️' : '🙈');  
             });  
-  
-            // Drag and drop  
-            $item.attr('draggable', true);  
-            $item.on('dragstart', handleDragStart);  
-            $item.on('dragover', handleDragOver);  
-            $item.on('drop', handleDrop);  
-            $item.on('dragend', handleDragEnd);  
   
             $list.append($item);  
         });  
   
-        // Закриття модального вікна  
-        modal.find('.buttons-edit-modal__close, .buttons-edit-modal__button').on('click', function() {  
-            modal.remove();  
-            reorderButtons(currentContainer);  
+        // Додаємо модальне вікно на сторінку  
+        $('body').append($modal);  
+  
+        // Обробники закриття  
+        $modal.find('.buttons-edit-modal__close, .buttons-edit-modal__overlay').on('click', function() {  
+            $modal.remove();  
         });  
   
-        $('body').append(modal);  
-    }  
-  
-    // Функція зміни назви кнопки  
-    function changeButtonText($button, $listItem) {  
-        const currentText = $button.text().trim();  
-        const newText = prompt('Введіть нову назву кнопки:', currentText);  
-          
-        if (newText && newText !== currentText) {  
-            // Зберігаємо оригінальний текст  
-            const originalText = $button.data('original-text') || currentText;  
-            $button.data('original-text', originalText);  
-              
-            // Оновлюємо текст кнопки  
-            const $span = $button.find('span');  
-            if ($span.length) {  
-                $span.text(newText);  
-            } else {  
-                $button.text(newText);  
-            }  
-              
-            // Оновлюємо текст у списку  
-            $listItem.find('.menu-edit-list__title').text(newText);  
-              
-            // Зберігаємо зміни  
-            const btnId = getButtonId($button);  
-            const customLabels = Lampa.Storage.get('button_custom_labels', {});  
-            customLabels[btnId] = newText;  
-            Lampa.Storage.set('button_custom_labels', customLabels);  
-        }  
-    }  
-  
-    // Функція перемикання видимості  
-    function toggleButtonVisibility($button, $listItem) {  
-        const isHidden = $button.hasClass('hidden');  
-          
-        if (isHidden) {  
-            $button.removeClass('hidden');  
-            $listItem.removeClass('menu-edit-list__item-hidden');  
-            $listItem.find('.menu-edit-list__toggle').text('🙈');  
-        } else {  
-            $button.addClass('hidden');  
-            $listItem.addClass('menu-edit-list__item-hidden');  
-            $listItem.find('.menu-edit-list__toggle').text('👁️');  
-        }  
-          
-        // Зберігаємо стан  
-        const btnId = getButtonId($button);  
-        const hiddenButtons = Lampa.Storage.get('button_hidden_buttons', []);  
-          
-        if (isHidden) {  
-            const index = hiddenButtons.indexOf(btnId);  
-            if (index > -1) hiddenButtons.splice(index, 1);  
-        } else {  
-            if (!hiddenButtons.includes(btnId)) {  
-                hiddenButtons.push(btnId);  
-            }  
-        }  
-          
-        Lampa.Storage.set('button_hidden_buttons', hiddenButtons);  
-    }  
-  
-    // Drag and drop функції  
-    function handleDragStart(e) {  
-        draggedElement = $(this);  
-        $(this).addClass('dragging');  
-        e.originalEvent.dataTransfer.effectAllowed = 'move';  
-        e.originalEvent.dataTransfer.setData('text/html', this.innerHTML);  
-    }  
-  
-    function handleDragOver(e) {  
-        if (e.preventDefault) {  
-            e.preventDefault();  
-        }  
-        e.originalEvent.dataTransfer.dropEffect = 'move';  
-          
-        const $this = $(this);  
-        const $list = $this.parent();  
-        const $dragging = $('.dragging');  
-          
-        if ($dragging.length && $this[0] !== $dragging[0]) {  
-            const draggingIndex = $dragging.index();  
-            const thisIndex = $this.index();  
-              
-            if (draggingIndex < thisIndex) {  
-                $this.after($dragging);  
-            } else {  
-                $this.before($dragging);  
-            }  
-        }  
-          
-        return false;  
-    }  
-  
-    function handleDrop(e) {  
-        if (e.stopPropagation) {  
-            e.stopPropagation();  
-        }  
-        return false;  
-    }  
-  
-    function handleDragEnd(e) {  
-        $(this).removeClass('dragging');  
-        draggedElement = null;  
-          
-        // Оновлюємо порядок кнопок  
-        const $items = $('.menu-edit-list__item');  
-        const newOrder = [];  
-          
-        $items.each(function() {  
-            const index = $(this).data('index');  
-            newOrder.push(currentButtons[index]);  
+        $modal.find('.buttons-edit-modal__button').on('click', function() {  
+            saveButtonOrder();  
+            $modal.remove();  
         });  
-          
-        currentButtons = newOrder;  
-          
-        // Зберігаємо порядок  
-        const buttonOrder = currentButtons.map(btn => getButtonId(btn));  
-        Lampa.Storage.set('button_order', buttonOrder);  
+  
+        // Drag and drop функціональність  
+        $(document).on('mousemove', function(e) {  
+            if (draggedElement) {  
+                const $items = $('.menu-edit-list__item');  
+                const draggedIndex = parseInt(draggedElement.attr('data-index'));  
+                  
+                $items.each(function(index) {  
+                    if (index !== draggedIndex) {  
+                        const $item = $(this);  
+                        const rect = $item[0].getBoundingClientRect();  
+                        const midpoint = rect.top + rect.height / 2;  
+                          
+                        if (e.clientY < midpoint && index < draggedIndex) {  
+                            $item.before(draggedElement);  
+                            draggedElement.attr('data-index', index);  
+                            $items.not(draggedElement).each(function(i) {  
+                                if (i >= index) {  
+                                    $(this).attr('data-index', i + 1);  
+                                }  
+                            });  
+                        } else if (e.clientY > midpoint && index > draggedIndex) {  
+                            $item.after(draggedElement);  
+                            draggedElement.attr('data-index', index);  
+                            $items.not(draggedElement).each(function(i) {  
+                                if (i <= index) {  
+                                    $(this).attr('data-index', i - 1);  
+                                }  
+                            });  
+                        }  
+                    }  
+                });  
+            }  
+        });  
+  
+        $(document).on('mouseup', function() {  
+            if (draggedElement) {  
+                draggedElement.removeClass('dragging');  
+                draggedElement = null;  
+            }  
+        });  
     }  
   
-    // Основна функція перестановки кнопок  
+    function saveButtonOrder() {  
+        const order = [];  
+        $('.menu-edit-list__item').each(function() {  
+            const index = parseInt($(this).attr('data-index'));  
+            order.push(index);  
+        });  
+        Lampa.Storage.set('button_order', order);  
+        reorderButtons(currentContainer);  
+    }  
+  
     function reorderButtons(container) {  
+        if (!container) return;  
+          
         currentContainer = container;  
         const targetContainer = container.find('.full-start-new__buttons');  
           
         if (!targetContainer.length) return;  
   
-        // Знаходимо ВСІ кнопки, включаючи динамічні  
-        const allButtons = container.find('.full-start__button');  
-        currentButtons = [];  
-          
-        allButtons.each(function() {  
-            const $btn = $(this);  
-            if (!isExcluded($btn)) {  
-                currentButtons.push($btn);  
-            }  
-        });  
+        targetContainer.addClass('buttons-loading');  
   
-        // Застосовуємо збережений порядок  
-        const savedOrder = Lampa.Storage.get('button_order', []);  
-        if (savedOrder.length > 0) {  
-            currentButtons.sort((a, b) => {  
-                const aId = getButtonId(a);  
-                const bId = getButtonId(b);  
-                const aIndex = savedOrder.indexOf(aId);  
-                const bIndex = savedOrder.indexOf(bId);  
-                  
-                if (aIndex === -1 && bIndex === -1) return 0;  
-                if (aIndex === -1) return 1;  
-                if (bIndex === -1) return -1;  
-                  
-                return aIndex - bIndex;  
-            });  
-        }  
+        setTimeout(function() {  
+            try {  
+                const allButtons = targetContainer.find('.full-start__button');  
+                currentButtons = [];  
   
-        // Очищуємо та додаємо кнопки в правильному порядку  
-        targetContainer.empty();  
-          
-        currentButtons.forEach($btn => {  
-            targetContainer.append($btn);  
-        });  
+                allButtons.each(function() {  
+                    const $btn = $(this);  
+                    if (!isExcluded($btn)) {  
+                        currentButtons.push($btn);  
+                    }  
+                });  
   
-        // Додаємо кнопку редагування  
-        const $editBtn = createEditButton();  
-        targetContainer.append($editBtn);  
-  
-        // Відновлюємо збережені назви  
-        const customLabels = Lampa.Storage.get('button_custom_labels', {});  
-        currentButtons.forEach($btn => {  
-            const btnId = getButtonId($btn);  
-            if (customLabels[btnId]) {  
-                const $span = $btn.find('span');  
-                if ($span.length) {  
-                    $span.text(customLabels[btnId]);  
-                } else {  
-                    $btn.text(customLabels[btnId]);  
+                // Застосовуємо збережений порядок  
+                const savedOrder = Lampa.Storage.get('button_order', []);  
+                if (savedOrder.length === currentButtons.length) {  
+                    const reorderedButtons = [];  
+                    savedOrder.forEach(function(index) {  
+                        if (currentButtons[index]) {  
+                            reorderedButtons.push(currentButtons[index]);  
+                        }  
+                    });  
+                    currentButtons = reorderedButtons;  
                 }  
-            }  
-        });  
   
-        // Відновлюємо стан видимості  
-        const hiddenButtons = Lampa.Storage.get('button_hidden_buttons', []);  
-        currentButtons.forEach($btn => {  
-            const btnId = getButtonId($btn);  
-            if (hiddenButtons.includes(btnId)) {  
-                $btn.addClass('hidden');  
-            }  
-        });  
+                // Застосовуємо збережені назви  
+                currentButtons.forEach(function($button) {  
+                    const buttonId = getButtonId($button);  
+                    const customName = Lampa.Storage.get('button_name_' + buttonId);  
+                    if (customName) {  
+                        const $span = $button.find('span');  
+                        if ($span.length) {  
+                            $span.text(customName);  
+                        } else {  
+                            $button.text(customName);  
+                        }  
+                    }  
+                });  
   
-        return true;  
+                // Очищуємо та додаємо кнопки в правильному порядку  
+                targetContainer.children().detach();  
+                currentButtons.forEach(function($button) {  
+                    targetContainer.append($button);  
+                });  
+  
+                // Додаємо кнопку редагування  
+                const $editBtn = createEditButton();  
+                targetContainer.append($editBtn);  
+  
+                // Застосовуємо анімацію  
+                currentButtons.forEach(function($button, index) {  
+                    setTimeout(function() {  
+                        $button.css({  
+                            'opacity': '1',  
+                            'transform': 'translateY(0)'  
+                        });  
+                    }, index * 50);  
+                });  
+  
+                $editBtn.css({  
+                    'opacity': '1',  
+                    'transform': 'translateY(0)'  
+                });  
+  
+            } catch(err) {  
+                console.error('Button Manager error:', err);  
+            } finally {  
+                targetContainer.removeClass('buttons-loading');  
+            }  
+        }, 400);  
     }  
   
-    // Стилі для модального вікна та drag&drop  
     function init() {  
-        const style = $('<style>' +  
-            '.buttons-edit-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: flex; align-items: center; justify-content: center; }' +  
-            '.buttons-edit-modal__content { background: #2a2a2a; border-radius: 1em; max-width: 500px; width: 90%; max-height: 80vh; overflow: hidden; display: flex; flex-direction: column; }' +  
-            '.buttons-edit-modal__header { padding: 1.5em; border-bottom: 1px solid #444; display: flex; justify-content: space-between; align-items: center; }' +  
+        // Додаємо стилі  
+        const style = $('<style id="button-manager-styles">' +  
+            '.full-start-new__buttons.buttons-loading .full-start__button { opacity: 0; transform: translateY(10px); transition: all 0.3s ease; }' +  
+            '.button--edit-order { background: rgba(66, 133, 244, 0.2) !important; cursor: pointer; }' +  
+            '.button--edit-order:hover { background: rgba(66, 133, 244, 0.4) !important; }' +  
+            '.buttons-edit-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999; display: flex; align-items: center; justify-content: center; }' +  
+            '.buttons-edit-modal__overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); }' +  
+            '.buttons-edit-modal__content { position: relative; background: #2a2a2a; border-radius: 8px; max-width: 500px; width: 90%; max-height: 80vh; overflow: hidden; z-index: 1; }' +  
+            '.buttons-edit-modal__header { padding: 1em; border-bottom: 1px solid #444; display: flex; justify-content: space-between; align-items: center; }' +  
             '.buttons-edit-modal__header h3 { margin: 0; color: #fff; }' +  
-            '.buttons-edit-modal__close { cursor: pointer; font-size: 1.5em; color: #fff; width: 2em; height: 2em; display: flex; align-items: center; justify-content: center; border-radius: 50%; }' +  
-            '.buttons-edit-modal__close:hover { background: rgba(255,255,255,0.1); }' +  
-            '.buttons-edit-modal__body { flex: 1; overflow-y: auto; padding: 1em; }' +  
-            '.menu-edit-list__item { background: #333; border-radius: 0.5em; padding: 1em; margin-bottom: 0.5em; display: flex; align-items: center; cursor: move; }' +  
+            '.buttons-edit-modal__close { cursor: pointer; color: #fff; font-size: 1.5em; width: 2em; height: 2em; display: flex; align-items: center; justify-content: center; }' +  
+            '.buttons-edit-modal__body { max-height: 400px; overflow-y: auto; }' +  
+            '.menu-edit-list__item { display: flex; align-items: center; padding: 0.8em; border-bottom: 1px solid #444; color: #fff; }' +  
             '.menu-edit-list__item.dragging { opacity: 0.5; }' +  
-            '.menu-edit-list__drag { color: #666; font-size: 1.2em; margin-right: 1em; cursor: grab; user-select: none; }' +  
-            '.menu-edit-list__drag:active { cursor: grabbing; }' +  
-            '.menu-edit-list__title { flex: 1; color: #fff; font-size: 1em; }' +  
-            '.menu-edit-list__actions { display: flex; gap: 0.5em; }' +  
-            '.menu-edit-list__change-name, .menu-edit-list__toggle { width: 2.5em; height: 2.5em; border-radius: 0.3em; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2em; transition: background 0.2s; }' +  
+            '.menu-edit-list__move { cursor: grab; color: #888; font-size: 1.2em; margin-right: 1em; user-select: none; }' +  
+            '.menu-edit-list__move:active { cursor: grabbing; }' +  
+            '.menu-edit-list__name { flex: 1; margin-right: 1em; }' +  
+            '.menu-edit-list__change-name, .menu-edit-list__toggle { cursor: pointer; padding: 0.5em; margin: 0 0.2em; border-radius: 4px; transition: background 0.2s; }' +  
             '.menu-edit-list__change-name:hover, .menu-edit-list__toggle:hover { background: rgba(255,255,255,0.1); }' +  
             '.menu-edit-list__item-hidden { opacity: 0.5; }' +  
             '.buttons-edit-modal__footer { padding: 1em; text-align: center; border-top: 1px solid #444; }' +  
-            '.buttons-edit-modal__button { padding: 0.8em 2em; background: #4285f4; color: white; border: none; border-radius: 0.3em; cursor: pointer; font-size: 1em; }' +  
+            '.buttons-edit-modal__button { padding: 0.8em 2em; background: #4285f4; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1em; }' +  
             '.buttons-edit-modal__button:hover { background: #3367d6; }' +  
-            '.button--edit-order { background: rgba(66, 133, 244, 0.2) !important; }' +  
-            '.button--edit-order:hover { background: rgba(66, 133, 244, 0.4) !important; }' +  
             '</style>');  
         $('body').append(style);  
   
