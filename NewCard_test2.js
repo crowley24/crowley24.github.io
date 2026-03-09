@@ -316,4 +316,42 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
 
                     const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));
                     const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');
-                    render.find('.cas-meta-info')
+                    render.find('.cas-meta-info').text((time ? time + (genre ? ' • ' : '') : '') + genre);
+
+                    if (Lampa.Storage.get('cas_show_studios')) {
+                        const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 3);
+                        render.find('.cas-studios-row').html(studios.map(s => `<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}"></div>`).join(''));
+                    }
+
+                    if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {
+                        Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {
+                            const items = res.Results || res;
+                            if (items && Array.isArray(items) && items.length > 0) {
+                                const b = { res: '', hdr: false, dv: false, ukr: false };
+                                items.slice(0, 15).forEach(i => {
+                                    const t = (i.Title || i.title || '').toLowerCase();
+                                  if (t.includes('4k') || t.includes('2160')) b.res = '4K';
+                                    else if (!b.res && (t.includes('1080') || t.includes('fhd'))) b.res = 'FULL HD';
+                                    if (t.includes('hdr')) b.hdr = true;
+                                    if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) b.dv = true;
+                                    if (t.includes('ukr') || t.includes('укр')) b.ukr = true;
+                                });
+                                let qH = '';
+                                if (b.res) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS[b.res]}"></div>`;
+                                if (b.dv) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;
+                                else if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;
+                                if (b.ukr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;
+                                if (qH) render.find('.cas-quality-row').html('<span style="opacity: 0.5; margin: 0 5px;">•</span>' + qH);
+                            }
+                        });
+                    }
+                }
+                setTimeout(() => render.find('.left-title__content').addClass('cas-animated'), 150);
+            }  
+        });  
+    }
+  
+    function startPlugin() { initializePlugin(); }
+    if (window.appready) startPlugin();  
+    else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') startPlugin(); });  
+})();
