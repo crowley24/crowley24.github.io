@@ -1,7 +1,14 @@
 (function () {
     'use strict';
 
-    // 1. Функція для збереження та завантаження назв
+    // 1. Polyfills для стабільнаї роботи на пристроях 2019 року
+    if (!Array.prototype.forEach) {
+        Array.prototype.forEach = function(callback) {
+            for (var i = 0; i < this.length; i++) callback(this[i], i, this);
+        };
+    }
+
+    // 2. Робота з пам'яттю (збереження ваших назв)
     var Storage = {
         saveName: function(id, name) {
             var data = Lampa.Storage.get('custom_button_names', '{}');
@@ -16,7 +23,7 @@
         }
     };
 
-    // 2. Основний слухач подій Lampa
+    // 3. Логіка розгортання кнопок та перейменування
     Lampa.Listener.follow('full', function(e) {
         if (e.type !== 'complite') return;
 
@@ -24,80 +31,78 @@
         var targetContainer = container.find('.full-start-new__buttons');
 
         if (targetContainer.length) {
-            
-            // Оновлюємо назви існуючих кнопок з пам'яті
-            targetContainer.find('.full-start__button').each(function() {
+            // РОЗГОРТАННЯ: Шукаємо приховані кнопки онлайн-перегляду
+            // Зазвичай вони знаходяться в додаткових контейнерах всередині кнопок
+            container.find('.full-start__button').each(function() {
                 var btn = $(this);
-                var span = btn.find('span');
-                var currentText = span.text().trim();
                 
-                // Створюємо унікальний ID для кожної кнопки на основі її класу
-                var btnId = btn.attr('class').replace(/\s+/g, '_');
-                var savedName = Storage.getName(btnId, currentText);
+                // Якщо всередині кнопки є прихований список інших кнопок (онлайн-сервіси)
+                var hiddenButtons = btn.find('.button--online, .modss--online, .showy--online');
                 
-                if (savedName !== currentText) {
-                    span.text(savedName);
+                if (hiddenButtons.length) {
+                    hiddenButtons.each(function() {
+                        var hBtn = $(this).clone(true); // Копіюємо кнопку
+                        hBtn.removeClass('hidden');     // Робимо видимою
+                        targetContainer.append(hBtn);   // Додаємо в основний ряд
+                    });
+                    btn.remove(); // Видаляємо стару "батьківську" кнопку, щоб не дублювати
                 }
             });
 
-            // Додаємо нашу кнопку-редактор, якщо її ще немає
+            // ПЕРЕЙМЕНУВАННЯ: Застосовуємо збережені назви
+            targetContainer.find('.full-start__button').each(function() {
+                var btn = $(this);
+                var span = btn.find('span');
+                var btnId = btn.attr('class').replace(/\s+/g, '_');
+                var savedName = Storage.getName(btnId, span.text().trim());
+                span.text(savedName);
+            });
+
+            // ДОДАВАННЯ РЕДАКТОРА
             if (targetContainer.find('.button--my-editor').length === 0) {
-                var myBtn = $('<div class="full-start__button selector button--my-editor">' +
+                var editBtn = $('<div class="full-start__button selector button--my-editor">' +
                     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">' +
                     '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>' +
                     '<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>' +
-                    '<span>Редактор кнопок</span></div>');
+                    '<span>Редактор</span></div>');
 
-                myBtn.on('hover:enter', function() {
+                editBtn.on('hover:enter', function() {
                     openEditorMenu(targetContainer);
                 });
 
-                targetContainer.append(myBtn);
+                targetContainer.append(editBtn);
                 Lampa.Controller.ready();
             }
         }
     });
 
-    // 3. Функція відкриття меню редагування
+    // 4. Меню вибору кнопок
     function openEditorMenu(container) {
-        var buttons = [];
-        container.find('.full-start__button').each(function() {
+        var list = [];
+        container.find('.full-start__button').not('.button--my-editor').each(function() {
             var btn = $(this);
-            if (!btn.hasClass('button--my-editor')) {
-                buttons.push({
-                    id: btn.attr('class').replace(/\s+/g, '_'),
-                    name: btn.find('span').text().trim()
-                });
-            }
-        });
-
-        // Створюємо список для вибору кнопки
-        var list = buttons.map(function(b) {
-            return {
-                title: b.name,
-                id: b.id
-            };
+            list.push({
+                title: btn.find('span').text().trim(),
+                id: btn.attr('class').replace(/\s+/g, '_')
+            });
         });
 
         Lampa.Select.show({
-            title: 'Оберіть кнопку для зміни назви',
+            title: 'Оберіть кнопку',
             items: list,
             onSelect: function(item) {
-                // Викликаємо вікно введення тексту
                 Lampa.Input.edit({
-                    title: 'Нова назва для: ' + item.title,
+                    title: 'Нова назва',
                     value: item.title,
                     free: true
                 }, function(newVal) {
                     if (newVal) {
                         Storage.saveName(item.id, newVal);
-                        Lampa.Noty.show('Назву змінено! Перезавантажте картку.');
+                        Lampa.Noty.show('Збережено! Оновіть сторінку.');
                     }
                 });
             },
-            onBack: function() {
-                Lampa.Controller.toggle('full_start');
-            }
+            onBack: function() { Lampa.Controller.toggle('full_start'); }
         });
     }
 
