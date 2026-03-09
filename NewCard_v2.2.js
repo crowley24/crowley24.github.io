@@ -237,11 +237,11 @@
   .left-title .full-start-new__buttons .full-start__button.focus {  
     color: #fff !important; 
     transform: scale(1.15) translateZ(0); 
-    /* Замість drop-shadow використовуємо фон з м'яким розмиттям */
-    background: radial-gradient(circle, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0) 70%) !important;
-    border-radius: 10px;
-    filter: none; /* Вимикаємо важкий фільтр */
-}  
+    /* Робимо інтенсивне контурне світіння тексту та іконок */
+    text-shadow: 0 0 5px rgba(255,255,255,0.8), 0 0 10px rgba(255,255,255,0.4);
+    /* Додаємо легку тінь самому SVG (якщо іконка не є шрифтом) */
+    filter: drop-shadow(0 0 3px rgba(255,255,255,0.7)); 
+}
   .left-title .full-start__button svg { width: 26px !important; height: 26px !important; }  
   .cas-logo img { max-width: 450px; max-height: 180px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); transform: scale(var(--cas-logo-scale)); transform-origin: left bottom; }  
   .cas-ratings-line { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; font-size: var(--cas-meta-size); font-weight: 600; }  
