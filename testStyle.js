@@ -3,6 +3,7 @@
 
     var STYLE_ID = 'lampa-custom-cards-style';
 
+    // 1. Ініціалізація параметрів (повернуто оригінальні значення)
     var Settings = {
         radius: function() { return Lampa.Storage.get('custom_card_radius', '1.5'); },
         borderWidth: function() { return Lampa.Storage.get('custom_card_border_width', '2'); },
@@ -20,50 +21,40 @@
         var sc = Settings.focusScale();
 
         var css = `
-            /* Базовий стан картки */
+            /* Оптимізована база картки */
             .card__view {
-                /* Примусове використання GPU */
-                transform: translate3d(0,0,0);
-                backface-visibility: hidden;
-                
-                /* Використовуємо outline замість border, щоб не лагав layout */
-                outline: 0px solid transparent;
-                transition: transform 0.15s ease-out !important;
+                border: ${bW} solid transparent;
+                /* Анімуємо ТІЛЬКИ трансформацію для плавності */
+                transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1) !important;
                 will-change: transform;
-                
+                transform: translateZ(0); /* GPU прискорення */
                 border-radius: ${r} !important;
                 overflow: hidden !important;
-                background-color: #141414 !important;
             }
 
             .card__img { 
-                border-radius: ${r} !important;
-                /* Запобігаємо мерехтінню при масштабуванні */
-                transform: translate3d(0,0,0);
+                border-radius: ${r} !important; 
+                backface-visibility: hidden;
             }
 
-            /* Стан ФОКУСУ */
+            /* Ефект при фокусі (повернуто оригінальну логіку) */
             .card.focus .card__view { 
-                /* Тільки трансформація */
-                transform: scale(${sc}) translate3d(0,0,0) !important; 
-                
-                /* Рамка через box-shadow (працює швидше за border) */
-                box-shadow: inset 0 0 0 ${bW} ${bC}, 0 10px 20px rgba(0,0,0,0.5) !important;
+                transform: scale(${sc}) !important; 
+                border-color: ${bC} !important;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
                 z-index: 10;
             }
 
-            /* Повністю вимикаємо стандартні ефекти Lampa */
+            /* Прибираємо стандартну білу рамку */
             .card.focus .card__view::after {
                 display: none !important;
             }
 
-            /* Модалки: максимально легкі для рендеру */
+            /* Модальні вікна (без важкого блюру для швидкості ТБ) */
             .settings__content, .selectbox__content, .modal__content {
                 border-radius: ${r} !important;
-                background: #1a1a1a !important;
                 border: 1px solid rgba(255,255,255,0.1) !important;
-                box-shadow: 0 15px 30px rgba(0,0,0,0.7) !important;
-                /* Жодних блюрів та анімацій тут */
+                background: #1a1a1a !important;
                 backdrop-filter: none !important;
             }
         `;
@@ -81,18 +72,20 @@
             name: 'Дизайн карточок'
         });
 
+        // Скруглення (як в оригіналі)
         Lampa.SettingsApi.addParam({
             component: 'card_design',
             param: { 
                 name: 'custom_card_radius', 
                 type: 'select', 
-                values: { '0': 'Квадратні', '0.8': 'Легке', '1.5': 'Середнє', '2.2': 'Полное' }, 
+                values: { '0': 'Квадратні', '0.8': 'Легке', '1.5': 'Середнє', '2.2': 'Повне' }, 
                 default: '1.5' 
             },
-            field: { name: 'Скруглення (Radius)', description: 'Наскільки круглыми будуть углы постеров' },
+            field: { name: 'Скруглення (Radius)', description: 'Наскільки круглими будуть углы постеров' },
             onChange: applyStyles
         });
 
+        // Колір рамки (як в оригіналі)
         Lampa.SettingsApi.addParam({
             component: 'card_design',
             param: { 
@@ -100,35 +93,37 @@
                 type: 'select', 
                 values: { 
                     '#00e5ff': 'Циан', 
-                    '#ff3d00': 'Червоний', 
-                    '#7c4dff': 'Фіолетовий', 
-                    '#ffea00': 'Жовтий',
-                    '#ffffff': 'Білий' 
+                    '#ff3d00': 'Красный', 
+                    '#7c4dff': 'Фиолетовый', 
+                    '#ffea00': 'Желтый',
+                    '#ffffff': 'Белый' 
                 }, 
                 default: '#00e5ff' 
             },
-            field: { name: 'Колір рамки фокусу', description: 'Колір обводки при наведенні' },
+            field: { name: 'Цвет рамки фокуса', description: 'Цвет обводки при наведении на карточку' },
             onChange: applyStyles
         });
 
+        // Товщина рамки (повернуто: Без рамки, Тонка, Жирна)
         Lampa.SettingsApi.addParam({
             component: 'card_design',
             param: { 
                 name: 'custom_card_border_width', 
                 type: 'select', 
-                values: { '1': 'Дуже тонка', '2': 'Тонка', '3': 'Середня' }, 
+                values: { '0': 'Без рамки', '2': 'Тонка', '4': 'Жирна' }, 
                 default: '2' 
             },
-            field: { name: 'Товщина рамки', description: 'Товщина кольорової лінії фокусу' },
+            field: { name: 'Толщина рамки', description: 'Толщина цветной линии фокуса' },
             onChange: applyStyles
         });
 
+        // Масштаб (повернуто оригінальний список + 1.08 за замовчуванням)
         Lampa.SettingsApi.addParam({
             component: 'card_design',
             param: { 
                 name: 'custom_card_scale', 
                 type: 'select', 
-                values: { '1.0': 'Без збільшення', '1.04': 'Мінімальне', '1.06': 'Легке', '1.08': 'Стандарт' }, 
+                values: { '1.0': 'Без збільшення', '1.04': 'Мінімальне', '1.08': 'Стандарт', '1.12': 'Максимальне' }, 
                 default: '1.08' 
             },
             field: { name: 'Масштаб при фокусі', description: 'Наскільки збільшується картка' },
