@@ -1,9 +1,9 @@
 (function() {
     'use strict';
 
-    var PLUGIN_VERSION = '1.56_light_fixed';
+    var PLUGIN_VERSION = '1.60_premium';
 
-    // Polyfills (залишено без змін)
+    // --- Polyfills ---
     if (!Array.prototype.forEach) {
         Array.prototype.forEach = function(callback, thisArg) {
             var T, k;
@@ -36,9 +36,9 @@
     ];
 
     var currentButtons = [];
-    var allButtonsOriginal = [];
     var currentContainer = null;
 
+    // --- Робота зі сховищем ---
     function getCustomOrder() { return Lampa.Storage.get('button_custom_order', []); }
     function setCustomOrder(order) { Lampa.Storage.set('button_custom_order', order); }
     function getHiddenButtons() { return Lampa.Storage.get('button_hidden', []); }
@@ -78,23 +78,33 @@
         return false;
     }
 
+    // --- Логіка відображення ---
     function applyChanges() {
         if (!currentContainer) return;
         var targetContainer = currentContainer.find('.full-start-new__buttons');
         if (!targetContainer.length) return;
+
         var categories = categorizeButtons(currentContainer);
         var all = [].concat(categories.online, categories.torrent, categories.trailer, categories.favorite, categories.subscribe, categories.book, categories.reaction, categories.other);
+        
         currentButtons = sortByCustomOrder(all);
         targetContainer.find('.full-start__button').not('.button--edit-order').detach();
-        currentButtons.forEach(function(btn) { targetContainer.append(btn); });
+
+        currentButtons.forEach(function(btn) {
+            targetContainer.append(btn);
+        });
+
         var editBtn = targetContainer.find('.button--edit-order');
         if (editBtn.length) targetContainer.append(editBtn.detach());
+
         applyHiddenButtons(currentButtons);
         applyCustomLabels(currentButtons);
+        
         var viewmode = Lampa.Storage.get('buttons_viewmode', 'default');
         targetContainer.removeClass('icons-only always-text');
         if (viewmode === 'icons') targetContainer.addClass('icons-only');
         if (viewmode === 'always') targetContainer.addClass('always-text');
+
         saveOrder();
     }
 
@@ -102,15 +112,18 @@
         var allButtons = container.find('.full-start__button').not('.button--edit-order, .button--play');
         var categories = { online: [], torrent: [], trailer: [], favorite: [], subscribe: [], book: [], reaction: [], other: [] };
         var processedIds = {};
+
         allButtons.each(function() {
             var $btn = $(this);
             if (isExcluded($btn)) return;
             var btnId = getButtonId($btn);
             if (processedIds[btnId]) return;
             processedIds[btnId] = true;
+            
             var type = getButtonType($btn);
             if (categories[type]) categories[type].push($btn);
             else categories.other.push($btn);
+            
             if (!$btn.hasClass('selector')) $btn.addClass('selector');
         });
         return categories;
@@ -120,10 +133,12 @@
         var customOrder = getCustomOrder();
         var priority = [];
         var regular = [];
+
         buttons.forEach(function(btn) {
             if (getButtonId(btn) === 'modss_online_button') priority.push(btn);
             else regular.push(btn);
         });
+
         if (!customOrder.length) {
             regular.sort(function(a, b) {
                 var typeOrder = ['online', 'torrent', 'trailer', 'favorite', 'subscribe', 'book', 'reaction', 'other'];
@@ -131,6 +146,7 @@
             });
             return priority.concat(regular);
         }
+
         var sorted = [];
         var remaining = regular.slice();
         customOrder.forEach(function(id) {
@@ -171,6 +187,7 @@
         setCustomOrder(order);
     }
 
+    // --- Модальне вікно редагування ---
     function openEditDialog() {
         var list = $('<div class="menu-edit-list"></div>');
         var hidden = getHiddenButtons();
@@ -178,7 +195,7 @@
         var labels = {default: 'Стандартний', icons: 'Тільки іконки', always: 'З текстом'};
         var currentMode = Lampa.Storage.get('buttons_viewmode', 'default');
 
-        var modeBtn = $('<div class="selector viewmode-switch"><div style="text-align: center; padding: 1em;">Вид кнопок: ' + labels[currentMode] + '</div></div>');
+        var modeBtn = $('<div class="selector viewmode-switch"><div style="text-align: center; padding: 1.2em;">Вид кнопок: ' + labels[currentMode] + '</div></div>');
         modeBtn.on('hover:enter', function() {
             currentMode = modes[(modes.indexOf(currentMode) + 1) % modes.length];
             Lampa.Storage.set('buttons_viewmode', currentMode);
@@ -190,7 +207,7 @@
         currentButtons.forEach(function(btn) {
             var btnId = getButtonId(btn);
             var isHidden = hidden.indexOf(btnId) !== -1;
-            var item = $('<div class="menu-edit-list__item">' +
+            var item = $('<div class="menu-edit-list__item selector">' +
                 '<div class="menu-edit-list__icon"></div>' +
                 '<div class="menu-edit-list__title">' + (getCustomLabels()[btnId] || btn.find('span').text().trim() || 'Кнопка') + '</div>' +
                 '<div class="menu-edit-list__change-name selector"><svg viewBox="0 0 24 24" fill="none" width="18" height="18"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" stroke="currentColor" stroke-width="1.5"/></svg></div>' +
@@ -250,7 +267,7 @@
             list.append(item);
         });
 
-        var resetBtn = $('<div class="selector folder-reset-button"><div style="text-align: center; padding: 1em;">Скинути налаштування</div></div>');
+        var resetBtn = $('<div class="selector folder-reset-button"><div style="text-align: center; padding: 1.2em;">Скинути налаштування</div></div>');
         resetBtn.on('hover:enter', function() {
             Lampa.Storage.set('button_custom_order', []);
             Lampa.Storage.set('button_hidden', []);
@@ -260,14 +277,12 @@
         });
         list.append(resetBtn);
 
-        // ФІКС: додано onBack для роботи кнопки "Назад"
         Lampa.Modal.open({ 
             title: 'Редактор кнопок', 
             html: list, 
             size: 'small',
             onBack: function() {
                 Lampa.Modal.close();
-                // Повертаємо фокус на кнопки картки
                 setTimeout(function() {
                     Lampa.Controller.toggle('full_start');
                 }, 100);
@@ -277,17 +292,29 @@
 
     function init() {
         var style = $('<style>' +
-            '.menu-edit-list__item { display: grid; grid-template-columns: 2.5em 1fr 2.4em 2.4em 2.4em 2.4em; align-items: center; gap: 0.5em; padding: 0.3em 0; }' +
-            '.menu-edit-list__icon svg { width: 1.4em; height: 1.4em; }' +
-            '.menu-edit-list__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }' +
-            '.menu-edit-list__item-hidden { opacity: 0.4; }' +
-            '.selector.focus { border-radius: 4px; background: rgba(255,255,255,0.1); }' +
-            '.viewmode-switch { background: rgba(66, 133, 244, 0.3); margin-bottom: 10px; border-radius: 4px; }' +
-            '.folder-reset-button { background: rgba(200, 50, 50, 0.2); margin-top: 15px; border-radius: 4px; }' +
+            '.full-start-new__buttons { display: flex !important; flex-wrap: wrap !important; gap: 12px !important; padding: 10px 0; }' +
+            '.full-start__button { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 12px !important; background: rgba(255,255,255,0.05) !important; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; }' +
+            '.full-start__button.focus { transform: scale(1.08); background: #fff !important; color: #000 !important; box-shadow: 0 10px 25px rgba(0,0,0,0.5); border-color: #fff; z-index: 10; }' +
+            
+            '.menu-edit-list__item { display: grid; grid-template-columns: 3.5em 1fr 2.8em 2.8em 2.8em 2.8em; align-items: center; gap: 8px; padding: 12px; margin-bottom: 8px; background: rgba(255,255,255,0.03); border-radius: 14px; border: 1px solid rgba(255,255,255,0.05); transition: all 0.2s; }' +
+            '.menu-edit-list__item.focus { background: rgba(255,255,255,0.1) !important; transform: translateX(5px); border-color: rgba(255,255,255,0.2); }' +
+            '.menu-edit-list__icon { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: rgba(255,255,255,0.05); border-radius: 10px; }' +
+            '.menu-edit-list__icon svg { width: 22px; height: 22px; fill: #fff; }' +
+            '.menu-edit-list__title { font-size: 1.1em; font-weight: 500; color: rgba(255,255,255,0.9); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }' +
+            '.menu-edit-list__item-hidden { opacity: 0.3; filter: grayscale(1); }' +
+            
+            '.menu-edit-list [class*="selector"] { display: flex; align-items: center; justify-content: center; height: 40px; border-radius: 10px; transition: all 0.2s; }' +
+            '.menu-edit-list [class*="selector"].focus { background: #fff !important; color: #000 !important; }' +
+            
+            '.viewmode-switch { background: linear-gradient(90deg, #4285f4, #34a853); margin-bottom: 15px; border: none; font-weight: bold; border-radius: 14px; text-transform: uppercase; letter-spacing: 1px; }' +
+            '.folder-reset-button { background: linear-gradient(90deg, #ea4335, #c5221f); margin-top: 20px; border: none; border-radius: 14px; opacity: 0.8; }' +
+            '.folder-reset-button.focus { opacity: 1; transform: scale(1.02); }' +
+            
             '.icons-only span { display: none !important; }' +
-            '.always-text span { display: block !important; }' +
-            '.full-start-new__buttons { display: flex !important; flex-wrap: wrap !important; gap: 8px !important; }' +
+            '.always-text span { display: block !important; margin-top: 5px; font-size: 0.8em; }' +
             '.full-start__button.hidden { display: none !important; }' +
+            
+            '.modal--small .modal__content { background: rgba(15, 15, 15, 0.85) !important; backdrop-filter: blur(25px); border-radius: 28px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.8); }' +
             '</style>');
         $('body').append(style);
 
@@ -299,14 +326,14 @@
             if (target.length && !currentContainer.data('buttons-processed')) {
                 currentContainer.data('buttons-processed', true);
                 
-                var editBtn = $('<div class="full-start__button selector button--edit-order"><svg viewBox="0 0 30 29" fill="none"><use xlink:href="#sprite-edit"></use></svg></div>');
+                var editBtn = $('<div class="full-start__button selector button--edit-order" style="width: 3.5em; justify-content: center; flex-shrink: 0;"><svg size="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></div>');
                 editBtn.on('hover:enter', openEditDialog);
                 target.append(editBtn);
 
                 applyChanges();
-                // Примусова ініціалізація навігації
+                
                 setTimeout(function() {
-                    Lampa.Controller.toggle('full_start');
+                    try { Lampa.Controller.toggle('full_start'); } catch(i) {}
                 }, 200);
             }
         });
