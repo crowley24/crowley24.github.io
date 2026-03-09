@@ -363,40 +363,40 @@ body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 4
                         }  
                     }  
   
-                    // Відкладений виклик парсера для якості  
-                    if (showQuality && Lampa.Parser.get) {  
-                        setTimeout(() => {  
-                            Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {  
-                                const items = res.Results || res;  
-                                if (items && Array.isArray(items) && items.length > 0) {  
-                                    const quality = { res: '', hdr: false, dv: false, ukr: false };  
-                                      
-                                    items.slice(0, 15).forEach(i => {  
-                                        const t = (i.Title || i.title || '').toLowerCase();  
-                                        if (t.includes('4k') || t.includes('2160')) quality.res = '4K';  
-                                        else if (!quality.res && (t.includes('1080') || t.includes('fhd'))) quality.res = 'FULL HD';  
-                                        if (t.includes('hdr')) quality.hdr = true;  
-                                        if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) quality.dv = true;  
-                                        if (t.includes('ukr') || t.includes('укр')) quality.ukr = true;  
-                                    });  
-  
-                                    let qHtml = '';  
-                                    if (quality.res) qHtml += `<div class="cas-quality-item"><img src="${QUALITY_ICONS[quality.res]}"></div>`;  
-                                    if (quality.dv) qHtml += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;  
-                                    else if (quality.hdr) qHtml += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;  
-                                    if (quality.ukr) qHtml += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;  
-                                      
-                                    if (qHtml) {  
-                                        $elements.quality.html('<span style="opacity: 0.5; margin: 0 5px;">•</span>' + qHtml).show();  
-                                    } else {  
-                                        $elements.quality.hide();  
-                                    }  
-                                } else {  
-                                    $elements.quality.hide();  
-                                }  
-                            });  
-                        }  
-                    }  
+                    // Відкладений виклик парсера для якості    
+if (showQuality && Lampa.Parser.get) {    
+    setTimeout(() => {    
+        Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {    
+            const items = res.Results || res;    
+            if (items && Array.isArray(items) && items.length > 0) {    
+                const quality = { res: '', hdr: false, dv: false, ukr: false };    
+                    
+                items.slice(0, 15).forEach(i => {    
+                    const t = (i.Title || i.title || '').toLowerCase();    
+                    if (t.includes('4k') || t.includes('2160')) quality.res = '4K';    
+                    else if (!quality.res && (t.includes('1080') || t.includes('fhd'))) quality.res = 'FULL HD';    
+                    if (t.includes('hdr')) quality.hdr = true;    
+                    if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) quality.dv = true;    
+                    if (t.includes('ukr') || t.includes('укр')) quality.ukr = true;    
+                });    
+    
+                let qHtml = '';    
+                if (quality.res) qHtml += `<div class="cas-quality-item"><img src="${QUALITY_ICONS[quality.res]}"></div>`;    
+                if (quality.dv) qHtml += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;    
+                else if (quality.hdr) qHtml += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;    
+                if (quality.ukr) qHtml += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;    
+                    
+                if (qHtml) {    
+                    render.find('.cas-quality-row').html('<span style="opacity: 0.5; margin: 0 5px;">•</span>' + qHtml).show();    
+                } else {    
+                    render.find('.cas-quality-row').hide();    
+                }    
+            } else {    
+                render.find('.cas-quality-row').hide();    
+            }    
+        });    
+    }, 500);    
+}
   
                     // Швидка анімація без затримки  
                     requestAnimationFrame(() => {  
