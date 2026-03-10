@@ -167,7 +167,7 @@
                           <div class="cas-quality-row" style="display: flex; gap: 8px; align-items: center;"></div>  
                       </div>  
                       <div class="cas-description" style="margin-top: var(--cas-blocks-gap);"></div>  
-                      <div class="cas-details-wrapper" style="margin-top: 25px;">
+                      <div class="cas-details-wrapper" style="margin-top: 10px;">
                           <div class="full-start-new__head hide"></div>    
                           <div class="full-start-new__details hide"></div>    
                       </div>
