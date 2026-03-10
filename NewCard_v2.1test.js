@@ -163,11 +163,10 @@
                       <div class="cas-studios-row" style="display: flex; gap: 15px; align-items: center; margin-bottom: 12px;"></div>  
                       <div class="cas-ratings-line">  
                           <div class="cas-rate-items" style="display: flex; align-items: center; gap: 12px;"></div>  
-                          <div class="cas-meta-info" style="opacity: 0.7; font-weight: 400;"></div>  
+                          <div class="cas-meta-info"></div>  
                           <div class="cas-quality-row" style="display: flex; gap: 8px; align-items: center;"></div>  
                       </div>  
                       <div class="cas-description" style="margin-top: var(--cas-blocks-gap);"></div>  
-                      <div class="full-start-new__details-custom" style="margin-top: 10px; opacity: 0.6; font-size: 0.9em;"></div>    
                       <div class="full-start-new__head hide"></div>    
                       <div class="full-start-new__details hide"></div>    
                       <div class="full-start-new__buttons">    
@@ -206,36 +205,44 @@
   
   .full-start__background { will-change: transform; transform: translateZ(0); }
 
-  /* ПРИХОВАННЯ ПЕРЕД АНІМАЦІЄЮ */
-  .cas-logo, .cas-description, .cas-studio-item, .cas-rate-item, .cas-meta-info, .cas-quality-item, .cas-sep, .full-start-new__details-custom, .full-start-new__buttons {
-      opacity: 0; transform: translateY(10px);
+  /* БАЗОВА ПОЯВА */
+  .cas-logo, .cas-description, .cas-meta-info {
+      opacity: 0 !important; transform: translateY(10px);
       transition: opacity 0.7s var(--cas-anim-curve), transform 0.7s var(--cas-anim-curve);
   }
-
-  /* 0.1s: ЛОГОТИП */
-  .cas-animated .cas-logo { opacity: 1; transform: translateY(0); transition-delay: 0.1s; }
-
-  /* 0.3s - 0.5s: СТУДІЇ */
-  .cas-animated .cas-studio-item:nth-child(1) { opacity: 1; transform: translateY(0); transition-delay: 0.3s; }
-  .cas-animated .cas-studio-item:nth-child(2) { opacity: 1; transform: translateY(0); transition-delay: 0.4s; }
-  .cas-animated .cas-studio-item:nth-child(3) { opacity: 1; transform: translateY(0); transition-delay: 0.5s; }
-
-  /* 0.6s: РЕЙТИНГИ */
-  .cas-animated .cas-rate-item { opacity: 1; transform: translateY(0); transition-delay: 0.6s; }
+  .cas-animated .cas-logo { opacity: 1 !important; transform: translateY(0); transition-delay: 0.1s; }
   
-  /* 0.8s: ТРИВАЛІСТЬ ТА ЖАНР (ТЕ ЩО ТИ ОБВІВ) */
-  .cas-animated .cas-meta-info { opacity: 0.7; transform: translateY(0); transition-delay: 0.8s; }
+  /* ХВИЛЯ: РЯДОК СТУДІЙ */
+  .cas-studio-item { opacity: 0 !important; transform: translateX(-15px); transition: all 0.5s var(--cas-anim-curve); }
+  .cas-animated .cas-studio-item:nth-child(1) { opacity: 1 !important; transform: translateX(0); transition-delay: 0.3s; }
+  .cas-animated .cas-studio-item:nth-child(2) { opacity: 1 !important; transform: translateX(0); transition-delay: 0.4s; }
+  .cas-animated .cas-studio-item:nth-child(3) { opacity: 1 !important; transform: translateX(0); transition-delay: 0.5s; }
+
+  /* Рейтинги */
+  .cas-rate-item { opacity: 0 !important; transform: translateX(-12px); transition: all 0.5s var(--cas-anim-curve); }
+  .cas-animated .cas-rate-item:nth-child(1) { opacity: 1 !important; transform: translateX(0); transition-delay: 0.6s; }
+  .cas-animated .cas-rate-item:nth-child(2) { opacity: 1 !important; transform: translateX(0); transition-delay: 0.7s; }
   
-  /* 1.1s: ЯКІСТЬ ТА UKR */
-  .cas-animated .cas-sep { opacity: 0.5; transform: translateY(0); transition-delay: 1.0s; }
-  .cas-animated .cas-quality-item { opacity: 1; transform: translateY(0); transition-delay: 1.1s; }
+  /* Мета-інфо: Тривалість та Жанр (0.9s) */
+  .cas-animated .cas-meta-info { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.9s; }
+  
+  /* Якість та Сепаратор (1.1s+) - ФІКС: Жорсткий opacity 0 до активації анімації */
+  .cas-quality-item, .cas-sep { 
+      opacity: 0 !important; 
+      transform: translateX(-12px); 
+      transition: all 0.5s var(--cas-anim-curve); 
+  }
+  .cas-animated .cas-sep { opacity: 0.5 !important; transform: translateX(0); transition-delay: 1.1s; }
+  .cas-animated .cas-quality-item:nth-child(2) { opacity: 1 !important; transform: translateX(0); transition-delay: 1.2s; }
+  .cas-animated .cas-quality-item:nth-child(3) { opacity: 1 !important; transform: translateX(0); transition-delay: 1.3s; }
+  .cas-animated .cas-quality-item:nth-child(4) { opacity: 1 !important; transform: translateX(0); transition-delay: 1.4s; }
 
-  /* 1.5s: ОПИС ТА ДЕТАЛІ (Рік/Країна) */
-  .cas-animated .cas-description { opacity: 1; transform: translateY(0); transition-delay: 1.5s; }
-  .cas-animated .full-start-new__details-custom { opacity: 0.6; transform: translateY(0); transition-delay: 1.5s; }
+  /* Опис (1.6s) */
+  .cas-animated .cas-description { opacity: 0.7 !important; transform: translateY(0); transition-delay: 1.6s; }
 
-  /* 1.8s: КНОПКИ */
-  .cas-animated .full-start-new__buttons { opacity: 1; transform: translateY(0); transition-delay: 1.8s; }
+  /* Кнопки (1.8s) */
+  .full-start-new__buttons { opacity: 0 !important; transform: translateY(10px); transition: all 0.6s var(--cas-anim-curve); }
+  .cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translateY(0); transition-delay: 1.8s; }
 
   .cas-description {  
       max-width: 650px; font-size: var(--cas-meta-size); line-height: 1.4; color: rgba(255,255,255,0.7);  
@@ -257,6 +264,7 @@
   .cas-rate-item img { height: 1.1em; }  
   .left-title .full-start-new__body { height: 85vh; }  
   .left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 2vh; padding-left: 1.5%; }  
+  .cas-meta-info { display: flex; align-items: center; gap: 8px; font-weight: 400; }
   
   @keyframes casKenBurns {   
       0% { transform: scale(1) translateZ(0); }   
@@ -280,10 +288,8 @@
           Lampa.Storage.set('cas_images_cache', cache);  
       }  
       function stopSlideshow() {  
-          if (window.casBgInterval) {  
-              clearInterval(window.casBgInterval);  
-              window.casBgInterval = null;  
-          }  
+          clearInterval(window.casBgInterval);  
+          window.casBgInterval = null;  
       }  
      function attachLoader() {    
           Lampa.Listener.follow('full', (event) => {    
@@ -332,15 +338,6 @@
                       } else {  
                           render.find('.cas-description').hide();  
                       }  
-
-                      // РІК ТА КРАЇНА (ВИКЛЮЧНО ЦЕ, БЕЗ ДУБЛІВ)
-                      const details = [];
-                      if(data.release_date) details.push(data.release_date.split('-')[0]);
-                      else if(data.first_air_date) details.push(data.first_air_date.split('-')[0]);
-                      const countries = (data.production_countries || data.origin_country || []).map(c => c.name || c);
-                      if(countries.length) details.push(countries.slice(0,2).join(', '));
-                      render.find('.full-start-new__details-custom').text(details.join(', '));
-
                         let ratesHtml = '';  
                       if (Lampa.Storage.get('cas_show_rating')) {  
                           const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);  
