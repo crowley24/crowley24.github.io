@@ -167,8 +167,9 @@
                           <div class="cas-quality-row" style="display: flex; gap: 8px; align-items: center;"></div>  
                       </div>  
                       <div class="cas-description" style="margin-top: var(--cas-blocks-gap);"></div>  
-                      <div class="full-start-new__details" style="margin-top: 10px; opacity: 0.6; font-size: 0.9em;"></div>    
+                      <div class="full-start-new__details-custom" style="margin-top: 10px; opacity: 0.6; font-size: 0.9em;"></div>    
                       <div class="full-start-new__head hide"></div>    
+                      <div class="full-start-new__details hide"></div>    
                       <div class="full-start-new__buttons">    
                           <div class="full-start__button selector button--play">    
                               <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/><path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/></svg>    
@@ -205,8 +206,8 @@
   
   .full-start__background { will-change: transform; transform: translateZ(0); }
 
-  /* ПОЧАТКОВИЙ СТАН ПРИХОВАННЯ */
-  .cas-logo, .cas-description, .cas-studio-item, .cas-rate-item, .cas-meta-info, .cas-quality-item, .cas-sep, .full-start-new__details, .full-start-new__buttons {
+  /* ПРИХОВАННЯ ПЕРЕД АНІМАЦІЄЮ */
+  .cas-logo, .cas-description, .cas-studio-item, .cas-rate-item, .cas-meta-info, .cas-quality-item, .cas-sep, .full-start-new__details-custom, .full-start-new__buttons {
       opacity: 0; transform: translateY(10px);
       transition: opacity 0.7s var(--cas-anim-curve), transform 0.7s var(--cas-anim-curve);
   }
@@ -222,18 +223,16 @@
   /* 0.6s: РЕЙТИНГИ */
   .cas-animated .cas-rate-item { opacity: 1; transform: translateY(0); transition-delay: 0.6s; }
   
-  /* 0.8s: ТРИВАЛІСТЬ ТА ЖАНР */
+  /* 0.8s: ТРИВАЛІСТЬ ТА ЖАНР (ТЕ ЩО ТИ ОБВІВ) */
   .cas-animated .cas-meta-info { opacity: 0.7; transform: translateY(0); transition-delay: 0.8s; }
   
-  /* 1.0s+: СЕПАРАТОР ТА ЯКІСТЬ */
+  /* 1.1s: ЯКІСТЬ ТА UKR */
   .cas-animated .cas-sep { opacity: 0.5; transform: translateY(0); transition-delay: 1.0s; }
-  .cas-animated .cas-quality-item:nth-child(1) { opacity: 1; transform: translateY(0); transition-delay: 1.1s; }
-  .cas-animated .cas-quality-item:nth-child(2) { opacity: 1; transform: translateY(0); transition-delay: 1.2s; }
-  .cas-animated .cas-quality-item:nth-child(3) { opacity: 1; transform: translateY(0); transition-delay: 1.3s; }
+  .cas-animated .cas-quality-item { opacity: 1; transform: translateY(0); transition-delay: 1.1s; }
 
   /* 1.5s: ОПИС ТА ДЕТАЛІ (Рік/Країна) */
   .cas-animated .cas-description { opacity: 1; transform: translateY(0); transition-delay: 1.5s; }
-  .cas-animated .full-start-new__details { opacity: 0.6; transform: translateY(0); transition-delay: 1.5s; display: block !important; }
+  .cas-animated .full-start-new__details-custom { opacity: 0.6; transform: translateY(0); transition-delay: 1.5s; }
 
   /* 1.8s: КНОПКИ */
   .cas-animated .full-start-new__buttons { opacity: 1; transform: translateY(0); transition-delay: 1.8s; }
@@ -333,6 +332,15 @@
                       } else {  
                           render.find('.cas-description').hide();  
                       }  
+
+                      // РІК ТА КРАЇНА (ВИКЛЮЧНО ЦЕ, БЕЗ ДУБЛІВ)
+                      const details = [];
+                      if(data.release_date) details.push(data.release_date.split('-')[0]);
+                      else if(data.first_air_date) details.push(data.first_air_date.split('-')[0]);
+                      const countries = (data.production_countries || data.origin_country || []).map(c => c.name || c);
+                      if(countries.length) details.push(countries.slice(0,2).join(', '));
+                      render.find('.full-start-new__details-custom').text(details.join(', '));
+
                         let ratesHtml = '';  
                       if (Lampa.Storage.get('cas_show_rating')) {  
                           const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);  
