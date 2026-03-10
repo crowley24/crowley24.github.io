@@ -166,7 +166,7 @@
                   <div class="rating--modss" style="display: none;"></div>    
               </div>    
           </div>    
-         <div class="buttons--container hide">    
+         <div class="hide buttons--container">    
               <div class="full-start__button view--torrent hide"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="50" height="50"><path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2z M40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4 S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851 c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29 c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862-4.993-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8 c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722 C42.541,30.867,41.756,30.963,40.5,30.963z" fill="currentColor"/></svg><span>#{full_torrents}</span></div>     
               <div class="full-start__button selector view--trailer"><svg height="70" viewBox="0 0 80 70" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/></svg><span>#{full_trailers}</span></div>    
           </div>    
@@ -175,49 +175,46 @@
       }    
       function addStyles() {    
           const styles = `<style>    
-  :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.6, 0.35, 1); }  
+  :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.22, 1, 0.36, 1); }  
   
   .full-start__background { will-change: transform; transform: translate3d(0,0,0); backface-visibility: hidden; perspective: 1000px; }
 
-  /* Базові налаштування анімації */
+  /* ПРЕМІАЛЬНИЙ СТАН: Спокій (з Blur та Scale) */
   .cas-logo, .cas-description, .full-start-new__buttons, 
   .cas-studio-item, .cas-rate-item, .cas-meta-info, .cas-quality-item {   
       backface-visibility: hidden; 
-      transform: translate3d(0, 15px, 0);   
+      transform: translate3d(0, 20px, 0) scale(0.96);   
       opacity: 0;
-      transition: opacity 0.7s var(--cas-anim-curve), transform 0.7s var(--cas-anim-curve);  
+      filter: blur(8px);
+      transition: opacity 1.1s var(--cas-anim-curve), transform 1.1s var(--cas-anim-curve), filter 1.1s var(--cas-anim-curve);  
   }  
 
-  /* Лого та Опис */
-  .cas-animated .cas-logo { opacity: 1; transform: translate3d(0,0,0); transition-delay: 0.1s; }  
-  .cas-animated .cas-description { opacity: 1; transform: translate3d(0,0,0); transition-delay: 0.2s; }  
+  /* 1. Лого та Опис */
+  .cas-animated .cas-logo { opacity: 1; transform: translate3d(0,0,0) scale(1); filter: blur(0); transition-delay: 0.1s; }  
+  .cas-animated .cas-description { opacity: 1; transform: translate3d(0,0,0) scale(1); filter: blur(0); transition-delay: 0.2s; }  
 
-  /* Студії */
-  .cas-animated .cas-studio-item:nth-child(1) { opacity: 1; transform: translate3d(0,0,0); transition-delay: 0.4s; }
-  .cas-animated .cas-studio-item:nth-child(2) { opacity: 1; transform: translate3d(0,0,0); transition-delay: 0.5s; }
-  .cas-animated .cas-studio-item:nth-child(3) { opacity: 1; transform: translate3d(0,0,0); transition-delay: 0.6s; }
+  /* 2. ХВИЛЯ: Студії (по одній) */
+  .cas-animated .cas-studio-item:nth-child(1) { opacity: 1; transform: translate3d(0,0,0) scale(1); filter: blur(0); transition-delay: 0.3s; }
+  .cas-animated .cas-studio-item:nth-child(2) { opacity: 1; transform: translate3d(0,0,0) scale(1); filter: blur(0); transition-delay: 0.4s; }
+  .cas-animated .cas-studio-item:nth-child(3) { opacity: 1; transform: translate3d(0,0,0) scale(1); filter: blur(0); transition-delay: 0.5s; }
 
-  /* Рейтинги */
-  .cas-animated .cas-rate-item { opacity: 1; transform: translate3d(0,0,0); transition-delay: 0.7s; }
+  /* 3. ХВИЛЯ: Рейтинги (наздоганяють) */
+  .cas-animated .cas-rate-item { opacity: 1; transform: translate3d(0,0,0) scale(1); filter: blur(0); transition-delay: 0.65s; }
 
-  /* Мета */
-  .cas-animated .cas-meta-info { opacity: 1; transform: translate3d(0,0,0); transition-delay: 0.8s; }
+  /* 4. ХВИЛЯ: Жанр і час */
+  .cas-animated .cas-meta-info { opacity: 1; transform: translate3d(0,0,0) scale(1); filter: blur(0); transition-delay: 0.85s; }
 
-  /* Якість - ПОЧЕРГОВА ХВИЛЯ */
-  .cas-animated .cas-quality-item:nth-child(1) { opacity: 1; transform: translate3d(0,0,0); transition-delay: 0.9s; }
-  .cas-animated .cas-quality-item:nth-child(2) { opacity: 1; transform: translate3d(0,0,0); transition-delay: 1.0s; }
-  .cas-animated .cas-quality-item:nth-child(3) { opacity: 1; transform: translate3d(0,0,0); transition-delay: 1.1s; }
-  .cas-animated .cas-quality-item:nth-child(4) { opacity: 1; transform: translate3d(0,0,0); transition-delay: 1.2s; }
+  /* 5. ХВИЛЯ: Якість */
+  .cas-animated .cas-quality-item { opacity: 1; transform: translate3d(0,0,0) scale(1); filter: blur(0); transition-delay: 1s; }
   
-  /* Кнопки */
-  .cas-animated .full-start-new__buttons { opacity: 1; transform: translate3d(0,0,0); transition-delay: 1.4s; }  
+  /* Кнопки в фіналі */
+  .cas-animated .full-start-new__buttons { opacity: 1; transform: translate3d(0,0,0) scale(1); filter: blur(0); transition-delay: 1.2s; }  
 
   .cas-description {  
       max-width: 650px; font-size: var(--cas-meta-size); line-height: 1.4; color: rgba(255,255,255,0.7);  
       display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;  
   }  
   .cas-studio-item img { height: 16px; filter: invert(1) brightness(1.2); opacity: 0.9; }  
-  .cas-quality-item { display: inline-flex; align-items: center; }
   .cas-quality-item img { height: 16px; }  
   .left-title .full-start-new__buttons { margin-top: 1.2em; display: flex; gap: 20px; }    
   .left-title .full-start-new__buttons .full-start__button {  
@@ -337,26 +334,28 @@
                     }, 700);
 
                     if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {  
-                        Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {  
-                            const items = res.Results || res;  
-                            if (items && Array.isArray(items) && items.length > 0) {  
-                                const b = { res: '', hdr: false, dv: false, ukr: false };  
-                                items.slice(0, 15).forEach(i => {  
-                                    const t = (i.Title || i.title || '').toLowerCase();  
-                                    if (t.includes('4k') || t.includes('2160')) b.res = '4K';  
-                                    else if (!b.res && (t.includes('1080') || t.includes('fhd'))) b.res = 'FULL HD';  
-                                    if (t.includes('hdr')) b.hdr = true;  
-                                    if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) b.dv = true;  
-                                    if (t.includes('ukr') || t.includes('укр')) b.ukr = true;  
-                                });  
-                                let qH = '';  
-                                if (b.res) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS[b.res]}"></div>`;  
-                                if (b.dv) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;  
-                                else if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;  
-                                if (b.ukr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;  
-                                if (qH) render.find('.cas-quality-row').html('<span style="opacity: 0.5; margin: 0 5px;">•</span>' + qH).show();  
-                            }  
-                        });  
+                        setTimeout(() => {
+                            Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {  
+                                const items = res.Results || res;  
+                                if (items && Array.isArray(items) && items.length > 0) {  
+                                    const b = { res: '', hdr: false, dv: false, ukr: false };  
+                                    items.slice(0, 15).forEach(i => {  
+                                        const t = (i.Title || i.title || '').toLowerCase();  
+                                        if (t.includes('4k') || t.includes('2160')) b.res = '4K';  
+                                        else if (!b.res && (t.includes('1080') || t.includes('fhd'))) b.res = 'FULL HD';  
+                                        if (t.includes('hdr')) b.hdr = true;  
+                                        if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) b.dv = true;  
+                                        if (t.includes('ukr') || t.includes('укр')) b.ukr = true;  
+                                    });  
+                                    let qH = '';  
+                                    if (b.res) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS[b.res]}"></div>`;  
+                                    if (b.dv) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;  
+                                    else if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;  
+                                    if (b.ukr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;  
+                                    if (qH) render.find('.cas-quality-row').html('<span style="opacity: 0.5; margin: 0 5px;">•</span>' + qH).show();  
+                                }  
+                            });  
+                        }, 1200);
                     }  
                 }  
                 setTimeout(() => content.addClass('cas-animated'), 100);  
