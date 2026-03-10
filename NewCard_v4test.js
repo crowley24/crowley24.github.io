@@ -18,22 +18,7 @@
         'UKR': ASSETS_PATH + 'UKR.svg'  
     };  
     const SETTINGS_ICON = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="15" y="20" width="70" height="60" rx="8" stroke="white" stroke-width="6" fill="none" opacity="0.4"/><rect x="25" y="32" width="50" height="28" rx="4" fill="white"/><rect x="25" y="66" width="30" height="6" rx="3" fill="white" opacity="0.6"/><rect x="60" y="66" width="15" height="6" rx="3" fill="white" opacity="0.6"/></svg>`;  
-
-    // Переклади для налаштувань  
-    const TRANSLATIONS = {  
-        'settings_cas_logo_quality': 'Якість логотипу',  
-        'settings_cas_logo_scale': 'Розмір логотипу',  
-        'settings_cas_meta_size': 'Розмір шрифту',  
-        'settings_cas_blocks_gap': 'Відступи між блоками',  
-        'settings_cas_bg_animation': 'Анімація фону (Ken Burns)',  
-        'settings_cas_slideshow_enabled': 'Слайд-шоу фону',  
-        'settings_cas_show_studios': 'Показувати студії',  
-        'settings_cas_show_quality': 'Показувати якість',  
-        'settings_cas_show_rating': 'Показувати рейтинги',  
-        'settings_cas_show_description': 'Опис фільму',  
-        'settings_cas_performance_mode': 'Режим продуктивності'  
-    };  
-
+  
     // Debounce function для оптимізації  
     let debounceTimer;  
     function debounce(func, delay) {  
@@ -92,66 +77,62 @@
             if (Lampa.Storage.get(key) === undefined) Lampa.Storage.set(key, defaults[key]);  
         });  
         Lampa.SettingsApi.addComponent({ component: PLUGIN_ID, name: PLUGIN_NAME, icon: SETTINGS_ICON });  
+          
+        // Використовуємо прямі українські рядки замість перекладів  
         Lampa.SettingsApi.addParam({  
             component: PLUGIN_ID,  
             param: { name: 'cas_logo_quality', type: 'select', values: { 'w300':'300px', 'w500':'500px', 'original':'Original' }, default: 'original' },  
-            field: { name: Lampa.Lang.translate('settings_cas_logo_quality') || TRANSLATIONS['settings_cas_logo_quality'] }, onChange: applySettings  
+            field: { name: 'Якість логотипу' }, onChange: applySettings  
         });  
         Lampa.SettingsApi.addParam({  
             component: PLUGIN_ID,  
             param: { name: 'cas_logo_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' }, default: '100' },  
-            field: { name: Lampa.Lang.translate('settings_cas_logo_scale') || TRANSLATIONS['settings_cas_logo_scale'] }, onChange: applySettings  
+            field: { name: 'Розмір логотипу' }, onChange: applySettings  
         });  
         Lampa.SettingsApi.addParam({  
             component: PLUGIN_ID,  
             param: { name: 'cas_meta_size', type: 'select', values: { '1.2': 'Малий', '1.3': 'Стандартний', '1.4': 'Збільшений', '1.5': 'Великий' }, default: '1.3' },  
-            field: { name: Lampa.Lang.translate('settings_cas_meta_size') || TRANSLATIONS['settings_cas_meta_size'] }, onChange: applySettings  
+            field: { name: 'Розмір шрифту' }, onChange: applySettings  
         });  
         Lampa.SettingsApi.addParam({  
             component: PLUGIN_ID,  
             param: { name: 'cas_blocks_gap', type: 'select', values: { '15':'Тісно','20':'Стандарт','25':'Просторе' }, default: '20' },  
-            field: { name: Lampa.Lang.translate('settings_cas_blocks_gap') || TRANSLATIONS['settings_cas_blocks_gap'] }, onChange: applySettings  
+            field: { name: 'Відступи між блоками' }, onChange: applySettings  
         });  
         Lampa.SettingsApi.addParam({  
             component: PLUGIN_ID,  
             param: { name: 'cas_bg_animation', type: 'trigger', default: true },  
-            field: { name: Lampa.Lang.translate('settings_cas_bg_animation') || TRANSLATIONS['settings_cas_bg_animation'] }, onChange: applySettings  
+            field: { name: 'Анімація фону (Ken Burns)' }, onChange: applySettings  
         });  
         Lampa.SettingsApi.addParam({  
             component: PLUGIN_ID,  
             param: { name: 'cas_slideshow_enabled', type: 'trigger', default: true },  
-            field: { name: Lampa.Lang.translate('settings_cas_slideshow_enabled') || TRANSLATIONS['settings_cas_slideshow_enabled'] },  
-            onChange: applySettings  
+            field: { name: 'Слайд-шоу фону' }, onChange: applySettings  
         });  
         Lampa.SettingsApi.addParam({  
             component: PLUGIN_ID,  
             param: { name: 'cas_show_studios', type: 'trigger', default: true },  
-            field: { name: Lampa.Lang.translate('settings_cas_show_studios') || TRANSLATIONS['settings_cas_show_studios'] },  
-            onChange: applySettings  
+            field: { name: 'Показувати студії' }, onChange: applySettings  
         });  
         Lampa.SettingsApi.addParam({  
             component: PLUGIN_ID,  
             param: { name: 'cas_show_quality', type: 'trigger', default: true },  
-            field: { name: Lampa.Lang.translate('settings_cas_show_quality') || TRANSLATIONS['settings_cas_show_quality'] },  
-            onChange: applySettings  
+            field: { name: 'Показувати якість' }, onChange: applySettings  
         });  
         Lampa.SettingsApi.addParam({  
             component: PLUGIN_ID,  
             param: { name: 'cas_show_rating', type: 'trigger', default: true },  
-            field: { name: Lampa.Lang.translate('settings_cas_show_rating') || TRANSLATIONS['settings_cas_show_rating'] },  
-            onChange: applySettings  
+            field: { name: 'Показувати рейтинги' }, onChange: applySettings  
         });  
         Lampa.SettingsApi.addParam({  
             component: PLUGIN_ID,  
             param: { name: 'cas_show_description', type: 'trigger', default: true },  
-            field: { name: Lampa.Lang.translate('settings_cas_show_description') || TRANSLATIONS['settings_cas_show_description'] },  
-            onChange: applySettings  
+            field: { name: 'Опис фільму' }, onChange: applySettings  
         });  
         Lampa.SettingsApi.addParam({  
             component: PLUGIN_ID,  
             param: { name: 'cas_performance_mode', type: 'trigger', default: false },  
-            field: { name: Lampa.Lang.translate('settings_cas_performance_mode') || TRANSLATIONS['settings_cas_performance_mode'] },  
-            onChange: applySettings  
+            field: { name: 'Режим продуктивності' }, onChange: applySettings  
         });  
         applySettings();  
     }    
