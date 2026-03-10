@@ -88,73 +88,52 @@
             'cas_show_description': true,  
             'cas_performance_mode': false  
         };  
+
+        // Встановлення значень за замовчуванням
         Object.keys(defaults).forEach(key => {  
             if (Lampa.Storage.get(key) === undefined) Lampa.Storage.set(key, defaults[key]);  
         });  
-        Lampa.SettingsApi.addComponent({ component: PLUGIN_ID, name: PLUGIN_NAME, icon: SETTINGS_ICON });  
-        Lampa.SettingsApi.addParam({  
-            component: PLUGIN_ID,  
-            param: { name: 'cas_logo_quality', type: 'select', values: { 'w300':'300px', 'w500':'500px', 'original':'Original' }, default: 'original' },  
-            field: { name: Lampa.Lang.translate('settings_cas_logo_quality') || TRANSLATIONS['settings_cas_logo_quality'] }, onChange: applySettings  
+
+        Lampa.SettingsApi.addComponent({ 
+            component: PLUGIN_ID, 
+            name: PLUGIN_NAME, 
+            icon: SETTINGS_ICON 
         });  
-        Lampa.SettingsApi.addParam({  
-            component: PLUGIN_ID,  
-            param: { name: 'cas_logo_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' }, default: '100' },  
-            field: { name: Lampa.Lang.translate('settings_cas_logo_scale') || TRANSLATIONS['settings_cas_logo_scale'] }, onChange: applySettings  
-        });  
-        Lampa.SettingsApi.addParam({  
-            component: PLUGIN_ID,  
-            param: { name: 'cas_meta_size', type: 'select', values: { '1.2': 'Малий', '1.3': 'Стандартний', '1.4': 'Збільшений', '1.5': 'Великий' }, default: '1.3' },  
-            field: { name: Lampa.Lang.translate('settings_cas_meta_size') || TRANSLATIONS['settings_cas_meta_size'] }, onChange: applySettings  
-        });  
-        Lampa.SettingsApi.addParam({  
-            component: PLUGIN_ID,  
-            param: { name: 'cas_blocks_gap', type: 'select', values: { '15':'Тісно','20':'Стандарт','25':'Просторе' }, default: '20' },  
-            field: { name: Lampa.Lang.translate('settings_cas_blocks_gap') || TRANSLATIONS['settings_cas_blocks_gap'] }, onChange: applySettings  
-        });  
-        Lampa.SettingsApi.addParam({  
-            component: PLUGIN_ID,  
-            param: { name: 'cas_bg_animation', type: 'trigger', default: true },  
-            field: { name: Lampa.Lang.translate('settings_cas_bg_animation') || TRANSLATIONS['settings_cas_bg_animation'] }, onChange: applySettings  
-        });  
-        Lampa.SettingsApi.addParam({  
-            component: PLUGIN_ID,  
-            param: { name: 'cas_slideshow_enabled', type: 'trigger', default: true },  
-            field: { name: Lampa.Lang.translate('settings_cas_slideshow_enabled') || TRANSLATIONS['settings_cas_slideshow_enabled'] },  
-            onChange: applySettings  
-        });  
-        Lampa.SettingsApi.addParam({  
-            component: PLUGIN_ID,  
-            param: { name: 'cas_show_studios', type: 'trigger', default: true },  
-            field: { name: Lampa.Lang.translate('settings_cas_show_studios') || TRANSLATIONS['settings_cas_show_studios'] },  
-            onChange: applySettings  
-        });  
-        Lampa.SettingsApi.addParam({  
-            component: PLUGIN_ID,  
-            param: { name: 'cas_show_quality', type: 'trigger', default: true },  
-            field: { name: Lampa.Lang.translate('settings_cas_show_quality') || TRANSLATIONS['settings_cas_show_quality'] },  
-            onChange: applySettings  
-        });  
-        Lampa.SettingsApi.addParam({  
-            component: PLUGIN_ID,  
-            param: { name: 'cas_show_rating', type: 'trigger', default: true },  
-            field: { name: Lampa.Lang.translate('settings_cas_show_rating') || TRANSLATIONS['settings_cas_show_rating'] },  
-            onChange: applySettings  
-        });  
-        Lampa.SettingsApi.addParam({  
-            component: PLUGIN_ID,  
-            param: { name: 'cas_show_description', type: 'trigger', default: true },  
-            field: { name: Lampa.Lang.translate('settings_cas_show_description') || TRANSLATIONS['settings_cas_show_description'] },  
-            onChange: applySettings  
-        });  
-        Lampa.SettingsApi.addParam({  
-            component: PLUGIN_ID,  
-            param: { name: 'cas_performance_mode', type: 'trigger', default: false },  
-            field: { name: Lampa.Lang.translate('settings_cas_performance_mode') || TRANSLATIONS['settings_cas_performance_mode'] },  
-            onChange: applySettings  
-        });  
+        
+        // Список параметрів для додавання
+        const params = [
+            { name: 'cas_logo_quality', type: 'select', values: { 'w300':'300px', 'w500':'500px', 'original':'Original' } },
+            { name: 'cas_logo_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' } },
+            { name: 'cas_meta_size', type: 'select', values: { '1.2': 'Малий', '1.3': 'Стандартний', '1.4': 'Збільшений', '1.5': 'Великий' } },
+            { name: 'cas_blocks_gap', type: 'select', values: { '15':'Тісно','20':'Стандарт','25':'Просторе' } },
+            { name: 'cas_bg_animation', type: 'trigger' },
+            { name: 'cas_slideshow_enabled', type: 'trigger' },
+            { name: 'cas_show_studios', type: 'trigger' },
+            { name: 'cas_show_quality', type: 'trigger' },
+            { name: 'cas_show_rating', type: 'trigger' },
+            { name: 'cas_show_description', type: 'trigger' },
+            { name: 'cas_performance_mode', type: 'trigger' }
+        ];
+
+        // Додавання параметрів у налаштування з правильними назвами
+        params.forEach(p => {
+            Lampa.SettingsApi.addParam({
+                component: PLUGIN_ID,
+                param: { 
+                    name: p.name, 
+                    type: p.type, 
+                    values: p.values, 
+                    default: defaults[p.name] 
+                },
+                field: { 
+                    name: TRANSLATIONS['settings_' + p.name] // Беремо назву прямо з вашого об'єкта TRANSLATIONS
+                },
+                onChange: applySettings
+            });
+        });
+
         applySettings();  
-    }  
+    }
   
     function applySettings() {  
         const root = document.documentElement;  
