@@ -391,4 +391,4 @@
     function startPlugin() { initializePlugin(); }  
     if (window.appready) startPlugin();    
     else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') startPlugin(); });    
-})();
+})();                          
