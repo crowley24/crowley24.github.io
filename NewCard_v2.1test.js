@@ -167,8 +167,10 @@
                           <div class="cas-quality-row" style="display: flex; gap: 8px; align-items: center;"></div>  
                       </div>  
                       <div class="cas-description" style="margin-top: var(--cas-blocks-gap);"></div>  
-                      <div class="full-start-new__head hide"></div>    
-                      <div class="full-start-new__details hide"></div>    
+                      <div class="cas-details-wrapper" style="margin-top: 25px;">
+                          <div class="full-start-new__head hide"></div>    
+                          <div class="full-start-new__details hide"></div>    
+                      </div>
                       <div class="full-start-new__buttons">    
                           <div class="full-start__button selector button--play">    
                               <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/><path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/></svg>    
@@ -206,7 +208,7 @@
   .full-start__background { will-change: transform; transform: translateZ(0); }
 
   /* БАЗОВА ПОЯВА */
-  .cas-logo, .cas-description, .cas-meta-info {
+  .cas-logo, .cas-description, .cas-meta-info, .cas-details-wrapper {
       opacity: 0 !important; transform: translateY(10px);
       transition: opacity 0.7s var(--cas-anim-curve), transform 0.7s var(--cas-anim-curve);
   }
@@ -226,19 +228,24 @@
   /* Мета-інфо: Тривалість та Жанр (0.9s) */
   .cas-animated .cas-meta-info { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.9s; }
   
-  /* Якість та Сепаратор (1.1s+) - ФІКС: Жорсткий opacity 0 до активації анімації */
-  .cas-quality-item, .cas-sep { 
-      opacity: 0 !important; 
-      transform: translateX(-12px); 
-      transition: all 0.5s var(--cas-anim-curve); 
-  }
+  /* Якість та Сепаратор (1.1s+) */
+  .cas-quality-item, .cas-sep { opacity: 0 !important; transform: translateX(-12px); transition: all 0.5s var(--cas-anim-curve); }
   .cas-animated .cas-sep { opacity: 0.5 !important; transform: translateX(0); transition-delay: 1.1s; }
   .cas-animated .cas-quality-item:nth-child(2) { opacity: 1 !important; transform: translateX(0); transition-delay: 1.2s; }
   .cas-animated .cas-quality-item:nth-child(3) { opacity: 1 !important; transform: translateX(0); transition-delay: 1.3s; }
   .cas-animated .cas-quality-item:nth-child(4) { opacity: 1 !important; transform: translateX(0); transition-delay: 1.4s; }
 
-  /* Опис (1.6s) */
+  /* Опис та технічні деталі (1.6s) */
   .cas-animated .cas-description { opacity: 0.7 !important; transform: translateY(0); transition-delay: 1.6s; }
+  .cas-animated .cas-details-wrapper { opacity: 0.5 !important; transform: translateY(0); transition-delay: 1.6s; }
+
+  /* Стилізація технічних деталей */
+  .full-start-new__details, .full-start-new__head {
+      display: block !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      font-size: 0.9em;
+  }
 
   /* Кнопки (1.8s) */
   .full-start-new__buttons { opacity: 0 !important; transform: translateY(10px); transition: all 0.6s var(--cas-anim-curve); }
