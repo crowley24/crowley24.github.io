@@ -167,8 +167,8 @@
                           <div class="cas-quality-row" style="display: flex; gap: 8px; align-items: center;"></div>  
                       </div>  
                       <div class="cas-description" style="margin-top: var(--cas-blocks-gap);"></div>  
+                      <div class="full-start-new__details" style="margin-top: 10px; opacity: 0.6; font-size: 0.9em;"></div>    
                       <div class="full-start-new__head hide"></div>    
-                      <div class="full-start-new__details hide"></div>    
                       <div class="full-start-new__buttons">    
                           <div class="full-start__button selector button--play">    
                               <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/><path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/></svg>    
@@ -205,42 +205,38 @@
   
   .full-start__background { will-change: transform; transform: translateZ(0); }
 
-  /* БАЗОВА ПОЯВА */
-  .cas-logo, .cas-description {
+  /* ПОЧАТКОВИЙ СТАН ПРИХОВАННЯ */
+  .cas-logo, .cas-description, .cas-studio-item, .cas-rate-item, .cas-meta-info, .cas-quality-item, .cas-sep, .full-start-new__details, .full-start-new__buttons {
       opacity: 0; transform: translateY(10px);
       transition: opacity 0.7s var(--cas-anim-curve), transform 0.7s var(--cas-anim-curve);
   }
+
+  /* 0.1s: ЛОГОТИП */
   .cas-animated .cas-logo { opacity: 1; transform: translateY(0); transition-delay: 0.1s; }
-  .cas-animated .cas-description { opacity: 1; transform: translateY(0); transition-delay: 0.9s; }
 
-  /* ХВИЛЯ: РЯДОК СТУДІЙ */
-  .cas-studio-item { opacity: 0; transform: translateX(-15px); transition: all 0.5s var(--cas-anim-curve); }
-  .cas-animated .cas-studio-item:nth-child(1) { opacity: 1; transform: translateX(0); transition-delay: 0.3s; }
-  .cas-animated .cas-studio-item:nth-child(2) { opacity: 1; transform: translateX(0); transition-delay: 0.4s; }
-  .cas-animated .cas-studio-item:nth-child(3) { opacity: 1; transform: translateX(0); transition-delay: 0.5s; }
+  /* 0.3s - 0.5s: СТУДІЇ */
+  .cas-animated .cas-studio-item:nth-child(1) { opacity: 1; transform: translateY(0); transition-delay: 0.3s; }
+  .cas-animated .cas-studio-item:nth-child(2) { opacity: 1; transform: translateY(0); transition-delay: 0.4s; }
+  .cas-animated .cas-studio-item:nth-child(3) { opacity: 1; transform: translateY(0); transition-delay: 0.5s; }
 
-  /* ХВИЛЯ: ТЕХНІЧНА ЛІНІЯ (Рейтинги, Мета, Якість) */
-  .cas-rate-item, .cas-meta-info, .cas-quality-item { 
-      opacity: 0; transform: translateX(-12px); 
-      transition: all 0.5s var(--cas-anim-curve); 
-  }
+  /* 0.6s: РЕЙТИНГИ */
+  .cas-animated .cas-rate-item { opacity: 1; transform: translateY(0); transition-delay: 0.6s; }
   
-  /* Рейтинги */
-  .cas-animated .cas-rate-item:nth-child(1) { opacity: 1; transform: translateX(0); transition-delay: 0.6s; }
-  .cas-animated .cas-rate-item:nth-child(2) { opacity: 1; transform: translateX(0); transition-delay: 0.7s; }
+  /* 0.8s: ТРИВАЛІСТЬ ТА ЖАНР */
+  .cas-animated .cas-meta-info { opacity: 0.7; transform: translateY(0); transition-delay: 0.8s; }
   
-  /* Тривалість + Жанр */
-  .cas-animated .cas-meta-info { opacity: 1; transform: translateX(0); transition-delay: 0.8s; }
-  
-  /* Якість (послідовно) */
-  .cas-animated .cas-quality-item:nth-child(1) { opacity: 1; transform: translateX(0); transition-delay: 0.9s; }
-  .cas-animated .cas-quality-item:nth-child(2) { opacity: 1; transform: translateX(0); transition-delay: 1.0s; }
-  .cas-animated .cas-quality-item:nth-child(3) { opacity: 1; transform: translateX(0); transition-delay: 1.1s; }
-  .cas-animated .cas-quality-item:nth-child(4) { opacity: 1; transform: translateX(0); transition-delay: 1.2s; }
+  /* 1.0s+: СЕПАРАТОР ТА ЯКІСТЬ */
+  .cas-animated .cas-sep { opacity: 0.5; transform: translateY(0); transition-delay: 1.0s; }
+  .cas-animated .cas-quality-item:nth-child(1) { opacity: 1; transform: translateY(0); transition-delay: 1.1s; }
+  .cas-animated .cas-quality-item:nth-child(2) { opacity: 1; transform: translateY(0); transition-delay: 1.2s; }
+  .cas-animated .cas-quality-item:nth-child(3) { opacity: 1; transform: translateY(0); transition-delay: 1.3s; }
 
-  /* Кнопки */
-  .cas-animated .full-start-new__buttons { opacity: 1; transform: translateY(0); transition-delay: 1.3s; }
-  .full-start-new__buttons { opacity: 0; transform: translateY(10px); transition: all 0.6s var(--cas-anim-curve); }
+  /* 1.5s: ОПИС ТА ДЕТАЛІ (Рік/Країна) */
+  .cas-animated .cas-description { opacity: 1; transform: translateY(0); transition-delay: 1.5s; }
+  .cas-animated .full-start-new__details { opacity: 0.6; transform: translateY(0); transition-delay: 1.5s; display: block !important; }
+
+  /* 1.8s: КНОПКИ */
+  .cas-animated .full-start-new__buttons { opacity: 1; transform: translateY(0); transition-delay: 1.8s; }
 
   .cas-description {  
       max-width: 650px; font-size: var(--cas-meta-size); line-height: 1.4; color: rgba(255,255,255,0.7);  
@@ -295,10 +291,11 @@
               if (event.type === 'complite') {    
                   const data = event.data.movie;  
                   const render = event.object.activity.render();  
-                  render.find('.left-title__content').removeClass('cas-animated');  
-                 event.object.activity.onBeforeDestroy = () => {  
-                      stopSlideshow();  
-                  };  
+                  const content = render.find('.left-title__content');
+                  content.removeClass('cas-animated');  
+                 
+                  event.object.activity.onBeforeDestroy = stopSlideshow;  
+
                  if (data && data.id) {  
                     render.data('movie', data);  
                       const cacheId = 'tmdb_' + data.id;  
@@ -354,6 +351,7 @@
                       const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));  
                       const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');  
                       render.find('.cas-meta-info').text((time ? time + (genre ? ' • ' : '') : '') + genre);  
+
                       if (Lampa.Storage.get('cas_show_studios')) {  
                           const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 3);  
                           render.find('.cas-studios-row').html(studios.map(s => `<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}"></div>`).join('')).show();  
@@ -378,14 +376,16 @@
                                 if (b.dv) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;  
                                 else if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;  
                                 if (b.ukr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;  
-                               if (qH) render.find('.cas-quality-row').html('<span style="opacity: 0.5; margin: 0 5px;">•</span>' + qH).show();  
+                               if (qH) {
+                                   render.find('.cas-quality-row').html('<span class="cas-sep" style="margin: 0 5px;">•</span>' + qH).show();
+                               }
                             }  
                         });  
                     } else {  
                         render.find('.cas-quality-row').hide();  
                     }  
                 }  
-                setTimeout(() => render.find('.left-title__content').addClass('cas-animated'), 200);  
+                setTimeout(() => content.addClass('cas-animated'), 200);  
             }  
         });  
     }  
