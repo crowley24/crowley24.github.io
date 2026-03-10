@@ -207,22 +207,19 @@
       --cas-logo-scale: 1; 
       --cas-blocks-gap: 30px; 
       --cas-meta-size: 1.3em; 
-      /* Преміальна крива: швидкий старт, плавне уповільнення */
       --cas-ease: cubic-bezier(0.05, 0.7, 0.1, 1.0); 
   }  
   
   .full-start__background { will-change: transform; transform: translateZ(0); }
 
-  /* БАЗОВИЙ СТАН (ПРИХОВАНО) */
+  /* АНІМАЦІЯ ПОЯВИ */
   .cas-logo, .cas-description, .cas-meta-info, .cas-details-wrapper, 
   .cas-studio-item, .cas-rate-item, .cas-quality-item, .cas-sep, .full-start-new__buttons {
       opacity: 0 !important; 
-      transform: translateY(15px) scale(0.98);
-      will-change: transform, opacity;
+      transform: translateY(15px);
       transition: opacity 0.6s var(--cas-ease), transform 0.6s var(--cas-ease);
   }
 
-  /* АНІМАЦІЯ ПОЯВИ (АКТИВНИЙ СТАН) */
   .cas-animated .cas-logo, 
   .cas-animated .cas-description, 
   .cas-animated .cas-meta-info, 
@@ -233,29 +230,43 @@
   .cas-animated .cas-sep,
   .cas-animated .full-start-new__buttons { 
       opacity: 1 !important; 
-      transform: translateY(0) scale(1); 
+      transform: translateY(0); 
   }
 
-  /* ТАЙМІНГИ (ХВИЛЯ) - Дуже швидка послідовність */
+  /* ТАЙМІНГИ */
   .cas-animated .cas-logo { transition-delay: 0.05s; }
-  
   .cas-animated .cas-studio-item:nth-child(1) { transition-delay: 0.15s; }
-  .cas-animated .cas-studio-item:nth-child(2) { transition-delay: 0.20s; }
-  .cas-animated .cas-studio-item:nth-child(3) { transition-delay: 0.25s; }
-
   .cas-animated .cas-rate-item:nth-child(1) { transition-delay: 0.35s; }
-  .cas-animated .cas-rate-item:nth-child(2) { transition-delay: 0.40s; }
-  
   .cas-animated .cas-meta-info { transition-delay: 0.45s; opacity: 0.8 !important; }
-  
-  .cas-animated .cas-sep { transition-delay: 0.50s; opacity: 0.5 !important; }
-  .cas-animated .cas-quality-item:nth-child(2) { transition-delay: 0.55s; }
-  .cas-animated .cas-quality-item:nth-child(3) { transition-delay: 0.60s; }
-  .cas-animated .cas-quality-item:nth-child(4) { transition-delay: 0.65s; }
-
   .cas-animated .cas-description { transition-delay: 0.70s; opacity: 0.7 !important; }
-  .cas-animated .cas-details-wrapper { transition-delay: 0.70s; opacity: 0.5 !important; }
   .cas-animated .full-start-new__buttons { transition-delay: 0.80s; }
+
+  /* КНОПКИ БЕЗ ЕФЕКТІВ (ЧИСТИЙ БІЛИЙ) */
+  .left-title .full-start-new__buttons { 
+      margin-top: 1.2em; 
+      display: flex; 
+      gap: 30px; 
+  }    
+  .left-title .full-start-new__buttons .full-start__button {  
+      background: none !important; /* Прибираємо фон */
+      color: rgba(255,255,255,0.5) !important; /* Напівпрозорий білий у спокої */
+      padding: 10px 0; 
+      border-radius: 0;
+      display: flex; 
+      align-items: center; 
+      gap: 10px; 
+      transition: color 0.3s ease;
+      box-shadow: none !important;
+  }  
+  .left-title .full-start-new__buttons .full-start__button.focus {  
+      background: none !important; /* Прибираємо фон при фокусі */
+      color: #fff !important; /* Чистий білий при фокусі */
+      transform: none !important; /* Прибираємо збільшення */
+  }  
+  .left-title .full-start-new__buttons .full-start__button svg {
+      width: 24px;
+      height: 24px;
+  }
 
   /* ІНШІ СТИЛІ */
   .full-start-new__details { display: none !important; }
@@ -266,15 +277,6 @@
   }  
   .cas-studio-item img { height: 18px; filter: invert(1) brightness(1.2); opacity: 0.8; }  
   .cas-quality-item img { height: 15px; }  
-  .left-title .full-start-new__buttons { margin-top: 1.2em; display: flex; gap: 20px; }    
-  .left-title .full-start-new__buttons .full-start__button {  
-      background: rgba(255,255,255,0.05) !important; color: rgba(255,255,255,0.6) !important;  
-      padding: 10px 20px; border-radius: 10px;
-      display: flex; align-items: center; gap: 10px; transition: all 0.3s var(--cas-ease);  
-  }  
-  .left-title .full-start-new__buttons .full-start__button.focus {  
-      background: rgba(255,255,255,1) !important; color: #000 !important; transform: scale(1.1);  
-  }  
   .cas-logo img { max-width: 450px; max-height: 180px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); transform: scale(var(--cas-logo-scale)); transform-origin: left bottom; }  
   .cas-ratings-line { display: flex; align-items: center; gap: 15px; margin-bottom: 5px; font-size: var(--cas-meta-size); font-weight: 600; height: 30px; }  
   .cas-rate-item { display: flex; align-items: center; gap: 6px; }
@@ -292,7 +294,7 @@
   </style>`;    
           Lampa.Template.add('left_title_css', styles);    
           $('body').append(Lampa.Template.get('left_title_css', {}, true));    
-            }
+      }
     
       function getCachedData(id) {  
           const cache = Lampa.Storage.get('cas_images_cache') || {};  
