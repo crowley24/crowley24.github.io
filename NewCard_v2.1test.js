@@ -173,7 +173,7 @@
                       </div>
                       <div class="full-start-new__buttons">    
                           <div class="full-start__button selector button--play">    
-                              <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/><path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.1506 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/></svg>    
+                              <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/><path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/></svg>    
                               <span>#{title_watch}</span>    
                           </div>    
                           <div class="full-start__button selector button--book">    
@@ -239,10 +239,10 @@
   .cas-animated .cas-description { opacity: 0.7 !important; transform: translateY(0); transition-delay: 1.6s; }
   .cas-animated .cas-details-wrapper { opacity: 0.5 !important; transform: translateY(0); transition-delay: 1.6s; }
 
-  /* Стилізація технічних деталей: ВИДАЛЕННЯ ДУБЛЯ ЖАНРІВ */
-  .full-start-new__head { display: none !important; }
-  .full-start-new__details {
-      display: block !important;
+  /* Стилізація технічних деталей: ЗАЛИШАЄМО РІК/КРАЇНУ, ПРИБИРАЄМО ДУБЛЬ ЖАНРІВ */
+  .full-start-new__details { display: none !important; } /* Ховаємо дубль жанрів */
+  .full-start-new__head {
+      display: block !important; /* Робимо видимим Рік та Країну */
       margin: 0 !important;
       padding: 0 !important;
       font-size: 0.9em;
