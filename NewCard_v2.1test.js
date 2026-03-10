@@ -236,6 +236,7 @@
   .cas-animated .cas-quality-item:nth-child(1) { opacity: 1; transform: translateX(0); transition-delay: 0.9s; }
   .cas-animated .cas-quality-item:nth-child(2) { opacity: 1; transform: translateX(0); transition-delay: 1.0s; }
   .cas-animated .cas-quality-item:nth-child(3) { opacity: 1; transform: translateX(0); transition-delay: 1.1s; }
+  .cas-animated .cas-quality-item:nth-child(4) { opacity: 1; transform: translateX(0); transition-delay: 1.2s; }
 
   /* Кнопки */
   .cas-animated .full-start-new__buttons { opacity: 1; transform: translateY(0); transition-delay: 1.3s; }
@@ -391,4 +392,4 @@
     function startPlugin() { initializePlugin(); }  
     if (window.appready) startPlugin();    
     else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') startPlugin(); });    
-})();                          
+})();
