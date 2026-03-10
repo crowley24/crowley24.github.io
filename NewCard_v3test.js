@@ -207,17 +207,18 @@
       --cas-logo-scale: 1; 
       --cas-blocks-gap: 30px; 
       --cas-meta-size: 1.3em; 
-      --cas-ease: cubic-bezier(0.05, 0.7, 0.1, 1.0); 
+      --cas-ease: cubic-bezier(0.25, 0.1, 0.25, 1.0); 
   }  
   
   .full-start__background { will-change: transform; transform: translateZ(0); }
 
-  /* АНІМАЦІЯ ПОЯВИ */
+  /* ОПТИМІЗОВАНА АНІМАЦІЯ (БЕЗ СКЛАДНИХ ТРАНСФОРМАЦІЙ ДЛЯ КНОПОК) */
   .cas-logo, .cas-description, .cas-meta-info, .cas-details-wrapper, 
-  .cas-studio-item, .cas-rate-item, .cas-quality-item, .cas-sep, .full-start-new__buttons {
+  .cas-studio-item, .cas-rate-item, .cas-quality-item, .cas-sep {
       opacity: 0 !important; 
-      transform: translateY(15px);
-      transition: opacity 0.6s var(--cas-ease), transform 0.6s var(--cas-ease);
+      transform: translateY(10px);
+      will-change: opacity, transform;
+      transition: opacity 0.4s ease, transform 0.4s ease;
   }
 
   .cas-animated .cas-logo, 
@@ -227,46 +228,49 @@
   .cas-animated .cas-studio-item, 
   .cas-animated .cas-rate-item, 
   .cas-animated .cas-quality-item, 
-  .cas-animated .cas-sep,
-  .cas-animated .full-start-new__buttons { 
+  .cas-animated .cas-sep { 
       opacity: 1 !important; 
       transform: translateY(0); 
   }
 
+  /* СТАНДАРТНІ КНОПКИ LAMPA (БЕЗ ЗАЙВИХ ЕФЕКТІВ) */
+  .left-title .full-start-new__buttons { 
+      margin-top: 1.5em; 
+      display: flex; 
+      gap: 10px; 
+      opacity: 1 !important; /* Кнопки показуємо одразу для швидкодії */
+      transform: none !important;
+  }    
+
+  .left-title .full-start-new__buttons .full-start__button {  
+      background: rgba(255, 255, 255, 0.1) !important;
+      color: #fff !important;
+      padding: 0.8em 1.5em;
+      border-radius: 0.5em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.2em;
+      font-weight: 500;
+      transition: background-color 0.2s, transform 0.2s;
+  }
+
+  .left-title .full-start-new__buttons .full-start__button.focus {  
+      background: #fff !important;
+      color: #000 !important;
+  }
+
+  .left-title .full-start-new__buttons .full-start__button svg {
+      width: 1.2em;
+      height: 1.2em;
+      display: block;
+  }
+
   /* ТАЙМІНГИ */
   .cas-animated .cas-logo { transition-delay: 0.05s; }
-  .cas-animated .cas-studio-item:nth-child(1) { transition-delay: 0.15s; }
-  .cas-animated .cas-rate-item:nth-child(1) { transition-delay: 0.35s; }
-  .cas-animated .cas-meta-info { transition-delay: 0.45s; opacity: 0.8 !important; }
-  .cas-animated .cas-description { transition-delay: 0.70s; opacity: 0.7 !important; }
-  .cas-animated .full-start-new__buttons { transition-delay: 0.80s; }
-
-  /* КНОПКИ БЕЗ ЕФЕКТІВ (ЧИСТИЙ БІЛИЙ) */
-  .left-title .full-start-new__buttons { 
-      margin-top: 1.2em; 
-      display: flex; 
-      gap: 30px; 
-  }    
-  .left-title .full-start-new__buttons .full-start__button {  
-      background: none !important; /* Прибираємо фон */
-      color: rgba(255,255,255,0.5) !important; /* Напівпрозорий білий у спокої */
-      padding: 10px 0; 
-      border-radius: 0;
-      display: flex; 
-      align-items: center; 
-      gap: 10px; 
-      transition: color 0.3s ease;
-      box-shadow: none !important;
-  }  
-  .left-title .full-start-new__buttons .full-start__button.focus {  
-      background: none !important; /* Прибираємо фон при фокусі */
-      color: #fff !important; /* Чистий білий при фокусі */
-      transform: none !important; /* Прибираємо збільшення */
-  }  
-  .left-title .full-start-new__buttons .full-start__button svg {
-      width: 24px;
-      height: 24px;
-  }
+  .cas-animated .cas-studio-item:nth-child(1) { transition-delay: 0.1s; }
+  .cas-animated .cas-rate-item:nth-child(1) { transition-delay: 0.15s; }
+  .cas-animated .cas-description { transition-delay: 0.2s; opacity: 0.7 !important; }
 
   /* ІНШІ СТИЛІ */
   .full-start-new__details { display: none !important; }
@@ -294,8 +298,7 @@
   </style>`;    
           Lampa.Template.add('left_title_css', styles);    
           $('body').append(Lampa.Template.get('left_title_css', {}, true));    
-      }
-    
+      }    
       function getCachedData(id) {  
           const cache = Lampa.Storage.get('cas_images_cache') || {};  
           const item = cache[id];  
