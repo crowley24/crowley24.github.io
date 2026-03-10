@@ -60,82 +60,79 @@
     }  
   
     function addSettings() {  
-        const defaults = {  
-            'cas_logo_scale': '100',  
-            'cas_logo_quality': 'original',  
-            'cas_bg_animation': true,  
-            'cas_slideshow_enabled': true,  
-            'cas_blocks_gap': '20',  
-            'cas_meta_size': '1.3',  
-            'cas_show_studios': true,  
-            'cas_show_quality': true,  
-            'cas_show_rating': true,  
-            'cas_show_description': true,  
-            'cas_performance_mode': false  
-        };  
-        Object.keys(defaults).forEach(key => {  
-            if (Lampa.Storage.get(key) === undefined) Lampa.Storage.set(key, defaults[key]);  
-        });  
-        Lampa.SettingsApi.addComponent({ component: PLUGIN_ID, name: PLUGIN_NAME, icon: SETTINGS_ICON });  
-          
-        // Використовуємо прямі українські рядки замість перекладів  
-        Lampa.SettingsApi.addParam({  
-            component: PLUGIN_ID,  
-            param: { name: 'cas_logo_quality', type: 'select', values: { 'w300':'300px', 'w500':'500px', 'original':'Original' }, default: 'original' },  
-            field: { name: 'Якість логотипу' }, onChange: applySettings  
-        });  
-        Lampa.SettingsApi.addParam({  
-            component: PLUGIN_ID,  
-            param: { name: 'cas_logo_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' }, default: '100' },  
-            field: { name: 'Розмір логотипу' }, onChange: applySettings  
-        });  
-        Lampa.SettingsApi.addParam({  
-            component: PLUGIN_ID,  
-            param: { name: 'cas_meta_size', type: 'select', values: { '1.2': 'Малий', '1.3': 'Стандартний', '1.4': 'Збільшений', '1.5': 'Великий' }, default: '1.3' },  
-            field: { name: 'Розмір шрифту' }, onChange: applySettings  
-        });  
-        Lampa.SettingsApi.addParam({  
-            component: PLUGIN_ID,  
-            param: { name: 'cas_blocks_gap', type: 'select', values: { '15':'Тісно','20':'Стандарт','25':'Просторе' }, default: '20' },  
-            field: { name: 'Відступи між блоками' }, onChange: applySettings  
-        });  
-        Lampa.SettingsApi.addParam({  
-            component: PLUGIN_ID,  
-            param: { name: 'cas_bg_animation', type: 'trigger', default: true },  
-            field: { name: 'Анімація фону (Ken Burns)' }, onChange: applySettings  
-        });  
-        Lampa.SettingsApi.addParam({  
-            component: PLUGIN_ID,  
-            param: { name: 'cas_slideshow_enabled', type: 'trigger', default: true },  
-            field: { name: 'Слайд-шоу фону' }, onChange: applySettings  
-        });  
-        Lampa.SettingsApi.addParam({  
-            component: PLUGIN_ID,  
-            param: { name: 'cas_show_studios', type: 'trigger', default: true },  
-            field: { name: 'Показувати студії' }, onChange: applySettings  
-        });  
-        Lampa.SettingsApi.addParam({  
-            component: PLUGIN_ID,  
-            param: { name: 'cas_show_quality', type: 'trigger', default: true },  
-            field: { name: 'Показувати якість' }, onChange: applySettings  
-        });  
-        Lampa.SettingsApi.addParam({  
-            component: PLUGIN_ID,  
-            param: { name: 'cas_show_rating', type: 'trigger', default: true },  
-            field: { name: 'Показувати рейтинги' }, onChange: applySettings  
-        });  
-        Lampa.SettingsApi.addParam({  
-            component: PLUGIN_ID,  
-            param: { name: 'cas_show_description', type: 'trigger', default: true },  
-            field: { name: 'Опис фільму' }, onChange: applySettings  
-        });  
-        Lampa.SettingsApi.addParam({  
-            component: PLUGIN_ID,  
-            param: { name: 'cas_performance_mode', type: 'trigger', default: false },  
-            field: { name: 'Режим продуктивності' }, onChange: applySettings  
-        });  
-        applySettings();  
-    }    
+          const defaults = {  
+              'cas_logo_scale': '100',  
+              'cas_logo_quality': 'original',  
+              'cas_bg_animation': true,  
+              'cas_slideshow_enabled': true,  
+              'cas_blocks_gap': '20',  
+              'cas_meta_size': '1.3',  
+              'cas_show_studios': true,  
+              'cas_show_quality': true,  
+              'cas_show_rating': true,  
+              'cas_show_description': true  
+          };  
+          Object.keys(defaults).forEach(key => {  
+              if (Lampa.Storage.get(key) === undefined) Lampa.Storage.set(key, defaults[key]);  
+          });  
+          Lampa.SettingsApi.addComponent({ component: PLUGIN_ID, name: PLUGIN_NAME, icon: SETTINGS_ICON });  
+          Lampa.SettingsApi.addParam({  
+              component: PLUGIN_ID,  
+              param: { name: 'cas_logo_quality', type: 'select', values: { 'w300':'300px', 'w500':'500px', 'original':'Original' }, default: 'original' },  
+              field: { name: 'Якість логотипу' }, onChange: applySettings  
+          });  
+          Lampa.SettingsApi.addParam({  
+              component: PLUGIN_ID,  
+              param: { name: 'cas_logo_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' }, default: '100' },  
+              field: { name: 'Розмір логотипу' }, onChange: applySettings  
+          });  
+          Lampa.SettingsApi.addParam({  
+              component: PLUGIN_ID,  
+              param: { name: 'cas_meta_size', type: 'select', values: { '1.2': 'Малий', '1.3': 'Стандартний', '1.4': 'Збільшений', '1.5': 'Великий' }, default: '1.3' },  
+              field: { name: 'Розмір шрифту' }, onChange: applySettings  
+          });  
+          Lampa.SettingsApi.addParam({  
+              component: PLUGIN_ID,  
+              param: { name: 'cas_blocks_gap', type: 'select', values: { '15':'Тісно','20':'Стандарт','25':'Просторе' }, default: '20' },  
+              field: { name: 'Відступи між блоками' }, onChange: applySettings  
+          });  
+          Lampa.SettingsApi.addParam({  
+              component: PLUGIN_ID,  
+              param: { name: 'cas_bg_animation', type: 'trigger', default: true },  
+              field: { name: 'Анімація фону (Ken Burns)' }, onChange: applySettings  
+          });  
+          Lampa.SettingsApi.addParam({   
+              component: PLUGIN_ID,   
+              param: { name: 'cas_slideshow_enabled', type: 'trigger', default: true },   
+              field: { name: 'Слайд-шоу фону' },  
+              onChange: applySettings  
+          });  
+          Lampa.SettingsApi.addParam({   
+              component: PLUGIN_ID,   
+              param: { name: 'cas_show_studios', type: 'trigger', default: true },   
+              field: { name: 'Показувати студії' },  
+              onChange: applySettings  
+          });  
+          Lampa.SettingsApi.addParam({   
+              component: PLUGIN_ID,   
+              param: { name: 'cas_show_quality', type: 'trigger', default: true },   
+              field: { name: 'Показувати якість' },  
+              onChange: applySettings  
+          });  
+          Lampa.SettingsApi.addParam({   
+              component: PLUGIN_ID,   
+              param: { name: 'cas_show_rating', type: 'trigger', default: true },   
+              field: { name: 'Показувати рейтинги' },  
+              onChange: applySettings  
+         });  
+            Lampa.SettingsApi.addParam({   
+              component: PLUGIN_ID,   
+              param: { name: 'cas_show_description', type: 'trigger', default: true },   
+              field: { name: 'Опис фільму' },  
+              onChange: applySettings  
+          });  
+          applySettings();  
+      }  
   
     function applySettings() {  
         const root = document.documentElement;  
