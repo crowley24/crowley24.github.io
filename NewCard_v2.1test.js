@@ -174,74 +174,123 @@
           Lampa.Template.add('full_start_new', template);    
       }    
       function addStyles() {    
-          const styles = `<style>    
-  :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.6, 0.35, 1); }  
-  
-  .full-start__background { will-change: transform; transform: translate3d(0,0,0); backface-visibility: hidden; perspective: 1000px; }
+        const styles = `<style>    
+:root { 
+    --cas-logo-scale: 1; 
+    --cas-blocks-gap: 30px; 
+    --cas-meta-size: 1.3em; 
+    --cas-wave-speed: 0.8s;
+    --cas-wave-curve: cubic-bezier(0.22, 1, 0.36, 1);
+}  
 
-  /* Базові налаштування анімації */
-  .cas-logo, .cas-description, .full-start-new__buttons, 
-  .cas-studio-item, .cas-rate-item, .cas-meta-info, .cas-quality-item {   
-      backface-visibility: hidden; 
-      transform: translate3d(0, 15px, 0);   
-      opacity: 0;
-      transition: opacity 0.7s var(--cas-anim-curve), transform 0.7s var(--cas-anim-curve);  
-  }  
+/* Стан до анімації */
+.cas-logo, 
+.cas-description, 
+.full-start-new__buttons, 
+.cas-studio-item, 
+.cas-rate-item, 
+.cas-meta-info, 
+.cas-quality-item {   
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+    filter: blur(5px);
+    transition: 
+        opacity var(--cas-wave-speed) var(--cas-wave-curve), 
+        transform var(--cas-wave-speed) var(--cas-wave-curve),
+        filter var(--cas-wave-speed) var(--cas-wave-curve);
+    will-change: transform, opacity, filter;
+}  
 
-  /* 1. Лого та Опис (майже відразу) */
-  .cas-animated .cas-logo { opacity: 1; transform: translate3d(0,0,0); transition-delay: 0.1s; }  
-  .cas-animated .cas-description { opacity: 1; transform: translate3d(0,0,0); transition-delay: 0.2s; }  
+/* Активний стан (хвиля пішла) */
+.cas-animated .cas-logo,
+.cas-animated .cas-description,
+.cas-animated .cas-studio-item,
+.cas-animated .cas-rate-item,
+.cas-animated .cas-meta-info,
+.cas-animated .cas-quality-item,
+.cas-animated .full-start-new__buttons {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+}
 
-  /* 2. ХВИЛЯ: Студії (по черзі) */
-  .cas-animated .cas-studio-item:nth-child(1) { opacity: 1; transform: translate3d(0,0,0); transition-delay: 0.4s; }
-  .cas-animated .cas-studio-item:nth-child(2) { opacity: 1; transform: translate3d(0,0,0); transition-delay: 0.5s; }
-  .cas-animated .cas-studio-item:nth-child(3) { opacity: 1; transform: translate3d(0,0,0); transition-delay: 0.6s; }
+/* Таймінги хвилі (Staggered Delay) */
+/* 1. Логотип головний */
+.cas-animated .cas-logo { transition-delay: 0.1s; }
 
-  /* 3. ХВИЛЯ: Рейтинги */
-  .cas-animated .cas-rate-item { opacity: 1; transform: translate3d(0,0,0); transition-delay: 0.7s; }
+/* 2. Ряд студій (по черзі кожна іконка) */
+.cas-animated .cas-studio-item:nth-child(1) { transition-delay: 0.3s; }
+.cas-animated .cas-studio-item:nth-child(2) { transition-delay: 0.4s; }
+.cas-animated .cas-studio-item:nth-child(3) { transition-delay: 0.5s; }
 
-  /* 4. ХВИЛЯ: Мета (жанр, час) */
-  .cas-animated .cas-meta-info { opacity: 1; transform: translate3d(0,0,0); transition-delay: 0.8s; }
+/* 3. Ряд рейтингів (TMDB, потім CUB) */
+.cas-animated .cas-rate-item:nth-child(1) { transition-delay: 0.6s; }
+.cas-animated .cas-rate-item:nth-child(2) { transition-delay: 0.7s; }
 
-  /* 5. ХВИЛЯ: Якість (з'являється останньою) */
-  .cas-animated .cas-quality-item { opacity: 1; transform: translate3d(0,0,0); transition-delay: 0.9s; }
-  
-  /* Кнопки в самому кінці */
-  .cas-animated .full-start-new__buttons { opacity: 1; transform: translate3d(0,0,0); transition-delay: 1.1s; }  
+/* 4. Мета-інфо (Жанр та час) */
+.cas-animated .cas-meta-info { transition-delay: 0.8s; }
 
-  .cas-description {  
-      max-width: 650px; font-size: var(--cas-meta-size); line-height: 1.4; color: rgba(255,255,255,0.7);  
-      display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;  
-  }  
-  .cas-studio-item img { height: 16px; filter: invert(1) brightness(1.2); opacity: 0.9; }  
-  .cas-quality-item img { height: 16px; }  
-  .left-title .full-start-new__buttons { margin-top: 1.2em; display: flex; gap: 20px; }    
-  .left-title .full-start-new__buttons .full-start__button {  
-      background: transparent !important; color: rgba(255,255,255,0.6) !important;  
-      display: flex; align-items: center; gap: 10px; transition: all 0.2s var(--cas-anim-curve);  
-  }  
-  .left-title .full-start-new__buttons .full-start__button.focus {  
-      color: #fff !important; transform: scale(1.1) translate3d(0,0,0); filter: drop-shadow(0 0 8px rgba(255,255,255,0.6));  
-  }  
-  .left-title .full-start__button svg { width: 26px !important; height: 26px !important; }  
-  .cas-logo img { max-width: 450px; max-height: 180px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); transform: scale(var(--cas-logo-scale)); transform-origin: left bottom; }  
-  .cas-ratings-line { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; font-size: var(--cas-meta-size); font-weight: 600; }  
-  .cas-rate-item { display: flex; align-items: center; gap: 6px; }
-  .cas-rate-item img { height: 1.1em; }  
-  .left-title .full-start-new__body { height: 85vh; }  
-  .left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 2vh; padding-left: 1.5%; }  
-  .left-title .full-start-new__reactions, .left-title .full-start-new__rate-line, .left-title .full-start__status, .left-title .rating--modss, .left-title .full-start-new__head, .left-title .full-start-new__details { display: none !important; }  
-  
-  @keyframes casKenBurns {   
-      0% { transform: scale(1) translate3d(0,0,0); }   
-      50% { transform: scale(1.06) translate3d(0,0,0); }   
-      100% { transform: scale(1) translate3d(0,0,0); }   
-  }  
-  body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 45s linear infinite !important; }  
-  </style>`;    
-          Lampa.Template.add('left_title_css', styles);    
-          $('body').append(Lampa.Template.get('left_title_css', {}, true));    
-      }  
+/* 5. Якість (по черзі) */
+.cas-animated .cas-quality-item:nth-child(1) { transition-delay: 0.9s; }
+.cas-animated .cas-quality-item:nth-child(2) { transition-delay: 1.0s; }
+
+/* 6. Опис фільму */
+.cas-animated .cas-description { transition-delay: 1.1s; }
+
+/* 7. Кнопки (останні) */
+.cas-animated .full-start-new__buttons { transition-delay: 1.25s; }
+
+/* Інші стилі без змін */
+.cas-description {  
+    max-width: 650px; font-size: var(--cas-meta-size); line-height: 1.4; color: rgba(255,255,255,0.7);  
+    display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;  
+}  
+.cas-studio-item img { height: 16px; filter: invert(1) brightness(1.2); opacity: 0.9; }  
+.cas-quality-item img { height: 16px; }  
+.left-title .full-start-new__buttons { margin-top: 1.2em; display: flex; gap: 20px; }    
+.cas-logo img { max-width: 450px; max-height: 180px; transform: scale(var(--cas-logo-scale)); transform-origin: left bottom; }  
+.cas-ratings-line { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; font-size: var(--cas-meta-size); font-weight: 600; }  
+.cas-rate-item { display: flex; align-items: center; gap: 6px; }
+.left-title .full-start-new__body { height: 85vh; }  
+.left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 2vh; padding-left: 1.5%; }  
+</style>`;    
+        Lampa.Template.add('left_title_css', styles);    
+        $('body').append(Lampa.Template.get('left_title_css', {}, true));    
+    }
+
+    function addCustomTemplate() {    
+        const template = `<div class="full-start-new left-title">    
+        <div class="full-start-new__body">    
+            <div class="full-start-new__right">    
+                <div class="left-title__content">    
+                    <div class="cas-logo-container" style="margin-bottom: var(--cas-blocks-gap);">  
+                        <div class="cas-logo"></div>  
+                    </div>  
+                    
+                    <div class="cas-studios-row" style="margin-bottom: 12px; display: flex; gap: 15px; align-items: center;"></div>  
+                    
+                    <div class="cas-ratings-line">  
+                        <div class="cas-rate-items" style="display: flex; align-items: center; gap: 12px;"></div>  
+                        <div class="cas-meta-info" style="opacity: 0.7; font-weight: 400;"></div>  
+                        <div class="cas-quality-row" style="display: flex; gap: 8px; align-items: center;"></div>  
+                    </div>  
+
+                    <div class="cas-description" style="margin-bottom: var(--cas-blocks-gap);"></div>  
+                    
+                    <div class="full-start-new__buttons">    
+                        <div class="full-start__button selector button--play">    
+                            <span>#{title_watch}</span>    
+                        </div>    
+                        <div class="full-start__button selector button--book">    
+                            <span>#{settings_input_links}</span>    
+                        </div>    
+                    </div>    
+                </div>    
+            </div>    
+        </div>    
+    </div>`;    
+        Lampa.Template.add('full_start_new', template);    
+    }
       function getCachedData(id) {  
           const cache = Lampa.Storage.get('cas_images_cache') || {};  
           const item = cache[id];  
