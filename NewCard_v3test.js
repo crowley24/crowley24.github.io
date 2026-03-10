@@ -160,13 +160,13 @@
                       <div class="cas-logo-container" style="margin-bottom: var(--cas-blocks-gap);">  
                           <div class="cas-logo"></div>  
                       </div>  
-                      <div class="cas-description" style="margin-bottom: var(--cas-blocks-gap);"></div>  
-                      <div class="cas-studios-row" style="margin-bottom: 12px; display: flex; gap: 15px; align-items: center;"></div>  
                       <div class="cas-ratings-line">  
+                          <div class="cas-studios-row" style="display: flex; gap: 15px; align-items: center;"></div>  
                           <div class="cas-rate-items" style="display: flex; align-items: center; gap: 12px;"></div>  
                           <div class="cas-meta-info" style="opacity: 0.7; font-weight: 400;"></div>  
                           <div class="cas-quality-row" style="display: flex; gap: 8px; align-items: center;"></div>  
                       </div>  
+                      <div class="cas-description" style="margin-top: var(--cas-blocks-gap);"></div>  
                       <div class="full-start-new__head hide"></div>    
                       <div class="full-start-new__details hide"></div>    
                       <div class="full-start-new__buttons">    
@@ -205,33 +205,26 @@
   
   .full-start__background { will-change: transform; transform: translateZ(0); backface-visibility: hidden; }
 
-  /* ХВИЛЯ АНІМАЦІЇ: Всі елементи приховано за замовчуванням */
-  .cas-logo, 
-  .cas-description,
-  .cas-studios-row,
-  .cas-ratings-line, 
-  .full-start-new__buttons {   
-      backface-visibility: hidden; 
-      transform: translateY(12px) translateZ(0);   
-      opacity: 0; 
-      transition: opacity 0.45s var(--cas-anim-curve), transform 0.45s var(--cas-anim-curve);  
-  }  
+  /* СТАТИЧНІ БЛОКИ (З’являються першими) */
+  .cas-logo, .cas-description {
+      opacity: 0; transform: translateY(10px);
+      transition: opacity 0.6s var(--cas-anim-curve), transform 0.6s var(--cas-anim-curve);
+  }
+  .cas-animated .cas-logo { opacity: 1; transform: translateY(0); transition-delay: 0.1s; }
+  .cas-animated .cas-description { opacity: 1; transform: translateY(0); transition-delay: 0.2s; }
 
-  /* ПОСЛІДОВНІСТЬ ХВИЛІ (Staggered Entrance) */
-  /* 1. Логотип з'являється першим */
-  .cas-animated .cas-logo { opacity: 1; transform: translateY(0); transition-delay: 0.05s; }  
-  
-  /* 2. Опис з'являється одразу за логотипом (або синхронно) */
-  .cas-animated .cas-description { opacity: 1; transform: translateY(0); transition-delay: 0.12s; }  
+  /* ХВИЛЯ ЗЛІВА НАПРАВО (Внутрішні елементи) */
+  .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .full-start-new__buttons {
+      opacity: 0; transform: translateX(-15px);
+      transition: opacity 0.5s var(--cas-anim-curve), transform 0.5s var(--cas-anim-curve);
+  }
 
-  /* 3. Логотипи студій */
-  .cas-animated .cas-studios-row { opacity: 1; transform: translateY(0); transition-delay: 0.20s; }  
-
-  /* 4. Технічна лінія: Рейтинги, тривалість, жанр, якість */
-  .cas-animated .cas-ratings-line { opacity: 1; transform: translateY(0); transition-delay: 0.28s; }  
-
-  /* 5. Кнопки дії (Перегляд, Трейлер тощо) */
-  .cas-animated .full-start-new__buttons { opacity: 1; transform: translateY(0); transition-delay: 0.36s; }  
+  /* Послідовна затримка для ефекту "Зліва направо" */
+  .cas-animated .cas-studios-row { opacity: 1; transform: translateX(0); transition-delay: 0.35s; }
+  .cas-animated .cas-rate-items    { opacity: 1; transform: translateX(0); transition-delay: 0.45s; }
+  .cas-animated .cas-meta-info     { opacity: 1; transform: translateX(0); transition-delay: 0.55s; }
+  .cas-animated .cas-quality-row  { opacity: 1; transform: translateX(0); transition-delay: 0.65s; }
+  .cas-animated .full-start-new__buttons { opacity: 1; transform: translateY(0); transition-delay: 0.8s; }
 
   .cas-description {  
       max-width: 650px; font-size: var(--cas-meta-size); line-height: 1.4; color: rgba(255,255,255,0.7);  
@@ -249,7 +242,7 @@
   }  
   .left-title .full-start__button svg { width: 26px !important; height: 26px !important; }  
   .cas-logo img { max-width: 450px; max-height: 180px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); transform: scale(var(--cas-logo-scale)); transform-origin: left bottom; }  
-  .cas-ratings-line { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; font-size: var(--cas-meta-size); font-weight: 600; }  
+  .cas-ratings-line { display: flex; align-items: center; gap: 15px; margin-bottom: 5px; font-size: var(--cas-meta-size); font-weight: 600; height: 30px; }  
   .cas-rate-item img { height: 1.1em; }  
   .left-title .full-start-new__body { height: 85vh; }  
   .left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 2vh; padding-left: 1.5%; }  
@@ -377,7 +370,7 @@
                         render.find('.cas-quality-row').hide();  
                     }  
                 }  
-                setTimeout(() => render.find('.left-title__content').addClass('cas-animated'), 150);  
+                setTimeout(() => render.find('.left-title__content').addClass('cas-animated'), 200);  
             }  
         });  
     }  
