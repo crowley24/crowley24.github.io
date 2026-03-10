@@ -135,7 +135,7 @@
             field: { name: 'Режим продуктивності' }, onChange: applySettings  
         });  
         applySettings();  
-    }  
+    }    
   
     function applySettings() {  
         const root = document.documentElement;  
