@@ -36,48 +36,14 @@
           attachLoader();  
       }  
       function addSettings() {  
-          const defaults = {  
-              'cas_logo_scale': '100',  
-              'cas_logo_quality': 'original',  
-              'cas_bg_animation': true,  
-              'cas_slideshow_enabled': true,  
-              'cas_blocks_gap': '20',  
-              'cas_meta_size': '1.3',  
-              'cas_show_studios': true,  
-              'cas_show_quality': true,  
-              'cas_show_rating': true,  
-              'cas_show_description': true  
-          };  
-          Object.keys(defaults).forEach(key => {  
-              if (Lampa.Storage.get(key) === undefined) Lampa.Storage.set(key, defaults[key]);  
-          });  
+          const defaults = { 'cas_logo_scale': '100', 'cas_logo_quality': 'original', 'cas_bg_animation': true, 'cas_slideshow_enabled': true, 'cas_blocks_gap': '20', 'cas_meta_size': '1.3', 'cas_show_studios': true, 'cas_show_quality': true, 'cas_show_rating': true, 'cas_show_description': true };  
+          Object.keys(defaults).forEach(key => { if (Lampa.Storage.get(key) === undefined) Lampa.Storage.set(key, defaults[key]); });  
           Lampa.SettingsApi.addComponent({ component: PLUGIN_ID, name: PLUGIN_NAME, icon: SETTINGS_ICON });  
-          Lampa.SettingsApi.addParam({  
-              component: PLUGIN_ID,  
-              param: { name: 'cas_logo_quality', type: 'select', values: { 'w300':'300px', 'w500':'500px', 'original':'Original' }, default: 'original' },  
-              field: { name: 'Якість логотипу' }, onChange: applySettings  
-          });  
-          Lampa.SettingsApi.addParam({  
-              component: PLUGIN_ID,  
-              param: { name: 'cas_logo_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' }, default: '100' },  
-              field: { name: 'Розмір логотипу' }, onChange: applySettings  
-          });  
-          Lampa.SettingsApi.addParam({  
-              component: PLUGIN_ID,  
-              param: { name: 'cas_meta_size', type: 'select', values: { '1.2': 'Малий', '1.3': 'Стандартний', '1.4': 'Збільшений', '1.5': 'Великий' }, default: '1.3' },  
-              field: { name: 'Розмір шрифту' }, onChange: applySettings  
-          });  
-          Lampa.SettingsApi.addParam({  
-              component: PLUGIN_ID,  
-              param: { name: 'cas_bg_animation', type: 'trigger', default: true },  
-              field: { name: 'Анімація фону (Ken Burns)' }, onChange: applySettings  
-          });  
-          Lampa.SettingsApi.addParam({   
-              component: PLUGIN_ID,   
-              param: { name: 'cas_slideshow_enabled', type: 'trigger', default: true },   
-              field: { name: 'Слайд-шоу фону' },  
-              onChange: applySettings  
-          });  
+          Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_logo_quality', type: 'select', values: { 'w300':'300px', 'w500':'500px', 'original':'Original' }, default: 'original' }, field: { name: 'Якість логотипу' }, onChange: applySettings });
+          Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_logo_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' }, default: '100' }, field: { name: 'Розмір логотипу' }, onChange: applySettings });
+          Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_meta_size', type: 'select', values: { '1.2': 'Малий', '1.3': 'Стандартний', '1.4': 'Збільшений' }, default: '1.3' }, field: { name: 'Розмір шрифту' }, onChange: applySettings });
+          Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_bg_animation', type: 'trigger', default: true }, field: { name: 'Анімація фону (Ken Burns)' }, onChange: applySettings });
+          Lampa.SettingsApi.addParam({ component: PLUGIN_ID, param: { name: 'cas_slideshow_enabled', type: 'trigger', default: true }, field: { name: 'Слайд-шоу фону' }, onChange: applySettings });
           applySettings();  
       }  
       function applySettings() {  
@@ -85,9 +51,9 @@
           const scale = parseInt(Lampa.Storage.get('cas_logo_scale') || 100) / 100;  
           const gap = Lampa.Storage.get('cas_blocks_gap') || '20';  
           const metaSize = Lampa.Storage.get('cas_meta_size') || '1.3';  
-         root.style.setProperty('--cas-logo-scale', scale);  
-         root.style.setProperty('--cas-blocks-gap', gap + 'px');  
-         root.style.setProperty('--cas-meta-size', metaSize + 'em');  
+          root.style.setProperty('--cas-logo-scale', scale);  
+          root.style.setProperty('--cas-blocks-gap', gap + 'px');  
+          root.style.setProperty('--cas-meta-size', metaSize + 'em');  
           $('body').toggleClass('cas--zoom-enabled', !!Lampa.Storage.get('cas_bg_animation'));  
       }  
       function addCustomTemplate() {    
@@ -108,10 +74,6 @@
 
                       <div class="cas-description" style="margin-bottom: var(--cas-blocks-gap);"></div>  
                       
-                      <div class="full-start-new__head hide"></div><div class="full-start-new__details hide"></div>
-                      <div class="full-start-new__reactions hide"></div><div class="full-start-new__rate-line hide"></div>
-                      <div class="rating--modss" style="display: none;"></div><div class="buttons--container hide"></div>
-
                       <div class="full-start-new__buttons">    
                           <div class="full-start__button selector button--play">    
                               <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/><path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/></svg>    
@@ -140,9 +102,9 @@
   
   .full-start__background { will-change: transform; transform: translate3d(0,0,0); backface-visibility: hidden; perspective: 1000px; }
 
-  /* Хвильова анімація (Premium Style) */
+  /* Основна анімація хвилі */
   .cas-logo, .cas-studio-item, .cas-rate-item, .cas-meta-info, 
-  .cas-quality-item, .cas-description, .full-start-new__buttons {   
+  .cas-quality-item, .cas-description, .full-start-new__buttons .full-start__button {   
       opacity: 0;
       transform: translateY(25px) scale(0.97);
       filter: blur(8px);
@@ -155,54 +117,62 @@
   .cas-animated .cas-logo, .cas-animated .cas-studio-item, 
   .cas-animated .cas-rate-item, .cas-animated .cas-meta-info, 
   .cas-animated .cas-quality-item, .cas-animated .cas-description, 
-  .cas-animated .full-start-new__buttons {
+  .cas-animated .full-start-new__buttons .full-start__button {
       opacity: 1; transform: translateY(0) scale(1); filter: blur(0);
   }
 
-  /* Покрокові таймінги хвилі */
+  /* Покрокові затримки */
   .cas-animated .cas-logo { transition-delay: 0.1s; }
   .cas-animated .cas-studio-item:nth-child(1) { transition-delay: 0.3s; }
   .cas-animated .cas-studio-item:nth-child(2) { transition-delay: 0.4s; }
   .cas-animated .cas-studio-item:nth-child(3) { transition-delay: 0.5s; }
-  .cas-animated .cas-rate-item:nth-child(1) { transition-delay: 0.65s; }
-  .cas-animated .cas-rate-item:nth-child(2) { transition-delay: 0.75s; }
-  .cas-animated .cas-meta-info { transition-delay: 0.85s; }
-  .cas-animated .cas-quality-item:nth-child(1) { transition-delay: 0.95s; }
-  .cas-animated .cas-quality-item:nth-child(2) { transition-delay: 1.05s; }
-  .cas-animated .cas-description { transition-delay: 1.2s; }
-  .cas-animated .full-start-new__buttons { transition-delay: 1.35s; }
+  .cas-animated .cas-rate-item:nth-child(1) { transition-delay: 0.6s; }
+  .cas-animated .cas-rate-item:nth-child(2) { transition-delay: 0.7s; }
+  .cas-animated .cas-meta-info { transition-delay: 0.8s; }
+  
+  /* Анімація іконок якості по черзі */
+  .cas-animated .cas-quality-item:nth-child(1) { transition-delay: 0.9s; }
+  .cas-animated .cas-quality-item:nth-child(2) { transition-delay: 1.0s; }
+  .cas-animated .cas-quality-item:nth-child(3) { transition-delay: 1.1s; }
+  .cas-animated .cas-quality-item:nth-child(4) { transition-delay: 1.2s; }
+
+  .cas-animated .cas-description { transition-delay: 1.3s; }
+  
+  /* Кнопки в кінці хвилі */
+  .cas-animated .full-start-new__buttons .button--play { transition-delay: 1.45s; }
+  .cas-animated .full-start-new__buttons .button--book { transition-delay: 1.55s; }
 
   .cas-description {  
       max-width: 650px; font-size: var(--cas-meta-size); line-height: 1.4; color: rgba(255,255,255,0.7);  
       display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;  
   }  
   .cas-studio-item img { height: 16px; filter: invert(1) brightness(1.2); opacity: 0.9; }  
-  .cas-quality-item img { height: 16px; margin-left: 5px; }  
+  .cas-quality-item { display: flex; align-items: center; }
+  .cas-quality-item img { height: 18px; margin-left: 5px; }  
+  
   .left-title .full-start-new__buttons { margin-top: 1.5em; display: flex; gap: 20px; }    
   .left-title .full-start-new__buttons .full-start__button {  
-      background: transparent !important; color: rgba(255,255,255,0.6) !important;  
-      display: flex; align-items: center; gap: 10px; transition: all 0.2s var(--cas-wave-curve);  
-  }  
+      background: rgba(255,255,255,0.05); padding: 12px 25px; border-radius: 12px;
+      display: flex; align-items: center; gap: 12px; cursor: pointer;
+  }
   .left-title .full-start-new__buttons .full-start__button.focus {  
-      color: #fff !important; transform: scale(1.1); filter: drop-shadow(0 0 8px rgba(255,255,255,0.6));  
-  }  
-  .cas-logo img { max-width: 450px; max-height: 180px; filter: drop-shadow(0 0 10px rgba(0,0,0,0.5)); transform: scale(var(--cas-logo-scale)); transform-origin: left bottom; }  
+      background: #fff !important; color: #000 !important; transform: scale(1.05); 
+  }
+
+  .cas-logo img { max-width: 450px; max-height: 180px; transform: scale(var(--cas-logo-scale)); transform-origin: left bottom; }  
   .cas-ratings-line { display: flex; align-items: center; gap: 12px; margin-bottom: 15px; font-size: var(--cas-meta-size); font-weight: 600; }  
   .cas-rate-item { display: flex; align-items: center; gap: 6px; }
   .cas-rate-item img { height: 1.1em; }  
   .left-title .full-start-new__body { height: 85vh; }  
   .left-title .full-start-new__right { display: flex; align-items: flex-end; padding-bottom: 5vh; padding-left: 3%; }  
-  
-  @keyframes casKenBurns {   
-      0% { transform: scale(1); }   
-      50% { transform: scale(1.08); }   
-      100% { transform: scale(1); }   
-  }  
+
+  @keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } }  
   body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 45s linear infinite !important; }  
   </style>`;    
           Lampa.Template.add('left_title_css', styles);    
           $('body').append(Lampa.Template.get('left_title_css', {}, true));    
       }  
+
       function getCachedData(id) {  
           const cache = Lampa.Storage.get('cas_images_cache') || {};  
           const item = cache[id];  
@@ -214,23 +184,18 @@
           cache[id] = { time: Date.now(), data: data };  
           Lampa.Storage.set('cas_images_cache', cache);  
       }  
-      function stopSlideshow() {  
-          if (window.casBgInterval) {  
-              clearInterval(window.casBgInterval);  
-              window.casBgInterval = null;  
-          }  
-      }  
-     function attachLoader() {    
+      function stopSlideshow() { if (window.casBgInterval) { clearInterval(window.casBgInterval); window.casBgInterval = null; } }  
+
+      function attachLoader() {    
           Lampa.Listener.follow('full', (event) => {    
               if (event.type === 'complite') {    
                   const data = event.data.movie;  
                   const render = event.object.activity.render();  
                   const content = render.find('.left-title__content');
-                  
                   content.removeClass('cas-animated');  
                   event.object.activity.onBeforeDestroy = () => { stopSlideshow(); };  
 
-                 if (data && data.id) {  
+                  if (data && data.id) {  
                     const cacheId = 'tmdb_' + data.id;  
                     const cached = getCachedData(cacheId);  
 
@@ -240,9 +205,9 @@
                             const quality = Lampa.Storage.get('cas_logo_quality') || 'original';  
                             render.find('.cas-logo').html(`<img src="${Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path)}">`);  
                         } else {  
-                            render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);  
-                        }  
-                        stopSlideshow();  
+                            render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800;">${data.title || data.name}</div>`);  
+                        }
+                        stopSlideshow();
                         if (Lampa.Storage.get('cas_slideshow_enabled') && res.backdrops?.length > 1) {  
                             let idx = 0;  
                             window.casBgInterval = setInterval(() => {  
@@ -251,7 +216,7 @@
                                 idx = (idx + 1) % Math.min(res.backdrops.length, 15);  
                                 bg.attr('src', Lampa.TMDB.image('/t/p/original' + res.backdrops[idx].file_path));  
                             }, 15000);  
-                        }  
+                        }
                     };  
 
                     if (cached) processImages(cached);  
@@ -261,7 +226,7 @@
                     }  
 
                     if (Lampa.Storage.get('cas_show_description')) render.find('.cas-description').text(data.overview || '');  
-
+                    
                     if (Lampa.Storage.get('cas_show_studios')) {  
                         const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 3);  
                         render.find('.cas-studios-row').html(studios.map(s => `<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}"></div>`).join(''));  
@@ -270,7 +235,7 @@
                     let ratesHtml = '';  
                     if (Lampa.Storage.get('cas_show_rating')) {  
                         const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);  
-                        if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;  
+                        if (tmdbV > 0) ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;
                         if (event.data.reactions && event.data.reactions.result) {  
                             let sum = 0, cnt = 0;  
                             const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };  
@@ -279,10 +244,10 @@
                                 const cubV = (((data.name?7.4:6.5)*(data.name?50:150)+sum)/((data.name?50:150)+cnt)).toFixed(1);  
                                 ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;  
                             }  
-                        }  
+                        }
                     }  
                     render.find('.cas-rate-items').html(ratesHtml);  
-
+                    
                     const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));  
                     const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');  
                     render.find('.cas-meta-info').text((time ? time + (genre ? ' • ' : '') : '') + genre);  
@@ -311,11 +276,11 @@
                     }  
                     setTimeout(() => content.addClass('cas-animated'), 200);  
                 }  
-            }  
-        });  
-    }  
-    function startPlugin() { initializePlugin(); }  
-    if (window.appready) startPlugin();    
-    else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') startPlugin(); });    
+              }  
+          });  
+      }  
+      function startPlugin() { initializePlugin(); }  
+      if (window.appready) startPlugin();    
+      else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') startPlugin(); });    
 })();
 
