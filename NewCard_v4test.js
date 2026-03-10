@@ -560,7 +560,8 @@ async function loadMovieDataOptimized(render, data) {
         render.find('.cas-rate-items').toggle(!!Lampa.Storage.get('cas_show_rating'));  
     });  
 }  
-  
+
+    const debouncedLoadMovieData = debounce(loadMovieDataOptimized, 300);
 function attachLoader() {  
     Lampa.Listener.follow('full', (e) => {  
         if (e.type === 'complite' && e.data.card && e.data.card.template === 'full_start_new') {  
