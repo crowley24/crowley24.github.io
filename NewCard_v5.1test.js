@@ -409,7 +409,7 @@
     
     async function loadMovieDataOptimized(render, data) {  
     const tasks = [];  
-    let ratesHtml = ''; // Додайте цей рядок на початку функції  
+    let ratesHtml = ''; // Ініціалізація на початку функції  
       
     if (Lampa.Storage.get('cas_show_description')) {  
         tasks.push(Promise.resolve().then(() => {  
@@ -425,6 +425,20 @@
             }  
         }));  
     }  
+      
+    // Додайте логіку для іконок якості тут  
+    if (Lampa.Storage.get('cas_show_quality')) {  
+        tasks.push(Promise.resolve().then(() => {  
+            // Ваш код для іконок якості  
+            ratesHtml += `<div class="cas-rate-item"><!-- HTML для іконок якості --></div>`;  
+        }));  
+    }  
+      
+    // Оновлення DOM після всіх завдань  
+    Promise.all(tasks).then(() => {  
+        render.find('.cas-rate-items').html(ratesHtml);  
+    });  
+    }
         tasks.push(Promise.resolve().then(() => {    
             const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));    
             const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');    
