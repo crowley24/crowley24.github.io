@@ -64,10 +64,15 @@
     }    
     
     function initializePlugin() {    
-        addCustomTemplate();    
-        addStyles();    
-        addSettings();    
-        attachLoader();    
+        try {    
+            addCustomTemplate();    
+            addStyles();    
+            addSettings();    
+            attachLoader();    
+            console.log('NewCard plugin initialized successfully');    
+        } catch (error) {    
+            console.error('NewCard plugin initialization error:', error);    
+        }    
     }    
     
     function addSettings() {    
@@ -188,13 +193,13 @@
                                 <svg width="21" height="32" viewBox="0 0 21 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 1.5H19C19.2761 1.5 19.5 1.72386 19.5 2V27.9618C19.5 28.3756 19.0261 28.6103 18.697 28.3595L12.6212 23.7303C11.3682 22.7757 9.63183 22.7757 8.37885 23.7303L2.30302 28.3595C1.9739 28.6103 1.5 28.3756 1.5 27.9618V2C1.5 1.72386 1.72386 1.5 2 1.5Z" stroke="currentColor" stroke-width="2.5"/></svg>    
                                 <span>#{settings_input_links}</span>    
                             </div>    
-                            <div class="full-start__button selector button--options">      
-    <svg width="38" height="10" viewBox="0 0 38 10" fill="none" xmlns="http://www.w3.org/2000/svg">  
-        <circle cx="4.88968" cy="4.98563" r="4.75394" fill="currentColor"/>  
-        <circle cx="18.9746" cy="4.98563" r="4.75394" fill="currentColor"/>  
-        <circle cx="33.0596" cy="4.98563" r="4.75394" fill="currentColor"/>  
-    </svg>      
-</div> 
+                            <div class="full-start__button selector button--options">    
+                                <svg width="38" height="10" viewBox="0 0 38 10" fill="none" xmlns="http://www.w3.org/2000/svg">    
+                                    <circle cx="4.88968" cy="4.98563" r="4.75394" fill="currentColor"/>    
+                                    <circle cx="18.9746" cy="4.98563" r="4.75394" fill="currentColor"/>    
+                                    <circle cx="33.0596" cy="4.98563" r="4.75394" fill="currentColor"/>    
+                                </svg>    
+                            </div>    
                         </div>    
                     </div>    
                 </div>    
@@ -207,7 +212,7 @@
         const styles = `<style>    
         :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); }    
         .full-start__background { will-change: transform; transform: translateZ(0); }    
-              
+                
         .cas-logo-container { position: relative; overflow: hidden; border-radius: 4px; }    
         .cas-logo::before {    
             content: '';    
@@ -218,40 +223,40 @@
             height: 100%;    
             background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);    
             animation: shimmer 2s infinite;    
-            mix-blend-mode: overlay;  
+            mix-blend-mode: overlay;    
         }    
-              
+                
         @keyframes shimmer {    
             0% { left: -100%; }    
             100% { left: 100%; }    
         }    
-              
+                
         .full-start__background {    
             transform: scale(1.1);    
             transition: transform 0.8s ease-out;    
         }    
-              
+                
         .cas-animated .full-start__background {    
             transform: scale(1);    
         }    
-              
+                
         .cas-logo, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper {    
             opacity: 0 !important;    
             transform: translateY(10px);    
             transition: opacity 0.4s var(--cas-anim-curve), transform 0.4s var(--cas-anim-curve);    
             will-change: transform, opacity;    
         }    
-              
+                
         .cas-animated .cas-logo { opacity: 1 !important; transform: translateY(0); transition-delay: 0s; }    
         .cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.1s; }    
         .cas-animated .cas-rate-items { opacity: 1 !important; transform: translateY(0); transition-delay: 0.2s; }    
         .cas-animated .cas-meta-info { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.3s; }    
         .cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.4s; }    
         .cas-animated .cas-description { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.5s; }    
-              
+                
         .full-start-new__details { display: none !important; }    
         .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }    
-              
+                
         .full-start-new__buttons {    
             display: flex !important;    
             flex-direction: row !important;    
@@ -262,9 +267,9 @@
             transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);    
             will-change: transform, opacity;    
         }    
-              
+                
         .cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translateY(0) scale(1); transition-delay: 0.6s; }    
-              
+                
         .left-title .full-start-new__buttons .full-start__button {    
             background: transparent !important;    
             color: rgba(255,255,255,0.6) !important;    
@@ -273,12 +278,12 @@
             gap: 10px;    
             transition: all 0.3s ease;    
         }    
-              
+                
         .left-title .full-start-new__buttons .full-start__button.focus {    
             color: #fff !important;    
             transform: scale(1.1) translateY(-2px);    
         }    
-    
+        
         .cas-rate-item {    
             display: flex;    
             align-items: center;    
@@ -286,37 +291,37 @@
             transform: scale(0);    
             animation: popIn 0.3s ease-out forwards;    
         }    
-    
+        
         @keyframes popIn {    
             0% { transform: scale(0) rotate(-10deg); opacity: 0; }    
             100% { transform: scale(1) rotate(0deg); opacity: 1; }    
         }    
-    
+        
         .cas-logo img { background: transparent !important; border: none !important; max-width: 450px; max-height: 180px; transform: scale(var(--cas-logo-scale)); transform-origin: left bottom; }    
-          
+            
         .cas-studio-item {    
             position: relative;    
             display: inline-block;    
         }    
-    
+        
         .cas-studio-item img {    
             height: 18px;    
             opacity: 0.9;    
-            transition: filter 0.3s ease;  
+            transition: filter 0.3s ease;    
         }    
-    
+        
         .cas-studio-item[data-logo-type="dark"] img {    
             filter: drop-shadow(0 0 1px rgba(255,255,255,0.6)) brightness(1.2);    
         }    
-    
+        
         .cas-studio-item[data-logo-type="light"] img {    
             filter: none;    
         }    
-    
+        
         .cas-studio-item[data-logo-type="color"] img {    
             filter: drop-shadow(0 0 1px rgba(0,0,0,0.8));    
         }    
-          
+            
         .cas-description { font-size: var(--cas-meta-size) !important; line-height: 1.4; color: rgba(255,255,255,0.7); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-width: 650px; }    
         .cas-quality-item img { height: 15px; }    
         .cas-ratings-line { display: flex; align-items: center; gap: 15px; margin-bottom: 5px; font-size: var(--cas-meta-size); font-weight: 600; height: 35px; }    
@@ -391,13 +396,11 @@
         let ratesHtml = '';    
             
         if (Lampa.Storage.get('cas_show_rating')) {    
-            // 1. TMDB Rating    
             const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);    
             if (tmdbV > 0) {    
                 ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;    
             }    
     
-            // 2. CUB Rating    
             if (reactions && reactions.result) {    
                 try {    
                     let sum = 0, cnt = 0;    
@@ -412,7 +415,6 @@
             container.html(ratesHtml).show();    
         }    
     
-        // Studios & Meta    
         const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));    
         const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');    
         render.find('.cas-meta-info').text((time ? time + (genre ? ' • ' : '') : '') + genre);    
@@ -421,22 +423,20 @@
         if (Lampa.Storage.get('cas_show_studios')) {    
             const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 3);    
             render.find('.cas-studios-row').html(studios.map(s => {    
-                // Simple heuristic to detect logo type based on studio name  
-                let logoType = 'color'; // default  
-                const studioName = (s.name || '').toLowerCase();  
-                if (studioName.includes('netflix') || studioName.includes('disney') ||   
-                    studioName.includes('warner') || studioName.includes('universal')) {  
-                    logoType = 'color';  
-                } else if (studioName.includes('paramount') || studioName.includes('sony')) {  
-                    logoType = 'dark';  
-                } else {  
-                    logoType = 'light';  
-                }  
+                let logoType = 'color';    
+                const studioName = (s.name || '').toLowerCase();    
+                if (studioName.includes('netflix') || studioName.includes('disney') ||     
+                    studioName.includes('warner') || studioName.includes('universal')) {    
+                    logoType = 'color';    
+                } else if (studioName.includes('paramount') || studioName.includes('sony')) {    
+                    logoType = 'dark';    
+                } else {    
+                    logoType = 'light';    
+                }    
                 return `<div class="cas-studio-item" data-logo-type="${logoType}"><img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}"></div>`;    
             }).join('')).show();    
         }    
     
-        // Quality & UKR Local    
         if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {    
             Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {    
                 const items = res.Results || res;    
@@ -499,6 +499,6 @@
     
     if (window.appready) initializePlugin();    
     else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') initializePlugin(); });    
-})();  
-   
+})();
+    
   
