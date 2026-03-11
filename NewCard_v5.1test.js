@@ -29,8 +29,7 @@
         'settings_cas_show_studios': 'Показувати студії',    
         'settings_cas_show_quality': 'Показувати якість',    
         'settings_cas_show_rating': 'Показувати рейтинги',    
-        'settings_cas_show_description': 'Опис фільму',    
-        'settings_cas_performance_mode': 'Режим продуктивності'    
+        'settings_cas_show_description': 'Опис фільму'    
     };    
     
     let debounceTimer;    
@@ -82,8 +81,7 @@
             'cas_show_studios': true,    
             'cas_show_quality': true,    
             'cas_show_rating': true,    
-            'cas_show_description': true,    
-            'cas_performance_mode': false    
+            'cas_show_description': true    
         };    
     
         Object.keys(defaults).forEach(key => {    
@@ -106,8 +104,7 @@
             { name: 'cas_show_studios', type: 'trigger' },    
             { name: 'cas_show_quality', type: 'trigger' },    
             { name: 'cas_show_rating', type: 'trigger' },    
-            { name: 'cas_show_description', type: 'trigger' },    
-            { name: 'cas_performance_mode', type: 'trigger' }    
+            { name: 'cas_show_description', type: 'trigger' }    
         ];    
     
         params.forEach(p => {    
@@ -134,14 +131,12 @@
         const scale = parseInt(Lampa.Storage.get('cas_logo_scale') || 100) / 100;    
         const gap = Lampa.Storage.get('cas_blocks_gap') || '20';    
         const metaSize = Lampa.Storage.get('cas_meta_size') || '1.3';    
-        const performanceMode = Lampa.Storage.get('cas_performance_mode') || false;    
             
         root.style.setProperty('--cas-logo-scale', scale);    
         root.style.setProperty('--cas-blocks-gap', gap + 'px');    
         root.style.setProperty('--cas-meta-size', metaSize + 'em');    
             
         $('body').toggleClass('cas--zoom-enabled', !!Lampa.Storage.get('cas_bg_animation'));    
-        $('body').toggleClass('cas--performance-mode', performanceMode);    
             
         const currentCard = $('.full-start-new.left-title');    
         if (currentCard.length > 0) {    
@@ -153,7 +148,7 @@
                 clearInterval(window.casBgInterval);    
                 window.casBgInterval = null;    
             }    
-            if (Lampa.Storage.get('cas_slideshow_enabled') && !performanceMode) {    
+            if (Lampa.Storage.get('cas_slideshow_enabled')) {    
                 const bg = currentCard.find('.full-start__background img, img.full-start__background');    
                 if (bg.length && bg.attr('src')) {    
                     const movieData = currentCard.data('movie');    
@@ -210,7 +205,7 @@
                                 <svg width="21" height="32" viewBox="0 0 21 32" fill="none" xmlns="http://www.w3.org/2000/svg">  
 <path d="M2 1.5H19C19.2761 1.5 19.5 1.72386 19.5 2V27.9618C19.5 28.3756 19.0261 28.6103 18.697 28.3595L12.6212 23.7303C11.3682 22.7757 9.63183 22.7757 8.37885 23.7303L2.30302 28.3595C1.9739 28.6103 1.5 28.3756 1.5 27.9618V2C1.5 1.72386 1.72386 1.5 2 1.5Z" stroke="currentColor" stroke-width="2.5"/>  
 </svg>
-  <span>#{settings_input_links}</span>        
+                                <span>#{settings_input_links}</span>        
                             </div>        
                             <div class="full-start__button selector button--reaction">        
                                 <svg width="38" height="34" viewBox="0 0 38 34" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M37.208 10.9742C37.1364 10.8013 37.0314 10.6441 36.899 10.5117C36.7666 10.3794 36.6095 10.2744 36.4365 10.2028L12.0658 0.108375C11.7166 -0.0361828 11.3242 -0.0361227 10.9749 0.108542C10.6257 0.253206 10.3482 0.530634 10.2034 0.879836L0.108666 25.2507C0.180114 26.5147 0.417545 26.8042 0.880127 27.1131L17.2452 33.8917C17.5945 34.0361 17.9869 34.0361 18.3362 33.8917L29.6574 29.2017C29.8304 29.1301 29.9875 29.0251 30.1199 28.8928C30.2523 28.7604 30.3573 28.6032 30.4289 28.4303L37.2078 12.065C37.2795 11.8921 37.3164 11.7068 37.3165 11.5196C37.3165 11.3325 37.2796 11.1471 37.208 10.9742ZM20.425 29.9407L21.8784 26.4316L25.3873 27.885L20.425 29.9407ZM28.3407 26.0222L21.6524 23.252C21.3031 23.1075 20.9107 23.1076 20.5615 23.2523C20.2123 23.3969 19.9348 23.6743 19.79 24.0235L17.0194 30.7123L3.28783 25.0247L12.2918 3.28773L34.0286 12.2912L28.3407 26.0222Z" fill="currentColor"/><path d="M25.3493 16.976L24.258 14.3423L16.959 17.3666L15.7196 14.375L13.0859 15.4659L15.4161 21.0916L25.3493 16.976Z" fill="currentColor"/></svg>        
@@ -234,7 +229,6 @@
         const styles = `<style>    
         :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); }    
         .full-start__background { will-change: transform; transform: translateZ(0); }    
-        body.cas--performance-mode * { transition: none !important; animation: none !important; }    
           
         /* Enhanced animations with shimmer effect */  
         .cas-logo-container { position: relative; overflow: hidden; }  
@@ -405,7 +399,7 @@
                 render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);    
             }    
             stopSlideshow();    
-            if (Lampa.Storage.get('cas_slideshow_enabled') && !Lampa.Storage.get('cas_performance_mode') && res.backdrops?.length > 1) {    
+            if (Lampa.Storage.get('cas_slideshow_enabled') && res.backdrops?.length > 1) {    
                 startSlideshow(render, res.backdrops);    
             }    
         } catch (error) {    
@@ -423,8 +417,9 @@
         if (Lampa.Storage.get('cas_show_rating')) {    
             tasks.push(Promise.resolve().then(() => {    
                 const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);    
-                const ratesHtml = tmdbV > 0 ? `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>` : '';    
-                render.find('.cas-rate-items').html(ratesHtml);    
+                if (tmdbV > 0) {    
+                    ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;    
+                }    
             }));    
         }    
         tasks.push(Promise.resolve().then(() => {    
@@ -433,12 +428,18 @@
             render.find('.cas-meta-info').text((time ? time + (genre ? ' • ' : '') : '') + genre);    
         }));    
         if (Lampa.Storage.get('cas_show_studios')) {    
-  tasks.push(Promise.resolve().then(() => {    
+            tasks.push(Promise.resolve().then(() => {    
                 const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 3);    
                 render.find('.cas-studios-row').html(studios.map(s => `<div class="cas-studio-item"><img src="${Lampa.TMDB.image('/t/p/w200' + s.logo_path)}"></div>`).join('')).show();    
             }));    
         }    
         await Promise.all(tasks);    
+          
+        // Вставляємо всі рейтинги одночасно    
+        if (ratesHtml) {    
+            render.find('.cas-rate-items').html(ratesHtml);    
+        }    
+          
         if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {    
             Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {    
                 try {    
@@ -489,13 +490,52 @@
                 const content = render.find('.left-title__content');    
                 content.removeClass('cas-animated');    
                 event.object.activity.onBeforeDestroy = cleanup;    
+                  
                 if (data && data.id) {    
                     render.data('movie', data);    
+                      
+                    // Попередньо збираємо рейтинги    
+                    let ratesHtml = '';    
+                      
+                    // TMDB рейтинг    
+                    if (Lampa.Storage.get('cas_show_rating')) {    
+                        const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);    
+                        if (tmdbV > 0) {    
+                            ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;    
+                        }    
+                    }    
+                      
+                    // CUB рейтинг - додаємо синхронно    
+                    if (Lampa.Storage.get('cas_show_rating') && event.data.reactions && event.data.reactions.result) {    
+                        try {    
+                            let sum = 0, cnt = 0;    
+                            const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };    
+                              
+                            event.data.reactions.result.forEach(r => {    
+                                if (r.counter) {    
+                                    sum += (r.counter * coef[r.type]);    
+                                    cnt += r.counter;    
+                                }    
+                            });    
+                              
+                            if (cnt >= 5) { // Поріг 5 голосів як у робочому плагіні    
+                                const cubV = (((data.name?7.4:6.5)*(data.name?50:150)+sum)/((data.name?50:150)+cnt)).toFixed(1);    
+                                ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;    
+                            }    
+                        } catch (e) {}    
+                    }    
+                      
+                    // Вставляємо всі рейтинги одночасно    
+                    if (ratesHtml) {    
+                        render.find('.cas-rate-items').html(ratesHtml);    
+                    }    
+                      
                     const cacheId = 'tmdb_' + data.id;    
                     const cached = getCachedData(cacheId);    
                     const processImagesWrapper = async (res) => {    
                         try { await processImages(render, data, res); } catch (e) {}    
                     };    
+                      
                     if (cached) processImagesWrapper(cached);    
                     else {    
                         const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());    
@@ -506,22 +546,26 @@
                             render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);    
                         });    
                     }    
+                      
                     debouncedLoadMovieData(render, data);    
-                    if (Lampa.Storage.get('cas_show_rating') && event.data.reactions && event.data.reactions.result) {    
-                        try {    
-                            let sum = 0, cnt = 0;    
-                            const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };    
-                            event.data.reactions.result.forEach(r => { if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; } });    
-                            if (cnt >= 5) {    
-                                const cubV = (((data.name?7.4:6.5)*(data.name?50:150)+sum)/((data.name?50:150)+cnt)).toFixed(1);    
-                                const currentRates = render.find('.cas-rate-items').html();    
-                                render.find('.cas-rate-items').html(currentRates + `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`);    
-                            }    
-                        } catch (e) {}    
-                    }    
                 }    
-                const animationDelay = Lampa.Storage.get('cas_performance_mode') ? 0 : 100;    
-                setTimeout(() => content.addClass('cas-animated'), animationDelay);    
+                  
+                setTimeout(() => content.addClass('cas-animated'), 100);    
+                  
+                // Покращене встановлення фокусу    
+                setTimeout(() => {    
+                    const firstButton = render.find('.full-start-new__buttons .full-start__button').first();    
+                    if (firstButton.length) {    
+                        render.find('.full-start__button').removeClass('focus');    
+                        firstButton.addClass('focus').trigger('focus');    
+                          
+                        setTimeout(() => {    
+                            if (!firstButton.hasClass('focus')) {    
+                                firstButton.addClass('focus').trigger('focus');    
+                            }    
+                        }, 50);    
+                    }    
+                }, 200);    
             }    
         });    
     }    
@@ -538,3 +582,5 @@
     if (window.appready) startPlugin();    
     else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') startPlugin(); });    
 })();
+  
+  
