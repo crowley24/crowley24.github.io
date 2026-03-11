@@ -407,21 +407,24 @@
         }    
     }    
     
-    async function loadMovieDataOptimized(render, data) {    
-        const tasks = [];    
-        if (Lampa.Storage.get('cas_show_description')) {    
-            tasks.push(Promise.resolve().then(() => {    
-                render.find('.cas-description').text(data.overview || '').show();    
-            }));    
-        }    
-        if (Lampa.Storage.get('cas_show_rating')) {    
-            tasks.push(Promise.resolve().then(() => {    
-                const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);    
-                if (tmdbV > 0) {    
-                    ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;    
-                }    
-            }));    
-        }    
+    async function loadMovieDataOptimized(render, data) {  
+    const tasks = [];  
+    let ratesHtml = ''; // Додайте цей рядок на початку функції  
+      
+    if (Lampa.Storage.get('cas_show_description')) {  
+        tasks.push(Promise.resolve().then(() => {  
+            render.find('.cas-description').text(data.overview || '').show();  
+        }));  
+    }  
+      
+    if (Lampa.Storage.get('cas_show_rating')) {  
+        tasks.push(Promise.resolve().then(() => {  
+            const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);  
+            if (tmdbV > 0) {  
+                ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;  
+            }  
+        }));  
+    }  
         tasks.push(Promise.resolve().then(() => {    
             const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));    
             const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');    
