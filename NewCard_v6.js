@@ -475,49 +475,68 @@
         }    
     }, 300);    
     
-    function attachLoader() {    
-        Lampa.Listener.follow('full', (event) => {    
-            if (event.type === 'complite') {    
-                const data = event.data.movie;    
-                const render = event.object.activity.render();    
-                const content = render.find('.left-title__content');    
-                content.removeClass('cas-animated');    
-                event.object.activity.onBeforeDestroy = cleanup;    
-                if (data && data.id) {    
-                    render.data('movie', data);    
-                    const cacheId = 'tmdb_' + data.id;    
-                    const cached = getCachedData(cacheId);    
-                    const processImagesWrapper = async (res) => {    
-                        try { await processImages(render, data, res); } catch (e) {}    
-                    };    
-                    if (cached) processImagesWrapper(cached);    
-                    else {    
-                        const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());    
-                        $.getJSON(imagesUrl, (res) => {    
-                            setCachedData(cacheId, res);    
-                            processImagesWrapper(res);    
-                        }).fail(() => {    
-                            render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);    
-                        });    
-                    }    
-                    debouncedLoadMovieData(render, data);    
-                    if (Lampa.Storage.get('cas_show_rating') && event.data.reactions && event.data.reactions.result) {    
-                        try {    
-                            let sum = 0, cnt = 0;    
-                            const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };    
-                            event.data.reactions.result.forEach(r => { if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; } });    
-                            if (cnt >= 5) {    
-                                const cubV = (((data.name?7.4:6.5)*(data.name?50:150)+sum)/((data.name?50:150)+cnt)).toFixed(1);    
-                                const currentRates = render.find('.cas-rate-items').html();    
-                                render.find('.cas-rate-items').html(currentRates + `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`);    
-                            }    
-                        } catch (e) {}    
-                    }    
-                }    
-                setTimeout(() => content.addClass('cas-animated'), 100);    
-            }    
-        });    
-    }    
+    function attachLoader() {  
+    Lampa.Listener.follow('full', (event) => {  
+        if (event.type === 'complite') {  
+            const data = event.data.movie;  
+            const render = event.object.activity.render();  
+            const content = render.find('.left-title__content');  
+            content.removeClass('cas-animated');  
+            event.object.activity.onBeforeDestroy = cleanup;  
+              
+            if (data && data.id) {  
+                render.data('movie', data);  
+                const cacheId = 'tmdb_' + data.id;  
+                const cached = getCachedData(cacheId);  
+                const processImagesWrapper = async (res) => {  
+                    try { await processImages(render, data, res); } catch (e) {}  
+                };  
+                  
+                if (cached) processImagesWrapper(cached);  
+                else {  
+                    const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());  
+                    $.getJSON(imagesUrl, (res) => {  
+                        setCachedData(cacheId, res);  
+                        processImagesWrapper(res);  
+                    }).fail(() => {  
+                        render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);  
+                    });  
+                }  
+                  
+                debouncedLoadMovieData(render, data);  
+                  
+                // Покращена логіка рейтингу CUB  
+                if (Lampa.Storage.get('cas_show_rating') && event.data.reactions && event.data.reactions.result) {  
+                    try {  
+                        let sum = 0, cnt = 0;  
+                        const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };  
+                        event.data.reactions.result.forEach(r => {   
+                            if (r.counter) {   
+                                sum += (r.counter * coef[r.type]);   
+                                cnt += r.counter;   
+                            }   
+                        });  
+                        if (cnt >= 3) { // Зменшено поріг для кращого відображення  
+                            const cubV = (((data.name?7.4:6.5)*(data.name?50:150)+sum)/((data.name?50:150)+cnt)).toFixed(1);  
+                            const currentRates = render.find('.cas-rate-items').html();  
+                            render.find('.cas-rate-items').html(currentRates + `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`);  
+                        }  
+                    } catch (e) {}  
+                }  
+            }  
+              
+            setTimeout(() => content.addClass('cas-animated'), 100);  
+              
+            // Встановлюємо фокус на першу кнопку  
+            setTimeout(() => {  
+                const firstButton = render.find('.full-start-new__buttons .full-start__button').first();  
+                if (firstButton.length) {  
+                    firstButton.trigger('focus');  
+                }  
+            }, 150);  
+        }  
+    });  
+    }
     
     function startPlugin() {     
         try {    
