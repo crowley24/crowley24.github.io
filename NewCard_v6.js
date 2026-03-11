@@ -505,35 +505,53 @@
                   
                 debouncedLoadMovieData(render, data);  
                   
-                // Покращена логіка рейтингу CUB  
+                // Покращена логіка рейтингу CUB з дебагінгом  
                 if (Lampa.Storage.get('cas_show_rating') && event.data.reactions && event.data.reactions.result) {  
+                    console.log('Reactions data:', event.data.reactions.result);  
+                      
                     try {  
                         let sum = 0, cnt = 0;  
                         const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };  
+                          
                         event.data.reactions.result.forEach(r => {   
                             if (r.counter) {   
                                 sum += (r.counter * coef[r.type]);   
                                 cnt += r.counter;   
-                            }   
+                            }  
                         });  
-                        if (cnt >= 3) { // Зменшено поріг для кращого відображення  
+                          
+                        console.log('CUB calculation - sum:', sum, 'count:', cnt);  
+                          
+                        if (cnt >= 1) {  
                             const cubV = (((data.name?7.4:6.5)*(data.name?50:150)+sum)/((data.name?50:150)+cnt)).toFixed(1);  
                             const currentRates = render.find('.cas-rate-items').html();  
                             render.find('.cas-rate-items').html(currentRates + `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`);  
+                            console.log('CUB rating added:', cubV);  
                         }  
-                    } catch (e) {}  
+                    } catch (e) {  
+                        console.error('CUB rating error:', e);  
+                    }  
+                } else {  
+                    console.log('No reactions data available');  
                 }  
             }  
               
             setTimeout(() => content.addClass('cas-animated'), 100);  
               
-            // Встановлюємо фокус на першу кнопку  
+            // Покращене встановлення фокусу  
             setTimeout(() => {  
                 const firstButton = render.find('.full-start-new__buttons .full-start__button').first();  
                 if (firstButton.length) {  
-                    firstButton.trigger('focus');  
+                    render.find('.full-start__button').removeClass('focus');  
+                    firstButton.addClass('focus').trigger('focus');  
+                      
+                    setTimeout(() => {  
+                        if (!firstButton.hasClass('focus')) {  
+                            firstButton.addClass('focus').trigger('focus');  
+                        }  
+                    }, 50);  
                 }  
-            }, 150);  
+            }, 200);  
         }  
     });  
     }
