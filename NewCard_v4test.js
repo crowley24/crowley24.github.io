@@ -369,7 +369,7 @@
     
     async function processImages(render, data, res) {    
         try {    
-            if(!res || !res.logos) throw new Error('No logos');
+            if (!res || !res.logos) throw new Error('No logos available');
             const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];    
             if (bestLogo) {    
                 const quality = Lampa.Storage.get('cas_logo_quality') || 'original';    
@@ -388,18 +388,18 @@
     }    
     
     async function loadMovieDataOptimized(render, data, reactions) {    
+        if (!data) return;
         const container = render.find('.cas-rate-items');    
         let ratesHtml = '';    
             
         if (Lampa.Storage.get('cas_show_rating')) {    
-            // 1. TMDB Rating    
             const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);    
             if (tmdbV > 0) {    
                 ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;    
             }    
     
-            // 2. CUB Rating (ВИПРАВЛЕНО БЕЗПЕКУ ЧИТАННЯ)   
-            if (reactions && Array.isArray(reactions.result) && reactions.result.length > 0) {    
+            // Безпечна обробка реакцій (CUB)
+            if (reactions && Array.isArray(reactions.result)) {    
                 try {    
                     let sum = 0, cnt = 0;    
                     const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };    
@@ -418,7 +418,6 @@
             container.html(ratesHtml).show();    
         }    
     
-        // Studios & Meta    
         const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));    
         const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');    
         render.find('.cas-meta-info').text((time ? time + (genre ? ' • ' : '') : '') + genre);    
@@ -427,7 +426,7 @@
         if (Lampa.Storage.get('cas_show_studios')) {    
             const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 3);    
             render.find('.cas-studios-row').html(studios.map(s => {    
-                let logoType = 'color'; 
+                let logoType = 'color';  
                 const studioName = (s.name || '').toLowerCase();  
                 if (studioName.includes('netflix') || studioName.includes('disney') ||   
                     studioName.includes('warner') || studioName.includes('universal')) {  
@@ -441,30 +440,28 @@
             }).join('')).show();    
         }    
     
-        // Quality & UKR Local (ВИПРАВЛЕНО БЕЗПЕКУ ПАРСЕРА)
         if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser && Lampa.Parser.get) {    
-            try {
-                Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {    
-                    const items = res.Results || res;    
-                    if (items && Array.isArray(items) && items.length > 0) {    
-                        const b = { res: '', hdr: false, dv: false, ukr: false };    
-                        items.slice(0, 15).forEach(i => {    
-                            const t = (i.Title || i.title || '').toLowerCase();    
-                            if (t.includes('4k') || t.includes('2160')) b.res = '4K';    
-                            else if (!b.res && (t.includes('1080') || t.includes('fhd'))) b.res = 'FULL HD';    
-                            if (t.includes('hdr')) b.hdr = true;    
-                            if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) b.dv = true;    
-                            if (t.includes('ukr') || t.includes('укр')) b.ukr = true;    
-                        });    
-                        let qH = '';    
-                        if (b.res) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS[b.res]}"></div>`;    
-                        if (b.dv) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;    
-                        else if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;    
-                        if (b.ukr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;    
-                        if (qH) render.find('.cas-quality-row').html('<span class="cas-sep" style="margin: 0 5px; opacity:0.5;">•</span>' + qH).show();    
-                    }    
-                });
-            } catch (e) { console.error('Parser Error:', e); }    
+            Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {    
+                if (!res) return;
+                const items = res.Results || res;    
+                if (items && Array.isArray(items) && items.length > 0) {    
+                    const b = { res: '', hdr: false, dv: false, ukr: false };    
+                    items.slice(0, 15).forEach(i => {    
+                        const t = (i.Title || i.title || '').toLowerCase();    
+                        if (t.includes('4k') || t.includes('2160')) b.res = '4K';    
+                        else if (!b.res && (t.includes('1080') || t.includes('fhd'))) b.res = 'FULL HD';    
+                        if (t.includes('hdr')) b.hdr = true;    
+                        if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) b.dv = true;    
+                        if (t.includes('ukr') || t.includes('укр')) b.ukr = true;    
+                    });    
+                    let qH = '';    
+                    if (b.res) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS[b.res]}"></div>`;    
+                    if (b.dv) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;    
+                    else if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;    
+                    if (b.ukr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;    
+                    if (qH) render.find('.cas-quality-row').html('<span class="cas-sep" style="margin: 0 5px; opacity:0.5;">•</span>' + qH).show();    
+                }    
+            });    
         }    
     }    
     
@@ -475,12 +472,11 @@
     function attachLoader() {    
         Lampa.Listener.follow('full', (event) => {    
             if (event.type === 'complite') {    
-                // ЗАХИСТ ВІД UNDEFINED (ВИПРАВЛЕНО ПРИЧИНУ ПОМИЛКИ DRAW)
-                const data = (event.data && event.data.movie) ? event.data.movie : null;
-                const activity = (event.object && event.object.activity) ? event.object.activity : null;
-                
-                if (!data || !activity) return;
+                // ПЕРЕВІРКА НАЯВНОСТІ ОБ'ЄКТІВ (ЗАПОБІГАЄ ПОМИЛЦІ DRAW)
+                if (!event.data || !event.data.movie || !event.object || !event.object.activity) return;
 
+                const data = event.data.movie;    
+                const activity = event.object.activity;
                 const render = activity.render();    
                 const content = render.find('.left-title__content');    
                 const reactions = event.data.reactions;    
@@ -497,7 +493,7 @@
                     else {    
                         const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());    
                         $.getJSON(imagesUrl, (res) => { 
-                            if(res) {
+                            if (res) {
                                 setCachedData(cacheId, res); 
                                 processImages(render, data, res); 
                             }
@@ -506,7 +502,7 @@
                     debouncedLoadMovieData(render, data, reactions);    
                 }    
                     
-                setTimeout(() => { if(content) content.addClass('cas-animated'); }, 150);    
+                setTimeout(() => content.addClass('cas-animated'), 150);    
                 setTimeout(() => {    
                     const btn = render.find('.full-start-new__buttons .full-start__button').first();    
                     if (btn.length) btn.addClass('focus').trigger('focus');    
