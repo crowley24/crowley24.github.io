@@ -188,9 +188,13 @@
                                 <svg width="21" height="32" viewBox="0 0 21 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 1.5H19C19.2761 1.5 19.5 1.72386 19.5 2V27.9618C19.5 28.3756 19.0261 28.6103 18.697 28.3595L12.6212 23.7303C11.3682 22.7757 9.63183 22.7757 8.37885 23.7303L2.30302 28.3595C1.9739 28.6103 1.5 28.3756 1.5 27.9618V2C1.5 1.72386 1.72386 1.5 2 1.5Z" stroke="currentColor" stroke-width="2.5"/></svg>    
                                 <span>#{settings_input_links}</span>    
                             </div>    
-                            <div class="full-start__button selector button--options">    
-                                <svg width="38" height="10" viewBox="0 0 38 10" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="4.88968" cy="4.98563" r="4.75394" fill="currentColor"/><circle cx="18.9746" cy="4.98563" r="4.88968" cy="4.98563" r="4.75394" fill="currentColor"/><circle cx="18.9746" cy="4.98563" r="4.75394" fill="currentColor"/><circle cx="33.0596" cy="4.98563" r="4.75394" fill="currentColor"/></svg>    
-                            </div>    
+                            <div class="full-start__button selector button--options">      
+    <svg width="38" height="10" viewBox="0 0 38 10" fill="none" xmlns="http://www.w3.org/2000/svg">  
+        <circle cx="4.88968" cy="4.98563" r="4.75394" fill="currentColor"/>  
+        <circle cx="18.9746" cy="4.98563" r="4.75394" fill="currentColor"/>  
+        <circle cx="33.0596" cy="4.98563" r="4.75394" fill="currentColor"/>  
+    </svg>      
+</div> 
                         </div>    
                     </div>    
                 </div>    
