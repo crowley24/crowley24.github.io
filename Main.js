@@ -3,110 +3,187 @@
       
     if (typeof Lampa === 'undefined') return;  
   
-    // Змінна для зберігання реальних рядків  
-    let realLampaRows = [];  
+    // Конфігурація рядків  
+    const ROWS_CONFIG = [  
+        {   
+            id: 'movies_new',   
+            title: 'Новинки фільмів',   
+            type: 'movies',  
+            url: 'https://uaserials.com/films/p/',  
+            defOrder: 1   
+        },  
+        {   
+            id: 'series_new',   
+            title: 'Новинки серіалів',   
+            type: 'series',  
+            url: 'https://uaserials.com/series/p/',  
+            defOrder: 2   
+        },  
+        {   
+            id: 'random_collection',   
+            title: 'Випадкова добірка',   
+            type: 'random',  
+            url: '',  
+            defOrder: 3   
+        }  
+    ];  
   
-    function getRealRowsFromMainPage() {  
-        return new Promise((resolve) => {  
-            const originalMain = Lampa.Api.sources.tmdb.main;  
-              
-            Lampa.Api.sources.tmdb.main = function (params, oncomplite, onerror) {  
-                const originalCallback = oncomplite;  
-                  
-                oncomplite = function(data) {  
-                    if (data && data.results) {  
-                        // Збираємо реальні рядки з даних  
-                        const rows = data.results.map((item, index) => ({  
-                            id: item.title ? item.title.replace(/\s+/g, '_').toLowerCase() : 'row_' + index,  
-                            title: item.title || 'Рядок ' + (index + 1),  
-                            defOrder: index + 1  
-                        }));  
-                          
-                        resolve(rows);  
+    // Проксі для CORS  
+    const PROXIES = [  
+        'https://cors.lampa.stream/',  
+        'https://cors.eu.org/',  
+        'https://corsproxy.io/?url='  
+    ];  
+  
+    // Функція для завантаження HTML  
+    async function fetchHtml(url) {  
+        for (let proxy of PROXIES) {  
+            try {  
+                let proxyUrl = proxy.includes('?url=') ? proxy + encodeURIComponent(url) : proxy + url;  
+                let res = await fetch(proxyUrl);  
+                if (res.ok) {  
+                    let text = await res.text();  
+                    if (text && text.length > 500 && text.includes('<html') && !text.includes('just a moment...')) {  
+                        return text;  
                     }  
-                      
-                    // Повертаємо оригінальний callback  
-                    return originalCallback(data);  
-                };  
-                  
-                return originalMain.call(this, params, oncomplite, onerror);  
-            };  
-              
-            // Запускаємо запит для отримання даних  
-            originalMain.call(this, { page: 1 }, () => {}, () => {});  
-        });  
+                }  
+            } catch (e) {}  
+        }  
+        return '';  
     }  
   
-    async function createSettings() {  
-        if (!window.Lampa || !Lampa.SettingsApi) return;  
+    // Завантаження каталогу  
+    async function fetchCatalogPage(url, limit = 15) {  
+        let html = await fetchHtml(url);  
+        if (!html) return [];  
           
-        // Отримуємо реальні рядки  
-        if (realLampaRows.length === 0) {  
-            realLampaRows = await getRealRowsFromMainPage();  
-        }  
+        let items = [];  
+        let doc = new DOMParser().parseFromString(html, "text/html");  
           
-        Lampa.SettingsApi.addComponent({  
-            component: 'mainpage_order',  
-            name: 'Порядок головної',  
-            icon: '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>'  
+        doc.querySelectorAll('.movie-item, .film-item, .item').forEach(item => {  
+            let title = item.querySelector('.title, .name')?.textContent?.trim();  
+            let link = item.querySelector('a')?.href;  
+            let image = item.querySelector('img')?.src;  
+              
+            if (title && link) {  
+                items.push({  
+                    title: title,  
+                    url: link.startsWith('http') ? link : 'https://uaserials.com' + link,  
+                    image: image,  
+                    source: 'catalog'  
+                });  
+            }  
         });  
-  
-        let orderValues = {};  
-        for (let i = 1; i <= realLampaRows.length; i++) {  
-            orderValues[i.toString()] = `Позиція ${i}`;  
-        }  
-  
-        realLampaRows.forEach(row => {  
-            Lampa.SettingsApi.addParam({  
-                component: 'mainpage_order',  
-                param: {   
-                    name: row.id + '_order',   
-                    type: 'select',   
-                    values: orderValues,   
-                    default: row.defOrder.toString()   
-                },  
-                field: {   
-                    name: 'Порядок: ' + row.title,   
-                    description: 'Встановіть позицію цього рядка'   
-                }  
-            });  
-        });  
+          
+        return items.slice(0, limit);  
     }  
   
-    function overrideMainPage() {  
-        const originalMain = Lampa.Api.sources.tmdb.main;  
-          
-        Lampa.Api.sources.tmdb.main = function (params, oncomplite, onerror) {  
-            const originalCallback = oncomplite;  
-              
-            oncomplite = function(data) {  
-                if (data && data.results) {  
-                    const processedResults = data.results.map((item, index) => {  
-                        const rowId = item.title ? item.title.replace(/\s+/g, '_').toLowerCase() : 'row_' + index;  
-                        const order = parseInt(Lampa.Storage.get(rowId + '_order')) || (index + 1);  
-                          
-                        return {   
-                            ...item,   
-                            order: order,  
-                            rowId: rowId,  
-                            name: item.name || item.title || 'Row ' + index,  
-                            title: item.title || item.name || 'Row ' + index  
-                        };  
-                    });  
-                      
-                    processedResults.sort((a, b) => a.order - b.order);  
-                      
-                    return originalCallback({ ...data, results: processedResults });  
-                }  
-                return originalCallback(data);  
-            };  
-              
-            return originalMain.call(this, params, oncomplite, onerror);  
+    // Створення картки для каталогу  
+    function makeCatalogCardItem(item) {  
+        return {  
+            title: item.title,  
+            url: item.url,  
+            image: item.image,  
+            source: 'catalog',  
+            card_type: 'basic'  
         };  
     }  
   
-    async function start() {  
-        await createSettings();  
+    // Завантаження випадкової добірки  
+    async function loadRandomCollectionRow(callback) {  
+        try {  
+            let listHtml = await fetchHtml('https://uaserials.com/collections/');  
+            let doc = new DOMParser().parseFromString(listHtml, "text/html");  
+            let collLinks = [];  
+              
+            doc.querySelectorAll('a[href]').forEach(a => {  
+                let href = a.getAttribute('href');  
+                if (href && href.match(/\/collections\/\d+/)) {  
+                    let fUrl = href.startsWith('http') ? href : 'https://uaserials.com' + href;  
+                    if (!collLinks.includes(fUrl)) collLinks.push(fUrl);  
+                }  
+            });  
+              
+            if (collLinks.length === 0) throw new Error("No collections");  
+  
+            let randomUrl = collLinks[Math.floor(Math.random() * collLinks.length)];  
+            let items = await fetchCatalogPage(randomUrl, 15);  
+              
+            callback({   
+                results: items.map(makeCatalogCardItem),   
+                title: '',   
+                params: { items: { mapping: 'line', view: 15 } }   
+            });  
+        } catch(e) {   
+            callback({ results: [] });   
+        }  
+    }  
+  
+    // Завантаження рядків каталогу  
+    async function loadCatalogRow(urlId, loadUrl, title, callback) {  
+        try {  
+            let items = await fetchCatalogPage(loadUrl, 15);  
+            let mapped = items.map(makeCatalogCardItem);  
+            callback({   
+                results: mapped,   
+                title: '',   
+                params: { items: { mapping: 'line', view: 15 } }   
+            });  
+        } catch(e) {   
+            callback({ results: [] });   
+        }  
+    }  
+  
+    // Перевизначення API головної сторінки  
+    function overrideMainPage() {  
+        Lampa.Api.sources.tmdb.main = function (params, oncomplite, onerror) {  
+            let parts_data = [];  
+              
+            // Додаємо завантаження для кожного рядка  
+            ROWS_CONFIG.forEach(row => {  
+                parts_data.push((cb) => {  
+                    cb({  
+                        results: [{  
+                            title: row.title,  
+                            url: row.url,  
+                            type: row.type  
+                        }],  
+                        title: '',   
+                        params: { items: { mapping: 'line', view: 1 } }   
+                    });  
+                });  
+  
+                parts_data.push((cb) => {  
+                    if (row.type === 'random') {  
+                        loadRandomCollectionRow(cb);  
+                    } else {  
+                        loadCatalogRow(row.url, row.url, row.title, cb);  
+                    }  
+                });  
+            });  
+              
+            // Обробка всіх частин  
+            let allResults = [];  
+            let processed = 0;  
+              
+            parts_data.forEach((loader, index) => {  
+                loader((data) => {  
+                    allResults[index] = data;  
+                    processed++;  
+                      
+                    if (processed === parts_data.length) {  
+                        oncomplite({  
+                            results: allResults.flat().filter(item => item && item.results),  
+                            page: params.page || 1  
+                        });  
+                    }  
+                });  
+            });  
+        };  
+    }  
+  
+    // Запуск плагіна  
+    function start() {  
         overrideMainPage();  
     }  
   
