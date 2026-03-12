@@ -35,7 +35,6 @@
         'https://corsproxy.io/?url='  
     ];  
   
-    // Функція для завантаження HTML  
     async function fetchHtml(url) {  
         for (let proxy of PROXIES) {  
             try {  
@@ -52,7 +51,6 @@
         return '';  
     }  
   
-    // Завантаження каталогу  
     async function fetchCatalogPage(url, limit = 15) {  
         let html = await fetchHtml(url);  
         if (!html) return [];  
@@ -78,7 +76,6 @@
         return items.slice(0, limit);  
     }  
   
-    // Створення картки для каталогу  
     function makeCatalogCardItem(item) {  
         return {  
             title: item.title,  
@@ -89,7 +86,6 @@
         };  
     }  
   
-    // Завантаження випадкової добірки  
     async function loadRandomCollectionRow(callback) {  
         try {  
             let listHtml = await fetchHtml('https://uaserials.com/collections/');  
@@ -119,7 +115,6 @@
         }  
     }  
   
-    // Завантаження рядків каталогу  
     async function loadCatalogRow(urlId, loadUrl, title, callback) {  
         try {  
             let items = await fetchCatalogPage(loadUrl, 15);  
@@ -134,17 +129,18 @@
         }  
     }  
   
-    // Перевизначення API головної сторінки  
+    // Правильне перевизначення API  
     function overrideMainPage() {  
         Lampa.Api.sources.tmdb.main = function (params, oncomplite, onerror) {  
             let parts_data = [];  
               
-            // Додаємо завантаження для кожного рядка  
+            // Додаємо заголовки рядків  
             ROWS_CONFIG.forEach(row => {  
                 parts_data.push((cb) => {  
                     cb({  
                         results: [{  
-                            title: row.title,  
+                            name: row.title,  // Обов'язкове поле  
+                            title: row.title, // Обов'язкове поле  
                             url: row.url,  
                             type: row.type  
                         }],  
@@ -153,6 +149,7 @@
                     });  
                 });  
   
+                // Додаємо контент для рядків  
                 parts_data.push((cb) => {  
                     if (row.type === 'random') {  
                         loadRandomCollectionRow(cb);  
@@ -182,7 +179,6 @@
         };  
     }  
   
-    // Запуск плагіна  
     function start() {  
         overrideMainPage();  
     }  
