@@ -283,7 +283,8 @@
         return results.filter(Boolean);  
     }  
   
-    function makeWideCardItem(movie) {  
+    // Стандартна вертикальна картка  
+    function makeCardItem(movie) {  
         return {  
             title: movie.title || movie.name,  
             params: {  
@@ -291,41 +292,6 @@
                     return Lampa.Maker.make('Card', movie, function (module) { return module.only('Card', 'Callback'); });  
                 },  
                 emit: {  
-                    onCreate: function () {  
-                        var item = $(this.html);  
-                        item.addClass('card--wide-custom');  
-                        var view = item.find('.card__view');  
-                        view.empty();   
-                          
-                        var quality = 'w300';  
-                        var imgUrl = PROXIES[0] + Lampa.TMDB.image('t/p/' + quality + movie.backdrop_path);  
-                        view.css({  
-                            'background-image': 'url(' + imgUrl + ')', 'background-size': 'cover', 'background-position': 'center',  
-                            'padding-bottom': '56.25%', 'height': '0', 'position': 'relative'  
-                        });  
-                          
-                        view.append('<div class="card-backdrop-overlay"></div>');  
-  
-                        var voteVal = parseFloat(movie.vote_average);  
-                        if (!isNaN(voteVal) && voteVal > 0) {  
-                            var voteDiv = document.createElement('div');  
-                            voteDiv.className = 'card__vote';  
-                            voteDiv.innerText = voteVal.toFixed(1);  
-                            view.append(voteDiv);  
-                        }  
-  
-                        var yearStr = (movie.release_date || movie.first_air_date || '').toString().substring(0, 4);  
-                        if (yearStr && yearStr.length === 4) {  
-                            var ageDiv = document.createElement('div');  
-                            ageDiv.className = 'card-badge-age';   
-                            ageDiv.innerText = yearStr;  
-                            view.append(ageDiv);  
-                        }  
-  
-                        var descText = movie.overview || 'Опис відсутній.';  
-                        item.append('<div class="custom-title-bottom">' + (movie.title || movie.name) + '</div>');  
-                        item.append('<div class="custom-overview-bottom">' + descText + '</div>');  
-                    },  
                     onlyEnter: function () {  
                         var mType = movie.media_type || (movie.name ? 'tv' : 'movie');  
                         Lampa.Activity.push({ url: '', component: 'full', id: movie.id, method: mType, card: movie, source: movie.source || 'tmdb' });  
@@ -338,10 +304,10 @@
     async function loadRow(urlId, loadUrl, title, callback) {  
         try {  
             let items = await fetchCatalogPage(loadUrl, 15);  
-            let mapped = items.map(makeWideCardItem);  
+            let mapped = items.map(makeCardItem);  
             callback({   
                 results: mapped,   
-                title: '',   
+                title: title,   
                 source: 'uas_pro_source',   
                 uas_content_row: true,   
                 params: { items: { mapping: 'line', view: 15 } }   
@@ -356,11 +322,11 @@
             let items = Array.isArray(res) ? res : (res.items ||[]);  
   
             let tmdbItems = await getLmeTmdbItems(items);  
-            let mappedResults = tmdbItems.map(makeWideCardItem);  
+            let mappedResults = tmdbItems.map(makeCardItem);  
   
             callback({   
                 results: mappedResults,   
-                title: '',   
+                title: 'Знахідки спільноти LME',   
                 source: 'uas_pro_source',   
                 uas_content_row: true,  
                 params: { items: { mapping: 'line', view: 15 } }   
@@ -441,32 +407,6 @@
             let parts_data =[];  
               
             activeRows.forEach(def => {  
-                if (def.type !== 'history') {  
-                    parts_data.push((cb) => {  
-                        cb({  
-                            results:[{  
-                                title: def.title,  
-                                params: {  
-                                    createInstance: function () {  
-                                        return Lampa.Maker.make('Card', { title: def.title }, function (module) { return module.only('Card', 'Callback'); });  
-                                    },  
-                                    emit: {  
-                                        onCreate: function () {  
-                                            var item = $(this.html);  
-                                            item.addClass('card--title-btn');  
-                                            item.empty();   
-                                            item.append('<div class="title-btn-text">' + def.title + '</div>');  
-                                        }  
-                                    }  
-                                }  
-                            }],  
-                            title: '',   
-                            uas_title_row: true,   
-                            params: { items: { mapping: 'line', view: 1 } }  
-                        });  
-                    });  
-                }  
-  
                 parts_data.push((cb) => {  
                     if (def.type === 'history') loadHistoryRow(cb);  
                     else if (def.type === 'uas') loadRow(def.url, def.loadUrl, def.title, cb);  
@@ -508,21 +448,8 @@
   
             if (validItems.length > 0) {  
                 callback({   
-                    results: validItems.map(movie => ({  
-                        title: movie.title || movie.name,  
-                        params: {  
-                            createInstance: function () {  
-                                return Lampa.Maker.make('Card', movie, function (module) { return module.only('Card', 'Callback'); });  
-                            },  
-                            emit: {  
-                                onlyEnter: function () {  
-                                    var mType = movie.media_type || (movie.name ? 'tv' : 'movie');  
-                                    Lampa.Activity.push({ url: '', component: 'full', id: movie.id, method: mType, card: movie, source: movie.source || 'tmdb' });  
-                                }  
-                            }  
-                        }  
-                    })),   
-                    title: '',   
+                    results: validItems.map(makeCardItem),   
+                    title: 'Історія перегляду',   
                     uas_content_row: true,   
                     params: { items: { mapping: 'line', view: 15 } }   
                 });  
@@ -550,10 +477,10 @@
                 return true;  
             });  
   
-            let mapped = finalItems.slice(0, 15).map(makeWideCardItem);  
+            let mapped = finalItems.slice(0, 15).map(makeCardItem);  
             callback({   
                 results: mapped,   
-                title: '',   
+                title: title,   
                 source: 'uas_pro_source',   
                 uas_content_row: true,   
                 params: { items: { mapping: 'line', view: 15 } }   
@@ -576,12 +503,6 @@
                         return Lampa.Maker.make('Card', { title: collection.title }, function (module) { return module.only('Card', 'Callback'); });  
                     },  
                     emit: {  
-                        onCreate: function () {  
-                            var item = $(this.html);  
-                            item.addClass('card--collection-btn');  
-                            item.empty();   
-                            item.append('<div class="collection-title">' + collection.title + '</div>');  
-                        },  
                         onlyEnter: function () {  
                             Lampa.Activity.push({  
                                 url: collection.url,  
@@ -598,7 +519,7 @@
               
             callback({   
                 results: mapped,   
-                title: '',   
+                title: title,   
                 source: 'uas_pro_source',   
                 uas_content_row: true,   
                 params: { items: { mapping: 'line', view: 15 } }   
@@ -624,8 +545,8 @@
             let items = await fetchCatalogPage(randomUrl, 15);  
               
             callback({   
-                results: items.map(makeWideCardItem),   
-                title: '',   
+                results: items.map(makeCardItem),   
+                title: 'Випадкова підбірка',   
                 uas_content_row: true,  
                 params: { items: { mapping: 'line', view: 15 } }   
             });  
@@ -710,7 +631,7 @@
                         title: title,  
                         url: fullUrl  
                     });  
-                 }  
+                }  
             }  
         });  
         return results;  
@@ -762,138 +683,20 @@
                 z-index: 10 !important; color: #fff !important; font-weight: bold !important;  
             }  
   
-            .card--wide-custom { width: 25em !important; margin-right: 0.2em !important; margin-bottom: 0 !important; position: relative; cursor: pointer; transition: transform 0.2s ease, z-index 0.2s ease; z-index: 1; }  
-              
-            .card--wide-custom .card__view { border-radius: 0.4em !important; overflow: hidden !important; box-shadow: 0 3px 6px rgba(0,0,0,0.5); }  
-            .card--wide-custom .card-backdrop-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); pointer-events: none; border-radius: 0.4em !important; z-index: 1; }  
-              
-            .card--wide-custom.focus { z-index: 99 !important; transform: scale(1.08); }  
-            .card--wide-custom.focus .card__view { box-shadow: 0 10px 25px rgba(0,0,0,0.9) !important; border: 3px solid #fff !important; outline: none !important; }  
-  
             .card__vote { right: 0 !important; bottom: 0 !important; padding: 0.2em 0.45em !important; z-index: 2; position: absolute !important; font-weight: bold; background: rgba(0,0,0,0.6); }  
             .card__ua_flag { position: absolute !important; left: 0 !important; bottom: 0 !important; width: 2.4em !important; height: 1.4em !important; font-size: 1.3em !important; background: linear-gradient(180deg, #0057b8 50%, #ffd700 50%) !important; opacity: 0.8 !important; z-index: 2; }  
               
-            .card--wide-custom .card-badge-age { border-radius: 0 0 0 0.5em !important; }  
-            .card--wide-custom .card__vote { border-radius: 0.5em 0 0 0 !important; }   
-            .card--wide-custom .card__type { border-radius: 0 0 0.5em 0 !important; }    
-            .card--wide-custom .card__ua_flag { border-radius: 0 0.5em 0 0 !important; }  
-  
-            .items-line[data-uas-title-row="true"] .items-line__head { display: none !important; }  
             .items-line[data-uas-content-row="true"] .items-line__head { display: none !important; }  
-              
-            .items-line[data-uas-title-row="true"] { margin-top: 0 !important; margin-bottom: 0.5em !important; padding-top: 0 !important; padding-bottom: 0 !important; }  
-            .items-line[data-uas-title-row="true"] .items-line__body { margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }  
-            .items-line[data-uas-title-row="true"] .scroll__item { margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }  
               
             .items-line[data-uas-content-row="true"] { margin-top: 0.1em !important; margin-bottom: 0.5em !important; padding-top: 0 !important; padding-bottom: 0 !important; }  
             .items-line[data-uas-content-row="true"] .items-line__body { margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }  
             .items-line[data-uas-content-row="true"] .scroll__item { margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }  
-  
-            .card--title-btn {  
-                width: 100vw !important;   
-                max-width: 100% !important;   
-                height: auto !important;  
-                background: transparent !important;  
-                border-radius: 1.5em !important;  
-                margin: 0.2em 0 !important;  
-                display: flex !important;  
-                align-items: center !important;   
-                justify-content: flex-start !important;   
-                padding: 0.5em 1.5em !important;   
-                cursor: pointer !important;  
-                border: 2px solid transparent !important;   
-                box-shadow: none !important;  
-                box-sizing: border-box !important;  
-                transition: transform 0.2s ease, border 0.2s ease, background 0.2s ease !important;  
-            }  
-  
-            .card--title-btn.focus {  
-                background: rgba(255, 255, 255, 0.05) !important;  
-                border: 2px solid #fff !important;  
-                box-shadow: none !important;  
-                outline: none !important;  
-                transform: scale(1.01) !important;  
-            }  
-  
-            .title-btn-text {  
-                display: flex !important;  
-                align-items: center !important;  
-                font-size: 1.4em !important;  
-                font-weight: bold !important;  
-                color: #777 !important;   
-                border: none !important;   
-                padding: 0 !important;  
-                line-height: 1.2 !important;  
-                text-align: left !important;  
-                transition: color 0.2s ease, transform 0.2s ease !important;  
-            }  
-  
-            .card--title-btn.focus .title-btn-text {  
-                color: #fff !important;   
-                text-shadow: none !important;   
-                box-shadow: none !important;   
-            }  
-  
-            .card--title-btn .card__view,   
-            .card--title-btn .card__view::after,   
-            .card--title-btn .card__view::before {  
-                display: none !important;  
-            }  
-  
-            .card--collection-btn {  
-                width: 16em !important;  
-                height: 7em !important;  
-                background: rgba(40,40,40,0.8) !important;  
-                border-radius: 0.8em !important;  
-                margin-right: 0.8em !important;  
-                margin-bottom: 0.8em !important;  
-                display: flex !important;  
-                flex-direction: column !important;  
-                align-items: center !important;  
-                justify-content: center !important;  
-                padding: 1em !important;  
-                cursor: pointer !important;  
-                border: 2px solid transparent !important;  
-                box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;  
-                transition: transform 0.2s ease, background 0.2s ease, border 0.2s ease !important;  
-                text-align: center !important;  
-                box-sizing: border-box !important;  
-                position: relative;  
-            }  
-  
-            .card--collection-btn.focus {  
-                background: rgba(60,60,60,0.9) !important;  
-                border: 2px solid #fff !important;  
-                transform: scale(1.05) !important;  
-                z-index: 99 !important;  
-            }  
-  
-            .card--collection-btn .collection-title {  
-                font-size: 1.1em !important;  
-                font-weight: bold !important;  
-                color: #fff !important;  
-                line-height: 1.3 !important;  
-                display: -webkit-box;  
-                -webkit-line-clamp: 2;  
-                -webkit-box-orient: vertical;  
-                overflow: hidden;  
-            }  
-  
-            .card--collection-btn .card__view,   
-            .card--collection-btn .card__view::after,   
-            .card--collection-btn .card__view::before {  
-                display: none !important;  
-            }  
-  
-            .custom-title-bottom { width: 100%; text-align: left; font-size: 1.1em; font-weight: bold; margin-top: 0.3em; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 0.2em; }  
-            .custom-overview-bottom { width: 100%; text-align: left; font-size: 0.85em; color: #bbb; line-height: 1.2; margin-top: 0.2em; padding: 0 0.2em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }  
         `;  
         document.head.appendChild(style);  
   
         Lampa.Listener.follow('line', function (e) {  
             if (e.type === 'create' && e.data && e.line && e.line.render) {  
                 var el = e.line.render();  
-                if (e.data.uas_title_row) el.attr('data-uas-title-row', 'true');  
                 if (e.data.uas_content_row) el.attr('data-uas-content-row', 'true');  
             }  
         });  
@@ -907,9 +710,6 @@
             var html = this.html;  
             var data = this.data;  
             if (!html || !data) return;  
-  
-            var isWideCard = html.classList.contains('card--wide-custom') || $(html).hasClass('card--wide-custom');  
-            if (isWideCard) return;  
   
             var showFlag = Lampa.Storage.get('uas_show_flag');  
             if (showFlag === null || showFlag === undefined) showFlag = true;  
@@ -936,6 +736,6 @@
     if (window.appready) start();  
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });  
   
-})();
-  
+})();  
+    
   
