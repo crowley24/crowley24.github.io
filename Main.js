@@ -378,54 +378,53 @@
     };  
   
     function overrideApi() {  
-        Lampa.Api.sources.tmdb.main = function (params, oncomplite, onerror) {  
-            var rowDefs =[  
-                { id: 'ym_row_history', defOrder: 1, type: 'history', url: '', title: 'Історія перегляду' },  
-                { id: 'ym_row_movies_new', defOrder: 2, type: 'uas', url: 'uas_movies_new', loadUrl: 'https://uaserials.com/films/p/', title: 'Новинки фільмів' },  
-                { id: 'ym_row_series_new', defOrder: 3, type: 'uas', url: 'uas_series_new', loadUrl: 'https://uaserials.com/series/p/', title: 'Новинки серіалів' },  
-                { id: 'ym_row_collections', defOrder: 4, type: 'kinobaza_collections', url: 'kinobaza_collections_list', loadUrl: 'https://kinobaza.com.ua/lists?order_by=popular&page=', title: 'Підбірки KinoBaza' },  
-                { id: 'ym_row_kinobaza', defOrder: 5, type: 'kinobaza', url: 'kinobaza_streaming', loadUrl: 'https://kinobaza.com.ua/online?order_by=date_desc&rating=1&rating_max=10&imdb_rating=1&imdb_rating_max=10&itunes_audio=1&rakuten_audio=1&netflix_audio=1&playmarket_audio=1&takflix_audio=1&sweet_audio=1&primevideo_audio=1&per_page=30&translated=has_ukr_audio&page=', title: 'Новинки Стрімінгів UA' },  
-                { id: 'ym_row_community', defOrder: 6, type: 'community', url: 'uas_community', title: 'Знахідки спільноти LME' },  
-                { id: 'ym_row_movies_watch', defOrder: 7, type: 'uas', url: 'uas_movies_pop', loadUrl: 'https://uaserials.my/filmss/w/', title: 'Популярні фільми' },  
-                { id: 'ym_row_series_pop', defOrder: 8, type: 'uas', url: 'uas_series_pop', loadUrl: 'https://uaserials.com/series/w/', title: 'Популярні серіали' },  
-                { id: 'ym_row_random', defOrder: 9, type: 'random', url: '', title: 'Випадкова підбірка' }  
-            ];  
+    Lampa.Api.sources.tmdb.main = function (params, oncomplite, onerror) {  
+        var rowDefs =[  
+            { id: 'ym_row_history', defOrder: 1, type: 'history', url: '', title: 'Історія перегляду' },  
+            { id: 'ym_row_movies_new', defOrder: 2, type: 'uas', url: 'uas_movies_new', loadUrl: 'https://uaserials.com/films/p/', title: 'Новинки фільмів' },  
+            { id: 'ym_row_series_new', defOrder: 3, type: 'uas', url: 'uas_series_new', loadUrl: 'https://uaserials.com/series/p/', title: 'Новинки серіалів' },  
+            { id: 'ym_row_collections', defOrder: 4, type: 'kinobaza_collections', url: 'kinobaza_collections_list', loadUrl: 'https://kinobaza.com.ua/lists?order_by=popular&page=', title: 'Підбірки KinoBaza' },  
+            { id: 'ym_row_kinobaza', defOrder: 5, type: 'kinobaza', url: 'kinobaza_streaming', loadUrl: 'https://kinobaza.com.ua/online?order_by=date_desc&rating=1&rating_max=10&imdb_rating=1&imdb_rating_max=10&itunes_audio=1&rakuten_audio=1&netflix_audio=1&playmarket_audio=1&takflix_audio=1&sweet_audio=1&primevideo_audio=1&per_page=30&translated=has_ukr_audio&page=', title: 'Новинки Стрімінгів UA' },  
+            { id: 'ym_row_community', defOrder: 6, type: 'community', url: 'uas_community', title: 'Знахідки спільноти LME' },  
+            { id: 'ym_row_movies_watch', defOrder: 7, type: 'uas', url: 'uas_movies_pop', loadUrl: 'https://uaserials.my/filmss/w/', title: 'Популярні фільми' },  
+            { id: 'ym_row_series_pop', defOrder: 8, type: 'uas', url: 'uas_series_pop', loadUrl: 'https://uaserials.com/series/w/', title: 'Популярні серіали' },  
+            { id: 'ym_row_random', defOrder: 9, type: 'random', url: '', title: 'Випадкова підбірка' }  
+        ];  
   
-            let activeRows =[];  
-            for (let def of rowDefs) {  
-                let defSetting = DEFAULT_ROWS_SETTINGS.find(r => r.id === def.id);  
-                let defaultEnabled = defSetting ? defSetting.default : true;  
-                  
-                let enabled = Lampa.Storage.get(def.id);  
-                if (enabled === null || enabled === undefined) enabled = defaultEnabled;  
-                  
-                let order = parseInt(Lampa.Storage.get(def.id + '_order')) || def.defOrder;  
-                if (enabled) activeRows.push({ ...def, order: order });  
-            }  
-            activeRows.sort((a, b) => a.order - b.order);  
+        let activeRows =[];  
+        for (let def of rowDefs) {  
+            let defSetting = DEFAULT_ROWS_SETTINGS.find(r => r.id === def.id);  
+            let defaultEnabled = defSetting ? defSetting.default : true;  
               
-            let parts_data =[];  
+            let enabled = Lampa.Storage.get(def.id);  
+            if (enabled === null || enabled === undefined) enabled = defaultEnabled;  
               
-            activeRows.forEach(def => {  
-                parts_data.push((cb) => {  
-                    if (def.type === 'history') loadHistoryRow(cb);  
-                    else if (def.type === 'uas') loadRow(def.url, def.loadUrl, def.title, cb);  
-                    else if (def.type === 'kinobaza') loadKinobazaRow(def.url, def.loadUrl, def.title, cb);  
-                    else if (def.type === 'kinobaza_collections') loadKinobazaCollectionsRow(def.url, def.loadUrl, def.title, cb);  
-                    else if (def.type === 'community') loadCommunityGemsRow(cb);  
-                    else if (def.type === 'random') loadRandomCollectionRow(cb);  
-                });  
+            let order = parseInt(Lampa.Storage.get(def.id + '_order')) || def.defOrder;  
+            if (enabled) activeRows.push({ ...def, order: order });  
+        }  
+        activeRows.sort((a, b) => a.order - b.order);  
+          
+        let parts_data =[];  
+          
+        activeRows.forEach(def => {  
+            parts_data.push((cb) => {  
+                if (def.type === 'history') loadHistoryRow(cb);  
+                else if (def.type === 'uas') loadRow(def.url, def.loadUrl, def.title, cb);  
+                else if (def.type === 'kinobaza') loadKinobazaRow(def.url, def.loadUrl, def.title, cb);  
+                else if (def.type === 'kinobaza_collections') loadKinobazaCollectionsRow(def.url, def.loadUrl, def.title, cb);  
+                else if (def.type === 'community') loadCommunityGemsRow(cb);  
+                else if (def.type === 'random') loadRandomCollectionRow(cb);  
             });  
+        });  
   
-            if(parts_data.length === 0) {  
-                parts_data.push((cb) => loadRow('uas_movies_new', 'https://uaserials.com/films/p/', 'Новинки фільмів', cb));  
-            }  
+        if(parts_data.length === 0) {  
+            parts_data.push((cb) => loadRow('uas_movies_new', 'https://uaserials.com/films/p/', 'Новинки фільмів', cb));  
+        }  
   
-            Lampa.Api.partNext(parts_data, 2, oncomplite, onerror);  
-        };  
-    }  
-  
-    function loadHistoryRow(callback) {  
+        Lampa.Api.partNext(parts_data, 2, oncomplite, onerror);  
+    };  
+}
+   function loadHistoryRow(callback) {  
         let hist =[];  
         try {  
             if (window.Lampa && Lampa.Favorite && typeof Lampa.Favorite.all === 'function') {  
@@ -673,26 +672,20 @@
         createSettings();  
   
         var style = document.createElement('style');  
-        style.innerHTML = `  
-            .card .card__age { display: none !important; }  
+style.innerHTML = `  
+    .card .card__age { display: none !important; }  
   
-            .card__view .card-badge-age {   
-                display: block !important; right: 0 !important; top: 0 !important; padding: 0.2em 0.45em !important;   
-                background: rgba(0, 0, 0, 0.6) !important;   
-                position: absolute !important; margin-top: 0 !important; font-size: 1.1em !important;   
-                z-index: 10 !important; color: #fff !important; font-weight: bold !important;  
-            }  
+    .card__view .card-badge-age {   
+        display: block !important; right: 0 !important; top: 0 !important; padding: 0.2em 0.45em !important;   
+        background: rgba(0, 0, 0, 0.6) !important;   
+        position: absolute !important; margin-top: 0 !important; font-size: 1.1em !important;   
+        z-index: 10 !important; color: #fff !important; font-weight: bold !important;  
+    }  
   
-            .card__vote { right: 0 !important; bottom: 0 !important; padding: 0.2em 0.45em !important; z-index: 2; position: absolute !important; font-weight: bold; background: rgba(0,0,0,0.6); }  
-            .card__ua_flag { position: absolute !important; left: 0 !important; bottom: 0 !important; width: 2.4em !important; height: 1.4em !important; font-size: 1.3em !important; background: linear-gradient(180deg, #0057b8 50%, #ffd700 50%) !important; opacity: 0.8 !important; z-index: 2; }  
-              
-            .items-line[data-uas-content-row="true"] .items-line__head { display: none !important; }  
-              
-            .items-line[data-uas-content-row="true"] { margin-top: 0.1em !important; margin-bottom: 0.5em !important; padding-top: 0 !important; padding-bottom: 0 !important; }  
-            .items-line[data-uas-content-row="true"] .items-line__body { margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }  
-            .items-line[data-uas-content-row="true"] .scroll__item { margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; padding-bottom: 0 !important; }  
-        `;  
-        document.head.appendChild(style);  
+    .card__vote { right: 0 !important; bottom: 0 !important; padding: 0.2em 0.45em !important; z-index: 2; position: absolute !important; font-weight: bold; background: rgba(0,0,0,0.6); }  
+    .card__ua_flag { position: absolute !important; left: 0 !important; bottom: 0 !important; width: 2.4em !important; height: 1.4em !important; font-size: 1.3em !important; background: linear-gradient(180deg, #0057b8 50%, #ffd700 50%) !important; opacity: 0.8 !important; z-index: 2; }  
+`;  
+document.head.appendChild(style);  
   
         Lampa.Listener.follow('line', function (e) {  
             if (e.type === 'create' && e.data && e.line && e.line.render) {  
