@@ -3,19 +3,47 @@
       
     if (typeof Lampa === 'undefined') return;  
   
-    // Стандартні рядки Lampa  
-    const LAMPA_ROWS = [  
-        { id: 'trending', title: 'Тренди', defOrder: 1 },  
-        { id: 'popular', title: 'Популярні', defOrder: 2 },  
-        { id: 'new_movies', title: 'Новинки фільмів', defOrder: 3 },  
-        { id: 'new_series', title: 'Новинки серіалів', defOrder: 4 },  
-        { id: 'top_rated', title: 'Найвищий рейтинг', defOrder: 5 },  
-        { id: 'upcoming', title: 'Очікувані', defOrder: 6 },  
-        { id: 'airing_today', title: 'Сьогодні в ефірі', defOrder: 7 }  
-    ];  
+    // Змінна для зберігання реальних рядків  
+    let realLampaRows = [];  
   
-    function createSettings() {  
+    function getRealRowsFromMainPage() {  
+        return new Promise((resolve) => {  
+            const originalMain = Lampa.Api.sources.tmdb.main;  
+              
+            Lampa.Api.sources.tmdb.main = function (params, oncomplite, onerror) {  
+                const originalCallback = oncomplite;  
+                  
+                oncomplite = function(data) {  
+                    if (data && data.results) {  
+                        // Збираємо реальні рядки з даних  
+                        const rows = data.results.map((item, index) => ({  
+                            id: item.title ? item.title.replace(/\s+/g, '_').toLowerCase() : 'row_' + index,  
+                            title: item.title || 'Рядок ' + (index + 1),  
+                            defOrder: index + 1  
+                        }));  
+                          
+                        resolve(rows);  
+                    }  
+                      
+                    // Повертаємо оригінальний callback  
+                    return originalCallback(data);  
+                };  
+                  
+                return originalMain.call(this, params, oncomplite, onerror);  
+            };  
+              
+            // Запускаємо запит для отримання даних  
+            originalMain.call(this, { page: 1 }, () => {}, () => {});  
+        });  
+    }  
+  
+    async function createSettings() {  
         if (!window.Lampa || !Lampa.SettingsApi) return;  
+          
+        // Отримуємо реальні рядки  
+        if (realLampaRows.length === 0) {  
+            realLampaRows = await getRealRowsFromMainPage();  
+        }  
           
         Lampa.SettingsApi.addComponent({  
             component: 'mainpage_order',  
@@ -24,11 +52,11 @@
         });  
   
         let orderValues = {};  
-        for (let i = 1; i <= LAMPA_ROWS.length; i++) {  
+        for (let i = 1; i <= realLampaRows.length; i++) {  
             orderValues[i.toString()] = `Позиція ${i}`;  
         }  
   
-        LAMPA_ROWS.forEach(row => {  
+        realLampaRows.forEach(row => {  
             Lampa.SettingsApi.addParam({  
                 component: 'mainpage_order',  
                 param: {   
@@ -53,22 +81,12 @@
               
             oncomplite = function(data) {  
                 if (data && data.results) {  
-                    // Переконуємось що кожен результат має обов'язкові поля  
                     const processedResults = data.results.map((item, index) => {  
-                        // Визначаємо rowId на основі типу контенту  
-                        let rowId = 'row_' + index;  
-                        if (item.title) {  
-                            rowId = item.title.replace(/\s+/g, '_').toLowerCase();  
-                        } else if (item.name) {  
-                            rowId = item.name.replace(/\s+/g, '_').toLowerCase();  
-                        }  
-                          
-                        // Отримуємо порядок з налаштувань  
+                        const rowId = item.title ? item.title.replace(/\s+/g, '_').toLowerCase() : 'row_' + index;  
                         const order = parseInt(Lampa.Storage.get(rowId + '_order')) || (index + 1);  
                           
-                        // Повертаємо об'єкт з усіма обов'язковими полями  
-                        return {  
-                            ...item,  
+                        return {   
+                            ...item,   
                             order: order,  
                             rowId: rowId,  
                             name: item.name || item.title || 'Row ' + index,  
@@ -76,10 +94,8 @@
                         };  
                     });  
                       
-                    // Сортуємо за порядком  
                     processedResults.sort((a, b) => a.order - b.order);  
                       
-                    // Повертаємо відсортовані дані  
                     return originalCallback({ ...data, results: processedResults });  
                 }  
                 return originalCallback(data);  
@@ -89,8 +105,8 @@
         };  
     }  
   
-    function start() {  
-        createSettings();  
+    async function start() {  
+        await createSettings();  
         overrideMainPage();  
     }  
   
