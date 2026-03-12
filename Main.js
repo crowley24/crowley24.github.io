@@ -16,16 +16,16 @@
     ];  
   
     const DEFAULT_ROWS_SETTINGS =[  
-        { id: 'ym_row_history', title: 'Історія перегляду', defOrder: '1', default: true },  
-        { id: 'ym_row_movies_new', title: 'Новинки фільмів', defOrder: '2', default: true },  
-        { id: 'ym_row_series_new', title: 'Новинки серіалів', defOrder: '3', default: true },  
-        { id: 'ym_row_collections', title: 'Підбірки KinoBaza', defOrder: '4', default: true },  
-        { id: 'ym_row_kinobaza', title: 'Новинки Стрімінгів UA', defOrder: '5', default: true },  
-        { id: 'ym_row_community', title: 'Знахідки спільноти LME', defOrder: '6', default: true },  
-        { id: 'ym_row_movies_watch', title: 'Популярні фільми', defOrder: '7', default: true },  
-        { id: 'ym_row_series_pop', title: 'Популярні серіали', defOrder: '8', default: true },  
-        { id: 'ym_row_random', title: 'Випадкова підбірка', defOrder: '9', default: true }  
-    ];  
+    { id: 'ym_row_history', title: 'Історія перегляду', defOrder: '1', default: true },  
+    { id: 'ym_row_movies_new', title: 'Новинки фільмів', defOrder: '2', default: true },  
+    { id: 'ym_row_series_new', title: 'Новинки серіалів', defOrder: '3', default: true },  
+    { id: 'ym_row_collections', title: 'Підбірки KinoBaza', defOrder: '4', default: true },  
+    { id: 'ym_row_kinobaza', title: 'Новинки Стрімінгів UA', defOrder: '5', default: true },  
+    { id: 'ym_row_community', title: 'Знахідки спільноти LME', defOrder: '6', default: true },  
+    { id: 'ym_row_movies_watch', title: 'Популярні фільми', defOrder: '7', default: true },  
+    { id: 'ym_row_series_pop', title: 'Популярні серіали', defOrder: '8', default: true },  
+    { id: 'ym_row_random', title: 'Випадкова підбірка', defOrder: '9', default: true }  
+]; 
   
     var inflight = {};  
     var listCache = {};        
@@ -39,56 +39,56 @@
     });  
   
     function createSettings() {  
-        if (!window.Lampa || !Lampa.SettingsApi) return;  
-        Lampa.SettingsApi.addComponent({  
-            component: 'ymainpage',  
-            name: 'YMainPage',  
-            icon: `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>`  
-        });  
+    if (!window.Lampa || !Lampa.SettingsApi) return;  
+    Lampa.SettingsApi.addComponent({  
+        component: 'tmdb_mp',  
+        name: 'TMDB_MP',  
+        icon: `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>`  
+    });  
   
+    Lampa.SettingsApi.addParam({  
+        component: 'tmdb_mp',  
+        param: { name: 'uas_show_flag', type: 'trigger', default: true },  
+        field: { name: 'Український дубляж', description: 'Пошук та відображення прапорця на картах' }  
+    });  
+  
+    let orderValues = { '1': 'Позиція 1', '2': 'Позиція 2', '3': 'Позиція 3', '4': 'Позиція 4', '5': 'Позиція 5', '6': 'Позиція 6', '7': 'Позиція 7', '8': 'Позиція 8', '9': 'Позиція 9' };  
+  
+    DEFAULT_ROWS_SETTINGS.forEach(r => {  
         Lampa.SettingsApi.addParam({  
-            component: 'ymainpage',  
-            param: { name: 'uas_show_flag', type: 'trigger', default: true },  
-            field: { name: 'Відображення УК озвучок', description: 'Пошук та відображення прапорця на картах' }  
+            component: 'tmdb_mp',  
+            param: { name: r.id, type: 'trigger', default: r.default },  
+            field: { name: r.title, description: 'Показувати цей рядок на головній' }  
         });  
-  
-        let orderValues = { '1': 'Позиція 1', '2': 'Позиція 2', '3': 'Позиція 3', '4': 'Позиція 4', '5': 'Позиція 5', '6': 'Позиція 6', '7': 'Позиція 7', '8': 'Позиція 8', '9': 'Позиція 9' };  
-  
-        DEFAULT_ROWS_SETTINGS.forEach(r => {  
-            Lampa.SettingsApi.addParam({  
-                component: 'ymainpage',  
-                param: { name: r.id, type: 'trigger', default: r.default },  
-                field: { name: 'Вимкнути / Увімкнути: ' + r.title, description: 'Показувати цей рядок на головній' }  
-            });  
-            Lampa.SettingsApi.addParam({  
-                component: 'ymainpage',  
-                param: { name: r.id + '_order', type: 'select', values: orderValues, default: r.defOrder },  
-                field: { name: 'Порядок: ' + r.title, description: 'Яким по рахунку виводити цей рядок' }  
-            });  
-        });  
-  
         Lampa.SettingsApi.addParam({  
-            component: 'ymainpage',  
-            param: { name: 'uas_pro_tmdb_btn', type: 'button' },  
-            field: { name: 'Власний TMDB API ключ', description: 'Натисніть, щоб ввести ключ (працює першочергово)' }  
+            component: 'tmdb_mp',  
+            param: { name: r.id + '_order', type: 'select', values: orderValues, default: r.defOrder },  
+            field: { name: 'Порядок: ' + r.title, description: 'Яким по рахунку виводити цей рядок' }  
         });  
+    });  
   
-        Lampa.Settings.listener.follow('open', function (e) {  
-            if (e.name === 'ymainpage') {  
-                e.body.find('[data-name="uas_pro_tmdb_btn"]').on('hover:enter', function () {  
-                    var currentKey = Lampa.Storage.get('uas_pro_tmdb_apikey') || '';  
-                    Lampa.Input.edit({  
-                        title: 'Введіть TMDB API Ключ', value: currentKey, free: true, nosave: true  
-                    }, function (new_val) {  
-                        if (new_val !== undefined) {  
-                            Lampa.Storage.set('uas_pro_tmdb_apikey', new_val.trim());  
-                            Lampa.Noty.show('TMDB ключ збережено. Перезапустіть застосунок.');  
-                        }  
-                    });  
+    Lampa.SettingsApi.addParam({  
+        component: 'tmdb_mp',  
+        param: { name: 'uas_pro_tmdb_btn', type: 'button' },  
+        field: { name: 'Власний TMDB API ключ', description: 'Натисніть, щоб ввести ключ (працює першочергово)' }  
+    });  
+  
+    Lampa.Settings.listener.follow('open', function (e) {  
+        if (e.name === 'tmdb_mp') {  
+            e.body.find('[data-name="uas_pro_tmdb_btn"]').on('hover:enter', function () {  
+                var currentKey = Lampa.Storage.get('uas_pro_tmdb_apikey') || '';  
+                Lampa.Input.edit({  
+                    title: 'Введіть TMDB API Ключ', value: currentKey, free: true, nosave: true  
+                }, function (new_val) {  
+                    if (new_val !== undefined) {  
+                        Lampa.Storage.set('uas_pro_tmdb_apikey', new_val.trim());  
+                        Lampa.Noty.show('TMDB ключ збережено. Перезапустіть застосунок.');  
+                    }  
                 });  
-            }  
-        });  
-    }  
+            });  
+        }  
+    });  
+}
   
     function getTmdbKey() {  
         let custom = (Lampa.Storage.get('uas_pro_tmdb_apikey') || '').trim();  
@@ -527,30 +527,33 @@
     }  
   
     async function loadRandomCollectionRow(callback) {  
-        try {  
-            let listHtml = await fetchHtml('https://uaserials.com/collections/');  
-            let doc = new DOMParser().parseFromString(listHtml, "text/html");  
-            let collLinks =[];  
-            doc.querySelectorAll('a[href]').forEach(a => {  
-                let href = a.getAttribute('href');  
-                if (href && href.match(/\/collections\/\d+/)) {  
-                    let fUrl = href.startsWith('http') ? href : 'https://uaserials.com' + href;  
-                    if (!collLinks.includes(fUrl)) collLinks.push(fUrl);  
-                }  
-            });  
-            if (collLinks.length === 0) throw new Error("No collections");  
+    try {  
+        let listHtml = await fetchHtml('https://uaserials.com/collections/');  
+        let doc = new DOMParser().parseFromString(listHtml, "text/html");  
+        let collLinks =[];  
+        doc.querySelectorAll('a[href]').forEach(a => {  
+            let href = a.getAttribute('href');  
+            if (href && href.match(/\/collections\/\d+/)) {  
+                let fUrl = href.startsWith('http') ? href : 'https://uaserials.com' + href;  
+                if (!collLinks.includes(fUrl)) collLinks.push(fUrl);  
+            }  
+        });  
+        if (collLinks.length === 0) throw new Error("No collections");  
   
-            let randomUrl = collLinks[Math.floor(Math.random() * collLinks.length)];  
-            let items = await fetchCatalogPage(randomUrl, 15);  
-              
-            callback({   
-                results: items.map(makeCardItem),   
-                title: 'Випадкова підбірка',   
-                uas_content_row: true,  
-                params: { items: { mapping: 'line', view: 15 } }   
-            });  
-        } catch(e) { callback({ results:[] }); }  
-    }  
+        let randomUrl = collLinks[Math.floor(Math.random() * collLinks.length)];  
+        let items = await fetchCatalogPage(randomUrl, 15);  
+          
+        // Фільтруємо лише фільми  
+        let moviesOnly = items.filter(item => item.media_type !== 'tv' && !item.name && !item.number_of_seasons);  
+          
+        callback({   
+            results: moviesOnly.map(makeCardItem),   
+            title: 'Випадкова підбірка',   
+            uas_content_row: true,  
+            params: { items: { mapping: 'line', view: 15 } }   
+        });  
+    } catch(e) { callback({ results:[] }); }  
+}  
   
     function extractKinobazaItems(html) {  
         let doc = new DOMParser().parseFromString(html, "text/html");  
