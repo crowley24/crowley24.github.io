@@ -3,40 +3,38 @@
       
     if (typeof Lampa === 'undefined') return;  
   
-    function overrideMainPage() {  
+    function overrideApi() {  
         Lampa.Api.sources.tmdb.main = function (params, oncomplite, onerror) {  
-            // Створюємо масив завдань для паралельного завантаження  
             let parts_data = [];  
               
-            // Додаємо завдання для кожного рядка  
+            // Новинки фільмів  
             parts_data.push((cb) => {  
                 cb({  
                     results: [{  
-                        name: 'Новинки фільмів',  // Обов'язкове поле  
-                        title: 'Новинки фільмів', // Обов'язкове поле  
-                        url: 'https://uaserials.com/films/p/'  
+                        name: 'Новинки фільмів',  
+                        title: 'Новинки фільмів'  
                     }],  
                     title: ''  
                 });  
             });  
   
+            // Новинки серіалів  
             parts_data.push((cb) => {  
                 cb({  
                     results: [{  
-                        name: 'Новинки серіалів',  // Обов'язкове поле  
-                        title: 'Новинки серіалів', // Обов'язкове поле  
-                        url: 'https://uaserials.com/series/p/'  
+                        name: 'Новинки серіалів',  
+                        title: 'Новинки серіалів'  
                     }],  
                     title: ''  
                 });  
             });  
   
+            // Випадкова добірка  
             parts_data.push((cb) => {  
                 cb({  
                     results: [{  
-                        name: 'Випадкова добірка',  // Обов'язкове поле  
-                        title: 'Випадкова добірка', // Обов'язкове поле  
-                        url: 'https://uaserials.com/collections/'  
+                        name: 'Випадкова добірка',  
+                        title: 'Випадкова добірка'  
                     }],  
                     title: ''  
                 });  
@@ -63,7 +61,7 @@
     }  
   
     function start() {  
-        overrideMainPage();  
+        overrideApi();  
     }  
   
     if (window.appready) start();  
