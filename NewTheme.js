@@ -52,7 +52,6 @@
             -webkit-animation: night-pulse 2s infinite; 
             animation: night-pulse 2s infinite; 
         }
-        
         @-webkit-keyframes night-pulse {
             0% { -webkit-box-shadow: 0 0 20px rgba(233, 64, 87, 0.3); }
             50% { -webkit-box-shadow: 0 0 30px rgba(242, 113, 33, 0.3); }
