@@ -1,1188 +1,343 @@
-(function () {  
-    'use strict';  
-  
-    // Іконка плагіна  
-    const PLUGIN_ICON = '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill="#333"><rect x="5" y="30" width="90" height="40" rx="5" fill="hsl(0, 0%, 30%)"/><rect x="8" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="18" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="28" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="38" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="48" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="58" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="68" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="78" y="33" width="6" height="6" fill="#1E1E1E"/><rect x="8" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="18" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="28" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="38" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="48" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="58" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="68" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="78" y="61" width="6" height="6" fill="#1E1E1E"/><rect x="15" y="40" width="20" height="20" fill="hsl(200, 80%, 70%)"/><rect x="40" y="40" width="20" height="20" fill="hsl(200, 80%, 80%)"/><rect x="65" y="40" width="20" height="20" fill="hsl(200, 80%, 70%)"/></svg>';  
-  
-    let logoCache = new Map();  
-    let logoQueue = [];  
-    let isProcessingQueue = false;  
-    let rafId = null;  
-    let scaleUpdateTimeout = null;  
-  
-    // Нові змінні для студій та рейтингів  
-    const pluginPath = 'https://crowley24.github.io/Icons/';  
-    const svgIcons = {  
-        '4K': pluginPath + '4K.svg',  
-        '2K': pluginPath + '2K.svg',  
-        'FULL HD': pluginPath + 'FULL HD.svg',  
-        'HD': pluginPath + 'HD.svg',  
-        'HDR': pluginPath + 'HDR.svg',  
-        'Dolby Vision': pluginPath + 'Dolby Vision.svg',  
-        '7.1': pluginPath + '7.1.svg',  
-        '5.1': pluginPath + '5.1.svg',  
-        '4.0': pluginPath + '4.0.svg',  
-        '2.0': pluginPath + '2.0.svg',  
-        'DUB': pluginPath + 'DUB.svg',  
-        'UKR': pluginPath + 'UKR.svg'  
-    };  
-  
-    const ratingIcons = {  
-        tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',  
-        cub: 'https://raw.githubusercontent.com/yumata/lampa/9381985ad4371d2a7d5eb5ca8e3daf0f32669eb7/img/logo-icon.svg'  
-    };  
-  
-    // Оптимізована функція відображення логотипа  
-    function displayLogo(logoContainer, titleElement, activity, logoUrl = null) {  
-        if (logoUrl) {  
-            const img = new Image();  
-            img.onload = () => {  
-                logoContainer.html(`<img src="${logoUrl}" alt="" />`);  
-                logoContainer.addClass('loaded');  
-            };  
-            img.onerror = () => {  
-                titleElement.show();  
-                logoContainer.addClass('loaded');  
-            };  
-            img.src = logoUrl;  
-        } else {  
-            titleElement.show();  
-            logoContainer.addClass('loaded');  
-        }  
-    }  
-  
-    // Оптимізована перевірка активності  
-    function isValidActivity() {  
-        const currentActivity = Lampa.Activity.active();  
-        return currentActivity && currentActivity.component === 'full';  
-    }  
-  
-    // Оптимізована обробка черги логотипів  
-    function processLogoQueue() {  
-        if (isProcessingQueue || logoQueue.length === 0) return;  
+(function () {
+    'use strict';
+
+    /**
+     * ПЕРЕМІННІ ТА КЕШУВАННЯ
+     */
+    var logoCache = {}; 
+    var slideshowTimer; 
+    var pluginPath = 'https://crowley24.github.io/Icons/';
+    
+    var settings_list = [
+        { id: 'mobile_interface_animation', default: true },
+        { id: 'mobile_interface_ui_anim', default: true },
+        { id: 'mobile_interface_slideshow', default: true },
+        { id: 'mobile_interface_slideshow_time', default: '10000' },
+        { id: 'mobile_interface_slideshow_quality', default: 'w780' },
+        { id: 'mobile_interface_logo_size_v2', default: '125' },
+        { id: 'mobile_interface_logo_quality', default: 'w500' },
+        { id: 'mobile_interface_show_tagline', default: true },
+        { id: 'mobile_interface_blocks_gap', default: '8px' },
+        { id: 'mobile_interface_ratings_size', default: '0.45em' },
+        { id: 'mobile_interface_studios', default: true },
+        { id: 'mobile_interface_studios_bg_opacity', default: '0.15' },
+        { id: 'mobile_interface_quality', default: true }
+    ];
+
+    settings_list.forEach(function (opt) {
+        if (Lampa.Storage.get(opt.id, 'unset') === 'unset') {
+            Lampa.Storage.set(opt.id, opt.default);
+        }
+    });
+
+    var svgIcons = {
+        '4K': pluginPath + '4K.svg',
+        '2K': pluginPath + '2K.svg',
+        'FULL HD': pluginPath + 'FULL HD.svg',
+        'HD': pluginPath + 'HD.svg',
+        'HDR': pluginPath + 'HDR.svg',
+        'Dolby Vision': pluginPath + 'Dolby Vision.svg',
+        '7.1': pluginPath + '7.1.svg',
+        '5.1': pluginPath + '5.1.svg',
+        '4.0': pluginPath + '4.0.svg',
+        '2.0': pluginPath + '2.0.svg',
+        'DUB': pluginPath + 'DUB.svg',
+        'UKR': pluginPath + 'UKR.svg'
+    };
+
+    var ratingIcons = {
+        tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',
+        cub: 'https://raw.githubusercontent.com/yumata/lampa/9381985ad4371d2a7d5eb5ca8e3daf0f32669eb7/img/logo-icon.svg'
+    };
+
+    /**
+     * СТИЛІ ІНТЕРФЕЙСУ (CSS)
+     */
+    function applyStyles() {
+        var oldStyle = document.getElementById('mobile-interface-styles');
+        if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
+
+        var isPosterAnim = Lampa.Storage.get('mobile_interface_animation');
+        var isUIAnim = Lampa.Storage.get('mobile_interface_ui_anim');
+        var bgOpacity = Lampa.Storage.get('mobile_interface_studios_bg_opacity', '0.15');
+        var rSize = Lampa.Storage.get('mobile_interface_ratings_size', '0.45em');
+        var lHeight = Lampa.Storage.get('mobile_interface_logo_size_v2', '125'); 
+        var showTagline = Lampa.Storage.get('mobile_interface_show_tagline');
+        var blocksGap = Lampa.Storage.get('mobile_interface_blocks_gap', '8px');
+        
+        var style = document.createElement('style');
+        style.id = 'mobile-interface-styles';
+        
+        var css = '';
+        css += '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } } ';
+        css += '@keyframes ui_reveal { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } } ';
+        
+        // ПРИХОВУЄМО ПРЯМОКУТНИЙ ПОСТЕР ТА ЗАЙВЕ
+        css += '.full-start-new__poster, .full-start__poster, .full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status { display:none !important; } ';
+        css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';
+        
+        // АНІМАЦІЯ ДЛЯ ФОНУ (BACKGROUND)
+        css += '.background__image { ';
+        css += (isPosterAnim ? 'animation: kenBurnsEffect 25s ease-in-out infinite !important; ' : '');
+        css += 'transition: opacity 1.5s ease-in-out !important; transform-origin: center center !important; } ';
+        css += '.background { background: #000 !important; } ';
+        
+        // ЦЕНТРУВАННЯ КОНТЕНТУ
+        css += '.full-start-new__right { background: none !important; margin-top: 15vh !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; padding: 0 10% !important; gap: ' + blocksGap + ' !important; width: 100% !important; max-width: 100% !important; } ';
+        
+        var uiAnimClass = isUIAnim ? 'animation: ui_reveal 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; opacity: 0; ' : '';
+
+        css += '.full-start-new__right > div:first-child { ' + uiAnimClass + ' margin: 0 0 -5px 0 !important; font-size: 1.1em !important; opacity: 0.8; order: 1; text-shadow: 0 2px 4px rgba(0,0,0,0.5); } ';
+        css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.1s; width: 100% !important; display: flex !important; justify-content: center !important; align-items: center !important; margin: 0 !important; min-height: 80px; order: 2; overflow: visible !important; } ';
+        css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 85vw !important; object-fit: contain !important; filter: drop-shadow(0 0 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';
+        css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.15s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; opacity: 0.9 !important; font-size: 1.2em !important; margin: 0 !important; color: #fff !important; text-align: center !important; order: 3; text-shadow: 0 2px 8px rgba(0,0,0,0.8); } ';
+        
+        css += '.plugin-info-block { ' + uiAnimClass + ' animation-delay: 0.25s; display: flex; flex-direction: column; align-items: center; gap: ' + blocksGap + '; margin: 0 !important; width: 100%; order: 4; } ';
+        css += '.plugin-ratings-row { ' + uiAnimClass + ' animation-delay: 0.35s; display: flex; justify-content: center; align-items: center; flex-wrap: nowrap; gap: 15px; margin: 0 !important; font-size: calc(' + rSize + ' * 3); width: 100%; order: 5; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.8); } ';
+        css += '.quality-row-inline { ' + uiAnimClass + ' animation-delay: 0.45s; display: flex; justify-content: center; align-items: center; gap: 10px; width: 100%; order: 6; margin-top: 5px !important; } '; 
+        
+        css += '.plugin-rating-item { display: flex; align-items: center; gap: 6px; font-weight: 700; } ';
+        css += '.plugin-rating-item img { height: 1.2em; width: auto; } ';
+        css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.9em; white-space: nowrap; } ';
+        css += '.info-separator { opacity: 0.5; font-size: 0.9em; margin: 0 2px; } ';
+        css += '.quality-item { height: 1.6em; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5)); } '; 
+        css += '.quality-item img { height: 100%; width: auto; } ';
+
+        css += '.studio-row { display: flex; justify-content: center; align-items: center; gap: 12px; width: 100%; } ';
+        css += '.studio-item { height: 2.4em !important; padding: 6px 14px; border-radius: 10px; display: flex; align-items: center; justify-content: center; ';
+        if (bgOpacity !== '0') {
+            css += 'background: rgba(255, 255, 255, ' + bgOpacity + '); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); ';
+        }
+        css += '} ';
+        css += '.studio-item img { height: 100%; width: auto; object-fit: contain; } ';
+
+        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.55s; display: flex !important; justify-content: center !important; gap: 15px !important; width: 100% !important; margin-top: 20px !important; order: 7; } ';
+        css += '.full-start-new .full-start__button { background: rgba(255,255,255,0.08) !important; border-radius: 12px !important; border: none !important; display: flex !important; flex-direction: column !important; align-items: center !important; width: 80px !important; padding: 10px 0 !important; transition: all 0.3s !important; } ';
+        css += '.full-start-new .full-start__button.focus { background: #fff !important; transform: scale(1.1); } ';
+        css += '.full-start-new .full-start__button.focus svg, .full-start-new .full-start__button.focus span { fill: #000 !important; color: #000 !important; opacity: 1 !important; } ';
+        css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 28px !important; height: 28px !important; margin-bottom: 6px !important; fill: #fff !important; } ';
+        css += '.full-start-new .full-start__button span { font-size: 10px !important; text-transform: uppercase !important; opacity: 0.8 !important; } ';
+
+        style.textContent = css;
+        document.head.appendChild(style);
+    }
+
+    /**
+     * ЛОГІКА СЛАЙД-ШОУ ДЛЯ ФОНУ
+     */
+    function startPosterSlideshow(items) {
+        if (!Lampa.Storage.get('mobile_interface_slideshow')) return;
+        var index = 0; 
+        clearInterval(slideshowTimer);
+        
+        slideshowTimer = setInterval(function() {
+            index = (index + 1) % items.length;
+            var imgUrl = Lampa.TMDB.image('/t/p/' + Lampa.Storage.get('mobile_interface_slideshow_quality', 'w780') + items[index].file_path);
             
-        isProcessingQueue = true;  
-        const { cacheKey, mediaType, id, resolve, reject } = logoQueue.shift();  
+            var $bgContainer = $('.background');
+            var $currentImg = $bgContainer.find('.background__image');
             
-        const network = new Lampa.Reguest();  
-        const url = `https://api.themoviedb.org/3/${mediaType}/${id}/images?api_key=${Lampa.TMDB.key()}`;  
-          
-        network.native(url, (json) => {  
-            if (json && json.logos) {  
-                logoCache.set(cacheKey, json);  
-                resolve(json);  
-            } else {  
-                reject(new Error('No logos found'));  
-            }  
-            isProcessingQueue = false;  
-            processLogoQueue();  
-        }, (error) => {  
-            reject(error);  
-            isProcessingQueue = false;  
-            processLogoQueue();  
-        });  
-    }  
-  
-    // Завантаження логотипів через чергу  
-    function loadLogoFromQueue(cacheKey, mediaType, id) {  
-        return new Promise((resolve, reject) => {  
-            logoQueue.push({ cacheKey, mediaType, id, resolve, reject });  
-            processLogoQueue();  
-        });  
-    }  
-  
-    // Функція відображення логотипів студій  
-    function renderStudioLogos(container, data) {  
-        if (!Lampa.Storage.get('applecation_studios', true)) return;  
-          
-        container.empty();  
-          
-        if (data.production_companies && data.production_companies.length > 0) {  
-            const studios = data.production_companies.slice(0, 3); // Обмежуємо до 3 логотипів  
-              
-            studios.forEach(studio => {  
-                if (studio.logo_path) {  
-                    const logoUrl = Lampa.TMDB.image(`/t/p/w185${studio.logo_path}`);  
-                    const studioItem = $(`  
-                        <div class="studio-item">  
-                            <img src="${logoUrl}" alt="${studio.name}" />  
-                        </div>  
-                    `);  
-                    container.append(studioItem);  
-                }  
-            });  
-        }  
-    }  
-  
-    // Функція отримання кольору рейтингу  
-    function getRatingColor(rating) {  
-        if (rating >= 8) return '#4CAF50';  
-        if (rating >= 7) return '#8BC34A';  
-        if (rating >= 6) return '#FFC107';  
-        if (rating >= 5) return '#FF9800';  
-        return '#F44336';  
-    }  
-  
-    // Функція форматування часу  
-    function formatTime(minutes) {  
-        const hours = Math.floor(minutes / 60);  
-        const mins = minutes % 60;  
-        if (hours > 0) {  
-            return `${hours} ${Lampa.Utils.stringToTime(hours * 60).time_h} ${mins} ${Lampa.Utils.stringToTime(mins).time_m}`;  
-        }  
-        return `${mins} ${Lampa.Utils.stringToTime(mins).time_m}`;  
-    }  
-  
-    // Функція отримання CUB рейтингу  
-    function getCubRating(data) {  
-        if (data.reactions && data.reactions.length > 0) {  
-            const total = data.reactions.reduce((sum, r) => sum + r.count, 0);  
-            if (total > 0) {  
-                const positive = data.reactions  
-                    .filter(r => r.type === 'fire' || r.type === 'nice')  
-                    .reduce((sum, r) => sum + r.count, 0);  
-                return Math.round((positive / total) * 10);  
-            }  
-        }  
-        return 0;  
-    }  
-  
-    // Функція отримання якості  
-    function getBestResults(data) {  
-        const best = {  
-            quality: [],  
-            audio: [],  
-            subs: []  
-        };  
-          
-        if (data.source && data.source.quality) {  
-            data.source.quality.forEach(t => {  
-                if (t.indexOf('2160') >= 0) best.quality.push('4K');  
-                if (t.indexOf('1440') >= 0 || t.indexOf('2k') >= 0) best.quality.push('2K');  
-                if (t.indexOf('1080') >= 0) best.quality.push('FULL HD');  
-                if (t.indexOf('720') >= 0) best.quality.push('HD');  
-                if (t.indexOf('480') >= 0) best.quality.push('SD');  
-                if (t.indexOf('hdr')>=0 || t.indexOf(' hdr')>=0) best.hdr = true;  
-                if (t.indexOf('dolby')>=0 || t.indexOf(' dv ')>=0) best.dolbyVision = true;  
-                if (t.indexOf('vision')>=0 || t.indexOf(' dv ')>=0) best.dolbyVision = true;  
-                if (t.indexOf('hdr')>=0) best.hdr = true;  
-                if (t.indexOf('dub')>=0 || t.indexOf('дуб')>=0) best.dub = true;  
-            });  
-        }  
-        return best;  
-    }  
-  
-    // Функція відображення рейтингів  
-    function renderRatings(container, event) {  
-        const data = event.data.movie;  
-        if (!data) return;  
-  
-        container.empty();  
-  
-        // Рядок рейтингів - ліве вирівнювання  
-        const ratingsRow = $('<div class="plugin-ratings-row"></div>');  
-          
-        // TMDB рейтинг  
-        if (data.vote_average && data.vote_average > 0) {  
-            const tmdbRating = $(`  
-                <div class="plugin-rating-item">  
-                    <img src="${ratingIcons.tmdb}" alt="TMDB" />  
-                    <span style="color: ${getRatingColor(data.vote_average)}">${data.vote_average.toFixed(1)}</span>  
-                </div>  
-            `);  
-            ratingsRow.append(tmdbRating);  
-        }  
-  
-        // CUB рейтинг  
-        const cubRating = getCubRating(data);  
-        if (cubRating > 0) {  
-            const cubRatingEl = $(`  
-                <div class="plugin-rating-item">  
-                    <img src="${ratingIcons.cub}" alt="CUB" />  
-                    <span style="color: ${getRatingColor(cubRating)}">${cubRating}</span>  
-                </div>  
-            `);  
-            ratingsRow.append(cubRatingEl);  
-        }  
-  
-        // Тривалість  
-        if (data.runtime && data.runtime > 0) {  
-            const duration = $(`<div class="info-text-item">${formatTime(data.runtime)}</div>`);  
-            ratingsRow.append(duration);  
-        }  
-  
-        // Жанри  
-        if (data.genres && data.genres.length > 0) {  
-            const genres = data.genres.slice(0, 3).map(g => g.name).join(', ');  
-            const genreEl = $(`<div class="info-text-item">${genres}</div>`);  
-            ratingsRow.append(genreEl);  
-        }  
-  
-        // Якість  
-        if (Lampa.Storage.get('applecation_quality', true)) {  
-            const bestResults = getBestResults(data);  
-            if (bestResults.quality && bestResults.quality.length > 0) {  
-                bestResults.quality.forEach(quality => {  
-                    if (svgIcons[quality]) {  
-                        const qualityIcon = $(`  
-                            <div class="quality-item-inline">  
-                                <img src="${svgIcons[quality]}" alt="${quality}" />  
-                            </div>  
-                        `);  
-                        ratingsRow.append(qualityIcon);  
-                    }  
-                });  
-            }  
-        }  
-  
-        container.append(ratingsRow);  
-    }  
-  
-    // Оптимізована функція завантаження логотипа  
-    function loadLogo(event) {  
-        const data = event.data.movie;  
-        const activity = event.object.activity;  
-        if (!data || !activity || !isValidActivity()) return;  
-  
-        const render = activity.render();  
-          
-        const elements = {  
-            logoContainer: render.find('.applecation__logo'),  
-            titleElement: render.find('.full-start-new__title'),  
-            metaText: render.find('.applecation__meta-text'),  
-            infoContainer: render.find('.applecation__info'),  
-            metaContainer: render.find('.applecation__meta'),  
-            descriptionContainer: render.find('.applecation__description')  
-        };  
-  
-        // Очищуємо зайву метаінформацію (для оптимізації)  
-        elements.metaText.empty();  
-        elements.infoContainer.empty();  
-  
-        // Показуємо контент одразу  
-        render.find('.applecation__meta, .applecation__info, .applecation__description')  
-            .addClass('show');  
-  
-        // Перевіряємо кеш  
-        const cacheKey = `${data.id}_${data.name ? 'tv' : 'movie'}`;  
-        if (logoCache.has(cacheKey)) {  
-            const cached = logoCache.get(cacheKey);  
-            const bestLogo = selectBestLogo(cached.logos, 'uk');  
-            const logoUrl = bestLogo ? Lampa.TMDB.image(`/t/p/${getLogoQuality()}${bestLogo.file_path}`) : null;  
-            displayLogo(elements.logoContainer, elements.titleElement, activity, logoUrl);  
-              
-            renderStudioLogos(render.find('.applecation__studio-row'), data);  
-            renderRatings(render.find('.applecation__left'), event);  
-            return;  
-        }  
-  
-        // Завантажуємо з API через чергу  
-        const mediaType = data.name ? 'tv' : 'movie';  
-        loadLogoFromQueue(cacheKey, mediaType, data.id)  
-            .then((imagesData) => {  
-                if (!isValidActivity()) return;  
-                const bestLogo = selectBestLogo(imagesData.logos, 'uk');  
-                const logoUrl = bestLogo ? Lampa.TMDB.image(`/t/p/${getLogoQuality()}${bestLogo.file_path}`) : null;  
-                displayLogo(elements.logoContainer, elements.titleElement, activity, logoUrl);  
-                  
-                renderStudioLogos(render.find('.applecation__studio-row'), data);  
-                renderRatings(render.find('.applecation__left'), event);  
-            })  
-            .catch(() => {  
-                if (!isValidActivity()) return;  
-                displayLogo(elements.logoContainer, elements.titleElement, activity);  
-                  
-                renderStudioLogos(render.find('.applecation__studio-row'), data);  
-                renderRatings(render.find('.applecation__left'), event);  
-            });  
-    }  
-  
-    // Головна функція плагіна  
-    function initializePlugin() {  
-        console.log('NewCard', 'v1.3.0');  
-  
-        if (!Lampa.Platform.screen('tv')) {  
-            console.log('NewCard', 'TV mode only');  
-            return;  
-        }  
-  
-        patchApiImg();  
-        addCustomTemplate();  
-        addStyles();  
-        addSettings();  
-        attachLogoLoader();  
-    }  
-  
-    // Переклади  
-    const translations = {  
-        logo_scale: { uk: 'Розмір логотипу' },  
-        logo_scale_desc: { uk: 'Масштаб логотипу фільму' },  
-        text_scale: { uk: 'Розмір тексту' },  
-        text_scale_desc: { uk: 'Масштаб тексту даних про фільм' },  
-        scale_default: { uk: 'За замовчуванням' },  
-        spacing_scale: { uk: 'Відступи між рядками' },  
-        spacing_scale_desc: { uk: 'Відстань між елементами інформації' },  
-        settings_title_display: { uk: 'Відображення' },  
-        settings_title_scaling: { uk: 'Масштабування' },  
-        studios: { uk: 'Показувати студії' },  
-        quality: { uk: 'Показувати якість' }  
-    };  
-  
-    function t(key) {  
-        return translations[key]?.['uk'] || '???';  
-    }  
-  
-    // Функції керування  
-    function updateZoomState() {  
-        let enabled = Lampa.Storage.get('applecation_apple_zoom', true);  
-        $('body').toggleClass('applecation--zoom-enabled', enabled);             
-    }  
-  
-    // Налаштування  
-    function addSettings() {  
-        const defaults = {  
-            'applecation_logo_scale': '100',  
-            'applecation_text_scale': '100',  
-            'applecation_spacing_scale': '100',  
-            'applecation_apple_zoom': true,  
-            'applecation_original_colors': true,  
-            'applecation_studios': true,  
-            'applecation_quality': true  
-        };  
-  
-        Object.keys(defaults).forEach(key => {  
-            if (Lampa.Storage.get(key) === undefined) {  
-                Lampa.Storage.set(key, defaults[key]);  
-            }  
-        });  
-  
-        Lampa.SettingsApi.addComponent({  
-            component: 'applecation_settings',  
-            name: 'NewCard',  
-            icon: PLUGIN_ICON  
-        });  
-  
-        Lampa.SettingsApi.addParam({  
-            component: 'applecation_settings',  
-            param: { name: 'applecation_apple_zoom', type: 'trigger', default: true },  
-            field: { name: 'Плаваючий зум фону', description: 'Повільна анімація наближення фонового зображення' },  
-            onChange: updateZoomState  
-        });  
-  
-        Lampa.SettingsApi.addParam({  
-            component: 'applecation_settings',  
-            param: {  
-                name: 'applecation_logo_scale',  
-                type: 'select',  
-                values: {  
-                    '70': '70%', '80': '80%', '90': '90%', '100': t('scale_default'),  
-                    '110': '110%', '120': '120%', '130': '130%', '140': '140%',  
-                    '150': '150%', '160': '160%'  
-                },  
-                default: '100'  
-            },  
-            field: { name: t('logo_scale'), description: t('logo_scale_desc') },  
-            onChange: (value) => {  
-                Lampa.Storage.set('applecation_logo_scale', value);  
-                applyScales();  
-            }  
-        });  
-  
-        Lampa.SettingsApi.addParam({  
-            component: 'applecation_settings',  
-            param: {  
-                name: 'applecation_text_scale',  
-                type: 'select',  
-                values: {  
-                    '50':'50%','60':'60%','70':'70%','80':'80%','90':'90%',  
-                    '100':t('scale_default'),'110':'110%','120':'120%','130':'130%',  
-                    '140':'140%','150':'150%','160':'160%','170':'170%','180':'180%'  
-                },  
-                default: '100'  
-            },  
-            field: { name: t('text_scale'), description: t('text_scale_desc') },  
-            onChange: (value) => {  
-                Lampa.Storage.set('applecation_text_scale', value);  
-                applyScales();  
-            }  
-        });  
-  
-        Lampa.SettingsApi.addParam({  
-            component: 'applecation_settings',  
-            param: {  
-                name: 'applecation_spacing_scale',  
-                type: 'select',  
-                values: {  
-                    '50':'50%','60':'60%','70':'70%','80':'80%','90':'90%',  
-                    '100':t('scale_default'),'110':'110%','120':'120%','130':'130%',  
-                    '140':'140%','150':'150%','160':'160%','170':'170%','180':'180%',  
-                    '200':'200%','250':'250%','300':'300%'  
-                },  
-                default: '100'  
-            },  
-            field: { name: t('spacing_scale'), description: t('spacing_scale_desc') },  
-            onChange: (value) => {  
-                Lampa.Storage.set('applecation_spacing_scale', value);  
-                applyScales();  
-            }  
-        });  
-  
-        Lampa.SettingsApi.addParam({  
-            component: 'applecation_settings',  
-            param: { name: 'applecation_studios', type: 'trigger', default: true },  
-            field: { name: t('studios') }  
-        });  
-  
-        Lampa.SettingsApi.addParam({  
-            component: 'applecation_settings',  
-            param: { name: 'applecation_quality', type: 'trigger', default: true },  
-            field: { name: t('quality') }  
-        });  
-    }  
-  
-    // Застосування масштабів  
-    function applyScales() {  
-        const logoScale = Lampa.Storage.get('applecation_logo_scale', '100') / 100;  
-        const textScale = Lampa.Storage.get('applecation_text_scale', '100') / 100;  
-        const spacingScale = Lampa.Storage.get('applecation_spacing_scale', '100') / 100;  
-  
-        if (scaleUpdateTimeout) clearTimeout(scaleUpdateTimeout);  
-          
-        scaleUpdateTimeout = setTimeout(() => {  
-            $('.applecation__logo img').css('transform', `scale(${logoScale})`);  
-            $('.applecation__meta, .applecation__info, .applecation__description').css('font-size', `${textScale}em`);  
-            $('.applecation__studio-row, .plugin-ratings-row').css('gap', `${12 * spacingScale}px`);  
-        }, 100);  
-    }  
-  
-    // Кастомний шаблон  
-    function addCustomTemplate() {  
-        const template = `<div class="full-start full-start--new applecation">  
-            <div class="full-start__background"></div>  
-            <div class="full-start__details">  
-                <div class="full-start-new__body">  
-                    <div class="full-start-new__left">  
-                        <div class="applecation__logo"></div>  
-                        <div class="full-start-new__title hide">#{title}</div>  
-                        <div class="applecation__studio-row"></div>  
-                        <div class="applecation__left"></div>  
-                        <div class="applecation__meta-text"></div>  
-                        <div class="applecation__info"></div>  
-                        <div class="applecation__description">#{overview}</div>  
-                    </div>  
-                    <div class="full-start-new__right">  
-                        <div class="full-start-new__buttons">  
-                            <div class="full-start__button selector view--torrent hide">  
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="50px" height="50px">  
-                                    <path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2z M40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4 S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851 c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29 c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862c-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8 c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722 C42.541,30.867,41.756,30.963,40.5,30.963z" fill="currentColor"/>  
-                                </svg>  
-                                <span>#{full_torrents}</span>  
-                            </div>  
-                    
-                            <div class="full-start__button selector view--trailer">  
-                                <svg height="70" viewBox="0 0 80 70" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                    <path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/>  
-                                </svg>  
-                                <span>#{full_trailers}</span>  
-                            </div>  
-                        </div>  
-                    </div>  
-  
-                    <div class="full-start-new__buttons">  
-                        <div class="full-start__button selector button--like">  
-                            <svg width="38" height="34" viewBox="0 0 38 34" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                <path d="M37.208 10.9742C37.1364 10.8013 37.0314 10.6441 36.899 10.5117C36.7666 10.3794 36.6095 10.2744 36.4365 10.2028L12.0658 0.108375C11.7166 -0.0361828 11.3242 -0.0361227 10.9749 0.108542C10.6257 0.253206 10.3482 0.530634 10.2034 0.879836L0.108666 25.2507C0.0369593 25.4236 3.37953e-05 25.609 2.3187e-08 25.7962C-3.37489e-05 25.9834 0.0368249 26.1688 0.108469 26.3418C0.180114 26.5147 0.28514 26.6719 0.417545 26.8042C0.54995 26.9366 0.707139 27.0416 0.880127 27.1131L17.2452 33.8917C17.5945 34.0361 17.9869 34.0361 18.3362 33.8917L29.6574 29.2017C29.8304 29.1301 29.9875 29.0251 30.1199 28.8928C30.2523 28.7604 30.3573 28.6032 30.4289 28.4303L37.2078 12.065C37.2795 11.8921 37.3164 11.7068 37.3165 11.5196C37.3165 11.3325 37.2796 11.1471 37.208 10.9742ZM20.425 29.9407L21.8784 26.4316L25.3873 27.885L20.425 29.9407ZM28.3407 26.0222L21.6524 23.252C21.3031 23.1075 20.9107 23.1076 20.5615 23.2523C20.2123 23.3969 19.9348 23.6743 19.79 24.0235L17.0194 30.7123L3.28783 25.0247L12.2918 3.28773L34.0286 12.2912L28.3407 26.0222Z" fill="currentColor"/>  
-                                <path d="M25.3493 16.976L24.258 14.3423L16.959 17.3666L15.7196 14.375L13.0859 15.4659L15.4161 21.0916L25.3493 16.976Z" fill="currentColor"/>  
-                            </svg>  
-                            <span>#{title_reactions}</span>  
-                        </div>  
-  
-                        <div class="full-start__button selector button--subscribe hide">  
-                            <svg width="25" height="30" viewBox="0 0 25 30" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                <path d="M6.01892 24C6.27423 27.3562 9.07836 30 12.5 30C15.9216 30 18.7257 27.3562 18.981 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z" fill="currentColor"/>  
-                                <path d="M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z" stroke="currentColor" stroke-width="2.5"/>  
-                            </svg>  
-                            <span>#{title_subscribe}</span>  
-                        </div>  
-  
-                        <div class="full-start__button selector button--options">  
-                            <svg width="38" height="10" viewBox="0 0 38 10" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                <circle cx="4.88968" cy="4.98563" r="4.75394" fill="currentColor"/>  
-                                <circle cx="18.9746" cy="4.98563" r="4.75394" fill="currentColor"/>  
-                                <circle cx="33.0596" cy="4.98563" r="4.75394" fill="currentColor"/>  
-                            </svg>  
-                        </div>  
-                    </div>  
-                </div>  
-  
-                <div class="applecation__right">  
-                    <div class="full-start-new__reactions selector">  
-                        <div>#{reactions_none}</div>  
-                    </div>  
-                              
-                    <div class="full-start-new__rate-line">  
-                        <div class="full-start__status hide"></div>  
-                    </div>  
-                              
-                    <div class="rating--modss" style="display: none;"></div>  
-                </div>  
-            </div>  
-        </div>  
-  
-        <div class="hide buttons--container">  
-            <div class="full-start__button view--torrent hide">  
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="50px" height="50px">  
-                    <path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2z M40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4 S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851 c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29 c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862c-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8 c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722 C42.541,30.867,41.756,30.963,40.5,30.963z" fill="currentColor"/>  
-                </svg>  
-                <span>#{full_torrents}</span>  
-            </div>  
-                    
-            <div class="full-start__button selector view--trailer">  
-                <svg height="70" viewBox="0 0 80 70" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                    <path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/>  
-                </svg>  
-                <span>#{full_trailers}</span>  
-            </div>  
-        </div>  
-    </div>`;  
-  
-        Lampa.Template.add('full_start_new', template);  
-  
-        // Шаблон епізода  
-        const episodeTemplate = `<div class="full-episode selector layer--visible">  
-            <div class="full-episode__img">  
-                <img />  
-               <div class="full-episode__time">{time}</div>  
-            </div>  
-            <div class="full-episode__body">  
-                <div class="full-episode__num">#{full_episode} {num}</div>  
-                <div class="full-episode__name">{name}</div>  
-                <div class="full-episode__overview">{overview}</div>  
-                <div class="full-episode__date">{date}</div>  
-            </div>  
-        </div>`;  
-              
-        Lampa.Template.add('full_episode', episodeTemplate);  
-    }  
-  
-    // Оптимізовані стилі з видаленням backdrop-filter  
-    function addStyles() {  
-        const styles = `<style>  
-/* Основний контейнер */  
-.applecation {  
-    transition: all .3s;  
-}  
-  
-.applecation .full-start-new__body {  
-    height: 80vh;  
-}  
-  
-.applecation .full-start-new__right {  
-    display: flex;  
-    align-items: flex-end;  
-}  
-  
-.applecation .full-start-new__title {  
-    font-size: 2.5em;  
-    font-weight: 700;  
-    line-height: 1.2;  
-    margin-bottom: 0.5em;  
-    text-shadow: 0 0 .1em rgba(0, 0, 0, 0.3);  
-}  
-  
-/* Логотип - оптимізовано */  
-.applecation__logo {  
-    margin-bottom: 0.5em;  
-    opacity: 0;  
-    transform: translateY(20px);  
-    transition: all 0.3s ease-out;  
-}  
-  
-.applecation__logo.loaded {  
-    opacity: 1;  
-    transform: translateY(0);  
-}  
-  
-.applecation__logo img {  
-    display: block;  
-    max-width: 35vw;  
-    width: auto;  
-    height: auto;  
-    object-fit: contain;  
-    object-position: left center;  
-    max-height: 180px;  
-}  
-  
-/* Рядок студій - прибрано фон та backdrop-filter */  
-.applecation__studio-row {  
-    display: flex;  
-    justify-content: flex-start;  
-    align-items: center;  
-    flex-wrap: nowrap !important;  
-    overflow: hidden;  
-    gap: 12px;  
-    width: 100%;  
-    margin-bottom: 0.5em;  
-}  
-  
-.studio-item {  
-    height: 2.2em !important;  
-    padding: 4px 10px;  
-    border-radius: 8px;  
-    display: flex;  
-    align-items: center;  
-    justify-content: center;  
-    flex-shrink: 0;  
-    background: transparent;  
-}  
-  
-.studio-item img {  
-    height: 100%;  
-    width: auto;  
-    object-fit: contain;  
-}  
-  
-/* Рядок рейтингів - вирівняно розміри */  
-.plugin-ratings-row {  
-    display: flex;  
-    justify-content: flex-start;  
-    align-items: center;  
-    flex-wrap: nowrap;  
-    gap: 12px;  
-    margin: 0 !important;  
-    font-size: 1.1em;  
-    width: 100%;  
-    color: #fff;  
-    font-family: "Inter", -apple-system, system-ui, sans-serif;  
-    letter-spacing: 0.02em;  
-}  
-  
-.plugin-rating-item {  
-    display: flex;  
-    align-items: center;  
-    gap: 4px;  
-    font-weight: 700;  
-}  
-  
-.plugin-rating-item img {  
-    height: 1.1em;  
-    width: auto;  
-}  
-  
-.info-text-item {  
-    opacity: 0.9;  
-    font-weight: 500;  
-    font-size: 0.85em;  
-    white-space: nowrap;  
-}  
-  
-.info-separator {  
-    opacity: 0.4;  
-    font-size: 0.8em;  
-    margin: 0 -2px;  
-}  
-  
-/* Якість - вирівняно розмір з іншими елементами */  
-.quality-item-inline {  
-    display: flex;  
-    align-items: center;  
-    height: 1.1em;  
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));  
-}  
-  
-.quality-item-inline img {  
-    height: 100%;  
-    width: auto;  
-    object-fit: contain;  
-}  
-  
-/* Мета інформація - прихована */  
-.applecation__meta {  
-    display: none;  
-}  
-  
-.applecation__info {  
-    display: none;  
-}  
-  
-/* Опис - спрощено */  
-.applecation__description {  
-    color: rgba(255, 255, 255, 0.6);  
-    font-size: 0.95em;  
-    line-height: 1.5;  
-    margin-bottom: 0.5em;  
-    max-width: 35vw;  
-    display: -webkit-box;  
-    -webkit-line-clamp: 3;  
-    -webkit-box-orient: vertical;  
-    overflow: hidden;  
-    text-overflow: ellipsis;  
-    opacity: 0;  
-    transform: translateY(15px);  
-    transition: opacity 0.4s ease-out, transform 0.4s ease-out;  
-    transition-delay: 0.1s;  
-}  
-  
-.applecation__description.show {  
-    opacity: 1;  
-    transform: translateY(0);  
-}  
-  
-/* Ліва і права частини */  
-.applecation__left {  
-    flex-grow: 1;  
-    display: flex;  
-    flex-direction: column;  
-    align-items: flex-start;  
-}  
-  
-.applecation__right {  
-    display: flex;  
-    align-items: flex-end;  
-    flex-shrink: 0;  
-    position: relative;  
-}  
-  
-/* Реакції */  
-.applecation .full-start-new__reactions {  
-    margin: 0;  
-    display: flex;  
-    flex-direction: column-reverse;  
-    align-items: flex-end;  
-}  
-  
-.applecation .full-start-new__reactions > div {  
-    align-self: flex-end;  
-}  
-  
-.applecation .full-start-new__reactions:not(.focus) {  
-    margin: 0;  
-}  
-  
-.applecation .full-start-new__reactions:not(.focus) > div:not(:first-child) {  
-    display: none;  
-}  
-  
-/* Стилі першої реакції */  
-.applecation .full-start-new__reactions > div:first-child .reaction {  
-    display: flex !important;  
-    align-items: center !important;  
-    background-color: rgba(0, 0, 0, 0) !important;  
-    gap: 0 !important;  
-}  
-  
-.applecation .full-start-new__reactions > div:first-child .reaction__icon {  
-    background-color: rgba(0, 0, 0, 0.3) !important;  
-    -webkit-border-radius: 5em;  
-    -moz-border-radius: 5em;  
-    border-radius: 5em;  
-    padding: 0.5em;  
-    width: 2.6em !important;  
-    height: 2.6em !important;  
-}  
-  
-.applecation .full-start-new__reactions > div:first-child .reaction__count {  
-    font-size: 1.2em !important;  
-    font-weight: 500 !important;  
-}  
-  
-/* При фокусі реакції */  
-.applecation .full-start-new__reactions.focus {  
-    gap: 0.5em;  
-}  
-  
-.applecation .full-start-new__reactions.focus > div {  
-    display: block;  
-}  
-  
-/* Приховуємо стандартний rate-line */  
-.applecation .full-start-new__rate-line {  
-    margin: 0;  
-    height: 0;  
-    overflow: hidden;  
-    opacity: 0;  
-    pointer-events: none;  
-}  
-  
-/* Анімація Ken Burns з оптимізацією */  
-@keyframes kenBurns {  
-    0% { transform: scale(1.0) translateZ(0); }  
-    50% { transform: scale(1.1) translateZ(0); }  
-    100% { transform: scale(1.0) translateZ(0); }  
-}  
-  
-/* Базовий стиль фону з оптимізацією */  
-.full-start__background {  
-    contain: layout style paint;  
-    will-change: transform, opacity;  
-    height: calc(100% + 6em);  
-    left: 0 !important;  
-    opacity: 0 !important;  
-    transition: opacity 0.8s ease-out, filter 0.3s ease-out !important;  
-    animation: none !important;  
-    backface-visibility: hidden;  
-    perspective: 1000px;  
-    transform: translateZ(0);  
-    z-index: 0 !important;  
-    position: absolute;  
-    width: 100%;  
-    transform-origin: center center;  
-}  
-  
-/* Фон з'являється */  
-.full-start__background.loaded:not(.dim) {  
-    opacity: 1 !important;  
-}  
-  
-/* Анімація вмикається тільки з класом */  
-body.applecation--zoom-enabled .full-start__background.loaded:not(.dim) {  
-    animation: kenBurns 40s linear infinite !important;  
-}  
-  
-/* Шар затемнення */  
-.full-start__details::before {  
-    content: '';  
-    position: absolute;  
-    top: -150px;  
-    left: -150px;  
-    width: 200%;  
-    height: 200%;  
-    background: linear-gradient(90deg,  
-        rgba(0, 0, 0, 1) 0%,  
-        rgba(0, 0, 0, 0.8) 25%,  
-        rgba(0, 0, 0, 0.4) 50%,  
-        rgba(0, 0, 0, 0) 100%  
-    );  
-    z-index: -1;  
-    pointer-events: none;  
-}  
-  
-/* Гарантуємо, що контент буде зверху */  
-.applecation__logo,  
-.applecation__studio-row,  
-.plugin-ratings-row,  
-.quality-row-inline,  
-.applecation__description {  
-    position: relative;  
-    z-index: 2;  
-}  
-  
-/* Затемнення фону */  
-.full-start__background.dim {  
-    filter: none;  
-}  
-  
-.full-start__background.loaded.applecation-animated {  
-    opacity: 1 !important;  
-}  
-  
-/* Приховуємо статус */  
-.applecation .full-start__status {  
-    display: none;  
-}  
-</style>`;  
-              
-        Lampa.Template.add('applecation_css', styles);  
-        $('body').append(Lampa.Template.get('applecation_css', {}, true));  
-    }  
-  
-    // Патч Api.img  
-    function patchApiImg() {  
-        const originalImg = Lampa.Api.img;  
+            var nextImg = new Image();
+            nextImg.onload = function() {
+                var $next = $('<img class="background__image" src="' + imgUrl + '" style="opacity: 0; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1;">');
+                $bgContainer.append($next);
                 
-        Lampa.Api.img = function(src, size) {  
-            if (size === 'w1280') {  
-                const posterSize = Lampa.Storage.field('poster_size');  
-                const sizeMap = {  
-                    'w200': 'w780',  
-                    'w300': 'w1280',  
-                    'w500': 'original'  
-                };  
-                size = sizeMap[posterSize] || 'w1280';  
-            }  
-            return originalImg.call(this, src, size);  
-        };  
-    }  
-  
-    // Отримання якості логотипа  
-    function getLogoQuality() {  
-        const posterSize = Lampa.Storage.field('poster_size');  
-        const qualityMap = {  
-            'w200': 'w300',  
-            'w300': 'w500',  
-            'w500': 'original'  
-        };  
-        return qualityMap[posterSize] || 'w500';  
-    }  
-            
-    // Вибір найкращого логотипа  
-    function selectBestLogo(logos, currentLang) {  
-        const preferred = logos.filter(l => l.iso_639_1 === currentLang);  
-        if (preferred.length > 0) {  
-            preferred.sort((a, b) => b.vote_average - a.vote_average);  
-            return preferred[0];  
-        }  
-  
-        const english = logos.filter(l => l.iso_639_1 === 'en');  
-        if (english.length > 0) {  
-            english.sort((a, b) => b.vote_average - a.vote_average);  
-            return english[0];  
-        }  
+                setTimeout(function() { 
+                    $next.css('opacity', '1'); 
+                    setTimeout(function(){ 
+                        $currentImg.not($next).remove(); 
+                    }, 1600); 
+                }, 100);
+            }; 
+            nextImg.src = imgUrl;
+        }, parseInt(Lampa.Storage.get('mobile_interface_slideshow_time', '10000')));
+    }
+
+    /**
+     * ЛОГІКА РЕЙТИНГІВ ТА ІНФОРМАЦІЇ
+     */
+    function getRatingColor(val) {
+        var n = parseFloat(val);
+        if (n >= 7.5) return '#2ecc71';
+        if (n >= 6) return '#feca57';
+        if (n > 0) return '#ff4d4d';
+        return '#fff';
+    }
+
+    function formatTime(mins) {
+        if (!mins) return '';
+        var h = Math.floor(mins / 60);
+        var m = mins % 60;
+        return (h > 0 ? h + 'г ' : '') + m + 'хв';
+    }
+
+    function getCubRating(e) {
+        if (!e.data || !e.data.reactions || !e.data.reactions.result) return null;
+        var reactionCoef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };
+        var sum = 0, cnt = 0;
+        e.data.reactions.result.forEach(function(r) {
+            if (r.counter) { sum += (r.counter * reactionCoef[r.type]); cnt += r.counter; }
+        });
+        if (cnt >= 5) {
+            var isTv = e.object.method === 'tv', avg = isTv ? 7.4 : 6.5, m = isTv ? 50 : 150;
+            return ((avg * m + sum) / (m + cnt)).toFixed(1);
+        }
+        return null;
+    }
+
+    function renderRatings(container, e) {
+        container.find('.plugin-ratings-row').remove();
+        container.find('.quality-row-inline').remove();
+        
+        var $row = $('<div class="plugin-ratings-row"></div>');
+        var sep = '<span class="info-separator">•</span>';
+        
+        var tmdb = parseFloat(e.data.movie.vote_average || 0).toFixed(1);
+        if (tmdb > 0) {
+            $row.append('<div class="plugin-rating-item"><img src="'+ratingIcons.tmdb+'"> <span style="color:'+getRatingColor(tmdb)+'">'+tmdb+'</span></div>');
+        }
+        
+        var cub = getCubRating(e);
+        if (cub) {
+            if ($row.children().length > 0) $row.append(sep);
+            $row.append('<div class="plugin-rating-item"><img src="' + ratingIcons.cub + '"> <span style="color:' + getRatingColor(cub) + '">' + cub + '</span></div>');
+        }
+        
+        var runtime = e.data.movie.runtime || (e.data.movie.episode_run_time ? e.data.movie.episode_run_time[0] : 0);
+        if (runtime) {
+            if ($row.children().length > 0) $row.append(sep);
+            $row.append('<div class="info-text-item">' + formatTime(runtime) + '</div>');
+        }
+
+        if (e.data.movie.genres && e.data.movie.genres.length > 0) {
+            if ($row.children().length > 0) $row.append(sep);
+            var genres = e.data.movie.genres.slice(0, 2).map(g => g.name).join(', ');
+            $row.append('<div class="info-text-item">' + genres + '</div>');
+        }
+
+        var $qRow = $('<div class="quality-row-inline"></div>');
+        var $target = container.find('.plugin-info-block'); 
+        $target.after($qRow).after($row);
+    }
+
+    function renderStudioLogos(container, data) {
+        if (!Lampa.Storage.get('mobile_interface_studios')) return;
+        var logos = [];
+        [data.networks, data.production_companies].forEach(function(source) {
+            if (source) source.forEach(function(item) {
+                if (item.logo_path) {
+                    var url = Lampa.Api.img(item.logo_path, 'w200');
+                    if (!logos.some(function(l) { return l.url === url; })) logos.push({ url: url, name: item.name });
+                }
+            });
+        });
+
+        logos.slice(0, 4).forEach(function(logo) {
+            var id = 'lg_' + Math.random().toString(36).substr(2, 9);
+            container.append('<div class="studio-item" id="'+id+'"><img src="'+logo.url+'"></div>');
+            var img = new Image(); img.crossOrigin = 'anonymous';
+            img.onload = function() {
+                var canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
+                canvas.width = this.width; canvas.height = this.height; ctx.drawImage(this, 0, 0);
+                try {
+                    var d = ctx.getImageData(0,0,canvas.width,canvas.height).data, r=0, g=0, b=0, c=0;
+                    for(var i=0; i<d.length; i+=4) { if(d[i+3]>50) { r+=d[i]; g+=d[i+1]; b+=d[i+2]; c++; } }
+                    if(c > 0 && (0.299*r + 0.587*g + 0.114*b) / c < 40) $('#'+id+' img').css('filter', 'brightness(0) invert(1)');
+                } catch(e) {}
+            }; img.src = logo.url;
+        });
+    }
+
+    function getBestResults(results) {
+        var best = { resolution: null, hdr: false, dolbyVision: false, dub: false, ukr: false };
+        if (!results) return best;
+        results.slice(0, 15).forEach(function(item) {
+            var t = (item.Title || '').toLowerCase();
+            if (t.indexOf('ukr')>=0 || t.indexOf('укр')>=0) best.ukr = true;
+            var res = t.indexOf('4k')>=0 ? '4K' : t.indexOf('2k')>=0 ? '2K' : t.indexOf('1080')>=0 ? 'FULL HD' : t.indexOf('720')>=0 ? 'HD' : null;
+            if (res && (!best.resolution || ['HD', 'FULL HD', '2K', '4K'].indexOf(res) > ['HD', 'FULL HD', '2K', '4K'].indexOf(best.resolution))) best.resolution = res;
+            if (t.indexOf('vision')>=0 || t.indexOf(' dv ')>=0) best.dolbyVision = true;
+            if (t.indexOf('hdr')>=0) best.hdr = true;
+            if (t.indexOf('dub')>=0 || t.indexOf('дуб')>=0) best.dub = true;
+        });
+        return best;
+    }
+
+    function loadMovieLogo(movie, $container) {
+        var movieId = movie.id + (movie.name ? '_tv' : '_movie');
+        if (logoCache[movieId]) { 
+            $container.html('<img src="' + logoCache[movieId] + '">'); 
+        }
+        $.ajax({
+            url: 'https://api.themoviedb.org/3/' + (movie.name ? 'tv' : 'movie') + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key(),
+            success: function(res) {
+                var lang = Lampa.Storage.get('language') || 'uk';
+                var logo = res.logos.filter(l => l.iso_639_1 === lang)[0] || res.logos.filter(l => l.iso_639_1 === 'en')[0] || res.logos[0];
                 
-        if (logos.length > 0) {  
-            logos.sort((a, b) => b.vote_average - a.vote_average);  
-            return logos[0];  
-        }  
-  
-        return null;  
-    }  
-  
-    // Оптимізована функція відображення логотипа  
-    function displayLogo(logoContainer, titleElement, activity, logoUrl = null) {  
-        if (logoUrl) {  
-            const img = new Image();  
-            img.onload = () => {  
-                logoContainer.html(`<img src="${logoUrl}" alt="" />`);  
-                logoContainer.addClass('loaded');  
-            };  
-            img.onerror = () => {  
-                titleElement.show();  
-                logoContainer.addClass('loaded');  
-            };  
-            img.src = logoUrl;  
-        } else {  
-            titleElement.show();  
-            logoContainer.addClass('loaded');  
-        }  
-    }  
-  
-    // Перевірка активності  
-    function isValidActivity() {  
-        const currentActivity = Lampa.Activity.active();  
-        return currentActivity && currentActivity.component === 'full';  
-    }  
-  
-    // Оптимізована обробка черги логотипів  
-    function processLogoQueue() {  
-        if (isProcessingQueue || logoQueue.length === 0) return;  
-            
-        isProcessingQueue = true;  
-        const { cacheKey, mediaType, id, resolve, reject } = logoQueue.shift();  
-            
-        const network = new Lampa.Reguest();  
-        const url = `https://api.themoviedb.org/3/${mediaType}/${id}/images?api_key=${Lampa.TMDB.key()}`;  
-          
-        network.native(url, (json) => {  
-            if (json && json.logos) {  
-                logoCache.set(cacheKey, json);  
-                resolve(json);  
-            } else {  
-                reject(new Error('No logos found'));  
-            }  
-            isProcessingQueue = false;  
-            processLogoQueue();  
-        }, (error) => {  
-            reject(error);  
-            isProcessingQueue = false;  
-            processLogoQueue();  
-        });  
-    }  
-  
-    // Завантаження логотипів через чергу  
-    function loadLogoFromQueue(cacheKey, mediaType, id) {  
-        return new Promise((resolve, reject) => {  
-            logoQueue.push({ cacheKey, mediaType, id, resolve, reject });  
-            processLogoQueue();  
-        });  
-    }  
-  
-    // Основна функція завантаження логотипа  
-    function loadLogo(event) {  
-        const data = event.data.movie;  
-        const activity = event.object.activity;  
-        if (!data || !activity || !isValidActivity()) return;  
-  
-        const render = activity.render();  
-          
-        const elements = {  
-            logoContainer: render.find('.applecation__logo'),  
-            titleElement: render.find('.full-start-new__title'),  
-            metaText: render.find('.applecation__meta-text'),  
-            infoContainer: render.find('.applecation__info'),  
-            metaContainer: render.find('.applecation__meta'),  
-            descriptionContainer: render.find('.applecation__description')  
-        };  
-  
-        // Очищуємо зайву метаінформацію  
-        elements.metaText.empty();  
-        elements.infoContainer.empty();  
-  
-        // Показуємо контент одразу  
-        render.find('.applecation__meta, .applecation__info, .applecation__description')  
-            .addClass('show');  
-  
-        // Перевіряємо кеш  
-        const cacheKey = `${data.id}_${data.name ? 'tv' : 'movie'}`;  
-        if (logoCache.has(cacheKey)) {  
-            const cached = logoCache.get(cacheKey);  
-            const bestLogo = selectBestLogo(cached.logos, 'uk');  
-            const logoUrl = bestLogo ? Lampa.TMDB.image(`/t/p/${getLogoQuality()}${bestLogo.file_path}`) : null;  
-            displayLogo(elements.logoContainer, elements.titleElement, activity, logoUrl);  
-              
-            renderStudioLogos(render.find('.applecation__studio-row'), data);  
-            renderRatings(render.find('.applecation__left'), event);  
-            return;  
-        }  
-  
-        // Завантажуємо з API через чергу  
-        const mediaType = data.name ? 'tv' : 'movie';  
-        loadLogoFromQueue(cacheKey, mediaType, data.id)  
-            .then((imagesData) => {  
-                if (!isValidActivity()) return;  
-                const bestLogo = selectBestLogo(imagesData.logos, 'uk');  
-                const logoUrl = bestLogo ? Lampa.TMDB.image(`/t/p/${getLogoQuality()}${bestLogo.file_path}`) : null;  
-                displayLogo(elements.logoContainer, elements.titleElement, activity, logoUrl);  
-                  
-                renderStudioLogos(render.find('.applecation__studio-row'), data);  
-                renderRatings(render.find('.applecation__left'), event);  
-            })  
-            .catch(() => {  
-                if (!isValidActivity()) return;  
-                displayLogo(elements.logoContainer, elements.titleElement, activity);  
-                  
-                renderStudioLogos(render.find('.applecation__studio-row'), data);  
-                renderRatings(render.find('.applecation__left'), event);  
-            });  
-    }  
-  
-    // Головна функція плагіна  
-    function initializePlugin() {  
-        console.log('NewCard', 'v1.3.0');  
-  
-        if (!Lampa.Platform.screen('tv')) {  
-            console.log('NewCard', 'TV mode only');  
-            return;  
-        }  
-  
-        patchApiImg();  
-        addCustomTemplate();  
-        addStyles();  
-        addSettings();  
-        attachLogoLoader();  
-    }  
-  
-    // Функція очікування завантаження фону  
-    function waitForBackgroundLoad(activity, callback) {  
-        const render = activity.render();  
-        const background = render.find('.full-start__background')[0];  
-          
-        if (!background) {  
-            setTimeout(callback, 100);  
-            return;  
-        }  
-  
-        const complete = () => {  
-            background.classList.add('applecation-animated');  
-            callback();  
-        };  
-  
-        if (background.classList.contains('loaded')) {  
-            requestAnimationFrame(() => {  
-                setTimeout(complete, 100);  
-            });  
-            return;  
-        }  
-  
-        // Використовуємо IntersectionObserver для кращої продуктивності  
-        if (typeof IntersectionObserver !== 'undefined') {  
-            const observer = new IntersectionObserver((entries) => {  
-                entries.forEach(entry => {  
-                    if (entry.isIntersecting && entry.target.classList.contains('loaded')) {  
-                        observer.disconnect();  
-                        requestAnimationFrame(() => {  
-                            setTimeout(complete, 100);  
-                        });  
-                    }  
-                });  
-            }, { threshold: 0.1 });  
-  
-            observer.observe(background);  
-                
-            // Запасний таймаут  
-            setTimeout(() => {  
-                observer.disconnect();  
-                if (!background.classList.contains('applecation-animated')) {  
-                    complete();  
-                }  
-            }, 1000);  
-        } else {  
-            // Спрощений fallback  
-            const checkLoad = () => {  
-                if (background.classList.contains('loaded')) {  
-                    requestAnimationFrame(() => {  
-                        setTimeout(complete, 100);  
-                    });  
-                } else {  
-                    requestAnimationFrame(checkLoad);  
-                }  
-            };  
-            checkLoad();  
-        }  
-    }  
-  
-    // Оптимізований дебаунс з requestAnimationFrame  
-    function attachLogoLoader() {  
-        Lampa.Listener.follow('full', (event) => {  
-            if (event.type === 'complite') {  
-                if (rafId) cancelAnimationFrame(rafId);  
-                    
-                rafId = requestAnimationFrame(() => {  
-                    if (isValidActivity()) {      
-                        loadLogo(event);      
-                    }      
-                });      
-            }      
-        });      
-    }      
-      
-    // Правильна реєстрація маніфесту      
-    function registerPlugin() {      
-        const pluginManifest = {      
-            type: 'other',      
-            version: '1.3.0',      
-            name: 'NewCard',      
-            description: 'Новий дизайн картки фільму/серіалу зі студіями та рейтингами.',      
-            author: '',      
-            icon: PLUGIN_ICON      
-        };      
-      
-        if (Lampa.Manifest) {      
-            if (!Lampa.Manifest.plugins) {      
-                Lampa.Manifest.plugins = {};      
-            }      
-                      
-            if (Array.isArray(Lampa.Manifest.plugins)) {      
-                Lampa.Manifest.plugins.push(pluginManifest);      
-            } else {      
-                Lampa.Manifest.plugins['newcard'] = pluginManifest;      
-            }      
-        }      
-    }      
-      
-    // Запуск плагіна      
-    function startPlugin() {      
-        registerPlugin();      
-        initializePlugin();      
-    }      
-      
-    if (window.appready) {      
-        startPlugin();      
-    } else {      
-        Lampa.Listener.follow('app', (event) => {      
-            if (event.type === 'ready') {      
-                startPlugin();      
-            }      
-        });      
-    }      
-          
+                if (logo) {
+                    var url = Lampa.TMDB.image('/t/p/' + Lampa.Storage.get('mobile_interface_logo_quality', 'w500') + logo.file_path.replace('.svg', '.png'));
+                    logoCache[movieId] = url; 
+                    $container.html('<img src="' + url + '">');
+                }
+
+                if (res.backdrops && res.backdrops.length > 1) {
+                    startPosterSlideshow(res.backdrops.slice(0, 15));
+                }
+            }
+        });
+    }
+
+    function init() {
+        Lampa.Listener.follow('full', function (e) {
+            if (e.type === 'destroy') clearInterval(slideshowTimer);
+            if (e.type === 'complite' || e.type === 'complete') {
+                var movie = e.data.movie, $render = e.object.activity.render();
+                loadMovieLogo(movie, $render.find('.full-start-new__title'));
+                $('.plugin-info-block').remove();
+                var $info = $('<div class="plugin-info-block"><div class="studio-row"></div></div>');
+                $render.find('.full-start-new__right').append($info);
+                renderStudioLogos($info.find('.studio-row'), movie);
+                renderRatings($render.find('.full-start-new__right'), e);
+
+                if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Parser.get) {
+                    Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
+                        if (res && res.Results) {
+                            var b = getBestResults(res.Results), list = [];
+                            if (b.resolution) list.push(b.resolution);
+                            if (b.dolbyVision) list.push('Dolby Vision'); else if (b.hdr) list.push('HDR');
+                            if (b.dub) list.push('DUB'); if (b.ukr) list.push('UKR');
+                            var $qRow = $render.find('.quality-row-inline');
+                            list.forEach(function(t) { if (svgIcons[t]) $qRow.append('<div class="quality-item"><img src="'+svgIcons[t]+'"></div>'); });
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    /**
+     * ПАНЕЛЬ НАЛАШТУВАНЬ
+     */
+    function setupSettings() {
+        Lampa.SettingsApi.addComponent({ component: 'mobile_interface', name: 'ТВ та Мобільний інтерфейс', icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z" fill="white"/></svg>' });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_animation', type: 'trigger', default: true }, field: { name: 'Анімація фону' }, onChange: applyStyles });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_ui_anim', type: 'trigger', default: true }, field: { name: 'Анімація елементів' }, onChange: applyStyles });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_slideshow', type: 'trigger', default: true }, field: { name: 'Слайд-шоу фону' } });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_slideshow_time', type: 'select', values: { '10000': '10с', '15000': '15с', '20000': '20с' }, default: '10000' }, field: { name: 'Інтервал слайд-шоу' } });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_logo_size_v2', type: 'select', values: { '125': 'Малий', '150': 'Середній', '180': 'Стандартний', '210': 'Великий' }, default: '125' }, field: { name: 'Висота логотипу' }, onChange: applyStyles });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_show_tagline', type: 'trigger', default: true }, field: { name: 'Показувати слоган' }, onChange: applyStyles });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_blocks_gap', type: 'select', values: { '8px': 'Компактний', '12px': 'Стандартний', '18px': 'Просторий', '24px': 'Панорамний' }, default: '8px' }, field: { name: 'Відступи між блоками' }, onChange: applyStyles });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_ratings_size', type: 'select', values: { '0.4em': 'Малий', '0.45em': 'Середній', '0.5em': 'Великий', '0.55em': 'Максимальний' }, default: '0.45em' }, field: { name: 'Розмір рейтингів' }, onChange: applyStyles });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_studios', type: 'trigger', default: true }, field: { name: 'Показувати студії' } });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_studios_bg_opacity', type: 'select', values: { '0': 'Вимкнено', '0.08': 'Легкий', '0.2': 'Середній', '0.4': 'Світлий' }, default: '0.15' }, field: { name: 'Фон студій' }, onChange: applyStyles });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_quality', type: 'trigger', default: true }, field: { name: 'Показувати якість' } });
+    }
+
+    function startPlugin() {
+        applyStyles(); setupSettings(); init();
+        setInterval(function () { if (window.lampa_settings) window.lampa_settings.blur_poster = false; }, 2000);
+    }
+
+    if (window.appready) startPlugin();
+    else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') startPlugin(); });
 })();
