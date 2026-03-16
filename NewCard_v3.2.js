@@ -43,7 +43,6 @@
         const m = mins % 60;      
         return (h > 0 ? h + 'г ' : '') + m + 'хв';      
     }      
-
     function initializePlugin() {      
         addCustomTemplate();      
         addStyles();      
