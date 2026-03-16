@@ -184,11 +184,9 @@
                             <div class="cas-quality-row" style="display: flex; gap: 8px; align-items: center;"></div>        
                         </div>        
                         <div class="cas-description" style="margin-top: var(--cas-blocks-gap);"></div>        
-                        <div class="cas-details-wrapper" style="margin-top: 10px;">      
-                            <div class="full-start-new__head"></div>           
-                            <div class="full-start-new__details"></div>          
-                        </div>      
-                        <div class="full-start-new__buttons"></div>          
+                        
+                        <div class="full-start__details"></div>
+                        <div class="full-start__buttons"></div>          
                     </div>          
                     <div class="full-start-new__reactions selector hide"></div>          
                     <div class="full-start-new__rate-line hide"></div>          
@@ -197,7 +195,7 @@
             </div>          
         </div>`;          
         Lampa.Template.add('full_start_new', template);          
-    }  
+    } 
       
     function addStyles() {      
         const styles = `<style>      
