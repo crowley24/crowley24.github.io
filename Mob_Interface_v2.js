@@ -80,33 +80,27 @@
         css += 'transform-origin: center center !important; transition: opacity 1.5s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 60%, transparent 100%) !important; } ';
         css += '.full-start-new__right { background: none !important; margin-top: -160px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; padding: 0 10px !important; gap: ' + blocksGap + ' !important; } ';
-        
-        // Капсули Року та Країни (Netflix Style)
-        css += '.plugin-meta-line { display: flex; gap: 6px; order: 1; margin-bottom: 2px; } ';
-        css += '.plugin-meta-item { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 1px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; text-transform: uppercase; } ';
-        css += '.full-start-new__right > div:first-child { display: none !important; } ';
-
+        css += '.full-start-new__right > div:first-child { margin: 0 !important; font-size: 0.9em !important; opacity: 0.8; order: 1; } ';
         css += '.full-start-new__title { width: 100% !important; display: flex !important; justify-content: center !important; align-items: center !important; margin: 5px 0 !important; min-height: 60px; order: 2; overflow: visible !important; } ';
         css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 90vw !important; object-fit: contain !important; filter: drop-shadow(0 0 15px rgba(0,0,0,0.8)); margin: 0 !important; } ';
         css += '.full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; opacity: 0.85 !important; font-size: 1.1em !important; margin: 0 !important; color: #fff !important; text-align: center !important; order: 3; } ';
-        
-        // Єдиний рядок: РЕЙТИНГ + ТРИВАЛІСТЬ + ЖАНР
-        css += '.plugin-ratings-row { display: flex; justify-content: center; align-items: center; flex-wrap: nowrap; gap: 10px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.8); width: 100%; order: 4; color: #fff; } ';
-        css += '.plugin-rating-item { display: flex; align-items: center; gap: 5px; font-weight: 700; } ';
+        css += '.plugin-ratings-row { display: flex; justify-content: center; align-items: center; gap: 15px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.8); width: 100%; order: 4; } ';
+        css += '.plugin-rating-item { display: flex; align-items: center; gap: 6px; font-weight: 700; color: #fff; } ';
         css += '.plugin-rating-item img { height: 1.1em; width: auto; } ';
-        css += '.plugin-extra-info { display: flex; align-items: center; gap: 8px; font-weight: 400; opacity: 0.9; white-space: nowrap; } ';
-        css += '.plugin-extra-info .dot { width: 4px; height: 4px; background: rgba(255,255,255,0.4); border-radius: 50%; flex-shrink: 0; } ';
-
         css += '.plugin-info-block { display: flex; flex-direction: column; align-items: center; gap: ' + blocksGap + '; margin: 0 !important; width: 100%; order: 5; } ';
-        css += '.studio-row, .quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px; width: 100%; } ';
-        css += '.studio-item { height: 3.2em !important; opacity: 0; animation: qb_in 0.4s ease forwards; padding: 5px 12px; border-radius: 10px; display: flex; align-items: center; justify-content: center; ';
+        
+        // Оновлена studio-row для одного рядка
+        css += '.studio-row { display: flex; justify-content: center; align-items: center; flex-wrap: nowrap !important; overflow: hidden; gap: 12px; width: 100%; } ';
+        css += '.quality-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px; width: 100%; } ';
+        
+        css += '.studio-item { height: 2.2em !important; opacity: 0; animation: qb_in 0.4s ease forwards; padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; ';
         if (bgOpacity !== '0') {
             css += 'background: rgba(255, 255, 255, ' + bgOpacity + '); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); ';
         }
         css += '} ';
-        css += '.quality-item { height: 2.3em; opacity: 0; animation: qb_in 0.4s ease forwards; } '; 
+        css += '.quality-item { height: 2.0em; opacity: 0; animation: qb_in 0.4s ease forwards; } '; 
         css += '.studio-item img, .quality-item img { height: 100%; width: auto; object-fit: contain; } ';
-        css += '.full-start-new__buttons { display: flex !important; justify(content: center !important; gap: 10px !important; width: 100% !important; margin-top: 5px !important; order: 6; } ';
+        css += '.full-start-new__buttons { display: flex !important; justify-content: center !important; gap: 10px !important; width: 100% !important; margin-top: 5px !important; order: 6; } ';
         css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; display: flex !important; flex-direction: column !important; align-items: center !important; width: 60px !important; } ';
         css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 24px !important; height: 24px !important; margin-bottom: 5px !important; fill: #fff !important; } ';
         css += '.full-start-new .full-start__button span { font-size: 8px !important; text-transform: uppercase !important; opacity: 0.7 !important; } ';
@@ -117,7 +111,7 @@
     }
 
     /**
-     * ЛОГІКА РЕЙТИНГІВ ТА ДОДАТКОВОЇ ІНФО
+     * ЛОГІКА РЕЙТИНГІВ
      */
     function getRatingColor(val) {
         var n = parseFloat(val);
@@ -141,55 +135,14 @@
         return null;
     }
 
-    function formatRuntime(minutes) {
-        if (!minutes) return '';
-        var h = Math.floor(minutes / 60);
-        var m = minutes % 60;
-        return (h > 0 ? h + 'г ' : '') + m + 'хв';
-    }
-
     function renderRatings(container, e) {
-        container.find('.plugin-ratings-row, .plugin-meta-line').remove();
-        var movie = e.data.movie;
-        
-        // 1. Рік та Країна (Капсули зверху)
-        var year = movie.release_date ? movie.release_date.split('-')[0] : (movie.first_air_date ? movie.first_air_date.split('-')[0] : '');
-        var country = movie.production_countries && movie.production_countries.length ? movie.production_countries[0].iso_3166_1 : '';
-        if (year || country) {
-            var $meta = $('<div class="plugin-meta-line"></div>');
-            if (year) $meta.append('<div class="plugin-meta-item">' + year + '</div>');
-            if (country) $meta.append('<div class="plugin-meta-item">' + country + '</div>');
-            container.prepend($meta);
-        }
-
-        // 2. Єдиний рядок: Рейтинги + Тривалість + Жанр
+        if (!Lampa.Storage.get('mobile_interface_ratings')) return;
+        container.find('.plugin-ratings-row').remove();
         var $row = $('<div class="plugin-ratings-row"></div>');
-        
-        // Рейтинг TMDB
-        var tmdb = parseFloat(movie.vote_average || 0).toFixed(1);
+        var tmdb = parseFloat(e.data.movie.vote_average || 0).toFixed(1);
         if (tmdb > 0) $row.append('<div class="plugin-rating-item"><img src="'+ratingIcons.tmdb+'"> <span style="color:'+getRatingColor(tmdb)+'">'+tmdb+'</span></div>');
-        
-        // Рейтинг CUB
         var cub = getCubRating(e);
         if (cub) $row.append('<div class="plugin-rating-item"><img src="' + ratingIcons.cub + '"> <span style="color:' + getRatingColor(cub) + '">' + cub + '</span></div>');
-        
-        // Тривалість та Жанр одним блоком
-        var runtime = formatRuntime(movie.runtime || movie.episode_run_time);
-        var genres = (movie.genres || []).slice(0, 1).map(function(g){ return g.name; }).join(', ');
-        
-        if (runtime || genres) {
-            var $info = $('<div class="plugin-extra-info"></div>');
-            if (runtime) {
-                $info.prepend('<span class="dot"></span>'); // Розділювач перед часом, якщо є рейтинг
-                $info.append('<span>' + runtime + '</span>');
-            }
-            if (genres) {
-                $info.append('<span class="dot"></span>');
-                $info.append('<span>' + genres + '</span>');
-            }
-            $row.append($info);
-        }
-
         var $target = container.find('.full-start-new__tagline');
         if (!$target.length || !Lampa.Storage.get('mobile_interface_show_tagline')) $target = container.find('.full-start-new__title');
         $target.after($row);
@@ -210,9 +163,10 @@
             });
         });
 
-        logos.forEach(function(logo) {
+        // Обмежуємо до 4 логотипів для одного рядка
+        logos.slice(0, 4).forEach(function(logo, index) {
             var id = 'lg_' + Math.random().toString(36).substr(2, 9);
-            container.append('<div class="studio-item" id="'+id+'"><img src="'+logo.url+'"></div>');
+            container.append('<div class="studio-item" id="'+id+'" style="animation-delay: '+(index * 0.1)+'s"><img src="'+logo.url+'"></div>');
             var img = new Image(); img.crossOrigin = 'anonymous';
             img.onload = function() {
                 var canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
@@ -303,6 +257,9 @@
         });
     }
 
+    /**
+     * ПАНЕЛЬ НАЛАШТУВАНЬ
+     */
     function setupSettings() {
         Lampa.SettingsApi.addComponent({ component: 'mobile_interface', name: 'Мобільний інтерфейс', icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" fill="white"/></svg>' });
 
@@ -310,7 +267,14 @@
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_slideshow', type: 'trigger', default: true }, field: { name: 'Слайд-шоу постера' } });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_slideshow_time', type: 'select', values: { '10000': '10с', '15000': '15с', '20000': '20с' }, default: '10000' }, field: { name: 'Інтервал слайд-шоу' } });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_slideshow_quality', type: 'select', values: { 'w300': '300px', 'w780': '780px', 'w1280': '1280px', 'original': 'Оригінал' }, default: 'w780' }, field: { name: 'Якість фону слайд-шоу' } });
-        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_logo_size_v2', type: 'select', values: { '125': 'Малий', '150': 'Середній', '180': 'Стандартний', '210': 'Великий' }, default: '125' }, field: { name: 'Висота логотипу' }, onChange: applyStyles });
+        
+        Lampa.SettingsApi.addParam({ 
+            component: 'mobile_interface', 
+            param: { name: 'mobile_interface_logo_size_v2', type: 'select', values: { '125': 'Малий', '150': 'Середній', '180': 'Стандартний', '210': 'Великий' }, default: '125' }, 
+            field: { name: 'Висота логотипу' }, 
+            onChange: applyStyles 
+        });
+        
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_logo_quality', type: 'select', values: { 'w300': '300px', 'w500': '500px', 'original': 'Оригінал' }, default: 'w500' }, field: { name: 'Якість логотипу' } });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_show_tagline', type: 'trigger', default: true }, field: { name: 'Показувати слоган' }, onChange: applyStyles });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_blocks_gap', type: 'select', values: { '8px': 'Компактний', '12px': 'Стандартний', '18px': 'Просторий', '24px': 'Панорамний' }, default: '8px' }, field: { name: 'Відступи між блоками' }, onChange: applyStyles });
