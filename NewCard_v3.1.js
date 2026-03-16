@@ -1,6 +1,7 @@
 (function () {
     'use strict';
-     /**
+
+    /**
      * ПЕРЕМІННІ ТА КЕШУВАННЯ
      */
     var logoCache = {}; 
@@ -30,18 +31,10 @@
     });
 
     var svgIcons = {
-        '4K': pluginPath + '4K.svg',
-        '2K': pluginPath + '2K.svg',
-        'FULL HD': pluginPath + 'FULL HD.svg',
-        'HD': pluginPath + 'HD.svg',
-        'HDR': pluginPath + 'HDR.svg',
-        'Dolby Vision': pluginPath + 'Dolby Vision.svg',
-        '7.1': pluginPath + '7.1.svg',
-        '5.1': pluginPath + '5.1.svg',
-        '4.0': pluginPath + '4.0.svg',
-        '2.0': pluginPath + '2.0.svg',
-        'DUB': pluginPath + 'DUB.svg',
-        'UKR': pluginPath + 'UKR.svg'
+        '4K': pluginPath + '4K.svg', '2K': pluginPath + '2K.svg', 'FULL HD': pluginPath + 'FULL HD.svg',
+        'HD': pluginPath + 'HD.svg', 'HDR': pluginPath + 'HDR.svg', 'Dolby Vision': pluginPath + 'Dolby Vision.svg',
+        '7.1': pluginPath + '7.1.svg', '5.1': pluginPath + '5.1.svg', '4.0': pluginPath + '4.0.svg',
+        '2.0': pluginPath + '2.0.svg', 'DUB': pluginPath + 'DUB.svg', 'UKR': pluginPath + 'UKR.svg'
     };
 
     var ratingIcons = {
@@ -68,92 +61,59 @@
         style.id = 'mobile-interface-styles';
         
         var css = '';
-        css += '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } } ';
+        css += '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.12); } 100% { transform: scale(1); } } ';
         css += '@keyframes ui_reveal { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } } ';
         
-        // ПРИХОВУЄМО ПРЯМОКУТНИЙ ПОСТЕР ТА ЗАЙВЕ
-        css += '.full-start-new__poster, .full-start__poster, .full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status { display:none !important; } ';
+        // ПРИХОВУЄМО ОРИГІНАЛЬНИЙ ПОСТЕР ТА ФОН LAMPA
+        css += '.full-start-new__poster, .full-start__poster, .background__image, .full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="rating-count"], [class*="status"] { display:none !important; } ';
         css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';
         
-        // АНІМАЦІЯ ДЛЯ ФОНУ (BACKGROUND)
-        css += '.background__image { ';
-        css += (isPosterAnim ? 'animation: kenBurnsEffect 25s ease-in-out infinite !important; ' : '');
-        css += 'transition: opacity 1.5s ease-in-out !important; transform-origin: center center !important; } ';
-        css += '.background { background: #000 !important; } ';
-        
-        // ЦЕНТРУВАННЯ КОНТЕНТУ
-        css += '.full-start-new__right { background: none !important; margin-top: 15vh !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; padding: 0 10% !important; gap: ' + blocksGap + ' !important; width: 100% !important; max-width: 100% !important; } ';
+        // НОВИЙ ШАР ФОНУ ДЛЯ АНІМАЦІЇ
+        css += '.custom-bg-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; overflow: hidden; background: #000; } ';
+        css += '.custom-bg-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; transition: opacity 1.8s ease-in-out; ';
+        css += (isPosterAnim ? 'animation: kenBurnsEffect 25s linear infinite !important; ' : '') + '} ';
+        css += '.custom-bg-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.5) 60%, #000 100%); z-index: 0; } ';
+
+        // КОНТЕНТ (ЦЕНТРУВАННЯ ТА ВІДСТУПИ)
+        css += '.full-start-new__right { background: none !important; margin-top: 15vh !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; padding: 0 10px !important; gap: ' + blocksGap + ' !important; width: 100% !important; max-width: 100% !important; } ';
         
         var uiAnimClass = isUIAnim ? 'animation: ui_reveal 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; opacity: 0; ' : '';
 
-        css += '.full-start-new__right > div:first-child { ' + uiAnimClass + ' margin: 0 0 -5px 0 !important; font-size: 1.1em !important; opacity: 0.8; order: 1; text-shadow: 0 2px 4px rgba(0,0,0,0.5); } ';
-        css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.1s; width: 100% !important; display: flex !important; justify-content: center !important; align-items: center !important; margin: 0 !important; min-height: 80px; order: 2; overflow: visible !important; } ';
-        css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 85vw !important; object-fit: contain !important; filter: drop-shadow(0 0 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';
-        css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.15s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; opacity: 0.9 !important; font-size: 1.2em !important; margin: 0 !important; color: #fff !important; text-align: center !important; order: 3; text-shadow: 0 2px 8px rgba(0,0,0,0.8); } ';
+        css += '.full-start-new__right > div:first-child { ' + uiAnimClass + ' margin: 0 0 -5px 0 !important; font-size: 1.1em !important; opacity: 0.8; order: 1; } ';
+        css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.1s; width: 100% !important; display: flex !important; justify-content: center !important; align-items: center !important; margin: 0 !important; min-height: 60px; order: 2; overflow: visible !important; } ';
+        css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 85vw !important; object-fit: contain !important; filter: drop-shadow(0 0 15px rgba(0,0,0,0.8)); margin: 0 !important; } ';
+        css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.15s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; opacity: 0.85 !important; font-size: 1.1em !important; margin: -2px 0 0 0 !important; color: #fff !important; text-align: center !important; order: 3; } ';
         
         css += '.plugin-info-block { ' + uiAnimClass + ' animation-delay: 0.25s; display: flex; flex-direction: column; align-items: center; gap: ' + blocksGap + '; margin: 0 !important; width: 100%; order: 4; } ';
-        css += '.plugin-ratings-row { ' + uiAnimClass + ' animation-delay: 0.35s; display: flex; justify-content: center; align-items: center; flex-wrap: nowrap; gap: 15px; margin: 0 !important; font-size: calc(' + rSize + ' * 3); width: 100%; order: 5; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,0.8); } ';
-        css += '.quality-row-inline { ' + uiAnimClass + ' animation-delay: 0.45s; display: flex; justify-content: center; align-items: center; gap: 10px; width: 100%; order: 6; margin-top: 5px !important; } '; 
+        css += '.plugin-ratings-row { ' + uiAnimClass + ' animation-delay: 0.35s; display: flex; justify-content: center; align-items: center; flex-wrap: nowrap; gap: 12px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.8); width: 100%; order: 5; color: #fff; text-shadow: 0 2px 5px #000; } ';
+        css += '.quality-row-inline { ' + uiAnimClass + ' animation-delay: 0.45s; display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%; order: 6; margin-top: 2px !important; opacity: 0.75; } '; 
         
-        css += '.plugin-rating-item { display: flex; align-items: center; gap: 6px; font-weight: 700; } ';
-        css += '.plugin-rating-item img { height: 1.2em; width: auto; } ';
-        css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.9em; white-space: nowrap; } ';
-        css += '.info-separator { opacity: 0.5; font-size: 0.9em; margin: 0 2px; } ';
-        css += '.quality-item { height: 1.6em; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5)); } '; 
+        css += '.plugin-rating-item { display: flex; align-items: center; gap: 4px; font-weight: 700; } ';
+        css += '.plugin-rating-item img { height: 1.1em; width: auto; } ';
+        css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.85em; white-space: nowrap; } ';
+        css += '.info-separator { opacity: 0.4; font-size: 0.8em; margin: 0 -2px; } ';
+        css += '.quality-item { height: 1.4em; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); } '; 
         css += '.quality-item img { height: 100%; width: auto; } ';
 
         css += '.studio-row { display: flex; justify-content: center; align-items: center; gap: 12px; width: 100%; } ';
-        css += '.studio-item { height: 2.4em !important; padding: 6px 14px; border-radius: 10px; display: flex; align-items: center; justify-content: center; ';
+        css += '.studio-item { height: 2.2em !important; padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: center; ';
         if (bgOpacity !== '0') {
             css += 'background: rgba(255, 255, 255, ' + bgOpacity + '); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); ';
         }
         css += '} ';
         css += '.studio-item img { height: 100%; width: auto; object-fit: contain; } ';
 
-        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.55s; display: flex !important; justify-content: center !important; gap: 15px !important; width: 100% !important; margin-top: 20px !important; order: 7; } ';
-        css += '.full-start-new .full-start__button { background: rgba(255,255,255,0.08) !important; border-radius: 12px !important; border: none !important; display: flex !important; flex-direction: column !important; align-items: center !important; width: 80px !important; padding: 10px 0 !important; transition: all 0.3s !important; } ';
-        css += '.full-start-new .full-start__button.focus { background: #fff !important; transform: scale(1.1); } ';
-        css += '.full-start-new .full-start__button.focus svg, .full-start-new .full-start__button.focus span { fill: #000 !important; color: #000 !important; opacity: 1 !important; } ';
-        css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 28px !important; height: 28px !important; margin-bottom: 6px !important; fill: #fff !important; } ';
-        css += '.full-start-new .full-start__button span { font-size: 10px !important; text-transform: uppercase !important; opacity: 0.8 !important; } ';
+        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.55s; display: flex !important; justify-content: center !important; gap: 10px !important; width: 100% !important; margin-top: 5px !important; order: 7; } ';
+        css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; display: flex !important; flex-direction: column !important; align-items: center !important; width: 60px !important; } ';
+        css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 24px !important; height: 24px !important; margin-bottom: 5px !important; fill: #fff !important; } ';
+        css += '.full-start-new .full-start__button span { font-size: 8px !important; text-transform: uppercase !important; opacity: 0.7 !important; } ';
 
         style.textContent = css;
         document.head.appendChild(style);
     }
 
     /**
-     * ЛОГІКА СЛАЙД-ШОУ ДЛЯ ФОНУ
-     */
-    function startPosterSlideshow(items) {
-        if (!Lampa.Storage.get('mobile_interface_slideshow')) return;
-        var index = 0; 
-        clearInterval(slideshowTimer);
-        
-        slideshowTimer = setInterval(function() {
-            index = (index + 1) % items.length;
-            var imgUrl = Lampa.TMDB.image('/t/p/' + Lampa.Storage.get('mobile_interface_slideshow_quality', 'w780') + items[index].file_path);
-            
-            var $bgContainer = $('.background');
-            var $currentImg = $bgContainer.find('.background__image');
-            
-            var nextImg = new Image();
-            nextImg.onload = function() {
-                var $next = $('<img class="background__image" src="' + imgUrl + '" style="opacity: 0; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: -1;">');
-                $bgContainer.append($next);
-                
-                setTimeout(function() { 
-                    $next.css('opacity', '1'); 
-                    setTimeout(function(){ 
-                        $currentImg.not($next).remove(); 
-                    }, 1600); 
-                }, 100);
-            }; 
-            nextImg.src = imgUrl;
-        }, parseInt(Lampa.Storage.get('mobile_interface_slideshow_time', '10000')));
-    }
-
-    /**
-     * ЛОГІКА РЕЙТИНГІВ ТА ІНФОРМАЦІЇ
+     * ЛОГІКА РЕЙТИНГІВ, ІНФОРМАЦІЇ ТА СЛАЙДШОУ
      */
     function getRatingColor(val) {
         var n = parseFloat(val);
@@ -185,16 +145,12 @@
     }
 
     function renderRatings(container, e) {
-        container.find('.plugin-ratings-row').remove();
-        container.find('.quality-row-inline').remove();
-        
+        container.find('.plugin-ratings-row, .quality-row-inline').remove();
         var $row = $('<div class="plugin-ratings-row"></div>');
         var sep = '<span class="info-separator">•</span>';
         
         var tmdb = parseFloat(e.data.movie.vote_average || 0).toFixed(1);
-        if (tmdb > 0) {
-            $row.append('<div class="plugin-rating-item"><img src="'+ratingIcons.tmdb+'"> <span style="color:'+getRatingColor(tmdb)+'">'+tmdb+'</span></div>');
-        }
+        if (tmdb > 0) $row.append('<div class="plugin-rating-item"><img src="'+ratingIcons.tmdb+'"> <span style="color:'+getRatingColor(tmdb)+'">'+tmdb+'</span></div>');
         
         var cub = getCubRating(e);
         if (cub) {
@@ -247,40 +203,37 @@
         });
     }
 
-    function getBestResults(results) {
-        var best = { resolution: null, hdr: false, dolbyVision: false, dub: false, ukr: false };
-        if (!results) return best;
-        results.slice(0, 15).forEach(function(item) {
-            var t = (item.Title || '').toLowerCase();
-            if (t.indexOf('ukr')>=0 || t.indexOf('укр')>=0) best.ukr = true;
-            var res = t.indexOf('4k')>=0 ? '4K' : t.indexOf('2k')>=0 ? '2K' : t.indexOf('1080')>=0 ? 'FULL HD' : t.indexOf('720')>=0 ? 'HD' : null;
-            if (res && (!best.resolution || ['HD', 'FULL HD', '2K', '4K'].indexOf(res) > ['HD', 'FULL HD', '2K', '4K'].indexOf(best.resolution))) best.resolution = res;
-            if (t.indexOf('vision')>=0 || t.indexOf(' dv ')>=0) best.dolbyVision = true;
-            if (t.indexOf('hdr')>=0) best.hdr = true;
-            if (t.indexOf('dub')>=0 || t.indexOf('дуб')>=0) best.dub = true;
-        });
-        return best;
+    function startCustomSlideshow(items) {
+        if (!Lampa.Storage.get('mobile_interface_slideshow')) return;
+        var index = 0; clearInterval(slideshowTimer);
+        slideshowTimer = setInterval(function() {
+            index = (index + 1) % items.length;
+            var imgUrl = Lampa.TMDB.image('/t/p/' + Lampa.Storage.get('mobile_interface_slideshow_quality', 'w780') + items[index].file_path);
+            var $container = $('.custom-bg-container');
+            var $old = $container.find('.custom-bg-layer');
+            var nextImg = new Image();
+            nextImg.onload = function() {
+                var $next = $('<img class="custom-bg-layer" src="' + imgUrl + '" style="opacity: 0;">');
+                $container.prepend($next);
+                setTimeout(function() { $next.css('opacity', '1'); setTimeout(function(){ $old.remove(); }, 2000); }, 100);
+            }; nextImg.src = imgUrl;
+        }, parseInt(Lampa.Storage.get('mobile_interface_slideshow_time', '10000')));
     }
 
     function loadMovieLogo(movie, $container) {
         var movieId = movie.id + (movie.name ? '_tv' : '_movie');
-        if (logoCache[movieId]) { 
-            $container.html('<img src="' + logoCache[movieId] + '">'); 
-        }
         $.ajax({
             url: 'https://api.themoviedb.org/3/' + (movie.name ? 'tv' : 'movie') + '/' + movie.id + '/images?api_key=' + Lampa.TMDB.key(),
             success: function(res) {
                 var lang = Lampa.Storage.get('language') || 'uk';
                 var logo = res.logos.filter(l => l.iso_639_1 === lang)[0] || res.logos.filter(l => l.iso_639_1 === 'en')[0] || res.logos[0];
-                
                 if (logo) {
                     var url = Lampa.TMDB.image('/t/p/' + Lampa.Storage.get('mobile_interface_logo_quality', 'w500') + logo.file_path.replace('.svg', '.png'));
-                    logoCache[movieId] = url; 
                     $container.html('<img src="' + url + '">');
                 }
-
                 if (res.backdrops && res.backdrops.length > 1) {
-                    startPosterSlideshow(res.backdrops.slice(0, 15));
+                    $('.custom-bg-container').prepend('<img class="custom-bg-layer" src="' + Lampa.TMDB.image('/t/p/w1280' + res.backdrops[0].file_path) + '">');
+                    startCustomSlideshow(res.backdrops.slice(0, 15));
                 }
             }
         });
@@ -288,9 +241,12 @@
 
     function init() {
         Lampa.Listener.follow('full', function (e) {
-            if (e.type === 'destroy') clearInterval(slideshowTimer);
+            if (e.type === 'destroy') { clearInterval(slideshowTimer); $('.custom-bg-container').remove(); }
             if (e.type === 'complite' || e.type === 'complete') {
                 var movie = e.data.movie, $render = e.object.activity.render();
+                
+                if ($('.custom-bg-container').length === 0) $('body').append('<div class="custom-bg-container"><div class="custom-bg-overlay"></div></div>');
+
                 loadMovieLogo(movie, $render.find('.full-start-new__title'));
                 $('.plugin-info-block').remove();
                 var $info = $('<div class="plugin-info-block"><div class="studio-row"></div></div>');
@@ -301,7 +257,20 @@
                 if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Parser.get) {
                     Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
                         if (res && res.Results) {
-                            var b = getBestResults(res.Results), list = [];
+                            var b = (function(results){
+                                var best = { resolution: null, hdr: false, dolbyVision: false, dub: false, ukr: false };
+                                results.slice(0, 15).forEach(function(item) {
+                                    var t = (item.Title || '').toLowerCase();
+                                    if (t.indexOf('ukr')>=0 || t.indexOf('укр')>=0) best.ukr = true;
+                                    var res = t.indexOf('4k')>=0 ? '4K' : t.indexOf('2k')>=0 ? '2K' : t.indexOf('1080')>=0 ? 'FULL HD' : t.indexOf('720')>=0 ? 'HD' : null;
+                                    if (res && (!best.resolution || ['HD', 'FULL HD', '2K', '4K'].indexOf(res) > ['HD', 'FULL HD', '2K', '4K'].indexOf(best.resolution))) best.resolution = res;
+                                    if (t.indexOf('vision')>=0 || t.indexOf(' dv ')>=0) best.dolbyVision = true;
+                                    if (t.indexOf('hdr')>=0) best.hdr = true;
+                                    if (t.indexOf('dub')>=0 || t.indexOf('дуб')>=0) best.dub = true;
+                                });
+                                return best;
+                            })(res.Results);
+                            var list = [];
                             if (b.resolution) list.push(b.resolution);
                             if (b.dolbyVision) list.push('Dolby Vision'); else if (b.hdr) list.push('HDR');
                             if (b.dub) list.push('DUB'); if (b.ukr) list.push('UKR');
@@ -314,9 +283,6 @@
         });
     }
 
-    /**
-     * ПАНЕЛЬ НАЛАШТУВАНЬ
-     */
     function setupSettings() {
         Lampa.SettingsApi.addComponent({ component: 'mobile_interface', name: 'ТВ та Мобільний інтерфейс', icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z" fill="white"/></svg>' });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_animation', type: 'trigger', default: true }, field: { name: 'Анімація фону' }, onChange: applyStyles });
