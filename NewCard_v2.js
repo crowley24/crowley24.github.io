@@ -95,20 +95,22 @@
         if (!data || !activity || !isValidActivity()) return;  
   
         const render = activity.render();  
+        const ratingsContainer = render.find('.applecation__ratings');  
         const logoContainer = render.find('.applecation__logo');  
         const titleElement = render.find('.full-start-new__title');  
   
         // Заповнюємо контент  
-        fillTagline(render, data);  
+        fillRatings(ratingsContainer, data);  
         fillMetaInfo(render, data);  
         fillAdditionalInfo(render, data);  
-        renderRatings(render, event);  
+        fillTagline(render, data);  
         renderStudioLogos(render, data);  
         renderQuality(render, data);  
+        renderRatings(render, event);  
   
         // Показуємо контент після завантаження фону  
         waitForBackgroundLoad(activity, () => {  
-            render.find('.applecation__meta, .applecation__info, .applecation__ratings, .applecation__description, .applecation__tagline')  
+            render.find('.applecation__meta, .applecation__info, .applecation__ratings, .applecation__description, .studio-row, .info-row')  
                 .addClass('show');  
         });  
   
@@ -162,20 +164,16 @@
         show_ratings: { uk: 'Показувати рейтинги' },  
         show_ratings_desc: { uk: 'Відображати рейтинги IMDB та КіноПошук' },  
         ratings_position: { uk: 'Розташування рейтингів' },  
-        ratings_position_desc: { uk: 'Виберіть де відображати рейтинги' },  
+        ratings_position_desc: { uk: 'Де відображати рейтинги - у картці або в куті' },  
         position_card: { uk: 'У картці' },  
-        position_corner: { uk: 'У лівому нижньому куті' },  
-        show_studio: { uk: 'Показувати логотип студії' },  
-        show_studio_desc: { uk: 'Відображати іконку телемережі (Netflix, HBO) або кіностудії' },  
-        logo_scale: { uk: 'Розмір логотипу' },  
-        logo_scale_desc: { uk: 'Масштаб логотипу фільму' },  
-        text_scale: { uk: 'Розмір тексту' },  
-        text_scale_desc: { uk: 'Масштаб тексту даних про фільм' },  
+        position_corner: { uk: 'В куті' },  
+        logo_scale: { uk: 'Масштаб логотипа' },  
+        logo_scale_desc: { uk: 'Зміна розміру логотипа фільму/серіалу' },  
+        text_scale: { uk: 'Масштаб тексту' },  
+        text_scale_desc: { uk: 'Зміна розміру всього тексту в картці' },  
+        spacing_scale: { uk: 'Масштаб відступів' },  
+        spacing_scale_desc: { uk: 'Зміна відстаней між елементами' },  
         scale_default: { uk: 'За замовчуванням' },  
-        spacing_scale: { uk: 'Відступи між рядками' },  
-        spacing_scale_desc: { uk: 'Відстань між елементами інформації' },  
-        settings_title_display: { uk: 'Відображення' },  
-        settings_title_scaling: { uk: 'Масштабування' },  
         show_tagline: { uk: 'Показувати слоган' },  
         show_tagline_desc: { uk: 'Відображати слоган фільму/серіалу' },  
         show_quality: { uk: 'Показувати якість' },  
@@ -400,23 +398,18 @@
                 .applecation .applecation__meta {  
                     margin-bottom: ${0.5 * spacingScale / 100}em !important;  
                 }  
-                .applecation .applecation__ratings {  
+                .applecation .studio-row {  
+                    margin-bottom: ${0.8 * spacingScale / 100}em !important;  
+                }  
+                .applecation .info-row {  
                     margin-bottom: ${0.5 * spacingScale / 100}em !important;  
                 }  
                 .applecation .applecation__description {  
                     max-width: ${35 * textScale / 100}vw !important;  
                     margin-bottom: ${0.5 * spacingScale / 100}em !important;  
                 }  
-                .applecation .applecation__info {  
-                    margin-bottom: ${0.5 * spacingScale / 100}em !important;  
-                }  
-                .applecation .applecation__tagline {  
-                    margin-bottom: ${0.5 * spacingScale / 100}em !important;  
-                }  
                 .studio-item {  
                     background: rgba(255, 255, 255, ${bgOpacity}) !important;  
-                    backdrop-filter: blur(10px) !important;  
-                    -webkit-backdrop-filter: blur(10px) !important;  
                 }  
             </style>  
         `;  
@@ -427,21 +420,6 @@
     function addCustomTemplate() {  
         const ratingsPosition = Lampa.Storage.get('applecation_ratings_position', 'card');  
           
-        const ratingsBlock = `<div class="applecation__ratings">  
-                        <div class="rate--imdb hide">  
-                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none">  
-                                <path fill="currentColor" d="M4 7c-1.103 0-2 .897-2 2v6.4c0 1.103.897 2 2 2h16c1.103 0 2-.897 2-2V9c0-1.103-.897-2-2-2H4Zm1.4 2.363h1.275v5.312H5.4V9.362Zm1.962 0H9l.438 2.512.287-2.512h1.75v5.312H10.4v-3l-.563 3h-.8l-.512-3v3H7.362V9.362Zm8.313 0H17v1.2c.16-.16.516-.363.875-.363.36.04.84.283.8.763v3.075c0 .24-.075.404-.275.524-.16.04-.28.075-.6.075-.32 0-.795-.196-.875-.237-.08-.04-.163.275-.163.275h-1.087V9.362Zm-3.513.037H13.6c.88 0 1.084.078 1.325.237.24.16.35.397.35.838v3.2c0 .32-.15.563-.35.762-.2.2-.484.288-1.325.288h-1.438V9.4Zm1.275.8v3.563c.2 0 .488.04.488-.2v-3.126c0-.28-.247-.237-.488-.237Zm3.763.675c-.12 0-.2.08-.2.2v2.688c0 .159.08.237.2.237.12 0 .2-.117.2-.238l-.037-2.687c0-.12-.043-.2-.163-.2Z"/>  
-                            </svg>  
-                            <div>0.0</div>  
-                        </div>  
-                        <div class="rate--kp hide">  
-                            <svg viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg" fill="none">  
-                                <path d="M96.5 20 66.1 75.733V20H40.767v152H66.1v-55.733L96.5 172h35.467C116.767 153.422 95.2 133.578 80 115c28.711 16.889 63.789 35.044 92.5 51.933v-30.4C148.856 126.4 108.644 115.133 85 105c23.644 3.378 63.856 7.889 87.5 11.267v-30.4L85 90c27.022-11.822 60.478-22.711 87.5-34.533v-30.4C143.789 41.956 108.711 63.11 80 80l51.967-60z" style="fill:none;stroke:currentColor;stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10"/>  
-                            </svg>  
-                            <div>0.0</div>  
-                        </div>  
-                    </div>`;  
-  
         const template = `<div class="full-start-new applecation">  
         <div class="full-start-new__body">  
             <div class="full-start-new__left hide">  
@@ -460,13 +438,16 @@
                               
                         <div class="applecation__meta">  
                             <div class="applecation__meta-left">  
-                                <div class="studio-row"></div>  
                                 <span class="applecation__meta-text"></span>  
                                 <div class="full-start__pg hide"></div>  
                             </div>  
                         </div>  
-                              
-                        <div class="applecation__info-row">  
+                          
+                        <!-- Рядок студій - окремо -->  
+                        <div class="studio-row"></div>  
+                          
+                        <!-- Об'єднаний рядок з інформацією -->  
+                        <div class="info-row">  
                             <div class="applecation__info"></div>  
                             <div class="quality-row"></div>  
                             <div class="ratings-row"></div>  
@@ -498,7 +479,7 @@
   
                         <div class="full-start__button selector button--reaction">  
                             <svg width="38" height="34" viewBox="0 0 38 34" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                <path d="M37.208 10.9742C37.1364 10.8013 37.0314 10.6441 36.899 10.5117C36.7666 10.3794 36.6095 10.2744 36.4365 10.2028L12.0658 0.108375C11.7166 -0.0361828 11.3242 -0.0361227 10.9749 0.108542C10.6257 0.253206 10.3482 0.530634 10.2034 0.879836L0.108666 25.2507C0.0369593 25.4236 3.37953e-05 25.609 2.3187e-08 25.7962C-3.37489e-05 25.9834 0.0368249 26.1688 0.108469 26.3418C0.180114 26.5147 0.28514 26.6719 0.417545 26.8042C0.54995 26.9366 0.707139 27.0416 0.880127 27.1131L17.2452 33.8917C17.5945 34.0361 17.9869 34.0361 18.3362 33.8917L29.6574 29.2017C29.8304 29.1301 29.9875 29.0251 30.1199 28.8928C30.2523 28.7604 30.3573 28.6032 30.4289 28.4303L37.2078 12.065C37.2795 11.8921 37.3164 11.7068 37.3165 11.5196C37.3165 11.3325 37.2796 11.1471 37.208 10.9742ZM20.425 29.9407L21.8784 26.4316L25.3873 27.885L20.425 29.9407ZM28.3407 26.0222L21.6524 23.252C21.3031 23.1075 20.9107 23.1076 20.5615 23.2523C20.2123 23.3969 19.9348 23.6743 19.79 24.0235L17.0194 30.7123L3.28783 25.0247L12.2918 3.28773L34.0286 12.2912L37.2078 12.065C37.2795 11.8921 37.3164 11.7068 37.3165 11.5196C37.3165 11.3325 37.2796 11.1471 37.208 10.9742ZM20.425 29.9407L21.8784 26.4316L25.3873 27.885L20.425 29.9407ZM28.3407 26.0222L21.6524 23.252C21.3031 23.1075 20.9107 23.1076 20.5615 23.2523C20.2123 23.3969 19.9348 23.6743 19.79 24.0235L17.0194 30.7123L3.28783 25.0247L12.2918 3.28773L34.0286 12.2912Z" fill="currentColor"/>  
+                                <path d="M37.208 10.9742C37.1364 10.8013 37.0314 10.6441 36.899 10.5117C36.7666 10.3794 36.6095 10.2744 36.4365 10.2028L12.0658 0.108375C11.7166 -0.0361828 11.3242 -0.0361227 10.9749 0.108542C10.6257 0.253206 10.3482 0.530634 10.2034 0.879836L0.108666 25.2507C0.0369593 25.4236 3.37953e-05 25.609 2.3187e-08 25.7962C-3.37489e-05 25.9834 0.0368249 26.1688 0.108469 26.3418C0.180114 26.5147 0.28514 26.6719 0.417545 26.8042C0.54995 26.9366 0.707139 27.0416 0.880127 27.1131L17.2452 33.8917C17.5945 34.0361 17.9869 34.0361 18.3362 33.8917L29.6574 29.2017C29.8304 29.1301 29.9875 29.0251 30.1199 28.8928C30.2523 28.7604 30.3573 28.6032 30.4289 28.4303L37.2078 12.065C37.2795 11.8921 37.3164 11.7068 37.3165 11.5196C37.3165 11.3325 37.2796 11.1471 37.208 10.9742ZM20.425 29.9407L21.8784 26.4316L25.3873 27.885L20.425 29.9407ZM28.3407 26.0222L21.6524 23.252C21.3031 23.1075 20.9107 23.1076 20.5615 23.2523C20.2123 23.3969 19.9348 23.6743 19.79 24.0235L17.0194 30.7123L3.28783 25.0247L12.2918 3.28773L34.0286 12.2912Z" fill="currentColor"/>  
                             </svg>  
                             <span>#{title_reactions}</span>  
                         </div>  
@@ -526,8 +507,6 @@
                         <div>#{reactions_none}</div>  
                     </div>  
                           
-                    ${ratingsPosition === 'corner' ? ratingsBlock : ''}  
-  
                     <div class="full-start-new__rate-line">  
                         <div class="full-start__status hide"></div>  
                     </div>  
@@ -536,44 +515,12 @@
                 </div>  
             </div>  
         </div>  
-  
-        <div class="hide buttons--container">  
-            <div class="full-start__button view--torrent hide">  
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="50px" height="50px">  
-                    <path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2z M40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4 S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851 c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29 c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862c-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8 c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722 C42.541,30.867,41.756,30.963,40.5,30.963z" fill="currentColor"/>  
-                </svg>  
-                <span>#{full_torrents}</span>  
-            </div>  
-              
-            <div class="full-start__button selector view--trailer">  
-                <svg height="70" viewBox="0 0 80 70" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                    <path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/>  
-                </svg>  
-                <span>#{full_trailers}</span>  
-            </div>  
-        </div>  
     </div>`;  
   
         Lampa.Template.add('full_start_new', template);  
-  
-        // Шаблон епізода  
-        const episodeTemplate = `<div class="full-episode selector layer--visible">  
-            <div class="full-episode__img">  
-                <img />  
-                <div class="full-episode__time">{time}</div>  
-            </div>  
-            <div class="full-episode__body">  
-                <div class="full-episode__num">#{full_episode} {num}</div>  
-                <div class="full-episode__name">{name}</div>  
-                <div class="full-episode__overview">{overview}</div>  
-                <div class="full-episode__date">{date}</div>  
-            </div>  
-        </div>`;  
-          
-        Lampa.Template.add('full_episode', episodeTemplate);  
     }  
   
-    // Стилі з оптимізаціями та новими елементами  
+    // Стилі з оптимізаціями  
     function addStyles() {  
         const styles = `<style>  
 /* Основний контейнер */  
@@ -697,40 +644,23 @@
     vertical-align: middle;  
 }  
   
-/* Рядок інформації - об'єднаний */  
-.applecation__info-row {  
-    display: flex;  
-    align-items: center;  
-    justify-content: center;  
-    gap: 1em;  
-    margin-bottom: 0.5em;  
-    flex-wrap: wrap;  
-    opacity: 0;  
-    transform: translateY(15px);  
-    transition: opacity 0.4s ease-out, transform 0.4s ease-out;  
-    transition-delay: 0.1s;  
-    will-change: opacity, transform;  
-}  
-  
-.applecation__info-row.show {  
-    opacity: 1;  
-    transform: translateY(0);  
-}  
-  
-.applecation__info {  
-    color: rgba(255, 255, 255, 0.75);  
-    font-size: 1em;  
-    line-height: 1.4;  
-}  
-  
-/* Рядок студій */  
+/* Рядок студій - окремо */  
 .studio-row {  
     display: flex;  
     justify-content: center;  
     align-items: center;  
     flex-wrap: wrap;  
     gap: 12px;  
-    margin-bottom: 0.5em;  
+    margin-bottom: 0.8em;  
+    opacity: 0;  
+    transform: translateY(15px);  
+    transition: opacity 0.4s ease-out, transform 0.4s ease-out;  
+    will-change: opacity, transform;  
+}  
+  
+.studio-row.show {  
+    opacity: 1;  
+    transform: translateY(0);  
 }  
   
 .studio-item {  
@@ -752,6 +682,32 @@
     height: 100%;  
     width: auto;  
     object-fit: contain;  
+}  
+  
+/* Об'єднаний рядок інформації */  
+.info-row {  
+    display: flex;  
+    align-items: center;  
+    justify-content: center;  
+    gap: 1em;  
+    margin-bottom: 0.5em;  
+    flex-wrap: wrap;  
+    opacity: 0;  
+    transform: translateY(15px);  
+    transition: opacity 0.4s ease-out, transform 0.4s ease-out;  
+    transition-delay: 0.1s;  
+    will-change: opacity, transform;  
+}  
+  
+.info-row.show {  
+    opacity: 1;  
+    transform: translateY(0);  
+}  
+  
+.applecation__info {  
+    color: rgba(255, 255, 255, 0.75);  
+    font-size: 1em;  
+    line-height: 1.4;  
 }  
   
 /* Рядок якості */  
@@ -854,15 +810,6 @@ body.applecation--hide-tagline .applecation__tagline {
 /* Управління видимістю якості */  
 body.applecation--hide-quality .quality-row {  
     display: none !important;  
-}  
-  
-/* Розташування рейтингів */  
-body.applecation--ratings-corner .applecation__right {  
-    gap: 1em;  
-}  
-  
-body.applecation--ratings-corner .applecation__ratings {  
-    margin-bottom: 0;  
 }  
   
 /* Опис */  
@@ -1031,8 +978,7 @@ body.applecation--zoom-enabled .full-start__background.loaded:not(.dim) {
 .applecation__meta,  
 .applecation__info,  
 .applecation__description,  
-.applecation__ratings,  
-.applecation__tagline {  
+.applecation__ratings {  
     position: relative;  
     z-index: 2;  
 }  
@@ -1116,74 +1062,6 @@ body.applecation--zoom-enabled .full-start__background.loaded:not(.dim) {
         return types['uk'];       
     }  
   
-    // Заповнення слогана  
-    function fillTagline(render, data) {  
-        const taglineContainer = render.find('.applecation__tagline');  
-        const showTagline = Lampa.Storage.get('applecation_show_tagline', true);  
-          
-        if (showTagline && data.tagline) {  
-            taglineContainer.text(data.tagline);  
-        } else {  
-            taglineContainer.hide();  
-        }  
-    }  
-  
-    // Відображення рейтингів  
-    function renderRatings(render, event) {  
-        const ratingsRow = render.find('.ratings-row');  
-        const data = event.data.movie;  
-          
-        ratingsRow.empty();  
-          
-        // TMDB рейтинг  
-        if (data.vote_average && data.vote_average > 0) {  
-            const tmdbRating = parseFloat(data.vote_average).toFixed(1);  
-            const tmdbColor = getRatingColor(tmdbRating);  
-            ratingsRow.append(`  
-                <div class="rating-item">  
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg" alt="TMDB">  
-                    <span style="color: ${tmdbColor}">${tmdbRating}</span>  
-                </div>  
-            `);  
-        }  
-          
-        // IMDB рейтинг  
-        const imdb = data.number_rating?.imdb || 0;  
-        if (imdb > 0) {  
-            const imdbColor = getRatingColor(imdb);  
-            ratingsRow.append(`  
-                <div class="rating-item">  
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/6/69/IMDB_Logo_2016.svg" alt="IMDB">  
-                    <span style="color: ${imdbColor}">${parseFloat(imdb).toFixed(1)}</span>  
-                </div>  
-            `);  
-        }  
-          
-        // КіноПошук рейтинг  
-        const kp = data.number_rating?.kp || 0;  
-        if (kp > 0) {  
-            const kpColor = getRatingColor(kp);  
-            ratingsRow.append(`  
-                <div class="rating-item">  
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Kinopoisk-logo.svg/200px-Kinopoisk-logo.svg.png" alt="KP">  
-                    <span style="color: ${kpColor}">${parseFloat(kp).toFixed(1)}</span>  
-                </div>  
-            `);  
-        }  
-          
-        // CUB рейтинг  
-        const cubRating = getCubRating(event);  
-        if (cubRating) {  
-            const cubColor = getRatingColor(cubRating);  
-            ratingsRow.append(`  
-                <div class="rating-item">  
-                    <img src="https://raw.githubusercontent.com/yumata/lampa/9381985ad4371d2a7d5eb5ca8e3daf0f32669eb7/img/logo-icon.svg" alt="CUB">  
-                    <span style="color: ${cubColor}">${cubRating}</span>  
-                </div>  
-            `);  
-        }  
-    }  
-  
     // Відображення логотипів студій  
     function renderStudioLogos(render, data) {  
         const studioRow = render.find('.studio-row');  
@@ -1227,6 +1105,7 @@ body.applecation--zoom-enabled .full-start__background.loaded:not(.dim) {
                     <img src="${logo.url}" alt="${logo.name}">  
                 </div>  
             `);  
+            studioRow.append(studioItem);  
             studioRow.append(studioItem);  
         });  
     }  
@@ -1314,7 +1193,7 @@ body.applecation--zoom-enabled .full-start__background.loaded:not(.dim) {
                 const timeStr = hours > 0       
                     ? `${hours} ${timeH} ${minutes} ${timeM}`       
                     : `${minutes} ${timeM}`;  
-               infoParts.push(timeStr);  
+                infoParts.push(timeStr);  
             }  
         }  
   
@@ -1378,102 +1257,10 @@ body.applecation--zoom-enabled .full-start__background.loaded:not(.dim) {
         }  
     }  
   
-    // Відображення логотипів студій  
-    function renderStudioLogos(render, data) {  
-        const studioRow = render.find('.studio-row');  
-        const showStudios = Lampa.Storage.get('applecation_show_studio', true);  
-          
-        if (!showStudios) {  
-            studioRow.hide();  
-            return;  
-        }  
-          
-        studioRow.empty();  
-        const logos = [];  
-          
-        if (data.networks && data.networks.length) {  
-            data.networks.forEach(network => {  
-                if (network.logo_path) {  
-                    const logoUrl = Lampa.Api.img(network.logo_path, 'w200');  
-                    logos.push({  
-                        url: logoUrl,  
-                        name: network.name  
-                    });  
-                }  
-            });  
-        }  
-          
-        if (data.production_companies && data.production_companies.length) {  
-            data.production_companies.forEach(company => {  
-                if (company.logo_path) {  
-                    const logoUrl = Lampa.Api.img(company.logo_path, 'w200');  
-                    logos.push({  
-                        url: logoUrl,  
-                        name: company.name  
-                    });  
-                }  
-            });  
-        }  
-          
-        logos.forEach((logo, index) => {  
-            const studioItem = $(`  
-                <div class="studio-item" style="animation-delay: ${index * 0.1}s">  
-                    <img src="${logo.url}" alt="${logo.name}">  
-                </div>  
-            `);  
-            studioRow.append(studioItem);  
-        });  
-    }  
-  
-    // Відображення якості  
-    function renderQuality(render, data) {  
-        const qualityRow = render.find('.quality-row');  
-        const showQuality = Lampa.Storage.get('applecation_show_quality', true);  
-          
-        if (!showQuality || !Lampa.Parser.get) {  
-            qualityRow.hide();  
-            return;  
-        }  
-          
-        Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, function(res) {  
-            if (res && res.Results) {  
-                const best = getBestResults(res.Results);  
-                const qualityList = [];  
-                  
-                if (best.resolution) qualityList.push(best.resolution);  
-                if (best.dolbyVision) qualityList.push('Dolby Vision');  
-                else if (best.hdr) qualityList.push('HDR');  
-                if (best.dub) qualityList.push('DUB');  
-                if (best.ukr) qualityList.push('UKR');  
-                  
-                qualityList.forEach((quality, index) => {  
-                    if (svgIcons[quality]) {  
-                        const qualityItem = $(`  
-                            <div class="quality-item" style="animation-delay: ${index * 0.1}s">  
-                                <img src="${svgIcons[quality]}" alt="${quality}">  
-                            </div>  
-                        `);  
-                        qualityRow.append(qualityItem);  
-                    }  
-                });  
-            }  
-        });  
-    }  
-  
-    // Форматування сезонів  
-    function formatSeasons(count) {  
-        const cases = [2, 0, 1, 1, 1, 2];  
-        const titles = ['сезон', 'сезони', 'сезонів'];  
-              
-        const caseIndex = (count % 100 > 4 && count % 100 < 20) ? 2 : cases[Math.min(count % 10, 5)];  
-              
-        return `${count} ${titles[caseIndex]}`;  
-    }  
-  
     // Оптимізована функція очікування завантаження фону  
     function waitForBackgroundLoad(activity, callback) {  
         const background = activity.render().find('.full-start__background');  
-          
+            
         if (!background.length) {  
             callback();  
             return;  
@@ -1532,6 +1319,24 @@ body.applecation--zoom-enabled .full-start__background.loaded:not(.dim) {
         }  
     }  
   
+    // Заповнення рейтингів з оптимізацією  
+    function fillRatings(ratingsContainer, data) {  
+        const imdb = data.number_rating?.imdb || data.vote_average || 0;  
+        const kp = data.number_rating?.kp || 0;  
+  
+        if (imdb > 0) {  
+            const imdbBlock = ratingsContainer.find('.rate--imdb');  
+            imdbBlock.find('div').text(parseFloat(imdb).toFixed(1));  
+            imdbBlock.removeClass('hide');  
+        }  
+  
+        if (kp > 0) {  
+            const kpBlock = ratingsContainer.find('.rate--kp');  
+            kpBlock.find('div').text(parseFloat(kp).toFixed(1));  
+            kpBlock.removeClass('hide');  
+        }  
+    }  
+  
     // Дебаунс для завантаження логотипів  
     let loadTimeout;  
     function attachLogoLoader() {  
@@ -1587,6 +1392,6 @@ body.applecation--zoom-enabled .full-start__background.loaded:not(.dim) {
         });  
     }  
       
-})();
+})();  
     
   
