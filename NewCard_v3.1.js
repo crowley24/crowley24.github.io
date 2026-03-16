@@ -118,6 +118,8 @@
   
     function renderStudioLogos(container, data) {  
         if (!Lampa.Storage.get('applecation_studios', true)) return;  
+        container.empty(); // Очищуємо контейнер перед додаванням  
+          
         const logos = [];  
         [data.networks, data.production_companies].forEach(function(source) {  
             if (source) source.forEach(function(item) {  
@@ -128,7 +130,8 @@
             });  
         });  
   
-        logos.slice(0, 4).forEach(function(logo) {  
+        // Обмежуємо до 3 логотипів  
+        logos.slice(0, 3).forEach(function(logo) {  
             const id = 'lg_' + Math.random().toString(36).substr(2, 9);  
             container.append('<div class="studio-item" id="'+id+'"><img src="'+logo.url+'"></div>');  
             const img = new Image(); img.crossOrigin = 'anonymous';  
@@ -145,12 +148,14 @@
     }  
   
     function renderRatings(container, e) {  
+        // Видаляємо старі рядки  
         container.find('.plugin-ratings-row').remove();  
         container.find('.quality-row-inline').remove();  
   
         const $row = $('<div class="plugin-ratings-row"></div>');  
         const sep = '<span class="info-separator">•</span>';  
   
+        // Додаємо рейтинги  
         const tmdb = parseFloat(e.data.movie.vote_average || 0).toFixed(1);  
         if (tmdb > 0) {  
             $row.append('<div class="plugin-rating-item"><img src="'+ratingIcons.tmdb+'"> <span style="color:'+getRatingColor(tmdb)+'">'+tmdb+'</span></div>');  
@@ -162,34 +167,41 @@
             $row.append('<div class="plugin-rating-item"><img src="' + ratingIcons.cub + '"> <span style="color:' + getRatingColor(cub) + '">' + cub + '</span></div>');  
         }  
   
+        // Додаємо тривалість  
         const runtime = e.data.movie.runtime || (e.data.movie.episode_run_time ? e.data.movie.episode_run_time[0] : 0);  
         if (runtime) {  
             if ($row.children().length > 0) $row.append(sep);  
             $row.append('<div class="info-text-item">' + formatTime(runtime) + '</div>');  
         }  
   
+        // Додаємо жанри  
         if (e.data.movie.genres && e.data.movie.genres.length > 0) {  
             if ($row.children().length > 0) $row.append(sep);  
             const genres = e.data.movie.genres.slice(0, 2).map(g => g.name).join(', ');  
             $row.append('<div class="info-text-item">' + genres + '</div>');  
         }  
   
-        const $qRow = $('<div class="quality-row-inline"></div>');  
-        const $target = container.find('.applecation__studio-row');  
-        $target.after($qRow).after($row);  
-  
-        // Завантаження якості  
+        // Додаємо якість в той самий рядок  
         if (Lampa.Storage.get('applecation_quality', true) && Lampa.Parser.get) {  
-            Lampa.Parser.get({ search: e.data.movie.title || e.data.movie.name, movie: e.data.movie, page: 1 }, function(res) {  
+            Lampa.Parser.get({ search: e.data.movie.title || e.data.movie.name, movie: e.data.movie, page: 1 }, (res) => {  
                 if (res && res.Results) {  
                     const b = getBestResults(res.Results), list = [];  
                     if (b.resolution) list.push(b.resolution);  
                     if (b.dolbyVision) list.push('Dolby Vision'); else if (b.hdr) list.push('HDR');  
                     if (b.dub) list.push('DUB'); if (b.ukr) list.push('UKR');  
-                    list.forEach(function(t) { if (svgIcons[t]) $qRow.append('<div class="quality-item"><img src="'+svgIcons[t]+'"></div>'); });  
+                      
+                    list.forEach(function(t) {   
+                        if (svgIcons[t]) {  
+                            if ($row.children().length > 0) $row.append(sep);  
+                            $row.append('<div class="quality-item-inline"><img src="'+svgIcons[t]+'"></div>');  
+                        }  
+                    });  
                 }  
             });  
         }  
+  
+        const $target = container.find('.applecation__studio-row');  
+        $target.after($row);  
     }  
   
     function getBestResults(results) {  
@@ -225,9 +237,9 @@
             descriptionContainer: render.find('.applecation__description')  
         };  
   
-        // Заповнюємо контент  
-        fillMetaInfo(elements, data);  
-        fillAdditionalInfo(elements, data);  
+        // Видаляємо зайву метаінформацію (для оптимізації)  
+        elements.metaText.empty();  
+        elements.infoContainer.empty();  
   
         // Показуємо контент після завантаження фону  
         waitForBackgroundLoad(activity, () => {  
@@ -274,7 +286,7 @@
   
     // Головна функція плагіна  
     function initializePlugin() {  
-        console.log('NewCard', 'v1.2.0');  
+        console.log('NewCard', 'v1.3.0');  
   
         if (!Lampa.Platform.screen('tv')) {  
             console.log('NewCard', 'TV mode only');  
@@ -529,7 +541,8 @@
                             </svg>  
                             <span>#{title_subscribe}</span>  
                         </div>  
-                       <div class="full-start__button selector button--options">  
+  
+                        <div class="full-start__button selector button--options">  
                             <svg width="38" height="10" viewBox="0 0 38 10" fill="none" xmlns="http://www.w3.org/2000/svg">  
                                 <circle cx="4.88968" cy="4.98563" r="4.75394" fill="currentColor"/>  
                                 <circle cx="18.9746" cy="4.98563" r="4.75394" fill="currentColor"/>  
@@ -589,7 +602,7 @@
         Lampa.Template.add('full_episode', episodeTemplate);  
     }  
   
-    // Оптимізовані стилі з contain для кращої продуктивності  
+    // Оптимізовані стилі з покращеною продуктивністю  
     function addStyles() {  
         const styles = `<style>  
 /* Основний контейнер */  
@@ -614,7 +627,7 @@
     text-shadow: 0 0 .1em rgba(0, 0, 0, 0.3);  
 }  
   
-/* Логотип з GPU прискоренням та contain */  
+/* Логотип з GPU прискоренням */  
 .applecation__logo {  
     contain: layout style paint;  
     will-change: transform, opacity;  
@@ -639,7 +652,7 @@
     max-height: 180px;  
 }  
   
-/* Рядок студій */  
+/* Рядок студій - центрований */  
 .applecation__studio-row {  
     display: flex;  
     justify-content: center;  
@@ -671,7 +684,7 @@
     object-fit: contain;  
 }  
   
-/* Рядок рейтингів */  
+/* Рядок рейтингів - центрований */  
 .plugin-ratings-row {  
     display: flex;  
     justify-content: center;  
@@ -712,89 +725,30 @@
     margin: 0 -2px;  
 }  
   
-/* Рядок якості */  
-.quality-row-inline {  
+/* Якість в тому ж рядку */  
+.quality-item-inline {  
     display: flex;  
-    justify-content: center;  
     align-items: center;  
-    gap: 8px;  
-    width: 100%;  
-    margin-top: 2px !important;  
-    opacity: 0.75;  
-    contain: layout style paint;  
-}  
-  
-.quality-item {  
     height: 1.4em;  
     filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));  
 }  
   
-.quality-item img {  
+.quality-item-inline img {  
     height: 100%;  
     width: auto;  
     object-fit: contain;  
 }  
   
-/* Мета інформація з contain */  
+/* Мета інформація - прихована для оптимізації */  
 .applecation__meta {  
-    contain: layout style paint;  
-    will-change: transform, opacity;  
-    display: flex;  
-    align-items: center;  
-    color: #fff;  
-    font-size: 1.1em;  
-    margin-bottom: 0.5em;  
-    line-height: 1;  
-    opacity: 0;  
-    transform: translateY(15px);  
-    transition: opacity 0.3s ease-out;  
+    display: none;  
 }  
   
-.applecation__meta.show {  
-    opacity: 1;  
-    transform: translateY(0);  
+.applecation__info {  
+    display: none;  
 }  
   
-.applecation__meta-left {  
-    display: flex;  
-    align-items: center;  
-    line-height: 1;  
-}  
-  
-.applecation__network {  
-    display: inline-flex;  
-    align-items: center;  
-    gap: 0.5em;  
-    line-height: 1;  
-}  
-  
-.applecation__network img {  
-    display: block;  
-    max-height: 1.4em;  
-    width: auto;  
-    object-fit: contain;  
-    transition: filter 0.3s ease;  
-}  
-  
-.applecation__meta-text {  
-    margin-left: 1em;  
-    line-height: 1;  
-}  
-  
-.applecation__meta .full-start__pg {  
-    margin: 0 0 0 0.6em;  
-    padding: 0.2em 0.5em;  
-    font-size: 0.85em;  
-    font-weight: 600;  
-    border: 1.5px solid rgba(255, 255, 255, 0.4);  
-    border-radius: 0.3em;  
-    background: rgba(255, 255, 255, 0.1);  
-    color: rgba(255, 255, 255, 0.9);  
-    line-height: 1;  
-    vertical-align: middle;  
-}  
-  
-/* Опис з contain */  
+/* Опис з оптимізацією */  
 .applecation__description {  
     contain: layout style paint;  
     will-change: transform, opacity;  
@@ -819,28 +773,12 @@
     transform: translateY(0);  
 }  
   
-/* Додаткова інформація з contain */  
-.applecation__info {  
-    contain: layout style paint;  
-    will-change: transform, opacity;  
-    color: rgba(255, 255, 255, 0.75);  
-    font-size: 1em;  
-    line-height: 1.4;  
-    margin-bottom: 0.5em;  
-    opacity: 0;  
-    transform: translateY(15px);  
-    transition: opacity 0.4s ease-out, transform 0.4s ease-out;  
-    transition-delay: 0.15s;  
-}  
-  
-.applecation__info.show {  
-    opacity: 1;  
-    transform: translateY(0);  
-}  
-  
 /* Ліва і права частини */  
 .applecation__left {  
     flex-grow: 1;  
+    display: flex;  
+    flex-direction: column;  
+    align-items: center;  
 }  
   
 .applecation__right {  
@@ -911,14 +849,14 @@
     pointer-events: none;  
 }  
   
-/* Анімація Ken Burns з GPU прискоренням */  
+/* Анімація Ken Burns з оптимізацією */  
 @keyframes kenBurns {  
     0% { transform: scale(1.0) translateZ(0); }  
     50% { transform: scale(1.1) translateZ(0); }  
     100% { transform: scale(1.0) translateZ(0); }  
 }  
   
-/* Базовий стиль фону з contain */  
+/* Базовий стиль фону з оптимізацією */  
 .full-start__background {  
     contain: layout style paint;  
     will-change: transform, opacity;  
@@ -969,8 +907,6 @@ body.applecation--zoom-enabled .full-start__background.loaded:not(.dim) {
 .applecation__studio-row,  
 .plugin-ratings-row,  
 .quality-row-inline,  
-.applecation__meta,  
-.applecation__info,  
 .applecation__description {  
     position: relative;  
     z-index: 2;  
@@ -1195,7 +1131,7 @@ body.applecation--zoom-enabled .full-start__background.loaded:not(.dim) {
     function registerPlugin() {    
         const pluginManifest = {    
             type: 'other',    
-            version: '1.2.0',    
+            version: '1.3.0',    
             name: 'NewCard',    
             description: 'Новий дизайн картки фільму/серіалу зі студіями та рейтингами.',    
             author: '',    
