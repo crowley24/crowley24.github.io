@@ -34,22 +34,24 @@
   
     // Оптимізована функція відображення логотипа  
     function displayLogo(logoContainer, titleElement, activity, logoUrl = null) {  
-        if (logoUrl) {  
-            const img = new Image();  
-            img.onload = () => {  
-                logoContainer.html(`<img src="${logoUrl}" alt="" />`);  
-                waitForBackgroundLoad(activity, () => {  
-                    logoContainer.addClass('loaded');  
-                });  
-            };  
-            img.src = logoUrl;  
-        } else {  
+    if (logoUrl) {  
+        // Попередньо завантажуємо зображення  
+        const img = new Image();  
+        img.onload = () => {  
+            logoContainer.html(`<img src="${logoUrl}" alt="" />`);  
+            logoContainer.addClass('loaded');  
+        };  
+        img.onerror = () => {  
+            // Якщо логотип не завантажився, показуємо назву  
             titleElement.show();  
-            waitForBackgroundLoad(activity, () => {  
-                logoContainer.addClass('loaded');  
-            });  
-        }  
+            logoContainer.addClass('loaded');  
+        };  
+        img.src = logoUrl;  
+    } else {  
+        titleElement.show();  
+        logoContainer.addClass('loaded');  
     }  
+}  
   
     // Оптимізована перевірка активності  
     function isValidActivity() {  
@@ -221,68 +223,62 @@
   
     // Оптимізована функція завантаження логотипа з кешуванням DOM  
     function loadLogo(event) {  
-        const data = event.data.movie;  
-        const activity = event.object.activity;  
-        if (!data || !activity || !isValidActivity()) return;  
+    const data = event.data.movie;  
+    const activity = event.object.activity;  
+    if (!data || !activity || !isValidActivity()) return;  
   
-        const render = activity.render();  
+    const render = activity.render();  
+      
+    const elements = {  
+        logoContainer: render.find('.applecation__logo'),  
+        titleElement: render.find('.full-start-new__title'),  
+        metaText: render.find('.applecation__meta-text'),  
+        infoContainer: render.find('.applecation__info'),  
+        metaContainer: render.find('.applecation__meta'),  
+        descriptionContainer: render.find('.applecation__description')  
+    };  
   
-        // Кешуємо DOM елементи  
-        const elements = {  
-            logoContainer: render.find('.applecation__logo'),  
-            titleElement: render.find('.full-start-new__title'),  
-            metaText: render.find('.applecation__meta-text'),  
-            infoContainer: render.find('.applecation__info'),  
-            metaContainer: render.find('.applecation__meta'),  
-            descriptionContainer: render.find('.applecation__description')  
-        };  
+    // Очищуємо зайву метаінформацію  
+    elements.metaText.empty();  
+    elements.infoContainer.empty();  
   
-        // Видаляємо зайву метаінформацію (для оптимізації)  
-        elements.metaText.empty();  
-        elements.infoContainer.empty();  
+    // Показуємо контент одразу  
+    render.find('.applecation__meta, .applecation__info, .applecation__description')  
+        .addClass('show');  
   
-        // Показуємо контент після завантаження фону  
-        waitForBackgroundLoad(activity, () => {  
-            render.find('.applecation__meta, .applecation__info, .applecation__description')  
-                .addClass('show');  
-        });  
+    // Перевіряємо кеш  
+    const cacheKey = `${data.id}_${data.name ? 'tv' : 'movie'}`;  
+    if (logoCache.has(cacheKey)) {  
+        const cached = logoCache.get(cacheKey);  
+        const bestLogo = selectBestLogo(cached.logos, 'uk');  
+        const logoUrl = bestLogo ? Lampa.TMDB.image(`/t/p/${getLogoQuality()}${bestLogo.file_path}`) : null;  
+        displayLogo(elements.logoContainer, elements.titleElement, activity, logoUrl);  
+          
+        renderStudioLogos(render.find('.applecation__studio-row'), data);  
+        renderRatings(render.find('.applecation__left'), event);  
+        return;  
+    }  
   
-        // Перевіряємо кеш  
-        const cacheKey = `${data.id}_${data.name ? 'tv' : 'movie'}`;  
-        if (logoCache.has(cacheKey)) {  
-            const cached = logoCache.get(cacheKey);  
-            const bestLogo = selectBestLogo(cached.logos, 'uk');  
+    // Завантажуємо з API  
+    const mediaType = data.name ? 'tv' : 'movie';  
+    loadLogoFromQueue(cacheKey, mediaType, data.id)  
+        .then((imagesData) => {  
+            if (!isValidActivity()) return;  
+            const bestLogo = selectBestLogo(imagesData.logos, 'uk');  
             const logoUrl = bestLogo ? Lampa.TMDB.image(`/t/p/${getLogoQuality()}${bestLogo.file_path}`) : null;  
             displayLogo(elements.logoContainer, elements.titleElement, activity, logoUrl);  
               
-            // Додаємо студії та рейтинги  
             renderStudioLogos(render.find('.applecation__studio-row'), data);  
             renderRatings(render.find('.applecation__left'), event);  
-            return;  
-        }  
-  
-        // Завантажуємо з API через чергу  
-        const mediaType = data.name ? 'tv' : 'movie';  
-        loadLogoFromQueue(cacheKey, mediaType, data.id)  
-            .then((imagesData) => {  
-                if (!isValidActivity()) return;  
-                const bestLogo = selectBestLogo(imagesData.logos, 'uk');  
-                const logoUrl = bestLogo ? Lampa.TMDB.image(`/t/p/${getLogoQuality()}${bestLogo.file_path}`) : null;  
-                displayLogo(elements.logoContainer, elements.titleElement, activity, logoUrl);  
-                  
-                // Додаємо студії та рейтинги  
-                renderStudioLogos(render.find('.applecation__studio-row'), data);  
-                renderRatings(render.find('.applecation__left'), event);  
-            })  
-            .catch(() => {  
-                if (!isValidActivity()) return;  
-                displayLogo(elements.logoContainer, elements.titleElement, activity);  
-                  
-                // Додаємо студії та рейтинги  
-                renderStudioLogos(render.find('.applecation__studio-row'), data);  
-                renderRatings(render.find('.applecation__left'), event);  
-            });  
-    }  
+        })  
+        .catch(() => {  
+            if (!isValidActivity()) return;  
+            displayLogo(elements.logoContainer, elements.titleElement, activity);  
+              
+            renderStudioLogos(render.find('.applecation__studio-row'), data);  
+            renderRatings(render.find('.applecation__left'), event);  
+        });  
+}  
   
     // Головна функція плагіна  
     function initializePlugin() {  
@@ -627,14 +623,12 @@
     text-shadow: 0 0 .1em rgba(0, 0, 0, 0.3);  
 }  
   
-/* Логотип з GPU прискоренням */  
+/* Логотип - оптимізовано */  
 .applecation__logo {  
-    contain: layout style paint;  
-    will-change: transform, opacity;  
     margin-bottom: 0.5em;  
     opacity: 0;  
     transform: translateY(20px);  
-    transition: transform 0.4s ease-out;  
+    transition: all 0.3s ease-out;  
 }  
   
 .applecation__logo.loaded {  
@@ -652,7 +646,7 @@
     max-height: 180px;  
 }  
   
-/* Рядок студій - вирівнювання ліворуч */  
+/* Рядок студій - прибрано фон та backdrop-filter */  
 .applecation__studio-row {  
     display: flex;  
     justify-content: flex-start;  
@@ -662,7 +656,6 @@
     gap: 12px;  
     width: 100%;  
     margin-bottom: 0.5em;  
-    contain: layout style paint;  
 }  
   
 .studio-item {  
@@ -673,9 +666,8 @@
     align-items: center;  
     justify-content: center;  
     flex-shrink: 0;  
-    background: rgba(255, 255, 255, 0.15);  
-    backdrop-filter: blur(10px);  
-    -webkit-backdrop-filter: blur(10px);  
+    /* Прибрано фон та backdrop-filter для продуктивності */  
+    background: transparent;  
 }  
   
 .studio-item img {  
@@ -684,7 +676,7 @@
     object-fit: contain;  
 }  
   
-/* Рядок рейтингів - вирівнювання ліворуч */  
+/* Рядок рейтингів - вирівняно розміри */  
 .plugin-ratings-row {  
     display: flex;  
     justify-content: flex-start;  
@@ -697,7 +689,6 @@
     color: #fff;  
     font-family: "Inter", -apple-system, system-ui, sans-serif;  
     letter-spacing: 0.02em;  
-    contain: layout style paint;  
 }  
   
 .plugin-rating-item {  
@@ -725,11 +716,11 @@
     margin: 0 -2px;  
 }  
   
-/* Якість в тому ж рядку */  
+/* Якість - вирівняно розмір з іншими елементами */  
 .quality-item-inline {  
     display: flex;  
     align-items: center;  
-    height: 1.4em;  
+    height: 1.1em; /* Змінено з 1.4em на 1.1em */  
     filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));  
 }  
   
@@ -739,7 +730,7 @@
     object-fit: contain;  
 }  
   
-/* Мета інформація - прихована для оптимізації */  
+/* Мета інформація - прихована */  
 .applecation__meta {  
     display: none;  
 }  
@@ -748,10 +739,8 @@
     display: none;  
 }  
   
-/* Опис з оптимізацією */  
+/* Опис - спрощено */  
 .applecation__description {  
-    contain: layout style paint;  
-    will-change: transform, opacity;  
     color: rgba(255, 255, 255, 0.6);  
     font-size: 0.95em;  
     line-height: 1.5;  
@@ -764,7 +753,7 @@
     text-overflow: ellipsis;  
     opacity: 0;  
     transform: translateY(15px);  
-    transition: opacity 0.4s ease-out, transform 0.4s ease-out;  
+    transition: all 0.3s ease-out;  
     transition-delay: 0.1s;  
 }  
   
@@ -808,7 +797,6 @@
     display: none;  
 }  
   
-/* Стилі першої реакції */  
 .applecation .full-start-new__reactions > div:first-child .reaction {  
     display: flex !important;  
     align-items: center !important;  
@@ -831,7 +819,6 @@
     font-weight: 500 !important;  
 }  
   
-/* При фокусі реакції */  
 .applecation .full-start-new__reactions.focus {  
     gap: 0.5em;  
 }  
@@ -840,7 +827,6 @@
     display: block;  
 }  
   
-/* Приховуємо стандартний rate-line */  
 .applecation .full-start-new__rate-line {  
     margin: 0;  
     height: 0;  
@@ -849,42 +835,33 @@
     pointer-events: none;  
 }  
   
-/* Анімація Ken Burns з оптимізацією */  
+/* Спрощена анімація фону */  
 @keyframes kenBurns {  
-    0% { transform: scale(1.0) translateZ(0); }  
-    50% { transform: scale(1.1) translateZ(0); }  
-    100% { transform: scale(1.0) translateZ(0); }  
+    0% { transform: scale(1.0); }  
+    50% { transform: scale(1.05); }  
+    100% { transform: scale(1.0); }  
 }  
   
-/* Базовий стиль фону з оптимізацією */  
 .full-start__background {  
-    contain: layout style paint;  
-    will-change: transform, opacity;  
     height: calc(100% + 6em);  
     left: 0 !important;  
     opacity: 0 !important;  
-    transition: opacity 0.8s ease-out, filter 0.3s ease-out !important;  
+    transition: opacity 0.5s ease-out !important;  
     animation: none !important;  
-    backface-visibility: hidden;  
-    perspective: 1000px;  
-    transform: translateZ(0);  
     z-index: 0 !important;  
     position: absolute;  
     width: 100%;  
     transform-origin: center center;  
 }  
   
-/* Фон з'являється */  
 .full-start__background.loaded:not(.dim) {  
     opacity: 1 !important;  
 }  
   
-/* Анімація вмикається тільки з класом */  
 body.applecation--zoom-enabled .full-start__background.loaded:not(.dim) {  
-    animation: kenBurns 40s linear infinite !important;  
+    animation: kenBurns 30s ease-in-out infinite !important;  
 }  
   
-/* Шар затемнення */  
 .full-start__details::before {  
     content: '';  
     position: absolute;  
@@ -902,17 +879,15 @@ body.applecation--zoom-enabled .full-start__background.loaded:not(.dim) {
     pointer-events: none;  
 }  
   
-/* Гарантуємо, що контент буде зверху */  
 .applecation__logo,  
 .applecation__studio-row,  
 .plugin-ratings-row,  
-.quality-row-inline,  
+.quality-item-inline,  
 .applecation__description {  
     position: relative;  
     z-index: 2;  
 }  
   
-/* Затемнення фону */  
 .full-start__background.dim {  
     filter: brightness(0.3);  
 }  
@@ -921,12 +896,11 @@ body.applecation--zoom-enabled .full-start__background.loaded:not(.dim) {
     opacity: 1 !important;  
 }  
   
-/* Приховуємо статус */  
 .applecation .full-start__status {  
     display: none;  
 }  
 </style>`;  
-          
+      
     Lampa.Template.add('applecation_css', styles);  
     $('body').append(Lampa.Template.get('applecation_css', {}, true));  
 }
