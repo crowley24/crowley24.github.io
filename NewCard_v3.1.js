@@ -1034,7 +1034,70 @@ body.applecation--zoom-enabled .full-start__background.loaded:not(.dim) {
         let enabled = Lampa.Storage.get('applecation_apple_zoom', true);    
         $('body').toggleClass('applecation--zoom-enabled', enabled);           
     }    
-    
+    // Функція застосування масштабування  
+function applyScales() {  
+    if (scaleUpdateTimeout) {  
+        clearTimeout(scaleUpdateTimeout);  
+    }  
+      
+    scaleUpdateTimeout = setTimeout(() => {  
+        const logoScale = parseInt(Lampa.Storage.get('applecation_logo_scale', '100'));  
+        const textScale = parseInt(Lampa.Storage.get('applecation_text_scale', '100'));  
+        const spacingScale = parseInt(Lampa.Storage.get('applecation_spacing_scale', '100'));  
+  
+        const existingStyles = $('style[data-id="applecation_scales"]');  
+          
+        if (existingStyles.length > 0) {  
+            // Оновлюємо існуючі стилі замість створення нових  
+            existingStyles.html(`  
+                .applecation .applecation__logo img {  
+                    max-width: ${35 * logoScale / 100}vw !important;  
+                    max-height: ${180 * logoScale / 100}px !important;  
+                }  
+                .applecation .applecation__content-wrapper {  
+                    font-size: ${textScale}% !important;  
+                }  
+                .applecation .full-start-new__title {  
+                    margin-bottom: ${0.5 * spacingScale / 100}em !important;  
+                }  
+                .applecation .applecation__meta {  
+                    margin-bottom: ${0.5 * spacingScale / 100}em !important;  
+                }  
+                .applecation .applecation__description {  
+                    max-width: ${35 * textScale / 100}vw !important;  
+                    margin-bottom: ${0.5 * spacingScale / 100}em !important;  
+                }  
+                .applecation .applecation__info {  
+                    margin-bottom: ${0.5 * spacingScale / 100}em !important;  
+                }  
+            `);  
+        } else {  
+            // Створюємо нові стилі, якщо існуючих немає  
+            $('body').append(`<style data-id="applecation_scales">  
+                .applecation .applecation__logo img {  
+                    max-width: ${35 * logoScale / 100}vw !important;  
+                    max-height: ${180 * logoScale / 100}px !important;  
+                }  
+                .applecation .applecation__content-wrapper {  
+                    font-size: ${textScale}% !important;  
+                }  
+                .applecation .full-start-new__title {  
+                    margin-bottom: ${0.5 * spacingScale / 100}em !important;  
+                }  
+                .applecation .applecation__meta {  
+                    margin-bottom: ${0.5 * spacingScale / 100}em !important;  
+                }  
+                .applecation .applecation__description {  
+                    max-width: ${35 * textScale / 100}vw !important;  
+                    margin-bottom: ${0.5 * spacingScale / 100}em !important;  
+                }  
+                .applecation .applecation__info {  
+                    margin-bottom: ${0.5 * spacingScale / 100}em !important;  
+                }  
+            </style>`);  
+        }  
+    }, 16); // ~60fps  
+}
     // Налаштування    
     function addSettings() {    
         // Ініціалізація значень за замовчуванням    
