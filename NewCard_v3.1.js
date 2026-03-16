@@ -200,69 +200,45 @@
     function addStyles() {      
         const styles = `<style>      
         :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); }      
-        .full-start__background { will-change: transform; transform: translateZ(0); }      
-            
+        
+        /* Робимо стандартні кнопки видимими */
+        .left-title .full-start__buttons { 
+            display: flex !important; 
+            opacity: 1 !important; 
+            position: relative; 
+            z-index: 10;
+            margin-top: 20px;
+        }
+        
+        .left-title .full-start__details { 
+            display: block !important; 
+            opacity: 1 !important; 
+        }
+
         .cas-logo-container { position: relative; overflow: hidden; }      
+        .full-start__background { transform: scale(1.1); transition: transform 0.8s ease-out; }      
+        .cas-animated .full-start__background { transform: scale(1); }      
             
-        .full-start__background {      
-            transform: scale(1.1);      
-            transition: transform 0.8s ease-out;      
-        }      
-            
-        .cas-animated .full-start__background {      
-            transform: scale(1);      
-        }      
-            
-        .cas-logo, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper {      
+        .cas-logo, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description {      
             opacity: 0 !important;      
             transform: translateY(10px);      
             transition: opacity 0.4s var(--cas-anim-curve), transform 0.4s var(--cas-anim-curve);      
-            will-change: transform, opacity;    
         }      
             
-        .cas-animated .cas-logo { opacity: 1 !important; transform: translateY(0); transition-delay: 0s; }      
-        .cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.1s; }      
-        .cas-animated .cas-rate-items { opacity: 1 !important; transform: translateY(0); transition-delay: 0.2s; }      
-        .cas-animated .cas-meta-info { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.3s; }      
-        .cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.4s; }      
+        .cas-animated .cas-logo { opacity: 1 !important; transform: translateY(0); }      
         .cas-animated .cas-description { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.15s; }
-            
-        .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }      
-            
-        .full-start-new__buttons {      
-            display: flex !important;      
-            flex-direction: row !important;      
-            gap: 20px;      
-            margin-top: 1.2em;      
-            opacity: 0;      
-            transform: translateY(10px);      
-            transition: opacity 0.4s ease, transform 0.4s ease !important;    
-        }      
-            
-        .cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translateY(0); transition-delay: 0.5s; }      
-            
-        .cas-rate-item{ opacity:0; transform:scale(.9); animation:popIn .2s ease forwards; }  
-        .cas-rate-item:nth-child(1) { animation-delay: 0.2s; }      
-        .cas-rate-item:nth-child(2) { animation-delay: 0.3s; }      
-    
-        @keyframes popIn{ from{opacity:0;transform:scale(.9);} to{opacity:1;transform:scale(1);} }   
-    
-        .cas-logo img { background: transparent !important; border: none !important; max-width: 450px; max-height: 180px; transform: scale(var(--cas-logo-scale)); transform-origin: left bottom; }      
-        .cas-studio-item img { height: 18px; filter: drop-shadow(0 0 2px rgba(255,255,255,0.8)); opacity: 0.9; }      
+        
+        .cas-logo img { max-width: 450px; max-height: 180px; transform: scale(var(--cas-logo-scale)); transform-origin: left bottom; }      
         .cas-description { font-size: var(--cas-meta-size) !important; line-height: 1.4; color: rgba(255,255,255,0.7); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-width: 650px; }      
-        .cas-quality-item img { height: 15px; }      
-        .cas-ratings-line { display: flex; align-items: center; gap: 15px; margin-bottom: 5px; font-size: var(--cas-meta-size); font-weight: 600; height: 30px; }      
-        .cas-rate-item { display: flex; align-items: center; gap: 6px; }      
-        .cas-rate-item img { height: 1.1em; }      
         .left-title .full-start-new__body { height: 85vh; }      
-        .left-title .full-start-new__right { display: flex; align-items: flex-end; justify-content: flex-start; padding-bottom: 2vh; padding-left: 1.5%; }      
-        .cas-meta-info { display: flex; align-items: center; gap: 8px; font-weight: 400; }      
-        @keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } }      
+        .left-title .full-start-new__right { display: flex; align-items: flex-end; justify-content: flex-start; padding-bottom: 5vh; padding-left: 3%; }      
+        
         body.cas--zoom-enabled .full-start__background.loaded { animation: casKenBurns 45s linear infinite !important; }      
+        @keyframes casKenBurns { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } }      
         </style>`;      
         Lampa.Template.add('left_title_css', styles);      
         $('body').append(Lampa.Template.get('left_title_css', {}, true));      
-    }      
+    }    
       
     function getCachedData(id) {      
         const cache = Lampa.Storage.get('cas_images_cache') || {};      
