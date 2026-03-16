@@ -272,9 +272,9 @@
             flex-direction: row !important;     
             gap: 20px;     
             margin-top: 1.2em;    
-            opacity: 0;     
+            opacity:1 !important;     
             transform: translateY(20px) scale(0.9);     
-            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);     
+            transition:none !important;     
             will-change: transform, opacity;    
         }      
             
