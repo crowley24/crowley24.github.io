@@ -604,7 +604,7 @@
   
     // Оптимізовані стилі з покращеною продуктивністю  
     function addStyles() {  
-        const styles = `<style>  
+    const styles = `<style>  
 /* Основний контейнер */  
 .applecation {  
     transition: all .3s;  
@@ -652,10 +652,10 @@
     max-height: 180px;  
 }  
   
-/* Рядок студій - центрований */  
+/* Рядок студій - вирівнювання ліворуч */  
 .applecation__studio-row {  
     display: flex;  
-    justify-content: center;  
+    justify-content: flex-start;  
     align-items: center;  
     flex-wrap: nowrap !important;  
     overflow: hidden;  
@@ -684,10 +684,10 @@
     object-fit: contain;  
 }  
   
-/* Рядок рейтингів - центрований */  
+/* Рядок рейтингів - вирівнювання ліворуч */  
 .plugin-ratings-row {  
     display: flex;  
-    justify-content: center;  
+    justify-content: flex-start;  
     align-items: center;  
     flex-wrap: nowrap;  
     gap: 12px;  
@@ -778,7 +778,7 @@
     flex-grow: 1;  
     display: flex;  
     flex-direction: column;  
-    align-items: center;  
+    align-items: flex-start;  
 }  
   
 .applecation__right {  
@@ -926,11 +926,10 @@ body.applecation--zoom-enabled .full-start__background.loaded:not(.dim) {
     display: none;  
 }  
 </style>`;  
-              
-        Lampa.Template.add('applecation_css', styles);  
-        $('body').append(Lampa.Template.get('applecation_css', {}, true));  
-    }  
-  
+          
+    Lampa.Template.add('applecation_css', styles);  
+    $('body').append(Lampa.Template.get('applecation_css', {}, true));  
+}
     // Патч Api.img  
     function patchApiImg() {  
         const originalImg = Lampa.Api.img;  
