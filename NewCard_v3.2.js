@@ -7,25 +7,23 @@ const ASSETS_PATH = 'https://crowley38.github.io/Icons/';
 const CACHE_LIFETIME = 1000 * 60 * 60 * 24;
 
 const ICONS = {
-tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',
-cub: 'https://raw.githubusercontent.com/yumata/lampa/9381985ad4371d2a7d5eb5ca8e3daf0f32669eb7/img/logo-icon.svg'
+tmdb:'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',
+cub:'https://raw.githubusercontent.com/yumata/lampa/9381985ad4371d2a7d5eb5ca8e3daf0f32669eb7/img/logo-icon.svg'
 };
 
-const QUALITY_ICONS = {
-'4K': ASSETS_PATH + '4K.svg',
-'2K': ASSETS_PATH + '2K.svg',
-'FULL HD': ASSETS_PATH + 'FULL HD.svg',
-'HD': ASSETS_PATH + 'HD.svg',
-'HDR': ASSETS_PATH + 'HDR.svg',
-'Dolby Vision': ASSETS_PATH + 'Dolby Vision.svg',
-'UKR': ASSETS_PATH + 'UKR.svg'
+const QUALITY_ICONS={
+'4K':ASSETS_PATH+'4K.svg',
+'2K':ASSETS_PATH+'2K.svg',
+'FULL HD':ASSETS_PATH+'FULL HD.svg',
+'HD':ASSETS_PATH+'HD.svg',
+'HDR':ASSETS_PATH+'HDR.svg',
+'Dolby Vision':ASSETS_PATH+'Dolby Vision.svg',
+'UKR':ASSETS_PATH+'UKR.svg'
 };
-
-const SETTINGS_ICON = `<svg viewBox="0 0 100 100"><rect x="15" y="20" width="70" height="60" rx="8" stroke="white" stroke-width="6" fill="none" opacity="0.4"/><rect x="25" y="32" width="50" height="28" rx="4" fill="white"/><rect x="25" y="66" width="30" height="6" rx="3" fill="white" opacity="0.6"/><rect x="60" y="66" width="15" height="6" rx="3" fill="white" opacity="0.6"/></svg>`;
 
 let debounceTimer;
 
-function debounce(func, delay){
+function debounce(func,delay){
 return function(){
 const context=this;
 const args=arguments;
@@ -56,14 +54,16 @@ return(h>0?h+'г ':'')+m+'хв';
 }
     function addStyles(){
 
-const styles=`
-<style>
+const styles=`<style>
 
 :root{
 --cas-logo-scale:1;
 --cas-blocks-gap:30px;
 --cas-meta-size:1.3em;
+--cas-anim-curve:cubic-bezier(.2,.8,.2,1);
 }
+
+/* легша анімація рейтингу */
 
 .cas-rate-item{
 opacity:0;
@@ -76,15 +76,19 @@ from{opacity:0;transform:scale(.9);}
 to{opacity:1;transform:scale(1);}
 }
 
+/* швидша поява опису */
+
 .cas-animated .cas-description{
-opacity:0.7!important;
+opacity:.7!important;
 transform:translateY(0);
-transition-delay:0.15s;
+transition-delay:.15s;
 }
+
+/* оптимізовані кнопки */
 
 .left-title .full-start-new__buttons .full-start__button{
 background:transparent!important;
-color:rgba(255,255,255,0.6)!important;
+color:rgba(255,255,255,.6)!important;
 display:flex;
 align-items:center;
 gap:10px;
@@ -97,19 +101,11 @@ padding:8px 16px!important;
 .left-title .full-start-new__buttons .full-start__button.focus{
 color:#fff!important;
 transform:scale(1.04);
-background:rgba(255,255,255,0.12)!important;
-border-color:rgba(255,255,255,0.25)!important;
+background:rgba(255,255,255,.12)!important;
+border-color:rgba(255,255,255,.25)!important;
 }
 
-.cas-description{
-font-size:var(--cas-meta-size)!important;
-line-height:1.4;
-color:rgba(255,255,255,0.7);
-max-width:650px;
-}
-
-</style>
-`;
+</style>`;
 
 Lampa.Template.add('left_title_css',styles);
 $('body').append(Lampa.Template.get('left_title_css',{},true));
@@ -117,25 +113,24 @@ $('body').append(Lampa.Template.get('left_title_css',{},true));
 }
     async function loadMovieDataOptimized(render,data){
 
-if(data.overview){
-
+if(Lampa.Storage.get('cas_show_description')){
 render.find('.cas-description')
 .html(data.overview||'')
 .css('opacity','1')
 .show();
-
 }
+
+if(Lampa.Storage.get('cas_show_rating')){
 
 const tmdbV=parseFloat(data.vote_average||0).toFixed(1);
 
-if(tmdbV>0){
-
-render.find('.cas-rate-items').html(
+const ratesHtml=tmdbV>0?
 `<div class="cas-rate-item">
 <img src="${ICONS.tmdb}">
 <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span>
-</div>`
-);
+</div>`:'';
+
+render.find('.cas-rate-items').html(ratesHtml);
 
 }
 
@@ -151,9 +146,7 @@ render.find('.cas-meta-info').text(
 );
 
 }
-    function parseQuality(render,data){
-
-if(!Lampa.Parser.get)return;
+    if(Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get){
 
 Lampa.Parser.get(
 {search:data.title||data.name,movie:data,page:1},
@@ -191,11 +184,15 @@ else if(b.hdr)qH+=`<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR'
 
 if(b.ukr)qH+=`<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;
 
-render.find('.cas-quality-row').html(qH);
+if(qH){
+render.find('.cas-quality-row').html('<span class="cas-sep">•</span>'+qH).show();
+}
 
 }
 
-}catch(e){}
+}catch(e){
+render.find('.cas-quality-row').hide();
+}
 
 });
 
@@ -204,9 +201,10 @@ render.find('.cas-quality-row').html(qH);
 
 try{
 loadMovieDataOptimized(render,data);
-parseQuality(render,data);
 }
-catch(e){}
+catch(e){
+console.error('Error loading movie data',e);
+}
 
 },80);
     function attachLoader(){
@@ -216,14 +214,20 @@ Lampa.Listener.follow('full',(event)=>{
 if(event.type==='complite'){
 
 const data=event.data.movie;
-
 const render=event.object.activity.render();
+const content=render.find('.left-title__content');
+
+content.removeClass('cas-animated');
 
 if(data && data.id){
+
+render.data('movie',data);
 
 debouncedLoadMovieData(render,data);
 
 }
+
+setTimeout(()=>content.addClass('cas-animated'),100);
 
 }
 
@@ -251,9 +255,7 @@ if(window.appready)startPlugin();
 else{
 
 Lampa.Listener.follow('app',(e)=>{
-
 if(e.type==='ready')startPlugin();
-
 });
 
 }
