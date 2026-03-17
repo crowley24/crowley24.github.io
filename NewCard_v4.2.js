@@ -497,33 +497,35 @@
                     debouncedLoadMovieData(render, data);        
                         
                     // Виправлена логіка відображення рейтингу CUB  
-                    if (Lampa.Storage.get('cas_show_rating') && event.data.reactions && event.data.reactions.result && event.data.reactions.result.length > 0) {        
-                        try {        
-                            let sum = 0, cnt = 0;        
-                            const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };        
-                                
-                            event.data.reactions.result.forEach(r => {        
-                                if (r.counter && r.counter > 0) {        
-                                    sum += (r.counter * coef[r.type]);        
-                                    cnt += r.counter;        
-                                }        
-                            });        
-                                
-                            if (cnt >= 1) {        
-                                const baseRating = data.name ? 7.4 : 6.5;        
-                                const baseWeight = data.name ? 50 : 150;        
-                                const cubV = ((baseRating * baseWeight + sum) / (baseWeight + cnt)).toFixed(1);        
-                                        
-                                const currentRates = render.find('.cas-rate-items').html();        
-                                const cubRatingHtml = `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;        
-                                        
-                                render.find('.cas-rate-items').html(currentRates + cubRatingHtml);        
-                            }        
-                        } catch (e) {        
-                            console.error('Error calculating CUB rating:', e);        
-                        }        
-                    }        
-                }        
+                    if (Lampa.Storage.get('cas_show_rating') && event.data.reactions && event.data.reactions.result && event.data.reactions.result.length > 0) {  
+    try {  
+        let sum = 0, cnt = 0;  
+        const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };  
+          
+        event.data.reactions.result.forEach(r => {  
+            if (r.counter && r.counter > 0) {  
+                sum += (r.counter * coef[r.type]);  
+                cnt += r.counter;  
+            }  
+        });  
+          
+        // Змінено умову з cnt >= 1 на cnt >= 5  
+        if (cnt >= 5) {  
+            // Використовуємо той самий метод визначення типу, що й у робочому плагіні  
+            const isTv = event.object.method === 'tv';  
+            const baseRating = isTv ? 7.4 : 6.5;  
+            const baseWeight = isTv ? 50 : 150;  
+            const cubV = ((baseRating * baseWeight + sum) / (baseWeight + cnt)).toFixed(1);  
+              
+            const currentRates = render.find('.cas-rate-items').html();  
+            const cubRatingHtml = `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;  
+              
+            render.find('.cas-rate-items').html(currentRates + cubRatingHtml);  
+        }  
+    } catch (e) {  
+        console.error('Error calculating CUB rating:', e);  
+    }  
+                    }
                         
                 setTimeout(() => content.addClass('cas-animated'), 100);        
                         
