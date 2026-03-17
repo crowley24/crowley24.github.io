@@ -176,8 +176,7 @@
             }          
         }          
     }          
-          
-    function addCustomTemplate() {               
+              function addCustomTemplate() {               
         const template = `<div class="full-start-new left-title">              
             <div class="full-start-new__body">              
                 <div class="full-start-new__left hide">              
@@ -187,17 +186,17 @@
                 </div>              
                 <div class="full-start-new__right">              
                     <div class="left-title__content">              
-                        <div class="cas-logo-container" style="margin-bottom: var(--cas-blocks-gap);">            
+                        <div class="cas-logo-container">            
                             <div class="cas-logo"></div>            
                         </div>            
-                        <div class="cas-studios-row" style="display: flex; gap: 15px; align-items: center; margin-bottom: 12px;"></div>            
+                        <div class="cas-studios-row" style="display: flex; gap: 15px; align-items: center; margin-bottom: 8px;"></div>            
                         <div class="cas-ratings-line">            
                             <div class="cas-rate-items" style="display: flex; align-items: center; gap: 12px;"></div>            
                             <div class="cas-meta-info"></div>            
                             <div class="cas-quality-row" style="display: flex; gap: 8px; align-items: center;"></div>            
                         </div>            
-                        <div class="cas-description" style="margin-top: calc(var(--cas-blocks-gap) * 0.6);"></div>            
-                        <div class="cas-details-wrapper" style="margin-top: 10px;">          
+                        <div class="cas-description" style="margin-top: 8px;"></div>            
+                        <div class="cas-details-wrapper" style="margin-top: 5px;">          
                             <div class="full-start-new__head hide"></div>              
                             <div class="full-start-new__details hide"></div>              
                         </div>          
@@ -231,28 +230,33 @@
                     <div class="rating--modss" style="display: none;"></div>              
                 </div>              
             </div>              
-            <div class="hide buttons--container">              
-                <div class="full-start__button view--torrent hide">              
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="24" height="24"><path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2z M40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4 S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851 c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29 c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862-4.993-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8 c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722 C42.541,30.867,41.756,30.963,40.5,30.963z" fill="currentColor"/></svg>              
-                    <span>#{full_torrents}</span>              
-                </div>              
-                <div class="full-start__button selector view--trailer">              
-                    <svg height="24" viewBox="0 0 80 70" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/></svg>              
-                    <span>#{full_trailers}</span>              
-                </div>              
-            </div>              
         </div>`;              
         Lampa.Template.add('full_start_new', template);              
     }          
           
     function addStyles() {          
-        if ($('#cas-main-styles').length) return; // Захист від дублювання    
+        if ($('#cas-main-styles').length) return; 
         const styles = `<style id="cas-main-styles">          
         :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); }          
         .full-start__background { will-change: transform; transform: translateZ(0); transition: opacity 0.8s ease; }          
                 
-        .cas-logo-container { position: relative; overflow: hidden; }        
+        /* Виправлення обрізання логотипу: видалено overflow та додано відступ для масштабу */
+        .cas-logo-container { 
+            position: relative; 
+            margin-bottom: calc(var(--cas-blocks-gap) * 0.8);
+            padding: 20px 0; 
+        }        
                 
+        .cas-logo img { 
+            background: transparent !important; 
+            border: none !important; 
+            max-width: 450px; 
+            max-height: 200px; 
+            transform: scale(var(--cas-logo-scale)); 
+            transform-origin: left bottom; /* Змінено на left для стабільності при масштабі */
+            display: block;
+        }
+
         .full-start__background {        
             transform: scale(1.1);        
             transition: transform 0.8s ease-out, opacity 0.8s ease;        
@@ -279,11 +283,12 @@
         .full-start-new__details { display: none !important; }          
         .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }          
                 
+        /* Зменшено відступ для кнопок */
         .full-start-new__buttons {         
             display: flex !important;         
             flex-direction: row !important;         
-            gap: 20px;         
-            margin-top: 1.2em;        
+            gap: 15px;         
+            margin-top: 0.6em;        
             opacity:1 !important;         
             transform: translateY(20px) scale(0.9);         
             transition:none !important;         
@@ -308,7 +313,7 @@
             will-change: transform;        
             border: 2px solid transparent !important;      
             border-radius: 8px !important;      
-            padding: 8px 16px !important;      
+            padding: 6px 14px !important; /* Трохи компактніші кнопки */     
         }          
                 
         .left-title .full-start-new__buttons .full-start__button.focus {    
@@ -323,7 +328,6 @@
         .cas-rate-item:nth-child(2) { animation-delay: 0.3s; }        
         @keyframes popIn{ from{opacity:0;transform:scale(.9);} to{opacity:1;transform:scale(1);} }       
         
-        .cas-logo img { background: transparent !important; border: none !important; max-width: 450px; max-height: 200px; transform: scale(var(--cas-logo-scale)); transform-origin: center bottom; }          
         .cas-studio-item img { height: 20px; filter: drop-shadow(0 0 1px rgba(255,255,255,0.8)) drop-shadow(0 0 1px rgba(255,255,255,0.8)); opacity: 1; image-rendering: crisp-edges; }          
         .cas-description { font-size: var(--cas-meta-size) !important; line-height: 1.4; color: rgba(255,255,255,0.7); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-width: 650px; }          
         .cas-quality-item img { height: 12px; }          
@@ -338,7 +342,7 @@
         </style>`;          
         Lampa.Template.add('left_title_css', styles);          
         $('body').append(Lampa.Template.get('left_title_css', {}, true));          
-    }          
+    }
           
     function getCachedData(id) {          
         const cache = Lampa.Storage.get('cas_images_cache') || {};          
