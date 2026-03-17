@@ -410,50 +410,51 @@
     }          
           
     function startSlideshow(render, backdrops) {  
-        stopSlideshow();  
-        let idx = 0;  
-        const intervalTime = 15000;  
+    stopSlideshow();  
+      
+    console.log('Starting slideshow with backdrops:', backdrops.length);  
+      
+    if (!backdrops || backdrops.length <= 1) {  
+        console.log('Not enough backdrops for slideshow');  
+        return;  
+    }  
+      
+    let idx = 0;  
+    const intervalTime = 15000;  
+      
+    // Спрощена реалізація без клонування  
+    const bg = render.find('.full-start__background img, img.full-start__background');  
+      
+    if (!bg.length) {  
+        console.log('Background element not found');  
+        return;  
+    }  
+      
+    console.log('Background element found, starting slideshow');  
+      
+    currentInterval = setInterval(() => {  
+        idx = (idx + 1) % backdrops.length;  
+        const nextSrc = Lampa.TMDB.image('/t/p/original' + backdrops[idx].file_path);  
           
-        // Створюємо другий шар для crossfade ефекту  
-        const bgContainer = render.find('.full-start__background');  
-        const originalBg = bgContainer.find('img').first();  
+        console.log('Changing background to:', nextSrc);  
           
-        if (!originalBg.length) return stopSlideshow();  
-          
-        // Клонуємо оригінальний фон для плавного переходу  
-        const cloneBg = originalBg.clone().css({  
-            'position': 'absolute',  
-            'top': '0',  
-            'left': '0',  
-            'width': '100%',  
-            'height': '100%',  
-            'opacity': '0',  
-            'transition': 'opacity 1.5s ease-in-out',  
-            'z-index': '2'  
-        });  
-          
-        bgContainer.append(cloneBg);  
-          
-        currentInterval = setInterval(() => {  
-            idx = (idx + 1) % Math.min(backdrops.length, 15);  
-            const nextSrc = Lampa.TMDB.image('/t/p/original' + backdrops[idx].file_path);  
-              
-            // Попередньо завантажуємо наступне зображення  
-            const tempImg = new Image();  
-            tempImg.onload = () => {  
-                cloneBg.attr('src', nextSrc);  
-                cloneBg.css('opacity', '1');  
-                  
-                setTimeout(() => {  
-                    originalBg.attr('src', nextSrc);  
-                    cloneBg.css('opacity', '0');  
-                }, 1500);  
-            };  
-            tempImg.src = nextSrc;  
-        }, intervalTime);  
-          
-        window.casBgInterval = currentInterval;  
-    }          
+        // Попередньо завантажуємо зображення  
+        const tempImg = new Image();  
+        tempImg.onload = () => {  
+            bg.css('opacity', '0');  
+            setTimeout(() => {  
+                bg.attr('src', nextSrc);  
+                bg.css('opacity', '1');  
+            }, 500);  
+        };  
+        tempImg.onerror = () => {  
+            console.error('Failed to load image:', nextSrc);  
+        };  
+        tempImg.src = nextSrc;  
+    }, intervalTime);  
+      
+    window.casBgInterval = currentInterval;  
+}          
           
     async function processImages(render, data, res) {          
         try {          
@@ -467,9 +468,12 @@
             render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);          
         }          
         stopSlideshow();          
-        if (Lampa.Storage.get('cas_slideshow_enabled') && res.backdrops?.length > 1) {          
-            startSlideshow(render, res.backdrops);          
-        }          
+        if (Lampa.Storage.get('cas_slideshow_enabled') && res.backdrops && res.backdrops.length > 1) {  
+    console.log('Slideshow enabled, backdrops:', res.backdrops.length);  
+    startSlideshow(render, res.backdrops);  
+} else {  
+    console.log('Slideshow disabled or not enough backdrops');  
+}          
     } catch (error) {          
         render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);          
     }          
