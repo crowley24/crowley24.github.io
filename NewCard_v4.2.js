@@ -259,7 +259,7 @@
         overflow: visible;   
         max-width: 100%;   
         padding-left: 2%;  
-        margin-bottom: var(--cas-blocks-gap);  
+        margin-bottom: calc(var(--cas-blocks-gap) * 1.5);
         max-height: 300px;  
     }          
               
