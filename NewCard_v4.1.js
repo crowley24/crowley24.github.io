@@ -1,4 +1,5 @@
-(function () {      
+(function () {    
+    
     'use strict';      
     const PLUGIN_NAME = 'NewCard';      
     const PLUGIN_ID = 'new_card_style';      
