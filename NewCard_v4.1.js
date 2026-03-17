@@ -290,7 +290,7 @@
         display: flex !important;           
         flex-direction: row !important;           
         gap: 20px;           
-        margin-top: 1.2em;          
+        margin-top: 0.8em;          
         opacity:1 !important;           
         transform: translateY(20px) scale(0.9);           
         transition:none !important;           
