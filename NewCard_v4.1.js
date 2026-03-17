@@ -246,17 +246,18 @@
     }          
           
     function addStyles() {            
-    if ($('#cas-main-styles').length) return; // Захист від дублювання      
+    if ($('#cas-main-styles').length) return;      
     const styles = `<style id="cas-main-styles">            
     :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); }            
     .full-start__background { will-change: transform; transform: translateZ(0); transition: opacity 0.8s ease; }            
               
     .cas-logo-container {   
         position: relative;   
-        overflow: hidden;   
+        overflow: visible;   
         max-width: 100%;   
         padding-left: 2%;  
         margin-bottom: var(--cas-blocks-gap);  
+        max-height: 300px;  
     }          
               
     .full-start__background {          
@@ -333,7 +334,7 @@
         background: transparent !important;   
         border: none !important;   
         max-width: 450px;   
-        max-height: 250px;   
+        max-height: 300px;   
         width: auto;  
         height: auto;  
         transform: scale(var(--cas-logo-scale));   
@@ -355,7 +356,7 @@
     </style>`;            
     Lampa.Template.add('left_title_css', styles);            
     $('body').append(Lampa.Template.get('left_title_css', {}, true));            
-} 
+}
           
     function getCachedData(id) {          
         const cache = Lampa.Storage.get('cas_images_cache') || {};          
