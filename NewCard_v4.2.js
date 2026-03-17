@@ -148,14 +148,18 @@
         currentCard.find('.cas-quality-row').toggle(!!Lampa.Storage.get('cas_show_quality'));  
         currentCard.find('.cas-rate-items').toggle(!!Lampa.Storage.get('cas_show_rating'));  
             
-        // Динамічне регулювання відступу коли елементи приховані  
+        // Перевіряємо чи є видимі елементи між мета-інформацією та кнопками  
         const hasVisibleElements = currentCard.find('.cas-studios-row:visible, .cas-rate-items:visible, .cas-quality-row:visible, .cas-description:visible').length > 0;  
-        const ratingsLine = currentCard.find('.cas-ratings-line');  
+        const buttons = currentCard.find('.full-start-new__buttons');  
           
         if (!hasVisibleElements) {  
-            ratingsLine.css('margin-bottom', '0.5em');  
+            // Агресивно зменшуємо відступ коли всі елементи приховані  
+            buttons.css('margin-top', '0.2em');  
+            currentCard.find('.cas-ratings-line').css('margin-bottom', '0');  
         } else {  
-            ratingsLine.css('margin-bottom', '');  
+            // Повертаємо стандартні значення  
+            buttons.css('margin-top', '');  
+            currentCard.find('.cas-ratings-line').css('margin-bottom', '');  
         }  
             
         stopSlideshow();  
