@@ -21,11 +21,12 @@
         return saved;
     }
 
-    // --- Функція налаштувань, яка НЕ закриває вікно ---
-    function showGenreSettings() {
+    // --- ФУНКЦІЯ НАЛАШТУВАНЬ З РОБОЧИМ ФОКУСОМ ---
+    function showGenreSettings(index_to_focus) {
         var ids = Object.keys(ALL_GENRES);
+        var selected = getSelectedGenres();
+        
         var items = ids.map(function(id) {
-            var selected = getSelectedGenres();
             return {
                 title: (selected.indexOf(id) !== -1 ? '✅ ' : '❌ ') + ALL_GENRES[id],
                 value: id
@@ -36,29 +37,32 @@
             title: tr('Оберіть жанри', 'Выберите жанры'),
             items: items,
             onSelect: function (item) {
-                // Цей блок порожній, бо ми обробляємо клік через свою подію нижче
+                var current = getSelectedGenres();
+                var idx = current.indexOf(item.value);
+                
+                if (idx > -1) current.splice(idx, 1);
+                else current.push(item.value);
+                
+                Lampa.Storage.set(STORAGE_KEY, current);
+
+                // Знаходимо індекс поточного елемента
+                var current_focus = ids.indexOf(item.value);
+                
+                // Перевідкриваємо меню через мінімальну паузу
+                setTimeout(function() {
+                    showGenreSettings(current_focus);
+                }, 10);
             },
             onRender: function(render) {
-                // Перехоплюємо клік на пункти меню
-                render.find('.select__item').on('hover:enter', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    var item_data = items[$(this).index()];
-                    var current = getSelectedGenres();
-                    var idx = current.indexOf(item_data.value);
-                    
-                    if (idx > -1) current.splice(idx, 1);
-                    else current.push(item_data.value);
-                    
-                    Lampa.Storage.set(STORAGE_KEY, current);
-
-                    // Оновлюємо текст прямо в списку без закриття
-                    var is_now_active = current.indexOf(item_data.value) !== -1;
-                    $(this).find('.select__title').text((is_now_active ? '✅ ' : '❌ ') + ALL_GENRES[item_data.value]);
-                    
-                    Lampa.Noty.show(tr('Оновлено', 'Обновлено'), {time: 300});
-                });
+                if (typeof index_to_focus !== 'undefined') {
+                    setTimeout(function() {
+                        var list = render.find('.select__item');
+                        if (list.length > index_to_focus) {
+                            Lampa.Controller.collectionSet(render);
+                            Lampa.Controller.collectionFocus(list.eq(index_to_focus)[0]);
+                        }
+                    }, 50);
+                }
             },
             onBack: function() {
                 Lampa.Controller.toggle('content');
@@ -70,7 +74,7 @@
         var genres = getSelectedGenres();
         if (!genres.length) genres = Object.keys(ALL_GENRES);
         var random_genre = genres[Math.floor(Math.random() * genres.length)];
-        var page = Math.floor(Math.random() * 15) + 1;
+        var page = Math.floor(Math.random() * 20) + 1;
         var type = Math.random() > 0.3 ? 'movie' : 'tv';
         
         return {
@@ -85,12 +89,13 @@
         };
     }
 
-    // --- Виведення на Головну (Найвищий пріоритет) ---
+    // --- ЗАЛІЗОБЕТОННЕ ВИВЕДЕННЯ НА ПЕРШЕ МІСЦЕ ---
     function injectToMain() {
         var originalCall = Lampa.ContentRows.call;
         Lampa.ContentRows.call = function (screen, params, calls) {
             if (screen === 'main') {
-                var randomRow = function (call) {
+                // Наша функція завантаження
+                var myRow = function (call) {
                     var config = getRandomParams();
                     var method = config.type === 'movie' ? 'discover/movie' : 'discover/tv';
                     
@@ -105,11 +110,9 @@
                     }, function () { call({ results: [] }); });
                 };
 
-                // Вставляємо на самий початок
-                calls.unshift(randomRow);
+                // Очищаємо масив від дублікатів нашої функції та ставимо її ПЕРШОЮ
+                calls.unshift(myRow);
             }
-            
-            // Виклик основних рядків
             originalCall.apply(this, arguments);
         };
     }
