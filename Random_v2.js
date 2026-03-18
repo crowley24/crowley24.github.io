@@ -1,9 +1,7 @@
 (function () {  
     'use strict';  
-  
     var PLUGIN_ID = 'lampa_random_premium';  
     var STORAGE_KEY = 'lampa_random_selected_genres';  
-  
     var ALL_GENRES = {  
         28: 'Бойовик', 12: 'Пригоди', 16: 'Мультфільм', 35: 'Комедія', 80: 'Кримінал',  
         99: 'Документальний', 18: 'Драма', 10751: 'Сімейний', 14: 'Фентезі', 36: 'Історія',  
