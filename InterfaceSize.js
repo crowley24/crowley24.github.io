@@ -1,73 +1,73 @@
-// ==Lampa==
-// name: Interface Size Precise PRO
-// version: 4.1.2
-// author: Crowley (optimized by ChatGPT)
-// ==/Lampa==
+(function () {  
+  "use strict";  
+  
+  let manifest = {  
+    type: 'interface',  
+    version: '3.11.5',  
+    name: 'Interface Size Precise',  
+    component: 'interface_size_precise'  
+  };  
+  Lampa.Manifest.plugins = manifest;  
+  
+  const lang_data = {
+    settings_param_interface_size_mini: 'Міні',  
+    settings_param_interface_size_very_small: 'Дуже малий',  
+    settings_param_interface_size_small: 'Малий',  
+    settings_param_interface_size_medium: 'Середній',  
+    settings_param_interface_size_standard: 'Стандартний',  
+    settings_param_interface_size_large: 'Великий',  
+    settings_param_interface_size_very_large: 'Дуже великий'
+  };
 
-(function () {
-    'use strict';
+  function init() {
+    if (window.Lampa && Lampa.Lang) {
+      Lampa.Lang.add(lang_data);
+    }
 
-    const KEY = 'interface_size_precise';
-    const sizes = ['9', '9.5', '10', '10.5', '11', '11.5', '12', '12.5', '13'];
+    // Очищуємо старі значення, щоб прибрати "Менше" та вирівняти порядок
+    Lampa.Params.values['interface_size'] = {};
 
-    // 1. Додаємо свій окремий пункт у налаштування "Інтерфейс"
-    Lampa.Params.select(KEY,
-        sizes.map(s => ({
-            title: s,
-            value: s
-        })),
-        '12',
-        'Виберіть точний розмір шрифту',
-        {
-            translate: false
-        }
-    );
+    // Додаємо значення в суворому порядку від 9 до 12
+    Lampa.Params.select('interface_size', {  
+  '09': lang_data.settings_param_interface_size_mini,         // Міні
+  '09.5': lang_data.settings_param_interface_size_very_small,  // Дуже малий
+  '10': lang_data.settings_param_interface_size_small,         // Малий
+  '10.5': lang_data.settings_param_interface_size_medium,      // Середній
+  '11': lang_data.settings_param_interface_size_standard,      // Стандартний
+  '11.5': lang_data.settings_param_interface_size_large,       // Великий
+  '12': lang_data.settings_param_interface_size_very_large     // Дуже великий
+}, '11');  // за замовчуванням - Стандартний
 
-    // 2. Функція застосування стилів
-    const applySize = () => {
-        const size = Lampa.Storage.field(KEY) || '12';
-        $('body').css('font-size', size + 'px');
-        
-        // Синхронізуємо з системним параметром, щоб Lampa не "скидала" його
-        Lampa.Storage.set('interface_size', Math.round(parseFloat(size)));
-    };
+    updateSize();
+  }
+  
+  const updateSize = () => {
+    const iSize = Lampa.Platform.screen('mobile') ? 10 : parseFloat(Lampa.Storage.field('interface_size')) || 11;
+    $('body').css({ fontSize: iSize + 'px' });  
+  
+    // Логіка карток
+    let cardCount = 6;
+    if (iSize <= 9.5) cardCount = 8;
+    else if (iSize <= 11) cardCount = 7;
 
-    // 3. Патч для карток (кількість об'єктів у рядку)
-    const patchGrid = () => {
-        const size = parseFloat(Lampa.Storage.field(KEY)) || 12;
-        const count = size <= 10 ? 7 : (size <= 11 ? 6 : 5);
-
-        const line = Lampa.Maker.map('Line');
-        if (line && line.Items && line.Items.onInit) {
-            const original = line.Items.onInit;
-            line.Items.onInit = function() {
-                original.call(this);
-                this.view = count;
-            };
-        }
-    };
-
-    // 4. Слухаємо зміни
-    Lampa.Storage.listener.follow('change', (e) => {
-        if (e.name === KEY) {
-            applySize();
-            Lampa.Noty.show('Розмір змінено: ' + e.value + 'px');
-            // Перезавантажуємо сторінку для застосування сітки (найнадійніший метод у Lampa)
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
-        }
+    if (Lampa.Maker && Lampa.Maker.map) {
+      ['Line', 'Category'].forEach(type => {
+        const original = Lampa.Maker.map(type).Items.onInit;
+        Lampa.Maker.map(type).Items.onInit = function() {
+          original.call(this);
+          if(type === 'Line') this.view = cardCount;
+          else this.limit_view = cardCount;
+        };
+      });
+    }
+  };  
+  
+  if (window.Lampa) {
+    // Затримка 500мс дає системі час завантажити стандартне меню, 
+    // щоб ми могли його переписати
+    setTimeout(init, 500); 
+    Lampa.Storage.listener.follow('change', e => {  
+      if (e.name == 'interface_size') updateSize();  
     });
-
-    // 5. Запуск
-    Lampa.Listener.follow('app', (e) => {
-        if (e.type === 'ready') {
-            applySize();
-            patchGrid();
-        }
-    });
-
-    // Про всяк випадок застосовуємо відразу
-    applySize();
-
+  }
 })();
