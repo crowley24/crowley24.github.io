@@ -26,14 +26,14 @@
     // Очищуємо старі значення  
     Lampa.Params.values['interface_size'] = {};  
   
-    // Додаємо значення в потрібному порядку  
+    // Додаємо значення в правильному порядку: малий, стандартний, дуже великий, міні, середній, великий  
     Lampa.Params.select('interface_size', {    
-      '09': lang_data.settings_param_interface_size_mini,          
-      '10': lang_data.settings_param_interface_size_small,         
-      '10.5': lang_data.settings_param_interface_size_medium,      
-      '11': lang_data.settings_param_interface_size_standard,      
-      '11.5': lang_data.settings_param_interface_size_large,       
-      '12': lang_data.settings_param_interface_size_very_large     
+      '10': lang_data.settings_param_interface_size_small,        // малий  
+      '11': lang_data.settings_param_interface_size_standard,    // стандартний    
+      '12': lang_data.settings_param_interface_size_very_large,  // дуже великий  
+      '09': lang_data.settings_param_interface_size_mini,        // міні  
+      '10.5': lang_data.settings_param_interface_size_medium,    // середній  
+      '11.5': lang_data.settings_param_interface_size_large      // великий  
     }, '11');    
   
     updateSize();  
