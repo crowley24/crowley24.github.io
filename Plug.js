@@ -4,7 +4,7 @@
     const AVAILABLE_PLUGINS = [
         {
             name: 'NewCard',
-            description: 'Новий вигляд повної картки фвльму з повним налаштуванням інтерфейсу',
+            description: 'Новий вигляд картки фвльму з повним налаштуванням інтерфейсу',
             url: 'https://crowley24.github.io/main/NewCard.js',
             id: 'NewCard'
         },
