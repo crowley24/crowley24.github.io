@@ -341,7 +341,13 @@
             transform-origin: left center;      
             display: block;      
             object-fit: contain;      
-        }                
+        }     
+        .cas-studio-item {  
+        height: 2.2em !important;  
+        display: flex;  
+        align-items: center;  
+        justify-content: center;  
+    }  
         .cas-studio-item img {   
     height: 100%;   
     width: auto;   
