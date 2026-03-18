@@ -32,8 +32,8 @@
       '10': lang_data.settings_param_interface_size_small,        // малий 
       '10.5': lang_data.settings_param_interface_size_medium,    // середній
       '11': lang_data.settings_param_interface_size_standard,    // стандартний 
-      '11.5': lang_data.settings_param_interface_size_large      // великий
-      '12': lang_data.settings_param_interface_size_very_large,  // дуже великий  
+      '11.5': lang_data.settings_param_interface_size_large,      // великий
+      '12': lang_data.settings_param_interface_size_very_large  // дуже великий  
       }, '11');    
   
     updateSize();  
@@ -45,7 +45,7 @@
     
     // Логіка карток  
     let cardCount = 6;  
-    if (iSize <= 9.5) cardCount = 8;  
+    if (iSize <= 9) cardCount = 8;  
     else if (iSize <= 11) cardCount = 7;  
   
     if (Lampa.Maker && Lampa.Maker.map) {  
