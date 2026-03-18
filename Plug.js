@@ -21,14 +21,6 @@
         return plugins.some(p => p.id === plugin.id || p.url === plugin.url);  
     }  
   
-    function getPluginStatus(plugin) {  
-        const plugins = Lampa.Storage.get('plugins') || [];  
-        const found = plugins.find(p => p.id === plugin.id || p.url === plugin.url);  
-          
-        if (!found) return -1; // Не встановлено  
-        return found.status === 0 ? 0 : 1; // 0 = вимкнено, 1 = активно  
-    }  
-  
     function togglePlugin(plugin) {  
         let plugins = Lampa.Storage.get('plugins') || [];  
         const installed = isPluginInstalled(plugin);  
@@ -45,57 +37,22 @@
                 status: 1  
             });  
             Lampa.Storage.set('plugins', plugins);  
-            Lampa.Noty.show('Встановлено. Перезавантажте додаток!');  
+            Lampa.Noty.show('Встановлено. ПЕРЕЗАПУСТІТЬ додаток повністю!');  
         }  
           
-        updatePluginIndicators();  
-    }  
-  
-    function updatePluginIndicators() {  
-        AVAILABLE_PLUGINS.forEach(plugin => {  
-            const pluginStatus = getPluginStatus(plugin);  
-            const pluginNameInternal = 'plugin_' + plugin.id;  
-              
-            setTimeout(() => {  
-                // Логіка відображення статусу (кольори градієнта)  
-                if (pluginStatus > 0) {  
-                    // Встановлено та Активно (Зелений)  
-                    $('div[data-name="' + pluginNameInternal + '"]').find('.settings-param__status')  
-                        .removeClass('active error')  
-                        .css('background', 'linear-gradient(45deg, #11e400, #36a700)');  
-                } else if (pluginStatus === 0) {  
-                    // Встановлено, але Вимкнено (Помаранчевий)  
-                    $('div[data-name="' + pluginNameInternal + '"]').find('.settings-param__status')  
-                        .removeClass('active error')  
-                        .css('background', 'linear-gradient(45deg, #ff8c00, #d96e00)');  
-                } else {  
-                    // Не встановлено (Червоний)  
-                    $('div[data-name="' + pluginNameInternal + '"]').find('.settings-param__status')  
-                        .removeClass('active error')  
-                        .css('background', 'linear-gradient(45deg, #ff0000, #c40000)');  
-                }  
-            }, 100);  
-        });  
+        Lampa.Settings.update();  
     }  
   
     function showPluginsList() {  
         const items = AVAILABLE_PLUGINS.map(plugin => {  
             const installed = isPluginInstalled(plugin);  
-            const status = getPluginStatus(plugin);  
-              
-            let statusText = 'Не встановлено';  
-            if (status > 0) statusText = 'Активно';  
-            else if (status === 0) statusText = 'Вимкнено';  
-              
             return {  
                 title: plugin.name,  
-                subtitle: plugin.description + ' - ' + statusText,  
-                onSelect: function() {  
-                    togglePlugin(plugin);  
-                }  
+                subtitle: plugin.description,  
+                onSelect: () => togglePlugin(plugin)  
             };  
         });  
-          
+  
         Lampa.Select.show({  
             title: 'Менеджер плагінів',  
             items: items,  
@@ -115,7 +72,6 @@
         icon: '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 6V18M6 12H18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'  
     });  
   
-    // Додавання параметрів для кожного плагіна  
     AVAILABLE_PLUGINS.forEach(plugin => {  
         Lampa.SettingsApi.addParam({  
             component: 'plugin_manager_page',  
@@ -128,28 +84,32 @@
                 description: plugin.description  
             },  
             onRender: function (item) {  
-                const installed = isPluginInstalled(plugin);  
-                const status = getPluginStatus(plugin);  
+                const myResult = isPluginInstalled(plugin);  
+                const pluginsArray = Lampa.Storage.get('plugins');  
                   
-                // Додаємо data-атрибут для пошуку  
-                item.attr('data-name', 'plugin_' + plugin.id);  
-                  
-                // Створюємо індикатор статусу  
-                const statusElement = $('<div class="settings-param__status"></div>');  
-                  
-                // Встановлюємо початковий колір градієнта  
-                if (status > 0) {  
-                    statusElement.css('background', 'linear-gradient(45deg, #11e400, #36a700)');  
-                } else if (status === 0) {  
-                    statusElement.css('background', 'linear-gradient(45deg, #ff8c00, #d96e00)');  
-                } else {  
-                    statusElement.css('background', 'linear-gradient(45deg, #ff0000, #c40000)');  
-                }  
-                  
-                item.prepend(statusElement);  
-                item.find('.settings-param__value').text(installed ? 'Видалити' : 'Встановити');  
-                  
-                if (installed) item.addClass('active');  
+                setTimeout(function () {  
+                    // Додаємо індикатор до елемента  
+                    $('div[data-name="plugin_' + plugin.id + '"]').append('<div class="settings-param__status one"></div>');  
+                      
+                    let pluginStatus = null;  
+                    for (let i = 0; i < pluginsArray.length; i++) {  
+                        if (pluginsArray[i].url === plugin.url) {  
+                            pluginStatus = pluginsArray[i].status;  
+                            break;  
+                        }  
+                    }  
+                      
+                    if (myResult && pluginStatus !== 0) {  
+                        // Встановлено та Активно (Зелений градієнт)  
+                        $('div[data-name="plugin_' + plugin.id + '"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #11e400, #36a700)');  
+                    } else if (pluginStatus === 0) {  
+                        // Відключено (Помаранчевий градієнт)  
+                        $('div[data-name="plugin_' + plugin.id + '"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff8c00, #d96e00)');  
+                    } else {  
+                        // Не встановлено (Червоний градієнт)  
+                        $('div[data-name="plugin_' + plugin.id + '"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff0000, #c40000)');  
+                    }  
+                }, 100);  
             },  
             onChange: function () {  
                 togglePlugin(plugin);  
@@ -160,9 +120,34 @@
     // Слухач для оновлення індикаторів при відкритті налаштувань  
     Lampa.Listener.follow('settings', (e) => {  
         if (e.type === 'open') {  
-            setTimeout(updatePluginIndicators, 300);  
+            setTimeout(() => {  
+                AVAILABLE_PLUGINS.forEach(plugin => {  
+                    const myResult = isPluginInstalled(plugin);  
+                    const pluginsArray = Lampa.Storage.get('plugins');  
+                      
+                    // Додаємо індикатор, якщо його немає  
+                    if (!$('div[data-name="plugin_' + plugin.id + '"]').find('.settings-param__status').length) {  
+                        $('div[data-name="plugin_' + plugin.id + '"]').append('<div class="settings-param__status one"></div>');  
+                    }  
+                      
+                    let pluginStatus = null;  
+                    for (let i = 0; i < pluginsArray.length; i++) {  
+                        if (pluginsArray[i].url === plugin.url) {  
+                            pluginStatus = pluginsArray[i].status;  
+                            break;  
+                        }  
+                    }  
+                      
+                    if (myResult && pluginStatus !== 0) {  
+                        $('div[data-name="plugin_' + plugin.id + '"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #11e400, #36a700)');  
+                    } else if (pluginStatus === 0) {  
+                        $('div[data-name="plugin_' + plugin.id + '"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff8c00, #d96e00)');  
+                    } else {  
+                        $('div[data-name="plugin_' + plugin.id + '"]').find('.settings-param__status').removeClass('active error').css('background', 'linear-gradient(45deg, #ff0000, #c40000)');  
+                    }  
+                });  
+            }, 300);  
         }  
     });  
   
-    console.log('Plugin Manager with gradient indicators initialized');  
 })();
