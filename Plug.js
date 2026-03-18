@@ -3,29 +3,29 @@
 
     const AVAILABLE_PLUGINS = [
         {
-            name: 'NewCard',
-            description: 'Новий вигляд картки фільму з налаштуванням інтерфейсу (ТВ версія)',
-            url: 'https://crowley24.github.io/main/NewCard.js',
-            id: 'NewCard'
-        },
-        {
-            name: 'Mobile Interface',
-            description: 'Інтерфейс картки фільму з налаштуванням інтерфейсу (Мобільна версія)',
-            url: 'https://crowley24.github.io/main/Mob_Interface.js',
-            id: 'mob_interface'
-        },
-        {
-            name: 'Mobile menu',
-            description: 'Модефіковане нижнє меню для мобільних пристроїв',
-            url: 'https://crowley24.github.io/NewMenu_Mob.js',
-            id: 'NewMenu_Mob'
-        },
-        {
-            name: 'Custom Buttons',
-            description: 'Кастомізація кнопок в картці фільму (Розробка проєкту BazarNet | LampaUA)',
-            url: 'http://lampaua.mooo.com/buttons.js',
-            id: 'custom_buttons'
-        }
+    name: 'NewCard',
+    description: 'Сучасний ТВ-інтерфейс картки фільму з гнучкими налаштуваннями відображення та покращеною візуальною структурою',
+    url: 'https://crowley24.github.io/main/NewCard.js',
+    id: 'NewCard'
+},
+{
+    name: 'Mobile Interface',
+    description: 'Оптимізований мобільний інтерфейс картки фільму з адаптивним дизайном та розширеними налаштуваннями',
+    url: 'https://crowley24.github.io/main/Mob_Interface.js',
+    id: 'mob_interface'
+},
+{
+    name: 'Mobile Menu',
+    description: 'Оновлене нижнє меню для мобільних пристроїв',
+    url: 'https://crowley24.github.io/NewMenu_Mob.js',
+    id: 'NewMenu_Mob'
+},
+{
+    name: 'Custom Buttons',
+    description: 'Розширена кастомізація кнопок у картці фільму з додатковими елементами керування (BazarNet | LampaUA)',
+    url: 'http://lampaua.mooo.com/buttons.js',
+    id: 'custom_buttons'
+}
     ];
 
     // =========================
