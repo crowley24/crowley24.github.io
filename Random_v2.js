@@ -1,13 +1,14 @@
 (function () {
     'use strict';
 
+    // Унікальний ID для запобігання дублюванню
     var PLUGIN_ID = 'lampa_random_premium';
     var STORAGE_KEY = 'lampa_random_selected_genres';
 
     var ALL_GENRES = {
         28: 'Бойовик', 12: 'Пригоди', 16: 'Мультфільм', 35: 'Комедія', 80: 'Кримінал',
         99: 'Документальний', 18: 'Драма', 10751: 'Сімейний', 14: 'Фентезі', 36: 'Історія',
-        27: 'Жахи', 10402: 'Музика', 9648: 'Містика', 10749: 'Мелодрама', 878: 'Фантастика',
+        27: 'Жахи', 10402: 'Music', 9648: 'Містика', 10749: 'Мелодрама', 878: 'Фантастика',
         53: 'Трилер', 10752: 'Військовий', 37: 'Вестерн'
     };
 
@@ -17,14 +18,12 @@
 
     function getSelectedGenres() {
         var saved = Lampa.Storage.get(STORAGE_KEY);
-        // Якщо нічого не збережено або це не масив — повертаємо всі ID
         if (!saved || !Array.isArray(saved)) return Object.keys(ALL_GENRES);
         return saved;
     }
 
     function showGenreSettings() {
         var selected = getSelectedGenres();
-        
         var items = Object.keys(ALL_GENRES).map(function(id) {
             return {
                 title: ALL_GENRES[id],
@@ -37,19 +36,12 @@
             title: tr('Оберіть жанри', 'Выберите жанры'),
             items: items,
             onSelect: function (item) {
-                // В Lampa при мультиселекті onSelect може викликатися для кожного кліку
-                // або повертати фінальний масив залежно від версії. 
-                // Використовуємо безпечний метод перемикання:
                 var current = getSelectedGenres();
                 var index = current.indexOf(item.value);
-
                 if (index > -1) current.splice(index, 1);
                 else current.push(item.value);
-
                 Lampa.Storage.set(STORAGE_KEY, current);
-                
-                // Перемальовуємо селектор, щоб бачити зміни (галочки)
-                showGenreSettings();
+                showGenreSettings(); // Оновлюємо список для візуалізації галочок
             },
             onBack: function() {
                 Lampa.Controller.toggle('content');
@@ -60,11 +52,9 @@
     function getRandomUrl() {
         var genres = getSelectedGenres();
         if (!genres.length) genres = Object.keys(ALL_GENRES);
-        
         var random_genre = genres[Math.floor(Math.random() * genres.length)];
-        var page = Math.floor(Math.random() * 20) + 1;
+        var page = Math.floor(Math.random() * 25) + 1;
         var type = Math.random() > 0.3 ? 'movie' : 'tv';
-        
         var lang = Lampa.Storage.get('language', 'uk') === 'uk' ? 'uk-UA' : 'ru-RU';
         
         return 'discover/' + type + '?with_genres=' + random_genre + 
@@ -74,8 +64,8 @@
     }
 
     function addMenuItem() {
-        // Видаляємо дублікати, якщо вони раптом з'явилися від старих версій
-        $('[data-plugin="' + PLUGIN_ID + '"]').remove();
+        // 1. КРИТИЧНО: Видаляємо всі існуючі елементи з нашим ID перед додаванням
+        $('.menu .menu__list [data-plugin="' + PLUGIN_ID + '"]').remove();
 
         var menu_item = $('<li class="menu__item selector" data-plugin="' + PLUGIN_ID + '">' +
             '<div class="menu__ico">' +
@@ -103,17 +93,25 @@
             showGenreSettings();
         });
 
-        $('.menu .menu__list').append(menu_item);
-    }
-
-    function init() {
-        if (window.appready) addMenuItem();
-        else {
-            Lampa.Listener.follow('app', function (e) {
-                if (e.type === 'ready') addMenuItem();
-            });
+        // 2. Додаємо в меню, перевіряючи чи існує список взагалі
+        var menuList = $('.menu .menu__list');
+        if (menuList.length) {
+            menuList.append(menu_item);
         }
     }
 
-    if (window.Lampa) init();
+    // Функція запуску з контролем
+    function startPlugin() {
+        addMenuItem();
+        
+        // Додаткова перевірка: якщо меню оновиться (наприклад при зміні профілю)
+        Lampa.Listener.follow('app', function (e) {
+            if (e.type === 'ready') addMenuItem();
+        });
+    }
+
+    // Запуск
+    if (window.Lampa) {
+        startPlugin();
+    }
 })();
