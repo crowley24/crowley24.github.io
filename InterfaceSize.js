@@ -24,19 +24,29 @@
       Lampa.Lang.add(lang_data);
     }
 
-    // Очищуємо старі значення, щоб прибрати "Менше" та вирівняти порядок
+    // Очищуємо старі значення
     Lampa.Params.values['interface_size'] = {};
 
-    // Додаємо значення в суворому порядку від 9 до 12
-    Lampa.Params.select('interface_size', {  
-  '09': lang_data.settings_param_interface_size_mini,         // Міні
-  '09.5': lang_data.settings_param_interface_size_very_small,  // Дуже малий
-  '10': lang_data.settings_param_interface_size_small,         // Малий
-  '10.5': lang_data.settings_param_interface_size_medium,      // Середній
-  '11': lang_data.settings_param_interface_size_standard,      // Стандартний
-  '11.5': lang_data.settings_param_interface_size_large,       // Великий
-  '12': lang_data.settings_param_interface_size_very_large     // Дуже великий
-}, '11');  // за замовчуванням - Стандартний
+    // Додаємо значення в меню у **правильному порядку**
+    const sizeValues = [
+      { id: '09', name: lang_data.settings_param_interface_size_mini },
+      { id: '09.5', name: lang_data.settings_param_interface_size_very_small },
+      { id: '10', name: lang_data.settings_param_interface_size_small },
+      { id: '10.5', name: lang_data.settings_param_interface_size_medium },
+      { id: '11', name: lang_data.settings_param_interface_size_standard },
+      { id: '11.5', name: lang_data.settings_param_interface_size_large },
+      { id: '12', name: lang_data.settings_param_interface_size_very_large }
+    ];
+
+    // Очищуємо старі дані
+    Lampa.Params.values['interface_size'] = {};
+
+    // Створюємо об’єкт для Params.select
+    let orderedValues = {};
+    sizeValues.forEach(v => orderedValues[v.id] = v.name);
+
+    // Передаємо у select
+    Lampa.Params.select('interface_size', orderedValues, '11'); // за замовчуванням Стандартний
 
     updateSize();
   }
@@ -63,8 +73,6 @@
   };  
   
   if (window.Lampa) {
-    // Затримка 500мс дає системі час завантажити стандартне меню, 
-    // щоб ми могли його переписати
     setTimeout(init, 500); 
     Lampa.Storage.listener.follow('change', e => {  
       if (e.name == 'interface_size') updateSize();  
