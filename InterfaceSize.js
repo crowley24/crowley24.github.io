@@ -27,14 +27,14 @@
     Lampa.Params.values['interface_size'] = {};  
   
     // Додаємо значення в правильному порядку: малий, стандартний, дуже великий, міні, середній, великий  
-    Lampa.Params.select('interface_size', {    
-      '10': lang_data.settings_param_interface_size_small,        // малий  
-      '11': lang_data.settings_param_interface_size_standard,    // стандартний    
+    Lampa.Params.select('interface_size', {   
+      '09': lang_data.settings_param_interface_size_mini,        // міні
+      '10': lang_data.settings_param_interface_size_small,        // малий 
+      '10.5': lang_data.settings_param_interface_size_medium,    // середній
+      '11': lang_data.settings_param_interface_size_standard,    // стандартний 
+      '11.5': lang_data.settings_param_interface_size_large      // великий
       '12': lang_data.settings_param_interface_size_very_large,  // дуже великий  
-      '09': lang_data.settings_param_interface_size_mini,        // міні  
-      '10.5': lang_data.settings_param_interface_size_medium,    // середній  
-      '11.5': lang_data.settings_param_interface_size_large      // великий  
-    }, '11');    
+      }, '11');    
   
     updateSize();  
   }  
