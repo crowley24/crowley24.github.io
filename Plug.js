@@ -18,76 +18,45 @@
 
     const icon_plugin_manager = `<svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 6V18M6 12H18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
-    // Додаємо CSS для красивого відображення статусів
-    $('<style>')
-        .prop('type', 'text/css')
-        .html(`
-            .plugin-status {
-                display: flex;
-                align-items: center;
-                font-weight: bold;
-            }
-            .plugin-status__dot {
-                width: 10px;
-                height: 10px;
-                border-radius: 50%;
-                margin-right: 8px;
-                display: inline-block;
-            }
-            .plugin-status--installed {
-                color: #2ecc71; /* Зелений */
-            }
-            .plugin-status--installed .plugin-status__dot {
-                background-color: #2ecc71;
-                box-shadow: 0 0 5px rgba(46, 204, 113, 0.5);
-            }
-            .plugin-status--not-installed {
-                color: #aaaaaa; /* Сірий */
-            }
-            .plugin-status--not-installed .plugin-status__dot {
-                background-color: #aaaaaa;
-            }
-        `)
-        .appendTo('head');
-
-    function isPluginInstalled(plugin) {
-        const plugins = Lampa.Storage.get('plugins') || [];
-        return plugins.some(p => p.id === plugin.id || p.url === plugin.url);
+    function getPlugins() {
+        return Lampa.Storage.get('plugins') || [];
     }
 
-    // Функція для отримання HTML-коду статусу
-    function getStatusHtml(installed) {
-        if (installed) {
-            return `<div class="plugin-status plugin-status--installed"><span class="plugin-status__dot"></span>Встановлено</div>`;
-        } else {
-            return `<div class="plugin-status plugin-status--not-installed"><span class="plugin-status__dot"></span>Не встановлено</div>`;
+    function isInstalled(plugin) {
+        return getPlugins().some(p => p.url === plugin.url);
+    }
+
+    // Функція оновлення тексту статусу без використання JQuery $
+    function updateStatusText(element, installed) {
+        const valueElement = element.querySelector('.settings-param__value');
+        if (valueElement) {
+            if (installed) {
+                valueElement.innerHTML = '<span style="color: #2ecc71;">● Встановлено</span>';
+            } else {
+                valueElement.innerHTML = '<span style="color: #aaaaaa;">○ Не встановлено</span>';
+            }
         }
     }
 
-    function togglePlugin(plugin, itemHtml) {
-        let plugins = Lampa.Storage.get('plugins') || [];
-        const installed = isPluginInstalled(plugin);
+    function toggle(plugin, element) {
+        let plugins = getPlugins();
+        const installed = isInstalled(plugin);
 
         if (installed) {
-            // Видаляємо
-            plugins = plugins.filter(p => p.id !== plugin.id && p.url !== plugin.url);
-            Lampa.Storage.set('plugins', plugins);
-            Lampa.Noty.show('Плагін видалено');
+            plugins = plugins.filter(p => p.url !== plugin.url);
+            Lampa.Noty.show('Видалено');
         } else {
-            // Додаємо
             plugins.push({
                 id: plugin.id,
                 name: plugin.name,
                 url: plugin.url,
                 status: 1
             });
-            Lampa.Storage.set('plugins', plugins);
-            Lampa.Noty.show('Встановлено. Перезавантажте додаток');
+            Lampa.Noty.show('Встановлено. Перезапустіть додаток');
         }
 
-        // Оновлюємо візуальний статус негайно після натискання
-        const newInstalledStatus = !installed;
-        itemHtml.find('.settings-param__value').html(getStatusHtml(newInstalledStatus));
+        Lampa.Storage.set('plugins', plugins);
+        updateStatusText(element, !installed);
     }
 
     // Реєстрація компонента
@@ -109,15 +78,16 @@
                 description: plugin.description
             },
             onRender: function (item) {
-                const installed = isPluginInstalled(plugin);
-                // Початковий рендер статусу
-                item.find('.settings-param__value').html(getStatusHtml(installed));
+                // item[0] — це чистий DOM елемент у Lampa
+                const el = item[0] || item; 
+                updateStatusText(el, isInstalled(plugin));
             },
             onChange: function (data) {
-                // Передаємо HTML елемент кнопки (data.item), щоб оновити його всередині togglePlugin
-                togglePlugin(plugin, data.item);
+                const el = data.item[0] || data.item;
+                toggle(plugin, el);
             }
         });
     });
 
+    console.log('Plugin Manager: Started');
 })();
