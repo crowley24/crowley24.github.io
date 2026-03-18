@@ -21,7 +21,6 @@
         return saved;
     }
 
-    // Логіка налаштувань жанрів
     function showGenreSettings() {
         var selected = getSelectedGenres();
         var items = Object.keys(ALL_GENRES).map(function(id) {
@@ -63,9 +62,8 @@
                '&language=' + lang;
     }
 
-    // ─── ГОЛОВНА ФУНКЦІЯ ДОДАВАННЯ В МЕНЮ (як у YouTube) ───────────
     function addMenuButton() {
-        // Перевірка: якщо кнопка вже є, нічого не робимо
+        // Перевірка на дублікат за унікальним ID
         if ($('.menu__item[data-action="' + PLUGIN_ID + '"]').length) return;
 
         var button = $(
@@ -96,16 +94,25 @@
             showGenreSettings();
         });
 
-        // Знаходимо пункт "Налаштування", щоб вставити ПЕРЕД ним (як у YouTube плагіні)
-        var settings = $('.menu .menu__list .menu__item[data-action="settings"]');
-        if (settings.length) {
-            settings.before(button);
+        // ─── ЛОГІКА РОЗМІЩЕННЯ ВИЩЕ ────────────────────────────────
+        // Шукаємо кнопку "Історія" (history)
+        var historyBtn = $('.menu .menu__list .menu__item[data-action="history"]');
+        
+        if (historyBtn.length) {
+            // Вставляємо ОДРАЗУ ПІСЛЯ Історії
+            historyBtn.after(button);
         } else {
-            $('.menu .menu__list').eq(0).append(button);
+            // Якщо Історії немає, шукаємо "Головна" (main)
+            var mainBtn = $('.menu .menu__list .menu__item[data-action="main"]');
+            if (mainBtn.length) {
+                mainBtn.after(button);
+            } else {
+                // Якщо нічого не знайшли, просто в початок списку
+                $('.menu .menu__list').prepend(button);
+            }
         }
     }
 
-    // ─── ІНІЦІАЛІЗАЦІЯ ──────────────────────────────────────────
     if (window.appready) {
         addMenuButton();
     } else {
