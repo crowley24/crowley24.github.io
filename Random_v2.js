@@ -21,17 +21,19 @@
         return saved;
     }
 
+    // Параметри для API (усі обрані жанри)
     function getRandomParams() {
         var genres = getSelectedGenres();
         if (!genres.length) genres = Object.keys(ALL_GENRES);
-        var random_genre = genres[Math.floor(Math.random() * genres.length)];
+
+        var with_genres = genres.join(','); // всі обрані жанри
         var page = Math.floor(Math.random() * 20) + 1;
         var type = Math.random() > 0.3 ? 'movie' : 'tv';
         
         return {
             type: type,
             params: {
-                with_genres: random_genre,
+                with_genres: with_genres,
                 'vote_average.gte': 6.5,
                 'vote_count.gte': 300,
                 page: page,
@@ -55,7 +57,7 @@
                             json.results.forEach(function(i) { i.type = config.type; });
                             call({
                                 results: json.results,
-                                title: tr('Випадкова добірка: ' + (ALL_GENRES[config.params.with_genres] || ''), 'Случайная подборка')
+                                title: tr('Випадкова добірка: ' + (ALL_GENRES[config.params.with_genres.split(',')[0]] || ''), 'Случайная подборка')
                             });
                         } else call({ results: [] });
                     }, function () {
@@ -112,7 +114,7 @@
                 items: items,
                 index: activeIndex,
                 onSelect: function(item, index) {
-                    var selectInstance = this; // коректно отримуємо інстанс
+                    var selectInstance = this;
 
                     var current = getSelectedGenres();
                     var idx = current.indexOf(item.value);
@@ -122,10 +124,10 @@
 
                     Lampa.Storage.set(STORAGE_KEY, current);
 
-                    // Оновлюємо стан елемента без перезавантаження
+                    // Міняємо стан елемента без закриття меню
                     item.selected = !item.selected;
                     if(selectInstance && typeof selectInstance.updateItem === 'function') {
-                        selectInstance.updateItem(index, item); // курсор лишається
+                        selectInstance.updateItem(index, item);
                     }
                 },
                 onBack: function() { Lampa.Controller.toggle('content'); }
