@@ -90,9 +90,9 @@
     }  
       
     function addSettingsComponent() {  
-        // Додаємо до існуючого компонента 'plugins'  
+        // Спосіб 1: Додати до існуючого компонента "interface"  
         Lampa.SettingsApi.addParam({  
-            component: 'plugins',  
+            component: 'interface',  
             param: {  
                 name: 'plugin_manager',  
                 type: 'button',  
