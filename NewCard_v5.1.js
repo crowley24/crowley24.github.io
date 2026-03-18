@@ -5,7 +5,7 @@
     const ASSETS_PATH = 'https://crowley38.github.io/Icons/';              
     const CACHE_LIFETIME = 1000 * 60 * 60 * 24;                
               
-    let currentInterval = null; // Локальна змінна для контролю інтервалу          
+    let currentInterval = null;          
           
     const ICONS = {              
         tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',              
@@ -148,16 +148,13 @@
             currentCard.find('.cas-quality-row').toggle(!!Lampa.Storage.get('cas_show_quality'));        
             currentCard.find('.cas-rate-items').toggle(!!Lampa.Storage.get('cas_show_rating'));        
                       
-            // Перевіряємо чи є видимі елементи між мета-інформацією та кнопками        
             const hasVisibleElements = currentCard.find('.cas-studios-row:visible, .cas-rate-items:visible, .cas-quality-row:visible, .cas-description:visible').length > 0;        
             const buttons = currentCard.find('.full-start-new__buttons');        
                     
             if (!hasVisibleElements) {        
-                // Агресивно зменшуємо відступ коли всі елементи приховані        
                 buttons.css('margin-top', '0.2em');        
                 currentCard.find('.cas-ratings-line').css('margin-bottom', '0');        
             } else {        
-                // Повертаємо стандартні значення        
                 buttons.css('margin-top', '');        
                 currentCard.find('.cas-ratings-line').css('margin-bottom', '');        
             }        
@@ -422,7 +419,6 @@
         let idx = 0;      
         const intervalTime = 15000;      
               
-        // Спрощена реалізація без клонування      
         const bg = render.find('.full-start__background img, img.full-start__background');      
               
         if (!bg.length) {      
@@ -438,7 +434,6 @@
                   
             console.log('Changing background to:', nextSrc);      
                   
-            // Змінюємо зображення без затемнення      
             bg.attr('src', nextSrc);      
         }, intervalTime);      
               
@@ -469,7 +464,7 @@
                     let r = 0, g = 0, b = 0, count = 0;  
                       
                     for (let i = 0; i < imageData.length; i += 4) {  
-                        if (imageData[i + 3] > 50) { // Прозорість > 50  
+                        if (imageData[i + 3] > 50) {  
                             r += imageData[i];  
                             g += imageData[i + 1];  
                             b += imageData[i + 2];  
@@ -479,7 +474,7 @@
                       
                     if (count > 0) {  
                         const brightness = (0.299 * r + 0.587 * g + 0.114 * b) / count;  
-                        if (brightness < 40) { // Якщо логотип темний  
+                        if (brightness < 40) {  
                             $('#' + id + ' img').css('filter', 'brightness(0) invert(1)');  
                         }  
                     }  
@@ -526,7 +521,6 @@
                 const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);              
                 let ratesHtml = tmdbV > 0 ? `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>` : '';      
                       
-                // Розрахунок рейтингу CUB      
                 if (data.reactions && data.reactions.result) {      
                     let sum = 0, cnt = 0;      
                     const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };      
