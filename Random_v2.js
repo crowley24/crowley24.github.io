@@ -102,7 +102,6 @@
                 return { title: ALL_GENRES[id], value: id, selected: selected.indexOf(id) !== -1 };
             });
 
-            // Визначаємо індекс першого виділеного жанру для початкового фокусу
             var activeIndex = 0;
             for (var i = 0; i < items.length; i++) {
                 if (items[i].selected) { activeIndex = i; break; }
@@ -112,7 +111,9 @@
                 title: tr('Оберіть жанри', 'Выберите жанры'),
                 items: items,
                 index: activeIndex,
-                onSelect: function(item, index, selectInstance) {
+                onSelect: function(item, index) {
+                    var selectInstance = this; // коректно отримуємо інстанс
+
                     var current = getSelectedGenres();
                     var idx = current.indexOf(item.value);
 
@@ -121,9 +122,11 @@
 
                     Lampa.Storage.set(STORAGE_KEY, current);
 
-                    // Змінюємо стан обраного елемента без перезавантаження
+                    // Оновлюємо стан елемента без перезавантаження
                     item.selected = !item.selected;
-                    selectInstance.updateItem(index, item); // курсор лишається на місці
+                    if(selectInstance && typeof selectInstance.updateItem === 'function') {
+                        selectInstance.updateItem(index, item); // курсор лишається
+                    }
                 },
                 onBack: function() { Lampa.Controller.toggle('content'); }
             });
