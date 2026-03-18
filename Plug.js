@@ -22,7 +22,7 @@
         },
         {
             name: 'Custom Buttons',
-            description: 'Кастомізація кнопок в картці фільму',
+            description: 'Кастомізація кнопок в картці фільму (Розробка проєкту BazarNet | LampaUA)',
             url: 'http://lampaua.mooo.com/buttons.js',
             id: 'custom_buttons'
         }
