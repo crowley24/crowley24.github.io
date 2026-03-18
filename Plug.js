@@ -25,6 +25,12 @@
     description: 'Розширена кастомізація кнопок у картці фільму з додатковими елементами керування (BazarNet | LampaUA)',
     url: 'http://lampaua.mooo.com/buttons.js',
     id: 'custom_buttons'
+},
+        {
+    name: 'Interface Size',
+    description: 'Зміна розміру інтерфейсу',
+    url: 'https://crowley24.github.io/main/InterfaceSize.js',
+    id: 'InterfaceSize'
 }
     ];
 
