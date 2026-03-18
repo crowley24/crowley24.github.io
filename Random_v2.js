@@ -4,7 +4,6 @@
     var PLUGIN_ID = 'lampa_random_premium';
     var STORAGE_KEY = 'lampa_random_selected_genres';
 
-    // Повний список жанрів TMDB для вибору
     var ALL_GENRES = {
         28: 'Бойовик', 12: 'Пригоди', 16: 'Мультфільм', 35: 'Комедія', 80: 'Кримінал',
         99: 'Документальний', 18: 'Драма', 10751: 'Сімейний', 14: 'Фентезі', 36: 'Історія',
@@ -16,15 +15,16 @@
         return Lampa.Storage.get('language', 'uk') === 'uk' ? uk : ru;
     }
 
-    // Отримання обраних жанрів (або всі за замовчуванням)
     function getSelectedGenres() {
-        var saved = Lampa.Storage.get(STORAGE_KEY, 'all');
-        return saved === 'all' ? Object.keys(ALL_GENRES) : saved;
+        var saved = Lampa.Storage.get(STORAGE_KEY);
+        // Якщо нічого не збережено або це не масив — повертаємо всі ID
+        if (!saved || !Array.isArray(saved)) return Object.keys(ALL_GENRES);
+        return saved;
     }
 
-    // Вікно вибору жанрів
     function showGenreSettings() {
         var selected = getSelectedGenres();
+        
         var items = Object.keys(ALL_GENRES).map(function(id) {
             return {
                 title: ALL_GENRES[id],
@@ -36,12 +36,20 @@
         Lampa.Select.show({
             title: tr('Оберіть жанри', 'Выберите жанры'),
             items: items,
-            multiselect: true,
-            onSelect: function (result) {
-                var new_selection = result.map(function(i) { return i.value; });
-                Lampa.Storage.set(STORAGE_KEY, new_selection.length ? new_selection : 'all');
-                Lampa.Noty.show(tr('Налаштування збережено', 'Настройки сохранены'));
-                Lampa.Controller.toggle('content');
+            onSelect: function (item) {
+                // В Lampa при мультиселекті onSelect може викликатися для кожного кліку
+                // або повертати фінальний масив залежно від версії. 
+                // Використовуємо безпечний метод перемикання:
+                var current = getSelectedGenres();
+                var index = current.indexOf(item.value);
+
+                if (index > -1) current.splice(index, 1);
+                else current.push(item.value);
+
+                Lampa.Storage.set(STORAGE_KEY, current);
+                
+                // Перемальовуємо селектор, щоб бачити зміни (галочки)
+                showGenreSettings();
             },
             onBack: function() {
                 Lampa.Controller.toggle('content');
@@ -51,19 +59,23 @@
 
     function getRandomUrl() {
         var genres = getSelectedGenres();
+        if (!genres.length) genres = Object.keys(ALL_GENRES);
+        
         var random_genre = genres[Math.floor(Math.random() * genres.length)];
-        var page = Math.floor(Math.random() * 30) + 1;
+        var page = Math.floor(Math.random() * 20) + 1;
         var type = Math.random() > 0.3 ? 'movie' : 'tv';
+        
+        var lang = Lampa.Storage.get('language', 'uk') === 'uk' ? 'uk-UA' : 'ru-RU';
         
         return 'discover/' + type + '?with_genres=' + random_genre + 
                '&vote_average.gte=6.5&vote_count.gte=300' +
                '&page=' + page + 
-               '&language=' + (Lampa.Storage.get('language', 'uk') === 'uk' ? 'uk-UA' : 'ru-RU');
+               '&language=' + lang;
     }
 
     function addMenuItem() {
-        // Перевірка на дублікат
-        if ($('.menu .menu__list [data-plugin="' + PLUGIN_ID + '"]').length) return;
+        // Видаляємо дублікати, якщо вони раптом з'явилися від старих версій
+        $('[data-plugin="' + PLUGIN_ID + '"]').remove();
 
         var menu_item = $('<li class="menu__item selector" data-plugin="' + PLUGIN_ID + '">' +
             '<div class="menu__ico">' +
@@ -87,7 +99,6 @@
             });
         });
 
-        // Додаємо можливість викликати налаштування через контекстне меню (довге натискання)
         menu_item.on('hover:long', function() {
             showGenreSettings();
         });
@@ -95,18 +106,14 @@
         $('.menu .menu__list').append(menu_item);
     }
 
-    // Ініціалізація з очисткою старих ітерацій
     function init() {
-        if (window.appready) {
-            addMenuItem();
-        } else {
+        if (window.appready) addMenuItem();
+        else {
             Lampa.Listener.follow('app', function (e) {
                 if (e.type === 'ready') addMenuItem();
             });
         }
     }
 
-    if (window.Lampa) {
-        init();
-    }
+    if (window.Lampa) init();
 })();
