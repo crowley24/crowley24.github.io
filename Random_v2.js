@@ -21,8 +21,8 @@
         return saved;
     }
 
-    // --- Оновлена функція з надійним фокусом ---
-    function showGenreSettings(index_to_focus) {
+    // --- Функція вибору жанрів БЕЗ ПЕРЕЗАВАНТАЖЕННЯ ВІКНА ---
+    function showGenreSettings() {
         var selected = getSelectedGenres();
         var ids = Object.keys(ALL_GENRES);
         
@@ -46,21 +46,14 @@
                 
                 Lampa.Storage.set(STORAGE_KEY, current);
 
-                // Запам'ятовуємо позицію перед перевідкриттям
-                var current_index = ids.indexOf(item.value);
-                showGenreSettings(current_index);
-            },
-            onRender: function(render) {
-                // Якщо ми передали індекс, знаходимо його в DOM і фокусуємось
-                if (typeof index_to_focus !== 'undefined') {
-                    setTimeout(function() {
-                        var item = render.find('.select__item').eq(index_to_focus);
-                        if (item.length) {
-                            Lampa.Controller.collectionSet(render);
-                            Lampa.Controller.collectionFocus(item[0]);
-                        }
-                    }, 10); // Мінімальна затримка для стабільності
-                }
+                // Оновлюємо текст пункту прямо в DOM, не закриваючи селектор
+                var is_now_active = current.indexOf(item.value) !== -1;
+                var new_title = (is_now_active ? '✅ ' : '❌ ') + ALL_GENRES[item.value];
+                
+                // Знаходимо активний елемент, на якому стоїть курсор, і змінюємо його текст
+                $('.select__item.focus .select__title').text(new_title);
+                
+                Lampa.Noty.show(tr('Збережено', 'Сохранено'), {time: 500});
             },
             onBack: function() {
                 Lampa.Controller.toggle('content');
@@ -68,13 +61,13 @@
         });
     }
 
-    // --- Решта логіки (без змін) ---
     function getRandomParams() {
         var genres = getSelectedGenres();
         if (!genres.length) genres = Object.keys(ALL_GENRES);
         var random_genre = genres[Math.floor(Math.random() * genres.length)];
         var page = Math.floor(Math.random() * 20) + 1;
         var type = Math.random() > 0.3 ? 'movie' : 'tv';
+        
         return {
             type: type,
             params: {
@@ -87,13 +80,16 @@
         };
     }
 
+    // --- Виведення на ГОЛОВНУ САМИМ ПЕРШИМ ---
     function injectToMain() {
         var originalCall = Lampa.ContentRows.call;
         Lampa.ContentRows.call = function (screen, params, calls) {
             if (screen === 'main') {
-                calls.unshift(function (call) {
+                // Створюємо функцію завантаження нашої добірки
+                var randomRow = function (call) {
                     var config = getRandomParams();
                     var method = config.type === 'movie' ? 'discover/movie' : 'discover/tv';
+                    
                     Lampa.Api.sources.tmdb.get(method, config.params, function (json) {
                         if (json && json.results && json.results.length) {
                             json.results.forEach(function(i) { i.type = config.type; });
@@ -103,7 +99,10 @@
                             });
                         } else { call({ results: [] }); }
                     }, function () { call({ results: [] }); });
-                });
+                };
+
+                // Вставляємо в самий початок масиву викликів
+                calls.unshift(randomRow);
             }
             originalCall.apply(this, arguments);
         };
@@ -111,6 +110,7 @@
 
     function addMenuButton() {
         if ($('.menu__item[data-action="' + PLUGIN_ID + '"]').length) return;
+
         var button = $(
             '<li class="menu__item selector" data-action="' + PLUGIN_ID + '">' +
                 '<div class="menu__ico">' +
@@ -124,6 +124,7 @@
                 '<div class="menu__text">' + tr('Випадкова добірка', 'Мне повезёт') + '</div>' +
             '</li>'
         );
+
         button.on('hover:enter', function () {
             var config = getRandomParams();
             Lampa.Activity.push({
@@ -134,10 +135,15 @@
                 card_type: true
             });
         });
-        button.on('hover:long', function() { showGenreSettings(); });
+
+        button.on('hover:long', function() {
+            showGenreSettings();
+        });
+
+        // Розміщення після Історії
         var historyBtn = $('.menu .menu__list .menu__item[data-action="history"]');
         if (historyBtn.length) historyBtn.after(button);
-        else $('.menu .menu__list').eq(0).append(button);
+        else $('.menu .menu__list').prepend(button);
     }
 
     function start() {
@@ -147,4 +153,5 @@
 
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
+
 })();
