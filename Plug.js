@@ -24,64 +24,59 @@
         Lampa.Storage.set('plugins', list);
     }
 
-    function findPlugin(url) {
-        return getPlugins().find(p => p.url === url);
+    function isInstalled(url) {
+        return getPlugins().some(p => p.url === url);
     }
 
     function togglePlugin(plugin) {
         let plugins = getPlugins();
-        let existing = findPlugin(plugin.url);
+        let installed = isInstalled(plugin.url);
 
-        if (!existing) {
-            // Встановити
+        if (installed) {
+            plugins = plugins.filter(p => p.url !== plugin.url);
+            Lampa.Noty.show('🔴 Видалено');
+        } else {
             plugins.push({
                 id: plugin.id,
                 name: plugin.name,
                 url: plugin.url,
                 status: 1
             });
-
-            Lampa.Noty.show('✅ Встановлено');
-        } else {
-            // Переключити статус
-            existing.status = existing.status === 1 ? 0 : 1;
-
-            if (existing.status === 1) {
-                Lampa.Noty.show('🟢 Увімкнено');
-            } else {
-                Lampa.Noty.show('🟠 Вимкнено');
-            }
+            Lampa.Noty.show('🟢 Встановлено');
         }
 
         savePlugins(plugins);
 
-        // Оновлення UI
+        // Перерисовка
         Lampa.Settings.update();
     }
 
-    function getStatus(plugin) {
-        let existing = findPlugin(plugin.url);
+    function applyIndicator(item, installed) {
+        let title = item.find('.settings-param__name');
 
-        if (!existing) return 'not_installed';
-        if (existing.status === 0) return 'disabled';
-        return 'enabled';
-    }
+        let indicator = title.find('.plugin-indicator');
 
-    function applyStatusStyle(el, status) {
-        if (status === 'enabled') {
-            el.css('background', 'linear-gradient(45deg, #11e400, #36a700)');
-        } else if (status === 'disabled') {
-            el.css('background', 'linear-gradient(45deg, #ff8c00, #d96e00)');
-        } else {
-            el.css('background', 'linear-gradient(45deg, #ff0000, #c40000)');
+        if (!indicator.length) {
+            indicator = $('<span class="plugin-indicator"></span>');
+            title.append(indicator);
         }
+
+        indicator.css({
+            display: 'inline-block',
+            width: '10px',
+            height: '10px',
+            'margin-left': '10px',
+            'border-radius': '50%',
+            'vertical-align': 'middle',
+            'background': installed ? '#11e400' : '#ff0000'
+        });
     }
 
     // Компонент
     Lampa.SettingsApi.addComponent({
         component: 'plugin_manager_page',
         name: 'Менеджер Плагінів',
-        icon: '<svg width="40" height="40" viewBox="0 0 24 24" fill="none"><path d="M12 6V18M6 12H18" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>'
+        icon: '<svg width="40" height="40" viewBox="0 0 24 24" fill="none"><path d="M12 6V18M6 12H18" stroke="white" stroke-width="2"/></svg>'
     });
 
     AVAILABLE_PLUGINS.forEach(plugin => {
@@ -97,16 +92,8 @@
             },
 
             onRender: function (item) {
-                let status = getStatus(plugin);
-
-                let statusEl = item.find('.settings-param__status');
-
-                if (!statusEl.length) {
-                    statusEl = $('<div class="settings-param__status"></div>');
-                    item.append(statusEl);
-                }
-
-                applyStatusStyle(statusEl, status);
+                let installed = isInstalled(plugin.url);
+                applyIndicator(item, installed);
             },
 
             onChange: function () {
