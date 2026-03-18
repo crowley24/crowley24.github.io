@@ -21,15 +21,13 @@
         return saved;
     }
 
-    // --- Функція вибору жанрів БЕЗ ПЕРЕЗАВАНТАЖЕННЯ ВІКНА ---
+    // --- Функція налаштувань, яка НЕ закриває вікно ---
     function showGenreSettings() {
-        var selected = getSelectedGenres();
         var ids = Object.keys(ALL_GENRES);
-        
         var items = ids.map(function(id) {
-            var is_active = selected.indexOf(id) !== -1;
+            var selected = getSelectedGenres();
             return {
-                title: (is_active ? '✅ ' : '❌ ') + ALL_GENRES[id],
+                title: (selected.indexOf(id) !== -1 ? '✅ ' : '❌ ') + ALL_GENRES[id],
                 value: id
             };
         });
@@ -38,22 +36,29 @@
             title: tr('Оберіть жанри', 'Выберите жанры'),
             items: items,
             onSelect: function (item) {
-                var current = getSelectedGenres();
-                var index = current.indexOf(item.value);
-                
-                if (index > -1) current.splice(index, 1);
-                else current.push(item.value);
-                
-                Lampa.Storage.set(STORAGE_KEY, current);
+                // Цей блок порожній, бо ми обробляємо клік через свою подію нижче
+            },
+            onRender: function(render) {
+                // Перехоплюємо клік на пункти меню
+                render.find('.select__item').on('hover:enter', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
 
-                // Оновлюємо текст пункту прямо в DOM, не закриваючи селектор
-                var is_now_active = current.indexOf(item.value) !== -1;
-                var new_title = (is_now_active ? '✅ ' : '❌ ') + ALL_GENRES[item.value];
-                
-                // Знаходимо активний елемент, на якому стоїть курсор, і змінюємо його текст
-                $('.select__item.focus .select__title').text(new_title);
-                
-                Lampa.Noty.show(tr('Збережено', 'Сохранено'), {time: 500});
+                    var item_data = items[$(this).index()];
+                    var current = getSelectedGenres();
+                    var idx = current.indexOf(item_data.value);
+                    
+                    if (idx > -1) current.splice(idx, 1);
+                    else current.push(item_data.value);
+                    
+                    Lampa.Storage.set(STORAGE_KEY, current);
+
+                    // Оновлюємо текст прямо в списку без закриття
+                    var is_now_active = current.indexOf(item_data.value) !== -1;
+                    $(this).find('.select__title').text((is_now_active ? '✅ ' : '❌ ') + ALL_GENRES[item_data.value]);
+                    
+                    Lampa.Noty.show(tr('Оновлено', 'Обновлено'), {time: 300});
+                });
             },
             onBack: function() {
                 Lampa.Controller.toggle('content');
@@ -65,7 +70,7 @@
         var genres = getSelectedGenres();
         if (!genres.length) genres = Object.keys(ALL_GENRES);
         var random_genre = genres[Math.floor(Math.random() * genres.length)];
-        var page = Math.floor(Math.random() * 20) + 1;
+        var page = Math.floor(Math.random() * 15) + 1;
         var type = Math.random() > 0.3 ? 'movie' : 'tv';
         
         return {
@@ -73,19 +78,18 @@
             params: {
                 with_genres: random_genre,
                 'vote_average.gte': 6.5,
-                'vote_count.gte': 300,
+                'vote_count.gte': 200,
                 page: page,
                 language: Lampa.Storage.get('language', 'uk') === 'uk' ? 'uk-UA' : 'ru-RU'
             }
         };
     }
 
-    // --- Виведення на ГОЛОВНУ САМИМ ПЕРШИМ ---
+    // --- Виведення на Головну (Найвищий пріоритет) ---
     function injectToMain() {
         var originalCall = Lampa.ContentRows.call;
         Lampa.ContentRows.call = function (screen, params, calls) {
             if (screen === 'main') {
-                // Створюємо функцію завантаження нашої добірки
                 var randomRow = function (call) {
                     var config = getRandomParams();
                     var method = config.type === 'movie' ? 'discover/movie' : 'discover/tv';
@@ -97,13 +101,15 @@
                                 results: json.results,
                                 title: tr('Випадкова добірка: ' + (ALL_GENRES[config.params.with_genres] || ''), 'Случайная подборка')
                             });
-                        } else { call({ results: [] }); }
+                        } else call({ results: [] });
                     }, function () { call({ results: [] }); });
                 };
 
-                // Вставляємо в самий початок масиву викликів
+                // Вставляємо на самий початок
                 calls.unshift(randomRow);
             }
+            
+            // Виклик основних рядків
             originalCall.apply(this, arguments);
         };
     }
@@ -140,7 +146,6 @@
             showGenreSettings();
         });
 
-        // Розміщення після Історії
         var historyBtn = $('.menu .menu__list .menu__item[data-action="history"]');
         if (historyBtn.length) historyBtn.after(button);
         else $('.menu .menu__list').prepend(button);
