@@ -1,9 +1,6 @@
 (function () {
     'use strict';
 
-    const PLUGIN_NAME = 'PluginManager';
-    const PLUGIN_ID = 'plugin_manager';
-
     const AVAILABLE_PLUGINS = [
         {
             name: 'Mobile Interface',
@@ -19,106 +16,64 @@
         }
     ];
 
+    // Іконка в форматі SVG (іконка "плюс" або "пакет")
+    const icon_plugin_manager = `<svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 6V18M6 12H18" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
     function isPluginInstalled(pluginId) {
         const plugins = Lampa.Storage.get('plugins') || [];
-        return plugins.some(plugin => plugin.id === pluginId);
+        return plugins.some(p => p.id === pluginId);
     }
 
-    function installPlugin(plugin) {
-        if (isPluginInstalled(plugin.id)) {
-            Lampa.Noty.show('Плагін вже встановлено');
-            return;
+    function togglePlugin(plugin) {
+        let plugins = Lampa.Storage.get('plugins') || [];
+        const installed = isPluginInstalled(plugin.id);
+
+        if (installed) {
+            plugins = plugins.filter(p => p.id !== plugin.id);
+            Lampa.Noty.show('Плагін видалено');
+        } else {
+            plugins.push({ id: plugin.id, name: plugin.name, url: plugin.url });
+            Lampa.Noty.show('Встановлено. Перезавантажте додаток');
         }
-        const plugins = Lampa.Storage.get('plugins') || [];
-        plugins.push({
-            id: plugin.id,
-            name: plugin.name,
-            url: plugin.url
-        });
         Lampa.Storage.set('plugins', plugins);
-        Lampa.Noty.show('Встановлено. Перезавантажте додаток');
     }
 
-    function removePlugin(pluginId) {
-        const plugins = Lampa.Storage.get('plugins') || [];
-        const updatedPlugins = plugins.filter(plugin => plugin.id !== pluginId);
-        Lampa.Storage.set('plugins', updatedPlugins);
-        Lampa.Noty.show('Плагін видалено');
-    }
+    // Створюємо компонент налаштувань
+    Lampa.SettingsApi.addComponent({
+        component: 'plugin_manager_page',
+        name: 'Менеджер Плагінів',
+        icon: icon_plugin_manager
+    });
 
-    function showPluginsList() {
-        const items = AVAILABLE_PLUGINS.map(plugin => {
-            const installed = isPluginInstalled(plugin.id);
-            return {
-                title: plugin.name,
-                description: plugin.description,
-                status: installed ? 'Встановлено' : 'Не встановлено',
-                onSelect: function () {
-                    Lampa.Select.close(); // Закриваємо список перед питанням
-                    Lampa.Modal.open({
-                        title: installed ? 'Видалити?' : 'Встановити?',
-                        html: `<div style="padding: 10px;">${plugin.name}</div>`,
-                        onBack: () => Lampa.Modal.close(),
-                        buttons: [
-                            {
-                                name: 'Так',
-                                onSelect: () => {
-                                    if (installed) removePlugin(plugin.id);
-                                    else installPlugin(plugin);
-                                    Lampa.Modal.close();
-                                }
-                            },
-                            {
-                                name: 'Відміна',
-                                onSelect: () => Lampa.Modal.close()
-                            }
-                        ]
-                    });
-                }
-            };
-        });
+    // Слухаємо відкриття нашого нового компонента
+    Lampa.SettingsApi.addParam({
+        component: 'plugin_manager_page',
+        param: { name: 'plugin_list_info', type: 'static' },
+        field: { name: 'Доступні розширення', description: 'Натисніть для встановлення або видалення' }
+    });
 
-        Lampa.Select.show({
-            title: 'Менеджер плагінів',
-            items: items,
-            onSelect: (item) => item.onSelect(),
-            onBack: () => Lampa.Settings.main()
-        });
-    }
-
-    function addSettingsButton() {
-        // Слухаємо відкриття розділів налаштувань
-        Lampa.Settings.listener.follow('open', function (e) {
-            if (e.name === 'interface') {
-                // Створюємо елемент кнопки
-                const item = $(`
-                    <div class="settings-param selector" data-name="plugin_manager_btn">
-                        <div class="settings-param__name">Менеджер плагінів</div>
-                        <div class="settings-param__value">Відкрити список</div>
-                    </div>
-                `);
-
-                // Додаємо подію натискання
-                item.on('hover:enter', function () {
-                    showPluginsList();
-                });
-
-                // Вставляємо в кінець списку параметрів інтерфейсу
-                e.body.append(item);
-                
-                // Оновлюємо навігацію контролера, щоб кнопку можна було вибрати пультом/курсором
-                Lampa.Controller.updateSelect(e.body);
+    AVAILABLE_PLUGINS.forEach(plugin => {
+        Lampa.SettingsApi.addParam({
+            component: 'plugin_manager_page',
+            param: {
+                name: 'plugin_' + plugin.id,
+                type: 'button'
+            },
+            field: {
+                name: plugin.name,
+                description: plugin.description
+            },
+            onRender: function (item) {
+                const installed = isPluginInstalled(plugin.id);
+                item.find('.settings-param__value').text(installed ? 'Встановлено (Видалити)' : 'Не встановлено');
+            },
+            onChange: function () {
+                togglePlugin(plugin);
+                Lampa.Settings.update(); // Оновлюємо вікно, щоб змінити текст кнопки
             }
         });
-    }
+    });
 
-    function startPlugin() {
-        addSettingsButton();
-        console.log('Plugin Manager: Ready');
-    }
-
-    // Запуск
-    if (window.appready) startPlugin();
-    else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') startPlugin(); });
+    console.log('Plugin Manager Component: Initialized');
 
 })();
