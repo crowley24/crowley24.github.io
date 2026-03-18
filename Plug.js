@@ -10,7 +10,7 @@
         },
         {
             name: 'Mobile Interface',
-            description: 'Мобільний інтерфейс картки фільму (Мобільна версія)',
+            description: 'Інтерфейс картки фільму з налаштуванням інтерфейсу (Мобільна версія)',
             url: 'https://crowley24.github.io/main/Mob_Interface.js',
             id: 'mob_interface'
         },
