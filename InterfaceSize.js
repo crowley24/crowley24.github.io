@@ -16,11 +16,11 @@
   function init() {
     // 🔥 ПОВНЕ перезаписування стандартного параметра
     Lampa.Params.select('interface_size', {
-      '8': '8px (Ultra Compact)',
-      '9': '9px (Compact)',
+      '8': '9px (Ultra Compact)',
+      '9': '9.5px (Compact)',
       '10': '10px (Balanced)',
-      '11': '11px (Default)',
-      '12': '12px (Comfort)'
+      '11': '10.5px (Default)',
+      '12': '11px (Comfort)'
     }, DEFAULT_SIZE);
 
     applySize(true);
