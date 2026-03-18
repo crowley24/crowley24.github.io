@@ -30,7 +30,6 @@
             return;  
         }  
           
-        // Використовуємо правильний метод для встановлення плагіна  
         Lampa.Storage.set('plugins', (Lampa.Storage.get('plugins') || []).concat([{  
             id: plugin.id,  
             name: plugin.name,  
@@ -91,11 +90,11 @@
     }  
       
     function addSettingsComponent() {  
-        // Правильний спосіб додавання компонента налаштувань  
+        // Додаємо до існуючого компонента 'plugins'  
         Lampa.SettingsApi.addParam({  
-            component: PLUGIN_ID,  
+            component: 'plugins',  
             param: {  
-                name: 'plugins_manager',  
+                name: 'plugin_manager',  
                 type: 'button',  
                 values: {}  
             },  
