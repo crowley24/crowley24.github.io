@@ -1,7 +1,3 @@
-// ==Lampa==
-// name: Random Pro (Top UI)
-// version: 2.0
-
 (function () {
   'use strict';
 
@@ -10,11 +6,16 @@
 
   var MENU_ID = 'lampa_random_menu';
 
-  var STORAGE_VOTE_FROM = 'lampa_random_vote_from';
-  var STORAGE_VOTE_TO = 'lampa_random_vote_to';
-  var STORAGE_GENRES = 'lampa_random_genres';
-  var STORAGE_YEAR_FROM = 'lampa_random_year_from';
-  var STORAGE_YEAR_TO = 'lampa_random_year_to';
+  // Storage Keys
+  var STORAGE = {
+    VOTE_FROM: 'lampa_random_vote_from',
+    VOTE_TO: 'lampa_random_vote_to',
+    GENRES: 'lampa_random_genres',
+    YEAR_FROM: 'lampa_random_year_from',
+    YEAR_TO: 'lampa_random_year_to',
+    TYPE: 'lampa_random_type', // movie, tv, mixed
+    REGION: 'lampa_random_region'
+  };
 
   var TMDB_GENRES = {
     28: 'Action', 12: 'Adventure', 16: 'Animation', 35: 'Comedy', 80: 'Crime',
@@ -23,212 +24,185 @@
     53: 'Thriller', 10752: 'War', 37: 'Western'
   };
 
-  var DEFAULT_GENRES = [27, 53, 9648, 28];
+  var REGIONS = {
+    'all': { ru: 'Все страны', uk: 'Всі країни' },
+    'US': { ru: 'США', uk: 'США' },
+    'EU': { ru: 'Европа', uk: 'Європа' },
+    'KR': { ru: 'Корея', uk: 'Корея' },
+    'JP': { ru: 'Япония', uk: 'Японія' }
+  };
 
-  function randInt(min, max) { return Math.floor(Math.random()*(max-min+1))+min; }
-  function shuffle(arr) { return arr.sort(()=>Math.random()-0.5); }
-  function nowYear() { return new Date().getFullYear(); }
-  function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
-  function roundHalf(v){ return Math.round(v*2)/2; }
-  function formatVote(v){ return v.toFixed(1).replace('.',','); }
-
-  function ensureDefaultRange(){
-    if(Lampa.Storage.get(STORAGE_VOTE_FROM)==null) Lampa.Storage.set(STORAGE_VOTE_FROM,6);
-    if(Lampa.Storage.get(STORAGE_VOTE_TO)==null) Lampa.Storage.set(STORAGE_VOTE_TO,10);
-    if(Lampa.Storage.get(STORAGE_GENRES)==null) Lampa.Storage.set(STORAGE_GENRES,DEFAULT_GENRES);
-    if(Lampa.Storage.get(STORAGE_YEAR_FROM)==null) Lampa.Storage.set(STORAGE_YEAR_FROM,1980);
-    if(Lampa.Storage.get(STORAGE_YEAR_TO)==null) Lampa.Storage.set(STORAGE_YEAR_TO,nowYear());
+  function tr(key, def) {
+    try { return Lampa.Lang.translate(key); } catch(e) {}
+    return def || key;
   }
 
-  function getVoteFrom(){ return roundHalf(clamp(parseFloat(Lampa.Storage.get(STORAGE_VOTE_FROM,6)),1,10)); }
-  function getVoteTo(){ return roundHalf(clamp(parseFloat(Lampa.Storage.get(STORAGE_VOTE_TO,10)),1,10)); }
-  function setVoteRange(f,t){ if(f>t)t=f; Lampa.Storage.set(STORAGE_VOTE_FROM,f); Lampa.Storage.set(STORAGE_VOTE_TO,t); }
-
-  function getGenres(){ return Lampa.Storage.get(STORAGE_GENRES,DEFAULT_GENRES); }
-  function setGenres(g){ Lampa.Storage.set(STORAGE_GENRES,g); }
-
-  function getYearFrom(){ return Lampa.Storage.get(STORAGE_YEAR_FROM,1980); }
-  function getYearTo(){ return Lampa.Storage.get(STORAGE_YEAR_TO,nowYear()); }
-  function setYears(f,t){ if(f>t)t=f; Lampa.Storage.set(STORAGE_YEAR_FROM,f); Lampa.Storage.set(STORAGE_YEAR_TO,t); }
-
-  function normalizeItem(it){
-    it = it || {};
-    it.type = 'movie';
-    it.source = 'tmdb';
-    it.title = it.title || it.name || '';
-    return it;
+  function addTranslations() {
+    Lampa.Lang.add({
+      lampa_random_name: { ru: 'Мне повезёт', uk: 'Випадкова добірка' },
+      lampa_random_type: { ru: 'Тип контента', uk: 'Тип контенту' },
+      lampa_random_region: { ru: 'Регион', uk: 'Регіон' },
+      lampa_random_movie: { ru: 'Фильмы', uk: 'Фільми' },
+      lampa_random_tv: { ru: 'Сериалы', uk: 'Серіали' },
+      lampa_random_mixed: { ru: 'Микс', uk: 'Мікс' },
+      lampa_random_apply: { ru: 'Найти новое', uk: 'Знайти нове' }
+    });
   }
 
-  function makeParams(page){
-    return {
+  // Helpers
+  function randInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+  function shuffle(arr) { return arr.sort(function() { return 0.5 - Math.random(); }); }
+  function getLang() { 
+    var l = Lampa.Storage.get('language', 'uk');
+    return (l === 'ua' ? 'uk' : l) + '-' + (l === 'ua' ? 'UK' : l.toUpperCase());
+  }
+
+  function ensureSettings() {
+    if (!Lampa.Storage.get(STORAGE.VOTE_FROM)) Lampa.Storage.set(STORAGE.VOTE_FROM, 6.5);
+    if (!Lampa.Storage.get(STORAGE.TYPE)) Lampa.Storage.set(STORAGE.TYPE, 'movie');
+    if (!Lampa.Storage.get(STORAGE.REGION)) Lampa.Storage.set(STORAGE.REGION, 'all');
+  }
+
+  // TMDB Engine
+  function makeParams(type, page) {
+    var params = {
       page: page,
-      sort_by: Math.random()<0.6 ? 'popularity.desc' : 'vote_average.desc',
-      'vote_average.gte': getVoteFrom(),
-      'vote_average.lte': getVoteTo(),
-      with_genres: getGenres().join(','),
-      'primary_release_date.gte': getYearFrom()+'-01-01',
-      'primary_release_date.lte': getYearTo()+'-12-31'
+      language: getLang(),
+      'vote_average.gte': Lampa.Storage.get(STORAGE.VOTE_FROM, 6.5),
+      'vote_average.lte': Lampa.Storage.get(STORAGE.VOTE_TO, 10),
+      'vote_count.gte': 300, // Premium filter: only quality content
+      with_genres: (Lampa.Storage.get(STORAGE.GENRES) || []).join(','),
+      include_adult: false,
+      sort_by: Math.random() > 0.5 ? 'popularity.desc' : 'vote_average.desc'
     };
+
+    var yf = Lampa.Storage.get(STORAGE.YEAR_FROM, 1990);
+    var yt = Lampa.Storage.get(STORAGE.YEAR_TO, new Date().getFullYear());
+    var reg = Lampa.Storage.get(STORAGE.REGION, 'all');
+
+    if (type === 'movie') {
+      params['primary_release_date.gte'] = yf + '-01-01';
+      params['primary_release_date.lte'] = yt + '-12-31';
+      if (reg !== 'all') params.with_origin_country = reg;
+    } else {
+      params['first_air_date.gte'] = yf + '-01-01';
+      params['first_air_date.lte'] = yt + '-12-31';
+      if (reg !== 'all') params.with_origin_country = reg;
+    }
+    return params;
   }
 
-  function tmdbGet(params, ok){
-    Lampa.Api.sources.tmdb.get('discover/movie', params, ok, ()=>ok({results:[]}));
-  }
+  function buildMixedResponse(done) {
+    var type = Lampa.Storage.get(STORAGE.TYPE, 'movie');
+    var tasks = [];
+    
+    if (type === 'mixed') {
+        tasks = [{t:'movie', p:randInt(1, 20)}, {t:'tv', p:randInt(1, 20)}, {t:'movie', p:randInt(21, 40)}];
+    } else {
+        tasks = [{t:type, p:randInt(1, 15)}, {t:type, p:randInt(16, 30)}, {t:type, p:randInt(31, 50)}];
+    }
 
-  function buildResponse(page, done){
     var results = [];
-    var left = 2;
+    var count = 0;
 
-    for(let i=0;i<2;i++){
-      tmdbGet(makeParams(randInt(1,150)), function(json){
-        (json.results||[]).forEach(i=>results.push(normalizeItem(i)));
-        if(--left===0){
-          shuffle(results);
-          done({results:results,page:page});
+    tasks.forEach(function(task) {
+      var req = task.t === 'movie' ? 'discover/movie' : 'discover/tv';
+      Lampa.Api.sources.tmdb.get(req, makeParams(task.t, task.p), function(json) {
+        if (json && json.results) {
+          json.results.forEach(function(i) {
+            i.type = task.t;
+            results.push(i);
+          });
         }
-      });
-    }
+        count++;
+        if (count === tasks.length) {
+          var final = { results: shuffle(results).slice(0, 40) };
+          Lampa.Utils.addSource(final, 'tmdb');
+          done(final);
+        }
+      }, function() { count++; if(count === tasks.length) done({results:[]}); });
+    });
   }
 
-  function patchAjax(){
-    if($.ajax.__lr) return;
-    $.ajax.__lr = true;
+  // UI Injection
+  function injectControls() {
+    var active = Lampa.Activity.active();
+    if (!active || !active.params || !active.params.lampa_random_ui) return;
 
-    var orig = $.ajax;
+    var $render = active.activity.render();
+    var $scroll = $render.find('.scroll__body');
+    if (!$scroll.length || $scroll.find('.lr-controls').length) return;
 
-    $.ajax = function(opt){
-      if(opt.url.includes('lampa_random')){
-        var d = $.Deferred();
-        buildResponse(1, function(json){
-          opt.success && opt.success(json);
-          d.resolve(json);
+    var $controls = $('<div class="lr-controls buttons"></div>').css({padding: '10px', display: 'flex', gap: '10px', flexWrap: 'wrap'});
+    
+    var btnStyle = { background: 'rgba(255,255,255,0.1)', borderRadius: '8px' };
+
+    var typeBtn = $('<div class="selector button"></div>').text(tr('lampa_random_type') + ': ' + tr('lampa_random_' + Lampa.Storage.get(STORAGE.TYPE)));
+    var regBtn = $('<div class="selector button"></div>').text(tr('lampa_random_region') + ': ' + (REGIONS[Lampa.Storage.get(STORAGE.REGION)] ? REGIONS[Lampa.Storage.get(STORAGE.REGION)][Lampa.Storage.get('language','uk') === 'uk' ? 'uk' : 'ru'] : 'All'));
+    var refreshBtn = $('<div class="selector button"></div>').css({background: '#35b54c'}).text(tr('lampa_random_apply'));
+
+    typeBtn.on('hover:enter', function() {
+      Lampa.Select.show({
+        title: tr('lampa_random_type'),
+        items: [
+            {title: tr('lampa_random_movie'), value: 'movie'},
+            {title: tr('lampa_random_tv'), value: 'tv'},
+            {title: tr('lampa_random_mixed'), value: 'mixed'}
+        ],
+        onSelect: function(a) { Lampa.Storage.set(STORAGE.TYPE, a.value); Lampa.Activity.replace(active.params); },
+        onBack: function() { Lampa.Controller.toggle('content'); }
+      });
+    });
+
+    regBtn.on('hover:enter', function() {
+        Lampa.Select.show({
+          title: tr('lampa_random_region'),
+          items: Object.keys(REGIONS).map(function(k) { return { title: REGIONS[k][Lampa.Storage.get('language','uk') === 'uk' ? 'uk' : 'ru'], value: k }; }),
+          onSelect: function(a) { Lampa.Storage.set(STORAGE.REGION, a.value); Lampa.Activity.replace(active.params); },
+          onBack: function() { Lampa.Controller.toggle('content'); }
         });
-        return d.promise();
+      });
+
+    refreshBtn.on('hover:enter', function() { Lampa.Activity.replace(active.params); });
+
+    $controls.append(typeBtn, regBtn, refreshBtn);
+    $scroll.prepend($controls);
+  }
+
+  // Patching
+  function patchAjax() {
+    if ($.ajax.__lampa_random_patched) return;
+    $.ajax.__lampa_random_patched = true;
+    var original = $.ajax;
+    $.ajax = function(opt) {
+      if (opt.url && opt.url.indexOf('lampa_random') > -1) {
+        var dfd = $.Deferred();
+        buildMixedResponse(function(json) {
+          if (opt.success) opt.success(json);
+          dfd.resolve(json);
+        });
+        return dfd.promise();
       }
-      return orig.apply(this,arguments);
+      return original.apply(this, arguments);
     };
   }
 
-  function openScreen(){
-    patchAjax();
-    Lampa.Activity.push({
-      url:'lampa_random',
-      component:'category_full',
-      source:'tmdb',
-      lampa_random_ui:1
+  function addMenuItem() {
+    var $btn = $('<li class="menu__item selector" data-id="'+MENU_ID+'"><div class="menu__ico"><svg height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg" style="transition: transform 0.3s ease;"><path d="M7,15L11,19L15,15M17,9L13,5L9,9" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="menu__text">'+tr('lampa_random_name')+'</div></li>');
+    $btn.on('hover:enter', function() {
+      patchAjax();
+      Lampa.Activity.push({ url: 'lampa_random', title: tr('lampa_random_name'), component: 'category_full', source: 'tmdb', card_type: true, lampa_random_ui: true });
+      setTimeout(injectControls, 400);
     });
-    setTimeout(injectControls,300);
+    $('.menu .menu__list').append($btn);
   }
 
-  function refreshScreen(){
-    Lampa.Activity.replace({
-      url:'lampa_random?'+Date.now(),
-      component:'category_full',
-      source:'tmdb',
-      lampa_random_ui:1
-    });
-    setTimeout(injectControls,300);
-  }
-
-  function buildVoteItems(val){
-    var a=[];
-    for(var i=60;i<=100;i+=5){
-      var v=i/10;
-      a.push({title:v.toFixed(1),value:v,selected:v===val});
-    }
-    return a;
-  }
-
-  function buildYearItems(val){
-    var a=[];
-    for(var i=nowYear();i>=1960;i--){
-      a.push({title:i,value:i,selected:i===val});
-    }
-    return a;
-  }
-
-  // 🔥 TOP UI
-  function injectControls(){
-    var a=Lampa.Activity.active();
-    if(!a || !a.params || !a.params.lampa_random_ui) return;
-
-    var body=a.activity.render().find('.scroll__body');
-    if(body.find('.lr-chips').length) return;
-
-    if(!$('#lr-style').length){
-      $('head').append(`
-        <style id="lr-style">
-        .lr-chips{display:flex;gap:.6em;padding:.6em 1em;margin:.5em 1em;background:rgba(0,0,0,.25);backdrop-filter:blur(10px);border-radius:1em;flex-wrap:wrap}
-        .lr-chip{padding:.4em .8em;border-radius:.7em;background:rgba(255,255,255,.08);transition:.2s}
-        .lr-chip.focus{background:rgba(255,255,255,.2);transform:scale(1.05)}
-        </style>
-      `);
-    }
-
-    function chip(txt,fn){
-      var c=$('<div class="selector lr-chip">'+txt+'</div>');
-      c.on('hover:enter',fn);
-      return c;
-    }
-
-    var wrap=$('<div class="lr-chips"></div>');
-
-    wrap.append(
-      chip('⭐ '+formatVote(getVoteFrom())+'–'+formatVote(getVoteTo()),()=>{
-        Lampa.Select.show({
-          title:'Рейтинг',
-          items:buildVoteItems(getVoteFrom()),
-          onSelect:(a)=>{ setVoteRange(a.value,getVoteTo()); refreshScreen(); }
-        });
-      }),
-      chip('🎭 '+getGenres().length,()=>{
-        Lampa.Select.show({
-          title:'Жанри',
-          multiselect:true,
-          items:Object.keys(TMDB_GENRES).map(id=>({
-            title:TMDB_GENRES[id],
-            value:id,
-            selected:getGenres().includes(id)
-          })),
-          onSelect:(items)=>{ setGenres(items.map(i=>i.value)); refreshScreen(); }
-        });
-      }),
-      chip('📅 '+getYearFrom()+'–'+getYearTo(),()=>{
-        Lampa.Select.show({
-          title:'Рік',
-          items:buildYearItems(getYearFrom()),
-          onSelect:(a)=>{ setYears(a.value,getYearTo()); refreshScreen(); }
-        });
-      }),
-      chip('🎲 Сюрприз',()=>{
-        setVoteRange(1,10);
-        setGenres([]);
-        setYears(1960,nowYear());
-        refreshScreen();
-      })
-    );
-
-    body.prepend(wrap);
-  }
-
-  function addMenu(){
-    var btn=$('<li class="menu__item selector"><div class="menu__text">Випадкова добірка</div></li>');
-    btn.on('hover:enter',openScreen);
-
-    var int=setInterval(()=>{
-      var m=$('.menu .menu__list');
-      if(m.length){
-        m.append(btn);
-        clearInterval(int);
-      }
-    },200);
-  }
-
-  function init(){
-    ensureDefaultRange();
-    if(window.appready) addMenu();
-    else Lampa.Listener.follow('app',e=>e.type==='ready' && addMenu());
-  }
-
-  init();
+  // Init
+  addTranslations();
+  ensureSettings();
+  if (window.appready) addMenuItem();
+  else Lampa.Listener.follow('app', function(e) { if (e.type === 'ready') addMenuItem(); });
+  
+  // Регулярна перевірка для UI (при поверненні назад)
+  setInterval(injectControls, 1000);
 })();
