@@ -3,7 +3,6 @@
 
     var PLUGIN_ID = 'lampa_random_premium';
 
-    // 🔒 Захист від повторного запуску
     if (window[PLUGIN_ID]) return;
     window[PLUGIN_ID] = true;
 
@@ -62,8 +61,7 @@
                 else current.push(item.value);
 
                 Lampa.Storage.set(STORAGE_KEY, current);
-
-                showGenreSettings(); // оновлення галочок
+                showGenreSettings();
             },
             onBack: function() {
                 Lampa.Controller.toggle('content');
@@ -88,30 +86,21 @@
             '&language=' + lang;
     }
 
-    function createMenuItem() {
-        return $('<li class="menu__item selector" data-plugin="' + PLUGIN_ID + '">' +
-            '<div class="menu__ico">' +
-            '<svg width="24" height="24" viewBox="0 0 24 24" fill="none">' +
-            '<rect x="3" y="3" width="18" height="18" rx="2" stroke="white" stroke-width="2"/>' +
-            '<circle cx="8" cy="8" r="1.5" fill="white"/>' +
-            '<circle cx="16" cy="16" r="1.5" fill="white"/>' +
-            '<circle cx="12" cy="12" r="1.5" fill="white"/>' +
-            '<circle cx="8" cy="16" r="1.5" fill="white"/>' +
-            '<circle cx="16" cy="8" r="1.5" fill="white"/>' +
-            '</svg>' +
-            '</div>' +
-            '<div class="menu__text">' + tr('Випадкова добірка', 'Мне повезёт') + '</div>' +
-            '</li>');
-    }
-
     function addMenuItem() {
         var menuList = $('.menu .menu__list');
         if (!menuList.length) return;
 
-        // 🧹 Жорстко видаляємо всі дублікати
-        menuList.find('[data-plugin="' + PLUGIN_ID + '"]').remove();
+        // якщо вже є — нічого не робимо
+        if (menuList.find('[data-plugin="' + PLUGIN_ID + '"]').length) return;
 
-        var menu_item = createMenuItem();
+        var menu_item = $('<li class="menu__item selector" data-plugin="' + PLUGIN_ID + '">' +
+            '<div class="menu__ico">' +
+            '<svg width="24" height="24" viewBox="0 0 24 24">' +
+            '<rect x="3" y="3" width="18" height="18" rx="2" stroke="white" stroke-width="2"/>' +
+            '</svg>' +
+            '</div>' +
+            '<div class="menu__text">' + tr('Випадкова добірка', 'Мне повезёт') + '</div>' +
+            '</li>');
 
         menu_item.on('hover:enter', function () {
             Lampa.Activity.push({
@@ -130,25 +119,34 @@
         menuList.append(menu_item);
     }
 
-    // 👀 Спостерігач за DOM (анти-дубль навіть при перерендері)
+    // 🧠 debounce щоб не було спаму
+    var timer = null;
+
     function observeMenu() {
+        var target = document.querySelector('.menu');
+
+        if (!target) {
+            setTimeout(observeMenu, 500);
+            return;
+        }
+
         var observer = new MutationObserver(function () {
-            addMenuItem();
+            clearTimeout(timer);
+            timer = setTimeout(addMenuItem, 200);
         });
 
-        observer.observe(document.body, {
+        observer.observe(target, {
             childList: true,
             subtree: true
         });
     }
 
     function startPlugin() {
-        addMenuItem();
+        setTimeout(addMenuItem, 300);
 
-        // При старті Lampa
         Lampa.Listener.follow('app', function (e) {
             if (e.type === 'ready') {
-                setTimeout(addMenuItem, 200);
+                setTimeout(addMenuItem, 300);
             }
         });
 
