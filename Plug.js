@@ -42,7 +42,51 @@
             Lampa.Noty.show('Встановлено. ПЕРЕЗАПУСТІТЬ додаток повністю!');  
         }  
           
-        Lampa.Settings.update();  
+        // Оновлюємо відображення негайно  
+        setTimeout(() => {  
+            Lampa.Settings.update();  
+            // Примусово оновлюємо індикатори  
+            updatePluginIndicators();  
+        }, 100);  
+    }  
+  
+    function updatePluginIndicators() {  
+        $('.settings-param[data-name^="plugin_"]').each(function() {  
+            const $item = $(this);  
+            const pluginId = $item.data('name').replace('plugin_', '');  
+            const plugin = AVAILABLE_PLUGINS.find(p => p.id === pluginId);  
+              
+            if (plugin) {  
+                const installed = isPluginInstalled(plugin);  
+                const $status = $item.find('.settings-param__status');  
+                  
+                if ($status.length === 0) {  
+                    // Додаємо індикатор, якщо його немає  
+                    const statusElement = $('<div class="settings-param__status"></div>');  
+                    if (installed) {  
+                        statusElement.addClass('active');  
+                        $item.addClass('active');  
+                    } else {  
+                        statusElement.addClass('wait');  
+                        $item.removeClass('active');  
+                    }  
+                    $item.prepend(statusElement);  
+                } else {  
+                    // Оновлюємо існуючий індикатор  
+                    $status.removeClass('active wait');  
+                    if (installed) {  
+                        $status.addClass('active');  
+                        $item.addClass('active');  
+                    } else {  
+                        $status.addClass('wait');  
+                        $item.removeClass('active');  
+                    }  
+                }  
+                  
+                // Оновлюємо текст  
+                $item.find('.settings-param__value').text(installed ? 'Видалити' : 'Встановити');  
+            }  
+        });  
     }  
   
     // Реєстрація компонента  
@@ -75,16 +119,20 @@
                     statusElement.addClass('wait');  
                 }  
                   
-                // Вставляємо індикатор перед елементом  
                 item.prepend(statusElement);  
-                  
-                // Оновлюємо текст праворуч  
                 item.find('.settings-param__value').text(installed ? 'Видалити' : 'Встановити');  
             },  
             onChange: function () {  
                 togglePlugin(plugin);  
             }  
         });  
+    });  
+  
+    // Додаємо слухача для оновлення індикаторів при відкритті налаштувань  
+    Lampa.Listener.follow('settings', (e) => {  
+        if (e.type === 'open') {  
+            setTimeout(updatePluginIndicators, 200);  
+        }  
     });  
   
 })();
