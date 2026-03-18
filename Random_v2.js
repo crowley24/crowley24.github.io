@@ -3,6 +3,7 @@
 
     var PLUGIN_ID = 'lampa_random_premium';
 
+    // 🔒 Захист від повторного запуску
     if (window[PLUGIN_ID]) return;
     window[PLUGIN_ID] = true;
 
@@ -90,8 +91,8 @@
         var menuList = $('.menu .menu__list');
         if (!menuList.length) return;
 
-        // якщо вже є — нічого не робимо
-        if (menuList.find('[data-plugin="' + PLUGIN_ID + '"]').length) return;
+        // 🧹 повна очистка дублю
+        menuList.find('[data-plugin="' + PLUGIN_ID + '"]').remove();
 
         var menu_item = $('<li class="menu__item selector" data-plugin="' + PLUGIN_ID + '">' +
             '<div class="menu__ico">' +
@@ -119,38 +120,25 @@
         menuList.append(menu_item);
     }
 
-    // 🧠 debounce щоб не було спаму
-    var timer = null;
-
-    function observeMenu() {
-        var target = document.querySelector('.menu');
-
-        if (!target) {
-            setTimeout(observeMenu, 500);
-            return;
-        }
-
-        var observer = new MutationObserver(function () {
-            clearTimeout(timer);
-            timer = setTimeout(addMenuItem, 200);
-        });
-
-        observer.observe(target, {
-            childList: true,
-            subtree: true
-        });
-    }
-
-    function startPlugin() {
-        setTimeout(addMenuItem, 300);
-
+    function initMenuHook() {
+        // 📌 Головний тригер — коли Lampa готова
         Lampa.Listener.follow('app', function (e) {
             if (e.type === 'ready') {
                 setTimeout(addMenuItem, 300);
             }
         });
 
-        observeMenu();
+        // 📌 Додатково — при відкритті головного екрану
+        Lampa.Listener.follow('activity', function (e) {
+            if (e.type === 'start') {
+                setTimeout(addMenuItem, 300);
+            }
+        });
+    }
+
+    function startPlugin() {
+        setTimeout(addMenuItem, 500);
+        initMenuHook();
     }
 
     if (window.Lampa) {
