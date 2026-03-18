@@ -4,13 +4,13 @@
     const AVAILABLE_PLUGINS = [
         {
             name: 'NewCard',
-            description: 'Новий вигляд картки фвльму з повним налаштуванням інтерфейсу',
+            description: 'Новий вигляд картки фільму з налаштуванням інтерфейсу (ТВ версія)',
             url: 'https://crowley24.github.io/main/NewCard.js',
             id: 'NewCard'
         },
         {
             name: 'Mobile Interface',
-            description: 'Мобільний інтерфейс картки фільму',
+            description: 'Мобільний інтерфейс картки фільму (Мобільна версія)',
             url: 'https://crowley24.github.io/main/Mob_Interface.js',
             id: 'mob_interface'
         },
