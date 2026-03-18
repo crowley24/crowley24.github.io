@@ -31,7 +31,13 @@
     description: 'Зміна розміру інтерфейсу',
     url: 'https://crowley24.github.io/main/InterfaceSize.js',
     id: 'InterfaceSize'
-}
+},
+        {
+    name: 'Random',
+    description: 'Випадкова добірка фільмів',
+    url: 'https://crowley24.github.io/main/Random.js',
+    id: 'Random'
+        }
     ];
 
     // =========================
