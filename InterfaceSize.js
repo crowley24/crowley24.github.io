@@ -19,17 +19,6 @@
     settings_param_interface_size_very_large: 'Дуже великий'
   };
 
-  // Відповідність ключів меню → реальний розмір
-  const sizeMap = {
-    '01': 9,    // Міні
-    '02': 9.5,  // Дуже малий
-    '03': 10,   // Малий
-    '04': 10.5, // Середній
-    '05': 11,   // Стандартний
-    '06': 11.5, // Великий
-    '07': 12    // Дуже великий
-  };
-
   function init() {
     if (window.Lampa && Lampa.Lang) {
       Lampa.Lang.add(lang_data);
@@ -38,29 +27,30 @@
     // Очищуємо старі значення
     Lampa.Params.values['interface_size'] = {};
 
-    // Ключі 01..07 для правильного порядку меню
+    // Значення з реальними розмірами
     const sizeValues = {
-      '01': lang_data.settings_param_interface_size_mini,
-      '02': lang_data.settings_param_interface_size_very_small,
-      '03': lang_data.settings_param_interface_size_small,
-      '04': lang_data.settings_param_interface_size_medium,
-      '05': lang_data.settings_param_interface_size_standard,
-      '06': lang_data.settings_param_interface_size_large,
-      '07': lang_data.settings_param_interface_size_very_large
+      9: lang_data.settings_param_interface_size_mini,
+      9.5: lang_data.settings_param_interface_size_very_small,
+      10: lang_data.settings_param_interface_size_small,
+      10.5: lang_data.settings_param_interface_size_medium,
+      11: lang_data.settings_param_interface_size_standard,
+      11.5: lang_data.settings_param_interface_size_large,
+      12: lang_data.settings_param_interface_size_very_large
     };
 
-    // Створюємо select у меню
-    Lampa.Params.select('interface_size', sizeValues, '05'); // за замовчуванням Стандартний
+    // Щоб порядок у меню був правильний, передаємо ключі як масив
+    const orderedKeys = [9, 9.5, 10, 10.5, 11, 11.5, 12];
+    let orderedValues = {};
+    orderedKeys.forEach(k => orderedValues[k] = sizeValues[k]);
+
+    // Створюємо select
+    Lampa.Params.select('interface_size', orderedValues, 11); // за замовчуванням Стандартний
 
     updateSize();
   }
 
   const updateSize = () => {
-    // Отримуємо ключ з Storage
-    let key = Lampa.Storage.field('interface_size');
-    if (!key || !sizeMap[key]) key = '05'; // якщо ключ некоректний, використовуємо Стандартний
-
-    const iSize = Lampa.Platform.screen('mobile') ? 10 : sizeMap[key];
+    let iSize = Lampa.Platform.screen('mobile') ? 10 : parseFloat(Lampa.Storage.field('interface_size')) || 11;
     $('body').css({ fontSize: iSize + 'px' });
 
     // Логіка карток
@@ -83,11 +73,9 @@
   if (window.Lampa) {
     setTimeout(init, 500);
 
-    // Слухаємо зміни у Storage і оновлюємо розмір
+    // Слухаємо зміни
     Lampa.Storage.listener.follow('change', e => {
-      if (e.name === 'interface_size') {
-        updateSize();
-      }
+      if (e.name === 'interface_size') updateSize();
     });
   }
 })();
