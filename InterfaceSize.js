@@ -1,61 +1,111 @@
-(function () {  
-  "use strict";  
-  
-  let manifest = {  
-    type: 'interface',  
-    version: '3.10.0',  
-    name: 'Interface Size Precise',  
-    component: 'interface_size_precise'  
-  };  
-  Lampa.Manifest.plugins = manifest;  
-  
-  // Розширені опції розміру з дробовими значеннями  
-  Lampa.Params.select('interface_size', {   
-    '09': '9',   
-    '09.5': '9.5',   
-    '10': '10',   
-    '10.5': '10.5',   
-    '11': '11',   
-    '11.5': '11.5',   
-    '12': '12'  
-  }, '12');  
-    
-  const getSize = () => Lampa.Platform.screen('mobile') ? 10 : parseFloat(Lampa.Storage.field('interface_size')) || 12;  
-    
-  // Розрахунок кількості карток залежно від розміру шрифту  
-  const getCardCount = (fontSize) => {  
-    if (fontSize <= 9) return 8;      // 9px - 8 карток  
-    if (fontSize <= 9.5) return 8;    // 9.5px - 8 карток    
-    if (fontSize <= 10) return 7;     // 10px - 7 карток  
-    if (fontSize <= 10.5) return 7;   // 10.5px - 7 карток  
-    if (fontSize <= 11) return 7;     // 11px - 7 карток  
-    if (fontSize <= 11.5) return 6;   // 11.5px - 6 карток  
-    if (fontSize <= 12) return 6;     // 12px - 6 карток  
-  };  
-    
-  const updateSize = () => {  
-    const fontSize = getSize();  
-    $('body').css({ fontSize: fontSize + 'px' });  
-      
-    // Оновлюємо кількість карток для Line та Category  
-    const cardCount = getCardCount(fontSize);  
-      
-    const originalLine = Lampa.Maker.map('Line').Items.onInit;  
-    Lampa.Maker.map('Line').Items.onInit = function () {   
-      originalLine.call(this);   
-      this.view = cardCount;   
-    };  
-      
-    const originalCategory = Lampa.Maker.map('Category').Items.onInit;  
-    Lampa.Maker.map('Category').Items.onInit = function () {   
-      originalCategory.call(this);   
-      this.limit_view = cardCount;   
-    };  
-  };  
-    
-  updateSize();  
-    
-  Lampa.Storage.listener.follow('change', e => {  
-    if (e.name == 'interface_size') updateSize();  
-  });  
+// ==Lampa==
+// name: Interface Size Precise PRO
+// version: 4.0.0
+// author: Crowley
+// ==/Lampa==
+
+(function () {
+    'use strict';
+
+    let manifest = {
+        type: 'interface',
+        version: '4.0.0',
+        name: 'Interface Size Precise PRO',
+        component: 'interface_size_precise'
+    };
+
+    Lampa.Manifest.plugins = manifest;
+
+    // =========================
+    // SELECT (правильний порядок)
+    // =========================
+    Lampa.Params.select('interface_size', [
+        { value: '9', title: '9' },
+        { value: '9.5', title: '9.5' },
+        { value: '10', title: '10' },
+        { value: '10.5', title: '10.5' },
+        { value: '11', title: '11' },
+        { value: '11.5', title: '11.5' },
+        { value: '12', title: '12' }
+    ], '12');
+
+    // =========================
+    // STATE
+    // =========================
+    let patched = false;
+
+    // =========================
+    // LOGIC
+    // =========================
+    const getSize = () => {
+        return parseFloat(Lampa.Storage.field('interface_size')) || 12;
+    };
+
+    const getCardCount = (fontSize) => {
+        return Math.max(5, Math.round(14 - fontSize));
+    };
+
+    const applyFontSize = () => {
+        const fontSize = getSize();
+        $('body').css({ fontSize: fontSize + 'px' });
+    };
+
+    // =========================
+    // PATCH UI (один раз)
+    // =========================
+    const patchUI = () => {
+        if (patched) return;
+        patched = true;
+
+        const line = Lampa.Maker.map('Line');
+        const category = Lampa.Maker.map('Category');
+
+        if (line && line.Items && line.Items.onInit) {
+            const originalLine = line.Items.onInit;
+
+            line.Items.onInit = function () {
+                originalLine.call(this);
+                this.view = getCardCount(getSize());
+            };
+        }
+
+        if (category && category.Items && category.Items.onInit) {
+            const originalCategory = category.Items.onInit;
+
+            category.Items.onInit = function () {
+                originalCategory.call(this);
+                this.limit_view = getCardCount(getSize());
+            };
+        }
+    };
+
+    // =========================
+    // UPDATE
+    // =========================
+    const updateSize = () => {
+        applyFontSize();
+        patchUI();
+
+        Lampa.Noty.show('⚙️ Розмір інтерфейсу оновлено');
+    };
+
+    // =========================
+    // INIT
+    // =========================
+    function init() {
+        applyFontSize();
+        patchUI();
+    }
+
+    init();
+
+    // =========================
+    // LISTENER
+    // =========================
+    Lampa.Storage.listener.follow('change', (e) => {
+        if (e.name === 'interface_size') {
+            updateSize();
+        }
+    });
+
 })();
