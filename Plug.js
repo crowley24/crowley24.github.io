@@ -33,8 +33,7 @@
             plugins.push({  
                 id: plugin.id,  
                 name: plugin.name,  
-                url: plugin.url,  
-                status: 1  
+                url: plugin.url  
             });  
             Lampa.Storage.set('plugins', plugins);  
             Lampa.Noty.show('Встановлено. Перезавантажте додаток!');  
@@ -68,7 +67,7 @@
         AVAILABLE_PLUGINS.forEach(plugin => updateIndicator(plugin.id));  
     }  
   
-    // Перехоплюємо оригінальний метод рендерингу налаштувань  
+    // Перехоплюємо оригінальний метод рендерингу  
     const originalRender = Lampa.Settings.render;  
     Lampa.Settings.render = function() {  
         const result = originalRender.apply(this, arguments);  
@@ -76,16 +75,10 @@
         return result;  
     };  
   
-    // Створюємо компонент  
-    Lampa.SettingsApi.addComponent({  
-        component: 'plugin_manager_page',  
-        name: 'Менеджер Плагінів'  
-    });  
-  
-    // Додаємо параметри з data-атрибутами для надійного пошуку  
+    // Реєстрація параметрів  
     AVAILABLE_PLUGINS.forEach(plugin => {  
         Lampa.SettingsApi.addParam({  
-            component: 'plugin_manager_page',  
+            component: 'interface',  
             param: {  
                 name: 'plugin_' + plugin.id,  
                 type: 'button'  
@@ -94,37 +87,29 @@
                 name: plugin.name,  
                 description: plugin.description  
             },  
-            onChange: function () {  
-                togglePlugin(plugin);  
-            }  
+            onChange: () => togglePlugin(plugin)  
         });  
     });  
   
-    // MutationObserver для відстеження змін в DOM  
-    const observer = new MutationObserver(function(mutations) {  
-        mutations.forEach(function(mutation) {  
-            if (mutation.addedNodes.length) {  
-                setTimeout(updateAllIndicators, 50);  
-            }  
-        });  
-    });  
+    // Додаємо data-атрибути для надійного пошуку  
+    const originalAddParam = Lampa.SettingsApi.addParam;  
+    Lampa.SettingsApi.addParam = function(params) {  
+        if (params.param && params.param.name && params.param.name.startsWith('plugin_')) {  
+            const originalOnRender = params.onRender;  
+            params.onRender = function(item) {  
+                item.attr('data-name', params.param.name);  
+                if (originalOnRender) originalOnRender.call(this, item);  
+            };  
+        }  
+        return originalAddParam.call(this, params);  
+    };  
   
-    // Слухач для відкриття налаштувань  
+    // Слухач відкриття налаштувань  
     Lampa.Listener.follow('settings', (e) => {  
         if (e.type === 'open') {  
-            setTimeout(() => {  
-                updateAllIndicators();  
-                observer.observe(document.body, {  
-                    childList: true,  
-                    subtree: true  
-                });  
-            }, 200);  
-        } else if (e.type === 'close') {  
-            observer.disconnect();  
+            setTimeout(updateAllIndicators, 200);  
         }  
     });  
   
-    // Резервний періодичний оновлення  
-    setInterval(updateAllIndicators, 3000);  
-  
+    console.log('Plugin Manager initialized');  
 })();
