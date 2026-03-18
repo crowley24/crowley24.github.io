@@ -21,7 +21,7 @@
         return saved;
     }
 
-    // --- Покращена функція вибору з фіксацією фокусу ---
+    // --- Оновлена функція з надійним фокусом ---
     function showGenreSettings(index_to_focus) {
         var selected = getSelectedGenres();
         var ids = Object.keys(ALL_GENRES);
@@ -46,36 +46,35 @@
                 
                 Lampa.Storage.set(STORAGE_KEY, current);
 
-                // Знаходимо індекс поточного натиснутого елемента
+                // Запам'ятовуємо позицію перед перевідкриттям
                 var current_index = ids.indexOf(item.value);
-                
-                // Перевідкриваємо меню і передаємо індекс для фокусу
                 showGenreSettings(current_index);
+            },
+            onRender: function(render) {
+                // Якщо ми передали індекс, знаходимо його в DOM і фокусуємось
+                if (typeof index_to_focus !== 'undefined') {
+                    setTimeout(function() {
+                        var item = render.find('.select__item').eq(index_to_focus);
+                        if (item.length) {
+                            Lampa.Controller.collectionSet(render);
+                            Lampa.Controller.collectionFocus(item[0]);
+                        }
+                    }, 10); // Мінімальна затримка для стабільності
+                }
             },
             onBack: function() {
                 Lampa.Controller.toggle('content');
             }
         });
-
-        // Якщо передано індекс, змушуємо Lampa сфокусуватися на ньому
-        if (typeof index_to_focus !== 'undefined') {
-            setTimeout(function() {
-                var select_items = $('.select__item');
-                if (select_items.length > index_to_focus) {
-                    Lampa.Controller.collectionSet($('.select__body'));
-                    Lampa.Controller.collectionFocus(select_items.eq(index_to_focus)[0]);
-                }
-            }, 50);
-        }
     }
 
+    // --- Решта логіки (без змін) ---
     function getRandomParams() {
         var genres = getSelectedGenres();
         if (!genres.length) genres = Object.keys(ALL_GENRES);
         var random_genre = genres[Math.floor(Math.random() * genres.length)];
         var page = Math.floor(Math.random() * 20) + 1;
         var type = Math.random() > 0.3 ? 'movie' : 'tv';
-        
         return {
             type: type,
             params: {
@@ -112,7 +111,6 @@
 
     function addMenuButton() {
         if ($('.menu__item[data-action="' + PLUGIN_ID + '"]').length) return;
-
         var button = $(
             '<li class="menu__item selector" data-action="' + PLUGIN_ID + '">' +
                 '<div class="menu__ico">' +
@@ -126,7 +124,6 @@
                 '<div class="menu__text">' + tr('Випадкова добірка', 'Мне повезёт') + '</div>' +
             '</li>'
         );
-
         button.on('hover:enter', function () {
             var config = getRandomParams();
             Lampa.Activity.push({
@@ -137,11 +134,7 @@
                 card_type: true
             });
         });
-
-        button.on('hover:long', function() {
-            showGenreSettings();
-        });
-
+        button.on('hover:long', function() { showGenreSettings(); });
         var historyBtn = $('.menu .menu__list .menu__item[data-action="history"]');
         if (historyBtn.length) historyBtn.after(button);
         else $('.menu .menu__list').eq(0).append(button);
@@ -154,5 +147,4 @@
 
     if (window.appready) start();
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') start(); });
-
 })();
