@@ -21,55 +21,6 @@
         return saved;
     }
 
-    // --- ФУНКЦІЯ НАЛАШТУВАНЬ З РОБОЧИМ ФОКУСОМ ---
-    function showGenreSettings(index_to_focus) {
-        var ids = Object.keys(ALL_GENRES);
-        var selected = getSelectedGenres();
-        
-        var items = ids.map(function(id) {
-            return {
-                title: (selected.indexOf(id) !== -1 ? '✅ ' : '❌ ') + ALL_GENRES[id],
-                value: id
-            };
-        });
-
-        Lampa.Select.show({
-            title: tr('Оберіть жанри', 'Выберите жанры'),
-            items: items,
-            onSelect: function (item) {
-                var current = getSelectedGenres();
-                var idx = current.indexOf(item.value);
-                
-                if (idx > -1) current.splice(idx, 1);
-                else current.push(item.value);
-                
-                Lampa.Storage.set(STORAGE_KEY, current);
-
-                // Знаходимо індекс поточного елемента
-                var current_focus = ids.indexOf(item.value);
-                
-                // Перевідкриваємо меню через мінімальну паузу
-                setTimeout(function() {
-                    showGenreSettings(current_focus);
-                }, 10);
-            },
-            onRender: function(render) {
-                if (typeof index_to_focus !== 'undefined') {
-                    setTimeout(function() {
-                        var list = render.find('.select__item');
-                        if (list.length > index_to_focus) {
-                            Lampa.Controller.collectionSet(render);
-                            Lampa.Controller.collectionFocus(list.eq(index_to_focus)[0]);
-                        }
-                    }, 50);
-                }
-            },
-            onBack: function() {
-                Lampa.Controller.toggle('content');
-            }
-        });
-    }
-
     function getRandomParams() {
         var genres = getSelectedGenres();
         if (!genres.length) genres = Object.keys(ALL_GENRES);
@@ -82,23 +33,23 @@
             params: {
                 with_genres: random_genre,
                 'vote_average.gte': 6.5,
-                'vote_count.gte': 200,
+                'vote_count.gte': 300,
                 page: page,
                 language: Lampa.Storage.get('language', 'uk') === 'uk' ? 'uk-UA' : 'ru-RU'
             }
         };
     }
 
-    // --- ЗАЛІЗОБЕТОННЕ ВИВЕДЕННЯ НА ПЕРШЕ МІСЦЕ ---
+    // --- Додаємо рядок на головну ---
     function injectToMain() {
         var originalCall = Lampa.ContentRows.call;
+
         Lampa.ContentRows.call = function (screen, params, calls) {
             if (screen === 'main') {
-                // Наша функція завантаження
-                var myRow = function (call) {
+                calls.unshift(function (call) {
                     var config = getRandomParams();
                     var method = config.type === 'movie' ? 'discover/movie' : 'discover/tv';
-                    
+
                     Lampa.Api.sources.tmdb.get(method, config.params, function (json) {
                         if (json && json.results && json.results.length) {
                             json.results.forEach(function(i) { i.type = config.type; });
@@ -107,16 +58,16 @@
                                 title: tr('Випадкова добірка: ' + (ALL_GENRES[config.params.with_genres] || ''), 'Случайная подборка')
                             });
                         } else call({ results: [] });
-                    }, function () { call({ results: [] }); });
-                };
-
-                // Очищаємо масив від дублікатів нашої функції та ставимо її ПЕРШОЮ
-                calls.unshift(myRow);
+                    }, function () {
+                        call({ results: [] });
+                    });
+                });
             }
             originalCall.apply(this, arguments);
         };
     }
 
+    // --- Меню для вибору жанрів ---
     function addMenuButton() {
         if ($('.menu__item[data-action="' + PLUGIN_ID + '"]').length) return;
 
@@ -146,14 +97,44 @@
         });
 
         button.on('hover:long', function() {
-            showGenreSettings();
+            var selected = getSelectedGenres();
+            var items = Object.keys(ALL_GENRES).map(function(id) {
+                return { title: ALL_GENRES[id], value: id, selected: selected.indexOf(id) !== -1 };
+            });
+
+            // Визначаємо індекс першого виділеного жанру для початкового фокусу
+            var activeIndex = 0;
+            for (var i = 0; i < items.length; i++) {
+                if (items[i].selected) { activeIndex = i; break; }
+            }
+
+            Lampa.Select.show({
+                title: tr('Оберіть жанри', 'Выберите жанры'),
+                items: items,
+                index: activeIndex,
+                onSelect: function(item, index, selectInstance) {
+                    var current = getSelectedGenres();
+                    var idx = current.indexOf(item.value);
+
+                    if(idx > -1) current.splice(idx, 1);
+                    else current.push(item.value);
+
+                    Lampa.Storage.set(STORAGE_KEY, current);
+
+                    // Змінюємо стан обраного елемента без перезавантаження
+                    item.selected = !item.selected;
+                    selectInstance.updateItem(index, item); // курсор лишається на місці
+                },
+                onBack: function() { Lampa.Controller.toggle('content'); }
+            });
         });
 
         var historyBtn = $('.menu .menu__list .menu__item[data-action="history"]');
         if (historyBtn.length) historyBtn.after(button);
-        else $('.menu .menu__list').prepend(button);
+        else $('.menu .menu__list').eq(0).append(button);
     }
 
+    // --- Старт плагіна ---
     function start() {
         addMenuButton();
         injectToMain();
