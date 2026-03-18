@@ -343,7 +343,7 @@
             object-fit: contain;      
         }     
                 .cas-studio-item {  
-            height: 2.2em !important;  
+            height: 2.4em !important;  
             display: flex;  
             align-items: center;  
             justify-content: center;
@@ -352,15 +352,14 @@
             padding: 4px 8px;
             border-radius: 6px;
         }  
-        .cas-studio-item img {   
-            height: 100%;   
-            width: auto;   
-            object-fit: contain;   
-            /* Прибираємо жорсткий drop-shadow, залишаємо лише ледь помітну тінь для об'єму */
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));   
-            opacity: 1;   
-            transition: all 0.3s ease;   
-        }
+        .cas-studio-item img {  
+    height: 100%;  
+    width: auto;  
+    object-fit: contain;  
+    filter: drop-shadow(0 0 1px rgba(255,255,255,0.8));  
+    opacity: 1;  
+    transition: filter 0.3s ease;  
+}
         .cas-description { font-size: var(--cas-meta-size) !important; line-height: 1.4; color: rgba(255,255,255,0.7); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-width: 650px; margin-top: calc(var(--cas-blocks-gap) * 0.4); }                
         .cas-quality-item img { height: 12px; }                
         .cas-ratings-line { display: flex; align-items: center; gap: 15px; margin-bottom: 5px; font-size: var(--cas-meta-size); font-weight: 600; height: 30px; }                
