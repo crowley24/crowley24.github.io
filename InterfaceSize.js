@@ -38,7 +38,7 @@
     // Очищуємо старі значення
     Lampa.Params.values['interface_size'] = {};
 
-    // Використовуємо ключі 01..07 для правильного порядку меню
+    // Ключі 01..07 для правильного порядку меню
     const sizeValues = {
       '01': lang_data.settings_param_interface_size_mini,
       '02': lang_data.settings_param_interface_size_very_small,
@@ -56,8 +56,10 @@
   }
 
   const updateSize = () => {
-    // Отримуємо ключ з меню і перетворюємо на реальний розмір
-    const key = Lampa.Storage.field('interface_size') || '05';
+    // Отримуємо ключ з Storage
+    let key = Lampa.Storage.field('interface_size');
+    if (!key || !sizeMap[key]) key = '05'; // якщо ключ некоректний, використовуємо Стандартний
+
     const iSize = Lampa.Platform.screen('mobile') ? 10 : sizeMap[key];
     $('body').css({ fontSize: iSize + 'px' });
 
@@ -80,8 +82,12 @@
 
   if (window.Lampa) {
     setTimeout(init, 500);
+
+    // Слухаємо зміни у Storage і оновлюємо розмір
     Lampa.Storage.listener.follow('change', e => {
-      if (e.name === 'interface_size') updateSize();
+      if (e.name === 'interface_size') {
+        updateSize();
+      }
     });
   }
 })();
