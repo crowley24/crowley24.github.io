@@ -1,45 +1,36 @@
 (function () {
   'use strict';
 
-  const PLUGIN_ID = 'interface_size_precise';
-  const DEFAULT_SIZE = 11;
+  const DEFAULT_SIZE = '11';
+  let patched = false;
 
   let manifest = {
     type: 'interface',
-    version: '3.13.0',
+    version: '3.13.1',
     name: 'Interface Size Pro',
-    component: PLUGIN_ID
+    component: 'interface_size_precise'
   };
 
   Lampa.Manifest.plugins = manifest;
 
-  let patched = false;
-
   function init() {
-    // Реєстрація параметра (без знищення системних значень)
-    if (!Lampa.Params.values['interface_size']) {
-      Lampa.Params.select('interface_size', {
-        '8': '8px (Ultra Compact)',
-        '9': '9px (Compact)',
-        '10': '10px (Balanced)',
-        '11': '11px (Default)',
-        '12': '12px (Comfort)'
-      }, DEFAULT_SIZE.toString());
-    }
+    // 🔥 ПОВНЕ перезаписування стандартного параметра
+    Lampa.Params.select('interface_size', {
+      '8': '8px (Ultra Compact)',
+      '9': '9px (Compact)',
+      '10': '10px (Balanced)',
+      '11': '11px (Default)',
+      '12': '12px (Comfort)'
+    }, DEFAULT_SIZE);
 
     applySize(true);
   }
 
   function applySize(smooth = false) {
-    let stored = Lampa.Storage.field('interface_size');
-    let size = parseInt(stored);
+    let size = parseInt(Lampa.Storage.field('interface_size')) || 11;
 
-    if (!size || isNaN(size)) size = DEFAULT_SIZE;
-
-    // Mobile fallback
     if (Lampa.Platform.screen('mobile')) size = 10;
 
-    // Плавність
     if (smooth) {
       $('body').css({
         transition: 'font-size 0.25s ease'
@@ -80,9 +71,9 @@
     patched = true;
   }
 
-  // Init
   if (window.Lampa) {
-    setTimeout(init, 300);
+    // 🔥 важливо: даємо Lampa створити меню і потім переписуємо
+    setTimeout(init, 800);
 
     Lampa.Storage.listener.follow('change', e => {
       if (e.name === 'interface_size') {
