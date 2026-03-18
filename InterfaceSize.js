@@ -1,62 +1,94 @@
-(function () {  
-  "use strict";  
-  
-  let manifest = {  
-    type: 'interface',  
-    version: '3.12.0',  
-    name: 'Interface Size Fixed',  
-    component: 'interface_size_precise'  
-  };  
-  Lampa.Manifest.plugins = manifest;  
-  
+(function () {
+  'use strict';
+
+  const PLUGIN_ID = 'interface_size_precise';
+  const DEFAULT_SIZE = 11;
+
+  let manifest = {
+    type: 'interface',
+    version: '3.13.0',
+    name: 'Interface Size Pro',
+    component: PLUGIN_ID
+  };
+
+  Lampa.Manifest.plugins = manifest;
+
+  let patched = false;
+
   function init() {
-    // Очищуємо старі значення
-    Lampa.Params.values['interface_size'] = {};
+    // Реєстрація параметра (без знищення системних значень)
+    if (!Lampa.Params.values['interface_size']) {
+      Lampa.Params.select('interface_size', {
+        '8': '8px (Ultra Compact)',
+        '9': '9px (Compact)',
+        '10': '10px (Balanced)',
+        '11': '11px (Default)',
+        '12': '12px (Comfort)'
+      }, DEFAULT_SIZE.toString());
+    }
 
-    // Додаємо новий список вибору від 8px до 12px
-    Lampa.Params.select('interface_size', {  
-      '8': '8px',
-      '9': '9px',
-      '10': '10px',       
-      '11': '11px',    
-      '12': '12px'   
-    }, '11'); // 11px за замовчуванням 
-
-    updateSize();
+    applySize(true);
   }
-  
-  const updateSize = () => {
-    // Отримуємо значення з пам'яті, якщо мобільний — примусово 10px
-    const iSize = Lampa.Platform.screen('mobile') ? 10 : parseInt(Lampa.Storage.field('interface_size')) || 11;
-    
-    // Встановлюємо розмір шрифту для всього інтерфейсу
-    $('body').css({ fontSize: iSize + 'px' });  
-  
-    // Логіка кількості карток у рядку залежно від розміру
-    let cardCount = 6;
-    if (iSize <= 8) cardCount = 9;      // Для 8px — 9 карток
-    else if (iSize <= 9) cardCount = 8; // Для 9px — 8 карток
-    else if (iSize <= 11) cardCount = 7;// Для 10-11px — 7 карток
-    else cardCount = 6;                 // Для 12px — 6 карток
 
-    if (Lampa.Maker && Lampa.Maker.map) {
-      ['Line', 'Category'].forEach(type => {
-        const original = Lampa.Maker.map(type).Items.onInit;
-        Lampa.Maker.map(type).Items.onInit = function() {
-          original.call(this);
-          if(type === 'Line') this.view = cardCount;
-          else this.limit_view = cardCount;
-        };
+  function applySize(smooth = false) {
+    let stored = Lampa.Storage.field('interface_size');
+    let size = parseInt(stored);
+
+    if (!size || isNaN(size)) size = DEFAULT_SIZE;
+
+    // Mobile fallback
+    if (Lampa.Platform.screen('mobile')) size = 10;
+
+    // Плавність
+    if (smooth) {
+      $('body').css({
+        transition: 'font-size 0.25s ease'
       });
     }
-  };  
-  
+
+    $('body').css({
+      fontSize: size + 'px'
+    });
+
+    updateCards(size);
+  }
+
+  function updateCards(size) {
+    if (!Lampa.Maker || !Lampa.Maker.map || patched) return;
+
+    let cardCount;
+
+    if (size <= 8) cardCount = 9;
+    else if (size <= 9) cardCount = 8;
+    else if (size <= 11) cardCount = 7;
+    else cardCount = 6;
+
+    ['Line', 'Category'].forEach(type => {
+      let map = Lampa.Maker.map(type);
+      if (!map || !map.Items || !map.Items.onInit) return;
+
+      const original = map.Items.onInit;
+
+      map.Items.onInit = function () {
+        original.call(this);
+
+        if (type === 'Line') this.view = cardCount;
+        else this.limit_view = cardCount;
+      };
+    });
+
+    patched = true;
+  }
+
+  // Init
   if (window.Lampa) {
-    // Затримка для переписування стандартного меню
-    setTimeout(init, 500); 
-    
-    Lampa.Storage.listener.follow('change', e => {  
-      if (e.name == 'interface_size') updateSize();  
+    setTimeout(init, 300);
+
+    Lampa.Storage.listener.follow('change', e => {
+      if (e.name === 'interface_size') {
+        applySize(true);
+      }
     });
   }
+
 })();
