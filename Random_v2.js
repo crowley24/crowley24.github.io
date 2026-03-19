@@ -133,22 +133,22 @@
                 title: tr('Оберіть жанри', 'Выберите жанры'),
                 items: items,
                 onSelect: function (item, index) {
-                    var current = getSelectedGenres();
-                    var idx = current.indexOf(item.value);
+    var current = getSelectedGenres();
+    var idx = current.indexOf(item.value);
 
-                    if (idx > -1) current.splice(idx, 1);
-                    else current.push(item.value);
+    if (idx > -1) current.splice(idx, 1);
+    else current.push(item.value);
 
-                    Lampa.Storage.set(STORAGE_KEY, current);
+    Lampa.Storage.set(STORAGE_KEY, current);
 
-                    item.selected = !item.selected;
-                    this.items[index] = item;
+    // просто міняємо стан
+    item.selected = !item.selected;
 
-                    // 👉 перерендер щоб не було багів
-                    this.render();
+    // оновлюємо елемент (без render!)
+    this.items[index].selected = item.selected;
 
-                    return false;
-                },
+    return false; // меню не закривається
+                }
                 onBack: function () {
                     Lampa.Controller.toggle('content');
                 }
