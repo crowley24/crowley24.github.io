@@ -1,8 +1,9 @@
 (function () {
     'use strict';
 
-    var PLUGIN_ID = 'lampa_random_pro';
+    var PLUGIN_ID = 'lampa_random_pro_plus';
     var STORAGE_KEY = 'lampa_random_pro_settings';
+    var HISTORY_KEY = 'lampa_random_history';
 
     var ALL_GENRES = {
         28: 'Бойовик', 12: 'Пригоди', 16: 'Мультфільм', 35: 'Комедія', 80: 'Кримінал',
@@ -11,41 +12,36 @@
         53: 'Трилер', 10752: 'Військовий', 37: 'Вестерн'
     };
 
-    function tr(uk, ru) {
-        return Lampa.Storage.get('language', 'uk') === 'uk' ? uk : ru;
-    }
-
     function getSettings() {
-        var def = {
+        return Object.assign({
             genres: [],
-            type: 'all', // movie / tv / all
-            mode: 'strict', // strict / random
+            type: 'all',
+            mode: 'strict',
             noAnimation: true
-        };
-
-        var saved = Lampa.Storage.get(STORAGE_KEY);
-        return Object.assign(def, saved || {});
+        }, Lampa.Storage.get(STORAGE_KEY) || {});
     }
 
-    function saveSettings(data) {
-        Lampa.Storage.set(STORAGE_KEY, data);
+    function saveSettings(s) {
+        Lampa.Storage.set(STORAGE_KEY, s);
+    }
+
+    function getHistory() {
+        return Lampa.Storage.get(HISTORY_KEY) || [];
+    }
+
+    function saveHistory(list) {
+        Lampa.Storage.set(HISTORY_KEY, list.slice(-30));
     }
 
     function filterResults(results, settings) {
-        var selected = settings.genres;
-
         return results.filter(function (item) {
 
             if (!item.genre_ids) return false;
 
-            // 🚫 без мультфільмів
-            if (settings.noAnimation && item.genre_ids.indexOf(16) !== -1) {
-                return false;
-            }
+            if (settings.noAnimation && item.genre_ids.indexOf(16) !== -1) return false;
 
-            // 🎯 строгий режим
-            if (settings.mode === 'strict' && selected.length > 1) {
-                return selected.every(function (g) {
+            if (settings.mode === 'strict' && settings.genres.length > 1) {
+                return settings.genres.every(function (g) {
                     return item.genre_ids.indexOf(parseInt(g)) !== -1;
                 });
             }
@@ -54,11 +50,25 @@
         });
     }
 
-    function getRandomConfig() {
+    function removeSeen(results) {
+        var history = getHistory();
+
+        return results.filter(function (item) {
+            return history.indexOf(item.id) === -1;
+        });
+    }
+
+    function remember(results) {
+        var history = getHistory();
+        results.forEach(function (i) {
+            history.push(i.id);
+        });
+        saveHistory(history);
+    }
+
+    function getConfig() {
         var s = getSettings();
-
         var genres = s.genres.length ? s.genres : Object.keys(ALL_GENRES);
-
         var randomGenre = genres[Math.floor(Math.random() * genres.length)];
 
         var type = 'movie';
@@ -67,51 +77,82 @@
 
         return {
             type: type,
-            genre: randomGenre,
             params: {
                 with_genres: randomGenre,
+                page: Math.floor(Math.random() * 50) + 1,
                 'vote_average.gte': 6,
-                'vote_count.gte': 200,
-                page: Math.floor(Math.random() * 40) + 1,
-                language: Lampa.Storage.get('language', 'uk') === 'uk' ? 'uk-UA' : 'ru-RU'
+                'vote_count.gte': 200
             }
         };
     }
 
-    function injectToMain() {
-        if (Lampa.ContentRows.call.__random_pro) return;
-        Lampa.ContentRows.call.__random_pro = true;
+    function loadRandom(callback, attempt) {
+        attempt = attempt || 0;
+
+        var config = getConfig();
+        var settings = getSettings();
+        var method = config.type === 'movie' ? 'discover/movie' : 'discover/tv';
+
+        Lampa.Api.sources.tmdb.get(method, config.params, function (json) {
+
+            if (!json || !json.results) return callback([]);
+
+            var res = filterResults(json.results, settings);
+            res = removeSeen(res);
+
+            if (res.length < 5 && attempt < 3) {
+                loadRandom(callback, attempt + 1);
+                return;
+            }
+
+            res.forEach(function (i) {
+                i.type = config.type;
+            });
+
+            remember(res);
+            callback(res);
+
+        }, function () {
+            callback([]);
+        });
+    }
+
+    function injectRow() {
+        if (Lampa.ContentRows.call.__pro_plus) return;
+        Lampa.ContentRows.call.__pro_plus = true;
 
         var original = Lampa.ContentRows.call;
 
         Lampa.ContentRows.call = function (screen, params, calls) {
 
             if (screen === 'main') {
+
                 calls.unshift(function (call) {
 
-                    var config = getRandomConfig();
-                    var settings = getSettings();
-                    var method = config.type === 'movie' ? 'discover/movie' : 'discover/tv';
+                    loadRandom(function (results) {
 
-                    Lampa.Api.sources.tmdb.get(method, config.params, function (json) {
+                        call({
+                            results: results,
+                            title: '🎲 PRO Random  🔄'
+                        });
 
-                        if (json && json.results) {
+                        // кнопка оновити
+                        setTimeout(function () {
+                            $('.content__title:contains("PRO Random")')
+                                .off('hover:enter')
+                                .on('hover:enter', function () {
 
-                            var filtered = filterResults(json.results, settings);
+                                    Lampa.Controller.toggle('content');
 
-                            filtered.forEach(function (i) {
-                                i.type = config.type;
-                            });
+                                    setTimeout(function () {
+                                        Lampa.Activity.replace({
+                                            url: '',
+                                            component: 'main'
+                                        });
+                                    }, 100);
+                                });
+                        }, 500);
 
-                            call({
-                                results: filtered,
-                                title: '🎲 ' + tr('Випадкова добірка', 'Случайная подборка')
-                            });
-
-                        } else call({ results: [] });
-
-                    }, function () {
-                        call({ results: [] });
                     });
 
                 });
@@ -121,112 +162,44 @@
         };
     }
 
-    function openSettings(button) {
-        var s = getSettings();
+    function addSwipe() {
+        var startX = 0;
 
-        var items = [];
-
-        // тип
-        items.push({
-            title: '🎬 ' + tr('Тип: ', 'Тип: ') + s.type,
-            value: 'type'
+        $(document).on('touchstart', function (e) {
+            startX = e.originalEvent.touches[0].clientX;
         });
 
-        // режим
-        items.push({
-            title: '🎯 ' + tr('Режим: ', 'Режим: ') + s.mode,
-            value: 'mode'
-        });
+        $(document).on('touchend', function (e) {
+            var endX = e.originalEvent.changedTouches[0].clientX;
 
-        // мультфільми
-        items.push({
-            title: (s.noAnimation ? '🚫 ' : '✅ ') + tr('Без мультфільмів', 'Без мультфильмов'),
-            value: 'anim'
-        });
-
-        // жанри
-        Object.keys(ALL_GENRES).forEach(function (id) {
-            items.push({
-                title: (s.genres.indexOf(id) !== -1 ? '✓ ' : '') + ALL_GENRES[id],
-                value: 'g_' + id
-            });
-        });
-
-        Lampa.Select.show({
-            title: 'PRO Random',
-
-            items: items,
-
-            onSelect: function (item) {
-
-                var s = getSettings();
-
-                if (item.value === 'type') {
-                    s.type = s.type === 'movie' ? 'tv' : s.type === 'tv' ? 'all' : 'movie';
-                }
-
-                else if (item.value === 'mode') {
-                    s.mode = s.mode === 'strict' ? 'random' : 'strict';
-                }
-
-                else if (item.value === 'anim') {
-                    s.noAnimation = !s.noAnimation;
-                }
-
-                else if (item.value.indexOf('g_') === 0) {
-                    var id = item.value.replace('g_', '');
-                    var idx = s.genres.indexOf(id);
-
-                    if (idx > -1) s.genres.splice(idx, 1);
-                    else s.genres.push(id);
-                }
-
-                saveSettings(s);
-
-                setTimeout(function () {
-                    openSettings(button);
-                }, 50);
-
-                return true;
-            },
-
-            onBack: function () {
-                Lampa.Controller.toggle('content');
+            if (Math.abs(startX - endX) > 100) {
+                Lampa.Activity.replace({ component: 'main' });
             }
         });
     }
 
     function addButton() {
+        var btn = $('<li class="menu__item selector"><div class="menu__ico">🎲</div><div class="menu__text">PRO Random</div></li>');
 
-        if ($('.menu__item[data-action="' + PLUGIN_ID + '"]').length) return;
+        btn.on('hover:enter', function () {
+            loadRandom(function (results) {
 
-        var button = $('<li class="menu__item selector" data-action="' + PLUGIN_ID + '">' +
-            '<div class="menu__ico">🎲</div>' +
-            '<div class="menu__text">PRO Random</div>' +
-            '</li>');
+                Lampa.Activity.push({
+                    title: 'PRO Random',
+                    component: 'category_full',
+                    results: results
+                });
 
-        button.on('hover:enter', function () {
-
-            var config = getRandomConfig();
-
-            Lampa.Activity.push({
-                url: 'discover/' + config.type + '?with_genres=' + config.params.with_genres,
-                title: 'PRO Random',
-                component: 'category_full',
-                source: 'tmdb'
             });
         });
 
-        button.on('hover:long', function () {
-            openSettings(button);
-        });
-
-        $('.menu .menu__list').eq(0).append(button);
+        $('.menu .menu__list').append(btn);
     }
 
     function start() {
+        injectRow();
+        addSwipe();
         addButton();
-        injectToMain();
     }
 
     if (window.appready) start();
