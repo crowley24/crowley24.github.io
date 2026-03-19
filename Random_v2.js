@@ -19,8 +19,8 @@
         var def = {
             genres: [],
             type: 'all', 
-            mode: 'random', // strict / random / trends
-            years: 'all',  // all / new / retro
+            mode: 'random', 
+            years: 'all',  
             noAnimation: true
         };
         var saved = Lampa.Storage.get(STORAGE_KEY);
@@ -35,28 +35,29 @@
         var s = getSettings();
         var lang = Lampa.Storage.get('language', 'uk') === 'uk' ? 'uk-UA' : 'ru-RU';
         var type = s.type === 'all' ? (Math.random() > 0.5 ? 'movie' : 'tv') : s.type;
+        var currentYear = new Date().getFullYear();
 
         var params = {
-            'vote_average.gte': 6,
-            'vote_count.gte': 100,
+            'vote_average.gte': 5.5,
+            'vote_count.gte': 50,
             'language': lang,
-            'page': Math.floor(Math.random() * 20) + 1
+            'sort_by': 'popularity.desc',
+            'page': Math.floor(Math.random() * 10) + 1
         };
 
-        // Фільтр по рокам
-        var currentYear = new Date().getFullYear();
+        // Корекція фільтра по рокам для фільмів та серіалів
         if (s.years === 'new') {
-            params['primary_release_date.gte'] = (currentYear - 5) + '-01-01';
+            var dateGte = (currentYear - 5) + '-01-01';
+            if (type === 'movie') params['primary_release_date.gte'] = dateGte;
+            else params['first_air_date.gte'] = dateGte;
         } else if (s.years === 'retro') {
-            params['primary_release_date.lte'] = '2000-01-01';
+            var dateLte = '2005-01-01';
+            if (type === 'movie') params['primary_release_date.lte'] = dateLte;
+            else params['first_air_date.lte'] = dateLte;
         }
 
-        // Режими роботи
-        if (s.mode === 'trends') {
-            // Режим Трендів ігнорує жанри
-            delete params.with_genres;
-            params.sort_by = 'popularity.desc';
-        } else if (s.genres.length > 0) {
+        // Режими жанрів
+        if (s.mode !== 'trends' && s.genres.length > 0) {
             if (s.mode === 'strict') {
                 params.with_genres = s.genres.join(',');
             } else {
@@ -65,6 +66,17 @@
         }
 
         return { type: type, params: params };
+    }
+
+    function filterStrict(results, settings) {
+        if (settings.mode !== 'strict' || settings.genres.length === 0) return results;
+        
+        return results.filter(function(item) {
+            // Перевіряємо, чи всі обрані користувачем жанри присутні в об'єкті
+            return settings.genres.every(function(gId) {
+                return item.genre_ids && item.genre_ids.indexOf(parseInt(gId)) !== -1;
+            });
+        });
     }
 
     function injectToMain() {
@@ -84,11 +96,15 @@
                             var filtered = json.results.filter(function(i) {
                                 return !(settings.noAnimation && i.genre_ids && i.genre_ids.indexOf(16) !== -1);
                             });
+                            
+                            // Додаткова перевірка для Strict Mode
+                            filtered = filterStrict(filtered, settings);
+                            
                             filtered.forEach(function (i) { i.type = config.type; });
 
                             call({
-                                results: filtered,
-                                title: tr('Випадкова добірка', 'Случайная подборка') // Прибрано іконку
+                                results: filtered.slice(0, 20),
+                                title: tr('Випадкова добірка', 'Случайная подборка')
                             });
                         } else call({ results: [] });
                     }, function () { call({ results: [] }); });
@@ -103,32 +119,32 @@
         var items = [];
 
         items.push({
-            title: '🎬 ' + tr('Тип: ', 'Тип: ') + (s.type === 'all' ? tr('Усе', 'Все') : s.type),
+            title: '🎬 ' + tr('Тип: ', 'Тип: ') + (s.type === 'all' ? tr('Усе', 'Все') : (s.type === 'movie' ? tr('Фільми', 'Фильмы') : tr('Серіали', 'Сериалы'))),
             value: 'type'
         });
 
-        var modeTitle = s.mode === 'strict' ? tr('Суворий (І)', 'Строгий (И)') : 
-                        s.mode === 'trends' ? tr('Тренди', 'Тренды') : tr('Мікс (АБО)', 'Микс (ИЛИ)');
+        var modeTitle = s.mode === 'strict' ? tr('Тільки вибрані (Strict)', 'Только выбранные') : 
+                        s.mode === 'trends' ? tr('Тренди (Популярне)', 'Тренды') : tr('Один із вибраних (Mix)', 'Один из выбранных');
         items.push({
-            title: '🎯 ' + tr('Режим: ', 'Режим: ') + modeTitle,
+            title: '🎯 ' + tr('Логіка: ', 'Логика: ') + modeTitle,
             value: 'mode'
         });
 
-        var yearsTitle = s.years === 'new' ? tr('Новинки', 'Новинки') : 
-                         s.years === 'retro' ? tr('Ретро', 'Ретро') : tr('Усі', 'Все');
+        var yearsTitle = s.years === 'new' ? tr('Останні 5 років', 'Последние 5 лет') : 
+                         s.years === 'retro' ? tr('Старі (до 2005)', 'Старые') : tr('Будь-які', 'Любые');
         items.push({
             title: '📅 ' + tr('Роки: ', 'Годы: ') + yearsTitle,
             value: 'years'
         });
 
         items.push({
-            title: (s.noAnimation ? '🚫 ' : '✅ ') + tr('Без мультфільмів', 'Без мультфильмов'),
+            title: (s.noAnimation ? '🚫 ' : '✅ ') + tr('Приховати мультфільми', 'Скрыть мультфильмы'),
             value: 'anim'
         });
 
-        items.push({ title: '--- ' + tr('Жанри', 'Жанры') + ' ---', value: 'none' });
+        items.push({ title: '--- ' + tr('Виберіть жанри нижче', 'Выберите жанры ниже') + ' ---', value: 'none' });
 
-        Object.keys(ALL_GENRES).forEach(function (id) {
+        Object.keys(ALL_GENRES).sort(function(a,b){return ALL_GENRES[a].localeCompare(ALL_GENRES[b])}).forEach(function (id) {
             items.push({
                 title: (s.genres.indexOf(id) !== -1 ? '● ' : '○ ') + ALL_GENRES[id],
                 value: 'g_' + id
@@ -136,7 +152,7 @@
         });
 
         Lampa.Select.show({
-            title: 'PRO Random',
+            title: 'Налаштування PRO Random',
             items: items,
             onSelect: function (item) {
                 if (item.value === 'none') return;
@@ -174,16 +190,17 @@
 
         button.on('hover:enter', function () {
             var config = getRandomConfig();
-            // Додаємо випадковий параметр до URL, щоб Lampa кожного разу завантажувала нові дані
-            var randomCache = Math.floor(Math.random() * 1000);
+            var s = getSettings();
+            
+            // Щоб уникнути кешування, додаємо timestamp
+            var url = 'discover/' + config.type + '?v=' + Date.now();
             
             Lampa.Activity.push({
-                url: config.type + '/popular?random=' + randomCache, 
+                url: url,
                 title: tr('Рандом: ', 'Рандом: ') + (config.type === 'movie' ? tr('Фільми', 'Фильмы') : tr('Серіали', 'Сериалы')),
                 component: 'category_full',
-                method: 'discover',
-                card_type: config.type,
                 page: config.params.page,
+                genres: config.params.with_genres,
                 params: config.params,
                 source: 'tmdb'
             });
@@ -193,15 +210,7 @@
         $('.menu .menu__list').eq(0).append(button);
     }
 
-    function updateGenres() {
-        var lang = Lampa.Storage.get('language', 'uk') === 'uk' ? 'uk-UA' : 'ru-RU';
-        Lampa.Api.sources.tmdb.get('genre/movie/list', { language: lang }, function (data) {
-            if (data && data.genres) data.genres.forEach(function (g) { ALL_GENRES[g.id] = g.name; });
-        });
-    }
-
     function start() {
-        updateGenres();
         addButton();
         injectToMain();
     }
