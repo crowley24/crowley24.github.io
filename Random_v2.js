@@ -26,7 +26,7 @@
 
         if (!genres.length) genres = Object.keys(ALL_GENRES);
 
-        // 👉 ВИПАДКОВИЙ ЖАНР (головне виправлення)
+        // 🎯 випадковий жанр
         var randomGenre = genres[Math.floor(Math.random() * genres.length)];
 
         var params = {
@@ -37,7 +37,7 @@
             language: Lampa.Storage.get('language', 'uk') === 'uk' ? 'uk-UA' : 'ru-RU'
         };
 
-        // 👉 якщо мультфільм НЕ вибраний — виключаємо
+        // 🚫 прибираємо мультфільми якщо не вибрані
         if (genres.indexOf('16') === -1) {
             params.without_genres = 16;
         }
@@ -63,6 +63,7 @@
 
                     Lampa.Api.sources.tmdb.get(method, config.params, function (json) {
                         if (json && json.results && json.results.length) {
+
                             json.results.forEach(function (i) {
                                 i.type = config.type;
                             });
@@ -74,6 +75,7 @@
                                     'Случайная подборка'
                                 )
                             });
+
                         } else {
                             call({ results: [] });
                         }
@@ -104,7 +106,7 @@
             '</li>'
         );
 
-        // 👉 коротке натискання — відкрити добірку
+        // ▶ відкриття добірки
         button.on('hover:enter', function () {
             var config = getRandomParams();
 
@@ -117,7 +119,7 @@
             });
         });
 
-        // 👉 довге натискання — вибір жанрів
+        // ⚙ вибір жанрів (БЕЗ render — без помилки!)
         button.on('hover:long', function () {
             var selected = getSelectedGenres();
 
@@ -132,23 +134,23 @@
             Lampa.Select.show({
                 title: tr('Оберіть жанри', 'Выберите жанры'),
                 items: items,
+
                 onSelect: function (item, index) {
-    var current = getSelectedGenres();
-    var idx = current.indexOf(item.value);
+                    var current = getSelectedGenres();
+                    var idx = current.indexOf(item.value);
 
-    if (idx > -1) current.splice(idx, 1);
-    else current.push(item.value);
+                    if (idx > -1) current.splice(idx, 1);
+                    else current.push(item.value);
 
-    Lampa.Storage.set(STORAGE_KEY, current);
+                    Lampa.Storage.set(STORAGE_KEY, current);
 
-    // просто міняємо стан
-    item.selected = !item.selected;
+                    // ✔ просто оновлюємо стан без render()
+                    item.selected = !item.selected;
+                    this.items[index].selected = item.selected;
 
-    // оновлюємо елемент (без render!)
-    this.items[index].selected = item.selected;
+                    return false; // меню не закривається
+                },
 
-    return false; // меню не закривається
-                }
                 onBack: function () {
                     Lampa.Controller.toggle('content');
                 }
