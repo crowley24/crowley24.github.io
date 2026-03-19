@@ -3,18 +3,11 @@
 
     const STORAGE_KEY = 'pro_random_ai_data';
 
-    const DEFAULT_DATA = {
-        history: [],
-        blacklist: []
-    };
-
     function getData() {
-        let data = Lampa.Storage.get(STORAGE_KEY, null);
-        if (!data) {
-            data = DEFAULT_DATA;
-            Lampa.Storage.set(STORAGE_KEY, data);
-        }
-        return data;
+        return Lampa.Storage.get(STORAGE_KEY, {
+            history: [],
+            blacklist: []
+        });
     }
 
     function saveData(data) {
@@ -22,26 +15,39 @@
     }
 
     function getRandomMovie(callback) {
-        Lampa.Api.get('discover/movie', {
+
+        let page = Math.floor(Math.random() * 5) + 1;
+
+        let url = Lampa.TMDB.api('discover/movie', {
             sort_by: 'popularity.desc',
-            page: Math.floor(Math.random() * 10) + 1
-        }, function (json) {
+            page: page
+        });
+
+        Lampa.Reguest.get(url, function (json) {
 
             let data = getData();
 
-            let items = (json.results || []).filter(item => {
-                return !data.history.includes(item.id) && !data.blacklist.includes(item.id);
+            let items = (json.results || []).filter(function (item) {
+                return data.history.indexOf(item.id) === -1 &&
+                       data.blacklist.indexOf(item.id) === -1;
             });
+
+            if (!items.length) {
+                callback(null);
+                return;
+            }
 
             let movie = items[Math.floor(Math.random() * items.length)];
 
-            if (movie) {
-                data.history.push(movie.id);
-                if (data.history.length > 50) data.history.shift();
-                saveData(data);
-            }
+            data.history.push(movie.id);
+            if (data.history.length > 50) data.history.shift();
+
+            saveData(data);
 
             callback(movie);
+
+        }, function () {
+            callback(null);
         });
     }
 
@@ -49,7 +55,7 @@
         getRandomMovie(function (movie) {
 
             if (!movie) {
-                Lampa.Noty.show('Немає результатів');
+                Lampa.Noty.show('Нічого не знайдено');
                 return;
             }
 
@@ -58,23 +64,24 @@
                 title: movie.title,
                 component: 'full'
             });
+
         });
     }
 
     function init() {
 
-        // ДОДАЄМО В МЕНЮ
         Lampa.Menu.add({
             title: '🎲 Pro Random',
             onSelect: openRandom
         });
 
-        Lampa.Noty.show('Pro Random активовано');
+        console.log('Pro Random: loaded');
     }
 
-    if (window.Lampa) init();
-    else {
-        document.addEventListener('lampa_ready', init);
+    if (window.Lampa) {
+        init();
+    } else {
+        window.addEventListener('lampa_ready', init);
     }
 
 })();
