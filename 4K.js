@@ -23,25 +23,44 @@
                 var url = Lampa.Storage.field('jackett_url');  
                 var key = Lampa.Storage.field('jackett_key') || Lampa.Storage.field('parser_jackett_key');  
                   
+                console.log('UaDV Debug: URL:', url);  
+                console.log('UaDV Debug: Key:', key);  
+                  
                 if (!url || !key) return noty('Перевірте налаштування Jackett');  
   
-                // Максимально простий запит як у звичайного торренті  
-                var searchUrl = url + '/api/v2.0/indexers/all/results?apikey=' + key + '&Query=' + encodeURIComponent(query);  
+                // Спеціальний формат для публічних серверів  
+                var searchUrl = url + '/api/v2.0/indexers/all/results?apikey=' + key + '&Query=' + encodeURIComponent(query) + '&Category%5B%5D=2000&Category%5B%5D=2010&Category%5B%5D=2030&Category%5B%5D=2040&Category%5B%5D=5000&Category%5B%5D=5030&Category%5B%5D=5040';  
                   
-                console.log('UaDV Debug: Simple URL:', searchUrl);  
+                console.log('UaDV Debug: Full URL:', searchUrl);  
   
-                var response = await fetch(searchUrl);  
+                var response = await fetch(searchUrl, {  
+                    method: 'GET',  
+                    headers: {  
+                        'Accept': 'application/json',  
+                        'User-Agent': 'Mozilla/5.0'  
+                    }  
+                });  
+  
+                console.log('UaDV Debug: Status:', response.status);  
+  
+                if (!response.ok) {  
+                    var errorText = await response.text();  
+                    console.error('UaDV Debug: Error:', errorText);  
+                    return noty('Помилка сервера: ' + response.status);  
+                }  
+  
                 var json = await response.json();  
                 var results = json.Results || [];  
   
-                console.log('UaDV Debug: Response OK:', response.ok, 'Results:', results.length);  
+                console.log('UaDV Debug: Found:', results.length);  
   
                 if (!results.length) return noty('Нічого не знайдено');  
   
-                // Проста фільтрація українських релізів  
+                // Розширена фільтрація українських релізів  
                 var uaResults = results.filter(function(item) {  
                     var t = (item.Title || '').toLowerCase();  
-                    return t.indexOf('ukr') >= 0 || t.indexOf('ua') >= 0 || t.indexOf('укр') >= 0;  
+                    return t.indexOf('ukr') >= 0 || t.indexOf('ua') >= 0 || t.indexOf('укр') >= 0 ||  
+                           t.indexOf('ukrainian') >= 0 || t.indexOf('ukraine') >= 0;  
                 });  
   
                 console.log('UaDV Debug: UA results:', uaResults.length);  
