@@ -7,152 +7,54 @@
   
     var UaDV = {  
         run: async function (object) {  
-            console.log('UaDV Debug: Button clicked');  
+            var movie = object.movie || object.item || object;  
               
-            var movie = object.movie ||   
-                       (object.data ? object.data.movie : null) ||   
-                       object.item ||  
-                       (object.card ? object.card.movie : null) ||  
-                       (object.activity ? object.activity.movie : null) ||  
-                       object;  
-              
-            if (!movie) {  
-                console.log('UaDV Debug: Available object keys:', Object.keys(object));  
-                return noty('Помилка: дані фільму не знайдено');  
-            }  
+            if (!movie) return noty('Помилка: дані фільму не знайдено');  
   
-            var title = movie.title ||   
-                       movie.name ||   
-                       movie.original_title ||   
-                       movie.original_name ||  
-                       movie.movie_title ||  
-                       movie.film_name ||  
-                       (movie.card && movie.card.title) ||  
-                       (movie.card && movie.card.name);  
-              
-            if (!title) {  
-                return noty('Помилка: не вдалося отримати назву фільму');  
-            }  
+            var title = movie.title || movie.name || movie.original_title;  
+            if (!title) return noty('Помилка: не вдалося отримати назву фільму');  
   
-            var year = (movie.release_date || movie.first_air_date || movie.year || '').slice(0, 4);  
+            var year = (movie.release_date || movie.first_air_date || '').slice(0, 4);  
             var query = title + (year ? ' ' + year : '');  
               
             noty('Шукаю найкращий UA реліз: ' + query);  
   
             try {  
                 var url = Lampa.Storage.field('jackett_url');  
-                var key = Lampa.Storage.field('jackett_key') ||   
-                         Lampa.Storage.field('parser_jackett_key');  
+                var key = Lampa.Storage.field('jackett_key') || Lampa.Storage.field('parser_jackett_key');  
                   
-                console.log('UaDV Debug: Jackett URL:', url);  
-                console.log('UaDV Debug: API Key found:', !!key);  
+                if (!url || !key) return noty('Перевірте налаштування Jackett');  
+  
+                // Максимально простий запит як у звичайного торренті  
+                var searchUrl = url + '/api/v2.0/indexers/all/results?apikey=' + key + '&Query=' + encodeURIComponent(query);  
                   
-                if (!url) return noty('Вкажіть Jackett URL у налаштуваннях');  
-                if (!key) return noty('Вкажіть Jackett API ключ у налаштуваннях');  
+                console.log('UaDV Debug: Simple URL:', searchUrl);  
   
-                // Формуємо URL як у звичайному торренті  
-                var cats = '2000,2010,2030,2040,5000,5030,5040';  
-                var baseUrl = url.replace(/\/$/, '');  
-                var searchUrl = baseUrl + '/api/v2.0/indexers/all/results?apikey=' + encodeURIComponent(key) + '&Query=' + encodeURIComponent(query) + '&Category[]=' + cats.split(',').join('&Category[]=');  
+                var response = await fetch(searchUrl);  
+                var json = await response.json();  
+                var results = json.Results || [];  
   
-                console.log('UaDV Debug: Base URL:', baseUrl);  
-                console.log('UaDV Debug: Search URL:', searchUrl);  
-                console.log('UaDV Debug: Query:', query);  
+                console.log('UaDV Debug: Response OK:', response.ok, 'Results:', results.length);  
   
-                // Перевіряємо доступність Jackett перед запитом  
-                try {  
-                    var testResponse = await fetch(baseUrl + '/api/v2.0/indexers', {  
-                        method: 'GET',  
-                        headers: {  
-                            'Accept': 'application/json'  
-                        },  
-                        timeout: 5000  
-                    });  
-                    console.log('UaDV Debug: Jackett test response status:', testResponse.status);  
-                } catch (testError) {  
-                    console.error('UaDV Debug: Jackett test failed:', testError);  
-                    return noty('Jackett недоступний за адресою: ' + baseUrl);  
-                }  
+                if (!results.length) return noty('Нічого не знайдено');  
   
-                // Основний запит  
-                var response = await fetch(searchUrl, {  
-                    method: 'GET',  
-                    headers: {  
-                        'Accept': 'application/json',  
-                        'User-Agent': 'Lampa-Plugin'  
-                    }  
+                // Проста фільтрація українських релізів  
+                var uaResults = results.filter(function(item) {  
+                    var t = (item.Title || '').toLowerCase();  
+                    return t.indexOf('ukr') >= 0 || t.indexOf('ua') >= 0 || t.indexOf('укр') >= 0;  
                 });  
   
-                console.log('UaDV Debug: Response status:', response.status);  
-                console.log('UaDV Debug: Response headers:', Object.fromEntries(response.headers.entries()));  
+                console.log('UaDV Debug: UA results:', uaResults.length);  
   
-                if (!response.ok) {  
-                    var errorText = await response.text();  
-                    console.error('UaDV Debug: Error response:', errorText);  
-                    throw new Error(`HTTP ${response.status}: ${errorText}`);  
-                }  
-  
-                var json = await response.json();  
-                var results = json.Results || json.results || [];  
-  
-                console.log('UaDV Debug: Raw response keys:', Object.keys(json));  
-                console.log('UaDV Debug: Results count:', results.length);  
-  
-                if (!results.length) {  
-                    console.log('UaDV Debug: No results found');  
-                    return noty('Нічого не знайдено в Jackett');  
-                }  
-  
-                var scored = results.map(function(item) {  
-                    var score = 0;  
-                    var t = (item.Title || '').toLowerCase();  
-                      
-                    var uaPatterns = ['ukr', 'ua', 'укр', 'ukrainian', 'ukraine', 'ua.', 'ukr.', 'український', 'україна'];  
-                    var hasUaMark = uaPatterns.some(function(pattern) {  
-                        return t.indexOf(pattern) >= 0;  
-                    });  
-                      
-                    if (hasUaMark) {  
-                        score += 1000;  
-                        console.log('UaDV Debug: Found UA release:', item.Title);  
-                    } else {  
-                        return { item: item, score: -1 };  
-                    }  
-  
-                    if (t.indexOf('dv') >= 0 || t.indexOf('dolby vision') >= 0 || t.indexOf('dovi') >= 0) score += 600;  
-                    if (t.indexOf('2160p') >= 0 || t.indexOf('4k') >= 0) score += 400;  
-                    if (t.indexOf('hdr') >= 0) score += 200;  
-                    if (t.indexOf('1080p') >= 0) score += 100;  
-                    if (t.indexOf('720p') >= 0) score += 50;  
-                      
-                    score += Math.floor((item.Size || 0) / (1024 * 1024 * 1024)) * 10;  
-                      
-                    return { item: item, score: score };  
-                }).filter(function(res) { return res.score > 0; });  
-  
-                console.log('UaDV Debug: Filtered UA results:', scored.length);  
-  
-                scored.sort(function(a, b) { return b.score - a.score; });  
-  
-                if (scored.length > 0) {  
-                    var best = scored[0].item;  
-                    noty('Знайдено якісний реліз. Запускаю...');  
-                    this.play(best, movie);  
+                if (uaResults.length > 0) {  
+                    noty('Знайдено український реліз. Запускаю...');  
+                    this.play(uaResults[0], movie);  
                 } else {  
                     noty('Українських релізів не знайдено');  
                 }  
             } catch (e) {  
-                console.error('UaDV Debug: Network error:', e);  
-                console.error('UaDV Debug: Error type:', e.constructor.name);  
-                console.error('UaDV Debug: Error message:', e.message);  
-                  
-                if (e.message.includes('Failed to fetch')) {  
-                    noty('Помилка підключення до Jackett. Перевірте URL та доступність сервера.');  
-                } else if (e.message.includes('CORS')) {  
-                    noty('CORS помилка. Jackett повинен бути налаштований для дозволу запитів.');  
-                } else {  
-                    noty('Помилка мережі або Jackett: ' + e.message);  
-                }  
+                console.error('UaDV Debug: Error:', e);  
+                noty('Помилка: ' + e.message);  
             }  
         },  
   
@@ -178,16 +80,10 @@
                     body: JSON.stringify({ action: 'get', hash: hash })  
                 });  
                 var filesData = await filesRes.json();  
-                var files = filesData.file_stats || filesData.FileStats || [];  
+                var files = filesData.file_stats || [];  
   
                 if (files.length) {  
-                    var videoFiles = files.filter(function(file) {  
-                        var name = (file.path || file.name || '').toLowerCase();  
-                        return name.indexOf('.mp4') >= 0 || name.indexOf('.mkv') >= 0 || name.indexOf('.avi') >= 0 || name.indexOf('.mov') >= 0;  
-                    });  
-  
-                    var targetFiles = videoFiles.length > 0 ? videoFiles : files;  
-                    var mainFile = targetFiles.reduce(function(prev, cur) {  
+                    var mainFile = files.reduce(function(prev, cur) {  
                         return (prev.length > cur.length) ? prev : cur;  
                     });  
   
@@ -196,11 +92,8 @@
                         title: movie.title || movie.name,  
                         timeline: { hash: hash }  
                     });  
-                } else {  
-                    noty('Файли не знайдено в торренті');  
                 }  
             } catch (e) {  
-                console.error('UaDV Debug: Play error:', e);  
                 noty('TorrServer не відповідає');  
             }  
         }  
@@ -223,7 +116,6 @@
                     `);  
   
                     btn.on('click', function() {  
-                        console.log('UaDV Debug: Button clicked!');  
                         UaDV.run(e.object);  
                     });  
   
