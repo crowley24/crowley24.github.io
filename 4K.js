@@ -9,7 +9,6 @@
         run: async function (object) {  
             console.log('UaDV Debug: Button clicked');  
               
-            // Безпечний пошук даних фільму  
             var movie = object.movie ||   
                        (object.data ? object.data.movie : null) ||   
                        object.item ||  
@@ -24,15 +23,38 @@
                 return noty('Помилка: дані фільму не знайдено');  
             }  
   
-            // Назва для пошуку  
-            var title = movie.title || movie.name || movie.original_title || movie.original_name;  
-            console.log('UaDV Debug: Movie title:', title);  
+            // Детальна діагностика полів назви  
+            console.log('UaDV Debug: Movie object keys:', Object.keys(movie));  
+            console.log('UaDV Debug: Movie object:', movie);  
+              
+            // Розширений пошук назви  
+            var title = movie.title ||   
+                       movie.name ||   
+                       movie.original_title ||   
+                       movie.original_name ||  
+                       movie.movie_title ||  
+                       movie.film_name ||  
+                       (movie.card && movie.card.title) ||  
+                       (movie.card && movie.card.name);  
+              
+            console.log('UaDV Debug: Available title fields:', {  
+                title: movie.title,  
+                name: movie.name,  
+                original_title: movie.original_title,  
+                original_name: movie.original_name,  
+                movie_title: movie.movie_title,  
+                film_name: movie.film_name,  
+                card_title: movie.card && movie.card.title,  
+                card_name: movie.card && movie.card.name  
+            });  
+              
+            console.log('UaDV Debug: Final title:', title);  
               
             if (!title) {  
                 return noty('Помилка: не вдалося отримати назву фільму');  
             }  
   
-            var year = (movie.release_date || movie.first_air_date || '').slice(0, 4);  
+            var year = (movie.release_date || movie.first_air_date || movie.year || '').slice(0, 4);  
             var query = title + (year ? ' ' + year : '');  
               
             noty('Шукаю найкращий UA реліз: ' + query);  
@@ -58,7 +80,6 @@
                     var score = 0;  
                     var t = (item.Title || '').toLowerCase();  
                       
-                    // Розширена перевірка на українські релізи  
                     var uaPatterns = ['ukr', 'ua', 'укр', 'ukrainian', 'ukraine', 'ua.', 'ukr.', 'український', 'україна'];  
                     var hasUaMark = uaPatterns.some(function(pattern) {  
                         return t.indexOf(pattern) >= 0;  
