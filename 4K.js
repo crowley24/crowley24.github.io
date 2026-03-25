@@ -7,16 +7,35 @@
   
     var UaDV = {  
         run: async function (object) {  
-            // Шукаємо дані фільму  
-            var movie = object.movie || (object.data ? object.data.movie : null) || object.item;  
+            // Детальна діагностика об'єкта  
+            console.log('UaDV Debug: Object type:', typeof object);  
+            console.log('UaDV Debug: Object keys:', object ? Object.keys(object) : 'null');  
+            console.log('UaDV Debug: Full object structure:', JSON.stringify(object, null, 2));  
+              
+            // Розширений пошук даних фільму  
+            var movie = object.movie ||   
+                       (object.data ? object.data.movie : null) ||   
+                       object.item ||  
+                       (object.card ? object.card.movie : null) ||  
+                       (object.activity ? object.activity.movie : null) ||  
+                       object;  
+              
+            console.log('UaDV Debug: Found movie:', movie);  
               
             if (!movie) {  
                 console.log('UaDV Debug: Full object:', object);  
                 return noty('Помилка: дані фільму не знайдено');  
             }  
   
-            // Назва для пошуку  
+            // Перевіряємо наявність назви  
             var title = movie.title || movie.name || movie.original_title || movie.original_name;  
+            console.log('UaDV Debug: Movie title:', title);  
+              
+            if (!title) {  
+                console.log('UaDV Debug: Movie object without title:', movie);  
+                return noty('Помилка: не вдалося отримати назву фільму');  
+            }  
+  
             var year = (movie.release_date || movie.first_air_date || '').slice(0, 4);  
             var query = title + (year ? ' ' + year : '');  
               
