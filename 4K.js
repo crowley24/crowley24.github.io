@@ -1,16 +1,12 @@
 (function () {
     'use strict';
 
-    function log() {
-        console.log('[UA DV]', ...arguments);
-    }
-
     function normalize(text) {
         return (text || '').toLowerCase();
     }
 
-    function isUA(torrent) {
-        let t = normalize(torrent.title);
+    function isUA(t) {
+        t = normalize(t.title);
         return t.includes('ukr') ||
                t.includes('ua') ||
                t.includes('україн') ||
@@ -18,24 +14,22 @@
                t.includes('dvo');
     }
 
-    function isDV(torrent) {
-        let t = normalize(torrent.title);
+    function isDV(t) {
+        t = normalize(t.title);
         return t.includes('dolby vision') ||
-               t.includes(' dv ') ||
+               t.includes('dovi') ||
                t.includes('.dv') ||
-               t.includes('dovi');
+               t.includes(' dv ');
     }
 
-    function sortBest(list) {
-        return list.sort(function (a, b) {
-            return (b.size || 0) - (a.size || 0);
-        });
+    function sortBest(arr) {
+        return arr.sort((a, b) => (b.size || 0) - (a.size || 0));
     }
 
-    function findBest(torrents) {
-        if (!torrents || !torrents.length) return null;
+    function findBest(list) {
+        if (!list || !list.length) return null;
 
-        let ua = torrents.filter(isUA);
+        let ua = list.filter(isUA);
         let ua_dv = ua.filter(isDV);
 
         if (ua_dv.length) return sortBest(ua_dv)[0];
@@ -44,50 +38,42 @@
         return null;
     }
 
-    function play(card) {
+    function smartPlay(card, original) {
         Lampa.Noty.show('Пошук UA DV...');
 
-        Lampa.Torrents.list(card, function (items) {
-            let best = findBest(items || []);
+        try {
+            Lampa.Torrents.list(card, function (items) {
+                let best = findBest(items || []);
 
-            if (!best) {
-                Lampa.Noty.show('Немає українського дубляжу 😢');
-                return;
-            }
-
-            Lampa.Player.play(best);
-        });
+                if (best) {
+                    Lampa.Player.play(best);
+                } else {
+                    Lampa.Noty.show('Нічого не знайдено — відкриваю список');
+                    original(); // fallback
+                }
+            });
+        } catch (e) {
+            console.log('UA DV error', e);
+            original();
+        }
     }
 
-    function addButtonToController(controller) {
-        if (!controller || controller._ua_dv_added) return;
+    function intercept() {
+        let orig = Lampa.Torrents.open;
 
-        controller._ua_dv_added = true;
+        if (!orig || orig._ua_dv) return;
 
-        controller.append({
-            title: '⚡ UA DV',
-            icon: 'star',
-            onClick: function () {
-                let card = Lampa.Activity.active().card;
-                if (card) play(card);
-            }
-        });
+        Lampa.Torrents.open = function (card) {
+            smartPlay(card, () => orig.call(this, card));
+        };
 
-        log('button added via controller');
+        Lampa.Torrents.open._ua_dv = true;
+
+        console.log('UA DV override enabled');
     }
 
     function init() {
-        Lampa.Listener.follow('full', function (e) {
-            if (e.type === 'complite') {
-                let activity = Lampa.Activity.active();
-
-                if (activity && activity.controller) {
-                    addButtonToController(activity.controller);
-                }
-            }
-        });
-
-        log('init OK');
+        intercept();
     }
 
     if (window.Lampa) init();
