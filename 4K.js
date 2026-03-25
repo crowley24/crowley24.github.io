@@ -11,7 +11,6 @@
 
     function isUA(torrent) {
         let t = normalize(torrent.title);
-
         return t.includes('ukr') ||
                t.includes('ua') ||
                t.includes('україн') ||
@@ -21,7 +20,6 @@
 
     function isDV(torrent) {
         let t = normalize(torrent.title);
-
         return t.includes('dolby vision') ||
                t.includes(' dv ') ||
                t.includes('.dv') ||
@@ -46,68 +44,50 @@
         return null;
     }
 
-    function play(torrent) {
-        if (!torrent) {
-            Lampa.Noty.show('Немає українського дубляжу 😢');
-            return;
-        }
-
-        Lampa.Player.play(torrent);
-    }
-
-    function loadAndPlay(card) {
+    function play(card) {
         Lampa.Noty.show('Пошук UA DV...');
 
-        try {
-            Lampa.Torrents.list(card, function (items) {
-                let best = findBest(items || []);
-                play(best);
-            });
-        } catch (e) {
-            log('ERROR:', e);
-        }
+        Lampa.Torrents.list(card, function (items) {
+            let best = findBest(items || []);
+
+            if (!best) {
+                Lampa.Noty.show('Немає українського дубляжу 😢');
+                return;
+            }
+
+            Lampa.Player.play(best);
+        });
     }
 
-    function insertButton() {
-        let container = document.querySelector('.full-start__buttons');
+    function addButtonToController(controller) {
+        if (!controller || controller._ua_dv_added) return;
 
-        if (!container) return;
+        controller._ua_dv_added = true;
 
-        if (container.querySelector('.ua-dv-btn')) return;
-
-        let btn = document.createElement('div');
-        btn.className = 'full-start__button selector ua-dv-btn';
-        btn.innerText = '⚡ UA DV';
-
-        btn.addEventListener('click', function () {
-            let card = Lampa.Activity.active().card;
-            if (card) loadAndPlay(card);
+        controller.append({
+            title: '⚡ UA DV',
+            icon: 'star',
+            onClick: function () {
+                let card = Lampa.Activity.active().card;
+                if (card) play(card);
+            }
         });
 
-        container.appendChild(btn);
-
-        log('button added');
-    }
-
-    function waitAndInsert() {
-        let tries = 0;
-
-        let timer = setInterval(function () {
-            insertButton();
-
-            tries++;
-            if (tries > 20) clearInterval(timer);
-        }, 300);
+        log('button added via controller');
     }
 
     function init() {
         Lampa.Listener.follow('full', function (e) {
             if (e.type === 'complite') {
-                waitAndInsert();
+                let activity = Lampa.Activity.active();
+
+                if (activity && activity.controller) {
+                    addButtonToController(activity.controller);
+                }
             }
         });
 
-        log('init');
+        log('init OK');
     }
 
     if (window.Lampa) init();
