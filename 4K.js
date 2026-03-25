@@ -41,51 +41,67 @@
   
             try {  
                 var url = Lampa.Storage.field('jackett_url');  
-                  
-                // Перевіряємо ВСІ можливі назви полів для API ключа  
-                var keyFields = [  
-                    'jackett_key',  
-                    'parser_jackett_key',   
-                    'jackett_api_key',  
-                    'api_key',  
-                    'jackettkey',  
-                    'parser_jackett_key_placeholder',  
-                    'settings_parser_jackett_key'  
-                ];  
-                  
-                var key = null;  
-                var foundFields = {};  
-                  
-                for (var i = 0; i < keyFields.length; i++) {  
-                    var fieldValue = Lampa.Storage.field(keyFields[i]);  
-                    foundFields[keyFields[i]] = !!fieldValue;  
-                    if (fieldValue && !key) {  
-                        key = fieldValue;  
-                    }  
-                }  
+                var key = Lampa.Storage.field('jackett_key') ||   
+                         Lampa.Storage.field('parser_jackett_key');  
                   
                 console.log('UaDV Debug: Jackett URL:', url);  
-                console.log('UaDV Debug: All API key fields status:', foundFields);  
-                console.log('UaDV Debug: Found API key:', !!key);  
+                console.log('UaDV Debug: API Key found:', !!key);  
                   
                 if (!url) return noty('Вкажіть Jackett URL у налаштуваннях');  
-                if (!key) {  
-                    console.log('UaDV Debug: No API key found in any field');  
-                    return noty('API ключ не знайдено. Перевірте налаштування Jackett.');  
+                if (!key) return noty('Вкажіть Jackett API ключ у налаштуваннях');  
+  
+                // Формуємо URL як у звичайному торренті  
+                var cats = '2000,2010,2030,2040,5000,5030,5040';  
+                var baseUrl = url.replace(/\/$/, '');  
+                var searchUrl = baseUrl + '/api/v2.0/indexers/all/results?apikey=' + encodeURIComponent(key) + '&Query=' + encodeURIComponent(query) + '&Category[]=' + cats.split(',').join('&Category[]=');  
+  
+                console.log('UaDV Debug: Base URL:', baseUrl);  
+                console.log('UaDV Debug: Search URL:', searchUrl);  
+                console.log('UaDV Debug: Query:', query);  
+  
+                // Перевіряємо доступність Jackett перед запитом  
+                try {  
+                    var testResponse = await fetch(baseUrl + '/api/v2.0/indexers', {  
+                        method: 'GET',  
+                        headers: {  
+                            'Accept': 'application/json'  
+                        },  
+                        timeout: 5000  
+                    });  
+                    console.log('UaDV Debug: Jackett test response status:', testResponse.status);  
+                } catch (testError) {  
+                    console.error('UaDV Debug: Jackett test failed:', testError);  
+                    return noty('Jackett недоступний за адресою: ' + baseUrl);  
                 }  
   
-                var cats = '2000,2010,2030,2040,5000,5030,5040';  
-                var searchUrl = url.replace(/\/$/, '') + '/api/v2.0/indexers/all/results?apikey=' + key + '&Query=' + encodeURIComponent(query) + '&Category[]=' + cats.split(',').join('&Category[]=');  
+                // Основний запит  
+                var response = await fetch(searchUrl, {  
+                    method: 'GET',  
+                    headers: {  
+                        'Accept': 'application/json',  
+                        'User-Agent': 'Lampa-Plugin'  
+                    }  
+                });  
   
-                console.log('UaDV Debug: Search URL:', searchUrl);  
+                console.log('UaDV Debug: Response status:', response.status);  
+                console.log('UaDV Debug: Response headers:', Object.fromEntries(response.headers.entries()));  
   
-                var response = await fetch(searchUrl);  
+                if (!response.ok) {  
+                    var errorText = await response.text();  
+                    console.error('UaDV Debug: Error response:', errorText);  
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);  
+                }  
+  
                 var json = await response.json();  
                 var results = json.Results || json.results || [];  
   
-                console.log('UaDV Debug: Found', results.length, 'results');  
+                console.log('UaDV Debug: Raw response keys:', Object.keys(json));  
+                console.log('UaDV Debug: Results count:', results.length);  
   
-                if (!results.length) return noty('Нічого не знайдено в Jackett');  
+                if (!results.length) {  
+                    console.log('UaDV Debug: No results found');  
+                    return noty('Нічого не знайдено в Jackett');  
+                }  
   
                 var scored = results.map(function(item) {  
                     var score = 0;  
@@ -98,6 +114,7 @@
                       
                     if (hasUaMark) {  
                         score += 1000;  
+                        console.log('UaDV Debug: Found UA release:', item.Title);  
                     } else {  
                         return { item: item, score: -1 };  
                     }  
@@ -125,8 +142,17 @@
                     noty('Українських релізів не знайдено');  
                 }  
             } catch (e) {  
-                console.error('UaDV Debug: Error:', e);  
-                noty('Помилка мережі або Jackett');  
+                console.error('UaDV Debug: Network error:', e);  
+                console.error('UaDV Debug: Error type:', e.constructor.name);  
+                console.error('UaDV Debug: Error message:', e.message);  
+                  
+                if (e.message.includes('Failed to fetch')) {  
+                    noty('Помилка підключення до Jackett. Перевірте URL та доступність сервера.');  
+                } else if (e.message.includes('CORS')) {  
+                    noty('CORS помилка. Jackett повинен бути налаштований для дозволу запитів.');  
+                } else {  
+                    noty('Помилка мережі або Jackett: ' + e.message);  
+                }  
             }  
         },  
   
