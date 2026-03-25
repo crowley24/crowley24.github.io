@@ -1,8 +1,6 @@
 (function () {
     'use strict';
 
-    var PLUGIN_ID = 'auto_ua_dv_player';
-
     function log() {
         console.log('[UA DV]', ...arguments);
     }
@@ -42,76 +40,77 @@
         let ua = torrents.filter(isUA);
         let ua_dv = ua.filter(isDV);
 
-        log('UA:', ua.length, 'UA+DV:', ua_dv.length);
-
-        if (ua_dv.length) {
-            return sortBest(ua_dv)[0];
-        }
-
-        if (ua.length) {
-            return sortBest(ua)[0];
-        }
+        if (ua_dv.length) return sortBest(ua_dv)[0];
+        if (ua.length) return sortBest(ua)[0];
 
         return null;
     }
 
-    function showNotFound() {
-        Lampa.Noty.show('Немає українського дубляжу 😢');
-    }
-
     function play(torrent) {
-        if (!torrent) return showNotFound();
-
-        log('PLAY:', torrent.title);
+        if (!torrent) {
+            Lampa.Noty.show('Немає українського дубляжу 😢');
+            return;
+        }
 
         Lampa.Player.play(torrent);
     }
 
-    function loadTorrents(card, callback) {
+    function loadAndPlay(card) {
+        Lampa.Noty.show('Пошук UA DV...');
+
         try {
             Lampa.Torrents.list(card, function (items) {
-                callback(items || []);
+                let best = findBest(items || []);
+                play(best);
             });
         } catch (e) {
-            log('ERROR LOAD:', e);
-            callback([]);
+            log('ERROR:', e);
         }
     }
 
-    function addButton(card) {
-        if (!card || card._ua_dv_added) return;
-        card._ua_dv_added = true;
+    function insertButton() {
+        let container = document.querySelector('.full-start__buttons');
 
-        let button = $(`<div class="full-start__button selector">
-            ⚡ UA DV
-        </div>`);
+        if (!container) return;
 
-        button.on('hover:enter', function () {
-            Lampa.Noty.show('Пошук UA + Dolby Vision...');
-            
-            loadTorrents(card, function (torrents) {
-                let best = findBest(torrents);
-                play(best);
-            });
+        if (container.querySelector('.ua-dv-btn')) return;
+
+        let btn = document.createElement('div');
+        btn.className = 'full-start__button selector ua-dv-btn';
+        btn.innerText = '⚡ UA DV';
+
+        btn.addEventListener('click', function () {
+            let card = Lampa.Activity.active().card;
+            if (card) loadAndPlay(card);
         });
 
-        card.buttons().append(button);
+        container.appendChild(btn);
+
+        log('button added');
+    }
+
+    function waitAndInsert() {
+        let tries = 0;
+
+        let timer = setInterval(function () {
+            insertButton();
+
+            tries++;
+            if (tries > 20) clearInterval(timer);
+        }, 300);
     }
 
     function init() {
-        Lampa.Listener.follow('full', function (event) {
-            if (event.type === 'complite') {
-                addButton(event.object);
+        Lampa.Listener.follow('full', function (e) {
+            if (e.type === 'complite') {
+                waitAndInsert();
             }
         });
 
-        log('initialized');
+        log('init');
     }
 
-    if (window.Lampa) {
-        init();
-    } else {
-        window.addEventListener('lampa', init);
-    }
+    if (window.Lampa) init();
+    else window.addEventListener('lampa', init);
 
 })();
