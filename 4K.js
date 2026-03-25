@@ -16,8 +16,6 @@
                        (object.activity ? object.activity.movie : null) ||  
                        object;  
               
-            console.log('UaDV Debug: Movie object found:', !!movie);  
-              
             if (!movie) {  
                 console.log('UaDV Debug: Available object keys:', Object.keys(object));  
                 return noty('Помилка: дані фільму не знайдено');  
@@ -32,8 +30,6 @@
                        (movie.card && movie.card.title) ||  
                        (movie.card && movie.card.name);  
               
-            console.log('UaDV Debug: Final title:', title);  
-              
             if (!title) {  
                 return noty('Помилка: не вдалося отримати назву фільму');  
             }  
@@ -45,46 +41,48 @@
   
             try {  
                 var url = Lampa.Storage.field('jackett_url');  
-                var key = Lampa.Storage.field('jackett_key');  
+                  
+                // Перевіряємо ВСІ можливі назви полів для API ключа  
+                var keyFields = [  
+                    'jackett_key',  
+                    'parser_jackett_key',   
+                    'jackett_api_key',  
+                    'api_key',  
+                    'jackettkey',  
+                    'parser_jackett_key_placeholder',  
+                    'settings_parser_jackett_key'  
+                ];  
+                  
+                var key = null;  
+                var foundFields = {};  
+                  
+                for (var i = 0; i < keyFields.length; i++) {  
+                    var fieldValue = Lampa.Storage.field(keyFields[i]);  
+                    foundFields[keyFields[i]] = !!fieldValue;  
+                    if (fieldValue && !key) {  
+                        key = fieldValue;  
+                    }  
+                }  
                   
                 console.log('UaDV Debug: Jackett URL:', url);  
-                console.log('UaDV Debug: Jackett Key exists:', !!key);  
+                console.log('UaDV Debug: All API key fields status:', foundFields);  
+                console.log('UaDV Debug: Found API key:', !!key);  
                   
                 if (!url) return noty('Вкажіть Jackett URL у налаштуваннях');  
-                if (!key) return noty('Вкажіть Jackett API ключ у налаштуваннях');  
+                if (!key) {  
+                    console.log('UaDV Debug: No API key found in any field');  
+                    return noty('API ключ не знайдено. Перевірте налаштування Jackett.');  
+                }  
   
-                // Спрощені категорії як у звичайному торренті  
                 var cats = '2000,2010,2030,2040,5000,5030,5040';  
                 var searchUrl = url.replace(/\/$/, '') + '/api/v2.0/indexers/all/results?apikey=' + key + '&Query=' + encodeURIComponent(query) + '&Category[]=' + cats.split(',').join('&Category[]=');  
   
-                console.log('UaDV Debug: Full search URL:', searchUrl);  
-                console.log('UaDV Debug: Search query:', query);  
+                console.log('UaDV Debug: Search URL:', searchUrl);  
   
-                // Додаємо таймаут та детальну обробку помилок  
-                var controller = new AbortController();  
-                var timeoutId = setTimeout(() => controller.abort(), 30000); // 30 секунд таймаут  
-  
-                var response = await fetch(searchUrl, {   
-                    signal: controller.signal,  
-                    headers: {  
-                        'Accept': 'application/json',  
-                        'Content-Type': 'application/json'  
-                    }  
-                });  
-                  
-                clearTimeout(timeoutId);  
-                  
-                console.log('UaDV Debug: Response status:', response.status);  
-                console.log('UaDV Debug: Response headers:', response.headers);  
-  
-                if (!response.ok) {  
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);  
-                }  
-  
+                var response = await fetch(searchUrl);  
                 var json = await response.json();  
                 var results = json.Results || json.results || [];  
   
-                console.log('UaDV Debug: Raw response:', json);  
                 console.log('UaDV Debug: Found', results.length, 'results');  
   
                 if (!results.length) return noty('Нічого не знайдено в Jackett');  
@@ -100,7 +98,6 @@
                       
                     if (hasUaMark) {  
                         score += 1000;  
-                        console.log('UaDV Debug: Found UA release:', item.Title);  
                     } else {  
                         return { item: item, score: -1 };  
                     }  
@@ -128,26 +125,14 @@
                     noty('Українських релізів не знайдено');  
                 }  
             } catch (e) {  
-                console.error('UaDV Debug: Network error:', e);  
-                console.error('UaDV Debug: Error details:', e.message);  
-                console.error('UaDV Debug: Error stack:', e.stack);  
-                  
-                if (e.name === 'AbortError') {  
-                    noty('Таймаут запиту до Jackett (30 секунд)');  
-                } else if (e.message.includes('Failed to fetch')) {  
-                    noty('Помилка підключення до Jackett. Перевірте URL та доступність сервера.');  
-                } else {  
-                    noty('Помилка мережі або Jackett: ' + e.message);  
-                }  
+                console.error('UaDV Debug: Error:', e);  
+                noty('Помилка мережі або Jackett');  
             }  
         },  
   
         play: async function (item, movie) {  
             var ts_url = Lampa.Storage.field('torrserver_url').replace(/\/$/, '');  
             var link = item.MagnetUri || item.Link;  
-  
-            console.log('UaDV Debug: Playing:', item.Title);  
-            console.log('UaDV Debug: TorrServer URL:', ts_url);  
   
             try {  
                 var res = await fetch(ts_url + '/torrents', {  
@@ -162,16 +147,12 @@
                 var data = await res.json();  
                 var hash = data.hash || data.id;  
   
-                console.log('UaDV Debug: Torrent added, hash:', hash);  
-  
                 var filesRes = await fetch(ts_url + '/torrents', {  
                     method: 'POST',  
                     body: JSON.stringify({ action: 'get', hash: hash })  
                 });  
                 var filesData = await filesRes.json();  
                 var files = filesData.file_stats || filesData.FileStats || [];  
-  
-                console.log('UaDV Debug: Files found:', files.length);  
   
                 if (files.length) {  
                     var videoFiles = files.filter(function(file) {  
@@ -183,8 +164,6 @@
                     var mainFile = targetFiles.reduce(function(prev, cur) {  
                         return (prev.length > cur.length) ? prev : cur;  
                     });  
-  
-                    console.log('UaDV Debug: Selected file:', mainFile.path || mainFile.name);  
   
                     Lampa.Player.play({  
                         url: ts_url + '/stream/?link=' + hash + '&index=' + mainFile.id + '&play=1',  
