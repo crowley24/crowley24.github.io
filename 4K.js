@@ -7,12 +7,9 @@
   
     var UaDV = {  
         run: async function (object) {  
-            // Детальна діагностика об'єкта  
-            console.log('UaDV Debug: Object type:', typeof object);  
-            console.log('UaDV Debug: Object keys:', object ? Object.keys(object) : 'null');  
-            console.log('UaDV Debug: Full object structure:', JSON.stringify(object, null, 2));  
+            console.log('UaDV Debug: Button clicked');  
               
-            // Розширений пошук даних фільму  
+            // Безпечний пошук даних фільму  
             var movie = object.movie ||   
                        (object.data ? object.data.movie : null) ||   
                        object.item ||  
@@ -20,19 +17,18 @@
                        (object.activity ? object.activity.movie : null) ||  
                        object;  
               
-            console.log('UaDV Debug: Found movie:', movie);  
+            console.log('UaDV Debug: Movie object found:', !!movie);  
               
             if (!movie) {  
-                console.log('UaDV Debug: Full object:', object);  
+                console.log('UaDV Debug: Available object keys:', Object.keys(object));  
                 return noty('Помилка: дані фільму не знайдено');  
             }  
   
-            // Перевіряємо наявність назви  
+            // Назва для пошуку  
             var title = movie.title || movie.name || movie.original_title || movie.original_name;  
             console.log('UaDV Debug: Movie title:', title);  
               
             if (!title) {  
-                console.log('UaDV Debug: Movie object without title:', movie);  
                 return noty('Помилка: не вдалося отримати назву фільму');  
             }  
   
@@ -47,17 +43,14 @@
                   
                 if (!url) return noty('Вкажіть Jackett URL у налаштуваннях');  
   
-                // Розширені категорії для кращого пошуку  
                 var cats = '2000,2010,2030,2040,5000,5030,5040,5010,5020,5050,5060,5070,5080';  
                 var searchUrl = url.replace(/\/$/, '') + '/api/v2.0/indexers/all/results?apikey=' + key + '&Query=' + encodeURIComponent(query) + '&Category[]=' + cats.split(',').join('&Category[]=');  
-  
-                console.log('UaDV Debug: Search URL:', searchUrl);  
   
                 var response = await fetch(searchUrl);  
                 var json = await response.json();  
                 var results = json.Results || json.results || [];  
   
-                console.log('UaDV Debug: Results found:', results.length);  
+                console.log('UaDV Debug: Found', results.length, 'results');  
   
                 if (!results.length) return noty('Нічого не знайдено в Jackett');  
   
@@ -73,19 +66,16 @@
                       
                     if (hasUaMark) {  
                         score += 1000;  
-                        console.log('UaDV Debug: Found UA release:', item.Title);  
                     } else {  
                         return { item: item, score: -1 };  
                     }  
   
-                    // Бонуси за якість  
                     if (t.indexOf('dv') >= 0 || t.indexOf('dolby vision') >= 0 || t.indexOf('dovi') >= 0) score += 600;  
                     if (t.indexOf('2160p') >= 0 || t.indexOf('4k') >= 0) score += 400;  
                     if (t.indexOf('hdr') >= 0) score += 200;  
                     if (t.indexOf('1080p') >= 0) score += 100;  
                     if (t.indexOf('720p') >= 0) score += 50;  
                       
-                    // Бонус за розмір  
                     score += Math.floor((item.Size || 0) / (1024 * 1024 * 1024)) * 10;  
                       
                     return { item: item, score: score };  
@@ -93,12 +83,10 @@
   
                 console.log('UaDV Debug: Filtered UA results:', scored.length);  
   
-                // Сортування за якістю  
                 scored.sort(function(a, b) { return b.score - a.score; });  
   
                 if (scored.length > 0) {  
                     var best = scored[0].item;  
-                    console.log('UaDV Debug: Best release:', best.Title, 'Score:', scored[0].score);  
                     noty('Знайдено якісний реліз. Запускаю...');  
                     this.play(best, movie);  
                 } else {  
@@ -114,8 +102,6 @@
             var ts_url = Lampa.Storage.field('torrserver_url').replace(/\/$/, '');  
             var link = item.MagnetUri || item.Link;  
   
-            console.log('UaDV Debug: Playing:', item.Title);  
-  
             try {  
                 var res = await fetch(ts_url + '/torrents', {  
                     method: 'POST',  
@@ -129,8 +115,6 @@
                 var data = await res.json();  
                 var hash = data.hash || data.id;  
   
-                console.log('UaDV Debug: Torrent added, hash:', hash);  
-  
                 var filesRes = await fetch(ts_url + '/torrents', {  
                     method: 'POST',  
                     body: JSON.stringify({ action: 'get', hash: hash })  
@@ -138,10 +122,7 @@
                 var filesData = await filesRes.json();  
                 var files = filesData.file_stats || filesData.FileStats || [];  
   
-                console.log('UaDV Debug: Files found:', files.length);  
-  
                 if (files.length) {  
-                    // Вибираємо найбільший відеофайл  
                     var videoFiles = files.filter(function(file) {  
                         var name = (file.path || file.name || '').toLowerCase();  
                         return name.indexOf('.mp4') >= 0 || name.indexOf('.mkv') >= 0 || name.indexOf('.avi') >= 0 || name.indexOf('.mov') >= 0;  
@@ -151,8 +132,6 @@
                     var mainFile = targetFiles.reduce(function(prev, cur) {  
                         return (prev.length > cur.length) ? prev : cur;  
                     });  
-  
-                    console.log('UaDV Debug: Selected file:', mainFile.path || mainFile.name);  
   
                     Lampa.Player.play({  
                         url: ts_url + '/stream/?link=' + hash + '&index=' + mainFile.id + '&play=1',  
@@ -186,6 +165,7 @@
                     `);  
   
                     btn.on('click', function() {  
+                        console.log('UaDV Debug: Button clicked!');  
                         UaDV.run(e.object);  
                     });  
   
