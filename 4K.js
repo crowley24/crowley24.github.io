@@ -23,11 +23,6 @@
                 return noty('Помилка: дані фільму не знайдено');  
             }  
   
-            // Детальна діагностика полів назви  
-            console.log('UaDV Debug: Movie object keys:', Object.keys(movie));  
-            console.log('UaDV Debug: Movie object:', movie);  
-              
-            // Розширений пошук назви  
             var title = movie.title ||   
                        movie.name ||   
                        movie.original_title ||   
@@ -36,17 +31,6 @@
                        movie.film_name ||  
                        (movie.card && movie.card.title) ||  
                        (movie.card && movie.card.name);  
-              
-            console.log('UaDV Debug: Available title fields:', {  
-                title: movie.title,  
-                name: movie.name,  
-                original_title: movie.original_title,  
-                original_name: movie.original_name,  
-                movie_title: movie.movie_title,  
-                film_name: movie.film_name,  
-                card_title: movie.card && movie.card.title,  
-                card_name: movie.card && movie.card.name  
-            });  
               
             console.log('UaDV Debug: Final title:', title);  
               
@@ -63,15 +47,44 @@
                 var url = Lampa.Storage.field('jackett_url');  
                 var key = Lampa.Storage.field('jackett_key');  
                   
+                console.log('UaDV Debug: Jackett URL:', url);  
+                console.log('UaDV Debug: Jackett Key exists:', !!key);  
+                  
                 if (!url) return noty('Вкажіть Jackett URL у налаштуваннях');  
+                if (!key) return noty('Вкажіть Jackett API ключ у налаштуваннях');  
   
-                var cats = '2000,2010,2030,2040,5000,5030,5040,5010,5020,5050,5060,5070,5080';  
+                // Спрощені категорії як у звичайному торренті  
+                var cats = '2000,2010,2030,2040,5000,5030,5040';  
                 var searchUrl = url.replace(/\/$/, '') + '/api/v2.0/indexers/all/results?apikey=' + key + '&Query=' + encodeURIComponent(query) + '&Category[]=' + cats.split(',').join('&Category[]=');  
   
-                var response = await fetch(searchUrl);  
+                console.log('UaDV Debug: Full search URL:', searchUrl);  
+                console.log('UaDV Debug: Search query:', query);  
+  
+                // Додаємо таймаут та детальну обробку помилок  
+                var controller = new AbortController();  
+                var timeoutId = setTimeout(() => controller.abort(), 30000); // 30 секунд таймаут  
+  
+                var response = await fetch(searchUrl, {   
+                    signal: controller.signal,  
+                    headers: {  
+                        'Accept': 'application/json',  
+                        'Content-Type': 'application/json'  
+                    }  
+                });  
+                  
+                clearTimeout(timeoutId);  
+                  
+                console.log('UaDV Debug: Response status:', response.status);  
+                console.log('UaDV Debug: Response headers:', response.headers);  
+  
+                if (!response.ok) {  
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);  
+                }  
+  
                 var json = await response.json();  
                 var results = json.Results || json.results || [];  
   
+                console.log('UaDV Debug: Raw response:', json);  
                 console.log('UaDV Debug: Found', results.length, 'results');  
   
                 if (!results.length) return noty('Нічого не знайдено в Jackett');  
@@ -87,6 +100,7 @@
                       
                     if (hasUaMark) {  
                         score += 1000;  
+                        console.log('UaDV Debug: Found UA release:', item.Title);  
                     } else {  
                         return { item: item, score: -1 };  
                     }  
@@ -114,14 +128,26 @@
                     noty('Українських релізів не знайдено');  
                 }  
             } catch (e) {  
-                console.error('UaDV Debug: Error:', e);  
-                noty('Помилка мережі або Jackett');  
+                console.error('UaDV Debug: Network error:', e);  
+                console.error('UaDV Debug: Error details:', e.message);  
+                console.error('UaDV Debug: Error stack:', e.stack);  
+                  
+                if (e.name === 'AbortError') {  
+                    noty('Таймаут запиту до Jackett (30 секунд)');  
+                } else if (e.message.includes('Failed to fetch')) {  
+                    noty('Помилка підключення до Jackett. Перевірте URL та доступність сервера.');  
+                } else {  
+                    noty('Помилка мережі або Jackett: ' + e.message);  
+                }  
             }  
         },  
   
         play: async function (item, movie) {  
             var ts_url = Lampa.Storage.field('torrserver_url').replace(/\/$/, '');  
             var link = item.MagnetUri || item.Link;  
+  
+            console.log('UaDV Debug: Playing:', item.Title);  
+            console.log('UaDV Debug: TorrServer URL:', ts_url);  
   
             try {  
                 var res = await fetch(ts_url + '/torrents', {  
@@ -136,12 +162,16 @@
                 var data = await res.json();  
                 var hash = data.hash || data.id;  
   
+                console.log('UaDV Debug: Torrent added, hash:', hash);  
+  
                 var filesRes = await fetch(ts_url + '/torrents', {  
                     method: 'POST',  
                     body: JSON.stringify({ action: 'get', hash: hash })  
                 });  
                 var filesData = await filesRes.json();  
                 var files = filesData.file_stats || filesData.FileStats || [];  
+  
+                console.log('UaDV Debug: Files found:', files.length);  
   
                 if (files.length) {  
                     var videoFiles = files.filter(function(file) {  
@@ -153,6 +183,8 @@
                     var mainFile = targetFiles.reduce(function(prev, cur) {  
                         return (prev.length > cur.length) ? prev : cur;  
                     });  
+  
+                    console.log('UaDV Debug: Selected file:', mainFile.path || mainFile.name);  
   
                     Lampa.Player.play({  
                         url: ts_url + '/stream/?link=' + hash + '&index=' + mainFile.id + '&play=1',  
