@@ -142,21 +142,23 @@
     return items;  
   }  
   function parseJackettJSON(json){  
-    var arr = (json && (Array.isArray(json)?json:(json.Results||json.results||json.items))) || [];  
-    var items = (arr||[]).map(function(x){  
-      var magnet = x.MagnetUri||x.MagnetUrl||x.magnet||'';  
-      var link   = (magnet && magnet.indexOf('magnet:')===0) ? magnet : (x.Link||x.link||'');  
-      var size   = Number(x.Size||x.size||0);  
-      var seed   = Number(x.Seeders||x.seeders||x.Peers||x.peers||0);  
-      var tracker= String(x.Tracker||x.tracker||'').toLowerCase();  
-      var trackerId=String(x.TrackerId||x.trackerId||'').toLowerCase();  
-      return { title:x.Title||x.title||'', link:link, magnet:magnet, dl:'', size:size, seed:seed, tracker:tracker, trackerId:trackerId };  
-    }).filter(function(x){ return x.link && x.size>0; }); // ВИДАЛЕНО фільтрацію по seeders  
-    var tol = items.filter(function(x){ return x.tracker.indexOf('toloka')>=0 || x.trackerId.indexOf('toloka')>=0; });  
-    if (tol.length) items = tol;  
-    items.sort(function(a,b){ return b.size - a.size; });  
-    return items;  
-  }  
+  var arr = (json && (Array.isArray(json)?json:(json.Results||json.results||json.items))) || [];  
+  var items = (arr||[]).map(function(x){  
+    var magnet = x.MagnetUri||x.MagnetUrl||x.magnet||'';  
+    var link   = (magnet && magnet.indexOf('magnet:')===0) ? magnet : (x.Link||x.link||'');  
+    var size   = Number(x.Size||x.size||0);  
+    var seed   = Number(x.Seeders||x.seeders||x.Peers||x.peers||0);  
+    var tracker= String(x.Tracker||x.tracker||'').toLowerCase();  
+    var trackerId=String(x.TrackerId||x.trackerId||'').toLowerCase();  
+    return { title:x.Title||x.title||'', link:link, magnet:magnet, dl:'', size:size, seed:seed, tracker:tracker, trackerId:trackerId };  
+  }).filter(function(x){ return x.link && x.size>0; }); // ВИДАЛЕНО всі фільтри  
+    
+  var tol = items.filter(function(x){ return x.tracker.indexOf('toloka')>=0 || x.trackerId.indexOf('toloka')>=0; });  
+  if (tol.length) items = tol;  
+  items.sort(function(a,b){ return b.size - a.size; });  
+  return items;  
+}
+  
   function catsToParams(csv){  
     return csv.split(',').map(function(s){return s.trim();}).filter(Boolean);  
   }  
