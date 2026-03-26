@@ -347,7 +347,7 @@
     border: none !important;  
     max-width: 100%;  
     width: auto;  
-    height: 120px !important; /* Збільшена висота з 80px до 120px */  
+    height: 170px !important;   
     transform: scale(var(--cas-logo-scale));  
     transform-origin: left top;  
     display: block;  
