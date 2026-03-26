@@ -898,17 +898,68 @@
     });
   }
 
-  function promptUrl(title, current, callback) {
-    if (window.Lampa && Lampa.Keypad && typeof Lampa.Keypad.show === 'function') {
-      Lampa.Keypad.show({
-        title:   title,
-        value:   current,
-        confirm: callback
-      });
-    } else {
-      const val = window.prompt(title + ':', current);
-      if (val !== null) callback(val);
-    }
+  function promptUrl(title, value, callback) {  
+  try {  
+    // Спроба використати Lampa.Keypad  
+    if (typeof Lampa !== 'undefined' && Lampa.Keypad && typeof Lampa.Keypad.show === 'function') {  
+      Lampa.Keypad.show({  
+        title: title,  
+        value: value,  
+        callback: function(new_value) {  
+          if (typeof callback === 'function') {  
+            callback(new_value);  
+          }  
+        }  
+      });  
+    } else {  
+      // Fallback до window.prompt з додатковою перевіркою  
+      var result = window.prompt(title + ':', value);  
+      if (result !== null && typeof callback === 'function') {  
+        callback(result);  
+      }  
+    }  
+  } catch (e) {  
+    console.error('PromptUrl error:', e);  
+    // Додатковий fallback через простий input  
+    var input = window.document.createElement('input');  
+    input.type = 'text';  
+    input.value = value || '';  
+    input.style.position = 'fixed';  
+    input.style.top = '50%';  
+    input.style.left = '50%';  
+    input.style.transform = 'translate(-50%, -50%)';  
+    input.style.zIndex = '99999';  
+    input.style.padding = '10px';  
+    input.style.fontSize = '16px';  
+      
+    window.document.body.appendChild(input);  
+    input.focus();  
+    input.select();  
+      
+    function finishInput() {  
+      var val = input.value;  
+      window.document.body.removeChild(input);  
+      if (typeof callback === 'function') {  
+        callback(val);  
+      }  
+    }  
+      
+    input.addEventListener('keydown', function(e) {  
+      if (e.key === 'Enter') {  
+        finishInput();  
+      } else if (e.key === 'Escape') {  
+        window.document.body.removeChild(input);  
+      }  
+    });  
+      
+    input.addEventListener('blur', function() {  
+      setTimeout(function() {  
+        if (window.document.body.contains(input)) {  
+          finishInput();  
+        }  
+      }, 200);  
+    });  
+  }  
   }
 
   function registerSettings(onM3uChange, onEpgChange) {
