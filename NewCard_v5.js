@@ -514,30 +514,37 @@
         });    
     }    
                 
-    async function processImages(render, data, res) {                
-        try {                
-            const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];                
-            if (bestLogo) {        
-                const quality = Lampa.Storage.get('cas_logo_quality') || 'original';                
-                const logoSrc = Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path);                
-                  
-                await preloadImage(logoSrc);                
-                render.find('.cas-logo').html(`<img src="${logoSrc}">`);  
-                  
-                // Динамічно розраховуємо висоту логотипу  
-                const logoImg = render.find('.cas-logo img')[0];  
-                if (logoImg) {  
-                    logoImg.onload = function() {  
-                        const logoHeight = this.offsetHeight * (parseFloat(Lampa.Storage.get('cas_logo_scale') || 100) / 100);  
-                        const container = render.find('.cas-logo-container');  
-                          
-                        // Встановлюємо мінімальну висоту контейнера  
-                        container.css('min-height', Math.min(logoHeight, window.innerHeight * 0.35) + 'px');  
-                    };  
-                }  
-            } else {                
-                render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                
-            }                
+    async function processImages(render, data, res) {  
+    try {  
+        const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];  
+        if (bestLogo) {  
+            const quality = Lampa.Storage.get('cas_logo_quality') || 'original';  
+            const logoSrc = Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path);  
+              
+            await preloadImage(logoSrc);  
+            render.find('.cas-logo').html(`<img src="${logoSrc}">`);  
+              
+            // Динамічно розраховуємо висоту логотипу з урахуванням масштабу  
+            const logoImg = render.find('.cas-logo img')[0];  
+            if (logoImg) {  
+                logoImg.onload = function() {  
+                    const scale = parseFloat(Lampa.Storage.get('cas_logo_scale') || 100) / 100;  
+                    const logoHeight = this.offsetHeight * scale;  
+                    const container = render.find('.cas-logo-container');  
+                      
+                    // Збільшуємо відступ для великих логотипів  
+                    let extraMargin = 0;  
+                    if (scale >= 1.2) extraMargin = 20; // Додатковий відступ для 120%  
+                    else if (scale >= 1.1) extraMargin = 10; // Додатковий відступ для 110%  
+                      
+                    const maxHeight = Math.min(logoHeight, window.innerHeight * 0.35);  
+                    container.css('min-height', maxHeight + 'px');  
+                    container.css('margin-bottom', `calc(var(--cas-blocks-gap) * 1.5 + ${extraMargin}px)`);  
+                };  
+            }  
+        } else {  
+            render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);  
+        }         
             stopSlideshow();                
             if (Lampa.Storage.get('cas_slideshow_enabled') && res.backdrops && res.backdrops.length > 1) {        
                 console.log('Slideshow enabled, backdrops:', res.backdrops.length);        
