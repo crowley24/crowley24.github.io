@@ -252,14 +252,16 @@
         .full-start__background { will-change: transform, opacity; backface-visibility: hidden; perspective: 1000px; transform: translateZ(0); transition: opacity 0.8s ease; }                
                     
         .cas-logo-container {         
-            position: relative;         
-            overflow: hidden; /* Змінено з visible на hidden */  
-            max-width: 100%;         
-            padding-left: 0%;        
-            margin-bottom: calc(var(--cas-blocks-gap) * 1.5);        
-            max-height: 25vh; /* Змінено з 300px на 25% від висоти екрана */  
-            min-height: 80px; /* Мінімальна висота */  
-        }                
+    position: relative;         
+    overflow: visible; /* Повертаємо visible щоб не обрізати логотип */  
+    max-width: 100%;         
+    padding-left: 0%;        
+    margin-bottom: calc(var(--cas-blocks-gap) * 1.5);        
+    max-height: 30vh; /* Збільшуємо висоту */  
+    min-height: 80px;      
+    display: flex;         
+    align-items: flex-start; /* Вирівнюємо по верху */  
+}             
                     
         .full-start__background {                
             transform: scale(1.1);                
@@ -332,20 +334,19 @@
         @keyframes popIn{ from{opacity:0;transform:scale(.9);} to{opacity:1;transform:scale(1);} }               
             
         .cas-logo img {         
-            background: transparent !important;         
-            border: none !important;         
-            max-width: 100%; /* Змінено з 450px */  
-            max-height: 100%; /* Змінено з 300px */  
-            width: auto;        
-            height: auto;        
-            transform: scale(var(--cas-logo-scale));         
-            transform-origin: left center;        
-            display: block;        
-            object-fit: contain;        
-            /* Додано обмеження для запобігання виходу за межі */  
-            position: relative;  
-            z-index: 1;  
-        }       
+    background: transparent !important;         
+    border: none !important;         
+    max-width: 100%;         
+    max-height: 100%; /* Обмежуємо висоту контейнером */  
+    width: auto;        
+    height: auto;        
+    transform: scale(var(--cas-logo-scale));         
+    transform-origin: left top; /* Змінюємо точку трансформації */  
+    display: block;        
+    object-fit: contain;        
+    position: relative;  
+    z-index: 1;  
+}    
                 .cas-studio-item {    
             height: 2.3em !important;    
             display: flex;    
@@ -395,16 +396,16 @@
           
         /* Медіа-запити для адаптивності логотипу */  
         @media screen and (max-height: 720px) {  
-            .cas-logo-container {  
-                max-height: 20vh;  
-            }  
-        }  
+    .cas-logo-container {  
+        max-height: 25vh;  
+    }  
+}
   
         @media screen and (max-height: 480px) {  
-            .cas-logo-container {  
-                max-height: 15vh;  
-            }  
-        }  
+    .cas-logo-container {  
+        max-height: 20vh;  
+    }  
+}
         </style>`;                
         Lampa.Template.add('left_title_css', styles);                
         $('body').append(Lampa.Template.get('left_title_css', {}, true));                
