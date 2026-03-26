@@ -527,8 +527,8 @@
             const logoImg = $('<img>').attr('src', logoSrc).css({  
                 'background': 'transparent !important',  
                 'border': 'none !important',  
-                'width': 'auto',  
-                'height': 'auto',  
+                'width': 'auto',      // Дозволяємо нативний розмір  
+                'height': 'auto',     // Дозволяємо нативний розмір  
                 'transform': `scale(${Lampa.Storage.get('cas_logo_scale') / 100})`,  
                 'transform-origin': 'left top',  
                 'display': 'block',  
