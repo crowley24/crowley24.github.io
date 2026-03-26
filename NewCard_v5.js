@@ -347,14 +347,14 @@
     border: none !important;  
     max-width: 100%;  
     width: auto;  
-    height: 80px !important; /* Примусова фіксована висота */  
+    height: 120px !important; /* Збільшена висота з 80px до 120px */  
     transform: scale(var(--cas-logo-scale));  
     transform-origin: left top;  
     display: block;  
     object-fit: contain;  
     position: relative;  
     z-index: 1;  
-    max-height: none !important; /* Вимикаємо обмеження */  
+    max-height: none !important;  
 }
                 .cas-studio-item {    
             height: 2.3em !important;    
