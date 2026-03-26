@@ -336,7 +336,8 @@
             max-width: 450px;       
             max-height: 200px;       
             width: auto;      
-            height: auto;      
+            height: auto; 
+            transition: transform 0.3s ease;
             transform: scale(var(--cas-logo-scale));       
             transform-origin: left center;      
             display: block;      
