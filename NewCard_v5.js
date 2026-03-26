@@ -342,20 +342,19 @@
             align-items: flex-start;         
         }                
   
-        .cas-logo img {         
-            background: transparent !important;         
-            border: none !important;         
-            max-width: 100%;         
-            width: auto;        
-            height: auto;        
-            transform: scale(var(--cas-logo-scale));         
-            transform-origin: left top;         
-            display: block;        
-            object-fit: contain;        
-            position: relative;  
-            z-index: 1;  
-            max-height: 35vh;  
-        }       
+        .cas-logo img {  
+    background: transparent !important;  
+    border: none !important;  
+    max-width: 100%;  
+    width: auto;  
+    max-height: 120px; /* Фіксована максимальна висота */  
+    transform: scale(var(--cas-logo-scale));  
+    transform-origin: left top;  
+    display: block;  
+    object-fit: contain;  
+    position: relative;  
+    z-index: 1;  
+}     
                 .cas-studio-item {    
             height: 2.3em !important;    
             display: flex;    
