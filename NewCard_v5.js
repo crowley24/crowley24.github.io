@@ -337,7 +337,7 @@
     border: none !important;  
     max-width: 300px !important;  
     width: auto;  
-    height: 120px !important;  
+    height: 170px !important;  
     transform: scale(var(--cas-logo-scale));  
     transform-origin: left top;  
     display: block;  
