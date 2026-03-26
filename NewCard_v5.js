@@ -325,19 +325,18 @@
     overflow: visible;  
     max-width: 100%;  
     padding-left: 0%;  
-    margin-bottom: calc(var(--cas-blocks-gap) * 1.0); /* Базовий відступ, буде змінено через JS */  
-    min-height: unset !important;  
-    height: auto !important;  
+    margin-bottom: calc(var(--cas-blocks-gap) * 1.0) !important; /* Фіксований відступ для всіх */  
+    height: 120px !important; /* Фіксована висота контейнера */  
     display: flex;  
     align-items: flex-start;  
-}
+}  
   
-        .cas-logo img {  
+.cas-logo img {  
     background: transparent !important;  
     border: none !important;  
-    max-width: 400px !important;  
+    max-width: 300px !important;  
     width: auto;  
-    height: 170px !important;   
+    height: 120px !important;  
     transform: scale(var(--cas-logo-scale));  
     transform-origin: left top;  
     display: block;  
@@ -513,48 +512,6 @@
                 
             await preloadImage(logoSrc);    
             render.find('.cas-logo').html(`<img src="${logoSrc}">`);    
-                
-            // Збалансована адаптація відступів  
-            const logoImg = render.find('.cas-logo img')[0];  
-            if (logoImg) {  
-                logoImg.onload = function() {  
-                    const container = render.find('.cas-logo-container');  
-                    const scale = parseFloat(Lampa.Storage.get('cas_logo_scale') || 100) / 100;  
-                    const imgHeight = this.offsetHeight;  
-                    const imgWidth = this.offsetWidth;  
-                    const aspectRatio = imgWidth / imgHeight;  
-                      
-                    // Більш збалансований розрахунок відступів  
-                    let baseMargin = 1.0;  
-                    if (aspectRatio > 4.0) {  
-                        baseMargin = 0.3; // Дуже широкі  
-                    } else if (aspectRatio > 2.5) {  
-                        baseMargin = 0.5; // Широкі  
-                    } else if (aspectRatio > 1.5) {  
-                        baseMargin = 0.8; // Помірно широкі  
-                    } else if (aspectRatio < 0.6) {  
-                        baseMargin = 1.5; // Високі  
-                    } else if (aspectRatio < 0.8) {  
-                        baseMargin = 1.2; // Помірно високі  
-                    }  
-                      
-                    // М'яка корекція масштабу  
-                    let scaleCorrection = 1.0;  
-                    if (scale >= 1.2) {  
-                        scaleCorrection = 0.8; // Тільки 20% зменшення при 120%  
-                    } else if (scale >= 1.1) {  
-                        scaleCorrection = 0.9; // Тільки 10% зменшення при 110%  
-                    }  
-                      
-                    const finalMargin = baseMargin * scaleCorrection;  
-                      
-                    // Гарантуємо мінімальний відступ для запобігання накладання  
-                    const minMargin = Math.max(finalMargin, 0.4);  
-                    const maxMargin = Math.min(finalMargin, 1.8);  
-                      
-                    container.css('margin-bottom', `calc(var(--cas-blocks-gap) * ${minMargin})`);  
-                };  
-            }  
         } else {    
             render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);    
         }           
