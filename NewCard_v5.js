@@ -514,7 +514,7 @@
             await preloadImage(logoSrc);    
             render.find('.cas-logo').html(`<img src="${logoSrc}">`);    
                 
-            // Динамічна адаптація відступів  
+            // Радикально покращена адаптація відступів  
             const logoImg = render.find('.cas-logo img')[0];  
             if (logoImg) {  
                 logoImg.onload = function() {  
@@ -524,21 +524,52 @@
                     const imgWidth = this.offsetWidth;  
                     const aspectRatio = imgWidth / imgHeight;  
                       
-                    // Розрахунок базового відступу залежно від співвідношення сторін  
-                    let baseMargin = 1.0; // Стандартний відступ  
-                    if (aspectRatio > 3.0) {  
-                        baseMargin = 0.4; // Дуже широкі логотипи  
+                    // Екстремально детальний розрахунок відступів  
+                    let baseMargin = 1.0;  
+                    if (aspectRatio > 5.0) {  
+                        baseMargin = 0.1; // Надзвичайно широкі  
+                    } else if (aspectRatio > 4.0) {  
+                        baseMargin = 0.15; // Дуже широкі  
+                    } else if (aspectRatio > 3.0) {  
+                        baseMargin = 0.2; // Широкі  
+                    } else if (aspectRatio > 2.5) {  
+                        baseMargin = 0.3; // Помірно широкі  
                     } else if (aspectRatio > 2.0) {  
-                        baseMargin = 0.6; // Широкі логотипи  
+                        baseMargin = 0.4; // Легко широкі  
+                    } else if (aspectRatio > 1.5) {  
+                        baseMargin = 0.6; // Близькі до квадратних  
+                    } else if (aspectRatio < 0.4) {  
+                        baseMargin = 2.2; // Надзвичайно високі  
+                    } else if (aspectRatio < 0.5) {  
+                        baseMargin = 1.9; // Дуже високі  
+                    } else if (aspectRatio < 0.6) {  
+                        baseMargin = 1.6; // Високі  
                     } else if (aspectRatio < 0.8) {  
-                        baseMargin = 1.2; // Високі логотипи  
+                        baseMargin = 1.3; // Помірно високі  
                     }  
                       
-                    // Корекція відступу залежно від масштабу  
-                    const scaleCorrection = Math.max(0.5, 2.0 - scale);  
+                    // Дуже сильна корекція для великого масштабу  
+                    let scaleCorrection = 1.0;  
+                    if (scale >= 1.2) {  
+                        scaleCorrection = 0.4; // Зменшення на 60% при 120%  
+                    } else if (scale >= 1.1) {  
+                        scaleCorrection = 0.6; // Зменшення на 40% при 110%  
+                    } else if (scale >= 1.05) {  
+                        scaleCorrection = 0.8; // Зменшення на 20% при 105%  
+                    }  
+                      
                     const finalMargin = baseMargin * scaleCorrection;  
                       
-                    container.css('margin-bottom', `calc(var(--cas-blocks-gap) * ${finalMargin})`);  
+                    // Жорсткі обмеження для запобігання проблем  
+                    const minMargin = Math.max(finalMargin, 0.08);  
+                    const maxMargin = Math.min(finalMargin, 2.0);  
+                      
+                    container.css('margin-bottom', `calc(var(--cas-blocks-gap) * ${minMargin})`);  
+                      
+                    // Додаткова корекція для дуже високих логотипів при великому масштабі  
+                    if (aspectRatio < 0.6 && scale >= 1.1) {  
+                        container.css('margin-bottom', `calc(var(--cas-blocks-gap) * 0.8)`);  
+                    }  
                 };  
             }  
         } else {    
@@ -555,7 +586,7 @@
     } catch (error) {                  
         render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                  
     }                  
-}                
+}
                 
     async function loadMovieDataOptimized(render, data) {                
         const tasks = [];                
