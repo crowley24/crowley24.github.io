@@ -252,16 +252,15 @@
         .full-start__background { will-change: transform, opacity; backface-visibility: hidden; perspective: 1000px; transform: translateZ(0); transition: opacity 0.8s ease; }                
                     
         .cas-logo-container {         
-    position: relative;         
-    overflow: visible; /* Повертаємо visible щоб не обрізати логотип */  
-    max-width: 100%;         
-    padding-left: 0%;        
-    margin-bottom: calc(var(--cas-blocks-gap) * 1.5);        
-    max-height: 30vh; /* Збільшуємо висоту */  
-    min-height: 80px;      
-    display: flex;         
-    align-items: flex-start; /* Вирівнюємо по верху */  
-}             
+            position: relative;         
+            overflow: visible;         
+            max-width: 100%;         
+            padding-left: 0%;        
+            margin-bottom: calc(var(--cas-blocks-gap) * 1.5);        
+            min-height: 80px;      
+            display: flex;         
+            align-items: flex-start;         
+        }                
                     
         .full-start__background {                
             transform: scale(1.1);                
@@ -319,8 +318,7 @@
             border: 2px solid transparent !important;              
             border-radius: 8px !important;              
             padding: 8px 16px !important;              
-        }                  
-                    
+        }  
         .left-title .full-start-new__buttons .full-start__button.focus {            
             color:#fff!important;            
             transform:scale(1.04);            
@@ -333,26 +331,36 @@
         .cas-rate-item:nth-child(2) { animation-delay: 0.3s; }                
         @keyframes popIn{ from{opacity:0;transform:scale(.9);} to{opacity:1;transform:scale(1);} }               
             
+        .cas-logo-container {         
+            position: relative;         
+            overflow: visible;         
+            max-width: 100%;         
+            padding-left: 0%;        
+            margin-bottom: calc(var(--cas-blocks-gap) * 1.5);        
+            min-height: 80px;      
+            display: flex;         
+            align-items: flex-start;         
+        }                
+  
         .cas-logo img {         
-    background: transparent !important;         
-    border: none !important;         
-    max-width: 100%;         
-    max-height: 100%; /* Обмежуємо висоту контейнером */  
-    width: auto;        
-    height: auto;        
-    transform: scale(var(--cas-logo-scale));         
-    transform-origin: left top; /* Змінюємо точку трансформації */  
-    display: block;        
-    object-fit: contain;        
-    position: relative;  
-    z-index: 1;  
-}    
+            background: transparent !important;         
+            border: none !important;         
+            max-width: 100%;         
+            width: auto;        
+            height: auto;        
+            transform: scale(var(--cas-logo-scale));         
+            transform-origin: left top;         
+            display: block;        
+            object-fit: contain;        
+            position: relative;  
+            z-index: 1;  
+            max-height: 35vh;  
+        }       
                 .cas-studio-item {    
             height: 2.3em !important;    
             display: flex;    
             align-items: center;    
             justify-content: center;  
-            /* Можна додати легкий фон, як у прикладі, для кращої читаємості */  
             background: rgba(255, 255, 255, 0.1);   
             padding: 4px 8px;  
             border-radius: 6px;  
@@ -361,7 +369,6 @@
             height: 100%;     
             width: auto;     
             object-fit: contain;     
-            /* Прибираємо жорсткий drop-shadow, залишаємо лише ледь помітну тінь для об'єму */  
             filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));     
             opacity: 1;     
             transition: all 0.3s ease;     
@@ -375,7 +382,6 @@
         .left-title .full-start-new__right { display: flex; align-items: flex-end; justify-content: flex-start; padding-bottom: 2vh; padding-left: 1.5%; }                  
         .cas-meta-info { display: flex; align-items: center; gap: 8px; font-weight: 400; }                  
                 
-        /* Покращена Ken Burns анімація з Parallax ефектом */        
         @keyframes casKenBurnsParallax {         
             0% { transform: scale(1.1) translateY(0px) translateX(0px); }         
             25% { transform: scale(1.13) translateY(-10px) translateX(-5px); }         
@@ -393,19 +399,6 @@
             transform: translateZ(0);         
             -webkit-transform: translateZ(0);         
         }        
-          
-        /* Медіа-запити для адаптивності логотипу */  
-        @media screen and (max-height: 720px) {  
-    .cas-logo-container {  
-        max-height: 25vh;  
-    }  
-}
-  
-        @media screen and (max-height: 480px) {  
-    .cas-logo-container {  
-        max-height: 20vh;  
-    }  
-}
         </style>`;                
         Lampa.Template.add('left_title_css', styles);                
         $('body').append(Lampa.Template.get('left_title_css', {}, true));                
@@ -476,7 +469,6 @@
         window.casBgInterval = currentInterval;        
     }                
                 
-    // Нова функція для аналізу кольорів логотипів студій    
     function renderStudioLogosWithColorAnalysis(container, data) {    
         const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 4);    
             
@@ -528,8 +520,21 @@
             if (bestLogo) {        
                 const quality = Lampa.Storage.get('cas_logo_quality') || 'original';                
                 const logoSrc = Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path);                
+                  
                 await preloadImage(logoSrc);                
-                render.find('.cas-logo').html(`<img src="${logoSrc}">`);                
+                render.find('.cas-logo').html(`<img src="${logoSrc}">`);  
+                  
+                // Динамічно розраховуємо висоту логотипу  
+                const logoImg = render.find('.cas-logo img')[0];  
+                if (logoImg) {  
+                    logoImg.onload = function() {  
+                        const logoHeight = this.offsetHeight * (parseFloat(Lampa.Storage.get('cas_logo_scale') || 100) / 100);  
+                        const container = render.find('.cas-logo-container');  
+                          
+                        // Встановлюємо мінімальну висоту контейнера  
+                        container.css('min-height', Math.min(logoHeight, window.innerHeight * 0.35) + 'px');  
+                    };  
+                }  
             } else {                
                 render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                
             }                
@@ -679,5 +684,4 @@
                   
     if (window.appready) startPlugin();                  
     else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') startPlugin(); });                  
-})();  
-  
+})();
