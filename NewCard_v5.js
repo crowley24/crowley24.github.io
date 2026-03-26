@@ -345,7 +345,7 @@
         .cas-logo img {  
     background: transparent !important;  
     border: none !important;  
-    max-width: 500px !important;  
+    max-width: 400px !important;  
     width: auto;  
     height: 170px !important;   
     transform: scale(var(--cas-logo-scale));  
