@@ -257,7 +257,7 @@
             max-width: 100%;       
             padding-left: 0%;      
             margin-bottom: calc(var(--cas-blocks-gap) * 1.5);      
-             max-height: 20vh;      
+            max-height: 300px;      
         }              
                   
         .full-start__background {              
