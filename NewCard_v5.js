@@ -325,11 +325,12 @@
     overflow: visible;  
     max-width: 100%;  
     padding-left: 0%;  
-    margin-bottom: calc(var(--cas-blocks-gap) * 1.0) !important; /* Фіксований відступ для всіх */  
-    height: 120px !important; /* Фіксована висота контейнера */  
+    margin-bottom: calc(var(--cas-blocks-gap) * 1.0) !important;  
+    min-height: 180px !important; /* Збільшена базова висота */  
+    height: auto !important;  
     display: flex;  
     align-items: flex-start;  
-}  
+}
   
 .cas-logo img {  
     background: transparent !important;  
