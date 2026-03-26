@@ -250,18 +250,7 @@
         const styles = `<style id="cas-main-styles">                
         :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); }                
         .full-start__background { will-change: transform, opacity; backface-visibility: hidden; perspective: 1000px; transform: translateZ(0); transition: opacity 0.8s ease; }                
-                    
-        .cas-logo-container {         
-            position: relative;         
-            overflow: visible;         
-            max-width: 100%;         
-            padding-left: 0%;        
-            margin-bottom: calc(var(--cas-blocks-gap) * 1.5);        
-            min-height: 80px;      
-            display: flex;         
-            align-items: flex-start;         
-        }                
-                    
+                      
         .full-start__background {                
             transform: scale(1.1);                
             transition: transform 0.8s ease-out, opacity 0.8s ease;                
@@ -331,16 +320,16 @@
         .cas-rate-item:nth-child(2) { animation-delay: 0.3s; }                
         @keyframes popIn{ from{opacity:0;transform:scale(.9);} to{opacity:1;transform:scale(1);} }               
             
-        .cas-logo-container {         
-            position: relative;         
-            overflow: visible;         
-            max-width: 100%;         
-            padding-left: 0%;        
-            margin-bottom: calc(var(--cas-blocks-gap) * 1.5);        
-            min-height: 80px;      
-            display: flex;         
-            align-items: flex-start;         
-        }                
+        .cas-logo-container {  
+    position: relative;  
+    overflow: visible;  
+    max-width: 100%;  
+    padding-left: 0%;  
+    margin-bottom: calc(var(--cas-blocks-gap) * 1.2); /* Менший відступ */  
+    min-height: 170px !important; /* Відповідає висоті логотипа */  
+    display: flex;  
+    align-items: flex-start;  
+}             
   
         .cas-logo img {  
     background: transparent !important;  
