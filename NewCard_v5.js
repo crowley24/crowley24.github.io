@@ -347,14 +347,15 @@
     border: none !important;  
     max-width: 100%;  
     width: auto;  
-    max-height: 120px; /* Фіксована максимальна висота */  
+    height: 100px; /* Фіксована базова висота для всіх логотипів */  
     transform: scale(var(--cas-logo-scale));  
     transform-origin: left top;  
     display: block;  
     object-fit: contain;  
     position: relative;  
     z-index: 1;  
-}     
+    max-height: 35vh;  
+}
                 .cas-studio-item {    
             height: 2.3em !important;    
             display: flex;    
@@ -523,25 +524,7 @@
             await preloadImage(logoSrc);  
             render.find('.cas-logo').html(`<img src="${logoSrc}">`);  
               
-            // Динамічно розраховуємо висоту логотипу з урахуванням масштабу  
-            const logoImg = render.find('.cas-logo img')[0];  
-            if (logoImg) {  
-                logoImg.onload = function() {  
-                    const scale = parseFloat(Lampa.Storage.get('cas_logo_scale') || 100) / 100;  
-                    const logoHeight = this.offsetHeight * scale;  
-                    const container = render.find('.cas-logo-container');  
-                      
-                    // Збільшуємо відступ для великих логотипів  
-                    let extraMargin = 0;  
-                    if (scale >= 1.2) extraMargin = 20; // Додатковий відступ для 120%  
-                    else if (scale >= 1.1) extraMargin = 10; // Додатковий відступ для 110%  
-                      
-                    const maxHeight = Math.min(logoHeight, window.innerHeight * 0.35);  
-                    container.css('min-height', maxHeight + 'px');  
-                    container.css('margin-bottom', `calc(var(--cas-blocks-gap) * 1.5 + ${extraMargin}px)`);  
-                };  
-            }  
-        } else {  
+           } else {  
             render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);  
         }         
             stopSlideshow();                
