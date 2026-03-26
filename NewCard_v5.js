@@ -325,11 +325,12 @@
     overflow: visible;  
     max-width: 100%;  
     padding-left: 0%;  
-    margin-bottom: calc(var(--cas-blocks-gap) * 1.2); /* Менший відступ */  
-    min-height: 170px !important; /* Відповідає висоті логотипа */  
+    margin-bottom: calc(var(--cas-blocks-gap) * 0.8); /* Ще менший відступ */  
+    min-height: unset !important; /* Повністю прибираємо фіксовану висоту */  
+    height: auto !important; /* Дозволяємо контейнеру адаптуватися */  
     display: flex;  
     align-items: flex-start;  
-}             
+}    
   
         .cas-logo img {  
     background: transparent !important;  
