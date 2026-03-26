@@ -321,15 +321,15 @@
         @keyframes popIn{ from{opacity:0;transform:scale(.9);} to{opacity:1;transform:scale(1);} }               
             
         .cas-logo-container {  
-    position: relative;  
-    overflow: visible;  
-    max-width: 100%;  
-    padding-left: 0%;  
-    margin-bottom: calc(var(--cas-blocks-gap) * 0.4) !important;  
-    min-height: 180px !important; /* Збільшена базова висота */  
-    height: auto !important;  
-    display: flex;  
-    align-items: flex-start;  
+     position: relative !important;  
+    overflow: visible !important;  
+    max-width: 100% !important;  
+    padding-left: 0% !important;  
+    margin-bottom: 8px !important; /* Примусово фіксоване значення в px */  
+    min-height: 120px !important;  
+    height: calc(120px * var(--cas-logo-scale)) !important;  
+    display: flex !important;  
+    align-items: flex-start !important;  
 }
   
 .cas-logo img {  
