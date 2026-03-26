@@ -522,33 +522,20 @@
             const logoSrc = Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path);  
               
             await preloadImage(logoSrc);  
+            render.find('.cas-logo').html(`<img src="${logoSrc}">`);  
               
-            // Створюємо img елемент без CSS обмежень розміру  
-            const logoImg = $('<img>').attr('src', logoSrc).css({  
-                'background': 'transparent !important',  
-                'border': 'none !important',  
-                'width': 'auto',      // Дозволяємо нативний розмір  
-                'height': 'auto',     // Дозволяємо нативний розмір  
-                'transform': `scale(${Lampa.Storage.get('cas_logo_scale') / 100})`,  
-                'transform-origin': 'left top',  
-                'display': 'block',  
-                'object-fit': 'contain'  
-            });  
-              
-            render.find('.cas-logo').html(logoImg);  
-              
-            // Динамічно розраховуємо висоту логотипу  
-            const imgElement = logoImg[0];  
-            if (imgElement) {  
-                imgElement.onload = function() {  
+            // Динамічно розраховуємо висоту логотипу з урахуванням масштабу  
+            const logoImg = render.find('.cas-logo img')[0];  
+            if (logoImg) {  
+                logoImg.onload = function() {  
                     const scale = parseFloat(Lampa.Storage.get('cas_logo_scale') || 100) / 100;  
                     const logoHeight = this.offsetHeight * scale;  
                     const container = render.find('.cas-logo-container');  
                       
                     // Збільшуємо відступ для великих логотипів  
                     let extraMargin = 0;  
-                    if (scale >= 1.2) extraMargin = 20;  
-                    else if (scale >= 1.1) extraMargin = 10;  
+                    if (scale >= 1.2) extraMargin = 20; // Додатковий відступ для 120%  
+                    else if (scale >= 1.1) extraMargin = 10; // Додатковий відступ для 110%  
                       
                     const maxHeight = Math.min(logoHeight, window.innerHeight * 0.35);  
                     container.css('min-height', maxHeight + 'px');  
@@ -557,19 +544,18 @@
             }  
         } else {  
             render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);  
-        }  
-          
-        stopSlideshow();  
-        if (Lampa.Storage.get('cas_slideshow_enabled') && res.backdrops && res.backdrops.length > 1) {  
-            console.log('Slideshow enabled, backdrops:', res.backdrops.length);  
-            startSlideshow(render, res.backdrops);  
-        } else {  
-            console.log('Slideshow disabled or not enough backdrops');  
-        }  
-    } catch (error) {  
-        render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);  
-    }  
-}
+        }         
+            stopSlideshow();                
+            if (Lampa.Storage.get('cas_slideshow_enabled') && res.backdrops && res.backdrops.length > 1) {        
+                console.log('Slideshow enabled, backdrops:', res.backdrops.length);        
+                startSlideshow(render, res.backdrops);        
+            } else {        
+                console.log('Slideshow disabled or not enough backdrops');        
+            }                
+        } catch (error) {                
+            render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                
+        }                
+    }                
                 
     async function loadMovieDataOptimized(render, data) {                
         const tasks = [];                
