@@ -325,12 +325,12 @@
     overflow: visible;  
     max-width: 100%;  
     padding-left: 0%;  
-    margin-bottom: calc(var(--cas-blocks-gap) * 0.8); /* Ще менший відступ */  
-    min-height: unset !important; /* Повністю прибираємо фіксовану висоту */  
-    height: auto !important; /* Дозволяємо контейнеру адаптуватися */  
+    margin-bottom: calc(var(--cas-blocks-gap) * 1.0); /* Базовий відступ, буде змінено через JS */  
+    min-height: unset !important;  
+    height: auto !important;  
     display: flex;  
     align-items: flex-start;  
-}    
+}
   
         .cas-logo img {  
     background: transparent !important;  
@@ -504,30 +504,58 @@
         });    
     }    
                 
-    async function processImages(render, data, res) {  
-    try {  
-        const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];  
-        if (bestLogo) {  
-            const quality = Lampa.Storage.get('cas_logo_quality') || 'original';  
-            const logoSrc = Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path);  
+    async function processImages(render, data, res) {    
+    try {    
+        const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];    
+        if (bestLogo) {    
+            const quality = Lampa.Storage.get('cas_logo_quality') || 'original';    
+            const logoSrc = Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path);    
+                
+            await preloadImage(logoSrc);    
+            render.find('.cas-logo').html(`<img src="${logoSrc}">`);    
+                
+            // Динамічна адаптація відступів  
+            const logoImg = render.find('.cas-logo img')[0];  
+            if (logoImg) {  
+                logoImg.onload = function() {  
+                    const container = render.find('.cas-logo-container');  
+                    const scale = parseFloat(Lampa.Storage.get('cas_logo_scale') || 100) / 100;  
+                    const imgHeight = this.offsetHeight;  
+                    const imgWidth = this.offsetWidth;  
+                    const aspectRatio = imgWidth / imgHeight;  
+                      
+                    // Розрахунок базового відступу залежно від співвідношення сторін  
+                    let baseMargin = 1.0; // Стандартний відступ  
+                    if (aspectRatio > 3.0) {  
+                        baseMargin = 0.4; // Дуже широкі логотипи  
+                    } else if (aspectRatio > 2.0) {  
+                        baseMargin = 0.6; // Широкі логотипи  
+                    } else if (aspectRatio < 0.8) {  
+                        baseMargin = 1.2; // Високі логотипи  
+                    }  
+                      
+                    // Корекція відступу залежно від масштабу  
+                    const scaleCorrection = Math.max(0.5, 2.0 - scale);  
+                    const finalMargin = baseMargin * scaleCorrection;  
+                      
+                    container.css('margin-bottom', `calc(var(--cas-blocks-gap) * ${finalMargin})`);  
+                };  
+            }  
+        } else {    
+            render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);    
+        }           
               
-            await preloadImage(logoSrc);  
-            render.find('.cas-logo').html(`<img src="${logoSrc}">`);  
-              
-           } else {  
-            render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);  
-        }         
-            stopSlideshow();                
-            if (Lampa.Storage.get('cas_slideshow_enabled') && res.backdrops && res.backdrops.length > 1) {        
-                console.log('Slideshow enabled, backdrops:', res.backdrops.length);        
-                startSlideshow(render, res.backdrops);        
-            } else {        
-                console.log('Slideshow disabled or not enough backdrops');        
-            }                
-        } catch (error) {                
-            render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                
-        }                
-    }                
+        stopSlideshow();                  
+        if (Lampa.Storage.get('cas_slideshow_enabled') && res.backdrops && res.backdrops.length > 1) {          
+            console.log('Slideshow enabled, backdrops:', res.backdrops.length);          
+            startSlideshow(render, res.backdrops);          
+        } else {          
+            console.log('Slideshow disabled or not enough backdrops');          
+        }                  
+    } catch (error) {                  
+        render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                  
+    }                  
+}                
                 
     async function loadMovieDataOptimized(render, data) {                
         const tasks = [];                
