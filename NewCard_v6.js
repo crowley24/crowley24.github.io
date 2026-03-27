@@ -185,7 +185,10 @@
                         <img class="full-start-new__img full--poster" />                    
                     </div>                    
                 </div>                    
-                <div class="full-start-new__right">                    
+                <div class="full-start-new__right">
+                <div class="cas-poster-right">
+                <img class="cas-poster-img"/>
+                  </div>
                     <div class="left-title__content">                    
                         <div class="cas-logo-container" style="margin-bottom: calc(var(--cas-blocks-gap) * 1.5);">                  
                             <div class="cas-logo"></div>                  
