@@ -390,7 +390,59 @@
         .full-start__background img {       
             transform: translateZ(0);       
             -webkit-transform: translateZ(0);       
-        }      
+        }     
+        /* === RIGHT POSTER (PRO LAYOUT) === */
+.cas-poster-right {
+    position: absolute;
+    right: 4%;
+    top: 10%;
+    width: 28%;
+    height: 75%;
+    z-index: 3;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    transform: translateZ(0);
+    transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+
+.cas-poster-right img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* hover/focus ефект (для TV теж норм) */
+.cas-poster-right:hover {
+    transform: scale(1.03);
+    box-shadow: 0 25px 80px rgba(0,0,0,0.8);
+}
+
+/* === DARKEN BACKGROUND === */
+.full-start__background::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to right,
+        rgba(0,0,0,0.85) 0%,
+        rgba(0,0,0,0.75) 40%,
+        rgba(0,0,0,0.4) 70%,
+        rgba(0,0,0,0.2) 100%
+    );
+    z-index: 1;
+}
+
+/* щоб контент був поверх */
+.left-title__content {
+    position: relative;
+    z-index: 2;
+}
+
+/* трохи звужуємо текстову зону */
+.full-start-new__right {
+    max-width: 60%;
+}
         </style>`;              
         Lampa.Template.add('left_title_css', styles);              
         $('body').append(Lampa.Template.get('left_title_css', {}, true));              
