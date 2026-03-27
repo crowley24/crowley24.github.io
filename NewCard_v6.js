@@ -249,8 +249,23 @@
         if ($('#cas-main-styles').length) return;          
         const styles = `<style id="cas-main-styles">              
         :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); }              
-        .full-start__background { will-change: transform, opacity; backface-visibility: hidden; perspective: 1000px; transform: translateZ(0); transition: opacity 0.8s ease; }              
-                  
+        .full-start__background {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 38%;
+    height: 100%;
+
+    overflow: hidden;
+    z-index: 1;
+
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    perspective: 1000px;
+
+    transform: scale(1.1) translateZ(0);
+    transition: transform 0.8s ease-out, opacity 0.8s ease;
+}
         .cas-logo-container {       
             position: relative;       
             overflow: visible;       
