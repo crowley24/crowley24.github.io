@@ -266,6 +266,17 @@
     transform: scale(1.1) translateZ(0);
     transition: transform 0.8s ease-out, opacity 0.8s ease;
 }
+.full-start__background::before {
+    content: '';
+    position: absolute;
+    left: -120px;
+    top: 0;
+    width: 150px;
+    height: 100%;
+    background: linear-gradient(to right, rgba(0,0,0,0.95), transparent);
+    z-index: 2;
+    pointer-events: none;
+}
         .cas-logo-container {       
             position: relative;       
             overflow: visible;       
@@ -377,7 +388,15 @@
         .cas-rate-item { display: flex; align-items: center; gap: 6px; }                
         .cas-rate-item img { height: 1.1em; }                
         .left-title .full-start-new__body { height: 85vh; }                
-        .left-title .full-start-new__right { display: flex; align-items: flex-end; justify-content: flex-start; padding-bottom: 2vh; padding-left: 1.5%; }                
+        .left-title .full-start-new__right {
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-start;
+    padding-bottom: 2vh;
+    padding-left: 1.5%;
+    width: 62%;
+    z-index: 3;
+}
         .cas-meta-info { display: flex; align-items: center; gap: 8px; font-weight: 400; }                
               
         /* Покращена Ken Burns анімація з Parallax ефектом */      
