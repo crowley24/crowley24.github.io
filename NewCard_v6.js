@@ -612,7 +612,12 @@
         tasks.push(Promise.resolve().then(() => {              
             const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));              
             const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');              
-            render.find('.cas-meta-info').text((time ? time + (genre ? ' • ' : '') : '') + genre);              
+            render.find('.cas-meta-info').text((time ? time + (genre ? ' • ' : '') : '') + genre);    
+            // === RIGHT POSTER IMAGE ===
+if (data.poster_path) {
+    const posterUrl = Lampa.TMDB.image('/t/p/w500' + data.poster_path);
+    render.find('.cas-poster-img').attr('src', posterUrl);
+}
         }));              
         if (Lampa.Storage.get('cas_show_studios')) {              
             tasks.push(Promise.resolve().then(() => {              
