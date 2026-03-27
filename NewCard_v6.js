@@ -277,6 +277,11 @@
     z-index: 2;
     pointer-events: none;
 }
+.full-start__background img {
+    object-fit: cover;
+    object-position: center right;
+    transform: translateZ(0);
+}
         .cas-logo-container {       
             position: relative;       
             overflow: visible;       
