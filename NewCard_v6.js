@@ -273,12 +273,7 @@
             padding-left: 0%;      
             margin-bottom: calc(var(--cas-blocks-gap) * 1.5);      
             max-height: 300px;      
-        }              
-                  
-        .full-start__background {              
-            transform: scale(1.1);              
-            transition: transform 0.8s ease-out, opacity 0.8s ease;              
-        }              
+        } 
                   
         .cas-animated .full-start__background {              
             transform: scale(1);              
