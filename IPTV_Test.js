@@ -18,7 +18,7 @@
         var config = Lampa.Storage.get(storage_key, {
             playlists: [{
                 name: 'TEST',
-                url: 'https://m3u.ch/pl/cbf67b9b46359837429e6deb5b384f9e_e2c018841bc8b4dd2110ddc53d611e72.m3u'
+                url: 'https://m3u.ch/pl/61b9ea4e90c4cf3165a4d19656e126a8_cf72fbb9e7ee647289c76620f1df15b4.m3u'
             }],
             // Вшиваємо посилання на EPG прямо в конфіг
             epg_url: 'https://iptvx.one/epg/epg.xml.gz',
