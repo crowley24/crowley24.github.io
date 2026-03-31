@@ -164,65 +164,71 @@ function pluginPage(object) {
 	};  
 	  
 	function parseList(data) {  
-		console.log('=== M3U Parse Debug ===');  
-		console.log('Raw data type:', typeof data);  
-		console.log('Raw data length:', data ? data.length : 'null');  
-		  
-		if (!data || typeof data != 'string') {  
-			console.log('ERROR: No valid data received');  
-			var empty = new Lampa.Empty();  
-			html.append(empty.render());  
-			return;  
-		}  
-		  
-		if (data.substr(0, 7).toUpperCase() !== "#EXTM3U") {  
-			console.log('ERROR: Not a valid M3U file');  
-			var empty = new Lampa.Empty();  
-			html.append(empty.render());  
-			return;  
-		}  
-		  
-		console.log('M3U header found, parsing...');  
-		  
-		catalog = {};  
-		var l = data.split(/\r?\n/);  
-		var cnt = 0, i = 1, chNum = 0, m, defGroup = defaultGroup;  
-		  
-		while (i < l.length) {  
-			chNum = cnt + 1;  
-			var channel = {  
-				ChNum: chNum,  
-				Title: "Канал " + chNum,  
-				Url: '',  
-				Group: ''  
-			};  
-			  
-			for (; cnt < chNum && i < l.length; i++) {  
-				if (!!(m = l[i].match(/^#EXTGRP:\s*(.+?)\s*$/i)) && m[1].trim() !== '') {  
-					defGroup = m[1].trim();  
-				} else if (!!(m = l[i].match(/^#EXTINF:\s*-?\d+(\s+\S.*?\s*)?,(.+)$/i))) {  
-					channel.Title = m[2].trim();  
-				} else if (!!(m = l[i].match(/^(https?):\/\/(.+)$/i))) {  
-					channel.Url = m[0].trim();  
-					channel.Group = defGroup + "";  
-					cnt++;  
-				}  
-			}  
-			  
-			if (!!channel.Url) {  
-				if (!catalog[channel.Group]) {  
-					catalog[channel.Group] = {  
-						title: channel.Group,  
-						channels: []  
-					};  
-				}  
-				catalog[channel.Group].channels.push(channel);  
-			}  
-		}  
-		  
-		console.log('Parsed', Object.keys(catalog).length, 'groups');  
-		this.build(catalog);  
-	}  
+    console.log('=== M3U Parse Debug ===');  
+    console.log('Raw data type:', typeof data);  
+    console.log('Raw data length:', data ? data.length : 'null');  
+      
+    if (!data || typeof data != 'string') {  
+        console.log('ERROR: No valid data received');  
+        var empty = new Lampa.Empty();  
+        html.append(empty.render());  
+        return;  
+    }  
+      
+    if (data.substr(0, 7).toUpperCase() !== "#EXTM3U") {  
+        console.log('ERROR: Not a valid M3U file');  
+        var empty = new Lampa.Empty();  
+        html.append(empty.render());  
+        return;  
+    }  
+      
+    console.log('M3U header found, parsing...');  
+      
+    catalog = {};  
+    var l = data.split(/\r?\n/);  
+    var cnt = 0, i = 1, chNum = 0, m, defGroup = defaultGroup;  
+      
+    while (i < l.length) {  
+        chNum = cnt + 1;  
+        var channel = {  
+            ChNum: chNum,  
+            Title: "Канал " + chNum,  
+            Url: '',  
+            Group: ''  
+        };  
+          
+        for (; cnt < chNum && i < l.length; i++) {  
+            if (!!(m = l[i].match(/^#EXTGRP:\s*(.+?)\s*$/i)) && m[1].trim() !== '') {  
+                defGroup = m[1].trim();  
+            } else if (!!(m = l[i].match(/^#EXTINF:\s*-?\d+(\s+\S.*?\s*)?,(.+)$/i))) {  
+                channel.Title = m[2].trim();  
+            } else if (!!(m = l[i].match(/^(https?):\/\/(.+)$/i))) {  
+                channel.Url = m[0].trim();  
+                channel.Group = defGroup + "";  
+                cnt++;  
+            }  
+        }  
+          
+        if (!!channel.Url) {  
+            if (!catalog[channel.Group]) {  
+                catalog[channel.Group] = {  
+                    title: channel.Group,  
+                    channels: []  
+                };  
+            }  
+            catalog[channel.Group].channels.push(channel);  
+        }  
+    }  
+      
+    console.log('Parsed', Object.keys(catalog).length, 'groups');  
+      
+    // Викликаємо build з правильним контекстом  
+    if (this && typeof this.build === 'function') {  
+        this.build(catalog);  
+    } else {  
+        console.error('build function not available in context');  
+    }  
+}  
 	  
 	function epgRender(epgId) {  
 		var epg = (EPG[epgId] || [0, 0, []])[2];  
