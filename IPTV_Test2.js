@@ -17,11 +17,8 @@
         // Оновлюємо конфігурацію при кожному зверненні  
         this.getConfig = function() {  
             return Lampa.Storage.get(storage_key, {  
-                playlists: [{  
-                    name: 'TEST',  
-                    url: 'https://m3u.ch/pl/61b9ea4e90c4cf3165a4d19656e126a8_cf72fbb9e7ee647289c76620f1df15b4.m3u'  
-                }],  
-                epg_url: 'https://iptvx.one/epg/epg.xml.gz',  
+                playlists: [{ url: '' }], // Порожний URL за замовчуванням  
+                epg_url: '',  
                 favorites: [],  
                 current_pl_index: 0  
             });  
@@ -65,36 +62,48 @@
         };  
   
         this.loadPlaylist = function () {  
-            var config = this.getConfig(); // Оновлюємо конфігурацію  
+            var config = this.getConfig(); // Завжди свіжа конфігурація  
             var pl = config.playlists[config.current_pl_index];  
-            if (!pl || !pl.url) {  
-                Lampa.Noty.show('Налаштуйте посилання на плейлист в налаштуваннях');  
+              
+            if (!pl || !pl.url || pl.url.trim() === '') {  
+                Lampa.Noty.show('Спочатку налаштуйте URL плейлиста в налаштуваннях');  
+                this.showEmptyState();  
                 return;  
             }  
+              
             Lampa.Noty.show('Завантаження плейлиста...');  
-            console.log('Loading playlist from:', pl.url); // Debug  
+            console.log('Loading playlist from:', pl.url);  
               
             $.ajax({  
                 url: pl.url,  
                 success: function (str) {   
-                    console.log('Playlist loaded, length:', str.length); // Debug  
+                    console.log('Playlist loaded, length:', str.length);  
                     _this.parse(str);   
                     Lampa.Noty.show('Плейлист завантажено');  
                 },  
                 error: function (xhr, status, error) {   
-                    console.log('Playlist error:', status, error); // Debug  
+                    console.log('Playlist error:', status, error);  
                     Lampa.Noty.show('Помилка завантаження плейлиста: ' + error);   
+                    _this.showEmptyState();  
                 }  
             });  
         };  
   
+        this.showEmptyState = function() {  
+            groups_data = { '⭐ Обрано': this.getConfig().favorites };  
+            this.renderG();  
+            colC.empty().append('<div style="padding:2rem;color:#999;text-align:center;">Налаштуйте плейлист в налаштуваннях</div>');  
+            colE.empty();  
+        };  
+  
         this.parse = function (str) {  
             var lines = str.split('\n');  
-            groups_data = { '⭐ Обрано': this.getConfig().favorites };  
+            var config = this.getConfig();  
+            groups_data = { '⭐ Обрано': config.favorites };  
             var current_group = 'ЗАГАЛЬНІ';  
             var channel_count = 0;  
               
-            console.log('Parsing playlist, lines:', lines.length); // Debug  
+            console.log('Parsing playlist, lines:', lines.length);  
               
             for (var i = 0; i < lines.length; i++) {  
                 var l = lines[i].trim();  
@@ -115,14 +124,21 @@
                 }  
             }  
               
-            console.log('Parsed channels:', channel_count, 'Groups:', Object.keys(groups_data)); // Debug  
+            console.log('Parsed channels:', channel_count, 'Groups:', Object.keys(groups_data));  
+              
+            if (channel_count === 0) {  
+                Lampa.Noty.show('Плейлист не містить каналів');  
+                this.showEmptyState();  
+                return;  
+            }  
+              
             this.renderG();  
         };  
   
         this.renderG = function () {  
             colG.empty();  
             var group_names = Object.keys(groups_data);  
-            console.log('Rendering groups:', group_names); // Debug  
+            console.log('Rendering groups:', group_names);  
               
             if (group_names.length === 0) {  
                 colG.append('<div style="padding:1rem;color:#999;">Немає груп каналів</div>');  
@@ -144,13 +160,6 @@
         this.renderC = function (list) {  
             colC.empty();  
             current_list = list || [];  
-            console.log('Rendering channels:', current_list.length); // Debug  
-              
-            if (current_list.length === 0) {  
-                colC.append('<div style="padding:1rem;color:#999;">Немає каналів у цій групі</div>');  
-                return;  
-            }  
-              
             current_list.forEach(function (c, idx) {  
                 var row = $('<div class="iptv-item">' +  
                                 '<div class="channel-row">' +  
@@ -171,7 +180,7 @@
         this.showDetails = function (channel) {  
             colE.empty();  
             var content = $('<div class="details-box">' +  
-                '<img src="' + channel.logo + '" style="width:100%; max-height:150px; object-fit:contain; margin-bottom:1rem; background:#000; padding:5px; border-radius:5px;" onerror="this.src=\'https://via.placeholder.com/150?text=NO+LOGO\'">' +  
+                '<img src="' + channel.logo + '" style="width:100%; max-height:150px; object-fit:contain; margin-bottom:1rem; background:#000; padding:5px; border-radius:5px;" onerror="this.src=\'https://via.placeholder.com/150?text=LOGO\'">' +  
                 '<div class="epg-title-big">' + channel.name + '</div>' +  
                 '<div class="epg-now">ЗАРАЗ В ЕФІРІ:</div>' +  
                 '<div class="epg-prog-name" id="epg-title">Пошук програми...</div>' +  
