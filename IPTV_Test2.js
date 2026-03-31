@@ -9,7 +9,7 @@
         var active_col = 'groups';
         var index_g = 0, index_c = 0;
         var epg_cache = {};
-        var epg_interval; // Інтервал для оновлення прогрес-бару
+        var epg_interval; 
 
         var storage_key = 'iptv_pro_v12';
         var config = Lampa.Storage.get(storage_key, {
@@ -22,12 +22,14 @@
             current_pl_index: 0
         });
 
-        // --- ДОДАНО: Логіка нормалізації назви для кращого пошуку EPG ---
-        var helperNormalize = function(name) {
-            return name.toLowerCase()
-                .replace(/hd|fhd|uhd|4k|sd/g, '') // видаляємо якість
-                .replace(/\s+/g, '')             // видаляємо пробіли
-                .replace(/[^\wа-яієїґ0-9]/gi, ''); // видаляємо спецсимволи
+        // --- МЕТОД НОРМАЛІЗАЦІЇ (з оригінального плагіна) ---
+        var chShortName = function(chName){
+            return chName.toLowerCase()
+                .replace(/\s+\(архив\)$/, '')
+                .replace(/\s+\((\+\d+)\)/g, ' $1')
+                .replace(/^телеканал\s+/, '')
+                .replace(/hd|fhd|uhd|4k|sd|50fps|orig|original/g, '')
+                .replace(/([!\s.,()–-]+)/g, '').trim();
         };
 
         this.create = function () {
@@ -47,20 +49,25 @@
                     '.iptv-flex-wrapper{display:flex;width:100%;height:100%;overflow:hidden;}' +
                     '.iptv-col{height:100%;overflow-y:auto;background:rgba(255,255,255,0.02);border-right:1px solid rgba(255,255,255,0.05);}' +
                     '.col-groups{width:20%; min-width:180px; flex-shrink:0;}' +
-                    '.col-channels{width:40%; flex-grow:1; min-width:250px; background:rgba(255,255,255,0.01);}' +
-                    '.col-details{width:40%; min-width:300px; flex-shrink:0; background:#080a0d; padding:2rem; border-left:1px solid #2962ff44;}' +
-                    '.iptv-item{padding:1rem;margin:.3rem;border-radius:.5rem;background:rgba(255,255,255,.03);cursor:pointer;transition: all 0.2s;}' +
-                    '.iptv-item.active{background:#2962ff;color:#fff;transform: scale(1.02);}' +
+                    '.col-channels{width:35%; flex-grow:1; min-width:250px; background:rgba(255,255,255,0.01);}' +
+                    '.col-details{width:45%; min-width:350px; flex-shrink:0; background:#080a0d; padding:2rem; position: relative;}' +
+                    '.iptv-item{padding:1rem;margin:.3rem;border-radius:.5rem;background:rgba(255,255,255,.03);cursor:pointer;transition: transform 0.1s;}' +
+                    '.iptv-item.active{background:#2962ff;color:#fff;box-shadow: 0 4px 15px rgba(41, 98, 255, 0.3);}' +
                     '.channel-row{display:flex;align-items:center;gap:1rem;}' +
-                    '.channel-logo{width:45px;height:45px;object-fit:contain;background:#000;border-radius:.3rem; border:1px solid rgba(255,255,255,0.1);}' +
+                    '.channel-logo{width:45px;height:45px;object-fit:contain;background:#000;border-radius:.4rem;}' +
                     '.channel-title{font-size:1.3rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
-                    '.epg-title-big{font-size:1.8rem; color:#fff; font-weight:700; margin-bottom:0.5rem; line-height:1.2;}' +
-                    '.epg-now{color:#2962ff; font-size:1rem; font-weight:bold; margin-top:2rem; letter-spacing:1px;}' +
-                    '.epg-prog-name{font-size:1.5rem; color:#eee; margin:.5rem 0; font-weight:500;}' +
-                    '.epg-bar{height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden; margin: 1rem 0;}' +
-                    '.epg-bar-inner{height:100%; background: linear-gradient(90deg, #2962ff, #00d2ff); width:0%; transition: width 0.5s;}' +
-                    '.epg-time{font-size:1.1rem; color:#888; display:flex; justify-content: space-between;}' +
-                    '.epg-description{margin-top:1.5rem; font-size:1.1rem; color:#aaa; line-height:1.6; height: 250px; overflow-y: auto; padding-right: 10px;}' +
+                    
+                    /* Стилі потужної системи EPG */
+                    '.epg-full-box{display: flex; flex-direction: column; height: 100%;}' +
+                    '.epg-big-logo{width: 100px; height: 100px; object-fit: contain; margin-bottom: 1.5rem; background: #000; border-radius: 10px; padding: 10px; border: 1px solid rgba(255,255,255,0.1);}' +
+                    '.epg-title-big{font-size:2.2rem; color:#fff; font-weight:700; margin-bottom:0.5rem; line-height: 1.1;}' +
+                    '.epg-now-label{color:#2962ff; font-size:1rem; font-weight:bold; text-transform: uppercase; letter-spacing: 2px; margin-top: 1.5rem;}' +
+                    '.epg-prog-name{font-size:1.7rem; color:#fff; margin:0.5rem 0 1rem 0; font-weight: 500;}' +
+                    '.epg-timeline{display: flex; justify-content: space-between; font-size: 1.2rem; color: #888; margin-bottom: 0.5rem; font-family: monospace;}' +
+                    '.epg-bar{height:8px; background:rgba(255,255,255,0.1); border-radius:4px; overflow:hidden; margin-bottom: 2rem;}' +
+                    '.epg-bar-inner{height:100%; background: linear-gradient(90deg, #2962ff 0%, #00d2ff 100%); width:0%; transition: width 0.5s ease-out;}' +
+                    '.epg-description{font-size:1.25rem; color:#aaa; line-height:1.6; overflow-y: auto; flex-grow: 1; padding-right: 1rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1.5rem;}' +
+                    '::-webkit-scrollbar {width: 4px;} ::-webkit-scrollbar-thumb {background: #2962ff; border-radius: 10px;}' +
                     '</style>');
             }
 
@@ -73,7 +80,8 @@
             if (!pl || !pl.url) return;
             $.ajax({
                 url: pl.url,
-                success: function (str) { _this.parse(str); }
+                success: function (str) { _this.parse(str); },
+                error: function () { Lampa.Noty.show('Помилка завантаження'); }
             });
         };
 
@@ -105,7 +113,11 @@
             colG.empty();
             Object.keys(groups_data).forEach(function (g, i) {
                 var item = $('<div class="iptv-item">' + g + ' (' + groups_data[g].length + ')</div>');
-                item.on('click', function () { index_g = i; active_col = 'groups'; _this.renderC(groups_data[g]); });
+                item.on('click', function () { 
+                    index_g = i; active_col = 'groups'; 
+                    _this.renderC(groups_data[g]); 
+                    _this.updateFocus();
+                });
                 colG.append(item);
             });
             this.updateFocus();
@@ -119,6 +131,7 @@
                                 '<img class="channel-logo" src="' + c.logo + '" onerror="this.src=\'https://via.placeholder.com/45?text=TV\'">' +
                                 '<div class="channel-title">' + c.name + '</div>' +
                             '</div></div>');
+                row.on('click', function () { Lampa.Player.play({ url: c.url, title: c.name }); });
                 row.on('hover:focus', function () { index_c = idx; _this.showDetails(c); });
                 colC.append(row);
             });
@@ -128,75 +141,82 @@
             this.updateFocus();
         };
 
-        // --- МОДЕРНІЗОВАНО: Завантаження EPG через API Lampa з кешем ---
+        // --- ІНТЕГРОВАНИЙ МЕТОД ЗАВАНТАЖЕННЯ EPG ---
         this.loadEPG = function(channel, callback) {
-            var cache_id = channel.tvg_id || helperNormalize(channel.name);
-            if (epg_cache[cache_id]) return callback(epg_cache[cache_id]);
+            var id = channel.tvg_id || '';
+            var name = channel.name;
+            var cache_key = id + '_' + chShortName(name);
 
-            // Використовуємо Lampa.Tvg для отримання програми, якщо доступно
-            if (window.Lampa.Tvg) {
-                Lampa.Tvg.get({
-                    id: channel.tvg_id,
-                    name: channel.name
-                }, function(data) {
-                    epg_cache[cache_id] = data;
+            if (epg_cache[cache_key]) return callback(epg_cache[cache_key]);
+
+            Lampa.Tvg.get({ id: id, name: name }, function(data) {
+                // Якщо за ID не знайшло, пробуємо за очищеним ім'ям (як в оригінальному плагіні)
+                if (!data || !data.program || !data.program.length) {
+                    Lampa.Tvg.get({ id: '', name: chShortName(name) }, function(data_alt) {
+                        epg_cache[cache_key] = data_alt;
+                        callback(data_alt);
+                    });
+                } else {
+                    epg_cache[cache_key] = data;
                     callback(data);
-                });
-            } else {
-                callback(null);
-            }
+                }
+            });
         };
 
-        // --- МОДЕРНІЗОВАНО: Потужний рендер деталей з прогрес-баром ---
+        // --- ПОТУЖНИЙ МЕТОД ВІДОБРАЖЕННЯ (EPG + PROGRESS + DESCRIPTION) ---
         this.showDetails = function (channel) {
-            colE.empty();
             if (epg_interval) clearInterval(epg_interval);
+            colE.empty();
 
-            var detailHtml = $(
-                '<div class="details-box">' +
+            var box = $(
+                '<div class="epg-full-box">' +
+                    '<img class="epg-big-logo" src="' + channel.logo + '" onerror="this.src=\'https://via.placeholder.com/100?text=TV\'">' +
                     '<div class="epg-title-big">' + channel.name + '</div>' +
-                    '<div class="epg-now">ЗАРАЗ В ЕФІРІ</div>' +
-                    '<div class="epg-prog-name" id="epg-title">...</div>' +
-                    '<div class="epg-time">' +
-                        '<span id="epg-start">00:00</span>' +
-                        '<span id="epg-stop">00:00</span>' +
+                    '<div id="epg-dynamic-part">' +
+                        '<div class="epg-now-label">Зараз в ефірі</div>' +
+                        '<div class="epg-prog-name" id="epg-prog-title">Завантаження...</div>' +
+                        '<div class="epg-timeline">' +
+                            '<span id="epg-start">--:--</span>' +
+                            '<span id="epg-stop">--:--</span>' +
+                        '</div>' +
+                        '<div class="epg-bar"><div class="epg-bar-inner" id="epg-progress-inner"></div></div>' +
+                        '<div class="epg-description" id="epg-prog-desc">Отримання даних телепрограми з сервера...</div>' +
                     '</div>' +
-                    '<div class="epg-bar"><div class="epg-bar-inner" id="epg-progress"></div></div>' +
-                    '<div class="epg-description" id="epg-desc">Завантаження опису програми...</div>' +
                 '</div>'
             );
-            colE.append(detailHtml);
+            colE.append(box);
 
             this.loadEPG(channel, function(data) {
                 if (data && data.program && data.program.length) {
-                    var p = data.program.find(function(prog) {
-                        var now = Date.now() / 1000;
-                        return now >= prog.start && now <= prog.stop;
-                    }) || data.program[0];
+                    var now = Date.now() / 1000;
+                    var p = data.program.find(function(prog) { return now >= prog.start && now <= prog.stop; });
 
-                    $('#epg-title').text(p.title);
-                    $('#epg-desc').text(p.description || 'Опис відсутній для цієї програми.');
+                    if (!p) p = data.program[0]; // Якщо поточну не знайдено, беремо найближчу
+
+                    $('#epg-prog-title').text(p.title);
+                    $('#epg-prog-desc').text(p.description || 'Детальний опис цієї програми відсутній.');
                     
-                    var formatTime = function(ts) {
+                    var format = function(ts) {
                         var d = new Date(ts * 1000);
                         return ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2);
                     };
 
-                    $('#epg-start').text(formatTime(p.start));
-                    $('#epg-stop').text(formatTime(p.stop));
+                    $('#epg-start').text(format(p.start));
+                    $('#epg-stop').text(format(p.stop));
 
-                    // Функція оновлення прогресу
-                    var updateProgress = function() {
-                        var now = Date.now() / 1000;
-                        var perc = ((now - p.start) / (p.stop - p.start)) * 100;
-                        $('#epg-progress').css('width', Math.min(100, Math.max(0, perc)) + '%');
+                    var update = function() {
+                        var curr = Date.now() / 1000;
+                        var total = p.stop - p.start;
+                        var elapsed = curr - p.start;
+                        var perc = Math.min(100, Math.max(0, (elapsed / total) * 100));
+                        $('#epg-progress-inner').css('width', perc + '%');
                     };
 
-                    updateProgress();
-                    epg_interval = setInterval(updateProgress, 30000); // Оновлюємо кожні 30 сек
+                    update();
+                    epg_interval = setInterval(update, 10000); // Оновлення кожні 10 сек
                 } else {
-                    $('#epg-title').text('Програма відсутня');
-                    $('#epg-desc').text('На жаль, для даного каналу немає даних телепрограми (EPG).');
+                    $('#epg-prog-title').text('Програма відсутня');
+                    $('#epg-prog-desc').html('На жаль, не вдалося знайти EPG для цього каналу.<br><br>Перевірте налаштування джерела XMLTV або tvg-id у вашому плейлисті.');
                 }
             });
         };
@@ -224,18 +244,26 @@
                     if (active_col === 'channels') _this.showDetails(current_list[index_c]);
                 },
                 right: function () {
-                    if (active_col === 'groups') _this.renderC(groups_data[Object.keys(groups_data)[index_g]]);
+                    if (active_col === 'groups' && current_list.length) {
+                        active_col = 'channels';
+                        _this.updateFocus();
+                    }
                 },
                 left: function () {
-                    if (active_col === 'channels') { active_col = 'groups'; _this.updateFocus(); }
+                    if (active_col === 'channels') {
+                        active_col = 'groups';
+                        _this.updateFocus();
+                    } else Lampa.Controller.toggle('menu');
                 },
                 enter: function () {
-                    if (active_col === 'groups') _this.renderC(groups_data[Object.keys(groups_data)[index_g]]);
-                    else if (current_list[index_c]) Lampa.Player.play({ url: current_list[index_c].url, title: current_list[index_c].name });
+                    if (active_col === 'groups') {
+                        _this.renderC(groups_data[Object.keys(groups_data)[index_g]]);
+                    } else if (current_list[index_c]) {
+                        Lampa.Player.play({ url: current_list[index_c].url, title: current_list[index_c].name });
+                    }
                 },
                 back: function () {
-                    if (active_col === 'channels') { active_col = 'groups'; _this.updateFocus(); }
-                    else Lampa.Activity.backward();
+                    Lampa.Activity.backward();
                 }
             });
             Lampa.Controller.toggle('iptv_pro');
@@ -249,10 +277,9 @@
         };
     }
 
-    // Решта функцій ініціалізації (init, addPluginSettings і т.д.) залишаються без змін
     function init() {
         Lampa.Component.add('iptv_pro', IPTVComponent);
-        var item = $('<li class="menu__item selector"><div class="menu__ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 7L12 3L3 7V17L12 21L21 17V7Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="menu__text">IPTV PRO</div></li>');
+        var item = $('<li class="menu__item selector"><div class="menu__ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="3" width="18" height="18" rx="2" stroke="white" stroke-width="2"/><path d="M7 8H17M7 12H17M7 16H13" stroke="white" stroke-width="2" stroke-linecap="round"/></svg></div><div class="menu__text">IPTV PRO</div></li>');
         item.on('hover:enter', function () {
             Lampa.Activity.push({ title: 'IPTV PRO', component: 'iptv_pro' });
         });
