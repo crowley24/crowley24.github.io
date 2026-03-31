@@ -60,7 +60,7 @@
         this.loadPlaylist = function () {  
             var pl = config.playlists[config.current_pl_index];  
             if (!pl || !pl.url) {  
-                Lampa.Noty.show('Налаштуйте посилання на плейлист');  
+                Lampa.Noty.show('Налаштуйте посилання на плейлист в налаштуваннях');  
                 return;  
             }  
             $.ajax({  
@@ -95,67 +95,12 @@
             this.renderG();  
         };  
   
-        // Функції для налаштувань  
-        function openPlaylistInput() {  
-            var currentUrl = config.playlists[0].url || '';  
-            Lampa.Template.show('input', {  
-                title: 'Налаштування плейлиста',  
-                value: currentUrl,  
-                placeholder: 'Введіть URL плейлиста',  
-                onChange: function(value) {  
-                    config.playlists[0].url = value;  
-                    Lampa.Storage.set(storage_key, config);  
-                    _this.loadPlaylist();  
-                }  
-            });  
-        }  
-  
-        function openEpgInput() {  
-            var currentUrl = config.epg_url || '';  
-            Lampa.Template.show('input', {  
-                title: 'Налаштування EPG',  
-                value: currentUrl,  
-                placeholder: 'Введіть URL EPG',  
-                onChange: function(value) {  
-                    config.epg_url = value;  
-                    Lampa.Storage.set(storage_key, config);  
-                    _this.registerEPG();  
-                }  
-            });  
-        }  
-  
+        // Повертаємо оригінальний рендеринг груп без налаштувань  
         this.renderG = function () {  
             colG.empty();  
-              
-            // Додаємо пункти налаштувань  
-            var settingsItems = [  
-                { type: "action", title: "Додати плейлист", action: "add_playlist" },  
-                { type: "action", title: "EPG URL", action: "epg_url" }  
-            ];  
-              
-            settingsItems.forEach(function(item, i) {  
-                var row = $('<div class="iptv-item">' + item.title + '</div>');  
-                row.on('click', function() {  
-                    if (item.action === "add_playlist") {  
-                        openPlaylistInput();  
-                    } else if (item.action === "epg_url") {  
-                        openEpgInput();  
-                    }  
-                });  
-                colG.append(row);  
-            });  
-              
-            // Додаємо роздільник  
-            colG.append('<div style="height:1px;background:rgba(255,255,255,0.1);margin:0.5rem 0;"></div>');  
-              
-            // Додаємо групи каналів  
             Object.keys(groups_data).forEach(function (g, i) {  
                 var item = $('<div class="iptv-item">' + g + '</div>');  
-                item.on('click', function () {   
-                    index_g = i + settingsItems.length + 1;  
-                    active_col = 'groups';   
-                    _this.renderC(groups_data[g]);   
-                });  
+                item.on('click', function () { index_g = i; active_col = 'groups'; _this.renderC(groups_data[g]); });  
                 colG.append(item);  
             });  
             this.updateFocus();  
@@ -264,22 +209,13 @@
                     if (active_col === 'channels') _this.showDetails(current_list[index_c]);  
                 },  
                 right: function () {  
-                    if (active_col === 'groups') _this.renderC(groups_data[Object.keys(groups_data)[index_g - 2]]);  
+                    if (active_col === 'groups') _this.renderC(groups_data[Object.keys(groups_data)[index_g]]);  
                 },  
                 left: function () {  
                     if (active_col === 'channels') { active_col = 'groups'; _this.updateFocus(); }  
                 },  
                 enter: function () {  
-                    if (active_col === 'groups') {  
-                        var settingsCount = 2;  
-                        if (index_g < settingsCount) {  
-                            // Обробка пунктів налаштувань  
-                            if (index_g === 0) openPlaylistInput();  
-                            else if (index_g === 1) openEpgInput();  
-                        } else {  
-                            _this.renderC(groups_data[Object.keys(groups_data)[index_g - settingsCount]]);  
-                        }  
-                    }  
+                    if (active_col === 'groups') _this.renderC(groups_data[Object.keys(groups_data)[index_g]]);  
                     else if (current_list[index_c]) Lampa.Player.play({ url: current_list[index_c].url, title: current_list[index_c].name });  
                 },  
                 back: function () {  
@@ -294,20 +230,48 @@
         this.destroy = function () { Lampa.Controller.remove('iptv_pro'); root.remove(); };  
     }  
   
-    // Функція для інтеграції з системними налаштуваннями  
-    function ensureSettingsFallback() {  
+    // Оновлена функція для додавання налаштувань в систему  
+    function addPluginSettings() {  
         try {  
             if (!Lampa.SettingsApi || !Lampa.SettingsApi.addParam) return;  
-            Lampa.SettingsApi.addComponent({ component: "iptv_pro_component", name: "IPTV PRO" });  
+              
+            // Додаємо компонент IPTV PRO до налаштувань  
+            Lampa.SettingsApi.addComponent({ component: "iptv_pro", name: "IPTV PRO" });  
+              
+            // Додаємо поле для URL плейлиста  
             Lampa.SettingsApi.addParam({  
-                component: "iptv_pro_component",  
-                param: { name: "Відкрити IPTV PRO", type: "button" },  
-                field: { name: "Відкрити IPTV PRO", description: "Запуск IPTV PRO" },  
-                onChange: function() {  
-                    Lampa.Activity.push({ title: 'IPTV PRO', component: 'iptv_pro' });  
+                component: "iptv_pro",  
+                param: "playlist_url",  
+                type: "input",  
+                placeholder: "https://example.com/playlist.m3u",  
+                default: "",  
+                onChange: function(value) {  
+                    var cfg = Lampa.Storage.get('iptv_pro_v12', {  
+                        playlists: [{ url: '' }],  
+                        epg_url: ''  
+                    });  
+                    cfg.playlists[0].url = value;  
+                    Lampa.Storage.set('iptv_pro_v12', cfg);  
                 }  
             });  
-        } catch (e) { console.log("settings fallback", e); }  
+              
+            // Додаємо поле для URL EPG  
+            Lampa.SettingsApi.addParam({  
+                component: "iptv_pro",   
+                param: "epg_url",  
+                type: "input",  
+                placeholder: "https://example.com/epg.xml.gz",  
+                default: "",  
+                onChange: function(value) {  
+                    var cfg = Lampa.Storage.get('iptv_pro_v12', {  
+                        playlists: [{ url: '' }],  
+                        epg_url: ''  
+                    });  
+                    cfg.epg_url = value;  
+                    Lampa.Storage.set('iptv_pro_v12', cfg);  
+                }  
+            });  
+        } catch (e) { console.log("settings error", e); }  
     }  
   
     function init() {  
@@ -321,7 +285,7 @@
         $('.menu .menu__list').append(item);  
           
         // Додання налаштувань  
-        ensureSettingsFallback();  
+        addPluginSettings();  
     }  
   
     if (window.app_ready) init();  
