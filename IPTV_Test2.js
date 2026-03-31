@@ -1,6 +1,8 @@
 (function () {  
     'use strict';  
   
+    var currentComponent = null; // Зберігаємо посилання на активний компонент  
+  
     function IPTVComponent() {  
         var _this = this;  
         var root, colG, colC, colE;  
@@ -22,6 +24,7 @@
         });  
   
         this.create = function () {  
+            currentComponent = this; // Зберігаємо посилання на компонент  
             root = $('<div class="iptv-root"></div>');  
             var container = $('<div class="iptv-flex-wrapper"></div>');  
   
@@ -63,10 +66,16 @@
                 Lampa.Noty.show('Налаштуйте посилання на плейлист в налаштуваннях');  
                 return;  
             }  
+            Lampa.Noty.show('Завантаження плейлиста...');  
             $.ajax({  
                 url: pl.url,  
-                success: function (str) { _this.parse(str); },  
-                error: function () { Lampa.Noty.show('Помилка завантаження плейлиста'); }  
+                success: function (str) {   
+                    _this.parse(str);   
+                    Lampa.Noty.show('Плейлист завантажено');  
+                },  
+                error: function () {   
+                    Lampa.Noty.show('Помилка завантаження плейлиста');   
+                }  
             });  
         };  
   
@@ -226,24 +235,34 @@
         };  
   
         this.render = function () { return root; };  
-        this.destroy = function () { Lampa.Controller.remove('iptv_pro'); root.remove(); };  
+        this.destroy = function () {   
+            Lampa.Controller.remove('iptv_pro');   
+            root.remove();   
+            if (currentComponent === this) currentComponent = null;  
+        };  
     }  
   
-    // Спрощена функція налаштувань  
+    // Функції налаштувань з перезавантаженням плейлиста  
     function showPlaylistSettings() {  
         var config = Lampa.Storage.get('iptv_pro_v12', {  
             playlists: [{ url: '' }],  
             epg_url: ''  
         });  
+        var currentUrl = config.playlists[0].url || '';  
           
         Lampa.Input.edit({  
-            value: config.playlists[0].url || '',  
+            value: currentUrl,  
             title: 'URL плейлиста',  
             placeholder: 'https://example.com/playlist.m3u'  
         }, function(new_value) {  
             config.playlists[0].url = new_value;  
             Lampa.Storage.set('iptv_pro_v12', config);  
             Lampa.Noty.show('Плейлист оновлено');  
+              
+            // Перезавантажуємо плейлист якщо компонент активний  
+            if (currentComponent) {  
+                currentComponent.loadPlaylist();  
+            }  
         });  
     }  
   
@@ -252,15 +271,21 @@
             playlists: [{ url: '' }],  
             epg_url: ''  
         });  
+        var currentUrl = config.epg_url || '';  
           
         Lampa.Input.edit({  
-            value: config.epg_url || '',  
+            value: currentUrl,  
             title: 'URL EPG',  
             placeholder: 'https://example.com/epg.xml.gz'  
         }, function(new_value) {  
             config.epg_url = new_value;  
             Lampa.Storage.set('iptv_pro_v12', config);  
             Lampa.Noty.show('EPG оновлено');  
+              
+            // Реєструємо новий EPG якщо компонент активний  
+            if (currentComponent) {  
+                currentComponent.registerEPG();  
+            }  
         });  
     }  
   
