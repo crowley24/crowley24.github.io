@@ -182,55 +182,68 @@
         };    
     
         this.setEpgIds = function() {  
-            if (!listCfg['epgApiChUrl']) return;  
-              
-            var _this = this;  
-            networkSilentSessCache(listCfg['epgApiChUrl'], function(d){  
-                var chIDs = d;  
-                if (!chIDs['id2epg']) chIDs['id2epg'] = {};  
-                epgPath = !chIDs['epgPath'] ? '' : ('/' + chIDs['epgPath']);  
+    if (!listCfg['epgApiChUrl']) {  
+        console.log('EPG API URL не встановлено');  
+        return;  
+    }  
+      
+    var _this = this;  
+    networkSilentSessCache(listCfg['epgApiChUrl'], function(d){  
+        var chIDs = d;  
+        if (!chIDs['id2epg']) chIDs['id2epg'] = {};  
+        epgPath = !chIDs['epgPath'] ? '' : ('/' + chIDs['epgPath']);  
+          
+        console.log('EPG Path встановлено:', epgPath);  
+        console.log('Отримано chIDs:', chIDs);  
+          
+        // Встановлення EPG ID для каналів  
+        Object.keys(groups_data).forEach(function(groupName) {  
+            groups_data[groupName].forEach(function(channel) {  
+                if (channel.tvg_id) return;  
                   
-                // Встановлення EPG ID для каналів  
-                Object.keys(groups_data).forEach(function(groupName) {  
-                    groups_data[groupName].forEach(function(channel) {  
-                        if (channel.tvg_id) return;  
-                          
-                        var chShortName = function(chName){  
-                            return chName  
-                                .toLowerCase()  
-                                .replace(/\s+\(архив\)$/, '')  
-                                .replace(/\s+\((\+\d+)\)/g, ' $1')  
-                                .replace(/^телеканал\s+/, '')  
-                                .replace(/([!\s.,()–-]+|ⓢ|ⓖ|ⓥ|ⓞ|Ⓢ|Ⓖ|Ⓥ|Ⓞ)/g, ' ').trim()  
-                                .replace(/\s(канал|тв)(\s.+|\s*)$/, '$2')  
-                                .replace(/\s(50|orig|original)$/, '')  
-                                .replace(/\s(\d+)/g, '$1');  
-                        };  
-                          
-                        var trW = {"ё":"e","у":"y","к":"k","е":"e","н":"h","ш":"w","з":"3","х":"x","ы":"bl","в":"b","а":"a","р":"p","о":"o","ч":"4","с":"c","м":"m","т":"t","ь":"b","б":"6"};  
-                        var trName = function(word) {  
-                            return word.split('').map(function (char) {  
-                                return trW[char] || char;  
-                            }).join("");  
-                        };  
-                          
-                        var n = chShortName(channel.name);  
-                        var fw = n[0];  
-                          
-                        if (chIDs[fw]) {  
-                            if (chIDs[fw][n]) {  
-                                channel.tvg_id = chIDs[fw][n];  
-                            } else {  
-                                n = trName(n);  
-                                if (chIDs[fw][n]) {  
-                                    channel.tvg_id = chIDs[fw][n];  
-                                }  
-                            }  
+                var chShortName = function(chName){  
+                    return chName  
+                        .toLowerCase()  
+                        .replace(/\s+\(архив\)$/, '')  
+                        .replace(/\s+\((\+\d+)\)/g, ' $1')  
+                        .replace(/^телеканал\s+/, '')  
+                        .replace(/([!\s.,()–-]+|ⓢ|ⓖ|ⓥ|ⓞ|Ⓢ|Ⓖ|Ⓥ|Ⓞ)/g, ' ').trim()  
+                        .replace(/\s(канал|тв)(\s.+|\s*)$/, '$2')  
+                        .replace(/\s(50|orig|original)$/, '')  
+                        .replace(/\s(\d+)/g, '$1');  
+                };  
+                  
+                var trW = {"ё":"e","у":"y","к":"k","е":"e","н":"h","ш":"w","з":"3","х":"x","ы":"bl","в":"b","а":"a","р":"p","о":"o","ч":"4","с":"c","м":"m","т":"t","ь":"b","б":"6"};  
+                var trName = function(word) {  
+                    return word.split('').map(function (char) {  
+                        return trW[char] || char;  
+                    }).join("");  
+                };  
+                  
+                var n = chShortName(channel.name);  
+                var fw = n[0];  
+                  
+                if (chIDs[fw]) {  
+                    if (chIDs[fw][n]) {  
+                        channel.tvg_id = chIDs[fw][n];  
+                        console.log('Знайдено EPG ID для', channel.name, ':', channel.tvg_id);  
+                    } else {  
+                        n = trName(n);  
+                        if (chIDs[fw][n]) {  
+                            channel.tvg_id = chIDs[fw][n];  
+                            console.log('Знайдено EPG ID (трансліт) для', channel.name, ':', channel.tvg_id);  
                         }  
-                    });  
-                });  
+                    }  
+                }  
             });  
-        };  
+        });  
+          
+        // Оновити відображення після встановлення EPG ID  
+        _this.renderG();  
+    }, function(error) {  
+        console.error('Помилка завантаження EPG API:', error);  
+    });  
+};
     
         this.renderG = function () {    
             colG.empty();    
