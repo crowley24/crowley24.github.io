@@ -75,23 +75,34 @@
               
             $.ajax({  
                 url: pl.url,  
-                success: function (str) {     
-                    console.log('Playlist loaded, length:', str.length);    
-                    _this.parse(str);     
+                success: function (str) {  
+                    console.log('Playlist loaded, length:', str.length);  
+                    _this.parse(str);  
+                    Lampa.Noty.show('Плейлист завантажено');  
                 },  
-                error: function () {     
-                    Lampa.Noty.show('Помилка завантаження плейлиста');     
-                    console.error('Failed to load playlist');    
+                error: function (xhr, status, error) {  
+                    console.log('Playlist error:', status, error);  
+                    Lampa.Noty.show('Помилка завантаження плейлиста: ' + error);  
+                    _this.showEmptyState();  
                 }  
             });  
         };  
   
+        this.showEmptyState = function() {  
+            groups_data = { '⭐ Обрано': this.getConfig().favorites };  
+            this.renderG();  
+            colC.empty().append('<div style="padding:2rem;color:#999;text-align:center;">Налаштуйте плейлист в налаштуваннях</div>');  
+            colE.empty();  
+        };  
+  
         this.parse = function (str) {  
             var lines = str.split('\n');  
-            groups_data = { '⭐ Обрано': this.getConfig().favorites };  
+            var config = this.getConfig();  
+            groups_data = { '⭐ Обрано': config.favorites };  
             var current_group = 'ЗАГАЛЬНІ';  
+            var channel_count = 0;  
               
-            console.log('Parsing playlist, lines count:', lines.length);  
+            console.log('Parsing playlist, lines:', lines.length);  
               
             for (var i = 0; i < lines.length; i++) {  
                 var l = lines[i].trim();  
@@ -101,28 +112,25 @@
                     var group = (l.match(/group-title="([^"]+)"/i) || ['', current_group])[1];  
                     var logo = (l.match(/tvg-logo="([^"]+)"/i) || ['', ''])[1];  
                     var tvg_id = (l.match(/tvg-id="([^"]+)"/i) || ['', ''])[1];  
+                    var url = lines[i + 1] ? lines[i + 1].trim() : '';  
                       
-                    var url = '';  
-                    for (var j = i + 1; j < lines.length; j++) {  
-                        var nextLine = lines[j].trim();  
-                        if (!nextLine || nextLine[0] === '#') continue;  
-                        if (nextLine.indexOf('http') === 0 || nextLine.indexOf('/') === 0) {  
-                            url = nextLine;  
-                            break;  
-                        }  
-                    }  
-                      
-                    if (url && (url.indexOf('http') === 0 || url.indexOf('rtmp') === 0 || url.indexOf('rtsp') === 0)) {  
+                    if (url && url.indexOf('http') === 0) {  
                         var item = { name: name, url: url, group: group, logo: logo, tvg_id: tvg_id };  
                         if (!groups_data[group]) groups_data[group] = [];  
                         groups_data[group].push(item);  
-                        console.log('Added channel:', name, 'URL:', url);  
+                        channel_count++;  
                     }  
                 }  
             }  
               
-            console.log('Parsed groups:', Object.keys(groups_data));  
+            console.log('Parsed channels:', channel_count);  
+            console.log('Groups found:', Object.keys(groups_data));  
+              
             this.renderG();  
+              
+            if (channel_count === 0) {  
+                colC.empty().append('<div style="padding:2rem;color:#999;text-align:center;">Канали не знайдено</div>');  
+            }  
         };  
   
         this.renderG = function () {  
@@ -130,10 +138,10 @@
             Object.keys(groups_data).forEach(function (g, i) {  
                 var count = groups_data[g].length;  
                 var item = $('<div class="iptv-item">' + g + ' (' + count + ')</div>');  
-                item.on('click', function () {     
-                    index_g = i;     
-                    active_col = 'groups';     
-                    _this.renderC(groups_data[g]);     
+                item.on('click', function () {  
+                    index_g = i;  
+                    active_col = 'groups';  
+                    _this.renderC(groups_data[g]);  
                 });  
                 colG.append(item);  
             });  
@@ -141,57 +149,52 @@
         };  
   
         this.renderC = function (list) {  
-            current_list = list || [];  
             colC.empty();  
-            current_list.forEach(function (channel, i) {  
-                var row = $('<div class="channel-row iptv-item">' +  
-                    '<img class="channel-logo" src="' + (channel.logo || '') + '" onerror="this.src=\'\'">' +  
-                    '<div class="channel-title">' + channel.name + '</div>' +  
+            current_list = list;  
+            list.forEach(function (ch, i) {  
+                var row = $('<div class="iptv-item channel-row">' +  
+                    '<img class="channel-logo" src="' + (ch.logo || '') + '" onerror="this.src=\'\'">' +  
+                    '<div class="channel-title">' + ch.name + '</div>' +  
                     '</div>');  
-                row.on('click', function () {     
-                    index_c = i;     
-                    active_col = 'channels';     
-                    _this.updateFocus();    
-                    _this.showDetails(channel);    
+                row.on('click', function () {  
+                    index_c = i;  
+                    active_col = 'channels';  
+                    _this.showDetails(ch);  
+                    _this.updateFocus();  
                 });  
                 colC.append(row);  
             });  
+            if (list.length) this.showDetails(list[0]);  
             this.updateFocus();  
         };  
   
         this.showDetails = function (channel) {  
             colE.empty();  
-            colE.append('<div class="epg-title-big">' + channel.name + '</div>');  
-            if (channel.logo) {  
-                colE.append('<img src="' + channel.logo + '" style="width:100%;max-width:200px;margin:1rem 0;border-radius:.5rem;">');  
-            }  
-            colE.append('<div style="color:#888;margin:1rem 0;">Група: ' + channel.group + '</div>');  
-              
+            var content = $('<div class="details-box">' +  
+                '<img src="' + channel.logo + '" style="width:100%; max-height:150px; object-fit:contain; margin-bottom:1rem; background:#000; padding:5px; border-radius:5px;" onerror="this.style.display=\'none\'">' +  
+                '<div class="epg-title-big">' + channel.name + '</div>' +  
+                '<div class="epg-now">ЗАРАЗ В ЕФІРІ:</div>' +  
+                '<div class="epg-prog-name" id="epg-title">Пошук програми...</div>' +  
+                '<div class="epg-bar"><div class="epg-bar-inner" id="epg-progress"></div></div>' +  
+                '<div style="margin-top:1rem; font-size:1.1rem; color:#555;">ID: ' + (channel.tvg_id || '---') + '</div>' +  
+                '</div>');  
+            colE.append(content);  
+  
             if (Lampa.SettingsApi && Lampa.SettingsApi.getEPG) {  
                 Lampa.SettingsApi.getEPG({ id: channel.tvg_id, name: channel.name }, function (data) {  
                     if (data && data.program && data.program[0]) {  
                         var p = data.program[0];  
-                        colE.append('<div class="epg-now">Зараз</div>');  
-                        colE.append('<div class="epg-prog-name">' + p.title + '</div>');  
+                        $('#epg-title').text(p.title);  
                         if (p.start && p.stop) {  
                             var now = Date.now() / 1000;  
                             var perc = ((now - p.start) / (p.stop - p.start)) * 100;  
-                            colE.append('<div class="epg-bar"><div class="epg-bar-inner" style="width:' + Math.min(100, Math.max(0, perc)) + '%"></div></div>');  
+                            $('#epg-progress').css('width', Math.min(100, Math.max(0, perc)) + '%');  
                         }  
                     } else {  
-                        colE.append('<div class="epg-now">Програма недоступна</div>');  
+                        $('#epg-title').text('Програма недоступна');  
                     }  
                 });  
             }  
-        };  
-  
-        this.showEmptyState = function () {  
-            colG.empty();  
-            colC.empty();  
-            colE.empty();  
-            colG.append('<div style="padding:2rem;color:#888;">Налаштуйте плейлист</div>');  
-            colC.append('<div style="padding:2rem;color:#888;">Введіть URL плейлиста в налаштуваннях</div>');  
-            colE.append('<div style="padding:2rem;color:#888;">Потім перезавантажте плагін</div>');  
         };  
   
         this.updateFocus = function () {  
@@ -202,10 +205,11 @@
             if (item.length) item[0].scrollIntoView({ block: 'center', behavior: 'smooth' });  
         };  
   
-        this.registerEPG = function () {  
+        this.registerEPG = function() {  
+            var config = this.getConfig();  
             if (window.Lampa && Lampa.Storage) {  
                 var iptv_config = Lampa.Storage.get('iptv_config', {});  
-                iptv_config.xmltv_url = this.getConfig().epg_url;     
+                iptv_config.xmltv_url = config.epg_url;  
                 Lampa.Storage.set('iptv_config', iptv_config);  
             }  
         };  
@@ -233,15 +237,10 @@
                     if (active_col === 'channels') { active_col = 'groups'; _this.updateFocus(); }  
                 },  
                 enter: function () {  
-                    if (active_col === 'groups') {  
-                        _this.renderC(groups_data[Object.keys(groups_data)[index_g]]);  
-                    } else if (active_col === 'channels' && current_list[index_c]) {  
-                        var channel = current_list[index_c];  
-                        console.log('Playing channel:', channel.name, 'URL:', channel.url);  
-                        Lampa.Player.play({     
-                            url: channel.url,     
-                            title: channel.name    
-                        });  
+                    if (active_col === 'groups') _this.renderC(groups_data[Object.keys(groups_data)[index_g]]);  
+                    else if (current_list[index_c]) {  
+                        console.log('Playing channel:', current_list[index_c].name, 'URL:', current_list[index_c].url);  
+                        Lampa.Player.play({ url: current_list[index_c].url, title: current_list[index_c].name });  
                     }  
                 },  
                 back: function () {  
@@ -253,10 +252,10 @@
         };  
   
         this.render = function () { return root; };  
-        this.destroy = function () {     
-            Lampa.Controller.remove('iptv_pro');     
-            root.remove();     
-            if (currentComponent === this) currentComponent = null;    
+        this.destroy = function () {  
+            Lampa.Controller.remove('iptv_pro');  
+            root.remove();  
+            if (currentComponent === this) currentComponent = null;  
         };  
     }  
   
@@ -318,7 +317,7 @@
             });  
               
             Lampa.SettingsApi.addParam({  
-                component: "iptv_pro",     
+                component: "iptv_pro",  
                 param: { name: "EPG URL", type: "button" },  
                 field: { name: "EPG URL", description: "Ввести URL EPG" },  
                 onChange: showEpgSettings  
@@ -339,7 +338,5 @@
     }  
   
     if (window.app_ready) init();  
-    else Lampa.Listener.follow('app', function (e) {   
-        if (e.type === 'ready') init();   
-    });  
+    else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') init(); });  
 })();
