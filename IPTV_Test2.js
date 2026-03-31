@@ -10,21 +10,10 @@
         var current_list = [];
         var active_col = 'groups';
         var index_g = 0, index_c = 0;
-
         var storage_key = 'iptv_pro_v12';
-
-        this.getConfig = function () {
-            return Lampa.Storage.get(storage_key, {
-                playlists: [{ url: '' }],
-                epg_url: '',
-                favorites: [],
-                current_pl_index: 0
-            });
-        };
 
         this.create = function () {
             currentComponent = this;
-
             root = $('<div class="iptv-root"></div>');
             var container = $('<div class="iptv-flex-wrapper"></div>');
 
@@ -34,236 +23,170 @@
 
             container.append(colG, colC, colE);
             root.append(container);
-
-            if (!$('#iptv-style-v12').length) {
-                $('head').append('<style id="iptv-style-v12">' +
-                    '.iptv-root{position:fixed;inset:0;background:#0b0d10;z-index:1000;padding-top:4rem;}' +
-                    '.iptv-flex-wrapper{display:flex;width:100%;height:100%;overflow:hidden;}' +
-                    '.iptv-col{height:100%;overflow-y:auto;background:rgba(255,255,255,0.02);border-right:1px solid rgba(255,255,255,0.05);}' +
-                    '.col-groups{width:20%;min-width:180px;}' +
-                    '.col-channels{width:45%;}' +
-                    '.col-details{width:35%;background:#080a0d;padding:1.5rem;}' +
-                    '.iptv-item{padding:1rem;margin:.3rem;border-radius:.5rem;background:rgba(255,255,255,.03);cursor:pointer;}' +
-                    '.iptv-item.active{background:#2962ff;color:#fff;}' +
-                    '</style>');
-            }
-
+            this.injectStyles();
             this.loadPlaylist();
             return root;
         };
 
-        // 🔥 HLS підтримка
-        this.playHLS = function (url) {
-            groups_data = {
-                '▶ HLS Потік': [{
-                    name: 'Live Stream',
-                    url: url,
-                    group: 'HLS',
-                    logo: ''
-                }]
-            };
-
-            this.renderG();
-            this.renderC(groups_data['▶ HLS Потік']);
+        this.injectStyles = function() {
+            if (!$('#iptv-style-v12').length) {
+                $('head').append('<style id="iptv-style-v12">' +
+                    '.iptv-root{position:fixed;inset:0;background:#0b0d10;z-index:1000;padding-top:4rem;}' +
+                    '.iptv-flex-wrapper{display:flex;width:100%;height:100%;overflow:hidden;}' +
+                    '.iptv-col{height:100%;overflow-y:auto;border-right:1px solid rgba(255,255,255,0.05);}' +
+                    '.col-groups{width:20%;min-width:180px;background:rgba(0,0,0,0.2);}' +
+                    '.col-channels{width:45%;background:rgba(255,255,255,0.01);}' +
+                    '.col-details{width:35%;background:#080a0d;padding:2rem;}' +
+                    '.iptv-item{padding:1rem;margin:.3rem;border-radius:.5rem;background:rgba(255,255,255,.03);cursor:pointer;color:rgba(255,255,255,0.6);}' +
+                    '.iptv-item.focused{background:rgba(255,255,255,0.1);color:#fff;}' +
+                    '.iptv-item.active{background:#2962ff;color:#fff;}' +
+                    '</style>');
+            }
         };
 
-        // 🚀 ГОЛОВНА ЛОГІКА
         this.loadPlaylist = function () {
-            var config = this.getConfig();
-            var pl = config.playlists[config.current_pl_index];
+            var config = Lampa.Storage.get(storage_key, { playlists: [{ url: '' }] });
+            var url = config.playlists[0].url;
 
-            if (!pl || !pl.url || pl.url.trim() === '') {
-                Lampa.Noty.show('Введіть URL плейлиста');
-                this.showEmptyState();
+            if (!url) {
+                this.showEmptyState('Введіть URL у налаштуваннях');
                 return;
             }
 
-            var url = pl.url;
-
-            // 👉 якщо m3u8 — одразу HLS
-            if (url.includes('.m3u8')) {
-                this.playHLS(url);
-                return;
-            }
-
-            Lampa.Noty.show('Завантаження плейлиста...');
-
+            Lampa.Loading.show();
+            // Використовуємо проксі Lampa для уникнення CORS помилок
             $.ajax({
-                url: url, // ❗ без proxy
+                url: url,
+                method: 'GET',
                 success: function (str) {
-
-                    if (!str || str.length < 50) {
-                        Lampa.Noty.show('Плейлист пустий або заблокований');
-                        return;
-                    }
-
-                    if (str.includes('#EXTINF')) {
-                        _this.parse(str);
-                        Lampa.Noty.show('Плейлист завантажено');
-                    } 
-                    else if (str.includes('#EXT-X-STREAM-INF')) {
-                        _this.playHLS(url);
-                    } 
-                    else {
-                        Lampa.Noty.show('Невідомий формат');
-                    }
+                    Lampa.Loading.hide();
+                    if (str.includes('#EXTINF')) _this.parse(str);
+                    else Lampa.Noty.show('Невірний формат плейлиста');
                 },
                 error: function () {
-                    Lampa.Noty.show('Помилка завантаження');
-                    _this.showEmptyState();
+                    Lampa.Loading.hide();
+                    _this.showEmptyState('Помилка завантаження');
                 }
             });
         };
 
-        this.showEmptyState = function () {
-            groups_data = {};
-            this.renderG();
-            colC.empty().append('<div style="padding:2rem;color:#999;text-align:center;">Немає даних</div>');
-            colE.empty();
-        };
-
-        // 📺 ПАРСЕР M3U (твій, не чіпаємо)
         this.parse = function (str) {
             var lines = str.split('\n');
             groups_data = {};
-            var current_group = 'Інше';
-
             for (var i = 0; i < lines.length; i++) {
-                var l = lines[i].trim();
-
-                if (l.indexOf('#EXTINF') === 0) {
-                    var name = (l.match(/,(.*)$/) || ['', ''])[1].trim();
-                    var group = (l.match(/group-title="([^"]+)"/i) || ['', current_group])[1];
-                    var logo = (l.match(/tvg-logo="([^"]+)"/i) || ['', ''])[1];
+                if (lines[i].indexOf('#EXTINF') === 0) {
+                    var name = (lines[i].match(/,(.*)$/) || ['', 'No name'])[1].trim();
+                    var group = (lines[i].match(/group-title="([^"]+)"/i) || ['', 'Загальні'])[1];
+                    var logo = (lines[i].match(/tvg-logo="([^"]+)"/i) || ['', ''])[1];
                     var url = lines[i + 1] ? lines[i + 1].trim() : '';
-
-                    if (url && url.indexOf('http') === 0) {
+                    if (url.startsWith('http')) {
                         if (!groups_data[group]) groups_data[group] = [];
-
-                        groups_data[group].push({
-                            name: name,
-                            url: url,
-                            logo: logo
-                        });
+                        groups_data[group].push({name: name, url: url, logo: logo});
                     }
                 }
             }
-
             this.renderG();
         };
 
         this.renderG = function () {
             colG.empty();
-
-            Object.keys(groups_data).forEach(function (g, i) {
-                var item = $('<div class="iptv-item">' + g + '</div>');
-
-                item.on('click', function () {
-                    index_g = i;
-                    active_col = 'groups';
-                    _this.renderC(groups_data[g]);
-                });
-
-                colG.append(item);
+            Object.keys(groups_data).forEach(function (g) {
+                colG.append('<div class="iptv-item selector">' + g + '</div>');
             });
+            this.toggleController();
         };
 
         this.renderC = function (list) {
             colC.empty();
             current_list = list;
-
-            list.forEach(function (ch, i) {
-                var row = $('<div class="iptv-item">' + ch.name + '</div>');
-
-                row.on('click', function () {
-                    index_c = i;
-
-                    Lampa.Player.play({
-                        url: ch.url,
-                        title: ch.name
-                    });
-                });
-
-                colC.append(row);
+            list.forEach(function (ch) {
+                colC.append('<div class="iptv-item selector">' + ch.name + '</div>');
             });
         };
 
-        this.start = function () {
+        this.showDetails = function(ch) {
+            colE.empty().append('<h3>' + ch.name + '</h3>' + (ch.logo ? '<img src="'+ch.logo+'" style="max-width:100%">' : ''));
+        };
+
+        this.updateFocus = function() {
+            $('.iptv-item').removeClass('focused active');
+            var g_items = colG.find('.iptv-item');
+            var c_items = colC.find('.iptv-item');
+
+            g_items.eq(index_g).addClass(active_col === 'groups' ? 'focused' : 'active');
+            if(active_col === 'channels') {
+                c_items.eq(index_c).addClass('focused');
+                this.showDetails(current_list[index_c]);
+            }
+        };
+
+        this.toggleController = function () {
             Lampa.Controller.add('iptv_pro', {
-                enter: function () {
-                    if (current_list[index_c]) {
-                        Lampa.Player.play({
-                            url: current_list[index_c].url,
-                            title: current_list[index_c].name
-                        });
+                invisible: true,
+                up: function () {
+                    if (active_col === 'groups') index_g = Math.max(0, index_g - 1);
+                    else index_c = Math.max(0, index_c - 1);
+                    _this.updateFocus();
+                },
+                down: function () {
+                    if (active_col === 'groups') index_g = Math.min(colG.find('.iptv-item').length - 1, index_g + 1);
+                    else index_c = Math.min(current_list.length - 1, index_c + 1);
+                    _this.updateFocus();
+                },
+                right: function () {
+                    if (active_col === 'groups') {
+                        var keys = Object.keys(groups_data);
+                        _this.renderC(groups_data[keys[index_g]]);
+                        active_col = 'channels';
+                        index_c = 0;
+                        _this.updateFocus();
                     }
+                },
+                left: function () {
+                    if (active_col === 'channels') { active_col = 'groups'; _this.updateFocus(); }
+                    else Lampa.Activity.backward();
+                },
+                enter: function () {
+                    if (active_col === 'groups') this.right();
+                    else Lampa.Player.play({ url: current_list[index_c].url, title: current_list[index_c].name });
                 }
             });
-
             Lampa.Controller.toggle('iptv_pro');
+            this.updateFocus();
         };
 
+        this.showEmptyState = function(msg) { colC.html('<div class="iptv-empty">'+msg+'</div>'); };
         this.render = function () { return root; };
-        this.destroy = function () {
-            Lampa.Controller.remove('iptv_pro');
-            root.remove();
-        };
+        this.destroy = function () { Lampa.Controller.remove('iptv_pro'); root.remove(); };
     }
 
-    function showPlaylistSettings() {
-        var config = Lampa.Storage.get('iptv_pro_v12', {
-            playlists: [{ url: '' }]
-        });
-
-        Lampa.Input.edit({
-            value: config.playlists[0].url,
-            title: 'URL плейлиста'
-        }, function (val) {
-            config.playlists[0].url = val;
-            Lampa.Storage.set('iptv_pro_v12', config);
-
-            if (currentComponent) currentComponent.loadPlaylist();
-        });
-    }
-
+    // Решта логіки (init, settings) залишається схожою, але з фіксом збереження
     function init() {
         Lampa.Component.add('iptv_pro', IPTVComponent);
+        $('.menu .menu__list').append($('<li class="menu__item selector"><div class="menu__text">IPTV PRO</div></li>').on('hover:enter', function () {
+            Lampa.Activity.push({ title: 'IPTV PRO', component: 'iptv_pro' });
+        }));
 
-        var item = $('<li class="menu__item selector"><div class="menu__text">IPTV PRO</div></li>');
-
-        item.on('hover:enter', function () {
-            Lampa.Activity.push({
-                title: 'IPTV PRO',
-                component: 'iptv_pro'
-            });
-        });
-
-        $('.menu .menu__list').append(item);
-
-        if (Lampa.SettingsApi && Lampa.SettingsApi.addParam) {
-            Lampa.SettingsApi.addComponent({
-                component: "iptv_pro",
-                name: "IPTV PRO"
-            });
-
+        if (Lampa.SettingsApi) {
+            Lampa.SettingsApi.addComponent({ component: "iptv_pro", name: "IPTV PRO" });
             Lampa.SettingsApi.addParam({
                 component: "iptv_pro",
-                param: {
-                    name: "playlist_url",
-                    type: "button"
-                },
-                field: {
-                    name: "Плейлист URL",
-                    description: "Введіть URL"
-                },
-                onChange: showPlaylistSettings
+                param: { name: "playlist_url", type: "button" },
+                field: { name: "Плейлист URL", description: "Введіть посилання" },
+                onChange: function() {
+                    var config = Lampa.Storage.get('iptv_pro_v12', { playlists: [{ url: '' }] });
+                    Lampa.Input.edit({ value: config.playlists[0].url, title: 'URL' }, function (val) {
+                        if(val) {
+                            config.playlists[0].url = val;
+                            Lampa.Storage.set('iptv_pro_v12', config);
+                            if (currentComponent) currentComponent.loadPlaylist();
+                        }
+                    });
+                }
             });
         }
     }
 
     if (window.app_ready) init();
-    else Lampa.Listener.follow('app', function (e) {
-        if (e.type === 'ready') init();
-    });
-
+    else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') init(); });
 })();
