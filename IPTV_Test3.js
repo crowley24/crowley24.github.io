@@ -75,13 +75,13 @@
               
             $.ajax({  
                 url: pl.url,  
-                success: function (str) {   
-                    console.log('Playlist loaded, length:', str.length);  
-                    _this.parse(str);   
+                success: function (str) {     
+                    console.log('Playlist loaded, length:', str.length);    
+                    _this.parse(str);     
                 },  
-                error: function () {   
-                    Lampa.Noty.show('Помилка завантаження плейлиста');   
-                    console.error('Failed to load playlist');  
+                error: function () {     
+                    Lampa.Noty.show('Помилка завантаження плейлиста');     
+                    console.error('Failed to load playlist');    
                 }  
             });  
         };  
@@ -102,7 +102,6 @@
                     var logo = (l.match(/tvg-logo="([^"]+)"/i) || ['', ''])[1];  
                     var tvg_id = (l.match(/tvg-id="([^"]+)"/i) || ['', ''])[1];  
                       
-                    // Шукаємо URL - підтримуємо як M3U так і M3U8  
                     var url = '';  
                     for (var j = i + 1; j < lines.length; j++) {  
                         var nextLine = lines[j].trim();  
@@ -113,7 +112,6 @@
                         }  
                     }  
                       
-                    // Перевіряємо чи це валідний URL для IPTV  
                     if (url && (url.indexOf('http') === 0 || url.indexOf('rtmp') === 0 || url.indexOf('rtsp') === 0)) {  
                         var item = { name: name, url: url, group: group, logo: logo, tvg_id: tvg_id };  
                         if (!groups_data[group]) groups_data[group] = [];  
@@ -132,10 +130,10 @@
             Object.keys(groups_data).forEach(function (g, i) {  
                 var count = groups_data[g].length;  
                 var item = $('<div class="iptv-item">' + g + ' (' + count + ')</div>');  
-                item.on('click', function () {   
-                    index_g = i;   
-                    active_col = 'groups';   
-                    _this.renderC(groups_data[g]);   
+                item.on('click', function () {     
+                    index_g = i;     
+                    active_col = 'groups';     
+                    _this.renderC(groups_data[g]);     
                 });  
                 colG.append(item);  
             });  
@@ -150,11 +148,11 @@
                     '<img class="channel-logo" src="' + (channel.logo || '') + '" onerror="this.src=\'\'">' +  
                     '<div class="channel-title">' + channel.name + '</div>' +  
                     '</div>');  
-                row.on('click', function () {   
-                    index_c = i;   
-                    active_col = 'channels';   
-                    _this.updateFocus();  
-                    _this.showDetails(channel);  
+                row.on('click', function () {     
+                    index_c = i;     
+                    active_col = 'channels';     
+                    _this.updateFocus();    
+                    _this.showDetails(channel);    
                 });  
                 colC.append(row);  
             });  
@@ -169,7 +167,6 @@
             }  
             colE.append('<div style="color:#888;margin:1rem 0;">Група: ' + channel.group + '</div>');  
               
-            // EPG  
             if (Lampa.SettingsApi && Lampa.SettingsApi.getEPG) {  
                 Lampa.SettingsApi.getEPG({ id: channel.tvg_id, name: channel.name }, function (data) {  
                     if (data && data.program && data.program[0]) {  
@@ -208,7 +205,7 @@
         this.registerEPG = function () {  
             if (window.Lampa && Lampa.Storage) {  
                 var iptv_config = Lampa.Storage.get('iptv_config', {});  
-                iptv_config.xmltv_url = this.getConfig().epg_url;   
+                iptv_config.xmltv_url = this.getConfig().epg_url;     
                 Lampa.Storage.set('iptv_config', iptv_config);  
             }  
         };  
@@ -241,9 +238,9 @@
                     } else if (active_col === 'channels' && current_list[index_c]) {  
                         var channel = current_list[index_c];  
                         console.log('Playing channel:', channel.name, 'URL:', channel.url);  
-                        Lampa.Player.play({   
-                            url: channel.url,   
-                            title: channel.name  
+                        Lampa.Player.play({     
+                            url: channel.url,     
+                            title: channel.name    
                         });  
                     }  
                 },  
@@ -256,10 +253,10 @@
         };  
   
         this.render = function () { return root; };  
-        this.destroy = function () {   
-            Lampa.Controller.remove('iptv_pro');   
-            root.remove();   
-            if (currentComponent === this) currentComponent = null;  
+        this.destroy = function () {     
+            Lampa.Controller.remove('iptv_pro');     
+            root.remove();     
+            if (currentComponent === this) currentComponent = null;    
         };  
     }  
   
@@ -321,7 +318,7 @@
             });  
               
             Lampa.SettingsApi.addParam({  
-                component: "iptv_pro",   
+                component: "iptv_pro",     
                 param: { name: "EPG URL", type: "button" },  
                 field: { name: "EPG URL", description: "Ввести URL EPG" },  
                 onChange: showEpgSettings  
@@ -342,5 +339,7 @@
     }  
   
     if (window.app_ready) init();  
-    else Lampa.Listener.follow('app', function (e) { if (e.type  
-  })();
+    else Lampa.Listener.follow('app', function (e) {   
+        if (e.type === 'ready') init();   
+    });  
+})();
