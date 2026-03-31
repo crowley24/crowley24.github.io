@@ -104,7 +104,21 @@
             return root;      
         };      
       
-        // Утиліти часу  
+        // Метод loadPlaylist - ВІДНОВЛЕНО  
+        this.loadPlaylist = function () {      
+            var pl = config.playlists[config.current_pl_index];      
+            if (!pl || !pl.url) {      
+                Lampa.Noty.show('Налаштуйте посилання на плейлист в налаштуваннях');      
+                return;      
+            }      
+            $.ajax({      
+                url: pl.url,      
+                success: function (str) { _this.parse(str); },      
+                error: function () { Lampa.Noty.show('Помилка завантаження плейлиста'); }      
+            });      
+        };  
+  
+        // Утиліти з оригінального плагіна  
         function unixtime() {      
             return Math.floor((new Date().getTime() + timeOffset)/1000);      
         }      
@@ -117,15 +131,16 @@
             return ('0' + date.getHours()).substr(-2) + ':' + ('0' + date.getMinutes()).substr(-2);      
         }      
       
-        function toLocaleDateString(time) {      
-            var date = new Date(),      
-                ofst = parseInt(Lampa.Storage.get('time_offset', 'n0').replace('n',''));      
-            time = time || date.getTime();      
-            date = new Date(time + (ofst * 1000 * 60 * 60));      
-            return date.toLocaleDateString();      
+        function generateSigForString(string) {      
+            var sigTime = unixtime();      
+            var utils = {      
+                uid: function() {return Lampa.Utils.uid(10).toUpperCase().replace(/(.{4})/g, '$1-')},      
+                hash36: function(s) {return (Lampa.Utils.hash(s) * 1).toString(36)}      
+            };      
+            return sigTime.toString(36) + ':' + utils.hash36((string || '') + sigTime + utils.uid());      
         }      
       
-        // Кешування  
+        // Кешування з оригінального плагіна  
         function networkSilentSessCache(url, success, fail, param) {      
             var context = this;      
             var urlForKey = url.replace(/([&?])sig=[^&]+&?/, '$1');      
@@ -261,7 +276,7 @@
                         if (epg.length > i) {      
                             var list = epgAfter.find('.js-epgList');      
                             list.empty();      
-                         var iEnd = Math.min(epg.length, 8);      
+                            var iEnd = Math.min(epg.length, 8);      
                             for (; i < iEnd; i++) {      
                                 e = epg[i];      
                                 var item = epgItemTeplate.clone();      
@@ -281,98 +296,21 @@
             if (epg.length < 3) epgUpdateData(epgId);      
         }      
       
-        // Функція setEpgId з оригінального плагіна  
-        function setEpgId(channelGroup) {      
-            if (channelGroup.setEpgId || !channelGroup.channels || !listCfg['epgApiChUrl']) return;      
-            var chIDs = {id2epg: {}, piconUrl: '', id2picon: []}, i=0, channel;      
-            networkSilentSessCache(listCfg['epgApiChUrl'], function(d){      
-                chIDs = d;      
-                if (!chIDs['id2epg']) chIDs['id2epg'] = {};      
-                epgPath = !chIDs['epgPath'] ? '' : ('/' + chIDs['epgPath']);      
-            });      
-            var chShortName = function(chName){      
-                return chName      
-                    .toLowerCase()      
-                    .replace(/\s+\(архив\)$/, '')      
-                    .replace(/\s+\((\+\d+)\)/g, ' $1')      
-                    .replace(/^телеканал\s+/, '')      
-                    .replace(/([!\s.,()–-]+|ⓢ|ⓖ|ⓥ|ⓞ|Ⓢ|Ⓖ|Ⓥ|Ⓞ)/g, ' ').trim()      
-                    .replace(/\s(канал|тв)(\s.+|\s*)$/, '$2')      
-                    .replace(/\s(50|orig|original)$/, '')      
-                    .replace(/\s(\d+)/g, '$1')      
-                    ;      
-            };      
-            var trW = {"ё":"e","у":"y","к":"k","е":"e","н":"h","ш":"w","з":"3","х":"x","ы":"bl","в":"b","а":"a","р":"p","о":"o","ч":"4","с":"c","м":"m","т":"t","ь":"b","б":"6"};      
-            var trName = function(word) {      
-                return word.split('').map(function (char) {      
-                    return trW[char] || char;      
-                }).join("");      
-            };      
-            var epgIdByName = function(v, find, epgId) {      
-                var n = chShortName(v), fw, key;      
-                if (n === '' || (!chIDs[n[0]] && !find)) return 0;      
-                fw = n[0];      
-                if (!!chIDs[fw]) {      
-                    if (!!chIDs[fw][n]) return chIDs[fw][n];      
-                    n = trName(n);      
-                    if (!!chIDs[fw][n]) return chIDs[fw][n];      
-                    if (find) {      
-                        for (key in chIDs[fw]) {      
-                            if (chIDs[fw][key] == epgId) {      
-                                return epgId;      
-                            } else if (n === trName(key)) {      
-                                return chIDs[fw][key];      
-                            }      
-                        }      
-                    }      
-                }      
-                if (n[0] !== fw && !!chIDs[n[0]]) {      
-                    fw = n[0];      
-                    if (!!chIDs[fw][n]) return chIDs[fw][n];      
-                    if (find) {      
-                        for (key in chIDs[fw]) {      
-                            if (chIDs[fw][key] == epgId) {      
-                                return epgId;      
-                            } else if (n === trName(key)) {      
-                                return chIDs[fw][key];      
-                            }      
-                        }      
-                    }      
-                } else if (find) {      
-                    for(var keyW in trW) {      
-                        if (trW[keyW] === fw && !!chIDs[keyW]) {      
-                            for (key in chIDs[keyW]) {      
-                                if (chIDs[keyW][key] == epgId) {      
-                                    return epgId;      
-                                } else if (n === trName(key)){      
-                                    return chIDs[keyW][key];      
-                                }      
-                            }      
-                        }      
-                    }      
-                }      
-                return 0;      
-            };      
-            for (;i < channelGroup.channels.length;i++) {      
-                channel = channelGroup.channels[i];      
-                channel['epgId'] = (listCfg['isEpgIt999'] || listCfg['isYosso'])      
-                    ? (channel['tvg_id'] && /^\d{1,4}$/.test(channel['tvg_id']) ? channel['tvg_id'] : epgIdByName(channel['name'], true, channel['tvg_id']))      
-                    : (chIDs.id2epg[channel['tvg_id'] || ''] || epgIdByName(channel['name'], isSNG, channel['tvg_id']) || channel['tvg_id']);      
-                if (!channel['logo'] && channel['epgId'] && !!chIDs.piconUrl) {      
-                    channel['logo'] = Lampa.Utils.protocol() + chIDs.piconUrl.replace('{picon}', (chIDs.id2picon && chIDs.id2picon[channel['epgId']]) ? chIDs.id2picon[channel['epgId']] : channel['epgId']);      
-                }      
-                if (!channel['logo']) {      
-                    if (channel['epgId'] && (listCfg['isEpgIt999'] || isSNG) && /^\d{1,4}$/.test(channel['epgId'])) {      
-                        channel['logo'] = Lampa.Utils.protocol() + 'epg.one/img2/' + channel['epgId'] + '.png'      
-                    } else if (isSNG && !/^Ch \d+$/.test(channel['name'])) {      
-                        channel['logo'] = Lampa.Utils.protocol() + 'epg.rootu.top/picon/'      
-                            + encodeURIComponent(channel['name']) + '.png';      
-                    }      
-                }      
+        // Метод loadPlaylist - ВИПРАВЛЕНО  
+        this.loadPlaylist = function () {      
+            var pl = config.playlists[config.current_pl_index];      
+            if (!pl || !pl.url) {      
+                Lampa.Noty.show('Налаштуйте посилання на плейлист в налаштуваннях');      
+                return;      
             }      
-            channelGroup.setEpgId = true;      
-        }      
+            $.ajax({      
+                url: pl.url,      
+                success: function (str) { _this.parse(str); },      
+                error: function () { Lampa.Noty.show('Помилка завантаження плейлиста'); }      
+            });      
+        };      
       
+        // Метод parse  
         this.parse = function (str) {      
             var lines = str.split('\n');      
             groups_data = { '⭐ Обране': config.favorites };      
@@ -438,6 +376,7 @@
             this.renderG();      
         };      
       
+        // Метод renderG  
         this.renderG = function () {      
             colG.empty();      
             Object.keys(groups_data).forEach(function (g, i) {      
@@ -449,6 +388,7 @@
             this.updateFocus();      
         };      
       
+        // Метод renderC  
         this.renderC = function (list) {      
             colC.empty();      
             current_list = list || [];      
@@ -470,6 +410,7 @@
             this.updateFocus();      
         };      
       
+        // Метод showDetails  
         this.showDetails = function (channel) {      
             colE.empty();      
             colE.append(epgTemplate);      
@@ -493,6 +434,7 @@
             }      
         };      
       
+        // Метод updateFocus  
         this.updateFocus = function () {      
             $('.iptv-item').removeClass('active');      
             var target = active_col === 'groups' ? colG : colC;      
@@ -501,6 +443,7 @@
             if (item.length) item[0].scrollIntoView({ block: 'center', behavior: 'smooth' });      
         };      
       
+        // Метод start  
         this.start = function () {      
             isSNG = ['uk', 'ru', 'be'].indexOf(Lampa.Storage.field('language')) >= 0;      
               
@@ -551,7 +494,7 @@
         };      
     }      
       
-    // Функції налаштувань  
+    // Функції налаштувань та ініціалізація...  
     function showPlaylistSettings() {      
         var config = Lampa.Storage.get('iptv_pro_v12', {      
             playlists: [{ url: '' }],      
@@ -586,7 +529,6 @@
         });      
     }      
       
-    // Функція для додавання налаштувань      
     function addPluginSettings() {      
         try {      
             if (!Lampa.SettingsApi || !Lampa.SettingsApi.addParam) return;      
@@ -609,22 +551,18 @@
         } catch (e) { console.log("settings error", e); }      
     }      
       
-    // Ініціалізація плагіна  
     function init() {      
         Lampa.Component.add('iptv_pro', IPTVComponent);      
               
-        // Додання пункту меню      
         var item = $('<li class="menu__item selector"><div class="menu__text">IPTV PRO</div></li>');      
         item.on('hover:enter', function () {      
             Lampa.Activity.push({ title: 'IPTV PRO', component: 'iptv_pro' });      
         });      
         $('.menu .menu__list').append(item);      
               
-        // Додання налаштувань      
         addPluginSettings();      
     }      
       
-    // Запуск плагіна  
     if (window.app_ready) init();      
     else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') init(); });      
       
