@@ -1,45 +1,6 @@
 (function () {  
     'use strict';  
   
-    // Глобальні функції для налаштувань  
-    function openPlaylistInput() {  
-        var config = Lampa.Storage.get('iptv_pro_v12', {  
-            playlists: [{ url: '' }],  
-            epg_url: ''  
-        });  
-        var currentUrl = config.playlists[0].url || '';  
-          
-        Lampa.Template.show('input', {  
-            title: 'Налаштування плейлиста',  
-            value: currentUrl,  
-            placeholder: 'Введіть URL плейлиста',  
-            onChange: function(value) {  
-                config.playlists[0].url = value;  
-                Lampa.Storage.set('iptv_pro_v12', config);  
-                Lampa.Noty.show('Плейлист оновлено');  
-            }  
-        });  
-    }  
-  
-    function openEpgInput() {  
-        var config = Lampa.Storage.get('iptv_pro_v12', {  
-            playlists: [{ url: '' }],  
-            epg_url: ''  
-        });  
-        var currentUrl = config.epg_url || '';  
-          
-        Lampa.Template.show('input', {  
-            title: 'Налаштування EPG',  
-            value: currentUrl,  
-            placeholder: 'Введіть URL EPG',  
-            onChange: function(value) {  
-                config.epg_url = value;  
-                Lampa.Storage.set('iptv_pro_v12', config);  
-                Lampa.Noty.show('EPG оновлено');  
-            }  
-        });  
-    }  
-  
     function IPTVComponent() {  
         var _this = this;  
         var root, colG, colC, colE;  
@@ -134,7 +95,6 @@
             this.renderG();  
         };  
   
-        // Оригінальний рендеринг груп без налаштувань  
         this.renderG = function () {  
             colG.empty();  
             Object.keys(groups_data).forEach(function (g, i) {  
@@ -269,7 +229,42 @@
         this.destroy = function () { Lampa.Controller.remove('iptv_pro'); root.remove(); };  
     }  
   
-    // Функція для додавання кнопки в налаштування  
+    // Спрощена функція налаштувань  
+    function showPlaylistSettings() {  
+        var config = Lampa.Storage.get('iptv_pro_v12', {  
+            playlists: [{ url: '' }],  
+            epg_url: ''  
+        });  
+          
+        Lampa.Input.edit({  
+            value: config.playlists[0].url || '',  
+            title: 'URL плейлиста',  
+            placeholder: 'https://example.com/playlist.m3u'  
+        }, function(new_value) {  
+            config.playlists[0].url = new_value;  
+            Lampa.Storage.set('iptv_pro_v12', config);  
+            Lampa.Noty.show('Плейлист оновлено');  
+        });  
+    }  
+  
+    function showEpgSettings() {  
+        var config = Lampa.Storage.get('iptv_pro_v12', {  
+            playlists: [{ url: '' }],  
+            epg_url: ''  
+        });  
+          
+        Lampa.Input.edit({  
+            value: config.epg_url || '',  
+            title: 'URL EPG',  
+            placeholder: 'https://example.com/epg.xml.gz'  
+        }, function(new_value) {  
+            config.epg_url = new_value;  
+            Lampa.Storage.set('iptv_pro_v12', config);  
+            Lampa.Noty.show('EPG оновлено');  
+        });  
+    }  
+  
+    // Функція для додавання налаштувань  
     function addPluginSettings() {  
         try {  
             if (!Lampa.SettingsApi || !Lampa.SettingsApi.addParam) return;  
@@ -278,16 +273,16 @@
               
             Lampa.SettingsApi.addParam({  
                 component: "iptv_pro",  
-                param: { name: "Налаштування плейлиста", type: "button" },  
-                field: { name: "Налаштування плейлиста", description: "Ввести URL плейлиста" },  
-                onChange: openPlaylistInput  
+                param: { name: "Плейлист URL", type: "button" },  
+                field: { name: "Плейлист URL", description: "Ввести URL плейлиста" },  
+                onChange: showPlaylistSettings  
             });  
               
             Lampa.SettingsApi.addParam({  
                 component: "iptv_pro",   
-                param: { name: "Налаштування EPG", type: "button" },  
-                field: { name: "Налаштування EPG", description: "Ввести URL EPG" },  
-                onChange: openEpgInput  
+                param: { name: "EPG URL", type: "button" },  
+                field: { name: "EPG URL", description: "Ввести URL EPG" },  
+                onChange: showEpgSettings  
             });  
         } catch (e) { console.log("settings error", e); }  
     }  
