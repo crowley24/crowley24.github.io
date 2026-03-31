@@ -514,56 +514,104 @@
   
     // Метод updateFocus  
     this.updateFocus = function () {  
-        $('.iptv-item').removeClass('active');  
-        var col = active_col === 'groups' ? colG : colC;  
-        var index = active_col === 'groups' ? index_g : index_c;  
-        var item = col.find('.iptv-item').eq(index);  
-        item.addClass('active');  
-        if (item.length) item[0].scrollIntoView({ block: 'center', behavior: 'smooth' });  
-    };  
+    colG.find('.iptv-item').removeClass('active');  
+    colC.find('.iptv-item').removeClass('active');  
+      
+    if (active_col === 'groups') {  
+        var groupItems = colG.find('.iptv-item');  
+        if (groupItems.length > 0) {  
+            $(groupItems[index_g]).addClass('active');  
+        }  
+    } else if (active_col === 'channels') {  
+        var channelItems = colC.find('.iptv-item');  
+        if (channelItems.length > 0) {  
+            $(channelItems[index_c]).addClass('active');  
+        }  
+    }  
+};
   
     // Метод start  
     this.start = function () {  
-        isSNG = ['uk', 'ru', 'be'].indexOf(Lampa.Storage.field('language')) >= 0;  
-          
-        // Запуск інтервалу оновлення EPG  
-        if (epgInterval) clearInterval(epgInterval);  
-        epgInterval = setInterval(function() {  
-            for (var epgId in EPG) {  
-                epgRender(epgId);  
-            }  
-        }, 10000);  
+    isSNG = ['uk', 'ru', 'be'].indexOf(Lampa.Storage.field('language')) >= 0;  
+      
+    // Запуск інтервалу оновлення EPG  
+    if (epgInterval) clearInterval(epgInterval);  
+    epgInterval = setInterval(function() {  
+        for (var epgId in EPG) {  
+            epgRender(epgId);  
+        }  
+    }, 10000);  
   
-        Lampa.Controller.add('iptv_pro', {  
-            up: function () {  
-                if (active_col === 'groups') index_g = Math.max(0, index_g - 1);  
-                else index_c = Math.max(0, index_c - 1);  
+    Lampa.Controller.add('iptv_pro', {  
+        up: function () {  
+            if (active_col === 'groups') {  
+                index_g = Math.max(0, index_g - 1);  
                 _this.updateFocus();  
-                if (active_col === 'channels') _this.showDetails(current_list[index_c]);  
-            },  
-            down: function () {  
-                if (active_col === 'groups') index_g = Math.min(colG.find('.iptv-item').length - 1, index_g + 1);  
-                else index_c = Math.min(current_list.length - 1, index_c + 1);  
+            } else if (active_col === 'channels') {  
+                index_c = Math.max(0, index_c - 1);  
                 _this.updateFocus();  
-                if (active_col === 'channels') _this.showDetails(current_list[index_c]);  
-            },  
-            right: function () {  
-                if (active_col === 'groups') _this.renderC(groups_data[Object.keys(groups_data)[index_g]]);  
-            },  
-            left: function () {  
-                if (active_col === 'channels') { active_col = 'groups'; _this.updateFocus(); }  
-            },  
-            enter: function () {  
-                if (active_col === 'groups') _this.renderC(groups_data[Object.keys(groups_data)[index_g]]);  
-                else if (current_list[index_c]) Lampa.Player.play({ url: current_list[index_c].url, title: current_list[index_c].name });  
-            },  
-            back: function () {  
-                if (active_col === 'channels') { active_col = 'groups'; _this.updateFocus(); }  
-                else Lampa.Activity.backward();  
+                _this.showDetails(current_list[index_c]);  
             }  
-        });  
-        Lampa.Controller.toggle('iptv_pro');  
-    };  
+        },  
+        down: function () {  
+            if (active_col === 'groups') {  
+                index_g = Math.min(colG.find('.iptv-item').length - 1, index_g + 1);  
+                _this.updateFocus();  
+            } else if (active_col === 'channels') {  
+                index_c = Math.min(current_list.length - 1, index_c + 1);  
+                _this.updateFocus();  
+                _this.showDetails(current_list[index_c]);  
+            }  
+        },  
+        right: function () {  
+            if (active_col === 'groups') {  
+                // Перехід до центральної колонки  
+                active_col = 'channels';  
+                index_c = 0;  
+                _this.updateFocus();  
+                _this.showDetails(current_list[index_c]);  
+            } else if (active_col === 'channels') {  
+                // Перехід до правої колонки (EPG)  
+                active_col = 'details';  
+                _this.updateFocus();  
+            }  
+        },  
+        left: function () {  
+            if (active_col === 'channels') {  
+                // Повернення до лівої колонки  
+                active_col = 'groups';  
+                _this.updateFocus();  
+            } else if (active_col === 'details') {  
+                // Повернення до центральної колонки  
+                active_col = 'channels';  
+                _this.updateFocus();  
+            }  
+        },  
+        enter: function () {  
+            if (active_col === 'groups') {  
+                _this.renderC(groups_data[Object.keys(groups_data)[index_g]]);  
+            } else if (active_col === 'channels' && current_list[index_c]) {  
+                Lampa.Player.play({   
+                    url: current_list[index_c].url,   
+                    title: current_list[index_c].name   
+                });  
+            }  
+        },  
+        back: function () {  
+            if (active_col === 'channels') {  
+                active_col = 'groups';  
+                _this.updateFocus();  
+            } else if (active_col === 'details') {  
+                active_col = 'channels';  
+                _this.updateFocus();  
+            } else {  
+                Lampa.Activity.backward();  
+            }  
+        }  
+    });  
+      
+    Lampa.Controller.toggle('iptv_pro');  
+};  
   
     this.render = function () { return root; };  
     this.destroy = function () {  
