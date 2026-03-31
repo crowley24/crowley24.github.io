@@ -116,13 +116,32 @@ function pluginPage(object) {
             return;  
         } else {  
             var listUrl = prepareUrl(object.url);  
+            console.log('Loading playlist from:', listUrl);  
+              
+            // Спочатку спробувати прямий запит  
             network.native(  
                 listUrl,  
                 function (data) {  
-                    parseList.call(_this, data); // Виправлено: передаємо контекст  
+                    console.log('Direct load successful, data length:', data ? data.length : 0);  
+                    parseList.call(_this, data);  
                 },  
                 function () {  
-                    emptyResult();  
+                    console.log('Direct load failed, trying CORS proxy...');  
+                    // Якщо пряме завантаження не вдалося, спробувати через CORS проксі  
+                    var proxyUrl = 'https://cors-anywhere.herokuapp.com/' + listUrl;  
+                    network.silent(  
+                        proxyUrl,  
+                        function (data) {  
+                            console.log('CORS proxy load successful, data length:', data ? data.length : 0);  
+                            parseList.call(_this, data);  
+                        },  
+                        function () {  
+                            console.log('CORS proxy also failed');  
+                            emptyResult();  
+                        },  
+                        false,  
+                        {dataType: 'text'}  
+                    );  
                 },  
                 false,  
                 {dataType: 'text'}  
@@ -132,8 +151,10 @@ function pluginPage(object) {
     };  
       
     function parseList(data) {  
-        // Тепер 'this' вказує на правильний контекст завдяки call()  
-        if (typeof data != 'string' || data.substr(0, 7).toUpperCase() !== "#EXTM3U") {  
+        console.log('Parsing M3U data...');  
+          
+        if (!data || typeof data != 'string' || data.substr(0, 7).toUpperCase() !== "#EXTM3U") {  
+            console.log('Invalid M3U data received');  
             var empty = new Lampa.Empty();  
             html.append(empty.render());  
             return;  
@@ -181,7 +202,10 @@ function pluginPage(object) {
             }  
         }  
           
-        this.build(catalog); // Використовуємо this замість _this  
+        console.log('Parsed', Object.keys(catalog).length, 'groups with',   
+                    Object.values(catalog).reduce((sum, group) => sum + group.channels.length, 0), 'channels');  
+          
+        this.build(catalog);  
     }  
       
     function epgRender(epgId) {  
@@ -456,7 +480,7 @@ Lampa.SettingsApi.addComponent(plugin);
 addSettings('input', {  
     title: langGet('playlist_url'),  
     name: 'playlist_url',  
-    default: 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8',  
+    default: 'https://iptv-org.github.io/iptv/countries/ua.m3u8',  
     placeholder: 'http://example.com/playlist.m3u8',  
     description: langGet('playlist_url_desc')  
 });  
@@ -474,7 +498,7 @@ addSettings('trigger', {
 // Створення активності для плагіна  
 var activity = {  
     id: 0,  
-    url: getSettings('playlist_url') || 'https://raw.githubusercontent.com/Free-TV/IPTV/master/playlist.m3u8',  
+    url: getSettings('playlist_url') || 'https://iptv-org.github.io/iptv/countries/ua.m3u8',  
     title: plugin.name,  
     groups: [],  
     currentGroup: '',  
