@@ -14,10 +14,10 @@
   
         var storage_key = 'iptv_pro_v12';  
   
-        // Оновлюємо конфігурацію при кожному зверненні  
+        // Завжди читаємо свіжу конфігурацію  
         this.getConfig = function() {  
             return Lampa.Storage.get(storage_key, {  
-                playlists: [{ url: '' }], // Порожний URL за замовчуванням  
+                playlists: [{ url: '' }],  
                 epg_url: '',  
                 favorites: [],  
                 current_pl_index: 0  
@@ -124,29 +124,21 @@
                 }  
             }  
               
-            console.log('Parsed channels:', channel_count, 'Groups:', Object.keys(groups_data));  
-              
-            if (channel_count === 0) {  
-                Lampa.Noty.show('Плейлист не містить каналів');  
-                this.showEmptyState();  
-                return;  
-            }  
+            console.log('Parsed channels:', channel_count);  
+            console.log('Groups found:', Object.keys(groups_data));  
               
             this.renderG();  
+              
+            if (channel_count === 0) {  
+                colC.empty().append('<div style="padding:2rem;color:#999;text-align:center;">Канали не знайдено</div>');  
+            }  
         };  
   
         this.renderG = function () {  
             colG.empty();  
-            var group_names = Object.keys(groups_data);  
-            console.log('Rendering groups:', group_names);  
-              
-            if (group_names.length === 0) {  
-                colG.append('<div style="padding:1rem;color:#999;">Немає груп каналів</div>');  
-                return;  
-            }  
-              
-            group_names.forEach(function (g, i) {  
-                var item = $('<div class="iptv-item">' + g + ' (' + groups_data[g].length + ')</div>');  
+            Object.keys(groups_data).forEach(function (g, i) {  
+                var count = groups_data[g].length;  
+                var item = $('<div class="iptv-item">' + g + ' (' + count + ')</div>');  
                 item.on('click', function () {   
                     index_g = i;   
                     active_col = 'groups';   
@@ -159,28 +151,28 @@
   
         this.renderC = function (list) {  
             colC.empty();  
-            current_list = list || [];  
-            current_list.forEach(function (c, idx) {  
-                var row = $('<div class="iptv-item">' +  
-                                '<div class="channel-row">' +  
-                                    '<img class="channel-logo" src="' + c.logo + '" onerror="this.src=\'https://via.placeholder.com/40?text=TV\'">' +  
-                                    '<div class="channel-title">' + c.name + '</div>' +  
-                                '</div>' +  
-                            '</div>');  
-                row.on('click', function () { Lampa.Player.play({ url: c.url, title: c.name }); });  
-                row.on('hover:focus', function () { index_c = idx; _this.showDetails(c); });  
+            current_list = list;  
+            list.forEach(function (ch, i) {  
+                var row = $('<div class="iptv-item channel-row">' +  
+                    '<img class="channel-logo" src="' + (ch.logo || '') + '" onerror="this.src=\'\'">' +  
+                    '<div class="channel-title">' + ch.name + '</div>' +  
+                    '</div>');  
+                row.on('click', function () {   
+                    index_c = i;   
+                    active_col = 'channels';   
+                    _this.showDetails(ch);   
+                    _this.updateFocus();   
+                });  
                 colC.append(row);  
             });  
-            active_col = 'channels';  
-            index_c = 0;  
-            if (current_list.length) this.showDetails(current_list[0]);  
+            if (list.length) this.showDetails(list[0]);  
             this.updateFocus();  
         };  
   
         this.showDetails = function (channel) {  
             colE.empty();  
             var content = $('<div class="details-box">' +  
-                '<img src="' + channel.logo + '" style="width:100%; max-height:150px; object-fit:contain; margin-bottom:1rem; background:#000; padding:5px; border-radius:5px;" onerror="this.src=\'https://via.placeholder.com/150?text=LOGO\'">' +  
+                '<img src="' + channel.logo + '" style="width:100%; max-height:150px; object-fit:contain; margin-bottom:1rem; background:#000; padding:5px; border-radius:5px;" onerror="this.style.display=\'none\'">' +  
                 '<div class="epg-title-big">' + channel.name + '</div>' +  
                 '<div class="epg-now">ЗАРАЗ В ЕФІРІ:</div>' +  
                 '<div class="epg-prog-name" id="epg-title">Пошук програми...</div>' +  
@@ -189,7 +181,21 @@
                 '</div>');  
             colE.append(content);  
   
-            // EPG loading logic here...  
+            if (Lampa.SettingsApi && Lampa.SettingsApi.getEPG) {  
+                Lampa.SettingsApi.getEPG({ id: channel.tvg_id, name: channel.name }, function (data) {  
+                    if (data && data.program && data.program[0]) {  
+                        var p = data.program[0];  
+                        $('#epg-title').text(p.title);  
+                        if (p.start && p.stop) {  
+                            var now = Date.now() / 1000;  
+                            var perc = ((now - p.start) / (p.stop - p.start)) * 100;  
+                            $('#epg-progress').css('width', Math.min(100, Math.max(0, perc)) + '%');  
+                        }  
+                    } else {  
+                        $('#epg-title').text('Програма недоступна');  
+                    }  
+                });  
+            }  
         };  
   
         this.updateFocus = function () {  
@@ -267,6 +273,7 @@
             Lampa.Storage.set('iptv_pro_v12', config);  
             Lampa.Noty.show('Плейлист оновлено');  
               
+            // Примусове перезавантаження плейлиста  
             if (currentComponent) {  
                 currentComponent.loadPlaylist();  
             }  
