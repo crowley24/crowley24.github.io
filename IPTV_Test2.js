@@ -17,12 +17,12 @@
                 name: 'TEST',
                 url: 'https://m3u.ch/pl/61b9ea4e90c4cf3165a4d19656e126a8_cf72fbb9e7ee647289c76620f1df15b4.m3u'
             }],
-           // epg_url: 'https://iptvx.one/epg/epg.xml.gz',
-            epg_url: 'http://1lot.tv/epg/epg.xml',
+            epg_url: 'https://iptvx.one/epg/epg.xml.gz',
             favorites: [],
             current_pl_index: 0
         });
 
+        // Функція очищення назви для пошуку (Matching)
         var chShortName = function(chName){
             return chName.toLowerCase()
                 .replace(/\s+\(архив\)$/, '')
@@ -138,31 +138,39 @@
             this.updateFocus();
         };
 
-        // --- ВИПРАВЛЕНИЙ loadEPG (з перевіркою наявності Lampa.Tvg) ---
+        // --- МАКСИМАЛЬНО ПОТУЖНИЙ loadEPG (Метод "Ультра-пошук") ---
         this.loadEPG = function(channel, callback) {
             var id = channel.tvg_id || '';
             var name = channel.name;
-            var cache_key = id + '_' + chShortName(name);
+            var short = chShortName(name);
+            var cache_key = id + '_' + short;
 
             if (epg_cache[cache_key]) return callback(epg_cache[cache_key]);
 
-            // Перевіряємо чи є взагалі об'єкт Tvg, якщо ні - використовуємо заглушку
-            var TvgApi = Lampa.Tvg || (Lampa.Iptv ? Lampa.Iptv.tvg() : null);
-
-            if (TvgApi && typeof TvgApi.get === 'function') {
-                TvgApi.get({ id: id, name: name }, function(data) {
-                    if (!data || !data.program || !data.program.length) {
-                        TvgApi.get({ id: '', name: chShortName(name) }, function(data_alt) {
-                            epg_cache[cache_key] = data_alt;
-                            callback(data_alt);
-                        });
-                    } else {
+            // 1. Спробуємо через Lampa.Tvg (офіційний шлях)
+            if (Lampa.Tvg && typeof Lampa.Tvg.get === 'function') {
+                Lampa.Tvg.get({ id: id, name: name }, function(data) {
+                    if (data && data.program && data.program.length) {
                         epg_cache[cache_key] = data;
-                        callback(data);
+                        return callback(data);
                     }
+                    
+                    // 2. Якщо не знайшло - спробуємо прямий доступ до внутрішнього кешу IPTV
+                    var full_epg = Lampa.Storage.get('iptv_epg', {});
+                    var found_data = full_epg[id] || full_epg[name] || full_epg[short];
+                    
+                    if (found_data && found_data.program) {
+                        epg_cache[cache_key] = found_data;
+                        return callback(found_data);
+                    }
+
+                    // 3. Остання спроба - пошук за очищеним ім'ям через Tvg API
+                    Lampa.Tvg.get({ id: '', name: short }, function(data_alt) {
+                        epg_cache[cache_key] = data_alt;
+                        callback(data_alt);
+                    });
                 });
             } else {
-                console.log('EPG System not ready yet');
                 callback(null);
             }
         };
@@ -177,13 +185,13 @@
                     '<div class="epg-title-big">' + channel.name + '</div>' +
                     '<div id="epg-dynamic-part">' +
                         '<div class="epg-now-label">Зараз в ефірі</div>' +
-                        '<div class="epg-prog-name" id="epg-prog-title">Пошук...</div>' +
+                        '<div class="epg-prog-name" id="epg-prog-title">Завантаження...</div>' +
                         '<div class="epg-timeline">' +
                             '<span id="epg-start">--:--</span>' +
                             '<span id="epg-stop">--:--</span>' +
                         '</div>' +
                         '<div class="epg-bar"><div class="epg-bar-inner" id="epg-progress-inner"></div></div>' +
-                        '<div class="epg-description" id="epg-prog-desc">Звіряємо базу каналів...</div>' +
+                        '<div class="epg-description" id="epg-prog-desc">Отримуємо дані...</div>' +
                     '</div>' +
                 '</div>'
             );
@@ -219,7 +227,7 @@
                     epg_interval = setInterval(update, 10000);
                 } else {
                     $('#epg-prog-title').text('Програма відсутня');
-                    $('#epg-prog-desc').text('Дані телепрограми не знайдено для цього каналу.');
+                    $('#epg-prog-desc').text('Дані не знайдені в системному кеші Lampa.');
                 }
             });
         };
