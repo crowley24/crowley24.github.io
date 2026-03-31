@@ -12,8 +12,9 @@ var EPG = {};
 var epgInterval;  
 var curListId = -1;  
 var defaultGroup = 'Інші';  
+var currentGroup = '';  
   
-// Шаблон EPG  
+// Шаблон EPG з оригінального коду  
 var epgTemplate = $(('<div id="PLUGIN_epg">\n' +  
 	'<h2 class="js-epgChannel"></h2>\n' +  
 	'<div class="PLUGIN-details__program-body js-epgNow">\n' +  
@@ -34,6 +35,15 @@ var epgTemplate = $(('<div id="PLUGIN_epg">\n' +
 	'   <div class="PLUGIN-details__program-list js-epgList">' +  
 	'   </div>\n' +  
 	'</div>' +  
+	'</div>').replace(/PLUGIN/g, plugin.component)  
+);  
+  
+var epgItemTeplate = $((  
+	'<div class="PLUGIN-program selector">\n' +  
+	'   <div class="PLUGIN-program__time js-epgTime">XX:XX</div>\n' +  
+	'   <div class="PLUGIN-program__body">\n' +  
+	'	   <div class="PLUGIN-program__title js-epgTitle"> </div>\n' +  
+	'   </div>\n' +  
 	'</div>').replace(/PLUGIN/g, plugin.component)  
 );  
   
@@ -87,6 +97,14 @@ function pluginPage(object) {
 	var info;  
 	var last;  
 	  
+	// Створюємо триколонковий layout  
+	var layout = $('<div class="iptv-layout" style="display: flex; height: 100%;"></div>');  
+	var groupsPanel = $('<div class="groups-panel" style="width: 25%; background: rgba(0,0,0,0.3); padding: 1em; overflow-y: auto;"></div>');  
+	var channelsPanel = $('<div class="channels-panel" style="width: 45%; padding: 1em; overflow-y: auto;"></div>');  
+	var epgPanel = $('<div class="epg-panel" style="width: 30%; background: rgba(0,0,0,0.2); padding: 1em; overflow-y: auto;"></div>');  
+	  
+	layout.append(groupsPanel).append(channelsPanel).append(epgPanel);  
+	  
 	if (epgInterval) clearInterval(epgInterval);  
 	epgInterval = setInterval(function() {  
 		for (var epgId in EPG) {  
@@ -115,7 +133,6 @@ function pluginPage(object) {
 			var listUrl = prepareUrl(object.url);  
 			console.log('Loading playlist from:', listUrl);  
 			  
-			// Спочатку спробувати прямий запит  
 			network.native(  
 				listUrl,  
 				function (data) {  
@@ -124,7 +141,6 @@ function pluginPage(object) {
 				},  
 				function () {  
 					console.log('Direct load failed, trying CORS proxy...');  
-					// Якщо пряме завантаження не вдалося, спробувати через CORS проксі  
 					var proxyUrl = 'https://cors-anywhere.herokuapp.com/' + listUrl;  
 					network.silent(  
 						proxyUrl,  
@@ -151,7 +167,6 @@ function pluginPage(object) {
 		console.log('=== M3U Parse Debug ===');  
 		console.log('Raw data type:', typeof data);  
 		console.log('Raw data length:', data ? data.length : 'null');  
-		console.log('Raw data preview:', data ? data.substring(0, 200) + '...' : 'null');  
 		  
 		if (!data || typeof data != 'string') {  
 			console.log('ERROR: No valid data received');  
@@ -162,7 +177,6 @@ function pluginPage(object) {
 		  
 		if (data.substr(0, 7).toUpperCase() !== "#EXTM3U") {  
 			console.log('ERROR: Not a valid M3U file');  
-			console.log('First 100 chars:', data.substring(0, 100));  
 			var empty = new Lampa.Empty();  
 			html.append(empty.render());  
 			return;  
@@ -170,36 +184,43 @@ function pluginPage(object) {
 		  
 		console.log('M3U header found, parsing...');  
 		  
-		catalog = {  
-			'': {  
-				title: 'Усі канали',  
-				channels: []  
-			}  
-		};  
+		catalog = {};  
+		var l = data.split(/\r?\n/);  
+		var cnt = 0, i = 1, chNum = 0, m, defGroup = defaultGroup;  
 		  
-		var lines = data.split('\n');  
-		var channelCount = 0;  
-		  
-		for (var i = 0; i < lines.length; i++) {  
-			var line = lines[i].trim();  
+		while (i < l.length) {  
+			chNum = cnt + 1;  
+			var channel = {  
+				ChNum: chNum,  
+				Title: "Канал " + chNum,  
+				Url: '',  
+				Group: ''  
+			};  
 			  
-			if (line.startsWith('#EXTINF:')) {  
-				var title = line.split(',')[1];  
-				if (title) {  
-					var url = lines[i + 1] ? lines[i + 1].trim() : '';  
-					if (url && url.startsWith('http')) {  
-						catalog[''].channels.push({  
-							Title: title.trim(),  
-							Url: url,  
-							ChNum: ++channelCount  
-						});  
-						console.log('Added channel:', title);  
-					}  
+			for (; cnt < chNum && i < l.length; i++) {  
+				if (!!(m = l[i].match(/^#EXTGRP:\s*(.+?)\s*$/i)) && m[1].trim() !== '') {  
+					defGroup = m[1].trim();  
+				} else if (!!(m = l[i].match(/^#EXTINF:\s*-?\d+(\s+\S.*?\s*)?,(.+)$/i))) {  
+					channel.Title = m[2].trim();  
+				} else if (!!(m = l[i].match(/^(https?):\/\/(.+)$/i))) {  
+					channel.Url = m[0].trim();  
+					channel.Group = defGroup + "";  
+					cnt++;  
 				}  
+			}  
+			  
+			if (!!channel.Url) {  
+				if (!catalog[channel.Group]) {  
+					catalog[channel.Group] = {  
+						title: channel.Group,  
+						channels: []  
+					};  
+				}  
+				catalog[channel.Group].channels.push(channel);  
 			}  
 		}  
 		  
-		console.log('Total channels parsed:', channelCount);  
+		console.log('Parsed', Object.keys(catalog).length, 'groups');  
 		this.build(catalog);  
 	}  
 	  
@@ -228,30 +249,86 @@ function pluginPage(object) {
 	this.append = function (data) {  
 		var _this2 = this;  
 		  
-		data.forEach(function (channel) {  
-			var card = Lampa.Template.get('card', {  
-				title: channel.Title,  
-				release_year: ''  
-			});  
+		// Очищуємо панелі  
+		groupsPanel.empty();  
+		channelsPanel.empty();  
+		epgPanel.empty();  
+		  
+		// Відображаємо групи  
+		var groupIndex = 0;  
+		for (var groupName in catalog) {  
+			var groupItem = $('<div class="group-item selector" style="padding: 0.8em; margin: 0.3em 0; background: rgba(255,255,255,0.1); border-radius: 0.3em; cursor: pointer;' +   
+				(groupName === currentGroup ? 'background: rgba(255,255,255,0.3);' : '') + '">' +  
+				'<div style="font-weight: bold;">' + catalog[groupName].title + '</div>' +  
+				'<div style="font-size: 0.9em; opacity: 0.7;">' + catalog[groupName].channels.length + ' каналів</div>' +  
+				'</div>');  
 			  
-			card.addClass('card--collection');  
+			groupItem.on('hover:enter', function(group) {  
+				return function() {  
+					currentGroup = group;  
+					_this2.build(catalog);  
+				};  
+			}(groupName));  
 			  
-			var img = card.find('.card__img')[0];  
-			img.onerror = function (e) {  
-				var name = channel.Title.replace(/\s+/g, '').substring(0, 3).toUpperCase();  
-				card.find('.card__img').replaceWith('<div class="card__img" style="display:flex;align-items:center;justify-content:center;font-size:2em;background:#333;color:#fff">' + name + '</div>');  
-				card.addClass('card--loaded');  
-			};  
+			groupsPanel.append(groupItem);  
+		}  
+		  
+		// Вибираємо поточну групу або першу  
+		if (!currentGroup || !catalog[currentGroup]) {  
+			currentGroup = Object.keys(catalog)[0];  
+		}  
+		  
+		var currentChannels = catalog[currentGroup].channels;  
+		  
+		// Відображаємо канали як список  
+		currentChannels.forEach(function (channel, index) {  
+			var channelItem = $('<div class="channel-item selector" style="display: flex; align-items: center; padding: 0.8em; margin: 0.3em 0; background: rgba(255,255,255,0.1); border-radius: 0.3em; cursor: pointer;" data-channel-index="' + index + '">' +  
+				'<div style="width: 3em; text-align: center; font-weight: bold; opacity: 0.7;">' + channel.ChNum + '</div>' +  
+				'<div style="flex: 1; margin-left: 1em;">' + channel.Title + '</div>' +  
+				'<div class="card__age" style="margin-left: 1em; display: none;">' +  
+				'<div class="card__epg-progress js-epgProgress" style="height: 3px; background: #4682B4; border-radius: 2px; margin-bottom: 2px;"></div>' +  
+				'<div class="card__epg-title js-epgTitle" style="font-size: 0.8em; color: #ccc;"></div>' +  
+				'</div>' +  
+				'</div>');  
 			  
-			if (channel['tvg-logo']) {  
-				img.src = channel['tvg-logo'];  
-			} else {  
-				img.onerror();  
+			// Додаємо EPG дані до каналу  
+			if (channel['epgId']) {  
+				channelItem.attr('data-epg-id', channel['epgId']);  
 			}  
 			  
-			card.find('.card__age').html('<div class="card__epg-progress js-epgProgress"></div><div class="card__epg-title js-epgTitle"></div>');  
-			  
-			card.playThis = function(){  
+			channelItem.on('hover:focus', function() {  
+				last = channelItem[0];  
+				scroll.update(channelItem, true);  
+				  
+				// Оновлюємо EPG панель  
+				epgPanel.empty();  
+				epgPanel.append('<h3 style="margin: 0 0 1em 0;">' + channel.Title + '</h3>');  
+				  
+				if (channel['epgId'] && EPG[channel['epgId']]) {  
+					var epg = EPG[channel['epgId']][2];  
+					if (epg && epg.length) {  
+						var nowDiv = $('<div style="margin-bottom: 1.5em;"><h4 style="color: #4682B4; margin-bottom: 0.5em;">Зараз</h4></div>');  
+						var afterDiv = $('<div><h4 style="color: #666; margin-bottom: 0.5em;">Далі</h4></div>');  
+						  
+						epg.forEach(function(program, index) {  
+							var programDiv = $('<div style="padding: 0.5em; margin: 0.3em 0; background: rgba(255,255,255,0.05); border-radius: 0.3em;">' +  
+								'<div style="font-weight: bold; margin-bottom: 0.3em;">' + toLocaleTimeString(program[0] * 60) + '</div>' +  
+								'<div>' + program[2] + '</div>' +  
+								'</div>');  
+							  
+							if (index === 0) {  
+								nowDiv.append(programDiv);  
+							} else if (index < 4) {  
+								afterDiv.append(programDiv);  
+							}  
+						});  
+						  
+						epgPanel.append(nowDiv).append(afterDiv);  
+					}  
+				} else {  
+					epgPanel.append('<div style="opacity: 0.6;">Телепрограма недоступна</div>');  
+				}  
+			}).on('hover:enter', function(){  
 				var video = {  
 					title: channel.Title,  
 					url: prepareUrl(channel.Url),  
@@ -261,7 +338,7 @@ function pluginPage(object) {
 				};  
 				  
 				var playlist = [];  
-				data.forEach(function (elem, index) {  
+				currentChannels.forEach(function (elem, index) {  
 					playlist.push({  
 						title: (index + 1) + '. ' + elem.Title,  
 						url: prepareUrl(elem.Url),  
@@ -273,69 +350,22 @@ function pluginPage(object) {
 				  
 				Lampa.Player.play(video);  
 				Lampa.Player.playlist(playlist);  
-			};  
-			  
-			card.on('hover:focus hover:hover touchstart', function (event) {  
-				if (event.type && event.type !== 'touchstart' && event.type !== 'hover:hover') {  
-					scroll.update(card, true);  
-				}  
-				last = card[0];  
-				info.find('.info__title').text(channel.Title);  
-				  
-				var ec = $('#' + plugin.component + '_epg');  
-				ec.find('.js-epgChannel').text(channel.Title);  
-				  
-				if (!channel['epgId']) {  
-					info.find('.info__create').empty();  
-					epgIdCurrent = '';  
-					ec.find('.js-epgNow').hide();  
-					ec.find('.js-epgAfter').hide();  
-				} else {  
-					epgIdCurrent = channel['epgId'];  
-					epgRender(channel['epgId']);  
-				}  
-			}).on('hover:enter', function() {  
-				card.playThis();  
 			});  
 			  
-			body.append(card);  
+			channelsPanel.append(channelItem);  
+		});  
+		  
+		// Додаємо layout до body  
+		body.empty().append(layout);  
+		  
+		// Оновлюємо EPG для видимих каналів  
+		channelsPanel.find('[data-epg-id]').each(function() {  
+			var epgId = $(this).attr('data-epg-id');  
+			if (epgId) epgRender(epgId);  
 		});  
 		  
 		_this2.activity.loader(false);  
 		_this2.activity.toggle();  
-	};  
-	  
-	this.build = function (catalog) {  
-		var channelGroup = catalog[object.currentGroup] || catalog[''] || {channels: []};  
-		var _this2 = this;  
-		  
-		Lampa.Background.change();  
-		  
-		Lampa.Template.add(plugin.component + '_info_radio', '<div class="info layer--width"><div class="info__left"><div class="info__title"></div><div class="info__title-original"></div><div class="info__create"></div></div></div>');  
-		  
-		info = Lampa.Template.get(plugin.component + '_info_radio');  
-		info.find('.info__title-original').text(channelGroup.title || '');  
-		info.find('.info__title').text('');  
-		html.append(info.append());  
-		  
-		if (channelGroup.channels.length) {  
-			scroll.render().addClass('layer--wheight').data('mheight', info);  
-			html.append(scroll.render());  
-			this.append(channelGroup.channels);  
-			  
-			if (getStorage('epg', false)) {  
-				scroll.render().css({float: "left", width: '70%'});  
-				scroll.render().parent().append(epgTemplate);  
-			}  
-			  
-			scroll.append(body);  
-		} else {  
-			var empty = new Lampa.Empty();  
-			html.append(empty.render());  
-			this.activity.loader(false);  
-			Lampa.Controller.collectionSet(info);  
-			Navigator.move('right');  
-		}  
 	};  
 	  
 	this.start = function () {  
@@ -343,15 +373,20 @@ function pluginPage(object) {
 		var _this = this;  
 		Lampa.Controller.add('content', {  
 			toggle: function toggle() {  
-				Lampa.Controller.collectionSet(scroll.render());  
-				Lampa.Controller.collectionFocus(last || false, scroll.render());  
+				Lampa.Controller.collectionSet(layout);  
+				Lampa.Controller.collectionFocus(last || false, layout);  
 			},  
 			left: function left() {  
-				if (Navigator.canmove('left')) Navigator.move('left');  
-				else Lampa.Controller.toggle('menu');  
+				if (Navigator.canmove('left')) {  
+					Navigator.move('left');  
+				} else {  
+					Lampa.Controller.toggle('menu');  
+				}  
 			},  
 			right: function right() {  
-				if (Navigator.canmove('right')) Navigator.move('right');  
+				if (Navigator.canmove('right')) {  
+					Navigator.move('right');  
+				}  
 			},  
 			up: function up() {  
 				if (Navigator.canmove('up')) {  
@@ -361,7 +396,9 @@ function pluginPage(object) {
 				}  
 			},  
 			down: function down() {  
-				if (Navigator.canmove('down')) Navigator.move('down');  
+				if (Navigator.canmove('down')) {  
+					Navigator.move('down');  
+				}  
 			},  
 			back: function back() {  
 				Lampa.Activity.backward();  
@@ -484,9 +521,9 @@ addSettings('input', {
 addSettings('trigger', {  
 	title: langGet('epg_toggle'),  
 	name: 'epg',  
-	default: false,  
+	default: true,  
 	onChange: function(v){  
-		epgListView(v === 'true');  
+		// EPG завжди увімкнено в цій версії  
 	}  
 });  
   
