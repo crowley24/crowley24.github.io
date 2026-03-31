@@ -9,6 +9,8 @@
         var active_col = 'groups';    
         var index_g = 0, index_c = 0;    
         var epg_cache = {};    
+        var epgPath = '';    
+        var listCfg = {};    
     
         var storage_key = 'iptv_pro_v12';    
         var config = Lampa.Storage.get(storage_key, {    
@@ -20,6 +22,67 @@
             favorites: [],    
             current_pl_index: 0    
         });    
+    
+        // Допоміжні функції для EPG  
+        var utils = {  
+            uid: function() { return Date.now().toString(36); },  
+            hash: function(s) { return s.split('').reduce((a,b) => (((a << 5) - a) + b.charCodeAt(0))|0, 0); },  
+            hash36: function(s) { return (this.hash(s) * 1).toString(36); }  
+        };  
+    
+        function generateSigForString(string) {  
+            var sigTime = Math.floor(Date.now() / 1000);  
+            return sigTime.toString(36) + ':' + utils.hash36((string || '') + sigTime + utils.uid());  
+        }  
+    
+        function networkSilentSessCache(url, success, fail, param) {  
+            var context = this;  
+            var urlForKey = url.replace(/([&?])sig=[^&]+&?/, '$1');  
+            var key = ['cache', urlForKey, param ? utils.hash36(JSON.stringify(param)) : ''].join('\t');  
+            var data = sessionStorage.getItem(key);  
+            if (data) {  
+                data = JSON.parse(data);  
+                if (data[0]) typeof success === 'function' && success.apply(context, [data[1]]);  
+                else typeof fail === 'function' && fail.apply(context, [data[1]]);  
+            } else {  
+                var network = new Lampa.Reguest();  
+                network.silent(  
+                    url,  
+                    function (data) {  
+                        sessionStorage.setItem(key, JSON.stringify([true, data]));  
+                        typeof success === 'function' && success.apply(context, [data]);  
+                    },  
+                    function (data) {  
+                        sessionStorage.setItem(key, JSON.stringify([false, data]));  
+                        typeof fail === 'function' && fail.apply(context, [data]);  
+                    },  
+                    param  
+                );  
+            }  
+        }  
+    
+        function getEpgSessCache(epgId, t) {  
+            var key = ['epg', epgId].join('\t');  
+            var epg = sessionStorage.getItem(key);  
+            if (epg) {  
+                epg = JSON.parse(epg);  
+                if (t) {  
+                    if (epg.length  
+                        && (  
+                            t < epg[0][0]  
+                            || t > (epg[epg.length - 1][0] + epg[epg.length - 1][1])  
+                        )  
+                    ) return false;  
+                    while (epg.length && t >= (epg[0][0] + epg[0][1])) epg.shift();  
+                }  
+            }  
+            return epg;  
+        }  
+    
+        function setEpgSessCache(epgId, epg) {  
+            var key = ['epg', epgId].join('\t');  
+            sessionStorage.setItem(key, JSON.stringify(epg));  
+        }  
     
         this.create = function () {    
             root = $('<div class="iptv-root"></div>');    
@@ -75,6 +138,28 @@
             groups_data = { '⭐ Обране': config.favorites };    
             var current_group = 'ЗАГАЛЬНІ';    
                 
+            // Парсинг заголовка M3U для EPG налаштувань  
+            var l = str.split(/\r?\n/, 2)[0];  
+            if (l.indexOf('#EXTM3U') === 0) {  
+                var m, mm;  
+                if (!!(m = l.match(/([^\s=]+)=((["'])(.*?)\3|\S+)/g))) {  
+                    for (var jj = 0; jj < m.length; jj++) {  
+                        if (!!(mm = m[jj].match(/([^\s=]+)=((["'])(.*?)\3|\S+)/))) {  
+                            listCfg[mm[1].toLowerCase()] = mm[4] || (mm[3] ? '' : mm[2]);  
+                        }  
+                    }  
+                }  
+                listCfg['epgUrl'] = listCfg['url-tvg'] || listCfg['x-tvg-url'] || config.epg_url;  
+                listCfg['epgCode'] = utils.hash36(listCfg['epgUrl'].toLowerCase().replace(/https:\/\//g, 'http://'));  
+                  
+                // Встановлення EPG API URL  
+                if (/^https?:\/\/.+/i.test(listCfg['epgUrl']) && listCfg['epgUrl'].length < 8000) {  
+                    var channelsUri = listCfg['epgCode'] + '/channels?url=' + encodeURIComponent(listCfg['epgUrl'])  
+                        + '&uid=' + utils.uid() + '&sig=' + generateSigForString(listCfg['epgUrl']);  
+                    listCfg['epgApiChUrl'] = Lampa.Utils.protocol() + 'epg.rootu.top/api/' + channelsUri;  
+                }  
+            }  
+                
             for (var i = 0; i < lines.length; i++) {    
                 var l = lines[i].trim();    
                     
@@ -92,8 +177,60 @@
                     }    
                 }    
             }    
+            this.setEpgIds();  
             this.renderG();    
         };    
+    
+        this.setEpgIds = function() {  
+            if (!listCfg['epgApiChUrl']) return;  
+              
+            var _this = this;  
+            networkSilentSessCache(listCfg['epgApiChUrl'], function(d){  
+                var chIDs = d;  
+                if (!chIDs['id2epg']) chIDs['id2epg'] = {};  
+                epgPath = !chIDs['epgPath'] ? '' : ('/' + chIDs['epgPath']);  
+                  
+                // Встановлення EPG ID для каналів  
+                Object.keys(groups_data).forEach(function(groupName) {  
+                    groups_data[groupName].forEach(function(channel) {  
+                        if (channel.tvg_id) return;  
+                          
+                        var chShortName = function(chName){  
+                            return chName  
+                                .toLowerCase()  
+                                .replace(/\s+\(архив\)$/, '')  
+                                .replace(/\s+\((\+\d+)\)/g, ' $1')  
+                                .replace(/^телеканал\s+/, '')  
+                                .replace(/([!\s.,()–-]+|ⓢ|ⓖ|ⓥ|ⓞ|Ⓢ|Ⓖ|Ⓥ|Ⓞ)/g, ' ').trim()  
+                                .replace(/\s(канал|тв)(\s.+|\s*)$/, '$2')  
+                                .replace(/\s(50|orig|original)$/, '')  
+                                .replace(/\s(\d+)/g, '$1');  
+                        };  
+                          
+                        var trW = {"ё":"e","у":"y","к":"k","е":"e","н":"h","ш":"w","з":"3","х":"x","ы":"bl","в":"b","а":"a","р":"p","о":"o","ч":"4","с":"c","м":"m","т":"t","ь":"b","б":"6"};  
+                        var trName = function(word) {  
+                            return word.split('').map(function (char) {  
+                                return trW[char] || char;  
+                            }).join("");  
+                        };  
+                          
+                        var n = chShortName(channel.name);  
+                        var fw = n[0];  
+                          
+                        if (chIDs[fw]) {  
+                            if (chIDs[fw][n]) {  
+                                channel.tvg_id = chIDs[fw][n];  
+                            } else {  
+                                n = trName(n);  
+                                if (chIDs[fw][n]) {  
+                                    channel.tvg_id = chIDs[fw][n];  
+                                }  
+                            }  
+                        }  
+                    });  
+                });  
+            });  
+        };  
     
         this.renderG = function () {    
             colG.empty();    
@@ -130,76 +267,49 @@
             if (epg_cache[channel.tvg_id]) {    
                 callback(epg_cache[channel.tvg_id]);    
                 return;    
-            }    
-                
-            // Спробуємо стандартний метод Lampa    
-            if (Lampa.SettingsApi && Lampa.SettingsApi.getEPG) {    
-                console.log('Спроба завантажити EPG через Lampa.SettingsApi для:', channel.tvg_id);    
-                Lampa.SettingsApi.getEPG({     
-                    id: channel.tvg_id,     
-                    name: channel.name     
-                }, function (data) {    
-                    if (data) {    
-                        console.log('EPG дані отримані через SettingsApi:', data);    
-                        epg_cache[channel.tvg_id] = data;    
-                        callback(data);    
-                    } else {    
-                        console.log('SettingsApi не повернув дані, спробуємо пряме завантаження');    
-                        _this.loadEPGDirect(channel, callback);    
-                    }    
-                });    
-            } else {    
-                console.log('SettingsApi недоступний, використовуємо пряме завантаження');    
-                _this.loadEPGDirect(channel, callback);    
-            }    
-        };    
-    
-        // Новий метод для прямого завантаження EPG    
-        this.loadEPGDirect = function(channel, callback) {    
-            if (!config.epg_url) {    
-                callback(null);    
-                return;    
-            }    
+            }  
               
-            console.log('Пряме завантаження EPG з:', config.epg_url);    
-            $.ajax({    
-                url: config.epg_url,    
-                dataType: 'xml',    
-                success: function(xml) {    
-                    try {    
-                        var programs = [];    
-                        $(xml).find('programme').each(function() {    
-                            var $prog = $(this);    
-                            var channelId = $prog.attr('channel');    
-                            if (channelId === channel.tvg_id) {    
-                                programs.push({    
-                                    start: $prog.attr('start'),    
-                                    stop: $prog.attr('stop'),    
-                                    title: $prog.find('title').text(),    
-                                    descr: $prog.find('desc').text()    
-                                });    
-                            }    
-                        });    
-                          
-                        if (programs.length > 0) {    
-                            var epgData = { program: programs };    
-                            epg_cache[channel.tvg_id] = epgData;    
-                            console.log('EPG дані завантажені напряму:', epgData);    
-                            callback(epgData);    
-                        } else {    
-                            console.log('Програми для каналу', channel.tvg_id, 'не знайдено');    
-                            callback(null);    
-                        }    
-                    } catch (e) {    
-                        console.error('Помилка парсингу EPG:', e);    
-                        callback(null);    
-                    }    
-                },    
-                error: function(xhr, status, error) {    
-                    console.error('Помилка завантаження EPG:', error);    
-                    callback(null);    
-                }    
-            });    
+            if (!channel.tvg_id) {  
+                callback(null);  
+                return;  
+            }  
+                
+            // Використання API epg.rootu.top  
+            var lt = Math.floor(Date.now()/60000);  
+            var t = Math.floor(lt/60);  
+              
+            var success = function(epg) {  
+                if (epg && epg.length > 0) {  
+                    var epgData = { program: epg.map(function(item) {  
+                        return {  
+                            start: item[0] * 60,  
+                            stop: (item[0] + item[1]) * 60,  
+                            title: item[2],  
+                            descr: item[3] || ''  
+                        };  
+                    })};  
+                    epg_cache[channel.tvg_id] = epgData;  
+                    setEpgSessCache(channel.tvg_id, epg);  
+                    callback(epgData);  
+                } else {  
+                    callback(null);  
+                }  
+            };  
+              
+            var fail = function() {  
+                callback(null);  
+            };  
+              
+            // Спроба отримати з кешу  
+            var cachedEpg = getEpgSessCache(channel.tvg_id, lt);  
+            if (cachedEpg) {  
+                success(cachedEpg);  
+                return;  
+            }  
+              
+            // Завантаження з API  
+            var epgUrl = Lampa.Utils.protocol() + 'epg.rootu.top/api' + epgPath + '/epg/' + channel.tvg_id + '/hour/' + t;  
+            networkSilentSessCache(epgUrl, success, fail);  
         };    
     
         this.showDetails = function (channel) {    
@@ -208,7 +318,7 @@
                 '<img src="' + channel.logo + '" style="width:100%; max-height:150px; object-fit:contain; margin-bottom:1rem; background:#000; padding:5px; border-radius:5px;">' +    
                 '<div class="epg-title-big">' + channel.name + '</div>' +    
                 '<div class="epg-now">ЗАРАЗ В ЕФІРІ:</div>' +    
-                '<div class="epg-prog-name" id="epg-title">Пошук програми...</div>' +    
+                 '<div class="epg-prog-name" id="epg-title">Пошук програми...</div>' +    
                 '<div class="epg-bar"><div class="epg-bar-inner" id="epg-progress"></div></div>' +    
                 '<div style="margin-top:1rem; font-size:1.1rem; color:#555;">ID: ' + (channel.tvg_id || '---') + '</div>' +    
                 '<div style="margin-top:0.5rem; font-size:0.9rem; color:#666;">EPG URL: ' + (config.epg_url || 'не вказано') + '</div>' +    
@@ -223,8 +333,8 @@
                     // Знайдемо поточну програму    
                     for (var i = 0; i < data.program.length; i++) {    
                         var p = data.program[i];    
-                        var startTime = _this.parseEPGTime(p.start);    
-                        var stopTime = _this.parseEPGTime(p.stop);    
+                        var startTime = p.start;    
+                        var stopTime = p.stop;    
                           
                         if (startTime <= now && stopTime > now) {    
                             currentProgram = p;    
@@ -235,8 +345,8 @@
                     if (currentProgram) {    
                         $('#epg-title').text(currentProgram.title);    
                         if (currentProgram.start && currentProgram.stop) {    
-                            var startTime = _this.parseEPGTime(currentProgram.start);    
-                            var stopTime = _this.parseEPGTime(currentProgram.stop);    
+                            var startTime = currentProgram.start;    
+                            var stopTime = currentProgram.stop;    
                             var perc = ((now - startTime) / (stopTime - startTime)) * 100;    
                             $('#epg-progress').css('width', Math.min(100, Math.max(0, perc)) + '%');    
                         }    
@@ -247,23 +357,6 @@
                     $('#epg-title').text('Програма недоступна');    
                 }    
             });    
-        };    
-    
-        // Функція для парсингу часу EPG    
-        this.parseEPGTime = function(timeStr) {    
-            // Формат: 20231231180000 +0000    
-            var match = timeStr.match(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/);    
-            if (match) {    
-                return new Date(Date.UTC(    
-                    parseInt(match[1]), // рік    
-                    parseInt(match[2]) - 1, // місяць    
-                    parseInt(match[3]), // день    
-                    parseInt(match[4]), // години    
-                    parseInt(match[5]), // хвилини    
-                    parseInt(match[6]) // секунди    
-                )).getTime() / 1000;    
-            }    
-            return 0;    
         };    
     
         this.updateFocus = function () {    
