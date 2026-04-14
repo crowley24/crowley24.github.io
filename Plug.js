@@ -27,11 +27,35 @@
     id: 'custom_buttons'
 },
         {
+    name: 'Finder UA',
+    description: 'Відображення бейджа на картці фільму при наявності українського дубляжа',
+    url: 'https://crowley24.github.io/main/UA-Finder+Mod.js',
+    id: 'UA-Finder'
+},        
+       {
+    name: 'Continue Watching',
+    description: 'Відображення на головній сторінці інформаційної панелі з історією перегляду',
+    url: 'https://crowley24.github.io/Watching.js',
+    id: 'Watching'
+},        
+        {
     name: 'Interface Size',
     description: 'Зміна розміру інтерфейсу',
     url: 'https://crowley24.github.io/main/InterfaceSize.js',
     id: 'InterfaceSize'
 },
+        {
+    name: 'Interface Hide',
+    description: 'Приховання елементів меню',
+    url: 'https://crowley24.github.io/interface_hide.js',
+    id: 'InterfaceHize'
+},   
+        {
+    name: 'Clock',
+    description: 'Стильний годинник',
+    url: 'https://crowley24.github.io/clock.js',
+    id: 'Clock'
+},        
         {
     name: 'Random',
     description: 'Випадкова добірка фільмів',
