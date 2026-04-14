@@ -55,6 +55,12 @@
     description: 'Стильний годинник',
     url: 'https://crowley24.github.io/clock.js',
     id: 'Clock'
+},    
+        {
+    name: 'Ukrainisation',
+    description: 'Лагідна Українізація',
+    url: 'https://crowley24.github.io/main/Ukr.js',
+    id: 'Ukr'
 },        
         {
     name: 'Random',
