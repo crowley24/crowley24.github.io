@@ -21,9 +21,8 @@
         cacheStore[key] = { time: Date.now(), data: data };
     }
 
-    // ===== СПИСОК КОЛЕКЦІЙ =====
     var collectionsConfig = [
-        { id: 'continue_line', emoji: '🕒', name_key: 'title_continue', request: 'local_continue' }, // Використовуємо стандартний переклад Lampa
+        { id: 'continue_line', emoji: '🕒', name_key: 'title_continue', request: 'local_continue' },
         { id: 'hot_new_releases', name_key: 'new_main_c_hot_new', emoji: '🎬', request: 'discover/movie?sort_by=primary_release_date.desc&with_release_type=4|5|6&primary_release_date.lte=' + today + '&vote_count.gte=50&vote_average.gte=6&with_runtime.gte=40&without_genres=99' },
         { id: 'trending_movies', emoji: '🔥', name_key: 'new_main_c_trend_movie', request: 'trending/movie/week' },
         { id: 'fresh_online', emoji: '👀', name_key: 'new_main_c_watching_now', request: 'discover/movie?sort_by=popularity.desc&with_release_type=4|5|6&primary_release_date.lte=' + today + '&vote_count.gte=50&vote_average.gte=6&with_runtime.gte=40&without_genres=99' },
@@ -35,11 +34,34 @@
         { id: 'best_of_last_year_movies', emoji: '🏆', name_key: 'new_main_c_best_last_y', request: 'discover/movie?primary_release_year=' + lastYear + '&sort_by=vote_average.desc&vote_count.gte=500' },
         { id: 'documentary', emoji: '🔬', name_key: 'new_main_c_documentary', request: 'discover/movie?with_genres=99&sort_by=popularity.desc&vote_count.gte=20' },
         { id: 'animation', emoji: '🧑‍🎤', name_key: 'new_main_c_animation', request: 'discover/movie?with_genres=16&sort_by=popularity.desc&vote_average.gte=7&vote_count.gte=500' },
+        { id: 'trending_tv', emoji: '📺', name_key: 'new_main_c_trend_tv', request: 'trending/tv/week' },
         { id: 'netflix_best', emoji: '⚫', name_key: 'new_main_c_netflix', request: 'discover/tv?with_networks=213' },
         { id: 'miniseries_hits', emoji: '💎', name_key: 'new_main_c_miniseries', request: 'discover/tv?with_type=2' }
     ];
 
     var pluginSettings = { collections: {}, order: {} };
+
+    // Функція для коректного перерахунку порядкових номерів
+    function normalizeOrder(changedId, newOrder) {
+        var list = [];
+        collectionsConfig.forEach(function(c) {
+            var ord = c.id === changedId ? newOrder : (pluginSettings.order[c.id] || 999);
+            list.push({ id: c.id, order: ord });
+        });
+
+        // Сортуємо: спочатку за номером, потім (якщо номери рівні) за ID
+        list.sort(function(a, b) {
+            if (a.order !== b.order) return a.order - b.order;
+            return a.id === changedId ? -1 : 1;
+        });
+
+        // Перепризначаємо чисті номери 1, 2, 3...
+        list.forEach(function(item, index) {
+            pluginSettings.order[item.id] = index + 1;
+        });
+        
+        saveSettings();
+    }
 
     function loadSettings() {
         if (Lampa.Storage) {
@@ -48,6 +70,7 @@
                 pluginSettings.order[cfg.id] = Lampa.Storage.get('new_main_order_' + cfg.id, index + 1);
             });
         }
+        // Сортуємо конфіг для відображення
         collectionsConfig.sort(function (a, b) { return (pluginSettings.order[a.id] || 999) - (pluginSettings.order[b.id] || 999); });
     }
 
@@ -75,6 +98,7 @@
             new_main_c_best_last_y: { uk: "Кращі " + lastYear },
             new_main_c_animation: { uk: "Мультфільми" },
             new_main_c_documentary: { uk: "Документалки" },
+            new_main_c_trend_tv: { uk: "Трендові серіали" },
             new_main_c_netflix: { uk: "Netflix хіти" },
             new_main_c_miniseries: { uk: "Міні-серіали" }
         });
@@ -90,7 +114,7 @@
             icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>'
         });
 
-        collectionsConfig.forEach(function (cfg, index) {
+        collectionsConfig.forEach(function (cfg) {
             var name = Lampa.Lang.translate(cfg.name_key);
             var fullName = name + (cfg.emoji ? ' ' + cfg.emoji : '');
             
@@ -114,13 +138,12 @@
                         for (var i = 1; i <= collectionsConfig.length; i++) { obj[i] = i; }
                         return obj;
                     })(),
-                    default: index + 1
+                    default: pluginSettings.order[cfg.id]
                 },
                 field: { name: '<span style="opacity: 0.5; font-size: 0.8em; margin-left: 10px;">↳ Порядок</span>' },
                 onChange: function (value) {
-                    pluginSettings.order[cfg.id] = parseInt(value);
-                    saveSettings();
-                    Lampa.Noty.show('Збережено. Оновіть сторінку.');
+                    normalizeOrder(cfg.id, parseInt(value));
+                    Lampa.Noty.show('Порядок оновлено. Перезавантажте сторінку.');
                 }
             });
         });
@@ -131,23 +154,23 @@
             var seen = {};
             var parts = [];
 
-            collectionsConfig.forEach(function (cfg) {
+            // Сортуємо копію масиву згідно з налаштуваннями перед виводом
+            var sortedCollections = [].concat(collectionsConfig).sort(function(a, b) {
+                return (pluginSettings.order[a.id] || 999) - (pluginSettings.order[b.id] || 999);
+            });
+
+            sortedCollections.forEach(function (cfg) {
                 if (!pluginSettings.collections[cfg.id]) return;
 
                 parts.push(function (call) {
-                    // --- ЛОГІКА ПРОДОВЖИТИ ПЕРЕГЛЯД (з вашого другого плагіна) ---
                     if (cfg.request === 'local_continue') {
                         var continues = Lampa.Favorite ? Lampa.Favorite.continues('movie') : [];
                         if (continues.length > 0) {
-                            return call({ 
-                                results: continues, 
-                                title: Lampa.Lang.translate(cfg.name_key) + ' ' + cfg.emoji 
-                            });
+                            return call({ results: continues, title: Lampa.Lang.translate(cfg.name_key) + ' ' + cfg.emoji });
                         }
                         return call({ results: [] });
                     }
 
-                    // --- TMDB ЗАПИТИ ---
                     var cached = getCache(cfg.id);
                     if (cached) return call(cached);
 
@@ -177,15 +200,14 @@
         if (original._new_main_pro_init) return;
         original._new_main_pro_init = true;
 
-        var new_main_source = Object.assign({}, original);
-        Lampa.Api.sources.new_main = new_main_source;
+        Lampa.Api.sources.new_main = Object.assign({}, original);
         
         if (Lampa.Params && Lampa.Params.values && Lampa.Params.values.source) {
             if (!Lampa.Params.values.source.new_main) Lampa.Params.values.source.new_main = 'New_Main';
         }
 
-        new_main_source.main = function () {
-            if (!this.type) return createDiscoveryMain(new_main_source).apply(this, arguments);
+        Lampa.Api.sources.new_main.main = function () {
+            if (!this.type) return createDiscoveryMain(Lampa.Api.sources.new_main).apply(this, arguments);
             return original.main.apply(this, arguments);
         };
 
