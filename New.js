@@ -86,7 +86,7 @@
         });    
     }    
     
-    // Додано функцію для отримання кольору рейтингу  
+    // Функція для отримання кольору рейтингу  
     function getColor(rating, alpha) {  
         var rgb = '';  
         if (rating >= 0 && rating <= 3) rgb = '231, 76, 60';  
@@ -97,7 +97,70 @@
         return rgb ? 'rgba(' + rgb + ', ' + alpha + ')' : null;  
     }    
     
-    // Додано функцію створення широких карток  
+    // Функція завантаження логотипів фільмів  
+    function fetchLogo(movie, itemElement) {  
+        var mType = movie.media_type || (movie.name ? 'tv' : 'movie');  
+        var langPref = Lampa.Storage.get('ym_logo_lang', 'uk_en');  
+        var quality = Lampa.Storage.get('ym_img_quality', 'w300');  
+          
+        function applyTextLogo() {  
+            var textLogo = document.createElement('div');  
+            textLogo.className = 'card-custom-logo-text';  
+            var txt = movie.title || movie.name;  
+            if (langPref === 'en' || langPref === 'text_en') {  
+                txt = movie.original_title || movie.original_name || txt;  
+            }  
+            textLogo.innerText = txt;  
+            itemElement.find('.card__view').append(textLogo);  
+        }  
+  
+        if (langPref === 'text_uk' || langPref === 'text_en') {  
+            applyTextLogo();  
+            return;  
+        }  
+  
+        var cacheKey = 'logo_uas_v8_' + quality + '_' + langPref + '_' + mType + '_' + movie.id;  
+        var cachedUrl = Lampa.Storage.get(cacheKey);  
+  
+        function applyLogo(url) {  
+            if (url && url !== 'none') {  
+                var img = new Image();  
+                img.crossOrigin = "anonymous";   
+                img.className = 'card-custom-logo';  
+                img.onload = function() { itemElement.find('.card__view').append(img); };  
+                img.onerror = applyTextLogo;  
+                img.src = url;  
+            } else {  
+                applyTextLogo();  
+            }  
+        }  
+          
+        if (cachedUrl) { applyLogo(cachedUrl); return; }  
+  
+        let endpoint = 'https://api.themoviedb.org/3/' + mType + '/' + movie.id + '/images?include_image_language=uk,en,null&api_key=' + (Lampa.TMDB && Lampa.TMDB.key ? Lampa.TMDB.key() : '4ef0d7355d9ffb5151e987764708ce96');  
+        fetch('https://cors.lampa.stream/' + endpoint).then(r=>r.json()).then(function(res) {  
+            var finalLogo = 'none';  
+            if (res.logos && res.logos.length > 0) {  
+                var found = null;  
+                if (langPref === 'uk') {  
+                    found = res.logos.find(l => l.iso_639_1 === 'uk');  
+                } else if (langPref === 'en') {  
+                    found = res.logos.find(l => l.iso_639_1 === 'en');  
+                } else {  
+                    found = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en');  
+                }  
+  
+                if (found) finalLogo = 'https://cors.lampa.stream/' + Lampa.TMDB.image('t/p/' + quality + found.file_path);  
+            }  
+            Lampa.Storage.set(cacheKey, finalLogo);  
+            applyLogo(finalLogo);  
+        }).catch(function() {  
+            Lampa.Storage.set(cacheKey, 'none');  
+            applyLogo('none');  
+        });  
+    }    
+    
+    // Функція створення широких карток  
     function makeWideCardItem(movie) {  
         return {  
             title: movie.title || movie.name,  
@@ -145,6 +208,9 @@
                             view.append(ageDiv);  
                         }  
   
+                        // Додаємо логотип фільму  
+                        fetchLogo(movie, item);  
+  
                         var descText = movie.overview || 'Опис відсутній.';  
                         item.append('<div class="custom-title-bottom">' + (movie.title || movie.name) + '</div>');  
                         item.append('<div class="custom-overview-bottom">' + descText + '</div>');  
@@ -184,7 +250,7 @@
     
             collectionsConfig.forEach(function(cfg) {    
                 if (settings.collections[cfg.id]) {    
-                    parts_data.push(function (call) {     
+          parts_data.push(function (call) {     
                         parent.get(cfg.request, params, function (json) {     
                             var translatedName = Lampa.Lang.translate(cfg.name_key);    
                             json.title = cfg.emoji ? cfg.emoji + ' ' + translatedName : translatedName;     
@@ -260,6 +326,34 @@
             Lampa.Noty.show(Lampa.Lang.translate('tmdb_mod_noty_reload'));      
         }      
     });    
+    
+    // Додаємо налаштування для мови логотипів  
+    var langValues = {  
+        'uk': 'Тільки українською',  
+        'uk_en': 'Укр + Англ (За замовчуванням)',  
+        'en': 'Тільки англійською',  
+        'text_uk': 'Завжди текст (Укр)',  
+        'text_en': 'Завжди текст (Англ)'  
+    };  
+  
+    Lampa.SettingsApi.addParam({  
+        component: 'tmdb_mod',  
+        param: { name: 'ym_logo_lang', type: 'select', values: langValues, default: 'uk_en' },  
+        field: { name: 'Мова логотипів', description: 'Оберіть пріоритет мови для логотипів' }  
+    });  
+  
+    var qualValues = {  
+        'w300': 'w300 (За замовчуванням)',  
+        'w500': 'w500',  
+        'w780': 'w780',  
+        'original': 'Оригінал'  
+    };  
+  
+    Lampa.SettingsApi.addParam({  
+        component: 'tmdb_mod',  
+        param: { name: 'ym_img_quality', type: 'select', values: qualValues, default: 'w300' },  
+        field: { name: 'Якість зображень (Фон/Лого)', description: 'Впливає на швидкість завантаження сторінки' }  
+    });  
     
     collectionsConfig.forEach(function(cfg) {      
         var translatedName = Lampa.Lang.translate(cfg.name_key);      
@@ -375,85 +469,6 @@
         }    
     }    
     
-    // Додано функцію для отримання кольору рейтингу  
-    function getColor(rating, alpha) {  
-        var rgb = '';  
-        if (rating >= 0 && rating <= 3) rgb = '231, 76, 60';  
-        else if (rating > 3 && rating <= 5) rgb = '230, 126, 34';  
-        else if (rating > 5 && rating <= 6.5) rgb = '241, 196, 15';  
-        else if (rating > 6.5 && rating < 8) rgb = '52, 152, 219';  
-        else if (rating >= 8 && rating <= 10) rgb = '46, 204, 113';  
-        return rgb ? 'rgba(' + rgb + ', ' + alpha + ')' : null;  
-    }    
-    
-    // Додано функцію створення широких карток  
-    function makeWideCardItem(movie) {  
-        return {  
-            title: movie.title || movie.name,  
-            params: {  
-                createInstance: function () {  
-                    return Lampa.Maker.make('Card', movie, function (module) {   
-                        return module.only('Card', 'Callback');   
-                    });  
-                },  
-                emit: {  
-                    onCreate: function () {  
-                        var item = $(this.html);  
-                        item.addClass('card--wide-custom');  
-                        var view = item.find('.card__view');  
-                        view.empty();   
-                          
-                        var quality = Lampa.Storage.get('ym_img_quality', 'w300');  
-                        var imgUrl = 'https://image.tmdb.org/t/p/' + quality + movie.backdrop_path;  
-                        view.css({  
-                            'background-image': 'url(' + imgUrl + ')',   
-                            'background-size': 'cover',   
-                            'background-position': 'center',  
-                            'padding-bottom': '56.25%',   
-                            'height': '0',   
-                            'position': 'relative'  
-                        });  
-                          
-                        view.append('<div class="card-backdrop-overlay"></div>');  
-  
-                        var voteVal = parseFloat(movie.vote_average);  
-                        if (!isNaN(voteVal) && voteVal > 0) {  
-                            var voteDiv = document.createElement('div');  
-                            voteDiv.className = 'card__vote';  
-                            voteDiv.innerText = voteVal.toFixed(1);  
-                            var color = getColor(voteVal, 0.8);  
-                            if (color) voteDiv.style.backgroundColor = color;  
-                            view.append(voteDiv);  
-                        }  
-  
-                        var yearStr = (movie.release_date || movie.first_air_date || '').toString().substring(0, 4);  
-                        if (yearStr && yearStr.length === 4) {  
-                            var ageDiv = document.createElement('div');  
-                            ageDiv.className = 'card-badge-age';   
-                            ageDiv.innerText = yearStr;  
-                            view.append(ageDiv);  
-                        }  
-  
-                        var descText = movie.overview || 'Опис відсутній.';  
-                        item.append('<div class="custom-title-bottom">' + (movie.title || movie.name) + '</div>');  
-                        item.append('<div class="custom-overview-bottom">' + descText + '</div>');  
-                    },  
-                    onlyEnter: function () {  
-                        var mType = movie.media_type || (movie.name ? 'tv' : 'movie');  
-                        Lampa.Activity.push({   
-                            url: '',   
-                            component: 'full',   
-                            id: movie.id,   
-                            method: mType,   
-                            card: movie,   
-                            source: movie.source || 'tmdb'   
-                        });  
-                    }  
-                }  
-            }  
-        };  
-    }    
-    
     // Додано функцію для додавання CSS стилів  
     function addWideCardStyles() {  
         var style = document.createElement('style');  
@@ -513,6 +528,29 @@
                 filter: drop-shadow(0px 3px 5px rgba(0,0,0,0.8));   
                 pointer-events: none;   
                 transition: filter 0.3s ease;   
+            }  
+              
+            .card-custom-logo-text {   
+                position: absolute;   
+                top: 50%;   
+                left: 50%;   
+                transform: translate(-50%, -50%);   
+                width: 80%;   
+                max-height: 70%;   
+                text-align: center;   
+                font-size: 2em;   
+                font-weight: 600;   
+                color: #fff;   
+                text-shadow: none !important;   
+                z-index: 5;   
+                pointer-events: none;   
+                word-wrap: break-word;   
+                white-space: normal;   
+                line-height: 1.2;   
+                font-family: sans-serif;   
+                display: flex;   
+                align-items: center;   
+                justify-content: center;   
             }  
               
             .custom-title-bottom {   
@@ -588,4 +626,4 @@
     
     waitForApp();    
     
-})();  
+})();
