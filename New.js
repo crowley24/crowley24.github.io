@@ -23,6 +23,11 @@
         { id: 'animation', emoji: '🧑‍🎤', name_key: 'tmdb_mod_c_animation', request: 'discover/movie?with_genres=16&sort_by=popularity.desc&vote_average.gte=7&vote_count.gte=500' },      
         { id: 'documentary', emoji: '🔬', name_key: 'tmdb_mod_c_documentary', request: 'discover/movie?with_genres=99&sort_by=popularity.desc&vote_count.gte=20' },      
       
+        // НОВІ ПІДБІРКИ  
+        { id: 'ukrainian_content', emoji: '🇺🇦', name_key: 'tmdb_mod_c_ukrainian', request: 'discover/movie?with_original_language=uk&sort_by=popularity.desc&vote_count.gte=10' },      
+        { id: 'highly_rated', emoji: '⭐', name_key: 'tmdb_mod_c_high_rated', request: 'discover/movie?sort_by=vote_average.desc&vote_count.gte=1000&vote_average.gte=8' },      
+        { id: 'recently_added', emoji: '🆕', name_key: 'tmdb_mod_c_recent', request: 'discover/movie?sort_by=release_date.desc&release_date.gte=' + (new Date().getFullYear() - 1) + '-01-01' },      
+      
         // СЕРІАЛИ      
         { id: 'trending_tv', emoji: '🔥', name_key: 'tmdb_mod_c_trend_tv', request: 'trending/tv/week' },      
         { id: 'best_world_series', emoji: '🌍', name_key: 'tmdb_mod_c_world_hits', request: 'discover/tv?with_origin_country=US|CA|GB|AU|IE|DE|FR|NL|SE|NO|DK|FI|ES|IT|BE|CH|AT|KR|JP|MX|BR&sort_by=last_air_date.desc&vote_average.gte=7&vote_count.gte=500&first_air_date.gte=2020-01-01&first_air_date.lte=' + today + '&without_genres=16|99|10762|10763|10764|10766|10767|10768|10770&with_status=0|1|2|3' },      
@@ -30,9 +35,50 @@
         { id: 'miniseries_hits', emoji: '💎', name_key: 'tmdb_mod_c_miniseries', request: 'discover/tv?with_type=2&sort_by=popularity.desc&vote_average.gte=7.0&vote_count.gte=200&without_genres=10764,10767' }      
     ];      
       
+    // Кешування для продуктивності  
+    var cache = {};  
+    var cacheTimeout = 5 * 60 * 1000; // 5 хвилин  
+      
+    function getCachedData(key) {  
+        var cached = cache[key];  
+        if (cached && Date.now() - cached.timestamp < cacheTimeout) {  
+            return cached.data;  
+        }  
+        return null;  
+    }  
+      
+    function setCachedData(key, data) {  
+        cache[key] = {  
+            data: data,  
+            timestamp: Date.now()  
+        };  
+    }  
+      
+    // Retry механізм для запитів  
+    function fetchWithRetry(url, retries, delay) {  
+        return new Promise(function(resolve, reject) {  
+            function attempt() {  
+                fetch(url)  
+                    .then(resolve)  
+                    .catch(function(error) {  
+                        if (retries > 0) {  
+                            setTimeout(attempt, delay);  
+                            retries--;  
+                            delay *= 2; // Exponential backoff  
+                        } else {  
+                            reject(error);  
+                        }  
+                    });  
+            }  
+            attempt();  
+        });  
+    }  
+      
     var pluginSettings = {      
-        wideCards: true, // Лише налаштування широких карток    
-        collections: collectionsConfig.reduce(function(acc, c) { acc[c.id] = true; return acc; }, {})      
+        wideCards: true,  
+        collections: collectionsConfig.reduce(function(acc, c) { acc[c.id] = true; return acc; }, {}),  
+        collectionOrder: collectionsConfig.map(function(c) { return c.id; }), // Порядок стрічок  
+        itemsPerCollection: 10  
     };      
       
     var settingsListener = null;      
@@ -40,20 +86,24 @@
       
     function loadSettings() {      
         if (Lampa.Storage) {      
-            pluginSettings.wideCards = Lampa.Storage.get('tmdb_mod_wide_cards', true); // Лише широкі картки    
+            pluginSettings.wideCards = Lampa.Storage.get('tmdb_mod_wide_cards', true);      
             collectionsConfig.forEach(function(cfg) {      
                 pluginSettings.collections[cfg.id] = Lampa.Storage.get('tmdb_mod_collection_' + cfg.id, true);      
             });      
+            pluginSettings.collectionOrder = Lampa.Storage.get('tmdb_mod_collection_order', collectionsConfig.map(function(c) { return c.id; }));  
+            pluginSettings.itemsPerCollection = Lampa.Storage.get('tmdb_mod_items_count', 10);  
         }      
         return pluginSettings;      
     }      
       
     function saveSettings() {      
         if (Lampa.Storage) {      
-            Lampa.Storage.set('tmdb_mod_wide_cards', pluginSettings.wideCards); // Лише широкі картки    
+            Lampa.Storage.set('tmdb_mod_wide_cards', pluginSettings.wideCards);      
             collectionsConfig.forEach(function(cfg) {      
                 Lampa.Storage.set('tmdb_mod_collection_' + cfg.id, pluginSettings.collections[cfg.id]);      
             });      
+            Lampa.Storage.set('tmdb_mod_collection_order', pluginSettings.collectionOrder);  
+            Lampa.Storage.set('tmdb_mod_items_count', pluginSettings.itemsPerCollection);  
         }      
     }      
       
@@ -61,7 +111,7 @@
         if (!Lampa.Lang) return;      
       
         Lampa.Lang.add({      
-            tmdb_mod_plugin_name: { uk: "Головна сторінка +" }, // Нова назва плагіна    
+            tmdb_mod_plugin_name: { uk: "Головна сторінка +" },      
             tmdb_mod_noty_reload: { uk: "Зміни набудуть чинності після перезавантаження головної сторінки" },      
             tmdb_mod_show_collection: { uk: "Показувати підбірку" },      
             tmdb_mod_wide_cards: { uk: "Горизонтальні картки" },      
@@ -78,11 +128,22 @@
             tmdb_mod_c_animation: { uk: "Анімація" },      
             tmdb_mod_c_documentary: { uk: "Документальні" },      
       
+            // Нові підбірки  
+            tmdb_mod_c_ukrainian: { uk: "Українське кіно" },  
+            tmdb_mod_c_high_rated: { uk: "Найвищий рейтинг" },  
+            tmdb_mod_c_recent: { uk: "Нещодавно додані" },  
+      
             // Серіали      
             tmdb_mod_c_trend_tv: { uk: "Топ серіалів тижня" },      
             tmdb_mod_c_world_hits: { uk: "Світові хіти" },      
             tmdb_mod_c_netflix: { uk: "Найкраще Netflix" },      
-            tmdb_mod_c_miniseries: { uk: "Мінісеріали" }      
+            tmdb_mod_c_miniseries: { uk: "Мінісеріали" },  
+      
+            // Нові налаштування  
+            tmdb_mod_collection_order: { uk: "Порядок підбірок" },  
+            tmdb_mod_collection_order_descr: { uk: "Перетягніть підбірки для зміни їх порядку" },  
+            tmdb_mod_items_count: { uk: "Кількість елементів" },  
+            tmdb_mod_items_count_descr: { uk: "Скільки елементів показувати в кожній підбірці" }  
         });      
     }      
       
@@ -225,7 +286,39 @@
                 }    
             }    
         };    
-    }      
+    }  
+  
+    // Функції для анімацій завантаження  
+    function showLoadingSpinner(collectionElement) {  
+        collectionElement.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';  
+    }  
+  
+    function hideLoadingSpinner(collectionElement) {  
+        var spinner = collectionElement.querySelector('.loading-spinner');  
+        if (spinner) {  
+            spinner.remove();  
+        }  
+    }  
+  
+    // Retry механізм для запитів  
+    function fetchWithRetry(url, retries, delay) {  
+        return new Promise(function(resolve, reject) {  
+            function attempt() {  
+                fetch(url)  
+                    .then(resolve)  
+                    .catch(function(error) {  
+                        if (retries > 0) {  
+                            setTimeout(attempt, delay);  
+                            retries--;  
+                            delay *= 2; // Exponential backoff  
+                        } else {  
+                            reject(error);  
+                        }  
+                    });  
+            }  
+            attempt();  
+        });  
+    }  
       
     var createDiscoveryMain = function (parent) {      
         return function () {      
@@ -243,34 +336,78 @@
       
             var settings = loadSettings();      
             var parts_data = [];      
-      
-            collectionsConfig.forEach(function(cfg) {      
-                if (settings.collections[cfg.id]) {      
-                    parts_data.push(function (call) {       
-                        parent.get(cfg.request, params, function (json) {       
-                            var translatedName = Lampa.Lang.translate(cfg.name_key);      
-                            json.title = cfg.emoji ? cfg.emoji + ' ' + translatedName : translatedName;       
+  
+            // Сортуємо колекції відповідно до налаштувань порядку  
+            var sortedCollections = pluginSettings.collectionOrder.map(function(id) {  
+                return collectionsConfig.find(function(cfg) { return cfg.id === id; });  
+            }).filter(function(cfg) { return cfg && settings.collections[cfg.id]; });  
+  
+            sortedCollections.forEach(function(cfg) {      
+                parts_data.push(function (call) {       
+                    // Перевіряємо кеш  
+                    var cacheKey = cfg.request + '_' + settings.itemsPerCollection;  
+                    var cachedData = getCachedData(cacheKey);  
+                      
+                    if (cachedData) {  
+                        var translatedName = Lampa.Lang.translate(cfg.name_key);      
+                        cachedData.title = cfg.emoji ? cfg.emoji + ' ' + translatedName : translatedName;  
+                        call(cachedData);  
+                        return;  
+                    }  
+  
+                    // Показуємо анімацію завантаження  
+                    var collectionElement = document.querySelector('[data-collection="' + cfg.id + '"]');  
+                    if (collectionElement) {  
+                        showLoadingSpinner(collectionElement);  
+                    }  
+  
+                    var requestUrl = cfg.request;  
+                    if (settings.itemsPerCollection && requestUrl.includes('discover')) {  
+                        requestUrl += '&limit=' + settings.itemsPerCollection;  
+                    }  
+  
+                    parent.get(requestUrl, params, function (json) {       
+                        var translatedName = Lampa.Lang.translate(cfg.name_key);      
+                        json.title = cfg.emoji ? cfg.emoji + ' ' + translatedName : translatedName;       
                                   
-                            // Умовно перетворюємо результати у широкі картки    
-                            if (json.results && json.results.length > 0) {    
-                                if (settings.wideCards) {    
-                                    json.results = json.results.map(makeWideCardItem);    
-                                }    
+                        // Обмежуємо кількість елементів  
+                        if (json.results && json.results.length > settings.itemsPerCollection) {  
+                            json.results = json.results.slice(0, settings.itemsPerCollection);  
+                        }  
+                                  
+                        // Умовно перетворюємо результати у широкі картки    
+                        if (json.results && json.results.length > 0) {    
+                            if (settings.wideCards) {    
+                                json.results = json.results.map(makeWideCardItem);    
                             }    
+                        }    
                                   
-                            if (Lampa.Utils && Lampa.Utils.addSource) {      
-                                Lampa.Utils.addSource(json, 'tmdb');      
-                            }      
+                        if (Lampa.Utils && Lampa.Utils.addSource) {      
+                            Lampa.Utils.addSource(json, 'tmdb');      
+                        }    
+  
+                        // Зберігаємо в кеш  
+                        setCachedData(cacheKey, json);  
+  
+                        // Приховуємо анімацію завантаження  
+                        if (collectionElement) {  
+                            hideLoadingSpinner(collectionElement);  
+                        }  
                                   
-                            call(json);       
-                        }, function(err) {      
-                            console.error('[TMDB_MOD] Помилка завантаження підбірки "' + cfg.id + '":', err);      
-                            var translatedName = Lampa.Lang.translate(cfg.name_key);      
-                            var title = cfg.emoji ? cfg.emoji + ' ' + translatedName : translatedName;      
-                            call({ source: 'tmdb', results: [], title: title });      
-                        });       
-                    });      
-                }      
+                        call(json);       
+                    }, function(err) {      
+                        console.error('[TMDB_MOD] Помилка завантаження підбірки "' + cfg.id + '":', err);      
+                          
+                        // Приховуємо анімацію завантаження при помилці  
+                        if (collectionElement) {  
+                            hideLoadingSpinner(collectionElement);  
+                        }  
+                          
+                        var translatedName = Lampa.Lang.translate(cfg.name_key);      
+                        var title = cfg.emoji ? cfg.emoji + ' ' + translatedName : translatedName;      
+                        call({ source: 'tmdb', results: [], title: title });      
+                    });       
+                });      
             });      
                   
             if (parts_data.length === 0) {      
@@ -317,6 +454,18 @@
             }        
         });    
           
+        // Додаємо налаштування для кількості елементів  
+        Lampa.SettingsApi.addParam({  
+            component: 'tmdb_mod',  
+            param: { name: 'tmdb_mod_items_count', type: 'select', values: {5: '5', 10: '10', 15: '15', 20: '20'}, default: '10' },  
+            field: { name: Lampa.Lang.translate('tmdb_mod_items_count'), description: Lampa.Lang.translate('tmdb_mod_items_count_descr') },  
+            onChange: function (value) {  
+                pluginSettings.itemsPerCollection = parseInt(value);  
+                saveSettings();  
+                Lampa.Noty.show(Lampa.Lang.translate('tmdb_mod_noty_reload'));  
+            }  
+        });  
+  
         // Додаємо налаштування для мови логотипів    
         var langValues = {    
             'uk': 'Тільки українською',    
@@ -344,6 +493,13 @@
             param: { name: 'ym_img_quality', type: 'select', values: qualValues, default: 'w300' },    
             field: { name: 'Якість зображень (Фон/Лого)', description: 'Впливає на швидкість завантаження сторінки' }    
         });    
+  
+        // Додаємо налаштування для порядку колекцій  
+        Lampa.SettingsApi.addParam({  
+            component: 'tmdb_mod',  
+            param: { name: 'tmdb_mod_collection_order', type: 'static' },  
+            field: { name: Lampa.Lang.translate('tmdb_mod_collection_order'), description: Lampa.Lang.translate('tmdb_mod_collection_order_descr') }  
+        });  
           
         collectionsConfig.forEach(function(cfg) {        
             var translatedName = Lampa.Lang.translate(cfg.name_key);        
@@ -534,6 +690,45 @@
                     margin-top: 0.1em;     
                 }    
             }    
+  
+            /* Додаткова мобільна адаптація */  
+            @media (max-width: 480px) {    
+                .card--wide-custom {    
+                    width: 12em !important;    
+                }    
+                  
+                .card--wide-custom .custom-title-bottom {    
+                    font-size: 0.9em !important;    
+                }    
+            }    
+  
+            @media (min-width: 1200px) {    
+                .card--wide-custom {    
+                    width: 30em !important;    
+                }    
+            }  
+  
+            /* Анімації завантаження */  
+            .loading-spinner {  
+                display: flex;  
+                justify-content: center;  
+                align-items: center;  
+                height: 10em;  
+            }  
+  
+            .spinner {  
+                width: 3em;  
+                height: 3em;  
+                border: 0.3em solid rgba(255, 255, 255, 0.3);  
+                border-top: 0.3em solid #fff;  
+                border-radius: 50%;  
+                animation: spin 1s linear infinite;  
+            }  
+  
+            @keyframes spin {  
+                0% { transform: rotate(0deg); }  
+                100% { transform: rotate(360deg); }  
+            }  
         `;    
         document.head.appendChild(style);    
     }    
@@ -623,3 +818,4 @@
     waitForApp();      
       
 })();
+  
