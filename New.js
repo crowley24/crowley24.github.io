@@ -30,13 +30,10 @@
         { id: 'hot_new_releases', name_key: 'new_main_c_hot_new', emoji: '🎬', request: 'discover/movie?sort_by=primary_release_date.desc&with_release_type=4|5|6&primary_release_date.lte=' + today + '&vote_count.gte=50&vote_average.gte=6&with_runtime.gte=40&without_genres=99' },
         { id: 'trending_movies', emoji: '🔥', name_key: 'new_main_c_trend_movie', request: 'trending/movie/week' },
         { id: 'fresh_online', emoji: '👀', name_key: 'new_main_c_watching_now', request: 'discover/movie?sort_by=popularity.desc&with_release_type=4|5|6&primary_release_date.lte=' + today + '&vote_count.gte=50&vote_average.gte=6&with_runtime.gte=40&without_genres=99' },
-        { id: 'cult_cinema', emoji: '🍿', name_key: 'new_main_c_cult', request: 'discover/movie?primary_release_date.gte=1980-01-01&sort_by=popularity.desc&vote_average.gte=7&vote_count.gte=500' },
         { id: 'top_10_studios_mix', emoji: '🏆', name_key: 'new_main_c_top_studios', request: 'discover/movie?with_companies=6194|33|4|306|5|12|8411|9195|2|7295&sort_by=popularity.desc&vote_average.gte=7.0&vote_count.gte=1000' },
         { id: 'cult_action_80_90', emoji: '🔫', name_key: 'new_main_c_action_80_90', request: 'discover/movie?with_genres=28&primary_release_date.gte=1980-01-01&primary_release_date.lte=1999-12-31&sort_by=popularity.desc&vote_average.gte=6.5&vote_count.gte=500' },
         { id: 'best_of_current_year_movies', emoji: '🌟', name_key: 'new_main_c_best_current_y', request: 'discover/movie?primary_release_year=' + currentYear + '&sort_by=vote_average.desc&vote_count.gte=300' },
         { id: 'animation', emoji: '🧑‍🎤', name_key: 'new_main_c_animation', request: 'discover/movie?with_genres=16&sort_by=popularity.desc&vote_average.gte=7&vote_count.gte=500' },
-        { id: 'trending_tv', emoji: '📺', name_key: 'new_main_c_trend_tv', request: 'trending/tv/week' },
-        { id: 'netflix_best', emoji: '⚫', name_key: 'new_main_c_netflix', request: 'discover/tv?with_networks=213' },
         { id: 'top_series_all_time', emoji: '💎', name_key: 'new_main_c_top_series', request: 'discover/tv?sort_by=vote_average.desc&vote_count.gte=1000&without_genres=16,10762&with_runtime.gte=25' }
     ];
 
@@ -86,19 +83,16 @@
             new_main_shuffle_name: { uk: "🔀 Перемішувати картки" },
             new_main_c_recommend: { uk: "Рекомендуємо подивитись" },
             new_main_c_trend_today: { uk: "Сьогодні у тренді" },
-            new_main_c_popular_77: { uk: "Популярні (з 1977)" },
+            new_main_c_popular_77: { uk: "Популярні фільми" },
             new_main_c_top_rated: { uk: "У топі (фільми за весь час)" },
-            new_main_c_horror_std: { uk: "Жахи (стандарт)" },
-            new_main_c_hot_new: { uk: "Найсвіжіші прем'єри" },
+            new_main_c_horror_std: { uk: "Жахи" },
+            new_main_c_hot_new: { uk: "Новинки" },
             new_main_c_trend_movie: { uk: "Трендові фільми" },
             new_main_c_watching_now: { uk: "Зараз дивляться" },
-            new_main_c_cult: { uk: "Популярні з 80-х" },
             new_main_c_top_studios: { uk: "Топ студії" },
             new_main_c_action_80_90: { uk: "Бойовики 80–90-х" },
             new_main_c_best_current_y: { uk: "Кращі фільми року" },
             new_main_c_animation: { uk: "Мультфільми" },
-            new_main_c_trend_tv: { uk: "Трендові серіали" },
-            new_main_c_netflix: { uk: "Netflix хіти" },
             new_main_c_top_series: { uk: "Топ серіали (без аніме)" }
         });
     }
