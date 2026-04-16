@@ -27,7 +27,7 @@
   
     var pluginSettings = {  
         enabled: true,  
-        stylish: false, // Новий параметр
+        stylish: false,
         collections: collectionsConfig.reduce(function(acc, c) { acc[c.id] = true; return acc; }, {})  
     };  
   
@@ -56,12 +56,11 @@
         if ($('#tmdb_mod_styles').length) return;
         var style = $('<style id="tmdb_mod_styles">')
             .text(`
-                .card--tmdb-stylish .card__title { display: none; }
-                .card--tmdb-stylish .card__age { display: none; }
-                .card--tmdb-stylish .card__icons { display: none; }
-                .card--tmdb-stylish .card__img { border-radius: 0.6em; overflow: hidden; }
-                /* Центрування логотипу, якщо Lampa підтримує вивід лого на картці */
-                /* Зазвичай це реалізується через кастомні шаблони, але для wide карток це базовий візуал */
+                .card--tmdb-stylish .card__title { display: none !important; }
+                .card--tmdb-stylish .card__age { display: none !important; }
+                .card--tmdb-stylish .card__icons { display: none !important; }
+                .card--tmdb-stylish .card__img { border-radius: 0.6em !important; overflow: hidden !important; }
+                .card--tmdb-stylish.card--wide { width: 20em !important; }
             `);
         $('head').append(style);
     }
@@ -72,11 +71,25 @@
             tmdb_mod_plugin_name: { ru: "Підбірки TMDB_MOD", uk: "Підбірки TMDB_MOD" },  
             tmdb_mod_toggle_name: { ru: "Увімкнути TMDB_MOD підбірки", uk: "Увімкнути TMDB_MOD підбірки" },  
             tmdb_mod_stylish_name: { ru: "Стильні картки", uk: "Стильні картки" },
-            tmdb_mod_stylish_desc: { ru: "Горизонтальний стиль Apple TV / Netflix", uk: "Горизонтальний стиль Apple TV / Netflix" },
+            tmdb_mod_stylish_desc: { ru: "Горизонтальні картки (Apple TV стиль)", uk: "Горизонтальні картки (Apple TV стиль)" },
             tmdb_mod_toggle_desc: { ru: "Показувати кастомні підбірки на головній сторінці", uk: "Показувати кастомні підбірки на головній сторінці" },  
             tmdb_mod_noty_reload: { ru: "Зміни набудуть чинності після перезавантаження головної сторінки", uk: "Зміни набудуть чинності після перезавантаження головної сторінки" },  
-            tmdb_mod_show_collection: { ru: "Показувати підбірку", uk: "Показувати підбірку" },  
-            // ... інші переклади залишаються без змін
+            tmdb_mod_show_collection: { ru: "Показувати підбірку", uk: "Показувати підбірку" },
+            // Фільми  
+            tmdb_mod_c_hot_new: { ru: "Найсвіжіші прем'єри", uk: "Найсвіжіші прем'єри" },  
+            tmdb_mod_c_trend_movie: { ru: "Топ фільмів тижня", uk: "Топ фільмів тижня" },  
+            tmdb_mod_c_watching_now: { ru: "Зараз дивляться", uk: "Зараз дивляться" },  
+            tmdb_mod_c_cult: { ru: "Популярні фільми з 80-х", uk: "Популярні фільми з 80-х" },  
+            tmdb_mod_c_top_studios: { ru: "Золота Десятка Студій", uk: "Золота Десятка Студій" },  
+            tmdb_mod_c_best_current_y: { ru: "Кращі фільми " + currentYear, uk: "Кращі фільми " + currentYear },  
+            tmdb_mod_c_best_last_y: { ru: "Кращі фільми " + lastYear, uk: "Кращі фільми " + lastYear },  
+            tmdb_mod_c_animation: { ru: "Кращі мультфільми", uk: "Кращі мультфільми" },  
+            tmdb_mod_c_documentary: { ru: "Документальні фільми", uk: "Документальні фільми" },  
+            // Серіали  
+            tmdb_mod_c_trend_tv: { ru: "Топ серіалів тижня", uk: "Топ серіалів тижня" },  
+            tmdb_mod_c_world_hits: { ru: "Хіти світу 2020+", uk: "Хіти світу 2020+" },  
+            tmdb_mod_c_netflix: { ru: "Серіали Netflix", uk: "Серіали Netflix" },  
+            tmdb_mod_c_miniseries: { ru: "Міні-серіали", uk: "Міні-серіали" }
         });  
     }  
   
@@ -95,12 +108,15 @@
                             var translatedName = Lampa.Lang.translate(cfg.name_key);  
                             json.title = cfg.emoji ? cfg.emoji + ' ' + translatedName : translatedName;   
                             
-                            // Застосування стилю карток
-                            if (settings.stylish && json.results) {
-                                json.results.forEach(function(item) {
-                                    item.card_type = 'wide'; 
-                                    item.class = 'tmdb-stylish';
-                                });
+                            // ПРИМУСОВЕ ЗАСТОСУВАННЯ СТИЛЮ
+                            if (settings.stylish) {
+                                json.card_type = 'wide'; // Встановлюємо для всієї стрічки
+                                if (json.results) {
+                                    json.results.forEach(function(item) {
+                                        item.card_type = 'wide';
+                                        item.class = 'tmdb-stylish';
+                                    });
+                                }
                             }
 
                             if (Lampa.Utils && Lampa.Utils.addSource) {  
@@ -108,7 +124,7 @@
                             }  
                             call(json);   
                         }, function(err) {  
-                            call({ source: 'tmdb', results: [], title: cfg.emoji + ' ' + Lampa.Lang.translate(cfg.name_key) });  
+                            call({ source: 'tmdb', results: [], title: Lampa.Lang.translate(cfg.name_key) });  
                         });   
                     });  
                 }  
@@ -207,4 +223,3 @@
   
     waitForApp();  
 })();
-
