@@ -13,7 +13,7 @@
 
     function getCache(key) {
         var item = cacheStore[key];
-        if (!item && (!item || Date.now() - item.time > CACHE_TTL)) return null;
+        if (!item || (Date.now() - item.time > CACHE_TTL)) return null;
         return item.data;
     }
 
@@ -21,9 +21,9 @@
         cacheStore[key] = { time: Date.now(), data: data };
     }
 
-    // ===== ПОВНИЙ СПИСОК КОЛЕКЦІЙ (Нічого не видалено) =====
+    // ===== СПИСОК КОЛЕКЦІЙ =====
     var collectionsConfig = [
-        { id: 'history_line', emoji: '🕒', name_key: 'new_main_c_history', request: 'local_history' },
+        { id: 'continue_line', emoji: '🕒', name_key: 'title_continue', request: 'local_continue' }, // Використовуємо стандартний переклад Lampa
         { id: 'hot_new_releases', name_key: 'new_main_c_hot_new', emoji: '🎬', request: 'discover/movie?sort_by=primary_release_date.desc&with_release_type=4|5|6&primary_release_date.lte=' + today + '&vote_count.gte=50&vote_average.gte=6&with_runtime.gte=40&without_genres=99' },
         { id: 'trending_movies', emoji: '🔥', name_key: 'new_main_c_trend_movie', request: 'trending/movie/week' },
         { id: 'fresh_online', emoji: '👀', name_key: 'new_main_c_watching_now', request: 'discover/movie?sort_by=popularity.desc&with_release_type=4|5|6&primary_release_date.lte=' + today + '&vote_count.gte=50&vote_average.gte=6&with_runtime.gte=40&without_genres=99' },
@@ -41,11 +41,6 @@
     ];
 
     var pluginSettings = { collections: {}, order: {} };
-
-    collectionsConfig.forEach(function (c, index) {
-        pluginSettings.collections[c.id] = true;
-        pluginSettings.order[c.id] = index + 1;
-    });
 
     function loadSettings() {
         if (Lampa.Storage) {
@@ -70,7 +65,6 @@
         if (!Lampa.Lang) return;
         Lampa.Lang.add({
             new_main_plugin_name: { uk: "Головна сторінка +" },
-            new_main_c_history: { uk: "Ви нещодавно дивились" },
             new_main_c_hot_new: { uk: "Найсвіжіші прем'єри" },
             new_main_c_trend_movie: { uk: "Трендові фільми" },
             new_main_c_watching_now: { uk: "Зараз дивляться" },
@@ -99,7 +93,9 @@
         });
 
         collectionsConfig.forEach(function (cfg, index) {
-            var fullName = Lampa.Lang.translate(cfg.name_key) + (cfg.emoji ? ' ' + cfg.emoji : '');
+            var name = Lampa.Lang.translate(cfg.name_key);
+            var fullName = name + (cfg.emoji ? ' ' + cfg.emoji : '');
+            
             Lampa.SettingsApi.addParam({
                 component: 'new_main_settings',
                 param: { name: 'new_main_collection_' + cfg.id, type: 'trigger', default: true },
@@ -141,15 +137,19 @@
                 if (!pluginSettings.collections[cfg.id]) return;
 
                 parts.push(function (call) {
-                    if (cfg.request === 'local_history') {
-                        var list = Lampa.History ? Lampa.History.get() : [];
-                        var cards = list.map(function(i){ return i.card || i; }).filter(function(c){ return c && (c.title || c.name); });
-                        if (cards.length > 0) {
-                            return call({ results: cards.slice(0, 20), title: Lampa.Lang.translate(cfg.name_key) + ' ' + cfg.emoji });
+                    // --- ЛОГІКА ПРОДОВЖИТИ ПЕРЕГЛЯД (з вашого другого плагіна) ---
+                    if (cfg.request === 'local_continue') {
+                        var continues = Lampa.Favorite ? Lampa.Favorite.continues('movie') : [];
+                        if (continues.length > 0) {
+                            return call({ 
+                                results: continues, 
+                                title: Lampa.Lang.translate(cfg.name_key) + ' ' + cfg.emoji 
+                            });
                         }
                         return call({ results: [] });
                     }
 
+                    // --- TMDB ЗАПИТИ ---
                     var cached = getCache(cfg.id);
                     if (cached) return call(cached);
 
@@ -174,19 +174,20 @@
     }
 
     function init() {
-        if (!Lampa.Api || !Lampa.Api.sources.tmdb) return;
+        if (!Lampa.Api || !Lampa.Api.sources || !Lampa.Api.sources.tmdb) return;
         var original = Lampa.Api.sources.tmdb;
         if (original._new_main_pro_init) return;
         original._new_main_pro_init = true;
 
-        Lampa.Api.sources.new_main = Object.assign({}, original);
+        var new_main_source = Object.assign({}, original);
+        Lampa.Api.sources.new_main = new_main_source;
         
         if (Lampa.Params && Lampa.Params.values && Lampa.Params.values.source) {
             if (!Lampa.Params.values.source.new_main) Lampa.Params.values.source.new_main = 'New_Main';
         }
 
-        Lampa.Api.sources.new_main.main = function () {
-            if (!this.type) return createDiscoveryMain(Lampa.Api.sources.new_main).apply(this, arguments);
+        new_main_source.main = function () {
+            if (!this.type) return createDiscoveryMain(new_main_source).apply(this, arguments);
             return original.main.apply(this, arguments);
         };
 
