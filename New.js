@@ -559,10 +559,12 @@
       
             var originalMain = originalTMDB.main;       
       
+            // ВИПРАВЛЕНО: плагін працює незалежно від налаштування широких карток  
             tmdb_mod.main = function () {      
                 var args = Array.from(arguments);      
                       
-                if (settings.wideCards && this.type !== 'movie' && this.type !== 'tv') {      
+                // Завжди використовуємо кастомну головну сторінку, крім для movie/tv  
+                if (this.type !== 'movie' && this.type !== 'tv') {      
                     return createDiscoveryMain(tmdb_mod).apply(this, args);      
                 }      
                       
