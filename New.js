@@ -117,7 +117,7 @@
         if (!Lampa.SettingsApi) return;
 
         Lampa.SettingsApi.addComponent({
-            component: 'new_main',
+            component: 'new_main_settings',
             name: Lampa.Lang.translate('new_main_plugin_name'),
             icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>'
         });
@@ -126,9 +126,8 @@
             var name = Lampa.Lang.translate(cfg.name_key);
             var fullName = (cfg.emoji ? cfg.emoji + ' ' : '') + name;
 
-            // 1. Перемикач підбірки
             Lampa.SettingsApi.addParam({
-                component: 'new_main',
+                component: 'new_main_settings',
                 param: { name: 'new_main_collection_' + cfg.id, type: 'trigger', default: true },
                 field: { name: fullName },
                 onChange: function (value) {
@@ -137,9 +136,8 @@
                 }
             });
 
-            // 2. Вибір позиції (одразу під підбіркою)
             Lampa.SettingsApi.addParam({
-                component: 'new_main',
+                component: 'new_main_settings',
                 param: {
                     name: 'new_main_order_' + cfg.id,
                     type: 'select',
@@ -210,16 +208,18 @@
     function init() {
         if (!Lampa.Api || !Lampa.Api.sources || !Lampa.Api.sources.tmdb) return;
         var original = Lampa.Api.sources.tmdb;
-        if (original._new_main_pro) return;
-        original._new_main_pro = true;
+        if (original._new_main_pro_init) return;
+        original._new_main_pro_init = true;
 
-        var new_main = Object.assign({}, original);
-        Lampa.Api.sources.new_main = new_main;
+        var new_main_source = Object.assign({}, original);
+        
+        // Реєструємо під цим ім'ям для відображення "New_main"
+        Lampa.Api.sources.new_main = new_main_source;
 
         var originalMain = original.main;
-        new_main.main = function () {
+        new_main_source.main = function () {
             if (!this.type) {
-                return createDiscoveryMain(new_main).apply(this, arguments);
+                return createDiscoveryMain(new_main_source).apply(this, arguments);
             }
             return originalMain.apply(this, arguments);
         };
