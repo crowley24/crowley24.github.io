@@ -39,7 +39,7 @@
         { id: 'documentary', emoji: '🔬', name_key: 'new_main_c_documentary', request: 'discover/movie?with_genres=99&sort_by=popularity.desc&vote_count.gte=20' },
         { id: 'animation', emoji: '🧑‍🎤', name_key: 'new_main_c_animation', request: 'discover/movie?with_genres=16&sort_by=popularity.desc&vote_average.gte=7&vote_count.gte=500' },
         { id: 'netflix_best', emoji: '⚫', name_key: 'new_main_c_netflix', request: 'discover/tv?with_networks=213' },
-        { id: 'top_series_all_time', emoji: '💎', name_key: 'new_main_c_top_series', request: 'discover/tv?sort_by=vote_average.desc&vote_count.gte=500&with_runtime.gte=20' }   
+        { id: 'top_series_all_time', emoji: '💎', name_key: 'new_main_c_top_series', request: 'discover/tv?sort_by=vote_average.desc&vote_count.gte=1000&without_genres=16,10762&with_runtime.gte=25' }   
     ];
 
     var pluginSettings = { collections: {}, order: {} };
