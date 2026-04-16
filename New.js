@@ -55,6 +55,34 @@
         pluginSettings.order[c.id] = index + 1;
     });
 
+    // ===== ORDER FIX =====
+    function normalizeOrder(changedId, newPosition) {
+
+        var items = collectionsConfig.map(function (c) {
+            return {
+                id: c.id,
+                pos: pluginSettings.order[c.id] || 999
+            };
+        });
+
+        items = items.filter(function (i) {
+            return i.id !== changedId;
+        });
+
+        items.sort(function (a, b) {
+            return a.pos - b.pos;
+        });
+
+        items.splice(newPosition - 1, 0, {
+            id: changedId,
+            pos: newPosition
+        });
+
+        items.forEach(function (item, index) {
+            pluginSettings.order[item.id] = index + 1;
+        });
+    }
+
     function applyOrder() {
         collectionsConfig.sort(function (a, b) {
             return (pluginSettings.order[a.id] || 999) - (pluginSettings.order[b.id] || 999);
@@ -90,8 +118,8 @@
         if (!Lampa.Lang) return;
 
         Lampa.Lang.add({
-            tmdb_mod_plugin_name: { ru: "TMDB PRO", uk: "TMDB PRO" },
-            tmdb_mod_toggle_name: { ru: "Увімкнути TMDB PRO", uk: "Увімкнути TMDB PRO" },
+            tmdb_mod_plugin_name: { ru: "Головна сторінка +", uk: "Головна сторінка +" },
+            tmdb_mod_toggle_name: { ru: "Увімкнути", uk: "Увімкнути" },
 
             tmdb_mod_c_hot_new: { ru: "Найсвіжіші прем'єри", uk: "Найсвіжіші прем'єри" },
             tmdb_mod_c_trend_movie: { ru: "Трендові фільми", uk: "Трендові фільми" },
@@ -135,7 +163,6 @@
             var name = Lampa.Lang.translate(cfg.name_key);
             var fullName = (cfg.emoji ? cfg.emoji + ' ' : '') + name;
 
-            // toggle
             Lampa.SettingsApi.addParam({
                 component: 'tmdb_mod',
                 param: {
@@ -150,7 +177,6 @@
                 }
             });
 
-            // order select
             Lampa.SettingsApi.addParam({
                 component: 'tmdb_mod',
                 param: {
@@ -169,10 +195,19 @@
                     name: '↳ Позиція: ' + fullName
                 },
                 onChange: function (value) {
-                    pluginSettings.order[cfg.id] = parseInt(value);
+
+                    var newPos = parseInt(value);
+
+                    normalizeOrder(cfg.id, newPos);
+
                     saveSettings();
                     applyOrder();
-                    Lampa.Noty.show('Порядок оновлено');
+
+                    if (Lampa.Settings && Lampa.Settings.update) {
+                        Lampa.Settings.update();
+                    }
+
+                    Lampa.Noty.show('Порядок оновлено ✔');
                 }
             });
 
