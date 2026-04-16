@@ -96,7 +96,6 @@
         if (!Lampa.Lang) return;
         Lampa.Lang.add({
             tmdb_mod_plugin_name: { ru: "Головна сторінка +", uk: "Головна сторінка +" },
-            tmdb_mod_title_list: { ru: "--- НАЛАШТУВАННЯ ПІДБІРОК ---", uk: "--- НАЛАШТУВАННЯ ПІДБІРОК ---" },
             tmdb_mod_c_hot_new: { ru: "Найсвіжіші прем'єри", uk: "Найсвіжіші прем'єри" },
             tmdb_mod_c_trend_movie: { ru: "Трендові фільми", uk: "Трендові фільми" },
             tmdb_mod_c_watching_now: { ru: "Зараз дивляться", uk: "Зараз дивляться" },
@@ -121,12 +120,6 @@
             component: 'tmdb_mod',
             name: Lampa.Lang.translate('tmdb_mod_plugin_name'),
             icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>'
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'tmdb_mod',
-            param: { name: 'tmdb_mod_title_list', type: 'static' },
-            field: { name: Lampa.Lang.translate('tmdb_mod_title_list') }
         });
 
         collectionsConfig.forEach(function (cfg, index) {
@@ -225,7 +218,6 @@
 
         var originalMain = original.main;
         tmdb_mod.main = function () {
-            // Плагін завжди увімкнений, якщо він встановлений
             if (!this.type) {
                 return createDiscoveryMain(tmdb_mod).apply(this, arguments);
             }
