@@ -214,7 +214,7 @@
         original._new_main_pro = true;
 
         var new_main = Object.assign({}, original);
-        Lampa.Api.sources.tmdb_mod = new_main;
+        Lampa.Api.sources.new_main = new_main;
 
         var originalMain = original.main;
         new_main.main = function () {
