@@ -28,12 +28,15 @@
 
     // ===== CONFIG =====
     var collectionsConfig = [
+        // Додано стрічку історії (локальна)
+        { id: 'history_line', emoji: '🕒', name_key: 'new_main_c_history', request: 'local_history' },
+        
         { id: 'hot_new_releases', name_key: 'new_main_c_hot_new', emoji: '🎬', request: 'discover/movie?sort_by=primary_release_date.desc&with_release_type=4|5|6&primary_release_date.lte=' + today + '&vote_count.gte=50&vote_average.gte=6&with_runtime.gte=40&without_genres=99' },
         { id: 'trending_movies', emoji: '🔥', name_key: 'new_main_c_trend_movie', request: 'trending/movie/week' },
         { id: 'fresh_online', emoji: '👀', name_key: 'new_main_c_watching_now', request: 'discover/movie?sort_by=popularity.desc&with_release_type=4|5|6&primary_release_date.lte=' + today + '&vote_count.gte=50&vote_average.gte=6&with_runtime.gte=40&without_genres=99' },
         { id: 'cult_cinema', emoji: '🍿', name_key: 'new_main_c_cult', request: 'discover/movie?primary_release_date.gte=1980-01-01&sort_by=popularity.desc&vote_average.gte=7&vote_count.gte=500' },
         { id: 'top_10_studios_mix', emoji: '🏆', name_key: 'new_main_c_top_studios', request: 'discover/movie?with_companies=6194|33|4|306|5|12|8411|9195|2|7295&sort_by=popularity.desc&vote_average.gte=7.0&vote_count.gte=1000' },
-        { id: 'cult_80_90_premium', emoji: '📼', name_key: 'new_main_c_cult_80_90', request: 'discover/movie?primary_release_date.gte=1980-01-01&primary_release_date.lte=1999-12-31&sort_by=popularity.desc&vote_average.gte=7&vote_count.gte=1000' },
+        { id: 'cult_80_90_premium', emoji: ' cassette ', name_key: 'new_main_c_cult_80_90', request: 'discover/movie?primary_release_date.gte=1980-01-01&primary_release_date.lte=1999-12-31&sort_by=popularity.desc&vote_average.gte=7&vote_count.gte=1000' },
         { id: 'horror_premium', emoji: '👻', name_key: 'new_main_c_horror_premium', request: 'discover/movie?with_genres=27&sort_by=vote_average.desc&vote_average.gte=6.2&vote_count.gte=300&with_runtime.gte=70' },
 
         { id: 'best_of_current_year_movies', emoji: '🌟', name_key: 'new_main_c_best_current_y', request: 'discover/movie?primary_release_year=' + currentYear + '&sort_by=vote_average.desc&vote_count.gte=300' },
@@ -98,6 +101,7 @@
         if (!Lampa.Lang) return;
         Lampa.Lang.add({
             new_main_plugin_name: { uk: "Головна сторінка +" },
+            new_main_c_history: { uk: "Ви нещодавно дивились" },
             new_main_c_hot_new: { uk: "Найсвіжіші прем'єри" },
             new_main_c_trend_movie: { uk: "Трендові фільми" },
             new_main_c_watching_now: { uk: "Зараз дивляться" },
@@ -128,7 +132,9 @@
 
         collectionsConfig.forEach(function (cfg, index) {
             var name = Lampa.Lang.translate(cfg.name_key);
-            var fullName = (cfg.emoji ? cfg.emoji + ' ' : '') + name;
+            // Емодзі після назви в налаштуваннях
+            var fullName = name + (cfg.emoji ? ' ' + cfg.emoji : '');
+            
             Lampa.SettingsApi.addParam({
                 component: 'new_main_settings',
                 param: { name: 'new_main_collection_' + cfg.id, type: 'trigger', default: true },
@@ -186,6 +192,17 @@
                 if (!pluginSettings.collections[cfg.id]) return;
 
                 parts.push(function (call) {
+                    // --- ЛОГІКА ДЛЯ ІСТОРІЇ ---
+                    if (cfg.request === 'local_history') {
+                        var list = (Lampa.History && Lampa.History.get) ? Lampa.History.get() : [];
+                        var results = list.slice(0, 20).map(function(h) { return h.card; });
+                        return call({
+                            results: results,
+                            title: Lampa.Lang.translate(cfg.name_key) + (cfg.emoji ? ' ' + cfg.emoji : '')
+                        });
+                    }
+
+                    // --- ЛОГІКА ДЛЯ ТМDB ---
                     var cached = getCache(cfg.id);
                     if (cached) return call(cached);
 
@@ -193,6 +210,7 @@
                         if (json && json.results) {
                             json.results = removeDuplicates(seen, json.results);
                             json.results = shuffle(json.results);
+                            // Емодзі після назви на головній
                             json.title = Lampa.Lang.translate(cfg.name_key) + (cfg.emoji ? ' ' + cfg.emoji : '');
                             setCache(cfg.id, json);
                         }
@@ -216,12 +234,9 @@
 
         var new_main_source = Object.assign({}, original);
         
-        // Реєструємо об'єкт у списку Api
         Lampa.Api.sources.new_main = new_main_source;
 
-        // --- КРИТИЧНО: Додаємо джерело у меню вибору ---
         if (Lampa.Params && Lampa.Params.values && Lampa.Params.values.source) {
-            // Перевіряємо, чи вже є воно у списку (щоб не дублювати)
             if (!Lampa.Params.values.source.new_main) {
                 Lampa.Params.values.source.new_main = 'New_Main';
             }
