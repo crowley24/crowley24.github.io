@@ -137,7 +137,7 @@
                 }
             });
 
-            // 2. Вибір позиції (одразу під підбіркою)
+            // 2. Вибір позиції
             Lampa.SettingsApi.addParam({
                 component: 'tmdb_mod',
                 param: {
@@ -214,7 +214,9 @@
         original._tmdb_mod_pro = true;
 
         var tmdb_mod = Object.assign({}, original);
-        Lampa.Api.sources.tmdb_mod = tmdb_mod;
+        
+        // Змінюємо ключ на "plus", щоб у заголовок виводилося "Plus"
+        Lampa.Api.sources.plus = tmdb_mod;
 
         var originalMain = original.main;
         tmdb_mod.main = function () {
