@@ -46,8 +46,11 @@
                 pluginSettings.collections[cfg.id] = Lampa.Storage.get('tmdb_mod_collection_' + cfg.id, true);    
                 // Надійна ініціалізація позиції з перевіркою  
                 var savedPosition = Lampa.Storage.get('tmdb_mod_position_' + cfg.id);  
-                pluginSettings.positions[cfg.id] = savedPosition !== null && savedPosition !== undefined ?   
-                    parseInt(savedPosition) : collectionsConfig.indexOf(cfg) + 1;  
+                if (savedPosition !== null && savedPosition !== undefined && !isNaN(savedPosition)) {  
+                    pluginSettings.positions[cfg.id] = parseInt(savedPosition);  
+                } else {  
+                    pluginSettings.positions[cfg.id] = collectionsConfig.indexOf(cfg) + 1;  
+                }  
             });    
         }    
         return pluginSettings;    
@@ -58,7 +61,10 @@
             Lampa.Storage.set('tmdb_mod_enabled', pluginSettings.enabled);    
             collectionsConfig.forEach(function(cfg) {    
                 Lampa.Storage.set('tmdb_mod_collection_' + cfg.id, pluginSettings.collections[cfg.id]);    
-                Lampa.Storage.set('tmdb_mod_position_' + cfg.id, pluginSettings.positions[cfg.id]);    
+                // Зберігаємо тільки валідні позиції  
+                if (pluginSettings.positions[cfg.id] !== undefined && !isNaN(pluginSettings.positions[cfg.id])) {  
+                    Lampa.Storage.set('tmdb_mod_position_' + cfg.id, pluginSettings.positions[cfg.id]);    
+                }  
             });    
         }    
     }    
@@ -117,8 +123,8 @@
                 var posB = settings.positions[b.id];  
                   
                 // Переконання, що позиції є числами  
-                posA = (typeof posA === 'number' && !isNaN(posA)) ? posA : 999;  
-                posB = (typeof posB === 'number' && !isNaN(posB)) ? posB : 999;  
+                posA = (typeof posA === 'number' && !isNaN(posA) && posA > 0) ? posA : 999;  
+                posB = (typeof posB === 'number' && !isNaN(posB) && posB > 0) ? posB : 999;  
                   
                 return posA - posB;    
             });    
@@ -179,7 +185,7 @@
                 });    
                 document.querySelectorAll('[data-name="tmdb_mod_position_' + cfg.id + '"]').forEach(function(el) {    
                     var position = pluginSettings.positions[cfg.id];  
-                    if (typeof position === 'number' && !isNaN(position)) {  
+                    if (typeof position === 'number' && !isNaN(position) && position > 0) {  
                         if (el.type === 'number' || el.type === 'text') el.value = position;    
                         if (el.tagName === 'SELECT') el.value = position.toString();    
                     }  
@@ -235,135 +241,134 @@
                 field: {       
                     name: fullDisplayName,       
                     description: Lampa.Lang.translate('tmdb_mod_show_collection') + ' "' + translatedName + '"'       
-            },      
-            onChange: function (value) {      
-                pluginSettings.collections[cfg.id] = value;      
-                saveSettings();      
-                Lampa.Noty.show(Lampa.Lang.translate('tmdb_mod_noty_reload'));      
-            }    
-        });      
+                },      
+                onChange: function (value) {      
+                    pluginSettings.collections[cfg.id] = value;      
+                    saveSettings();      
+                    Lampa.Noty.show(Lampa.Lang.translate('tmdb_mod_noty_reload'));      
+                }    
+            });      
   
-        // Альтернативний варіант з випадаючим списком для позиції  
-        var positionOptions = {};  
-        for (var i = 1; i <= collectionsConfig.length; i++) {  
-            positionOptions[i] = i.toString();  
-        }  
-          
-        Lampa.SettingsApi.addParam({      
-            component: 'tmdb_mod',      
-            param: { name: 'tmdb_mod_position_' + cfg.id, type: 'select', default: collectionsConfig.indexOf(cfg) + 1 },      
-            field: {       
-                name: Lampa.Lang.translate('tmdb_mod_position') + ' - ' + translatedName,       
-                description: Lampa.Lang.translate('tmdb_mod_position_descr') + ' "' + translatedName + '"'       
-            },  
-            values: positionOptions,  
-            onChange: function (value) {      
-                var parsedValue = parseInt(value);  
-                pluginSettings.positions[cfg.id] = (typeof parsedValue === 'number' && !isNaN(parsedValue)) ?   
-                    parsedValue : collectionsConfig.indexOf(cfg) + 1;      
-                saveSettings();      
-                Lampa.Noty.show(Lampa.Lang.translate('tmdb_mod_noty_reload'));      
-            }    
+            // Альтернативний варіант з випадаючим списком для позиції  
+            var positionOptions = {};  
+            for (var i = 1; i <= collectionsConfig.length; i++) {  
+                positionOptions[i] = i.toString();  
+            }  
+              
+            Lampa.SettingsApi.addParam({      
+                component: 'tmdb_mod',      
+                param: { name: 'tmdb_mod_position_' + cfg.id, type: 'select', default: collectionsConfig.indexOf(cfg) + 1 },      
+                field: {       
+                    name: Lampa.Lang.translate('tmdb_mod_position') + ' - ' + translatedName,       
+                    description: Lampa.Lang.translate('tmdb_mod_position_descr') + ' "' + translatedName + '"'       
+                },  
+                values: positionOptions,  
+                onChange: function (value) {      
+                    var parsedValue = parseInt(value);  
+                    pluginSettings.positions[cfg.id] = (typeof parsedValue === 'number' && !isNaN(parsedValue)) ?   
+                        parsedValue : collectionsConfig.indexOf(cfg) + 1;      
+                    saveSettings();      
+                    Lampa.Noty.show(Lampa.Lang.translate('tmdb_mod_noty_reload'));      
+                }    
+            });    
         });    
-    });    
       
-    // Видаляємо старий слухач перед додаванням нового (запобігання витоку пам'яті)      
-    if (settingsListener && Lampa.Settings.listener.remove) {      
-        Lampa.Settings.listener.remove('open', settingsListener);      
-    }    
-    
-    // Створюємо новий слухач для синхронізації чекбоксів      
-    settingsListener = function (e) {      
-        if (e.name === 'tmdb_mod') {      
-            syncCheckboxes();      
-        }      
-    };    
-    
-    if (Lampa.Settings && Lampa.Settings.listener) {      
-        Lampa.Settings.listener.follow('open', settingsListener);      
-    }      
-}   
-    
-function initPlugin() {    
-    try {    
-        if (!Lampa.Api || !Lampa.Api.sources || !Lampa.Api.sources.tmdb) {    
-            console.error('[TMDB_MOD] Lampa API не готовий');    
-            if (Lampa.Noty) {    
-                Lampa.Noty.show('TMDB_MOD: Помилка ініціалізації');    
-            }    
-            return false;    
+        // Видаляємо старий слухач перед додаванням нового (запобігання витоку пам'яті)      
+        if (settingsListener && Lampa.Settings.listener.remove) {      
+            Lampa.Settings.listener.remove('open', settingsListener);      
         }    
     
-        var originalTMDB = Lampa.Api.sources.tmdb;    
-        var settings = loadSettings();    
-            
-        var tmdb_mod = Object.assign({}, originalTMDB);    
-        Lampa.Api.sources.tmdb_mod = tmdb_mod;    
-        Object.defineProperty(Lampa.Api.sources, 'tmdb_mod', {     
-            get: function() { return tmdb_mod; }     
-        });    
-    
-        var originalMain = originalTMDB.main;     
-    
-        tmdb_mod.main = function () {    
-            var args = Array.from(arguments);    
-                
-            if (loadSettings().enabled && this.type !== 'movie' && this.type !== 'tv') {    
-                return createDiscoveryMain(tmdb_mod).apply(this, args);    
-            }    
-                
-            return originalMain.apply(this, args);    
+        // Створюємо новий слухач для синхронізації чекбоксів      
+        settingsListener = function (e) {      
+            if (e.name === 'tmdb_mod') {      
+                syncCheckboxes();      
+            }      
         };    
     
-        if (Lampa.Params && Lampa.Params.select) {    
-            try {    
-                var sources = Lampa.Params.values && Lampa.Params.values.source ? Lampa.Params.values.source : {};    
-                if (!sources.tmdb_mod) {    
-                    sources.tmdb_mod = 'TMDB_MOD';     
-                    Lampa.Params.select('source', sources, 'tmdb');     
+        if (Lampa.Settings && Lampa.Settings.listener) {      
+            Lampa.Settings.listener.follow('open', settingsListener);      
+        }      
+    }    
+        
+    function initPlugin() {    
+        try {    
+            if (!Lampa.Api || !Lampa.Api.sources || !Lampa.Api.sources.tmdb) {    
+                console.error('[TMDB_MOD] Lampa API не готовий');    
+                if (Lampa.Noty) {    
+                    Lampa.Noty.show('TMDB_MOD: Помилка ініціалізації');    
                 }    
-            } catch (e) {    
-                console.error('[TMDB_MOD] Помилка реєстрації джерела:', e);    
+                return false;    
+            }    
+    
+            var originalTMDB = Lampa.Api.sources.tmdb;    
+            var settings = loadSettings();    
+                
+            var tmdb_mod = Object.assign({}, originalTMDB);    
+            Lampa.Api.sources.tmdb_mod = tmdb_mod;    
+            Object.defineProperty(Lampa.Api.sources, 'tmdb_mod', {     
+                get: function() { return tmdb_mod; }     
+            });    
+    
+            var originalMain = originalTMDB.main;     
+    
+            tmdb_mod.main = function () {    
+                var args = Array.from(arguments);    
+                    
+                if (loadSettings().enabled && this.type !== 'movie' && this.type !== 'tv') {    
+                    return createDiscoveryMain(tmdb_mod).apply(this, args);    
+                }    
+                    
+                return originalMain.apply(this, args);    
+            };    
+    
+            if (Lampa.Params && Lampa.Params.select) {    
+                try {    
+                    var sources = Lampa.Params.values && Lampa.Params.values.source ? Lampa.Params.values.source : {};    
+                    if (!sources.tmdb_mod) {    
+                        sources.tmdb_mod = 'TMDB_MOD';     
+                        Lampa.Params.select('source', sources, 'tmdb');     
+                    }    
+                } catch (e) {    
+                    console.error('[TMDB_MOD] Помилка реєстрації джерела:', e);    
+                }    
+            }    
+    
+            return true;    
+        } catch (e) {    
+            console.error('[TMDB_MOD] Критична помилка ініціалізації:', e);    
+            return false;    
+        }    
+    }    
+    
+    function waitForApp(retries) {    
+        retries = retries || 0;    
+        if (retries > maxRetries) {    
+            console.error('[TMDB_MOD] Не вдалося завантажити Lampa після ' + maxRetries + ' спроб');    
+            return;    
+        }    
+    
+        function onAppReady() {    
+            addTranslations();    
+            if (initPlugin()) {    
+                addSettings();    
             }    
         }    
     
-        return true;    
-    } catch (e) {    
-        console.error('[TMDB_MOD] Критична помилка ініціалізації:', e);    
-        return false;    
-    }    
-}    
-    
-function waitForApp(retries) {    
-    retries = retries || 0;    
-    if (retries > maxRetries) {    
-        console.error('[TMDB_MOD] Не вдалося завантажити Lampa після ' + maxRetries + ' спроб');    
-        return;    
-    }    
-    
-    function onAppReady() {    
-        addTranslations();    
-        if (initPlugin()) {    
-            addSettings();    
+        if (window.appready) {    
+            onAppReady();    
+        } else if (Lampa.Listener && typeof Lampa.Listener.follow === 'function') {    
+            Lampa.Listener.follow('app', function (e) {    
+                if (e.type === 'ready') {    
+                    onAppReady();    
+                }    
+            });    
+        } else {    
+            setTimeout(function() {     
+                waitForApp(retries + 1);     
+            }, 1000);    
         }    
     }    
     
-    if (window.appready) {    
-        onAppReady();    
-    } else if (Lampa.Listener && typeof Lampa.Listener.follow === 'function') {    
-        Lampa.Listener.follow('app', function (e) {    
-            if (e.type === 'ready') {    
-                onAppReady();    
-            }    
-        });    
-    } else {    
-        setTimeout(function() {     
-            waitForApp(retries + 1);     
-        }, 1000);    
-    }    
-}    
+    waitForApp();    
     
-waitForApp();    
-    
-})(); 
-  
+})();
