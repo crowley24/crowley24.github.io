@@ -25,13 +25,11 @@
     
         // СЕРІАЛИ    
         { id: 'trending_tv', emoji: '🔥', name_key: 'tmdb_mod_c_trend_tv', request: 'trending/tv/week' },    
-        { id: 'best_world_series', emoji: '🌍', name_key: 'tmdb_mod_c_world_hits', request: 'discover/tv?with_origin_country=US|CA|GB|AU|IE|DE|FR|NL|SE|NO|DK|FI|ES|IT|BE|CH|AT|KR|JP|MX|BR&sort_by=last_air_date.desc&vote_average.gte=7&vote_count.gte=500&first_air_date.gte=2020-01-01&first_air_date.lte=' + today + '&without_genres=16|99|10762|10763|10764|10766|10767|10768|10770&with_status=0|1|2|3' },    
-        { id: 'netflix_best', emoji: '⚫', name_key: 'tmdb_mod_c_netflix', request: 'discover/tv?with_networks=213&sort_by=last_air_date.desc&first_air_date.gte=2020-01-01&vote_average.gte=7&vote_count.gte=100' },    
-        { id: 'hbo_max_hits', emoji: '🟠', name_key: 'tmdb_mod_c_hbo', request: 'discover/tv?with_networks=49&sort_by=last_air_date.desc&first_air_date.gte=2020-01-01&vote_average.gte=7&vote_count.gte=100' },    
-        { id: 'apple_tv_plus', emoji: '⚪', name_key: 'tmdb_mod_c_apple', request: 'discover/tv?with_networks=2552&sort_by=last_air_date.desc&first_air_date.gte=2020-01-01&vote_average.gte=7&vote_count.gte=50' },    
-        { id: 'amazon_prime', emoji: '🔵', name_key: 'tmdb_mod_c_amazon', request: 'discover/tv?with_networks=1024&sort_by=last_air_date.desc&first_air_date.gte=2020-01-01&vote_average.gte=7&vote_count.gte=100' },    
-        { id: 'disney_plus', emoji: '🔷', name_key: 'tmdb_mod_c_disney', request: 'discover/tv?with_networks=2739&sort_by=last_air_date.desc&first_air_date.gte=2020-01-01&vote_average.gte=7&vote_count.gte=100' },    
-        { id: 'paramount_plus', emoji: '🟣', name_key: 'tmdb_mod_c_paramount', request: 'discover/tv?with_networks=4330&sort_by=last_air_date.desc&first_air_date.gte=2020-01-01&vote_average.gte=7&vote_count.gte=50' }    
+        { id: 'best_world_series', emoji: '🌍', name_key: 'tmdb_mod_c_world_hits', request: 'discover/tv?with_origin_country=US|GB|FR|DE|JP|KR&sort_by=popularity.desc&vote_average.gte=7&vote_count.gte=100' },    
+        { id: 'ukrainian_series', emoji: '🇺🇦', name_key: 'tmdb_mod_c_ukr_series', request: 'discover/tv?with_origin_country=UA&sort_by=popularity.desc&vote_average.gte=6&vote_count.gte=10' },    
+        { id: 'best_of_current_year_tv', emoji: '🌟', name_key: 'tmdb_mod_c_best_current_y_tv', request: 'discover/tv?first_air_date.year=' + currentYear + '&sort_by=vote_average.desc&vote_count.gte=50' },    
+        { id: 'best_of_last_year_tv', emoji: '🏆', name_key: 'tmdb_mod_c_best_last_y_tv', request: 'discover/tv?first_air_date.year=' + lastYear + '&sort_by=vote_average.desc&vote_count.gte=100' },    
+        { id: 'animation_tv', emoji: '🧑‍🎤', name_key: 'tmdb_mod_c_animation_tv', request: 'discover/tv?with_genres=16&sort_by=popularity.desc&vote_average.gte=7&vote_count.gte=100' }    
     ];    
     
     var maxRetries = 30;    
@@ -48,7 +46,7 @@
             tmdb_mod_plugin_name: 'Головна сторінка +',    
             tmdb_mod_wide_cards: 'Горизонтальні картки',    
             tmdb_mod_wide_cards_descr: 'Використовувати широкі горизонтальні картки замість стандартних',    
-            tmdb_mod_noty_reload: 'Перезавантажте сторінку для застосування змін',    
+            tmdb_mod_noty_reload: 'Потрібно перезавантажити сторінку для застосування змін',    
             tmdb_mod_c_hot_new: 'Гарячі новинки',    
             tmdb_mod_c_trend_movie: 'Трендові фільми',    
             tmdb_mod_c_watching_now: 'Дивляться зараз',    
@@ -60,12 +58,10 @@
             tmdb_mod_c_documentary: 'Документальні',    
             tmdb_mod_c_trend_tv: 'Трендові серіали',    
             tmdb_mod_c_world_hits: 'Світові хіти',    
-            tmdb_mod_c_netflix: 'Netflix Найкраще',    
-            tmdb_mod_c_hbo: 'HBO Max Хіти',    
-            tmdb_mod_c_apple: 'Apple TV+',    
-            tmdb_mod_c_amazon: 'Amazon Prime',    
-            tmdb_mod_c_disney: 'Disney+',    
-            tmdb_mod_c_paramount: 'Paramount+'    
+            tmdb_mod_c_ukr_series: 'Українські серіали',    
+            tmdb_mod_c_best_current_y_tv: 'Найкращі серіали ' + currentYear + ' року',    
+            tmdb_mod_c_best_last_y_tv: 'Найкращі серіали ' + lastYear + ' року',    
+            tmdb_mod_c_animation_tv: 'Анімаційні серіали'    
         });    
     }    
     
@@ -250,87 +246,191 @@
                     },    
                     onlyEnter: function () {    
                         var mType = movie.media_type || (movie.name ? 'tv' : 'movie');    
-                        Lampa.Activity.push({   
-                            url: '',   
-                            component: 'full',   
-                            id: movie.id,   
-                            method: mType,   
-                            card: movie,   
-                            source: movie.source || 'tmdb'   
-                        });  
-                    }  
-                }  
-            }  
-        };  
+                        Lampa.Activity.push({    
+                            url: '',    
+                            component: 'full',    
+                            id: movie.id,    
+                            method: mType,    
+                            card: movie,    
+                            source: movie.source || 'tmdb'    
+                        });    
+                    }    
+                }    
+            }    
+        };    
     }    
     
-    function makeWideCardItem(movie) {  
-        return {  
-            title: movie.title || movie.name,  
-            params: {  
-                createInstance: function () {  
-                    return Lampa.Maker.make('Card', movie, function (module) {   
-                        return module.only('Card', 'Callback');   
-                    });  
-                },  
-                emit: {  
-                    onCreate: function () {  
-                        var item = $(this.html);  
-                        item.addClass('card--wide-custom');  
-                        var view = item.find('.card__view');  
-                        view.empty();   
+    function makeWideCardItem(movie) {    
+        return {    
+            title: movie.title || movie.name,    
+            params: {    
+                createInstance: function () {    
+                    return Lampa.Maker.make('Card', movie, function (module) {    
+                        return module.only('Card', 'Callback');    
+                    });    
+                },    
+                emit: {    
+                    onCreate: function () {    
+                        var item = $(this.html);    
+                        item.addClass('card--wide-custom');    
+                        var view = item.find('.card__view');    
+                        view.empty();    
                           
-                        var quality = Lampa.Storage.get('ym_img_quality', 'w300');  
-                        var imgUrl = 'https://image.tmdb.org/t/p/' + quality + movie.backdrop_path;  
-                        view.css({  
-                            'background-image': 'url(' + imgUrl + ')',   
-                            'background-size': 'cover',   
-                            'background-position': 'center',  
-                            'padding-bottom': '56.25%',   
-                            'height': '0',   
-                            'position': 'relative'  
-                        });  
+                        var quality = Lampa.Storage.get('ym_img_quality', 'w300');    
+                        var imgUrl = 'https://image.tmdb.org/t/p/' + quality + movie.backdrop_path;    
+                        view.css({    
+                            'background-image': 'url(' + imgUrl + ')',    
+                            'background-size': 'cover',    
+                            'background-position': 'center',    
+                            'padding-bottom': '56.25%',    
+                            'height': '0',    
+                            'position': 'relative'    
+                        });    
                           
-                        view.append('<div class="card-backdrop-overlay"></div>');  
-  
-                        var voteVal = parseFloat(movie.vote_average);  
-                        if (!isNaN(voteVal) && voteVal > 0) {  
-                            var voteDiv = document.createElement('div');  
-                            voteDiv.className = 'card__vote';  
-                            voteDiv.innerText = voteVal.toFixed(1);  
-                            var color = getColor(voteVal, 0.8);  
-                            if (color) voteDiv.style.backgroundColor = color;  
-                            view.append(voteDiv);  
-                        }  
-  
-                        var yearStr = (movie.release_date || movie.first_air_date || '').toString().substring(0, 4);  
-                        if (yearStr && yearStr.length === 4) {  
-                            var ageDiv = document.createElement('div');  
-                            ageDiv.className = 'card-badge-age';   
-                            ageDiv.innerText = yearStr;  
-                            view.append(ageDiv);  
-                        }  
-  
-                        fetchLogo(movie, item);  
-  
-                        var descText = movie.overview || 'Опис відсутній.';  
-                        item.append('<div class="custom-title-bottom">' + (movie.title || movie.name) + '</div>');  
-                        item.append('<div class="custom-overview-bottom">' + descText + '</div>');  
-                    },  
-                    onlyEnter: function () {  
-                        var mType = movie.media_type || (movie.name ? 'tv' : 'movie');  
-                        Lampa.Activity.push({   
-                            url: '',   
-                            component: 'full',   
-                            id: movie.id,   
-                            method: mType,   
-                            card: movie,   
-                            source: movie.source || 'tmdb'   
-                        });  
-                    }  
-                }  
-            }  
-        };  
+                        view.append('<div class="card-backdrop-overlay"></div>');    
+    
+                        var voteVal = parseFloat(movie.vote_average);    
+                        if (!isNaN(voteVal) && voteVal > 0) {    
+                            var voteDiv = document.createElement('div');    
+                            voteDiv.className = 'card__vote';    
+                            voteDiv.innerText = voteVal.toFixed(1);    
+                            var color = getColor(voteVal, 0.8);    
+                            if (color) voteDiv.style.backgroundColor = color;    
+                            view.append(voteDiv);    
+                        }    
+    
+                        var yearStr = (movie.release_date || movie.first_air_date || '').toString().substring(0, 4);    
+                        if (yearStr && yearStr.length === 4) {    
+                            var ageDiv = document.createElement('div');    
+                            ageDiv.className = 'card-badge-age';    
+                            ageDiv.innerText = yearStr;    
+                            view.append(ageDiv);    
+                        }    
+    
+                        fetchLogo(movie, item);    
+    
+                        var descText = movie.overview || 'Опис відсутній.';    
+                        item.append('<div class="custom-title-bottom">' + (movie.title || movie.name) + '</div>');    
+                        item.append('<div class="custom-overview-bottom">' + descText + '</div>');    
+                    },    
+                    onlyEnter: function () {    
+                        var mType = movie.media_type || (movie.name ? 'tv' : 'movie');    
+                        Lampa.Activity.push({    
+                            url: '',    
+                            component: 'full',    
+                            id: movie.id,    
+                            method: mType,    
+                            card: movie,    
+                            source: movie.source || 'tmdb'    
+                        });    
+                    }    
+                }    
+            }    
+        };    
+    }    
+    
+    function loadHistoryRow(callback, settings) {    
+        let hist = [];    
+        let allFavs = {};    
+        try {    
+            if (window.Lampa && Lampa.Favorite && typeof Lampa.Favorite.all === 'function') {    
+                allFavs = Lampa.Favorite.all() || {};    
+                if (allFavs.history) {    
+                    hist = allFavs.history;    
+                }    
+            }    
+        } catch(e) {}    
+          
+        let results = [];    
+          
+        if (hist && hist.length > 0) {    
+            let unique = {};    
+            let validItems = hist.filter(h => {    
+                if (h && h.id && (h.title || h.name) && !unique[h.id]) {    
+                    unique[h.id] = true;    
+                    return true;    
+                }    
+                return false;    
+            }).slice(0, 20);    
+    
+            if (validItems.length > 0) {    
+                // Використовуємо правильний тип карток залежно від налаштувань    
+                if (settings && settings.wideCards) {    
+                    results = results.concat(validItems.map(makeWideCardItem));    
+                } else {    
+                    results = results.concat(validItems.map(makeHistoryCardItem));    
+                }    
+            }    
+        }    
+    
+        if (results.length > 0) {    
+            callback({    
+                results: results,    
+                title: '🕒 Продовжити перегляд',    
+                uas_content_row: true,    
+                params: { items: { mapping: 'line', view: 15 } }    
+            });    
+        } else {    
+            callback({ results: [] });    
+        }    
+    }    
+    
+    function makeHistoryCardItem(movie) {    
+        return {    
+            title: movie.title || movie.name,    
+            params: {    
+                createInstance: function () {    
+                    return Lampa.Maker.make('Card', movie, function (module) {    
+                        return module.only('Card', 'Callback');    
+                    });    
+                },    
+                emit: {    
+                    onCreate: function () {    
+                        var item = $(this.html);    
+                        item.addClass('card--history-custom');    
+                        var view = item.find('.card__view');    
+                        view.empty();    
+                          
+                        var quality = Lampa.Storage.get('ym_img_quality', 'w300');    
+                        var imgUrl = 'https://image.tmdb.org/t/p/' + quality + (movie.backdrop_path || movie.poster_path);    
+                        view.css({    
+                            'background-image': 'url(' + imgUrl + ')',    
+                            'background-size': 'cover',    
+                            'background-position': 'center',    
+                            'padding-bottom': '56.25%',    
+                            'height': '0',    
+                            'position': 'relative'    
+                        });    
+                          
+                        view.append('<div class="card-backdrop-overlay"></div>');    
+    
+                        var voteVal = parseFloat(movie.vote_average);    
+                        if (!isNaN(voteVal) && voteVal > 0) {    
+                            var voteDiv = document.createElement('div');    
+                            voteDiv.className = 'card__vote';    
+                            voteDiv.innerText = voteVal.toFixed(1);    
+                            var color = getColor(voteVal, 0.8);    
+                            if (color) voteDiv.style.backgroundColor = color;    
+                            view.append(voteDiv);    
+                        }    
+    
+                        fetchLogo(movie, item);    
+                        // НЕ додаємо назву тут, щоб уникнути дублювання    
+                    },    
+                    onlyEnter: function () {    
+                        var mType = movie.media_type || (movie.name ? 'tv' : 'movie');    
+                        Lampa.Activity.push({    
+                            url: '',    
+                            component: 'full',    
+                            id: movie.id,    
+                            method: mType,    
+                            card: movie,    
+                            source: movie.source || 'tmdb'    
+                        });    
+                    }    
+                }    
+            }    
+        };    
     }    
     
     var createDiscoveryMain = function (parent) {    
@@ -350,17 +450,18 @@
             var settings = loadSettings();    
             var parts_data = [];    
     
-            // Додаємо завантаження історії перегляду  
-            parts_data.push(function (call) {  
-                loadHistoryRow(function(json) {  
-                    if (json.results && json.results.length > 0) {  
-                        if (settings.wideCards) {  
-                            json.results = json.results.map(makeWideCardItem);  
-                        }  
-                    }  
-                    call(json);  
-                }, settings);  
-            });  
+            // Додаємо завантаження історії перегляду    
+            parts_data.push(function (call) {    
+                loadHistoryRow(function(json) {    
+                    if (json.results && json.results.length > 0) {    
+                        // Перетворюємо результати у відповідний тип карток    
+                        if (settings.wideCards) {    
+                            json.results = json.results.map(makeWideCardItem);    
+                        }    
+                    }    
+                    call(json);    
+                }, settings); // Передаємо settings    
+            });    
     
             collectionsConfig.forEach(function(cfg) {    
                 if (settings.collections[cfg.id]) {    
@@ -369,11 +470,11 @@
                             var translatedName = Lampa.Lang.translate(cfg.name_key);    
                             json.title = cfg.emoji ? cfg.emoji + ' ' + translatedName : translatedName;     
                                 
-                            if (json.results && json.results.length > 0) {  
-                                if (settings.wideCards) {  
-                                    json.results = json.results.map(makeWideCardItem);  
-                                }  
-                            }  
+                            if (json.results && json.results.length > 0) {    
+                                if (settings.wideCards) {    
+                                    json.results = json.results.map(makeWideCardItem);    
+                                }    
+                            }    
                                 
                             if (Lampa.Utils && Lampa.Utils.addSource) {    
                                 Lampa.Utils.addSource(json, 'tmdb');    
@@ -400,7 +501,7 @@
             return function () {};    
         };    
     };    
-        
+    
     function syncCheckboxes() {    
         requestAnimationFrame(function() {    
             collectionsConfig.forEach(function(cfg) {    
@@ -462,25 +563,6 @@
         field: { name: 'Якість зображень (Фон/Лого)', description: 'Впливає на швидкість завантаження сторінки' }  
     });  
     
-    collectionsConfig.forEach(function(cfg) {      
-        var translatedName = Lampa.Lang.translate(cfg.name_key);      
-        var fullDisplayName = cfg.emoji ? cfg.emoji + ' ' + translatedName : translatedName;      
-              
-        Lampa.SettingsApi.addParam({      
-            component: 'tmdb_mod',      
-            param: { name: 'tmdb_mod_collection_' + cfg.id, type: 'trigger', default: true },      
-            field: {       
-                name: fullDisplayName,       
-                description: Lampa.Lang.translate('tmdb_mod_show_collection') + ' "' + translatedName + '"'       
-            },      
-            onChange: function (value) {      
-                pluginSettings.collections[cfg.id] = value;      
-                saveSettings();      
-                Lampa.Noty.show(Lampa.Lang.translate('tmdb_mod_noty_reload'));      
-            }    
-        });    
-    });    
-    
     if (settingsListener && Lampa.Settings.listener.remove) {      
         Lampa.Settings.listener.remove('open', settingsListener);      
     }      
@@ -520,7 +602,11 @@
             tmdb_mod.main = function () {    
                 var args = Array.from(arguments);    
                     
-                return createDiscoveryMain(tmdb_mod).apply(this, args);    
+                if (loadSettings().enabled && this.type !== 'movie' && this.type !== 'tv') {    
+                    return createDiscoveryMain(tmdb_mod).apply(this, args);    
+                }    
+                    
+                return originalMain.apply(this, args);    
             };    
     
             if (Lampa.Params && Lampa.Params.select) {    
@@ -539,36 +625,6 @@
         } catch (e) {    
             console.error('[TMDB_MOD] Критична помилка ініціалізації:', e);    
             return false;    
-        }    
-    }    
-    
-    function waitForApp(retries) {    
-        retries = retries || 0;    
-        if (retries > maxRetries) {    
-            console.error('[TMDB_MOD] Не вдалося завантажити Lampa після ' + maxRetries + ' спроб');    
-            return;    
-        }    
-    
-        function onAppReady() {    
-            addTranslations();    
-            if (initPlugin()) {    
-                addSettings();    
-                addWideCardStyles();    
-            }    
-        }    
-    
-        if (window.appready) {    
-            onAppReady();    
-        } else if (Lampa.Listener && typeof Lampa.Listener.follow === 'function') {    
-            Lampa.Listener.follow('app', function (e) {    
-                if (e.type === 'ready') {    
-                    onAppReady();    
-                }    
-            });    
-        } else {    
-            setTimeout(function() {     
-                waitForApp(retries + 1);     
-            }, 1000);    
         }    
     }    
     
@@ -778,52 +834,6 @@
         `;  
         document.head.appendChild(style);  
     }  
-    
-    function initPlugin() {    
-        try {    
-            if (!Lampa.Api || !Lampa.Api.sources || !Lampa.Api.sources.tmdb) {    
-                console.error('[TMDB_MOD] Lampa API не готовий');    
-                if (Lampa.Noty) {    
-                    Lampa.Noty.show('TMDB_MOD: Помилка ініціалізації');    
-                }    
-                return false;    
-            }    
-    
-            var originalTMDB = Lampa.Api.sources.tmdb;    
-            var settings = loadSettings();    
-                
-            var tmdb_mod = Object.assign({}, originalTMDB);    
-            Lampa.Api.sources.tmdb_mod = tmdb_mod;    
-            Object.defineProperty(Lampa.Api.sources, 'tmdb_mod', {     
-                get: function() { return tmdb_mod; }     
-            });    
-    
-            var originalMain = originalTMDB.main;     
-    
-            tmdb_mod.main = function () {    
-                var args = Array.from(arguments);    
-                    
-                return createDiscoveryMain(tmdb_mod).apply(this, args);    
-            };    
-    
-            if (Lampa.Params && Lampa.Params.select) {    
-                try {    
-                    var sources = Lampa.Params.values && Lampa.Params.values.source ? Lampa.Params.values.source : {};    
-                    if (!sources.tmdb_mod) {    
-                        sources.tmdb_mod = 'Головна сторінка +';     
-                        Lampa.Params.select('source', sources, 'tmdb');     
-                    }    
-                } catch (e) {    
-                    console.error('[TMDB_MOD] Помилка реєстрації джерела:', e);    
-                }    
-            }    
-    
-            return true;    
-        } catch (e) {    
-            console.error('[TMDB_MOD] Критична помилка ініціалізації:', e);    
-            return false;    
-        }    
-    }    
     
     function waitForApp(retries) {    
         retries = retries || 0;    
