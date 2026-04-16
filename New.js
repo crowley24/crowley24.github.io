@@ -39,7 +39,7 @@
         { id: 'documentary', emoji: '🔬', name_key: 'new_main_c_documentary', request: 'discover/movie?with_genres=99&sort_by=popularity.desc&vote_count.gte=20' },
         { id: 'animation', emoji: '🧑‍🎤', name_key: 'new_main_c_animation', request: 'discover/movie?with_genres=16&sort_by=popularity.desc&vote_average.gte=7&vote_count.gte=500' },
         { id: 'netflix_best', emoji: '⚫', name_key: 'new_main_c_netflix', request: 'discover/tv?with_networks=213' },
-        { id: 'miniseries_hits', emoji: '💎', name_key: 'new_main_c_miniseries', request: 'discover/tv?with_type=2' }
+        { id: 'top_series_all_time', emoji: '💎', name_key: 'new_main_c_top_series', request: 'discover/tv?sort_by=vote_average.desc&vote_count.gte=500&with_runtime.gte=20' }   
     ];
 
     var pluginSettings = { collections: {}, order: {} };
@@ -100,7 +100,7 @@
             new_main_c_documentary: { uk: "Документалки" },
             new_main_c_trend_tv: { uk: "Трендові серіали" },
             new_main_c_netflix: { uk: "Netflix хіти" },
-            new_main_c_miniseries: { uk: "Міні-серіали" }
+            new_main_c_top_series: { uk: "Топ серіали за весь час" }
         });
     }
 
