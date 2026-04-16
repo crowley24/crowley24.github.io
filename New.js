@@ -94,23 +94,54 @@
 
     // ===== SETTINGS =====
     function addSettings() {
-        if (!Lampa.SettingsApi) return;
+    loadSettings();
 
-        Lampa.SettingsApi.addComponent({
-            component: 'tmdb_mod',
-            name: Lampa.Lang.translate('tmdb_mod_plugin_name')
-        });
+    if (!Lampa.SettingsApi) return;
+
+    Lampa.SettingsApi.addComponent({
+        component: 'tmdb_mod',
+        name: Lampa.Lang.translate('tmdb_mod_plugin_name')
+    });
+
+    // Головний перемикач
+    Lampa.SettingsApi.addParam({
+        component: 'tmdb_mod',
+        param: { name: 'tmdb_mod_enabled', type: 'trigger', default: true },
+        field: {
+            name: Lampa.Lang.translate('tmdb_mod_toggle_name'),
+            description: Lampa.Lang.translate('tmdb_mod_toggle_desc')
+        },
+        onChange: function (value) {
+            pluginSettings.enabled = value;
+            saveSettings();
+            Lampa.Noty && Lampa.Noty.show('Потрібно оновити головну сторінку');
+        }
+    });
+
+    // 🔥 ОСЬ ЦЕ БУЛО ВТРАЧЕНО — ПОВЕРТАЄМО
+    collectionsConfig.forEach(function (cfg) {
+        var name = Lampa.Lang.translate(cfg.name_key);
+        var fullName = (cfg.emoji ? cfg.emoji + ' ' : '') + name;
 
         Lampa.SettingsApi.addParam({
             component: 'tmdb_mod',
-            param: { name: 'tmdb_mod_enabled', type: 'trigger', default: true },
-            field: { name: Lampa.Lang.translate('tmdb_mod_toggle_name') },
+            param: {
+                name: 'tmdb_mod_collection_' + cfg.id,
+                type: 'trigger',
+                default: true
+            },
+            field: {
+                name: fullName,
+                description: 'Показувати підбірку "' + name + '"'
+            },
             onChange: function (value) {
-                pluginSettings.enabled = value;
+                pluginSettings.collections[cfg.id] = value;
                 saveSettings();
+                Lampa.Noty && Lampa.Noty.show('Онови головну сторінку');
             }
         });
-    }
+    });
+}
 
     // ===== CORE =====
     function shuffle(arr) {
