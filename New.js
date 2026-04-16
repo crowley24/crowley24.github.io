@@ -20,9 +20,9 @@
         { id: 'documentary', emoji: '🔬', name_key: 'tmdb_mod_c_documentary', request: 'discover/movie?with_genres=99&sort_by=popularity.desc&vote_count.gte=20' },
 
         { id: 'trending_tv', emoji: '🔥', name_key: 'tmdb_mod_c_trend_tv', request: 'trending/tv/week' },
-        { id: 'best_world_series', emoji: '🌍', name_key: 'tmdb_mod_c_world_hits', request: 'discover/tv?with_origin_country=US|CA|GB|AU|IE|DE|FR|NL|SE|NO|DK|FI|ES|IT|BE|CH|AT|KR|JP|MX|BR&sort_by=last_air_date.desc&vote_average.gte=7&vote_count.gte=500&first_air_date.gte=2020-01-01&first_air_date.lte=' + today },
-        { id: 'netflix_best', emoji: '⚫', name_key: 'tmdb_mod_c_netflix', request: 'discover/tv?with_networks=213&sort_by=last_air_date.desc&first_air_date.gte=2020-01-01&vote_count.gte=500&vote_average.gte=7' },
-        { id: 'miniseries_hits', emoji: '💎', name_key: 'tmdb_mod_c_miniseries', request: 'discover/tv?with_type=2&sort_by=popularity.desc&vote_average.gte=7.0&vote_count.gte=200' }
+        { id: 'best_world_series', emoji: '🌍', name_key: 'tmdb_mod_c_world_hits', request: 'discover/tv?with_origin_country=US|CA|GB|AU|IE|DE|FR|NL|SE|NO|DK|FI|ES|IT|BE|CH|AT|KR|JP|MX|BR&sort_by=last_air_date.desc&vote_average.gte=7&vote_count.gte=500&first_air_date.gte=2020-01-01&first_air_date.lte=' + today + '&without_genres=16|99|10762|10763|10764|10766|10767|10768|10770&with_status=0|1|2|3' },
+        { id: 'netflix_best', emoji: '⚫', name_key: 'tmdb_mod_c_netflix', request: 'discover/tv?with_networks=213&sort_by=last_air_date.desc&first_air_date.gte=2020-01-01&last_air_date.lte=' + today + '&vote_count.gte=500&vote_average.gte=7&without_genres=16|99|10751|10762|10763|10764|10766|10767|10768|10770' },
+        { id: 'miniseries_hits', emoji: '💎', name_key: 'tmdb_mod_c_miniseries', request: 'discover/tv?with_type=2&sort_by=popularity.desc&vote_average.gte=7.0&vote_count.gte=200&without_genres=10764,10767' }
     ];
 
     var pluginSettings = {
@@ -54,36 +54,47 @@
 
     function getColor(rating, alpha) {
         var rgb = '';
-        if (rating <= 3) rgb = '231,76,60';
-        else if (rating <= 5) rgb = '230,126,34';
-        else if (rating <= 6.5) rgb = '241,196,15';
-        else if (rating < 8) rgb = '52,152,219';
-        else rgb = '46,204,113';
-        return 'rgba(' + rgb + ',' + alpha + ')';
+        if (rating >= 0 && rating <= 3) rgb = '231, 76, 60';
+        else if (rating <= 5) rgb = '230, 126, 34';
+        else if (rating <= 6.5) rgb = '241, 196, 15';
+        else if (rating < 8) rgb = '52, 152, 219';
+        else rgb = '46, 204, 113';
+        return rgb ? 'rgba(' + rgb + ', ' + alpha + ')' : null;
     }
 
     function fetchLogo(movie, itemElement) {
         var mType = movie.media_type || (movie.name ? 'tv' : 'movie');
-        var apiKey = Lampa.TMDB && Lampa.TMDB.key && Lampa.TMDB.key();
-        if (!apiKey) return;
+        var langPref = Lampa.Storage.get('ym_logo_lang', 'uk_en');
+        var quality = Lampa.Storage.get('ym_img_quality', 'w300');
 
-        var endpoint = 'https://api.themoviedb.org/3/' + mType + '/' + movie.id + '/images?include_image_language=uk,en,null&api_key=' + apiKey;
+        function applyTextLogo() {
+            var textLogo = document.createElement('div');
+            textLogo.className = 'card-custom-logo-text';
+            textLogo.innerText = movie.title || movie.name;
+            itemElement.find('.card__view').append(textLogo);
+        }
+
+        var apiKey = Lampa.TMDB && Lampa.TMDB.key && Lampa.TMDB.key();
+        if (!apiKey) return applyTextLogo();
+
+        let endpoint = 'https://api.themoviedb.org/3/' + mType + '/' + movie.id + '/images?include_image_language=uk,en,null&api_key=' + apiKey;
 
         fetch('https://cors.lampa.stream/' + endpoint)
             .then(r => r.json())
             .then(function (res) {
-                if (!res.logos || !res.logos.length) return;
+                if (!res.logos || !res.logos.length) return applyTextLogo();
 
-                var logo = res.logos.find(l => l.iso_639_1 === 'uk') ||
+                var found = res.logos.find(l => l.iso_639_1 === 'uk') ||
                     res.logos.find(l => l.iso_639_1 === 'en');
 
-                if (!logo) return;
+                if (!found) return applyTextLogo();
 
                 var img = new Image();
                 img.className = 'card-custom-logo';
-                img.src = 'https://image.tmdb.org/t/p/w300' + logo.file_path;
+                img.src = 'https://image.tmdb.org/t/p/' + quality + found.file_path;
                 itemElement.find('.card__view').append(img);
-            });
+            })
+            .catch(applyTextLogo);
     }
 
     function makeWideCardItem(movie) {
@@ -103,20 +114,24 @@
                         var view = item.find('.card__view');
                         view.empty();
 
-                        var quality = 'w300';
+                        var quality = Lampa.Storage.get('ym_img_quality', 'w300');
+
                         if (movie.backdrop_path) {
                             view.css({
                                 backgroundImage: 'url(https://image.tmdb.org/t/p/' + quality + movie.backdrop_path + ')',
-                                backgroundSize: 'cover'
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center'
                             });
                         } else {
                             view.css('background', '#222');
                         }
 
                         var vote = parseFloat(movie.vote_average);
-                        if (vote) {
-                            var el = $('<div class="card__vote">' + vote.toFixed(1) + '</div>');
-                            el.css('background', getColor(vote, 0.8));
+                        if (!isNaN(vote) && vote > 0) {
+                            var el = document.createElement('div');
+                            el.className = 'card__vote';
+                            el.innerText = vote.toFixed(1);
+                            el.style.backgroundColor = getColor(vote, 0.8);
                             view.append(el);
                         }
 
