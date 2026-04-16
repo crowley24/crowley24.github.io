@@ -1,374 +1,177 @@
-(function () {    
-    'use strict';    
-    
-    // Перевірка на повторний запуск    
-    if (window.plugin_tmdb_mod_ready) return;    
-    window.plugin_tmdb_mod_ready = true;    
-    
-    // Динамічні дати    
-    var today = new Date().toISOString().slice(0, 10);    
-    var currentYear = new Date().getFullYear();    
-    var lastYear = currentYear - 1;    
-    
-    // Конфігурація підбірок (БЕЗ російського контенту)    
-    var collectionsConfig = [    
-        // ФІЛЬМИ    
-        { id: 'hot_new_releases', emoji: '🎬', name_key: 'tmdb_mod_c_hot_new', request: 'discover/movie?sort_by=primary_release_date.desc&with_release_type=4|5|6&primary_release_date.lte=' + today + '&vote_count.gte=50&vote_average.gte=6&with_runtime.gte=40&without_genres=99' },    
-        { id: 'trending_movies', emoji: '🔥', name_key: 'tmdb_mod_c_trend_movie', request: 'trending/movie/week' },    
-        { id: 'fresh_online', emoji: '👀', name_key: 'tmdb_mod_c_watching_now', request: 'discover/movie?sort_by=popularity.desc&with_release_type=4|5|6&primary_release_date.lte=' + today + '&vote_count.gte=50&vote_average.gte=6&with_runtime.gte=40&without_genres=99' },    
-        { id: 'cult_cinema', emoji: '🍿', name_key: 'tmdb_mod_c_cult', request: 'discover/movie?primary_release_date.gte=1980-01-01&sort_by=popularity.desc&vote_average.gte=7&vote_count.gte=500' },    
-        { id: 'top_10_studios_mix', emoji: '🏆', name_key: 'tmdb_mod_c_top_studios', request: 'discover/movie?with_companies=6194|33|4|306|5|12|8411|9195|2|7295&sort_by=popularity.desc&vote_average.gte=7.0&vote_count.gte=1000' },    
-        { id: 'best_of_current_year_movies', emoji: '🌟', name_key: 'tmdb_mod_c_best_current_y', request: 'discover/movie?primary_release_year=' + currentYear + '&sort_by=vote_average.desc&vote_count.gte=300' },    
-        { id: 'best_of_last_year_movies', emoji: '🏆', name_key: 'tmdb_mod_c_best_last_y', request: 'discover/movie?primary_release_year=' + lastYear + '&sort_by=vote_average.desc&vote_count.gte=500' },    
-        { id: 'animation', emoji: '🧑‍🎤', name_key: 'tmdb_mod_c_animation', request: 'discover/movie?with_genres=16&sort_by=popularity.desc&vote_average.gte=7&vote_count.gte=500' },    
-        { id: 'documentary', emoji: '🔬', name_key: 'tmdb_mod_c_documentary', request: 'discover/movie?with_genres=99&sort_by=popularity.desc&vote_count.gte=20' },    
-    
-        // СЕРІАЛИ    
-        { id: 'trending_tv', emoji: '🔥', name_key: 'tmdb_mod_c_trend_tv', request: 'trending/tv/week' },    
-        { id: 'best_world_series', emoji: '🌍', name_key: 'tmdb_mod_c_world_hits', request: 'discover/tv?with_origin_country=US|CA|GB|AU|IE|DE|FR|NL|SE|NO|DK|FI|ES|IT|BE|CH|AT|KR|JP|MX|BR&sort_by=last_air_date.desc&vote_average.gte=7&vote_count.gte=500&first_air_date.gte=2020-01-01&first_air_date.lte=' + today + '&without_genres=16|99|10762|10763|10764|10766|10767|10768|10770&with_status=0|1|2|3' },    
-        { id: 'netflix_best', emoji: '⚫', name_key: 'tmdb_mod_c_netflix', request: 'discover/tv?with_networks=213&sort_by=last_air_date.desc&first_air_date.gte=2020-01-01&last_air_date.lte=' + today + '&vote_count.gte=500&vote_average.gte=7&without_genres=16|99|10751|10762|10763|10764|10766|10767|10768|10770' },    
-        { id: 'miniseries_hits', emoji: '💎', name_key: 'tmdb_mod_c_miniseries', request: 'discover/tv?with_type=2&sort_by=popularity.desc&vote_average.gte=7.0&vote_count.gte=200&without_genres=10764,10767' }    
-    ];    
-    
-    var pluginSettings = {    
-        enabled: true,    
-        collections: collectionsConfig.reduce(function(acc, c) { acc[c.id] = true; return acc; }, {}),    
-        positions: collectionsConfig.reduce(function(acc, c, index) { acc[c.id] = index + 1; return acc; }, {})    
-    };    
-    
-    var settingsListener = null;    
-    var maxRetries = 30;    
-    
-    function loadSettings() {    
-        if (Lampa.Storage) {    
-            pluginSettings.enabled = Lampa.Storage.get('tmdb_mod_enabled', true);    
-            collectionsConfig.forEach(function(cfg) {    
-                pluginSettings.collections[cfg.id] = Lampa.Storage.get('tmdb_mod_collection_' + cfg.id, true);    
-                // Надійна ініціалізація позиції з перевіркою  
-                var savedPosition = Lampa.Storage.get('tmdb_mod_position_' + cfg.id);  
-                if (savedPosition !== null && savedPosition !== undefined && !isNaN(savedPosition)) {  
-                    pluginSettings.positions[cfg.id] = parseInt(savedPosition);  
-                } else {  
-                    pluginSettings.positions[cfg.id] = collectionsConfig.indexOf(cfg) + 1;  
-                }  
-            });    
-        }    
-        return pluginSettings;    
-    }    
-    
-    function saveSettings() {    
-        if (Lampa.Storage) {    
-            Lampa.Storage.set('tmdb_mod_enabled', pluginSettings.enabled);    
-            collectionsConfig.forEach(function(cfg) {    
-                Lampa.Storage.set('tmdb_mod_collection_' + cfg.id, pluginSettings.collections[cfg.id]);    
-                // Зберігаємо тільки валідні позиції  
-                if (pluginSettings.positions[cfg.id] !== undefined && !isNaN(pluginSettings.positions[cfg.id])) {  
-                    Lampa.Storage.set('tmdb_mod_position_' + cfg.id, pluginSettings.positions[cfg.id]);    
-                }  
-            });    
-        }    
-    }    
-    
-    function addTranslations() {    
-        if (!Lampa.Lang) return;    
-    
-        Lampa.Lang.add({    
-            tmdb_mod_plugin_name: { ru: "Підбірки TMDB_MOD", uk: "Підбірки TMDB_MOD" },    
-            tmdb_mod_toggle_name: { ru: "Увімкнути TMDB_MOD підбірки", uk: "Увімкнути TMDB_MOD підбірки" },    
-            tmdb_mod_toggle_desc: { ru: "Показувати кастомні підбірки на головній сторінці", uk: "Показувати кастомні підбірки на головній сторінці" },    
-            tmdb_mod_noty_reload: { ru: "Зміни набудуть чинності після перезавантаження головної сторінки", uk: "Зміни набудуть чинності після перезавантаження головної сторінки" },    
-            tmdb_mod_show_collection: { ru: "Показувати підбірку", uk: "Показувати підбірку" },    
-            tmdb_mod_position: { ru: "Положение", uk: "Положення" },    
-            tmdb_mod_position_descr: { ru: "Порядковый номер на главной странице", uk: "Порядковий номер на головній сторінці" },    
-    
-            // Фільми    
-            tmdb_mod_c_hot_new: { ru: "Найсвіжіші прем'єри", uk: "Найсвіжіші прем'єри" },    
-            tmdb_mod_c_trend_movie: { ru: "Топ фільмів тижня", uk: "Топ фільмів тижня" },    
-            tmdb_mod_c_watching_now: { ru: "Зараз дивляться", uk: "Зараз дивляться" },    
-            tmdb_mod_c_cult: { ru: "Популярні фільми з 80-х", uk: "Популярні фільми з 80-х" },    
-            tmdb_mod_c_top_studios: { ru: "Золота Десятка Студій", uk: "Золота Десятка Студій" },    
-            tmdb_mod_c_best_current_y: { ru: "Кращі фільми " + currentYear + " року", uk: "Кращі фільми " + currentYear + " року" },    
-            tmdb_mod_c_best_last_y: { ru: "Кращі фільми " + lastYear + " року", uk: "Кращі фільми " + lastYear + " року" },    
-            tmdb_mod_c_animation: { ru: "Кращі мультфільми", uk: "Кращі мультфільми" },    
-            tmdb_mod_c_documentary: { ru: "Документальні фільми", uk: "Документальні фільми" },    
-    
-            // Серіали    
-            tmdb_mod_c_trend_tv: { ru: "Топ серіалів тижня", uk: "Топ серіалів тижня" },    
-            tmdb_mod_c_world_hits: { ru: "Хіти серіалів світу 2020+", uk: "Хіти серіалів світу 2020+" },    
-            tmdb_mod_c_netflix: { ru: "Хіти серіалів Netflix", uk: "Хіти серіалів Netflix" },    
-            tmdb_mod_c_miniseries: { ru: "Кращі Міні-серіали", uk: "Кращі Міні-серіали" }    
-        });    
-    }    
-    
-    var createDiscoveryMain = function (parent) {    
-        return function () {    
-            var params = arguments[0] || {};    
-            var oncomplete = arguments[1];    
-            var onerror = arguments[2];    
-    
-            var hasSequentials = Lampa.Api && Lampa.Api.sequentials && typeof Lampa.Api.sequentials === 'function';    
-            var hasPartNext = Lampa.Api && Lampa.Api.partNext && typeof Lampa.Api.partNext === 'function';    
-    
-            if (!hasSequentials && !hasPartNext) {     
-                if (onerror) onerror();     
-                return;     
-            }    
-    
-            var settings = loadSettings();    
-            var parts_data = [];    
-    
-            // Сортування підбірок за позицією з додатковими перевірками  
-            var sortedCollections = collectionsConfig.slice().sort(function(a, b) {    
-                var posA = settings.positions[a.id];  
-                var posB = settings.positions[b.id];  
-                  
-                // Переконання, що позиції є числами  
-                posA = (typeof posA === 'number' && !isNaN(posA) && posA > 0) ? posA : 999;  
-                posB = (typeof posB === 'number' && !isNaN(posB) && posB > 0) ? posB : 999;  
-                  
-                return posA - posB;    
-            });    
-    
-            sortedCollections.forEach(function(cfg) {    
-                if (settings.collections[cfg.id]) {    
-                    parts_data.push(function (call) {     
-                        parent.get(cfg.request, params, function (json) {     
-                            var translatedName = Lampa.Lang.translate(cfg.name_key);    
-                            json.title = cfg.emoji ? cfg.emoji + ' ' + translatedName : translatedName;     
-                              
-                            // Додано обов'язкові поля для уникнення помилки  
-                            if (!json.name) json.name = cfg.id;  
-                            if (!json.title) json.title = translatedName;  
-                                
-                            if (Lampa.Utils && Lampa.Utils.addSource) {    
-                                Lampa.Utils.addSource(json, 'tmdb');    
-                            }    
-                                
-                            call(json);     
-                        }, function(err) {    
-                            console.error('[TMDB_MOD] Помилка завантаження підбірки "' + cfg.id + '":', err);    
-                            var translatedName = Lampa.Lang.translate(cfg.name_key);    
-                            var title = cfg.emoji ? cfg.emoji + ' ' + translatedName : translatedName;    
-                              
-                            // Додано обов'язкові поля навіть при помилці  
-                            call({   
-                                source: 'tmdb',   
-                                results: [],   
-                                title: title,  
-                                name: cfg.id  
-                            });    
-                        });     
-                    });    
-                }    
-            });    
-                
-            if (parts_data.length === 0) {    
-                if (onerror) onerror();    
-                return function () {};    
-            }    
-    
-            var methodToUse = Lampa.Api.sequentials || Lampa.Api.partNext;    
-            methodToUse(parts_data, parts_data.length, oncomplete, onerror);     
-            return function () {};    
-        };    
-    };    
-        
-    function syncCheckboxes() {    
-        requestAnimationFrame(function() {    
-            document.querySelectorAll('[data-name="tmdb_mod_enabled"]').forEach(function(el) {     
-                if (el.type === 'checkbox') el.checked = pluginSettings.enabled;     
-            });    
-                
-            collectionsConfig.forEach(function(cfg) {    
-                document.querySelectorAll('[data-name="tmdb_mod_collection_' + cfg.id + '"]').forEach(function(el) {    
-                    if (el.type === 'checkbox') el.checked = pluginSettings.collections[cfg.id];    
-                });    
-                document.querySelectorAll('[data-name="tmdb_mod_position_' + cfg.id + '"]').forEach(function(el) {    
-                    var position = pluginSettings.positions[cfg.id];  
-                    if (typeof position === 'number' && !isNaN(position) && position > 0) {  
-                        if (el.type === 'number' || el.type === 'text') el.value = position;    
-                        if (el.tagName === 'SELECT') el.value = position.toString();    
-                    }  
-                });    
-            });    
-        });    
-    }    
-    
-   function addSettings() {      
-        loadSettings();       
-      
-        // Діагностика  
-        console.log('[TMDB_MOD] Додаємо налаштування...');  
-        console.log('[TMDB_MOD] Lampa.SettingsApi доступний:', !!Lampa.SettingsApi);  
-        console.log('[TMDB_MOD] Lampa.Lang доступний:', !!Lampa.Lang);  
-        console.log('[TMDB_MOD] Кількість підбірок:', collectionsConfig.length);  
-      
-        if (!Lampa.SettingsApi) {  
-            console.error('[TMDB_MOD] Lampa.SettingsApi не доступний');  
-            return;      
-        }  
-          
-        Lampa.SettingsApi.addComponent({      
-            component: 'tmdb_mod',      
-            name: Lampa.Lang.translate('tmdb_mod_plugin_name'),      
-            icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>'      
-        });      
-      
-        Lampa.SettingsApi.addParam({      
-            component: 'tmdb_mod',      
-            param: { name: 'tmdb_mod_enabled', type: 'trigger', default: true },      
-            field: { name: Lampa.Lang.translate('tmdb_mod_toggle_name'), description: Lampa.Lang.translate('tmdb_mod_toggle_desc') },      
-            onChange: function (value) {      
-                pluginSettings.enabled = value;      
-                saveSettings();      
-                      
-                if (!value && Lampa.Api.sources.tmdb_mod) {      
-                    delete Lampa.Api.sources.tmdb_mod;      
-                }      
-                      
-                Lampa.Noty.show(Lampa.Lang.translate('tmdb_mod_noty_reload'));      
-            }      
-        });      
-      
-        collectionsConfig.forEach(function(cfg) {      
-            var translatedName = Lampa.Lang.translate(cfg.name_key);      
-            var fullDisplayName = cfg.emoji ? cfg.emoji + ' ' + translatedName : translatedName;      
-                  
-            // Існуючий перемикач підбірки    
-            Lampa.SettingsApi.addParam({      
-                component: 'tmdb_mod',      
-                param: { name: 'tmdb_mod_collection_' + cfg.id, type: 'trigger', default: true },      
-                field: {       
-                    name: fullDisplayName,       
-                    description: Lampa.Lang.translate('tmdb_mod_show_collection') + ' "' + translatedName + '"'       
-                },      
-                onChange: function (value) {      
-                    pluginSettings.collections[cfg.id] = value;      
-                    saveSettings();      
-                    Lampa.Noty.show(Lampa.Lang.translate('tmdb_mod_noty_reload'));      
-                }    
-            });      
-  
-            // Альтернативний варіант з випадаючим списком для позиції  
-            var positionOptions = {};  
-            for (var i = 1; i <= collectionsConfig.length; i++) {  
-                positionOptions[i] = i.toString();  
-            }  
-              
-            Lampa.SettingsApi.addParam({      
-                component: 'tmdb_mod',      
-                param: { name: 'tmdb_mod_position_' + cfg.id, type: 'select', default: collectionsConfig.indexOf(cfg) + 1 },      
-                field: {       
-                    name: Lampa.Lang.translate('tmdb_mod_position') + ' - ' + translatedName,       
-                    description: Lampa.Lang.translate('tmdb_mod_position_descr') + ' "' + translatedName + '"'       
-                },  
-                values: positionOptions,  
-                onChange: function (value) {      
-                    var parsedValue = parseInt(value);  
-                    pluginSettings.positions[cfg.id] = (typeof parsedValue === 'number' && !isNaN(parsedValue)) ?   
-                        parsedValue : collectionsConfig.indexOf(cfg) + 1;      
-                    saveSettings();      
-                    Lampa.Noty.show(Lampa.Lang.translate('tmdb_mod_noty_reload'));      
-                }    
-            });    
-        });    
-      
-        // Видаляємо старий слухач перед додаванням нового (запобігання витоку пам'яті)      
-        if (settingsListener && Lampa.Settings.listener.remove) {      
-            Lampa.Settings.listener.remove('open', settingsListener);      
-        }    
-    
-        // Створюємо новий слухач для синхронізації чекбоксів      
-        settingsListener = function (e) {      
-            if (e.name === 'tmdb_mod') {      
-                syncCheckboxes();      
-            }      
-        };    
-    
-        if (Lampa.Settings && Lampa.Settings.listener) {      
-            Lampa.Settings.listener.follow('open', settingsListener);      
-        }      
-    }    
-        
-    function initPlugin() {    
-        try {    
-            if (!Lampa.Api || !Lampa.Api.sources || !Lampa.Api.sources.tmdb) {    
-                console.error('[TMDB_MOD] Lampa API не готовий');    
-                if (Lampa.Noty) {    
-                    Lampa.Noty.show('TMDB_MOD: Помилка ініціалізації');    
-                }    
-                return false;    
-            }    
-    
-            var originalTMDB = Lampa.Api.sources.tmdb;    
-            var settings = loadSettings();    
-                
-            var tmdb_mod = Object.assign({}, originalTMDB);    
-            Lampa.Api.sources.tmdb_mod = tmdb_mod;    
-            Object.defineProperty(Lampa.Api.sources, 'tmdb_mod', {     
-                get: function() { return tmdb_mod; }     
-            });    
-    
-            var originalMain = originalTMDB.main;     
-    
-            tmdb_mod.main = function () {    
-                var args = Array.from(arguments);    
-                    
-                if (loadSettings().enabled && this.type !== 'movie' && this.type !== 'tv') {    
-                    return createDiscoveryMain(tmdb_mod).apply(this, args);    
-                }    
-                    
-                return originalMain.apply(this, args);    
-            };    
-    
-            if (Lampa.Params && Lampa.Params.select) {    
-                try {    
-                    var sources = Lampa.Params.values && Lampa.Params.values.source ? Lampa.Params.values.source : {};    
-                    if (!sources.tmdb_mod) {    
-                        sources.tmdb_mod = 'TMDB_MOD';     
-                        Lampa.Params.select('source', sources, 'tmdb');     
-                    }    
-                } catch (e) {    
-                    console.error('[TMDB_MOD] Помилка реєстрації джерела:', e);    
-                }    
-            }    
-    
-            return true;    
-        } catch (e) {    
-            console.error('[TMDB_MOD] Критична помилка ініціалізації:', e);    
-            return false;    
-        }    
-    }    
-    
-    function waitForApp(retries) {    
-        retries = retries || 0;    
-        if (retries > maxRetries) {    
-            console.error('[TMDB_MOD] Не вдалося завантажити Lampa після ' + maxRetries + ' спроб');    
-            return;    
-        }    
-    
-        function onAppReady() {    
-            addTranslations();    
-            if (initPlugin()) {    
-                addSettings();    
-            }    
-        }    
-    
-        if (window.appready) {    
-            onAppReady();    
-        } else if (Lampa.Listener && typeof Lampa.Listener.follow === 'function') {    
-            Lampa.Listener.follow('app', function (e) {    
-                if (e.type === 'ready') {    
-                    onAppReady();    
-                }    
-            });    
-        } else {    
-            setTimeout(function() {     
-                waitForApp(retries + 1);     
-            }, 1000);    
-        }    
-    }    
-    
-    waitForApp();    
-    
+(function () {
+    'use strict';
+
+    if (window.plugin_tmdb_mod_pro_ready) return;
+    window.plugin_tmdb_mod_pro_ready = true;
+
+    var today = new Date().toISOString().slice(0, 10);
+    var currentYear = new Date().getFullYear();
+    var lastYear = currentYear - 1;
+
+    // ===== CACHE =====
+    var CACHE_TTL = 1000 * 60 * 10; // 10 хв
+    var cacheStore = {};
+
+    function getCache(key) {
+        var item = cacheStore[key];
+        if (!item) return null;
+        if (Date.now() - item.time > CACHE_TTL) {
+            delete cacheStore[key];
+            return null;
+        }
+        return item.data;
+    }
+
+    function setCache(key, data) {
+        cacheStore[key] = {
+            time: Date.now(),
+            data: data
+        };
+    }
+
+    // ===== CONFIG =====
+    var collectionsConfig = [
+        { id: 'hot_new_releases', emoji: '🎬', name_key: 'tmdb_mod_c_hot_new', request: 'discover/movie?sort_by=primary_release_date.desc&with_release_type=4|5|6&primary_release_date.lte=' + today + '&vote_count.gte=50&vote_average.gte=6&with_runtime.gte=40&without_genres=99' },
+        { id: 'trending_movies', emoji: '🔥', name_key: 'tmdb_mod_c_trend_movie', request: 'trending/movie/week' },
+        { id: 'fresh_online', emoji: '👀', name_key: 'tmdb_mod_c_watching_now', request: 'discover/movie?sort_by=popularity.desc&with_release_type=4|5|6&primary_release_date.lte=' + today + '&vote_count.gte=50&vote_average.gte=6&with_runtime.gte=40&without_genres=99' },
+        { id: 'cult_cinema', emoji: '🍿', name_key: 'tmdb_mod_c_cult', request: 'discover/movie?primary_release_date.gte=1980-01-01&sort_by=popularity.desc&vote_average.gte=7&vote_count.gte=500' },
+        { id: 'top_10_studios_mix', emoji: '🏆', name_key: 'tmdb_mod_c_top_studios', request: 'discover/movie?with_companies=6194|33|4|306|5|12|8411|9195|2|7295&sort_by=popularity.desc&vote_average.gte=7.0&vote_count.gte=1000' },
+        { id: 'best_of_current_year_movies', emoji: '🌟', name_key: 'tmdb_mod_c_best_current_y', request: 'discover/movie?primary_release_year=' + currentYear + '&sort_by=vote_average.desc&vote_count.gte=300' },
+        { id: 'best_of_last_year_movies', emoji: '🏆', name_key: 'tmdb_mod_c_best_last_y', request: 'discover/movie?primary_release_year=' + lastYear + '&sort_by=vote_average.desc&vote_count.gte=500' },
+        { id: 'animation', emoji: '🧑‍🎤', name_key: 'tmdb_mod_c_animation', request: 'discover/movie?with_genres=16&sort_by=popularity.desc&vote_average.gte=7&vote_count.gte=500' },
+        { id: 'documentary', emoji: '🔬', name_key: 'tmdb_mod_c_documentary', request: 'discover/movie?with_genres=99&sort_by=popularity.desc&vote_count.gte=20' },
+
+        { id: 'trending_tv', emoji: '🔥', name_key: 'tmdb_mod_c_trend_tv', request: 'trending/tv/week' },
+        { id: 'best_world_series', emoji: '🌍', name_key: 'tmdb_mod_c_world_hits', request: 'discover/tv?with_origin_country=US|CA|GB|AU|IE|DE|FR|NL|SE|NO|DK|FI|ES|IT|BE|CH|AT|KR|JP|MX|BR&sort_by=last_air_date.desc&vote_average.gte=7&vote_count.gte=500&first_air_date.gte=2020-01-01&first_air_date.lte=' + today + '&without_genres=16|99|10762|10763|10764|10766|10767|10768|10770&with_status=0|1|2|3' },
+        { id: 'netflix_best', emoji: '⚫', name_key: 'tmdb_mod_c_netflix', request: 'discover/tv?with_networks=213&sort_by=last_air_date.desc&first_air_date.gte=2020-01-01&last_air_date.lte=' + today + '&vote_count.gte=500&vote_average.gte=7' },
+        { id: 'miniseries_hits', emoji: '💎', name_key: 'tmdb_mod_c_miniseries', request: 'discover/tv?with_type=2&sort_by=popularity.desc&vote_average.gte=7.0&vote_count.gte=200' }
+    ];
+
+    var pluginSettings = {
+        enabled: true,
+        collections: {}
+    };
+
+    collectionsConfig.forEach(c => pluginSettings.collections[c.id] = true);
+
+    function loadSettings() {
+        if (Lampa.Storage) {
+            pluginSettings.enabled = Lampa.Storage.get('tmdb_mod_enabled', true);
+            collectionsConfig.forEach(cfg => {
+                pluginSettings.collections[cfg.id] = Lampa.Storage.get('tmdb_mod_collection_' + cfg.id, true);
+            });
+        }
+        return pluginSettings;
+    }
+
+    // ===== HELPERS =====
+
+    function shuffle(arr) {
+        return arr.sort(() => Math.random() - 0.5);
+    }
+
+    function removeDuplicates(globalMap, list) {
+        return list.filter(item => {
+            if (globalMap[item.id]) return false;
+            globalMap[item.id] = true;
+            return true;
+        });
+    }
+
+    // ===== CORE =====
+
+    function createDiscoveryMain(parent) {
+        return function (params, oncomplete, onerror) {
+
+            var settings = loadSettings();
+            var seenGlobal = {};
+            var parts = [];
+
+            collectionsConfig.forEach(cfg => {
+                if (!settings.collections[cfg.id]) return;
+
+                parts.push(function (call) {
+
+                    var cacheKey = cfg.id;
+                    var cached = getCache(cacheKey);
+
+                    if (cached) {
+                        call(cached);
+                        return;
+                    }
+
+                    parent.get(cfg.request, params, function (json) {
+
+                        // анти-дублі (глобально)
+                        json.results = removeDuplicates(seenGlobal, json.results);
+
+                        // легка рандомізація
+                        json.results = shuffle(json.results);
+
+                        var title = (cfg.emoji ? cfg.emoji + ' ' : '') + Lampa.Lang.translate(cfg.name_key);
+                        json.title = title;
+
+                        if (Lampa.Utils && Lampa.Utils.addSource) {
+                            Lampa.Utils.addSource(json, 'tmdb');
+                        }
+
+                        setCache(cacheKey, json);
+
+                        call(json);
+
+                    }, function () {
+                        call({ results: [], title: cfg.name_key });
+                    });
+                });
+            });
+
+            if (!parts.length) {
+                if (onerror) onerror();
+                return;
+            }
+
+            var method = Lampa.Api.sequentials || Lampa.Api.partNext;
+            method(parts, parts.length, oncomplete, onerror);
+        };
+    }
+
+    function initPlugin() {
+        if (!Lampa.Api || !Lampa.Api.sources || !Lampa.Api.sources.tmdb) return;
+
+        var original = Lampa.Api.sources.tmdb;
+
+        if (original._tmdb_mod_pro) return;
+        original._tmdb_mod_pro = true;
+
+        var tmdb_mod = Object.assign({}, original);
+        Lampa.Api.sources.tmdb_mod = tmdb_mod;
+
+        var originalMain = original.main;
+
+        tmdb_mod.main = function () {
+            if (loadSettings().enabled && !this.type) {
+                return createDiscoveryMain(tmdb_mod).apply(this, arguments);
+            }
+            return originalMain.apply(this, arguments);
+        };
+
+        if (Lampa.Params && Lampa.Params.select) {
+            var sources = Lampa.Params.values.source || {};
+            sources.tmdb_mod = 'TMDB PRO';
+            Lampa.Params.select('source', sources, 'tmdb');
+        }
+    }
+
+    function start() {
+        if (window.appready) {
+            initPlugin();
+        } else {
+            Lampa.Listener.follow('app', function (e) {
+                if (e.type === 'ready') initPlugin();
+            });
+        }
+    }
+
+    start();
+
 })();
