@@ -1,8 +1,8 @@
 (function () {
     'use strict';
 
-    if (window.plugin_tmdb_mod_pro_ready) return;
-    window.plugin_tmdb_mod_pro_ready = true;
+    if (window.plugin_home_plus_ready) return;
+    window.plugin_home_plus_ready = true;
 
     var today = new Date().toISOString().slice(0, 10);
     var currentYear = new Date().getFullYear();
@@ -28,20 +28,20 @@
 
     // ===== CONFIG =====
     var collectionsConfig = [
-        { id: 'hot_new_releases', emoji: '🎬', name_key: 'tmdb_mod_c_hot_new', request: 'discover/movie?sort_by=primary_release_date.desc&with_release_type=4|5|6&primary_release_date.lte=' + today + '&vote_count.gte=50&vote_average.gte=6&with_runtime.gte=40&without_genres=99' },
-        { id: 'trending_movies', emoji: '🔥', name_key: 'tmdb_mod_c_trend_movie', request: 'trending/movie/week' },
-        { id: 'fresh_online', emoji: '👀', name_key: 'tmdb_mod_c_watching_now', request: 'discover/movie?sort_by=popularity.desc&with_release_type=4|5|6&primary_release_date.lte=' + today + '&vote_count.gte=50&vote_average.gte=6&with_runtime.gte=40&without_genres=99' },
-        { id: 'cult_cinema', emoji: '🍿', name_key: 'tmdb_mod_c_cult', request: 'discover/movie?primary_release_date.gte=1980-01-01&sort_by=popularity.desc&vote_average.gte=7&vote_count.gte=500' },
-        { id: 'top_10_studios_mix', emoji: '🏆', name_key: 'tmdb_mod_c_top_studios', request: 'discover/movie?with_companies=6194|33|4|306|5|12|8411|9195|2|7295&sort_by=popularity.desc&vote_average.gte=7.0&vote_count.gte=1000' },
-        { id: 'best_of_current_year_movies', emoji: '🌟', name_key: 'tmdb_mod_c_best_current_y', request: 'discover/movie?primary_release_year=' + currentYear + '&sort_by=vote_average.desc&vote_count.gte=300' },
-        { id: 'best_of_last_year_movies', emoji: '🏆', name_key: 'tmdb_mod_c_best_last_y', request: 'discover/movie?primary_release_year=' + lastYear + '&sort_by=vote_average.desc&vote_count.gte=500' },
-        { id: 'animation', emoji: '🧑‍🎤', name_key: 'tmdb_mod_c_animation', request: 'discover/movie?with_genres=16&sort_by=popularity.desc&vote_average.gte=7&vote_count.gte=500' },
-        { id: 'documentary', emoji: '🔬', name_key: 'tmdb_mod_c_documentary', request: 'discover/movie?with_genres=99&sort_by=popularity.desc&vote_count.gte=20' },
+        { id: 'hot_new_releases', emoji: '🎬', name_key: 'h_plus_c_hot_new', request: 'discover/movie?sort_by=primary_release_date.desc&with_release_type=4|5|6&primary_release_date.lte=' + today + '&vote_count.gte=50&vote_average.gte=6&with_runtime.gte=40&without_genres=99' },
+        { id: 'trending_movies', emoji: '🔥', name_key: 'h_plus_c_trend_movie', request: 'trending/movie/week' },
+        { id: 'fresh_online', emoji: '👀', name_key: 'h_plus_c_watching_now', request: 'discover/movie?sort_by=popularity.desc&with_release_type=4|5|6&primary_release_date.lte=' + today + '&vote_count.gte=50&vote_average.gte=6&with_runtime.gte=40&without_genres=99' },
+        { id: 'cult_cinema', emoji: '🍿', name_key: 'h_plus_c_cult', request: 'discover/movie?primary_release_date.gte=1980-01-01&sort_by=popularity.desc&vote_average.gte=7&vote_count.gte=500' },
+        { id: 'top_10_studios_mix', emoji: '🏆', name_key: 'h_plus_c_top_studios', request: 'discover/movie?with_companies=6194|33|4|306|5|12|8411|9195|2|7295&sort_by=popularity.desc&vote_average.gte=7.0&vote_count.gte=1000' },
+        { id: 'best_of_current_year_movies', emoji: '🌟', name_key: 'h_plus_c_best_current_y', request: 'discover/movie?primary_release_year=' + currentYear + '&sort_by=vote_average.desc&vote_count.gte=300' },
+        { id: 'best_of_last_year_movies', emoji: '🏆', name_key: 'h_plus_c_best_last_y', request: 'discover/movie?primary_release_year=' + lastYear + '&sort_by=vote_average.desc&vote_count.gte=500' },
+        { id: 'animation', emoji: '🧑‍🎤', name_key: 'h_plus_c_animation', request: 'discover/movie?with_genres=16&sort_by=popularity.desc&vote_average.gte=7&vote_count.gte=500' },
+        { id: 'documentary', emoji: '🔬', name_key: 'h_plus_c_documentary', request: 'discover/movie?with_genres=99&sort_by=popularity.desc&vote_count.gte=20' },
 
-        { id: 'trending_tv', emoji: '🔥', name_key: 'tmdb_mod_c_trend_tv', request: 'trending/tv/week' },
-        { id: 'best_world_series', emoji: '🌍', name_key: 'tmdb_mod_c_world_hits', request: 'discover/tv?with_origin_country=US|CA|GB|AU|IE|DE|FR|NL|SE|NO|DK|FI|ES|IT|BE|CH|AT|KR|JP|MX|BR&sort_by=last_air_date.desc&vote_average.gte=7&vote_count.gte=500&first_air_date.gte=2020-01-01&first_air_date.lte=' + today },
-        { id: 'netflix_best', emoji: '⚫', name_key: 'tmdb_mod_c_netflix', request: 'discover/tv?with_networks=213' },
-        { id: 'miniseries_hits', emoji: '💎', name_key: 'tmdb_mod_c_miniseries', request: 'discover/tv?with_type=2' }
+        { id: 'trending_tv', emoji: '🔥', name_key: 'h_plus_c_trend_tv', request: 'trending/tv/week' },
+        { id: 'best_world_series', emoji: '🌍', name_key: 'h_plus_c_world_hits', request: 'discover/tv?with_origin_country=US|CA|GB|AU|IE|DE|FR|NL|SE|NO|DK|FI|ES|IT|BE|CH|AT|KR|JP|MX|BR&sort_by=last_air_date.desc&vote_average.gte=7&vote_count.gte=500&first_air_date.gte=2020-01-01&first_air_date.lte=' + today },
+        { id: 'netflix_best', emoji: '⚫', name_key: 'h_plus_c_netflix', request: 'discover/tv?with_networks=213' },
+        { id: 'miniseries_hits', emoji: '💎', name_key: 'h_plus_c_miniseries', request: 'discover/tv?with_type=2' }
     ];
 
     var pluginSettings = {
@@ -54,7 +54,6 @@
         pluginSettings.order[c.id] = index + 1;
     });
 
-    // ===== ORDER LOGIC =====
     function normalizeOrder(changedId, newPosition) {
         var items = collectionsConfig.map(function (c) {
             return { id: c.id, pos: pluginSettings.order[c.id] || 999 };
@@ -76,8 +75,8 @@
     function loadSettings() {
         if (Lampa.Storage) {
             collectionsConfig.forEach(function (cfg, index) {
-                pluginSettings.collections[cfg.id] = Lampa.Storage.get('tmdb_mod_collection_' + cfg.id, true);
-                pluginSettings.order[cfg.id] = Lampa.Storage.get('tmdb_mod_order_' + cfg.id, index + 1);
+                pluginSettings.collections[cfg.id] = Lampa.Storage.get('hp_coll_' + cfg.id, true);
+                pluginSettings.order[cfg.id] = Lampa.Storage.get('hp_ord_' + cfg.id, index + 1);
             });
         }
         applyOrder();
@@ -86,8 +85,8 @@
     function saveSettings() {
         if (Lampa.Storage) {
             collectionsConfig.forEach(function (cfg) {
-                Lampa.Storage.set('tmdb_mod_collection_' + cfg.id, pluginSettings.collections[cfg.id]);
-                Lampa.Storage.set('tmdb_mod_order_' + cfg.id, pluginSettings.order[cfg.id]);
+                Lampa.Storage.set('hp_coll_' + cfg.id, pluginSettings.collections[cfg.id]);
+                Lampa.Storage.set('hp_ord_' + cfg.id, pluginSettings.order[cfg.id]);
             });
         }
     }
@@ -95,21 +94,21 @@
     function addTranslations() {
         if (!Lampa.Lang) return;
         Lampa.Lang.add({
-            tmdb_mod_plugin_name: { ru: "Головна сторінка +", uk: "Головна сторінка +" },
-            tmdb_mod_title_list: { ru: "--- НАЛАШТУВАННЯ ПІДБІРОК ---", uk: "--- НАЛАШТУВАННЯ ПІДБІРОК ---" },
-            tmdb_mod_c_hot_new: { ru: "Найсвіжіші прем'єри", uk: "Найсвіжіші прем'єри" },
-            tmdb_mod_c_trend_movie: { ru: "Трендові фільми", uk: "Трендові фільми" },
-            tmdb_mod_c_watching_now: { ru: "Зараз дивляться", uk: "Зараз дивляться" },
-            tmdb_mod_c_cult: { ru: "Популярні з 80-х", uk: "Популярні з 80-х" },
-            tmdb_mod_c_top_studios: { ru: "Топ студії", uk: "Топ студії" },
-            tmdb_mod_c_best_current_y: { ru: "Кращі " + currentYear, uk: "Кращі " + currentYear },
-            tmdb_mod_c_best_last_y: { ru: "Кращі " + lastYear, uk: "Кращі " + lastYear },
-            tmdb_mod_c_animation: { ru: "Мультфільми", uk: "Мультфільми" },
-            tmdb_mod_c_documentary: { ru: "Документалки", uk: "Документалки" },
-            tmdb_mod_c_trend_tv: { ru: "Трендові серіали", uk: "Трендові серіали" },
-            tmdb_mod_c_world_hits: { ru: "Світові хіти", uk: "Світові хіти" },
-            tmdb_mod_c_netflix: { ru: "Netflix хіти", uk: "Netflix хіти" },
-            tmdb_mod_c_miniseries: { ru: "Міні-серіали", uk: "Міні-серіали" }
+            h_plus_plugin_name: { ru: "Головна сторінка +", uk: "Головна сторінка +" },
+            h_plus_main_title: { ru: "Главная +", uk: "Головна +" },
+            h_plus_c_hot_new: { ru: "Найсвіжіші прем'єри", uk: "Найсвіжіші прем'єри" },
+            h_plus_c_trend_movie: { ru: "Трендові фільми", uk: "Трендові фільми" },
+            h_plus_c_watching_now: { ru: "Зараз дивляться", uk: "Зараз дивляться" },
+            h_plus_c_cult: { ru: "Популярні з 80-х", uk: "Популярні з 80-х" },
+            h_plus_c_top_studios: { ru: "Топ студії", uk: "Топ студії" },
+            h_plus_c_best_current_y: { ru: "Кращі " + currentYear, uk: "Кращі " + currentYear },
+            h_plus_c_best_last_y: { ru: "Кращі " + lastYear, uk: "Кращі " + lastYear },
+            h_plus_c_animation: { ru: "Мультфільми", uk: "Мультфільми" },
+            h_plus_c_documentary: { ru: "Документалки", uk: "Документалки" },
+            h_plus_c_trend_tv: { ru: "Трендові серіали", uk: "Трендові серіали" },
+            h_plus_c_world_hits: { ru: "Світові хіти", uk: "Світові хіти" },
+            h_plus_c_netflix: { ru: "Netflix хіти", uk: "Netflix хіти" },
+            h_plus_c_miniseries: { ru: "Міні-серіали", uk: "Міні-серіали" }
         });
     }
 
@@ -118,25 +117,18 @@
         if (!Lampa.SettingsApi) return;
 
         Lampa.SettingsApi.addComponent({
-            component: 'tmdb_mod',
-            name: Lampa.Lang.translate('tmdb_mod_plugin_name'),
+            component: 'home_plus',
+            name: Lampa.Lang.translate('h_plus_plugin_name'),
             icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>'
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'tmdb_mod',
-            param: { name: 'tmdb_mod_title_list', type: 'static' },
-            field: { name: Lampa.Lang.translate('tmdb_mod_title_list') }
         });
 
         collectionsConfig.forEach(function (cfg, index) {
             var name = Lampa.Lang.translate(cfg.name_key);
             var fullName = (cfg.emoji ? cfg.emoji + ' ' : '') + name;
 
-            // 1. Перемикач підбірки
             Lampa.SettingsApi.addParam({
-                component: 'tmdb_mod',
-                param: { name: 'tmdb_mod_collection_' + cfg.id, type: 'trigger', default: true },
+                component: 'home_plus',
+                param: { name: 'hp_coll_' + cfg.id, type: 'trigger', default: true },
                 field: { name: fullName },
                 onChange: function (value) {
                     pluginSettings.collections[cfg.id] = value;
@@ -144,11 +136,10 @@
                 }
             });
 
-            // 2. Вибір позиції (одразу під підбіркою)
             Lampa.SettingsApi.addParam({
-                component: 'tmdb_mod',
+                component: 'home_plus',
                 param: {
-                    name: 'tmdb_mod_order_' + cfg.id,
+                    name: 'hp_ord_' + cfg.id,
                     type: 'select',
                     values: (function () {
                         var obj = {};
@@ -199,6 +190,7 @@
                         if (json && json.results) {
                             json.results = removeDuplicates(seen, json.results);
                             json.results = shuffle(json.results);
+                            // Використовуємо "Головна +" як основний заголовок секції
                             json.title = (cfg.emoji ? cfg.emoji + ' ' : '') + Lampa.Lang.translate(cfg.name_key);
                             setCache(cfg.id, json);
                         }
@@ -217,17 +209,19 @@
     function init() {
         if (!Lampa.Api || !Lampa.Api.sources || !Lampa.Api.sources.tmdb) return;
         var original = Lampa.Api.sources.tmdb;
-        if (original._tmdb_mod_pro) return;
-        original._tmdb_mod_pro = true;
+        if (original._home_plus_active) return;
+        original._home_plus_active = true;
 
-        var tmdb_mod = Object.assign({}, original);
-        Lampa.Api.sources.tmdb_mod = tmdb_mod;
+        var home_plus_source = Object.assign({}, original);
+        // Замінюємо назву джерела, яка відображається на головній
+        home_plus_source.title = Lampa.Lang.translate('h_plus_main_title');
+        
+        Lampa.Api.sources.home_plus = home_plus_source;
 
         var originalMain = original.main;
-        tmdb_mod.main = function () {
-            // Плагін завжди увімкнений, якщо він встановлений
+        home_plus_source.main = function () {
             if (!this.type) {
-                return createDiscoveryMain(tmdb_mod).apply(this, arguments);
+                return createDiscoveryMain(home_plus_source).apply(this, arguments);
             }
             return originalMain.apply(this, arguments);
         };
