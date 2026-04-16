@@ -32,6 +32,7 @@
     
     var pluginSettings = {    
         enabled: true,    
+        wideCards: true, // Додано налаштування широких карток  
         collections: collectionsConfig.reduce(function(acc, c) { acc[c.id] = true; return acc; }, {})    
     };    
     
@@ -41,6 +42,7 @@
     function loadSettings() {    
         if (Lampa.Storage) {    
             pluginSettings.enabled = Lampa.Storage.get('tmdb_mod_enabled', true);    
+            pluginSettings.wideCards = Lampa.Storage.get('tmdb_mod_wide_cards', true); // Додано  
             collectionsConfig.forEach(function(cfg) {    
                 pluginSettings.collections[cfg.id] = Lampa.Storage.get('tmdb_mod_collection_' + cfg.id, true);    
             });    
@@ -51,6 +53,7 @@
     function saveSettings() {    
         if (Lampa.Storage) {    
             Lampa.Storage.set('tmdb_mod_enabled', pluginSettings.enabled);    
+            Lampa.Storage.set('tmdb_mod_wide_cards', pluginSettings.wideCards); // Додано  
             collectionsConfig.forEach(function(cfg) {    
                 Lampa.Storage.set('tmdb_mod_collection_' + cfg.id, pluginSettings.collections[cfg.id]);    
             });    
@@ -66,6 +69,8 @@
             tmdb_mod_toggle_desc: { ru: "Показувати кастомні підбірки на головній сторінці", uk: "Показувати кастомні підбірки на головній сторінці" },    
             tmdb_mod_noty_reload: { ru: "Зміни набудуть чинності після перезавантаження головної сторінки", uk: "Зміни набудуть чинності після перезавантаження головної сторінки" },    
             tmdb_mod_show_collection: { ru: "Показувати підбірку", uk: "Показувати підбірку" },    
+            tmdb_mod_wide_cards: { ru: "Горизонтальні картки", uk: "Горизонтальні картки" }, // Додано  
+            tmdb_mod_wide_cards_descr: { ru: "Использовать широкие горизонтальные карточки вместо стандартных", uk: "Використовувати широкі горизонтальні картки замість стандартних" }, // Додано  
     
             // Фільми    
             tmdb_mod_c_hot_new: { ru: "Найсвіжіші прем'єри", uk: "Найсвіжіші прем'єри" },    
@@ -250,14 +255,16 @@
     
             collectionsConfig.forEach(function(cfg) {    
                 if (settings.collections[cfg.id]) {    
-          parts_data.push(function (call) {     
+                    parts_data.push(function (call) {     
                         parent.get(cfg.request, params, function (json) {     
                             var translatedName = Lampa.Lang.translate(cfg.name_key);    
                             json.title = cfg.emoji ? cfg.emoji + ' ' + translatedName : translatedName;     
                                 
-                            // Перетворюємо результати у широкі картки  
+                            // Умовно перетворюємо результати у широкі картки  
                             if (json.results && json.results.length > 0) {  
-                                json.results = json.results.map(makeWideCardItem);  
+                                if (settings.wideCards) {  
+                                    json.results = json.results.map(makeWideCardItem);  
+                                }  
                             }  
                                 
                             if (Lampa.Utils && Lampa.Utils.addSource) {    
@@ -326,6 +333,18 @@
             Lampa.Noty.show(Lampa.Lang.translate('tmdb_mod_noty_reload'));      
         }      
     });    
+    
+    // Додаємо налаштування для широких карток  
+    Lampa.SettingsApi.addParam({      
+        component: 'tmdb_mod',      
+        param: { name: 'tmdb_mod_wide_cards', type: 'trigger', default: true },      
+        field: { name: Lampa.Lang.translate('tmdb_mod_wide_cards'), description: Lampa.Lang.translate('tmdb_mod_wide_cards_descr') },      
+        onChange: function (value) {      
+            pluginSettings.wideCards = value;      
+            saveSettings();      
+            Lampa.Noty.show(Lampa.Lang.translate('tmdb_mod_noty_reload'));      
+        }      
+    });  
     
     // Додаємо налаштування для мови логотипів  
     var langValues = {  
@@ -471,163 +490,163 @@
     
     // Додано функцію для додавання CSS стилів  
     function addWideCardStyles() {  
-    var style = document.createElement('style');  
-    style.innerHTML = `  
-        .card--wide-custom {   
-            width: 25em !important;   
-            margin-right: 0.2em !important;   
-            margin-bottom: 0 !important;   
-            position: relative;   
-            cursor: pointer;   
-            transition: transform 0.2s ease, z-index 0.2s ease;   
-            z-index: 1;   
-        }  
-          
-        .card--wide-custom .card__view {   
-            border-radius: 0.4em !important;   
-            overflow: hidden !important;   
-            box-shadow: 0 3px 6px rgba(0,0,0,0.5);   
-        }  
-          
-        .card--wide-custom .card-backdrop-overlay {   
-            position: absolute;   
-            top: 0;   
-            left: 0;   
-            right: 0;   
-            bottom: 0;   
-            background: rgba(0, 0, 0, 0.5);   
-            pointer-events: none;   
-            border-radius: 0.4em !important;   
-            z-index: 1;   
-        }  
-          
-        .card--wide-custom.focus {   
-            z-index: 99 !important;   
-            transform: scale(1.08);   
-        }  
-          
-        .card--wide-custom.focus .card__view {   
-            box-shadow: 0 10px 25px rgba(0,0,0,0.9) !important;   
-            border: 3px solid #fff !important;   
-            outline: none !important;   
-        }  
-          
-        .card-custom-logo {   
-            position: absolute;   
-            top: 50%;   
-            left: 50%;   
-            transform: translate(-50%, -50%);   
-            width: 70% !important;   
-            height: 70% !important;   
-            max-width: 70% !important;   
-            max-height: 70% !important;   
-            padding: 0 !important;   
-            margin: 0 !important;   
-            object-fit: contain;   
-            z-index: 5;   
-            filter: drop-shadow(0px 3px 5px rgba(0,0,0,0.8));   
-            pointer-events: none;   
-            transition: filter 0.3s ease;   
-        }  
-          
-        .card-custom-logo-text {   
-            position: absolute;   
-            top: 50%;   
-            left: 50%;   
-            transform: translate(-50%, -50%);   
-            width: 80%;   
-            max-height: 70%;   
-            text-align: center;   
-            font-size: 2em;   
-            font-weight: 600;   
-            color: #fff;   
-            text-shadow: none !important;   
-            z-index: 5;   
-            pointer-events: none;   
-            word-wrap: break-word;   
-            white-space: normal;   
-            line-height: 1.2;   
-            font-family: sans-serif;   
-            display: flex;   
-            align-items: center;   
-            justify-content: center;   
-        }  
-          
-        .custom-title-bottom {   
-            width: 100%;   
-            text-align: left;   
-            font-size: 1.1em;   
-            font-weight: bold;   
-            margin-top: 0.3em;   
-            color: #fff;   
-            white-space: nowrap;   
-            overflow: hidden;   
-            text-overflow: ellipsis;   
-            padding: 0 0.2em;   
-        }  
-          
-        .custom-overview-bottom {   
-            width: 100%;   
-            text-align: left;   
-            font-size: 0.85em;   
-            color: #bbb;   
-            line-height: 1.2;   
-            margin-top: 0.2em;   
-            padding: 0 0.2em;   
-            display: -webkit-box;   
-            -webkit-line-clamp: 2;   
-            -webkit-box-orient: vertical;   
-            overflow: hidden;   
-            white-space: normal;   
-        }  
-          
-        .card-badge-age {   
-            display: block !important;   
-            right: 0 !important;   
-            top: 0 !important;   
-            padding: 0.2em 0.45em !important;   
-            background: rgba(0, 0, 0, 0.6) !important;   
-            position: absolute !important;   
-            margin-top: 0 !important;   
-            font-size: 1.1em !important;   
-            z-index: 10 !important;   
-            color: #fff !important;   
-            font-weight: bold !important;  
-        }  
-          
-        .card__vote {   
-            right: 0 !important;   
-            bottom: 0 !important;   
-            padding: 0.2em 0.45em !important;   
-            z-index: 2;   
-            position: absolute !important;   
-            font-weight: bold;   
-            background: rgba(0,0,0,0.6);   
-        }  
-          
-        /* Приховуємо стандартну назву Lampa для широких карток */  
-        .card--wide-custom .card__title {  
-            display: none !important;  
-        }  
-          
-        /* Мобільна адаптація */  
-        @media (orientation: portrait), (max-width: 768px) {  
+        var style = document.createElement('style');  
+        style.innerHTML = `  
             .card--wide-custom {   
-                width: 14em !important;   
+                width: 25em !important;   
+                margin-right: 0.2em !important;   
+                margin-bottom: 0 !important;   
+                position: relative;   
+                cursor: pointer;   
+                transition: transform 0.2s ease, z-index 0.2s ease;   
+                z-index: 1;   
             }  
               
-            .card--wide-custom .custom-overview-bottom {   
-                display: none !important;   
+            .card--wide-custom .card__view {   
+                border-radius: 0.4em !important;   
+                overflow: hidden !important;   
+                box-shadow: 0 3px 6px rgba(0,0,0,0.5);   
             }  
               
-            .card--wide-custom .custom-title-bottom {   
-                font-size: 1em !important;   
-                margin-top: 0.1em;   
+            .card--wide-custom .card-backdrop-overlay {   
+                position: absolute;   
+                top: 0;   
+                left: 0;   
+                right: 0;   
+                bottom: 0;   
+                background: rgba(0, 0, 0, 0.5);   
+                pointer-events: none;   
+                border-radius: 0.4em !important;   
+                z-index: 1;   
             }  
-        }  
-    `;  
-    document.head.appendChild(style);  
-    }
+              
+            .card--wide-custom.focus {   
+                z-index: 99 !important;   
+                transform: scale(1.08);   
+            }  
+              
+            .card--wide-custom.focus .card__view {   
+                box-shadow: 0 10px 25px rgba(0,0,0,0.9) !important;   
+                border: 3px solid #fff !important;   
+                outline: none !important;   
+            }  
+              
+            .card-custom-logo {   
+                position: absolute;   
+                top: 50%;   
+                left: 50%;   
+                transform: translate(-50%, -50%);   
+                width: 70% !important;   
+                height: 70% !important;   
+                max-width: 70% !important;   
+                max-height: 70% !important;   
+                padding: 0 !important;   
+                margin: 0 !important;   
+                object-fit: contain;   
+                z-index: 5;   
+                filter: drop-shadow(0px 3px 5px rgba(0,0,0,0.8));   
+                pointer-events: none;   
+                transition: filter 0.3s ease;   
+            }  
+              
+            .card-custom-logo-text {   
+                position: absolute;   
+                top: 50%;   
+                left: 50%;   
+                transform: translate(-50%, -50%);   
+                width: 80%;   
+                max-height: 70%;   
+                text-align: center;   
+                font-size: 2em;   
+                font-weight: 600;   
+                color: #fff;   
+                text-shadow: none !important;   
+                z-index: 5;   
+                pointer-events: none;   
+                word-wrap: break-word;   
+                white-space: normal;   
+                line-height: 1.2;   
+                font-family: sans-serif;   
+                display: flex;   
+                align-items: center;   
+                justify-content: center;   
+            }  
+              
+            .custom-title-bottom {   
+                width: 100%;   
+                text-align: left;   
+                font-size: 1.1em;   
+                font-weight: bold;   
+                margin-top: 0.3em;   
+                color: #fff;   
+                white-space: nowrap;   
+                overflow: hidden;   
+                text-overflow: ellipsis;   
+                padding: 0 0.2em;   
+            }  
+              
+            .custom-overview-bottom {   
+                width: 100%;   
+                text-align: left;   
+                font-size: 0.85em;   
+                color: #bbb;   
+                line-height: 1.2;   
+                margin-top: 0.2em;   
+                padding: 0 0.2em;   
+                display: -webkit-box;   
+                -webkit-line-clamp: 2;   
+                -webkit-box-orient: vertical;   
+                overflow: hidden;   
+                white-space: normal;   
+            }  
+              
+            .card-badge-age {   
+                display: block !important;   
+                right: 0 !important;   
+                top: 0 !important;   
+                padding: 0.2em 0.45em !important;   
+                background: rgba(0, 0, 0, 0.6) !important;   
+                position: absolute !important;   
+                margin-top: 0 !important;   
+                font-size: 1.1em !important;   
+                z-index: 10 !important;   
+                color: #fff !important;   
+                font-weight: bold !important;  
+            }  
+              
+            .card__vote {   
+                right: 0 !important;   
+                bottom: 0 !important;   
+                padding: 0.2em 0.45em !important;   
+                z-index: 2;   
+                position: absolute !important;   
+                font-weight: bold;   
+                background: rgba(0,0,0,0.6);   
+            }  
+              
+            /* Приховуємо стандартну назву Lampa для широких карток */  
+            .card--wide-custom .card__title {  
+                display: none !important;  
+            }  
+              
+            /* Мобільна адаптація */  
+            @media (orientation: portrait), (max-width: 768px) {  
+                .card--wide-custom {   
+                    width: 14em !important;   
+                }  
+                  
+                .card--wide-custom .custom-overview-bottom {   
+                    display: none !important;   
+                }  
+                  
+                .card--wide-custom .custom-title-bottom {   
+                    font-size: 1em !important;   
+                    margin-top: 0.1em;   
+                }  
+            }  
+        `;  
+        document.head.appendChild(style);  
+    }  
     
     waitForApp();    
     
