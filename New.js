@@ -97,20 +97,22 @@
     function addTranslations() {
         if (!Lampa.Lang) return;
         Lampa.Lang.add({
-            new_main_plugin_name: { ru: "Головна сторінка +", uk: "Головна сторінка +" },
-            new_main_c_hot_new: { ru: "Найсвіжіші прем'єри", uk: "Найсвіжіші прем'єри" },
-            new_main_c_trend_movie: { ru: "Трендові фільми", uk: "Трендові фільми" },
-            new_main_c_watching_now: { ru: "Зараз дивляться", uk: "Зараз дивляться" },
-            new_main_c_cult: { ru: "Популярні з 80-х", uk: "Популярні з 80-х" },
-            new_main_c_top_studios: { ru: "Топ студії", uk: "Топ студії" },
-            new_main_c_best_current_y: { ru: "Кращі " + currentYear, uk: "Кращі " + currentYear },
-            new_main_c_best_last_y: { ru: "Кращі " + lastYear, uk: "Кращі " + lastYear },
-            new_main_c_animation: { ru: "Мультфільми", uk: "Мультфільми" },
-            new_main_c_documentary: { ru: "Документалки", uk: "Документалки" },
-            new_main_c_trend_tv: { ru: "Трендові серіали", uk: "Трендові серіали" },
-            new_main_c_world_hits: { ru: "Світові хіти", uk: "Світові хіти" },
-            new_main_c_netflix: { ru: "Netflix хіти", uk: "Netflix хіти" },
-            new_main_c_miniseries: { ru: "Міні-серіали", uk: "Міні-серіали" }
+            new_main_plugin_name: { uk: "Головна сторінка +" },
+            new_main_c_hot_new: { uk: "Найсвіжіші прем'єри" },
+            new_main_c_trend_movie: { uk: "Трендові фільми" },
+            new_main_c_watching_now: { uk: "Зараз дивляться" },
+            new_main_c_cult: { uk: "Популярні з 80-х" },
+            new_main_c_top_studios: { uk: "Топ студії" },
+            new_main_c_cult_80_90: { uk: "Хіти 80–90 (культові)" },
+            new_main_c_horror_premium: { uk: "Жахи Premium" },
+            new_main_c_best_current_y: { uk: "Кращі " + currentYear },
+            new_main_c_best_last_y: { uk: "Кращі " + lastYear },
+            new_main_c_animation: { uk: "Мультфільми" },
+            new_main_c_documentary: { uk: "Документалки" },
+            new_main_c_trend_tv: { uk: "Трендові серіали" },
+            new_main_c_world_hits: { uk: "Світові хіти" },
+            new_main_c_netflix: { uk: "Netflix хіти" },
+            new_main_c_miniseries: { uk: "Міні-серіали" }
         });
     }
 
