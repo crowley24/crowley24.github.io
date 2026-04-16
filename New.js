@@ -227,4 +227,102 @@
         });    
     });      
     
-    // Видаляємо старий слухач 
+    // Видаляємо старий слухач перед додаванням нового (запобігання витоку пам'яті)      
+    if (settingsListener && Lampa.Settings.listener.remove) {      
+        Lampa.Settings.listener.remove('open', settingsListener);      
+    }      
+    
+    // Створюємо новий слухач для синхронізації чекбоксів      
+    settingsListener = function (e) {      
+        if (e.name === 'tmdb_mod') {      
+            syncCheckboxes();      
+        }      
+    };      
+    
+    if (Lampa.Settings && Lampa.Settings.listener) {      
+        Lampa.Settings.listener.follow('open', settingsListener);      
+    }      
+}   
+    
+    function initPlugin() {    
+        try {    
+            if (!Lampa.Api || !Lampa.Api.sources || !Lampa.Api.sources.tmdb) {    
+                console.error('[TMDB_MOD] Lampa API не готовий');    
+                if (Lampa.Noty) {    
+                    Lampa.Noty.show('TMDB_MOD: Помилка ініціалізації');    
+                }    
+                return false;    
+            }    
+    
+            var originalTMDB = Lampa.Api.sources.tmdb;    
+            var settings = loadSettings();    
+                
+            var tmdb_mod = Object.assign({}, originalTMDB);    
+            Lampa.Api.sources.tmdb_mod = tmdb_mod;    
+            Object.defineProperty(Lampa.Api.sources, 'tmdb_mod', {     
+                get: function() { return tmdb_mod; }     
+            });    
+    
+            var originalMain = originalTMDB.main;     
+    
+            tmdb_mod.main = function () {    
+                var args = Array.from(arguments);    
+                    
+                if (loadSettings().enabled && this.type !== 'movie' && this.type !== 'tv') {    
+                    return createDiscoveryMain(tmdb_mod).apply(this, args);    
+                }    
+                    
+                return originalMain.apply(this, args);    
+            };    
+    
+            if (Lampa.Params && Lampa.Params.select) {    
+                try {    
+                    var sources = Lampa.Params.values && Lampa.Params.values.source ? Lampa.Params.values.source : {};    
+                    if (!sources.tmdb_mod) {    
+                        sources.tmdb_mod = 'TMDB_MOD';     
+                        Lampa.Params.select('source', sources, 'tmdb');     
+                    }    
+                } catch (e) {    
+                    console.error('[TMDB_MOD] Помилка реєстрації джерела:', e);    
+                }    
+            }    
+    
+            return true;    
+        } catch (e) {    
+            console.error('[TMDB_MOD] Критична помилка ініціалізації:', e);    
+            return false;    
+        }    
+    }    
+    
+    function waitForApp(retries) {    
+        retries = retries || 0;    
+        if (retries > maxRetries) {    
+            console.error('[TMDB_MOD] Не вдалося завантажити Lampa після ' + maxRetries + ' спроб');    
+            return;    
+        }    
+    
+        function onAppReady() {    
+            addTranslations();    
+            if (initPlugin()) {    
+                addSettings();    
+            }    
+        }    
+    
+        if (window.appready) {    
+            onAppReady();    
+        } else if (Lampa.Listener && typeof Lampa.Listener.follow === 'function') {    
+            Lampa.Listener.follow('app', function (e) {    
+                if (e.type === 'ready') {    
+                    onAppReady();    
+                }    
+            });    
+        } else {    
+            setTimeout(function() {     
+                waitForApp(retries + 1);     
+            }, 1000);    
+        }    
+    }    
+    
+    waitForApp();    
+    
+})();
