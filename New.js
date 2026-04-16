@@ -26,23 +26,6 @@
         cacheStore[key] = { time: Date.now(), data: data };
     }
 
-    // ===== ORDER =====
-    var ORDER_KEY = 'tmdb_mod_order';
-
-    function loadOrder() {
-        var saved = Lampa.Storage.get(ORDER_KEY, null);
-        if (saved && Array.isArray(saved)) {
-            collectionsConfig.sort(function (a, b) {
-                return saved.indexOf(a.id) - saved.indexOf(b.id);
-            });
-        }
-    }
-
-    function saveOrder() {
-        var order = collectionsConfig.map(function (c) { return c.id; });
-        Lampa.Storage.set(ORDER_KEY, order);
-    }
-
     // ===== CONFIG =====
     var collectionsConfig = [
         { id: 'hot_new_releases', emoji: '🎬', name_key: 'tmdb_mod_c_hot_new', request: 'discover/movie?sort_by=primary_release_date.desc&with_release_type=4|5|6&primary_release_date.lte=' + today + '&vote_count.gte=50&vote_average.gte=6&with_runtime.gte=40&without_genres=99' },
@@ -61,37 +44,54 @@
         { id: 'miniseries_hits', emoji: '💎', name_key: 'tmdb_mod_c_miniseries', request: 'discover/tv?with_type=2' }
     ];
 
-    var pluginSettings = { enabled: true, collections: {} };
-    collectionsConfig.forEach(function (c) { pluginSettings.collections[c.id] = true; });
+    var pluginSettings = {
+        enabled: true,
+        collections: {},
+        order: {}
+    };
+
+    collectionsConfig.forEach(function (c, index) {
+        pluginSettings.collections[c.id] = true;
+        pluginSettings.order[c.id] = index + 1;
+    });
+
+    function applyOrder() {
+        collectionsConfig.sort(function (a, b) {
+            return (pluginSettings.order[a.id] || 999) - (pluginSettings.order[b.id] || 999);
+        });
+    }
 
     function loadSettings() {
         if (Lampa.Storage) {
             pluginSettings.enabled = Lampa.Storage.get('tmdb_mod_enabled', true);
-            collectionsConfig.forEach(function (cfg) {
+
+            collectionsConfig.forEach(function (cfg, index) {
                 pluginSettings.collections[cfg.id] = Lampa.Storage.get('tmdb_mod_collection_' + cfg.id, true);
+                pluginSettings.order[cfg.id] = Lampa.Storage.get('tmdb_mod_order_' + cfg.id, index + 1);
             });
         }
-        loadOrder();
+
+        applyOrder();
         return pluginSettings;
     }
 
     function saveSettings() {
         if (Lampa.Storage) {
             Lampa.Storage.set('tmdb_mod_enabled', pluginSettings.enabled);
+
             collectionsConfig.forEach(function (cfg) {
                 Lampa.Storage.set('tmdb_mod_collection_' + cfg.id, pluginSettings.collections[cfg.id]);
+                Lampa.Storage.set('tmdb_mod_order_' + cfg.id, pluginSettings.order[cfg.id]);
             });
         }
     }
 
-    // ===== TRANSLATIONS =====
     function addTranslations() {
         if (!Lampa.Lang) return;
 
         Lampa.Lang.add({
             tmdb_mod_plugin_name: { ru: "TMDB PRO", uk: "TMDB PRO" },
             tmdb_mod_toggle_name: { ru: "Увімкнути TMDB PRO", uk: "Увімкнути TMDB PRO" },
-            tmdb_mod_toggle_desc: { ru: "Показувати підбірки", uk: "Показувати підбірки" },
 
             tmdb_mod_c_hot_new: { ru: "Найсвіжіші прем'єри", uk: "Найсвіжіші прем'єри" },
             tmdb_mod_c_trend_movie: { ru: "Трендові фільми", uk: "Трендові фільми" },
@@ -110,7 +110,6 @@
         });
     }
 
-    // ===== SETTINGS =====
     function addSettings() {
         loadSettings();
 
@@ -124,20 +123,19 @@
         Lampa.SettingsApi.addParam({
             component: 'tmdb_mod',
             param: { name: 'tmdb_mod_enabled', type: 'trigger', default: true },
-            field: {
-                name: Lampa.Lang.translate('tmdb_mod_toggle_name'),
-                description: Lampa.Lang.translate('tmdb_mod_toggle_desc')
-            },
+            field: { name: Lampa.Lang.translate('tmdb_mod_toggle_name') },
             onChange: function (value) {
                 pluginSettings.enabled = value;
                 saveSettings();
             }
         });
 
-        collectionsConfig.forEach(function (cfg) {
+        collectionsConfig.forEach(function (cfg, index) {
+
             var name = Lampa.Lang.translate(cfg.name_key);
             var fullName = (cfg.emoji ? cfg.emoji + ' ' : '') + name;
 
+            // toggle
             Lampa.SettingsApi.addParam({
                 component: 'tmdb_mod',
                 param: {
@@ -145,38 +143,42 @@
                     type: 'trigger',
                     default: true
                 },
-                field: {
-                    name: fullName + ' ⬅➡',
-                    description: 'OK — вкл/викл | ← → змінити порядок'
-                },
+                field: { name: fullName },
                 onChange: function (value) {
                     pluginSettings.collections[cfg.id] = value;
                     saveSettings();
-                },
-                onKey: function (e) {
-                    var i = collectionsConfig.findIndex(function (c) { return c.id === cfg.id; });
-
-                    if (e.key === 'left' && i > 0) {
-                        var t = collectionsConfig[i - 1];
-                        collectionsConfig[i - 1] = collectionsConfig[i];
-                        collectionsConfig[i] = t;
-                        saveOrder();
-                        Lampa.Noty.show('⬆ Переміщено');
-                    }
-
-                    if (e.key === 'right' && i < collectionsConfig.length - 1) {
-                        var t2 = collectionsConfig[i + 1];
-                        collectionsConfig[i + 1] = collectionsConfig[i];
-                        collectionsConfig[i] = t2;
-                        saveOrder();
-                        Lampa.Noty.show('⬇ Переміщено');
-                    }
                 }
             });
+
+            // order select
+            Lampa.SettingsApi.addParam({
+                component: 'tmdb_mod',
+                param: {
+                    name: 'tmdb_mod_order_' + cfg.id,
+                    type: 'select',
+                    values: (function () {
+                        var obj = {};
+                        for (var i = 1; i <= collectionsConfig.length; i++) {
+                            obj[i] = 'Позиція ' + i;
+                        }
+                        return obj;
+                    })(),
+                    default: index + 1
+                },
+                field: {
+                    name: '↳ Позиція: ' + fullName
+                },
+                onChange: function (value) {
+                    pluginSettings.order[cfg.id] = parseInt(value);
+                    saveSettings();
+                    applyOrder();
+                    Lampa.Noty.show('Порядок оновлено');
+                }
+            });
+
         });
     }
 
-    // ===== CORE =====
     function shuffle(arr) {
         return arr.sort(function () { return Math.random() - 0.5; });
     }
