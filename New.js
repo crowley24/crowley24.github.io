@@ -28,49 +28,28 @@
 
     // ===== CONFIG =====
     var collectionsConfig = [
-        // Додано стрічку історії (локальна)
         { id: 'history_line', emoji: '🕒', name_key: 'new_main_c_history', request: 'local_history' },
-        
         { id: 'hot_new_releases', name_key: 'new_main_c_hot_new', emoji: '🎬', request: 'discover/movie?sort_by=primary_release_date.desc&with_release_type=4|5|6&primary_release_date.lte=' + today + '&vote_count.gte=50&vote_average.gte=6&with_runtime.gte=40&without_genres=99' },
         { id: 'trending_movies', emoji: '🔥', name_key: 'new_main_c_trend_movie', request: 'trending/movie/week' },
         { id: 'fresh_online', emoji: '👀', name_key: 'new_main_c_watching_now', request: 'discover/movie?sort_by=popularity.desc&with_release_type=4|5|6&primary_release_date.lte=' + today + '&vote_count.gte=50&vote_average.gte=6&with_runtime.gte=40&without_genres=99' },
         { id: 'cult_cinema', emoji: '🍿', name_key: 'new_main_c_cult', request: 'discover/movie?primary_release_date.gte=1980-01-01&sort_by=popularity.desc&vote_average.gte=7&vote_count.gte=500' },
         { id: 'top_10_studios_mix', emoji: '🏆', name_key: 'new_main_c_top_studios', request: 'discover/movie?with_companies=6194|33|4|306|5|12|8411|9195|2|7295&sort_by=popularity.desc&vote_average.gte=7.0&vote_count.gte=1000' },
-        { id: 'cult_80_90_premium', emoji: ' cassette ', name_key: 'new_main_c_cult_80_90', request: 'discover/movie?primary_release_date.gte=1980-01-01&primary_release_date.lte=1999-12-31&sort_by=popularity.desc&vote_average.gte=7&vote_count.gte=1000' },
+        { id: 'cult_80_90_premium', emoji: '📼', name_key: 'new_main_c_cult_80_90', request: 'discover/movie?primary_release_date.gte=1980-01-01&primary_release_date.lte=1999-12-31&sort_by=popularity.desc&vote_average.gte=7&vote_count.gte=1000' },
         { id: 'horror_premium', emoji: '👻', name_key: 'new_main_c_horror_premium', request: 'discover/movie?with_genres=27&sort_by=vote_average.desc&vote_average.gte=6.2&vote_count.gte=300&with_runtime.gte=70' },
-
         { id: 'best_of_current_year_movies', emoji: '🌟', name_key: 'new_main_c_best_current_y', request: 'discover/movie?primary_release_year=' + currentYear + '&sort_by=vote_average.desc&vote_count.gte=300' },
         { id: 'best_of_last_year_movies', emoji: '🏆', name_key: 'new_main_c_best_last_y', request: 'discover/movie?primary_release_year=' + lastYear + '&sort_by=vote_average.desc&vote_count.gte=500' },
         { id: 'documentary', emoji: '🔬', name_key: 'new_main_c_documentary', request: 'discover/movie?with_genres=99&sort_by=popularity.desc&vote_count.gte=20' },
-
         { id: 'animation', emoji: '🧑‍🎤', name_key: 'new_main_c_animation', request: 'discover/movie?with_genres=16&sort_by=popularity.desc&vote_average.gte=7&vote_count.gte=500' },
-
         { id: 'netflix_best', emoji: '⚫', name_key: 'new_main_c_netflix', request: 'discover/tv?with_networks=213' },
         { id: 'miniseries_hits', emoji: '💎', name_key: 'new_main_c_miniseries', request: 'discover/tv?with_type=2' }
     ];
 
-    var pluginSettings = {
-        collections: {},
-        order: {}
-    };
+    var pluginSettings = { collections: {}, order: {} };
 
     collectionsConfig.forEach(function (c, index) {
         pluginSettings.collections[c.id] = true;
         pluginSettings.order[c.id] = index + 1;
     });
-
-    // ===== ORDER LOGIC =====
-    function normalizeOrder(changedId, newPosition) {
-        var items = collectionsConfig.map(function (c) {
-            return { id: c.id, pos: pluginSettings.order[c.id] || 999 };
-        });
-        items = items.filter(function (i) { return i.id !== changedId; });
-        items.sort(function (a, b) { return a.pos - b.pos; });
-        items.splice(newPosition - 1, 0, { id: changedId, pos: newPosition });
-        items.forEach(function (item, index) {
-            pluginSettings.order[item.id] = index + 1;
-        });
-    }
 
     function applyOrder() {
         collectionsConfig.sort(function (a, b) {
@@ -113,8 +92,6 @@
             new_main_c_best_last_y: { uk: "Кращі " + lastYear },
             new_main_c_animation: { uk: "Мультфільми" },
             new_main_c_documentary: { uk: "Документалки" },
-            new_main_c_trend_tv: { uk: "Трендові серіали" },
-            new_main_c_world_hits: { uk: "Світові хіти" },
             new_main_c_netflix: { uk: "Netflix хіти" },
             new_main_c_miniseries: { uk: "Міні-серіали" }
         });
@@ -127,14 +104,11 @@
         Lampa.SettingsApi.addComponent({
             component: 'new_main_settings',
             name: Lampa.Lang.translate('new_main_plugin_name'),
-            icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>'
+            icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>'
         });
 
         collectionsConfig.forEach(function (cfg, index) {
-            var name = Lampa.Lang.translate(cfg.name_key);
-            // Емодзі після назви в налаштуваннях
-            var fullName = name + (cfg.emoji ? ' ' + cfg.emoji : '');
-            
+            var fullName = Lampa.Lang.translate(cfg.name_key) + (cfg.emoji ? ' ' + cfg.emoji : '');
             Lampa.SettingsApi.addParam({
                 component: 'new_main_settings',
                 param: { name: 'new_main_collection_' + cfg.id, type: 'trigger', default: true },
@@ -144,42 +118,6 @@
                     saveSettings();
                 }
             });
-
-            Lampa.SettingsApi.addParam({
-                component: 'new_main_settings',
-                param: {
-                    name: 'new_main_order_' + cfg.id,
-                    type: 'select',
-                    values: (function () {
-                        var obj = {};
-                        for (var i = 1; i <= collectionsConfig.length; i++) { obj[i] = i; }
-                        return obj;
-                    })(),
-                    default: index + 1
-                },
-                field: { 
-                    name: '<span style="opacity: 0.5; font-size: 0.8em; margin-left: 10px;">↳ Порядок виводу</span>' 
-                },
-                onChange: function (value) {
-                    normalizeOrder(cfg.id, parseInt(value));
-                    saveSettings();
-                    applyOrder();
-                    if (Lampa.Settings && Lampa.Settings.update) Lampa.Settings.update();
-                    Lampa.Noty.show('Порядок оновлено ✔');
-                }
-            });
-        });
-    }
-
-    function shuffle(arr) {
-        return arr.sort(function () { return Math.random() - 0.5; });
-    }
-
-    function removeDuplicates(map, list) {
-        return list.filter(function (item) {
-            if (map[item.id]) return false;
-            map[item.id] = true;
-            return true;
         });
     }
 
@@ -192,31 +130,44 @@
                 if (!pluginSettings.collections[cfg.id]) return;
 
                 parts.push(function (call) {
-                    // --- ЛОГІКА ДЛЯ ІСТОРІЇ ---
+                    // --- ІСТОРІЯ (Виправлено) ---
                     if (cfg.request === 'local_history') {
-                        var list = (Lampa.History && Lampa.History.get) ? Lampa.History.get() : [];
-                        var results = list.slice(0, 20).map(function(h) { return h.card; });
-                        return call({
-                            results: results,
-                            title: Lampa.Lang.translate(cfg.name_key) + (cfg.emoji ? ' ' + cfg.emoji : '')
-                        });
+                        // Отримуємо історію через внутрішній метод Lampa
+                        var list = Lampa.History ? Lampa.History.get() : [];
+                        if (list.length > 0) {
+                            var cards = list.map(function(item) {
+                                return item.card || item; // Деякі версії повертають об'єкт прямо
+                            }).filter(function(c) { return c && (c.title || c.name); });
+
+                            return call({
+                                results: cards.slice(0, 20),
+                                title: Lampa.Lang.translate(cfg.name_key) + (cfg.emoji ? ' ' + cfg.emoji : '')
+                            });
+                        } else {
+                            // Якщо історія пуста, просто не виводимо цей рядок
+                            return call({ results: [] });
+                        }
                     }
 
-                    // --- ЛОГІКА ДЛЯ ТМDB ---
+                    // --- TMDB ---
                     var cached = getCache(cfg.id);
                     if (cached) return call(cached);
 
                     parent.get(cfg.request, params, function (json) {
                         if (json && json.results) {
-                            json.results = removeDuplicates(seen, json.results);
-                            json.results = shuffle(json.results);
-                            // Емодзі після назви на головній
+                            var res = json.results.filter(function(i) {
+                                if (seen[i.id]) return false;
+                                seen[i.id] = true;
+                                return true;
+                            }).sort(function() { return 0.5 - Math.random(); });
+
+                            json.results = res;
                             json.title = Lampa.Lang.translate(cfg.name_key) + (cfg.emoji ? ' ' + cfg.emoji : '');
                             setCache(cfg.id, json);
                         }
                         call(json || { results: [] });
                     }, function () {
-                        call({ results: [], title: cfg.id });
+                        call({ results: [] });
                     });
                 });
             });
@@ -233,7 +184,6 @@
         original._new_main_pro_init = true;
 
         var new_main_source = Object.assign({}, original);
-        
         Lampa.Api.sources.new_main = new_main_source;
 
         if (Lampa.Params && Lampa.Params.values && Lampa.Params.values.source) {
@@ -242,12 +192,9 @@
             }
         }
 
-        var originalMain = original.main;
         new_main_source.main = function () {
-            if (!this.type) {
-                return createDiscoveryMain(new_main_source).apply(this, arguments);
-            }
-            return originalMain.apply(this, arguments);
+            if (!this.type) return createDiscoveryMain(new_main_source).apply(this, arguments);
+            return original.main.apply(this, arguments);
         };
 
         addTranslations();
