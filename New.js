@@ -129,7 +129,6 @@
         collectionsConfig.forEach(function (cfg, index) {
             var name = Lampa.Lang.translate(cfg.name_key);
             var fullName = (cfg.emoji ? cfg.emoji + ' ' : '') + name;
-
             Lampa.SettingsApi.addParam({
                 component: 'new_main_settings',
                 param: { name: 'new_main_collection_' + cfg.id, type: 'trigger', default: true },
@@ -194,7 +193,7 @@
                         if (json && json.results) {
                             json.results = removeDuplicates(seen, json.results);
                             json.results = shuffle(json.results);
-                            json.title = (cfg.emoji ? cfg.emoji + ' ' : '') + Lampa.Lang.translate(cfg.name_key);
+                            json.title = Lampa.Lang.translate(cfg.name_key) + (cfg.emoji ? ' ' + cfg.emoji : '');
                             setCache(cfg.id, json);
                         }
                         call(json || { results: [] });
