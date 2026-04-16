@@ -8,17 +8,12 @@
     var currentYear = new Date().getFullYear();
     var lastYear = currentYear - 1;
 
-    // ===== CACHE =====
     var CACHE_TTL = 1000 * 60 * 10;
     var cacheStore = {};
 
     function getCache(key) {
         var item = cacheStore[key];
-        if (!item) return null;
-        if (Date.now() - item.time > CACHE_TTL) {
-            delete cacheStore[key];
-            return null;
-        }
+        if (!item && (!item || Date.now() - item.time > CACHE_TTL)) return null;
         return item.data;
     }
 
@@ -26,7 +21,7 @@
         cacheStore[key] = { time: Date.now(), data: data };
     }
 
-    // ===== CONFIG =====
+    // ===== ПОВНИЙ СПИСОК КОЛЕКЦІЙ (Нічого не видалено) =====
     var collectionsConfig = [
         { id: 'history_line', emoji: '🕒', name_key: 'new_main_c_history', request: 'local_history' },
         { id: 'hot_new_releases', name_key: 'new_main_c_hot_new', emoji: '🎬', request: 'discover/movie?sort_by=primary_release_date.desc&with_release_type=4|5|6&primary_release_date.lte=' + today + '&vote_count.gte=50&vote_average.gte=6&with_runtime.gte=40&without_genres=99' },
@@ -40,6 +35,7 @@
         { id: 'best_of_last_year_movies', emoji: '🏆', name_key: 'new_main_c_best_last_y', request: 'discover/movie?primary_release_year=' + lastYear + '&sort_by=vote_average.desc&vote_count.gte=500' },
         { id: 'documentary', emoji: '🔬', name_key: 'new_main_c_documentary', request: 'discover/movie?with_genres=99&sort_by=popularity.desc&vote_count.gte=20' },
         { id: 'animation', emoji: '🧑‍🎤', name_key: 'new_main_c_animation', request: 'discover/movie?with_genres=16&sort_by=popularity.desc&vote_average.gte=7&vote_count.gte=500' },
+        { id: 'trending_tv', emoji: '📺', name_key: 'new_main_c_trend_tv', request: 'trending/tv/week' },
         { id: 'netflix_best', emoji: '⚫', name_key: 'new_main_c_netflix', request: 'discover/tv?with_networks=213' },
         { id: 'miniseries_hits', emoji: '💎', name_key: 'new_main_c_miniseries', request: 'discover/tv?with_type=2' }
     ];
@@ -51,12 +47,6 @@
         pluginSettings.order[c.id] = index + 1;
     });
 
-    function applyOrder() {
-        collectionsConfig.sort(function (a, b) {
-            return (pluginSettings.order[a.id] || 999) - (pluginSettings.order[b.id] || 999);
-        });
-    }
-
     function loadSettings() {
         if (Lampa.Storage) {
             collectionsConfig.forEach(function (cfg, index) {
@@ -64,7 +54,7 @@
                 pluginSettings.order[cfg.id] = Lampa.Storage.get('new_main_order_' + cfg.id, index + 1);
             });
         }
-        applyOrder();
+        collectionsConfig.sort(function (a, b) { return (pluginSettings.order[a.id] || 999) - (pluginSettings.order[b.id] || 999); });
     }
 
     function saveSettings() {
@@ -92,6 +82,7 @@
             new_main_c_best_last_y: { uk: "Кращі " + lastYear },
             new_main_c_animation: { uk: "Мультфільми" },
             new_main_c_documentary: { uk: "Документалки" },
+            new_main_c_trend_tv: { uk: "Трендові серіали" },
             new_main_c_netflix: { uk: "Netflix хіти" },
             new_main_c_miniseries: { uk: "Міні-серіали" }
         });
@@ -118,6 +109,26 @@
                     saveSettings();
                 }
             });
+
+            Lampa.SettingsApi.addParam({
+                component: 'new_main_settings',
+                param: {
+                    name: 'new_main_order_' + cfg.id,
+                    type: 'select',
+                    values: (function () {
+                        var obj = {};
+                        for (var i = 1; i <= collectionsConfig.length; i++) { obj[i] = i; }
+                        return obj;
+                    })(),
+                    default: index + 1
+                },
+                field: { name: '<span style="opacity: 0.5; font-size: 0.8em; margin-left: 10px;">↳ Порядок</span>' },
+                onChange: function (value) {
+                    pluginSettings.order[cfg.id] = parseInt(value);
+                    saveSettings();
+                    Lampa.Noty.show('Збережено. Оновіть сторінку.');
+                }
+            });
         });
     }
 
@@ -130,45 +141,30 @@
                 if (!pluginSettings.collections[cfg.id]) return;
 
                 parts.push(function (call) {
-                    // --- ІСТОРІЯ (Виправлено) ---
                     if (cfg.request === 'local_history') {
-                        // Отримуємо історію через внутрішній метод Lampa
                         var list = Lampa.History ? Lampa.History.get() : [];
-                        if (list.length > 0) {
-                            var cards = list.map(function(item) {
-                                return item.card || item; // Деякі версії повертають об'єкт прямо
-                            }).filter(function(c) { return c && (c.title || c.name); });
-
-                            return call({
-                                results: cards.slice(0, 20),
-                                title: Lampa.Lang.translate(cfg.name_key) + (cfg.emoji ? ' ' + cfg.emoji : '')
-                            });
-                        } else {
-                            // Якщо історія пуста, просто не виводимо цей рядок
-                            return call({ results: [] });
+                        var cards = list.map(function(i){ return i.card || i; }).filter(function(c){ return c && (c.title || c.name); });
+                        if (cards.length > 0) {
+                            return call({ results: cards.slice(0, 20), title: Lampa.Lang.translate(cfg.name_key) + ' ' + cfg.emoji });
                         }
+                        return call({ results: [] });
                     }
 
-                    // --- TMDB ---
                     var cached = getCache(cfg.id);
                     if (cached) return call(cached);
 
                     parent.get(cfg.request, params, function (json) {
                         if (json && json.results) {
-                            var res = json.results.filter(function(i) {
+                            json.results = json.results.filter(function(i) {
                                 if (seen[i.id]) return false;
                                 seen[i.id] = true;
                                 return true;
                             }).sort(function() { return 0.5 - Math.random(); });
-
-                            json.results = res;
-                            json.title = Lampa.Lang.translate(cfg.name_key) + (cfg.emoji ? ' ' + cfg.emoji : '');
+                            json.title = Lampa.Lang.translate(cfg.name_key) + ' ' + cfg.emoji;
                             setCache(cfg.id, json);
                         }
                         call(json || { results: [] });
-                    }, function () {
-                        call({ results: [] });
-                    });
+                    }, function () { call({ results: [] }); });
                 });
             });
 
@@ -178,22 +174,19 @@
     }
 
     function init() {
-        if (!Lampa.Api || !Lampa.Api.sources || !Lampa.Api.sources.tmdb) return;
+        if (!Lampa.Api || !Lampa.Api.sources.tmdb) return;
         var original = Lampa.Api.sources.tmdb;
         if (original._new_main_pro_init) return;
         original._new_main_pro_init = true;
 
-        var new_main_source = Object.assign({}, original);
-        Lampa.Api.sources.new_main = new_main_source;
-
+        Lampa.Api.sources.new_main = Object.assign({}, original);
+        
         if (Lampa.Params && Lampa.Params.values && Lampa.Params.values.source) {
-            if (!Lampa.Params.values.source.new_main) {
-                Lampa.Params.values.source.new_main = 'New_Main';
-            }
+            if (!Lampa.Params.values.source.new_main) Lampa.Params.values.source.new_main = 'New_Main';
         }
 
-        new_main_source.main = function () {
-            if (!this.type) return createDiscoveryMain(new_main_source).apply(this, arguments);
+        Lampa.Api.sources.new_main.main = function () {
+            if (!this.type) return createDiscoveryMain(Lampa.Api.sources.new_main).apply(this, arguments);
             return original.main.apply(this, arguments);
         };
 
