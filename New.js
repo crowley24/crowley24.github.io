@@ -496,10 +496,22 @@
   
         // Додаємо налаштування для порядку колекцій  
         Lampa.SettingsApi.addParam({  
-            component: 'tmdb_mod',  
-            param: { name: 'tmdb_mod_collection_order', type: 'static' },  
-            field: { name: Lampa.Lang.translate('tmdb_mod_collection_order'), description: Lampa.Lang.translate('tmdb_mod_collection_order_descr') }  
-        });  
+    component: 'tmdb_mod',  
+    param: { name: 'tmdb_mod_collection_order', type: 'dragdrop' },  
+    field: { name: Lampa.Lang.translate('tmdb_mod_collection_order'), description: Lampa.Lang.translate('tmdb_mod_collection_order_descr') },  
+    values: collectionsConfig.map(function(cfg) {  
+        return {  
+            id: cfg.id,  
+            name: Lampa.Lang.translate(cfg.name_key)  
+        };  
+    }),  
+    default: pluginSettings.collectionOrder,  
+    onChange: function (value) {  
+        pluginSettings.collectionOrder = value;  
+        saveSettings();  
+        Lampa.Noty.show(Lampa.Lang.translate('tmdb_mod_noty_reload'));  
+    }  
+});
           
         collectionsConfig.forEach(function(cfg) {        
             var translatedName = Lampa.Lang.translate(cfg.name_key);        
