@@ -58,104 +58,197 @@
     }    
     
     function addTranslations() {    
-        if (!Lampa.Lang) return;    
-    
         Lampa.Lang.add({    
-            tmdb_mod_plugin_name: { uk: "Головна сторінка +" }, // Нова назва плагіна  
-            tmdb_mod_noty_reload: { uk: "Зміни набудуть чинності після перезавантаження головної сторінки" },    
-            tmdb_mod_show_collection: { uk: "Показувати підбірку" },    
-            tmdb_mod_wide_cards: { uk: "Горизонтальні картки" },    
-            tmdb_mod_wide_cards_descr: { uk: "Використовувати широкі горизонтальні картки замість стандартних" },    
-    
-            // Фільми    
-            tmdb_mod_c_hot_new: { uk: "Найсвіжіші прем'єри" },    
-            tmdb_mod_c_trend_movie: { uk: "Топ фільмів тижня" },    
-            tmdb_mod_c_watching_now: { uk: "Зараз дивляться" },    
-            tmdb_mod_c_cult: { uk: "Популярні фільми з 80-х" },    
-            tmdb_mod_c_top_studios: { uk: "Золота Десятка Студій" },    
-            tmdb_mod_c_best_current_y: { uk: "Найкраще " + currentYear + " року" },    
-            tmdb_mod_c_best_last_y: { uk: "Найкраще " + lastYear + " року" },    
-            tmdb_mod_c_animation: { uk: "Анімація" },    
-            tmdb_mod_c_documentary: { uk: "Документальні" },    
-    
-            // Серіали    
-            tmdb_mod_c_trend_tv: { uk: "Топ серіалів тижня" },    
-            tmdb_mod_c_world_hits: { uk: "Світові хіти" },    
-            tmdb_mod_c_netflix: { uk: "Найкраще Netflix" },    
-            tmdb_mod_c_miniseries: { uk: "Мінісеріали" }    
+            tmdb_mod_plugin_name: 'Головна сторінка +',    
+            tmdb_mod_wide_cards: 'Горизонтальні картки',    
+            tmdb_mod_wide_cards_descr: 'Використовувати широкі горизонтальні картки замість стандартних',    
+            tmdb_mod_noty_reload: 'Перезавантажте сторінку для застосування змін',    
+            tmdb_mod_show_collection: 'Показати підбірку',    
+            tmdb_mod_c_hot_new: 'Гарячі новинки',    
+            tmdb_mod_c_trend_movie: 'Трендові фільми',    
+            tmdb_mod_c_watching_now: 'Зараз дивляться',    
+            tmdb_mod_c_cult: 'Культове кіно',    
+            tmdb_mod_c_top_studios: 'Топ студій',    
+            tmdb_mod_c_best_current_y: 'Найкраще поточного року',    
+            tmdb_mod_c_best_last_y: 'Найкраще минулого року',    
+            tmdb_mod_c_animation: 'Анімація',    
+            tmdb_mod_c_documentary: 'Документальні',    
+            tmdb_mod_c_trend_tv: 'Трендові серіали',    
+            tmdb_mod_c_world_hits: 'Світові хіти',    
+            tmdb_mod_c_netflix: 'Найкраще Netflix',    
+            tmdb_mod_c_miniseries: 'Мінісеріали'    
         });    
     }    
     
-    function getColor(rating, alpha) {  
-        var rgb = '';  
-        if (rating >= 0 && rating <= 3) rgb = '231, 76, 60';  
-        else if (rating > 3 && rating <= 5) rgb = '230, 126, 34';  
-        else if (rating > 5 && rating <= 6.5) rgb = '241, 196, 15';  
-        else if (rating > 6.5 && rating < 8) rgb = '52, 152, 219';  
-        else if (rating >= 8 && rating <= 10) rgb = '46, 204, 113';  
-        return rgb ? 'rgba(' + rgb + ', ' + alpha + ')' : null;  
+    function getColor(rating, alpha) {    
+        var rgb = '';    
+        if (rating >= 0 && rating <= 3) rgb = '231, 76, 60';    
+        else if (rating > 3 && rating <= 5) rgb = '230, 126, 34';    
+        else if (rating > 5 && rating <= 6.5) rgb = '241, 196, 15';    
+        else if (rating > 6.5 && rating < 8) rgb = '52, 152, 219';    
+        else if (rating >= 8 && rating <= 10) rgb = '46, 204, 113';    
+        return rgb ? 'rgba(' + rgb + ', ' + alpha + ')' : null;    
     }    
     
-    function fetchLogo(movie, itemElement) {  
-        var mType = movie.media_type || (movie.name ? 'tv' : 'movie');  
-        var langPref = Lampa.Storage.get('ym_logo_lang', 'uk_en');  
-        var quality = Lampa.Storage.get('ym_img_quality', 'w300');  
+    function fetchLogo(movie, itemElement) {    
+        var mType = movie.media_type || (movie.name ? 'tv' : 'movie');    
+        var langPref = Lampa.Storage.get('ym_logo_lang', 'uk_en');    
+        var quality = Lampa.Storage.get('ym_img_quality', 'w300');    
           
-        function applyTextLogo() {  
-            var textLogo = document.createElement('div');  
-            textLogo.className = 'card-custom-logo-text';  
-            var txt = movie.title || movie.name;  
-            if (langPref === 'en' || langPref === 'text_en') {  
-                txt = movie.original_title || movie.original_name || txt;  
-            }  
-            textLogo.innerText = txt;  
-            itemElement.find('.card__view').append(textLogo);  
-        }  
-  
-        if (langPref === 'text_uk' || langPref === 'text_en') {  
-            applyTextLogo();  
-            return;  
-        }  
-  
-        var cacheKey = 'logo_uas_v8_' + quality + '_' + langPref + '_' + mType + '_' + movie.id;  
-        var cachedUrl = Lampa.Storage.get(cacheKey);  
-  
-        function applyLogo(url) {  
-            if (url && url !== 'none') {  
-                var img = new Image();  
-                img.crossOrigin = "anonymous";   
-                img.className = 'card-custom-logo';  
-                img.onload = function() { itemElement.find('.card__view').append(img); };  
-                img.onerror = applyTextLogo;  
-                img.src = url;  
-            } else {  
-                applyTextLogo();  
-            }  
-        }  
+        function applyTextLogo() {    
+            var textLogo = document.createElement('div');    
+            textLogo.className = 'card-custom-logo-text';    
+            var txt = movie.title || movie.name;    
+            if (langPref === 'en' || langPref === 'text_en') {    
+                txt = movie.original_title || movie.original_name || txt;    
+            }    
+            textLogo.innerText = txt;    
+            itemElement.find('.card__view').append(textLogo);    
+        }    
+    
+        if (langPref === 'text_uk' || langPref === 'text_en') {    
+            applyTextLogo();    
+            return;    
+        }    
+    
+        var cacheKey = 'logo_uas_v8_' + quality + '_' + langPref + '_' + mType + '_' + movie.id;    
+        var cachedUrl = Lampa.Storage.get(cacheKey);    
+    
+        function applyLogo(url) {    
+            if (url && url !== 'none') {    
+                var img = new Image();    
+                img.crossOrigin = "anonymous";    
+                img.className = 'card-custom-logo';    
+                img.onload = function() { itemElement.find('.card__view').append(img); };    
+                img.onerror = applyTextLogo;    
+                img.src = url;    
+            } else {    
+                applyTextLogo();    
+            }    
+        }    
           
-        if (cachedUrl) { applyLogo(cachedUrl); return; }  
-  
-        let endpoint = 'https://api.themoviedb.org/3/' + mType + '/' + movie.id + '/images?include_image_language=uk,en,null&api_key=' + (Lampa.TMDB && Lampa.TMDB.key ? Lampa.TMDB.key() : '4ef0d7355d9ffb5151e987764708ce96');  
-        fetch('https://cors.lampa.stream/' + endpoint).then(r=>r.json()).then(function(res) {  
-            var finalLogo = 'none';  
-            if (res.logos && res.logos.length > 0) {  
-                var found = null;  
-                if (langPref === 'uk') {  
-                    found = res.logos.find(l => l.iso_639_1 === 'uk');  
-                } else if (langPref === 'en') {  
-                    found = res.logos.find(l => l.iso_639_1 === 'en');  
-                } else {  
-                    found = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en');  
+        if (cachedUrl) { applyLogo(cachedUrl); return; }    
+    
+        let endpoint = 'https://api.themoviedb.org/3/' + mType + '/' + movie.id + '/images?include_image_language=uk,en,null&api_key=' + (Lampa.TMDB && Lampa.TMDB.key ? Lampa.TMDB.key() : '4ef0d7355d9ffb5151e987764708ce96');    
+        fetch('https://cors.lampa.stream/' + endpoint).then(r=>r.json()).then(function(res) {    
+            var finalLogo = 'none';    
+            if (res.logos && res.logos.length > 0) {    
+                var found = null;    
+                if (langPref === 'uk') {    
+                    found = res.logos.find(l => l.iso_639_1 === 'uk');    
+                } else if (langPref === 'en') {    
+                    found = res.logos.find(l => l.iso_639_1 === 'en');    
+                } else {    
+                    found = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en');    
+                }    
+    
+                if (found) finalLogo = 'https://cors.lampa.stream/' + Lampa.TMDB.image('t/p/' + quality + found.file_path);    
+            }    
+            Lampa.Storage.set(cacheKey, finalLogo);    
+            applyLogo(finalLogo);    
+        }).catch(function() {    
+            Lampa.Storage.set(cacheKey, 'none');    
+            applyLogo('none');    
+        });    
+    }    
+    
+    // Функція завантаження історії перегляду  
+    function loadHistoryRow(callback) {  
+        let hist = [];  
+        let allFavs = {};  
+        try {  
+            if (window.Lampa && Lampa.Favorite && typeof Lampa.Favorite.all === 'function') {  
+                allFavs = Lampa.Favorite.all() || {};  
+                if (allFavs.history) {  
+                    hist = allFavs.history;  
                 }  
-  
-                if (found) finalLogo = 'https://cors.lampa.stream/' + Lampa.TMDB.image('t/p/' + quality + found.file_path);  
             }  
-            Lampa.Storage.set(cacheKey, finalLogo);  
-            applyLogo(finalLogo);  
-        }).catch(function() {  
-            Lampa.Storage.set(cacheKey, 'none');  
-            applyLogo('none');  
-        });  
+        } catch(e) {}  
+          
+        let results = [];  
+          
+        if (hist && hist.length > 0) {  
+            let unique = {};  
+            let validItems = hist.filter(h => {  
+                if (h && h.id && (h.title || h.name) && !unique[h.id]) {  
+                    unique[h.id] = true;  
+                    return true;  
+                }  
+                return false;  
+            }).slice(0, 20);  
+  
+            if (validItems.length > 0) {  
+                results = results.concat(validItems.map(makeHistoryCardItem));  
+            }  
+        }  
+  
+        if (results.length > 0) {  
+            callback({   
+                results: results,   
+                title: '🕒 Продовжити перегляд',   
+                uas_content_row: true,   
+                params: { items: { mapping: 'line', view: 15 } }   
+            });  
+        } else {  
+            callback({ results: [] });  
+        }  
+    }  
+  
+    function makeHistoryCardItem(movie) {  
+        return {  
+            title: movie.title || movie.name,  
+            params: {  
+                createInstance: function () {  
+                    return Lampa.Maker.make('Card', movie, function (module) {   
+                        return module.only('Card', 'Callback');   
+                    });  
+                },  
+                emit: {  
+                    onCreate: function () {  
+                        var item = $(this.html);  
+                        item.addClass('card--history-custom');  
+                        var view = item.find('.card__view');  
+                        view.empty();   
+                          
+                        var quality = Lampa.Storage.get('ym_img_quality', 'w300');  
+                        var imgUrl = 'https://image.tmdb.org/t/p/' + quality + (movie.backdrop_path || movie.poster_path);  
+                        view.css({  
+                            'background-image': 'url(' + imgUrl + ')',   
+                            'background-size': 'cover',   
+                            'background-position': 'center',  
+                            'padding-bottom': '56.25%',   
+                            'height': '0',   
+                            'position': 'relative'  
+                        });  
+                          
+                        view.append('<div class="card-backdrop-overlay"></div>');  
+  
+                        var voteVal = parseFloat(movie.vote_average);  
+                        if (!isNaN(voteVal) && voteVal > 0) {  
+                            var voteDiv = document.createElement('div');  
+                            voteDiv.className = 'card__vote';  
+                            voteDiv.innerText = voteVal.toFixed(1);  
+                            var color = getColor(voteVal, 0.8);  
+                            if (color) voteDiv.style.backgroundColor = color;  
+                            view.append(voteDiv);  
+                        }  
+  
+                        fetchLogo(movie, item);  
+                    },  
+                    onlyEnter: function () {  
+                        var mType = movie.media_type || (movie.name ? 'tv' : 'movie');  
+                        Lampa.Activity.push({   
+                            url: '',   
+                            component: 'full',   
+                            id: movie.id,   
+                            method: mType,   
+                            card: movie,   
+                            source: movie.source || 'tmdb'   
+                        });  
+                    }  
+                }  
+            }  
+        };  
     }    
     
     function makeWideCardItem(movie) {  
@@ -227,6 +320,63 @@
         };  
     }    
     
+    function makeHistoryCardItem(movie) {  
+        return {  
+            title: movie.title || movie.name,  
+            params: {  
+                createInstance: function () {  
+                    return Lampa.Maker.make('Card', movie, function (module) {   
+                        return module.only('Card', 'Callback');   
+                    });  
+                },  
+                emit: {  
+                    onCreate: function () {  
+                        var item = $(this.html);  
+                        item.addClass('card--history-custom');  
+                        var view = item.find('.card__view');  
+                        view.empty();   
+                          
+                        var quality = Lampa.Storage.get('ym_img_quality', 'w300');  
+                        var imgUrl = 'https://image.tmdb.org/t/p/' + quality + (movie.backdrop_path || movie.poster_path);  
+                        view.css({  
+                            'background-image': 'url(' + imgUrl + ')',   
+                            'background-size': 'cover',   
+                            'background-position': 'center',  
+                            'padding-bottom': '56.25%',   
+                            'height': '0',   
+                            'position': 'relative'  
+                        });  
+                          
+                        view.append('<div class="card-backdrop-overlay"></div>');  
+  
+                        var voteVal = parseFloat(movie.vote_average);  
+                        if (!isNaN(voteVal) && voteVal > 0) {  
+                            var voteDiv = document.createElement('div');  
+                            voteDiv.className = 'card__vote';  
+                            voteDiv.innerText = voteVal.toFixed(1);  
+                            var color = getColor(voteVal, 0.8);  
+                            if (color) voteDiv.style.backgroundColor = color;  
+                            view.append(voteDiv);  
+                        }  
+  
+                        fetchLogo(movie, item);  
+                    },  
+                    onlyEnter: function () {  
+                        var mType = movie.media_type || (movie.name ? 'tv' : 'movie');  
+                        Lampa.Activity.push({   
+                            url: '',   
+                            component: 'full',   
+                            id: movie.id,   
+                            method: mType,   
+                            card: movie,   
+                            source: movie.source || 'tmdb'   
+                        });  
+                    }  
+                }  
+            }  
+        };  
+    }    
+    
     var createDiscoveryMain = function (parent) {    
         return function () {    
             var params = arguments[0] || {};    
@@ -244,6 +394,18 @@
             var settings = loadSettings();    
             var parts_data = [];    
     
+            // Додаємо завантаження історії перегляду  
+            parts_data.push(function (call) {  
+                loadHistoryRow(function(json) {  
+                    if (json.results && json.results.length > 0) {  
+                        if (settings.wideCards) {  
+                            json.results = json.results.map(makeWideCardItem);  
+                        }  
+                    }  
+                    call(json);  
+                });  
+            });  
+    
             collectionsConfig.forEach(function(cfg) {    
                 if (settings.collections[cfg.id]) {    
                     parts_data.push(function (call) {     
@@ -251,7 +413,6 @@
                             var translatedName = Lampa.Lang.translate(cfg.name_key);    
                             json.title = cfg.emoji ? cfg.emoji + ' ' + translatedName : translatedName;     
                                 
-                            // Умовно перетворюємо результати у широкі картки  
                             if (json.results && json.results.length > 0) {  
                                 if (settings.wideCards) {  
                                     json.results = json.results.map(makeWideCardItem);  
@@ -272,7 +433,7 @@
                     });    
                 }    
             });    
-                
+    
             if (parts_data.length === 0) {    
                 if (onerror) onerror();    
                 return function () {};    
@@ -390,8 +551,7 @@
             }    
     
             var originalTMDB = Lampa.Api.sources.tmdb;    
-            var settings = loadSettings();    
-                
+              
             var tmdb_mod = Object.assign({}, originalTMDB);    
             Lampa.Api.sources.tmdb_mod = tmdb_mod;    
             Object.defineProperty(Lampa.Api.sources, 'tmdb_mod', {     
@@ -403,11 +563,7 @@
             tmdb_mod.main = function () {    
                 var args = Array.from(arguments);    
                     
-                if (settings.wideCards && this.type !== 'movie' && this.type !== 'tv') {    
-                    return createDiscoveryMain(tmdb_mod).apply(this, args);    
-                }    
-                    
-                return originalMain.apply(this, args);    
+                return createDiscoveryMain(tmdb_mod).apply(this, args);    
             };    
     
             if (Lampa.Params && Lampa.Params.select) {    
@@ -459,151 +615,6 @@
         }    
     }    
     
-    // Додано функцію для отримання кольору рейтингу  
-    function getColor(rating, alpha) {  
-        var rgb = '';  
-        if (rating >= 0 && rating <= 3) rgb = '231, 76, 60';  
-        else if (rating > 3 && rating <= 5) rgb = '230, 126, 34';  
-        else if (rating > 5 && rating <= 6.5) rgb = '241, 196, 15';  
-        else if (rating > 6.5 && rating < 8) rgb = '52, 152, 219';  
-        else if (rating >= 8 && rating <= 10) rgb = '46, 204, 113';  
-        return rgb ? 'rgba(' + rgb + ', ' + alpha + ')' : null;  
-    }    
-    
-    // Додано функцію завантаження логотипів  
-    function fetchLogo(movie, itemElement) {  
-        var mType = movie.media_type || (movie.name ? 'tv' : 'movie');  
-        var langPref = Lampa.Storage.get('ym_logo_lang', 'uk_en');  
-        var quality = Lampa.Storage.get('ym_img_quality', 'w300');  
-          
-        function applyTextLogo() {  
-            var textLogo = document.createElement('div');  
-            textLogo.className = 'card-custom-logo-text';  
-            var txt = movie.title || movie.name;  
-            if (langPref === 'en' || langPref === 'text_en') {  
-                txt = movie.original_title || movie.original_name || txt;  
-            }  
-            textLogo.innerText = txt;  
-            itemElement.find('.card__view').append(textLogo);  
-        }  
-  
-        if (langPref === 'text_uk' || langPref === 'text_en') {  
-            applyTextLogo();  
-            return;  
-        }  
-  
-        var cacheKey = 'logo_uas_v8_' + quality + '_' + langPref + '_' + mType + '_' + movie.id;  
-        var cachedUrl = Lampa.Storage.get(cacheKey);  
-  
-        function applyLogo(url) {  
-            if (url && url !== 'none') {  
-                var img = new Image();  
-                img.crossOrigin = "anonymous";   
-                img.className = 'card-custom-logo';  
-                img.onload = function() { itemElement.find('.card__view').append(img); };  
-                img.onerror = applyTextLogo;  
-                img.src = url;  
-            } else {  
-                applyTextLogo();  
-            }  
-        }  
-          
-        if (cachedUrl) { applyLogo(cachedUrl); return; }  
-  
-        let endpoint = 'https://api.themoviedb.org/3/' + mType + '/' + movie.id + '/images?include_image_language=uk,en,null&api_key=' + (Lampa.TMDB && Lampa.TMDB.key ? Lampa.TMDB.key() : '4ef0d7355d9ffb5151e987764708ce96');  
-        fetch('https://cors.lampa.stream/' + endpoint).then(r=>r.json()).then(function(res) {  
-            var finalLogo = 'none';  
-            if (res.logos && res.logos.length > 0) {  
-                var found = null;  
-                if (langPref === 'uk') {  
-                    found = res.logos.find(l => l.iso_639_1 === 'uk');  
-                } else if (langPref === 'en') {  
-                    found = res.logos.find(l => l.iso_639_1 === 'en');  
-                } else {  
-                    found = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en');  
-                }  
-  
-                if (found) finalLogo = 'https://cors.lampa.stream/' + Lampa.TMDB.image('t/p/' + quality + found.file_path);  
-            }  
-            Lampa.Storage.set(cacheKey, finalLogo);  
-            applyLogo(finalLogo);  
-        }).catch(function() {  
-            Lampa.Storage.set(cacheKey, 'none');  
-            applyLogo('none');  
-        });  
-    }    
-    
-    // Додано функцію створення широких карток  
-    function makeWideCardItem(movie) {  
-        return {  
-            title: movie.title || movie.name,  
-            params: {  
-                createInstance: function () {  
-                    return Lampa.Maker.make('Card', movie, function (module) {   
-                        return module.only('Card', 'Callback');   
-                    });  
-                },  
-                emit: {  
-                    onCreate: function () {  
-                        var item = $(this.html);  
-                        item.addClass('card--wide-custom');  
-                        var view = item.find('.card__view');  
-                        view.empty();   
-                          
-                        var quality = Lampa.Storage.get('ym_img_quality', 'w300');  
-                        var imgUrl = 'https://image.tmdb.org/t/p/' + quality + movie.backdrop_path;  
-                        view.css({  
-                            'background-image': 'url(' + imgUrl + ')',   
-                            'background-size': 'cover',   
-                            'background-position': 'center',  
-                            'padding-bottom': '56.25%',   
-                            'height': '0',   
-                            'position': 'relative'  
-                        });  
-                          
-                        view.append('<div class="card-backdrop-overlay"></div>');  
-  
-                        var voteVal = parseFloat(movie.vote_average);  
-                        if (!isNaN(voteVal) && voteVal > 0) {  
-                            var voteDiv = document.createElement('div');  
-                            voteDiv.className = 'card__vote';  
-                            voteDiv.innerText = voteVal.toFixed(1);  
-                            var color = getColor(voteVal, 0.8);  
-                            if (color) voteDiv.style.backgroundColor = color;  
-                            view.append(voteDiv);  
-                        }  
-  
-                        var yearStr = (movie.release_date || movie.first_air_date || '').toString().substring(0, 4);  
-                        if (yearStr && yearStr.length === 4) {  
-                            var ageDiv = document.createElement('div');  
-                            ageDiv.className = 'card-badge-age';   
-                            ageDiv.innerText = yearStr;  
-                            view.append(ageDiv);  
-                        }  
-  
-                        fetchLogo(movie, item);  
-  
-                        var descText = movie.overview || 'Опис відсутній.';  
-                        item.append('<div class="custom-title-bottom">' + (movie.title || movie.name) + '</div>');  
-                        item.append('<div class="custom-overview-bottom">' + descText + '</div>');  
-                    },  
-                    onlyEnter: function () {  
-                        var mType = movie.media_type || (movie.name ? 'tv' : 'movie');  
-                        Lampa.Activity.push({   
-                            url: '',   
-                            component: 'full',   
-                            id: movie.id,   
-                            method: mType,   
-                            card: movie,   
-                            source: movie.source || 'tmdb'   
-                        });  
-                    }  
-                }  
-            }  
-        };  
-    }    
-    
-    // Додано функцію стилів  
     function addWideCardStyles() {  
         var style = document.createElement('style');  
         style.innerHTML = `  
@@ -687,6 +698,45 @@
                 justify-content: center;   
             }  
               
+            .card--history-custom {   
+                width: 16em !important;   
+                margin-right: 0.2em !important;   
+                margin-bottom: 0 !important;   
+                position: relative;   
+                cursor: pointer;   
+                transition: transform 0.2s ease, z-index 0.2s ease;   
+                z-index: 1;   
+            }  
+              
+            .card--history-custom .card__view {   
+                border-radius: 0.8em !important;   
+                overflow: hidden !important;   
+                box-shadow: 0 3px 6px rgba(0,0,0,0.5);   
+            }  
+              
+            .card--history-custom .card-backdrop-overlay {   
+                position: absolute;   
+                top: 0;   
+                left: 0;   
+                right: 0;   
+                bottom: 0;   
+                background: rgba(0, 0, 0, 0.3);   
+                pointer-events: none;   
+                border-radius: 0.8em !important;   
+                z-index: 1;   
+            }  
+              
+            .card--history-custom.focus {   
+                z-index: 99 !important;   
+                transform: scale(1.05);   
+            }  
+              
+            .card--history-custom.focus .card__view {   
+                box-shadow: 0 8px 20px rgba(0,0,0,0.8) !important;   
+                border: 2px solid #fff !important;   
+                outline: none !important;   
+            }  
+              
             .custom-title-bottom {   
                 width: 100%;   
                 text-align: left;   
@@ -757,6 +807,10 @@
                 .card--wide-custom .custom-title-bottom {   
                     font-size: 1em !important;   
                     margin-top: 0.1em;   
+                }  
+                  
+                .card--history-custom {   
+                    width: 12em !important;   
                 }  
             }  
         `;  
@@ -841,3 +895,4 @@
     waitForApp();    
     
 })();
+  
