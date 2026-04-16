@@ -44,7 +44,10 @@
             pluginSettings.enabled = Lampa.Storage.get('tmdb_mod_enabled', true);    
             collectionsConfig.forEach(function(cfg) {    
                 pluginSettings.collections[cfg.id] = Lampa.Storage.get('tmdb_mod_collection_' + cfg.id, true);    
-                pluginSettings.positions[cfg.id] = Lampa.Storage.get('tmdb_mod_position_' + cfg.id, collectionsConfig.indexOf(cfg) + 1);    
+                // Надійна ініціалізація позиції з перевіркою  
+                var savedPosition = Lampa.Storage.get('tmdb_mod_position_' + cfg.id);  
+                pluginSettings.positions[cfg.id] = savedPosition !== null && savedPosition !== undefined ?   
+                    parseInt(savedPosition) : collectionsConfig.indexOf(cfg) + 1;  
             });    
         }    
         return pluginSettings;    
@@ -108,10 +111,15 @@
             var settings = loadSettings();    
             var parts_data = [];    
     
-            // Сортуємо підбірки за позицією    
+            // Сортування підбірок за позицією з додатковими перевірками  
             var sortedCollections = collectionsConfig.slice().sort(function(a, b) {    
-                var posA = settings.positions[a.id] || 999;    
-                var posB = settings.positions[b.id] || 999;    
+                var posA = settings.positions[a.id];  
+                var posB = settings.positions[b.id];  
+                  
+                // Переконання, що позиції є числами  
+                posA = (typeof posA === 'number' && !isNaN(posA)) ? posA : 999;  
+                posB = (typeof posB === 'number' && !isNaN(posB)) ? posB : 999;  
+                  
                 return posA - posB;    
             });    
     
@@ -170,8 +178,11 @@
                     if (el.type === 'checkbox') el.checked = pluginSettings.collections[cfg.id];    
                 });    
                 document.querySelectorAll('[data-name="tmdb_mod_position_' + cfg.id + '"]').forEach(function(el) {    
-                    if (el.type === 'number' || el.type === 'text') el.value = pluginSettings.positions[cfg.id];    
-                    if (el.tagName === 'SELECT') el.value = pluginSettings.positions[cfg.id].toString();    
+                    var position = pluginSettings.positions[cfg.id];  
+                    if (typeof position === 'number' && !isNaN(position)) {  
+                        if (el.type === 'number' || el.type === 'text') el.value = position;    
+                        if (el.tagName === 'SELECT') el.value = position.toString();    
+                    }  
                 });    
             });    
         });    
@@ -224,8 +235,8 @@
                 field: {       
                     name: fullDisplayName,       
                     description: Lampa.Lang.translate('tmdb_mod_show_collection') + ' "' + translatedName + '"'       
-                },      
-                onChange: function (value) {      
+            },      
+            onChange: function (value) {      
                 pluginSettings.collections[cfg.id] = value;      
                 saveSettings();      
                 Lampa.Noty.show(Lampa.Lang.translate('tmdb_mod_noty_reload'));      
@@ -247,7 +258,9 @@
             },  
             values: positionOptions,  
             onChange: function (value) {      
-                pluginSettings.positions[cfg.id] = parseInt(value) || 1;      
+                var parsedValue = parseInt(value);  
+                pluginSettings.positions[cfg.id] = (typeof parsedValue === 'number' && !isNaN(parsedValue)) ?   
+                    parsedValue : collectionsConfig.indexOf(cfg) + 1;      
                 saveSettings();      
                 Lampa.Noty.show(Lampa.Lang.translate('tmdb_mod_noty_reload'));      
             }    
@@ -352,4 +365,5 @@ function waitForApp(retries) {
     
 waitForApp();    
     
-})();
+})(); 
+  
