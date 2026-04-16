@@ -26,6 +26,23 @@
         cacheStore[key] = { time: Date.now(), data: data };
     }
 
+    // ===== ORDER =====
+    var ORDER_KEY = 'tmdb_mod_order';
+
+    function loadOrder() {
+        var saved = Lampa.Storage.get(ORDER_KEY, null);
+        if (saved && Array.isArray(saved)) {
+            collectionsConfig.sort(function (a, b) {
+                return saved.indexOf(a.id) - saved.indexOf(b.id);
+            });
+        }
+    }
+
+    function saveOrder() {
+        var order = collectionsConfig.map(function (c) { return c.id; });
+        Lampa.Storage.set(ORDER_KEY, order);
+    }
+
     // ===== CONFIG =====
     var collectionsConfig = [
         { id: 'hot_new_releases', emoji: '🎬', name_key: 'tmdb_mod_c_hot_new', request: 'discover/movie?sort_by=primary_release_date.desc&with_release_type=4|5|6&primary_release_date.lte=' + today + '&vote_count.gte=50&vote_average.gte=6&with_runtime.gte=40&without_genres=99' },
@@ -39,28 +56,29 @@
         { id: 'documentary', emoji: '🔬', name_key: 'tmdb_mod_c_documentary', request: 'discover/movie?with_genres=99&sort_by=popularity.desc&vote_count.gte=20' },
 
         { id: 'trending_tv', emoji: '🔥', name_key: 'tmdb_mod_c_trend_tv', request: 'trending/tv/week' },
-        { id: 'best_world_series', emoji: '🌍', name_key: 'tmdb_mod_c_world_hits', request: 'discover/tv?...' },
-        { id: 'netflix_best', emoji: '⚫', name_key: 'tmdb_mod_c_netflix', request: 'discover/tv?with_networks=213...' },
-        { id: 'miniseries_hits', emoji: '💎', name_key: 'tmdb_mod_c_miniseries', request: 'discover/tv?with_type=2...' }
+        { id: 'best_world_series', emoji: '🌍', name_key: 'tmdb_mod_c_world_hits', request: 'discover/tv?with_origin_country=US|CA|GB|AU|IE|DE|FR|NL|SE|NO|DK|FI|ES|IT|BE|CH|AT|KR|JP|MX|BR&sort_by=last_air_date.desc&vote_average.gte=7&vote_count.gte=500&first_air_date.gte=2020-01-01&first_air_date.lte=' + today },
+        { id: 'netflix_best', emoji: '⚫', name_key: 'tmdb_mod_c_netflix', request: 'discover/tv?with_networks=213' },
+        { id: 'miniseries_hits', emoji: '💎', name_key: 'tmdb_mod_c_miniseries', request: 'discover/tv?with_type=2' }
     ];
 
     var pluginSettings = { enabled: true, collections: {} };
-    collectionsConfig.forEach(c => pluginSettings.collections[c.id] = true);
+    collectionsConfig.forEach(function (c) { pluginSettings.collections[c.id] = true; });
 
     function loadSettings() {
         if (Lampa.Storage) {
             pluginSettings.enabled = Lampa.Storage.get('tmdb_mod_enabled', true);
-            collectionsConfig.forEach(cfg => {
+            collectionsConfig.forEach(function (cfg) {
                 pluginSettings.collections[cfg.id] = Lampa.Storage.get('tmdb_mod_collection_' + cfg.id, true);
             });
         }
+        loadOrder();
         return pluginSettings;
     }
 
     function saveSettings() {
         if (Lampa.Storage) {
             Lampa.Storage.set('tmdb_mod_enabled', pluginSettings.enabled);
-            collectionsConfig.forEach(cfg => {
+            collectionsConfig.forEach(function (cfg) {
                 Lampa.Storage.set('tmdb_mod_collection_' + cfg.id, pluginSettings.collections[cfg.id]);
             });
         }
@@ -94,64 +112,79 @@
 
     // ===== SETTINGS =====
     function addSettings() {
-    loadSettings();
+        loadSettings();
 
-    if (!Lampa.SettingsApi) return;
+        if (!Lampa.SettingsApi) return;
 
-    Lampa.SettingsApi.addComponent({
-        component: 'tmdb_mod',
-        name: Lampa.Lang.translate('tmdb_mod_plugin_name')
-    });
-
-    // Головний перемикач
-    Lampa.SettingsApi.addParam({
-        component: 'tmdb_mod',
-        param: { name: 'tmdb_mod_enabled', type: 'trigger', default: true },
-        field: {
-            name: Lampa.Lang.translate('tmdb_mod_toggle_name'),
-            description: Lampa.Lang.translate('tmdb_mod_toggle_desc')
-        },
-        onChange: function (value) {
-            pluginSettings.enabled = value;
-            saveSettings();
-            Lampa.Noty && Lampa.Noty.show('Потрібно оновити головну сторінку');
-        }
-    });
-
-    // 🔥 ОСЬ ЦЕ БУЛО ВТРАЧЕНО — ПОВЕРТАЄМО
-    collectionsConfig.forEach(function (cfg) {
-        var name = Lampa.Lang.translate(cfg.name_key);
-        var fullName = (cfg.emoji ? cfg.emoji + ' ' : '') + name;
+        Lampa.SettingsApi.addComponent({
+            component: 'tmdb_mod',
+            name: Lampa.Lang.translate('tmdb_mod_plugin_name')
+        });
 
         Lampa.SettingsApi.addParam({
             component: 'tmdb_mod',
-            param: {
-                name: 'tmdb_mod_collection_' + cfg.id,
-                type: 'trigger',
-                default: true
-            },
+            param: { name: 'tmdb_mod_enabled', type: 'trigger', default: true },
             field: {
-                name: fullName,
-                description: 'Показувати підбірку "' + name + '"'
+                name: Lampa.Lang.translate('tmdb_mod_toggle_name'),
+                description: Lampa.Lang.translate('tmdb_mod_toggle_desc')
             },
             onChange: function (value) {
-                pluginSettings.collections[cfg.id] = value;
+                pluginSettings.enabled = value;
                 saveSettings();
-                Lampa.Noty && Lampa.Noty.show('Онови головну сторінку');
             }
         });
-    });
-}
+
+        collectionsConfig.forEach(function (cfg) {
+            var name = Lampa.Lang.translate(cfg.name_key);
+            var fullName = (cfg.emoji ? cfg.emoji + ' ' : '') + name;
+
+            Lampa.SettingsApi.addParam({
+                component: 'tmdb_mod',
+                param: {
+                    name: 'tmdb_mod_collection_' + cfg.id,
+                    type: 'trigger',
+                    default: true
+                },
+                field: {
+                    name: fullName + ' ⬅➡',
+                    description: 'OK — вкл/викл | ← → змінити порядок'
+                },
+                onChange: function (value) {
+                    pluginSettings.collections[cfg.id] = value;
+                    saveSettings();
+                },
+                onKey: function (e) {
+                    var i = collectionsConfig.findIndex(function (c) { return c.id === cfg.id; });
+
+                    if (e.key === 'left' && i > 0) {
+                        var t = collectionsConfig[i - 1];
+                        collectionsConfig[i - 1] = collectionsConfig[i];
+                        collectionsConfig[i] = t;
+                        saveOrder();
+                        Lampa.Noty.show('⬆ Переміщено');
+                    }
+
+                    if (e.key === 'right' && i < collectionsConfig.length - 1) {
+                        var t2 = collectionsConfig[i + 1];
+                        collectionsConfig[i + 1] = collectionsConfig[i];
+                        collectionsConfig[i] = t2;
+                        saveOrder();
+                        Lampa.Noty.show('⬇ Переміщено');
+                    }
+                }
+            });
+        });
+    }
 
     // ===== CORE =====
     function shuffle(arr) {
-        return arr.sort(() => Math.random() - 0.5);
+        return arr.sort(function () { return Math.random() - 0.5; });
     }
 
-    function removeDuplicates(globalMap, list) {
-        return list.filter(item => {
-            if (globalMap[item.id]) return false;
-            globalMap[item.id] = true;
+    function removeDuplicates(map, list) {
+        return list.filter(function (item) {
+            if (map[item.id]) return false;
+            map[item.id] = true;
             return true;
         });
     }
@@ -162,7 +195,7 @@
             var seen = {};
             var parts = [];
 
-            collectionsConfig.forEach(cfg => {
+            collectionsConfig.forEach(function (cfg) {
                 if (!pluginSettings.collections[cfg.id]) return;
 
                 parts.push(function (call) {
@@ -174,13 +207,14 @@
 
                         json.results = removeDuplicates(seen, json.results);
                         json.results = shuffle(json.results);
-
                         json.title = (cfg.emoji ? cfg.emoji + ' ' : '') + Lampa.Lang.translate(cfg.name_key);
 
                         setCache(cfg.id, json);
                         call(json);
 
-                    }, () => call({ results: [], title: cfg.id }));
+                    }, function () {
+                        call({ results: [], title: cfg.id });
+                    });
                 });
             });
 
@@ -190,7 +224,7 @@
     }
 
     function init() {
-        if (!Lampa.Api?.sources?.tmdb) return;
+        if (!Lampa.Api || !Lampa.Api.sources || !Lampa.Api.sources.tmdb) return;
 
         var original = Lampa.Api.sources.tmdb;
         if (original._tmdb_mod_pro) return;
@@ -213,6 +247,8 @@
     }
 
     if (window.appready) init();
-    else Lampa.Listener.follow('app', e => e.type === 'ready' && init());
+    else Lampa.Listener.follow('app', function (e) {
+        if (e.type === 'ready') init();
+    });
 
 })();
