@@ -45,7 +45,6 @@
     ];
 
     var pluginSettings = {
-        enabled: true,
         collections: {},
         order: {}
     };
@@ -55,6 +54,7 @@
         pluginSettings.order[c.id] = index + 1;
     });
 
+    // ===== ORDER LOGIC =====
     function normalizeOrder(changedId, newPosition) {
         var items = collectionsConfig.map(function (c) {
             return { id: c.id, pos: pluginSettings.order[c.id] || 999 };
@@ -75,19 +75,16 @@
 
     function loadSettings() {
         if (Lampa.Storage) {
-            pluginSettings.enabled = Lampa.Storage.get('tmdb_mod_enabled', true);
             collectionsConfig.forEach(function (cfg, index) {
                 pluginSettings.collections[cfg.id] = Lampa.Storage.get('tmdb_mod_collection_' + cfg.id, true);
                 pluginSettings.order[cfg.id] = Lampa.Storage.get('tmdb_mod_order_' + cfg.id, index + 1);
             });
         }
         applyOrder();
-        return pluginSettings;
     }
 
     function saveSettings() {
         if (Lampa.Storage) {
-            Lampa.Storage.set('tmdb_mod_enabled', pluginSettings.enabled);
             collectionsConfig.forEach(function (cfg) {
                 Lampa.Storage.set('tmdb_mod_collection_' + cfg.id, pluginSettings.collections[cfg.id]);
                 Lampa.Storage.set('tmdb_mod_order_' + cfg.id, pluginSettings.order[cfg.id]);
@@ -99,9 +96,7 @@
         if (!Lampa.Lang) return;
         Lampa.Lang.add({
             tmdb_mod_plugin_name: { ru: "Головна сторінка +", uk: "Головна сторінка +" },
-            tmdb_mod_toggle_name: { ru: "Увімкнути", uk: "Увімкнути" },
-            tmdb_mod_title_list: { ru: "--- СПИСОК ПІДБІРОК ---", uk: "--- СПИСОК ПІДБІРОК ---" },
-            tmdb_mod_title_order: { ru: "--- ПОРЯДОК ВИВОДУ ---", uk: "--- ПОРЯДОК ВИВОДУ ---" },
+            tmdb_mod_title_list: { ru: "--- НАЛАШТУВАННЯ ПІДБІРОК ---", uk: "--- НАЛАШТУВАННЯ ПІДБІРОК ---" },
             tmdb_mod_c_hot_new: { ru: "Найсвіжіші прем'єри", uk: "Найсвіжіші прем'єри" },
             tmdb_mod_c_trend_movie: { ru: "Трендові фільми", uk: "Трендові фільми" },
             tmdb_mod_c_watching_now: { ru: "Зараз дивляться", uk: "Зараз дивляться" },
@@ -130,23 +125,15 @@
 
         Lampa.SettingsApi.addParam({
             component: 'tmdb_mod',
-            param: { name: 'tmdb_mod_enabled', type: 'trigger', default: true },
-            field: { name: Lampa.Lang.translate('tmdb_mod_toggle_name') },
-            onChange: function (value) {
-                pluginSettings.enabled = value;
-                saveSettings();
-            }
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'tmdb_mod',
             param: { name: 'tmdb_mod_title_list', type: 'static' },
             field: { name: Lampa.Lang.translate('tmdb_mod_title_list') }
         });
 
-        collectionsConfig.forEach(function (cfg) {
+        collectionsConfig.forEach(function (cfg, index) {
             var name = Lampa.Lang.translate(cfg.name_key);
             var fullName = (cfg.emoji ? cfg.emoji + ' ' : '') + name;
+
+            // 1. Перемикач підбірки
             Lampa.SettingsApi.addParam({
                 component: 'tmdb_mod',
                 param: { name: 'tmdb_mod_collection_' + cfg.id, type: 'trigger', default: true },
@@ -156,16 +143,8 @@
                     saveSettings();
                 }
             });
-        });
 
-        Lampa.SettingsApi.addParam({
-            component: 'tmdb_mod',
-            param: { name: 'tmdb_mod_title_order', type: 'static' },
-            field: { name: Lampa.Lang.translate('tmdb_mod_title_order') }
-        });
-
-        collectionsConfig.forEach(function (cfg, index) {
-            var name = Lampa.Lang.translate(cfg.name_key);
+            // 2. Вибір позиції (одразу під підбіркою)
             Lampa.SettingsApi.addParam({
                 component: 'tmdb_mod',
                 param: {
@@ -178,7 +157,9 @@
                     })(),
                     default: index + 1
                 },
-                field: { name: '<span style="opacity: 0.6; font-size: 0.85em">↳ Позиція: ' + name + '</span>' },
+                field: { 
+                    name: '<span style="opacity: 0.5; font-size: 0.8em; margin-left: 10px;">↳ Порядок виводу</span>' 
+                },
                 onChange: function (value) {
                     normalizeOrder(cfg.id, parseInt(value));
                     saveSettings();
@@ -244,7 +225,8 @@
 
         var originalMain = original.main;
         tmdb_mod.main = function () {
-            if (pluginSettings.enabled && !this.type) {
+            // Плагін завжди увімкнений, якщо він встановлений
+            if (!this.type) {
                 return createDiscoveryMain(tmdb_mod).apply(this, arguments);
             }
             return originalMain.apply(this, arguments);
