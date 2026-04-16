@@ -9,7 +9,7 @@
     var lastYear = currentYear - 1;
 
     // ===== CACHE =====
-    var CACHE_TTL = 1000 * 60 * 10; // 10 хв
+    var CACHE_TTL = 1000 * 60 * 10;
     var cacheStore = {};
 
     function getCache(key) {
@@ -23,10 +23,7 @@
     }
 
     function setCache(key, data) {
-        cacheStore[key] = {
-            time: Date.now(),
-            data: data
-        };
+        cacheStore[key] = { time: Date.now(), data: data };
     }
 
     // ===== CONFIG =====
@@ -42,16 +39,12 @@
         { id: 'documentary', emoji: '🔬', name_key: 'tmdb_mod_c_documentary', request: 'discover/movie?with_genres=99&sort_by=popularity.desc&vote_count.gte=20' },
 
         { id: 'trending_tv', emoji: '🔥', name_key: 'tmdb_mod_c_trend_tv', request: 'trending/tv/week' },
-        { id: 'best_world_series', emoji: '🌍', name_key: 'tmdb_mod_c_world_hits', request: 'discover/tv?with_origin_country=US|CA|GB|AU|IE|DE|FR|NL|SE|NO|DK|FI|ES|IT|BE|CH|AT|KR|JP|MX|BR&sort_by=last_air_date.desc&vote_average.gte=7&vote_count.gte=500&first_air_date.gte=2020-01-01&first_air_date.lte=' + today + '&without_genres=16|99|10762|10763|10764|10766|10767|10768|10770&with_status=0|1|2|3' },
-        { id: 'netflix_best', emoji: '⚫', name_key: 'tmdb_mod_c_netflix', request: 'discover/tv?with_networks=213&sort_by=last_air_date.desc&first_air_date.gte=2020-01-01&last_air_date.lte=' + today + '&vote_count.gte=500&vote_average.gte=7' },
-        { id: 'miniseries_hits', emoji: '💎', name_key: 'tmdb_mod_c_miniseries', request: 'discover/tv?with_type=2&sort_by=popularity.desc&vote_average.gte=7.0&vote_count.gte=200' }
+        { id: 'best_world_series', emoji: '🌍', name_key: 'tmdb_mod_c_world_hits', request: 'discover/tv?...' },
+        { id: 'netflix_best', emoji: '⚫', name_key: 'tmdb_mod_c_netflix', request: 'discover/tv?with_networks=213...' },
+        { id: 'miniseries_hits', emoji: '💎', name_key: 'tmdb_mod_c_miniseries', request: 'discover/tv?with_type=2...' }
     ];
 
-    var pluginSettings = {
-        enabled: true,
-        collections: {}
-    };
-
+    var pluginSettings = { enabled: true, collections: {} };
     collectionsConfig.forEach(c => pluginSettings.collections[c.id] = true);
 
     function loadSettings() {
@@ -64,8 +57,62 @@
         return pluginSettings;
     }
 
-    // ===== HELPERS =====
+    function saveSettings() {
+        if (Lampa.Storage) {
+            Lampa.Storage.set('tmdb_mod_enabled', pluginSettings.enabled);
+            collectionsConfig.forEach(cfg => {
+                Lampa.Storage.set('tmdb_mod_collection_' + cfg.id, pluginSettings.collections[cfg.id]);
+            });
+        }
+    }
 
+    // ===== TRANSLATIONS =====
+    function addTranslations() {
+        if (!Lampa.Lang) return;
+
+        Lampa.Lang.add({
+            tmdb_mod_plugin_name: { ru: "TMDB PRO", uk: "TMDB PRO" },
+            tmdb_mod_toggle_name: { ru: "Увімкнути TMDB PRO", uk: "Увімкнути TMDB PRO" },
+            tmdb_mod_toggle_desc: { ru: "Показувати підбірки", uk: "Показувати підбірки" },
+
+            tmdb_mod_c_hot_new: { ru: "Найсвіжіші прем'єри", uk: "Найсвіжіші прем'єри" },
+            tmdb_mod_c_trend_movie: { ru: "Трендові фільми", uk: "Трендові фільми" },
+            tmdb_mod_c_watching_now: { ru: "Зараз дивляться", uk: "Зараз дивляться" },
+            tmdb_mod_c_cult: { ru: "Популярні з 80-х", uk: "Популярні з 80-х" },
+            tmdb_mod_c_top_studios: { ru: "Топ студії", uk: "Топ студії" },
+            tmdb_mod_c_best_current_y: { ru: "Кращі " + currentYear, uk: "Кращі " + currentYear },
+            tmdb_mod_c_best_last_y: { ru: "Кращі " + lastYear, uk: "Кращі " + lastYear },
+            tmdb_mod_c_animation: { ru: "Мультфільми", uk: "Мультфільми" },
+            tmdb_mod_c_documentary: { ru: "Документалки", uk: "Документалки" },
+
+            tmdb_mod_c_trend_tv: { ru: "Трендові серіали", uk: "Трендові серіали" },
+            tmdb_mod_c_world_hits: { ru: "Світові хіти", uk: "Світові хіти" },
+            tmdb_mod_c_netflix: { ru: "Netflix хіти", uk: "Netflix хіти" },
+            tmdb_mod_c_miniseries: { ru: "Міні-серіали", uk: "Міні-серіали" }
+        });
+    }
+
+    // ===== SETTINGS =====
+    function addSettings() {
+        if (!Lampa.SettingsApi) return;
+
+        Lampa.SettingsApi.addComponent({
+            component: 'tmdb_mod',
+            name: Lampa.Lang.translate('tmdb_mod_plugin_name')
+        });
+
+        Lampa.SettingsApi.addParam({
+            component: 'tmdb_mod',
+            param: { name: 'tmdb_mod_enabled', type: 'trigger', default: true },
+            field: { name: Lampa.Lang.translate('tmdb_mod_toggle_name') },
+            onChange: function (value) {
+                pluginSettings.enabled = value;
+                saveSettings();
+            }
+        });
+    }
+
+    // ===== CORE =====
     function shuffle(arr) {
         return arr.sort(() => Math.random() - 0.5);
     }
@@ -78,68 +125,43 @@
         });
     }
 
-    // ===== CORE =====
-
     function createDiscoveryMain(parent) {
         return function (params, oncomplete, onerror) {
 
-            var settings = loadSettings();
-            var seenGlobal = {};
+            var seen = {};
             var parts = [];
 
             collectionsConfig.forEach(cfg => {
-                if (!settings.collections[cfg.id]) return;
+                if (!pluginSettings.collections[cfg.id]) return;
 
                 parts.push(function (call) {
 
-                    var cacheKey = cfg.id;
-                    var cached = getCache(cacheKey);
-
-                    if (cached) {
-                        call(cached);
-                        return;
-                    }
+                    var cached = getCache(cfg.id);
+                    if (cached) return call(cached);
 
                     parent.get(cfg.request, params, function (json) {
 
-                        // анти-дублі (глобально)
-                        json.results = removeDuplicates(seenGlobal, json.results);
-
-                        // легка рандомізація
+                        json.results = removeDuplicates(seen, json.results);
                         json.results = shuffle(json.results);
 
-                        var title = (cfg.emoji ? cfg.emoji + ' ' : '') + Lampa.Lang.translate(cfg.name_key);
-                        json.title = title;
+                        json.title = (cfg.emoji ? cfg.emoji + ' ' : '') + Lampa.Lang.translate(cfg.name_key);
 
-                        if (Lampa.Utils && Lampa.Utils.addSource) {
-                            Lampa.Utils.addSource(json, 'tmdb');
-                        }
-
-                        setCache(cacheKey, json);
-
+                        setCache(cfg.id, json);
                         call(json);
 
-                    }, function () {
-                        call({ results: [], title: cfg.name_key });
-                    });
+                    }, () => call({ results: [], title: cfg.id }));
                 });
             });
-
-            if (!parts.length) {
-                if (onerror) onerror();
-                return;
-            }
 
             var method = Lampa.Api.sequentials || Lampa.Api.partNext;
             method(parts, parts.length, oncomplete, onerror);
         };
     }
 
-    function initPlugin() {
-        if (!Lampa.Api || !Lampa.Api.sources || !Lampa.Api.sources.tmdb) return;
+    function init() {
+        if (!Lampa.Api?.sources?.tmdb) return;
 
         var original = Lampa.Api.sources.tmdb;
-
         if (original._tmdb_mod_pro) return;
         original._tmdb_mod_pro = true;
 
@@ -149,29 +171,17 @@
         var originalMain = original.main;
 
         tmdb_mod.main = function () {
-            if (loadSettings().enabled && !this.type) {
+            if (pluginSettings.enabled && !this.type) {
                 return createDiscoveryMain(tmdb_mod).apply(this, arguments);
             }
             return originalMain.apply(this, arguments);
         };
 
-        if (Lampa.Params && Lampa.Params.select) {
-            var sources = Lampa.Params.values.source || {};
-            sources.tmdb_mod = 'TMDB PRO';
-            Lampa.Params.select('source', sources, 'tmdb');
-        }
+        addTranslations();
+        addSettings();
     }
 
-    function start() {
-        if (window.appready) {
-            initPlugin();
-        } else {
-            Lampa.Listener.follow('app', function (e) {
-                if (e.type === 'ready') initPlugin();
-            });
-        }
-    }
-
-    start();
+    if (window.appready) init();
+    else Lampa.Listener.follow('app', e => e.type === 'ready' && init());
 
 })();
