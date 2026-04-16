@@ -89,7 +89,7 @@
             new_main_c_action_80_90: { uk: "Бойовики 80–90-х" },
             new_main_c_best_current_y: { uk: "Кращі фільми року" },
             new_main_c_animation: { uk: "Мультфільми" },
-            new_main_c_top_series: { uk: "Топ серіали (без аніме)" }
+            new_main_c_top_series: { uk: "Топ серіали" }
         });
     }
 
