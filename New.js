@@ -213,8 +213,16 @@
 
         var new_main_source = Object.assign({}, original);
         
-        // Реєструємо під цим ім'ям для відображення "New_main"
+        // Реєструємо об'єкт у списку Api
         Lampa.Api.sources.new_main = new_main_source;
+
+        // --- КРИТИЧНО: Додаємо джерело у меню вибору ---
+        if (Lampa.Params && Lampa.Params.values && Lampa.Params.values.source) {
+            // Перевіряємо, чи вже є воно у списку (щоб не дублювати)
+            if (!Lampa.Params.values.source.new_main) {
+                Lampa.Params.values.source.new_main = 'New_Main';
+            }
+        }
 
         var originalMain = original.main;
         new_main_source.main = function () {
