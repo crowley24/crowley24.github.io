@@ -55,28 +55,13 @@
         pluginSettings.order[c.id] = index + 1;
     });
 
-    // ===== ORDER FIX =====
     function normalizeOrder(changedId, newPosition) {
         var items = collectionsConfig.map(function (c) {
-            return {
-                id: c.id,
-                pos: pluginSettings.order[c.id] || 999
-            };
+            return { id: c.id, pos: pluginSettings.order[c.id] || 999 };
         });
-
-        items = items.filter(function (i) {
-            return i.id !== changedId;
-        });
-
-        items.sort(function (a, b) {
-            return a.pos - b.pos;
-        });
-
-        items.splice(newPosition - 1, 0, {
-            id: changedId,
-            pos: newPosition
-        });
-
+        items = items.filter(function (i) { return i.id !== changedId; });
+        items.sort(function (a, b) { return a.pos - b.pos; });
+        items.splice(newPosition - 1, 0, { id: changedId, pos: newPosition });
         items.forEach(function (item, index) {
             pluginSettings.order[item.id] = index + 1;
         });
@@ -91,13 +76,11 @@
     function loadSettings() {
         if (Lampa.Storage) {
             pluginSettings.enabled = Lampa.Storage.get('tmdb_mod_enabled', true);
-
             collectionsConfig.forEach(function (cfg, index) {
                 pluginSettings.collections[cfg.id] = Lampa.Storage.get('tmdb_mod_collection_' + cfg.id, true);
                 pluginSettings.order[cfg.id] = Lampa.Storage.get('tmdb_mod_order_' + cfg.id, index + 1);
             });
         }
-
         applyOrder();
         return pluginSettings;
     }
@@ -105,7 +88,6 @@
     function saveSettings() {
         if (Lampa.Storage) {
             Lampa.Storage.set('tmdb_mod_enabled', pluginSettings.enabled);
-
             collectionsConfig.forEach(function (cfg) {
                 Lampa.Storage.set('tmdb_mod_collection_' + cfg.id, pluginSettings.collections[cfg.id]);
                 Lampa.Storage.set('tmdb_mod_order_' + cfg.id, pluginSettings.order[cfg.id]);
@@ -115,13 +97,11 @@
 
     function addTranslations() {
         if (!Lampa.Lang) return;
-
         Lampa.Lang.add({
             tmdb_mod_plugin_name: { ru: "Головна сторінка +", uk: "Головна сторінка +" },
             tmdb_mod_toggle_name: { ru: "Увімкнути", uk: "Увімкнути" },
             tmdb_mod_title_list: { ru: "--- СПИСОК ПІДБІРОК ---", uk: "--- СПИСОК ПІДБІРОК ---" },
             tmdb_mod_title_order: { ru: "--- ПОРЯДОК ВИВОДУ ---", uk: "--- ПОРЯДОК ВИВОДУ ---" },
-
             tmdb_mod_c_hot_new: { ru: "Найсвіжіші прем'єри", uk: "Найсвіжіші прем'єри" },
             tmdb_mod_c_trend_movie: { ru: "Трендові фільми", uk: "Трендові фільми" },
             tmdb_mod_c_watching_now: { ru: "Зараз дивляться", uk: "Зараз дивляться" },
@@ -131,7 +111,6 @@
             tmdb_mod_c_best_last_y: { ru: "Кращі " + lastYear, uk: "Кращі " + lastYear },
             tmdb_mod_c_animation: { ru: "Мультфільми", uk: "Мультфільми" },
             tmdb_mod_c_documentary: { ru: "Документалки", uk: "Документалки" },
-
             tmdb_mod_c_trend_tv: { ru: "Трендові серіали", uk: "Трендові серіали" },
             tmdb_mod_c_world_hits: { ru: "Світові хіти", uk: "Світові хіти" },
             tmdb_mod_c_netflix: { ru: "Netflix хіти", uk: "Netflix хіти" },
@@ -141,7 +120,6 @@
 
     function addSettings() {
         loadSettings();
-
         if (!Lampa.SettingsApi) return;
 
         Lampa.SettingsApi.addComponent({
@@ -150,7 +128,6 @@
             icon: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>'
         });
 
-        // 1. Головний перемикач
         Lampa.SettingsApi.addParam({
             component: 'tmdb_mod',
             param: { name: 'tmdb_mod_enabled', type: 'trigger', default: true },
@@ -161,25 +138,18 @@
             }
         });
 
-        // 2. Роздільник списку
         Lampa.SettingsApi.addParam({
             component: 'tmdb_mod',
             param: { name: 'tmdb_mod_title_list', type: 'static' },
             field: { name: Lampa.Lang.translate('tmdb_mod_title_list') }
         });
 
-        // Виводимо спочатку всі галочки увімкнення
         collectionsConfig.forEach(function (cfg) {
             var name = Lampa.Lang.translate(cfg.name_key);
             var fullName = (cfg.emoji ? cfg.emoji + ' ' : '') + name;
-
             Lampa.SettingsApi.addParam({
                 component: 'tmdb_mod',
-                param: {
-                    name: 'tmdb_mod_collection_' + cfg.id,
-                    type: 'trigger',
-                    default: true
-                },
+                param: { name: 'tmdb_mod_collection_' + cfg.id, type: 'trigger', default: true },
                 field: { name: fullName },
                 onChange: function (value) {
                     pluginSettings.collections[cfg.id] = value;
@@ -188,17 +158,14 @@
             });
         });
 
-        // 3. Роздільник сортування
         Lampa.SettingsApi.addParam({
             component: 'tmdb_mod',
             param: { name: 'tmdb_mod_title_order', type: 'static' },
             field: { name: Lampa.Lang.translate('tmdb_mod_title_order') }
         });
 
-        // Виводимо налаштування позицій
         collectionsConfig.forEach(function (cfg, index) {
             var name = Lampa.Lang.translate(cfg.name_key);
-            
             Lampa.SettingsApi.addParam({
                 component: 'tmdb_mod',
                 param: {
@@ -206,26 +173,17 @@
                     type: 'select',
                     values: (function () {
                         var obj = {};
-                        for (var i = 1; i <= collectionsConfig.length; i++) {
-                            obj[i] = i; 
-                        }
+                        for (var i = 1; i <= collectionsConfig.length; i++) { obj[i] = i; }
                         return obj;
                     })(),
                     default: index + 1
                 },
-                field: {
-                    name: '<span style="opacity: 0.6; font-size: 0.8em">↳ Позиція: ' + name + '</span>'
-                },
+                field: { name: '<span style="opacity: 0.6; font-size: 0.85em">↳ Позиція: ' + name + '</span>' },
                 onChange: function (value) {
-                    var newPos = parseInt(value);
-                    normalizeOrder(cfg.id, newPos);
+                    normalizeOrder(cfg.id, parseInt(value));
                     saveSettings();
                     applyOrder();
-
-                    if (Lampa.Settings && Lampa.Settings.update) {
-                        Lampa.Settings.update();
-                    }
-
+                    if (Lampa.Settings && Lampa.Settings.update) Lampa.Settings.update();
                     Lampa.Noty.show('Порядок оновлено ✔');
                 }
             });
@@ -257,12 +215,13 @@
                     if (cached) return call(cached);
 
                     parent.get(cfg.request, params, function (json) {
-                        json.results = removeDuplicates(seen, json.results);
-                        json.results = shuffle(json.results);
-                        json.results = json.title = (cfg.emoji ? cfg.emoji + ' ' : '') + Lampa.Lang.translate(cfg.name_key);
-
-                        setCache(cfg.id, json);
-                        call(json);
+                        if (json && json.results) {
+                            json.results = removeDuplicates(seen, json.results);
+                            json.results = shuffle(json.results);
+                            json.title = (cfg.emoji ? cfg.emoji + ' ' : '') + Lampa.Lang.translate(cfg.name_key);
+                            setCache(cfg.id, json);
+                        }
+                        call(json || { results: [] });
                     }, function () {
                         call({ results: [], title: cfg.id });
                     });
@@ -276,7 +235,6 @@
 
     function init() {
         if (!Lampa.Api || !Lampa.Api.sources || !Lampa.Api.sources.tmdb) return;
-
         var original = Lampa.Api.sources.tmdb;
         if (original._tmdb_mod_pro) return;
         original._tmdb_mod_pro = true;
@@ -285,7 +243,6 @@
         Lampa.Api.sources.tmdb_mod = tmdb_mod;
 
         var originalMain = original.main;
-
         tmdb_mod.main = function () {
             if (pluginSettings.enabled && !this.type) {
                 return createDiscoveryMain(tmdb_mod).apply(this, arguments);
@@ -298,8 +255,6 @@
     }
 
     if (window.appready) init();
-    else Lampa.Listener.follow('app', function (e) {
-        if (e.type === 'ready') init();
-    });
+    else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') init(); });
 
 })();
