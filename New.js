@@ -497,19 +497,12 @@
         // Додаємо налаштування для порядку колекцій  
         Lampa.SettingsApi.addParam({  
     component: 'tmdb_mod',  
-    param: { name: 'tmdb_mod_collection_order', type: 'dragdrop' },  
-    field: { name: Lampa.Lang.translate('tmdb_mod_collection_order'), description: Lampa.Lang.translate('tmdb_mod_collection_order_descr') },  
-    values: collectionsConfig.map(function(cfg) {  
-        return {  
-            id: cfg.id,  
-            name: Lampa.Lang.translate(cfg.name_key)  
-        };  
-    }),  
-    default: pluginSettings.collectionOrder,  
-    onChange: function (value) {  
-        pluginSettings.collectionOrder = value;  
+    param: { name: 'tmdb_mod_reset_order', type: 'button' },  
+    field: { name: 'Скинути порядок', description: 'Повернути стандартний порядок підбірок' },  
+    onChange: function () {  
+        pluginSettings.collectionOrder = collectionsConfig.map(function(c) { return c.id; });  
         saveSettings();  
-        Lampa.Noty.show(Lampa.Lang.translate('tmdb_mod_noty_reload'));  
+        Lampa.Noty.show('Порядок скинуто. Перезавантажте сторінку.');  
     }  
 });
           
