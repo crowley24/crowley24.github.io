@@ -245,21 +245,31 @@
         Lampa.Template.add('full_start_new', template);                  
     }              
               
-         
-function addStyles() {                
+       function addStyles() {                
     if ($('#cas-main-styles').length) return;            
     const styles = `<style id="cas-main-styles">                
     :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); }                
-    .full-start__background {   
-        will-change: transform, opacity;   
-        backface-visibility: hidden;   
-        perspective: 1000px;   
-        transform: translateZ(0) scale(1.02);   
-        transition: transform 0.8s ease-out, opacity 0.8s ease;   
-        filter: brightness(1.4) contrast(1.3) saturate(1.4) sharpen(1);  
-        position: relative;  
-    }                
-                
+      
+    /* Чистий фон без фільтрів - підхід Apple TV */  
+    .full-start__background {  
+        height: calc(100% + 6em);  
+        left: 0 !important;  
+        opacity: 0 !important;  
+        transition: opacity 0.6s ease-out, filter 0.3s ease-out !important;  
+        animation: none !important;  
+        transform: none !important;  
+        will-change: opacity, filter;  
+    }  
+  
+    .full-start__background.loaded:not(.dim) {  
+        opacity: 1 !important;  
+    }  
+  
+    /* Відключення стандартної анімації Lampa */  
+    body.advanced--animation:not(.no--animation) .full-start__background.loaded {  
+        animation: none !important;  
+    }  
+                    
     .cas-logo-container {         
         position: relative;         
         overflow: visible;         
@@ -268,29 +278,24 @@ function addStyles() {
         margin-bottom: calc(var(--cas-blocks-gap) * 1.5);        
         max-height: 300px;        
     }                
-                
-    .cas-animated .full-start__background {                
-        transform: translateZ(0) scale(1);   
-        filter: brightness(1.5) contrast(1.4) saturate(1.5) sharpen(1.1);                
-    }                
-                
+                    
     .cas-logo, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper {                 
         opacity: 0 !important;                 
         transform: translateY(10px);                 
         transition: opacity 0.4s var(--cas-anim-curve), transform 0.4s var(--cas-anim-curve);                 
         will-change: transform, opacity;                
     }                  
-                
+                    
     .cas-animated .cas-logo { opacity: 1 !important; transform: translateY(0); transition-delay: 0s; }                  
     .cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.1s; }                  
     .cas-animated .cas-rate-items { opacity: 1 !important; transform: translateY(0); transition-delay: 0.2s; }                  
     .cas-animated .cas-meta-info { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.3s; }                  
     .cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.4s; }                  
     .cas-animated .cas-description { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.15s; }            
-                
+                    
     .full-start-new__details { display: none !important; }                  
     .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }                  
-                
+                    
     .full-start-new__buttons {                 
         display: flex !important;                 
         flex-direction: row !important;                 
@@ -301,9 +306,9 @@ function addStyles() {
         transition:none !important;                 
         will-change: transform, opacity;                
     }                  
-                
+                    
     .cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translateY(0) scale(1); transition-delay: 0.6s; }                  
-                
+                    
     .full-start__button.button--play { order: 1; }                
     .full-start__button.button--book { order: 2; }                
     .full-start__button.button--reaction { order: 3; }                
@@ -322,7 +327,7 @@ function addStyles() {
         border-radius: 8px !important;              
         padding: 8px 16px !important;              
     }                  
-                
+                    
     .left-title .full-start-new__buttons .full-start__button.focus {            
         color:#fff!important;            
         transform:scale(1.04);            
@@ -373,45 +378,19 @@ function addStyles() {
     .left-title .full-start-new__right { display: flex; align-items: flex-end; justify-content: flex-start; padding-bottom: 2vh; padding-left: 1.5%; }                  
     .cas-meta-info { display: flex; align-items: center; gap: 8px; font-weight: 400; }                  
                 
-    /* Покращена Ken Burns анімація з Parallax ефектом */        
-    @keyframes casKenBurnsParallax {         
-        0% { transform: scale(1.02) translateY(0px) translateX(0px); }         
-        25% { transform: scale(1.05) translateY(-10px) translateX(-5px); }         
-        50% { transform: scale(1.07) translateY(-20px) translateX(5px); }         
-        75% { transform: scale(1.05) translateY(-10px) translateX(-3px); }         
-        100% { transform: scale(1.02) translateY(0px) translateX(0px); }         
-    }        
-                
+    /* Відключена Ken Burns анімація для чистого фону */        
     body.cas--zoom-enabled .full-start__background.loaded {         
-        animation: casKenBurnsParallax 50s ease-in-out infinite !important;         
-        will-change: transform;         
+        animation: none !important;         
     }        
                 
     .full-start__background img {         
         transform: translateZ(0);         
-        -webkit-transform: translateZ(0);   
-        filter: brightness(1.45) contrast(1.35) saturate(1.45) sharpen(0.8);         
-    }        
-                
-    /* Додатковий градієнт для покращення контрасту */        
-    .full-start__background::before {         
-        content: '';         
-        position: absolute;         
-        top: 0;         
-        left: 0;         
-        right: 0;         
-        bottom: 0;         
-        background: linear-gradient(135deg,         
-            rgba(255,255,255,0.05) 0%,         
-            rgba(255,255,255,0) 50%,         
-            rgba(0,0,0,0.1) 100%);         
-        pointer-events: none;         
-        z-index: 1;         
+        -webkit-transform: translateZ(0);         
     }        
     </style>`;                
     Lampa.Template.add('left_title_css', styles);                
     $('body').append(Lampa.Template.get('left_title_css', {}, true));                
-}
+       } 
     
     function getCachedData(id) {              
         const cache = Lampa.Storage.get('cas_images_cache') || {};              
