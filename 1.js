@@ -257,6 +257,7 @@
         opacity: 0 !important;  
         transition: opacity 0.6s ease-out !important;  
         will-change: opacity;  
+        transform: scale(1.08);  
     }  
   
     .full-start__background.loaded:not(.dim) {  
@@ -268,21 +269,23 @@
         animation: none !important;  
     }  
       
-    /* Ken Burns анімація для чистого фону */  
+    /* Преміальна Ken Burns анімація з більш динамічними ефектами */  
     @keyframes casKenBurnsParallax {         
-        0% { transform: scale(1.05) translateY(0px) translateX(0px); }         
-        25% { transform: scale(1.08) translateY(-10px) translateX(-5px); }         
-        50% { transform: scale(1.1) translateY(-20px) translateX(5px); }         
-        75% { transform: scale(1.08) translateY(-10px) translateX(-3px); }         
-        100% { transform: scale(1.05) translateY(0px) translateX(0px); }         
+        0% { transform: scale(1.08) translateY(0px) translateX(0px) rotate(0deg); }         
+        20% { transform: scale(1.12) translateY(-15px) translateX(-8px) rotate(0.5deg); }         
+        40% { transform: scale(1.15) translateY(-25px) translateX(10px) rotate(-0.3deg); }         
+        60% { transform: scale(1.18) translateY(-15px) translateX(-5px) rotate(0.2deg); }         
+        80% { transform: scale(1.12) translateY(-8px) translateX(8px) rotate(-0.4deg); }         
+        100% { transform: scale(1.08) translateY(0px) translateX(0px) rotate(0deg); }         
     }        
                 
     body.cas--zoom-enabled .full-start__background.loaded {         
-        animation: casKenBurnsParallax 50s ease-in-out infinite !important;         
+        animation: casKenBurnsParallax 40s ease-in-out infinite !important;         
         will-change: transform;         
+        transform: scale(1.08) translateY(0px) translateX(0px) !important;  
     }        
   
-    /* Решта стилів для контенту */  
+    /* Анімації контенту - повертаємо їх */  
     .cas-logo, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper {                 
         opacity: 0 !important;                 
         transform: translateY(10px);                 
@@ -322,12 +325,7 @@
     .left-title .full-start-new__buttons .full-start__button {                 
         background: transparent !important;                 
         color: rgba(255,255,255,0.6) !important;                 
-        display: flex;                 
-        align-items: center;                 
-        gap: 10px;                 
-        transition: all 0.3s ease;                
-        will-change: transform;                
-        border: 2px solid transparent !important;              
+        border: 1px solid rgba(255,255,255,0.2) !important;                 
         border-radius: 8px !important;              
         padding: 8px 16px !important;              
     }                  
@@ -391,7 +389,7 @@
     Lampa.Template.add('left_title_css', styles);                
     $('body').append(Lampa.Template.get('left_title_css', {}, true));                
         }
-        
+     
      function getCachedData(id) {              
         const cache = Lampa.Storage.get('cas_images_cache') || {};              
         const item = cache[id];              
