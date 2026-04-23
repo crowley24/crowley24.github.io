@@ -257,7 +257,7 @@
         opacity: 0 !important;      
         transition: opacity 0.6s ease-out !important;      
         will-change: opacity;      
-        transform: scale(1.1);      
+        transform: scale(1.05);      
     }      
       
     .full-start__background.loaded:not(.dim) {      
@@ -269,99 +269,73 @@
         animation: none !important;      
     }      
           
-    /* ПРЕМІАЛЬНА Ken Burns анімація з вау-ефектом */      
+    /* Елегантна Ken Burns анімація */  
     @keyframes casKenBurnsParallax {             
-        0% { transform: scale(1.1) translateY(0px) translateX(0px) rotate(0deg) perspective(1000px) rotateY(0deg); }             
-        15% { transform: scale(1.18) translateY(-20px) translateX(-12px) rotate(1deg) perspective(1000px) rotateY(2deg); }             
-        30% { transform: scale(1.25) translateY(-35px) translateX(15px) rotate(-1.5deg) perspective(1000px) rotateY(-3deg); }             
-        45% { transform: scale(1.3) translateY(-45px) translateX(-8px) rotate(1.2deg) perspective(1000px) rotateY(1deg); }             
-        60% { transform: scale(1.22) translateY(-30px) translateX(12px) rotate(-0.8deg) perspective(1000px) rotateY(-2deg); }             
-        75% { transform: scale(1.15) translateY(-15px) translateX(-10px) rotate(0.6deg) perspective(1000px) rotateY(1deg); }             
-        90% { transform: scale(1.12) translateY(-8px) translateX(5px) rotate(-0.3deg) perspective(1000px) rotateY(-0.5deg); }             
-        100% { transform: scale(1.1) translateY(0px) translateX(0px) rotate(0deg) perspective(1000px) rotateY(0deg); }             
+        0% { transform: scale(1.05) translateY(0px) translateX(0px); }             
+        25% { transform: scale(1.08) translateY(-12px) translateX(-6px); }             
+        50% { transform: scale(1.12) translateY(-18px) translateX(8px); }             
+        75% { transform: scale(1.09) translateY(-10px) translateX(-4px); }             
+        100% { transform: scale(1.05) translateY(0px) translateX(0px); }             
     }            
                     
     body.cas--zoom-enabled .full-start__background.loaded {             
-        animation: casKenBurnsParallax 35s cubic-bezier(0.4, 0, 0.2, 1) infinite !important;             
+        animation: casKenBurnsParallax 50s ease-in-out infinite !important;             
         will-change: transform;             
     }             
-    
-    /* Додатковий ефект глибини для преміальності */  
-    body.cas--zoom-enabled .full-start__background::before {  
+  
+    /* Додатковий subtle ефект глибини */  
+    body.cas--zoom-enabled .full-start__background::after {  
         content: '';  
         position: absolute;  
-        top: -5%;  
-        left: -5%;  
-        right: -5%;  
-        bottom: -5%;  
+        top: 0;  
+        left: 0;  
+        right: 0;  
+        bottom: 0;  
         background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.1) 100%);  
         pointer-events: none;  
-        z-index: 1;  
-        animation: vignettePulse 35s ease-in-out infinite;  
+        animation: vignettePulse 50s ease-in-out infinite;  
     }  
-      
+  
     @keyframes vignettePulse {  
         0%, 100% { opacity: 0.3; }  
         50% { opacity: 0.1; }  
     }  
     
-    /* Решта стилів без змін */  
+    /* Анімації контенту */  
     .cas-logo, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper {                   
         opacity: 0 !important;                   
         transform: translateY(10px);                   
         transition: opacity 0.4s var(--cas-anim-curve), transform 0.4s var(--cas-anim-curve);                   
         will-change: transform, opacity;                  
     }                    
-                  
+                    
     .cas-animated .cas-logo { opacity: 1 !important; transform: translateY(0); transition-delay: 0s; }                    
     .cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.1s; }                    
     .cas-animated .cas-rate-items { opacity: 1 !important; transform: translateY(0); transition-delay: 0.2s; }                    
     .cas-animated .cas-meta-info { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.3s; }                    
     .cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.4s; }                    
-    .cas-animated .cas-description { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.15s; }              
-                  
+    .cas-animated .cas-description { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.15s; }            
+                    
     .full-start-new__details { display: none !important; }                    
     .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }                    
-                  
-    .full-start-new__buttons {                   
-        display: flex !important;                   
-        flex-direction: row !important;                   
-        gap: 20px;                   
-        margin-top: 0.2em;                  
-        opacity:1 !important;                   
-        transform: translateY(20px) scale(0.9);                   
-        transition:none !important;                   
-        will-change: transform, opacity;                  
+    .full-start-new__body { display: flex; height: 85vh; position: relative; }                    
+    .full-start-new__left { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 4em 3em 2em 4em; position: relative; z-index: 2; }                    
+    .full-start-new__right { width: 50%; display: flex; flex-direction: column; justify-content: space-between; padding: 4em 4em 2em 0; position: relative; z-index: 2; }                    
+    .full-start-new__poster { display: none; }                    
+    .full-start-new__title { display: none; }                    
+                    
+    .left-title .full-start-new__left { width: 50%; }                    
+    .left-title .full-start-new__right { width: 50%; }                    
+                    
+    .cas-logo-container {         
+        position: relative;         
+        overflow: visible;         
+        max-width: 100%;         
+        padding-left: 0%;        
+        margin-bottom: calc(var(--cas-blocks-gap) * 1.5);        
+        max-height: 300px;        
     }                    
-                  
-    .cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translateY(0) scale(1); transition-delay: 0.6s; }                    
-                  
-    .full-start__button.button--play { order: 1; }                  
-    .full-start__button.button--book { order: 2; }                  
-    .full-start__button.button--reaction { order: 3; }                  
-    .full-start__button.button--subscribe { order: 4; }                  
-    .full-start__button.button--options { order: 5; }                  
-                  
-    .left-title .full-start-new__buttons .full-start__button {                   
-        background: transparent !important;                   
-        color: rgba(255,255,255,0.6) !important;                   
-        border: 1px solid rgba(255,255,255,0.2) !important;                   
-        border-radius: 8px !important;                
-        padding: 8px 16px !important;                
-    }                    
-                  
-    .left-title .full-start-new__buttons .full-start__button.focus {              
-        color:#fff!important;              
-        transform:scale(1.04);              
-        background:rgba(255,255,255,0.12)!important;              
-        border-color:rgba(255,255,255,0.25)!important;              
-    }               
-              
-    .cas-rate-item{ opacity:0; transform:scale(.9); animation:popIn .2s ease forwards; }                
-    .cas-rate-item:nth-child(1) { animation-delay: 0.2s; }                  
-    .cas-rate-item:nth-child(2) { animation-delay: 0.3s; }                  
-    @keyframes popIn{ from{opacity:0;transform:scale(.9);} to{opacity:1;transform:scale(1);} }                 
-              
+                    
     .cas-logo img {           
         background: transparent !important;           
         border: none !important;           
@@ -374,7 +348,14 @@
         display: block;          
         object-fit: contain;          
     }         
-                
+                    
+    .cas-studios-row {         
+        display: flex;         
+        flex-wrap: wrap;         
+        gap: 8px;         
+        margin-bottom: calc(var(--cas-blocks-gap) * 0.8);        
+    }                    
+                    
     .cas-studio-item {      
         height: 2.3em !important;      
         display: flex;      
@@ -405,11 +386,11 @@
         transform: translateZ(0);             
         -webkit-transform: translateZ(0);             
     }            
-    </style>`;                  
-    Lampa.Template.add('left_title_css', styles);                  
-    $('body').append(Lampa.Template.get('left_title_css', {}, true));                  
+    </style>`;                    
+    Lampa.Template.add('left_title_css', styles);                    
+    $('body').append(Lampa.Template.get('left_title_css', {}, true));                    
        }
-            
+                            
      function getCachedData(id) {              
         const cache = Lampa.Storage.get('cas_images_cache') || {};              
         const item = cache[id];              
