@@ -109,7 +109,7 @@
             { name: 'cas_show_rating', type: 'trigger' },              
             { name: 'cas_show_description', type: 'trigger' }              
         ];              
-              
+          
         params.forEach(p => {              
             Lampa.SettingsApi.addParam({              
                 component: PLUGIN_ID,              
