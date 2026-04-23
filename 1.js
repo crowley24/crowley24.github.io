@@ -245,57 +245,49 @@
         Lampa.Template.add('full_start_new', template);                  
     }              
               
-       function addStyles() {                
-    if ($('#cas-main-styles').length) return;            
-    const styles = `<style id="cas-main-styles">                
-    :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); }                
-      
-    /* Чистий фон без фільтрів - підхід Apple TV */  
-    .full-start__background {  
-        height: calc(100% + 6em);  
-        left: 0 !important;  
-        opacity: 0 !important;  
-        transition: opacity 0.6s ease-out, filter 0.3s ease-out !important;  
-        animation: none !important;  
-        transform: none !important;  
-        will-change: opacity, filter;  
-    }  
+       function addStyles() {                  
+    if ($('#cas-main-styles').length) return;              
+    const styles = `<style id="cas-main-styles">                  
+    :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); }                  
+        
+    /* Чистий фон без фільтрів - підхід Apple TV */    
+    .full-start__background {    
+        height: calc(100% + 6em);    
+        left: 0 !important;    
+        opacity: 0 !important;    
+        transition: opacity 0.6s ease-out, filter 0.3s ease-out !important;    
+        animation: none !important;    
+        transform: none !important;    
+        will-change: opacity, filter;    
+    }    
+    
+    .full-start__background.loaded:not(.dim) {    
+        opacity: 1 !important;    
+    }    
+    
+    /* Відключена Ken Burns анімація для чистого фону */          
+    body.cas--zoom-enabled .full-start__background.loaded {           
+        animation: none !important;           
+    }          
   
-    .full-start__background.loaded:not(.dim) {  
-        opacity: 1 !important;  
-    }  
-  
-    /* Відключення стандартної анімації Lampa */  
-    body.advanced--animation:not(.no--animation) .full-start__background.loaded {  
-        animation: none !important;  
-    }  
-                    
-    .cas-logo-container {         
-        position: relative;         
-        overflow: visible;         
-        max-width: 100%;         
-        padding-left: 0%;        
-        margin-bottom: calc(var(--cas-blocks-gap) * 1.5);        
-        max-height: 300px;        
-    }                
-                    
+    /* Анімації контенту - повертаємо їх */  
     .cas-logo, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper {                 
         opacity: 0 !important;                 
         transform: translateY(10px);                 
         transition: opacity 0.4s var(--cas-anim-curve), transform 0.4s var(--cas-anim-curve);                 
         will-change: transform, opacity;                
     }                  
-                    
+                
     .cas-animated .cas-logo { opacity: 1 !important; transform: translateY(0); transition-delay: 0s; }                  
     .cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.1s; }                  
     .cas-animated .cas-rate-items { opacity: 1 !important; transform: translateY(0); transition-delay: 0.2s; }                  
     .cas-animated .cas-meta-info { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.3s; }                  
     .cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.4s; }                  
     .cas-animated .cas-description { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.15s; }            
-                    
+                
     .full-start-new__details { display: none !important; }                  
     .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }                  
-                    
+                
     .full-start-new__buttons {                 
         display: flex !important;                 
         flex-direction: row !important;                 
@@ -306,9 +298,9 @@
         transition:none !important;                 
         will-change: transform, opacity;                
     }                  
-                    
+                
     .cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translateY(0) scale(1); transition-delay: 0.6s; }                  
-                    
+                
     .full-start__button.button--play { order: 1; }                
     .full-start__button.button--book { order: 2; }                
     .full-start__button.button--reaction { order: 3; }                
@@ -327,7 +319,7 @@
         border-radius: 8px !important;              
         padding: 8px 16px !important;              
     }                  
-                    
+                
     .left-title .full-start-new__buttons .full-start__button.focus {            
         color:#fff!important;            
         transform:scale(1.04);            
@@ -352,7 +344,8 @@
         display: block;        
         object-fit: contain;        
     }       
-            .cas-studio-item {    
+              
+    .cas-studio-item {    
         height: 2.3em !important;    
         display: flex;    
         align-items: center;    
@@ -377,20 +370,15 @@
     .left-title .full-start-new__body { height: 85vh; }                  
     .left-title .full-start-new__right { display: flex; align-items: flex-end; justify-content: flex-start; padding-bottom: 2vh; padding-left: 1.5%; }                  
     .cas-meta-info { display: flex; align-items: center; gap: 8px; font-weight: 400; }                  
-                
-    /* Відключена Ken Burns анімація для чистого фону */        
-    body.cas--zoom-enabled .full-start__background.loaded {         
-        animation: none !important;         
-    }        
-                
-    .full-start__background img {         
-        transform: translateZ(0);         
-        -webkit-transform: translateZ(0);         
-    }        
-    </style>`;                
-    Lampa.Template.add('left_title_css', styles);                
-    $('body').append(Lampa.Template.get('left_title_css', {}, true));                
-       } 
+                  
+    .full-start__background img {           
+        transform: translateZ(0);           
+        -webkit-transform: translateZ(0);           
+    }          
+    </style>`;                  
+    Lampa.Template.add('left_title_css', styles);                  
+    $('body').append(Lampa.Template.get('left_title_css', {}, true));                  
+       }
     
     function getCachedData(id) {              
         const cache = Lampa.Storage.get('cas_images_cache') || {};              
