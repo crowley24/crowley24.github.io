@@ -245,45 +245,44 @@
         Lampa.Template.add('full_start_new', template);                  
     }              
               
-        function addStyles() {                
-    if ($('#cas-main-styles').length) return;            
-    const styles = `<style id="cas-main-styles">                
-    :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); }                
-      
-    /* Чистий фон без стандартних фільтрів Lampa */  
-    .full-start__background {  
-        height: calc(100% + 6em);  
-        left: 0 !important;  
-        opacity: 0 !important;  
-        transition: opacity 0.6s ease-out !important;  
-        will-change: opacity;  
-        transform: scale(1.08);  
-    }  
-  
-    .full-start__background.loaded:not(.dim) {  
-        opacity: 1 !important;  
-    }  
-  
-    /* Відключення стандартної анімації Lampa */  
-    body.advanced--animation:not(.no--animation) .full-start__background.loaded {  
-        animation: none !important;  
-    }  
-      
-    /* Преміальна Ken Burns анімація з більш динамічними ефектами */  
-    @keyframes casKenBurnsParallax {         
-        0% { transform: scale(1.08) translateY(0px) translateX(0px) rotate(0deg); }         
-        20% { transform: scale(1.12) translateY(-15px) translateX(-8px) rotate(0.5deg); }         
-        40% { transform: scale(1.15) translateY(-25px) translateX(10px) rotate(-0.3deg); }         
-        60% { transform: scale(1.18) translateY(-15px) translateX(-5px) rotate(0.2deg); }         
-        80% { transform: scale(1.12) translateY(-8px) translateX(8px) rotate(-0.4deg); }         
-        100% { transform: scale(1.08) translateY(0px) translateX(0px) rotate(0deg); }         
-    }        
-                
-    body.cas--zoom-enabled .full-start__background.loaded {         
-        animation: casKenBurnsParallax 40s ease-in-out infinite !important;         
-        will-change: transform;         
-        transform: scale(1.08) translateY(0px) translateX(0px) !important;  
-    }        
+       function addStyles() {                  
+    if ($('#cas-main-styles').length) return;              
+    const styles = `<style id="cas-main-styles">                  
+    :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); }                  
+        
+    /* Чистий фон без стандартних фільтрів Lampa */    
+    .full-start__background {    
+        height: calc(100% + 6em);    
+        left: 0 !important;    
+        opacity: 0 !important;    
+        transition: opacity 0.6s ease-out !important;    
+        will-change: opacity;    
+        transform: scale(1.08);    
+    }    
+    
+    .full-start__background.loaded:not(.dim) {    
+        opacity: 1 !important;    
+    }    
+    
+    /* Відключення стандартної анімації Lampa */    
+    body.advanced--animation:not(.no--animation) .full-start__background.loaded {    
+        animation: none !important;    
+    }    
+        
+    /* Преміальна Ken Burns анімація з більш динамічними ефектами */    
+    @keyframes casKenBurnsParallax {           
+        0% { transform: scale(1.08) translateY(0px) translateX(0px) rotate(0deg); }           
+        20% { transform: scale(1.12) translateY(-15px) translateX(-8px) rotate(0.5deg); }           
+        40% { transform: scale(1.15) translateY(-25px) translateX(10px) rotate(-0.3deg); }           
+        60% { transform: scale(1.18) translateY(-15px) translateX(-5px) rotate(0.2deg); }           
+        80% { transform: scale(1.12) translateY(-8px) translateX(8px) rotate(-0.4deg); }           
+        100% { transform: scale(1.08) translateY(0px) translateX(0px) rotate(0deg); }           
+    }          
+                  
+    body.cas--zoom-enabled .full-start__background.loaded {           
+        animation: casKenBurnsParallax 40s ease-in-out infinite !important;           
+        will-change: transform;           
+    }           
   
     /* Анімації контенту - повертаємо їх */  
     .cas-logo, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper {                 
