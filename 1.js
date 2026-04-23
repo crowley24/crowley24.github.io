@@ -379,7 +379,6 @@
     .cas-rate-item { display: flex; align-items: center; gap: 6px; }                    
     .cas-rate-item img { height: 1.1em; }                    
     .left-title .full-start-new__body { height: 85vh; }                    
-    .left-title .full-start-new__right { display: flex; align-items: flex-end; justify-content: flex-start; padding-bottom: 2vh; padding-left: 1.5%; }                    
     .cas-meta-info { display: flex; align-items: center; gap: 8px; font-weight: 400; }                    
                     
     .full-start__background img {             
