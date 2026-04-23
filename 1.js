@@ -245,46 +245,49 @@
         Lampa.Template.add('full_start_new', template);                  
     }              
               
-        function addStyles() {                    
-    if ($('#cas-main-styles').length) return;                
-    const styles = `<style id="cas-main-styles">                    
-    :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); }                    
-          
-    /* Чистий фон без фільтрів - підхід Apple TV */      
-    .full-start__background {      
-        height: calc(100% + 6em);      
-        left: 0 !important;      
-        opacity: 0 !important;      
-        transition: opacity 0.6s ease-out, filter 0.3s ease-out !important;      
-        will-change: opacity, filter;      
-    }      
+        function addStyles() {                
+    if ($('#cas-main-styles').length) return;            
+    const styles = `<style id="cas-main-styles">                
+    :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); }                
       
-    .full-start__background.loaded:not(.dim) {      
-        opacity: 1 !important;      
-    }      
-      
-    /* Відновлена Ken Burns анімація для чистого фону */            
-    @keyframes casKenBurnsParallax {           
-        0% { transform: scale(1.05) translateY(0px) translateX(0px); }           
-        25% { transform: scale(1.08) translateY(-10px) translateX(-5px); }           
-        50% { transform: scale(1.1) translateY(-20px) translateX(5px); }           
-        75% { transform: scale(1.08) translateY(-10px) translateX(-3px); }           
-        100% { transform: scale(1.05) translateY(0px) translateX(0px); }           
-    }          
-                  
-    /* Додаємо !important для Ken Burns анімації */  
-    body.cas--zoom-enabled .full-start__background.loaded {           
-        animation: casKenBurnsParallax 50s ease-in-out infinite !important;           
-        will-change: transform;           
-        transform: scale(1.05) translateY(0px) translateX(0px) !important;  
-    }            
+    /* Чистий фон без стандартних фільтрів Lampa */  
+    .full-start__background {  
+        height: calc(100% + 6em);  
+        left: 0 !important;  
+        opacity: 0 !important;  
+        transition: opacity 0.6s ease-out !important;  
+        will-change: opacity;  
+    }  
   
-    /* Анімації контенту - повертаємо їх */  
-    .cas-logo, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper {                   
-        opacity: 0 !important;                   
-        transform: translateY(10px);                   
-        transition: opacity 0.4s var(--cas-anim-curve), transform 0.4s var(--cas-anim-curve);                   
-        will-change: transform, opacity;                  
+    .full-start__background.loaded:not(.dim) {  
+        opacity: 1 !important;  
+    }  
+  
+    /* Відключення стандартної анімації Lampa */  
+    body.advanced--animation:not(.no--animation) .full-start__background.loaded {  
+        animation: none !important;  
+    }  
+      
+    /* Ken Burns анімація для чистого фону */  
+    @keyframes casKenBurnsParallax {         
+        0% { transform: scale(1.05) translateY(0px) translateX(0px); }         
+        25% { transform: scale(1.08) translateY(-10px) translateX(-5px); }         
+        50% { transform: scale(1.1) translateY(-20px) translateX(5px); }         
+        75% { transform: scale(1.08) translateY(-10px) translateX(-3px); }         
+        100% { transform: scale(1.05) translateY(0px) translateX(0px); }         
+    }        
+                
+    body.cas--zoom-enabled .full-start__background.loaded {         
+        animation: casKenBurnsParallax 50s ease-in-out infinite !important;         
+        will-change: transform;         
+    }        
+  
+    /* Решта стилів для контенту */  
+    .cas-logo, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper {                 
+        opacity: 0 !important;                 
+        transform: translateY(10px);                 
+        transition: opacity 0.4s var(--cas-anim-curve), transform 0.4s var(--cas-anim-curve);                 
+        will-change: transform, opacity;                
     }                  
                 
     .cas-animated .cas-logo { opacity: 1 !important; transform: translateY(0); transition-delay: 0s; }                  
@@ -384,11 +387,10 @@
         transform: translateZ(0);           
         -webkit-transform: translateZ(0);           
     }          
-    </style>`;                    
-    Lampa.Template.add('left_title_css', styles);                    
-    $('body').append(Lampa.Template.get('left_title_css', {}, true));                    
+    </style>`;                
+    Lampa.Template.add('left_title_css', styles);                
+    $('body').append(Lampa.Template.get('left_title_css', {}, true));                
         }
-        
         
      function getCachedData(id) {              
         const cache = Lampa.Storage.get('cas_images_cache') || {};              
