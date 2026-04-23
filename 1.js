@@ -245,7 +245,7 @@
         Lampa.Template.add('full_start_new', template);                  
     }              
               
-       function addStyles() {                  
+        function addStyles() {                  
     if ($('#cas-main-styles').length) return;              
     const styles = `<style id="cas-main-styles">                  
     :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); }                  
@@ -265,9 +265,18 @@
         opacity: 1 !important;    
     }    
     
-    /* Відключена Ken Burns анімація для чистого фону */          
-    body.cas--zoom-enabled .full-start__background.loaded {           
-        animation: none !important;           
+    /* Відновлена Ken Burns анімація для чистого фону */          
+    @keyframes casKenBurnsParallax {         
+        0% { transform: scale(1.05) translateY(0px) translateX(0px); }         
+        25% { transform: scale(1.08) translateY(-10px) translateX(-5px); }         
+        50% { transform: scale(1.1) translateY(-20px) translateX(5px); }         
+        75% { transform: scale(1.08) translateY(-10px) translateX(-3px); }         
+        100% { transform: scale(1.05) translateY(0px) translateX(0px); }         
+    }        
+                
+    body.cas--zoom-enabled .full-start__background.loaded {         
+        animation: casKenBurnsParallax 50s ease-in-out infinite !important;         
+        will-change: transform;         
     }          
   
     /* Анімації контенту - повертаємо їх */  
@@ -378,9 +387,9 @@
     </style>`;                  
     Lampa.Template.add('left_title_css', styles);                  
     $('body').append(Lampa.Template.get('left_title_css', {}, true));                  
-       }
-    
-    function getCachedData(id) {              
+        }  
+        
+     function getCachedData(id) {              
         const cache = Lampa.Storage.get('cas_images_cache') || {};              
         const item = cache[id];              
         if (item && (Date.now() - item.time < CACHE_LIFETIME)) return item.data;              
