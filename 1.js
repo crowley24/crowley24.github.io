@@ -245,150 +245,171 @@
         Lampa.Template.add('full_start_new', template);                  
     }              
               
-       function addStyles() {                  
-    if ($('#cas-main-styles').length) return;              
-    const styles = `<style id="cas-main-styles">                  
-    :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); }                  
-        
-    /* Чистий фон без стандартних фільтрів Lampa */    
-    .full-start__background {    
-        height: calc(100% + 6em);    
-        left: 0 !important;    
-        opacity: 0 !important;    
-        transition: opacity 0.6s ease-out !important;    
-        will-change: opacity;    
-        transform: scale(1.08);    
-    }    
-    
-    .full-start__background.loaded:not(.dim) {    
-        opacity: 1 !important;    
-    }    
-    
-    /* Відключення стандартної анімації Lampa */    
-    body.advanced--animation:not(.no--animation) .full-start__background.loaded {    
-        animation: none !important;    
-    }    
-        
-    /* Преміальна Ken Burns анімація з більш динамічними ефектами */    
-    @keyframes casKenBurnsParallax {           
-        0% { transform: scale(1.08) translateY(0px) translateX(0px) rotate(0deg); }           
-        20% { transform: scale(1.12) translateY(-15px) translateX(-8px) rotate(0.5deg); }           
-        40% { transform: scale(1.15) translateY(-25px) translateX(10px) rotate(-0.3deg); }           
-        60% { transform: scale(1.18) translateY(-15px) translateX(-5px) rotate(0.2deg); }           
-        80% { transform: scale(1.12) translateY(-8px) translateX(8px) rotate(-0.4deg); }           
-        100% { transform: scale(1.08) translateY(0px) translateX(0px) rotate(0deg); }           
-    }          
-                  
-    body.cas--zoom-enabled .full-start__background.loaded {           
-        animation: casKenBurnsParallax 40s ease-in-out infinite !important;           
-        will-change: transform;           
-    }           
-  
-    /* Анімації контенту - повертаємо їх */  
-    .cas-logo, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper {                 
-        opacity: 0 !important;                 
-        transform: translateY(10px);                 
-        transition: opacity 0.4s var(--cas-anim-curve), transform 0.4s var(--cas-anim-curve);                 
-        will-change: transform, opacity;                
-    }                  
-                
-    .cas-animated .cas-logo { opacity: 1 !important; transform: translateY(0); transition-delay: 0s; }                  
-    .cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.1s; }                  
-    .cas-animated .cas-rate-items { opacity: 1 !important; transform: translateY(0); transition-delay: 0.2s; }                  
-    .cas-animated .cas-meta-info { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.3s; }                  
-    .cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.4s; }                  
-    .cas-animated .cas-description { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.15s; }            
-                
-    .full-start-new__details { display: none !important; }                  
-    .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }                  
-                
-    .full-start-new__buttons {                 
-        display: flex !important;                 
-        flex-direction: row !important;                 
-        gap: 20px;                 
-        margin-top: 0.2em;                
-        opacity:1 !important;                 
-        transform: translateY(20px) scale(0.9);                 
-        transition:none !important;                 
-        will-change: transform, opacity;                
-    }                  
-                
-    .cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translateY(0) scale(1); transition-delay: 0.6s; }                  
-                
-    .full-start__button.button--play { order: 1; }                
-    .full-start__button.button--book { order: 2; }                
-    .full-start__button.button--reaction { order: 3; }                
-    .full-start__button.button--subscribe { order: 4; }                
-    .full-start__button.button--options { order: 5; }                
-                
-    .left-title .full-start-new__buttons .full-start__button {                 
-        background: transparent !important;                 
-        color: rgba(255,255,255,0.6) !important;                 
-        border: 1px solid rgba(255,255,255,0.2) !important;                 
-        border-radius: 8px !important;              
-        padding: 8px 16px !important;              
-    }                  
-                
-    .left-title .full-start-new__buttons .full-start__button.focus {            
-        color:#fff!important;            
-        transform:scale(1.04);            
-        background:rgba(255,255,255,0.12)!important;            
-        border-color:rgba(255,255,255,0.25)!important;            
+       function addStyles() {                    
+    if ($('#cas-main-styles').length) return;                
+    const styles = `<style id="cas-main-styles">                    
+    :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); }                    
+          
+    /* Чистий фон без стандартних фільтрів Lampa */      
+    .full-start__background {      
+        height: calc(100% + 6em);      
+        left: 0 !important;      
+        opacity: 0 !important;      
+        transition: opacity 0.6s ease-out !important;      
+        will-change: opacity;      
+        transform: scale(1.1);      
+    }      
+      
+    .full-start__background.loaded:not(.dim) {      
+        opacity: 1 !important;      
+    }      
+      
+    /* Відключення стандартної анімації Lampa */      
+    body.advanced--animation:not(.no--animation) .full-start__background.loaded {      
+        animation: none !important;      
+    }      
+          
+    /* ПРЕМІАЛЬНА Ken Burns анімація з вау-ефектом */      
+    @keyframes casKenBurnsParallax {             
+        0% { transform: scale(1.1) translateY(0px) translateX(0px) rotate(0deg) perspective(1000px) rotateY(0deg); }             
+        15% { transform: scale(1.18) translateY(-20px) translateX(-12px) rotate(1deg) perspective(1000px) rotateY(2deg); }             
+        30% { transform: scale(1.25) translateY(-35px) translateX(15px) rotate(-1.5deg) perspective(1000px) rotateY(-3deg); }             
+        45% { transform: scale(1.3) translateY(-45px) translateX(-8px) rotate(1.2deg) perspective(1000px) rotateY(1deg); }             
+        60% { transform: scale(1.22) translateY(-30px) translateX(12px) rotate(-0.8deg) perspective(1000px) rotateY(-2deg); }             
+        75% { transform: scale(1.15) translateY(-15px) translateX(-10px) rotate(0.6deg) perspective(1000px) rotateY(1deg); }             
+        90% { transform: scale(1.12) translateY(-8px) translateX(5px) rotate(-0.3deg) perspective(1000px) rotateY(-0.5deg); }             
+        100% { transform: scale(1.1) translateY(0px) translateX(0px) rotate(0deg) perspective(1000px) rotateY(0deg); }             
+    }            
+                    
+    body.cas--zoom-enabled .full-start__background.loaded {             
+        animation: casKenBurnsParallax 35s cubic-bezier(0.4, 0, 0.2, 1) infinite !important;             
+        will-change: transform;             
     }             
-            
-    .cas-rate-item{ opacity:0; transform:scale(.9); animation:popIn .2s ease forwards; }              
-    .cas-rate-item:nth-child(1) { animation-delay: 0.2s; }                
-    .cas-rate-item:nth-child(2) { animation-delay: 0.3s; }                
-    @keyframes popIn{ from{opacity:0;transform:scale(.9);} to{opacity:1;transform:scale(1);} }               
-            
-    .cas-logo img {         
-        background: transparent !important;         
-        border: none !important;         
-        max-width: 450px;         
-        max-height: 200px;         
-        width: auto;        
-        height: auto;        
-        transform: scale(var(--cas-logo-scale));         
-        transform-origin: left center;        
-        display: block;        
-        object-fit: contain;        
-    }       
-              
-    .cas-studio-item {    
-        height: 2.3em !important;    
-        display: flex;    
-        align-items: center;    
-        justify-content: center;  
-        background: rgba(255, 255, 255, 0.1);   
-        padding: 4px 8px;  
-        border-radius: 6px;  
-    }    
-    .cas-studio-item img {     
-        height: 100%;     
-        width: auto;     
-        object-fit: contain;     
-        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));     
-        opacity: 1;     
-        transition: all 0.3s ease;     
+    
+    /* Додатковий ефект глибини для преміальності */  
+    body.cas--zoom-enabled .full-start__background::before {  
+        content: '';  
+        position: absolute;  
+        top: -5%;  
+        left: -5%;  
+        right: -5%;  
+        bottom: -5%;  
+        background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.1) 100%);  
+        pointer-events: none;  
+        z-index: 1;  
+        animation: vignettePulse 35s ease-in-out infinite;  
     }  
-    .cas-description { font-size: var(--cas-meta-size) !important; line-height: 1.4; color: rgba(255,255,255,0.7); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-width: 650px; margin-top: calc(var(--cas-blocks-gap) * 0.4); }                  
-    .cas-quality-item img { height: 12px; }                  
-    .cas-ratings-line { display: flex; align-items: center; gap: 15px; margin-bottom: 5px; font-size: var(--cas-meta-size); font-weight: 600; height: 30px; }                  
-    .cas-rate-item { display: flex; align-items: center; gap: 6px; }                  
-    .cas-rate-item img { height: 1.1em; }                  
-    .left-title .full-start-new__body { height: 85vh; }                  
-    .left-title .full-start-new__right { display: flex; align-items: flex-end; justify-content: flex-start; padding-bottom: 2vh; padding-left: 1.5%; }                  
-    .cas-meta-info { display: flex; align-items: center; gap: 8px; font-weight: 400; }                  
+      
+    @keyframes vignettePulse {  
+        0%, 100% { opacity: 0.3; }  
+        50% { opacity: 0.1; }  
+    }  
+    
+    /* Решта стилів без змін */  
+    .cas-logo, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper {                   
+        opacity: 0 !important;                   
+        transform: translateY(10px);                   
+        transition: opacity 0.4s var(--cas-anim-curve), transform 0.4s var(--cas-anim-curve);                   
+        will-change: transform, opacity;                  
+    }                    
                   
-    .full-start__background img {           
-        transform: translateZ(0);           
-        -webkit-transform: translateZ(0);           
-    }          
-    </style>`;                
-    Lampa.Template.add('left_title_css', styles);                
-    $('body').append(Lampa.Template.get('left_title_css', {}, true));                
-        }
-     
+    .cas-animated .cas-logo { opacity: 1 !important; transform: translateY(0); transition-delay: 0s; }                    
+    .cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.1s; }                    
+    .cas-animated .cas-rate-items { opacity: 1 !important; transform: translateY(0); transition-delay: 0.2s; }                    
+    .cas-animated .cas-meta-info { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.3s; }                    
+    .cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.4s; }                    
+    .cas-animated .cas-description { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.15s; }              
+                  
+    .full-start-new__details { display: none !important; }                    
+    .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }                    
+                  
+    .full-start-new__buttons {                   
+        display: flex !important;                   
+        flex-direction: row !important;                   
+        gap: 20px;                   
+        margin-top: 0.2em;                  
+        opacity:1 !important;                   
+        transform: translateY(20px) scale(0.9);                   
+        transition:none !important;                   
+        will-change: transform, opacity;                  
+    }                    
+                  
+    .cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translateY(0) scale(1); transition-delay: 0.6s; }                    
+                  
+    .full-start__button.button--play { order: 1; }                  
+    .full-start__button.button--book { order: 2; }                  
+    .full-start__button.button--reaction { order: 3; }                  
+    .full-start__button.button--subscribe { order: 4; }                  
+    .full-start__button.button--options { order: 5; }                  
+                  
+    .left-title .full-start-new__buttons .full-start__button {                   
+        background: transparent !important;                   
+        color: rgba(255,255,255,0.6) !important;                   
+        border: 1px solid rgba(255,255,255,0.2) !important;                   
+        border-radius: 8px !important;                
+        padding: 8px 16px !important;                
+    }                    
+                  
+    .left-title .full-start-new__buttons .full-start__button.focus {              
+        color:#fff!important;              
+        transform:scale(1.04);              
+        background:rgba(255,255,255,0.12)!important;              
+        border-color:rgba(255,255,255,0.25)!important;              
+    }               
+              
+    .cas-rate-item{ opacity:0; transform:scale(.9); animation:popIn .2s ease forwards; }                
+    .cas-rate-item:nth-child(1) { animation-delay: 0.2s; }                  
+    .cas-rate-item:nth-child(2) { animation-delay: 0.3s; }                  
+    @keyframes popIn{ from{opacity:0;transform:scale(.9);} to{opacity:1;transform:scale(1);} }                 
+              
+    .cas-logo img {           
+        background: transparent !important;           
+        border: none !important;           
+        max-width: 450px;           
+        max-height: 200px;           
+        width: auto;          
+        height: auto;          
+        transform: scale(var(--cas-logo-scale));           
+        transform-origin: left center;          
+        display: block;          
+        object-fit: contain;          
+    }         
+                
+    .cas-studio-item {      
+        height: 2.3em !important;      
+        display: flex;      
+        align-items: center;      
+        justify-content: center;    
+        background: rgba(255, 255, 255, 0.1);     
+        padding: 4px 8px;    
+        border-radius: 6px;    
+    }      
+    .cas-studio-item img {       
+        height: 100%;       
+        width: auto;       
+        object-fit: contain;       
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));       
+        opacity: 1;       
+        transition: all 0.3s ease;       
+    }    
+    .cas-description { font-size: var(--cas-meta-size) !important; line-height: 1.4; color: rgba(255,255,255,0.7); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-width: 650px; margin-top: calc(var(--cas-blocks-gap) * 0.4); }                    
+    .cas-quality-item img { height: 12px; }                    
+    .cas-ratings-line { display: flex; align-items: center; gap: 15px; margin-bottom: 5px; font-size: var(--cas-meta-size); font-weight: 600; height: 30px; }                    
+    .cas-rate-item { display: flex; align-items: center; gap: 6px; }                    
+    .cas-rate-item img { height: 1.1em; }                    
+    .left-title .full-start-new__body { height: 85vh; }                    
+    .left-title .full-start-new__right { display: flex; align-items: flex-end; justify-content: flex-start; padding-bottom: 2vh; padding-left: 1.5%; }                    
+    .cas-meta-info { display: flex; align-items: center; gap: 8px; font-weight: 400; }                    
+                    
+    .full-start__background img {             
+        transform: translateZ(0);             
+        -webkit-transform: translateZ(0);             
+    }            
+    </style>`;                  
+    Lampa.Template.add('left_title_css', styles);                  
+    $('body').append(Lampa.Template.get('left_title_css', {}, true));                  
+       }
+            
      function getCachedData(id) {              
         const cache = Lampa.Storage.get('cas_images_cache') || {};              
         const item = cache[id];              
