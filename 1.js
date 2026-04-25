@@ -190,11 +190,11 @@
                         <div class="cas-logo-container" style="margin-bottom: calc(var(--cas-blocks-gap) * 1.5);">                  
                             <div class="cas-logo"></div>                  
                         </div>                  
-                        <div class="cas-studios-row" style="display: flex; gap: 15px; align-items: center; margin-bottom: 12px;"></div>                  
-                         <div class="cas-ratings-line">  
-                            <div class="cas-meta-info"></div>  
-                            <div class="cas-quality-row" style="display: flex; gap: 8px; align-items: center;"></div>  
-                        </div>                  
+                        <div class="cas-meta-line" style="display: flex; align-items: center; gap: 15px; margin-bottom: 12px; flex-wrap: wrap;">  
+                         <div class="cas-studios-row" style="display: flex; gap: 8px; align-items: center;"></div>  
+                          <div class="cas-meta-info"></div>  
+                          <div class="cas-quality-row" style="display: flex; gap: 6px; align-items: center;"></div>  
+                        </div>                 
                         <div class="cas-description" style="margin-top: calc(var(--cas-blocks-gap) * 0.4);"></div>                  
                         <div class="cas-details-wrapper" style="margin-top: 10px;">                
                             <div class="full-start-new__head hide"></div>                    
