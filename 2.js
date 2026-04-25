@@ -294,9 +294,23 @@ function addStyles() {
         opacity: 1 !important;  
     }  
       
-    /* Ефект затемнення при прокрутці вниз */  
+    /* Ефект затемнення при прокрутці вниз - менш інтенсивний */  
     .full-start__background.dim {  
-        filter: brightness(0.7) !important;  
+        filter: brightness(0.85) !important;  
+    }  
+      
+    /* Відновлюємо Ken Burns анімацію */  
+    @keyframes casKenBurnsParallax {  
+        0% { transform: scale(1.1) translateY(0px) translateX(0px); }  
+        25% { transform: scale(1.13) translateY(-10px) translateX(-5px); }  
+        50% { transform: scale(1.15) translateY(-20px) translateX(5px); }  
+        75% { transform: scale(1.13) translateY(-10px) translateX(-3px); }  
+        100% { transform: scale(1.1) translateY(0px) translateX(0px); }  
+    }  
+      
+    body.cas--zoom-enabled .full-start__background.loaded:not(.dim) {  
+        animation: casKenBurnsParallax 50s ease-in-out infinite !important;  
+        will-change: transform;  
     }  
       
     .cas-animated .full-start__background {  
@@ -359,20 +373,6 @@ function addStyles() {
     .cas-sep {  
         color: rgba(255, 255, 255, 0.5);  
         font-size: 0.9em;  
-    }  
-      
-    /* Ken Burns анімація */  
-    @keyframes casKenBurnsParallax {  
-        0% { transform: scale(1.1) translateY(0px) translateX(0px); }  
-        25% { transform: scale(1.13) translateY(-10px) translateX(-5px); }  
-        50% { transform: scale(1.15) translateY(-20px) translateX(5px); }  
-        75% { transform: scale(1.13) translateY(-10px) translateX(-3px); }  
-        100% { transform: scale(1.1) translateY(0px) translateX(0px); }  
-    }  
-      
-    body.cas--zoom-enabled .full-start__background.loaded {  
-        animation: casKenBurnsParallax 50s ease-in-out infinite !important;  
-        will-change: transform;  
     }  
       
     .full-start__background img {  
@@ -605,8 +605,8 @@ function attachLoader() {
             content.removeClass('cas-animated');  
             event.object.activity.onBeforeDestroy = cleanup;  
               
-            // Примусово видаляємо клас dim при відкритті картки  
-            bg.removeClass('dim').addClass('loaded');  
+            // Примусово додаємо клас loaded і видаляємо dim при відкритті картки  
+            bg.addClass('loaded').removeClass('dim');  
               
             // Додаємо обробник прокрутки для затемнення фону  
             $(window).off('scroll.cas-dimming');  
