@@ -434,7 +434,15 @@ function addStyles() {
         font-size: 0.8em;  
         font-weight: 600;  
         color: white;  
-    }  
+    }
+    
+    .cas-meta-line {  
+    display: flex;  
+    align-items: center;  
+    gap: 15px;  
+    margin-bottom: 12px;  
+    flex-wrap: wrap;  
+    }
     </style>`;  
     Lampa.Template.add('left_title_css', styles);  
     $('body').append(Lampa.Template.get('left_title_css', {}, true));  
@@ -582,13 +590,19 @@ async function loadMovieDataOptimized(render, data) {
         }));  
     }  
       
-    // Об'єднана задача для метаданих та рейтингів з іконками  
-    tasks.push(Promise.resolve().then(() => {  
+    // Об'єднана задача для всіх метаданих  
+    tasks.push(Promise.resolve().then(async () => {  
+        // Логотип студії  
+        if (Lampa.Storage.get('cas_show_studios')) {  
+            renderStudioLogosWithColorAnalysis(render.find('.cas-studios-row'), data);  
+        }  
+          
+        // Текстові метадані  
         const year = data.release_date ? new Date(data.release_date).getFullYear() : (data.first_air_date ? new Date(data.first_air_date).getFullYear() : '');  
         const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));  
         const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');  
           
-        // Рейтинги з іконками  
+        // Рейтинги  
         let ratings = '';  
         const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);  
         if (tmdbV > 0) {  
@@ -598,8 +612,8 @@ async function loadMovieDataOptimized(render, data) {
         if (data.reactions && data.reactions.result) {  
             let sum = 0, cnt = 0;  
             const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };  
-            data.reactions.result.forEach(r => {         
-                if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; }        
+            data.reactions.result.forEach(r => {           
+                if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; }          
             });  
             if (cnt >= 1) {  
                 const isTv = data.name ? true : false;  
@@ -609,7 +623,7 @@ async function loadMovieDataOptimized(render, data) {
             }  
         }  
           
-        // Формуємо повний рядок  
+        // Формуємо текстові метадані  
         let metaText = '';  
         if (year) metaText += year;  
         if (time) metaText += (metaText ? ' • ' : '') + time;  
@@ -617,19 +631,36 @@ async function loadMovieDataOptimized(render, data) {
         if (ratings) metaText += (metaText ? ' • ' : '') + ratings;  
           
         render.find('.cas-meta-info').html(metaText);  
-        render.find('.cas-rate-items').empty(); // Очищуємо окремий блок рейтингів  
+          
+        // Обробка якості (тепер синхронно в основній задачі)  
+        if (Lampa.Storage.get('cas_show_quality')) {  
+            try {  
+                // Спробуємо отримати якість синхронно або з кешу  
+                const qualityData = await getQualityData(data);  
+                if (qualityData) {  
+                    render.find('.cas-quality-row').html(qualityData).show();  
+                } else {  
+                    render.find('.cas-quality-row').hide();  
+                }  
+            } catch (error) {  
+                render.find('.cas-quality-row').hide();  
+            }  
+        } else {  
+            render.find('.cas-quality-row').hide();  
+        }  
     }));  
       
-    if (Lampa.Storage.get('cas_show_studios')) {  
-        tasks.push(Promise.resolve().then(() => {  
-            renderStudioLogosWithColorAnalysis(render.find('.cas-studios-row'), data);  
-        }));  
-    }  
-      
     await Promise.all(tasks);  
-      
-    // Обробка якості з підтримкою аудіо форматів  
-    if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {  
+}  
+  
+// Допоміжна функція для отримання даних про якість  
+async function getQualityData(data) {  
+    return new Promise((resolve) => {  
+        if (!Lampa.Parser.get) {  
+            resolve(null);  
+            return;  
+        }  
+          
         Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {  
             try {  
                 const items = res.Results || res;  
@@ -653,23 +684,18 @@ async function loadMovieDataOptimized(render, data) {
                     if (b.audio) qH += `<div class="cas-quality-item cas-audio-item">${b.audio}</div>`;  
                     if (b.ukr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;  
                       
-                    if (qH) {  
-                      render.find('.cas-quality-row').html(qH).show();
-                    }  
+                    resolve(qH || null);  
+                } else {  
+                    resolve(null);  
                 }  
             } catch (error) {  
-                render.find('.cas-quality-row').hide();  
+                resolve(null);  
             }  
         }).fail(() => {  
-            render.find('.cas-quality-row').hide();  
+            resolve(null);  
         });  
-    } else {  
-        render.find('.cas-quality-row').hide();  
-    }  
-}           
-    const debouncedLoadMovieData = debounce((render, data) => {              
-        try { loadMovieDataOptimized(render, data); } catch (error) {}              
-    }, 250);              
+    });  
+}       
               
     function attachLoader() {              
         Lampa.Listener.follow('full', (event) => {              
