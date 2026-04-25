@@ -248,7 +248,7 @@
         function addStyles() {                  
     if ($('#cas-main-styles').length) return;              
     const styles = `<style id="cas-main-styles">                  
-    :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); } [1](#8-0)   
+    :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); } [1](#11-0)   
       
     /* Базові стилі фону */  
     .full-start__background {   
@@ -264,27 +264,22 @@
       
     /* Ефект затемнення при прокрутці */  
     .full-start__background.scrolled {                  
-        filter: brightness(0.8) !important;                  
+        filter: brightness(0.9) !important;                  
     }  
       
-    /* Зменшуємо градієнтні оверлеї */  
+    /* Повністю прибираємо градієнтні оверлеї */  
     .full-start-new.left-title::before,  
-    .full-start-new.left-title::after {    
-        opacity: 0.3 !important;    
-        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.3) 100%) !important;    
+    .full-start-new.left-title::after {  
+        display: none !important;  
     }  
-      
-    .full-start-new.left-title::after {    
-        background: linear-gradient(to right, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.2) 100%) !important;    
-    }  
-      
+  
     .full-start-new__right::before,  
-    .full-start-new__right::after {    
-        opacity: 0.2 !important;    
+    .full-start-new__right::after {  
+        display: none !important;  
     }  
-      
-    .left-title__content::before {    
-        opacity: 0.25 !important;    
+  
+    .left-title__content::before {  
+        display: none !important;  
     }  
       
     /* Анімація фону */  
@@ -367,6 +362,7 @@
     Lampa.Template.add('left_title_css', styles);                  
     $('body').append(Lampa.Template.get('left_title_css', {}, true));                  
 }
+
     function getCachedData(id) {              
         const cache = Lampa.Storage.get('cas_images_cache') || {};              
         const item = cache[id];              
