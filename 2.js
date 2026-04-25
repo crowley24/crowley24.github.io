@@ -258,11 +258,30 @@ function addStyles() {
         padding-left: 0%;  
         margin-bottom: calc(var(--cas-blocks-gap) * 1.5);  
         max-height: 300px;  
+        display: flex;  
+        align-items: center;  
+        justify-content: flex-start;  
+    }  
+      
+    .cas-logo {  
+        max-width: 100%;  
+        max-height: 300px;  
+        display: flex;  
+        align-items: center;  
+        justify-content: flex-start;  
+    }  
+      
+    .cas-logo img {  
+        max-width: 100%;  
+        max-height: 300px;  
+        object-fit: contain;  
+        height: auto !important;  
+        width: auto !important;  
     }  
       
     .full-start__background {  
         transform: scale(1.1);  
-        transition: transform 0.8s ease-out, opacity 0.8s ease;  
+        transition: transform 0.8s ease-out, opacity 0.8s ease, filter 0.3s ease;  
         opacity: 1 !important;  
     }  
       
@@ -291,7 +310,7 @@ function addStyles() {
     .cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.4s; }  
     .cas-animated .cas-description { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.15s; }  
       
-    /* Додаткові стилі для повноцінної роботи */  
+    /* Інші стилі */  
     .cas-studio-item {  
         display: flex;  
         align-items: center;  
@@ -568,26 +587,30 @@ function addStyles() {
     }, 250);              
               
 function attachLoader() {  
-    // Додаємо обробник прокрутки для затемнення фону  
-    $(window).on('scroll', function() {  
-        const scrollTop = $(window).scrollTop();  
-        const bg = $('.full-start__background');  
-          
-        if (scrollTop > 50) {  
-            bg.addClass('scrolled');  
-        } else {  
-            bg.removeClass('scrolled');  
-        }  
-    });  
-  
     Lampa.Listener.follow('full', (event) => {  
         if (event.type === 'complite') {  
             const data = event.data.movie;  
             const render = event.object.activity.render();  
             const content = render.find('.left-title__content');  
+            const bg = render.find('.full-start__background');  
               
             content.removeClass('cas-animated');  
             event.object.activity.onBeforeDestroy = cleanup;  
+              
+            // Примусово видаляємо клас scrolled при відкритті картки  
+            bg.removeClass('scrolled');  
+              
+            // Додаємо обробник прокрутки для затемнення фону  
+            $(window).off('scroll.cas-dimming'); // Видаляємо попередні обробники  
+            $(window).on('scroll.cas-dimming', function() {  
+                const scrollTop = $(window).scrollTop();  
+                  
+                if (scrollTop > 50) {  
+                    bg.addClass('scrolled');  
+                } else {  
+                    bg.removeClass('scrolled');  
+                }  
+            });  
               
             if (data && data.id) {  
                 render.data('movie', data);  
@@ -625,7 +648,7 @@ function attachLoader() {
         }  
     });  
 }
-             
+            
     function startPlugin() {                 
         try {                
             initializePlugin();                
