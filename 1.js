@@ -245,168 +245,109 @@
         Lampa.Template.add('full_start_new', template);                  
     }              
               
-       function addStyles() {                
-    if ($('#cas-main-styles').length) return;            
-
-    const styles = `<style id="cas-main-styles">                
-
-    :root { 
-        --cas-logo-scale: 1; 
-        --cas-blocks-gap: 30px; 
-        --cas-meta-size: 1.3em; 
-        --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); 
-    }                
-
-    /* ===================== 🔥 ПРАВИЛЬНО ВБИВАЄМО ЗАТЕМНЕННЯ ===================== */
-
-    /* прибираємо тільки затемнюючі шари */
-    .full-start__background::before,
-    .full-start__background::after {
-        background: none !important;
-        opacity: 0 !important;
-    }
-
-    /* НЕ ЧІПАЄМО mask-image !!! (це важливо) */
-
-    /* прибираємо затемнення, але не ламаємо layout */
-    .full-start__background {
-        filter: none !important;
-    }
-
-    .full-start__background.scrolled {
-        filter: none !important;
-    }
-
-    /* якщо є overlay */
-    .applecation__overlay {
-        display: none !important;
-    }
-
-    /* ===================================================================== */
-
-    .full-start__background {                
-        will-change: transform, opacity; 
-        backface-visibility: hidden; 
-        perspective: 1000px; 
-        transform: translateZ(0); 
-        transition: opacity 0.8s ease; 
-    }                
-
-    .cas-logo-container {         
-        position: relative;         
-        overflow: visible;         
-        max-width: 100%;         
-        padding-left: 0%;        
-        margin-bottom: calc(var(--cas-blocks-gap) * 1.5);        
-        max-height: 300px;        
-    }                
-
-    .full-start__background {                
-        transform: scale(1.1);                
-        transition: transform 0.8s ease-out, opacity 0.8s ease;                
-    }           
-
-    .cas-animated .full-start__background {                
-        transform: scale(1);                
-    }                
-
-    .cas-logo, 
-    .cas-studios-row, 
-    .cas-rate-items, 
-    .cas-meta-info, 
-    .cas-quality-row, 
-    .cas-description, 
-    .cas-details-wrapper {                 
-        opacity: 0 !important;                 
-        transform: translateY(10px);                 
-        transition: opacity 0.4s var(--cas-anim-curve), transform 0.4s var(--cas-anim-curve);                 
-        will-change: transform, opacity;                
-    }                  
-
-    .cas-animated .cas-logo { opacity: 1 !important; transform: translateY(0); transition-delay: 0s; }                  
-    .cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.1s; }                  
-    .cas-animated .cas-rate-items { opacity: 1 !important; transform: translateY(0); transition-delay: 0.2s; }                  
-    .cas-animated .cas-meta-info { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.3s; }                  
-    .cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.4s; }                  
-    .cas-animated .cas-description { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.15s; }            
-
-    .full-start-new__details { display: none !important; }                  
-    .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }                  
-
-    .full-start-new__buttons {                 
-        display: flex !important;                 
-        flex-direction: row !important;                 
-        gap: 20px;                 
-        margin-top: 0.2em;                
-        opacity:1 !important;                 
-        transform: translateY(20px) scale(0.9);                 
-        transition:none !important;                 
-        will-change: transform, opacity;                
-    }                  
-
-    .cas-animated .full-start-new__buttons { 
-        opacity: 1 !important; 
-        transform: translateY(0) scale(1); 
-        transition-delay: 0.6s; 
-    }                  
-
-    .left-title .full-start-new__buttons .full-start__button {                 
-        background: transparent !important;                 
-        color: rgba(255,255,255,0.6) !important;                 
-        display: flex;                 
-        align-items: center;                 
-        gap: 10px;                 
-        transition: all 0.3s ease;                
-        border: 2px solid transparent !important;              
-        border-radius: 8px !important;              
-        padding: 8px 16px !important;              
-    }                  
-
-    .left-title .full-start-new__buttons .full-start__button.focus {            
-        color:#fff!important;            
-        transform:scale(1.04);            
-        background:rgba(255,255,255,0.12)!important;            
-        border-color:rgba(255,255,255,0.25)!important;            
-    }             
-
-    /* 🔥 ПОВЕРТАЄМО НОРМАЛЬНІ РОЗМІРИ */
-
-    .cas-studio-item {
-        height: 2.3em !important;
-    }
-
-    .cas-studio-item img {
-        height: 100% !important;
-        width: auto !important;
-    }
-
-    .cas-quality-item img {
-        height: 12px !important;
-    }
-
-    .cas-rate-item img {
-        height: 1.1em !important;
-    }
-
-    .cas-logo img {         
-        max-width: 450px;         
-        max-height: 200px;         
-        transform: scale(var(--cas-logo-scale));         
-        transform-origin: left center;        
-        object-fit: contain;        
-    }       
-
-    .cas-description { 
-        font-size: var(--cas-meta-size) !important; 
-        line-height: 1.4; 
-        color: rgba(255,255,255,0.7); 
-        max-width: 650px; 
-    }                  
-
-    </style>`;                
-
-    Lampa.Template.add('left_title_css', styles);                
-    $('body').append(Lampa.Template.get('left_title_css', {}, true));                
+       function addStyles() {                      
+    if ($('#cas-main-styles').length) return;                  
+    const styles = `<style id="cas-main-styles">                      
+    :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); } [1](#20-0)   
+      
+    /* Фон - переопределяем стандартную анимацию на fade */  
+    .full-start__background {   
+        height: calc(100% + 6em);   
+        left: 0 !important;   
+        opacity: 0 !important;   
+        transition: opacity 0.6s ease-out, filter 0.3s ease-out !important;   
+        animation: none !important;   
+        transform: none !important;   
+        will-change: opacity, filter;   
+        filter: none !important;  
+    }   
+      
+    .full-start__background.loaded:not(.dim) {   
+        opacity: 1 !important;   
+        filter: none !important;  
+    }   
+      
+    .full-start__background.dim {   
+        filter: blur(30px);   
+    }  
+      
+    /* Удерживаем opacity при загрузке нового фона */  
+    .full-start__background.loaded.applecation-animated {   
+        opacity: 1 !important;   
+    }   
+      
+    body:not(.menu--open) .full-start__background {   
+        mask-image: none;   
+    }  
+      
+    /* Отключаем стандартную анимацию Lampa для фона */  
+    body.advanced--animation:not(.no--animation) .full-start__background.loaded {   
+        animation: none !important;   
+    }  
+      
+    /* Прибираємо всі градієнтні оверлеї */  
+    .full-start-new::before,  
+    .full-start-new::after,  
+    .full-start-new__right::before,  
+    .full-start-new__right::after,  
+    .left-title__content::before,  
+    .left-title__content::after {  
+        display: none !important;  
+    }  
+      
+    /* Ефект затемнення при прокрутці */  
+    .full-start__background.scrolled {  
+        filter: brightness(0.9) !important;  
+    }  
+      
+    /* Решта стилів вашого плагіна */  
+    .cas-animated .full-start__background { transform: scale(1); }  
+    .cas-logo-container { position: relative; overflow: visible; max-width: 100%; padding-left: 0%; margin-bottom: calc(var(--cas-blocks-gap) * 1.5); max-height: 300px; }  
+    .cas-logo, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper { opacity: 0 !important; transform: translateY(10px); transition: opacity 0.4s var(--cas-anim-curve), transform 0.4s var(--cas-anim-curve); will-change: transform, opacity; }  
+    .cas-animated .cas-logo { opacity: 1 !important; transform: translateY(0); transition-delay: 0s; }  
+    .cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.1s; }  
+    .cas-animated .cas-rate-items { opacity: 1 !important; transform: translateY(0); transition-delay: 0.2s; }  
+    .cas-animated .cas-meta-info { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.3s; }  
+    .cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.4s; }  
+    .cas-animated .cas-description { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.5s; }  
+    .cas-animated .cas-details-wrapper { opacity: 0.8 !important; transform: translateY(0); transition-delay: 0.6s; }  
+    .cas-logo { text-align: left; margin-bottom: 1.5em; }  
+    .cas-logo img { max-height: 200px; max-width: 450px; object-fit: contain; }  
+    .cas-studios-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 1em; }  
+    .cas-studio-item { height: 2.3em !important; display: flex; align-items: center; justify-content: center; background: rgba(255, 255, 255, 0.1); padding: 4px 8px; border-radius: 6px; }  
+    .cas-studio-item img { height: 100%; width: auto; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); opacity: 1; transition: all 0.3s ease; }  
+    .cas-rate-items { display: flex; gap: 15px; margin-bottom: 1em; }  
+    .cas-rate-item { display: flex; align-items: center; gap: 6px; }  
+    .cas-rate-item img { height: 1.1em; }  
+    .cas-quality-row { display: flex; gap: 8px; margin-bottom: 1em; }  
+    .cas-quality-item { display: flex; align-items: center; gap: 4px; }  
+    .cas-quality-item img { height: 12px; }  
+    .cas-meta-info { display: flex; align-items: center; gap: 8px; font-weight: 400; }  
+    .cas-description { font-size: var(--cas-meta-size) !important; line-height: 1.4; color: rgba(255,255,255,0.7); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-width: 650px; margin-top: calc(var(--cas-blocks-gap) * 0.4); }  
+    .left-title .full-start-new__body { height: 85vh; }  
+    .left-title .full-start-new__right { display: flex; align-items: flex-end; justify-content: flex-start; padding-bottom: 2vh; padding-left: 1.5%; }  
+      
+    /* Ken Burns анімація */  
+    @keyframes casKenBurnsParallax {           
+        0% { transform: scale(1.1) translateY(0px) translateX(0px); }           
+        25% { transform: scale(1.13) translateY(-10px) translateX(-5px); }           
+        50% { transform: scale(1.15) translateY(-20px) translateX(5px); }           
+        75% { transform: scale(1.13) translateY(-10px) translateX(-3px); }           
+        100% { transform: scale(1.1) translateY(0px) translateX(0px); }           
+    }          
+              
+    body.cas--zoom-enabled .full-start__background.loaded {           
+        animation: casKenBurnsParallax 50s ease-in-out infinite !important;           
+        will-change: transform;           
+    }          
+              
+    .full-start__background img {           
+        transform: translateZ(0);           
+        -webkit-transform: translateZ(0);           
+    }          
+    </style>`;                      
+    Lampa.Template.add('left_title_css', styles);                      
+    $('body').append(Lampa.Template.get('left_title_css', {}, true));                      
 }
     
     function getCachedData(id) {              
