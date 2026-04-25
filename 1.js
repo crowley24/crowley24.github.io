@@ -1,6 +1,5 @@
 (function () {              
-    'use strict';   
-    
+    'use strict';              
     const PLUGIN_NAME = 'NewCard';              
     const PLUGIN_ID = 'new_card_style';              
     const ASSETS_PATH = 'https://crowley38.github.io/Icons/';              
@@ -245,209 +244,200 @@
         Lampa.Template.add('full_start_new', template);                  
     }              
               
-function addStyles() {    
-    if ($('#cas-main-styles').length) return;    
-    const styles = `<style id="cas-main-styles">    
-    :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); }    
-      
-    /* Додано для відображення метаданих в одному рядку */  
-    .cas-meta-line {  
-        display: flex;  
-        align-items: center;  
-        gap: 15px;  
-        margin-bottom: 12px;  
-        flex-wrap: wrap;  
+function addStyles() {  
+    if ($('#cas-main-styles').length) return;  
+    const styles = `<style id="cas-main-styles">  
+    :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); }  
+            
+    /* Чистий фон без стандартних фільтрів Lampa */  
+    .full-start__background {  
+        height: calc(100% + 6em);  
+        left: 0 !important;  
+        opacity: 0 !important;  
+        transition: opacity 0.6s ease-out !important;  
+        will-change: opacity;  
+        transform: scale(1.05);  
+    }  
+        
+    .full-start__background.loaded {  
+        opacity: 1 !important;  
+    }  
+  
+    .full-start__background.dim {  
+        opacity: 0.35 !important;  
+    }  
+        
+    /* Відключення стандартної анімації Lampa */  
+    body.advanced--animation:not(.no--animation) .full-start__background.loaded {  
+        animation: none !important;  
+    }  
+            
+    /* Елегантна Ken Burns анімація */  
+    @keyframes casKenBurnsParallax {  
+        0% { transform: scale(1.05) translateY(0px) translateX(0px); }  
+        25% { transform: scale(1.08) translateY(-12px) translateX(-6px); }  
+        50% { transform: scale(1.12) translateY(-18px) translateX(8px); }  
+        75% { transform: scale(1.09) translateY(-10px) translateX(-4px); }  
+        100% { transform: scale(1.05) translateY(0px) translateX(0px); }  
     }  
               
-    /* Чистий фон без стандартних фільтрів Lampa */    
-    .full-start__background {    
-        height: calc(100% + 6em);    
-        left: 0 !important;    
-        opacity: 0 !important;    
-        transition: opacity 0.6s ease-out !important;    
-        will-change: opacity;    
-        transform: scale(1.05);    
-    }    
-          
-    .full-start__background.loaded {    
-        opacity: 1 !important;    
-    }    
+    body.cas--zoom-enabled .full-start__background.loaded {  
+        animation: casKenBurnsParallax 50s ease-in-out infinite !important;  
+        will-change: transform;  
+    }  
     
-    .full-start__background.dim {    
-        opacity: 0.35 !important;    
-    }    
-          
-    /* Відключення стандартної анімації Lampa */    
-    body.advanced--animation:not(.no--animation) .full-start__background.loaded {    
-        animation: none !important;    
-    }    
+    /* Додатковий subtle ефект глибини */  
+    body.cas--zoom-enabled .full-start__background::after {  
+        content: '';  
+        position: absolute;  
+        top: 0;  
+        left: 0;  
+        right: 0;  
+        bottom: 0;  
+        background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.1) 100%);  
+        pointer-events: none;  
+        animation: vignettePulse 50s ease-in-out infinite;  
+    }  
+    
+    @keyframes vignettePulse {  
+        0%, 100% { opacity: 0.3; }  
+        50% { opacity: 0.1; }  
+    }  
+      
+    /* Анімації контенту */  
+    .cas-logo, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper {  
+        opacity: 0 !important;  
+        transform: translateY(10px);  
+        transition: opacity 0.4s var(--cas-anim-curve), transform 0.4s var(--cas-anim-curve);  
+        will-change: transform, opacity;  
+    }  
+                        
+    .cas-animated .cas-logo { opacity: 1 !important; transform: translateY(0); transition-delay: 0s; }  
+    .cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.1s; }  
+    .cas-animated .cas-rate-items { opacity: 1 !important; transform: translateY(0); transition-delay: 0.2s; }  
+    .cas-animated .cas-meta-info { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.3s; }  
+    .cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.4s; }  
+    .cas-animated .cas-description { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.15s; }  
               
-    /* Елегантна Ken Burns анімація */    
-    @keyframes casKenBurnsParallax {    
-        0% { transform: scale(1.05) translateY(0px) translateX(0px); }    
-        25% { transform: scale(1.08) translateY(-12px) translateX(-6px); }    
-        50% { transform: scale(1.12) translateY(-18px) translateX(8px); }    
-        75% { transform: scale(1.09) translateY(-10px) translateX(-4px); }    
-        100% { transform: scale(1.05) translateY(0px) translateX(0px); }    
-    }    
-                
-    body.cas--zoom-enabled .full-start__background.loaded {    
-        animation: casKenBurnsParallax 50s ease-in-out infinite !important;    
-        will-change: transform;    
-    }    
+    .full-start-new__details { display: none !important; }  
+    .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }  
+    .full-start-new__body { display: flex; height: 85vh; position: relative; }  
+    .full-start-new__left { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 4em 3em 2em 4em; position: relative; z-index: 2; }  
+    .full-start-new__right { width: 50%; display: flex; flex-direction: column; justify-content: space-between; padding: 4em 4em 2em 0; position: relative; z-index: 2; }  
+    .full-start-new__poster { display: none; }  
+    .full-start-new__title { display: none; }  
+                        
+    .left-title .full-start-new__left { width: 50%; }  
+    .left-title .full-start-new__right { width: 50%; }  
+                        
+    .cas-logo-container {  
+        position: relative;  
+        overflow: visible;  
+        max-width: 100%;  
+        padding-left: 0%;  
+        margin-bottom: calc(var(--cas-blocks-gap) * 1.5);  
+        max-height: 300px;  
+    }  
+                        
+    .cas-logo img {  
+        background: transparent !important;  
+        border: none !important;  
+        max-width: 450px;  
+        max-height: 200px;  
+        width: auto;  
+        height: auto;  
+        transform: scale(var(--cas-logo-scale));  
+        transform-origin: left center;  
+        display: block;  
+        object-fit: contain;  
+    }  
+           
+    /* Вирівнювання відступів для всіх елементів */  
+    .cas-logo-container,  
+    .cas-studios-row,  
+    .cas-ratings-line,  
+    .cas-description {  
+        margin-left: 0;  
+        margin-right: 0;  
+        padding-left: 0;  
+        padding-right: 0;  
+    }  
+    
+    /* Вирівнювання елементів у рядку метаданих */  
+    .cas-ratings-line {  
+        display: flex;  
+        align-items: center;  
+        gap: 8px !important;  
+        flex-wrap: wrap;  
+        margin-bottom: 8px !important;  
+    }  
+    
+    .cas-meta-info {  
+        margin-right: 0;  
+        display: flex;  
+        align-items: center;  
+        gap: 8px;  
+    }  
+    
+    .cas-quality-row {  
+        margin-top: 0 !important;  
+        display: flex;  
+        align-items: center;  
+        gap: 6px;  
+    }  
+    
+    .cas-sep {  
+        margin: 0 2px !important;  
+    }  
+                        
+    .cas-studios-row {  
+        display: flex;  
+        flex-wrap: wrap;  
+        gap: 8px;  
+        margin-bottom: calc(var(--cas-blocks-gap) * 0.8);  
+    }  
+                        
+    .cas-studio-item {  
+        height: 2.3em !important;  
+        display: flex;  
+        align-items: center;  
+        justify-content: center;  
+        background: rgba(255, 255, 255, 0.1);  
+        padding: 4px 8px;  
+        border-radius: 6px;  
+    }  
+    .cas-studio-item img {  
+        height: 100%;  
+        width: auto;  
+        object-fit: contain;  
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));  
+        opacity: 1;  
+        transition: all 0.3s ease;  
+    }  
+    .cas-description { font-size: var(--cas-meta-size) !important; line-height: 1.4; color: rgba(255,255,255,0.7); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-width: 650px; margin-top: calc(var(--cas-blocks-gap) * 0.4); }  
+    .cas-quality-item img { height: 12px; }  
+    .cas-ratings-line { display: flex; align-items: center; gap: 15px; margin-bottom: 5px; font-size: var(--cas-meta-size); font-weight: 600; height: 30px; }  
+    .cas-rate-item { display: flex; align-items: center; gap: 6px; }  
+    .cas-rate-item img { height: 1.1em; }  
+    .left-title .full-start-new__body { height: 85vh; }  
+    .cas-meta-info { display: flex; align-items: center; gap: 8px; font-weight: 400; }  
+                        
+    .full-start__background img {  
+        transform: translateZ(0);  
+        -webkit-transform: translateZ(0);  
+    }  
       
-    /* Додатковий subtle ефект глибини */    
-    body.cas--zoom-enabled .full-start__background::after {    
-        content: '';    
-        position: absolute;    
-        top: 0;    
-        left: 0;    
-        right: 0;    
-        bottom: 0;    
-        background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.1) 100%);    
-        pointer-events: none;    
-        animation: vignettePulse 50s ease-in-out infinite;    
-    }    
-      
-    @keyframes vignettePulse {    
-        0%, 100% { opacity: 0.3; }    
-        50% { opacity: 0.1; }    
-    }    
-        
-    /* Анімації контенту */    
-    .cas-logo, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper {    
-        opacity: 0 !important;    
-        transform: translateY(10px);    
-        transition: opacity 0.4s var(--cas-anim-curve), transform 0.4s var(--cas-anim-curve);    
-        will-change: transform, opacity;    
-    }    
-                          
-    .cas-animated .cas-logo { opacity: 1 !important; transform: translateY(0); transition-delay: 0s; }    
-    .cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.1s; }    
-    .cas-animated .cas-rate-items { opacity: 1 !important; transform: translateY(0); transition-delay: 0.2s; }    
-    .cas-animated .cas-meta-info { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.3s; }    
-    .cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.4s; }    
-    .cas-animated .cas-description { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.15s; }    
-                
-    .full-start-new__details { display: none !important; }    
-    .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }    
-    .full-start-new__body { display: flex; height: 85vh; position: relative; }    
-    .full-start-new__left { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 4em 3em 2em 4em; position: relative; z-index: 2; }    
-    .full-start-new__right { width: 50%; display: flex; flex-direction: column; justify-content: space-between; padding: 4em 4em 2em 0; position: relative; z-index: 2; }    
-    .full-start-new__poster { display: none; }    
-    .full-start-new__title { display: none; }    
-                          
-    .left-title .full-start-new__left { width: 50%; }    
-    .left-title .full-start-new__right { width: 50%; }    
-                          
-    .cas-logo-container {    
-        position: relative;    
-        overflow: visible;    
-        max-width: 100%;    
-        padding-left: 0%;    
-        margin-bottom: calc(var(--cas-blocks-gap) * 1.5);    
-        max-height: 300px;    
-    }    
-                          
-    .cas-logo img {    
-        background: transparent !important;    
-        border: none !important;    
-        max-width: 450px;    
-        max-height: 200px;    
-        width: auto;    
-        height: auto;    
-        transform: scale(var(--cas-logo-scale));    
-        transform-origin: left center;    
-        display: block;    
-        object-fit: contain;    
-    }    
-             
-    /* Вирівнювання відступів для всіх елементів */    
-    .cas-logo-container,    
-    .cas-studios-row,    
-    .cas-ratings-line,    
-    .cas-description {    
-        margin-left: 0;    
-        margin-right: 0;    
-        padding-left: 0;    
-        padding-right: 0;    
-    }    
-      
-    /* Вирівнювання елементів у рядку метаданих */    
-    .cas-ratings-line {    
-        display: flex;    
-        align-items: center;    
-        gap: 8px !important;    
-        flex-wrap: wrap;    
-        margin-bottom: 8px !important;    
-    }    
-      
-    .cas-meta-info {    
-        margin-right: 0;    
-        display: flex;    
-        align-items: center;    
-        gap: 8px;    
-    }    
-      
-    .cas-quality-row {    
-        margin-top: 0 !important;    
-        display: flex;    
-        align-items: center;    
-        gap: 6px;    
-    }    
-      
-    .cas-sep {    
-        margin: 0 2px !important;    
-    }    
-                          
-    .cas-studios-row {    
-        display: flex;    
-        flex-wrap: wrap;    
-        gap: 8px;    
-        margin-bottom: calc(var(--cas-blocks-gap) * 0.8);    
-    }    
-                          
-    .cas-studio-item {    
-        height: 2.3em !important;    
-        display: flex;    
-        align-items: center;    
-        justify-content: center;    
-        background: rgba(255, 255, 255, 0.1);    
-        padding: 4px 8px;    
-        border-radius: 6px;    
-    }    
-    .cas-studio-item img {    
-        height: 100%;    
-        width: auto;    
-        object-fit: contain;    
-        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));    
-        opacity: 1;    
-        transition: all 0.3s ease;    
-    }    
-    .cas-description { font-size: var(--cas-meta-size) !important; line-height: 1.4; color: rgba(255,255,255,0.7); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-width: 650px; margin-top: calc(var(--cas-blocks-gap) * 0.4); }    
-    .cas-quality-item img { height: 12px; }    
-    .cas-ratings-line { display: flex; align-items: center; gap: 15px; margin-bottom: 5px; font-size: var(--cas-meta-size); font-weight: 600; height: 30px; }    
-    .cas-rate-item { display: flex; align-items: center; gap: 6px; }    
-    .cas-rate-item img { height: 1.1em; }    
-    .left-title .full-start-new__body { height: 85vh; }    
-    .cas-meta-info { display: flex; align-items: center; gap: 8px; font-weight: 400; }    
-                          
-    .full-start__background img {    
-        transform: translateZ(0);    
-        -webkit-transform: translateZ(0);    
-    }    
-        
-    .cas-audio-item {    
-        background: rgba(255, 255, 255, 0.2);    
-        padding: 2px 6px;    
-        border-radius: 4px;    
-        font-size: 0.8em;    
-        font-weight: 600;    
-        color: white;    
-    }    
-    </style>`;    
-    Lampa.Template.add('left_title_css', styles);    
-    $('body').append(Lampa.Template.get('left_title_css', {}, true));    
+    .cas-audio-item {  
+        background: rgba(255, 255, 255, 0.2);  
+        padding: 2px 6px;  
+        border-radius: 4px;  
+        font-size: 0.8em;  
+        font-weight: 600;  
+        color: white;  
+    }  
+    </style>`;  
+    Lampa.Template.add('left_title_css', styles);  
+    $('body').append(Lampa.Template.get('left_title_css', {}, true));  
 }
      function getCachedData(id) {              
         const cache = Lampa.Storage.get('cas_images_cache') || {};              
@@ -592,19 +582,13 @@ async function loadMovieDataOptimized(render, data) {
         }));  
     }  
       
-    // Об'єднана задача для всіх метаданих  
-    tasks.push(Promise.resolve().then(async () => {  
-        // Логотип студії  
-        if (Lampa.Storage.get('cas_show_studios')) {  
-            renderStudioLogosWithColorAnalysis(render.find('.cas-studios-row'), data);  
-        }  
-          
-        // Текстові метадані  
+    // Об'єднана задача для метаданих та рейтингів з іконками  
+    tasks.push(Promise.resolve().then(() => {  
         const year = data.release_date ? new Date(data.release_date).getFullYear() : (data.first_air_date ? new Date(data.first_air_date).getFullYear() : '');  
         const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));  
         const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');  
           
-        // Рейтинги  
+        // Рейтинги з іконками  
         let ratings = '';  
         const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);  
         if (tmdbV > 0) {  
@@ -614,8 +598,8 @@ async function loadMovieDataOptimized(render, data) {
         if (data.reactions && data.reactions.result) {  
             let sum = 0, cnt = 0;  
             const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };  
-            data.reactions.result.forEach(r => {           
-                if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; }          
+            data.reactions.result.forEach(r => {         
+                if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; }        
             });  
             if (cnt >= 1) {  
                 const isTv = data.name ? true : false;  
@@ -625,7 +609,7 @@ async function loadMovieDataOptimized(render, data) {
             }  
         }  
           
-        // Формуємо текстові метадані  
+        // Формуємо повний рядок  
         let metaText = '';  
         if (year) metaText += year;  
         if (time) metaText += (metaText ? ' • ' : '') + time;  
@@ -633,36 +617,19 @@ async function loadMovieDataOptimized(render, data) {
         if (ratings) metaText += (metaText ? ' • ' : '') + ratings;  
           
         render.find('.cas-meta-info').html(metaText);  
-          
-        // Обробка якості (тепер синхронно в основній задачі)  
-        if (Lampa.Storage.get('cas_show_quality')) {  
-            try {  
-                // Спробуємо отримати якість синхронно або з кешу  
-                const qualityData = await getQualityData(data);  
-                if (qualityData) {  
-                    render.find('.cas-quality-row').html(qualityData).show();  
-                } else {  
-                    render.find('.cas-quality-row').hide();  
-                }  
-            } catch (error) {  
-                render.find('.cas-quality-row').hide();  
-            }  
-        } else {  
-            render.find('.cas-quality-row').hide();  
-        }  
+        render.find('.cas-rate-items').empty(); // Очищуємо окремий блок рейтингів  
     }));  
       
+    if (Lampa.Storage.get('cas_show_studios')) {  
+        tasks.push(Promise.resolve().then(() => {  
+            renderStudioLogosWithColorAnalysis(render.find('.cas-studios-row'), data);  
+        }));  
+    }  
+      
     await Promise.all(tasks);  
-}  
-  
-// Допоміжна функція для отримання даних про якість  
-async function getQualityData(data) {  
-    return new Promise((resolve) => {  
-        if (!Lampa.Parser.get) {  
-            resolve(null);  
-            return;  
-        }  
-          
+      
+    // Обробка якості з підтримкою аудіо форматів  
+    if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {  
         Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {  
             try {  
                 const items = res.Results || res;  
@@ -686,18 +653,23 @@ async function getQualityData(data) {
                     if (b.audio) qH += `<div class="cas-quality-item cas-audio-item">${b.audio}</div>`;  
                     if (b.ukr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;  
                       
-                    resolve(qH || null);  
-                } else {  
-                    resolve(null);  
+                    if (qH) {  
+                      render.find('.cas-quality-row').html(qH).show();
+                    }  
                 }  
             } catch (error) {  
-                resolve(null);  
+                render.find('.cas-quality-row').hide();  
             }  
         }).fail(() => {  
-            resolve(null);  
+            render.find('.cas-quality-row').hide();  
         });  
-    });  
-}       
+    } else {  
+        render.find('.cas-quality-row').hide();  
+    }  
+}           
+    const debouncedLoadMovieData = debounce((render, data) => {              
+        try { loadMovieDataOptimized(render, data); } catch (error) {}              
+    }, 250);              
               
     function attachLoader() {              
         Lampa.Listener.follow('full', (event) => {              
