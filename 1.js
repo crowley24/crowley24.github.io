@@ -265,7 +265,42 @@
         transition: transform 0.8s ease-out, opacity 0.8s ease;                
         filter: none !important; /* Прибираємо всі фільтри */                
         opacity: 1 !important; /* Забезпечуємо повну непрозорість */                
-    }                
+    }          
+
+    /* Зменшуємо градієнтні оверлеї замість повного прибрання */  
+.full-start-new.left-title::before,  
+.full-start-new.left-title::after {  
+    opacity: 0.3 !important; /* Зменшуємо непрозорість з 1 до 0.3 */  
+}  
+  
+.full-start-new__right::before,  
+.full-start-new__right::after {  
+    opacity: 0.2 !important; /* Що менше затемнення для правої частини */  
+}  
+  
+/* Зменшуємо градієнт на контенті */  
+.left-title__content::before {  
+    opacity: 0.25 !important;  
+}  
+  
+/* Або alternatively, можна змінити градієнти на менш інтенсивні */  
+.full-start-new.left-title::before {  
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.3) 100%) !important;  
+}  
+  
+.full-start-new.left-title::after {  
+    background: linear-gradient(to right, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.2) 100%) !important;  
+}  
+  
+/* Перевизначаємо стилі для фону */  
+.full-start__background {  
+    filter: none !important;  
+    opacity: 1 !important;  
+}  
+  
+.full-start__background.scrolled {  
+    filter: brightness(0.8) !important; /* Менше затемнення при прокрутці */  
+}
                 
     /* Ефект затемнення при прокрутці вниз */  
     .full-start__background.scrolled {                
