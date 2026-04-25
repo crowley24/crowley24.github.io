@@ -245,7 +245,7 @@
         Lampa.Template.add('full_start_new', template);                  
     }              
               
-        function addStyles() {  
+function addStyles() {  
     if ($('#cas-main-styles').length) return;  
     const styles = `<style id="cas-main-styles">  
     :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); }  
@@ -263,16 +263,18 @@
     .full-start__background {  
         transform: scale(1.1);  
         transition: transform 0.8s ease-out, opacity 0.8s ease, filter 0.3s ease;  
+        /* Видаляємо filter: none !important та opacity: 1 !important */  
     }  
       
-    /* Ефект затемнення при прокрутці вниз */  
+    /* Ефект затемнення тільки при скролі */  
     .full-start__background.scrolled {  
         filter: brightness(0.7) !important;  
+        transition: filter 0.3s ease;  
     }  
       
     .cas-animated .full-start__background {  
         transform: scale(1);  
-    }                
+    }                  
                 
     .cas-logo, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper {                 
         opacity: 0 !important;                 
