@@ -260,9 +260,9 @@
         transform: scale(1.05);      
     }      
       
-    .full-start__background.loaded:not(.dim) {      
-        opacity: 1 !important;      
-    }      
+    .full-start__background.dim {
+    opacity: 0.3 !important; /* або 0.4–0.5 підбери */
+}   
       
     /* Відключення стандартної анімації Lampa */      
     body.advanced--animation:not(.no--animation) .full-start__background.loaded {      
