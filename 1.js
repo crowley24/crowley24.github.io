@@ -528,84 +528,100 @@
         }              
     }              
               
-    async function loadMovieDataOptimized(render, data) {              
-        const tasks = [];              
-        if (Lampa.Storage.get('cas_show_description')) {              
-            tasks.push(Promise.resolve().then(() => {              
-                render.find('.cas-description').html(data.overview || '').css('opacity','1').show();              
-            }));              
-        }              
-        if (Lampa.Storage.get('cas_show_rating')) {              
-            tasks.push(Promise.resolve().then(() => {              
-                const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);              
-                let ratesHtml = tmdbV > 0 ? `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>` : '';      
-                      
-                if (data.reactions && data.reactions.result) {      
-                    let sum = 0, cnt = 0;      
-                    const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };      
-                    data.reactions.result.forEach(r => {       
-                        if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; }      
-                    });      
-                    if (cnt >= 1) {      
-                        const isTv = data.name ? true : false;      
-                        const cubV = (((isTv?7.4:6.5)*(isTv?50:150)+sum)/((isTv?50:150)+cnt)).toFixed(1);      
-                        ratesHtml += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;      
-                    }      
-                }      
-                render.find('.cas-rate-items').html(ratesHtml);              
-            }));              
-        }              
+async function loadMovieDataOptimized(render, data) {  
+    const tasks = [];  
+      
+    if (Lampa.Storage.get('cas_show_description')) {  
         tasks.push(Promise.resolve().then(() => {  
-    const year = data.release_date ? new Date(data.release_date).getFullYear() : (data.first_air_date ? new Date(data.first_air_date).getFullYear() : '');  
-    const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));  
-    const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');  
+            render.find('.cas-description').html(data.overview || '').css('opacity','1').show();  
+        }));  
+    }  
       
-    let metaText = '';  
-    if (year) metaText += year;  
-    if (time) metaText += (metaText ? ' • ' : '') + time;  
-    if (genre) metaText += (metaText ? ' • ' : '') + genre;  
+    // Об'єднана задача для метаданих та рейтингів  
+    tasks.push(Promise.resolve().then(() => {  
+        const year = data.release_date ? new Date(data.release_date).getFullYear() : (data.first_air_date ? new Date(data.first_air_date).getFullYear() : '');  
+        const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));  
+        const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');  
+          
+        // Рейтинги  
+        let ratings = '';  
+        const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);  
+        if (tmdbV > 0) {  
+            ratings += `<span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span>`;  
+        }  
+          
+        if (data.reactions && data.reactions.result) {  
+            let sum = 0, cnt = 0;  
+            const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };  
+            data.reactions.result.forEach(r => {         
+                if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; }        
+            });  
+            if (cnt >= 1) {  
+                const isTv = data.name ? true : false;  
+                const cubV = (((isTv?7.4:6.5)*(isTv?50:150)+sum)/((isTv?50:150)+cnt)).toFixed(1);  
+                if (ratings) ratings += ' • ';  
+                ratings += `<span style="color:${getRatingColor(cubV)}">${cubV}</span>`;  
+            }  
+        }  
+          
+        // Формуємо повний рядок  
+        let metaText = '';  
+        if (year) metaText += year;  
+        if (time) metaText += (metaText ? ' • ' : '') + time;  
+        if (genre) metaText += (metaText ? ' • ' : '') + genre;  
+        if (ratings) metaText += (metaText ? ' • ' : '') + ratings;  
+          
+        render.find('.cas-meta-info').html(metaText);  
+        render.find('.cas-rate-items').empty(); // Очищуємо окремий блок рейтингів  
+    }));  
       
-    render.find('.cas-meta-info').text(metaText);  
-}));              
-        if (Lampa.Storage.get('cas_show_studios')) {              
-            tasks.push(Promise.resolve().then(() => {              
-                renderStudioLogosWithColorAnalysis(render.find('.cas-studios-row'), data);              
-            }));              
-        }              
-        await Promise.all(tasks);              
-        if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {              
-            Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {              
-                try {              
-                    const items = res.Results || res;              
-                    if (items && Array.isArray(items) && items.length > 0) {              
-                        const b = { res: '', hdr: false, dv: false, ukr: false };              
-                        items.slice(0, 8).forEach(i => {              
-                            const t = (i.Title || i.title || '').toLowerCase();              
-                            if (t.includes('4k') || t.includes('2160')) b.res = '4K';              
-                            else if (!b.res && (t.includes('1080') || t.includes('fhd'))) b.res = 'FULL HD';              
-                            if (t.includes('hdr')) b.hdr = true;              
-                            if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) b.dv = true;              
-                            if (t.includes('ukr') || t.includes('укр')) b.ukr = true;              
-                        });              
-                        let qH = '';              
-                        if (b.res) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS[b.res]}"></div>`;              
-                        if (b.dv) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;              
-                        else if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;              
-                        if (b.ukr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;              
-                        if (qH) {              
-                            render.find('.cas-quality-row').html('<span class="cas-sep" style="margin: 0 5px;">•</span>' + qH).show();              
-                        }              
-                    }              
-                } catch (error) {              
-                    render.find('.cas-quality-row').hide();              
-                }              
-            }).fail(() => {              
-                render.find('.cas-quality-row').hide();              
-            });              
-        } else {              
-            render.find('.cas-quality-row').hide();              
-        }              
-    }              
+    if (Lampa.Storage.get('cas_show_studios')) {  
+        tasks.push(Promise.resolve().then(() => {  
+            renderStudioLogosWithColorAnalysis(render.find('.cas-studios-row'), data);  
+        }));  
+    }  
+      
+    await Promise.all(tasks);  
+      
+    // Обробка якості з підтримкою аудіо форматів  
+    if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {  
+        Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {  
+            try {  
+                const items = res.Results || res;  
+                if (items && Array.isArray(items) && items.length > 0) {  
+                    const b = { res: '', hdr: false, dv: false, ukr: false, audio: '' };  
+                    items.slice(0, 8).forEach(i => {  
+                        const t = (i.Title || i.title || '').toLowerCase();  
+                        if (t.includes('4k') || t.includes('2160')) b.res = '4K';  
+                        else if (!b.res && (t.includes('1080') || t.includes('fhd'))) b.res = 'FULL HD';  
+                        if (t.includes('hdr')) b.hdr = true;  
+                        if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) b.dv = true;  
+                        if (t.includes('ukr') || t.includes('укр')) b.ukr = true;  
+                        if (t.includes('5.1') || t.includes('5 1')) b.audio = '5.1';  
+                        else if (t.includes('7.1') || t.includes('7 1')) b.audio = '7.1';  
+                    });  
+                      
+                    let qH = '';  
+                    if (b.res) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS[b.res]}"></div>`;  
+                    if (b.dv) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;  
+                    else if (b.hdr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;  
+                    if (b.audio) qH += `<div class="cas-quality-item cas-audio-item">${b.audio}</div>`;  
+                    if (b.ukr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;  
+                      
+                    if (qH) {  
+                        render.find('.cas-quality-row').html('<span class="cas-sep" style="margin: 0 5px;">•</span>' + qH).show();  
+                    }  
+                }  
+            } catch (error) {  
+                render.find('.cas-quality-row').hide();  
+            }  
+        }).fail(() => {  
+            render.find('.cas-quality-row').hide();  
+        });  
+    } else {  
+        render.find('.cas-quality-row').hide();  
+    }  
+}             
               
     const debouncedLoadMovieData = debounce((render, data) => {              
         try { loadMovieDataOptimized(render, data); } catch (error) {}              
