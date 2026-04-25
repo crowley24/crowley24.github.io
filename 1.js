@@ -539,29 +539,28 @@
         }  
     }  
                 
-    async function processImages(render, data, res) {  
-        try {  
-            const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];  
-            if (bestLogo) {  
-                const quality = Lampa.Storage.get('cas_logo_quality') || 'original';  
-                const logoSrc = Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path);  
-                await preloadImage(logoSrc);  
-                render.find('.cas-logo').html(`<img src="${logoSrc}">`);  
-            } else {  
-                render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);  
-            }  
-            stopSlideshow();  
-            if (Lampa.Storage.get('cas_slideshow_enabled') && res.backdrops && res.backdrops.length > 1) {  
-                console.log('Slideshow enabled, backdrops:', res.backdrops.length);  
-                startSlideshow(render, res.backdrops);  
-            } else {  
-                console.log('Slideshow disabled or not enough backdrops');  
-            }  
-        } catch (error) {  
-                render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);  
-            }  
+   async function processImages(render, data, res) {  
+    try {  
+        const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];  
+        if (bestLogo) {  
+            const quality = Lampa.Storage.get('cas_logo_quality') || 'original';  
+            const logoSrc = Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path);  
+            await preloadImage(logoSrc);  
+            render.find('.cas-logo').html(`<img src="${logoSrc}">`);  
+        } else {  
+            render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);  
         }  
+        stopSlideshow();  
+        if (Lampa.Storage.get('cas_slideshow_enabled') && res.backdrops && res.backdrops.length > 1) {  
+            console.log('Slideshow enabled, backdrops:', res.backdrops.length);  
+            startSlideshow(render, res.backdrops);  
+        } else {  
+            console.log('Slideshow disabled or not enough backdrops');  
+        }  
+    } catch (error) {  
+        render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);  
     }  
+}
   
     async function loadMovieDataOptimized(render, data) {  
         const tasks = [];  
