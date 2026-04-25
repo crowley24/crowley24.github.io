@@ -653,14 +653,21 @@
                 }                  
             }, 200);                  
   
-            // Правильний обробник прокрутки - шукаємо прокручуваний контейнер  
-            const scrollBody = render.find('.scroll__body').length ? render.find('.scroll__body') : render;  
-            scrollBody.on('scroll', function() {      
-                const bg = render.find('.full-start__background');      
-                if (scrollBody.scrollTop() > 50) {      
+            // Виправлений обробник прокрутки з дебагінгом  
+            const scrollContainer = render.find('.scroll__body').length ? render.find('.scroll__body') : $(window);  
+              
+            scrollContainer.on('scroll', function() {      
+                const scrollTop = scrollContainer.scrollTop();  
+                const bg = render.find('.full-start__background');  
+                  
+                console.log('Scroll position:', scrollTop); // для дебагінгу  
+                  
+                if (scrollTop > 50) {      
                     bg.addClass('scrolled');      
+                    console.log('Added scrolled class'); // для дебагінгу  
                 } else {      
                     bg.removeClass('scrolled');      
+                    console.log('Removed scrolled class'); // для дебагінгу  
                 }      
             });                  
         }                  
