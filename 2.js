@@ -263,10 +263,10 @@ function addStyles() {
     .full-start__background {  
         transform: scale(1.1);  
         transition: transform 0.8s ease-out, opacity 0.8s ease, filter 0.3s ease;  
-        /* Видаляємо filter: none !important та opacity: 1 !important */  
+        /* Видаляємо всі постійні фільтри */  
     }  
       
-    /* Ефект затемнення тільки при скролі */  
+    /* Ефект затемнення ТІЛЬКИ при скролі */  
     .full-start__background.scrolled {  
         filter: brightness(0.7) !important;  
         transition: filter 0.3s ease;  
@@ -608,27 +608,33 @@ function addStyles() {
         try { loadMovieDataOptimized(render, data); } catch (error) {}              
     }, 250);              
               
-    function attachLoader() {  
-    // Додаємо обробник прокрутки для затемнення фону  
-    $(window).on('scroll', function() {  
-        const scrollTop = $(window).scrollTop();  
-        const bg = $('.full-start__background');  
-          
-        if (scrollTop > 50) {  
-            bg.addClass('scrolled');  
-        } else {  
-            bg.removeClass('scrolled');  
-        }  
-    });  
-  
+function attachLoader() {  
     Lampa.Listener.follow('full', (event) => {  
         if (event.type === 'complite') {  
             const data = event.data.movie;  
             const render = event.object.activity.render();  
             const content = render.find('.left-title__content');  
+            const bg = render.find('.full-start__background');  
               
             content.removeClass('cas-animated');  
             event.object.activity.onBeforeDestroy = cleanup;  
+              
+            // Примусово видаляємо клас scrolled при відкритті картки  
+            bg.removeClass('scrolled');  
+              
+            // Видаляємо попередні обробники прокрутки  
+            $(window).off('scroll.cas-dimming');  
+              
+            // Додаємо новий обробник прокрутки  
+            $(window).on('scroll.cas-dimming', function() {  
+                const scrollTop = $(window).scrollTop();  
+                  
+                if (scrollTop > 50) {  
+                    bg.addClass('scrolled');  
+                } else {  
+                    bg.removeClass('scrolled');  
+                }  
+            });  
               
             if (data && data.id) {  
                 render.data('movie', data);  
