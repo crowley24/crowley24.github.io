@@ -270,10 +270,17 @@
     .full-start__background::after {
     background: linear-gradient(
         to top,
-        rgba(0,0,0,0.4) 0%,
-        rgba(0,0,0,0.2) 30%,
-        rgba(0,0,0,0) 70%
+        rgba(0,0,0,0.35) 0%,
+        rgba(0,0,0,0.15) 40%,
+        rgba(0,0,0,0) 75%
     ) !important;
+
+    opacity: 1 !important;
+    display: block !important;
+}
+.full-start__gradient {
+    display: none !important;
+    opacity: 0 !important;
 }
                 
     /* Ефект затемнення при прокрутці вниз */  
