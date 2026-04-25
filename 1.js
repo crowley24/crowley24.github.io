@@ -265,7 +265,16 @@
         transition: transform 0.8s ease-out, opacity 0.8s ease;                
         filter: none !important; /* Прибираємо всі фільтри */                
         opacity: 1 !important; /* Забезпечуємо повну непрозорість */                
-    }                
+    }           
+
+    .full-start__background::after {
+    background: linear-gradient(
+        to top,
+        rgba(0,0,0,0.4) 0%,
+        rgba(0,0,0,0.2) 30%,
+        rgba(0,0,0,0) 70%
+    ) !important;
+}
                 
     /* Ефект затемнення при прокрутці вниз */  
     .full-start__background.scrolled {                
