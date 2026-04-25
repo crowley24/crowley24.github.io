@@ -257,27 +257,27 @@
         --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); 
     }                
 
-    /* ===================== 🔥 ВБИВАЄМО ВСЕ ЗАТЕМНЕННЯ ===================== */
+    /* ===================== 🔥 ПРАВИЛЬНО ВБИВАЄМО ЗАТЕМНЕННЯ ===================== */
 
+    /* прибираємо тільки затемнюючі шари */
     .full-start__background::before,
     .full-start__background::after {
-        display: none !important;
-        content: none !important;
         background: none !important;
+        opacity: 0 !important;
     }
 
+    /* НЕ ЧІПАЄМО mask-image !!! (це важливо) */
+
+    /* прибираємо затемнення, але не ламаємо layout */
     .full-start__background {
-        -webkit-mask-image: none !important;
-        mask-image: none !important;
         filter: none !important;
-        opacity: 1 !important;
     }
 
-    .full-start__background img {
+    .full-start__background.scrolled {
         filter: none !important;
-        opacity: 1 !important;
     }
 
+    /* якщо є overlay */
     .applecation__overlay {
         display: none !important;
     }
@@ -305,11 +305,6 @@
         transform: scale(1.1);                
         transition: transform 0.8s ease-out, opacity 0.8s ease;                
     }           
-
-    /* Ефект затемнення при прокрутці — ВІДКЛЮЧЕНИЙ */
-    .full-start__background.scrolled {                
-        filter: none !important;                
-    }                
 
     .cas-animated .full-start__background {                
         transform: scale(1);                
@@ -373,6 +368,25 @@
         background:rgba(255,255,255,0.12)!important;            
         border-color:rgba(255,255,255,0.25)!important;            
     }             
+
+    /* 🔥 ПОВЕРТАЄМО НОРМАЛЬНІ РОЗМІРИ */
+
+    .cas-studio-item {
+        height: 2.3em !important;
+    }
+
+    .cas-studio-item img {
+        height: 100% !important;
+        width: auto !important;
+    }
+
+    .cas-quality-item img {
+        height: 12px !important;
+    }
+
+    .cas-rate-item img {
+        height: 1.1em !important;
+    }
 
     .cas-logo img {         
         max-width: 450px;         
