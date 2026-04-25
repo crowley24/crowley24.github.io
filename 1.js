@@ -436,14 +436,7 @@ function addStyles() {
         color: white;  
     }
     
-    .cas-meta-line {  
-    display: flex;  
-    align-items: center;  
-    gap: 15px;  
-    margin-bottom: 12px;  
-    flex-wrap: wrap;  
-    }
-    </style>`;  
+       </style>`;  
     Lampa.Template.add('left_title_css', styles);  
     $('body').append(Lampa.Template.get('left_title_css', {}, true));  
 }
