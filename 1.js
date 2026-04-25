@@ -537,17 +537,17 @@ async function loadMovieDataOptimized(render, data) {
         }));  
     }  
       
-    // Об'єднана задача для метаданих та рейтингів  
+    // Об'єднана задача для метаданих та рейтингів з іконками  
     tasks.push(Promise.resolve().then(() => {  
         const year = data.release_date ? new Date(data.release_date).getFullYear() : (data.first_air_date ? new Date(data.first_air_date).getFullYear() : '');  
         const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));  
         const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');  
           
-        // Рейтинги  
+        // Рейтинги з іконками  
         let ratings = '';  
         const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);  
         if (tmdbV > 0) {  
-            ratings += `<span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span>`;  
+            ratings += `<img src="${ICONS.tmdb}" style="height: 1.1em; margin-right: 4px;"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span>`;  
         }  
           
         if (data.reactions && data.reactions.result) {  
@@ -560,7 +560,7 @@ async function loadMovieDataOptimized(render, data) {
                 const isTv = data.name ? true : false;  
                 const cubV = (((isTv?7.4:6.5)*(isTv?50:150)+sum)/((isTv?50:150)+cnt)).toFixed(1);  
                 if (ratings) ratings += ' • ';  
-                ratings += `<span style="color:${getRatingColor(cubV)}">${cubV}</span>`;  
+                ratings += `<img src="${ICONS.cub}" style="height: 1.1em; margin-right: 4px;"> <span style="color:${getRatingColor(cubV)}">${cubV}</span>`;  
             }  
         }  
           
@@ -621,8 +621,7 @@ async function loadMovieDataOptimized(render, data) {
     } else {  
         render.find('.cas-quality-row').hide();  
     }  
-}             
-              
+}           
     const debouncedLoadMovieData = debounce((render, data) => {              
         try { loadMovieDataOptimized(render, data); } catch (error) {}              
     }, 250);              
