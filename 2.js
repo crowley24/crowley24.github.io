@@ -279,16 +279,24 @@ function addStyles() {
         width: auto !important;  
     }  
       
+    /* Фон - переопределяем стандартную анимацию на fade */  
     .full-start__background {  
-        transform: scale(1.1);  
-        transition: transform 0.8s ease-out, opacity 0.8s ease, filter 0.3s ease;  
+        height: calc(100% + 6em);  
+        left: 0 !important;  
+        opacity: 0 !important;  
+        transition: opacity 0.6s ease-out, filter 0.3s ease-out !important;  
+        animation: none !important;  
+        transform: none !important;  
+        will-change: opacity, filter;  
+    }  
+      
+    .full-start__background.loaded:not(.dim) {  
         opacity: 1 !important;  
     }  
       
     /* Ефект затемнення при прокрутці вниз */  
-    .full-start__background.scrolled {  
+    .full-start__background.dim {  
         filter: brightness(0.7) !important;  
-        transition: filter 0.3s ease;  
     }  
       
     .cas-animated .full-start__background {  
@@ -597,18 +605,18 @@ function attachLoader() {
             content.removeClass('cas-animated');  
             event.object.activity.onBeforeDestroy = cleanup;  
               
-            // Примусово видаляємо клас scrolled при відкритті картки  
-            bg.removeClass('scrolled');  
+            // Примусово видаляємо клас dim при відкритті картки  
+            bg.removeClass('dim').addClass('loaded');  
               
             // Додаємо обробник прокрутки для затемнення фону  
-            $(window).off('scroll.cas-dimming'); // Видаляємо попередні обробники  
+            $(window).off('scroll.cas-dimming');  
             $(window).on('scroll.cas-dimming', function() {  
                 const scrollTop = $(window).scrollTop();  
                   
                 if (scrollTop > 50) {  
-                    bg.addClass('scrolled');  
+                    bg.addClass('dim');  
                 } else {  
-                    bg.removeClass('scrolled');  
+                    bg.removeClass('dim');  
                 }  
             });  
               
