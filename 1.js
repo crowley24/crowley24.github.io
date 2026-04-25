@@ -506,7 +506,7 @@ function addStyles() {
               
     // Нова функція для аналізу кольорів логотипів студій  
     function renderStudioLogosWithColorAnalysis(container, data) {  
-        const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 4);  
+     const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 1);
           
         studios.forEach((studio, index) => {  
             const logoUrl = Lampa.TMDB.image('/t/p/w200' + studio.logo_path);  
