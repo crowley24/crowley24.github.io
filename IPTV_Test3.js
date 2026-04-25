@@ -1,6 +1,6 @@
 // ==Lampa==
-// name: IPTV PRO Final Fix + Settings
-// version: 13.0
+// name: IPTV PRO Final Fix + Settings (Stable Input)
+// version: 14.0
 // ==/Lampa==
 
 (function () {
@@ -15,7 +15,7 @@
         var active_col = 'groups';
         var index_g = 0, index_c = 0;
 
-        var storage_key = 'iptv_pro_v13';
+        var storage_key = 'iptv_pro_v14';
         var config = Lampa.Storage.get(storage_key, {
             playlists: [
                 {
@@ -26,6 +26,41 @@
             favorites: [],
             current_pl_index: 0
         });
+
+        /* ================= INPUT MODAL ================= */
+
+        this.openInputModal = function (title, value, callback) {
+            var input = $(`<input type="text" value="${value || ''}"
+                style="width:100%;padding:1rem;font-size:1.2rem;background:#111;color:#fff;border:1px solid #444;border-radius:.5rem;">`);
+
+            var wrapper = $('<div style="padding:2rem"></div>').append(input);
+
+            Lampa.Modal.open({
+                title: title,
+                html: wrapper,
+                onBack: function () {
+                    Lampa.Modal.close();
+                },
+                buttons: [
+                    {
+                        name: 'Отмена',
+                        onSelect: function () {
+                            Lampa.Modal.close();
+                        }
+                    },
+                    {
+                        name: 'OK',
+                        onSelect: function () {
+                            var val = input.val().trim();
+                            if (val) callback(val);
+                            Lampa.Modal.close();
+                        }
+                    }
+                ]
+            });
+
+            setTimeout(() => input.focus(), 100);
+        };
 
         /* ================= FAVORITES ================= */
 
@@ -63,9 +98,9 @@
             container.append(colG, colC, colE);
             root.append(container);
 
-            if (!$('#iptv-style-v13').length) {
+            if (!$('#iptv-style-v14').length) {
                 $('head').append(`
-<style id="iptv-style-v13">
+<style id="iptv-style-v14">
 .iptv-root{position:fixed;inset:0;background:#0b0d10;z-index:1000;padding-top:5rem}
 .iptv-wrapper{display:flex;width:100%;height:100%}
 .iptv-col{height:100%;overflow-y:auto;border-right:1px solid rgba(255,255,255,.1)}
@@ -168,7 +203,7 @@
                 var is_fav = config.favorites.some(f => f.url === c.url);
 
                 var logo_html = c.logo
-                    ? '<img class="channel-logo" loading="lazy" src="' + c.logo + '">'
+                    ? '<img class="channel-logo" src="' + c.logo + '">'
                     : '<div class="channel-logo empty">📺</div>';
 
                 var row = $(`
@@ -181,7 +216,6 @@
                 `);
 
                 row.on('click', () => Lampa.Player.play({ url: c.url, title: c.name }));
-
                 colC.append(row);
             });
 
@@ -224,11 +258,8 @@
         };
 
         this.addPlaylist = function () {
-            Lampa.Input.edit({ title: 'Название', value: '' }, function (name) {
-                if (!name) return;
-
-                Lampa.Input.edit({ title: 'URL', value: '' }, function (url) {
-                    if (!url) return;
+            _this.openInputModal('Название плейлиста', '', function (name) {
+                _this.openInputModal('URL плейлиста', '', function (url) {
 
                     config.playlists.push({ name, url });
                     Lampa.Storage.set(storage_key, config);
@@ -242,11 +273,8 @@
         this.editPlaylist = function (i) {
             var pl = config.playlists[i];
 
-            Lampa.Input.edit({ title: 'Название', value: pl.name }, function (name) {
-                if (!name) return;
-
-                Lampa.Input.edit({ title: 'URL', value: pl.url }, function (url) {
-                    if (!url) return;
+            _this.openInputModal('Название', pl.name, function (name) {
+                _this.openInputModal('URL', pl.url, function (url) {
 
                     pl.name = name;
                     pl.url = url;
@@ -278,8 +306,7 @@
         /* ================= SEARCH ================= */
 
         this.searchChannels = function () {
-            Lampa.Input.edit({ title: 'Поиск', value: '' }, function (q) {
-                if (!q) return;
+            _this.openInputModal('Поиск', '', function (q) {
                 var res = all_channels.filter(c => c.name.toLowerCase().includes(q.toLowerCase()));
                 _this.renderC(res);
             });
