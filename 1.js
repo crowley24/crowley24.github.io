@@ -403,34 +403,7 @@ function addStyles() {
         align-items: center;  
         justify-content: center;  
     }  
-    .cas-meta-line {  
-    display: flex;  
-    align-items: center;  
-    gap: 12px;  
-    margin-bottom: 12px;  
-    flex-wrap: wrap;  
-    min-height: 2.3em; /* Забезпечує узгоджену висоту */  
-}  
-  
-.cas-studios-row {  
-    display: flex;  
-    flex-wrap: wrap;  
-    gap: 8px;  
-    align-items: center;  
-}  
-  
-.cas-meta-info {  
-    display: flex;  
-    align-items: center;  
-    gap: 8px;  
-    font-weight: 400;  
-}  
-  
-.cas-quality-row {  
-    display: flex;  
-    align-items: center;  
-    gap: 6px;  
-}
+
     .cas-studio-item img {  
         height: 100%;  
         width: auto;  
