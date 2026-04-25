@@ -265,26 +265,7 @@
         transition: transform 0.8s ease-out, opacity 0.8s ease;                
         filter: none !important; /* Прибираємо всі фільтри */                
         opacity: 1 !important; /* Забезпечуємо повну непрозорість */                
-    }           
-
-    .full-start__background::after,
-.full-start__gradient,
-.full-start__body::after,
-.full-start::after {
-    display: none !important;
-}
-
-.cas-overlay {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: linear-gradient(
-        to top,
-        rgba(0,0,0,0.45) 0%,
-        rgba(0,0,0,0.2) 35%,
-        rgba(0,0,0,0) 70%
-    );
-}
+    }                
                 
     /* Ефект затемнення при прокрутці вниз */  
     .full-start__background.scrolled {                
@@ -628,54 +609,66 @@
         try { loadMovieDataOptimized(render, data); } catch (error) {}              
     }, 250);              
               
-    function attachLoader() {              
-        Lampa.Listener.follow('full', (event) => {              
-            if (event.type === 'complite') {              
-                const data = event.data.movie;              
-                const render = event.object.activity.render();              
-                const content = render.find('.left-title__content');              
-                          
-                content.removeClass('cas-animated');              
-                event.object.activity.onBeforeDestroy = cleanup;              
-                              
-                if (data && data.id) {              
-                    render.data('movie', data);              
-                    const cacheId = 'tmdb_' + data.id;              
-                    const cached = getCachedData(cacheId);              
-                              
-                    const processImagesWrapper = async (res) => {              
-                        try { await processImages(render, data, res); } catch (e) {}              
-                    };              
-                                  
-                    if (cached) processImagesWrapper(cached);              
-                    else {              
-                        const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());              
-                        $.getJSON(imagesUrl, (res) => {              
-                            setCachedData(cacheId, res);              
-                            processImagesWrapper(res);              
-                        }).fail(() => {              
-                            render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);              
-                        });              
-                    }              
-                                  
-                    // Об'єднуємо дані реакцій з об'єктом фільму для loadMovieDataOptimized        
-                    if (event.data.reactions) data.reactions = event.data.reactions;        
-                    debouncedLoadMovieData(render, data);              
-                }              
-                              
-                setTimeout(() => content.addClass('cas-animated'), 100);              
-                              
-                setTimeout(() => {              
-                    const firstButton = render.find('.full-start-new__buttons .full-start__button').first();              
-                    if (firstButton.length) {              
-                        render.find('.full-start__button').removeClass('focus');              
-                        firstButton.addClass('focus').trigger('focus');              
-                    }              
-                }, 200);              
-            }              
-        });              
-    }            
-                
+    function attachLoader() {  
+    // Додаємо обробник прокрутки для затемнення фону  
+    $(window).on('scroll', function() {  
+        const scrollTop = $(window).scrollTop();  
+        const bg = $('.full-start__background');  
+          
+        if (scrollTop > 50) {  
+            bg.addClass('scrolled');  
+        } else {  
+            bg.removeClass('scrolled');  
+        }  
+    });  
+  
+    Lampa.Listener.follow('full', (event) => {  
+        if (event.type === 'complite') {  
+            const data = event.data.movie;  
+            const render = event.object.activity.render();  
+            const content = render.find('.left-title__content');  
+              
+            content.removeClass('cas-animated');  
+            event.object.activity.onBeforeDestroy = cleanup;  
+              
+            if (data && data.id) {  
+                render.data('movie', data);  
+                const cacheId = 'tmdb_' + data.id;  
+                const cached = getCachedData(cacheId);  
+                  
+                const processImagesWrapper = async (res) => {  
+                    try { await processImages(render, data, res); } catch (e) {}  
+                };  
+                  
+                if (cached) processImagesWrapper(cached);  
+                else {  
+                    const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());  
+                    $.getJSON(imagesUrl, (res) => {  
+                        setCachedData(cacheId, res);  
+                        processImagesWrapper(res);  
+                    }).fail(() => {  
+                        render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);  
+                    });  
+                }  
+                  
+                // Об'єднуємо дані реакцій з об'єктом фільму для loadMovieDataOptimized  
+                if (event.data.reactions) data.reactions = event.data.reactions;  
+                debouncedLoadMovieData(render, data);  
+            }  
+              
+            setTimeout(() => content.addClass('cas-animated'), 100);  
+              
+            setTimeout(() => {  
+                const firstButton = render.find('.full-start-new__buttons .full-start__button').first();  
+                if (firstButton.length) {  
+                    render.find('.full-start__button').removeClass('focus');  
+                    firstButton.addClass('focus').trigger('focus');  
+                }  
+            }, 200);  
+        }  
+    });  
+}
+             
     function startPlugin() {                 
         try {                
             initializePlugin();                
