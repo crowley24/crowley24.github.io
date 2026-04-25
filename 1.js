@@ -248,12 +248,13 @@
        function addStyles() {                      
     if ($('#cas-main-styles').length) return;                  
     const styles = `<style id="cas-main-styles">                      
-    :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); } [1](#20-0)   
+    :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); } [1](#21-0)   
       
     /* Фон - переопределяем стандартную анимацию на fade */  
     .full-start__background {   
-        height: calc(100% + 6em);   
-        left: 0 !important;   
+        /* Прибираємо проблемні властивості */  
+        /* left: 0 !important; - ВИДАЛИТИ */  
+        /* height: calc(100% + 6em); - ВИДАЛИТИ */  
         opacity: 0 !important;   
         transition: opacity 0.6s ease-out, filter 0.3s ease-out !important;   
         animation: none !important;   
@@ -299,8 +300,6 @@
     .full-start__background.scrolled {  
         filter: brightness(0.9) !important;  
     }  
-      
-    /* Решта стилів вашого плагіна */  
     .cas-animated .full-start__background { transform: scale(1); }  
     .cas-logo-container { position: relative; overflow: visible; max-width: 100%; padding-left: 0%; margin-bottom: calc(var(--cas-blocks-gap) * 1.5); max-height: 300px; }  
     .cas-logo, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper { opacity: 0 !important; transform: translateY(10px); transition: opacity 0.4s var(--cas-anim-curve), transform 0.4s var(--cas-anim-curve); will-change: transform, opacity; }  
