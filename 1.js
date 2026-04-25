@@ -282,6 +282,13 @@
     display: none !important;
     opacity: 0 !important;
 }
+.full-start__body::after {
+    display: none !important;
+}
+
+.full-start::after {
+    display: none !important;
+}
                 
     /* Ефект затемнення при прокрутці вниз */  
     .full-start__background.scrolled {                
