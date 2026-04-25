@@ -245,36 +245,33 @@
         Lampa.Template.add('full_start_new', template);                  
     }              
               
-        function addStyles() {                
-    if ($('#cas-main-styles').length) return;            
-    const styles = `<style id="cas-main-styles">                
-    :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); }                
-    .full-start__background { will-change: transform, opacity; backface-visibility: hidden; perspective: 1000px; transform: translateZ(0); transition: opacity 0.8s ease; }                
-                
-    .cas-logo-container {         
-        position: relative;         
-        overflow: visible;         
-        max-width: 100%;         
-        padding-left: 0%;        
-        margin-bottom: calc(var(--cas-blocks-gap) * 1.5);        
-        max-height: 300px;        
-    }                
-                
-    .full-start__background {                
-        transform: scale(1.1);                
-        transition: transform 0.8s ease-out, opacity 0.8s ease;                
-        filter: none !important; /* Прибираємо всі фільтри */                
-        opacity: 1 !important; /* Забезпечуємо повну непрозорість */                
-    }                
-                
+        function addStyles() {  
+    if ($('#cas-main-styles').length) return;  
+    const styles = `<style id="cas-main-styles">  
+    :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); }  
+    .full-start__background { will-change: transform, opacity; backface-visibility: hidden; perspective: 1000px; transform: translateZ(0); transition: opacity 0.8s ease; }  
+      
+    .cas-logo-container {  
+        position: relative;  
+        overflow: visible;  
+        max-width: 100%;  
+        padding-left: 0%;  
+        margin-bottom: calc(var(--cas-blocks-gap) * 1.5);  
+        max-height: 300px;  
+    }  
+      
+    .full-start__background {  
+        transform: scale(1.1);  
+        transition: transform 0.8s ease-out, opacity 0.8s ease, filter 0.3s ease;  
+    }  
+      
     /* Ефект затемнення при прокрутці вниз */  
-    .full-start__background.scrolled {                
-        filter: brightness(0.7) !important;                
-        transition: filter 0.3s ease;                
-    }                
-                
-    .cas-animated .full-start__background {                
-        transform: scale(1);                
+    .full-start__background.scrolled {  
+        filter: brightness(0.7) !important;  
+    }  
+      
+    .cas-animated .full-start__background {  
+        transform: scale(1);  
     }                
                 
     .cas-logo, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper {                 
@@ -651,7 +648,6 @@
                     });  
                 }  
                   
-                // Об'єднуємо дані реакцій з об'єктом фільму для loadMovieDataOptimized  
                 if (event.data.reactions) data.reactions = event.data.reactions;  
                 debouncedLoadMovieData(render, data);  
             }  
