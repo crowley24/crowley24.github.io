@@ -311,7 +311,7 @@ function addStyles() {
         transition: opacity 0.4s var(--cas-anim-curve), transform 0.4s var(--cas-anim-curve);  
         will-change: transform, opacity;  
     }  
-                      
+                        
     .cas-animated .cas-logo { opacity: 1 !important; transform: translateY(0); transition-delay: 0s; }  
     .cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.1s; }  
     .cas-animated .cas-rate-items { opacity: 1 !important; transform: translateY(0); transition-delay: 0.2s; }  
@@ -326,10 +326,10 @@ function addStyles() {
     .full-start-new__right { width: 50%; display: flex; flex-direction: column; justify-content: space-between; padding: 4em 4em 2em 0; position: relative; z-index: 2; }  
     .full-start-new__poster { display: none; }  
     .full-start-new__title { display: none; }  
-                      
+                        
     .left-title .full-start-new__left { width: 50%; }  
     .left-title .full-start-new__right { width: 50%; }  
-                      
+                        
     .cas-logo-container {  
         position: relative;  
         overflow: visible;  
@@ -338,7 +338,7 @@ function addStyles() {
         margin-bottom: calc(var(--cas-blocks-gap) * 1.5);  
         max-height: 300px;  
     }  
-                      
+                        
     .cas-logo img {  
         background: transparent !important;  
         border: none !important;  
@@ -363,38 +363,40 @@ function addStyles() {
         padding-right: 0;  
     }  
     
-    /* Зменшення відступу між рядками */  
-    .cas-ratings-line {  
-        margin-bottom: 8px !important;  
-    }  
-    
-    .cas-quality-row {  
-        margin-top: 4px !important;  
-    }  
-    
     /* Вирівнювання елементів у рядку метаданих */  
     .cas-ratings-line {  
         display: flex;  
         align-items: center;  
-        gap: 12px;  
+        gap: 8px !important;  
         flex-wrap: wrap;  
+        margin-bottom: 8px !important;  
     }  
     
     .cas-meta-info {  
-        margin-right: 8px;  
+        margin-right: 0;  
+        display: flex;  
+        align-items: center;  
+        gap: 8px;  
+    }  
+    
+    .cas-quality-row {  
+        margin-top: 0 !important;  
+        display: flex;  
+        align-items: center;  
+        gap: 6px;  
     }  
     
     .cas-sep {  
-        margin: 0 4px !important;  
+        margin: 0 2px !important;  
     }  
-                      
+                        
     .cas-studios-row {  
         display: flex;  
         flex-wrap: wrap;  
         gap: 8px;  
         margin-bottom: calc(var(--cas-blocks-gap) * 0.8);  
     }  
-                      
+                        
     .cas-studio-item {  
         height: 2.3em !important;  
         display: flex;  
@@ -419,7 +421,7 @@ function addStyles() {
     .cas-rate-item img { height: 1.1em; }  
     .left-title .full-start-new__body { height: 85vh; }  
     .cas-meta-info { display: flex; align-items: center; gap: 8px; font-weight: 400; }  
-                      
+                        
     .full-start__background img {  
         transform: translateZ(0);  
         -webkit-transform: translateZ(0);  
@@ -437,7 +439,6 @@ function addStyles() {
     Lampa.Template.add('left_title_css', styles);  
     $('body').append(Lampa.Template.get('left_title_css', {}, true));  
 }
-                            
      function getCachedData(id) {              
         const cache = Lampa.Storage.get('cas_images_cache') || {};              
         const item = cache[id];              
@@ -653,7 +654,7 @@ async function loadMovieDataOptimized(render, data) {
                     if (b.ukr) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;  
                       
                     if (qH) {  
-                        render.find('.cas-quality-row').html('<span class="cas-sep" style="margin: 0 5px;">•</span>' + qH).show();  
+                      render.find('.cas-quality-row').html(qH).show();
                     }  
                 }  
             } catch (error) {  
