@@ -177,60 +177,68 @@
         }  
     }  
   
-    function addCustomTemplate() {  
-        const template = `<div class="full-start-new left-title">  
+function addCustomTemplate() {  
+    if (Lampa.Template.get('full_start_new')) return;  
+      
+    const template = `<div class="full-start-new">  
+        <div class="full-start__background"></div>  
+        <div class="full-start-new__left hide">  
+            <div class="full-start-new__poster">  
+                <div class="full-start__img"></div>  
+            </div>  
+        </div>  
+        <div class="full-start-new__right">  
+            <div class="full-start-new__head">  
+                <div class="cas-logo-container"></div>  
+                <div class="cas-ratings-line">  
+                    <div class="cas-studios-row" style="display: flex; gap: 15px; align-items: center; margin-bottom: 0;"></div>  
+                    <div class="cas-meta-info"></div>  
+                    <div class="cas-quality-row" style="display: flex; gap: 8px; align-items: center;"></div>  
+                </div>  
+                <div class="cas-description"></div>  
+                <div class="full-start-new__details hide"></div>  
+            </div>  
             <div class="full-start-new__body">  
-                <div class="full-start-new__left hide">  
-                    <div class="full-start-new__poster">  
-                        <img class="full-start-new__img full--poster" />  
+                <div class="full-start-new__buttons">  
+                    <div class="full-start__button selector button--play">  
+                        <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/><path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/></svg>  
+                        <span>#{title_watch}</span>  
+                    </div>  
+                    <div class="full-start__button selector button--book">  
+                        <svg width="21" height="32" viewBox="0 0 21 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 1.5H19C19.2761 1.5 19.5 1.72386 19.5 2V27.9618C19.5 28.3756 19.0261 28.6103 18.697 28.3595L12.6212 23.7303C11.3682 22.7757 9.63183 22.7757 8.37885 23.7303L2.30302 28.3595C1.9739 28.6103 1.5 28.3756 1.5 27.9618V2C1.5 1.72386 1.72386 1.5 2 1.5Z" stroke="currentColor" stroke-width="2.5"/></svg>  
+                        <span>#{settings_input_links}</span>  
+                    </div>  
+                    <div class="full-start__button selector button--reaction">  
+                        <svg width="38" height="34" viewBox="0 0 38 34" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M37.208 10.9742C37.1364 10.8013 37.0314 10.6441 36.899 10.5117C36.7666 10.3794 36.6095 10.2744 36.4365 10.2028L12.0658 0.108375C11.7166 -0.0361828 11.3242 -0.0361227 10.9749 0.108542C10.6257 0.253206 10.3482 0.530634 10.2034 0.879836L0.108666 25.2507C0.0369593 25.4236 3.37953e-05 25.609 2.3187e-08 25.7962C-3.37489e-05 25.9834 0.0368249 26.1688 0.108469 26.3418C0.180114 26.5147 0.28514 26.6719 0.417545 26.8042C0.54995 26.9366 0.707139 27.0416 0.880127 27.1131L17.2452 33.8917C17.5945 34.0361 17.9869 34.0361 18.3362 33.8917L29.6574 29.2017C29.8304 29.1301 29.9875 29.0251 30.1199 28.8928C30.2523 28.7604 30.3573 28.6032 30.4289 28.4303L37.2078 12.065C37.2795 11.8921 37.3164 11.7068 37.3165 11.5196C37.3165 11.3325 37.2796 11.1471 37.208 10.9742ZM20.425 29.9407L21.8784 26.4316L25.3873 27.885L20.425 29.9407ZM28.3407 26.0222L21.6524 23.252C21.3031 23.1075 20.9107 23.1076 20.5615 23.2523C20.2123 23.3969 19.9348 23.6743 19.79 24.0235L17.0194 30.7123L3.28783 25.0247L12.2918 3.28773L34.0286 12.2912L28.3407 26.0222Z" fill="currentColor"/><path d="M25.3493 16.976L24.258 14.3423L16.959 17.3666L15.7196 14.375L13.0859 15.4659L15.4161 21.0916L25.3493 16.976Z" fill="currentColor"/></svg>  
+                        <span>#{title_reactions}</span>  
+                    </div>  
+                    <div class="full-start__button selector button--subscribe">  
+                        <svg width="25" height="30" viewBox="0 0 25 30" fill="none" xmlns="http://www.w3.org/2000/svg">  
+                            <path d="M6.01892 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z" fill="currentColor"/>  
+                            <path d="M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z" stroke="currentColor" stroke-width="2.5"/>  
+                        </svg>  
+                        <span>#{title_subscribe}</span>  
+                    </div>  
+                    <div class="full-start__button selector button--options">  
+                        <svg width="38" height="10" viewBox="0 0 38 10" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="4.88968" cy="4.98563" r="4.75394" fill="currentColor"/><circle cx="18.9746" cy="4.98563" r="4.75394" fill="currentColor"/><circle cx="33.0595" cy="4.98563" r="4.75394" fill="currentColor"/></svg>  
+                        <span>#{title_more}</span>  
                     </div>  
                 </div>  
-                <div class="full-start-new__right">  
-                    <div class="left-title__content">  
-                        <div class="cas-logo-container" style="margin-bottom: calc(var(--cas-blocks-gap) * 1.5);">  
-                            <div class="cas-logo"></div>  
-                        </div>  
-                        <div class="cas-ratings-line">  
-                            <div class="cas-studios-row" style="display: flex; gap: 15px; align-items: center; margin-bottom: 0;"></div>  
-                            <div class="cas-meta-info"></div>  
-                            <div class="cas-quality-row" style="display: flex; gap: 8px; align-items: center;"></div>  
-                        </div>  
-                        <div class="cas-description" style="margin-top: calc(var(--cas-blocks-gap) * 0.4);"></div>  
-                        <div class="cas-details-wrapper" style="margin-top: 10px;">  
-                            <div class="full-start-new__head hide"></div>  
-                            <div class="full-start-new__details hide"></div>  
-                        </div>  
-                        <div class="full-start-new__buttons">  
-                            <div class="full-start__button selector button--play">  
-                                <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/><path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/></svg>  
-                                <span>#{title_watch}</span>  
-                            </div>  
-                            <div class="full-start__button selector button--book">  
-                                <svg width="21" height="32" viewBox="0 0 21 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 1.5H19C19.2761 1.5 19.5 1.72386 19.5 2V27.9618C19.5 28.3756 19.0261 28.6103 18.697 28.3595L12.6212 23.7303C11.3682 22.7757 9.63183 22.7757 8.37885 23.7303L2.30302 28.3595C1.9739 28.6103 1.5 28.3756 1.5 27.9618V2C1.5 1.72386 1.72386 1.5 2 1.5Z" stroke="currentColor" stroke-width="2.5"/></svg>  
-                                <span>#{settings_input_links}</span>  
-                            </div>  
-                             <div class="full-start__button selector button--reaction">  
-                                <svg width="38" height="34" viewBox="0 0 38 34" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M37.208 10.9742C37.1364 10.8013 37.0314 10.6441 36.899 10.5117C36.7666 10.3794 36.6095 10.2744 36.4365 10.2028L12.0658 0.108375C11.7166 -0.0361828 11.3242 -0.0361227 10.9749 0.108542C10.6257 0.253206 10.3482 0.530634 10.2034 0.879836L0.108666 25.2507C0.0369593 25.4236 3.37953e-05 25.609 2.3187e-08 25.7962C-3.37489e-05 25.9834 0.0368249 26.1688 0.108469 26.3418C0.180114 26.5147 0.28514 26.6719 0.417545 26.8042C0.54995 26.9366 0.707139 27.0416 0.880127 27.1131L17.2452 33.8917C17.5945 34.0361 17.9869 34.0361 18.3362 33.8917L29.6574 29.2017C29.8304 29.1301 29.9875 29.0251 30.1199 28.8928C30.2523 28.7604 30.3573 28.6032 30.4289 28.4303L37.2078 12.065C37.2795 11.8921 37.3164 11.7068 37.3165 11.5196C37.3165 11.3325 37.2796 11.1471 37.208 10.9742ZM20.425 29.9407L21.8784 26.4316L25.3873 27.885L20.425 29.9407ZM28.3407 26.0222L21.6524 23.252C21.3031 23.1075 20.9107 23.1076 20.5615 23.2523C20.2123 23.3969 19.9348 23.6743 19.79 24.0235L17.0194 30.7123L3.28783 25.0247L12.2918 3.28773L34.0286 12.2912L28.3407 26.0222Z" fill="currentColor"/><path d="M25.3493 16.976L24.258 14.3423L16.959 17.3666L15.7196 14.375L13.0859 15.4659L15.4161 21.0916L25.3493 16.976Z" fill="currentColor"/></svg>  
-                              <span>#{title_reactions}</span>  
-                            </div>  
-                            <div class="full-start__button selector button--subscribe hide">  
-                                <svg width="25" height="30" viewBox="0 0 25 30" fill="none" xmlns="http://www.w3.org/2000/svg">  
-                                    <path d="M6.01892 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z" fill="currentColor"/>  
-                                    <path d="M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z" stroke="currentColor" stroke-width="2.5"/>  
-                                </svg>  
-                                <span>#{title_subscribe}</span>  
-                            </div>  
-                            <div class="full-start__button selector button--options">  
-                                <svg width="38" height="10" viewBox="0 0 38 10" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="4.88968" cy="4.98563" r="4.75394" fill="currentColor"/><circle cx="18.9746" cy="4.98563" r="4.75394" fill="currentColor"/><circle cx="33.0595" cy="4.98563" r="4.75394" fill="currentColor"/></svg>  
-                                <span>#{title_more}</span>  
-                            </div>  
-                        </div>  
+                <div class="hide buttons--container">  
+                    <div class="full-start__button view--torrent hide">  
+                        <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 0C6.71573 0 0 6.71573 0 15C0 23.2843 6.71573 30 15 30C23.2843 30 30 23.2843 30 15C30 6.71573 23.2843 0 15 0ZM15 27.5C8.09644 27.5 2.5 21.9036 2.5 15C2.5 8.09644 8.09644 2.5 15 2.5C21.9036 2.5 27.5 8.09644 27.5 15C27.5 21.9036 21.9036 27.5 15 27.5Z" fill="currentColor"/><path d="M15 7.5C14.3096 7.5 13.75 8.05964 13.75 8.75V13.75H8.75C8.05964 13.75 7.5 14.3096 7.5 15C7.5 15.6904 8.05964 16.25 8.75 16.25H13.75V21.25C13.75 21.9404 14.3096 22.5 15 22.5C15.6904 22.5 16.25 21.9404 16.25 21.25V16.25H21.25C21.9404 16.25 22.5 15.6904 22.5 15C22.5 14.3096 21.9404 13.75 21.25 13.75H16.25V8.75C16.25 8.05964 15.6904 7.5 15 7.5Z" fill="currentColor"/></svg>  
+                        <span>#{full_torrents}</span>  
+                    </div>  
+                    <div class="full-start__button selector view--trailer">  
+                        <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 0C6.71573 0 0 6.71573 0 15C0 23.2843 6.71573 30 15 30C23.2843 30 30 23.2843 30 15C30 6.71573 23.2843 0 15 0ZM15 27.5C8.09644 27.5 2.5 21.9036 2.5 15C2.5 8.09644 8.09644 2.5 15 2.5C21.9036 2.5 27.5 8.09644 27.5 15C27.5 21.9036 21.9036 27.5 15 27.5Z" fill="currentColor"/><path d="M11.25 8.75V21.25L21.25 15L11.25 8.75Z" fill="currentColor"/></svg>  
+                        <span>#{full_trailers}</span>  
                     </div>  
                 </div>  
             </div>  
-        </div>`;  
-        Lampa.Template.add('full_start_new', template);  
-    }  
+        </div>  
+    </div>`;  
+    Lampa.Template.add('full_start_new', template);  
+}
   
     function addStyles() {  
         if ($('#cas-main-styles').length) return;  
