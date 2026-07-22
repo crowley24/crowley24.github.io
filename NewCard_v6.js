@@ -33,6 +33,7 @@
         'settings_cas_meta_size': 'Розмір шрифту',                
         'settings_cas_blocks_gap': 'Відступи між блоками',                
         'settings_cas_bg_animation': 'Анімація фону (Ken Burns)',                
+        'settings_cas_animation_style': 'Стиль анімації появи',
         'settings_cas_slideshow_enabled': 'Слайд-шоу фону',                
         'settings_cas_show_studios': 'Показувати студії',                
         'settings_cas_show_quality': 'Показувати якість',                
@@ -83,6 +84,7 @@
             'cas_logo_scale': '100',                
             'cas_logo_quality': 'original',                
             'cas_bg_animation': true,                
+            'cas_animation_style': 'slide',
             'cas_slideshow_enabled': true,                
             'cas_blocks_gap': '20',                
             'cas_meta_size': '1.3',                
@@ -108,6 +110,7 @@
             { name: 'cas_meta_size', type: 'select', values: { '1.1': 'Міні', '1.2': 'Малий', '1.3': 'Стандартний', '1.4': 'Збільшений', '1.5': 'Великий' } },                
             { name: 'cas_blocks_gap', type: 'select', values: { '10':'Дуже тісно','15':'Тісно','20':'Стандарт','25':'Просторе','30':'Дуже просторе' } },                
             { name: 'cas_bg_animation', type: 'trigger' },                
+            { name: 'cas_animation_style', type: 'select', values: { 'slide': 'Slide from Left (Виїзд зліва)', 'spring': 'Elastic Spring (Жива пружина)' } },
             { name: 'cas_slideshow_enabled', type: 'trigger' },                
             { name: 'cas_show_studios', type: 'trigger' },                
             { name: 'cas_show_quality', type: 'trigger' },                
@@ -139,15 +142,18 @@
         const scale = parseInt(Lampa.Storage.get('cas_logo_scale') || 100) / 100;          
         const gap = Lampa.Storage.get('cas_blocks_gap') || '20';          
         const metaSize = Lampa.Storage.get('cas_meta_size') || '1.3';          
+        const animStyle = Lampa.Storage.get('cas_animation_style') || 'slide';
                           
         root.style.setProperty('--cas-logo-scale', scale);          
         root.style.setProperty('--cas-blocks-gap', gap + 'px');          
         root.style.setProperty('--cas-meta-size', metaSize + 'em');          
                           
         $('body').toggleClass('cas--zoom-enabled', !!Lampa.Storage.get('cas_bg_animation'));          
-                          
+        
         const currentCard = $('.full-start-new.left-title');          
         if (currentCard.length > 0) {          
+            currentCard.removeClass('cas-anim-slide cas-anim-spring').addClass('cas-anim-' + animStyle);
+
             currentCard.find('.cas-description').toggle(!!Lampa.Storage.get('cas_show_description'));          
             currentCard.find('.cas-studios-row').toggle(!!Lampa.Storage.get('cas_show_studios'));          
             currentCard.find('.cas-quality-row').toggle(!!Lampa.Storage.get('cas_show_quality'));          
@@ -183,7 +189,8 @@
     }               
                       
     function addCustomTemplate() {                       
-        const template = `<div class="full-start-new left-title">                      
+        const animStyle = Lampa.Storage.get('cas_animation_style') || 'slide';
+        const template = `<div class="full-start-new left-title cas-anim-${animStyle}">                      
             <div class="full-start-new__body">                      
                 <div class="full-start-new__left hide">                      
                     <div class="full-start-new__poster">                      
@@ -256,7 +263,8 @@ function addStyles() {
         --cas-logo-scale: 1; 
         --cas-blocks-gap: 30px; 
         --cas-meta-size: 1.3em; 
-        --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); 
+        --cas-curve-slide: cubic-bezier(0.2, 0.8, 0.2, 1); 
+        --cas-curve-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }  
             
     /* Налаштування фону та Ken Burns */  
@@ -290,20 +298,49 @@ function addStyles() {
         transform-origin: center center;  
     }  
       
-    /* Елегантний Slide from Left */  
+    /* Загальні базові стани для анімацій */  
     .cas-logo, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper, .full-start-new__buttons {  
         opacity: 0 !important;  
-        transform: translateX(-40px);  
-        transition: opacity 0.8s var(--cas-anim-curve), transform 0.8s var(--cas-anim-curve);  
         will-change: transform, opacity;  
     }  
-                        
-    .cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.06s; }  
-    .cas-animated .cas-logo { opacity: 1 !important; transform: translateX(0); transition-delay: 0.14s; }  
-    .cas-animated .cas-meta-info { opacity: 0.85 !important; transform: translateX(0); transition-delay: 0.22s; }  
-    .cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.30s; }  
-    .cas-animated .cas-description { opacity: 0.75 !important; transform: translateX(0); transition-delay: 0.38s; }  
-    .cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translateX(0); transition-delay: 0.46s; }  
+
+    /* --- Варіант 1: Slide from Left --- */
+    .cas-anim-slide .cas-logo, 
+    .cas-anim-slide .cas-studios-row, 
+    .cas-anim-slide .cas-rate-items, 
+    .cas-anim-slide .cas-meta-info, 
+    .cas-anim-slide .cas-quality-row, 
+    .cas-anim-slide .cas-description, 
+    .cas-anim-slide .cas-details-wrapper, 
+    .cas-anim-slide .full-start-new__buttons {  
+        transform: translateX(-40px);  
+        transition: opacity 0.8s var(--cas-curve-slide), transform 0.8s var(--cas-curve-slide);  
+    }                        
+    .cas-anim-slide.cas-animated .cas-logo { opacity: 1 !important; transform: translateX(0); transition-delay: 0.0s; }  
+    .cas-anim-slide.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.08s; }  
+    .cas-anim-slide.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: translateX(0); transition-delay: 0.16s; }  
+    .cas-anim-slide.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.24s; }  
+    .cas-anim-slide.cas-animated .cas-description { opacity: 0.75 !important; transform: translateX(0); transition-delay: 0.32s; }  
+    .cas-anim-slide.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translateX(0); transition-delay: 0.40s; }  
+
+    /* --- Варіант 2: Elastic Spring --- */
+    .cas-anim-spring .cas-logo, 
+    .cas-anim-spring .cas-studios-row, 
+    .cas-anim-spring .cas-rate-items, 
+    .cas-anim-spring .cas-meta-info, 
+    .cas-anim-spring .cas-quality-row, 
+    .cas-anim-spring .cas-description, 
+    .cas-anim-spring .cas-details-wrapper, 
+    .cas-anim-spring .full-start-new__buttons {  
+        transform: scale(0.85) translateX(-30px);  
+        transition: opacity 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.7s var(--cas-curve-spring);  
+    }                        
+    .cas-anim-spring.cas-animated .cas-logo { opacity: 1 !important; transform: scale(1) translateX(0); transition-delay: 0.0s; }  
+    .cas-anim-spring.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: scale(1) translateX(0); transition-delay: 0.08s; }  
+    .cas-anim-spring.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: scale(1) translateX(0); transition-delay: 0.16s; }  
+    .cas-anim-spring.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: scale(1) translateX(0); transition-delay: 0.24s; }  
+    .cas-anim-spring.cas-animated .cas-description { opacity: 0.75 !important; transform: scale(1) translateX(0); transition-delay: 0.32s; }  
+    .cas-anim-spring.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: scale(1) translateX(0); transition-delay: 0.40s; }  
               
     .full-start-new__details { display: none !important; }  
     .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }  
@@ -425,7 +462,7 @@ function addStyles() {
                 
     function cleanup() {                
         stopSlideshow();                
-        $('.left-title__content').removeClass('cas-animated');          
+        $('.left-title__content').parent().parent().removeClass('cas-animated');          
     }                
                 
     function stopSlideshow() {                
@@ -505,6 +542,7 @@ function addStyles() {
                 
     async function processImages(render, data, res) {                
         try {                
+            // Умова використання англійського логотипу, якщо відсутній український
             const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];                
             if (bestLogo) {        
                 const quality = Lampa.Storage.get('cas_logo_quality') || 'original';                
@@ -590,7 +628,7 @@ function addStyles() {
                             if (t.includes('ukr') || t.includes('укр')) b.ukr = true;    
                             if (t.includes('5.1') || t.includes('5 1')) b.audio = '5.1';    
                             else if (t.includes('7.1') || t.includes('7 1')) b.audio = '7.1';    
-                            else if (t.includes('4.0') || t.includes('4 0')) b.audio = '4.0';    
+                            if (t.includes('4.0') || t.includes('4 0')) b.audio = '4.0';    
                             else if (t.includes('2.0') || t.includes('2 0')) b.audio = '2.0';    
                             if (t.includes('dub') || t.includes('дубл')) b.dub = true;    
                         });    
@@ -627,9 +665,9 @@ function addStyles() {
             if (event.type === 'complite') {                
                 const data = event.data.movie;                
                 const render = event.object.activity.render();                
-                const content = render.find('.left-title__content');                
+                const cardRoot = render.find('.full-start-new.left-title');                
                             
-                content.removeClass('cas-animated');                
+                cardRoot.removeClass('cas-animated');                
                 event.object.activity.onBeforeDestroy = cleanup;                
                                 
                 if (data && data.id) {                
@@ -638,25 +676,32 @@ function addStyles() {
                     const cached = getCachedData(cacheId);                
                                 
                     const processImagesWrapper = async (res) => {                
-                        try { await processImages(render, data, res); } catch (e) {}                
+                        try { 
+                            await processImages(render, data, res); 
+                        } catch (e) {} finally {
+                            // Анімація запускається ТІЛЬКИ після завантаження або спроби завантаження логотипу
+                            setTimeout(() => cardRoot.addClass('cas-animated'), 30);
+                        }
                     };                
                                     
-                    if (cached) processImagesWrapper(cached);                
-                    else {                
+                    if (cached) {
+                        processImagesWrapper(cached);
+                    } else {                
                         const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());                
                         $.getJSON(imagesUrl, (res) => {                
                             setCachedData(cacheId, res);                
                             processImagesWrapper(res);                
                         }).fail(() => {                
                             render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                
+                            cardRoot.addClass('cas-animated');
                         });                
                     }                
                                     
                     if (event.data.reactions) data.reactions = event.data.reactions;          
                     debouncedLoadMovieData(render, data);                
+                } else {
+                    cardRoot.addClass('cas-animated');
                 }                
-                                
-                setTimeout(() => content.addClass('cas-animated'), 60);                
                                 
                 setTimeout(() => {                
                     const firstButton = render.find('.full-start-new__buttons .full-start__button').first();                
