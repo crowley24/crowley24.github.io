@@ -337,7 +337,12 @@ function addStyles() {
     .cas-anim-slide.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.24s; }    
     .cas-anim-slide.cas-animated .cas-description { opacity: 0.75 !important; transform: translateX(0); transition-delay: 0.32s; }    
     .cas-anim-slide.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translateX(0); transition-delay: 0.40s; }    
-    .cas-anim-slide.cas-animated .cas-rating-corner { opacity: 1 !important; transform: translateX(0); transition-delay: 0.48s; }    
+    .cas-anim-slide.cas-animated .cas-rating-corner {   
+        opacity: 1 !important;   
+        transform: translateX(0);   
+        transition-delay: 0.48s;  
+        animation: rating-pulse 3s ease-in-out 0.48s infinite, rating-slide-in 0.6s ease 0.48s forwards;  
+    }    
   
     .cas-anim-spring .cas-logo,   
     .cas-anim-spring .cas-studios-row,   
@@ -357,7 +362,12 @@ function addStyles() {
     .cas-anim-spring.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: scale(1) translateX(0); transition-delay: 0.24s; }    
     .cas-anim-spring.cas-animated .cas-description { opacity: 0.75 !important; transform: scale(1) translateX(0); transition-delay: 0.32s; }    
     .cas-anim-spring.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: scale(1) translateX(0); transition-delay: 0.40s; }    
-    .cas-anim-spring.cas-animated .cas-rating-corner { opacity: 1 !important; transform: scale(1) translateX(0); transition-delay: 0.48s; }    
+    .cas-anim-spring.cas-animated .cas-rating-corner {   
+        opacity: 1 !important;   
+        transform: scale(1) translateX(0);   
+        transition-delay: 0.48s;  
+        animation: rating-pulse 3s ease-in-out 0.48s infinite, rating-spring-in 0.7s ease 0.48s forwards;  
+    }    
                 
     .full-start-new__details { display: none !important; }    
     .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }    
@@ -472,6 +482,7 @@ function addStyles() {
         padding: 0.5em 1em;  
         border-radius: 0.5em;  
         backdrop-filter: blur(10px);  
+        animation: rating-pulse 3s ease-in-out infinite;  
     }  
   
     .cas-rating-corner .cas-rate-item {  
@@ -482,6 +493,37 @@ function addStyles() {
   
     .cas-rating-corner img {  
         height: 1.2em;  
+    }  
+  
+    @keyframes rating-pulse {  
+        0%, 100% {  
+            box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.6);  
+        }  
+        50% {  
+            box-shadow: 0 0 15px 3px rgba(255, 255, 255, 0.2);  
+        }  
+    }  
+  
+    @keyframes rating-slide-in {  
+        0% {  
+            transform: translateX(-40px) scale(0.8);  
+            opacity: 0;  
+        }  
+        100% {  
+            transform: translateX(0) scale(1);  
+            opacity: 1;  
+        }  
+    }  
+  
+    @keyframes rating-spring-in {  
+        0% {  
+            transform: scale(0.85) translateX(-30px);  
+            opacity: 0;  
+        }  
+        100% {  
+            transform: scale(1) translateX(0);  
+            opacity: 1;  
+        }  
     }  
     </style>`;      
     Lampa.Template.add('left_title_css', styles);      
