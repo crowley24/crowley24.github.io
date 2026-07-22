@@ -42,13 +42,21 @@
     };                
                 
     function preloadImage(src) {                
-        return new Promise((resolve, reject) => {                
+        return new Promise((resolve) => {                
             if (!src) { resolve(); return; }
             const img = new Image();                
             img.onload = () => resolve(img);                
-            img.onerror = () => resolve(); // Якщо помилка завантаження, не ламаємо ланцюжок
+            img.onerror = () => resolve();                
             img.src = src;                
         });                
+    }
+
+    function preloadImageWithTimeout(src, ms = 2500) {
+        if (!src) return Promise.resolve();
+        return Promise.race([
+            preloadImage(src),
+            new Promise(resolve => setTimeout(resolve, ms))
+        ]);
     }
                 
     function getRatingColor(val) {                
@@ -549,7 +557,7 @@
             if (bestLogo) {        
                 const quality = Lampa.Storage.get('cas_logo_quality') || 'original';                
                 const logoSrc = Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path);                
-                await preloadImage(logoSrc);                
+                await preloadImageWithTimeout(logoSrc, 2500);                
                 render.find('.cas-logo').html(`<img src="${logoSrc}">`);                
             } else {                
                 render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                
@@ -677,7 +685,7 @@
                         const bgImgElement = render.find('.full-start__background img, img.full-start__background');
                         const bgSrc = bgImgElement.attr('src');
                         if (bgSrc) {
-                            await preloadImage(bgSrc);
+                            await preloadImageWithTimeout(bgSrc, 2500);
                         }
                     };
 
