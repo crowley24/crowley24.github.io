@@ -108,7 +108,7 @@
     /**  
      * СТИЛІ ІНТЕРФЕЙСУ (CSS)  
      */  
-    function applyStyles() {  
+ function applyStyles() {  
     var oldStyle = document.getElementById('mobile-interface-styles');  
     if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);  
   
@@ -143,11 +143,10 @@
     css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="rating-count"], [class*="status"] { display:none !important; } ';  
     css += '.full-start-new__right > div:first-child { display: none !important; } ';  
     css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';  
-    css += '.background { background: #000 !important; } ';  
       
-    // Застосовуємо анімацію Ken Burns до фону  
-    css += '.background { position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; z-index: 0 !important; } ';  
-    css += '.background img { ';  
+    // Застосовуємо анімацію Ken Burns до всіх елементів фону  
+    css += '.background, .background__one, .background__two, .background__fade { position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; z-index: 0 !important; } ';  
+    css += '.background img, .background__one img, .background__two img, .background__fade img { ';  
     css += (isPosterAnim ? 'animation: kenBurnsEffect 22s ease-in-out infinite !important; ' : '');  
     css += 'transform-origin: center center !important; transition: opacity 1.2s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; } ';  
       
@@ -343,7 +342,7 @@ function startPosterSlideshow($poster, items) {
         index = (index + 1) % items.length;  
         var imgUrl = Lampa.TMDB.image('/t/p/' + Lampa.Storage.get('mobile_interface_slideshow_quality', 'w780') + items[index].file_path);  
           
-        // Змінено: працюємо з фоном, а не з постером  
+        // Працюємо з усіма можливими елементами фону  
         var $background = $('.background');  
         var $current = $background.find('img').first();  
           
