@@ -640,61 +640,62 @@ function addStyles() {
         }                  
     }      
                   
-    async function loadMovieDataOptimized(render, data) {      
-        const tasks = [];      
-              
-        if (Lampa.Storage.get('cas_show_description')) {      
-            tasks.push(Promise.resolve().then(() => {      
-                render.find('.cas-description').html(data.overview || '').css('opacity','1').show();      
-            }));      
-        }      
-              
+async function loadMovieDataOptimized(render, data) {      
+    const tasks = [];      
+          
+    if (Lampa.Storage.get('cas_show_description')) {      
         tasks.push(Promise.resolve().then(() => {      
-            const year = data.release_date ? new Date(data.release_date).getFullYear() : (data.first_air_date ? new Date(data.first_air_date).getFullYear() : '');      
-            const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));      
-            const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');      
-                  
-            let ratings = '';      
-            const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);      
-            if (tmdbV > 0) {      
-                ratings += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;      
-            }      
-                  
-            if (data.reactions && data.reactions.result) {      
-                let sum = 0, cnt = 0;      
-                const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };      
-                data.reactions.result.forEach(r => {             
-                    if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; }            
-                });      
-                if (cnt >= 1) {      
-                    const isTv = data.name ? true : false;      
-                    const cubV = (((isTv?7.4:6.5)*(isTv?50:150)+sum)/((isTv?50:150)+cnt)).toFixed(1);      
-                    ratings += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;      
-                }      
-            }      
-                  
-            let metaHtml = '';      
-            if (year) metaHtml += `<span class="cas-wave-year">${year}</span>`;      
-            if (time) metaHtml += `<span class="cas-wave-time">${time}</span>`;      
-            if (genre) metaHtml += `<span class="cas-wave-genre">${genre}</span>`;      
-                  
-            render.find('.cas-meta-info').html(metaHtml);      
-            render.find('.cas-rate-items').empty();     
-  
-            if (ratings) {  
-                render.find('.cas-rating-corner').html(ratings);  
-            }  
+            render.find('.cas-description').html(data.overview || '').css('opacity','1').show();      
         }));      
+    }      
+          
+    tasks.push(Promise.resolve().then(() => {      
+        const year = data.release_date ? new Date(data.release_date).getFullYear() : (data.first_air_date ? new Date(data.first_air_date).getFullYear() : '');      
+        const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));      
+        const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');      
               
-        if (Lampa.Storage.get('cas_show_studios')) {      
-            tasks.push(Promise.resolve().then(() => {      
-                renderStudioLogosWithColorAnalysis(render.find('.cas-studios-row'), data);      
-            }));      
+        let ratings = '';      
+        const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);      
+        if (tmdbV > 0) {      
+            ratings += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;      
         }      
               
-        await Promise.all(tasks);      
+        if (data.reactions && data.reactions.result) {      
+            let sum = 0, cnt = 0;      
+            const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };      
+            data.reactions.result.forEach(r => {             
+                if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; }            
+            });      
+            if (cnt >= 1) {      
+                const isTv = data.name ? true : false;      
+                const cubV = (((isTv?7.4:6.5)*(isTv?50:150)+sum)/((isTv?50:150)+cnt)).toFixed(1);      
+                ratings += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;      
+            }      
+        }      
               
-        if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {      
+        let metaHtml = '';      
+        if (year) metaHtml += `<span class="cas-wave-year">${year}</span>`;      
+        if (time) metaHtml += `<span class="cas-wave-time">${time}</span>`;      
+        if (genre) metaHtml += `<span class="cas-wave-genre">${genre}</span>`;      
+              
+        render.find('.cas-meta-info').html(metaHtml);      
+        render.find('.cas-rate-items').empty();     
+  
+        if (ratings) {  
+            render.find('.cas-rating-corner').html(ratings);  
+        }  
+    }));      
+              
+    if (Lampa.Storage.get('cas_show_studios')) {      
+        tasks.push(Promise.resolve().then(() => {      
+            renderStudioLogosWithColorAnalysis(render.find('.cas-studios-row'), data);      
+        }));      
+    }      
+          
+    await Promise.all(tasks);      
+          
+    // Завжди повертаємо Promise  
+    if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {      
         return new Promise((resolve) => {  
             Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {      
                 try {      
@@ -738,6 +739,7 @@ function addStyles() {
         });  
     } else {      
         render.find('.cas-quality-row').hide();      
+        return Promise.resolve(); // Повертаємо resolved Promise  
     }  
 }  
                   
@@ -775,29 +777,37 @@ function attachLoader() {
                 };                  
                                   
                 const loadAllData = async () => {  
-                    if (cached) {  
-                        await processImagesWrapper(cached);  
-                    } else {                  
-                        const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());                  
-                        await new Promise((resolve) => {  
-                            $.getJSON(imagesUrl, (res) => {                  
-                                setCachedData(cacheId, res);                  
-                                processImagesWrapper(res).then(resolve);  
-                            }).fail(async () => {                  
-                                await ensureBackgroundLoaded();  
-                                render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                  
-                                resolve();  
-                            });                  
-                        });  
-                    }      
+                    try {  
+                        if (cached) {  
+                            await processImagesWrapper(cached);  
+                        } else {                  
+                            const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());                  
+                            await new Promise((resolve) => {  
+                                $.getJSON(imagesUrl, (res) => {                  
+                                    setCachedData(cacheId, res);                  
+                                    processImagesWrapper(res).then(resolve);  
+                                }).fail(async () => {                  
+                                    await ensureBackgroundLoaded();  
+                                    render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                  
+                                    resolve();  
+                                });                  
+                            });  
+                        }      
                                       
-                    if (event.data.reactions) data.reactions = event.data.reactions;            
-                    await loadMovieDataOptimized(render, data);  
+                        if (event.data.reactions) data.reactions = event.data.reactions;            
+                        await loadMovieDataOptimized(render, data);  
+                    } catch (error) {  
+                        console.error('Error loading movie data:', error);  
+                    }  
                 };  
   
                 loadAllData().then(() => {  
                     cardRoot.removeClass('cas-loading-state');  
                     requestAnimationFrame(() => cardRoot.addClass('cas-animated'));  
+                }).catch(() => {  
+                    // Навіть при помилці показуємо елементи  
+                    cardRoot.removeClass('cas-loading-state');  
+                    cardRoot.addClass('cas-animated');  
                 });  
             } else {  
                 cardRoot.removeClass('cas-loading-state');  
@@ -812,7 +822,7 @@ function attachLoader() {
             }, 200);                  
         }                  
     });                  
-}  
+} 
                     
 function startPlugin() {                     
     try {                    
