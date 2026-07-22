@@ -153,8 +153,8 @@ function applyStyles() {
     css += (isPosterAnim ? 'animation: kenBurnsEffect 22s ease-in-out infinite !important; ' : '');  
     css += 'transform-origin: center center !important; transition: opacity 1.2s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 0 !important; } ';  
       
-    // Контейнер з даними - відносне позиціонування для коректного відображення опису  
-    css += '.full-start-new__right { background: none !important; margin-top: 0 !important; z-index: 10 !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; justify-content: flex-start !important; padding: 20px 30px 40px 30px !important; gap: ' + blocksGap + ' !important; position: relative !important; bottom: auto !important; left: auto !important; width: 100% !important; max-width: 100% !important; } ';  
+    // Контейнер з даними - фіксований у лівому нижньому куту  
+    css += '.full-start-new__right { background: none !important; margin-top: 0 !important; z-index: 10 !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; justify-content: flex-end !important; padding: 20px 30px !important; gap: ' + blocksGap + ' !important; position: fixed !important; bottom: 0 !important; left: 0 !important; width: auto !important; max-width: 80% !important; max-height: 50vh !important; overflow-y: auto !important; } ';  
       
     var uiAnimClass = isUIAnim ? 'animation: premium_ui_reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; will-change: transform, opacity, filter; transform: translateZ(0); ' : '';  
   
@@ -186,10 +186,10 @@ function applyStyles() {
     css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 24px !important; height: 24px !important; margin-bottom: 5px !important; fill: #fff !important; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5)); } ';  
     css += '.full-start-new .full-start__button span { font-size: 8px !important; text-transform: uppercase !important; opacity: 0.75 !important; font-weight: 600; letter-spacing: 0.05em; } ';  
   
-    // Порядок для опису фільму - відображається після кнопок  
-    css += '.full-start-new__description { order: 7 !important; margin-top: 20px !important; width: 100% !important; } ';  
-    css += '.full-descr { order: 8 !important; width: 100% !important; } ';  
-    css += '.full-descr__text { order: 9 !important; width: 100% !important; } ';  
+    // Опис фільму - окремий блок, який відображається при скролінгу  
+    css += '.full-start-new__description { position: relative !important; margin-top: 100vh !important; padding: 20px 30px !important; width: 100% !important; background: rgba(0,0,0,0.8) !important; z-index: 5 !important; } ';  
+    css += '.full-descr { position: relative !important; margin-top: 0 !important; padding: 20px 30px !important; width: 100% !important; background: rgba(0,0,0,0.8) !important; z-index: 5 !important; } ';  
+    css += '.full-descr__text { position: relative !important; margin-top: 0 !important; padding: 20px 30px !important; width: 100% !important; background: rgba(0,0,0,0.8) !important; z-index: 5 !important; } ';  
   
     style.textContent = css;  
     document.head.appendChild(style);  
