@@ -193,7 +193,6 @@
                 <div class="full-start-new__right">                      
                     <div class="left-title__content">                      
                         <div class="cas-logo-container" style="margin-bottom: calc(var(--cas-blocks-gap) * 1.5);">  
-                            <!-- Логотип студії перенесено сюди, чітко над логотипом назви фільму -->  
                             <div class="cas-studios-row" style="display: flex; gap: 8px; align-items: center; margin-bottom: 10px;"></div>                  
                             <div class="cas-logo"></div>                    
                         </div>                    
@@ -253,14 +252,19 @@
 function addStyles() {  
     if ($('#cas-main-styles').length) return;  
     const styles = `<style id="cas-main-styles">  
-    :root { --cas-logo-scale: 1; --cas-blocks-gap: 30px; --cas-meta-size: 1.3em; --cas-anim-curve: cubic-bezier(0.2, 0.8, 0.2, 1); }  
+    :root { 
+        --cas-logo-scale: 1; 
+        --cas-blocks-gap: 30px; 
+        --cas-meta-size: 1.3em; 
+        --cas-anim-curve: cubic-bezier(0.16, 1, 0.3, 1); 
+    }  
             
-    /* Налаштування фону та виправлення Ken Burns анімації */  
+    /* Налаштування фону та Ken Burns */  
     .full-start__background {  
         height: calc(100% + 6em);  
         left: 0 !important;  
         opacity: 0 !important;  
-        transition: opacity 0.6s ease-out !important;  
+        transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) !important;  
         will-change: opacity;  
         overflow: hidden !important;  
     }  
@@ -273,7 +277,6 @@ function addStyles() {
         opacity: 0.35 !important;  
     }  
             
-    /* Елегантна Ken Burns анімація, прив'язана до зображення фону */  
     @keyframes casKenBurnsParallax {  
         0% { transform: scale(1.02) translateY(0px) translateX(0px); }  
         50% { transform: scale(1.10) translateY(-15px) translateX(5px); }  
@@ -287,20 +290,21 @@ function addStyles() {
         transform-origin: center center;  
     }  
       
-    /* Анімації контенту */  
-    .cas-logo, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper {  
+    /* Преміальні плавні анімації появи (каскад із розмиттям та масштабуванням) */  
+    .cas-logo, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper, .full-start-new__buttons {  
         opacity: 0 !important;  
-        transform: translateY(10px);  
-        transition: opacity 0.4s var(--cas-anim-curve), transform 0.4s var(--cas-anim-curve);  
-        will-change: transform, opacity;  
+        transform: translateY(18px) scale(0.98);  
+        filter: blur(4px);
+        transition: opacity 0.6s var(--cas-anim-curve), transform 0.6s var(--cas-anim-curve), filter 0.6s var(--cas-anim-curve);  
+        will-change: transform, opacity, filter;  
     }  
                         
-    .cas-animated .cas-logo { opacity: 1 !important; transform: translateY(0); transition-delay: 0s; }  
-    .cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.05s; }  
-    .cas-animated .cas-rate-items { opacity: 1 !important; transform: translateY(0); transition-delay: 0.2s; }  
-    .cas-animated .cas-meta-info { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.3s; }  
-    .cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.4s; }  
-    .cas-animated .cas-description { opacity: 0.7 !important; transform: translateY(0); transition-delay: 0.15s; }  
+    .cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateY(0) scale(1); filter: blur(0); transition-delay: 0.05s; }  
+    .cas-animated .cas-logo { opacity: 1 !important; transform: translateY(0) scale(1); filter: blur(0); transition-delay: 0.12s; }  
+    .cas-animated .cas-meta-info { opacity: 0.8 !important; transform: translateY(0) scale(1); filter: blur(0); transition-delay: 0.2s; }  
+    .cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateY(0) scale(1); filter: blur(0); transition-delay: 0.25s; }  
+    .cas-animated .cas-description { opacity: 0.75 !important; transform: translateY(0) scale(1); filter: blur(0); transition-delay: 0.32s; }  
+    .cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translateY(0) scale(1); filter: blur(0); transition-delay: 0.4s; }  
               
     .full-start-new__details { display: none !important; }  
     .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }  
@@ -653,7 +657,7 @@ function addStyles() {
                     debouncedLoadMovieData(render, data);                
                 }                
                                 
-                setTimeout(() => content.addClass('cas-animated'), 100);                
+                setTimeout(() => content.addClass('cas-animated'), 60);                
                                 
                 setTimeout(() => {                
                     const firstButton = render.find('.full-start-new__buttons .full-start__button').first();                
