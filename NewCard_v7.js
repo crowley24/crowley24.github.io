@@ -144,11 +144,16 @@
     css += '.full-start-new__right > div:first-child { display: none !important; } ';  
     css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';  
       
-    // Застосовуємо анімацію Ken Burns до всіх елементів фону  
-    css += '.background, .background__one, .background__two, .background__fade { position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; z-index: 0 !important; } ';  
+    // ВИКЛЮЧАЄМО transition для фону та застосовуємо анімацію  
+    css += '.background, .background__one, .background__two, .background__fade { ';  
+    css += 'position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; z-index: 0 !important; ';  
+    css += 'transition: none !important; -webkit-transition: none !important; -moz-transition: none !important; -o-transition: none !important; ';  
+    css += '} ';  
+      
     css += '.background img, .background__one img, .background__two img, .background__fade img { ';  
     css += (isPosterAnim ? 'animation: kenBurnsEffect 22s ease-in-out infinite !important; ' : '');  
-    css += 'transform-origin: center center !important; transition: opacity 1.2s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; } ';  
+    css += 'transform-origin: center center !important; transition: none !important; -webkit-transition: none !important; -moz-transition: none !important; -o-transition: none !important; ';  
+    css += 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; } ';  
       
     css += '.full-start-new__right { background: none !important; margin-top: 0 !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; padding: 0 10px !important; gap: ' + blocksGap + ' !important; position: relative !important; } ';  
       
