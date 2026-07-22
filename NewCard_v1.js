@@ -621,24 +621,24 @@ function addStyles() {
     }      
                   
     async function processImages(render, data, res) {                  
-        try {                  
-            const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];                  
-            if (bestLogo) {          
-                const quality = Lampa.Storage.get('cas_logo_quality') || 'original';                  
-                const logoSrc = Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path);                  
-                await preloadImageWithTimeout(logoSrc, 2000);                  
-                render.find('.cas-logo').html(`<img src="${logoSrc}">`);                  
-            } else {                  
-                render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                  
-            }                  
-            stopSlideshow();                  
-            if (Lampa.Storage.get('cas_slideshow_enabled') && res.backdrops && res.backdrops.length > 1) {          
-                startSlideshow(render, res.backdrops);          
-            }                  
-        } catch (error) {                  
+    try {                  
+        const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];                  
+        if (bestLogo) {          
+            const quality = Lampa.Storage.get('cas_logo_quality') || 'original';                  
+            const logoSrc = Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path);                  
+            await preloadImageWithTimeout(logoSrc, 5000);  // Збільшено тайм-аут  
+            render.find('.cas-logo').html(`<img src="${logoSrc}">`);                  
+        } else {                  
             render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                  
         }                  
-    }      
+        stopSlideshow();                  
+        if (Lampa.Storage.get('cas_slideshow_enabled') && res.backdrops && res.backdrops.length > 1) {          
+            startSlideshow(render, res.backdrops);          
+        }                  
+    } catch (error) {                  
+        render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                  
+    }                  
+}
                   
 async function loadMovieDataOptimized(render, data) {      
     const tasks = [];      
@@ -758,24 +758,28 @@ function attachLoader() {
                 const cached = getCachedData(cacheId);  
                                   
                 const ensureBackgroundLoaded = async () => {  
-                    const bgImgElement = render.find('.full-start__background img, img.full-start__background');  
-                    const bgSrc = bgImgElement.attr('src');  
-                    if (bgSrc) {  
-                        try {  
-                            await preloadImageWithTimeout(bgSrc, 2500);  
-                        } catch (e) {}  
-                    }  
-                };  
+    const bgImgElement = render.find('.full-start__background img, img.full-start__background');  
+    const bgSrc = bgImgElement.attr('src');  
+    if (bgSrc) {  
+        try {  
+            // Перевіряємо, чи зображення вже завантажено  
+            if (bgImgElement[0].complete) {  
+                return;  
+            }  
+            await preloadImageWithTimeout(bgSrc, 5000);  
+        } catch (e) {}  
+    }  
+};
   
                 const processImagesWrapper = async (res) => {                  
-                    try {   
-                        await Promise.all([  
-                            ensureBackgroundLoaded(),  
-                            processImages(render, data, res)  
-                        ]);  
-                    } catch (e) {}   
-                    // НЕ додаємо клас .loaded тут  
-                };                  
+    try {   
+        // Спочатку завантажуємо логотип  
+        await processImages(render, data, res);  
+          
+        // Потім завантажуємо фон  
+        await ensureBackgroundLoaded();  
+    } catch (e) {}   
+};              
                                   
                 const loadAllData = async () => {  
                     try {  
