@@ -312,7 +312,7 @@
                 if (data.images && data.images.backdrops && data.images.backdrops.length > 1) {  
                     var cleanBackdrops = data.images.backdrops.filter(function(b) { return b.aspect_ratio > 1.5; });  
                     if (cleanBackdrops.length > 0) {  
-                        startPosterSlideshow($('.full-start-new__poster'), cleanBackdrops.slice(0, 15));  
+                    startPosterSlideshow($('.background'), cleanBackdrops.slice(0, 15));
                     }  
                 }  
             }  
