@@ -9,7 +9,7 @@
   'use strict';
 
   // --- Online Ultra: настраиваемый бэкенд ---
-  var OU_DEFAULT = 'https://akter-black.com/';
+  var OU_DEFAULT = 'https://www.themoviedb.org/';
   var OU_BASE = (function () {
     var b = OU_DEFAULT;
     try { b = (window.Lampa && Lampa.Storage ? Lampa.Storage.get('ou_backend', OU_DEFAULT) : OU_DEFAULT) || OU_DEFAULT; } catch (e) {}
