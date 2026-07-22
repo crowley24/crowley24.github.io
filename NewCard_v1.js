@@ -61,7 +61,6 @@
         });                  
     }  
   
-    // Безпечний завантажувач із таймаутом, щоб уникнути зависань інтерфейсу  
     function preloadImageWithTimeout(src, timeout = 2500) {  
         return Promise.race([  
             preloadImage(src),  
@@ -340,7 +339,6 @@ function addStyles() {
     .cas-anim-slide.cas-animated .cas-rating-corner {   
         opacity: 1 !important;   
         transform: translateX(0);   
-        transition-delay: 0.48s;  
         animation: rating-pulse 3s ease-in-out 0.48s infinite, rating-slide-in 0.6s ease 0.48s forwards;  
     }    
   
@@ -365,7 +363,6 @@ function addStyles() {
     .cas-anim-spring.cas-animated .cas-rating-corner {   
         opacity: 1 !important;   
         transform: scale(1) translateX(0);   
-        transition-delay: 0.48s;  
         animation: rating-pulse 3s ease-in-out 0.48s infinite, rating-spring-in 0.7s ease 0.48s forwards;  
     }    
                 
@@ -644,61 +641,60 @@ function addStyles() {
     }      
                   
     async function loadMovieDataOptimized(render, data) {      
-    const tasks = [];      
-          
-    if (Lampa.Storage.get('cas_show_description')) {      
-        tasks.push(Promise.resolve().then(() => {      
-            render.find('.cas-description').html(data.overview || '').css('opacity','1').show();      
-        }));      
-    }      
-          
-    tasks.push(Promise.resolve().then(() => {      
-        const year = data.release_date ? new Date(data.release_date).getFullYear() : (data.first_air_date ? new Date(data.first_air_date).getFullYear() : '');      
-        const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));      
-        const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');      
+        const tasks = [];      
               
-        let ratings = '';      
-        const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);      
-        if (tmdbV > 0) {      
-            ratings += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;      
+        if (Lampa.Storage.get('cas_show_description')) {      
+            tasks.push(Promise.resolve().then(() => {      
+                render.find('.cas-description').html(data.overview || '').css('opacity','1').show();      
+            }));      
         }      
               
-        if (data.reactions && data.reactions.result) {      
-            let sum = 0, cnt = 0;      
-            const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };      
-            data.reactions.result.forEach(r => {             
-                if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; }            
-            });      
-            if (cnt >= 1) {      
-                const isTv = data.name ? true : false;      
-                const cubV = (((isTv?7.4:6.5)*(isTv?50:150)+sum)/((isTv?50:150)+cnt)).toFixed(1);      
-                ratings += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;      
+        tasks.push(Promise.resolve().then(() => {      
+            const year = data.release_date ? new Date(data.release_date).getFullYear() : (data.first_air_date ? new Date(data.first_air_date).getFullYear() : '');      
+            const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));      
+            const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');      
+                  
+            let ratings = '';      
+            const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);      
+            if (tmdbV > 0) {      
+                ratings += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;      
             }      
+                  
+            if (data.reactions && data.reactions.result) {      
+                let sum = 0, cnt = 0;      
+                const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };      
+                data.reactions.result.forEach(r => {             
+                    if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; }            
+                });      
+                if (cnt >= 1) {      
+                    const isTv = data.name ? true : false;      
+                    const cubV = (((isTv?7.4:6.5)*(isTv?50:150)+sum)/((isTv?50:150)+cnt)).toFixed(1);      
+                    ratings += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;      
+                }      
+            }      
+                  
+            let metaHtml = '';      
+            if (year) metaHtml += `<span class="cas-wave-year">${year}</span>`;      
+            if (time) metaHtml += `<span class="cas-wave-time">${time}</span>`;      
+            if (genre) metaHtml += `<span class="cas-wave-genre">${genre}</span>`;      
+                  
+            render.find('.cas-meta-info').html(metaHtml);      
+            render.find('.cas-rate-items').empty();     
+  
+            if (ratings) {  
+                render.find('.cas-rating-corner').html(ratings);  
+            }  
+        }));      
+              
+        if (Lampa.Storage.get('cas_show_studios')) {      
+            tasks.push(Promise.resolve().then(() => {      
+                renderStudioLogosWithColorAnalysis(render.find('.cas-studios-row'), data);      
+            }));      
         }      
               
-        let metaHtml = '';      
-        if (year) metaHtml += `<span class="cas-wave-year">${year}</span>`;      
-        if (time) metaHtml += `<span class="cas-wave-time">${time}</span>`;      
-        if (genre) metaHtml += `<span class="cas-wave-genre">${genre}</span>`;      
+        await Promise.all(tasks);      
               
-        render.find('.cas-meta-info').html(metaHtml);      
-        render.find('.cas-rate-items').empty();     
-  
-        if (ratings) {  
-            render.find('.cas-rating-corner').html(ratings);  
-        }  
-    }));      
-          
-    if (Lampa.Storage.get('cas_show_studios')) {      
-        tasks.push(Promise.resolve().then(() => {      
-            renderStudioLogosWithColorAnalysis(render.find('.cas-studios-row'), data);      
-        }));      
-    }      
-          
-    await Promise.all(tasks);      
-          
-    // Повертаємо Promise для завантаження якості  
-    if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {      
+        if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {      
         return new Promise((resolve) => {  
             Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {      
                 try {      
@@ -743,13 +739,9 @@ function addStyles() {
     } else {      
         render.find('.cas-quality-row').hide();      
     }  
-}    
-  
-    const debouncedLoadMovieData = debounce((render, data) => {                  
-        try { loadMovieDataOptimized(render, data); } catch (error) {}                  
-    }, 250);                  
+}  
                   
-    function attachLoader() {                  
+function attachLoader() {                  
     Lampa.Listener.follow('full', (event) => {                  
         if (event.type === 'complite') {                  
             const data = event.data.movie;                  
@@ -820,18 +812,18 @@ function addStyles() {
             }, 200);                  
         }                  
     });                  
-}        
+}  
                     
-    function startPlugin() {                     
-        try {                    
-            initializePlugin();                    
-            console.log('NewCard plugin initialized successfully');                    
-        } catch (error) {                    
-            console.error('Failed to initialize NewCard plugin:', error);                    
-        }                    
+function startPlugin() {                     
+    try {                    
+        initializePlugin();                    
+        console.log('NewCard plugin initialized successfully');                    
+    } catch (error) {                    
+        console.error('Failed to initialize NewCard plugin:', error);                    
     }                    
+}                    
                     
-    if (window.appready) startPlugin();                    
-    else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') startPlugin(); });                    
-})();   
+if (window.appready) startPlugin();                    
+else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') startPlugin(); });                    
+})();  
   
