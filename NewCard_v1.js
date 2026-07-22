@@ -461,7 +461,7 @@ function addStyles() {
     .cas-rating-corner {  
         position: absolute;  
         bottom: 2em;  
-        right: 4em;  
+        right: 2em;  
         z-index: 10;  
         display: flex;  
         align-items: center;  
