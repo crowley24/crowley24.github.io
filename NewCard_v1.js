@@ -292,13 +292,13 @@ function addStyles() {
         overflow: hidden !important;    
     }    
           
-    .full-start__background.loaded {    
-        opacity: 1 !important;    
-    }    
-    
     .full-start__background.dim {    
         opacity: 0.35 !important;    
     }    
+
+    .full-start__background.loaded {    
+    opacity: 0.5 !important;  /* Або 1, якщо потрібна повна непрозорість */  
+}
               
     @keyframes casKenBurnsParallax {    
         0% { transform: scale(1.02) translateY(0px) translateX(0px); }    
@@ -774,6 +774,7 @@ function attachLoader() {
                             processImages(render, data, res)  
                         ]);  
                     } catch (e) {}   
+                    // НЕ додаємо клас .loaded тут  
                 };                  
                                   
                 const loadAllData = async () => {  
@@ -802,10 +803,12 @@ function attachLoader() {
                 };  
   
                 loadAllData().then(() => {  
+                    // Показуємо фон та всі елементи одночасно  
+                    render.find('.full-start__background').addClass('loaded');  
                     cardRoot.removeClass('cas-loading-state');  
                     requestAnimationFrame(() => cardRoot.addClass('cas-animated'));  
                 }).catch(() => {  
-                    // Навіть при помилці показуємо елементи  
+                    render.find('.full-start__background').addClass('loaded');  
                     cardRoot.removeClass('cas-loading-state');  
                     cardRoot.addClass('cas-animated');  
                 });  
