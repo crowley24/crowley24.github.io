@@ -750,74 +750,77 @@ function addStyles() {
     }, 250);                  
                   
     function attachLoader() {                  
-        Lampa.Listener.follow('full', (event) => {                  
-            if (event.type === 'complite') {                  
-                const data = event.data.movie;                  
-                const render = event.object.activity.render();                  
-                const cardRoot = render.find('.full-start-new.left-title');                  
-                              
-                cardRoot.removeClass('cas-animated').addClass('cas-loading-state');                  
-                event.object.activity.onBeforeDestroy = cleanup;                  
+    Lampa.Listener.follow('full', (event) => {                  
+        if (event.type === 'complite') {                  
+            const data = event.data.movie;                  
+            const render = event.object.activity.render();                  
+            const cardRoot = render.find('.full-start-new.left-title');                          
+            cardRoot.removeClass('cas-animated').addClass('cas-loading-state');                  
+            event.object.activity.onBeforeDestroy = cleanup;                          
+                          
+            if (data && data.id) {                  
+                render.data('movie', data);                  
+                const cacheId = 'tmdb_' + data.id;                  
+                const cached = getCachedData(cacheId);  
                                   
-                if (data && data.id) {                  
-                    render.data('movie', data);                  
-                    const cacheId = 'tmdb_' + data.id;                  
-                    const cached = getCachedData(cacheId);  
-                                  
-                    const ensureBackgroundLoaded = async () => {  
-                        const bgImgElement = render.find('.full-start__background img, img.full-start__background');  
-                        const bgSrc = bgImgElement.attr('src');  
-                        if (bgSrc) {  
-                            try {  
-                                await preloadImageWithTimeout(bgSrc, 2500);  
-                            } catch (e) {}  
-                        }  
-                    };  
+                const ensureBackgroundLoaded = async () => {  
+                    const bgImgElement = render.find('.full-start__background img, img.full-start__background');  
+                    const bgSrc = bgImgElement.attr('src');  
+                    if (bgSrc) {  
+                        try {  
+                            await preloadImageWithTimeout(bgSrc, 2500);  
+                        } catch (e) {}  
+                    }  
+                };  
   
-                    const processImagesWrapper = async (res) => {                  
-                        try {   
-                            await Promise.all([  
-                                ensureBackgroundLoaded(),  
-                                processImages(render, data, res)  
-                            ]);  
-                        } catch (e) {} finally {  
-                            cardRoot.removeClass('cas-loading-state');  
-                            setTimeout(() => cardRoot.addClass('cas-animated'), 30);  
-                        }  
-                    };                  
-                                      
+                const processImagesWrapper = async (res) => {                  
+                    try {   
+                        await Promise.all([  
+                            ensureBackgroundLoaded(),  
+                            processImages(render, data, res)  
+                        ]);  
+                    } catch (e) {}   
+                };                  
+                                  
+                const loadAllData = async () => {  
                     if (cached) {  
-                        processImagesWrapper(cached);  
+                        await processImagesWrapper(cached);  
                     } else {                  
                         const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());                  
-                        $.getJSON(imagesUrl, (res) => {                  
-                            setCachedData(cacheId, res);                  
-                            processImagesWrapper(res);                  
-                        }).fail(async () => {                  
-                            await ensureBackgroundLoaded();  
-                            render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                  
-                            cardRoot.removeClass('cas-loading-state');  
-                            cardRoot.addClass('cas-animated');  
-                        });                  
-                    }                  
+                        await new Promise((resolve) => {  
+                            $.getJSON(imagesUrl, (res) => {                  
+                                setCachedData(cacheId, res);                  
+                                processImagesWrapper(res).then(resolve);  
+                            }).fail(async () => {                  
+                                await ensureBackgroundLoaded();  
+                                render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                  
+                                resolve();  
+                            });                  
+                        });  
+                    }      
                                       
                     if (event.data.reactions) data.reactions = event.data.reactions;            
-                    debouncedLoadMovieData(render, data);                  
-                } else {  
+                    await loadMovieDataOptimized(render, data);  
+                };  
+  
+                loadAllData().then(() => {  
                     cardRoot.removeClass('cas-loading-state');  
-                    cardRoot.addClass('cas-animated');  
+                    requestAnimationFrame(() => cardRoot.addClass('cas-animated'));  
+                });  
+            } else {  
+                cardRoot.removeClass('cas-loading-state');  
+                cardRoot.addClass('cas-animated');  
+            }                          
+            setTimeout(() => {                  
+                const firstButton = render.find('.full-start-new__buttons .full-start__button').first();                  
+                if (firstButton.length) {                  
+                    render.find('.full-start__button').removeClass('focus');                  
+                    firstButton.addClass('focus').trigger('focus');                  
                 }                  
-                                  
-                setTimeout(() => {                  
-                    const firstButton = render.find('.full-start-new__buttons .full-start__button').first();                  
-                    if (firstButton.length) {                  
-                        render.find('.full-start__button').removeClass('focus');                  
-                        firstButton.addClass('focus').trigger('focus');                  
-                    }                  
-                }, 200);                  
-            }                  
-        });                  
-    }                
+            }, 200);                  
+        }                  
+    });                  
+}        
                     
     function startPlugin() {                     
         try {                    
