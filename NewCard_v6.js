@@ -290,21 +290,20 @@ function addStyles() {
         transform-origin: center center;  
     }  
       
-    /* Преміальні плавні анімації появи (каскад з інерцією та м'яким розмиттям) */  
+    /* Елегантний Slide from Left */  
     .cas-logo, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper, .full-start-new__buttons {  
         opacity: 0 !important;  
-        transform: translateY(24px) scale(0.96);  
-        filter: blur(6px);
-        transition: opacity 0.8s var(--cas-anim-curve), transform 0.8s var(--cas-anim-curve), filter 0.8s var(--cas-anim-curve);  
-        will-change: transform, opacity, filter;  
+        transform: translateX(-40px);  
+        transition: opacity 0.8s var(--cas-anim-curve), transform 0.8s var(--cas-anim-curve);  
+        will-change: transform, opacity;  
     }  
                         
-    .cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateY(0) scale(1); filter: blur(0); transition-delay: 0.08s; }  
-    .cas-animated .cas-logo { opacity: 1 !important; transform: translateY(0) scale(1); filter: blur(0); transition-delay: 0.18s; }  
-    .cas-animated .cas-meta-info { opacity: 0.85 !important; transform: translateY(0) scale(1); filter: blur(0); transition-delay: 0.28s; }  
-    .cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateY(0) scale(1); filter: blur(0); transition-delay: 0.36s; }  
-    .cas-animated .cas-description { opacity: 0.75 !important; transform: translateY(0) scale(1); filter: blur(0); transition-delay: 0.44s; }  
-    .cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translateY(0) scale(1); filter: blur(0); transition-delay: 0.54s; }  
+    .cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.06s; }  
+    .cas-animated .cas-logo { opacity: 1 !important; transform: translateX(0); transition-delay: 0.14s; }  
+    .cas-animated .cas-meta-info { opacity: 0.85 !important; transform: translateX(0); transition-delay: 0.22s; }  
+    .cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.30s; }  
+    .cas-animated .cas-description { opacity: 0.75 !important; transform: translateX(0); transition-delay: 0.38s; }  
+    .cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translateX(0); transition-delay: 0.46s; }  
               
     .full-start-new__details { display: none !important; }  
     .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }  
