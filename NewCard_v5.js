@@ -190,7 +190,8 @@
                       
     function addCustomTemplate() {                       
         const animStyle = Lampa.Storage.get('cas_animation_style') || 'slide';
-        const template = `<div class="full-start-new left-title cas-anim-${animStyle}">                      
+        // Додаємо клас cas-loading-state за замовчуванням при створенні шаблону
+        const template = `<div class="full-start-new left-title cas-anim-${animStyle} cas-loading-state">                      
             <div class="full-start-new__body">                      
                 <div class="full-start-new__left hide">                      
                     <div class="full-start-new__poster">                      
@@ -267,6 +268,13 @@ function addStyles() {
         --cas-curve-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }  
             
+    /* Налаштування блокування екрану до моменту повного завантаження */
+    .full-start-new.cas-loading-state {
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+    }
+
     /* Налаштування фону та Ken Burns */  
     .full-start__background {  
         height: calc(100% + 6em);  
@@ -316,12 +324,12 @@ function addStyles() {
         transform: translateX(-40px);  
         transition: opacity 0.8s var(--cas-curve-slide), transform 0.8s var(--cas-curve-slide);  
     }                        
-    .cas-anim-slide.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.06s; }  
-    .cas-anim-slide.cas-animated .cas-logo { opacity: 1 !important; transform: translateX(0); transition-delay: 0.14s; }  
-    .cas-anim-slide.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: translateX(0); transition-delay: 0.22s; }  
-    .cas-anim-slide.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.30s; }  
-    .cas-anim-slide.cas-animated .cas-description { opacity: 0.75 !important; transform: translateX(0); transition-delay: 0.38s; }  
-    .cas-anim-slide.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translateX(0); transition-delay: 0.46s; }  
+    .cas-anim-slide.cas-animated .cas-logo { opacity: 1 !important; transform: translateX(0); transition-delay: 0.0s; }  
+    .cas-anim-slide.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.08s; }  
+    .cas-anim-slide.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: translateX(0); transition-delay: 0.16s; }  
+    .cas-anim-slide.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.24s; }  
+    .cas-anim-slide.cas-animated .cas-description { opacity: 0.75 !important; transform: translateX(0); transition-delay: 0.32s; }  
+    .cas-anim-slide.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translateX(0); transition-delay: 0.40s; }  
 
     /* --- Варіант 2: Elastic Spring --- */
     .cas-anim-spring .cas-logo, 
@@ -335,11 +343,11 @@ function addStyles() {
         transform: scale(0.85) translateX(-30px);  
         transition: opacity 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.7s var(--cas-curve-spring);  
     }                        
-    .cas-anim-spring.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: scale(1) translateX(0); transition-delay: 0.05s; }  
-    .cas-anim-spring.cas-animated .cas-logo { opacity: 1 !important; transform: scale(1) translateX(0); transition-delay: 0.12s; }  
-    .cas-anim-spring.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: scale(1) translateX(0); transition-delay: 0.19s; }  
-    .cas-anim-spring.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: scale(1) translateX(0); transition-delay: 0.26s; }  
-    .cas-anim-spring.cas-animated .cas-description { opacity: 0.75 !important; transform: scale(1) translateX(0); transition-delay: 0.33s; }  
+    .cas-anim-spring.cas-animated .cas-logo { opacity: 1 !important; transform: scale(1) translateX(0); transition-delay: 0.0s; }  
+    .cas-anim-spring.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: scale(1) translateX(0); transition-delay: 0.08s; }  
+    .cas-anim-spring.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: scale(1) translateX(0); transition-delay: 0.16s; }  
+    .cas-anim-spring.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: scale(1) translateX(0); transition-delay: 0.24s; }  
+    .cas-anim-spring.cas-animated .cas-description { opacity: 0.75 !important; transform: scale(1) translateX(0); transition-delay: 0.32s; }  
     .cas-anim-spring.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: scale(1) translateX(0); transition-delay: 0.40s; }  
               
     .full-start-new__details { display: none !important; }  
@@ -462,7 +470,7 @@ function addStyles() {
                 
     function cleanup() {                
         stopSlideshow();                
-        $('.left-title__content').parent().parent().removeClass('cas-animated');          
+        $('.left-title__content').parent().parent().removeClass('cas-animated cas-loading-state');          
     }                
                 
     function stopSlideshow() {                
@@ -542,6 +550,7 @@ function addStyles() {
                 
     async function processImages(render, data, res) {                
         try {                
+            // Умова використання англійського логотипу, якщо відсутній український
             const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];                
             if (bestLogo) {        
                 const quality = Lampa.Storage.get('cas_logo_quality') || 'original';                
@@ -627,7 +636,7 @@ function addStyles() {
                             if (t.includes('ukr') || t.includes('укр')) b.ukr = true;    
                             if (t.includes('5.1') || t.includes('5 1')) b.audio = '5.1';    
                             else if (t.includes('7.1') || t.includes('7 1')) b.audio = '7.1';    
-                            else if (t.includes('4.0') || t.includes('4 0')) b.audio = '4.0';    
+                            if (t.includes('4.0') || t.includes('4 0')) b.audio = '4.0';    
                             else if (t.includes('2.0') || t.includes('2 0')) b.audio = '2.0';    
                             if (t.includes('dub') || t.includes('дубл')) b.dub = true;    
                         });    
@@ -666,7 +675,7 @@ function addStyles() {
                 const render = event.object.activity.render();                
                 const cardRoot = render.find('.full-start-new.left-title');                
                             
-                cardRoot.removeClass('cas-animated');                
+                cardRoot.removeClass('cas-animated').addClass('cas-loading-state');                
                 event.object.activity.onBeforeDestroy = cleanup;                
                                 
                 if (data && data.id) {                
@@ -674,26 +683,52 @@ function addStyles() {
                     const cacheId = 'tmdb_' + data.id;                
                     const cached = getCachedData(cacheId);                
                                 
+                    // Функція перевірки та передзавантаження фону (backdrop)
+                    const ensureBackgroundLoaded = async () => {
+                        const bgImgElement = render.find('.full-start__background img, img.full-start__background');
+                        const bgSrc = bgImgElement.attr('src');
+                        if (bgSrc) {
+                            try {
+                                await preloadImage(bgSrc);
+                            } catch (e) {}
+                        }
+                    };
+
                     const processImagesWrapper = async (res) => {                
-                        try { await processImages(render, data, res); } catch (e) {}                
+                        try { 
+                            // Паралельно завантажуємо фон та логотип перед тим, як показати картку
+                            await Promise.all([
+                                ensureBackgroundLoaded(),
+                                processImages(render, data, res)
+                            ]);
+                        } catch (e) {} finally {
+                            // Знімаємо приховування і запускаємо анімацію появи одночасно
+                            cardRoot.removeClass('cas-loading-state');
+                            setTimeout(() => cardRoot.addClass('cas-animated'), 30);
+                        }
                     };                
                                     
-                    if (cached) processImagesWrapper(cached);                
-                    else {                
+                    if (cached) {
+                        processImagesWrapper(cached);
+                    } else {                
                         const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());                
                         $.getJSON(imagesUrl, (res) => {                
                             setCachedData(cacheId, res);                
                             processImagesWrapper(res);                
-                        }).fail(() => {                
+                        }).fail(async () => {                
+                            await ensureBackgroundLoaded();
                             render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                
+                            cardRoot.removeClass('cas-loading-state');
+                            cardRoot.addClass('cas-animated');
                         });                
                     }                
                                     
                     if (event.data.reactions) data.reactions = event.data.reactions;          
                     debouncedLoadMovieData(render, data);                
+                } else {
+                    cardRoot.removeClass('cas-loading-state');
+                    cardRoot.addClass('cas-animated');
                 }                
-                                
-                setTimeout(() => cardRoot.addClass('cas-animated'), 60);                
                                 
                 setTimeout(() => {                
                     const firstButton = render.find('.full-start-new__buttons .full-start__button').first();                
