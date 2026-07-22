@@ -284,22 +284,23 @@ function addStyles() {
     }  
   
     .full-start__background {    
-        height: calc(100% + 6em);    
-        left: 0 !important;    
-        opacity: 0 !important;    
-        transition: opacity 1s cubic-bezier(0.2, 0.8, 0.2, 1) !important;    
-        will-change: opacity;    
-        overflow: hidden !important;    
-    }    
+    height: calc(100% + 6em);    
+    left: 0 !important;    
+    opacity: 0 !important;    
+    visibility: hidden !important;  /* Додано для повного приховування */  
+    transition: opacity 1s cubic-bezier(0.2, 0.8, 0.2, 1) !important;    
+    will-change: opacity;    
+    overflow: hidden !important;    
+}     
           
     .full-start__background.dim {    
         opacity: 0.35 !important;    
     }    
 
     .full-start__background.loaded {    
-    opacity: 0.5 !important;  /* Або 1, якщо потрібна повна непрозорість */  
-}
-              
+    opacity: 0.5 !important;    
+    visibility: visible !important;  /* Додано для показу */  
+}              
     @keyframes casKenBurnsParallax {    
         0% { transform: scale(1.02) translateY(0px) translateX(0px); }    
         50% { transform: scale(1.10) translateY(-15px) translateX(5px); }    
@@ -773,13 +774,18 @@ function attachLoader() {
   
                 const processImagesWrapper = async (res) => {                  
     try {   
-        // Спочатку завантажуємо логотип  
-        await processImages(render, data, res);  
+        // Завантажуємо логотип і фон паралельно  
+        const [logoResult, bgResult] = await Promise.allSettled([  
+            processImages(render, data, res),  
+            ensureBackgroundLoaded()  
+        ]);  
           
-        // Потім завантажуємо фон  
-        await ensureBackgroundLoaded();  
+        // Перевіряємо, чи логотип успішно завантажився  
+        if (logoResult.status === 'rejected') {  
+            render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                  
+        }  
     } catch (e) {}   
-};              
+};
                                   
                 const loadAllData = async () => {  
                     try {  
