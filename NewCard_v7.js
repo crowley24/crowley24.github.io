@@ -46,16 +46,9 @@
             if (!src) { resolve(); return; }
             const img = new Image();                
             img.onload = () => resolve(img);                
-            img.onerror = reject;                
+            img.onerror = () => resolve(); // Якщо помилка завантаження, не ламаємо ланцюжок
             img.src = src;                
         });                
-    }
-
-    function preloadImageWithTimeout(src, timeout = 2500) {
-        return Promise.race([
-            preloadImage(src),
-            new Promise(resolve => setTimeout(resolve, timeout))
-        ]);
     }
                 
     function getRatingColor(val) {                
@@ -550,17 +543,19 @@
                 
     async function processImages(render, data, res) {                
         try {                
-            const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];                
+            const logos = (res && res.logos) ? res.logos : [];
+            const bestLogo = logos.find(l => l.iso_639_1 === 'uk') || logos.find(l => l.iso_639_1 === 'en') || logos[0];                
+            
             if (bestLogo) {        
                 const quality = Lampa.Storage.get('cas_logo_quality') || 'original';                
                 const logoSrc = Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path);                
-                await preloadImageWithTimeout(logoSrc, 2000);                
+                await preloadImage(logoSrc);                
                 render.find('.cas-logo').html(`<img src="${logoSrc}">`);                
             } else {                
                 render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                
             }                
             stopSlideshow();                
-            if (Lampa.Storage.get('cas_slideshow_enabled') && res.backdrops && res.backdrops.length > 1) {        
+            if (Lampa.Storage.get('cas_slideshow_enabled') && res && res.backdrops && res.backdrops.length > 1) {        
                 startSlideshow(render, res.backdrops);        
             }                
         } catch (error) {                
@@ -682,16 +677,8 @@
                         const bgImgElement = render.find('.full-start__background img, img.full-start__background');
                         const bgSrc = bgImgElement.attr('src');
                         if (bgSrc) {
-                            try {
-                                await preloadImageWithTimeout(bgSrc, 2500);
-                            } catch (e) {}
+                            await preloadImage(bgSrc);
                         }
-                    };
-
-                    const loadImagesData = (res) => {
-                        return new Promise((resolve) => {
-                            processImages(render, data, res).then(resolve).catch(resolve);
-                        });
                     };
 
                     const startFullRender = async () => {
@@ -701,14 +688,14 @@
                             let imagesData = cached;
                             if (!imagesData) {
                                 try {
-                                    const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());
+                                    const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key() + '&include_image_language=uk,en,null');
                                     imagesData = await new Promise((res) => $.getJSON(imagesUrl, res).fail(() => res(null)));
                                     if (imagesData) setCachedData(cacheId, imagesData);
                                 } catch(e) {}
                             }
 
                             if (imagesData) {
-                                await loadImagesData(imagesData);
+                                await processImages(render, data, imagesData);
                             } else {
                                 render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);
                             }
