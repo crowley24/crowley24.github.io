@@ -136,24 +136,22 @@
     css += '  100% { opacity: 1; transform: scale(1); } ';  
     css += '} ';  
       
-    // Прибираємо постер  
+    // Прибираємо оригінальний фон  
+    css += '.background { display: none !important; } ';  
+    css += '.background__one, .background__two, .background__fade { display: none !important; } ';  
+      
+    // Прибираємо ліву частину з постером, але залишаємо сам постер  
     css += '.full-start-new__left { display: none !important; } ';  
-    css += '.full-start-new__poster { display: none !important; } ';  
       
     css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="rating-count"], [class*="status"] { display:none !important; } ';  
     css += '.full-start-new__right > div:first-child { display: none !important; } ';  
     css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';  
       
-    // ВИКЛЮЧАЄМО transition для фону та застосовуємо анімацію  
-    css += '.background, .background__one, .background__two, .background__fade { ';  
-    css += 'position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; z-index: 0 !important; ';  
-    css += 'transition: none !important; -webkit-transition: none !important; -moz-transition: none !important; -o-transition: none !important; ';  
-    css += '} ';  
-      
-    css += '.background img, .background__one img, .background__two img, .background__fade img { ';  
+    // Робимо постер фоновим зображенням  
+    css += '.full-start-new__poster { position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; z-index: 0 !important; padding-bottom: 0 !important; background: #000 !important; border-radius: 0 !important; } ';  
+    css += '.full-start-new__poster img { ';  
     css += (isPosterAnim ? 'animation: kenBurnsEffect 22s ease-in-out infinite !important; ' : '');  
-    css += 'transform-origin: center center !important; transition: none !important; -webkit-transition: none !important; -moz-transition: none !important; -o-transition: none !important; ';  
-    css += 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; } ';  
+    css += 'transform-origin: center center !important; transition: opacity 1.2s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 0 !important; } ';  
       
     css += '.full-start-new__right { background: none !important; margin-top: 0 !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; padding: 0 10px !important; gap: ' + blocksGap + ' !important; position: relative !important; } ';  
       
@@ -316,7 +314,7 @@
                 if (data.images && data.images.backdrops && data.images.backdrops.length > 1) {  
                     var cleanBackdrops = data.images.backdrops.filter(function(b) { return b.aspect_ratio > 1.5; });  
                     if (cleanBackdrops.length > 0) {  
-                    startPosterSlideshow($('.background'), cleanBackdrops.slice(0, 15));
+startPosterSlideshow($('.full-start-new__poster'), cleanBackdrops.slice(0, 15));
                     }  
                 }  
             }  
@@ -346,25 +344,18 @@ function startPosterSlideshow($poster, items) {
     slideshowTimer = setInterval(function() {  
         index = (index + 1) % items.length;  
         var imgUrl = Lampa.TMDB.image('/t/p/' + Lampa.Storage.get('mobile_interface_slideshow_quality', 'w780') + items[index].file_path);  
-          
-        // Працюємо з усіма можливими елементами фону  
-        var $background = $('.background');  
-        var $current = $background.find('img').first();  
-          
-        if ($current.length === 0) {  
-            // Якщо зображення ще немає, створюємо його  
-            $background.append('<img src="' + imgUrl + '" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;">');  
-        } else {  
-            var nextImg = new Image();  
-            nextImg.onload = function() {  
-                $current.css('opacity', '0');  
-                setTimeout(function() {  
-                    $current.attr('src', imgUrl);  
-                    $current.css('opacity', '1');  
-                }, 1200);  
-            };   
-            nextImg.src = imgUrl;  
-        }  
+        var $current = $poster.find('img').first();  
+        var nextImg = new Image();  
+        nextImg.onload = function() {  
+            var $next = $('<img src="' + imgUrl + '" style="opacity: 0; transition: opacity 1.2s ease-in-out;">');  
+            $poster.append($next);  
+            setTimeout(function() {   
+                $next.css('opacity', '1');   
+                $current.css('opacity', '0');   
+                setTimeout(function(){ $current.remove(); }, 1200);   
+            }, 100);  
+        };   
+        nextImg.src = imgUrl;  
     }, parseInt(Lampa.Storage.get('mobile_interface_slideshow_time', '10000')));  
 }
   
