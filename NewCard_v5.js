@@ -57,7 +57,7 @@
         return new Promise((resolve) => {                
             const img = new Image();                
             img.onload = () => resolve(img);                
-            img.onerror = () => resolve(null); // Не кидаємо reject, щоб не ламати проміси              
+            img.onerror = () => resolve(null);              
             img.src = src;                
         });                
     }                
@@ -365,7 +365,7 @@
         $('body').append(Lampa.Template.get('left_title_css', {}, true));    
     }  
 
-    // Швидка робота з кешем
+    // Швидка робота з кешем у пам'яті
     function getCachedData(id) {                
         if (memoryCache.has(id)) return memoryCache.get(id);
         const cache = Lampa.Storage.get('cas_images_cache') || {};                
@@ -417,7 +417,7 @@
         window.casBgInterval = currentInterval;        
     }                
                 
-    // Оптимізований аналіз кольору без витоків пам'яті
+    // Оптимізований аналіз кольору логотипу студії без витоків GPU
     function renderStudioLogosWithColorAnalysis(container, data) {    
         container.empty();
         const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 1);  
@@ -442,7 +442,7 @@
                         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;    
                         let r = 0, g = 0, b = 0, count = 0;    
                             
-                        for (let i = 0; i < imageData.length; i += 16) { // Крок 16 замість 4 прискорює в 4 рази   
+                        for (let i = 0; i < imageData.length; i += 16) {   
                             if (imageData[i + 3] > 50) {    
                                 r += imageData[i]; g += imageData[i + 1]; b += imageData[i + 2];    
                                 count++;    
@@ -453,7 +453,7 @@
                             $('#' + id + ' img').css('filter', 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))');    
                         }    
                     } catch (e) {}
-                    canvas.width = canvas.height = 0; // Очищення GPU
+                    canvas.width = canvas.height = 0; 
                     canvas = null;
                 });
             };    
@@ -463,7 +463,7 @@
                 
     async function processImages(render, data, res) {                
         try {                
-            // Пріоритет українського логотипу з fallback на EN
+            // Якщо немає українського логотипу, беремо англійський
             const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];                
             if (bestLogo) {        
                 const quality = Lampa.Storage.get('cas_logo_quality') || 'original';                
@@ -481,9 +481,73 @@
             render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                
         }                
     }    
+
+    // Швидкий та безпечний аналіз через TMDB API (Keywords & Translations)
+    function fetchTmdbDetails(data, callback) {
+        const type = data.name ? 'tv' : 'movie';
+        const key = Lampa.TMDB.key();
+        const keywordsUrl = Lampa.TMDB.api(`${type}/${data.id}/keywords?api_key=${key}`);
+        const translationsUrl = Lampa.TMDB.api(`${type}/${data.id}/translations?api_key=${key}`);
+
+        const result = {
+            res: '',
+            hdr: false,
+            dv: false,
+            ukr: false,
+            dub: false
+        };
+
+        // Еуристика за платформою/студією для розширень
+        const networks = (data.networks || data.production_companies || []).map(n => (n.name || '').toLowerCase());
+        const year = new Date(data.release_date || data.first_air_date || 0).getFullYear();
+        
+        if (year >= 2020 && networks.some(n => n.includes('apple') || n.includes('disney') || n.includes('netflix') || n.includes('hbo') || n.includes('amazon'))) {
+            result.res = '4K';
+        } else if (year >= 2012) {
+            result.res = 'FULL HD';
+        }
+
+        let completed = 0;
+        const checkDone = () => {
+            completed++;
+            if (completed === 2) callback(result);
+        };
+
+        // Запит TMDB Keywords (HDR, Dolby Vision, 4K)
+        Lampa.Reguest.get(keywordsUrl, (res) => {
+            const kwList = (res.keywords || res.results || []).map(k => (k.name || '').toLowerCase());
+
+            if (kwList.some(k => k.includes('dolby vision') || k.includes('dovi'))) {
+                result.dv = true;
+                result.hdr = true;
+            } else if (kwList.some(k => k.includes('hdr') || k.includes('hdr10') || k.includes('high dynamic range'))) {
+                result.hdr = true;
+            }
+
+            if (kwList.some(k => k.includes('4k') || k.includes('2160p') || k.includes('ultra hd'))) {
+                result.res = '4K';
+            }
+
+            checkDone();
+        }, checkDone);
+
+        // Запит TMDB Translations (Українська мова та дубляж)
+        Lampa.Reguest.get(translationsUrl, (res) => {
+            if (res && res.translations && Array.isArray(res.translations)) {
+                const ukTr = res.translations.find(t => t.iso_639_1 === 'uk');
+                if (ukTr) {
+                    result.ukr = true;
+                    if (ukTr.data && (ukTr.data.title || ukTr.data.name || ukTr.data.overview)) {
+                        result.dub = true;
+                    }
+                }
+            }
+            checkDone();
+        }, checkDone);
+    }
                 
     function loadMovieDataOptimized(render, data) {    
-        // 1. Синхронний вивід текстових даних для миттєвого рендеру
+        // Синхронний вивід текстових даних для миттєвого рендеру
         if (data.tagline) render.find('.cas-tagline').text(`«${data.tagline}»`).show();
         else render.find('.cas-tagline').hide();
 
@@ -528,45 +592,19 @@
             renderStudioLogosWithColorAnalysis(render.find('.cas-studios-row'), data);    
         }    
             
-        // 2. Безпечний асинхронний пошук якості через Lampa.Parser
-        if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser && Lampa.Parser.get) {    
-            try {
-                Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {    
-                    try {    
-                        const items = res.Results || res;    
-                        if (items && Array.isArray(items) && items.length > 0) {    
-                            const b = { res: '', hdr: false, dv: false, ukr: false, audio: '', dub: false };    
-                            items.slice(0, 8).forEach(i => {    
-                                const t = (i.Title || i.title || '').toLowerCase();    
-                                if (t.includes('4k') || t.includes('2160')) b.res = '4K';    
-                                else if (!b.res && (t.includes('1080') || t.includes('fhd'))) b.res = 'FULL HD';    
-                                if (t.includes('hdr')) b.hdr = true;    
-                                if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) b.dv = true;    
-                                if (t.includes('ukr') || t.includes('укр')) b.ukr = true;    
-                                if (t.includes('5.1') || t.includes('5 1')) b.audio = '5.1';    
-                                else if (t.includes('7.1') || t.includes('7 1')) b.audio = '7.1';    
-                                if (t.includes('4.0') || t.includes('4 0')) b.audio = '4.0';    
-                                else if (t.includes('2.0') || t.includes('2 0')) b.audio = '2.0';    
-                                if (t.includes('dub') || t.includes('дубл')) b.dub = true;    
-                            });    
-                                
-                            let qH = '';    
-                            if (b.res) qH += `<div class="cas-quality-item cas-wave-quality"><img src="${QUALITY_ICONS[b.res]}"></div>`;    
-                            if (b.dv) qH += `<div class="cas-quality-item cas-wave-hdr"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;    
-                            else if (b.hdr) qH += `<div class="cas-quality-item cas-wave-hdr"><img src="${QUALITY_ICONS['HDR']}"></div>`;    
-                            if (b.audio) qH += `<div class="cas-quality-item cas-wave-quality cas-audio-item">${b.audio}</div>`;    
-                            if (b.dub) qH += `<div class="cas-quality-item cas-wave-quality"><img src="${QUALITY_ICONS['DUB']}"></div>`;    
-                            if (b.ukr) qH += `<div class="cas-quality-item cas-wave-ukr"><img src="${QUALITY_ICONS['UKR']}"></div>`;    
-                                
-                            if (qH) render.find('.cas-quality-row').html(qH).show();  
-                        }    
-                    } catch (e) { render.find('.cas-quality-row').hide(); }    
-                }, () => {
-                    render.find('.cas-quality-row').hide();
-                });
-            } catch (e) {
-                render.find('.cas-quality-row').hide();
-            }
+        // Завантаження якості/HDR/дубляжу через TMDB Keywords
+        if (Lampa.Storage.get('cas_show_quality')) {    
+            fetchTmdbDetails(data, (b) => {
+                let qH = '';    
+                if (b.res) qH += `<div class="cas-quality-item cas-wave-quality"><img src="${QUALITY_ICONS[b.res]}"></div>`;    
+                if (b.dv) qH += `<div class="cas-quality-item cas-wave-hdr"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;    
+                else if (b.hdr) qH += `<div class="cas-quality-item cas-wave-hdr"><img src="${QUALITY_ICONS['HDR']}"></div>`;    
+                if (b.dub) qH += `<div class="cas-quality-item cas-wave-quality"><img src="${QUALITY_ICONS['DUB']}"></div>`;    
+                if (b.ukr) qH += `<div class="cas-quality-item cas-wave-ukr"><img src="${QUALITY_ICONS['UKR']}"></div>`;    
+                    
+                if (qH) render.find('.cas-quality-row').html(qH).show();  
+                else render.find('.cas-quality-row').hide();
+            });
         } else {    
             render.find('.cas-quality-row').hide();    
         }    
@@ -602,7 +640,7 @@
                     } else {                
                         const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());                
                         
-                        // Заміна $.getJSON на захищений Lampa.Reguest
+                        // Безнапірний і безпечний HTTP-запит
                         activeRequest = Lampa.Reguest.get(imagesUrl, (res) => {                
                             activeRequest = null;
                             setCachedData(cacheId, res);                
