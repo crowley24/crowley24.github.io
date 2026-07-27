@@ -107,7 +107,7 @@
     }
 
     /**
-     * СТИЛІ ІНТЕРФЕЙСУ (CSS) - ПОВНЕ БЛОКУВАННЯ ВСІХ ВНУТРІШНІХ БЛОКІВ LAMPA
+     * СТИЛІ ІНТЕРФЕЙСУ (CSS)
      */
     function applyStyles() {
         var oldStyle = document.getElementById('tv-interface-styles');
@@ -136,14 +136,10 @@
         css += '  0% { opacity: 0; } ';
         css += '  100% { opacity: 1; } ';
         css += '} ';
-        
-        // 1. АГРЕСИВНЕ ПРИХОВУВАННЯ СТАНОДАРТНИХ ЕЛЕМЕНТІВ (Опис зверху, Актори знизу, Вкладки, Реакції)
-        css += '.full-start-new__details, .full-start__info, .full-start-new__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, .full-start-new__reactions, .full-start__reactions, [class*="reactions"], [class*="age"], [class*="pg"], [class*="rating-count"], [class*="status"] { display:none !important; } ';
+
+        // 1. ПРИХОВУВАННЯ ЛИШЕ ВЕРХНІХ ДУБЛЮЮЧИХ ЕЛЕМЕНТІВ (Заголовок та стандартні рейтинги)
         css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates, .full-start-new__rates { display: none !important; } ';
-        css += '.full-start-new__title-text, .full-start-new__head { display: none !important; } ';
-        
-        // ТОТАЛЬНЕ ПРИХОВУВАННЯ СТАНОДАРТНОГО ОПИСУ ТА АКТОРИВ У КАРТЦІ
-        css += '.full-start-new__text, .full-start-new__descr, .full-start__descr, .full-start-new__cast, .full-start__persons, .full-persons, .full-descr, .full-start-new__body, .full-start-new__tags, .full-start-new__person, .full-start-new__director { display: none !important; } ';
+        css += '.full-start-new__title-text, .full-start-new__head, .full-start-new__details { display: none !important; } ';
         
         css += '.background { background: #141414 !important; } ';
 
@@ -155,12 +151,11 @@
         css += (isPosterAnim ? 'animation: kenBurnsEffect 30s ease-in-out infinite !important; ' : '');
         css += 'transform-origin: center center !important; transition: opacity 1.2s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
         
-        // Подвійний затемнюючий градієнт під лівий текст у стилі Netflix
         css += 'mask-image: linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 45%, rgba(0,0,0,0.1) 80%, transparent 100%), linear-gradient(to top, #141414 0%, rgba(20,20,20,0.7) 40%, transparent 85%) !important; ';
         css += '-webkit-mask-image: linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 45%, rgba(0,0,0,0.1) 80%, transparent 100%), linear-gradient(to top, #141414 0%, rgba(20,20,20,0.7) 40%, transparent 85%) !important; } ';
         
-        // 3. Контейнер панелі (Жорстке позиціонування ЛІВОРУЧ ВНИЗУ)
-        css += '.full-start-new__right { position: absolute !important; bottom: 6vh !important; left: 4vw !important; top: auto !important; right: auto !important; width: 45vw !important; max-height: 85vh !important; overflow: visible !important; background: none !important; z-index: 10 !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; justify-content: flex-end !important; padding: 0 !important; margin: 0 !important; gap: ' + blocksGap + ' !important; text-align: left !important; } ';
+        // 3. Перший екран (Формуємо висоту 100vh, щоб опис і актори залишалися суворо ВНИЗУ)
+        css += '.full-start-new__right { position: relative !important; min-height: 100vh !important; width: 45vw !important; box-sizing: border-box !important; padding-bottom: 6vh !important; padding-left: 4vw !important; background: none !important; z-index: 10 !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; justify-content: flex-end !important; margin: 0 !important; gap: ' + blocksGap + ' !important; text-align: left !important; } ';
         
         var uiAnimClass = isUIAnim ? 'animation: premium_ui_reveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; will-change: transform, opacity; ' : '';
 
@@ -169,21 +164,18 @@
         css += '.studio-header-brand img { height: 26px !important; width: auto; max-width: 150px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.9)); opacity: 0.95; } ';
         css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 6px rgba(0,0,0,0.9)) !important; } ';
 
-        // Назва / Логотип фільму (Вирівняно по лівому краю)
+        // Назва / Логотип фільму
         css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.1s; width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; min-height: 50px; order: 2; text-align: left !important; } ';
         css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 38vw !important; object-fit: contain !important; object-position: left center !important; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.9)); margin: 0 !important; } ';
 
         // Слоган
         css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.15s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 1.05em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; order: 3; line-height: 1.35; max-width: 42vw; } ';
         
-        // Короткий опис (акуратний блок під логотипом)
-        css += '.tv-netflix-overview { ' + uiAnimClass + ' animation-delay: 0.18s; order: 4; font-size: 0.9em; color: rgba(255,255,255,0.8); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; line-height: 1.4; max-width: 42vw; margin: 2px 0 !important; text-shadow: 0 2px 4px rgba(0,0,0,0.9); } ';
-
-        // Мета-інформація (Рік, Країна, Жанри)
-        css += '.plugin-meta-row { ' + uiAnimClass + ' animation-delay: 0.22s; display: flex; justify-content: flex-start; align-items: center; flex-wrap: wrap; gap: 10px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.2); width: 100%; order: 5; color: #e5e5e5; font-family: "Inter", -apple-system, system-ui, sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.9); } ';
+        // Мета-інформація
+        css += '.plugin-meta-row { ' + uiAnimClass + ' animation-delay: 0.22s; display: flex; justify-content: flex-start; align-items: center; flex-wrap: wrap; gap: 10px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.2); width: 100%; order: 4; color: #e5e5e5; font-family: "Inter", -apple-system, system-ui, sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.9); } ';
         
-        // Блок Рейтинги + Якість
-        css += '.plugin-ratings-quality-row { ' + uiAnimClass + ' animation-delay: 0.26s; display: flex; justify-content: flex-start; align-items: center; flex-wrap: wrap; gap: 16px; margin: 0 !important; width: 100%; order: 6; font-size: calc(' + rSize + ' * 2.4); } ';
+        // Рейтинги + Якість
+        css += '.plugin-ratings-quality-row { ' + uiAnimClass + ' animation-delay: 0.26s; display: flex; justify-content: flex-start; align-items: center; flex-wrap: wrap; gap: 16px; margin: 0 !important; width: 100%; order: 5; font-size: calc(' + rSize + ' * 2.4); } ';
         css += '.plugin-ratings-group { display: flex; align-items: center; gap: 12px; } ';
         css += '.quality-row-inline { display: flex; align-items: center; gap: 8px; opacity: 0.95; } '; 
         
@@ -194,17 +186,19 @@
         css += '.quality-item { height: 1.2em; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6)); } '; 
         css += '.quality-item img { height: 100%; width: auto; object-fit: contain; } ';
 
-        // 4. Кнопки (Вирівняні ліворуч)
-        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.32s; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 14px !important; width: 100% !important; margin-top: 6px !important; order: 7; } ';
+        // Кнопки
+        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.32s; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 14px !important; width: 100% !important; margin-top: 6px !important; order: 6; } ';
         css += '.full-start-new .full-start__button { background: rgba(255, 255, 255, 0.15) !important; border: 2px solid transparent !important; border-radius: 8px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: center !important; padding: 10px 22px !important; width: auto !important; min-width: 120px !important; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important; cursor: pointer; } ';
         
-        // Активна кнопка (Фокус з пульта)
         css += '.full-start-new .full-start__button.focus, .full-start-new .full-start__button:focus { background: #ffffff !important; transform: scale(1.08) !important; border-color: #ffffff !important; box-shadow: 0 8px 25px rgba(0,0,0,0.8) !important; z-index: 20; } ';
         css += '.full-start-new .full-start__button.focus span, .full-start-new .full-start__button:focus span { color: #000000 !important; opacity: 1 !important; } ';
         css += '.full-start-new .full-start__button.focus svg, .full-start-new .full-start__button:focus svg { fill: #000000 !important; } ';
 
         css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 22px !important; height: 22px !important; margin-right: 8px !important; margin-bottom: 0 !important; fill: #fff !important; } ';
         css += '.full-start-new .full-start__button span { font-size: 13px !important; text-transform: uppercase !important; color: #fff !important; opacity: 0.9 !important; font-weight: 700; letter-spacing: 0.03em; white-space: nowrap; } ';
+
+        // 4. НИЖНІ БЛОКИ (Секції "Детально", "Актори", "Опис" знаходяться нижче після скролу)
+        css += '.full-start-new__body, .full-start-new__bottom, .full-descr, .full-persons { position: relative !important; z-index: 10 !important; padding-left: 4vw !important; padding-right: 4vw !important; margin-top: 20px !important; } ';
 
         style.textContent = css;
         document.head.appendChild(style);
@@ -245,7 +239,6 @@
     function renderRatings(container, e) {
         container.find('.plugin-meta-row').remove();
         container.find('.plugin-ratings-quality-row').remove();
-        container.find('.tv-netflix-overview').remove();
         
         var sep = '<span class="info-separator">•</span>';
         var $metaRow = $('<div class="plugin-meta-row"></div>');
@@ -296,11 +289,6 @@
 
         $rqRow.append($ratingsGroup).append($qRow);
         container.append($metaRow).append($rqRow);
-
-        if (e.data.movie.overview) {
-            var $overview = $('<div class="tv-netflix-overview">' + e.data.movie.overview + '</div>');
-            container.find('.full-start-new__tagline').after($overview);
-        }
     }
 
     function loadMovieDetails(movie, $render) {
@@ -412,9 +400,6 @@
                 var movie = e.data.movie, $render = e.object.activity.render();
                 
                 if (window.lampa_settings) window.lampa_settings.blur_poster = false;
-
-                // Примусове вимирання та видалення непотрібних DOM-вузлів
-                $render.find('.full-start-new__reactions, .full-start__reactions, .full-start-new__head, .full-descr, .full-persons, .full-start-new__persons, .full-start-new__body').remove();
 
                 renderRatings($render.find('.full-start-new__right'), e);
                 loadMovieDetails(movie, $render);
