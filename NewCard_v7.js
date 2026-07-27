@@ -14,11 +14,11 @@
         { id: 'tv_interface_slideshow', default: true },
         { id: 'tv_interface_slideshow_time', default: '10000' },
         { id: 'tv_interface_slideshow_quality', default: 'w1280' },
-        { id: 'tv_interface_logo_size_v2', default: '120' },
+        { id: 'tv_interface_logo_size_v2', default: '100' },
         { id: 'tv_interface_logo_quality', default: 'w500' },
         { id: 'tv_interface_show_tagline', default: true },
-        { id: 'tv_interface_blocks_gap', default: '6px' },
-        { id: 'tv_interface_ratings_size', default: '0.55em' },
+        { id: 'tv_interface_blocks_gap', default: '4px' },
+        { id: 'tv_interface_ratings_size', default: '0.5em' },
         { id: 'tv_interface_studios', default: true },
         { id: 'tv_interface_quality', default: true }
     ];
@@ -57,7 +57,7 @@
     }
 
     /**
-     * АНАЛІЗ ЗОБРАЖЕННЯ НА ТЕМНОТУ ТА НАЯВНІСТЬ КОЛЬОРУ
+     * АНАЛІЗ ЗОБРАЖЕННЯ НА ТЕМНОТУ
      */
     function isImageDark(imgSrc, callback) {
         var img = new Image();
@@ -115,10 +115,10 @@
 
         var isPosterAnim = Lampa.Storage.get('tv_interface_animation');
         var isUIAnim = Lampa.Storage.get('tv_interface_ui_anim');
-        var rSize = Lampa.Storage.get('tv_interface_ratings_size', '0.55em');
-        var lHeight = Lampa.Storage.get('tv_interface_logo_size_v2', '120'); 
+        var rSize = Lampa.Storage.get('tv_interface_ratings_size', '0.5em');
+        var lHeight = Lampa.Storage.get('tv_interface_logo_size_v2', '100'); 
         var showTagline = Lampa.Storage.get('tv_interface_show_tagline');
-        var blocksGap = Lampa.Storage.get('tv_interface_blocks_gap', '6px');
+        var blocksGap = Lampa.Storage.get('tv_interface_blocks_gap', '4px');
         
         var style = document.createElement('style');
         style.id = 'tv-interface-styles';
@@ -126,22 +126,13 @@
         var css = '';
         
         css += '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.06); } 100% { transform: scale(1); } } ';
-        
-        css += '@keyframes premium_ui_reveal { ';
-        css += '  0% { opacity: 0; transform: translate3d(-20px, 0, 0); filter: blur(6px); } ';
-        css += '  100% { opacity: 1; transform: translate3d(0, 0, 0); filter: blur(0px); } ';
-        css += '} ';
+        css += '@keyframes premium_ui_reveal { 0% { opacity: 0; transform: translate3d(-20px, 0, 0); filter: blur(6px); } 100% { opacity: 1; transform: translate3d(0, 0, 0); filter: blur(0px); } } ';
+        css += '@keyframes poster_fade_in { 0% { opacity: 0; } 100% { opacity: 1; } } ';
 
-        css += '@keyframes poster_fade_in { ';
-        css += '  0% { opacity: 0; } ';
-        css += '  100% { opacity: 1; } ';
-        css += '} ';
-
-        // 1. Приховуємо дублюючі елементи Lampa
+        // 1. Приховуємо дефолтні елементи Lampa
         css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates, .full-start-new__rates { display: none !important; } ';
         css += '.full-start-new__title-text, .full-start-new__head, .full-start-new__details { display: none !important; } ';
         css += '.full-start-new__img, .full-start__img, .full-start-new__poster-img { display: none !important; visibility: hidden !important; opacity: 0 !important; } ';
-        
         css += '.background { background: #141414 !important; } ';
 
         // 2. Повноекранний Фоновий Постер
@@ -151,55 +142,54 @@
         css += '.full-start-new__poster img { filter: none !important; ';
         css += (isPosterAnim ? 'animation: kenBurnsEffect 30s ease-in-out infinite !important; ' : '');
         css += 'transform-origin: center center !important; transition: opacity 1.2s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
-        
         css += 'mask-image: linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 45%, rgba(0,0,0,0.1) 80%, transparent 100%), linear-gradient(to top, #141414 0%, rgba(20,20,20,0.7) 40%, transparent 85%) !important; ';
         css += '-webkit-mask-image: linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 45%, rgba(0,0,0,0.1) 80%, transparent 100%), linear-gradient(to top, #141414 0%, rgba(20,20,20,0.7) 40%, transparent 85%) !important; } ';
         
-        // 3. Корекція позиціонування першого екрана
-        css += '.full-start-new { position: relative !important; min-height: 100vh !important; height: 100vh !important; padding: 0 0 4vh 4vw !important; box-sizing: border-box !important; display: flex !important; flex-direction: column !important; justify-content: flex-end !important; align-items: flex-start !important; } ';
+        // 3. ЖОРСТКЕ ВИРІВНЮВАННЯ ГОЛОВНОГО КОНТЕЙНЕРА (ЗНІМАЄМО GRID ЦЕНТРОВКУ)
+        css += 'body .full-start-new { display: flex !important; flex-direction: column !important; justify-content: flex-end !important; align-items: flex-start !important; position: relative !important; min-height: 100vh !important; height: 100vh !important; padding: 0 0 5vh 4vw !important; box-sizing: border-box !important; grid-template-columns: none !important; grid-template-rows: none !important; grid-template-areas: none !important; } ';
 
-        // Ліве вирівнювання та притиск блоку вниз
-        css += '.full-start-new__right { position: relative !important; width: 48vw !important; margin: 0 !important; padding: 0 !important; background: none !important; z-index: 10 !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; justify-content: flex-end !important; gap: ' + blocksGap + ' !important; text-align: left !important; } ';
+        // Жорсткий притиск блоку ліворуч і вниз
+        css += 'body .full-start-new__right { position: relative !important; width: 50vw !important; max-width: 600px !important; margin: 0 !important; padding: 0 !important; background: none !important; z-index: 10 !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; justify-content: flex-end !important; gap: ' + blocksGap + ' !important; text-align: left !important; float: left !important; left: 0 !important; right: auto !important; } ';
         
         var uiAnimClass = isUIAnim ? 'animation: premium_ui_reveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; will-change: transform, opacity; ' : '';
 
         // Логотип студії
-        css += '.studio-header-brand { ' + uiAnimClass + ' animation-delay: 0.05s; order: 1; width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: -2px !important; margin-left: 0 !important; } ';
-        css += '.studio-header-brand img { height: 20px !important; width: auto; max-width: 120px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.9)); opacity: 0.95; margin: 0 !important; } ';
+        css += '.studio-header-brand { ' + uiAnimClass + ' animation-delay: 0.05s; order: 1; width: 100%; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 0 -2px 0 !important; } ';
+        css += '.studio-header-brand img { height: 18px !important; width: auto; max-width: 110px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.9)); opacity: 0.95; margin: 0 !important; } ';
         css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 6px rgba(0,0,0,0.9)) !important; } ';
 
         // Назва / Логотип фільму
         css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.1s; width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; padding: 0 !important; order: 2; text-align: left !important; } ';
-        css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 36vw !important; object-fit: contain !important; object-position: left center !important; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.9)); margin: 0 !important; } ';
+        css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 38vw !important; object-fit: contain !important; object-position: left center !important; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.9)); margin: 0 !important; } ';
 
         // Слоган
-        css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.15s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; order: 3; line-height: 1.25; max-width: 42vw; } ';
+        css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.15s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.85em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; order: 3; line-height: 1.2; max-width: 45vw; } ';
         
-        // Мета-інформація
-        css += '.plugin-meta-row { ' + uiAnimClass + ' animation-delay: 0.2s; display: flex; justify-content: flex-start; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 !important; font-size: calc(' + rSize + ' * 2); width: 100%; order: 4; color: #e5e5e5; font-family: "Inter", -apple-system, system-ui, sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.9); } ';
+        // Мета-інформація (Рік, Країна, Час, Жанр)
+        css += '.plugin-meta-row { ' + uiAnimClass + ' animation-delay: 0.2s; display: flex !important; justify-content: flex-start !important; align-items: center !important; flex-wrap: wrap !important; gap: 8px; margin: 0 !important; font-size: calc(' + rSize + ' * 2); width: 100%; order: 4; color: #e5e5e5; font-family: "Inter", -apple-system, system-ui, sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.9); text-align: left !important; } ';
         
         // Рейтинги + Якість
-        css += '.plugin-ratings-quality-row { ' + uiAnimClass + ' animation-delay: 0.25s; display: flex; justify-content: flex-start; align-items: center; flex-wrap: wrap; gap: 12px; margin: 0 !important; width: 100%; order: 5; font-size: calc(' + rSize + ' * 2.2); } ';
-        css += '.plugin-ratings-group { display: flex; align-items: center; gap: 10px; } ';
-        css += '.quality-row-inline { display: flex; align-items: center; gap: 6px; opacity: 0.95; } '; 
+        css += '.plugin-ratings-quality-row { ' + uiAnimClass + ' animation-delay: 0.25s; display: flex !important; justify-content: flex-start !important; align-items: center !important; flex-wrap: wrap !important; gap: 12px; margin: 0 !important; width: 100%; order: 5; font-size: calc(' + rSize + ' * 2.2); text-align: left !important; } ';
+        css += '.plugin-ratings-group { display: flex !important; align-items: center !important; gap: 10px; } ';
+        css += '.quality-row-inline { display: flex !important; align-items: center !important; gap: 6px; opacity: 0.95; } '; 
         
-        css += '.plugin-rating-item { display: flex; align-items: center; gap: 5px; font-weight: 700; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.9); } ';
+        css += '.plugin-rating-item { display: flex !important; align-items: center !important; gap: 5px; font-weight: 700; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.9); } ';
         css += '.plugin-rating-item img { height: 1.1em; width: auto; } ';
         css += '.info-text-item { opacity: 0.85; font-weight: 500; font-size: 0.9em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
         css += '.quality-item { height: 1.1em; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6)); } '; 
         css += '.quality-item img { height: 100%; width: auto; object-fit: contain; } ';
 
-        // Кнопки (Чітко зліва внизу)
-        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.3s; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 10px !important; width: 100% !important; margin: 4px 0 0 0 !important; order: 6; } ';
-        css += '.full-start-new .full-start__button { background: rgba(255, 255, 255, 0.15) !important; border: 2px solid transparent !important; border-radius: 8px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: center !important; padding: 7px 16px !important; width: auto !important; min-width: 100px !important; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important; cursor: pointer; margin: 0 !important; } ';
+        // Кнопки (Притиснуті вліво та підняті вище за нижній край)
+        css += 'body .full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.3s; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 10px !important; width: 100% !important; margin: 6px 0 0 0 !important; order: 6; } ';
+        css += 'body .full-start-new .full-start__button { background: rgba(255, 255, 255, 0.15) !important; border: 2px solid transparent !important; border-radius: 8px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: center !important; padding: 6px 14px !important; width: auto !important; min-width: 90px !important; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important; cursor: pointer; margin: 0 !important; } ';
         
-        css += '.full-start-new .full-start__button.focus, .full-start-new .full-start__button:focus { background: #ffffff !important; transform: scale(1.05) !important; border-color: #ffffff !important; box-shadow: 0 8px 25px rgba(0,0,0,0.8) !important; z-index: 20; } ';
-        css += '.full-start-new .full-start__button.focus span, .full-start-new .full-start__button:focus span { color: #000000 !important; opacity: 1 !important; } ';
-        css += '.full-start-new .full-start__button.focus svg, .full-start-new .full-start__button:focus svg { fill: #000000 !important; } ';
+        css += 'body .full-start-new .full-start__button.focus, body .full-start-new .full-start__button:focus { background: #ffffff !important; transform: scale(1.05) !important; border-color: #ffffff !important; box-shadow: 0 8px 25px rgba(0,0,0,0.8) !important; z-index: 20; } ';
+        css += 'body .full-start-new .full-start__button.focus span, body .full-start-new .full-start__button:focus span { color: #000000 !important; opacity: 1 !important; } ';
+        css += 'body .full-start-new .full-start__button.focus svg, body .full-start-new .full-start__button:focus svg { fill: #000000 !important; } ';
 
-        css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 18px !important; height: 18px !important; margin-right: 6px !important; margin-bottom: 0 !important; fill: #fff !important; } ';
-        css += '.full-start-new .full-start__button span { font-size: 12px !important; text-transform: uppercase !important; color: #fff !important; opacity: 0.9 !important; font-weight: 700; letter-spacing: 0.03em; white-space: nowrap; } ';
+        css += 'body .full-start-new .full-start__button svg, body .full-start-new .full-start__button img { width: 16px !important; height: 16px !important; margin-right: 6px !important; margin-bottom: 0 !important; fill: #fff !important; } ';
+        css += 'body .full-start-new .full-start__button span { font-size: 12px !important; text-transform: uppercase !important; color: #fff !important; opacity: 0.9 !important; font-weight: 700; letter-spacing: 0.03em; white-space: nowrap; } ';
 
         // 4. НИЖНІ БЛОКИ
         css += '.full-start-new__body, .full-start-new__bottom, .full-descr, .full-persons { position: relative !important; z-index: 10 !important; width: 100% !important; padding: 20px 4vw !important; margin: 0 !important; box-sizing: border-box !important; } ';
@@ -466,7 +456,7 @@
 
         Lampa.SettingsApi.addParam({ 
             component: 'tv_interface', 
-            param: { name: 'tv_interface_logo_size_v2', type: 'select', values: { '100': 'Дрібний', '120': 'Стандартний', '150': 'Великий' }, default: '120' }, 
+            param: { name: 'tv_interface_logo_size_v2', type: 'select', values: { '90': 'Дрібний', '100': 'Стандартний', '130': 'Великий' }, default: '100' }, 
             field: { name: 'Висота логотипу тайтлу' }, 
             onChange: applyStyles 
         });
@@ -480,14 +470,14 @@
 
         Lampa.SettingsApi.addParam({ 
             component: 'tv_interface', 
-            param: { name: 'tv_interface_blocks_gap', type: 'select', values: { '4px': 'Дуже компактний', '6px': 'Стандартний', '10px': 'Просторий' }, default: '6px' }, 
+            param: { name: 'tv_interface_blocks_gap', type: 'select', values: { '2px': 'Дуже компактний', '4px': 'Стандартний', '8px': 'Просторий' }, default: '4px' }, 
             field: { name: 'Відступи між блоками' }, 
             onChange: applyStyles 
         });
 
         Lampa.SettingsApi.addParam({ 
             component: 'tv_interface', 
-            param: { name: 'tv_interface_ratings_size', type: 'select', values: { '0.45em': 'Дрібний', '0.55em': 'Звичайний', '0.65em': 'Великий' }, default: '0.55em' }, 
+            param: { name: 'tv_interface_ratings_size', type: 'select', values: { '0.45em': 'Дрібний', '0.5em': 'Звичайний', '0.6em': 'Великий' }, default: '0.5em' }, 
             field: { name: 'Розмір шрифту інфо-блоків' }, 
             onChange: applyStyles 
         });
