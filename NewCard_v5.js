@@ -3,8 +3,7 @@
     const PLUGIN_NAME = 'NewCard';                
     const PLUGIN_ID = 'new_card_style';                
     const ASSETS_PATH = 'https://crowley38.github.io/Icons/';                
-    const CACHE_LIFETIME = 1000 * 60 * 60 * 24;                  
-                
+    const CACHE_LIFETIME = 1000 * 60 * 60 * 24;                              
     let currentInterval = null;            
             
     const ICONS = {                
