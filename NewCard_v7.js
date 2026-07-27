@@ -169,7 +169,7 @@
             const buttons = currentCard.find('.full-start-new__buttons');          
                       
             if (!showDesc) {          
-                buttons.css('margin-top', '0.4em');          
+                buttons.css('margin-top', '0.1em');          
             } else {          
                 buttons.css('margin-top', '');          
             }          
@@ -217,7 +217,7 @@
                             <div class="full-start-new__head hide"></div>                      
                             <div class="full-start-new__details hide"></div>                      
                         </div>                  
-                        <div class="full-start-new__buttons" style="margin-top: 14px;">                      
+                        <div class="full-start-new__buttons" style="margin-top: 6px;">                      
                             <div class="full-start__button selector button--play">                      
                                 <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/><path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/></svg>                      
                                 <span>#{title_watch}</span>                      
@@ -391,7 +391,7 @@
             overflow: visible;  
             max-width: 100%;  
             padding-left: 0%;  
-            margin-bottom: calc(var(--cas-blocks-gap) * 0.8);  
+            margin-bottom: calc(var(--cas-blocks-gap) * 1.2);  
             max-height: 300px;  
             display: flex;
             flex-direction: column;
@@ -415,7 +415,7 @@
             font-size: calc(var(--cas-meta-size) * 0.95);
             font-style: italic;
             color: rgba(255, 255, 255, 0.85);
-            margin-bottom: 12px;
+            margin-bottom: 16px;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
             max-width: 650px;
             text-align: left !important;
@@ -453,6 +453,7 @@
             flex-wrap: wrap;
             width: 100%;
             margin-left: 0 !important;
+            margin-top: 6px !important;
         }
         
         .cas-sep {  
