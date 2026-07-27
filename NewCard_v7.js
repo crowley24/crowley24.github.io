@@ -157,21 +157,21 @@
         if (currentCard.length > 0) {          
             currentCard.removeClass('cas-anim-slide cas-anim-spring').addClass('cas-anim-' + animStyle);
 
-            currentCard.find('.cas-description').toggle(!!Lampa.Storage.get('cas_show_description'));          
+            const showDesc = !!Lampa.Storage.get('cas_show_description');
+            const showTag = !!Lampa.Storage.get('cas_show_tagline');
+
+            currentCard.find('.cas-description').toggle(showDesc);          
+            currentCard.find('.cas-tagline').toggle(showTag);
             currentCard.find('.cas-studios-row').toggle(!!Lampa.Storage.get('cas_show_studios'));          
             currentCard.find('.cas-quality-row').toggle(!!Lampa.Storage.get('cas_show_quality'));          
             currentCard.find('.cas-rate-items, .cas-bottom-ratings').toggle(!!Lampa.Storage.get('cas_show_rating'));
-            currentCard.find('.cas-tagline').toggle(!!Lampa.Storage.get('cas_show_tagline'));          
                         
-            const hasVisibleElements = currentCard.find('.cas-studios-row:visible, .cas-rate-items:visible, .cas-quality-row:visible, .cas-description:visible').length > 0;          
             const buttons = currentCard.find('.full-start-new__buttons');          
                       
-            if (!hasVisibleElements) {          
-                buttons.css('margin-top', '0.2em');          
-                currentCard.find('.cas-ratings-line').css('margin-bottom', '0');          
+            if (!showDesc) {          
+                buttons.css('margin-top', '0.4em');          
             } else {          
                 buttons.css('margin-top', '');          
-                currentCard.find('.cas-ratings-line').css('margin-bottom', '');          
             }          
                         
             stopSlideshow();          
@@ -203,21 +203,21 @@
                 </div>                      
                 <div class="full-start-new__right">                      
                     <div class="left-title__content">                      
-                        <div class="cas-logo-container" style="margin-bottom: calc(var(--cas-blocks-gap) * 1.5);">  
-                            <div class="cas-studios-row" style="display: flex; gap: 8px; align-items: center; margin-bottom: 10px;"></div>                  
+                        <div class="cas-logo-container" style="margin-bottom: calc(var(--cas-blocks-gap) * 1.2);">  
+                            <div class="cas-studios-row" style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;"></div>                  
                             <div class="cas-logo"></div>                    
                         </div>                    
                         <div class="cas-tagline" style="display: none;"></div>
-                        <div class="cas-meta-line" style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">      
+                        <div class="cas-meta-line" style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap;">      
                             <div class="cas-meta-info"></div>      
                             <div class="cas-quality-row" style="display: flex; gap: 6px; align-items: center;"></div>      
                         </div>  
-                        <div class="cas-description" style="margin-top: calc(var(--cas-blocks-gap) * 0.4);"></div>                    
-                        <div class="cas-details-wrapper" style="margin-top: 10px;">                  
+                        <div class="cas-description" style="margin-top: 2px;"></div>                    
+                        <div class="cas-details-wrapper" style="margin-top: 4px;">                  
                             <div class="full-start-new__head hide"></div>                      
                             <div class="full-start-new__details hide"></div>                      
                         </div>                  
-                        <div class="full-start-new__buttons">                      
+                        <div class="full-start-new__buttons" style="margin-top: 14px;">                      
                             <div class="full-start__button selector button--play">                      
                                 <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/><path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/></svg>                      
                                 <span>#{title_watch}</span>                      
@@ -243,7 +243,7 @@
                         </div>                  
                     </div>                  
                     <div class="full-start-new__reactions selector hide"></div>                  
-                    <div class="cas-bottom-ratings" style="position: absolute; right: 4em; bottom: 2em; display: flex; align-items: center; gap: 15px; font-size: var(--cas-meta-size); font-weight: 600; z-index: 3;"></div>
+                    <div class="cas-bottom-ratings" style="position: absolute; right: 2.5em; bottom: 2em; display: flex; align-items: center; gap: 15px; font-size: var(--cas-meta-size); font-weight: 600; z-index: 3;"></div>
                     <div class="full-start-new__rate-line hide"></div>                  
                     <div class="rating--modss" style="display: none;"></div>                  
                 </div>                  
@@ -310,17 +310,22 @@
             backface-visibility: hidden;
         }  
 
-        /* Стилі для блоку якості з плавним відкладеним проявом */
-        .cas-quality-row {
+        .cas-quality-row .cas-quality-item {
             opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.2s ease;
+            transform: translate3d(0, 6px, 0) scale(0.9);
+            transition: opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1), transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
         }
-        .cas-quality-row.show-quality,
-        .cas-quality-row.visible {
+
+        .cas-quality-row.show-quality .cas-quality-item {
             opacity: 1;
-            visibility: visible;
+            transform: translate3d(0, 0, 0) scale(1);
         }
+
+        .cas-quality-row.show-quality .cas-quality-item:nth-child(1) { transition-delay: 0.0s; }
+        .cas-quality-row.show-quality .cas-quality-item:nth-child(2) { transition-delay: 0.05s; }
+        .cas-quality-row.show-quality .cas-quality-item:nth-child(3) { transition-delay: 0.10s; }
+        .cas-quality-row.show-quality .cas-quality-item:nth-child(4) { transition-delay: 0.15s; }
+        .cas-quality-row.show-quality .cas-quality-item:nth-child(5) { transition-delay: 0.20s; }
 
         /* --- Варіант 1: Slide from Left --- */
         .cas-anim-slide .cas-logo, 
@@ -337,13 +342,13 @@
             transition: opacity 0.35s var(--cas-curve-slide), transform 0.35s var(--cas-curve-slide);  
         }                        
         .cas-anim-slide.cas-animated .cas-logo { opacity: 1 !important; transform: translate3d(0, 0, 0); transition-delay: 0.0s; }  
-        .cas-anim-slide.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translate3d(0, 0, 0); transition-delay: 0.04s; }  
-        .cas-anim-slide.cas-animated .cas-tagline { opacity: 0.85 !important; transform: translate3d(0, 0, 0); transition-delay: 0.08s; }
-        .cas-anim-slide.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: translate3d(0, 0, 0); transition-delay: 0.12s; }    
-        .cas-anim-slide.cas-animated .cas-description { opacity: 0.75 !important; transform: translate3d(0, 0, 0); transition-delay: 0.16s; }  
-        .cas-anim-slide.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translate3d(0, 0, 0); transition-delay: 0.20s; }  
-        .cas-anim-slide.cas-animated .cas-bottom-ratings { opacity: 1 !important; transform: translate3d(0, 0, 0); transition-delay: 0.20s; }  
-        .cas-anim-slide.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translate3d(0, 0, 0); transition-delay: 0.24s; }
+        .cas-anim-slide.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translate3d(0, 0, 0); transition-delay: 0.03s; }  
+        .cas-anim-slide.cas-animated .cas-tagline { opacity: 0.85 !important; transform: translate3d(0, 0, 0); transition-delay: 0.06s; }
+        .cas-anim-slide.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: translate3d(0, 0, 0); transition-delay: 0.09s; }    
+        .cas-anim-slide.cas-animated .cas-description { opacity: 0.75 !important; transform: translate3d(0, 0, 0); transition-delay: 0.12s; }  
+        .cas-anim-slide.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translate3d(0, 0, 0); transition-delay: 0.16s; }  
+        .cas-anim-slide.cas-animated .cas-bottom-ratings { opacity: 1 !important; transform: translate3d(0, 0, 0); transition-delay: 0.16s; }  
+        .cas-anim-slide.cas-animated .cas-quality-row { opacity: 1 !important; transform: translate3d(0, 0, 0); transition-delay: 0.18s; }
 
         /* --- Варіант 2: Elastic Spring --- */
         .cas-anim-spring .cas-logo, 
@@ -360,13 +365,13 @@
             transition: opacity 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.4s var(--cas-curve-spring);  
         }                        
         .cas-anim-spring.cas-animated .cas-logo { opacity: 1 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.0s; }  
-        .cas-anim-spring.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.04s; }  
-        .cas-anim-spring.cas-animated .cas-tagline { opacity: 0.85 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.08s; }
-        .cas-anim-spring.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.12s; }    
-        .cas-anim-spring.cas-animated .cas-description { opacity: 0.75 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.16s; }  
-        .cas-anim-spring.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.20s; }  
-        .cas-anim-spring.cas-animated .cas-bottom-ratings { opacity: 1 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.20s; }
-        .cas-anim-spring.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.24s; }
+        .cas-anim-spring.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.03s; }  
+        .cas-anim-spring.cas-animated .cas-tagline { opacity: 0.85 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.06s; }
+        .cas-anim-spring.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.09s; }    
+        .cas-anim-spring.cas-animated .cas-description { opacity: 0.75 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.12s; }  
+        .cas-anim-spring.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.16s; }  
+        .cas-anim-spring.cas-animated .cas-bottom-ratings { opacity: 1 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.16s; }
+        .cas-anim-spring.cas-animated .cas-quality-row { opacity: 1 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.18s; }
                   
         .full-start-new__details { display: none !important; }  
         .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }  
@@ -422,7 +427,7 @@
             justify-content: flex-start !important;
             gap: 8px !important;  
             flex-wrap: wrap;  
-            margin-bottom: 8px !important;  
+            margin-bottom: 6px !important;  
         }  
         
         .cas-meta-info {  
@@ -466,7 +471,7 @@
             display: flex;    
             align-items: center;    
             justify-content: flex-start;  
-            margin-bottom: 4px;  
+            margin-bottom: 2px;  
         }    
       
         .cas-studio-item img {    
@@ -478,9 +483,9 @@
             opacity: 0.95;    
         }    
 
-        .cas-description { font-size: var(--cas-meta-size) !important; line-height: 1.4; color: rgba(255,255,255,0.7); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-width: 650px; margin-top: calc(var(--cas-blocks-gap) * 0.4); text-align: left !important; }    
+        .cas-description { font-size: var(--cas-meta-size) !important; line-height: 1.35; color: rgba(255,255,255,0.7); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-width: 650px; margin-top: 4px; margin-bottom: 12px; text-align: left !important; }    
         .cas-quality-item img { height: 12px; }    
-        .cas-ratings-line { display: flex; align-items: center; gap: 15px; margin-bottom: 5px; font-size: var(--cas-meta-size); font-weight: 600; height: 30px; }    
+        .cas-ratings-line { display: flex; align-items: center; gap: 15px; margin-bottom: 4px; font-size: var(--cas-meta-size); font-weight: 600; height: 30px; }    
         .cas-rate-item { display: flex; align-items: center; gap: 6px; }    
         .cas-rate-item img { height: 1.1em; }    
         .left-title .full-start-new__body { height: 85vh; }    
@@ -596,7 +601,9 @@
                 
     async function processImages(render, data, res) {                
         try {                
-            const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];                
+            let bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];                
+            if (!bestLogo && res.logos.length > 0) bestLogo = res.logos[0];
+            
             if (bestLogo) {        
                 const quality = Lampa.Storage.get('cas_logo_quality') || 'original';                
                 const logoSrc = Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path);                
@@ -708,7 +715,6 @@
                         if (qH) {    
                             qualityElement.html(qH).show();  
 
-                            // Інтегрована логіка очікування завершення анімації кнопок перед показом якості
                             if (buttonsBlock.length) {
                                 buttonsBlock.off('transitionend.casQuality animationend.casQuality');
                                 buttonsBlock.on('transitionend.casQuality animationend.casQuality', function handler(e) {
