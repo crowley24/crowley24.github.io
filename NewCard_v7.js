@@ -38,7 +38,8 @@
         'settings_cas_show_studios': 'Показувати студії',                
         'settings_cas_show_quality': 'Показувати якість',                
         'settings_cas_show_rating': 'Показувати рейтинги',                
-        'settings_cas_show_description': 'Опис фільму'                
+        'settings_cas_show_description': 'Опис фільму',
+        'settings_cas_show_tagline': 'Показувати слоган'
     };                
                 
     let debounceTimer;                
@@ -91,7 +92,8 @@
             'cas_show_studios': true,                
             'cas_show_quality': true,                
             'cas_show_rating': true,                
-            'cas_show_description': true                
+            'cas_show_description': true,
+            'cas_show_tagline': true
         };                
                 
         Object.keys(defaults).forEach(key => {                
@@ -115,7 +117,8 @@
             { name: 'cas_show_studios', type: 'trigger' },                
             { name: 'cas_show_quality', type: 'trigger' },                
             { name: 'cas_show_rating', type: 'trigger' },                
-            { name: 'cas_show_description', type: 'trigger' }                
+            { name: 'cas_show_description', type: 'trigger' },
+            { name: 'cas_show_tagline', type: 'trigger' }                
         ];                
                 
         params.forEach(p => {                
@@ -157,7 +160,8 @@
             currentCard.find('.cas-description').toggle(!!Lampa.Storage.get('cas_show_description'));          
             currentCard.find('.cas-studios-row').toggle(!!Lampa.Storage.get('cas_show_studios'));          
             currentCard.find('.cas-quality-row').toggle(!!Lampa.Storage.get('cas_show_quality'));          
-            currentCard.find('.cas-rate-items').toggle(!!Lampa.Storage.get('cas_show_rating'));          
+            currentCard.find('.cas-rate-items, .cas-bottom-ratings').toggle(!!Lampa.Storage.get('cas_show_rating'));
+            currentCard.find('.cas-tagline').toggle(!!Lampa.Storage.get('cas_show_tagline'));          
                         
             const hasVisibleElements = currentCard.find('.cas-studios-row:visible, .cas-rate-items:visible, .cas-quality-row:visible, .cas-description:visible').length > 0;          
             const buttons = currentCard.find('.full-start-new__buttons');          
@@ -239,6 +243,7 @@
                         </div>                  
                     </div>                  
                     <div class="full-start-new__reactions selector hide"></div>                  
+                    <div class="cas-bottom-ratings" style="position: absolute; right: 4em; bottom: 2em; display: flex; align-items: center; gap: 15px; font-size: var(--cas-meta-size); font-weight: 600; z-index: 3;"></div>
                     <div class="full-start-new__rate-line hide"></div>                  
                     <div class="rating--modss" style="display: none;"></div>                  
                 </div>                  
@@ -300,7 +305,7 @@ function addStyles() {
     }  
       
     /* Загальні базові стани для анімацій */  
-    .cas-logo, .cas-tagline, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper, .full-start-new__buttons {  
+    .cas-logo, .cas-tagline, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper, .full-start-new__buttons, .cas-bottom-ratings {  
         opacity: 0 !important;  
         will-change: transform, opacity;  
     }  
@@ -314,17 +319,19 @@ function addStyles() {
     .cas-anim-slide .cas-quality-row, 
     .cas-anim-slide .cas-description, 
     .cas-anim-slide .cas-details-wrapper, 
-    .cas-anim-slide .full-start-new__buttons {  
+    .cas-anim-slide .full-start-new__buttons,
+    .cas-anim-slide .cas-bottom-ratings {  
         transform: translateX(-40px);  
         transition: opacity 0.8s var(--cas-curve-slide), transform 0.8s var(--cas-curve-slide);  
     }                        
     .cas-anim-slide.cas-animated .cas-logo { opacity: 1 !important; transform: translateX(0); transition-delay: 0.0s; }  
     .cas-anim-slide.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.08s; }  
     .cas-anim-slide.cas-animated .cas-tagline { opacity: 0.85 !important; transform: translateX(0); transition-delay: 0.12s; }
-    .cas-anim-slide.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: translateX(0); transition-delay: 0.16s; }  
-    .cas-anim-slide.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.24s; }  
+    .cas-anim-slide.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: translateX(0); transition-delay: 0.16s; }    
     .cas-anim-slide.cas-animated .cas-description { opacity: 0.75 !important; transform: translateX(0); transition-delay: 0.32s; }  
     .cas-anim-slide.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translateX(0); transition-delay: 0.40s; }  
+    .cas-anim-slide.cas-animated .cas-bottom-ratings { opacity: 1 !important; transform: translateX(0); transition-delay: 0.40s; }  
+    .cas-anim-slide.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.48s; }
 
     /* --- Варіант 2: Elastic Spring --- */
     .cas-anim-spring .cas-logo, 
@@ -335,29 +342,31 @@ function addStyles() {
     .cas-anim-spring .cas-quality-row, 
     .cas-anim-spring .cas-description, 
     .cas-anim-spring .cas-details-wrapper, 
-    .cas-anim-spring .full-start-new__buttons {  
+    .cas-anim-spring .full-start-new__buttons,
+    .cas-anim-spring .cas-bottom-ratings {  
         transform: scale(0.85) translateX(-30px);  
         transition: opacity 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.7s var(--cas-curve-spring);  
     }                        
     .cas-anim-spring.cas-animated .cas-logo { opacity: 1 !important; transform: scale(1) translateX(0); transition-delay: 0.0s; }  
     .cas-anim-spring.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: scale(1) translateX(0); transition-delay: 0.08s; }  
     .cas-anim-spring.cas-animated .cas-tagline { opacity: 0.85 !important; transform: scale(1) translateX(0); transition-delay: 0.12s; }
-    .cas-anim-spring.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: scale(1) translateX(0); transition-delay: 0.16s; }  
-    .cas-anim-spring.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: scale(1) translateX(0); transition-delay: 0.24s; }  
+    .cas-anim-spring.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: scale(1) translateX(0); transition-delay: 0.16s; }    
     .cas-anim-spring.cas-animated .cas-description { opacity: 0.75 !important; transform: scale(1) translateX(0); transition-delay: 0.32s; }  
     .cas-anim-spring.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: scale(1) translateX(0); transition-delay: 0.40s; }  
+    .cas-anim-spring.cas-animated .cas-bottom-ratings { opacity: 1 !important; transform: scale(1) translateX(0); transition-delay: 0.40s; }
+    .cas-anim-spring.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: scale(1) translateX(0); transition-delay: 0.48s; }
               
     .full-start-new__details { display: none !important; }  
     .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }  
     
     .full-start-new__body { display: flex; height: 85vh; position: relative; width: 100%; }  
-    .full-start-new__left { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 4em 3em 2em 4em; position: relative; z-index: 2; }  
+    .full-start-new__left { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 4em 3em 2em 2em; position: relative; z-index: 2; }  
     .full-start-new__right { width: 60%; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start !important; text-align: left !important; padding: 4em 4em 2em 0; position: relative; z-index: 2; margin-left: 0 !important; }  
     .full-start-new__poster { display: none; }  
     .full-start-new__title { display: none; }  
                         
     .left-title .full-start-new__left { display: none !important; }  
-    .left-title .full-start-new__right { width: 100% !important; padding-left: 4em !important; }  
+    .left-title .full-start-new__right { width: 100% !important; padding-left: 2em !important; }  
     .left-title__content { display: flex; flex-direction: column; align-items: flex-start !important; text-align: left !important; width: 100%; }
                         
     .cas-logo-container {  
@@ -575,7 +584,6 @@ function addStyles() {
                 
     async function processImages(render, data, res) {                
         try {                
-            // Пріоритет українського логотипу, з можливістю фолбеку на англійський
             const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];                
             if (bestLogo) {        
                 const quality = Lampa.Storage.get('cas_logo_quality') || 'original';                
@@ -597,8 +605,7 @@ function addStyles() {
     async function loadMovieDataOptimized(render, data) {    
         const tasks = [];    
             
-        // Обробка та виведення слогану
-        if (data.tagline) {
+        if (data.tagline && Lampa.Storage.get('cas_show_tagline')) {
             render.find('.cas-tagline').text(`«${data.tagline}»`).show();
         } else {
             render.find('.cas-tagline').hide();
@@ -612,13 +619,14 @@ function addStyles() {
             
         tasks.push(Promise.resolve().then(() => {    
             const year = data.release_date ? new Date(data.release_date).getFullYear() : (data.first_air_date ? new Date(data.first_air_date).getFullYear() : '');    
+            const country = (data.production_countries && data.production_countries.length > 0) ? data.production_countries[0].name : '';
             const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));    
-            const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');    
+            const genres = (data.genres || []).map(g => g.name).join(', ');    
                 
             let ratings = '';    
             const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);    
             if (tmdbV > 0) {    
-                ratings += `<img src="${ICONS.tmdb}" style="height: 1.1em; margin-right: 4px;"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span>`;    
+                ratings += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;    
             }    
                 
             if (data.reactions && data.reactions.result) {    
@@ -630,19 +638,18 @@ function addStyles() {
                 if (cnt >= 1) {    
                     const isTv = data.name ? true : false;    
                     const cubV = (((isTv?7.4:6.5)*(isTv?50:150)+sum)/((isTv?50:150)+cnt)).toFixed(1);    
-                    if (ratings) ratings += ' • ';    
-                    ratings += `<img src="${ICONS.cub}" style="height: 1.1em; margin-right: 4px;"> <span style="color:${getRatingColor(cubV)}">${cubV}</span>`;    
+                    ratings += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;    
                 }    
             }    
                 
-            let metaHtml = '';    
-            if (year) metaHtml += `<span class="cas-wave-year">${year}</span>`;    
-            if (time) metaHtml += `<span class="cas-wave-time">${time}</span>`;    
-            if (genre) metaHtml += `<span class="cas-wave-genre">${genre}</span>`;    
-            if (ratings) metaHtml += `<span class="cas-wave-rating">${ratings}</span>`;    
+            let metaParts = [];
+            if (year) metaParts.push(`<span class="cas-wave-year">${year}</span>`);
+            if (country) metaParts.push(`<span class="cas-wave-country">${country}</span>`);
+            if (time) metaParts.push(`<span class="cas-wave-time">${time}</span>`);
+            if (genres) metaParts.push(`<span class="cas-wave-genre">${genres}</span>`);
                 
-            render.find('.cas-meta-info').html(metaHtml);    
-            render.find('.cas-rate-items').empty();   
+            render.find('.cas-meta-info').html(metaParts.join(' &bull; '));    
+            render.find('.cas-bottom-ratings').html(ratings);
         }));    
             
         if (Lampa.Storage.get('cas_show_studios')) {    
