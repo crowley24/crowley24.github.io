@@ -1,5 +1,5 @@
 (function () {
-    'use strict';
+    'style';
 
     var slideshowTimer = null; 
     var pluginPath = 'https://crowley38.github.io/Icons/';
@@ -96,7 +96,7 @@
         css += '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } } ';
         css += '@keyframes premium_ui_reveal { 0% { opacity: 0; transform: translate3d(-20px, 0, 0); } 100% { opacity: 1; transform: translate3d(0, 0, 0); } } ';
 
-        // 1. ОЧИЩЕННЯ СМІТТЯ (приховуємо все дефолтне дублювання)
+        // 1. ОЧИЩЕННЯ ДЕФОЛТНИХ БЛОКІВ
         css += '.full-start-new__head, .full-start-new__details-info, .full-start-new__tagline-default, .full-start-new__rate, .full-start-new__info { display: none !important; } ';
 
         // 2. ФОН
@@ -106,46 +106,47 @@
         css += 'mask-image: linear-gradient(to right, rgba(0,0,0,1) 35%, rgba(0,0,0,0.6) 65%, transparent 100%), linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.8) 80%, #000 100%) !important; ';
         css += '-webkit-mask-image: linear-gradient(to right, rgba(0,0,0,1) 35%, rgba(0,0,0,0.6) 65%, transparent 100%), linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.8) 80%, #000 100%) !important; } ';
 
-        // 3. ОСНОВНІ КОНТЕЙНЕРИ (Жорстке вирівнювання по лівому краю)
-        css += '.full-start-new { display: flex !important; flex-direction: column !important; align-items: flex-start !important; justify-content: flex-start !important; padding: 40px 0 0 60px !important; width: 100% !important; box-sizing: border-box !important; margin: 0 !important; text-align: left !important; } ';
-        css += '.full-start-new__right { display: flex !important; flex-direction: column !important; align-items: flex-start !important; justify-content: flex-start !important; width: 55vw !important; max-width: 700px !important; margin: 0 !important; padding: 0 !important; text-align: left !important; gap: 8px !important; } ';
+        // 3. ЖОРСТКЕ ВИРІВНЮВАННЯ ПО ЛІВОМУ КРАЮ ДЛЯ ВСІХ ДОЧІРНІХ ЕЛЕМЕНТІВ
+        css += 'body .full-start-new, body .full-start-new * { text-align: left !important; margin-left: 0 !important; margin-right: 0 !important; } ';
+        css += 'body .full-start-new { display: flex !important; flex-direction: column !important; align-items: flex-start !important; justify-content: flex-start !important; padding: 40px 0 0 60px !important; width: 100% !important; box-sizing: border-box !important; } ';
+        css += 'body .full-start-new__right { display: flex !important; flex-direction: column !important; align-items: flex-start !important; justify-content: flex-start !important; width: 55vw !important; max-width: 700px !important; padding: 0 !important; gap: 8px !important; } ';
 
         var uiAnimClass = isUIAnim ? 'animation: premium_ui_reveal 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; ' : '';
 
         // Студія
-        css += '.studio-header-brand { ' + uiAnimClass + ' animation-delay: 0.05s; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 0 2px 0 !important; text-align: left !important; width: 100% !important; } ';
-        css += '.studio-header-brand img { height: 22px !important; width: auto !important; max-width: 140px !important; object-fit: contain !important; margin: 0 !important; } ';
+        css += '.studio-header-brand { ' + uiAnimClass + ' animation-delay: 0.05s; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin-bottom: 2px !important; width: 100% !important; } ';
+        css += '.studio-header-brand img { height: 22px !important; width: auto !important; max-width: 140px !important; object-fit: contain !important; } ';
         css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) !important; } ';
 
-        // Лого/Назва
-        css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.1s; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; text-align: left !important; width: 100% !important; } ';
-        css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 100% !important; object-fit: contain !important; filter: drop-shadow(0 4px 15px rgba(0,0,0,0.8)); margin: 0 !important; } ';
+        // Логотип / Назва
+        css += 'body .full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.1s; display: flex !important; justify-content: flex-start !important; align-items: center !important; width: 100% !important; } ';
+        css += 'body .full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 100% !important; object-fit: contain !important; filter: drop-shadow(0 4px 15px rgba(0,0,0,0.8)); } ';
 
         // Слоган
-        css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.15s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 1em !important; color: rgba(255,255,255,0.75) !important; text-align: left !important; margin: 0 !important; width: 100% !important; } ';
+        css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.15s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 1em !important; color: rgba(255,255,255,0.75) !important; width: 100% !important; } ';
 
-        // Мета-інформація та бейджі
-        css += '.plugin-meta-row { ' + uiAnimClass + ' animation-delay: 0.2s; display: flex !important; justify-content: flex-start !important; align-items: center !important; flex-wrap: wrap !important; gap: 8px !important; font-size: 0.95em !important; color: rgba(255,255,255,0.85) !important; text-align: left !important; width: 100% !important; margin: 0 !important; } ';
-        css += '.plugin-ratings-quality-row { ' + uiAnimClass + ' animation-delay: 0.25s; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 12px !important; font-size: 1.05em !important; width: 100% !important; margin: 2px 0 0 0 !important; text-align: left !important; } ';
-        css += '.plugin-ratings-group { display: flex !important; align-items: center !important; justify-content: flex-start !important; gap: 10px !important; margin: 0 !important; } ';
-        css += '.quality-row-inline { display: flex !important; align-items: center !important; justify-content: flex-start !important; gap: 6px !important; margin: 0 !important; } ';
+        // Рядки метаданих та бейджів
+        css += '.plugin-meta-row { ' + uiAnimClass + ' animation-delay: 0.2s; display: flex !important; justify-content: flex-start !important; align-items: center !important; flex-wrap: wrap !important; gap: 8px !important; font-size: 0.95em !important; color: rgba(255,255,255,0.85) !important; width: 100% !important; } ';
+        css += '.plugin-ratings-quality-row { ' + uiAnimClass + ' animation-delay: 0.25s; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 12px !important; font-size: 1.05em !important; width: 100% !important; margin-top: 2px !important; } ';
+        css += '.plugin-ratings-group { display: flex !important; align-items: center !important; justify-content: flex-start !important; gap: 10px !important; } ';
+        css += '.quality-row-inline { display: flex !important; align-items: center !important; justify-content: flex-start !important; gap: 6px !important; } ';
         css += '.plugin-rating-item { display: flex !important; align-items: center !important; gap: 5px !important; font-weight: 700 !important; color: #fff !important; } ';
-        css += '.plugin-rating-item img { height: 1em !important; width: auto !important; margin: 0 !important; } ';
-        css += '.info-separator { opacity: 0.4 !important; margin: 0 !important; } ';
+        css += '.plugin-rating-item img { height: 1em !important; width: auto !important; } ';
+        css += '.info-separator { opacity: 0.4 !important; } ';
         css += '.quality-item { height: 1em !important; display: inline-flex !important; align-items: center !important; } '; 
-        css += '.quality-item img { height: 100% !important; width: auto !important; object-fit: contain !important; margin: 0 !important; } ';
+        css += '.quality-item img { height: 100% !important; width: auto !important; object-fit: contain !important; } ';
 
         // 4. КНОПКИ ДІЙ
-        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.3s; display: flex !important; flex-wrap: wrap !important; justify-content: flex-start !important; align-items: center !important; gap: 10px !important; margin: 12px 0 0 0 !important; width: 100% !important; position: relative !important; z-index: 99 !important; order: 5 !important; } ';
-        css += '.full-start-new .full-start__button { display: inline-flex !important; align-items: center !important; justify-content: center !important; background: rgba(255, 255, 255, 0.12) !important; border-radius: 8px !important; padding: 10px 18px !important; margin: 0 !important; border: 1px solid rgba(255,255,255,0.1) !important; transition: background 0.2s, border-color 0.2s !important; } ';
+        css += 'body .full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.3s; display: flex !important; flex-wrap: wrap !important; justify-content: flex-start !important; align-items: center !important; gap: 10px !important; margin-top: 12px !important; width: 100% !important; position: relative !important; z-index: 99 !important; order: 5 !important; } ';
+        css += 'body .full-start-new .full-start__button { display: inline-flex !important; align-items: center !important; justify-content: center !important; background: rgba(255, 255, 255, 0.12) !important; border-radius: 8px !important; padding: 10px 18px !important; border: 1px solid rgba(255,255,255,0.1) !important; transition: background 0.2s, border-color 0.2s !important; } ';
         
         // Фокус кнопок
-        css += '.full-start-new .full-start__button.focus { background: rgba(255, 255, 255, 0.25) !important; border-color: rgba(255, 255, 255, 0.8) !important; box-shadow: 0 0 12px rgba(255,255,255,0.3) !important; transform: scale(1.03) !important; } ';
-        css += '.full-start-new .full-start__button svg { width: 18px !important; height: 18px !important; fill: #fff !important; margin: 0 !important; } ';
-        css += '.full-start-new .full-start__button span { font-size: 0.9em !important; font-weight: 600 !important; color: #fff !important; margin: 0 !important; } ';
+        css += 'body .full-start-new .full-start__button.focus { background: rgba(255, 255, 255, 0.25) !important; border-color: rgba(255, 255, 255, 0.8) !important; box-shadow: 0 0 12px rgba(255,255,255,0.3) !important; transform: scale(1.03) !important; } ';
+        css += 'body .full-start-new .full-start__button svg { width: 18px !important; height: 18px !important; fill: #fff !important; } ';
+        css += 'body .full-start-new .full-start__button span { font-size: 0.9em !important; font-weight: 600 !important; color: #fff !important; } ';
 
         // 5. РЕАКЦІЇ CUB ТА ОПИС
-        css += '.full-start-new__reactions, .full-start-new__details { order: 6 !important; margin: 15px 0 0 0 !important; width: 80vw !important; max-width: 1000px !important; text-align: left !important; display: flex !important; justify-content: flex-start !important; } ';
+        css += 'body .full-start-new__reactions, body .full-start-new__details { order: 6 !important; margin-top: 15px !important; width: 80vw !important; max-width: 1000px !important; display: flex !important; justify-content: flex-start !important; } ';
 
         style.textContent = css;
         document.head.appendChild(style);
