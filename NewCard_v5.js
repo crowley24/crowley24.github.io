@@ -111,7 +111,17 @@
             { name: 'cas_logo_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' } },                
             { name: 'cas_meta_size', type: 'select', values: { '1.1': 'Міні', '1.2': 'Малий', '1.3': 'Стандартний', '1.4': 'Збільшений', '1.5': 'Великий' } },                
             { name: 'cas_blocks_gap', type: 'select', values: { '10':'Дуже тісно','15':'Тісно','20':'Стандарт','25':'Просторе','30':'Дуже просторе' } },                
-            { name: 'cas_bg_animation', type: 'select', values: { 'off': 'Вимкнено', 'kenburns': 'Ken Burns (Зум + Паралакс)', 'blurzoom': 'Глибина фокусу (Зум + Розмиття)' } },                
+            { 
+                name: 'cas_bg_animation', 
+                type: 'select', 
+                values: { 
+                    'off': 'Вимкнено', 
+                    'kenburns': 'Ken Burns (Зум + Паралакс)', 
+                    'drift': 'Кінематографічний дрейф (Панорама)', 
+                    'pulse': 'Пульс живої пам\'яті (Колір + Зсув)', 
+                    'tilt': 'Двошаровий паралакс (3D Нахил)' 
+                } 
+            },                
             { name: 'cas_animation_style', type: 'select', values: { 'slide': 'Slide from Left (Виїзд зліва)', 'spring': 'Elastic Spring (Жива пружина)' } },
             { name: 'cas_slideshow_enabled', type: 'trigger' },                
             { name: 'cas_show_studios', type: 'trigger' },                
@@ -153,11 +163,9 @@
         root.style.setProperty('--cas-meta-size', metaSize + 'em');          
                           
         const bodyEl = $('body');
-        bodyEl.removeClass('cas--zoom-kenburns cas--zoom-blurzoom');
-        if (bgAnim === 'kenburns') {
-            bodyEl.addClass('cas--zoom-kenburns');
-        } else if (bgAnim === 'blurzoom') {
-            bodyEl.addClass('cas--zoom-blurzoom');
+        bodyEl.removeClass('cas--zoom-kenburns cas--zoom-drift cas--zoom-pulse cas--zoom-tilt');
+        if (bgAnim !== 'off') {
+            bodyEl.addClass('cas--zoom-' + bgAnim);
         }
         
         const currentCard = $('.full-start-new.left-title');          
@@ -304,10 +312,25 @@
             100% { transform: scale(1.02) translateY(0px) translateX(0px) translateZ(0); }  
         }  
 
-        @keyframes casBlurZoomFocus {
-            0% { transform: scale(1.03) translateZ(0); filter: blur(4px); }
-            50% { transform: scale(1.09) translateZ(0); filter: blur(0px); }
-            100% { transform: scale(1.03) translateZ(0); filter: blur(4px); }
+        /* 1. Кінематографічний дрейф (Панорама зліва направо і назад) */
+        @keyframes casCinematicDrift {
+            0% { transform: scale(1.06) translateX(-2%) translateZ(0); }
+            50% { transform: scale(1.06) translateX(2%) translateZ(0); }
+            100% { transform: scale(1.06) translateX(-2%) translateZ(0); }
+        }
+
+        /* 2. Пульс живої пам'яті (Гра світла/насиченості та мікро-зсув) */
+        @keyframes casLivingPulse {
+            0% { transform: scale(1.04) translateY(0) translateZ(0); filter: brightness(1) saturate(1); }
+            50% { transform: scale(1.08) translateY(-8px) translateZ(0); filter: brightness(1.06) saturate(1.12); }
+            100% { transform: scale(1.04) translateY(0) translateZ(0); filter: brightness(1) saturate(1); }
+        }
+
+        /* 3. Двошаровий паралакс з 3D нахилом */
+        @keyframes casTiltZoom {
+            0% { transform: scale(1.03) perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0); }
+            50% { transform: scale(1.08) perspective(1000px) rotateX(1deg) rotateY(-1.5deg) translateZ(0); }
+            100% { transform: scale(1.03) perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0); }
         }
                   
         body.cas--zoom-kenburns .full-start__background img, 
@@ -317,10 +340,24 @@
             transform-origin: center center;  
         }  
 
-        body.cas--zoom-blurzoom .full-start__background img, 
-        body.cas--zoom-blurzoom img.full-start__background {  
-            animation: casBlurZoomFocus 25s ease-in-out infinite !important;  
+        body.cas--zoom-drift .full-start__background img, 
+        body.cas--zoom-drift img.full-start__background {  
+            animation: casCinematicDrift 30s ease-in-out infinite !important;  
+            will-change: transform;  
+            transform-origin: center center;  
+        }
+
+        body.cas--zoom-pulse .full-start__background img, 
+        body.cas--zoom-pulse img.full-start__background {  
+            animation: casLivingPulse 22s ease-in-out infinite !important;  
             will-change: transform, filter;  
+            transform-origin: center center;  
+        }
+
+        body.cas--zoom-tilt .full-start__background img, 
+        body.cas--zoom-tilt img.full-start__background {  
+            animation: casTiltZoom 25s ease-in-out infinite !important;  
+            will-change: transform;  
             transform-origin: center center;  
         }
           
