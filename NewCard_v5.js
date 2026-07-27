@@ -84,7 +84,7 @@
         const defaults = {                
             'cas_logo_scale': '100',                
             'cas_logo_quality': 'original',                
-            'cas_bg_animation': 'kenburns',                
+            'cas_bg_animation': 'perspective',                
             'cas_animation_style': 'slide',
             'cas_slideshow_enabled': true,                
             'cas_blocks_gap': '20',                
@@ -118,7 +118,8 @@
                     'off': 'Вимкнено', 
                     'kenburns': 'Ken Burns (Зум + Паралакс)', 
                     'panscan': 'Кінематографічний дрейф (Pan & Scan)', 
-                    'tiltzoom': 'Динамічний кут (Tilt Zoom)' 
+                    'tiltzoom': 'Динамічний кут (Tilt Zoom)',
+                    'perspective': 'Складна перспектива (Зворотний зум сторін)' 
                 } 
             },                
             { name: 'cas_animation_style', type: 'select', values: { 'slide': 'Slide from Left (Виїзд зліва)', 'spring': 'Elastic Spring (Жива пружина)' } },
@@ -155,14 +156,14 @@
         const gap = Lampa.Storage.get('cas_blocks_gap') || '20';          
         const metaSize = Lampa.Storage.get('cas_meta_size') || '1.3';          
         const animStyle = Lampa.Storage.get('cas_animation_style') || 'slide';
-        const bgAnim = Lampa.Storage.get('cas_bg_animation') || 'kenburns';
+        const bgAnim = Lampa.Storage.get('cas_bg_animation') || 'perspective';
                           
         root.style.setProperty('--cas-logo-scale', scale);          
         root.style.setProperty('--cas-blocks-gap', gap + 'px');          
         root.style.setProperty('--cas-meta-size', metaSize + 'em');          
                           
         const bodyEl = $('body');
-        bodyEl.removeClass('cas--zoom-kenburns cas--zoom-panscan cas--zoom-tiltzoom');
+        bodyEl.removeClass('cas--zoom-kenburns cas--zoom-panscan cas--zoom-tiltzoom cas--zoom-perspective');
         if (bgAnim !== 'off') {
             bodyEl.addClass('cas--zoom-' + bgAnim);
         }
@@ -311,7 +312,6 @@
             100% { transform: scale(1.02) translateY(0px) translateX(0px) translateZ(0); }  
         }  
 
-        /* 1. Кінематографічний дрейф (Pan & Scan) */
         @keyframes casCinematicPanScan {
             0% { transform: scale(1.06) translate3d(0px, 0px, 0); }
             33% { transform: scale(1.12) translate3d(-25px, -12px, 0); }
@@ -319,12 +319,20 @@
             100% { transform: scale(1.06) translate3d(0px, 0px, 0); }
         }
 
-        /* 2. Динамічний кут / Tilt Zoom з вираженим поворотом */
         @keyframes casDynamicTiltZoom {
             0% { transform: scale(1.08) rotate(0deg) translate3d(0, 0, 0); }
             33% { transform: scale(1.14) rotate(-2.2deg) translate3d(-15px, 10px, 0); }
             66% { transform: scale(1.14) rotate(2.2deg) translate3d(15px, -10px, 0); }
             100% { transform: scale(1.08) rotate(0deg) translate3d(0, 0, 0); }
+        }
+
+        /* Новий ефект: Складна перспектива (одна частина збільшується, інша зменшується у протифазі) */
+        @keyframes casPerspectiveShift {
+            0% { transform: scale3d(1.08, 1.08, 1) perspective(800px) rotateY(0deg) rotateX(0deg); }
+            25% { transform: scale3d(1.15, 1.02, 1) perspective(800px) rotateY(-4.5deg) rotateX(2deg); }
+            50% { transform: scale3d(1.08, 1.08, 1) perspective(800px) rotateY(0deg) rotateX(0deg); }
+            75% { transform: scale3d(1.02, 1.15, 1) perspective(800px) rotateY(4.5deg) rotateX(-2deg); }
+            100% { transform: scale3d(1.08, 1.08, 1) perspective(800px) rotateY(0deg) rotateX(0deg); }
         }
                   
         body.cas--zoom-kenburns .full-start__background img, 
@@ -344,6 +352,13 @@
         body.cas--zoom-tiltzoom .full-start__background img, 
         body.cas--zoom-tiltzoom img.full-start__background {  
             animation: casDynamicTiltZoom 25s ease-in-out infinite !important;  
+            will-change: transform;  
+            transform-origin: center center;  
+        }
+
+        body.cas--zoom-perspective .full-start__background img, 
+        body.cas--zoom-perspective img.full-start__background {  
+            animation: casPerspectiveShift 20s ease-in-out infinite !important;  
             will-change: transform;  
             transform-origin: center center;  
         }
