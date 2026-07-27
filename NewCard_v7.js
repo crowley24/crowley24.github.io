@@ -273,7 +273,7 @@
             --cas-curve-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }  
                 
-        /* Налаштування фону та Ken Burns */  
+        /* Налаштування фону та Ken Burns з апаратним прискоренням */  
         .full-start__background {  
             height: calc(100% + 6em);  
             left: 0 !important;  
@@ -281,6 +281,7 @@
             transition: opacity 1s cubic-bezier(0.2, 0.8, 0.2, 1) !important;  
             will-change: opacity;  
             overflow: hidden !important;  
+            transform: translateZ(0);
         }  
             
         .full-start__background.loaded {  
@@ -292,9 +293,9 @@
         }  
                 
         @keyframes casKenBurnsParallax {  
-            0% { transform: scale(1.02) translateY(0px) translateX(0px); }  
-            50% { transform: scale(1.10) translateY(-15px) translateX(5px); }  
-            100% { transform: scale(1.02) translateY(0px) translateX(0px); }  
+            0% { transform: scale(1.02) translateY(0px) translateX(0px) translateZ(0); }  
+            50% { transform: scale(1.10) translateY(-15px) translateX(5px) translateZ(0); }  
+            100% { transform: scale(1.02) translateY(0px) translateX(0px) translateZ(0); }  
         }  
                   
         body.cas--zoom-enabled .full-start__background img, 
@@ -304,10 +305,11 @@
             transform-origin: center center;  
         }  
           
-        /* Загальні базові стани для анімацій та GPU-прискорення */  
+        /* Апаратне прискорення та базові стани для анімацій */  
         .cas-logo, .cas-tagline, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper, .full-start-new__buttons, .cas-bottom-ratings {  
             opacity: 0 !important;  
             will-change: transform, opacity;  
+            backface-visibility: hidden;
         }  
 
         /* --- Варіант 1: Slide from Left --- */
@@ -321,17 +323,17 @@
         .cas-anim-slide .cas-details-wrapper, 
         .cas-anim-slide .full-start-new__buttons,
         .cas-anim-slide .cas-bottom-ratings {  
-            transform: translateY(8px);  
+            transform: translate3d(0, 8px, 0);  
             transition: opacity 0.35s var(--cas-curve-slide), transform 0.35s var(--cas-curve-slide);  
         }                        
-        .cas-anim-slide.cas-animated .cas-logo { opacity: 1 !important; transform: translateY(0); transition-delay: 0.0s; }  
-        .cas-anim-slide.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.04s; }  
-        .cas-anim-slide.cas-animated .cas-tagline { opacity: 0.85 !important; transform: translateY(0); transition-delay: 0.08s; }
-        .cas-anim-slide.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: translateY(0); transition-delay: 0.12s; }    
-        .cas-anim-slide.cas-animated .cas-description { opacity: 0.75 !important; transform: translateY(0); transition-delay: 0.16s; }  
-        .cas-anim-slide.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translateY(0); transition-delay: 0.20s; }  
-        .cas-anim-slide.cas-animated .cas-bottom-ratings { opacity: 1 !important; transform: translateY(0); transition-delay: 0.20s; }  
-        .cas-anim-slide.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateY(0); transition-delay: 0.24s; }
+        .cas-anim-slide.cas-animated .cas-logo { opacity: 1 !important; transform: translate3d(0, 0, 0); transition-delay: 0.0s; }  
+        .cas-anim-slide.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translate3d(0, 0, 0); transition-delay: 0.04s; }  
+        .cas-anim-slide.cas-animated .cas-tagline { opacity: 0.85 !important; transform: translate3d(0, 0, 0); transition-delay: 0.08s; }
+        .cas-anim-slide.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: translate3d(0, 0, 0); transition-delay: 0.12s; }    
+        .cas-anim-slide.cas-animated .cas-description { opacity: 0.75 !important; transform: translate3d(0, 0, 0); transition-delay: 0.16s; }  
+        .cas-anim-slide.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translate3d(0, 0, 0); transition-delay: 0.20s; }  
+        .cas-anim-slide.cas-animated .cas-bottom-ratings { opacity: 1 !important; transform: translate3d(0, 0, 0); transition-delay: 0.20s; }  
+        .cas-anim-slide.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translate3d(0, 0, 0); transition-delay: 0.24s; }
 
         /* --- Варіант 2: Elastic Spring --- */
         .cas-anim-spring .cas-logo, 
@@ -344,17 +346,17 @@
         .cas-anim-spring .cas-details-wrapper, 
         .cas-anim-spring .full-start-new__buttons,
         .cas-anim-spring .cas-bottom-ratings {  
-            transform: scale(0.92) translateY(6px);  
+            transform: scale3d(0.92, 0.92, 1) translate3d(0, 6px, 0);  
             transition: opacity 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.4s var(--cas-curve-spring);  
         }                        
-        .cas-anim-spring.cas-animated .cas-logo { opacity: 1 !important; transform: scale(1) translateY(0); transition-delay: 0.0s; }  
-        .cas-anim-spring.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: scale(1) translateY(0); transition-delay: 0.04s; }  
-        .cas-anim-spring.cas-animated .cas-tagline { opacity: 0.85 !important; transform: scale(1) translateY(0); transition-delay: 0.08s; }
-        .cas-anim-spring.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: scale(1) translateY(0); transition-delay: 0.12s; }    
-        .cas-anim-spring.cas-animated .cas-description { opacity: 0.75 !important; transform: scale(1) translateY(0); transition-delay: 0.16s; }  
-        .cas-anim-spring.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: scale(1) translateY(0); transition-delay: 0.20s; }  
-        .cas-anim-spring.cas-animated .cas-bottom-ratings { opacity: 1 !important; transform: scale(1) translateY(0); transition-delay: 0.20s; }
-        .cas-anim-spring.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: scale(1) translateY(0); transition-delay: 0.24s; }
+        .cas-anim-spring.cas-animated .cas-logo { opacity: 1 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.0s; }  
+        .cas-anim-spring.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.04s; }  
+        .cas-anim-spring.cas-animated .cas-tagline { opacity: 0.85 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.08s; }
+        .cas-anim-spring.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.12s; }    
+        .cas-anim-spring.cas-animated .cas-description { opacity: 0.75 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.16s; }  
+        .cas-anim-spring.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.20s; }  
+        .cas-anim-spring.cas-animated .cas-bottom-ratings { opacity: 1 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.20s; }
+        .cas-anim-spring.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.24s; }
                   
         .full-start-new__details { display: none !important; }  
         .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }  
@@ -584,6 +586,7 @@
                 
     async function processImages(render, data, res) {                
         try {                
+            // Пріоритет: українська емблема, якщо немає — англійська
             const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];                
             if (bestLogo) {        
                 const quality = Lampa.Storage.get('cas_logo_quality') || 'original';                
@@ -727,7 +730,9 @@
                         try { 
                             await processImages(render, data, res); 
                         } catch (e) {} finally {
-                            setTimeout(() => cardRoot.addClass('cas-animated'), 40);
+                            requestAnimationFrame(() => {
+                                cardRoot.addClass('cas-animated');
+                            });
                         }
                     };                
                                     
@@ -740,14 +745,18 @@
                             processImagesWrapper(res);                
                         }).fail(() => {                
                             render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                
-                            cardRoot.addClass('cas-animated');
+                            requestAnimationFrame(() => {
+                                cardRoot.addClass('cas-animated');
+                            });
                         });                
                     }                
                                     
                     if (event.data.reactions) data.reactions = event.data.reactions;          
                     debouncedLoadMovieData(render, data);                
                 } else {
-                    cardRoot.addClass('cas-animated');
+                    requestAnimationFrame(() => {
+                        cardRoot.addClass('cas-animated');
+                    });
                 }                
                                 
                 setTimeout(() => {                
