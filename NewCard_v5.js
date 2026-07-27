@@ -117,8 +117,8 @@
                 values: { 
                     'off': 'Вимкнено', 
                     'kenburns': 'Ken Burns (Зум + Паралакс)', 
-                    'blurshift': 'М’який блур-перелив (Фокус)', 
-                    'chromatic': 'Хроматичний кіно-зсув' 
+                    'panscan': 'Кінематографічний дрейф (Pan & Scan)', 
+                    'tiltzoom': 'Динамічний кут (Tilt Zoom)' 
                 } 
             },                
             { name: 'cas_animation_style', type: 'select', values: { 'slide': 'Slide from Left (Виїзд зліва)', 'spring': 'Elastic Spring (Жива пружина)' } },
@@ -162,7 +162,7 @@
         root.style.setProperty('--cas-meta-size', metaSize + 'em');          
                           
         const bodyEl = $('body');
-        bodyEl.removeClass('cas--zoom-kenburns cas--zoom-blurshift cas--zoom-chromatic');
+        bodyEl.removeClass('cas--zoom-kenburns cas--zoom-panscan cas--zoom-tiltzoom');
         if (bgAnim !== 'off') {
             bodyEl.addClass('cas--zoom-' + bgAnim);
         }
@@ -311,18 +311,20 @@
             100% { transform: scale(1.02) translateY(0px) translateX(0px) translateZ(0); }  
         }  
 
-        /* 2. М’який фоновий блур-перелив (Фокус) */
-        @keyframes casBlurShift {
-            0% { transform: scale(1.05) translateZ(0); filter: blur(0px); }
-            50% { transform: scale(1.09) translateZ(0); filter: blur(2.5px); }
-            100% { transform: scale(1.05) translateZ(0); filter: blur(0px); }
+        /* 1. Кінематографічний дрейф (Pan & Scan) */
+        @keyframes casCinematicPanScan {
+            0% { transform: scale(1.06) translate3d(0px, 0px, 0); }
+            33% { transform: scale(1.12) translate3d(-25px, -12px, 0); }
+            66% { transform: scale(1.10) translate3d(20px, 15px, 0); }
+            100% { transform: scale(1.06) translate3d(0px, 0px, 0); }
         }
 
-        /* 3. Хроматичний кіно-зсув */
-        @keyframes casChromaticShift {
-            0% { transform: scale(1.05) translateZ(0); filter: drop-shadow(-1px 0px 0px rgba(255,0,50,0.4)) drop-shadow(1px 0px 0px rgba(0,200,255,0.4)); }
-            50% { transform: scale(1.08) translateZ(0); filter: drop-shadow(-2.5px 0px 0px rgba(255,0,50,0.7)) drop-shadow(2.5px 0px 0px rgba(0,200,255,0.7)); }
-            100% { transform: scale(1.05) translateZ(0); filter: drop-shadow(-1px 0px 0px rgba(255,0,50,0.4)) drop-shadow(1px 0px 0px rgba(0,200,255,0.4)); }
+        /* 2. Динамічний кут / Tilt Zoom з вираженим поворотом */
+        @keyframes casDynamicTiltZoom {
+            0% { transform: scale(1.08) rotate(0deg) translate3d(0, 0, 0); }
+            33% { transform: scale(1.14) rotate(-2.2deg) translate3d(-15px, 10px, 0); }
+            66% { transform: scale(1.14) rotate(2.2deg) translate3d(15px, -10px, 0); }
+            100% { transform: scale(1.08) rotate(0deg) translate3d(0, 0, 0); }
         }
                   
         body.cas--zoom-kenburns .full-start__background img, 
@@ -332,17 +334,17 @@
             transform-origin: center center;  
         }  
 
-        body.cas--zoom-blurshift .full-start__background img, 
-        body.cas--zoom-blurshift img.full-start__background {  
-            animation: casBlurShift 20s ease-in-out infinite !important;  
-            will-change: transform, filter;  
+        body.cas--zoom-panscan .full-start__background img, 
+        body.cas--zoom-panscan img.full-start__background {  
+            animation: casCinematicPanScan 35s ease-in-out infinite !important;  
+            will-change: transform;  
             transform-origin: center center;  
         }
 
-        body.cas--zoom-chromatic .full-start__background img, 
-        body.cas--zoom-chromatic img.full-start__background {  
-            animation: casChromaticShift 15s ease-in-out infinite !important;  
-            will-change: transform, filter;  
+        body.cas--zoom-tiltzoom .full-start__background img, 
+        body.cas--zoom-tiltzoom img.full-start__background {  
+            animation: casDynamicTiltZoom 25s ease-in-out infinite !important;  
+            will-change: transform;  
             transform-origin: center center;  
         }
           
