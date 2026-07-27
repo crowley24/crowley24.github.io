@@ -17,7 +17,7 @@
         { id: 'tv_interface_logo_size_v2', default: '160' },
         { id: 'tv_interface_logo_quality', default: 'w500' },
         { id: 'tv_interface_show_tagline', default: true },
-        { id: 'tv_interface_blocks_gap', default: '12px' },
+        { id: 'tv_interface_blocks_gap', default: '10px' },
         { id: 'tv_interface_ratings_size', default: '0.55em' },
         { id: 'tv_interface_studios', default: true },
         { id: 'tv_interface_quality', default: true }
@@ -118,7 +118,7 @@
         var rSize = Lampa.Storage.get('tv_interface_ratings_size', '0.55em');
         var lHeight = Lampa.Storage.get('tv_interface_logo_size_v2', '160'); 
         var showTagline = Lampa.Storage.get('tv_interface_show_tagline');
-        var blocksGap = Lampa.Storage.get('tv_interface_blocks_gap', '12px');
+        var blocksGap = Lampa.Storage.get('tv_interface_blocks_gap', '10px');
         
         var style = document.createElement('style');
         style.id = 'tv-interface-styles';
@@ -137,13 +137,14 @@
         css += '  100% { opacity: 1; } ';
         css += '} ';
 
-        // 1. ПРИХОВУВАННЯ ЛИШЕ ВЕРХНІХ ДУБЛЮЮЧИХ ЕЛЕМЕНТІВ (Заголовок та стандартні рейтинги)
+        // 1. Приховуємо дублюючі рейтинги, назви та ВКЛАДЕНИЙ СТАНДАРТНИЙ ПОСТЕР LAMPA
         css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates, .full-start-new__rates { display: none !important; } ';
         css += '.full-start-new__title-text, .full-start-new__head, .full-start-new__details { display: none !important; } ';
+        css += '.full-start-new__img, .full-start__img, .full-start-new__poster-img { display: none !important; visibility: hidden !important; opacity: 0 !important; } '; // Видалення подвійного постера
         
         css += '.background { background: #141414 !important; } ';
 
-        // 2. Фоновий Постер / Кадр фільму на увесь екран
+        // 2. Повноекранний Фоновий Постер / Кадр фільму
         css += '.full-start-new__poster { position: fixed !important; top:0; left:0; width:100vw !important; height: 100vh !important; overflow: hidden !important; background: #141414; z-index: 1; pointer-events: none !important; ';
         css += (isUIAnim ? 'animation: poster_fade_in 0.8s ease forwards; ' : '') + '} ';
         
@@ -154,8 +155,11 @@
         css += 'mask-image: linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 45%, rgba(0,0,0,0.1) 80%, transparent 100%), linear-gradient(to top, #141414 0%, rgba(20,20,20,0.7) 40%, transparent 85%) !important; ';
         css += '-webkit-mask-image: linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 45%, rgba(0,0,0,0.1) 80%, transparent 100%), linear-gradient(to top, #141414 0%, rgba(20,20,20,0.7) 40%, transparent 85%) !important; } ';
         
-        // 3. Перший екран (Формуємо висоту 100vh, щоб опис і актори залишалися суворо ВНИЗУ)
-        css += '.full-start-new__right { position: relative !important; min-height: 100vh !important; width: 45vw !important; box-sizing: border-box !important; padding-bottom: 6vh !important; padding-left: 4vw !important; background: none !important; z-index: 10 !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; justify-content: flex-end !important; margin: 0 !important; gap: ' + blocksGap + ' !important; text-align: left !important; } ';
+        // 3. Перший екран: Фіксуємо висоту першого контейнера чітко під 100vh
+        css += '.full-start-new { position: relative !important; min-height: 100vh !important; height: 100vh !important; box-sizing: border-box !important; } ';
+
+        // Панель з контентом (прив'язана до низу екрана: bottom: 5vh)
+        css += '.full-start-new__right { position: absolute !important; bottom: 5vh !important; left: 4vw !important; width: 48vw !important; max-height: 85vh !important; overflow: visible !important; background: none !important; z-index: 10 !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; justify-content: flex-end !important; padding: 0 !important; margin: 0 !important; gap: ' + blocksGap + ' !important; text-align: left !important; } ';
         
         var uiAnimClass = isUIAnim ? 'animation: premium_ui_reveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; will-change: transform, opacity; ' : '';
 
@@ -165,8 +169,8 @@
         css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 6px rgba(0,0,0,0.9)) !important; } ';
 
         // Назва / Логотип фільму
-        css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.1s; width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; min-height: 50px; order: 2; text-align: left !important; } ';
-        css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 38vw !important; object-fit: contain !important; object-position: left center !important; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.9)); margin: 0 !important; } ';
+        css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.1s; width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; min-height: 40px; order: 2; text-align: left !important; } ';
+        css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 40vw !important; object-fit: contain !important; object-position: left center !important; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.9)); margin: 0 !important; } ';
 
         // Слоган
         css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.15s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 1.05em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; order: 3; line-height: 1.35; max-width: 42vw; } ';
@@ -186,8 +190,8 @@
         css += '.quality-item { height: 1.2em; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6)); } '; 
         css += '.quality-item img { height: 100%; width: auto; object-fit: contain; } ';
 
-        // Кнопки
-        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.32s; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 14px !important; width: 100% !important; margin-top: 6px !important; order: 6; } ';
+        // Кнопки (Суворо внизу екрана)
+        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.32s; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 14px !important; width: 100% !important; margin-top: 4px !important; order: 6; } ';
         css += '.full-start-new .full-start__button { background: rgba(255, 255, 255, 0.15) !important; border: 2px solid transparent !important; border-radius: 8px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: center !important; padding: 10px 22px !important; width: auto !important; min-width: 120px !important; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important; cursor: pointer; } ';
         
         css += '.full-start-new .full-start__button.focus, .full-start-new .full-start__button:focus { background: #ffffff !important; transform: scale(1.08) !important; border-color: #ffffff !important; box-shadow: 0 8px 25px rgba(0,0,0,0.8) !important; z-index: 20; } ';
@@ -197,8 +201,8 @@
         css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 22px !important; height: 22px !important; margin-right: 8px !important; margin-bottom: 0 !important; fill: #fff !important; } ';
         css += '.full-start-new .full-start__button span { font-size: 13px !important; text-transform: uppercase !important; color: #fff !important; opacity: 0.9 !important; font-weight: 700; letter-spacing: 0.03em; white-space: nowrap; } ';
 
-        // 4. НИЖНІ БЛОКИ (Секції "Детально", "Актори", "Опис" знаходяться нижче після скролу)
-        css += '.full-start-new__body, .full-start-new__bottom, .full-descr, .full-persons { position: relative !important; z-index: 10 !important; padding-left: 4vw !important; padding-right: 4vw !important; margin-top: 20px !important; } ';
+        // 4. НИЖНІ БЛОКИ (Зсунуті нижче за межі 100vh для прокрутки)
+        css += '.full-start-new__body, .full-start-new__bottom, .full-descr, .full-persons { position: relative !important; z-index: 10 !important; padding-left: 4vw !important; padding-right: 4vw !important; margin-top: 100vh !important; } ';
 
         style.textContent = css;
         document.head.appendChild(style);
@@ -476,7 +480,7 @@
 
         Lampa.SettingsApi.addParam({ 
             component: 'tv_interface', 
-            param: { name: 'tv_interface_blocks_gap', type: 'select', values: { '8px': 'Компактний', '12px': 'Стандартний', '16px': 'Просторий' }, default: '12px' }, 
+            param: { name: 'tv_interface_blocks_gap', type: 'select', values: { '8px': 'Компактний', '10px': 'Стандартний', '14px': 'Просторий' }, default: '10px' }, 
             field: { name: 'Відступи між блоками' }, 
             onChange: applyStyles 
         });
