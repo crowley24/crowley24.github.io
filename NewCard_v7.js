@@ -203,6 +203,7 @@
                             <div class="cas-studios-row" style="display: flex; gap: 8px; align-items: center; margin-bottom: 10px;"></div>                  
                             <div class="cas-logo"></div>                    
                         </div>                    
+                        <div class="cas-tagline" style="display: none;"></div>
                         <div class="cas-meta-line" style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">      
                             <div class="cas-meta-info"></div>      
                             <div class="cas-quality-row" style="display: flex; gap: 6px; align-items: center;"></div>      
@@ -299,13 +300,14 @@ function addStyles() {
     }  
       
     /* Загальні базові стани для анімацій */  
-    .cas-logo, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper, .full-start-new__buttons {  
+    .cas-logo, .cas-tagline, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper, .full-start-new__buttons {  
         opacity: 0 !important;  
         will-change: transform, opacity;  
     }  
 
     /* --- Варіант 1: Slide from Left --- */
     .cas-anim-slide .cas-logo, 
+    .cas-anim-slide .cas-tagline, 
     .cas-anim-slide .cas-studios-row, 
     .cas-anim-slide .cas-rate-items, 
     .cas-anim-slide .cas-meta-info, 
@@ -318,6 +320,7 @@ function addStyles() {
     }                        
     .cas-anim-slide.cas-animated .cas-logo { opacity: 1 !important; transform: translateX(0); transition-delay: 0.0s; }  
     .cas-anim-slide.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.08s; }  
+    .cas-anim-slide.cas-animated .cas-tagline { opacity: 0.85 !important; transform: translateX(0); transition-delay: 0.12s; }
     .cas-anim-slide.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: translateX(0); transition-delay: 0.16s; }  
     .cas-anim-slide.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.24s; }  
     .cas-anim-slide.cas-animated .cas-description { opacity: 0.75 !important; transform: translateX(0); transition-delay: 0.32s; }  
@@ -325,6 +328,7 @@ function addStyles() {
 
     /* --- Варіант 2: Elastic Spring --- */
     .cas-anim-spring .cas-logo, 
+    .cas-anim-spring .cas-tagline, 
     .cas-anim-spring .cas-studios-row, 
     .cas-anim-spring .cas-rate-items, 
     .cas-anim-spring .cas-meta-info, 
@@ -337,6 +341,7 @@ function addStyles() {
     }                        
     .cas-anim-spring.cas-animated .cas-logo { opacity: 1 !important; transform: scale(1) translateX(0); transition-delay: 0.0s; }  
     .cas-anim-spring.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: scale(1) translateX(0); transition-delay: 0.08s; }  
+    .cas-anim-spring.cas-animated .cas-tagline { opacity: 0.85 !important; transform: scale(1) translateX(0); transition-delay: 0.12s; }
     .cas-anim-spring.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: scale(1) translateX(0); transition-delay: 0.16s; }  
     .cas-anim-spring.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: scale(1) translateX(0); transition-delay: 0.24s; }  
     .cas-anim-spring.cas-animated .cas-description { opacity: 0.75 !important; transform: scale(1) translateX(0); transition-delay: 0.32s; }  
@@ -345,7 +350,6 @@ function addStyles() {
     .full-start-new__details { display: none !important; }  
     .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }  
     
-    /* Збережено твою структуру з точковим фіксом вирівнювання зліва */
     .full-start-new__body { display: flex; height: 85vh; position: relative; width: 100%; }  
     .full-start-new__left { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 4em 3em 2em 4em; position: relative; z-index: 2; }  
     .full-start-new__right { width: 60%; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start !important; text-align: left !important; padding: 4em 4em 2em 0; position: relative; z-index: 2; margin-left: 0 !important; }  
@@ -361,7 +365,7 @@ function addStyles() {
         overflow: visible;  
         max-width: 100%;  
         padding-left: 0%;  
-        margin-bottom: calc(var(--cas-blocks-gap) * 1.5);  
+        margin-bottom: calc(var(--cas-blocks-gap) * 0.8);  
         max-height: 300px;  
         display: flex;
         flex-direction: column;
@@ -381,6 +385,16 @@ function addStyles() {
         object-fit: contain;  
     }  
     
+    .cas-tagline {
+        font-size: calc(var(--cas-meta-size) * 0.95);
+        font-style: italic;
+        color: rgba(255, 255, 255, 0.85);
+        margin-bottom: 12px;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+        max-width: 650px;
+        text-align: left !important;
+    }
+
     .cas-ratings-line {  
         display: flex;  
         align-items: center;  
@@ -561,7 +575,7 @@ function addStyles() {
                 
     async function processImages(render, data, res) {                
         try {                
-            // Умова використання англійського логотипу, якщо відсутній український
+            // Пріоритет українського логотипу, з можливістю фолбеку на англійський
             const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];                
             if (bestLogo) {        
                 const quality = Lampa.Storage.get('cas_logo_quality') || 'original';                
@@ -583,6 +597,13 @@ function addStyles() {
     async function loadMovieDataOptimized(render, data) {    
         const tasks = [];    
             
+        // Обробка та виведення слогану
+        if (data.tagline) {
+            render.find('.cas-tagline').text(`«${data.tagline}»`).show();
+        } else {
+            render.find('.cas-tagline').hide();
+        }
+
         if (Lampa.Storage.get('cas_show_description')) {    
             tasks.push(Promise.resolve().then(() => {    
                 render.find('.cas-description').html(data.overview || '').css('opacity','1').show();    
@@ -698,7 +719,6 @@ function addStyles() {
                         try { 
                             await processImages(render, data, res); 
                         } catch (e) {} finally {
-                            // Анімація запускається ТІЛЬКИ після завантаження або спроби завантаження логотипу
                             setTimeout(() => cardRoot.addClass('cas-animated'), 30);
                         }
                     };                
