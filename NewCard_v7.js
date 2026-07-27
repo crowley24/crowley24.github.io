@@ -1,6 +1,5 @@
 (function () {
     'use strict';
-
     var slideshowTimer = null; 
     var pluginPath = 'https://crowley38.github.io/Icons/';
     
