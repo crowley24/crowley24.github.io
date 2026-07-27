@@ -210,7 +210,6 @@
                         <div class="cas-tagline" style="display: none;"></div>
                         <div class="cas-meta-line" style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">      
                             <div class="cas-meta-info"></div>      
-                            <div class="cas-quality-row" style="display: flex; gap: 6px; align-items: center;"></div>      
                         </div>  
                         <div class="cas-description" style="margin-top: calc(var(--cas-blocks-gap) * 0.4);"></div>                    
                         <div class="cas-details-wrapper" style="margin-top: 10px;">                  
@@ -243,7 +242,10 @@
                         </div>                  
                     </div>                  
                     <div class="full-start-new__reactions selector hide"></div>                  
-                    <div class="cas-bottom-ratings" style="position: absolute; right: 4em; bottom: 2em; display: flex; align-items: center; gap: 15px; font-size: var(--cas-meta-size); font-weight: 600; z-index: 3;"></div>
+                    <div class="cas-bottom-right-container" style="position: absolute; right: 4em; bottom: 2em; display: flex; align-items: center; gap: 20px; z-index: 3;">
+                        <div class="cas-quality-row" style="display: flex; gap: 6px; align-items: center;"></div>
+                        <div class="cas-bottom-ratings" style="display: flex; align-items: center; gap: 15px; font-size: var(--cas-meta-size); font-weight: 600;"></div>
+                    </div>
                     <div class="full-start-new__rate-line hide"></div>                  
                     <div class="rating--modss" style="display: none;"></div>                  
                 </div>                  
@@ -306,7 +308,7 @@
         }  
           
         /* Апаратне прискорення та базові стани для анімацій */  
-        .cas-logo, .cas-tagline, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper, .full-start-new__buttons, .cas-bottom-ratings {  
+        .cas-logo, .cas-tagline, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper, .full-start-new__buttons, .cas-bottom-ratings, .cas-bottom-right-container {  
             opacity: 0 !important;  
             will-change: transform, opacity;  
             backface-visibility: hidden;
@@ -322,7 +324,8 @@
         .cas-anim-slide .cas-description, 
         .cas-anim-slide .cas-details-wrapper, 
         .cas-anim-slide .full-start-new__buttons,
-        .cas-anim-slide .cas-bottom-ratings {  
+        .cas-anim-slide .cas-bottom-ratings,
+        .cas-anim-slide .cas-bottom-right-container {  
             transform: translate3d(0, 8px, 0);  
             transition: opacity 0.35s var(--cas-curve-slide), transform 0.35s var(--cas-curve-slide);  
         }                        
@@ -333,6 +336,7 @@
         .cas-anim-slide.cas-animated .cas-description { opacity: 0.75 !important; transform: translate3d(0, 0, 0); transition-delay: 0.16s; }  
         .cas-anim-slide.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translate3d(0, 0, 0); transition-delay: 0.20s; }  
         .cas-anim-slide.cas-animated .cas-bottom-ratings { opacity: 1 !important; transform: translate3d(0, 0, 0); transition-delay: 0.20s; }  
+        .cas-anim-slide.cas-animated .cas-bottom-right-container { opacity: 1 !important; transform: translate3d(0, 0, 0); transition-delay: 0.20s; }
         .cas-anim-slide.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translate3d(0, 0, 0); transition-delay: 0.24s; }
 
         /* --- Варіант 2: Elastic Spring --- */
@@ -345,7 +349,8 @@
         .cas-anim-spring .cas-description, 
         .cas-anim-spring .cas-details-wrapper, 
         .cas-anim-spring .full-start-new__buttons,
-        .cas-anim-spring .cas-bottom-ratings {  
+        .cas-anim-spring .cas-bottom-ratings,
+        .cas-anim-spring .cas-bottom-right-container {  
             transform: scale3d(0.92, 0.92, 1) translate3d(0, 6px, 0);  
             transition: opacity 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.4s var(--cas-curve-spring);  
         }                        
@@ -356,6 +361,7 @@
         .cas-anim-spring.cas-animated .cas-description { opacity: 0.75 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.16s; }  
         .cas-anim-spring.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.20s; }  
         .cas-anim-spring.cas-animated .cas-bottom-ratings { opacity: 1 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.20s; }
+        .cas-anim-spring.cas-animated .cas-bottom-right-container { opacity: 1 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.20s; }
         .cas-anim-spring.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.24s; }
                   
         .full-start-new__details { display: none !important; }  
