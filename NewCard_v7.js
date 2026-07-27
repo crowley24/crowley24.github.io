@@ -33,7 +33,7 @@
         'settings_cas_meta_size': 'Розмір шрифту',                
         'settings_cas_blocks_gap': 'Відступи між блоками',                
         'settings_cas_bg_animation': 'Анімація фону (Ken Burns)',                
-        'settings_cas_animation_style': 'Стиль анімації появи',
+        'settings_cas_animation_style': 'Стиль анімації появі',  
         'settings_cas_slideshow_enabled': 'Слайд-шоу фону',                
         'settings_cas_show_studios': 'Показувати студії',                
         'settings_cas_show_quality': 'Показувати якість',                
@@ -84,7 +84,7 @@
             'cas_logo_scale': '100',                
             'cas_logo_quality': 'original',                
             'cas_bg_animation': true,                
-            'cas_animation_style': 'slide',
+            'cas_animation_style': 'slide',  
             'cas_slideshow_enabled': true,                
             'cas_blocks_gap': '20',                
             'cas_meta_size': '1.3',                
@@ -110,7 +110,7 @@
             { name: 'cas_meta_size', type: 'select', values: { '1.1': 'Міні', '1.2': 'Малий', '1.3': 'Стандартний', '1.4': 'Збільшений', '1.5': 'Великий' } },                
             { name: 'cas_blocks_gap', type: 'select', values: { '10':'Дуже тісно','15':'Тісно','20':'Стандарт','25':'Просторе','30':'Дуже просторе' } },                
             { name: 'cas_bg_animation', type: 'trigger' },                
-            { name: 'cas_animation_style', type: 'select', values: { 'slide': 'Slide from Left (Виїзд зліва)', 'spring': 'Elastic Spring (Жива пружина)' } },
+            { name: 'cas_animation_style', type: 'select', values: { 'slide': 'Slide from Left (Виїзд зліва)', 'spring': 'Elastic Spring (Жива пружина)' } },  
             { name: 'cas_slideshow_enabled', type: 'trigger' },                
             { name: 'cas_show_studios', type: 'trigger' },                
             { name: 'cas_show_quality', type: 'trigger' },                
@@ -142,7 +142,7 @@
         const scale = parseInt(Lampa.Storage.get('cas_logo_scale') || 100) / 100;          
         const gap = Lampa.Storage.get('cas_blocks_gap') || '20';          
         const metaSize = Lampa.Storage.get('cas_meta_size') || '1.3';          
-        const animStyle = Lampa.Storage.get('cas_animation_style') || 'slide';
+        const animStyle = Lampa.Storage.get('cas_animation_style') || 'slide';  
                           
         root.style.setProperty('--cas-logo-scale', scale);          
         root.style.setProperty('--cas-blocks-gap', gap + 'px');          
@@ -152,7 +152,7 @@
         
         const currentCard = $('.full-start-new.left-title');          
         if (currentCard.length > 0) {          
-            currentCard.removeClass('cas-anim-slide cas-anim-spring').addClass('cas-anim-' + animStyle);
+            currentCard.removeClass('cas-anim-slide cas-anim-spring').addClass('cas-anim-' + animStyle);  
 
             currentCard.find('.cas-description').toggle(!!Lampa.Storage.get('cas_show_description'));          
             currentCard.find('.cas-studios-row').toggle(!!Lampa.Storage.get('cas_show_studios'));          
@@ -189,7 +189,7 @@
     }               
                       
     function addCustomTemplate() {                       
-        const animStyle = Lampa.Storage.get('cas_animation_style') || 'slide';
+        const animStyle = Lampa.Storage.get('cas_animation_style') || 'slide';  
         const template = `<div class="full-start-new left-title cas-anim-${animStyle}">                      
             <div class="full-start-new__body">                      
                 <div class="full-start-new__left">                      
@@ -281,7 +281,7 @@
             transform-origin: center center;  
         }  
           
-        /* Базові стилі контейнерів */
+        /* Фікс сітки: вирівнюємо картку по лівому краю як у NewCard */
         .full-start-new.left-title {
             position: relative;
             z-index: 2;
@@ -301,8 +301,8 @@
         }  
 
         .full-start-new.left-title .full-start-new__left { 
-            width: 55% !important; 
-            max-width: 700px !important;
+            width: 60% !important; 
+            max-width: 750px !important;
             display: flex !important; 
             flex-direction: column !important; 
             justify-content: flex-end !important; 
@@ -311,8 +311,8 @@
             text-align: left !important;
         }  
 
-        .full-start-new.left-title .full-start-new__right { 
-            width: 45% !important; 
+        .full-start-new.left-title .full-start-new__right,
+        .full-start-new.left-title .full-start-new__poster { 
             display: none !important; 
         }  
 
@@ -467,7 +467,7 @@
             line-height: 1;
         }    
 
-        /* Кнопки */
+        /* Вирівнювання кнопок по лівому краю */
         .full-start-new.left-title .full-start-new__buttons {
             display: flex !important;
             flex-direction: row !important;
@@ -583,8 +583,7 @@
                 
     async function processImages(render, data, res) {                
         try {                
-            // Якщо немає українського логотипу — автоматично ставимо англійський
-            const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];                
+            const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];               
             if (bestLogo) {        
                 const quality = Lampa.Storage.get('cas_logo_quality') || 'original';                
                 const logoSrc = Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path);                
