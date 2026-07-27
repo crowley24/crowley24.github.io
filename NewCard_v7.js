@@ -331,7 +331,7 @@ function addStyles() {
     .cas-anim-slide.cas-animated .cas-description { opacity: 0.75 !important; transform: translateX(0); transition-delay: 0.32s; }  
     .cas-anim-slide.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translateX(0); transition-delay: 0.40s; }  
     .cas-anim-slide.cas-animated .cas-bottom-ratings { opacity: 1 !important; transform: translateX(0); transition-delay: 0.40s; }  
-    .cas-anim-slide.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.48s; }
+    .cas-anim-slide.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.52s; }
 
     /* --- Варіант 2: Elastic Spring --- */
     .cas-anim-spring .cas-logo, 
@@ -354,7 +354,7 @@ function addStyles() {
     .cas-anim-spring.cas-animated .cas-description { opacity: 0.75 !important; transform: scale(1) translateX(0); transition-delay: 0.32s; }  
     .cas-anim-spring.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: scale(1) translateX(0); transition-delay: 0.40s; }  
     .cas-anim-spring.cas-animated .cas-bottom-ratings { opacity: 1 !important; transform: scale(1) translateX(0); transition-delay: 0.40s; }
-    .cas-anim-spring.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: scale(1) translateX(0); transition-delay: 0.48s; }
+    .cas-anim-spring.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: scale(1) translateX(0); transition-delay: 0.52s; }
               
     .full-start-new__details { display: none !important; }  
     .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }  
@@ -661,6 +661,7 @@ function addStyles() {
         await Promise.all(tasks);    
             
         if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {    
+            render.find('.cas-quality-row').hide();
             Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {    
                 try {    
                     const items = res.Results || res;    
