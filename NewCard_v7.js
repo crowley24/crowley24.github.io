@@ -169,7 +169,7 @@
             const buttons = currentCard.find('.full-start-new__buttons');          
                       
             if (!showDesc) {          
-                buttons.css('margin-top', '0.1em');          
+                buttons.css('margin-top', '0px');          
             } else {          
                 buttons.css('margin-top', '');          
             }          
@@ -217,7 +217,7 @@
                             <div class="full-start-new__head hide"></div>                      
                             <div class="full-start-new__details hide"></div>                      
                         </div>                  
-                        <div class="full-start-new__buttons" style="margin-top: 6px;">                      
+                        <div class="full-start-new__buttons" style="margin-top: 0px;">                      
                             <div class="full-start__button selector button--play">                      
                                 <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/><path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/></svg>                      
                                 <span>#{title_watch}</span>                      
@@ -453,7 +453,7 @@
             flex-wrap: wrap;
             width: 100%;
             margin-left: 0 !important;
-            margin-top: 6px !important;
+            margin-top: 0px !important;
         }
         
         .cas-sep {  
@@ -484,7 +484,7 @@
             opacity: 0.95;    
         }    
 
-        .cas-description { font-size: var(--cas-meta-size) !important; line-height: 1.35; color: rgba(255,255,255,0.7); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-width: 650px; margin-top: 4px; margin-bottom: 12px; text-align: left !important; }    
+        .cas-description { font-size: var(--cas-meta-size) !important; line-height: 1.35; color: rgba(255,255,255,0.7); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-width: 650px; margin-top: 4px; margin-bottom: 8px; text-align: left !important; }    
         .cas-quality-item img { height: 12px; }    
         .cas-ratings-line { display: flex; align-items: center; gap: 15px; margin-bottom: 4px; font-size: var(--cas-meta-size); font-weight: 600; height: 30px; }    
         .cas-rate-item { display: flex; align-items: center; gap: 6px; }    
