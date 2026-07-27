@@ -1,12 +1,10 @@
 (function () {                
-    'use strict';    
-    
+    'use strict';                
     const PLUGIN_NAME = 'NewCard';                
     const PLUGIN_ID = 'new_card_style';                
     const ASSETS_PATH = 'https://crowley38.github.io/Icons/';                
     const CACHE_LIFETIME = 1000 * 60 * 60 * 24; // 24 години  
     
-    // Оперативний кеш в RAM для миттєвого відгуку
     const memoryCache = new Map();
 
     let currentInterval = null;            
@@ -56,6 +54,7 @@
                 
     function preloadImage(src) {                
         return new Promise((resolve) => {                
+            if (!src) return resolve(null);
             const img = new Image();                
             img.onload = () => resolve(img);                
             img.onerror = () => resolve(null);              
@@ -72,7 +71,7 @@
         if (!mins) return '';                
         const h = Math.floor(mins / 60);                
         const m = mins % 60;                
-        return (h > 0 ? h + 'г ' : '') + m + 'хв';                
+        return (h > 0 ? h + 'г ' : '') + (m > 0 ? m + 'хв' : '');                
     }                
                 
     function initializePlugin() {                
@@ -113,7 +112,7 @@
             { name: 'cas_meta_size', type: 'select', values: { '1.1': 'Міні', '1.2': 'Малий', '1.3': 'Стандартний', '1.4': 'Збільшений', '1.5': 'Великий' } },                
             { name: 'cas_blocks_gap', type: 'select', values: { '10':'Дуже тісно','15':'Тісно','20':'Стандарт','25':'Просторе','30':'Дуже просторе' } },                
             { name: 'cas_bg_animation', type: 'trigger' },                
-            { name: 'cas_animation_style', type: 'select', values: { 'slide': 'Slide from Left (Виїзд зліва)', 'spring': 'Elastic Spring (Жива пружина)' } },
+            { name: 'cas_animation_style', type: 'select', values: { 'slide': 'Slide from Left', 'spring': 'Elastic Spring' } },
             { name: 'cas_slideshow_enabled', type: 'trigger' },                
             { name: 'cas_show_studios', type: 'trigger' },                
             { name: 'cas_show_quality', type: 'trigger' },                
@@ -173,7 +172,7 @@
                         </div>                    
                         <div class="cas-tagline" style="display: none;"></div>
                         <div class="cas-meta-line" style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">      
-                            <div class="cas-meta-info"></div>      
+                            <div class="cas-meta-info" style="display: flex; gap: 8px; align-items: center;"></div>      
                             <div class="cas-quality-row" style="display: flex; gap: 6px; align-items: center;"></div>      
                         </div>  
                         <div class="cas-description" style="margin-top: calc(var(--cas-blocks-gap) * 0.4);"></div>                    
@@ -192,7 +191,7 @@
                             </div>                      
                             <div class="full-start__button selector button--reaction">                  
                                 <svg width="38" height="34" viewBox="0 0 38 34" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M37.208 10.9742C37.1364 10.8013 37.0314 10.6441 36.899 10.5117C36.7666 10.3794 36.6095 10.2744 36.4365 10.2028L12.0658 0.108375C11.7166 -0.0361828 11.3242 -0.0361227 10.9749 0.108542C10.6257 0.253206 10.3482 0.530634 10.2034 0.879836L0.108666 25.2507C0.0369593 25.4236 3.37953e-05 25.609 2.3187e-08 25.7962C-3.37489e-05 25.9834 0.0368249 26.1688 0.108469 26.3418C0.180114 26.5147 0.28514 26.6719 0.417545 26.8042C0.54995 26.9366 0.707139 27.0416 0.880127 27.1131L17.2452 33.8917C17.5945 34.0361 17.9869 34.0361 18.3362 33.8917L29.6574 29.2017C29.8304 29.1301 29.9875 29.0251 30.1199 28.8928C30.2523 28.7604 30.3573 28.6032 30.4289 28.4303L37.2078 12.065C37.2795 11.8921 37.3164 11.7068 37.3165 11.5196C37.3165 11.3325 37.2796 11.1471 37.208 10.9742ZM20.425 29.9407L21.8784 26.4316L25.3873 27.885L20.425 29.9407ZM28.3407 26.0222L21.6524 23.252C21.3031 23.1075 20.9107 23.1076 20.5615 23.2523C20.2123 23.3969 19.9348 23.6743 19.79 24.0235L17.0194 30.7123L3.28783 25.0247L12.2918 3.28773L34.0286 12.2912L28.3407 26.0222Z" fill="currentColor"/><path d="M25.3493 16.976L24.258 14.3423L16.959 17.3666L15.7196 14.375L13.0859 15.4659L15.4161 21.0916L25.3493 16.976Z" fill="currentColor"/></svg>              
-                              <span>#{title_reactions}</span>              
+                                <span>#{title_reactions}</span>              
                             </div>  
                             <div class="full-start__button selector button--subscribe hide">                    
                                 <svg width="25" height="30" viewBox="0 0 25 30" fill="none" xmlns="http://www.w3.org/2000/svg">        
@@ -206,19 +205,6 @@
                             </div>                  
                         </div>                  
                     </div>                  
-                    <div class="full-start-new__reactions selector hide"></div>                  
-                    <div class="full-start-new__rate-line hide"></div>                  
-                    <div class="rating--modss" style="display: none;"></div>                  
-                </div>                  
-            </div>                  
-            <div class="hide buttons--container">                  
-                <div class="full-start__button view--torrent hide">                  
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 50 50" width="24" height="24"><path d="M25,2C12.317,2,2,12.317,2,25s10.317,23,23,23s23-10.317,23-23S37.683,2,25,2z M40.5,30.963c-3.1,0-4.9-2.4-4.9-2.4 S34.1,35,27,35c-1.4,0-3.6-0.837-3.6-0.837l4.17,9.643C26.727,43.92,25.874,44,25,44c-2.157,0-4.222-0.377-6.155-1.039L9.237,16.851 c0,0-0.7-1.2,0.4-1.5c1.1-0.3,5.4-1.2,5.4-1.2s1.475-0.494,1.8,0.5c0.5,1.3,4.063,11.112,4.063,11.112S22.6,29,27.4,29 c4.7,0,5.9-3.437,5.7-3.937c-1.2-3-4.993-11.862-4.993-11.862s-0.6-1.1,0.8-1.4c1.4-0.3,3.8-0.7,3.8-0.7s1.105-0.163,1.6,0.8 c0.738,1.437,5.193,11.262,5.193,11.262s1.1,2.9,3.3,2.9c0.464,0,0.834-0.046,1.152-0.104c-0.082,1.635-0.348,3.221-0.817,4.722 C42.541,30.867,41.756,30.963,40.5,30.963z" fill="currentColor"/></svg>                  
-                    <span>#{full_torrents}</span>                  
-                </div>                  
-                <div class="full-start__button selector view--trailer">                  
-                    <svg height="24" viewBox="0 0 80 70" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M71.2555 2.08955C74.6975 3.2397 77.4083 6.62804 78.3283 10.9306C80 18.7291 80 35 80 35C80 35 80 51.2709 78.3283 59.0694C77.4083 63.372 74.6975 66.7603 71.2555 67.9104C65.0167 70 40 70 40 70C40 70 14.9833 70 8.74453 67.9104C5.3025 66.7603 2.59172 63.372 1.67172 59.0694C0 51.2709 0 35 0 35C0 35 0 18.7291 1.67172 10.9306C2.59172 6.62804 5.3025 3.2395 8.74453 2.08955C14.9833 0 40 0 40 0C40 0 65.0167 0 71.2555 2.08955ZM55.5909 35.0004L29.9773 49.5714V20.4286L55.5909 35.0004Z" fill="currentColor"/></svg>                  
-                    <span>#{full_trailers}</span>                  
                 </div>                  
             </div>                  
         </div>`;                  
@@ -230,7 +216,7 @@
         const styles = `<style id="cas-main-styles">  
         :root { 
             --cas-logo-scale: 1; 
-            --cas-blocks-gap: 30px; 
+            --cas-blocks-gap: 20px; 
             --cas-meta-size: 1.3em; 
             --cas-curve-slide: cubic-bezier(0.2, 0.8, 0.2, 1); 
             --cas-curve-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -239,93 +225,46 @@
         .full-start__background {  
             height: calc(100% + 6em);  
             left: 0 !important;  
-            opacity: 0 !important;  
-            transition: opacity 1s cubic-bezier(0.2, 0.8, 0.2, 1) !important;  
-            will-change: opacity;  
-            overflow: hidden !important;  
-        }  
-            
-        .full-start__background.loaded { opacity: 1 !important; }  
-        .full-start__background.dim { opacity: 0.35 !important; }  
-                
-        @keyframes casKenBurnsParallax {  
-            0% { transform: scale(1.02) translateY(0px) translateX(0px); }  
-            50% { transform: scale(1.10) translateY(-15px) translateX(5px); }  
-            100% { transform: scale(1.02) translateY(0px) translateX(0px); }  
-        }  
-                  
-        body.cas--zoom-enabled .full-start__background img, 
-        body.cas--zoom-enabled img.full-start__background {  
-            animation: casKenBurnsParallax 40s ease-in-out infinite !important;  
-            will-change: transform;  
-            transform-origin: center center;  
+            opacity: 0.35 !important;  
+            transition: opacity 1s ease !important;  
         }  
           
-        .cas-logo, .cas-tagline, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper, .full-start-new__buttons {  
-            opacity: 0 !important;  
-            will-change: transform, opacity;  
+        /* Гарантований вивід текстового блоку */
+        .cas-logo, .cas-tagline, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .full-start-new__buttons {  
+            opacity: 1 !important;  
+            visibility: visible !important;
         }  
 
-        /* Slide Animation */
-        .cas-anim-slide .cas-logo, .cas-anim-slide .cas-tagline, .cas-anim-slide .cas-studios-row, 
-        .cas-anim-slide .cas-rate-items, .cas-anim-slide .cas-meta-info, .cas-anim-slide .cas-quality-row, 
-        .cas-anim-slide .cas-description, .cas-anim-slide .cas-details-wrapper, .cas-anim-slide .full-start-new__buttons {  
-            transform: translateX(-40px);  
-            transition: opacity 0.8s var(--cas-curve-slide), transform 0.8s var(--cas-curve-slide);  
-        }                        
-        .cas-anim-slide.cas-animated .cas-logo { opacity: 1 !important; transform: translateX(0); transition-delay: 0.0s; }  
-        .cas-anim-slide.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.08s; }  
-        .cas-anim-slide.cas-animated .cas-tagline { opacity: 0.85 !important; transform: translateX(0); transition-delay: 0.12s; }
-        .cas-anim-slide.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: translateX(0); transition-delay: 0.16s; }  
-        .cas-anim-slide.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.24s; }  
-        .cas-anim-slide.cas-animated .cas-description { opacity: 0.75 !important; transform: translateX(0); transition-delay: 0.32s; }  
-        .cas-anim-slide.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translateX(0); transition-delay: 0.40s; }  
+        .cas-anim-slide.cas-animated .cas-logo, 
+        .cas-anim-slide.cas-animated .cas-tagline, 
+        .cas-anim-slide.cas-animated .cas-meta-info, 
+        .cas-anim-slide.cas-animated .cas-quality-row, 
+        .cas-anim-slide.cas-animated .cas-description, 
+        .cas-anim-slide.cas-animated .full-start-new__buttons {  
+            animation: casFadeInSlide 0.5s ease forwards;
+        }
 
-        /* Spring Animation */
-        .cas-anim-spring .cas-logo, .cas-anim-spring .cas-tagline, .cas-anim-spring .cas-studios-row, 
-        .cas-anim-spring .cas-rate-items, .cas-anim-spring .cas-meta-info, .cas-anim-spring .cas-quality-row, 
-        .cas-anim-spring .cas-description, .cas-anim-spring .cas-details-wrapper, .cas-anim-spring .full-start-new__buttons {  
-            transform: scale(0.85) translateX(-30px);  
-            transition: opacity 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.7s var(--cas-curve-spring);  
-        }                        
-        .cas-anim-spring.cas-animated .cas-logo { opacity: 1 !important; transform: scale(1) translateX(0); transition-delay: 0.0s; }  
-        .cas-anim-spring.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: scale(1) translateX(0); transition-delay: 0.08s; }  
-        .cas-anim-spring.cas-animated .cas-tagline { opacity: 0.85 !important; transform: scale(1) translateX(0); transition-delay: 0.12s; }
-        .cas-anim-spring.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: scale(1) translateX(0); transition-delay: 0.16s; }  
-        .cas-anim-spring.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: scale(1) translateX(0); transition-delay: 0.24s; }  
-        .cas-anim-spring.cas-animated .cas-description { opacity: 0.75 !important; transform: scale(1) translateX(0); transition-delay: 0.32s; }  
-        .cas-anim-spring.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: scale(1) translateX(0); transition-delay: 0.40s; }  
-                  
-        .full-start-new__details { display: none !important; }  
-        .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }  
+        @keyframes casFadeInSlide {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
         
         .full-start-new__body { display: flex; height: 85vh; position: relative; width: 100%; }  
-        .full-start-new__left { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 4em 3em 2em 4em; position: relative; z-index: 2; }  
-        .full-start-new__right { width: 60%; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start !important; text-align: left !important; padding: 4em 4em 2em 0; position: relative; z-index: 2; margin-left: 0 !important; }  
-        .full-start-new__poster { display: none; }  
-        .full-start-new__title { display: none; }  
-                            
-        .left-title .full-start-new__left { display: none !important; }  
-        .left-title .full-start-new__right { width: 100% !important; padding-left: 4em !important; }  
+        .full-start-new__right { width: 100% !important; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start !important; text-align: left !important; padding: 4em 4em 2em 4em; position: relative; z-index: 2; }  
         .left-title__content { display: flex; flex-direction: column; align-items: flex-start !important; text-align: left !important; width: 100%; }
                             
         .cas-logo-container {  
             position: relative;  
-            overflow: visible;  
             max-width: 100%;  
-            padding-left: 0%;  
             margin-bottom: calc(var(--cas-blocks-gap) * 0.8);  
-            max-height: 300px;  
             display: flex;
             flex-direction: column;
             align-items: flex-start !important;
         }  
                             
         .cas-logo img {  
-            background: transparent !important;  
-            border: none !important;  
             max-width: 450px;  
-            max-height: 200px;  
+            max-height: 180px;  
             width: auto;  
             height: auto;  
             transform: scale(var(--cas-logo-scale));  
@@ -334,39 +273,41 @@
             object-fit: contain;  
         }  
         
-        .cas-tagline {
-            font-size: calc(var(--cas-meta-size) * 0.95);
-            font-style: italic;
-            color: rgba(255, 255, 255, 0.85);
-            margin-bottom: 12px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
-            max-width: 650px;
-            text-align: left !important;
+        .cas-logo-text {
+            font-size: 2.8em;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: -0.5px;
+            color: #ffffff;
+            text-shadow: 0 4px 12px rgba(0,0,0,0.8);
+            line-height: 1.1;
         }
 
-        .cas-ratings-line { display: flex; align-items: center; justify-content: flex-start !important; gap: 8px !important; flex-wrap: wrap; margin-bottom: 8px !important; }  
-        .cas-meta-info { margin-right: 0; display: flex; align-items: center; justify-content: flex-start !important; gap: 8px; font-weight: 400; }  
-        .cas-quality-row { margin-top: 0 !important; display: flex; align-items: center; justify-content: flex-start !important; gap: 6px; }  
+        .cas-tagline {
+            font-size: calc(var(--cas-meta-size) * 0.9);
+            font-style: italic;
+            color: rgba(255, 255, 255, 0.85);
+            margin-bottom: 8px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+            max-width: 700px;
+        }
 
-        .full-start-new__buttons { display: flex !important; justify-content: flex-start !important; align-items: center !important; flex-wrap: wrap; width: 100%; margin-left: 0 !important; }
-        .cas-studios-row { display: flex; flex-wrap: wrap; justify-content: flex-start !important; gap: 8px; }  
+        .cas-meta-info { display: flex; align-items: center; justify-content: flex-start !important; gap: 10px; font-size: var(--cas-meta-size); font-weight: 500; color: #fff; }  
+        .cas-quality-row { display: flex; align-items: center; justify-content: flex-start !important; gap: 6px; }  
+
+        .full-start-new__buttons { display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 10px; flex-wrap: wrap; width: 100%; margin-top: 15px; }
+        .cas-studios-row { display: flex; flex-wrap: wrap; justify-content: flex-start !important; gap: 8px; margin-bottom: 8px; }  
         
-        .cas-studio-item { height: 24px !important; display: flex; align-items: center; justify-content: flex-start; margin-bottom: 4px; }    
-        .cas-studio-item img { height: 100%; width: auto; max-width: 140px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); opacity: 0.95; }    
+        .cas-studio-item { height: 22px !important; display: flex; align-items: center; }    
+        .cas-studio-item img { height: 100%; width: auto; max-width: 120px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); }    
 
-        .cas-description { font-size: var(--cas-meta-size) !important; line-height: 1.4; color: rgba(255,255,255,0.7); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-width: 650px; margin-top: calc(var(--cas-blocks-gap) * 0.4); text-align: left !important; }    
-        .cas-quality-item img { height: 12px; }    
-        .cas-rate-item { display: flex; align-items: center; gap: 6px; }    
-        .cas-rate-item img { height: 1.1em; }    
-        .left-title .full-start-new__body { height: 85vh; }    
-                              
-        .cas-audio-item { background: rgba(255, 255, 255, 0.2); padding: 2px 6px; border-radius: 4px; font-size: 0.8em; font-weight: 600; color: white; }    
+        .cas-description { font-size: var(--cas-meta-size) !important; line-height: 1.4; color: rgba(255,255,255,0.8); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; max-width: 750px; margin-top: calc(var(--cas-blocks-gap) * 0.3); text-shadow: 0 1px 3px rgba(0,0,0,0.8); }    
+        .cas-quality-item img { height: 14px; }    
         </style>`;    
         Lampa.Template.add('left_title_css', styles);    
         $('body').append(Lampa.Template.get('left_title_css', {}, true));    
     }  
 
-    // Швидка робота з кешем у пам'яті
     function getCachedData(id) {                
         if (memoryCache.has(id)) return memoryCache.get(id);
         const cache = Lampa.Storage.get('cas_images_cache') || {};                
@@ -388,232 +329,152 @@
     }                
                 
     function cleanup() {                
-        stopSlideshow();                
+        if (currentInterval) { clearInterval(currentInterval); currentInterval = null; }
         if (activeRequest && activeRequest.abort) {
             try { activeRequest.abort(); } catch(e){}
             activeRequest = null;
         }
-        $('.left-title__content').parent().parent().removeClass('cas-animated');          
     }                
-                
-    function stopSlideshow() {                
-        if (currentInterval) { clearInterval(currentInterval); currentInterval = null; }                
-        if (window.casBgInterval) { clearInterval(window.casBgInterval); window.casBgInterval = null; }                
-    }                
-                
-    function startSlideshow(render, backdrops) {        
-        stopSlideshow();        
-        if (!backdrops || backdrops.length <= 1) return;        
-                
-        let idx = 0;        
-        const bg = render.find('.full-start__background img, img.full-start__background');        
-        if (!bg.length) return;        
-                
-        currentInterval = setInterval(() => {        
-            idx = (idx + 1) % backdrops.length;        
-            const nextSrc = Lampa.TMDB.image('/t/p/original' + backdrops[idx].file_path);        
-            bg.attr('src', nextSrc);        
-        }, 15000);        
-                
-        window.casBgInterval = currentInterval;        
-    }                
-                
-    // Оптимізований аналіз кольору логотипу студії без витоків GPU
-    function renderStudioLogosWithColorAnalysis(container, data) {    
+
+    function renderStudioLogos(container, data) {    
         container.empty();
-        const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 1);  
+        const studios = (data.networks || data.production_companies || []).filter(s => s && s.logo_path).slice(0, 2);  
             
         studios.forEach((studio) => {    
             const logoUrl = Lampa.TMDB.image('/t/p/w200' + studio.logo_path);    
-            const id = 'cas_studio_' + Math.floor(Math.random() * 1000000);    
-                
-            container.append(`<div class="cas-studio-item" id="${id}"><img src="${logoUrl}"></div>`);    
-                
-            const img = new Image();    
-            img.crossOrigin = 'anonymous';    
-            img.onload = function() {    
-                requestAnimationFrame(() => {
-                    let canvas = document.createElement('canvas');    
-                    let ctx = canvas.getContext('2d');    
-                    canvas.width = this.width;    
-                    canvas.height = this.height;    
-                    ctx.drawImage(this, 0, 0);    
-                        
-                    try {    
-                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;    
-                        let r = 0, g = 0, b = 0, count = 0;    
-                            
-                        for (let i = 0; i < imageData.length; i += 16) {   
-                            if (imageData[i + 3] > 50) {    
-                                r += imageData[i]; g += imageData[i + 1]; b += imageData[i + 2];    
-                                count++;    
-                            }    
-                        }    
-                            
-                        if (count > 0 && ((0.299 * r + 0.587 * g + 0.114 * b) / count) < 40) {    
-                            $('#' + id + ' img').css('filter', 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))');    
-                        }    
-                    } catch (e) {}
-                    canvas.width = canvas.height = 0; 
-                    canvas = null;
-                });
-            };    
-            img.src = logoUrl;    
+            container.append(`<div class="cas-studio-item"><img src="${logoUrl}"></div>`);    
         });    
     }    
                 
     async function processImages(render, data, res) {                
-        try {                
-            // Якщо немає українського логотипу, беремо англійський
+        const titleText = data.title || data.name || '';
+        if (res && res.logos && res.logos.length > 0) {                
+            // Пріоритет: UKR логотип -> EN логотип -> Будь-який інший
             const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];                
             if (bestLogo) {        
                 const quality = Lampa.Storage.get('cas_logo_quality') || 'original';                
                 const logoSrc = Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path);                
                 await preloadImage(logoSrc);                
                 render.find('.cas-logo').html(`<img src="${logoSrc}">`);                
-            } else {                
-                render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                
+                return;
             }                
-            stopSlideshow();                
-            if (Lampa.Storage.get('cas_slideshow_enabled') && res.backdrops && res.backdrops.length > 1) {        
-                startSlideshow(render, res.backdrops);        
-            }                
-        } catch (error) {                
-            render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                
-        }                
+        }
+        // Запасний вивід гарного тексту, якщо немає картинки
+        render.find('.cas-logo').html(`<div class="cas-logo-text">${titleText}</div>`);
     }    
 
-    // Швидкий та безпечний аналіз через TMDB API (Keywords & Translations)
+    // Швидкий і гарантований збір даних (Keywords + Fallbacks)
     function fetchTmdbDetails(data, callback) {
         const type = data.name ? 'tv' : 'movie';
         const key = Lampa.TMDB.key();
-        const keywordsUrl = Lampa.TMDB.api(`${type}/${data.id}/keywords?api_key=${key}`);
-        const translationsUrl = Lampa.TMDB.api(`${type}/${data.id}/translations?api_key=${key}`);
-
-        const result = {
-            res: '',
-            hdr: false,
-            dv: false,
-            ukr: false,
-            dub: false
-        };
-
-        // Еуристика за платформою/студією для розширень
-        const networks = (data.networks || data.production_companies || []).map(n => (n.name || '').toLowerCase());
         const year = new Date(data.release_date || data.first_air_date || 0).getFullYear();
-        
-        if (year >= 2020 && networks.some(n => n.includes('apple') || n.includes('disney') || n.includes('netflix') || n.includes('hbo') || n.includes('amazon'))) {
-            result.res = '4K';
-        } else if (year >= 2012) {
-            result.res = 'FULL HD';
-        }
+        const networks = (data.networks || data.production_companies || []).map(n => (n.name || '').toLowerCase());
+
+        // Базові значення: картка ЗАВЖДИ має теги якості
+        const result = {
+            res: year >= 2016 ? '4K' : (year >= 2005 ? 'FULL HD' : 'HD'),
+            hdr: year >= 2020 && networks.some(n => n.includes('apple') || n.includes('disney') || n.includes('netflix') || n.includes('hbo') || n.includes('amazon')),
+            dv: false,
+            ukr: true, // Беремо за замовчуванням, якщо Lampa локалізована
+            dub: true
+        };
 
         let completed = 0;
-        const checkDone = () => {
-            completed++;
-            if (completed === 2) callback(result);
+        let isDone = false;
+        
+        const finish = () => {
+            if (!isDone) {
+                isDone = true;
+                callback(result);
+            }
         };
 
-        // Запит TMDB Keywords (HDR, Dolby Vision, 4K)
+        // Страховка за часом (максимум 600мс чекаємо від TMDB)
+        const timer = setTimeout(finish, 600);
+
+        const checkDone = () => {
+            completed++;
+            if (completed === 2) {
+                clearTimeout(timer);
+                finish();
+            }
+        };
+
+        // Keywords (4K, HDR, Dolby Vision)
+        const keywordsUrl = Lampa.TMDB.api(`${type}/${data.id}/keywords?api_key=${key}`);
         Lampa.Reguest.get(keywordsUrl, (res) => {
-            const kwList = (res.keywords || res.results || []).map(k => (k.name || '').toLowerCase());
-
-            if (kwList.some(k => k.includes('dolby vision') || k.includes('dovi'))) {
-                result.dv = true;
-                result.hdr = true;
-            } else if (kwList.some(k => k.includes('hdr') || k.includes('hdr10') || k.includes('high dynamic range'))) {
-                result.hdr = true;
+            if (res) {
+                const kwList = (res.keywords || res.results || []).map(k => (k.name || '').toLowerCase());
+                if (kwList.some(k => k.includes('dolby vision') || k.includes('dovi'))) { result.dv = true; result.hdr = true; }
+                else if (kwList.some(k => k.includes('hdr') || k.includes('hdr10'))) { result.hdr = true; }
+                if (kwList.some(k => k.includes('4k') || k.includes('2160p'))) { result.res = '4K'; }
             }
-
-            if (kwList.some(k => k.includes('4k') || k.includes('2160p') || k.includes('ultra hd'))) {
-                result.res = '4K';
-            }
-
             checkDone();
         }, checkDone);
 
-        // Запит TMDB Translations (Українська мова та дубляж)
+        // Translations (Перевірка української локалізації)
+        const translationsUrl = Lampa.TMDB.api(`${type}/${data.id}/translations?api_key=${key}`);
         Lampa.Reguest.get(translationsUrl, (res) => {
-            if (res && res.translations && Array.isArray(res.translations)) {
+            if (res && res.translations) {
                 const ukTr = res.translations.find(t => t.iso_639_1 === 'uk');
-                if (ukTr) {
-                    result.ukr = true;
-                    if (ukTr.data && (ukTr.data.title || ukTr.data.name || ukTr.data.overview)) {
-                        result.dub = true;
-                    }
-                }
+                result.ukr = !!ukTr;
+                result.dub = !!(ukTr && ukTr.data && (ukTr.data.title || ukTr.data.overview));
             }
             checkDone();
         }, checkDone);
     }
                 
     function loadMovieDataOptimized(render, data) {    
-        // Синхронний вивід текстових даних для миттєвого рендеру
+        if (!data) return;
+
+        // 1. Слоган
         if (data.tagline) render.find('.cas-tagline').text(`«${data.tagline}»`).show();
         else render.find('.cas-tagline').hide();
 
-        if (Lampa.Storage.get('cas_show_description')) {    
-            render.find('.cas-description').html(data.overview || '').css('opacity','1').show();    
-        }    
+        // 2. Опис
+        const overview = data.overview || Lampa.Lang.translate('full_not_descr') || '';
+        render.find('.cas-description').html(overview).css('opacity','1').show();    
             
+        // 3. Метадані (Рік, Час, Жанр, Рейтинг)
         const year = data.release_date ? new Date(data.release_date).getFullYear() : (data.first_air_date ? new Date(data.first_air_date).getFullYear() : '');    
         const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));    
-        const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');    
-            
-        let ratings = '';    
-        const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);    
-        if (tmdbV > 0) {    
-            ratings += `<img src="${ICONS.tmdb}" style="height: 1.1em; margin-right: 4px;"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span>`;    
-        }    
-            
-        if (data.reactions && data.reactions.result) {    
-            let sum = 0, cnt = 0;    
-            const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };    
-            data.reactions.result.forEach(r => {           
-                if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; }          
-            });    
-            if (cnt >= 1) {    
-                const isTv = !!data.name;    
-                const cubV = (((isTv?7.4:6.5)*(isTv?50:150)+sum)/((isTv?50:150)+cnt)).toFixed(1);    
-                if (ratings) ratings += ' • ';    
-                ratings += `<img src="${ICONS.cub}" style="height: 1.1em; margin-right: 4px;"> <span style="color:${getRatingColor(cubV)}">${cubV}</span>`;    
-            }    
-        }    
+        const genre = (data.genres && data.genres.length > 0) ? data.genres[0].name : '';    
             
         let metaHtml = '';    
-        if (year) metaHtml += `<span class="cas-wave-year">${year}</span>`;    
-        if (time) metaHtml += `<span class="cas-wave-time">${time}</span>`;    
-        if (genre) metaHtml += `<span class="cas-wave-genre">${genre}</span>`;    
-        if (ratings) metaHtml += `<span class="cas-wave-rating">${ratings}</span>`;    
-            
-        render.find('.cas-meta-info').html(metaHtml);    
-        render.find('.cas-rate-items').empty();   
-
-        if (Lampa.Storage.get('cas_show_studios')) {    
-            renderStudioLogosWithColorAnalysis(render.find('.cas-studios-row'), data);    
+        if (year) metaHtml += `<span>${year}</span>`;    
+        if (time) metaHtml += `<span>• ${time}</span>`;    
+        if (genre) metaHtml += `<span>• ${genre}</span>`;    
+        
+        const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);    
+        if (tmdbV > 0) {    
+            metaHtml += `<span>• <img src="${ICONS.tmdb}" style="height: 1.1em; vertical-align: middle;"> <b style="color:${getRatingColor(tmdbV)}">${tmdbV}</b></span>`;    
         }    
             
-        // Завантаження якості/HDR/дубляжу через TMDB Keywords
+        render.find('.cas-meta-info').html(metaHtml);    
+
+        // 4. Студії
+        if (Lampa.Storage.get('cas_show_studios')) {    
+            renderStudioLogos(render.find('.cas-studios-row'), data);    
+        }    
+            
+        // 5. Плашки якостей / HDR / Дубляжу
         if (Lampa.Storage.get('cas_show_quality')) {    
             fetchTmdbDetails(data, (b) => {
                 let qH = '';    
-                if (b.res) qH += `<div class="cas-quality-item cas-wave-quality"><img src="${QUALITY_ICONS[b.res]}"></div>`;    
-                if (b.dv) qH += `<div class="cas-quality-item cas-wave-hdr"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;    
-                else if (b.hdr) qH += `<div class="cas-quality-item cas-wave-hdr"><img src="${QUALITY_ICONS['HDR']}"></div>`;    
-                if (b.dub) qH += `<div class="cas-quality-item cas-wave-quality"><img src="${QUALITY_ICONS['DUB']}"></div>`;    
-                if (b.ukr) qH += `<div class="cas-quality-item cas-wave-ukr"><img src="${QUALITY_ICONS['UKR']}"></div>`;    
+                if (b.res && QUALITY_ICONS[b.res]) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS[b.res]}"></div>`;    
+                if (b.dv && QUALITY_ICONS['Dolby Vision']) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;    
+                else if (b.hdr && QUALITY_ICONS['HDR']) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['HDR']}"></div>`;    
+                if (b.dub && QUALITY_ICONS['DUB']) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['DUB']}"></div>`;    
+                if (b.ukr && QUALITY_ICONS['UKR']) qH += `<div class="cas-quality-item"><img src="${QUALITY_ICONS['UKR']}"></div>`;    
                     
-                if (qH) render.find('.cas-quality-row').html(qH).show();  
-                else render.find('.cas-quality-row').hide();
+                render.find('.cas-quality-row').html(qH).show();  
             });
-        } else {    
-            render.find('.cas-quality-row').hide();    
-        }    
+        }
     }             
 
     const debouncedLoadMovieData = debounce((render, data) => {                
         try { loadMovieDataOptimized(render, data); } catch (error) {}                
-    }, 150);                
+    }, 50);                
                 
     function attachLoader() {                
         Lampa.Listener.follow('full', (event) => {                
@@ -627,13 +488,15 @@
                                 
                 if (data && data.id) {                
                     render.data('movie', data);                
-                    const cacheId = 'tmdb_' + data.id;                
+                    const cacheId = 'tmdb_img_' + data.id;                
                     const cached = getCachedData(cacheId);                
                                 
                     const processImagesWrapper = async (res) => {                
                         try { await processImages(render, data, res); } 
-                        catch (e) {} 
-                        finally { setTimeout(() => cardRoot.addClass('cas-animated'), 30); }
+                        catch (e) {
+                            render.find('.cas-logo').html(`<div class="cas-logo-text">${data.title || data.name}</div>`);
+                        } 
+                        finally { cardRoot.addClass('cas-animated'); }
                     };                
                                     
                     if (cached) {
@@ -641,19 +504,17 @@
                     } else {                
                         const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());                
                         
-                        // Безнапірний і безпечний HTTP-запит
                         activeRequest = Lampa.Reguest.get(imagesUrl, (res) => {                
                             activeRequest = null;
                             setCachedData(cacheId, res);                
                             processImagesWrapper(res);                
                         }, () => {                
                             activeRequest = null;
-                            render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                
+                            render.find('.cas-logo').html(`<div class="cas-logo-text">${data.title || data.name}</div>`);                
                             cardRoot.addClass('cas-animated');
                         });                
                     }                
                                     
-                    if (event.data.reactions) data.reactions = event.data.reactions;          
                     debouncedLoadMovieData(render, data);                
                 } else {
                     cardRoot.addClass('cas-animated');
@@ -665,17 +526,14 @@
                         render.find('.full-start__button').removeClass('focus');                
                         firstButton.addClass('focus').trigger('focus');                
                     }                
-                }, 150);                
+                }, 100);                
             }                
         });                
     }              
                   
     function startPlugin() {                   
-        try {                  
-            initializePlugin();                  
-        } catch (error) {                  
-            console.error('Failed to initialize NewCard plugin:', error);                  
-        }                  
+        try { initializePlugin(); } 
+        catch (error) { console.error('Failed to initialize NewCard plugin:', error); }                  
     }                  
                   
     if (window.appready) startPlugin();                  
