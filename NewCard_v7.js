@@ -14,10 +14,10 @@
         { id: 'tv_interface_slideshow', default: true },
         { id: 'tv_interface_slideshow_time', default: '10000' },
         { id: 'tv_interface_slideshow_quality', default: 'w1280' },
-        { id: 'tv_interface_logo_size_v2', default: '160' },
+        { id: 'tv_interface_logo_size_v2', default: '140' },
         { id: 'tv_interface_logo_quality', default: 'w500' },
         { id: 'tv_interface_show_tagline', default: true },
-        { id: 'tv_interface_blocks_gap', default: '10px' },
+        { id: 'tv_interface_blocks_gap', default: '8px' },
         { id: 'tv_interface_ratings_size', default: '0.55em' },
         { id: 'tv_interface_studios', default: true },
         { id: 'tv_interface_quality', default: true }
@@ -116,9 +116,9 @@
         var isPosterAnim = Lampa.Storage.get('tv_interface_animation');
         var isUIAnim = Lampa.Storage.get('tv_interface_ui_anim');
         var rSize = Lampa.Storage.get('tv_interface_ratings_size', '0.55em');
-        var lHeight = Lampa.Storage.get('tv_interface_logo_size_v2', '160'); 
+        var lHeight = Lampa.Storage.get('tv_interface_logo_size_v2', '140'); 
         var showTagline = Lampa.Storage.get('tv_interface_show_tagline');
-        var blocksGap = Lampa.Storage.get('tv_interface_blocks_gap', '10px');
+        var blocksGap = Lampa.Storage.get('tv_interface_blocks_gap', '8px');
         
         var style = document.createElement('style');
         style.id = 'tv-interface-styles';
@@ -128,7 +128,7 @@
         css += '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.06); } 100% { transform: scale(1); } } ';
         
         css += '@keyframes premium_ui_reveal { ';
-        css += '  0% { opacity: 0; transform: translate3d(-30px, 0, 0); filter: blur(8px); } ';
+        css += '  0% { opacity: 0; transform: translate3d(-20px, 0, 0); filter: blur(6px); } ';
         css += '  100% { opacity: 1; transform: translate3d(0, 0, 0); filter: blur(0px); } ';
         css += '} ';
 
@@ -137,14 +137,14 @@
         css += '  100% { opacity: 1; } ';
         css += '} ';
 
-        // 1. Приховуємо дублюючі рейтинги, назви та ВКЛАДЕНИЙ СТАНДАРТНИЙ ПОСТЕР LAMPA
+        // 1. Приховуємо дублюючі рейтинги, назви та стандартний постер
         css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates, .full-start-new__rates { display: none !important; } ';
         css += '.full-start-new__title-text, .full-start-new__head, .full-start-new__details { display: none !important; } ';
-        css += '.full-start-new__img, .full-start__img, .full-start-new__poster-img { display: none !important; visibility: hidden !important; opacity: 0 !important; } '; // Видалення подвійного постера
+        css += '.full-start-new__img, .full-start__img, .full-start-new__poster-img { display: none !important; visibility: hidden !important; opacity: 0 !important; } ';
         
         css += '.background { background: #141414 !important; } ';
 
-        // 2. Повноекранний Фоновий Постер / Кадр фільму
+        // 2. Повноекранний Фоновий Постер
         css += '.full-start-new__poster { position: fixed !important; top:0; left:0; width:100vw !important; height: 100vh !important; overflow: hidden !important; background: #141414; z-index: 1; pointer-events: none !important; ';
         css += (isUIAnim ? 'animation: poster_fade_in 0.8s ease forwards; ' : '') + '} ';
         
@@ -155,54 +155,54 @@
         css += 'mask-image: linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 45%, rgba(0,0,0,0.1) 80%, transparent 100%), linear-gradient(to top, #141414 0%, rgba(20,20,20,0.7) 40%, transparent 85%) !important; ';
         css += '-webkit-mask-image: linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 45%, rgba(0,0,0,0.1) 80%, transparent 100%), linear-gradient(to top, #141414 0%, rgba(20,20,20,0.7) 40%, transparent 85%) !important; } ';
         
-        // 3. Перший екран: Фіксуємо висоту першого контейнера чітко під 100vh
-        css += '.full-start-new { position: relative !important; min-height: 100vh !important; height: 100vh !important; box-sizing: border-box !important; } ';
+        // 3. Структура екрану Lampa
+        css += '.full-start-new { position: relative !important; min-height: 100vh !important; padding: 4vh 0 4vh 4vw !important; box-sizing: border-box !important; display: flex !important; flex-direction: column !important; justify-content: flex-end !important; } ';
 
-        // Панель з контентом (прив'язана до низу екрана: bottom: 5vh)
-        css += '.full-start-new__right { position: absolute !important; bottom: 5vh !important; left: 4vw !important; width: 48vw !important; max-height: 85vh !important; overflow: visible !important; background: none !important; z-index: 10 !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; justify-content: flex-end !important; padding: 0 !important; margin: 0 !important; gap: ' + blocksGap + ' !important; text-align: left !important; } ';
+        // Правильне позиціонування інфо-панелі
+        css += '.full-start-new__right { position: relative !important; width: 48vw !important; max-height: 82vh !important; overflow: visible !important; background: none !important; z-index: 10 !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; justify-content: flex-end !important; padding: 0 !important; margin: 0 !important; gap: ' + blocksGap + ' !important; text-align: left !important; } ';
         
-        var uiAnimClass = isUIAnim ? 'animation: premium_ui_reveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; will-change: transform, opacity; ' : '';
+        var uiAnimClass = isUIAnim ? 'animation: premium_ui_reveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; will-change: transform, opacity; ' : '';
 
         // Логотип студії
-        css += '.studio-header-brand { ' + uiAnimClass + ' animation-delay: 0.05s; order: 1; width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: -4px !important; } ';
-        css += '.studio-header-brand img { height: 26px !important; width: auto; max-width: 150px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.9)); opacity: 0.95; } ';
+        css += '.studio-header-brand { ' + uiAnimClass + ' animation-delay: 0.05s; order: 1; width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: -2px !important; } ';
+        css += '.studio-header-brand img { height: 22px !important; width: auto; max-width: 130px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.9)); opacity: 0.95; } ';
         css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 6px rgba(0,0,0,0.9)) !important; } ';
 
         // Назва / Логотип фільму
-        css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.1s; width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; min-height: 40px; order: 2; text-align: left !important; } ';
-        css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 40vw !important; object-fit: contain !important; object-position: left center !important; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.9)); margin: 0 !important; } ';
+        css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.1s; width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; order: 2; text-align: left !important; } ';
+        css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 38vw !important; object-fit: contain !important; object-position: left center !important; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.9)); margin: 0 !important; } ';
 
         // Слоган
-        css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.15s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 1.05em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; order: 3; line-height: 1.35; max-width: 42vw; } ';
+        css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.15s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.95em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; order: 3; line-height: 1.3; max-width: 42vw; } ';
         
         // Мета-інформація
-        css += '.plugin-meta-row { ' + uiAnimClass + ' animation-delay: 0.22s; display: flex; justify-content: flex-start; align-items: center; flex-wrap: wrap; gap: 10px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.2); width: 100%; order: 4; color: #e5e5e5; font-family: "Inter", -apple-system, system-ui, sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.9); } ';
+        css += '.plugin-meta-row { ' + uiAnimClass + ' animation-delay: 0.2s; display: flex; justify-content: flex-start; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.1); width: 100%; order: 4; color: #e5e5e5; font-family: "Inter", -apple-system, system-ui, sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.9); } ';
         
         // Рейтинги + Якість
-        css += '.plugin-ratings-quality-row { ' + uiAnimClass + ' animation-delay: 0.26s; display: flex; justify-content: flex-start; align-items: center; flex-wrap: wrap; gap: 16px; margin: 0 !important; width: 100%; order: 5; font-size: calc(' + rSize + ' * 2.4); } ';
-        css += '.plugin-ratings-group { display: flex; align-items: center; gap: 12px; } ';
-        css += '.quality-row-inline { display: flex; align-items: center; gap: 8px; opacity: 0.95; } '; 
+        css += '.plugin-ratings-quality-row { ' + uiAnimClass + ' animation-delay: 0.25s; display: flex; justify-content: flex-start; align-items: center; flex-wrap: wrap; gap: 14px; margin: 0 !important; width: 100%; order: 5; font-size: calc(' + rSize + ' * 2.3); } ';
+        css += '.plugin-ratings-group { display: flex; align-items: center; gap: 10px; } ';
+        css += '.quality-row-inline { display: flex; align-items: center; gap: 6px; opacity: 0.95; } '; 
         
-        css += '.plugin-rating-item { display: flex; align-items: center; gap: 6px; font-weight: 700; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.9); } ';
-        css += '.plugin-rating-item img { height: 1.2em; width: auto; } ';
+        css += '.plugin-rating-item { display: flex; align-items: center; gap: 5px; font-weight: 700; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.9); } ';
+        css += '.plugin-rating-item img { height: 1.1em; width: auto; } ';
         css += '.info-text-item { opacity: 0.85; font-weight: 500; font-size: 0.9em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
-        css += '.quality-item { height: 1.2em; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6)); } '; 
+        css += '.quality-item { height: 1.1em; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6)); } '; 
         css += '.quality-item img { height: 100%; width: auto; object-fit: contain; } ';
 
-        // Кнопки (Суворо внизу екрана)
-        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.32s; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 14px !important; width: 100% !important; margin-top: 4px !important; order: 6; } ';
-        css += '.full-start-new .full-start__button { background: rgba(255, 255, 255, 0.15) !important; border: 2px solid transparent !important; border-radius: 8px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: center !important; padding: 10px 22px !important; width: auto !important; min-width: 120px !important; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important; cursor: pointer; } ';
+        // Кнопки (Притиснуті внизу)
+        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.3s; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 12px !important; width: 100% !important; margin-top: 4px !important; order: 6; } ';
+        css += '.full-start-new .full-start__button { background: rgba(255, 255, 255, 0.15) !important; border: 2px solid transparent !important; border-radius: 8px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: center !important; padding: 8px 18px !important; width: auto !important; min-width: 110px !important; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important; cursor: pointer; } ';
         
-        css += '.full-start-new .full-start__button.focus, .full-start-new .full-start__button:focus { background: #ffffff !important; transform: scale(1.08) !important; border-color: #ffffff !important; box-shadow: 0 8px 25px rgba(0,0,0,0.8) !important; z-index: 20; } ';
+        css += '.full-start-new .full-start__button.focus, .full-start-new .full-start__button:focus { background: #ffffff !important; transform: scale(1.06) !important; border-color: #ffffff !important; box-shadow: 0 8px 25px rgba(0,0,0,0.8) !important; z-index: 20; } ';
         css += '.full-start-new .full-start__button.focus span, .full-start-new .full-start__button:focus span { color: #000000 !important; opacity: 1 !important; } ';
         css += '.full-start-new .full-start__button.focus svg, .full-start-new .full-start__button:focus svg { fill: #000000 !important; } ';
 
-        css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 22px !important; height: 22px !important; margin-right: 8px !important; margin-bottom: 0 !important; fill: #fff !important; } ';
+        css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 20px !important; height: 20px !important; margin-right: 8px !important; margin-bottom: 0 !important; fill: #fff !important; } ';
         css += '.full-start-new .full-start__button span { font-size: 13px !important; text-transform: uppercase !important; color: #fff !important; opacity: 0.9 !important; font-weight: 700; letter-spacing: 0.03em; white-space: nowrap; } ';
 
-        // 4. НИЖНІ БЛОКИ (Зсунуті нижче за межі 100vh для прокрутки)
-        css += '.full-start-new__body, .full-start-new__bottom, .full-descr, .full-persons { position: relative !important; z-index: 10 !important; padding-left: 4vw !important; padding-right: 4vw !important; margin-top: 100vh !important; } ';
+        // 4. НИЖНІ БЛОКИ (Актори, Опис, Схожі)
+        css += '.full-start-new__body, .full-start-new__bottom, .full-descr, .full-persons { position: relative !important; z-index: 10 !important; width: 100% !important; padding: 20px 0 !important; margin: 0 !important; } ';
 
         style.textContent = css;
         document.head.appendChild(style);
@@ -466,7 +466,7 @@
 
         Lampa.SettingsApi.addParam({ 
             component: 'tv_interface', 
-            param: { name: 'tv_interface_logo_size_v2', type: 'select', values: { '130': 'Малий', '160': 'Стандартний', '200': 'Великий', '240': 'Дуже великий' }, default: '160' }, 
+            param: { name: 'tv_interface_logo_size_v2', type: 'select', values: { '110': 'Дрібний', '140': 'Стандартний', '180': 'Великий' }, default: '140' }, 
             field: { name: 'Висота логотипу тайтлу' }, 
             onChange: applyStyles 
         });
@@ -480,14 +480,14 @@
 
         Lampa.SettingsApi.addParam({ 
             component: 'tv_interface', 
-            param: { name: 'tv_interface_blocks_gap', type: 'select', values: { '8px': 'Компактний', '10px': 'Стандартний', '14px': 'Просторий' }, default: '10px' }, 
+            param: { name: 'tv_interface_blocks_gap', type: 'select', values: { '6px': 'Компактний', '8px': 'Стандартний', '12px': 'Просторий' }, default: '8px' }, 
             field: { name: 'Відступи між блоками' }, 
             onChange: applyStyles 
         });
 
         Lampa.SettingsApi.addParam({ 
             component: 'tv_interface', 
-            param: { name: 'tv_interface_ratings_size', type: 'select', values: { '0.45em': 'Дрібний', '0.55em': 'Звичайний', '0.65em': 'Великий' }, default: '0.55em' }, 
+            param: { name: 'tv_interface_ratings_size', type: 'select', values: { '0.45em': 'Дрібний', '0.55em': 'Ззвичайний', '0.65em': 'Великий' }, default: '0.55em' }, 
             field: { name: 'Розмір шрифту інфо-блоків' }, 
             onChange: applyStyles 
         });
