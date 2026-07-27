@@ -1,9 +1,6 @@
 (function () {
     'use strict';
 
-    /**
-     * ПЕРЕМІННІ ТА КЕШУВАННЯ
-     */
     var slideshowTimer = null; 
     var pluginPath = 'https://crowley38.github.io/Icons/';
     
@@ -60,49 +57,28 @@
             try {
                 var canvas = document.createElement('canvas');
                 var ctx = canvas.getContext('2d');
-                canvas.width = 40;
-                canvas.height = 40;
+                canvas.width = 40; canvas.height = 40;
                 ctx.drawImage(img, 0, 0, 40, 40);
 
-                var imgData = ctx.getImageData(0, 0, 40, 40);
-                var data = imgData.data;
-                var totalBrightness = 0;
-                var hasColor = false;
-                var count = 0;
+                var imgData = ctx.getImageData(0, 0, 40, 40).data;
+                var totalBrightness = 0, hasColor = false, count = 0;
 
-                for (var i = 0; i < data.length; i += 4) {
-                    var alpha = data[i + 3];
-                    if (alpha > 50) { 
-                        var r = data[i];
-                        var g = data[i + 1];
-                        var b = data[i + 2];
-
-                        var brightness = (r * 299 + g * 587 + b * 114) / 1000;
-                        totalBrightness += brightness;
+                for (var i = 0; i < imgData.length; i += 4) {
+                    if (imgData[i + 3] > 50) { 
+                        var r = imgData[i], g = imgData[i + 1], b = imgData[i + 2];
+                        totalBrightness += (r * 299 + g * 587 + b * 114) / 1000;
                         count++;
-
-                        var max = Math.max(r, g, b);
-                        var min = Math.min(r, g, b);
-                        if ((max - min) > 30) { 
-                            hasColor = true;
-                        }
+                        if ((Math.max(r, g, b) - Math.min(r, g, b)) > 30) hasColor = true;
                     }
                 }
-
                 var avgBrightness = count > 0 ? (totalBrightness / count) : 255;
-                var isDark = (avgBrightness < 110) && !hasColor;
-                callback(isDark);
-            } catch (e) {
-                callback(false);
-            }
+                callback((avgBrightness < 110) && !hasColor);
+            } catch (e) { callback(false); }
         };
         img.onerror = function () { callback(false); };
         img.src = imgSrc;
     }
 
-    /**
-     * ЖОРСТКА ФІКСАЦІЯ ЛІВОГО ВИРІВНЮВАННЯ ТА КНОПОК
-     */
     function applyStyles() {
         var oldStyle = document.getElementById('tv-interface-styles');
         if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
@@ -118,60 +94,58 @@
         var css = '';
         
         css += '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } } ';
-        css += '@keyframes premium_ui_reveal { ';
-        css += '  0% { opacity: 0; transform: translate3d(-25px, 0, 0); filter: blur(6px); } ';
-        css += '  100% { opacity: 1; transform: translate3d(0, 0, 0); filter: blur(0px); } ';
-        css += '} ';
+        css += '@keyframes premium_ui_reveal { 0% { opacity: 0; transform: translate3d(-20px, 0, 0); } 100% { opacity: 1; transform: translate3d(0, 0, 0); } } ';
 
-        // Базовий контейнер картки
-        css += '.full-start-new { position: relative !important; display: block !important; padding: 3vw 0 0 5vw !important; box-sizing: border-box !important; } ';
-        
-        // Фонові кадри
+        // 1. ПРИХОВУЄМО ДЕФОЛТНІ ДУБЛЮЮЧІ ЕЛЕМЕНТИ LAMPA
+        css += '.full-start-new__head, .full-start-new__details-info, .full-start-new__tagline-default { display: none !important; } ';
+
+        // 2. ФОНОВИЙ ПОСТЕР
         css += '.full-start-new__poster { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: -1 !important; overflow: hidden !important; background: #000 !important; pointer-events: none !important; } ';
         css += '.full-start-new__poster img { width: 100% !important; height: 100% !important; object-fit: cover !important; position: absolute !important; top:0; left:0; ';
         css += (isPosterAnim ? 'animation: kenBurnsEffect 25s ease-in-out infinite !important; ' : '');
         css += 'mask-image: linear-gradient(to right, rgba(0,0,0,1) 35%, rgba(0,0,0,0.6) 65%, transparent 100%), linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.8) 80%, #000 100%) !important; ';
         css += '-webkit-mask-image: linear-gradient(to right, rgba(0,0,0,1) 35%, rgba(0,0,0,0.6) 65%, transparent 100%), linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.8) 80%, #000 100%) !important; } ';
 
-        // Лівий блок (примусово лівий край і скидання всіх відступів Lampa)
-        css += '.full-start-new__right { width: 50vw !important; max-width: 650px !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; justify-content: flex-start !important; text-align: left !important; gap: 12px !important; background: none !important; margin: 0 !important; padding: 0 !important; float: left !important; } ';
+        // 3. ОСНОВНИЙ КОНТЕЙНЕР І ЛІВИЙ БЛОК (ВИРІВНЮВАННЯ ПО ЛІВОМУ КРАЮ)
+        css += '.full-start-new { display: flex !important; flex-direction: column !important; align-items: flex-start !important; justify-content: flex-start !important; padding: 40px 0 0 60px !important; width: 100% !important; box-sizing: border-box !important; margin: 0 !important; text-align: left !important; } ';
+        css += '.full-start-new__right { display: flex !important; flex-direction: column !important; align-items: flex-start !important; justify-content: flex-start !important; width: 55vw !important; max-width: 700px !important; margin: 0 !important; padding: 0 !important; text-align: left !important; gap: 10px !important; } ';
 
-        var uiAnimClass = isUIAnim ? 'animation: premium_ui_reveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; ' : '';
+        var uiAnimClass = isUIAnim ? 'animation: premium_ui_reveal 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; ' : '';
 
-        // Логотип студії
-        css += '.studio-header-brand { ' + uiAnimClass + ' animation-delay: 0.05s; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin-bottom: -4px !important; width: 100% !important; } ';
-        css += '.studio-header-brand img { height: 20px !important; width: auto; max-width: 130px; object-fit: contain; opacity: 0.9; } ';
+        // Блок студії
+        css += '.studio-header-brand { ' + uiAnimClass + ' animation-delay: 0.05s; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin-bottom: 2px !important; } ';
+        css += '.studio-header-brand img { height: 22px !important; width: auto; max-width: 140px; object-fit: contain; } ';
         css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) !important; } ';
 
-        // Назва / Логотип
-        css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.1s; width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; text-align: left !important; min-height: 40px; } ';
+        // Назва / Логотип фільму
+        css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.1s; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; text-align: left !important; width: 100% !important; } ';
         css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 100% !important; object-fit: contain !important; filter: drop-shadow(0 4px 15px rgba(0,0,0,0.8)); margin: 0 !important; } ';
+        css += '.full-start-new__title span, .full-start-new__title div { text-align: left !important; margin: 0 !important; } ';
 
         // Слоган
-        css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.15s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 1em !important; color: rgba(255,255,255,0.75) !important; text-align: left !important; margin: 0 !important; width: 100% !important; } ';
+        css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.15s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 1em !important; color: rgba(255,255,255,0.75) !important; text-align: left !important; margin: 0 !important; } ';
 
-        // Мета-рядок та рейтинги
-        css += '.plugin-meta-row { ' + uiAnimClass + ' animation-delay: 0.2s; display: flex !important; justify-content: flex-start !important; align-items: center !important; flex-wrap: wrap !important; gap: 10px !important; font-size: 1em !important; color: rgba(255,255,255,0.9) !important; font-weight: 500 !important; width: 100% !important; } ';
-        css += '.plugin-ratings-quality-row { ' + uiAnimClass + ' animation-delay: 0.25s; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 14px !important; font-size: 1.1em !important; width: 100% !important; } ';
+        // Рядки метаданих та бейджів
+        css += '.plugin-meta-row { ' + uiAnimClass + ' animation-delay: 0.2s; display: flex !important; justify-content: flex-start !important; align-items: center !important; flex-wrap: wrap !important; gap: 8px !important; font-size: 0.95em !important; color: rgba(255,255,255,0.85) !important; text-align: left !important; width: 100% !important; } ';
+        css += '.plugin-ratings-quality-row { ' + uiAnimClass + ' animation-delay: 0.25s; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 12px !important; font-size: 1.05em !important; width: 100% !important; margin-top: 2px !important; } ';
         css += '.plugin-ratings-group { display: flex !important; align-items: center !important; gap: 10px !important; } ';
-        css += '.quality-row-inline { display: flex !important; align-items: center !important; gap: 8px !important; } ';
-        css += '.plugin-rating-item { display: flex !important; align-items: center !important; gap: 6px !important; font-weight: 700 !important; color: #fff !important; } ';
-        css += '.plugin-rating-item img { height: 1.1em !important; width: auto !important; } ';
-        css += '.info-text-item { white-space: nowrap !important; } ';
-        css += '.info-separator { opacity: 0.4 !important; margin: 0 -2px !important; } ';
-        css += '.quality-item { height: 1.1em !important; } '; 
+        css += '.quality-row-inline { display: flex !important; align-items: center !important; gap: 6px !important; } ';
+        css += '.plugin-rating-item { display: flex !important; align-items: center !important; gap: 5px !important; font-weight: 700 !important; color: #fff !important; } ';
+        css += '.plugin-rating-item img { height: 1em !important; width: auto !important; } ';
+        css += '.info-separator { opacity: 0.4 !important; } ';
+        css += '.quality-item { height: 1em !important; } '; 
         css += '.quality-item img { height: 100% !important; width: auto !important; object-fit: contain !important; } ';
 
-        // БЛОК КНОПОК (Жорстка видимість та стиль TV D-Pad)
-        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.3s; display: flex !important; flex-wrap: wrap !important; justify-content: flex-start !important; align-items: center !important; gap: 12px !important; margin-top: 8px !important; width: 100% !important; clear: both !important; position: relative !important; z-index: 10 !important; } ';
-        css += '.full-start-new .full-start__button { background: rgba(255, 255, 255, 0.12) !important; border-radius: 8px !important; padding: 10px 16px !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; gap: 8px !important; width: auto !important; height: auto !important; border: 1px solid rgba(255,255,255,0.08) !important; box-shadow: none !important; opacity: 0.9 !important; } ';
-        css += '.full-start-new .full-start__button.focus { background: #fff !important; opacity: 1 !important; transform: scale(1.05) !important; border-color: #fff !important; box-shadow: 0 0 15px rgba(255,255,255,0.5) !important; } ';
+        // 4. КНОПКИ ДІЙ (ГАРАНТОВАНА ВІДОБРАЖЕНІСТЬ ТА ФОКУС)
+        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.3s; display: flex !important; flex-wrap: wrap !important; justify-content: flex-start !important; align-items: center !important; gap: 10px !important; margin-top: 15px !important; width: 100% !important; position: relative !important; z-index: 99 !important; } ';
+        css += '.full-start-new .full-start__button { display: inline-flex !important; align-items: center !important; justify-content: center !important; background: rgba(255, 255, 255, 0.15) !important; border-radius: 8px !important; padding: 10px 18px !important; margin: 0 !important; border: 1px solid rgba(255,255,255,0.1) !important; } ';
+        css += '.full-start-new .full-start__button.focus { background: #fff !important; border-color: #fff !important; transform: scale(1.04) !important; box-shadow: 0 0 15px rgba(255,255,255,0.4) !important; } ';
         css += '.full-start-new .full-start__button.focus span, .full-start-new .full-start__button.focus svg { color: #000 !important; fill: #000 !important; } ';
-        css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 20px !important; height: 20px !important; fill: #fff !important; margin: 0 !important; } ';
-        css += '.full-start-new .full-start__button span { font-size: 0.85em !important; font-weight: 600 !important; text-transform: uppercase !important; color: #fff !important; opacity: 1 !important; letter-spacing: 0.03em !important; } ';
+        css += '.full-start-new .full-start__button svg { width: 18px !important; height: 18px !important; fill: #fff !important; } ';
+        css += '.full-start-new .full-start__button span { font-size: 0.9em !important; font-weight: 600 !important; color: #fff !important; } ';
 
-        // Нижня частина сторінки (опис, актори) висунута нижче першого екрана
-        css += '.full-start-new__details, .full-start__info { clear: both !important; margin-top: 60vh !important; width: 85vw !important; max-width: 1100px !important; display: block !important; } ';
+        // Нижній блок опису
+        css += '.full-start-new__details { margin-top: 40px !important; width: 80vw !important; max-width: 1000px !important; text-align: left !important; } ';
 
         style.textContent = css;
         document.head.appendChild(style);
