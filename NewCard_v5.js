@@ -203,21 +203,21 @@
                 </div>                      
                 <div class="full-start-new__right">                      
                     <div class="left-title__content">                      
-                        <div class="cas-logo-container" style="margin-bottom: calc(var(--cas-blocks-gap) * 1.5);">  
-                            <div class="cas-studios-row" style="display: flex; gap: 8px; align-items: center; margin-bottom: 10px;"></div>                  
+                        <div class="cas-logo-container" style="margin-bottom: calc(var(--cas-blocks-gap) * 1.2);">  
+                            <div class="cas-studios-row" style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;"></div>                  
                             <div class="cas-logo"></div>                    
                         </div>                    
                         <div class="cas-tagline" style="display: none;"></div>
-                        <div class="cas-meta-line" style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">      
+                        <div class="cas-meta-line" style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap;">      
                             <div class="cas-meta-info"></div>      
                             <div class="cas-quality-row" style="display: flex; gap: 6px; align-items: center;"></div>      
                         </div>  
-                        <div class="cas-description" style="margin-top: calc(var(--cas-blocks-gap) * 0.4);"></div>                    
-                        <div class="cas-details-wrapper" style="margin-top: 10px;">                  
+                        <div class="cas-description" style="margin-top: 4px;"></div>                    
+                        <div class="cas-details-wrapper" style="margin-top: 8px;">                  
                             <div class="full-start-new__head hide"></div>                      
                             <div class="full-start-new__details hide"></div>                      
                         </div>                  
-                        <div class="full-start-new__buttons">                      
+                        <div class="full-start-new__buttons" style="margin-top: 14px;">                      
                             <div class="full-start__button selector button--play">                      
                                 <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/><path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/></svg>                      
                                 <span>#{title_watch}</span>                      
@@ -243,7 +243,7 @@
                         </div>                  
                     </div>                  
                     <div class="full-start-new__reactions selector hide"></div>                  
-                    <div class="cas-bottom-ratings" style="position: absolute; right: 4em; bottom: 2em; display: flex; align-items: center; gap: 15px; font-size: var(--cas-meta-size); font-weight: 600; z-index: 3;"></div>
+                    <div class="cas-bottom-ratings" style="position: absolute; right: 2.5em; bottom: 2em; display: flex; align-items: center; gap: 15px; font-size: var(--cas-meta-size); font-weight: 600; z-index: 3;"></div>
                     <div class="full-start-new__rate-line hide"></div>                  
                     <div class="rating--modss" style="display: none;"></div>                  
                 </div>                  
@@ -262,230 +262,249 @@
         Lampa.Template.add('full_start_new', template);                  
     }              
               
-function addStyles() {  
-    if ($('#cas-main-styles').length) return;  
-    const styles = `<style id="cas-main-styles">  
-    :root { 
-        --cas-logo-scale: 1; 
-        --cas-blocks-gap: 30px; 
-        --cas-meta-size: 1.3em; 
-        --cas-curve-slide: cubic-bezier(0.2, 0.8, 0.2, 1); 
-        --cas-curve-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }  
+    function addStyles() {  
+        if ($('#cas-main-styles').length) return;  
+        const styles = `<style id="cas-main-styles">  
+        :root { 
+            --cas-logo-scale: 1; 
+            --cas-blocks-gap: 30px; 
+            --cas-meta-size: 1.3em; 
+            --cas-curve-slide: cubic-bezier(0.25, 1, 0.5, 1); 
+            --cas-curve-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }  
+                
+        .full-start__background {  
+            height: calc(100% + 6em);  
+            left: 0 !important;  
+            opacity: 0 !important;  
+            transition: opacity 1s cubic-bezier(0.2, 0.8, 0.2, 1) !important;  
+            will-change: opacity;  
+            overflow: hidden !important;  
+            transform: translateZ(0);
+        }  
             
-    /* Налаштування фону та Ken Burns */  
-    .full-start__background {  
-        height: calc(100% + 6em);  
-        left: 0 !important;  
-        opacity: 0 !important;  
-        transition: opacity 1s cubic-bezier(0.2, 0.8, 0.2, 1) !important;  
-        will-change: opacity;  
-        overflow: hidden !important;  
-    }  
-        
-    .full-start__background.loaded {  
-        opacity: 1 !important;  
-    }  
-  
-    .full-start__background.dim {  
-        opacity: 0.35 !important;  
-    }  
-            
-    @keyframes casKenBurnsParallax {  
-        0% { transform: scale(1.02) translateY(0px) translateX(0px); }  
-        50% { transform: scale(1.10) translateY(-15px) translateX(5px); }  
-        100% { transform: scale(1.02) translateY(0px) translateX(0px); }  
-    }  
-              
-    body.cas--zoom-enabled .full-start__background img, 
-    body.cas--zoom-enabled img.full-start__background {  
-        animation: casKenBurnsParallax 40s ease-in-out infinite !important;  
-        will-change: transform;  
-        transform-origin: center center;  
-    }  
+        .full-start__background.loaded {  
+            opacity: 1 !important;  
+        }  
       
-    /* Загальні базові стани для анімацій */  
-    .cas-logo, .cas-tagline, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper, .full-start-new__buttons, .cas-bottom-ratings {  
-        opacity: 0 !important;  
-        will-change: transform, opacity;  
-    }  
+        .full-start__background.dim {  
+            opacity: 0.35 !important;  
+        }  
+                
+        @keyframes casKenBurnsParallax {  
+            0% { transform: scale(1.02) translateY(0px) translateX(0px) translateZ(0); }  
+            50% { transform: scale(1.10) translateY(-15px) translateX(5px) translateZ(0); }  
+            100% { transform: scale(1.02) translateY(0px) translateX(0px) translateZ(0); }  
+        }  
+                  
+        body.cas--zoom-enabled .full-start__background img, 
+        body.cas--zoom-enabled img.full-start__background {  
+            animation: casKenBurnsParallax 40s ease-in-out infinite !important;  
+            will-change: transform;  
+            transform-origin: center center;  
+        }  
+          
+        .cas-logo, .cas-tagline, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper, .full-start-new__buttons, .cas-bottom-ratings {  
+            opacity: 0 !important;  
+            will-change: transform, opacity;  
+            backface-visibility: hidden;
+        }  
 
-    /* --- Варіант 1: Slide from Left --- */
-    .cas-anim-slide .cas-logo, 
-    .cas-anim-slide .cas-tagline, 
-    .cas-anim-slide .cas-studios-row, 
-    .cas-anim-slide .cas-rate-items, 
-    .cas-anim-slide .cas-meta-info, 
-    .cas-anim-slide .cas-quality-row, 
-    .cas-anim-slide .cas-description, 
-    .cas-anim-slide .cas-details-wrapper, 
-    .cas-anim-slide .full-start-new__buttons,
-    .cas-anim-slide .cas-bottom-ratings {  
-        transform: translateX(-40px);  
-        transition: opacity 0.8s var(--cas-curve-slide), transform 0.8s var(--cas-curve-slide);  
-    }                        
-    .cas-anim-slide.cas-animated .cas-logo { opacity: 1 !important; transform: translateX(0); transition-delay: 0.0s; }  
-    .cas-anim-slide.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.08s; }  
-    .cas-anim-slide.cas-animated .cas-tagline { opacity: 0.85 !important; transform: translateX(0); transition-delay: 0.12s; }
-    .cas-anim-slide.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: translateX(0); transition-delay: 0.16s; }  
-    .cas-anim-slide.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.24s; }  
-    .cas-anim-slide.cas-animated .cas-description { opacity: 0.75 !important; transform: translateX(0); transition-delay: 0.32s; }  
-    .cas-anim-slide.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translateX(0); transition-delay: 0.40s; }  
-    .cas-anim-slide.cas-animated .cas-bottom-ratings { opacity: 1 !important; transform: translateX(0); transition-delay: 0.40s; }
+        /* Стилі для каскадної анімації кожного бейджика якості окремо */
+        .cas-quality-row .cas-quality-item {
+            opacity: 0;
+            transform: translate3d(0, 6px, 0) scale(0.9);
+            transition: opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1), transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        }
 
-    /* --- Варіант 2: Elastic Spring --- */
-    .cas-anim-spring .cas-logo, 
-    .cas-anim-spring .cas-tagline, 
-    .cas-anim-spring .cas-studios-row, 
-    .cas-anim-spring .cas-rate-items, 
-    .cas-anim-spring .cas-meta-info, 
-    .cas-anim-spring .cas-quality-row, 
-    .cas-anim-spring .cas-description, 
-    .cas-anim-spring .cas-details-wrapper, 
-    .cas-anim-spring .full-start-new__buttons,
-    .cas-anim-spring .cas-bottom-ratings {  
-        transform: scale(0.85) translateX(-30px);  
-        transition: opacity 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.7s var(--cas-curve-spring);  
-    }                        
-    .cas-anim-spring.cas-animated .cas-logo { opacity: 1 !important; transform: scale(1) translateX(0); transition-delay: 0.0s; }  
-    .cas-anim-spring.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: scale(1) translateX(0); transition-delay: 0.08s; }  
-    .cas-anim-spring.cas-animated .cas-tagline { opacity: 0.85 !important; transform: scale(1) translateX(0); transition-delay: 0.12s; }
-    .cas-anim-spring.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: scale(1) translateX(0); transition-delay: 0.16s; }  
-    .cas-anim-spring.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: scale(1) translateX(0); transition-delay: 0.24s; }  
-    .cas-anim-spring.cas-animated .cas-description { opacity: 0.75 !important; transform: scale(1) translateX(0); transition-delay: 0.32s; }  
-    .cas-anim-spring.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: scale(1) translateX(0); transition-delay: 0.40s; }  
-    .cas-anim-spring.cas-animated .cas-bottom-ratings { opacity: 1 !important; transform: scale(1) translateX(0); transition-delay: 0.40s; }
-              
-    .full-start-new__details { display: none !important; }  
-    .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }  
-    
-    .full-start-new__body { display: flex; height: 85vh; position: relative; width: 100%; }  
-    .full-start-new__left { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 4em 3em 2em 2em; position: relative; z-index: 2; }  
-    .full-start-new__right { width: 60%; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start !important; text-align: left !important; padding: 4em 4em 2em 0; position: relative; z-index: 2; margin-left: 0 !important; }  
-    .full-start-new__poster { display: none; }  
-    .full-start-new__title { display: none; }  
-                        
-    .left-title .full-start-new__left { display: none !important; }  
-    .left-title .full-start-new__right { width: 100% !important; padding-left: 2em !important; }  
-    .left-title__content { display: flex; flex-direction: column; align-items: flex-start !important; text-align: left !important; width: 100%; }
-                        
-    .cas-logo-container {  
-        position: relative;  
-        overflow: visible;  
-        max-width: 100%;  
-        padding-left: 0%;  
-        margin-bottom: calc(var(--cas-blocks-gap) * 0.8);  
-        max-height: 300px;  
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start !important;
-    }  
-                        
-    .cas-logo img {  
-        background: transparent !important;  
-        border: none !important;  
-        max-width: 450px;  
-        max-height: 200px;  
-        width: auto;  
-        height: auto;  
-        transform: scale(var(--cas-logo-scale));  
-        transform-origin: left center;  
-        display: block;  
-        object-fit: contain;  
-    }  
-    
-    .cas-tagline {
-        font-size: calc(var(--cas-meta-size) * 0.95);
-        font-style: italic;
-        color: rgba(255, 255, 255, 0.85);
-        margin-bottom: 12px;
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
-        max-width: 650px;
-        text-align: left !important;
-    }
+        .cas-quality-row.show-quality .cas-quality-item {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) scale(1);
+        }
 
-    .cas-ratings-line {  
-        display: flex;  
-        align-items: center;  
-        justify-content: flex-start !important;
-        gap: 8px !important;  
-        flex-wrap: wrap;  
-        margin-bottom: 8px !important;  
-    }  
-    
-    .cas-meta-info {  
-        margin-right: 0;  
-        display: flex;  
-        align-items: center;  
-        justify-content: flex-start !important;
-        gap: 8px;  
-    }  
-    
-    .cas-quality-row {  
-        margin-top: 0 !important;  
-        display: flex;  
-        align-items: center;  
-        justify-content: flex-start !important;
-        gap: 6px;  
-    }  
+        /* Затримка появи для кожного наступного бейджа якості */
+        .cas-quality-row.show-quality .cas-quality-item:nth-child(1) { transition-delay: 0.0s; }
+        .cas-quality-row.show-quality .cas-quality-item:nth-child(2) { transition-delay: 0.05s; }
+        .cas-quality-row.show-quality .cas-quality-item:nth-child(3) { transition-delay: 0.10s; }
+        .cas-quality-row.show-quality .cas-quality-item:nth-child(4) { transition-delay: 0.15s; }
+        .cas-quality-row.show-quality .cas-quality-item:nth-child(5) { transition-delay: 0.20s; }
 
-    .full-start-new__buttons {
-        display: flex !important;
-        justify-content: flex-start !important;
-        align-items: center !important;
-        flex-wrap: wrap;
-        width: 100%;
-        margin-left: 0 !important;
-    }
-    
-    .cas-sep {  
-        margin: 0 2px !important;  
-    }  
-                        
-    .cas-studios-row {  
-        display: flex;  
-        flex-wrap: wrap;  
-        justify-content: flex-start !important;
-        gap: 8px;  
-    }  
-    
-    .cas-studio-item {    
-        height: 24px !important;    
-        display: flex;    
-        align-items: center;    
-        justify-content: flex-start;  
-        margin-bottom: 4px;  
-    }    
-  
-    .cas-studio-item img {    
-        height: 100%;    
-        width: auto;    
-        max-width: 140px;  
-        object-fit: contain;    
-        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));    
-        opacity: 0.95;    
-    }    
+        /* --- Варіант 1: Slide from Left --- */
+        .cas-anim-slide .cas-logo, 
+        .cas-anim-slide .cas-tagline, 
+        .cas-anim-slide .cas-studios-row, 
+        .cas-anim-slide .cas-rate-items, 
+        .cas-anim-slide .cas-meta-info, 
+        .cas-anim-slide .cas-quality-row, 
+        .cas-anim-slide .cas-description, 
+        .cas-anim-slide .cas-details-wrapper, 
+        .cas-anim-slide .full-start-new__buttons,
+        .cas-anim-slide .cas-bottom-ratings {  
+            transform: translate3d(0, 8px, 0);  
+            transition: opacity 0.35s var(--cas-curve-slide), transform 0.35s var(--cas-curve-slide);  
+        }                        
+        .cas-anim-slide.cas-animated .cas-logo { opacity: 1 !important; transform: translate3d(0, 0, 0); transition-delay: 0.0s; }  
+        .cas-anim-slide.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translate3d(0, 0, 0); transition-delay: 0.03s; }  
+        .cas-anim-slide.cas-animated .cas-tagline { opacity: 0.85 !important; transform: translate3d(0, 0, 0); transition-delay: 0.06s; }
+        .cas-anim-slide.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: translate3d(0, 0, 0); transition-delay: 0.09s; }    
+        .cas-anim-slide.cas-animated .cas-description { opacity: 0.75 !important; transform: translate3d(0, 0, 0); transition-delay: 0.12s; }  
+        .cas-anim-slide.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translate3d(0, 0, 0); transition-delay: 0.16s; }  
+        .cas-anim-slide.cas-animated .cas-bottom-ratings { opacity: 1 !important; transform: translate3d(0, 0, 0); transition-delay: 0.16s; }  
+        .cas-anim-slide.cas-animated .cas-quality-row { opacity: 1 !important; transform: translate3d(0, 0, 0); transition-delay: 0.18s; }
 
-    .cas-description { font-size: var(--cas-meta-size) !important; line-height: 1.4; color: rgba(255,255,255,0.7); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-width: 650px; margin-top: calc(var(--cas-blocks-gap) * 0.4); text-align: left !important; }    
-    .cas-quality-item img { height: 12px; }    
-    .cas-ratings-line { display: flex; align-items: center; gap: 15px; margin-bottom: 5px; font-size: var(--cas-meta-size); font-weight: 600; height: 30px; }    
-    .cas-rate-item { display: flex; align-items: center; gap: 6px; }    
-    .cas-rate-item img { height: 1.1em; }    
-    .left-title .full-start-new__body { height: 85vh; }    
-    .cas-meta-info { display: flex; align-items: center; gap: 8px; font-weight: 400; }    
-                          
-    .cas-audio-item {    
-        background: rgba(255, 255, 255, 0.2);    
-        padding: 2px 6px;    
-        border-radius: 4px;    
-        font-size: 0.8em;    
-        font-weight: 600;    
-        color: white;    
-    }    
-    </style>`;    
-    Lampa.Template.add('left_title_css', styles);    
-    $('body').append(Lampa.Template.get('left_title_css', {}, true));    
-}  
+        /* --- Варіант 2: Elastic Spring --- */
+        .cas-anim-spring .cas-logo, 
+        .cas-anim-spring .cas-tagline, 
+        .cas-anim-spring .cas-studios-row, 
+        .cas-anim-spring .cas-rate-items, 
+        .cas-anim-spring .cas-meta-info, 
+        .cas-anim-spring .cas-quality-row, 
+        .cas-anim-spring .cas-description, 
+        .cas-anim-spring .cas-details-wrapper, 
+        .cas-anim-spring .full-start-new__buttons,
+        .cas-anim-spring .cas-bottom-ratings {  
+            transform: scale3d(0.92, 0.92, 1) translate3d(0, 6px, 0);  
+            transition: opacity 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.4s var(--cas-curve-spring);  
+        }                        
+        .cas-anim-spring.cas-animated .cas-logo { opacity: 1 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.0s; }  
+        .cas-anim-spring.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.03s; }  
+        .cas-anim-spring.cas-animated .cas-tagline { opacity: 0.85 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.06s; }
+        .cas-anim-spring.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.09s; }    
+        .cas-anim-spring.cas-animated .cas-description { opacity: 0.75 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.12s; }  
+        .cas-anim-spring.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.16s; }  
+        .cas-anim-spring.cas-animated .cas-bottom-ratings { opacity: 1 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.16s; }
+        .cas-anim-spring.cas-animated .cas-quality-row { opacity: 1 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.18s; }
+                  
+        .full-start-new__details { display: none !important; }  
+        .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }  
+        
+        .full-start-new__body { display: flex; height: 85vh; position: relative; width: 100%; }  
+        .full-start-new__left { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 4em 3em 2em 2em; position: relative; z-index: 2; }  
+        .full-start-new__right { width: 60%; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start !important; text-align: left !important; padding: 4em 4em 2em 0; position: relative; z-index: 2; margin-left: 0 !important; }  
+        .full-start-new__poster { display: none; }  
+        .full-start-new__title { display: none; }  
+                            
+        .left-title .full-start-new__left { display: none !important; }  
+        .left-title .full-start-new__right { width: 100% !important; padding-left: 2em !important; }  
+        .left-title__content { display: flex; flex-direction: column; align-items: flex-start !important; text-align: left !important; width: 100%; }
+                            
+        .cas-logo-container {  
+            position: relative;  
+            overflow: visible;  
+            max-width: 100%;  
+            padding-left: 0%;  
+            margin-bottom: calc(var(--cas-blocks-gap) * 0.8);  
+            max-height: 300px;  
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start !important;
+        }  
+                            
+        .cas-logo img {  
+            background: transparent !important;  
+            border: none !important;  
+            max-width: 450px;  
+            max-height: 200px;  
+            width: auto;  
+            height: auto;  
+            transform: scale(var(--cas-logo-scale));  
+            transform-origin: left center;  
+            display: block;  
+            object-fit: contain;  
+        }  
+        
+        .cas-tagline {
+            font-size: calc(var(--cas-meta-size) * 0.95);
+            font-style: italic;
+            color: rgba(255, 255, 255, 0.85);
+            margin-bottom: 8px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+            max-width: 650px;
+            text-align: left !important;
+        }
+
+        .cas-ratings-line {  
+            display: flex;  
+            align-items: center;  
+            justify-content: flex-start !important;
+            gap: 8px !important;  
+            flex-wrap: wrap;  
+            margin-bottom: 6px !important;  
+        }  
+        
+        .cas-meta-info {  
+            margin-right: 0;  
+            display: flex;  
+            align-items: center;  
+            justify-content: flex-start !important;
+            gap: 8px;  
+        }  
+        
+        .cas-quality-row {  
+            margin-top: 0 !important;  
+            display: flex;  
+            align-items: center;  
+            justify-content: flex-start !important;
+            gap: 6px;  
+        }  
+
+        .full-start-new__buttons {
+            display: flex !important;
+            justify-content: flex-start !important;
+            align-items: center !important;
+            flex-wrap: wrap;
+            width: 100%;
+            margin-left: 0 !important;
+        }
+        
+        .cas-sep {  
+            margin: 0 2px !important;  
+        }  
+                            
+        .cas-studios-row {  
+            display: flex;  
+            flex-wrap: wrap;  
+            justify-content: flex-start !important;
+            gap: 8px;  
+        }  
+        
+        .cas-studio-item {    
+            height: 24px !important;    
+            display: flex;    
+            align-items: center;    
+            justify-content: flex-start;  
+            margin-bottom: 2px;  
+        }    
+      
+        .cas-studio-item img {    
+            height: 100%;    
+            width: auto;    
+            max-width: 140px;  
+            object-fit: contain;    
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));    
+            opacity: 0.95;    
+        }    
+
+        .cas-description { font-size: var(--cas-meta-size) !important; line-height: 1.35; color: rgba(255,255,255,0.7); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-width: 650px; margin-top: 4px; text-align: left !important; }    
+        .cas-quality-item img { height: 12px; }    
+        .cas-ratings-line { display: flex; align-items: center; gap: 15px; margin-bottom: 4px; font-size: var(--cas-meta-size); font-weight: 600; height: 30px; }    
+        .cas-rate-item { display: flex; align-items: center; gap: 6px; }    
+        .cas-rate-item img { height: 1.1em; }    
+        .left-title .full-start-new__body { height: 85vh; }    
+        .cas-meta-info { display: flex; align-items: center; gap: 8px; font-weight: 400; }    
+                              
+        .cas-audio-item {    
+            background: rgba(255, 255, 255, 0.2);    
+            padding: 2px 6px;    
+            border-radius: 4px;    
+            font-size: 0.8em;    
+            font-weight: 600;    
+            color: white;    
+        }    
+        </style>`;    
+        Lampa.Template.add('left_title_css', styles);    
+        $('body').append(Lampa.Template.get('left_title_css', {}, true));    
+    }  
 
     function getCachedData(id) {                
         const cache = Lampa.Storage.get('cas_images_cache') || {};                
@@ -584,7 +603,9 @@ function addStyles() {
                 
     async function processImages(render, data, res) {                
         try {                
-            const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];                
+            let bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];                
+            if (!bestLogo && res.logos.length > 0) bestLogo = res.logos[0];
+            
             if (bestLogo) {        
                 const quality = Lampa.Storage.get('cas_logo_quality') || 'original';                
                 const logoSrc = Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path);                
@@ -661,6 +682,11 @@ function addStyles() {
         await Promise.all(tasks);    
             
         if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {    
+            let qualityElement = render.find('.cas-quality-row');
+            let buttonsBlock = render.find('.full-start-new__buttons');
+
+            qualityElement.hide();
+            
             Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {    
                 try {    
                     const items = res.Results || res;    
@@ -689,14 +715,26 @@ function addStyles() {
                         if (b.ukr) qH += `<div class="cas-quality-item cas-wave-ukr"><img src="${QUALITY_ICONS['UKR']}"></div>`;    
                             
                         if (qH) {    
-                          render.find('.cas-quality-row').html(qH).show();  
+                            qualityElement.html(qH).show();  
+
+                            if (buttonsBlock.length) {
+                                buttonsBlock.off('transitionend.casQuality animationend.casQuality');
+                                buttonsBlock.on('transitionend.casQuality animationend.casQuality', function handler(e) {
+                                    if (e.target === this) {
+                                        qualityElement.addClass('show-quality');
+                                        buttonsBlock.off('transitionend.casQuality animationend.casQuality', handler);
+                                    }
+                                });
+                            } else {
+                                qualityElement.addClass('show-quality');
+                            }
                         }    
                     }    
                 } catch (error) {    
-                    render.find('.cas-quality-row').hide();    
+                    qualityElement.hide();    
                 }    
             }).fail(() => {    
-                render.find('.cas-quality-row').hide();    
+                qualityElement.hide();    
             });    
         } else {    
             render.find('.cas-quality-row').hide();    
@@ -715,6 +753,7 @@ function addStyles() {
                 const cardRoot = render.find('.full-start-new.left-title');                
                             
                 cardRoot.removeClass('cas-animated');                
+                render.find('.cas-quality-row').removeClass('show-quality');
                 event.object.activity.onBeforeDestroy = cleanup;                
                                 
                 if (data && data.id) {                
@@ -726,7 +765,9 @@ function addStyles() {
                         try { 
                             await processImages(render, data, res); 
                         } catch (e) {} finally {
-                            setTimeout(() => cardRoot.addClass('cas-animated'), 30);
+                            requestAnimationFrame(() => {
+                                cardRoot.addClass('cas-animated');
+                            });
                         }
                     };                
                                     
@@ -739,14 +780,18 @@ function addStyles() {
                             processImagesWrapper(res);                
                         }).fail(() => {                
                             render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                
-                            cardRoot.addClass('cas-animated');
+                            requestAnimationFrame(() => {
+                                cardRoot.addClass('cas-animated');
+                            });
                         });                
                     }                
                                     
                     if (event.data.reactions) data.reactions = event.data.reactions;          
                     debouncedLoadMovieData(render, data);                
                 } else {
-                    cardRoot.addClass('cas-animated');
+                    requestAnimationFrame(() => {
+                        cardRoot.addClass('cas-animated');
+                    });
                 }                
                                 
                 setTimeout(() => {                
