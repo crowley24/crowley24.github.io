@@ -32,7 +32,7 @@
         'settings_cas_logo_scale': 'Розмір логотипу',                
         'settings_cas_meta_size': 'Розмір шрифту',                
         'settings_cas_blocks_gap': 'Відступи між блоками',                
-        'settings_cas_bg_animation': 'Анімація фону (Ken Burns)',                
+        'settings_cas_bg_animation': 'Анімація фону',                
         'settings_cas_animation_style': 'Стиль анімації появи',
         'settings_cas_slideshow_enabled': 'Слайд-шоу фону',                
         'settings_cas_show_studios': 'Показувати студії',                
@@ -84,7 +84,7 @@
         const defaults = {                
             'cas_logo_scale': '100',                
             'cas_logo_quality': 'original',                
-            'cas_bg_animation': true,                
+            'cas_bg_animation': 'kenburns',                
             'cas_animation_style': 'slide',
             'cas_slideshow_enabled': true,                
             'cas_blocks_gap': '20',                
@@ -111,7 +111,7 @@
             { name: 'cas_logo_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' } },                
             { name: 'cas_meta_size', type: 'select', values: { '1.1': 'Міні', '1.2': 'Малий', '1.3': 'Стандартний', '1.4': 'Збільшений', '1.5': 'Великий' } },                
             { name: 'cas_blocks_gap', type: 'select', values: { '10':'Дуже тісно','15':'Тісно','20':'Стандарт','25':'Просторе','30':'Дуже просторе' } },                
-            { name: 'cas_bg_animation', type: 'trigger' },                
+            { name: 'cas_bg_animation', type: 'select', values: { 'off': 'Вимкнено', 'kenburns': 'Ken Burns (Зум + Паралакс)', 'blurzoom': 'Глибина фокусу (Зум + Розмиття)' } },                
             { name: 'cas_animation_style', type: 'select', values: { 'slide': 'Slide from Left (Виїзд зліва)', 'spring': 'Elastic Spring (Жива пружина)' } },
             { name: 'cas_slideshow_enabled', type: 'trigger' },                
             { name: 'cas_show_studios', type: 'trigger' },                
@@ -146,32 +146,39 @@
         const gap = Lampa.Storage.get('cas_blocks_gap') || '20';          
         const metaSize = Lampa.Storage.get('cas_meta_size') || '1.3';          
         const animStyle = Lampa.Storage.get('cas_animation_style') || 'slide';
+        const bgAnim = Lampa.Storage.get('cas_bg_animation') || 'kenburns';
                           
         root.style.setProperty('--cas-logo-scale', scale);          
         root.style.setProperty('--cas-blocks-gap', gap + 'px');          
         root.style.setProperty('--cas-meta-size', metaSize + 'em');          
                           
-        $('body').toggleClass('cas--zoom-enabled', !!Lampa.Storage.get('cas_bg_animation'));          
+        const bodyEl = $('body');
+        bodyEl.removeClass('cas--zoom-kenburns cas--zoom-blurzoom');
+        if (bgAnim === 'kenburns') {
+            bodyEl.addClass('cas--zoom-kenburns');
+        } else if (bgAnim === 'blurzoom') {
+            bodyEl.addClass('cas--zoom-blurzoom');
+        }
         
         const currentCard = $('.full-start-new.left-title');          
         if (currentCard.length > 0) {          
             currentCard.removeClass('cas-anim-slide cas-anim-spring').addClass('cas-anim-' + animStyle);
 
-            currentCard.find('.cas-description').toggle(!!Lampa.Storage.get('cas_show_description'));          
+            const showDesc = !!Lampa.Storage.get('cas_show_description');
+            const showTag = !!Lampa.Storage.get('cas_show_tagline');
+
+            currentCard.find('.cas-description').toggle(showDesc);          
+            currentCard.find('.cas-tagline').toggle(showTag);
             currentCard.find('.cas-studios-row').toggle(!!Lampa.Storage.get('cas_show_studios'));          
             currentCard.find('.cas-quality-row').toggle(!!Lampa.Storage.get('cas_show_quality'));          
             currentCard.find('.cas-rate-items, .cas-bottom-ratings').toggle(!!Lampa.Storage.get('cas_show_rating'));
-            currentCard.find('.cas-tagline').toggle(!!Lampa.Storage.get('cas_show_tagline'));          
                         
-            const hasVisibleElements = currentCard.find('.cas-studios-row:visible, .cas-rate-items:visible, .cas-quality-row:visible, .cas-description:visible').length > 0;          
             const buttons = currentCard.find('.full-start-new__buttons');          
                       
-            if (!hasVisibleElements) {          
-                buttons.css('margin-top', '0.2em');          
-                currentCard.find('.cas-ratings-line').css('margin-bottom', '0');          
+            if (!showDesc) {          
+                buttons.css('margin-top', '0px');          
             } else {          
                 buttons.css('margin-top', '');          
-                currentCard.find('.cas-ratings-line').css('margin-bottom', '');          
             }          
                         
             stopSlideshow();          
@@ -212,12 +219,12 @@
                             <div class="cas-meta-info"></div>      
                             <div class="cas-quality-row" style="display: flex; gap: 6px; align-items: center;"></div>      
                         </div>  
-                        <div class="cas-description" style="margin-top: 4px;"></div>                    
-                        <div class="cas-details-wrapper" style="margin-top: 8px;">                  
+                        <div class="cas-description" style="margin-top: 2px;"></div>                    
+                        <div class="cas-details-wrapper" style="margin-top: 4px;">                  
                             <div class="full-start-new__head hide"></div>                      
                             <div class="full-start-new__details hide"></div>                      
                         </div>                  
-                        <div class="full-start-new__buttons" style="margin-top: 14px;">                      
+                        <div class="full-start-new__buttons" style="margin-top: 0px;">                      
                             <div class="full-start__button selector button--play">                      
                                 <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/><path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/></svg>                      
                                 <span>#{title_watch}</span>                      
@@ -296,13 +303,26 @@
             50% { transform: scale(1.10) translateY(-15px) translateX(5px) translateZ(0); }  
             100% { transform: scale(1.02) translateY(0px) translateX(0px) translateZ(0); }  
         }  
+
+        @keyframes casBlurZoomFocus {
+            0% { transform: scale(1.03) translateZ(0); filter: blur(4px); }
+            50% { transform: scale(1.09) translateZ(0); filter: blur(0px); }
+            100% { transform: scale(1.03) translateZ(0); filter: blur(4px); }
+        }
                   
-        body.cas--zoom-enabled .full-start__background img, 
-        body.cas--zoom-enabled img.full-start__background {  
+        body.cas--zoom-kenburns .full-start__background img, 
+        body.cas--zoom-kenburns img.full-start__background {  
             animation: casKenBurnsParallax 40s ease-in-out infinite !important;  
             will-change: transform;  
             transform-origin: center center;  
         }  
+
+        body.cas--zoom-blurzoom .full-start__background img, 
+        body.cas--zoom-blurzoom img.full-start__background {  
+            animation: casBlurZoomFocus 25s ease-in-out infinite !important;  
+            will-change: transform, filter;  
+            transform-origin: center center;  
+        }
           
         .cas-logo, .cas-tagline, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper, .full-start-new__buttons, .cas-bottom-ratings {  
             opacity: 0 !important;  
@@ -310,7 +330,6 @@
             backface-visibility: hidden;
         }  
 
-        /* Стилі для каскадної анімації кожного бейджика якості окремо */
         .cas-quality-row .cas-quality-item {
             opacity: 0;
             transform: translate3d(0, 6px, 0) scale(0.9);
@@ -322,7 +341,6 @@
             transform: translate3d(0, 0, 0) scale(1);
         }
 
-        /* Затримка появи для кожного наступного бейджа якості */
         .cas-quality-row.show-quality .cas-quality-item:nth-child(1) { transition-delay: 0.0s; }
         .cas-quality-row.show-quality .cas-quality-item:nth-child(2) { transition-delay: 0.05s; }
         .cas-quality-row.show-quality .cas-quality-item:nth-child(3) { transition-delay: 0.10s; }
@@ -393,7 +411,7 @@
             overflow: visible;  
             max-width: 100%;  
             padding-left: 0%;  
-            margin-bottom: calc(var(--cas-blocks-gap) * 0.8);  
+            margin-bottom: calc(var(--cas-blocks-gap) * 1.2);  
             max-height: 300px;  
             display: flex;
             flex-direction: column;
@@ -417,7 +435,7 @@
             font-size: calc(var(--cas-meta-size) * 0.95);
             font-style: italic;
             color: rgba(255, 255, 255, 0.85);
-            margin-bottom: 8px;
+            margin-bottom: 16px;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
             max-width: 650px;
             text-align: left !important;
@@ -455,6 +473,7 @@
             flex-wrap: wrap;
             width: 100%;
             margin-left: 0 !important;
+            margin-top: 0px !important;
         }
         
         .cas-sep {  
@@ -485,7 +504,7 @@
             opacity: 0.95;    
         }    
 
-        .cas-description { font-size: var(--cas-meta-size) !important; line-height: 1.35; color: rgba(255,255,255,0.7); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-width: 650px; margin-top: 4px; text-align: left !important; }    
+        .cas-description { font-size: var(--cas-meta-size) !important; line-height: 1.35; color: rgba(255,255,255,0.7); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-width: 650px; margin-top: 4px; margin-bottom: 8px; text-align: left !important; }    
         .cas-quality-item img { height: 12px; }    
         .cas-ratings-line { display: flex; align-items: center; gap: 15px; margin-bottom: 4px; font-size: var(--cas-meta-size); font-weight: 600; height: 30px; }    
         .cas-rate-item { display: flex; align-items: center; gap: 6px; }    
