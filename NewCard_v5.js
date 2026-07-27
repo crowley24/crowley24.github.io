@@ -117,9 +117,8 @@
                 values: { 
                     'off': 'Вимкнено', 
                     'kenburns': 'Ken Burns (Зум + Паралакс)', 
-                    'drift': 'Кінематографічний дрейф (Панорама)', 
-                    'pulse': 'Пульс живої пам\'яті (Колір + Зсув)', 
-                    'tilt': 'Двошаровий паралакс (3D Нахил)' 
+                    'blurshift': 'М’який блур-перелив (Фокус)', 
+                    'chromatic': 'Хроматичний кіно-зсув' 
                 } 
             },                
             { name: 'cas_animation_style', type: 'select', values: { 'slide': 'Slide from Left (Виїзд зліва)', 'spring': 'Elastic Spring (Жива пружина)' } },
@@ -163,7 +162,7 @@
         root.style.setProperty('--cas-meta-size', metaSize + 'em');          
                           
         const bodyEl = $('body');
-        bodyEl.removeClass('cas--zoom-kenburns cas--zoom-drift cas--zoom-pulse cas--zoom-tilt');
+        bodyEl.removeClass('cas--zoom-kenburns cas--zoom-blurshift cas--zoom-chromatic');
         if (bgAnim !== 'off') {
             bodyEl.addClass('cas--zoom-' + bgAnim);
         }
@@ -312,25 +311,18 @@
             100% { transform: scale(1.02) translateY(0px) translateX(0px) translateZ(0); }  
         }  
 
-        /* 1. Кінематографічний дрейф (Панорама зліва направо і назад) */
-        @keyframes casCinematicDrift {
-            0% { transform: scale(1.06) translateX(-2%) translateZ(0); }
-            50% { transform: scale(1.06) translateX(2%) translateZ(0); }
-            100% { transform: scale(1.06) translateX(-2%) translateZ(0); }
+        /* 2. М’який фоновий блур-перелив (Фокус) */
+        @keyframes casBlurShift {
+            0% { transform: scale(1.05) translateZ(0); filter: blur(0px); }
+            50% { transform: scale(1.09) translateZ(0); filter: blur(2.5px); }
+            100% { transform: scale(1.05) translateZ(0); filter: blur(0px); }
         }
 
-        /* 2. Пульс живої пам'яті (Гра світла/насиченості та мікро-зсув) */
-        @keyframes casLivingPulse {
-            0% { transform: scale(1.04) translateY(0) translateZ(0); filter: brightness(1) saturate(1); }
-            50% { transform: scale(1.08) translateY(-8px) translateZ(0); filter: brightness(1.06) saturate(1.12); }
-            100% { transform: scale(1.04) translateY(0) translateZ(0); filter: brightness(1) saturate(1); }
-        }
-
-        /* 3. Двошаровий паралакс з 3D нахилом */
-        @keyframes casTiltZoom {
-            0% { transform: scale(1.03) perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0); }
-            50% { transform: scale(1.08) perspective(1000px) rotateX(1deg) rotateY(-1.5deg) translateZ(0); }
-            100% { transform: scale(1.03) perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0); }
+        /* 3. Хроматичний кіно-зсув */
+        @keyframes casChromaticShift {
+            0% { transform: scale(1.05) translateZ(0); filter: drop-shadow(-1px 0px 0px rgba(255,0,50,0.4)) drop-shadow(1px 0px 0px rgba(0,200,255,0.4)); }
+            50% { transform: scale(1.08) translateZ(0); filter: drop-shadow(-2.5px 0px 0px rgba(255,0,50,0.7)) drop-shadow(2.5px 0px 0px rgba(0,200,255,0.7)); }
+            100% { transform: scale(1.05) translateZ(0); filter: drop-shadow(-1px 0px 0px rgba(255,0,50,0.4)) drop-shadow(1px 0px 0px rgba(0,200,255,0.4)); }
         }
                   
         body.cas--zoom-kenburns .full-start__background img, 
@@ -340,24 +332,17 @@
             transform-origin: center center;  
         }  
 
-        body.cas--zoom-drift .full-start__background img, 
-        body.cas--zoom-drift img.full-start__background {  
-            animation: casCinematicDrift 30s ease-in-out infinite !important;  
-            will-change: transform;  
-            transform-origin: center center;  
-        }
-
-        body.cas--zoom-pulse .full-start__background img, 
-        body.cas--zoom-pulse img.full-start__background {  
-            animation: casLivingPulse 22s ease-in-out infinite !important;  
+        body.cas--zoom-blurshift .full-start__background img, 
+        body.cas--zoom-blurshift img.full-start__background {  
+            animation: casBlurShift 20s ease-in-out infinite !important;  
             will-change: transform, filter;  
             transform-origin: center center;  
         }
 
-        body.cas--zoom-tilt .full-start__background img, 
-        body.cas--zoom-tilt img.full-start__background {  
-            animation: casTiltZoom 25s ease-in-out infinite !important;  
-            will-change: transform;  
+        body.cas--zoom-chromatic .full-start__background img, 
+        body.cas--zoom-chromatic img.full-start__background {  
+            animation: casChromaticShift 15s ease-in-out infinite !important;  
+            will-change: transform, filter;  
             transform-origin: center center;  
         }
           
