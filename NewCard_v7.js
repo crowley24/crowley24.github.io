@@ -1,506 +1,767 @@
-(function () {
-    'use strict';
-
-    /**
-     * ПЕРЕМІННІ ТА КЕШУВАННЯ
-     */
-    var logoCache = {}; 
-    var slideshowTimer = null; 
-    var pluginPath = 'https://crowley38.github.io/Icons/';
-    
-    var settings_list = [
-        { id: 'tv_interface_animation', default: true },
-        { id: 'tv_interface_ui_anim', default: true },
-        { id: 'tv_interface_slideshow', default: true },
-        { id: 'tv_interface_slideshow_time', default: '10000' },
-        { id: 'tv_interface_slideshow_quality', default: 'w1280' },
-        { id: 'tv_interface_logo_size_v2', default: '100' },
-        { id: 'tv_interface_logo_quality', default: 'w500' },
-        { id: 'tv_interface_show_tagline', default: true },
-        { id: 'tv_interface_blocks_gap', default: '4px' },
-        { id: 'tv_interface_ratings_size', default: '0.5em' },
-        { id: 'tv_interface_studios', default: true },
-        { id: 'tv_interface_quality', default: true }
-    ];
-
-    settings_list.forEach(function (opt) {
-        if (Lampa.Storage.get(opt.id, 'unset') === 'unset') {
-            Lampa.Storage.set(opt.id, opt.default);
-        }
-    });
-
-    var svgIcons = {
-        '4K': pluginPath + '4K.svg',
-        '2K': pluginPath + '2K.svg',
-        'FULL HD': pluginPath + 'FULL HD.svg',
-        'HD': pluginPath + 'HD.svg',
-        'HDR': pluginPath + 'HDR.svg',
-        'Dolby Vision': pluginPath + 'Dolby Vision.svg',
-        '7.1': pluginPath + '7.1.svg',
-        '5.1': pluginPath + '5.1.svg',
-        '4.0': pluginPath + '4.0.svg',
-        '2.0': pluginPath + '2.0.svg',
-        'DUB': pluginPath + 'DUB.svg',
-        'UKR': pluginPath + 'UKR.svg'
-    };
-
-    var ratingIcons = {
-        tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',
-        cub: 'https://raw.githubusercontent.com/yumata/lampa/9381985ad4371d2a7d5eb5ca8e3daf0f32669eb7/img/logo-icon.svg'
-    };
-
-    function stopSlideshow() {
-        if (slideshowTimer) {
-            clearInterval(slideshowTimer);
-            slideshowTimer = null;
-        }
-    }
-
-    /**
-     * АНАЛІЗ ЗОБРАЖЕННЯ НА ТЕМНОТУ
-     */
-    function isImageDark(imgSrc, callback) {
-        var img = new Image();
-        img.crossOrigin = 'Anonymous';
-        img.onload = function () {
-            try {
-                var canvas = document.createElement('canvas');
-                var ctx = canvas.getContext('2d');
-                canvas.width = 40;
-                canvas.height = 40;
-                ctx.drawImage(img, 0, 0, 40, 40);
-
-                var imgData = ctx.getImageData(0, 0, 40, 40);
-                var data = imgData.data;
-                var totalBrightness = 0;
-                var hasColor = false;
-                var count = 0;
-
-                for (var i = 0; i < data.length; i += 4) {
-                    var alpha = data[i + 3];
-                    if (alpha > 50) { 
-                        var r = data[i];
-                        var g = data[i + 1];
-                        var b = data[i + 2];
-
-                        var brightness = (r * 299 + g * 587 + b * 114) / 1000;
-                        totalBrightness += brightness;
-                        count++;
-
-                        var max = Math.max(r, g, b);
-                        var min = Math.min(r, g, b);
-                        if ((max - min) > 30) { 
-                            hasColor = true;
-                        }
-                    }
-                }
-
-                var avgBrightness = count > 0 ? (totalBrightness / count) : 255;
-                var isDark = (avgBrightness < 110) && !hasColor;
-                callback(isDark);
-            } catch (e) {
-                callback(false);
-            }
-        };
-        img.onerror = function () { callback(false); };
-        img.src = imgSrc;
-    }
-
-    /**
-     * СТИЛІ ІНТЕРФЕЙСУ (CSS)
-     */
-    function applyStyles() {
-        var oldStyle = document.getElementById('tv-interface-styles');
-        if (oldStyle) oldStyle.parentNode.removeChild(oldStyle);
-
-        var isPosterAnim = Lampa.Storage.get('tv_interface_animation');
-        var isUIAnim = Lampa.Storage.get('tv_interface_ui_anim');
-        var rSize = Lampa.Storage.get('tv_interface_ratings_size', '0.5em');
-        var lHeight = Lampa.Storage.get('tv_interface_logo_size_v2', '100'); 
-        var showTagline = Lampa.Storage.get('tv_interface_show_tagline');
-        var blocksGap = Lampa.Storage.get('tv_interface_blocks_gap', '4px');
-        
-        var style = document.createElement('style');
-        style.id = 'tv-interface-styles';
-        
-        var css = '';
-        
-        css += '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.06); } 100% { transform: scale(1); } } ';
-        css += '@keyframes premium_ui_reveal { 0% { opacity: 0; transform: translate3d(-20px, 0, 0); filter: blur(6px); } 100% { opacity: 1; transform: translate3d(0, 0, 0); filter: blur(0px); } } ';
-        css += '@keyframes poster_fade_in { 0% { opacity: 0; } 100% { opacity: 1; } } ';
-
-        // 1. Приховуємо дефолтні елементи Lampa
-        css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates, .full-start-new__rates { display: none !important; } ';
-        css += '.full-start-new__title-text, .full-start-new__head, .full-start-new__details { display: none !important; } ';
-        css += '.full-start-new__img, .full-start__img, .full-start-new__poster-img { display: none !important; visibility: hidden !important; opacity: 0 !important; } ';
-        css += '.background { background: #141414 !important; } ';
-
-        // 2. Повноекранний Фоновий Постер
-        css += '.full-start-new__poster { position: fixed !important; top:0; left:0; width:100vw !important; height: 100vh !important; overflow: hidden !important; background: #141414; z-index: 1; pointer-events: none !important; ';
-        css += (isUIAnim ? 'animation: poster_fade_in 0.8s ease forwards; ' : '') + '} ';
-        
-        css += '.full-start-new__poster img { filter: none !important; ';
-        css += (isPosterAnim ? 'animation: kenBurnsEffect 30s ease-in-out infinite !important; ' : '');
-        css += 'transform-origin: center center !important; transition: opacity 1.2s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
-        css += 'mask-image: linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 45%, rgba(0,0,0,0.1) 80%, transparent 100%), linear-gradient(to top, #141414 0%, rgba(20,20,20,0.7) 40%, transparent 85%) !important; ';
-        css += '-webkit-mask-image: linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 45%, rgba(0,0,0,0.1) 80%, transparent 100%), linear-gradient(to top, #141414 0%, rgba(20,20,20,0.7) 40%, transparent 85%) !important; } ';
-        
-        // 3. ЖОРСТКЕ ВИРІВНЮВАННЯ ГОЛОВНОГО КОНТЕЙНЕРА (ЗНІМАЄМО GRID ЦЕНТРОВКУ)
-        css += 'body .full-start-new { display: flex !important; flex-direction: column !important; justify-content: flex-end !important; align-items: flex-start !important; position: relative !important; min-height: 100vh !important; height: 100vh !important; padding: 0 0 5vh 4vw !important; box-sizing: border-box !important; grid-template-columns: none !important; grid-template-rows: none !important; grid-template-areas: none !important; } ';
-
-        // Жорсткий притиск блоку ліворуч і вниз
-        css += 'body .full-start-new__right { position: relative !important; width: 50vw !important; max-width: 600px !important; margin: 0 !important; padding: 0 !important; background: none !important; z-index: 10 !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; justify-content: flex-end !important; gap: ' + blocksGap + ' !important; text-align: left !important; float: left !important; left: 0 !important; right: auto !important; } ';
-        
-        var uiAnimClass = isUIAnim ? 'animation: premium_ui_reveal 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; will-change: transform, opacity; ' : '';
-
-        // Логотип студії
-        css += '.studio-header-brand { ' + uiAnimClass + ' animation-delay: 0.05s; order: 1; width: 100%; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 0 -2px 0 !important; } ';
-        css += '.studio-header-brand img { height: 18px !important; width: auto; max-width: 110px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.9)); opacity: 0.95; margin: 0 !important; } ';
-        css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 6px rgba(0,0,0,0.9)) !important; } ';
-
-        // Назва / Логотип фільму
-        css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.1s; width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; padding: 0 !important; order: 2; text-align: left !important; } ';
-        css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 38vw !important; object-fit: contain !important; object-position: left center !important; filter: drop-shadow(0 6px 14px rgba(0,0,0,0.9)); margin: 0 !important; } ';
-
-        // Слоган
-        css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.15s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.85em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; order: 3; line-height: 1.2; max-width: 45vw; } ';
-        
-        // Мета-інформація (Рік, Країна, Час, Жанр)
-        css += '.plugin-meta-row { ' + uiAnimClass + ' animation-delay: 0.2s; display: flex !important; justify-content: flex-start !important; align-items: center !important; flex-wrap: wrap !important; gap: 8px; margin: 0 !important; font-size: calc(' + rSize + ' * 2); width: 100%; order: 4; color: #e5e5e5; font-family: "Inter", -apple-system, system-ui, sans-serif; text-shadow: 0 2px 4px rgba(0,0,0,0.9); text-align: left !important; } ';
-        
-        // Рейтинги + Якість
-        css += '.plugin-ratings-quality-row { ' + uiAnimClass + ' animation-delay: 0.25s; display: flex !important; justify-content: flex-start !important; align-items: center !important; flex-wrap: wrap !important; gap: 12px; margin: 0 !important; width: 100%; order: 5; font-size: calc(' + rSize + ' * 2.2); text-align: left !important; } ';
-        css += '.plugin-ratings-group { display: flex !important; align-items: center !important; gap: 10px; } ';
-        css += '.quality-row-inline { display: flex !important; align-items: center !important; gap: 6px; opacity: 0.95; } '; 
-        
-        css += '.plugin-rating-item { display: flex !important; align-items: center !important; gap: 5px; font-weight: 700; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.9); } ';
-        css += '.plugin-rating-item img { height: 1.1em; width: auto; } ';
-        css += '.info-text-item { opacity: 0.85; font-weight: 500; font-size: 0.9em; white-space: nowrap; } ';
-        css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
-        css += '.quality-item { height: 1.1em; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6)); } '; 
-        css += '.quality-item img { height: 100%; width: auto; object-fit: contain; } ';
-
-        // Кнопки (Притиснуті вліво та підняті вище за нижній край)
-        css += 'body .full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.3s; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 10px !important; width: 100% !important; margin: 6px 0 0 0 !important; order: 6; } ';
-        css += 'body .full-start-new .full-start__button { background: rgba(255, 255, 255, 0.15) !important; border: 2px solid transparent !important; border-radius: 8px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: center !important; padding: 6px 14px !important; width: auto !important; min-width: 90px !important; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important; cursor: pointer; margin: 0 !important; } ';
-        
-        css += 'body .full-start-new .full-start__button.focus, body .full-start-new .full-start__button:focus { background: #ffffff !important; transform: scale(1.05) !important; border-color: #ffffff !important; box-shadow: 0 8px 25px rgba(0,0,0,0.8) !important; z-index: 20; } ';
-        css += 'body .full-start-new .full-start__button.focus span, body .full-start-new .full-start__button:focus span { color: #000000 !important; opacity: 1 !important; } ';
-        css += 'body .full-start-new .full-start__button.focus svg, body .full-start-new .full-start__button:focus svg { fill: #000000 !important; } ';
-
-        css += 'body .full-start-new .full-start__button svg, body .full-start-new .full-start__button img { width: 16px !important; height: 16px !important; margin-right: 6px !important; margin-bottom: 0 !important; fill: #fff !important; } ';
-        css += 'body .full-start-new .full-start__button span { font-size: 12px !important; text-transform: uppercase !important; color: #fff !important; opacity: 0.9 !important; font-weight: 700; letter-spacing: 0.03em; white-space: nowrap; } ';
-
-        // 4. НИЖНІ БЛОКИ
-        css += '.full-start-new__body, .full-start-new__bottom, .full-descr, .full-persons { position: relative !important; z-index: 10 !important; width: 100% !important; padding: 20px 4vw !important; margin: 0 !important; box-sizing: border-box !important; } ';
-
-        style.textContent = css;
-        document.head.appendChild(style);
-    }
-
-    /**
-     * РЕНДЕР ІНФОРМАЦІЇ
-     */
-    function getRatingColor(val) {
-        var n = parseFloat(val);
-        if (n >= 7.5) return '#2ecc71';
-        if (n >= 6) return '#feca57';
-        if (n > 0) return '#ff4d4d';
-        return '#fff';
-    }
-
-    function formatTime(mins) {
-        if (!mins) return '';
-        var h = Math.floor(mins / 60);
-        var m = mins % 60;
-        return (h > 0 ? h + 'г ' : '') + m + 'хв';
-    }
-
-    function getCubRating(e) {
-        if (!e.data || !e.data.reactions || !e.data.reactions.result) return null;
-        var reactionCoef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };
-        var sum = 0, cnt = 0;
-        e.data.reactions.result.forEach(function(r) {
-            if (r.counter) { sum += (r.counter * reactionCoef[r.type]); cnt += r.counter; }
-        });
-        if (cnt >= 5) {
-            var isTv = e.object.method === 'tv', avg = isTv ? 7.4 : 6.5, m = isTv ? 50 : 150;
-            return ((avg * m + sum) / (m + cnt)).toFixed(1);
-        }
-        return null;
-    }
-
-    function renderRatings(container, e) {
-        container.find('.plugin-meta-row').remove();
-        container.find('.plugin-ratings-quality-row').remove();
-        
-        var sep = '<span class="info-separator">•</span>';
-        var $metaRow = $('<div class="plugin-meta-row"></div>');
-        
-        var year = (e.data.movie.release_date || e.data.movie.first_air_date || '').substring(0, 4);
-        if (year) {
-            $metaRow.append('<div class="info-text-item">' + year + '</div>');
-        }
-
-        var country = '';
-        if (e.data.movie.production_countries && e.data.movie.production_countries.length > 0) {
-            country = e.data.movie.production_countries[0].name || e.data.movie.production_countries[0].iso_3166_1;
-        } else if (e.data.movie.origin_country && e.data.movie.origin_country.length > 0) {
-            country = e.data.movie.origin_country[0];
-        }
-
-        if (country) {
-            if ($metaRow.children().length > 0) $metaRow.append(sep);
-            $metaRow.append('<div class="info-text-item">' + country + '</div>');
-        }
-        
-        var runtime = e.data.movie.runtime || (e.data.movie.episode_run_time ? e.data.movie.episode_run_time[0] : 0);
-        if (runtime) {
-            if ($metaRow.children().length > 0) $metaRow.append(sep);
-            $metaRow.append('<div class="info-text-item">' + formatTime(runtime) + '</div>');
-        }
-
-        if (e.data.movie.genres && e.data.movie.genres.length > 0) {
-            if ($metaRow.children().length > 0) $metaRow.append(sep);
-            var genres = e.data.movie.genres.slice(0, 3).map(function(g) { return g.name; }).join(', ');
-            $metaRow.append('<div class="info-text-item">' + genres + '</div>');
-        }
-
-        var $rqRow = $('<div class="plugin-ratings-quality-row"></div>');
-        var $ratingsGroup = $('<div class="plugin-ratings-group"></div>');
-        
-        var tmdb = parseFloat(e.data.movie.vote_average || 0).toFixed(1);
-        if (tmdb > 0) {
-            $ratingsGroup.append('<div class="plugin-rating-item"><img src="'+ratingIcons.tmdb+'"> <span style="color:'+getRatingColor(tmdb)+'">'+tmdb+'</span></div>');
-        }
-        
-        var cub = getCubRating(e);
-        if (cub) {
-            $ratingsGroup.append('<div class="plugin-rating-item"><img src="' + ratingIcons.cub + '"> <span style="color:' + getRatingColor(cub) + '">' + cub + '</span></div>');
-        }
-
-        var $qRow = $('<div class="quality-row-inline"></div>');
-
-        $rqRow.append($ratingsGroup).append($qRow);
-        container.append($metaRow).append($rqRow);
-    }
-
-    function loadMovieDetails(movie, $render) {
-        var type = (movie.name || movie.first_air_date) ? 'tv' : 'movie';
-        var url = 'https://api.themoviedb.org/3/' + type + '/' + movie.id + '?api_key=' + Lampa.TMDB.key() + '&append_to_response=images&include_image_language=uk,en,null';
-
-        $.ajax({
-            url: url,
-            type: 'GET',
-            dataType: 'json',
-            success: function(data) {
-                if (data.images && data.images.logos && data.images.logos.length > 0) {
-                    var lang = Lampa.Storage.get('language') || 'uk';
-                    var logo = data.images.logos.filter(function(l) { return l.iso_639_1 === lang; })[0] || 
-                               data.images.logos.filter(function(l) { return l.iso_639_1 === 'en'; })[0] || 
-                               data.images.logos[0];
-                    
-                    if (logo) {
-                        var logoUrl = Lampa.TMDB.image('/t/p/' + Lampa.Storage.get('tv_interface_logo_quality', 'w500') + logo.file_path.replace('.svg', '.png'));
-                        $render.find('.full-start-new__title').html('<img src="' + logoUrl + '">');
-                    }
-                }
-
-                if (Lampa.Storage.get('tv_interface_studios')) {
-                    $render.find('.studio-header-brand').remove();
-                    var studio = null;
-
-                    if (data.networks && data.networks.length > 0) {
-                        studio = data.networks.find(function(n) { return n.logo_path; });
-                    }
-                    if (!studio && data.production_companies && data.production_companies.length > 0) {
-                        studio = data.production_companies.find(function(c) { return c.logo_path; });
-                    }
-
-                    if (studio && studio.logo_path) {
-                        var studioLogoUrl = Lampa.TMDB.image('/t/p/w200' + studio.logo_path);
-                        var $brand = $('<div class="studio-header-brand"><img src="' + studioLogoUrl + '" alt="' + (studio.name || '') + '"></div>');
-                        var $img = $brand.find('img');
-
-                        $img.on('error', function() { $brand.remove(); });
-                        
-                        isImageDark(studioLogoUrl, function(isDark) {
-                            if (isDark) {
-                                $img.addClass('is-dark-logo');
-                            }
-                        });
-
-                        $render.find('.full-start-new__title').before($brand);
-                    }
-                }
-
-                if (data.images && data.images.backdrops && data.images.backdrops.length > 1) {
-                    var cleanBackdrops = data.images.backdrops.filter(function(b) { return b.aspect_ratio > 1.5; });
-                    if (cleanBackdrops.length > 0) {
-                        startPosterSlideshow($('.full-start-new__poster'), cleanBackdrops.slice(0, 15));
-                    }
-                }
-            }
-        });
-    }
-
-    function getBestResults(results) {
-        var best = { resolution: null, hdr: false, dolbyVision: false, dub: false, ukr: false };
-        if (!results) return best;
-        results.slice(0, 15).forEach(function(item) {
-            var t = (item.Title || '').toLowerCase();
-            if (t.indexOf('ukr')>=0 || t.indexOf('укр')>=0) best.ukr = true;
-            var res = t.indexOf('4k')>=0 ? '4K' : t.indexOf('2k')>=0 ? '2K' : t.indexOf('1080')>=0 ? 'FULL HD' : t.indexOf('720')>=0 ? 'HD' : null;
-            if (res && (!best.resolution || ['HD', 'FULL HD', '2K', '4K'].indexOf(res) > ['HD', 'FULL HD', '2K', '4K'].indexOf(best.resolution))) best.resolution = res;
-            if (t.indexOf('vision')>=0 || t.indexOf(' dv ')>=0) best.dolbyVision = true;
-            if (t.indexOf('hdr')>=0) best.hdr = true;
-            if (t.indexOf('dub')>=0 || t.indexOf('дуб')>=0) best.dub = true;
-        });
-        return best;
-    }
-
-    function startPosterSlideshow($poster, items) {
-        if (!Lampa.Storage.get('tv_interface_slideshow')) return;
-        var index = 0; 
-        stopSlideshow();
-
-        slideshowTimer = setInterval(function() {
-            index = (index + 1) % items.length;
-            var imgUrl = Lampa.TMDB.image('/t/p/' + Lampa.Storage.get('tv_interface_slideshow_quality', 'w1280') + items[index].file_path);
-            var $current = $poster.find('img').first();
-            var nextImg = new Image();
-            nextImg.onload = function() {
-                var $next = $('<img src="' + imgUrl + '" style="opacity: 0; transition: opacity 1.2s ease-in-out;">');
-                $poster.append($next);
-                setTimeout(function() { 
-                    $next.css('opacity', '1'); 
-                    $current.css('opacity', '0'); 
-                    setTimeout(function(){ $current.remove(); }, 1200); 
-                }, 100);
-            }; 
-            nextImg.src = imgUrl;
-        }, parseInt(Lampa.Storage.get('tv_interface_slideshow_time', '10000')));
-    }
-
-    function init() {
-        Lampa.Listener.follow('full', function (e) {
-            if (e.type === 'destroy') {
-                stopSlideshow();
-            }
+(function () {                
+    'use strict';                
+    const PLUGIN_NAME = 'NewCard';                
+    const PLUGIN_ID = 'new_card_style';                
+    const ASSETS_PATH = 'https://crowley38.github.io/Icons/';                
+    const CACHE_LIFETIME = 1000 * 60 * 60 * 24;                  
+                
+    let currentInterval = null;            
             
-            if (e.type === 'complite' || e.type === 'complete') {
-                stopSlideshow(); 
+    const ICONS = {                
+        tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',                
+        cub: 'https://raw.githubusercontent.com/yumata/lampa/9381985ad4371d2a7d5eb5ca8e3daf0f32669eb7/img/logo-icon.svg'                
+    };                
+    const QUALITY_ICONS = {                
+        '4K': ASSETS_PATH + '4K.svg',                
+        '2K': ASSETS_PATH + '2K.svg',                
+        'FULL HD': ASSETS_PATH + 'FULL HD.svg',                
+        'HD': ASSETS_PATH + 'HD.svg',                
+        'HDR': ASSETS_PATH + 'HDR.svg',                
+        'Dolby Vision': ASSETS_PATH + 'Dolby Vision.svg',                
+        'UKR': ASSETS_PATH + 'UKR.svg',  
+        '7.1': ASSETS_PATH + '7.1.svg',  
+        '5.1': ASSETS_PATH + '5.1.svg',  
+        '4.0': ASSETS_PATH + '4.0.svg',  
+        '2.0': ASSETS_PATH + '2.0.svg',  
+        'DUB': ASSETS_PATH + 'DUB.svg'  
+    };                
+    const SETTINGS_ICON = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="15" y="20" width="70" height="60" rx="8" stroke="white" stroke-width="6" fill="none" opacity="0.4"/><rect x="25" y="32" width="50" height="28" rx="4" fill="white"/><rect x="25" y="66" width="30" height="6" rx="3" fill="white" opacity="0.6"/><rect x="60" y="66" width="15" height="6" rx="3" fill="white" opacity="0.6"/></svg>`;                
                 
-                var movie = e.data.movie, $render = e.object.activity.render();
+    const TRANSLATIONS = {                
+        'settings_cas_logo_quality': 'Якість логотипу',                
+        'settings_cas_logo_scale': 'Розмір логотипу',                
+        'settings_cas_meta_size': 'Розмір шрифту',                
+        'settings_cas_blocks_gap': 'Відступи між блоками',                
+        'settings_cas_bg_animation': 'Анімація фону (Ken Burns)',                
+        'settings_cas_animation_style': 'Стиль анімації появи',
+        'settings_cas_slideshow_enabled': 'Слайд-шоу фону',                
+        'settings_cas_show_studios': 'Показувати студії',                
+        'settings_cas_show_quality': 'Показувати якість',                
+        'settings_cas_show_rating': 'Показувати рейтинги',                
+        'settings_cas_show_description': 'Опис фільму'                
+    };                
                 
-                if (window.lampa_settings) window.lampa_settings.blur_poster = false;
+    let debounceTimer;                
+    function debounce(func, delay) {                
+        return function() {                
+            const context = this;                
+            const args = arguments;                
+            clearTimeout(debounceTimer);                
+            debounceTimer = setTimeout(() => func.apply(context, args), delay);                
+        };                
+    }                
+                
+    function preloadImage(src) {                
+        return new Promise((resolve, reject) => {                
+            const img = new Image();                
+            img.onload = () => resolve(img);                
+            img.onerror = reject;                
+            img.src = src;                
+        });                
+    }                
+                
+    function getRatingColor(val) {                
+        const n = parseFloat(val);                
+        return n >= 7.5 ? '#2ecc71' : n >= 6 ? '#feca57' : '#ff4d4d';                
+    }                
+                
+    function formatTime(mins) {                
+        if (!mins) return '';                
+        const h = Math.floor(mins / 60);                
+        const m = mins % 60;                
+        return (h > 0 ? h + 'г ' : '') + m + 'хв';                
+    }                
+                
+    function initializePlugin() {                
+        addCustomTemplate();                
+        addStyles();                
+        addSettings();                
+        attachLoader();                
+    }                
+                
+    function addSettings() {                
+        const defaults = {                
+            'cas_logo_scale': '100',                
+            'cas_logo_quality': 'original',                
+            'cas_bg_animation': true,                
+            'cas_animation_style': 'slide',
+            'cas_slideshow_enabled': true,                
+            'cas_blocks_gap': '20',                
+            'cas_meta_size': '1.3',                
+            'cas_show_studios': true,                
+            'cas_show_quality': true,                
+            'cas_show_rating': true,                
+            'cas_show_description': true                
+        };                
+                
+        Object.keys(defaults).forEach(key => {                
+            if (Lampa.Storage.get(key) === undefined) Lampa.Storage.set(key, defaults[key]);                
+        });                
+                
+        Lampa.SettingsApi.addComponent({                
+            component: PLUGIN_ID,                
+            name: PLUGIN_NAME,                
+            icon: SETTINGS_ICON                
+        });                
+                        
+        const params = [                
+            { name: 'cas_logo_quality', type: 'select', values: { 'w300':'300px', 'w500':'500px', 'original':'Original' } },                
+            { name: 'cas_logo_scale', type: 'select', values: { '70':'70%','80':'80%','90':'90%','100':'100%','110':'110%','120':'120%' } },                
+            { name: 'cas_meta_size', type: 'select', values: { '1.1': 'Міні', '1.2': 'Малий', '1.3': 'Стандартний', '1.4': 'Збільшений', '1.5': 'Великий' } },                
+            { name: 'cas_blocks_gap', type: 'select', values: { '10':'Дуже тісно','15':'Тісно','20':'Стандарт','25':'Просторе','30':'Дуже просторе' } },                
+            { name: 'cas_bg_animation', type: 'trigger' },                
+            { name: 'cas_animation_style', type: 'select', values: { 'slide': 'Slide from Left (Виїзд зліва)', 'spring': 'Elastic Spring (Жива пружина)' } },
+            { name: 'cas_slideshow_enabled', type: 'trigger' },                
+            { name: 'cas_show_studios', type: 'trigger' },                
+            { name: 'cas_show_quality', type: 'trigger' },                
+            { name: 'cas_show_rating', type: 'trigger' },                
+            { name: 'cas_show_description', type: 'trigger' }                
+        ];                
+                
+        params.forEach(p => {                
+            Lampa.SettingsApi.addParam({                
+                component: PLUGIN_ID,                
+                param: {                 
+                    name: p.name,                 
+                    type: p.type,                 
+                    values: p.values,                 
+                    default: defaults[p.name]                 
+                },                
+                field: {                 
+                    name: TRANSLATIONS['settings_' + p.name]                
+                },                
+                onChange: applySettings                
+            });                
+        });                
+                
+        applySettings();                
+    }                
+                
+    function applySettings() {          
+        const root = document.documentElement;          
+        const scale = parseInt(Lampa.Storage.get('cas_logo_scale') || 100) / 100;          
+        const gap = Lampa.Storage.get('cas_blocks_gap') || '20';          
+        const metaSize = Lampa.Storage.get('cas_meta_size') || '1.3';          
+        const animStyle = Lampa.Storage.get('cas_animation_style') || 'slide';
+                          
+        root.style.setProperty('--cas-logo-scale', scale);          
+        root.style.setProperty('--cas-blocks-gap', gap + 'px');          
+        root.style.setProperty('--cas-meta-size', metaSize + 'em');          
+                          
+        $('body').toggleClass('cas--zoom-enabled', !!Lampa.Storage.get('cas_bg_animation'));          
+        
+        const currentCard = $('.full-start-new.left-title');          
+        if (currentCard.length > 0) {          
+            currentCard.removeClass('cas-anim-slide cas-anim-spring').addClass('cas-anim-' + animStyle);
 
-                renderRatings($render.find('.full-start-new__right'), e);
-                loadMovieDetails(movie, $render);
+            currentCard.find('.cas-description').toggle(!!Lampa.Storage.get('cas_show_description'));          
+            currentCard.find('.cas-studios-row').toggle(!!Lampa.Storage.get('cas_show_studios'));          
+            currentCard.find('.cas-quality-row').toggle(!!Lampa.Storage.get('cas_show_quality'));          
+            currentCard.find('.cas-rate-items').toggle(!!Lampa.Storage.get('cas_show_rating'));          
+                        
+            const hasVisibleElements = currentCard.find('.cas-studios-row:visible, .cas-rate-items:visible, .cas-quality-row:visible, .cas-description:visible').length > 0;          
+            const buttons = currentCard.find('.full-start-new__buttons');          
+                      
+            if (!hasVisibleElements) {          
+                buttons.css('margin-top', '0.2em');          
+                currentCard.find('.cas-ratings-line').css('margin-bottom', '0');          
+            } else {          
+                buttons.css('margin-top', '');          
+                currentCard.find('.cas-ratings-line').css('margin-bottom', '');          
+            }          
+                        
+            stopSlideshow();          
+          
+            if (Lampa.Storage.get('cas_slideshow_enabled')) {          
+                const bg = currentCard.find('.full-start__background img, img.full-start__background');          
+                if (bg.length && bg.attr('src')) {          
+                    const movieData = currentCard.data('movie');          
+                    if (movieData && movieData.id) {          
+                        const cacheId = 'tmdb_' + movieData.id;          
+                        const cached = getCachedData(cacheId);          
+                        if (cached && cached.backdrops?.length > 1) {          
+                            startSlideshow(currentCard, cached.backdrops);          
+                        }          
+                    }          
+                }          
+            }          
+        }          
+    }               
+                      
+    function addCustomTemplate() {                       
+        const animStyle = Lampa.Storage.get('cas_animation_style') || 'slide';
+        const template = `<div class="full-start-new left-title cas-anim-${animStyle}">                      
+            <div class="full-start-new__body">                      
+                <div class="full-start-new__left">                      
+                    <div class="left-title__content">                      
+                        <div class="cas-logo-container">  
+                            <div class="cas-studios-row"></div>                  
+                            <div class="cas-logo"></div>                    
+                        </div>                    
+                        <div class="cas-meta-line">      
+                            <div class="cas-meta-info"></div>      
+                            <div class="cas-quality-row"></div>      
+                        </div>  
+                        <div class="cas-description"></div>                    
+                        <div class="cas-details-wrapper">                  
+                            <div class="full-start-new__head hide"></div>                      
+                            <div class="full-start-new__details hide"></div>                      
+                        </div>                  
+                        <div class="full-start-new__buttons">                      
+                            <div class="full-start__button selector button--play">                      
+                                <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/><path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/></svg>                      
+                                <span>#{title_watch}</span>                      
+                            </div>                      
+                            <div class="full-start__button selector button--book">                      
+                                <svg width="21" height="32" viewBox="0 0 21 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 1.5H19C19.2761 1.5 19.5 1.72386 19.5 2V27.9618C19.5 28.3756 19.0261 28.6103 18.697 28.3595L12.6212 23.7303C11.3682 22.7757 9.63183 22.7757 8.37885 23.7303L2.30302 28.3595C1.9739 28.6103 1.5 28.3756 1.5 27.9618V2C1.5 1.72386 1.72386 1.5 2 1.5Z" stroke="currentColor" stroke-width="2.5"/></svg>                      
+                                <span>#{settings_input_links}</span>                      
+                            </div>                      
+                            <div class="full-start__button selector button--reaction">                  
+                                <svg width="38" height="34" viewBox="0 0 38 34" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M37.208 10.9742C37.1364 10.8013 37.0314 10.6441 36.899 10.5117C36.7666 10.3794 36.6095 10.2744 36.4365 10.2028L12.0658 0.108375C11.7166 -0.0361828 11.3242 -0.0361227 10.9749 0.108542C10.6257 0.253206 10.3482 0.530634 10.2034 0.879836L0.108666 25.2507C0.0369593 25.4236 3.37953e-05 25.609 2.3187e-08 25.7962C-3.37489e-05 25.9834 0.0368249 26.1688 0.108469 26.3418C0.180114 26.5147 0.28514 26.6719 0.417545 26.8042C0.54995 26.9366 0.707139 27.0416 0.880127 27.1131L17.2452 33.8917C17.5945 34.0361 17.9869 34.0361 18.3362 33.8917L29.6574 29.2017C29.8304 29.1301 29.9875 29.0251 30.1199 28.8928C30.2523 28.7604 30.3573 28.6032 30.4289 28.4303L37.2078 12.065C37.2795 11.8921 37.3164 11.7068 37.3165 11.5196C37.3165 11.3325 37.2796 11.1471 37.208 10.9742ZM20.425 29.9407L21.8784 26.4316L25.3873 27.885L20.425 29.9407ZM28.3407 26.0222L21.6524 23.252C21.3031 23.1075 20.9107 23.1076 20.5615 23.2523C20.2123 23.3969 19.9348 23.6743 19.79 24.0235L17.0194 30.7123L3.28783 25.0247L12.2918 3.28773L34.0286 12.2912L28.3407 26.0222Z" fill="currentColor"/><path d="M25.3493 16.976L24.258 14.3423L16.959 17.3666L15.7196 14.375L13.0859 15.4659L15.4161 21.0916L25.3493 16.976Z" fill="currentColor"/></svg>              
+                                <span>#{title_reactions}</span>              
+                            </div>  
+                            <div class="full-start__button selector button--subscribe hide">                    
+                                <svg width="25" height="30" viewBox="0 0 25 30" fill="none" xmlns="http://www.w3.org/2000/svg">        
+                                    <path d="M6.01892 24H15.9645C15.7219 25.6961 14.2632 27 12.5 27C10.7367 27 9.27804 25.6961 9.03542 24H6.01892Z" fill="currentColor"/>        
+                                    <path d="M3.81972 14.5957V10.2679C3.81972 5.41336 7.7181 1.5 12.5 1.5C17.2819 1.5 21.1803 5.41336 21.1803 10.2679V14.5957C21.1803 15.8462 21.5399 17.0709 22.2168 18.1213L23.0727 19.4494C24.2077 21.2106 22.9392 23.5 20.9098 23.5H4.09021C2.06084 23.5 0.792282 21.2106 1.9273 19.4494L2.78317 18.1213C3.46012 17.0709 3.81972 15.8462 3.81972 14.5957Z" stroke="currentColor" stroke-width="2.5"/>        
+                                </svg>    
+                                <span>#{title_subscribe}</span>                    
+                            </div>                  
+                            <div class="full-start__button selector button--options">                  
+                                <svg width="38" height="10" viewBox="0 0 38 10" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="4.88968" cy="4.98563" r="4.75394" fill="currentColor"/><circle cx="18.9746" cy="4.98563" r="4.75394" fill="currentColor"/><circle cx="33.0596" cy="4.98563" r="4.75394" fill="currentColor"/></svg>                  
+                            </div>                  
+                        </div>                  
+                    </div>                  
+                </div>                  
+                <div class="full-start-new__right"></div>                  
+            </div>                  
+        </div>`;                  
+        Lampa.Template.add('full_start_new', template);                  
+    }              
+              
+    function addStyles() {  
+        if ($('#cas-main-styles').length) return;  
+        const styles = `<style id="cas-main-styles">  
+        :root { 
+            --cas-logo-scale: 1; 
+            --cas-blocks-gap: 20px; 
+            --cas-meta-size: 1.3em; 
+            --cas-curve-slide: cubic-bezier(0.2, 0.8, 0.2, 1); 
+            --cas-curve-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }  
+                
+        /* Налаштування фону та Ken Burns */  
+        .full-start__background {  
+            height: 100vh !important;  
+            width: 100vw !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;  
+            opacity: 0 !important;  
+            transition: opacity 1s var(--cas-curve-slide) !important;  
+            will-change: opacity;  
+            overflow: hidden !important;  
+            z-index: 1 !important;
+        }  
+            
+        .full-start__background.loaded {  
+            opacity: 1 !important;  
+        }  
+      
+        @keyframes casKenBurnsParallax {  
+            0% { transform: scale(1.02) translateY(0px) translateX(0px); }  
+            50% { transform: scale(1.08) translateY(-10px) translateX(5px); }  
+            100% { transform: scale(1.02) translateY(0px) translateX(0px); }  
+        }  
+                  
+        body.cas--zoom-enabled .full-start__background img, 
+        body.cas--zoom-enabled img.full-start__background {  
+            animation: casKenBurnsParallax 40s ease-in-out infinite !important;  
+            will-change: transform;  
+            transform-origin: center center;  
+        }  
+          
+        /* Базові стилі контейнерів */
+        .full-start-new.left-title {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            height: 100vh;
+            box-sizing: border-box;
+        }
 
-                if (Lampa.Storage.get('tv_interface_quality') && Lampa.Parser && Lampa.Parser.get) {
-                    Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
-                        if (res && Array.isArray(res.Results)) {
-                            var b = getBestResults(res.Results), list = [];
-                            if (b.resolution) list.push(b.resolution);
-                            if (b.dolbyVision) list.push('Dolby Vision'); else if (b.hdr) list.push('HDR');
-                            if (b.dub) list.push('DUB'); if (b.ukr) list.push('UKR');
+        .full-start-new.left-title .full-start-new__body { 
+            display: flex !important; 
+            flex-direction: row !important;
+            width: 100% !important;
+            height: 100vh !important; 
+            position: relative !important; 
+            margin: 0 !important;
+            padding: 0 !important;
+        }  
+
+        .full-start-new.left-title .full-start-new__left { 
+            width: 55% !important; 
+            max-width: 700px !important;
+            display: flex !important; 
+            flex-direction: column !important; 
+            justify-content: flex-end !important; 
+            padding: 0 0 4vw 4vw !important; 
+            box-sizing: border-box !important;
+            text-align: left !important;
+        }  
+
+        .full-start-new.left-title .full-start-new__right { 
+            width: 45% !important; 
+            display: none !important; 
+        }  
+
+        .left-title__content {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            justify-content: flex-end !important;
+            text-align: left !important;
+            width: 100% !important;
+        }
+
+        /* Анімації появи */  
+        .cas-logo, .cas-studios-row, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper, .full-start-new__buttons {  
+            opacity: 0 !important;  
+            will-change: transform, opacity;  
+        }  
+
+        /* --- Slide from Left --- */
+        .cas-anim-slide .cas-logo, 
+        .cas-anim-slide .cas-studios-row, 
+        .cas-anim-slide .cas-meta-info, 
+        .cas-anim-slide .cas-quality-row, 
+        .cas-anim-slide .cas-description, 
+        .cas-anim-slide .cas-details-wrapper, 
+        .cas-anim-slide .full-start-new__buttons {  
+            transform: translateX(-40px);  
+            transition: opacity 0.8s var(--cas-curve-slide), transform 0.8s var(--cas-curve-slide);  
+        }                        
+        .cas-anim-slide.cas-animated .cas-logo { opacity: 1 !important; transform: translateX(0); transition-delay: 0.0s; }  
+        .cas-anim-slide.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.08s; }  
+        .cas-anim-slide.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: translateX(0); transition-delay: 0.16s; }  
+        .cas-anim-slide.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.24s; }  
+        .cas-anim-slide.cas-animated .cas-description { opacity: 0.75 !important; transform: translateX(0); transition-delay: 0.32s; }  
+        .cas-anim-slide.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translateX(0); transition-delay: 0.40s; }  
+
+        /* --- Elastic Spring --- */
+        .cas-anim-spring .cas-logo, 
+        .cas-anim-spring .cas-studios-row, 
+        .cas-anim-spring .cas-meta-info, 
+        .cas-anim-spring .cas-quality-row, 
+        .cas-anim-spring .cas-description, 
+        .cas-anim-spring .cas-details-wrapper, 
+        .cas-anim-spring .full-start-new__buttons {  
+            transform: scale(0.85) translateX(-30px);  
+            transition: opacity 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.7s var(--cas-curve-spring);  
+        }                        
+        .cas-anim-spring.cas-animated .cas-logo { opacity: 1 !important; transform: scale(1) translateX(0); transition-delay: 0.0s; }  
+        .cas-anim-spring.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: scale(1) translateX(0); transition-delay: 0.08s; }  
+        .cas-anim-spring.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: scale(1) translateX(0); transition-delay: 0.16s; }  
+        .cas-anim-spring.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: scale(1) translateX(0); transition-delay: 0.24s; }  
+        .cas-anim-spring.cas-animated .cas-description { opacity: 0.75 !important; transform: scale(1) translateX(0); transition-delay: 0.32s; }  
+        .cas-anim-spring.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: scale(1) translateX(0); transition-delay: 0.40s; }  
+                  
+        /* Внутрішні елементи */
+        .cas-logo-container {  
+            position: relative;  
+            overflow: visible;  
+            width: 100%;  
+            margin-bottom: calc(var(--cas-blocks-gap) * 0.8);  
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }  
                             
-                            var $qRow = $render.find('.quality-row-inline');
-                            $qRow.empty();
-                            list.forEach(function(t) { 
-                                if (svgIcons[t]) $qRow.append('<div class="quality-item"><img src="' + svgIcons[t] + '"></div>'); 
-                            });
+        .cas-logo img {  
+            background: transparent !important;  
+            border: none !important;  
+            max-width: 420px;  
+            max-height: 160px;  
+            width: auto;  
+            height: auto;  
+            transform: scale(var(--cas-logo-scale));  
+            transform-origin: left bottom;  
+            display: block;  
+            object-fit: contain;  
+        }  
+        
+        .cas-meta-line {  
+            display: flex !important;  
+            align-items: center !important;  
+            justify-content: flex-start !important;
+            gap: 12px !important;  
+            flex-wrap: wrap !important;  
+            margin-bottom: calc(var(--cas-blocks-gap) * 0.5) !important;  
+            font-size: var(--cas-meta-size) !important;
+            color: #e5e5e5;
+        }  
+        
+        .cas-meta-info {  
+            display: flex !important;  
+            align-items: center !important;  
+            gap: 8px !important;  
+            font-weight: 500;
+        }  
+        
+        .cas-quality-row {  
+            display: flex !important;  
+            align-items: center !important;  
+            gap: 6px !important;  
+        }  
+                            
+        .cas-studios-row {  
+            display: flex !important;  
+            flex-wrap: wrap !important;  
+            gap: 8px !important;  
+            margin-bottom: 6px !important;
+        }  
+        
+        .cas-studio-item {    
+            height: 22px !important;    
+            display: flex !important;    
+            align-items: center !important;    
+            justify-content: flex-start !important;  
+        }    
+      
+        .cas-studio-item img {    
+            height: 100%;    
+            width: auto;    
+            max-width: 130px;  
+            object-fit: contain;    
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));    
+            opacity: 0.95;    
+        }    
+
+        .cas-description { 
+            font-size: var(--cas-meta-size) !important; 
+            line-height: 1.35; 
+            color: rgba(255,255,255,0.75); 
+            display: -webkit-box; 
+            -webkit-line-clamp: 3; 
+            -webkit-box-orient: vertical; 
+            overflow: hidden; 
+            max-width: 600px; 
+            margin-bottom: calc(var(--cas-blocks-gap) * 0.6); 
+            text-align: left !important;
+        }    
+        
+        .cas-quality-item {
+            display: flex;
+            align-items: center;
+        }
+        .cas-quality-item img { height: 1.1em; }    
+        
+        .cas-audio-item {    
+            background: rgba(255, 255, 255, 0.2);    
+            padding: 1px 5px;    
+            border-radius: 4px;    
+            font-size: 0.75em;    
+            font-weight: 700;    
+            color: white;    
+            line-height: 1;
+        }    
+
+        /* Кнопки */
+        .full-start-new.left-title .full-start-new__buttons {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            gap: 10px !important;
+            margin-top: 5px !important;
+        }
+
+        .full-start-new.left-title .full-start__button {
+            margin: 0 !important;
+            border-radius: 8px !important;
+        }
+        </style>`;    
+        Lampa.Template.add('left_title_css', styles);    
+        $('body').append(Lampa.Template.get('left_title_css', {}, true));    
+    }  
+
+    function getCachedData(id) {                
+        const cache = Lampa.Storage.get('cas_images_cache') || {};                
+        const item = cache[id];                
+        if (item && (Date.now() - item.time < CACHE_LIFETIME)) return item.data;                
+        return null;                
+    }                
+                
+    function setCachedData(id, data) {                
+        const cache = Lampa.Storage.get('cas_images_cache') || {};                
+        cache[id] = { time: Date.now(), data: data };                
+        const keys = Object.keys(cache);          
+        if (keys.length > 100) delete cache[keys[0]];          
+        Lampa.Storage.set('cas_images_cache', cache);                
+    }                
+                
+    function cleanup() {                
+        stopSlideshow();                
+        $('.left-title__content').parent().parent().removeClass('cas-animated');          
+    }                
+                
+    function stopSlideshow() {                
+        if (currentInterval) {                
+            clearInterval(currentInterval);                
+            currentInterval = null;                
+        }                
+        if (window.casBgInterval) {                
+            clearInterval(window.casBgInterval);                
+            window.casBgInterval = null;                
+        }                
+    }                
+                
+    function startSlideshow(render, backdrops) {        
+        stopSlideshow();        
+        if (!backdrops || backdrops.length <= 1) return;        
+                
+        let idx = 0;        
+        const intervalTime = 15000;        
+        const bg = render.find('.full-start__background img, img.full-start__background');        
+        if (!bg.length) return;        
+                
+        currentInterval = setInterval(() => {        
+            idx = (idx + 1) % backdrops.length;        
+            const nextSrc = Lampa.TMDB.image('/t/p/original' + backdrops[idx].file_path);        
+            bg.attr('src', nextSrc);        
+        }, intervalTime);        
+                
+        window.casBgInterval = currentInterval;        
+    }                
+                
+    function renderStudioLogosWithColorAnalysis(container, data) {    
+        container.empty();
+        const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 1);  
+            
+        studios.forEach((studio) => {    
+            const logoUrl = Lampa.TMDB.image('/t/p/w200' + studio.logo_path);    
+            const id = 'cas_studio_' + Math.random().toString(36).substr(2, 9);    
+                
+            container.append(`<div class="cas-studio-item cas-wave-studio" id="${id}"><img src="${logoUrl}"></div>`);    
+                
+            const img = new Image();    
+            img.crossOrigin = 'anonymous';    
+            img.onload = function() {    
+                const canvas = document.createElement('canvas');    
+                const ctx = canvas.getContext('2d');    
+                canvas.width = this.width;    
+                canvas.height = this.height;    
+                ctx.drawImage(this, 0, 0);    
+                    
+                try {    
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;    
+                    let r = 0, g = 0, b = 0, count = 0;    
+                        
+                    for (let i = 0; i < imageData.length; i += 4) {    
+                        if (imageData[i + 3] > 50) {    
+                            r += imageData[i];    
+                            g += imageData[i + 1];    
+                            b += imageData[i + 2];    
+                            count++;    
+                        }    
+                    }    
+                        
+                    if (count > 0) {    
+                        const brightness = (0.299 * r + 0.587 * g + 0.114 * b) / count;    
+                        if (brightness < 40) {    
+                            $('#' + id + ' img').css('filter', 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))');    
+                        }    
+                    }    
+                } catch (e) {    
+                    console.log('Error analyzing logo color:', e);    
+                }    
+            };    
+            img.src = logoUrl;    
+        });    
+    }    
+                
+    async function processImages(render, data, res) {                
+        try {                
+            // Якщо немає українського логотипу — автоматично ставимо англійський
+            const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];                
+            if (bestLogo) {        
+                const quality = Lampa.Storage.get('cas_logo_quality') || 'original';                
+                const logoSrc = Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path);                
+                await preloadImage(logoSrc);                
+                render.find('.cas-logo').html(`<img src="${logoSrc}">`);                
+            } else {                
+                render.find('.cas-logo').html(`<div style="font-size: 2.2em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                
+            }                
+            stopSlideshow();                
+            if (Lampa.Storage.get('cas_slideshow_enabled') && res.backdrops && res.backdrops.length > 1) {        
+                startSlideshow(render, res.backdrops);        
+            }                
+        } catch (error) {                
+            render.find('.cas-logo').html(`<div style="font-size: 2.2em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                
+        }                
+    }    
+                
+    async function loadMovieDataOptimized(render, data) {    
+        const tasks = [];    
+            
+        if (Lampa.Storage.get('cas_show_description')) {    
+            tasks.push(Promise.resolve().then(() => {    
+                render.find('.cas-description').html(data.overview || '').css('opacity','1').show();    
+            }));    
+        }    
+            
+        tasks.push(Promise.resolve().then(() => {    
+            const year = data.release_date ? new Date(data.release_date).getFullYear() : (data.first_air_date ? new Date(data.first_air_date).getFullYear() : '');    
+            const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));    
+            const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');    
+                
+            let ratings = '';    
+            const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);    
+            if (tmdbV > 0) {    
+                ratings += `<img src="${ICONS.tmdb}" style="height: 1.1em; margin-right: 4px;"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span>`;    
+            }    
+                
+            if (data.reactions && data.reactions.result) {    
+                let sum = 0, cnt = 0;    
+                const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };    
+                data.reactions.result.forEach(r => {           
+                    if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; }          
+                });    
+                if (cnt >= 1) {    
+                    const isTv = data.name ? true : false;    
+                    const cubV = (((isTv?7.4:6.5)*(isTv?50:150)+sum)/((isTv?50:150)+cnt)).toFixed(1);    
+                    if (ratings) ratings += ' • ';    
+                    ratings += `<img src="${ICONS.cub}" style="height: 1.1em; margin-right: 4px;"> <span style="color:${getRatingColor(cubV)}">${cubV}</span>`;    
+                }    
+            }    
+                
+            let metaHtml = '';    
+            if (year) metaHtml += `<span class="cas-wave-year">${year}</span>`;    
+            if (time) metaHtml += (metaHtml ? ' • ' : '') + `<span class="cas-wave-time">${time}</span>`;    
+            if (genre) metaHtml += (metaHtml ? ' • ' : '') + `<span class="cas-wave-genre">${genre}</span>`;    
+            if (ratings) metaHtml += (metaHtml ? ' • ' : '') + `<span class="cas-wave-rating">${ratings}</span>`;    
+                
+            render.find('.cas-meta-info').html(metaHtml);    
+        }));    
+            
+        if (Lampa.Storage.get('cas_show_studios')) {    
+            tasks.push(Promise.resolve().then(() => {    
+                renderStudioLogosWithColorAnalysis(render.find('.cas-studios-row'), data);    
+            }));    
+        }    
+            
+        await Promise.all(tasks);    
+            
+        if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser && Lampa.Parser.get) {    
+            Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {    
+                try {    
+                    const items = res.Results || res;    
+                    if (items && Array.isArray(items) && items.length > 0) {    
+                        const b = { res: '', hdr: false, dv: false, ukr: false, audio: '', dub: false };    
+                        items.slice(0, 8).forEach(i => {    
+                            const t = (i.Title || i.title || '').toLowerCase();    
+                            if (t.includes('4k') || t.includes('2160')) b.res = '4K';    
+                            else if (!b.res && (t.includes('1080') || t.includes('fhd'))) b.res = 'FULL HD';    
+                            if (t.includes('hdr')) b.hdr = true;    
+                            if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) b.dv = true;    
+                            if (t.includes('ukr') || t.includes('укр')) b.ukr = true;    
+                            if (t.includes('5.1') || t.includes('5 1')) b.audio = '5.1';    
+                            else if (t.includes('7.1') || t.includes('7 1')) b.audio = '7.1';    
+                            if (t.includes('4.0') || t.includes('4 0')) b.audio = '4.0';    
+                            else if (t.includes('2.0') || t.includes('2 0')) b.audio = '2.0';    
+                            if (t.includes('dub') || t.includes('дубл')) b.dub = true;    
+                        });    
+                            
+                        let qH = '';    
+                        if (b.res) qH += `<div class="cas-quality-item cas-wave-quality"><img src="${QUALITY_ICONS[b.res]}"></div>`;    
+                        if (b.dv) qH += `<div class="cas-quality-item cas-wave-hdr"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;    
+                        else if (b.hdr) qH += `<div class="cas-quality-item cas-wave-hdr"><img src="${QUALITY_ICONS['HDR']}"></div>`;    
+                        if (b.audio) qH += `<div class="cas-quality-item cas-wave-quality cas-audio-item">${b.audio}</div>`;    
+                        if (b.dub) qH += `<div class="cas-quality-item cas-wave-quality"><img src="${QUALITY_ICONS['DUB']}"></div>`;    
+                        if (b.ukr) qH += `<div class="cas-quality-item cas-wave-ukr"><img src="${QUALITY_ICONS['UKR']}"></div>`;    
+                            
+                        if (qH) {    
+                          render.find('.cas-quality-row').html(qH).show();  
+                        }    
+                    }    
+                } catch (error) {    
+                    render.find('.cas-quality-row').hide();    
+                }    
+            }).fail(() => {    
+                render.find('.cas-quality-row').hide();    
+            });    
+        } else {    
+            render.find('.cas-quality-row').hide();    
+        }    
+    }             
+
+    const debouncedLoadMovieData = debounce((render, data) => {                
+        try { loadMovieDataOptimized(render, data); } catch (error) {}                
+    }, 250);                
+                
+    function attachLoader() {                
+        Lampa.Listener.follow('full', (event) => {                
+            if (event.type === 'complite') {                
+                const data = event.data.movie;                
+                const render = event.object.activity.render();                
+                const cardRoot = render.find('.full-start-new.left-title');                
+                            
+                cardRoot.removeClass('cas-animated');                
+                event.object.activity.onBeforeDestroy = cleanup;                
+                                
+                if (data && data.id) {                
+                    render.data('movie', data);                
+                    const cacheId = 'tmdb_' + data.id;                
+                    const cached = getCachedData(cacheId);                
+                                
+                    const processImagesWrapper = async (res) => {                
+                        try { 
+                            await processImages(render, data, res); 
+                        } catch (e) {} finally {
+                            setTimeout(() => cardRoot.addClass('cas-animated'), 30);
                         }
-                    });
-                }
-            }
-        });
-    }
-
-    /**
-     * ПАНЕЛЬ НАЛАШТУВАНЬ
-     */
-    function setupSettings() {
-        Lampa.SettingsApi.addComponent({ 
-            component: 'tv_interface', 
-            name: 'TV Інтерфейс (Netflix)', 
-            icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z" fill="white"/></svg>' 
-        });
-
-        Lampa.SettingsApi.addParam({ 
-            component: 'tv_interface', 
-            param: { name: 'tv_interface_animation', type: 'trigger', default: true }, 
-            field: { name: 'Зум-ефект фону (Ken Burns)' }, 
-            onChange: applyStyles 
-        });
-
-        Lampa.SettingsApi.addParam({ 
-            component: 'tv_interface', 
-            param: { name: 'tv_interface_ui_anim', type: 'trigger', default: true }, 
-            field: { name: 'Плавна анімація появи елементів' }, 
-            onChange: applyStyles 
-        });
-
-        Lampa.SettingsApi.addParam({ 
-            component: 'tv_interface', 
-            param: { name: 'tv_interface_slideshow', type: 'trigger', default: true }, 
-            field: { name: 'Автозміна фонових кадрів' } 
-        });
-
-        Lampa.SettingsApi.addParam({ 
-            component: 'tv_interface', 
-            param: { name: 'tv_interface_slideshow_time', type: 'select', values: { '10000': '10 секунд', '15000': '15 секунд', '20000': '20 секунд' }, default: '10000' }, 
-            field: { name: 'Інтервал зміни фону' } 
-        });
-
-        Lampa.SettingsApi.addParam({ 
-            component: 'tv_interface', 
-            param: { name: 'tv_interface_logo_size_v2', type: 'select', values: { '90': 'Дрібний', '100': 'Стандартний', '130': 'Великий' }, default: '100' }, 
-            field: { name: 'Висота логотипу тайтлу' }, 
-            onChange: applyStyles 
-        });
-
-        Lampa.SettingsApi.addParam({ 
-            component: 'tv_interface', 
-            param: { name: 'tv_interface_show_tagline', type: 'trigger', default: true }, 
-            field: { name: 'Відображати слоган' }, 
-            onChange: applyStyles 
-        });
-
-        Lampa.SettingsApi.addParam({ 
-            component: 'tv_interface', 
-            param: { name: 'tv_interface_blocks_gap', type: 'select', values: { '2px': 'Дуже компактний', '4px': 'Стандартний', '8px': 'Просторий' }, default: '4px' }, 
-            field: { name: 'Відступи між блоками' }, 
-            onChange: applyStyles 
-        });
-
-        Lampa.SettingsApi.addParam({ 
-            component: 'tv_interface', 
-            param: { name: 'tv_interface_ratings_size', type: 'select', values: { '0.45em': 'Дрібний', '0.5em': 'Звичайний', '0.6em': 'Великий' }, default: '0.5em' }, 
-            field: { name: 'Розмір шрифту інфо-блоків' }, 
-            onChange: applyStyles 
-        });
-
-        Lampa.SettingsApi.addParam({ 
-            component: 'tv_interface', 
-            param: { name: 'tv_interface_studios', type: 'trigger', default: true }, 
-            field: { name: 'Показувати логотип студії' } 
-        });
-
-        Lampa.SettingsApi.addParam({ 
-            component: 'tv_interface', 
-            param: { name: 'tv_interface_quality', type: 'trigger', default: true }, 
-            field: { name: 'Бейджі якості та звуку' } 
-        });
-    }
-
-    function startPlugin() {
-        applyStyles(); 
-        setupSettings(); 
-        init();
-    }
-
-    if (window.appready) startPlugin();
-    else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') startPlugin(); });
+                    };                
+                                    
+                    if (cached) {
+                        processImagesWrapper(cached);
+                    } else {                
+                        const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());                
+                        $.getJSON(imagesUrl, (res) => {                
+                            setCachedData(cacheId, res);                
+                            processImagesWrapper(res);                
+                        }).fail(() => {                
+                            render.find('.cas-logo').html(`<div style="font-size: 2.2em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                
+                            cardRoot.addClass('cas-animated');
+                        });                
+                    }                
+                                    
+                    if (event.data.reactions) data.reactions = event.data.reactions;          
+                    debouncedLoadMovieData(render, data);                
+                } else {
+                    cardRoot.addClass('cas-animated');
+                }                
+                                
+                setTimeout(() => {                
+                    const firstButton = render.find('.full-start-new__buttons .full-start__button').first();                
+                    if (firstButton.length) {                
+                        render.find('.full-start__button').removeClass('focus');                
+                        firstButton.addClass('focus').trigger('focus');                
+                    }                
+                }, 200);                
+            }                
+        });                
+    }              
+                  
+    function startPlugin() {                   
+        try {                  
+            initializePlugin();                  
+            console.log('NewCard plugin initialized successfully');                  
+        } catch (error) {                  
+            console.error('Failed to initialize NewCard plugin:', error);                  
+        }                  
+    }                  
+                  
+    if (window.appready) startPlugin();                  
+    else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') startPlugin(); });                  
 })();
