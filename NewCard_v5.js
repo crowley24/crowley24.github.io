@@ -3,9 +3,13 @@
     const PLUGIN_NAME = 'NewCard';                
     const PLUGIN_ID = 'new_card_style';                
     const ASSETS_PATH = 'https://crowley38.github.io/Icons/';                
-    const CACHE_LIFETIME = 1000 * 60 * 60 * 24;                  
-                
+    const CACHE_LIFETIME = 1000 * 60 * 60 * 24; // 24 години  
+    
+    // Оперативний кеш в RAM для миттєвого відгуку
+    const memoryCache = new Map();
+
     let currentInterval = null;            
+    let activeRequest = null;
             
     const ICONS = {                
         tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',                
@@ -33,7 +37,7 @@
         'settings_cas_meta_size': 'Розмір шрифту',                
         'settings_cas_blocks_gap': 'Відступи між блоками',                
         'settings_cas_bg_animation': 'Анімація фону (Ken Burns)',                
-        'settings_cas_animation_style': 'Стиль анімації появи',
+        'settings_cas_animation_style': 'Стиль анімації появу',
         'settings_cas_slideshow_enabled': 'Слайд-шоу фону',                
         'settings_cas_show_studios': 'Показувати студії',                
         'settings_cas_show_quality': 'Показувати якість',                
@@ -43,19 +47,17 @@
                 
     let debounceTimer;                
     function debounce(func, delay) {                
-        return function() {                
-            const context = this;                
-            const args = arguments;                
+        return function(...args) {                
             clearTimeout(debounceTimer);                
-            debounceTimer = setTimeout(() => func.apply(context, args), delay);                
+            debounceTimer = setTimeout(() => func.apply(this, args), delay);                
         };                
     }                
                 
     function preloadImage(src) {                
-        return new Promise((resolve, reject) => {                
+        return new Promise((resolve) => {                
             const img = new Image();                
             img.onload = () => resolve(img);                
-            img.onerror = reject;                
+            img.onerror = () => resolve(null); // Не кидаємо reject, щоб не ламати проміси              
             img.src = src;                
         });                
     }                
@@ -121,15 +123,8 @@
         params.forEach(p => {                
             Lampa.SettingsApi.addParam({                
                 component: PLUGIN_ID,                
-                param: {                 
-                    name: p.name,                 
-                    type: p.type,                 
-                    values: p.values,                 
-                    default: defaults[p.name]                 
-                },                
-                field: {                 
-                    name: TRANSLATIONS['settings_' + p.name]                
-                },                
+                param: { name: p.name, type: p.type, values: p.values, default: defaults[p.name] },                
+                field: { name: TRANSLATIONS['settings_' + p.name] },                
                 onChange: applySettings                
             });                
         });                
@@ -153,45 +148,16 @@
         const currentCard = $('.full-start-new.left-title');          
         if (currentCard.length > 0) {          
             currentCard.removeClass('cas-anim-slide cas-anim-spring').addClass('cas-anim-' + animStyle);
-
             currentCard.find('.cas-description').toggle(!!Lampa.Storage.get('cas_show_description'));          
             currentCard.find('.cas-studios-row').toggle(!!Lampa.Storage.get('cas_show_studios'));          
             currentCard.find('.cas-quality-row').toggle(!!Lampa.Storage.get('cas_show_quality'));          
             currentCard.find('.cas-rate-items').toggle(!!Lampa.Storage.get('cas_show_rating'));          
-                        
-            const hasVisibleElements = currentCard.find('.cas-studios-row:visible, .cas-rate-items:visible, .cas-quality-row:visible, .cas-description:visible').length > 0;          
-            const buttons = currentCard.find('.full-start-new__buttons');          
-                      
-            if (!hasVisibleElements) {          
-                buttons.css('margin-top', '0.2em');          
-                currentCard.find('.cas-ratings-line').css('margin-bottom', '0');          
-            } else {          
-                buttons.css('margin-top', '');          
-                currentCard.find('.cas-ratings-line').css('margin-bottom', '');          
-            }          
-                        
-            stopSlideshow();          
-          
-            if (Lampa.Storage.get('cas_slideshow_enabled')) {          
-                const bg = currentCard.find('.full-start__background img, img.full-start__background');          
-                if (bg.length && bg.attr('src')) {          
-                    const movieData = currentCard.data('movie');          
-                    if (movieData && movieData.id) {          
-                        const cacheId = 'tmdb_' + movieData.id;          
-                        const cached = getCachedData(cacheId);          
-                        if (cached && cached.backdrops?.length > 1) {          
-                            startSlideshow(currentCard, cached.backdrops);          
-                        }          
-                    }          
-                }          
-            }          
         }          
     }               
                       
     function addCustomTemplate() {                       
         const animStyle = Lampa.Storage.get('cas_animation_style') || 'slide';
-        // Додаємо клас cas-loading-state за замовчуванням при створенні шаблону
-        const template = `<div class="full-start-new left-title cas-anim-${animStyle} cas-loading-state">                      
+        const template = `<div class="full-start-new left-title cas-anim-${animStyle}">                      
             <div class="full-start-new__body">                      
                 <div class="full-start-new__left hide">                      
                     <div class="full-start-new__poster">                      
@@ -204,6 +170,7 @@
                             <div class="cas-studios-row" style="display: flex; gap: 8px; align-items: center; margin-bottom: 10px;"></div>                  
                             <div class="cas-logo"></div>                    
                         </div>                    
+                        <div class="cas-tagline" style="display: none;"></div>
                         <div class="cas-meta-line" style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">      
                             <div class="cas-meta-info"></div>      
                             <div class="cas-quality-row" style="display: flex; gap: 6px; align-items: center;"></div>      
@@ -257,231 +224,180 @@
         Lampa.Template.add('full_start_new', template);                  
     }              
               
-function addStyles() {  
-    if ($('#cas-main-styles').length) return;  
-    const styles = `<style id="cas-main-styles">  
-    :root { 
-        --cas-logo-scale: 1; 
-        --cas-blocks-gap: 30px; 
-        --cas-meta-size: 1.3em; 
-        --cas-curve-slide: cubic-bezier(0.2, 0.8, 0.2, 1); 
-        --cas-curve-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }  
+    function addStyles() {  
+        if ($('#cas-main-styles').length) return;  
+        const styles = `<style id="cas-main-styles">  
+        :root { 
+            --cas-logo-scale: 1; 
+            --cas-blocks-gap: 30px; 
+            --cas-meta-size: 1.3em; 
+            --cas-curve-slide: cubic-bezier(0.2, 0.8, 0.2, 1); 
+            --cas-curve-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }  
+                
+        .full-start__background {  
+            height: calc(100% + 6em);  
+            left: 0 !important;  
+            opacity: 0 !important;  
+            transition: opacity 1s cubic-bezier(0.2, 0.8, 0.2, 1) !important;  
+            will-change: opacity;  
+            overflow: hidden !important;  
+        }  
             
-    /* Налаштування блокування екрану до моменту повного завантаження */
-    .full-start-new.cas-loading-state {
-        opacity: 0 !important;
-        visibility: hidden !important;
-        pointer-events: none !important;
-    }
+        .full-start__background.loaded { opacity: 1 !important; }  
+        .full-start__background.dim { opacity: 0.35 !important; }  
+                
+        @keyframes casKenBurnsParallax {  
+            0% { transform: scale(1.02) translateY(0px) translateX(0px); }  
+            50% { transform: scale(1.10) translateY(-15px) translateX(5px); }  
+            100% { transform: scale(1.02) translateY(0px) translateX(0px); }  
+        }  
+                  
+        body.cas--zoom-enabled .full-start__background img, 
+        body.cas--zoom-enabled img.full-start__background {  
+            animation: casKenBurnsParallax 40s ease-in-out infinite !important;  
+            will-change: transform;  
+            transform-origin: center center;  
+        }  
+          
+        .cas-logo, .cas-tagline, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper, .full-start-new__buttons {  
+            opacity: 0 !important;  
+            will-change: transform, opacity;  
+        }  
 
-    /* Налаштування фону та Ken Burns */  
-    .full-start__background {  
-        height: calc(100% + 6em);  
-        left: 0 !important;  
-        opacity: 0 !important;  
-        transition: opacity 1s cubic-bezier(0.2, 0.8, 0.2, 1) !important;  
-        will-change: opacity;  
-        overflow: hidden !important;  
-    }  
+        /* Slide Animation */
+        .cas-anim-slide .cas-logo, .cas-anim-slide .cas-tagline, .cas-anim-slide .cas-studios-row, 
+        .cas-anim-slide .cas-rate-items, .cas-anim-slide .cas-meta-info, .cas-anim-slide .cas-quality-row, 
+        .cas-anim-slide .cas-description, .cas-anim-slide .cas-details-wrapper, .cas-anim-slide .full-start-new__buttons {  
+            transform: translateX(-40px);  
+            transition: opacity 0.8s var(--cas-curve-slide), transform 0.8s var(--cas-curve-slide);  
+        }                        
+        .cas-anim-slide.cas-animated .cas-logo { opacity: 1 !important; transform: translateX(0); transition-delay: 0.0s; }  
+        .cas-anim-slide.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.08s; }  
+        .cas-anim-slide.cas-animated .cas-tagline { opacity: 0.85 !important; transform: translateX(0); transition-delay: 0.12s; }
+        .cas-anim-slide.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: translateX(0); transition-delay: 0.16s; }  
+        .cas-anim-slide.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.24s; }  
+        .cas-anim-slide.cas-animated .cas-description { opacity: 0.75 !important; transform: translateX(0); transition-delay: 0.32s; }  
+        .cas-anim-slide.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translateX(0); transition-delay: 0.40s; }  
+
+        /* Spring Animation */
+        .cas-anim-spring .cas-logo, .cas-anim-spring .cas-tagline, .cas-anim-spring .cas-studios-row, 
+        .cas-anim-spring .cas-rate-items, .cas-anim-spring .cas-meta-info, .cas-anim-spring .cas-quality-row, 
+        .cas-anim-spring .cas-description, .cas-anim-spring .cas-details-wrapper, .cas-anim-spring .full-start-new__buttons {  
+            transform: scale(0.85) translateX(-30px);  
+            transition: opacity 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.7s var(--cas-curve-spring);  
+        }                        
+        .cas-anim-spring.cas-animated .cas-logo { opacity: 1 !important; transform: scale(1) translateX(0); transition-delay: 0.0s; }  
+        .cas-anim-spring.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: scale(1) translateX(0); transition-delay: 0.08s; }  
+        .cas-anim-spring.cas-animated .cas-tagline { opacity: 0.85 !important; transform: scale(1) translateX(0); transition-delay: 0.12s; }
+        .cas-anim-spring.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: scale(1) translateX(0); transition-delay: 0.16s; }  
+        .cas-anim-spring.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: scale(1) translateX(0); transition-delay: 0.24s; }  
+        .cas-anim-spring.cas-animated .cas-description { opacity: 0.75 !important; transform: scale(1) translateX(0); transition-delay: 0.32s; }  
+        .cas-anim-spring.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: scale(1) translateX(0); transition-delay: 0.40s; }  
+                  
+        .full-start-new__details { display: none !important; }  
+        .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }  
         
-    .full-start__background.loaded {  
-        opacity: 1 !important;  
-    }  
-  
-    .full-start__background.dim {  
-        opacity: 0.35 !important;  
-    }  
-            
-    @keyframes casKenBurnsParallax {  
-        0% { transform: scale(1.02) translateY(0px) translateX(0px); }  
-        50% { transform: scale(1.10) translateY(-15px) translateX(5px); }  
-        100% { transform: scale(1.02) translateY(0px) translateX(0px); }  
-    }  
-              
-    body.cas--zoom-enabled .full-start__background img, 
-    body.cas--zoom-enabled img.full-start__background {  
-        animation: casKenBurnsParallax 40s ease-in-out infinite !important;  
-        will-change: transform;  
-        transform-origin: center center;  
-    }  
-      
-    /* Загальні базові стани для анімацій */  
-    .cas-logo, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper, .full-start-new__buttons {  
-        opacity: 0 !important;  
-        will-change: transform, opacity;  
+        .full-start-new__body { display: flex; height: 85vh; position: relative; width: 100%; }  
+        .full-start-new__left { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 4em 3em 2em 4em; position: relative; z-index: 2; }  
+        .full-start-new__right { width: 60%; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start !important; text-align: left !important; padding: 4em 4em 2em 0; position: relative; z-index: 2; margin-left: 0 !important; }  
+        .full-start-new__poster { display: none; }  
+        .full-start-new__title { display: none; }  
+                            
+        .left-title .full-start-new__left { display: none !important; }  
+        .left-title .full-start-new__right { width: 100% !important; padding-left: 4em !important; }  
+        .left-title__content { display: flex; flex-direction: column; align-items: flex-start !important; text-align: left !important; width: 100%; }
+                            
+        .cas-logo-container {  
+            position: relative;  
+            overflow: visible;  
+            max-width: 100%;  
+            padding-left: 0%;  
+            margin-bottom: calc(var(--cas-blocks-gap) * 0.8);  
+            max-height: 300px;  
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start !important;
+        }  
+                            
+        .cas-logo img {  
+            background: transparent !important;  
+            border: none !important;  
+            max-width: 450px;  
+            max-height: 200px;  
+            width: auto;  
+            height: auto;  
+            transform: scale(var(--cas-logo-scale));  
+            transform-origin: left center;  
+            display: block;  
+            object-fit: contain;  
+        }  
+        
+        .cas-tagline {
+            font-size: calc(var(--cas-meta-size) * 0.95);
+            font-style: italic;
+            color: rgba(255, 255, 255, 0.85);
+            margin-bottom: 12px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+            max-width: 650px;
+            text-align: left !important;
+        }
+
+        .cas-ratings-line { display: flex; align-items: center; justify-content: flex-start !important; gap: 8px !important; flex-wrap: wrap; margin-bottom: 8px !important; }  
+        .cas-meta-info { margin-right: 0; display: flex; align-items: center; justify-content: flex-start !important; gap: 8px; font-weight: 400; }  
+        .cas-quality-row { margin-top: 0 !important; display: flex; align-items: center; justify-content: flex-start !important; gap: 6px; }  
+
+        .full-start-new__buttons { display: flex !important; justify-content: flex-start !important; align-items: center !important; flex-wrap: wrap; width: 100%; margin-left: 0 !important; }
+        .cas-studios-row { display: flex; flex-wrap: wrap; justify-content: flex-start !important; gap: 8px; }  
+        
+        .cas-studio-item { height: 24px !important; display: flex; align-items: center; justify-content: flex-start; margin-bottom: 4px; }    
+        .cas-studio-item img { height: 100%; width: auto; max-width: 140px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); opacity: 0.95; }    
+
+        .cas-description { font-size: var(--cas-meta-size) !important; line-height: 1.4; color: rgba(255,255,255,0.7); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-width: 650px; margin-top: calc(var(--cas-blocks-gap) * 0.4); text-align: left !important; }    
+        .cas-quality-item img { height: 12px; }    
+        .cas-rate-item { display: flex; align-items: center; gap: 6px; }    
+        .cas-rate-item img { height: 1.1em; }    
+        .left-title .full-start-new__body { height: 85vh; }    
+                              
+        .cas-audio-item { background: rgba(255, 255, 255, 0.2); padding: 2px 6px; border-radius: 4px; font-size: 0.8em; font-weight: 600; color: white; }    
+        </style>`;    
+        Lampa.Template.add('left_title_css', styles);    
+        $('body').append(Lampa.Template.get('left_title_css', {}, true));    
     }  
 
-    /* --- Варіант 1: Slide from Left --- */
-    .cas-anim-slide .cas-logo, 
-    .cas-anim-slide .cas-studios-row, 
-    .cas-anim-slide .cas-rate-items, 
-    .cas-anim-slide .cas-meta-info, 
-    .cas-anim-slide .cas-quality-row, 
-    .cas-anim-slide .cas-description, 
-    .cas-anim-slide .cas-details-wrapper, 
-    .cas-anim-slide .full-start-new__buttons {  
-        transform: translateX(-40px);  
-        transition: opacity 0.8s var(--cas-curve-slide), transform 0.8s var(--cas-curve-slide);  
-    }                        
-    .cas-anim-slide.cas-animated .cas-logo { opacity: 1 !important; transform: translateX(0); transition-delay: 0.0s; }  
-    .cas-anim-slide.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.08s; }  
-    .cas-anim-slide.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: translateX(0); transition-delay: 0.16s; }  
-    .cas-anim-slide.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: translateX(0); transition-delay: 0.24s; }  
-    .cas-anim-slide.cas-animated .cas-description { opacity: 0.75 !important; transform: translateX(0); transition-delay: 0.32s; }  
-    .cas-anim-slide.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translateX(0); transition-delay: 0.40s; }  
-
-    /* --- Варіант 2: Elastic Spring --- */
-    .cas-anim-spring .cas-logo, 
-    .cas-anim-spring .cas-studios-row, 
-    .cas-anim-spring .cas-rate-items, 
-    .cas-anim-spring .cas-meta-info, 
-    .cas-anim-spring .cas-quality-row, 
-    .cas-anim-spring .cas-description, 
-    .cas-anim-spring .cas-details-wrapper, 
-    .cas-anim-spring .full-start-new__buttons {  
-        transform: scale(0.85) translateX(-30px);  
-        transition: opacity 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.7s var(--cas-curve-spring);  
-    }                        
-    .cas-anim-spring.cas-animated .cas-logo { opacity: 1 !important; transform: scale(1) translateX(0); transition-delay: 0.0s; }  
-    .cas-anim-spring.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: scale(1) translateX(0); transition-delay: 0.08s; }  
-    .cas-anim-spring.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: scale(1) translateX(0); transition-delay: 0.16s; }  
-    .cas-anim-spring.cas-animated .cas-quality-row { opacity: 0.9 !important; transform: scale(1) translateX(0); transition-delay: 0.24s; }  
-    .cas-anim-spring.cas-animated .cas-description { opacity: 0.75 !important; transform: scale(1) translateX(0); transition-delay: 0.32s; }  
-    .cas-anim-spring.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: scale(1) translateX(0); transition-delay: 0.40s; }  
-              
-    .full-start-new__details { display: none !important; }  
-    .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }  
-    .full-start-new__body { display: flex; height: 85vh; position: relative; }  
-    .full-start-new__left { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 4em 3em 2em 4em; position: relative; z-index: 2; }  
-    .full-start-new__right { width: 50%; display: flex; flex-direction: column; justify-content: space-between; padding: 4em 4em 2em 0; position: relative; z-index: 2; }  
-    .full-start-new__poster { display: none; }  
-    .full-start-new__title { display: none; }  
-                        
-    .left-title .full-start-new__left { width: 50%; }  
-    .left-title .full-start-new__right { width: 50%; }  
-                        
-    .cas-logo-container {  
-        position: relative;  
-        overflow: visible;  
-        max-width: 100%;  
-        padding-left: 0%;  
-        margin-bottom: calc(var(--cas-blocks-gap) * 1.5);  
-        max-height: 300px;  
-    }  
-                        
-    .cas-logo img {  
-        background: transparent !important;  
-        border: none !important;  
-        max-width: 450px;  
-        max-height: 200px;  
-        width: auto;  
-        height: auto;  
-        transform: scale(var(--cas-logo-scale));  
-        transform-origin: left center;  
-        display: block;  
-        object-fit: contain;  
-    }  
-    
-    .cas-ratings-line {  
-        display: flex;  
-        align-items: center;  
-        gap: 8px !important;  
-        flex-wrap: wrap;  
-        margin-bottom: 8px !important;  
-    }  
-    
-    .cas-meta-info {  
-        margin-right: 0;  
-        display: flex;  
-        align-items: center;  
-        gap: 8px;  
-    }  
-    
-    .cas-quality-row {  
-        margin-top: 0 !important;  
-        display: flex;  
-        align-items: center;  
-        gap: 6px;  
-    }  
-    
-    .cas-sep {  
-        margin: 0 2px !important;  
-    }  
-                        
-    .cas-studios-row {  
-        display: flex;  
-        flex-wrap: wrap;  
-        gap: 8px;  
-    }  
-    
-    .cas-studio-item {    
-        height: 24px !important;    
-        display: flex;    
-        align-items: center;    
-        justify-content: flex-start;  
-        margin-bottom: 4px;  
-    }    
-  
-    .cas-studio-item img {    
-        height: 100%;    
-        width: auto;    
-        max-width: 140px;  
-        object-fit: contain;    
-        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));    
-        opacity: 0.95;    
-    }    
-
-    .cas-description { font-size: var(--cas-meta-size) !important; line-height: 1.4; color: rgba(255,255,255,0.7); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-width: 650px; margin-top: calc(var(--cas-blocks-gap) * 0.4); }    
-    .cas-quality-item img { height: 12px; }    
-    .cas-ratings-line { display: flex; align-items: center; gap: 15px; margin-bottom: 5px; font-size: var(--cas-meta-size); font-weight: 600; height: 30px; }    
-    .cas-rate-item { display: flex; align-items: center; gap: 6px; }    
-    .cas-rate-item img { height: 1.1em; }    
-    .left-title .full-start-new__body { height: 85vh; }    
-    .cas-meta-info { display: flex; align-items: center; gap: 8px; font-weight: 400; }    
-                          
-    .cas-audio-item {    
-        background: rgba(255, 255, 255, 0.2);    
-        padding: 2px 6px;    
-        border-radius: 4px;    
-        font-size: 0.8em;    
-        font-weight: 600;    
-        color: white;    
-    }    
-    </style>`;    
-    Lampa.Template.add('left_title_css', styles);    
-    $('body').append(Lampa.Template.get('left_title_css', {}, true));    
-}  
-
+    // Швидка робота з кешем
     function getCachedData(id) {                
+        if (memoryCache.has(id)) return memoryCache.get(id);
         const cache = Lampa.Storage.get('cas_images_cache') || {};                
         const item = cache[id];                
-        if (item && (Date.now() - item.time < CACHE_LIFETIME)) return item.data;                
+        if (item && (Date.now() - item.time < CACHE_LIFETIME)) {
+            memoryCache.set(id, item.data);
+            return item.data;
+        }
         return null;                
     }                
                 
     function setCachedData(id, data) {                
+        memoryCache.set(id, data);
         const cache = Lampa.Storage.get('cas_images_cache') || {};                
         cache[id] = { time: Date.now(), data: data };                
         const keys = Object.keys(cache);          
-        if (keys.length > 100) delete cache[keys[0]];          
+        if (keys.length > 50) delete cache[keys[0]];          
         Lampa.Storage.set('cas_images_cache', cache);                
     }                
                 
     function cleanup() {                
         stopSlideshow();                
-        $('.left-title__content').parent().parent().removeClass('cas-animated cas-loading-state');          
+        if (activeRequest && activeRequest.abort) {
+            try { activeRequest.abort(); } catch(e){}
+            activeRequest = null;
+        }
+        $('.left-title__content').parent().parent().removeClass('cas-animated');          
     }                
                 
     function stopSlideshow() {                
-        if (currentInterval) {                
-            clearInterval(currentInterval);                
-            currentInterval = null;                
-        }                
-        if (window.casBgInterval) {                
-            clearInterval(window.casBgInterval);                
-            window.casBgInterval = null;                
-        }                
+        if (currentInterval) { clearInterval(currentInterval); currentInterval = null; }                
+        if (window.casBgInterval) { clearInterval(window.casBgInterval); window.casBgInterval = null; }                
     }                
                 
     function startSlideshow(render, backdrops) {        
@@ -489,7 +405,6 @@ function addStyles() {
         if (!backdrops || backdrops.length <= 1) return;        
                 
         let idx = 0;        
-        const intervalTime = 15000;        
         const bg = render.find('.full-start__background img, img.full-start__background');        
         if (!bg.length) return;        
                 
@@ -497,52 +412,50 @@ function addStyles() {
             idx = (idx + 1) % backdrops.length;        
             const nextSrc = Lampa.TMDB.image('/t/p/original' + backdrops[idx].file_path);        
             bg.attr('src', nextSrc);        
-        }, intervalTime);        
+        }, 15000);        
                 
         window.casBgInterval = currentInterval;        
     }                
                 
+    // Оптимізований аналіз кольору без витоків пам'яті
     function renderStudioLogosWithColorAnalysis(container, data) {    
         container.empty();
         const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 1);  
             
         studios.forEach((studio) => {    
             const logoUrl = Lampa.TMDB.image('/t/p/w200' + studio.logo_path);    
-            const id = 'cas_studio_' + Math.random().toString(36).substr(2, 9);    
+            const id = 'cas_studio_' + Math.floor(Math.random() * 1000000);    
                 
-            container.append(`<div class="cas-studio-item cas-wave-studio" id="${id}"><img src="${logoUrl}"></div>`);    
+            container.append(`<div class="cas-studio-item" id="${id}"><img src="${logoUrl}"></div>`);    
                 
             const img = new Image();    
             img.crossOrigin = 'anonymous';    
             img.onload = function() {    
-                const canvas = document.createElement('canvas');    
-                const ctx = canvas.getContext('2d');    
-                canvas.width = this.width;    
-                canvas.height = this.height;    
-                ctx.drawImage(this, 0, 0);    
-                    
-                try {    
-                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;    
-                    let r = 0, g = 0, b = 0, count = 0;    
+                requestAnimationFrame(() => {
+                    let canvas = document.createElement('canvas');    
+                    let ctx = canvas.getContext('2d');    
+                    canvas.width = this.width;    
+                    canvas.height = this.height;    
+                    ctx.drawImage(this, 0, 0);    
                         
-                    for (let i = 0; i < imageData.length; i += 4) {    
-                        if (imageData[i + 3] > 50) {    
-                            r += imageData[i];    
-                            g += imageData[i + 1];    
-                            b += imageData[i + 2];    
-                            count++;    
+                    try {    
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;    
+                        let r = 0, g = 0, b = 0, count = 0;    
+                            
+                        for (let i = 0; i < imageData.length; i += 16) { // Крок 16 замість 4 прискорює в 4 рази   
+                            if (imageData[i + 3] > 50) {    
+                                r += imageData[i]; g += imageData[i + 1]; b += imageData[i + 2];    
+                                count++;    
+                            }    
                         }    
-                    }    
-                        
-                    if (count > 0) {    
-                        const brightness = (0.299 * r + 0.587 * g + 0.114 * b) / count;    
-                        if (brightness < 40) {    
+                            
+                        if (count > 0 && ((0.299 * r + 0.587 * g + 0.114 * b) / count) < 40) {    
                             $('#' + id + ' img').css('filter', 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))');    
                         }    
-                    }    
-                } catch (e) {    
-                    console.log('Error analyzing logo color:', e);    
-                }    
+                    } catch (e) {}
+                    canvas.width = canvas.height = 0; // Очищення GPU
+                    canvas = null;
+                });
             };    
             img.src = logoUrl;    
         });    
@@ -550,7 +463,7 @@ function addStyles() {
                 
     async function processImages(render, data, res) {                
         try {                
-            // Умова використання англійського логотипу, якщо відсутній український
+            // Пріоритет українського логотипу з fallback на EN
             const bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];                
             if (bestLogo) {        
                 const quality = Lampa.Storage.get('cas_logo_quality') || 'original';                
@@ -569,96 +482,91 @@ function addStyles() {
         }                
     }    
                 
-    async function loadMovieDataOptimized(render, data) {    
-        const tasks = [];    
-            
+    function loadMovieDataOptimized(render, data) {    
+        // 1. Синхронний вивід текстових даних для миттєвого рендеру
+        if (data.tagline) render.find('.cas-tagline').text(`«${data.tagline}»`).show();
+        else render.find('.cas-tagline').hide();
+
         if (Lampa.Storage.get('cas_show_description')) {    
-            tasks.push(Promise.resolve().then(() => {    
-                render.find('.cas-description').html(data.overview || '').css('opacity','1').show();    
-            }));    
+            render.find('.cas-description').html(data.overview || '').css('opacity','1').show();    
         }    
             
-        tasks.push(Promise.resolve().then(() => {    
-            const year = data.release_date ? new Date(data.release_date).getFullYear() : (data.first_air_date ? new Date(data.first_air_date).getFullYear() : '');    
-            const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));    
-            const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');    
-                
-            let ratings = '';    
-            const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);    
-            if (tmdbV > 0) {    
-                ratings += `<img src="${ICONS.tmdb}" style="height: 1.1em; margin-right: 4px;"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span>`;    
-            }    
-                
-            if (data.reactions && data.reactions.result) {    
-                let sum = 0, cnt = 0;    
-                const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };    
-                data.reactions.result.forEach(r => {           
-                    if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; }          
-                });    
-                if (cnt >= 1) {    
-                    const isTv = data.name ? true : false;    
-                    const cubV = (((isTv?7.4:6.5)*(isTv?50:150)+sum)/((isTv?50:150)+cnt)).toFixed(1);    
-                    if (ratings) ratings += ' • ';    
-                    ratings += `<img src="${ICONS.cub}" style="height: 1.1em; margin-right: 4px;"> <span style="color:${getRatingColor(cubV)}">${cubV}</span>`;    
-                }    
-            }    
-                
-            let metaHtml = '';    
-            if (year) metaHtml += `<span class="cas-wave-year">${year}</span>`;    
-            if (time) metaHtml += `<span class="cas-wave-time">${time}</span>`;    
-            if (genre) metaHtml += `<span class="cas-wave-genre">${genre}</span>`;    
-            if (ratings) metaHtml += `<span class="cas-wave-rating">${ratings}</span>`;    
-                
-            render.find('.cas-meta-info').html(metaHtml);    
-            render.find('.cas-rate-items').empty();   
-        }));    
+        const year = data.release_date ? new Date(data.release_date).getFullYear() : (data.first_air_date ? new Date(data.first_air_date).getFullYear() : '');    
+        const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));    
+        const genre = (data.genres || []).slice(0, 1).map(g => g.name).join('');    
             
-        if (Lampa.Storage.get('cas_show_studios')) {    
-            tasks.push(Promise.resolve().then(() => {    
-                renderStudioLogosWithColorAnalysis(render.find('.cas-studios-row'), data);    
-            }));    
+        let ratings = '';    
+        const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);    
+        if (tmdbV > 0) {    
+            ratings += `<img src="${ICONS.tmdb}" style="height: 1.1em; margin-right: 4px;"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span>`;    
         }    
             
-        await Promise.all(tasks);    
-            
-        if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser.get) {    
-            Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {    
-                try {    
-                    const items = res.Results || res;    
-                    if (items && Array.isArray(items) && items.length > 0) {    
-                        const b = { res: '', hdr: false, dv: false, ukr: false, audio: '', dub: false };    
-                        items.slice(0, 8).forEach(i => {    
-                            const t = (i.Title || i.title || '').toLowerCase();    
-                            if (t.includes('4k') || t.includes('2160')) b.res = '4K';    
-                            else if (!b.res && (t.includes('1080') || t.includes('fhd'))) b.res = 'FULL HD';    
-                            if (t.includes('hdr')) b.hdr = true;    
-                            if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) b.dv = true;    
-                            if (t.includes('ukr') || t.includes('укр')) b.ukr = true;    
-                            if (t.includes('5.1') || t.includes('5 1')) b.audio = '5.1';    
-                            else if (t.includes('7.1') || t.includes('7 1')) b.audio = '7.1';    
-                            if (t.includes('4.0') || t.includes('4 0')) b.audio = '4.0';    
-                            else if (t.includes('2.0') || t.includes('2 0')) b.audio = '2.0';    
-                            if (t.includes('dub') || t.includes('дубл')) b.dub = true;    
-                        });    
-                            
-                        let qH = '';    
-                        if (b.res) qH += `<div class="cas-quality-item cas-wave-quality"><img src="${QUALITY_ICONS[b.res]}"></div>`;    
-                        if (b.dv) qH += `<div class="cas-quality-item cas-wave-hdr"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;    
-                        else if (b.hdr) qH += `<div class="cas-quality-item cas-wave-hdr"><img src="${QUALITY_ICONS['HDR']}"></div>`;    
-                        if (b.audio) qH += `<div class="cas-quality-item cas-wave-quality cas-audio-item">${b.audio}</div>`;    
-                        if (b.dub) qH += `<div class="cas-quality-item cas-wave-quality"><img src="${QUALITY_ICONS['DUB']}"></div>`;    
-                        if (b.ukr) qH += `<div class="cas-quality-item cas-wave-ukr"><img src="${QUALITY_ICONS['UKR']}"></div>`;    
-                            
-                        if (qH) {    
-                          render.find('.cas-quality-row').html(qH).show();  
-                        }    
-                    }    
-                } catch (error) {    
-                    render.find('.cas-quality-row').hide();    
-                }    
-            }).fail(() => {    
-                render.find('.cas-quality-row').hide();    
+        if (data.reactions && data.reactions.result) {    
+            let sum = 0, cnt = 0;    
+            const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };    
+            data.reactions.result.forEach(r => {           
+                if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; }          
             });    
+            if (cnt >= 1) {    
+                const isTv = !!data.name;    
+                const cubV = (((isTv?7.4:6.5)*(isTv?50:150)+sum)/((isTv?50:150)+cnt)).toFixed(1);    
+                if (ratings) ratings += ' • ';    
+                ratings += `<img src="${ICONS.cub}" style="height: 1.1em; margin-right: 4px;"> <span style="color:${getRatingColor(cubV)}">${cubV}</span>`;    
+            }    
+        }    
+            
+        let metaHtml = '';    
+        if (year) metaHtml += `<span class="cas-wave-year">${year}</span>`;    
+        if (time) metaHtml += `<span class="cas-wave-time">${time}</span>`;    
+        if (genre) metaHtml += `<span class="cas-wave-genre">${genre}</span>`;    
+        if (ratings) metaHtml += `<span class="cas-wave-rating">${ratings}</span>`;    
+            
+        render.find('.cas-meta-info').html(metaHtml);    
+        render.find('.cas-rate-items').empty();   
+
+        if (Lampa.Storage.get('cas_show_studios')) {    
+            renderStudioLogosWithColorAnalysis(render.find('.cas-studios-row'), data);    
+        }    
+            
+        // 2. Безпечний асинхронний пошук якості через Lampa.Parser
+        if (Lampa.Storage.get('cas_show_quality') && Lampa.Parser && Lampa.Parser.get) {    
+            try {
+                Lampa.Parser.get({ search: data.title || data.name, movie: data, page: 1 }, (res) => {    
+                    try {    
+                        const items = res.Results || res;    
+                        if (items && Array.isArray(items) && items.length > 0) {    
+                            const b = { res: '', hdr: false, dv: false, ukr: false, audio: '', dub: false };    
+                            items.slice(0, 8).forEach(i => {    
+                                const t = (i.Title || i.title || '').toLowerCase();    
+                                if (t.includes('4k') || t.includes('2160')) b.res = '4K';    
+                                else if (!b.res && (t.includes('1080') || t.includes('fhd'))) b.res = 'FULL HD';    
+                                if (t.includes('hdr')) b.hdr = true;    
+                                if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) b.dv = true;    
+                                if (t.includes('ukr') || t.includes('укр')) b.ukr = true;    
+                                if (t.includes('5.1') || t.includes('5 1')) b.audio = '5.1';    
+                                else if (t.includes('7.1') || t.includes('7 1')) b.audio = '7.1';    
+                                if (t.includes('4.0') || t.includes('4 0')) b.audio = '4.0';    
+                                else if (t.includes('2.0') || t.includes('2 0')) b.audio = '2.0';    
+                                if (t.includes('dub') || t.includes('дубл')) b.dub = true;    
+                            });    
+                                
+                            let qH = '';    
+                            if (b.res) qH += `<div class="cas-quality-item cas-wave-quality"><img src="${QUALITY_ICONS[b.res]}"></div>`;    
+                            if (b.dv) qH += `<div class="cas-quality-item cas-wave-hdr"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;    
+                            else if (b.hdr) qH += `<div class="cas-quality-item cas-wave-hdr"><img src="${QUALITY_ICONS['HDR']}"></div>`;    
+                            if (b.audio) qH += `<div class="cas-quality-item cas-wave-quality cas-audio-item">${b.audio}</div>`;    
+                            if (b.dub) qH += `<div class="cas-quality-item cas-wave-quality"><img src="${QUALITY_ICONS['DUB']}"></div>`;    
+                            if (b.ukr) qH += `<div class="cas-quality-item cas-wave-ukr"><img src="${QUALITY_ICONS['UKR']}"></div>`;    
+                                
+                            if (qH) render.find('.cas-quality-row').html(qH).show();  
+                        }    
+                    } catch (e) { render.find('.cas-quality-row').hide(); }    
+                }, () => {
+                    render.find('.cas-quality-row').hide();
+                });
+            } catch (e) {
+                render.find('.cas-quality-row').hide();
+            }
         } else {    
             render.find('.cas-quality-row').hide();    
         }    
@@ -666,7 +574,7 @@ function addStyles() {
 
     const debouncedLoadMovieData = debounce((render, data) => {                
         try { loadMovieDataOptimized(render, data); } catch (error) {}                
-    }, 250);                
+    }, 150);                
                 
     function attachLoader() {                
         Lampa.Listener.follow('full', (event) => {                
@@ -675,7 +583,7 @@ function addStyles() {
                 const render = event.object.activity.render();                
                 const cardRoot = render.find('.full-start-new.left-title');                
                             
-                cardRoot.removeClass('cas-animated').addClass('cas-loading-state');                
+                cleanup();
                 event.object.activity.onBeforeDestroy = cleanup;                
                                 
                 if (data && data.id) {                
@@ -683,42 +591,25 @@ function addStyles() {
                     const cacheId = 'tmdb_' + data.id;                
                     const cached = getCachedData(cacheId);                
                                 
-                    // Функція перевірки та передзавантаження фону (backdrop)
-                    const ensureBackgroundLoaded = async () => {
-                        const bgImgElement = render.find('.full-start__background img, img.full-start__background');
-                        const bgSrc = bgImgElement.attr('src');
-                        if (bgSrc) {
-                            try {
-                                await preloadImage(bgSrc);
-                            } catch (e) {}
-                        }
-                    };
-
                     const processImagesWrapper = async (res) => {                
-                        try { 
-                            // Паралельно завантажуємо фон та логотип перед тим, як показати картку
-                            await Promise.all([
-                                ensureBackgroundLoaded(),
-                                processImages(render, data, res)
-                            ]);
-                        } catch (e) {} finally {
-                            // Знімаємо приховування і запускаємо анімацію появи одночасно
-                            cardRoot.removeClass('cas-loading-state');
-                            setTimeout(() => cardRoot.addClass('cas-animated'), 30);
-                        }
+                        try { await processImages(render, data, res); } 
+                        catch (e) {} 
+                        finally { setTimeout(() => cardRoot.addClass('cas-animated'), 30); }
                     };                
                                     
                     if (cached) {
                         processImagesWrapper(cached);
                     } else {                
                         const imagesUrl = Lampa.TMDB.api((data.name ? 'tv/' : 'movie/') + data.id + '/images?api_key=' + Lampa.TMDB.key());                
-                        $.getJSON(imagesUrl, (res) => {                
+                        
+                        // Заміна $.getJSON на захищений Lampa.Reguest
+                        activeRequest = Lampa.Reguest.get(imagesUrl, (res) => {                
+                            activeRequest = null;
                             setCachedData(cacheId, res);                
                             processImagesWrapper(res);                
-                        }).fail(async () => {                
-                            await ensureBackgroundLoaded();
+                        }, () => {                
+                            activeRequest = null;
                             render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                
-                            cardRoot.removeClass('cas-loading-state');
                             cardRoot.addClass('cas-animated');
                         });                
                     }                
@@ -726,7 +617,6 @@ function addStyles() {
                     if (event.data.reactions) data.reactions = event.data.reactions;          
                     debouncedLoadMovieData(render, data);                
                 } else {
-                    cardRoot.removeClass('cas-loading-state');
                     cardRoot.addClass('cas-animated');
                 }                
                                 
@@ -736,7 +626,7 @@ function addStyles() {
                         render.find('.full-start__button').removeClass('focus');                
                         firstButton.addClass('focus').trigger('focus');                
                     }                
-                }, 200);                
+                }, 150);                
             }                
         });                
     }              
@@ -744,7 +634,6 @@ function addStyles() {
     function startPlugin() {                   
         try {                  
             initializePlugin();                  
-            console.log('NewCard plugin initialized successfully');                  
         } catch (error) {                  
             console.error('Failed to initialize NewCard plugin:', error);                  
         }                  
