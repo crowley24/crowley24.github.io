@@ -5,19 +5,20 @@
     if (window.plugin_tmdb_mod_ready) return;  
     window.plugin_tmdb_mod_ready = true;  
   
-    // Ін'єкція CSS для примусового перетворення карток у горизонтальний формат (баннери)
+    // Ін'єкція CSS для горизонтальних карток
     var styleId = 'tmdb_mod_horizontal_posters_style';
     if (!document.getElementById(styleId)) {
         var style = document.createElement('style');
         style.id = styleId;
         style.innerHTML = `
-            /* Примусові стилі для широких карток плагіна */
-            .card--wide, div[data-source="tmdb_mod"] .card, .view--horizontal .card {
-                aspect-ratio: 16 / 9 !important;
+            .card--wide, div[data-source="tmdb_mod"] .card {
+                aspect-ratio: 16/9 !important;
+                width: 270px !important;
                 height: auto !important;
             }
-            div[data-source="tmdb_mod"] .card__img, div[data-source="tmdb_mod"] .card__view {
-                aspect-ratio: 16 / 9 !important;
+            div[data-source="tmdb_mod"] .card__img {
+                aspect-ratio: 16/9 !important;
+                height: auto !important;
             }
         `;
         document.head.appendChild(style);
@@ -140,8 +141,9 @@
                                         item.poster_path_original = item.poster_path;  
                                         item.poster_path = item.backdrop_path;  
                                     }  
-                                    item.card_style = 'wide';  
-                                    item.view = 'horizontal';  
+                                    // Змінюємо параметри рендерингу картки на широкий формат
+                                    item.card_type = 'wide';
+                                    item.bg_image = item.backdrop_path;
                                 });  
                             }  
   
