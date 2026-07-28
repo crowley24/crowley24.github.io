@@ -87,7 +87,7 @@
             tmdb_mod_c_animation: { ru: "Лучшие мультфильмы", uk: "Кращі мультфільми" },  
             tmdb_mod_c_documentary: { ru: "Документальные фильмы", uk: "Документальні фільми" },  
   
-            // Серіалы  
+            // Серіали  
             tmdb_mod_c_trend_tv: { ru: "Топ сериалов недели", uk: "Топ серіалів тижня" },  
             tmdb_mod_c_world_hits: { ru: "Хиты сериалов мира 2020+", uk: "Хіти серіалів світу 2020+" },  
             tmdb_mod_c_netflix: { ru: "Хиты сериалов Netflix", uk: "Хіти серіалів Netflix" },  
@@ -119,14 +119,16 @@
                             var translatedName = Lampa.Lang.translate(cfg.name_key);  
                             json.title = cfg.emoji ? cfg.emoji + ' ' + translatedName : translatedName;   
                               
-                            // Логіка зміни постерів на горизонтальні (backdrop), якщо активовано в налаштуваннях
+                            // Примусове переведення карток у горизонтальний режим
                             if (settings.poster_type === 'horizontal' && json.results) {
                                 json.results.forEach(function(item) {
                                     if (item.backdrop_path) {
                                         item.poster_path_original = item.poster_path;
                                         item.poster_path = item.backdrop_path;
                                     }
-                                    item.card_view = 'horizontal';
+                                    // Інструкції для рендерера карток Lampa для зміни пропорцій на широкі
+                                    item.view = 'horizontal';
+                                    item.card_type = 'horizontal';
                                 });
                             }
 
@@ -197,7 +199,7 @@
             }    
         });  
 
-        // Додаємо налаштування формату постерів
+        // Налаштування вибору формату постерів
         Lampa.SettingsApi.addParam({    
             component: 'tmdb_mod',    
             param: { 
