@@ -5,20 +5,25 @@
     if (window.plugin_tmdb_mod_ready) return;  
     window.plugin_tmdb_mod_ready = true;  
   
-    // Ін'єкція CSS для горизонтальних карток
+    // Потужні стилі для перетворення вертикальних контейнерів на горизонтальні 16:9
     var styleId = 'tmdb_mod_horizontal_posters_style';
     if (!document.getElementById(styleId)) {
         var style = document.createElement('style');
         style.id = styleId;
         style.innerHTML = `
-            .card--wide, div[data-source="tmdb_mod"] .card {
-                aspect-ratio: 16/9 !important;
-                width: 270px !important;
+            div[data-source="tmdb_mod"] .card,
+            div[data-source="tmdb_mod"] .card--vertical {
+                aspect-ratio: 16 / 9 !important;
                 height: auto !important;
+                width: 260px !important;
             }
             div[data-source="tmdb_mod"] .card__img {
-                aspect-ratio: 16/9 !important;
-                height: auto !important;
+                aspect-ratio: 16 / 9 !important;
+                height: 100% !important;
+                object-fit: cover !important;
+            }
+            div[data-source="tmdb_mod"] .card__view {
+                aspect-ratio: 16 / 9 !important;
             }
         `;
         document.head.appendChild(style);
@@ -92,7 +97,7 @@
             tmdb_mod_poster_type: { ru: "Формат постеров", uk: "Формат постерів" },  
             tmdb_mod_poster_desc: { ru: "Выберите вертикальные или горизонтальные постеры для карточек", uk: "Виберіть вертикальні чи горизонтальні постери для карток" },  
             tmdb_mod_poster_vert: { ru: "Вертикальные (Стандарт)", uk: "Вертикальні (Стандарт)" },  
-            tmdb_mod_poster_horiz: { ru: "Горизонтальные (Баннеры)", uk: "Горизонтальні (Баннери)" },  
+            tmdb_mod_poster_horiz: { ru: "Горизонтальные (Баннеры)", uk: "Горизонтальні (Баннеры)" },  
   
             tmdb_mod_c_hot_new: { ru: "Самые свежие премьеры", uk: "Найсвіжіші прем'єри" },  
             tmdb_mod_c_trend_movie: { ru: "Топ фильмов недели", uk: "Топ фільмів тижня" },  
@@ -136,14 +141,17 @@
                             json.title = cfg.emoji ? cfg.emoji + ' ' + translatedName : translatedName;   
                               
                             if (settings.poster_type === 'horizontal' && json.results) {  
+                                // Встановлюємо параметри горизонтального перегляду для самого контейнера рядка
+                                json.view = 'horizontal';
+                                json.card_type = 'wide';
+
                                 json.results.forEach(function(item) {  
                                     if (item.backdrop_path) {  
                                         item.poster_path_original = item.poster_path;  
                                         item.poster_path = item.backdrop_path;  
                                     }  
-                                    // Змінюємо параметри рендерингу картки на широкий формат
-                                    item.card_type = 'wide';
-                                    item.bg_image = item.backdrop_path;
+                                    item.card_type = 'wide';  
+                                    item.view = 'horizontal';  
                                 });  
                             }  
   
