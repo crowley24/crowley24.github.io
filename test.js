@@ -32,7 +32,7 @@
   
     var pluginSettings = {  
         enabled: true,  
-        poster_type: 'vertical', // 'vertical' або 'horizontal'
+        poster_type: 'vertical',  
         collections: collectionsConfig.reduce(function(acc, c) { acc[c.id] = true; return acc; }, {})  
     };  
   
@@ -42,7 +42,7 @@
     function loadSettings() {  
         if (Lampa.Storage) {  
             pluginSettings.enabled = Lampa.Storage.get('tmdb_mod_enabled', true);  
-            pluginSettings.poster_type = Lampa.Storage.get('tmdb_mod_poster_type', 'vertical');
+            pluginSettings.poster_type = Lampa.Storage.get('tmdb_mod_poster_type', 'vertical');  
             collectionsConfig.forEach(function(cfg) {  
                 pluginSettings.collections[cfg.id] = Lampa.Storage.get('tmdb_mod_collection_' + cfg.id, true);  
             });  
@@ -53,7 +53,7 @@
     function saveSettings() {  
         if (Lampa.Storage) {  
             Lampa.Storage.set('tmdb_mod_enabled', pluginSettings.enabled);  
-            Lampa.Storage.set('tmdb_mod_poster_type', pluginSettings.poster_type);
+            Lampa.Storage.set('tmdb_mod_poster_type', pluginSettings.poster_type);  
             collectionsConfig.forEach(function(cfg) {  
                 Lampa.Storage.set('tmdb_mod_collection_' + cfg.id, pluginSettings.collections[cfg.id]);  
             });  
@@ -70,13 +70,11 @@
             tmdb_mod_noty_reload: { ru: "Изменения вступят в силу после перезагрузки главной страницы", uk: "Зміни набудуть чинності після перезавантаження головної сторінки" },  
             tmdb_mod_show_collection: { ru: "Показывать подборку", uk: "Показувати підбірку" },  
   
-            // Налаштування постерів
-            tmdb_mod_poster_type: { ru: "Формат постеров", uk: "Формат постерів" },
-            tmdb_mod_poster_desc: { ru: "Выберите вертикальные или горизонтальные постеры для карточек", uk: "Виберіть вертикальні чи горизонтальні постери для карток" },
-            tmdb_mod_poster_vert: { ru: "Вертикальные (Стандарт)", uk: "Вертикальні (Стандарт)" },
-            tmdb_mod_poster_horiz: { ru: "Горизонтальные (Баннеры)", uk: "Горизонтальні (Баннери)" },
-
-            // Фільми  
+            tmdb_mod_poster_type: { ru: "Формат постеров", uk: "Формат постерів" },  
+            tmdb_mod_poster_desc: { ru: "Выберите вертикальные или горизонтальные постеры для карточек", uk: "Виберіть вертикальні чи горизонтальні постери для карток" },  
+            tmdb_mod_poster_vert: { ru: "Вертикальные (Стандарт)", uk: "Вертикальні (Стандарт)" },  
+            tmdb_mod_poster_horiz: { ru: "Горизонтальные (Баннеры)", uk: "Горизонтальні (Баннери)" },  
+  
             tmdb_mod_c_hot_new: { ru: "Самые свежие премьеры", uk: "Найсвіжіші прем'єри" },  
             tmdb_mod_c_trend_movie: { ru: "Топ фильмов недели", uk: "Топ фільмів тижня" },  
             tmdb_mod_c_watching_now: { ru: "Сейчас смотрят", uk: "Зараз дивляться" },  
@@ -87,7 +85,6 @@
             tmdb_mod_c_animation: { ru: "Лучшие мультфильмы", uk: "Кращі мультфільми" },  
             tmdb_mod_c_documentary: { ru: "Документальные фильмы", uk: "Документальні фільми" },  
   
-            // Серіали  
             tmdb_mod_c_trend_tv: { ru: "Топ сериалов недели", uk: "Топ серіалів тижня" },  
             tmdb_mod_c_world_hits: { ru: "Хиты сериалов мира 2020+", uk: "Хіти серіалів світу 2020+" },  
             tmdb_mod_c_netflix: { ru: "Хиты сериалов Netflix", uk: "Хіти серіалів Netflix" },  
@@ -119,19 +116,20 @@
                             var translatedName = Lampa.Lang.translate(cfg.name_key);  
                             json.title = cfg.emoji ? cfg.emoji + ' ' + translatedName : translatedName;   
                               
-                            // Примусове переведення карток у горизонтальний режим
-                            if (settings.poster_type === 'horizontal' && json.results) {
-                                json.results.forEach(function(item) {
-                                    if (item.backdrop_path) {
-                                        item.poster_path_original = item.poster_path;
-                                        item.poster_path = item.backdrop_path;
-                                    }
-                                    // Інструкції для рендерера карток Lampa для зміни пропорцій на широкі
-                                    item.view = 'horizontal';
-                                    item.card_type = 'horizontal';
-                                });
-                            }
-
+                            // Примусове перемикання зображень та стилю для горизонтального формату
+                            if (settings.poster_type === 'horizontal' && json.results) {  
+                                json.results.forEach(function(item) {  
+                                    if (item.backdrop_path) {  
+                                        item.poster_path_original = item.poster_path;  
+                                        item.poster_path = item.backdrop_path;  
+                                    }  
+                                    // Змушуємо картку використовувати стиль широкого банера
+                                    item.card_style = 'wide';  
+                                    item.view = 'horizontal';  
+                                    item.is_collection_banner = true;  
+                                });  
+                            }  
+  
                             if (Lampa.Utils && Lampa.Utils.addSource) {  
                                 Lampa.Utils.addSource(json, 'tmdb');  
                             }  
@@ -198,18 +196,17 @@
                 Lampa.Noty.show(Lampa.Lang.translate('tmdb_mod_noty_reload'));    
             }    
         });  
-
-        // Налаштування вибору формату постерів
+  
         Lampa.SettingsApi.addParam({    
             component: 'tmdb_mod',    
-            param: { 
-                name: 'tmdb_mod_poster_type', 
-                type: 'select', 
-                values: { 
-                    vertical: Lampa.Lang.translate('tmdb_mod_poster_vert'), 
-                    horizontal: Lampa.Lang.translate('tmdb_mod_poster_horiz') 
-                }, 
-                default: 'vertical' 
+            param: {   
+                name: 'tmdb_mod_poster_type',   
+                type: 'select',   
+                values: {   
+                    vertical: Lampa.Lang.translate('tmdb_mod_poster_vert'),   
+                    horizontal: Lampa.Lang.translate('tmdb_mod_poster_horiz')   
+                },   
+                default: 'vertical'   
             },    
             field: {     
                 name: Lampa.Lang.translate('tmdb_mod_poster_type'),     
@@ -253,8 +250,8 @@
   
         if (Lampa.Settings && Lampa.Settings.listener) {    
             Lampa.Settings.listener.follow('open', settingsListener);    
-        }    
-    } 
+        }  
+    }   
   
     function initPlugin() {  
         try {  
