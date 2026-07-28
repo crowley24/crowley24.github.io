@@ -5,6 +5,24 @@
     if (window.plugin_tmdb_mod_ready) return;  
     window.plugin_tmdb_mod_ready = true;  
   
+    // Ін'єкція CSS для примусового перетворення карток у горизонтальний формат (баннери)
+    var styleId = 'tmdb_mod_horizontal_posters_style';
+    if (!document.getElementById(styleId)) {
+        var style = document.createElement('style');
+        style.id = styleId;
+        style.innerHTML = `
+            /* Примусові стилі для широких карток плагіна */
+            .card--wide, div[data-source="tmdb_mod"] .card, .view--horizontal .card {
+                aspect-ratio: 16 / 9 !important;
+                height: auto !important;
+            }
+            div[data-source="tmdb_mod"] .card__img, div[data-source="tmdb_mod"] .card__view {
+                aspect-ratio: 16 / 9 !important;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+  
     // Динамічні дати  
     var today = new Date().toISOString().slice(0, 10);  
     var currentYear = new Date().getFullYear();  
@@ -116,22 +134,19 @@
                             var translatedName = Lampa.Lang.translate(cfg.name_key);  
                             json.title = cfg.emoji ? cfg.emoji + ' ' + translatedName : translatedName;   
                               
-                            // Примусове перемикання зображень та стилю для горизонтального формату
                             if (settings.poster_type === 'horizontal' && json.results) {  
                                 json.results.forEach(function(item) {  
                                     if (item.backdrop_path) {  
                                         item.poster_path_original = item.poster_path;  
                                         item.poster_path = item.backdrop_path;  
                                     }  
-                                    // Змушуємо картку використовувати стиль широкого банера
                                     item.card_style = 'wide';  
                                     item.view = 'horizontal';  
-                                    item.is_collection_banner = true;  
                                 });  
                             }  
   
                             if (Lampa.Utils && Lampa.Utils.addSource) {  
-                                Lampa.Utils.addSource(json, 'tmdb');  
+                                Lampa.Utils.addSource(json, 'tmdb_mod');  
                             }  
                               
                             call(json);   
@@ -139,7 +154,7 @@
                             console.error('[TMDB_MOD] Помилка завантаження підбірки "' + cfg.id + '":', err);  
                             var translatedName = Lampa.Lang.translate(cfg.name_key);  
                             var title = cfg.emoji ? cfg.emoji + ' ' + translatedName : translatedName;  
-                            call({ source: 'tmdb', results: [], title: title });  
+                            call({ source: 'tmdb_mod', results: [], title: title });  
                         });   
                     });  
                 }  
