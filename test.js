@@ -5,7 +5,7 @@
     if (window.plugin_tmdb_mod_ready) return;  
     window.plugin_tmdb_mod_ready = true;  
   
-    // Потужні стилі для перетворення вертикальних контейнерів на горизонтальні 16:9
+    // Ін'єкція CSS для примусового розгортання карток у 16:9
     var styleId = 'tmdb_mod_horizontal_posters_style';
     if (!document.getElementById(styleId)) {
         var style = document.createElement('style');
@@ -15,7 +15,7 @@
             div[data-source="tmdb_mod"] .card--vertical {
                 aspect-ratio: 16 / 9 !important;
                 height: auto !important;
-                width: 260px !important;
+                width: 280px !important;
             }
             div[data-source="tmdb_mod"] .card__img {
                 aspect-ratio: 16 / 9 !important;
@@ -24,6 +24,7 @@
             }
             div[data-source="tmdb_mod"] .card__view {
                 aspect-ratio: 16 / 9 !important;
+                height: auto !important;
             }
         `;
         document.head.appendChild(style);
@@ -97,7 +98,7 @@
             tmdb_mod_poster_type: { ru: "Формат постеров", uk: "Формат постерів" },  
             tmdb_mod_poster_desc: { ru: "Выберите вертикальные или горизонтальные постеры для карточек", uk: "Виберіть вертикальні чи горизонтальні постери для карток" },  
             tmdb_mod_poster_vert: { ru: "Вертикальные (Стандарт)", uk: "Вертикальні (Стандарт)" },  
-            tmdb_mod_poster_horiz: { ru: "Горизонтальные (Баннеры)", uk: "Горизонтальні (Баннеры)" },  
+            tmdb_mod_poster_horiz: { ru: "Горизонтальные (Баннеры)", uk: "Горизонтальні (Баннери)" },  
   
             tmdb_mod_c_hot_new: { ru: "Самые свежие премьеры", uk: "Найсвіжіші прем'єри" },  
             tmdb_mod_c_trend_movie: { ru: "Топ фильмов недели", uk: "Топ фільмів тижня" },  
@@ -141,10 +142,6 @@
                             json.title = cfg.emoji ? cfg.emoji + ' ' + translatedName : translatedName;   
                               
                             if (settings.poster_type === 'horizontal' && json.results) {  
-                                // Встановлюємо параметри горизонтального перегляду для самого контейнера рядка
-                                json.view = 'horizontal';
-                                json.card_type = 'wide';
-
                                 json.results.forEach(function(item) {  
                                     if (item.backdrop_path) {  
                                         item.poster_path_original = item.poster_path;  
@@ -180,6 +177,30 @@
             return function () {};  
         };  
     };  
+  
+    // DOM Спостерігач для примусової зміни класів вертикальних карток на горизонтальні «на льоту»
+    function initObserver() {  
+        var observer = new MutationObserver(function(mutations) {  
+            if (loadSettings().poster_type !== 'horizontal') return;  
+  
+            mutations.forEach(function(mutation) {  
+                mutation.addedNodes.forEach(function(node) {  
+                    if (node.nodeType === 1) {  
+                        // Знаходимо картки всередині нашого джерела  
+                        var cards = node.querySelectorAll ? node.querySelectorAll('div[data-source="tmdb_mod"] .card, .card--vertical') : [];  
+                        cards.forEach(function(card) {  
+                            if (card.closest('div[data-source="tmdb_mod"]')) {  
+                                card.classList.remove('card--vertical');  
+                                card.classList.add('card--wide');  
+                            }  
+                        });  
+                    }  
+                });  
+            });  
+        });  
+  
+        observer.observe(document.body, { childList: true, subtree: true });  
+    }  
       
     function syncCheckboxes() {  
         requestAnimationFrame(function() {  
@@ -320,6 +341,7 @@
                 }  
             }  
   
+            initObserver();  
             return true;  
         } catch (e) {  
             console.error('[TMDB_MOD] Критична помилка ініціалізації:', e);  
