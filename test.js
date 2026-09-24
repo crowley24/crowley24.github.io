@@ -5,7 +5,7 @@
      */
     var slideshowTimer = null; 
     var pluginPath = 'https://crowley24.github.io/Icons/';
-    var detailsCache = {}; 
+    var detailsCache = {}; // Кеш для даних TMDB, щоб уникнути повторних запитів
     var currentActiveId = null;
     
     var settings_list = [
@@ -57,6 +57,9 @@
         }
     }
 
+    /**
+     * АНАЛІЗ ЗОБРАЖЕННЯ НА ТЕМНОТУ ТА НАЯВНІСТЬ КОЛЬОРУ
+     */
     function isImageDark(imgSrc, callback) {
         var img = new Image();
         img.crossOrigin = 'Anonymous';
@@ -104,6 +107,9 @@
         img.src = imgSrc;
     }
 
+    /**
+     * СТИЛІ ІНТЕРФЕЙСУ (CSS) — ОПТИМІЗОВАНО (оновлення існуючого елемента)
+     */
     function applyStyles() {
         var style = document.getElementById('mobile-interface-styles');
         if (!style) {
@@ -124,23 +130,69 @@
         var css = '';
         
         css += '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } } ';
-        css += '@keyframes anim_fluid { 0% { opacity: 0; transform: translate3d(0, 25px, 0) scale(0.95); filter: blur(10px); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0px); } } ';
-        css += '@keyframes anim_cyber { 0% { opacity: 0; transform: translate3d(-40px, 0, 0) scale(0.9); filter: brightness(1.5); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: brightness(1); } } ';
-        css += '@keyframes anim_cinematic { 0% { opacity: 0; transform: translate3d(0, 15px, 0) scale(1.08); filter: blur(6px); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0px); } } ';
-        css += '@keyframes anim_elastic { 0% { opacity: 0; transform: scale(0.7); } 70% { opacity: 1; transform: scale(1.04); } 100% { opacity: 1; transform: scale(1); } } ';
-        css += '@keyframes anim_minimal { 0% { opacity: 0; transform: translate3d(0, 10px, 0); } 100% { opacity: 1; transform: translate3d(0, 0, 0); } } ';
-        css += '@keyframes wave_cascade { 0% { opacity: 0; transform: scale(0.5) translateY(10px); filter: blur(4px); } 100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0px); } } ';
-        css += '@keyframes badge_anim_pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } } ';
-        css += '@keyframes badge_anim_breathe { 0%, 100% { transform: scale(1); opacity: 0.85; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); } 50% { transform: scale(1.06); opacity: 1; filter: drop-shadow(0 0 10px rgba(255,255,255,0.6)); } } ';
-        css += '@keyframes badge_anim_spin_slow { 0% { transform: rotate(0deg); } 25% { transform: rotate(4deg); } 75% { transform: rotate(-4deg); } 100% { transform: rotate(0deg); } } ';
-        css += '@keyframes badge_anim_float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } } ';
-        css += '@keyframes poster_fade_in { 0% { opacity: 0; transform: scale(1.05); } 100% { opacity: 1; transform: scale(1); } } ';
+        
+        css += '@keyframes anim_fluid { ';
+        css += '  0% { opacity: 0; transform: translate3d(0, 25px, 0) scale(0.95); filter: blur(10px); } ';
+        css += '  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0px); } ';
+        css += '} ';
+
+        css += '@keyframes anim_cyber { ';
+        css += '  0% { opacity: 0; transform: translate3d(-40px, 0, 0) scale(0.9); filter: brightness(1.5); } ';
+        css += '  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: brightness(1); } ';
+        css += '} ';
+
+        css += '@keyframes anim_cinematic { ';
+        css += '  0% { opacity: 0; transform: translate3d(0, 15px, 0) scale(1.08); filter: blur(6px); } ';
+        css += '  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0px); } ';
+        css += '} ';
+
+        css += '@keyframes anim_elastic { ';
+        css += '  0% { opacity: 0; transform: scale(0.7); } ';
+        css += '  70% { opacity: 1; transform: scale(1.04); } ';
+        css += '  100% { opacity: 1; transform: scale(1); } ';
+        css += '} ';
+
+        css += '@keyframes anim_minimal { ';
+        css += '  0% { opacity: 0; transform: translate3d(0, 10px, 0); } ';
+        css += '  100% { opacity: 1; transform: translate3d(0, 0, 0); } ';
+        css += '} ';
+
+        css += '@keyframes wave_cascade { ';
+        css += '  0% { opacity: 0; transform: scale(0.5) translateY(10px); filter: blur(4px); } ';
+        css += '  100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0px); } ';
+        css += '} ';
+
+        css += '@keyframes badge_anim_pulse { ';
+        css += '  0%, 100% { transform: scale(1); } ';
+        css += '  50% { transform: scale(1.1); } ';
+        css += '} ';
+
+        css += '@keyframes badge_anim_breathe { ';
+        css += '  0%, 100% { transform: scale(1); opacity: 0.85; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); } ';
+        css += '  50% { transform: scale(1.06); opacity: 1; filter: drop-shadow(0 0 10px rgba(255,255,255,0.6)); } ';
+        css += '} ';
+
+        css += '@keyframes badge_anim_spin_slow { ';
+        css += '  0% { transform: rotate(0deg); } ';
+        css += '  25% { transform: rotate(4deg); } ';
+        css += '  75% { transform: rotate(-4deg); } ';
+        css += '  100% { transform: rotate(0deg); } ';
+        css += '} ';
+
+        css += '@keyframes badge_anim_float { ';
+        css += '  0%, 100% { transform: translateY(0); } ';
+        css += '  50% { transform: translateY(-4px); } ';
+        css += '} ';
+
+        css += '@keyframes poster_fade_in { ';
+        css += '  0% { opacity: 0; transform: scale(1.05); } ';
+        css += '  100% { opacity: 1; transform: scale(1); } ';
+        css += '} ';
         
         css += '@media screen and (max-width: 480px) { ';
         css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="rating-count"], [class*="status"] { display:none !important; } ';
         css += '.full-start-new__right > div:first-child { display: none !important; } ';
-        
-        css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates, .rate--cub, [class*="reactions"] { display: none !important; } ';
+        css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';
         css += '.background { background: #000 !important; } ';
         
         css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 62vh !important; pointer-events: none !important; ';
@@ -151,7 +203,7 @@
         css += 'transform-origin: center center !important; transition: opacity 1.2s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
         
-        css += '.full-start-new__right { background: none !important; margin-top: -160px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; padding: 0 10px 30px 10px !important; gap: ' + blocksGap + ' !important; } ';
+        css += '.full-start-new__right { background: none !important; margin-top: -160px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; padding: 0 10px !important; gap: ' + blocksGap + ' !important; } ';
         
         var chosenAnimName = 'anim_' + animEffect;
         var animTiming = animEffect === 'elastic' ? 'cubic-bezier(0.34, 1.56, 0.64, 1)' : 'cubic-bezier(0.16, 1, 0.3, 1)';
@@ -161,10 +213,8 @@
         css += '.studio-header-brand img { height: 18px !important; width: auto; max-width: 110px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; } ';
         css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
 
-        // Надійне приховування стандартного тексту всередині контейнера без руйнування самого вузла
-        css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.15s; width: 100% !important; display: flex !important; justify-content: center !important; align-items: center !important; margin: 0 !important; min-height: 40px; order: 2; font-size: 0 !important; color: transparent !important; text-indent: -9999px !important; overflow: hidden !important; white-space: nowrap !important; } ';
-        css += '.full-start-new__title * { font-size: 0 !important; color: transparent !important; display: none !important; } ';
-        css += '.full-start-new__title img { font-size: initial !important; color: initial !important; text-indent: 0 !important; display: block !important; height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 85vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 auto !important; } ';
+        css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.15s; width: 100% !important; display: flex !important; justify-content: center !important; align-items: center !important; margin: 0 !important; min-height: 50px; order: 2; overflow: visible !important; } ';
+        css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 90vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';
 
         css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.22s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: center !important; order: 3; } ';
         
@@ -201,13 +251,19 @@
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.85em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
 
-        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; justify-content: center !important; gap: 12px !important; width: 100% !important; margin-top: 6px !important; margin-bottom: 20px !important; order: 6; opacity: 1 !important; visibility: visible !important; } ';
-        css += '.full-start-new .full-start__button { display: inline-flex !important; opacity: 1 !important; visibility: visible !important; transform: none !important; transition: none !important; box-shadow: none !important; } ';
+        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; justify-content: center !important; gap: 12px !important; width: 100% !important; margin-top: 6px !important; order: 6; } ';
+        css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; display: flex !important; flex-direction: column !important; align-items: center !important; width: 60px !important; transition: transform 0.2s ease, opacity 0.2s ease; } ';
+        css += '.full-start-new .full-start__button:active { transform: scale(0.9); opacity: 0.7; } ';
+        css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 24px !important; height: 24px !important; margin-bottom: 5px !important; fill: #fff !important; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5)); } ';
+        css += '.full-start-new .full-start__button span { font-size: 8px !important; text-transform: uppercase !important; opacity: 0.75 !important; font-weight: 600; letter-spacing: 0.05em; } ';
         css += '} ';
 
         style.textContent = css;
     }
 
+    /**
+     * ЛОГІКА РЕЙТИНГІВ ТА ІНФОРМАЦІЇ
+     */
     function getRatingColor(val) {
         var n = parseFloat(val);
         if (n >= 7.5) return '#2ecc71';
@@ -279,8 +335,6 @@
     }
 
     function applyMovieDetailsData(data, movie, $render) {
-        var $titleContainer = $render.find('.full-start-new__title');
-        
         if (data.images && data.images.logos && data.images.logos.length > 0) {
             var lang = Lampa.Storage.get('language') || 'uk';
             var logo = data.images.logos.filter(function(l) { return l.iso_639_1 === lang; })[0] || 
@@ -289,10 +343,7 @@
             
             if (logo) {
                 var logoUrl = Lampa.TMDB.image('/t/p/' + Lampa.Storage.get('mobile_interface_logo_quality', 'w500') + logo.file_path.replace('.svg', '.png'));
-                
-                // Видаляємо попередній логотип, якщо він був, і додаємо новий всередину рідного контейнера
-                $titleContainer.find('img').remove();
-                $titleContainer.append('<img src="' + logoUrl + '">');
+                $render.find('.full-start-new__title').html('<img src="' + logoUrl + '">');
             }
         }
 
@@ -437,6 +488,9 @@
         });
     }
 
+    /**
+     * ПАНЕЛЬ НАЛАШТУВАНЬ
+     */
     function setupSettings() {
         Lampa.SettingsApi.addComponent({ 
             component: 'mobile_interface', 
