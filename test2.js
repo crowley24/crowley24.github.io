@@ -197,10 +197,9 @@
                     if (movieData && movieData.id) {          
                         const cacheId = 'tmdb_' + movieData.id;          
                         const cached = getCachedData(cacheId);          
-                        if (cached && cached.backdrops?.length > 1) {  
-    var current_lang = Lampa.Storage.get('tmdb_lang') || 'uk';  
-    startSlideshow(currentCard, cached.backdrops, current_lang);  
-}         
+                        if (cached && cached.backdrops?.length > 1) {          
+                            startSlideshow(currentCard, cached.backdrops);          
+                        }          
                     }          
                 }          
             }          
@@ -581,21 +580,7 @@
         }                
     }                
                 
-
-                
-    function renderStudioLogosWithColorAnalysis(container, data) {    
-        container.empty();
-        const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 1);  
-            
-        studios.forEach((studio) => {    
-            const logoUrl = Lampa.TMDB.image('/t/p/w200' + studio.logo_path);    
-            const id = 'cas_studio_' + Math.random().toString(36).substr(2, 9);    
-                
-            container.append(`<div class="cas-studio-item cas-wave-studio" id="${id}"><img src="${logoUrl}"></div>`);    
-                
-            const img = new Image();    
-            img.crossOrigin = 'anonymous';    
-      function startSlideshow(render, backdrops, currentLang) {  
+function startSlideshow(render, backdrops, currentLang) {  
     stopSlideshow();  
     if (!backdrops || backdrops.length <= 1) return;  
   
@@ -665,7 +650,21 @@
     }, intervalTime);  
   
     window.casBgInterval = currentInterval;  
-}      img.onload = function() {    
+}               
+                
+    function renderStudioLogosWithColorAnalysis(container, data) {    
+        container.empty();
+        const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 1);  
+            
+        studios.forEach((studio) => {    
+            const logoUrl = Lampa.TMDB.image('/t/p/w200' + studio.logo_path);    
+            const id = 'cas_studio_' + Math.random().toString(36).substr(2, 9);    
+                
+            container.append(`<div class="cas-studio-item cas-wave-studio" id="${id}"><img src="${logoUrl}"></div>`);    
+                
+            const img = new Image();    
+            img.crossOrigin = 'anonymous';    
+            img.onload = function() {    
                 const canvas = document.createElement('canvas');    
                 const ctx = canvas.getContext('2d');    
                 canvas.width = this.width;    
@@ -714,9 +713,9 @@ async function processImages(render, data, res) {
         }  
         stopSlideshow();  
         if (Lampa.Storage.get('cas_slideshow_enabled') && res.backdrops && res.backdrops.length > 1) {  
-    var current_lang = Lampa.Storage.get('tmdb_lang') || 'uk';  
-    startSlideshow(render, res.backdrops, current_lang);  
-}
+            var current_lang = Lampa.Storage.get('tmdb_lang') || 'uk';  
+            startSlideshow(render, res.backdrops, current_lang);  
+        }  
     } catch (error) {  
         render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);  
     }  
