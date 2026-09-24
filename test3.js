@@ -619,7 +619,7 @@ function startSlideshow(render, backdrops, currentLang) {
         idx = (idx + 1) % final_backdrops.length;  
         var nextSrc = Lampa.TMDB.image('/t/p/original' + final_backdrops[idx].file_path);  
   
-        var $currentBg = render.find('.full-start__background img, img.full-start__background').last();  
+        var $currentBg = render.find('.full-start__background').last();  
         if (!$currentBg.length) return;  
   
         var img = new Image();  
@@ -650,10 +650,6 @@ function startSlideshow(render, backdrops, currentLang) {
     }, intervalTime);  
   
     window.casBgInterval = currentInterval;  
-  
-    var stop_watch = setInterval(function () {  
-        if (!is_active) clearInterval(stop_watch);  
-    }, 1000);  
 }                
                 
     function renderStudioLogosWithColorAnalysis(container, data) {    
