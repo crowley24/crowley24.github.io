@@ -8,6 +8,7 @@ var slideshowTimer = null;
 var pluginPath = 'https://crowley24.github.io/Icons/';
 var detailsCache = {};
 var currentActiveId = null;
+var reactionsObserver = null;
 
 var settings_list = [
     { id: 'mobile_interface_animation', default: true },
@@ -59,6 +60,103 @@ function stopSlideshow() {
 }
 
 /**
+ * ПОВНЕ ВИДАЛЕННЯ РЕАКЦІЙ LAMPA
+ *
+ * Реакції можуть створюватися самим Lampa після завантаження
+ * нашого плагіна. Тому CSS недостатньо — додатково видаляємо
+ * їх із DOM після рендерингу.
+ */
+function removeLampaReactions(root) {
+    try {
+        root = root || document;
+
+        var selectors = [
+            '.full-start__reactions',
+            '.full-start-new__reactions',
+            '.full-start__reaction',
+            '.full-start-new__reaction',
+            '.full-start__rates-reactions',
+            '.full-start-new__rates-reactions',
+            '.reactions',
+            '.reaction',
+            '[class*="reactions"]',
+            '[class*="reaction"]'
+        ];
+
+        selectors.forEach(function (selector) {
+            try {
+                $(root).find(selector).remove();
+            } catch (e) {}
+        });
+
+        /**
+         * Додатковий захист.
+         *
+         * Якщо конкретна версія Lampa використовує інший клас,
+         * перевіряємо елементи всередині блоку інформації.
+         */
+        $(root).find('.full-start-new__right, .full-start__right').each(function () {
+            var $block = $(this);
+
+            $block.children().each(function () {
+                var $item = $(this);
+
+                var cls = (
+                    ($item.attr('class') || '') + ' ' +
+                    ($item.attr('data-component') || '') + ' ' +
+                    ($item.attr('data-name') || '')
+                ).toLowerCase();
+
+                if (
+                    cls.indexOf('reaction') >= 0 ||
+                    cls.indexOf('reactions') >= 0
+                ) {
+                    $item.remove();
+                }
+            });
+        });
+
+    } catch (e) {}
+}
+
+/**
+ * СПОСТЕРІГАЧ ЗА DOM
+ *
+ * Lampa може повторно намалювати реакції після відкриття
+ * картки. Observer прибирає їх автоматично.
+ */
+function startReactionsObserver() {
+    if (reactionsObserver) {
+        try {
+            reactionsObserver.disconnect();
+        } catch (e) {}
+    }
+
+    if (!window.MutationObserver) return;
+
+    reactionsObserver = new MutationObserver(function (mutations) {
+        var needClean = false;
+
+        mutations.forEach(function (mutation) {
+            if (mutation.addedNodes && mutation.addedNodes.length) {
+                needClean = true;
+            }
+        });
+
+        if (needClean) {
+            removeLampaReactions(document);
+        }
+    });
+
+    reactionsObserver.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+
+    removeLampaReactions(document);
+}
+
+/**
  * АНАЛІЗ ЗОБРАЖЕННЯ НА ТЕМНОТУ ТА НАЯВНІСТЬ КОЛЬОРУ
  */
 function isImageDark(imgSrc, callback) {
@@ -85,7 +183,7 @@ function isImageDark(imgSrc, callback) {
             for (var i = 0; i < data.length; i += 4) {
                 var alpha = data[i + 3];
 
-                if (alpha > 50) { 
+                if (alpha > 50) {
                     var r = data[i];
                     var g = data[i + 1];
                     var b = data[i + 2];
@@ -98,7 +196,7 @@ function isImageDark(imgSrc, callback) {
                     var max = Math.max(r, g, b);
                     var min = Math.min(r, g, b);
 
-                    if ((max - min) > 30) { 
+                    if ((max - min) > 30) {
                         hasColor = true;
                     }
                 }
@@ -122,7 +220,7 @@ function isImageDark(imgSrc, callback) {
 }
 
 /**
- * СТИЛІ ІНТЕРФЕЙСУ (CSS)
+ * СТИЛІ ІНТЕРФЕЙСУ
  */
 function applyStyles() {
     var style = document.getElementById('mobile-interface-styles');
@@ -138,109 +236,136 @@ function applyStyles() {
     var animEffect = Lampa.Storage.get('mobile_interface_ui_anim_effect', 'fluid');
     var badgeAnim = Lampa.Storage.get('mobile_interface_badge_anim', 'pulse');
     var rSize = Lampa.Storage.get('mobile_interface_ratings_size', '0.45em');
-    var lHeight = Lampa.Storage.get('mobile_interface_logo_size_v2', '125'); 
+    var lHeight = Lampa.Storage.get('mobile_interface_logo_size_v2', '125');
     var showTagline = Lampa.Storage.get('mobile_interface_show_tagline');
     var blocksGap = Lampa.Storage.get('mobile_interface_blocks_gap', '8px');
-    
+
     var css = '';
-    
+
     css += '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } } ';
-    
+
     css += '@keyframes anim_fluid { ';
-    css += ' 0% { opacity: 0; transform: translate3d(0, 25px, 0) scale(0.95); filter: blur(10px); } ';
-    css += ' 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0px); } ';
+    css += '0% { opacity: 0; transform: translate3d(0, 25px, 0) scale(0.95); filter: blur(10px); } ';
+    css += '100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0px); } ';
     css += '} ';
 
     css += '@keyframes anim_cyber { ';
-    css += ' 0% { opacity: 0; transform: translate3d(-40px, 0, 0) scale(0.9); filter: brightness(1.5); } ';
-    css += ' 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: brightness(1); } ';
+    css += '0% { opacity: 0; transform: translate3d(-40px, 0, 0) scale(0.9); filter: brightness(1.5); } ';
+    css += '100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: brightness(1); } ';
     css += '} ';
 
     css += '@keyframes anim_cinematic { ';
-    css += ' 0% { opacity: 0; transform: translate3d(0, 15px, 0) scale(1.08); filter: blur(6px); } ';
-    css += ' 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0px); } ';
+    css += '0% { opacity: 0; transform: translate3d(0, 15px, 0) scale(1.08); filter: blur(6px); } ';
+    css += '100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0px); } ';
     css += '} ';
 
     css += '@keyframes anim_elastic { ';
-    css += ' 0% { opacity: 0; transform: scale(0.7); } ';
-    css += ' 70% { opacity: 1; transform: scale(1.04); } ';
-    css += ' 100% { opacity: 1; transform: scale(1); } ';
+    css += '0% { opacity: 0; transform: scale(0.7); } ';
+    css += '70% { opacity: 1; transform: scale(1.04); } ';
+    css += '100% { opacity: 1; transform: scale(1); } ';
     css += '} ';
 
     css += '@keyframes anim_minimal { ';
-    css += ' 0% { opacity: 0; transform: translate3d(0, 10px, 0); } ';
-    css += ' 100% { opacity: 1; transform: translate3d(0, 0, 0); } ';
+    css += '0% { opacity: 0; transform: translate3d(0, 10px, 0); } ';
+    css += '100% { opacity: 1; transform: translate3d(0, 0, 0); } ';
     css += '} ';
 
     css += '@keyframes wave_cascade { ';
-    css += ' 0% { opacity: 0; transform: scale(0.5) translateY(10px); filter: blur(4px); } ';
-    css += ' 100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0px); } ';
+    css += '0% { opacity: 0; transform: scale(0.5) translateY(10px); filter: blur(4px); } ';
+    css += '100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0px); } ';
     css += '} ';
 
     css += '@keyframes badge_anim_pulse { ';
-    css += ' 0%, 100% { transform: scale(1); } ';
-    css += ' 50% { transform: scale(1.1); } ';
+    css += '0%, 100% { transform: scale(1); } ';
+    css += '50% { transform: scale(1.1); } ';
     css += '} ';
 
     css += '@keyframes badge_anim_breathe { ';
-    css += ' 0%, 100% { transform: scale(1); opacity: 0.85; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); } ';
-    css += ' 50% { transform: scale(1.06); opacity: 1; filter: drop-shadow(0 0 10px rgba(255,255,255,0.6)); } ';
+    css += '0%, 100% { transform: scale(1); opacity: 0.85; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); } ';
+    css += '50% { transform: scale(1.06); opacity: 1; filter: drop-shadow(0 0 10px rgba(255,255,255,0.6)); } ';
     css += '} ';
 
     css += '@keyframes badge_anim_spin_slow { ';
-    css += ' 0% { transform: rotate(0deg); } ';
-    css += ' 25% { transform: rotate(4deg); } ';
-    css += ' 75% { transform: rotate(-4deg); } ';
-    css += ' 100% { transform: rotate(0deg); } ';
+    css += '0% { transform: rotate(0deg); } ';
+    css += '25% { transform: rotate(4deg); } ';
+    css += '75% { transform: rotate(-4deg); } ';
+    css += '100% { transform: rotate(0deg); } ';
     css += '} ';
 
     css += '@keyframes badge_anim_float { ';
-    css += ' 0%, 100% { transform: translateY(0); } ';
-    css += ' 50% { transform: translateY(-4px); } ';
+    css += '0%, 100% { transform: translateY(0); } ';
+    css += '50% { transform: translateY(-4px); } ';
     css += '} ';
 
     css += '@keyframes poster_fade_in { ';
-    css += ' 0% { opacity: 0; transform: scale(1.05); } ';
-    css += ' 100% { opacity: 1; transform: scale(1); } ';
+    css += '0% { opacity: 0; transform: scale(1.05); } ';
+    css += '100% { opacity: 1; transform: scale(1); } ';
     css += '} ';
-    
+
     css += '@media screen and (max-width: 480px) { ';
+
     css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="rating-count"], [class*="status"] { display:none !important; } ';
+
     css += '.full-start-new__right > div:first-child { display: none !important; } ';
+
     css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';
+
+    /*
+     * РЕАКЦІЇ — ПРИМУСОВО ПРИХОВУЄМО
+     */
+    css += '.full-start__reactions, .full-start-new__reactions, .full-start__reaction, .full-start-new__reaction, .full-start__rates-reactions, .full-start-new__rates-reactions, .reactions, .reaction, [class*="reactions"], [class*="reaction"] { display:none !important; visibility:hidden !important; opacity:0 !important; width:0 !important; height:0 !important; max-width:0 !important; max-height:0 !important; overflow:hidden !important; margin:0 !important; padding:0 !important; } ';
+
     css += '.background { background: #000 !important; } ';
-    
+
     css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 62vh !important; pointer-events: none !important; ';
+
     css += (isUIAnim ? 'animation: poster_fade_in 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards; ' : '') + '} ';
-    
+
     css += '.full-start-new__poster img { filter: none !important; ';
+
     css += (isPosterAnim ? 'animation: kenBurnsEffect 25s ease-in-out infinite !important; ' : '');
+
     css += 'transform-origin: center center !important; transition: opacity 1.2s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
+
     css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
-    
+
     css += '.full-start-new__right { background: none !important; margin-top: -160px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; padding: 0 10px !important; gap: ' + blocksGap + ' !important; } ';
-    
+
     var chosenAnimName = 'anim_' + animEffect;
-    var animTiming = animEffect === 'elastic' ? 'cubic-bezier(0.34, 1.56, 0.64, 1)' : 'cubic-bezier(0.16, 1, 0.3, 1)';
-    var uiAnimClass = isUIAnim ? 'animation: ' + chosenAnimName + ' 0.8s ' + animTiming + ' forwards; opacity: 0; will-change: transform, opacity, filter; transform: translateZ(0); ' : '';
+
+    var animTiming = animEffect === 'elastic'
+        ? 'cubic-bezier(0.34, 1.56, 0.64, 1)'
+        : 'cubic-bezier(0.16, 1, 0.3, 1)';
+
+    var uiAnimClass = isUIAnim
+        ? 'animation: ' + chosenAnimName + ' 0.8s ' + animTiming + ' forwards; opacity: 0; will-change: transform, opacity, filter; transform: translateZ(0); '
+        : '';
 
     css += '.studio-header-brand { ' + uiAnimClass + ' animation-delay: 0.08s; order: 1; width: 100%; display: flex; justify-content: flex-start; align-items: center; padding-left: 5vw; margin-bottom: -2px !important; } ';
+
     css += '.studio-header-brand img { height: 18px !important; width: auto; max-width: 110px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; } ';
+
     css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
 
     css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.15s; width: 100% !important; display: flex !important; justify-content: center !important; align-items: center !important; margin: 0 !important; min-height: 50px; order: 2; overflow: visible !important; } ';
+
     css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 90vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';
 
     css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.22s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: center !important; order: 3; } ';
-    
+
     css += '.plugin-meta-row { ' + uiAnimClass + ' animation-delay: 0.28s; display: flex; justify-content: center; align-items: center; flex-wrap: nowrap; gap: 8px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.5); width: 100%; order: 4; color: rgba(255,255,255,0.85); font-family: "Inter", -apple-system, system-ui, sans-serif; } ';
-    
+
     css += '.plugin-ratings-quality-row { ' + uiAnimClass + ' animation-delay: 0.35s; display: flex; justify-content: center; align-items: center; flex-wrap: nowrap; gap: 12px; margin: 0 !important; width: 100%; order: 5; font-size: calc(' + rSize + ' * 2.8); } ';
+
     css += '.plugin-ratings-group { display: flex; align-items: center; gap: 10px; } ';
-    css += '.quality-row-inline { display: flex; align-items: center; gap: 6px; opacity: 0.9; } '; 
-    
+
+    css += '.quality-row-inline { display: flex; align-items: center; gap: 6px; opacity: 0.9; } ';
+
     var loopAnimName = badgeAnim !== 'none' ? 'badge_anim_' + badgeAnim : '';
-    var loopDuration = badgeAnim === 'spin_slow' ? '4s' : (badgeAnim === 'breathe' ? '3s' : '2.5s');
+
+    var loopDuration = badgeAnim === 'spin_slow'
+        ? '4s'
+        : (badgeAnim === 'breathe' ? '3s' : '2.5s');
 
     css += '.wave-item { transform-origin: center center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); ';
 
@@ -264,21 +389,35 @@ function applyStyles() {
     css += '} ';
 
     css += '.plugin-rating-item { display: flex; align-items: center; gap: 4px; font-weight: 700; color: #fff; } ';
+
     css += '.plugin-rating-item img { height: 1.1em; width: auto; } ';
+
     css += '.quality-item { height: 1.1em; } ';
+
     css += '.quality-item img { height: 100%; width: auto; object-fit: contain; } ';
 
     css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.85em; white-space: nowrap; } ';
+
     css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
 
     css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; justify-content: center !important; gap: 12px !important; width: 100% !important; margin-top: 6px !important; order: 6; } ';
+
     css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; display: flex !important; flex-direction: column !important; align-items: center !important; width: 60px !important; transition: transform 0.2s ease, opacity 0.2s ease; } ';
+
     css += '.full-start-new .full-start__button:active { transform: scale(0.9); opacity: 0.7; } ';
+
     css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 24px !important; height: 24px !important; margin-bottom: 5px !important; fill: #fff !important; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5)); } ';
+
     css += '.full-start-new .full-start__button span { font-size: 8px !important; text-transform: uppercase !important; opacity: 0.75 !important; font-weight: 600; letter-spacing: 0.05em; } ';
+
     css += '} ';
 
     style.textContent = css;
+
+    /*
+     * Після застосування CSS одразу прибираємо реакції.
+     */
+    removeLampaReactions(document);
 }
 
 /**
@@ -306,140 +445,268 @@ function formatTime(mins) {
 function renderRatings(container, e) {
     container.find('.plugin-meta-row').remove();
     container.find('.plugin-ratings-quality-row').remove();
-    
+
     var sep = '<span class="info-separator">•</span>';
     var $metaRow = $('<div class="plugin-meta-row"></div>');
-    
-    var year = (e.data.movie.release_date || e.data.movie.first_air_date || '').substring(0, 4);
+
+    var year = (
+        e.data.movie.release_date ||
+        e.data.movie.first_air_date ||
+        ''
+    ).substring(0, 4);
 
     if (year) {
-        $metaRow.append('<div class="info-text-item">' + year + '</div>');
+        $metaRow.append(
+            '<div class="info-text-item">' + year + '</div>'
+        );
     }
 
     var country = '';
 
-    if (e.data.movie.production_countries && e.data.movie.production_countries.length > 0) {
-        country = e.data.movie.production_countries[0].name || e.data.movie.production_countries[0].iso_3166_1;
+    if (
+        e.data.movie.production_countries &&
+        e.data.movie.production_countries.length > 0
+    ) {
+        country =
+            e.data.movie.production_countries[0].name ||
+            e.data.movie.production_countries[0].iso_3166_1;
 
-    } else if (e.data.movie.origin_country && e.data.movie.origin_country.length > 0) {
+    } else if (
+        e.data.movie.origin_country &&
+        e.data.movie.origin_country.length > 0
+    ) {
         country = e.data.movie.origin_country[0];
     }
 
     if (country) {
-        if ($metaRow.children().length > 0) $metaRow.append(sep);
-        $metaRow.append('<div class="info-text-item">' + country + '</div>');
+        if ($metaRow.children().length > 0) {
+            $metaRow.append(sep);
+        }
+
+        $metaRow.append(
+            '<div class="info-text-item">' + country + '</div>'
+        );
     }
-    
-    var runtime = e.data.movie.runtime || (e.data.movie.episode_run_time ? e.data.movie.episode_run_time[0] : 0);
+
+    var runtime =
+        e.data.movie.runtime ||
+        (
+            e.data.movie.episode_run_time
+                ? e.data.movie.episode_run_time[0]
+                : 0
+        );
 
     if (runtime) {
-        if ($metaRow.children().length > 0) $metaRow.append(sep);
-        $metaRow.append('<div class="info-text-item">' + formatTime(runtime) + '</div>');
+        if ($metaRow.children().length > 0) {
+            $metaRow.append(sep);
+        }
+
+        $metaRow.append(
+            '<div class="info-text-item">' +
+            formatTime(runtime) +
+            '</div>'
+        );
     }
 
-    if (e.data.movie.genres && e.data.movie.genres.length > 0) {
-        if ($metaRow.children().length > 0) $metaRow.append(sep);
+    if (
+        e.data.movie.genres &&
+        e.data.movie.genres.length > 0
+    ) {
+        if ($metaRow.children().length > 0) {
+            $metaRow.append(sep);
+        }
 
         var genres = e.data.movie.genres
             .slice(0, 2)
-            .map(function(g) {
+            .map(function (g) {
                 return g.name;
             })
             .join(', ');
 
-        $metaRow.append('<div class="info-text-item">' + genres + '</div>');
+        $metaRow.append(
+            '<div class="info-text-item">' +
+            genres +
+            '</div>'
+        );
     }
 
     var $rqRow = $('<div class="plugin-ratings-quality-row"></div>');
     var $ratingsGroup = $('<div class="plugin-ratings-group"></div>');
-    
+
     var globalIndex = 0;
 
-    var tmdb = parseFloat(e.data.movie.vote_average || 0).toFixed(1);
+    /*
+     * ЗАЛИШАЄМО ТІЛЬКИ TMDB
+     */
+    var tmdb = parseFloat(
+        e.data.movie.vote_average || 0
+    ).toFixed(1);
 
     if (tmdb > 0) {
-        var $tmdbItem = $('<div class="plugin-rating-item wave-item"><img src="' + ratingIcons.tmdb + '"> <span style="color:' + getRatingColor(tmdb) + '">' + tmdb + '</span></div>');
+        var $tmdbItem = $(
+            '<div class="plugin-rating-item wave-item">' +
+            '<img src="' + ratingIcons.tmdb + '">' +
+            ' <span style="color:' +
+            getRatingColor(tmdb) +
+            '">' +
+            tmdb +
+            '</span>' +
+            '</div>'
+        );
 
-        $tmdbItem.css('--item-index', globalIndex++);
+        $tmdbItem.css(
+            '--item-index',
+            globalIndex++
+        );
 
         $ratingsGroup.append($tmdbItem);
     }
 
     var $qRow = $('<div class="quality-row-inline"></div>');
 
-    $rqRow.append($ratingsGroup).append($qRow);
+    $rqRow
+        .append($ratingsGroup)
+        .append($qRow);
 
-    container.append($metaRow).append($rqRow);
+    container
+        .append($metaRow)
+        .append($rqRow);
 
     return globalIndex;
 }
 
 function applyMovieDetailsData(data, movie, $render) {
-    if (data.images && data.images.logos && data.images.logos.length > 0) {
-        var lang = Lampa.Storage.get('language') || 'uk';
+    if (
+        data.images &&
+        data.images.logos &&
+        data.images.logos.length > 0
+    ) {
+        var lang =
+            Lampa.Storage.get('language') || 'uk';
 
-        var logo = data.images.logos.filter(function(l) {
-            return l.iso_639_1 === lang;
-        })[0] || 
-        data.images.logos.filter(function(l) {
-            return l.iso_639_1 === 'en';
-        })[0] || 
-        data.images.logos[0];
-        
+        var logo =
+            data.images.logos.filter(function (l) {
+                return l.iso_639_1 === lang;
+            })[0] ||
+
+            data.images.logos.filter(function (l) {
+                return l.iso_639_1 === 'en';
+            })[0] ||
+
+            data.images.logos[0];
+
         if (logo) {
             var logoUrl = Lampa.TMDB.image(
                 '/t/p/' +
-                Lampa.Storage.get('mobile_interface_logo_quality', 'w500') +
+                Lampa.Storage.get(
+                    'mobile_interface_logo_quality',
+                    'w500'
+                ) +
                 logo.file_path.replace('.svg', '.png')
             );
 
-            $render.find('.full-start-new__title').html(
-                '<img src="' + logoUrl + '">'
-            );
+            $render
+                .find('.full-start-new__title')
+                .html(
+                    '<img src="' +
+                    logoUrl +
+                    '">'
+                );
         }
     }
 
-    if (Lampa.Storage.get('mobile_interface_studios')) {
-        $render.find('.studio-header-brand').remove();
+    if (
+        Lampa.Storage.get(
+            'mobile_interface_studios'
+        )
+    ) {
+        $render
+            .find('.studio-header-brand')
+            .remove();
 
         var studio = null;
 
-        if (data.networks && data.networks.length > 0) {
-            studio = data.networks.find(function(n) {
-                return n.logo_path;
-            });
+        if (
+            data.networks &&
+            data.networks.length > 0
+        ) {
+            studio = data.networks.find(
+                function (n) {
+                    return n.logo_path;
+                }
+            );
         }
 
-        if (!studio && data.production_companies && data.production_companies.length > 0) {
-            studio = data.production_companies.find(function(c) {
-                return c.logo_path;
-            });
+        if (
+            !studio &&
+            data.production_companies &&
+            data.production_companies.length > 0
+        ) {
+            studio =
+                data.production_companies.find(
+                    function (c) {
+                        return c.logo_path;
+                    }
+                );
         }
 
-        if (studio && studio.logo_path) {
-            var studioLogoUrl = Lampa.TMDB.image('/t/p/w200' + studio.logo_path);
+        if (
+            studio &&
+            studio.logo_path
+        ) {
+            var studioLogoUrl =
+                Lampa.TMDB.image(
+                    '/t/p/w200' +
+                    studio.logo_path
+                );
 
-            var $brand = $('<div class="studio-header-brand"><img src="' + studioLogoUrl + '" alt="' + (studio.name || '') + '"></div>');
+            var $brand = $(
+                '<div class="studio-header-brand">' +
+                '<img src="' +
+                studioLogoUrl +
+                '" alt="' +
+                (studio.name || '') +
+                '">' +
+                '</div>'
+            );
+
             var $img = $brand.find('img');
 
-            $img.on('error', function() {
-                $brand.remove();
-            });
-            
-            isImageDark(studioLogoUrl, function(isDark) {
-                if (isDark) {
-                    $img.addClass('is-dark-logo');
+            $img.on(
+                'error',
+                function () {
+                    $brand.remove();
                 }
-            });
+            );
 
-            $render.find('.full-start-new__title').before($brand);
+            isImageDark(
+                studioLogoUrl,
+                function (isDark) {
+                    if (isDark) {
+                        $img.addClass(
+                            'is-dark-logo'
+                        );
+                    }
+                }
+            );
+
+            $render
+                .find('.full-start-new__title')
+                .before($brand);
         }
     }
 
-    if (data.images && data.images.backdrops && data.images.backdrops.length > 1) {
-        var cleanBackdrops = data.images.backdrops.filter(function(b) {
-            return b.aspect_ratio > 1.5;
-        });
+    if (
+        data.images &&
+        data.images.backdrops &&
+        data.images.backdrops.length > 1
+    ) {
+        var cleanBackdrops =
+            data.images.backdrops.filter(
+                function (b) {
+                    return b.aspect_ratio > 1.5;
+                }
+            );
 
         if (cleanBackdrops.length > 0) {
             startPosterSlideshow(
@@ -448,6 +715,8 @@ function applyMovieDetailsData(data, movie, $render) {
             );
         }
     }
+
+    removeLampaReactions($render);
 }
 
 function loadMovieDetails(movie, $render) {
@@ -456,11 +725,21 @@ function loadMovieDetails(movie, $render) {
     currentActiveId = movieId;
 
     if (detailsCache[movieId]) {
-        applyMovieDetailsData(detailsCache[movieId], movie, $render);
+        applyMovieDetailsData(
+            detailsCache[movieId],
+            movie,
+            $render
+        );
+
+        removeLampaReactions($render);
+
         return;
     }
 
-    var type = (movie.name || movie.first_air_date) ? 'tv' : 'movie';
+    var type =
+        (movie.name || movie.first_air_date)
+            ? 'tv'
+            : 'movie';
 
     var url =
         'https://api.themoviedb.org/3/' +
@@ -476,12 +755,16 @@ function loadMovieDetails(movie, $render) {
         type: 'GET',
         dataType: 'json',
 
-        success: function(data) {
+        success: function (data) {
             if (currentActiveId !== movieId) return;
 
             detailsCache[movieId] = data;
 
-            applyMovieDetailsData(data, movie, $render);
+            applyMovieDetailsData(
+                data,
+                movie,
+                $render
+            );
         }
     });
 }
@@ -497,277 +780,455 @@ function getBestResults(results) {
 
     if (!results) return best;
 
-    results.slice(0, 15).forEach(function(item) {
-        var t = (item.Title || '').toLowerCase();
+    results.slice(0, 15).forEach(
+        function (item) {
+            var t =
+                (item.Title || '')
+                .toLowerCase();
 
-        if (t.indexOf('ukr') >= 0 || t.indexOf('укр') >= 0) {
-            best.ukr = true;
+            if (
+                t.indexOf('ukr') >= 0 ||
+                t.indexOf('укр') >= 0
+            ) {
+                best.ukr = true;
+            }
+
+            var res =
+                t.indexOf('4k') >= 0
+                    ? '4K'
+                    : t.indexOf('2k') >= 0
+                    ? '2K'
+                    : t.indexOf('1080') >= 0
+                    ? 'FULL HD'
+                    : t.indexOf('720') >= 0
+                    ? 'HD'
+                    : null;
+
+            if (
+                res &&
+                (
+                    !best.resolution ||
+                    [
+                        'HD',
+                        'FULL HD',
+                        '2K',
+                        '4K'
+                    ].indexOf(res) >
+                    [
+                        'HD',
+                        'FULL HD',
+                        '2K',
+                        '4K'
+                    ].indexOf(
+                        best.resolution
+                    )
+                )
+            ) {
+                best.resolution = res;
+            }
+
+            if (
+                t.indexOf('vision') >= 0 ||
+                t.indexOf(' dv ') >= 0
+            ) {
+                best.dolbyVision = true;
+            }
+
+            if (
+                t.indexOf('hdr') >= 0
+            ) {
+                best.hdr = true;
+            }
+
+            if (
+                t.indexOf('dub') >= 0 ||
+                t.indexOf('дуб') >= 0
+            ) {
+                best.dub = true;
+            }
         }
-
-        var res =
-            t.indexOf('4k') >= 0 ? '4K' :
-            t.indexOf('2k') >= 0 ? '2K' :
-            t.indexOf('1080') >= 0 ? 'FULL HD' :
-            t.indexOf('720') >= 0 ? 'HD' :
-            null;
-
-        if (
-            res &&
-            (
-                !best.resolution ||
-                ['HD', 'FULL HD', '2K', '4K'].indexOf(res) >
-                ['HD', 'FULL HD', '2K', '4K'].indexOf(best.resolution)
-            )
-        ) {
-            best.resolution = res;
-        }
-
-        if (t.indexOf('vision') >= 0 || t.indexOf(' dv ') >= 0) {
-            best.dolbyVision = true;
-        }
-
-        if (t.indexOf('hdr') >= 0) {
-            best.hdr = true;
-        }
-
-        if (t.indexOf('dub') >= 0 || t.indexOf('дуб') >= 0) {
-            best.dub = true;
-        }
-    });
+    );
 
     return best;
 }
 
 function startPosterSlideshow($poster, items) {
-    if (!Lampa.Storage.get('mobile_interface_slideshow')) return;
+    if (
+        !Lampa.Storage.get(
+            'mobile_interface_slideshow'
+        )
+    ) {
+        return;
+    }
 
     var index = 0;
 
     stopSlideshow();
 
-    slideshowTimer = setInterval(function() {
-        index = (index + 1) % items.length;
+    slideshowTimer = setInterval(
+        function () {
+            index =
+                (index + 1) %
+                items.length;
 
-        var imgUrl = Lampa.TMDB.image(
-            '/t/p/' +
-            Lampa.Storage.get('mobile_interface_slideshow_quality', 'w780') +
-            items[index].file_path
-        );
+            var imgUrl =
+                Lampa.TMDB.image(
+                    '/t/p/' +
+                    Lampa.Storage.get(
+                        'mobile_interface_slideshow_quality',
+                        'w780'
+                    ) +
+                    items[index].file_path
+                );
 
-        var $current = $poster.find('img').first();
+            var $current =
+                $poster.find('img').first();
 
-        var nextImg = new Image();
+            var nextImg =
+                new Image();
 
-        nextImg.onload = function() {
-            var $next = $('<img src="' + imgUrl + '" style="opacity: 0; transition: opacity 1.2s ease-in-out;">');
+            nextImg.onload =
+                function () {
+                    var $next = $(
+                        '<img src="' +
+                        imgUrl +
+                        '" style="opacity: 0; transition: opacity 1.2s ease-in-out;">'
+                    );
 
-            $poster.append($next);
+                    $poster.append(
+                        $next
+                    );
 
-            setTimeout(function() {
-                $next.css('opacity', '1');
-                $current.css('opacity', '0');
+                    setTimeout(
+                        function () {
+                            $next.css(
+                                'opacity',
+                                '1'
+                            );
 
-                setTimeout(function() {
-                    $current.remove();
-                }, 1200);
+                            $current.css(
+                                'opacity',
+                                '0'
+                            );
 
-            }, 100);
-        };
+                            setTimeout(
+                                function () {
+                                    $current.remove();
+                                },
+                                1200
+                            );
+                        },
+                        100
+                    );
+                };
 
-        nextImg.src = imgUrl;
+            nextImg.src = imgUrl;
 
-    }, parseInt(
-        Lampa.Storage.get(
-            'mobile_interface_slideshow_time',
-            '10000'
+        },
+        parseInt(
+            Lampa.Storage.get(
+                'mobile_interface_slideshow_time',
+                '10000'
+            )
         )
-    ));
+    );
 }
 
 function init() {
-    Lampa.Listener.follow('full', function(e) {
+    startReactionsObserver();
 
-        if (e.type === 'destroy') {
-            stopSlideshow();
-            currentActiveId = null;
-        }
-        
-        if (
-            window.innerWidth <= 480 &&
-            (e.type === 'complite' || e.type === 'complete')
-        ) {
-            stopSlideshow(); 
-            
-            var movie = e.data.movie;
-            var $render = e.object.activity.render();
-            
-            if (window.lampa_settings) {
-                window.lampa_settings.blur_poster = false;
-            }
+    Lampa.Listener.follow(
+        'full',
+        function (e) {
 
-            var startIndex = renderRatings(
-                $render.find('.full-start-new__right'),
-                e
-            );
+            if (e.type === 'destroy') {
+                stopSlideshow();
 
-            loadMovieDetails(movie, $render);
+                currentActiveId = null;
 
-            if (
-                Lampa.Storage.get('mobile_interface_quality') &&
-                Lampa.Parser &&
-                Lampa.Parser.get
-            ) {
-                Lampa.Parser.get(
-                    {
-                        search: movie.title || movie.name,
-                        movie: movie,
-                        page: 1
-                    },
-                    function(res) {
-
-                        if (res && Array.isArray(res.Results)) {
-                            var b = getBestResults(res.Results);
-                            var list = [];
-
-                            if (b.resolution) {
-                                list.push(b.resolution);
-                            }
-
-                            if (b.dolbyVision) {
-                                list.push('Dolby Vision');
-                            } else if (b.hdr) {
-                                list.push('HDR');
-                            }
-
-                            if (b.dub) {
-                                list.push('DUB');
-                            }
-
-                            if (b.ukr) {
-                                list.push('UKR');
-                            }
-                            
-                            var $qRow = $render.find('.quality-row-inline');
-
-                            $qRow.empty();
-
-                            list.forEach(function(t, idx) {
-
-                                if (svgIcons[t]) {
-                                    var currentItemIndex = startIndex + idx;
-
-                                    var $badge = $(
-                                        '<div class="quality-item wave-item">' +
-                                        '<img src="' + svgIcons[t] + '">' +
-                                        '</div>'
-                                    );
-
-                                    $badge.css(
-                                        '--item-index',
-                                        currentItemIndex
-                                    );
-
-                                    $qRow.append($badge);
-                                }
-                            });
-                        }
-                    }
+                removeLampaReactions(
+                    document
                 );
             }
+
+            if (
+                window.innerWidth <= 480 &&
+                (
+                    e.type === 'complite' ||
+                    e.type === 'complete'
+                )
+            ) {
+                stopSlideshow();
+
+                var movie = e.data.movie;
+                var $render =
+                    e.object.activity.render();
+
+                if (
+                    window.lampa_settings
+                ) {
+                    window.lampa_settings.blur_poster =
+                        false;
+                }
+
+                /*
+                 * Видаляємо реакції одразу після
+                 * створення сторінки.
+                 */
+                removeLampaReactions(
+                    $render
+                );
+
+                var startIndex =
+                    renderRatings(
+                        $render.find(
+                            '.full-start-new__right'
+                        ),
+                        e
+                    );
+
+                loadMovieDetails(
+                    movie,
+                    $render
+                );
+
+                /*
+                 * Ще кілька перевірок після
+                 * асинхронного рендерингу Lampa.
+                 */
+                setTimeout(
+                    function () {
+                        removeLampaReactions(
+                            $render
+                        );
+                    },
+                    50
+                );
+
+                setTimeout(
+                    function () {
+                        removeLampaReactions(
+                            $render
+                        );
+                    },
+                    300
+                );
+
+                setTimeout(
+                    function () {
+                        removeLampaReactions(
+                            $render
+                        );
+                    },
+                    1000
+                );
+
+                if (
+                    Lampa.Storage.get(
+                        'mobile_interface_quality'
+                    ) &&
+                    Lampa.Parser &&
+                    Lampa.Parser.get
+                ) {
+                    Lampa.Parser.get(
+                        {
+                            search:
+                                movie.title ||
+                                movie.name,
+                            movie: movie,
+                            page: 1
+                        },
+                        function (res) {
+
+                            if (
+                                res &&
+                                Array.isArray(
+                                    res.Results
+                                )
+                            ) {
+                                var b =
+                                    getBestResults(
+                                        res.Results
+                                    );
+
+                                var list = [];
+
+                                if (
+                                    b.resolution
+                                ) {
+                                    list.push(
+                                        b.resolution
+                                    );
+                                }
+
+                                if (
+                                    b.dolbyVision
+                                ) {
+                                    list.push(
+                                        'Dolby Vision'
+                                    );
+                                } else if (
+                                    b.hdr
+                                ) {
+                                    list.push(
+                                        'HDR'
+                                    );
+                                }
+
+                                if (b.dub) {
+                                    list.push(
+                                        'DUB'
+                                    );
+                                }
+
+                                if (b.ukr) {
+                                    list.push(
+                                        'UKR'
+                                    );
+                                }
+
+                                var $qRow =
+                                    $render.find(
+                                        '.quality-row-inline'
+                                    );
+
+                                $qRow.empty();
+
+                                list.forEach(
+                                    function (
+                                        t,
+                                        idx
+                                    ) {
+                                        if (
+                                            svgIcons[t]
+                                        ) {
+                                            var currentItemIndex =
+                                                startIndex +
+                                                idx;
+
+                                            var $badge =
+                                                $(
+                                                    '<div class="quality-item wave-item">' +
+                                                    '<img src="' +
+                                                    svgIcons[t] +
+                                                    '">' +
+                                                    '</div>'
+                                                );
+
+                                            $badge.css(
+                                                '--item-index',
+                                                currentItemIndex
+                                            );
+
+                                            $qRow.append(
+                                                $badge
+                                            );
+                                        }
+                                    }
+                                );
+                            }
+
+                            removeLampaReactions(
+                                $render
+                            );
+                        }
+                    );
+                }
+            }
         }
-    });
+    );
 }
 
 /**
  * ПАНЕЛЬ НАЛАШТУВАНЬ
  */
 function setupSettings() {
-    Lampa.SettingsApi.addComponent({ 
-        component: 'mobile_interface', 
-        name: 'Мобільний інтерфейс', 
-        icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1-.9 1.99-2 1.99zM17 19H7V5h10v14z" fill="white"/></svg>' 
+    Lampa.SettingsApi.addComponent({
+        component: 'mobile_interface',
+        name: 'Мобільний інтерфейс',
+        icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" fill="white"/></svg>'
     });
 
-    Lampa.SettingsApi.addParam({ 
-        component: 'mobile_interface', 
+    Lampa.SettingsApi.addParam({
+        component: 'mobile_interface',
         param: {
             name: 'mobile_interface_animation',
             type: 'trigger',
             default: true
-        }, 
+        },
         field: {
             name: 'Зум-ефект постера (Ken Burns)'
-        }, 
-        onChange: applyStyles 
+        },
+        onChange: applyStyles
     });
 
-    Lampa.SettingsApi.addParam({ 
-        component: 'mobile_interface', 
+    Lampa.SettingsApi.addParam({
+        component: 'mobile_interface',
         param: {
             name: 'mobile_interface_ui_anim',
             type: 'trigger',
             default: true
-        }, 
+        },
         field: {
             name: 'Плавна анімація появи елементів'
-        }, 
-        onChange: applyStyles 
+        },
+        onChange: applyStyles
     });
 
-    Lampa.SettingsApi.addParam({ 
-        component: 'mobile_interface', 
-        param: { 
-            name: 'mobile_interface_ui_anim_effect', 
-            type: 'select', 
-            values: { 
-                'fluid': 'Apple Fluid (М’який розмитий вихід)', 
-                'cyber': 'Cyber Neon (Динамічний виліт зліва)', 
-                'cinematic': 'Cinematic Depth (Кінематографічне масштабування)', 
-                'elastic': 'Elastic Spring (Пружний пружинний ефект)', 
-                'minimal': 'Minimal Fade (Простий мінімалістичний плавний)' 
-            }, 
-            default: 'fluid' 
-        }, 
+    Lampa.SettingsApi.addParam({
+        component: 'mobile_interface',
+        param: {
+            name: 'mobile_interface_ui_anim_effect',
+            type: 'select',
+            values: {
+                'fluid': 'Apple Fluid (М’який розмитий вихід)',
+                'cyber': 'Cyber Neon (Динамічний виліт зліва)',
+                'cinematic': 'Cinematic Depth (Кінематографічне масштабування)',
+                'elastic': 'Elastic Spring (Пружний пружинний ефект)',
+                'minimal': 'Minimal Fade (Простий мінімалістичний плавний)'
+            },
+            default: 'fluid'
+        },
         field: {
             name: 'Стиль анімації появи'
-        }, 
-        onChange: applyStyles 
+        },
+        onChange: applyStyles
     });
 
-    Lampa.SettingsApi.addParam({ 
-        component: 'mobile_interface', 
-        param: { 
-            name: 'mobile_interface_badge_anim', 
-            type: 'select', 
-            values: { 
-                'none': 'Без циклічної анімації', 
-                'pulse': 'Пульсація (Збільшення)', 
-                'breathe': 'Дихання (М’яке сяйво)', 
-                'spin_slow': 'Легке гойдання (Маятник)', 
-                'float': 'Плавне підстрибування' 
-            }, 
-            default: 'pulse' 
-        }, 
+    Lampa.SettingsApi.addParam({
+        component: 'mobile_interface',
+        param: {
+            name: 'mobile_interface_badge_anim',
+            type: 'select',
+            values: {
+                'none': 'Без циклічної анімації',
+                'pulse': 'Пульсація (Збільшення)',
+                'breathe': 'Дихання (М’яке сяйво)',
+                'spin_slow': 'Легке гойдання (Маятник)',
+                'float': 'Плавне підстрибування'
+            },
+            default: 'pulse'
+        },
         field: {
             name: 'Жива анімація бейджів та рейтингів'
-        }, 
-        onChange: applyStyles 
+        },
+        onChange: applyStyles
     });
 
-    Lampa.SettingsApi.addParam({ 
-        component: 'mobile_interface', 
+    Lampa.SettingsApi.addParam({
+        component: 'mobile_interface',
         param: {
             name: 'mobile_interface_slideshow',
             type: 'trigger',
             default: true
-        }, 
+        },
         field: {
             name: 'Автозміна фонових кадрів'
-        } 
+        }
     });
 
-    Lampa.SettingsApi.addParam({ 
-        component: 'mobile_interface', 
+    Lampa.SettingsApi.addParam({
+        component: 'mobile_interface',
         param: {
             name: 'mobile_interface_slideshow_time',
             type: 'select',
@@ -777,14 +1238,14 @@ function setupSettings() {
                 '20000': '20 секунд'
             },
             default: '10000'
-        }, 
+        },
         field: {
             name: 'Інтервал зміни фону'
-        } 
+        }
     });
 
-    Lampa.SettingsApi.addParam({ 
-        component: 'mobile_interface', 
+    Lampa.SettingsApi.addParam({
+        component: 'mobile_interface',
         param: {
             name: 'mobile_interface_logo_size_v2',
             type: 'select',
@@ -795,28 +1256,28 @@ function setupSettings() {
                 '210': 'Великий'
             },
             default: '125'
-        }, 
+        },
         field: {
             name: 'Висота логотипу тайтлу'
-        }, 
-        onChange: applyStyles 
+        },
+        onChange: applyStyles
     });
 
-    Lampa.SettingsApi.addParam({ 
-        component: 'mobile_interface', 
+    Lampa.SettingsApi.addParam({
+        component: 'mobile_interface',
         param: {
             name: 'mobile_interface_show_tagline',
             type: 'trigger',
             default: true
-        }, 
+        },
         field: {
             name: 'Відображати слоган'
-        }, 
-        onChange: applyStyles 
+        },
+        onChange: applyStyles
     });
 
-    Lampa.SettingsApi.addParam({ 
-        component: 'mobile_interface', 
+    Lampa.SettingsApi.addParam({
+        component: 'mobile_interface',
         param: {
             name: 'mobile_interface_blocks_gap',
             type: 'select',
@@ -827,15 +1288,15 @@ function setupSettings() {
                 '24px': 'Панорамний'
             },
             default: '8px'
-        }, 
+        },
         field: {
             name: 'Відступи між блоками'
-        }, 
-        onChange: applyStyles 
+        },
+        onChange: applyStyles
     });
 
-    Lampa.SettingsApi.addParam({ 
-        component: 'mobile_interface', 
+    Lampa.SettingsApi.addParam({
+        component: 'mobile_interface',
         param: {
             name: 'mobile_interface_ratings_size',
             type: 'select',
@@ -846,52 +1307,55 @@ function setupSettings() {
                 '0.55em': 'Дуже великий'
             },
             default: '0.45em'
-        }, 
+        },
         field: {
             name: 'Розмір шрифту інфо-блоків'
-        }, 
-        onChange: applyStyles 
+        },
+        onChange: applyStyles
     });
 
-    Lampa.SettingsApi.addParam({ 
-        component: 'mobile_interface', 
+    Lampa.SettingsApi.addParam({
+        component: 'mobile_interface',
         param: {
             name: 'mobile_interface_studios',
             type: 'trigger',
             default: true
-        }, 
+        },
         field: {
             name: 'Показувати логотип студії'
-        } 
+        }
     });
 
-    Lampa.SettingsApi.addParam({ 
-        component: 'mobile_interface', 
+    Lampa.SettingsApi.addParam({
+        component: 'mobile_interface',
         param: {
             name: 'mobile_interface_quality',
             type: 'trigger',
             default: true
-        }, 
+        },
         field: {
             name: 'Бейджі якості та звуку'
-        } 
+        }
     });
 }
 
 function startPlugin() {
-    applyStyles(); 
-    setupSettings(); 
+    applyStyles();
+    setupSettings();
     init();
 }
 
 if (window.appready) {
     startPlugin();
 } else {
-    Lampa.Listener.follow('app', function(e) {
-        if (e.type === 'ready') {
-            startPlugin();
+    Lampa.Listener.follow(
+        'app',
+        function (e) {
+            if (e.type === 'ready') {
+                startPlugin();
+            }
         }
-    });
+    );
 }
 
 })();
