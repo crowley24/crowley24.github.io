@@ -140,7 +140,7 @@
         css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="rating-count"], [class*="status"] { display:none !important; } ';
         css += '.full-start-new__right > div:first-child { display: none !important; } ';
         
-        // Повністю приховуємо всі стандартні рейтинги та реакції CUB
+        // Приховуємо стандартні рейтинги та реакції
         css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates, .rate--cub, [class*="reactions"] { display: none !important; } ';
         css += '.background { background: #000 !important; } ';
         
@@ -162,10 +162,9 @@
         css += '.studio-header-brand img { height: 18px !important; width: auto; max-width: 110px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; } ';
         css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
 
-        // Контейнер логотипу: ховаємо внутрішній текстовий заголовок Lampa, залишаючи картинку центруватися
-        css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.15s; width: 100% !important; display: flex !important; justify-content: center !important; align-items: center !important; margin: 0 !important; min-height: 50px; order: 2; overflow: visible !important; } ';
-        css += '.full-start-new__title > div:not(:has(img)), .full-start-new__title > span { display: none !important; } ';
-        css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 90vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';
+        // Жорстко ховаємо текстовий заголовок і все зайве зліва, залишаючи контейнер виключно для графічного логотипу центру
+        css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.15s; width: 100% !important; display: flex !important; justify-content: center !important; align-items: center !important; margin: 0 !important; min-height: 50px; order: 2; overflow: hidden !important; position: relative !important; text-indent: -9999px !important; } ';
+        css += '.full-start-new__title img { position: absolute !important; text-indent: 0 !important; height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 90vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; left: 50% !important; transform: translateX(-50%) !important; } ';
 
         css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.22s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: center !important; order: 3; } ';
         
@@ -202,10 +201,9 @@
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.85em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
 
-        // Максимально прості медіа кнопки (без руйнування внутрішньої верстки Lampa)
-        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; justify-content: center !important; gap: 12px !important; width: 100% !important; margin-top: 6px !important; order: 6; } ';
-        css += '.full-start-new .full-start__button { transform: none !important; transition: none !important; box-shadow: none !important; } ';
-        css += '.full-start-new .full-start__button:active { transform: none !important; opacity: 1 !important; } ';
+        // Гарантуємо повну видимість медіа кнопок без ламання їхньої структури
+        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; justify-content: center !important; gap: 12px !important; width: 100% !important; margin-top: 6px !important; order: 6; opacity: 1 !important; visibility: visible !important; } ';
+        css += '.full-start-new .full-start__button { display: inline-flex !important; opacity: 1 !important; visibility: visible !important; transform: none !important; transition: none !important; box-shadow: none !important; } ';
         css += '} ';
 
         style.textContent = css;
