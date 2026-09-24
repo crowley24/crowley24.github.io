@@ -849,7 +849,7 @@ async function processImages(render, data, res) {
                 
     function attachLoader() {                
         Lampa.Listener.follow('full', (event) => {                
-            if (event.type === 'complete') {                
+            if (event.type === 'complite') {                
                 const data = event.data.movie;                
                 const render = event.object.activity.render();                
                 const cardRoot = render.find('.full-start-new.left-title');                
