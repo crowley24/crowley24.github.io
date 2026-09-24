@@ -251,14 +251,13 @@
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.85em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
 
-        /* Виправлення для кнопок дії, щоб вони не виходили за межі екрану */
-        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 8px !important; width: 100% !important; max-width: 100% !important; overflow-x: auto !important; overflow-y: hidden !important; padding: 4px 5vw 8px 5vw !important; margin-top: 6px !important; order: 6; -webkit-overflow-scrolling: touch; scrollbar-width: none; } ';
-        css += '.full-start-new__buttons::-webkit-scrollbar { display: none; } ';
+        /* Переведення кнопок у дворядкову сітку (гортати більше не потрібно, видно всі одночасно) */
+        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: grid !important; grid-template-columns: repeat(4, 1fr) !important; justify-items: center !important; gap: 8px 4px !important; width: 100% !important; max-width: 100% !important; padding: 2px 10px 6px 10px !important; margin-top: 4px !important; order: 6; } ';
         
-        css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; display: flex !important; flex-direction: column !important; align-items: center !important; min-width: 50px !important; width: 50px !important; flex-shrink: 0 !important; transition: transform 0.2s ease, opacity 0.2s ease; } ';
+        css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; display: flex !important; flex-direction: column !important; align-items: center !important; width: 100% !important; max-width: 65px !important; transition: transform 0.2s ease, opacity 0.2s ease; } ';
         css += '.full-start-new .full-start__button:active { transform: scale(0.9); opacity: 0.7; } ';
-        css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 22px !important; height: 22px !important; margin-bottom: 4px !important; fill: #fff !important; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5)); } ';
-        css += '.full-start-new .full-start__button span { font-size: 7.5px !important; text-transform: uppercase !important; opacity: 0.75 !important; font-weight: 600; letter-spacing: 0.03em; white-space: nowrap; } ';
+        css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 22px !important; height: 22px !important; margin-bottom: 3px !important; fill: #fff !important; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5)); } ';
+        css += '.full-start-new .full-start__button span { font-size: 7.5px !important; text-transform: uppercase !important; opacity: 0.75 !important; font-weight: 600; letter-spacing: 0.02em; white-space: nowrap; text-align: center; } ';
         css += '} ';
 
         style.textContent = css;
