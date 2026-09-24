@@ -150,8 +150,8 @@
         var animTiming = animEffect === 'elastic' ? 'cubic-bezier(0.34, 1.56, 0.64, 1)' : 'cubic-bezier(0.16, 1, 0.3, 1)';
         var uiAnimClass = isUIAnim ? 'animation: ' + chosenAnimName + ' 0.8s ' + animTiming + ' forwards; opacity: 0; will-change: transform, opacity, filter; transform: translateZ(0); ' : '';
 
-        // Правий верхній кут: загальний контейнер для бейджів і рейтингів
-        css += '.quality-row-inline { position: absolute; top: 15px; right: 15px; z-index: 99; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; pointer-events: none; } '; 
+        // КОЛОНКА СПРАВЗЬ ЗВЕРХУ: акуратне вирівнювання за правим краєм, зменшений масштаб та єдиний мінімалістичний стиль
+        css += '.quality-row-inline { position: absolute; top: 12px; right: 12px; z-index: 99; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; pointer-events: none; } '; 
 
         css += '.studio-header-brand { ' + uiAnimClass + ' animation-delay: 0.08s; order: 1; width: 100%; display: flex; justify-content: flex-start; align-items: center; padding-left: 5vw; margin-bottom: -2px !important; } ';
         css += '.studio-header-brand img { height: 18px !important; width: auto; max-width: 110px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; } ';
@@ -183,12 +183,13 @@
         }
         css += '} ';
 
-        // Стилі для рейтингів у правому куті
-        css += '.quality-row-inline .plugin-rating-item { display: flex; align-items: center; gap: 4px; font-weight: 700; color: #fff; font-size: 1.1em; background: rgba(0, 0, 0, 0.55); padding: 3px 6px; border-radius: 6px; backdrop-filter: blur(4px); margin-bottom: 2px; } ';
-        css += '.quality-row-inline .plugin-rating-item img { height: 1.1em; width: auto; } ';
+        // Стилі рейтингів: компактні, акуратні, вирівняні
+        css += '.quality-row-inline .plugin-rating-item { display: flex; align-items: center; gap: 4px; font-weight: 700; color: #fff; font-size: 0.95em; background: rgba(0, 0, 0, 0.5); padding: 2px 5px; border-radius: 4px; backdrop-filter: blur(4px); } ';
+        css += '.quality-row-inline .plugin-rating-item img { height: 1em; width: auto; } ';
         
-        css += '.quality-item { height: 1.4em; display: flex; align-items: center; justify-content: flex-end; } ';
-        css += '.quality-item img { height: 100%; width: auto; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.8)); } ';
+        // Стилі якості: обмежена висота та однаковий вигляд, щоб не були занадто широкими
+        css += '.quality-item { height: 1.15em; display: flex; align-items: center; justify-content: flex-end; } ';
+        css += '.quality-item img { height: 100%; width: auto; max-width: 55px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8)); } ';
 
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.85em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
@@ -399,7 +400,6 @@
 
                 var globalIndex = 0;
 
-                // Додаємо рейтинги у правий кут першими
                 var tmdb = parseFloat(e.data.movie.vote_average || 0).toFixed(1);
                 if (tmdb > 0) {
                     var $tmdbItem = $('<div class="plugin-rating-item wave-item"><img src="'+ratingIcons.tmdb+'"> <span style="color:'+getRatingColor(tmdb)+'">'+tmdb+'</span></div>');
@@ -414,7 +414,6 @@
                     $qRow.append($cubItem);
                 }
 
-                // Додаємо бейджи якості відразу під рейтингами
                 if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Parser && Lampa.Parser.get) {
                     Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
                         if (res && Array.isArray(res.Results)) {
