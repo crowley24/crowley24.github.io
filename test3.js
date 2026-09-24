@@ -584,7 +584,7 @@
         }                
     }                
                 
-        function startSlideshow(render, backdrops, currentLang) {  
+             function startSlideshow(render, backdrops, currentLang) {  
         stopSlideshow();  
         if (!backdrops || backdrops.length <= 1) return;  
       
@@ -621,54 +621,40 @@
             idx = (idx + 1) % final_backdrops.length;  
             let nextSrc = Lampa.TMDB.image('/t/p/original' + final_backdrops[idx].file_path);  
       
-            let $currentBg = render.find('.full-start__background img, img.full-start__background').last();  
-            if (!$currentBg.length) return;  
+            let $bgImg = render.find('.full-start__background img, img.full-start__background').last();  
+            if (!$bgImg.length) return;  
       
+            // Попереднє завантаження зображення в пам'ять приставки
             let img = new Image();  
             img.onload = () => {  
                 if (!is_active) return;  
-      
-                // Створюємо новий елемент фону поверх старого з нульовою прозорістю
-                let $newBg = $currentBg.clone();
-                $newBg.attr('src', nextSrc);  
-                $newBg.css({                       
-                    opacity: 0,                       
-                    transition: 'opacity 1.2s ease-in-out',                       
-                    transform: 'translateZ(0)',
-                    'will-change': 'opacity',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    'object-fit': 'cover'
+                
+                // Щоб уникнути будь-яких шлейфів у WebView ТВ, робимо легке згасання самого контейнера фону в нуль, 
+                // підміна картинки "в сліпу", і плавне повернення назад. Це дає ідеально чистий перехід без артефактів.
+                let $container = render.find('.full-start__background');
+                
+                $container.css({
+                    transition: 'opacity 0.4s ease',
+                    opacity: 0
                 });
 
-                // Блокуємо взаємодію зі старим шаром, щоб уникнути артефактів рендерингу
-                $currentBg.css('pointer-events', 'none');
-
-                $currentBg.after($newBg);
-                
-                // Примусовий перерахунок стилів (reflow) для коректного старту анімації на TV-приставках
-                $newBg[0].offsetHeight;  
-      
-                // Запускаємо плавний перехід
-                $newBg.css('opacity', 1);
-                $currentBg.css('opacity', 0);  
-      
-                // Гарантоване видалення старого шару після завершення анимації
-                setTimeout(() => {  
-                    if (!is_active) return;  
-                    $currentBg.remove();  
-                }, 1300);  
+                setTimeout(() => {
+                    if (!is_active) return;
+                    $bgImg.attr('src', nextSrc);
+                    
+                    // Невелика затримка перед проявом нового фону
+                    setTimeout(() => {
+                        if (!is_active) return;
+                        $container.css('opacity', 0.35); // або 1, залежно від вашого стилю затемнення
+                    }, 100);
+                }, 400);
             };  
             img.onerror = () => {};  
             img.src = nextSrc;  
         }, intervalTime);  
       
         window.casBgInterval = currentInterval;  
-        }
-    
+    } 
                 
     function renderStudioLogosWithColorAnalysis(container, data) {    
         container.empty();
