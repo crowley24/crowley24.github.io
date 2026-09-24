@@ -191,7 +191,7 @@
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.85em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
 
-        // ЗМІНЕНО: Медіа-кнопки без фону та рамок (прозорі)
+        // Медіа-кнопки без фону та рамок
         css += '.full-start__buttons, .full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; flex-direction: row !important; justify-content: center !important; flex-wrap: nowrap !important; gap: 6px !important; width: 100% !important; max-width: 100% !important; padding: 0 5px !important; box-sizing: border-box !important; margin-top: 6px !important; order: 6; } ';
         
         css += '.full-start__button, .full-start-new .full-start__button { background: transparent !important; border: none !important; border-radius: 8px !important; padding: 6px 8px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: center !important; gap: 5px !important; flex: 1 !important; min-width: 0 !important; transition: background 0.2s ease, transform 0.2s ease, opacity 0.2s ease; } ';
@@ -201,7 +201,8 @@
         css += '.full-start__button svg, .full-start__button img, .full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 18px !important; height: 18px !important; margin-bottom: 0 !important; fill: #fff !important; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); flex-shrink: 0; } ';
         
         css += '.full-start__button span, .full-start-new .full-start__button span { font-size: 10px !important; text-transform: none !important; opacity: 0.9 !important; font-weight: 500; letter-spacing: normal !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; } ';
-        } ';
+        
+        css += '} '; // Закриття медіа-запиту @media screen and (max-width: 480px)
 
         style.textContent = css;
     }
