@@ -574,7 +574,7 @@
                 
     function startSlideshow(render, backdrops, currentLang) {  
         stopSlideshow();  
-        if (!backdrops || backdrops.length <= 1) return;  
+        if (!render || !render.length || !backdrops || backdrops.length <= 1) return;  
       
         var lang_backdrops = [];  
         var no_lang_backdrops = [];  
@@ -602,8 +602,8 @@
         if (final_backdrops.length <= 1) return;  
       
         var current_index = 0;  
-        var quality = Lampa.Storage.field('cas_slideshow_quality') || 'w1280';  
-        var duration = parseInt(Lampa.Storage.field('cas_slideshow_duration')) || 12000;  
+        var quality = (typeof Lampa.Storage.field === 'function' && Lampa.Storage.field('cas_slideshow_quality')) || Lampa.Storage.get('cas_slideshow_quality') || 'w1280';  
+        var duration = parseInt((typeof Lampa.Storage.field === 'function' && Lampa.Storage.field('cas_slideshow_duration')) || Lampa.Storage.get('cas_slideshow_duration')) || 12000;  
       
         currentInterval = setInterval(function () {  
             var $render = render;  
@@ -637,7 +637,7 @@
                     $currentBg.after($newBg);  
                 }  
       
-                $newBg[0].offsetHeight;   
+                if ($newBg[0])$newBg[0].offsetHeight;   
       
                 $newBg.css('opacity', '1');$currentBg.css({  
                     'transition': 'opacity 1.8s cubic-bezier(0.4, 0, 0.2, 1)',  
@@ -656,6 +656,7 @@
     }               
                 
     function renderStudioLogosWithColorAnalysis(container, data) {    
+        if (!container || !container.length) return;
         container.empty();
         const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 1);  
             
@@ -700,6 +701,7 @@
     }    
                 
     async function processImages(render, data, res) {  
+        if (!render || !render.length) return;
         try {  
             let bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];  
             if (!bestLogo && res.logos.length > 0) bestLogo = res.logos[0];  
@@ -723,6 +725,7 @@
     }    
                 
     async function loadMovieDataOptimized(render, data) {    
+        if (!render || !render.length) return;
         const tasks = [];    
             
         if (data.tagline && Lampa.Storage.get('cas_show_tagline')) {
@@ -925,4 +928,3 @@
     if (window.appready) startPlugin();                  
     else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') startPlugin(); });                  
 })();
-
