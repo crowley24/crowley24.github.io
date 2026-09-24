@@ -197,9 +197,10 @@
                     if (movieData && movieData.id) {          
                         const cacheId = 'tmdb_' + movieData.id;          
                         const cached = getCachedData(cacheId);          
-                        if (cached && cached.backdrops?.length > 1) {          
-                            startSlideshow(currentCard, cached.backdrops);          
-                        }          
+                        if (cached && cached.backdrops?.length > 1) {  
+    var current_lang = Lampa.Storage.get('tmdb_lang') || 'uk';  
+    startSlideshow(currentCard, cached.backdrops, current_lang);  
+}         
                     }          
                 }          
             }          
