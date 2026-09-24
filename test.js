@@ -160,15 +160,15 @@
         
         css += '.plugin-meta-row { ' + uiAnimClass + ' animation-delay: 0.28s; display: flex; justify-content: center; align-items: center; flex-wrap: nowrap; gap: 8px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.5); width: 100%; order: 4; color: rgba(255,255,255,0.85); font-family: "Inter", -apple-system, system-ui, sans-serif; } ';
         
-        // ОПТИМІЗОВАНИЙ СТОВПЧИК РЕЙТИНГІВ ТА ЯКОСТІ
-        css += '.plugin-ratings-quality-row { position: absolute !important; top: 12px !important; right: 12px !important; z-index: 10 !important; display: flex !important; flex-direction: column !important; align-items: flex-end !important; gap: 8px !important; margin: 0 !important; font-size: calc(' + rSize + ' * 2.3); background: rgba(0, 0, 0, 0.55); padding: 10px 12px; border-radius: 12px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); } ';
-        css += '.plugin-ratings-group { display: flex !important; flex-direction: column !important; align-items: flex-end !important; gap: 6px !important; width: 100% !important; } ';
-        css += '.quality-row-inline { display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; justify-content: flex-end !important; align-items: center !important; gap: 6px !important; width: 100% !important; margin-top: 2px !important; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 6px; } '; 
+        // ПОВНІСТЮ ПРОЗОРЕ РОЗТАШУВАННЯ БЕЗ ФОНУ (РЕЙТИНГИ ТА ЯКІСТЬ РОЗДІЛЕНІ)
+        css += '.plugin-ratings-quality-row { position: absolute !important; top: 12px !important; right: 12px !important; z-index: 10 !important; display: flex !important; flex-direction: column !important; align-items: flex-end !important; gap: 10px !important; margin: 0 !important; font-size: calc(' + rSize + ' * 2.3); background: none !important; padding: 0 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; } ';
+        css += '.plugin-ratings-group { display: flex !important; flex-direction: column !important; align-items: flex-end !important; gap: 6px !important; width: 100% !important; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.9)) !important; } ';
+        css += '.quality-row-inline { display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; justify-content: flex-end !important; align-items: center !important; gap: 6px !important; width: 100% !important; margin-top: 4px !important; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.9)) !important; } '; 
         
         var loopAnimName = badgeAnim !== 'none' ? 'badge_anim_' + badgeAnim : '';
         var loopDuration = badgeAnim === 'spin_slow' ? '4s' : (badgeAnim === 'breathe' ? '3s' : '2.5s');
 
-        css += '.wave-item { transform-origin: center center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); ';
+        css += '.wave-item { transform-origin: center center; ';
         if (isUIAnim) {
             css += 'opacity: 0; animation: wave_cascade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards';
             if (badgeAnim !== 'none') {
@@ -184,10 +184,10 @@
         }
         css += '} ';
 
-        css += '.plugin-rating-item { display: flex; align-items: center; gap: 6px; font-weight: 700; color: #fff; } ';
-        css += '.plugin-rating-item img { height: 1.2em; width: auto; } ';
-        css += '.quality-item { height: 1.1em; } ';
-        css += '.quality-item img { height: 100%; width: auto; object-fit: contain; } ';
+        css += '.plugin-rating-item { display: flex; align-items: center; gap: 6px; font-weight: 700; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.9); } ';
+        css += '.plugin-rating-item img { height: 1.2em; width: auto; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.9)); } ';
+        css += '.quality-item { height: 1.2em; } ';
+        css += '.quality-item img { height: 100%; width: auto; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.9)); } ';
 
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.85em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
