@@ -143,9 +143,9 @@
         css += 'transform-origin: center center !important; transition: opacity 1.2s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
         
-        // Стиль для плаваючого TMDB у правому верхньому кутку постера
-        css += '.plugin-tmdb-top-right { position: absolute; top: 12px; right: 12px; z-index: 10; background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); padding: 4px 8px; border-radius: 8px; display: flex; align-items: center; gap: 5px; font-weight: 700; color: #fff; font-size: 0.9rem; border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.5); } ';
-        css += '.plugin-tmdb-top-right img { height: 1em; width: auto; display: block; } ';
+        // Виправлені стилі для TMDB у правому верхньому кутку (додано gap та більший відступ)
+        css += '.plugin-tmdb-top-right { position: absolute; top: 12px; right: 12px; z-index: 10; background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); padding: 5px 10px; border-radius: 8px; display: flex; align-items: center; gap: 7px; font-weight: 700; color: #fff; font-size: 0.9rem; border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.5); } ';
+        css += '.plugin-tmdb-top-right img { height: 1.1em; width: auto; display: block; flex-shrink: 0; } ';
 
         css += '.full-start-new__right { background: none !important; margin-top: -160px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; padding: 0 10px !important; gap: ' + blocksGap + ' !important; } ';
         
@@ -239,7 +239,6 @@
         container.find('.plugin-meta-row').remove();
         container.find('.plugin-ratings-quality-row').remove();
         
-        // Видаляємо попередній TMDB з постера, якщо він вже там був (при оновленні)
         var $poster = container.closest('.full-start-new, .full-start').find('.full-start-new__poster');
         $poster.find('.plugin-tmdb-top-right').remove();
 
@@ -278,14 +277,12 @@
         
         var globalIndex = 0;
 
-        // Виносимо TMDB на постер у правому верхньому кутку
         var tmdb = parseFloat(e.data.movie.vote_average || 0).toFixed(1);
         if (tmdb > 0) {
             var $tmdbTop = $('<div class="plugin-tmdb-top-right"><img src="'+ratingIcons.tmdb+'"> <span style="color:'+getRatingColor(tmdb)+'">'+tmdb+'</span></div>');
             $poster.append($tmdbTop);
         }
         
-        // Внизу залишаємо тільки CUB (якщо він є)
         var cub = getCubRating(e);
         if (cub) {
             var $cubItem = $('<div class="plugin-rating-item wave-item"><img src="' + ratingIcons.cub + '"> <span style="color:' + getRatingColor(cub) + '">' + cub + '</span></div>');
