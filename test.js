@@ -140,7 +140,6 @@
         css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="rating-count"], [class*="status"] { display:none !important; } ';
         css += '.full-start-new__right > div:first-child { display: none !important; } ';
         
-        // Приховуємо стандартні рейтинги та реакції
         css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates, .rate--cub, [class*="reactions"] { display: none !important; } ';
         css += '.background { background: #000 !important; } ';
         
@@ -152,7 +151,7 @@
         css += 'transform-origin: center center !important; transition: opacity 1.2s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
         
-        css += '.full-start-new__right { background: none !important; margin-top: -160px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; padding: 0 10px !important; gap: ' + blocksGap + ' !important; } ';
+        css += '.full-start-new__right { background: none !important; margin-top: -160px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; padding: 0 10px 30px 10px !important; gap: ' + blocksGap + ' !important; } ';
         
         var chosenAnimName = 'anim_' + animEffect;
         var animTiming = animEffect === 'elastic' ? 'cubic-bezier(0.34, 1.56, 0.64, 1)' : 'cubic-bezier(0.16, 1, 0.3, 1)';
@@ -162,9 +161,10 @@
         css += '.studio-header-brand img { height: 18px !important; width: auto; max-width: 110px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; } ';
         css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
 
-        // Жорстко ховаємо текстовий заголовок і все зайве зліва, залишаючи контейнер виключно для графічного логотипу центру
-        css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.15s; width: 100% !important; display: flex !important; justify-content: center !important; align-items: center !important; margin: 0 !important; min-height: 50px; order: 2; overflow: hidden !important; position: relative !important; text-indent: -9999px !important; } ';
-        css += '.full-start-new__title img { position: absolute !important; text-indent: 0 !important; height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 90vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; left: 50% !important; transform: translateX(-50%) !important; } ';
+        // Надійне приховування стандартного тексту всередині контейнера без руйнування самого вузла
+        css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.15s; width: 100% !important; display: flex !important; justify-content: center !important; align-items: center !important; margin: 0 !important; min-height: 40px; order: 2; font-size: 0 !important; color: transparent !important; text-indent: -9999px !important; overflow: hidden !important; white-space: nowrap !important; } ';
+        css += '.full-start-new__title * { font-size: 0 !important; color: transparent !important; display: none !important; } ';
+        css += '.full-start-new__title img { font-size: initial !important; color: initial !important; text-indent: 0 !important; display: block !important; height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 85vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 auto !important; } ';
 
         css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.22s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: center !important; order: 3; } ';
         
@@ -201,8 +201,7 @@
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.85em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
 
-        // Гарантуємо повну видимість медіа кнопок без ламання їхньої структури
-        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; justify-content: center !important; gap: 12px !important; width: 100% !important; margin-top: 6px !important; order: 6; opacity: 1 !important; visibility: visible !important; } ';
+        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; justify-content: center !important; gap: 12px !important; width: 100% !important; margin-top: 6px !important; margin-bottom: 20px !important; order: 6; opacity: 1 !important; visibility: visible !important; } ';
         css += '.full-start-new .full-start__button { display: inline-flex !important; opacity: 1 !important; visibility: visible !important; transform: none !important; transition: none !important; box-shadow: none !important; } ';
         css += '} ';
 
@@ -280,6 +279,8 @@
     }
 
     function applyMovieDetailsData(data, movie, $render) {
+        var $titleContainer = $render.find('.full-start-new__title');
+        
         if (data.images && data.images.logos && data.images.logos.length > 0) {
             var lang = Lampa.Storage.get('language') || 'uk';
             var logo = data.images.logos.filter(function(l) { return l.iso_639_1 === lang; })[0] || 
@@ -288,7 +289,8 @@
             
             if (logo) {
                 var logoUrl = Lampa.TMDB.image('/t/p/' + Lampa.Storage.get('mobile_interface_logo_quality', 'w500') + logo.file_path.replace('.svg', '.png'));
-                var $titleContainer = $render.find('.full-start-new__title');
+                
+                // Видаляємо попередній логотип, якщо він був, і додаємо новий всередину рідного контейнера
                 $titleContainer.find('img').remove();
                 $titleContainer.append('<img src="' + logoUrl + '">');
             }
