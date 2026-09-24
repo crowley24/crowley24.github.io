@@ -190,10 +190,13 @@
         css += '} ';
         
         css += '@media screen and (max-width: 480px) { ';
-        css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="rating-count"], [class*="status"] { display:none !important; } ';
-        css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';
         
-        /* ПОВНЕ ПРИХОВУВАННЯ ШТАТНИХ РЕАКЦІЙ LAMPA */
+        /* ПОВНЕ ПРИХОВУВАННЯ ШТАТНИХ ДЕТАЛЕЙ, РОКІВ, КРАЇН ТА РЕАКЦІЙ LAMPA */
+        css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, ';
+        css += '.full-start-new__details *, .full-start__info *, [class*="age"], [class*="pg"], [class*="rating-count"], [class*="status"], ';
+        css += '[class*="year"], [class*="country"], [class*="details"] { display: none !important; } ';
+        
+        css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';
         css += '.full-start-new__reactions, .full-start__reactions, .full-start-new__reaction, .full-start__reaction, [class*="reaction"], [class*="reactions"] { display: none !important; } ';
         
         css += '.background { background: #000 !important; } ';
@@ -212,7 +215,6 @@
         var animTiming = animEffect === 'elastic' ? 'cubic-bezier(0.34, 1.56, 0.64, 1)' : 'cubic-bezier(0.16, 1, 0.3, 1)';
         var uiAnimClass = isUIAnim ? 'animation: ' + chosenAnimName + ' 0.8s ' + animTiming + ' forwards; opacity: 0; will-change: transform, opacity, filter; transform: translateZ(0); ' : '';
 
-        /* ПРАВИЛЬНИЙ ПОРЯДОК ЕЛЕМЕНТІВ ЧЕРЕЗ ORDER */
         css += '.studio-header-brand { ' + uiAnimClass + ' animation-delay: 0.05s; order: 1; width: 100%; display: flex; justify-content: flex-start; align-items: center; padding-left: 5vw; margin-bottom: -2px !important; } ';
         css += '.studio-header-brand img { height: 18px !important; width: auto; max-width: 110px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; } ';
         css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
@@ -255,14 +257,12 @@
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.85em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
 
-        /* КОНТЕЙНЕР КНОПОК ДІЙ ТА ІНТЕГРАЦІЇ ВСІХ ЗОВНІШНІХ ПЛАГІНІВ (ТОРРЕНТИ, SHOTS ТОЩО) */
         css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.38s; display: flex !important; justify-content: center !important; align-items: center !important; flex-wrap: wrap !important; gap: 8px !important; width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; padding: 0 8px !important; margin-top: 6px !important; order: 6; overflow: visible !important; } ';
         css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; flex: 0 1 52px !important; width: 52px !important; min-width: 0 !important; max-width: 52px !important; box-sizing: border-box !important; transition: transform 0.2s ease, opacity 0.2s ease; } ';
         css += '.full-start-new .full-start__button:active { transform: scale(0.9); opacity: 0.7; } ';
         css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 24px !important; height: 24px !important; margin-bottom: 5px !important; fill: #fff !important; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5)); } ';
         css += '.full-start-new .full-start__button span { font-size: 8px !important; text-transform: uppercase !important; opacity: 0.75 !important; font-weight: 600; letter-spacing: 0.05em; } ';
         
-        /* ЗБЕРЕЖЕННЯ ВІДОБРАЖЕННЯ УСІХ ДОДАТКОВИХ КНОПОК ТА ПЛАГІНІВ В ДИВИТИСЬ */
         css += '.full-start-new__buttons > div:not(.full-start__button) { display: flex !important; align-items: center !important; justify-content: center !important; flex-wrap: wrap !important; gap: 8px !important; } ';
         css += '.full-start-new__buttons * { visibility: visible !important; opacity: 1 !important; } ';
         css += '} ';
