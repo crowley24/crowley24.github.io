@@ -143,6 +143,10 @@
         css += 'transform-origin: center center !important; transition: opacity 1.2s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
         
+        // Стиль для плаваючого TMDB у правому верхньому кутку постера
+        css += '.plugin-tmdb-top-right { position: absolute; top: 12px; right: 12px; z-index: 10; background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); padding: 4px 8px; border-radius: 8px; display: flex; align-items: center; gap: 5px; font-weight: 700; color: #fff; font-size: 0.9rem; border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.5); } ';
+        css += '.plugin-tmdb-top-right img { height: 1em; width: auto; display: block; } ';
+
         css += '.full-start-new__right { background: none !important; margin-top: -160px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; padding: 0 10px !important; gap: ' + blocksGap + ' !important; } ';
         
         var chosenAnimName = 'anim_' + animEffect;
@@ -160,15 +164,14 @@
         
         css += '.plugin-meta-row { ' + uiAnimClass + ' animation-delay: 0.28s; display: flex; justify-content: center; align-items: center; flex-wrap: nowrap; gap: 8px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.5); width: 100%; order: 4; color: rgba(255,255,255,0.85); font-family: "Inter", -apple-system, system-ui, sans-serif; } ';
         
-        // ПОВНІСТЮ ПРОЗОРЕ РОЗТАШУВАННЯ БЕЗ ФОНУ (РЕЙТИНГИ ТА ЯКІСТЬ РОЗДІЛЕНІ)
-        css += '.plugin-ratings-quality-row { position: absolute !important; top: 12px !important; right: 12px !important; z-index: 10 !important; display: flex !important; flex-direction: column !important; align-items: flex-end !important; gap: 10px !important; margin: 0 !important; font-size: calc(' + rSize + ' * 2.3); background: none !important; padding: 0 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; } ';
-        css += '.plugin-ratings-group { display: flex !important; flex-direction: column !important; align-items: flex-end !important; gap: 6px !important; width: 100% !important; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.9)) !important; } ';
-        css += '.quality-row-inline { display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; justify-content: flex-end !important; align-items: center !important; gap: 6px !important; width: 100% !important; margin-top: 4px !important; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.9)) !important; } '; 
+        css += '.plugin-ratings-quality-row { ' + uiAnimClass + ' animation-delay: 0.35s; display: flex; justify-content: center; align-items: center; flex-wrap: nowrap; gap: 12px; margin: 0 !important; width: 100%; order: 5; font-size: calc(' + rSize + ' * 2.8); } ';
+        css += '.plugin-ratings-group { display: flex; align-items: center; gap: 10px; } ';
+        css += '.quality-row-inline { display: flex; align-items: center; gap: 6px; opacity: 0.9; } '; 
         
         var loopAnimName = badgeAnim !== 'none' ? 'badge_anim_' + badgeAnim : '';
         var loopDuration = badgeAnim === 'spin_slow' ? '4s' : (badgeAnim === 'breathe' ? '3s' : '2.5s');
 
-        css += '.wave-item { transform-origin: center center; ';
+        css += '.wave-item { transform-origin: center center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); ';
         if (isUIAnim) {
             css += 'opacity: 0; animation: wave_cascade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards';
             if (badgeAnim !== 'none') {
@@ -184,15 +187,15 @@
         }
         css += '} ';
 
-        css += '.plugin-rating-item { display: flex; align-items: center; gap: 6px; font-weight: 700; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.9); } ';
-        css += '.plugin-rating-item img { height: 1.2em; width: auto; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.9)); } ';
-        css += '.quality-item { height: 1.2em; } ';
-        css += '.quality-item img { height: 100%; width: auto; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.9)); } ';
+        css += '.plugin-rating-item { display: flex; align-items: center; gap: 4px; font-weight: 700; color: #fff; } ';
+        css += '.plugin-rating-item img { height: 1.1em; width: auto; } ';
+        css += '.quality-item { height: 1.1em; } ';
+        css += '.quality-item img { height: 100%; width: auto; object-fit: contain; } ';
 
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.85em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
 
-        // КНОПКИ
+        // ВИПРАВЛЕННЯ ДЛЯ КНОПОК (не виходять за межі екрана)
         css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; justify-content: center !important; flex-wrap: wrap !important; gap: 8px !important; width: 100% !important; max-width: 100% !important; padding: 0 5px !important; box-sizing: border-box !important; margin-top: 6px !important; order: 6; } ';
         css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; display: flex !important; flex-direction: column !important; align-items: center !important; width: 52px !important; min-width: 45px !important; transition: transform 0.2s ease, opacity 0.2s ease; } ';
         css += '.full-start-new .full-start__button:active { transform: scale(0.9); opacity: 0.7; } ';
@@ -234,9 +237,12 @@
 
     function renderRatings(container, e) {
         container.find('.plugin-meta-row').remove();
-        var $poster = e.object.activity.render().find('.full-start-new__poster');
-        $poster.find('.plugin-ratings-quality-row').remove();
+        container.find('.plugin-ratings-quality-row').remove();
         
+        // Видаляємо попередній TMDB з постера, якщо він вже там був (при оновленні)
+        var $poster = container.closest('.full-start-new, .full-start').find('.full-start-new__poster');
+        $poster.find('.plugin-tmdb-top-right').remove();
+
         var sep = '<span class="info-separator">•</span>';
         var $metaRow = $('<div class="plugin-meta-row"></div>');
         
@@ -272,13 +278,14 @@
         
         var globalIndex = 0;
 
+        // Виносимо TMDB на постер у правому верхньому кутку
         var tmdb = parseFloat(e.data.movie.vote_average || 0).toFixed(1);
         if (tmdb > 0) {
-            var $tmdbItem = $('<div class="plugin-rating-item wave-item"><img src="'+ratingIcons.tmdb+'"> <span style="color:'+getRatingColor(tmdb)+'">'+tmdb+'</span></div>');
-            $tmdbItem.css('--item-index', globalIndex++);
-            $ratingsGroup.append($tmdbItem);
+            var $tmdbTop = $('<div class="plugin-tmdb-top-right"><img src="'+ratingIcons.tmdb+'"> <span style="color:'+getRatingColor(tmdb)+'">'+tmdb+'</span></div>');
+            $poster.append($tmdbTop);
         }
         
+        // Внизу залишаємо тільки CUB (якщо він є)
         var cub = getCubRating(e);
         if (cub) {
             var $cubItem = $('<div class="plugin-rating-item wave-item"><img src="' + ratingIcons.cub + '"> <span style="color:' + getRatingColor(cub) + '">' + cub + '</span></div>');
@@ -288,9 +295,7 @@
 
         var $qRow = $('<div class="quality-row-inline"></div>');
         $rqRow.append($ratingsGroup).append($qRow);
-        
-        $poster.append($rqRow);
-        container.append($metaRow);
+        container.append($metaRow).append($rqRow);
 
         return globalIndex;
     }
