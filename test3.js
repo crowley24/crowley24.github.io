@@ -602,8 +602,8 @@
         if (final_backdrops.length <= 1) return;  
       
         var current_index = 0;  
-        var quality = (typeof Lampa.Storage.field === 'function' && Lampa.Storage.field('cas_slideshow_quality')) || Lampa.Storage.get('cas_slideshow_quality') || 'w1280';  
-        var duration = parseInt((typeof Lampa.Storage.field === 'function' && Lampa.Storage.field('cas_slideshow_duration')) || Lampa.Storage.get('cas_slideshow_duration')) || 12000;  
+        var quality = Lampa.Storage.get('cas_slideshow_quality') || 'w1280';  
+        var duration = parseInt(Lampa.Storage.get('cas_slideshow_duration')) || 12000;  
       
         currentInterval = setInterval(function () {  
             var $render = render;  
