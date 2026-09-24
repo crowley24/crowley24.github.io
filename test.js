@@ -158,10 +158,9 @@
 
         css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.22s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: center !important; order: 3; } ';
         
-        // Рядок року/жанрів залишається на своєму місці (по центру)
         css += '.plugin-meta-row { ' + uiAnimClass + ' animation-delay: 0.28s; display: flex; justify-content: center; align-items: center; flex-wrap: nowrap; gap: 8px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.5); width: 100%; order: 4; color: rgba(255,255,255,0.85); font-family: "Inter", -apple-system, system-ui, sans-serif; background: none !important; box-shadow: none !important; padding: 0 !important; } ';
         
-        // Перенесення рейтингу та якості у верхній правий кут екрана (поверх постера)
+        // Повністю вертикальний стовпчик у верхньому правому куті (і рейтинги, і якість вишикувані в одну колонку праворуч)
         css += '.plugin-ratings-quality-row { position: absolute !important; top: 15px !important; right: 15px !important; z-index: 10 !important; display: flex !important; flex-direction: column !important; align-items: flex-end !important; gap: 6px !important; margin: 0 !important; width: auto !important; background: none !important; box-shadow: none !important; border: none !important; padding: 0 !important; font-size: calc(' + rSize + ' * 2.5); } ';
         css += '.plugin-ratings-group { display: flex !important; flex-direction: column !important; align-items: flex-end !important; gap: 4px !important; width: auto !important; background: none !important; box-shadow: none !important; padding: 0 !important; } ';
         css += '.quality-row-inline { display: flex !important; flex-direction: column !important; align-items: flex-end !important; gap: 4px !important; opacity: 0.9; width: auto !important; background: none !important; box-shadow: none !important; padding: 0 !important; } '; 
