@@ -150,7 +150,6 @@
         var animTiming = animEffect === 'elastic' ? 'cubic-bezier(0.34, 1.56, 0.64, 1)' : 'cubic-bezier(0.16, 1, 0.3, 1)';
         var uiAnimClass = isUIAnim ? 'animation: ' + chosenAnimName + ' 0.8s ' + animTiming + ' forwards; opacity: 0; will-change: transform, opacity, filter; transform: translateZ(0); ' : '';
 
-        // Колонка праворуч (трохи опущена нижче завдяки top: 40px)
         css += '.quality-row-inline { position: absolute; top: 40px; right: 12px; z-index: 99; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; pointer-events: none; } '; 
 
         css += '.studio-header-brand { ' + uiAnimClass + ' animation-delay: 0.08s; order: 1; width: 100%; display: flex; justify-content: flex-start; align-items: center; padding-left: 5vw; margin-bottom: -2px !important; } ';
@@ -192,16 +191,17 @@
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.85em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
 
-        // Медіа-кнопки (Дивитися, Трейлер тощо) в один рядок
+        // ЗМІНЕНО: Медіа-кнопки без фону та рамок (прозорі)
         css += '.full-start__buttons, .full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; flex-direction: row !important; justify-content: center !important; flex-wrap: nowrap !important; gap: 6px !important; width: 100% !important; max-width: 100% !important; padding: 0 5px !important; box-sizing: border-box !important; margin-top: 6px !important; order: 6; } ';
         
-        css += '.full-start__button, .full-start-new .full-start__button { background: rgba(0, 0, 0, 0.4) !important; border: 1px solid rgba(255, 255, 255, 0.15) !important; border-radius: 8px !important; padding: 6px 8px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: center !important; gap: 5px !important; flex: 1 !important; min-width: 0 !important; transition: transform 0.2s ease, opacity 0.2s ease; } ';
-        css += '.full-start__button:active, .full-start-new .full-start__button:active { transform: scale(0.95); opacity: 0.7; } ';
+        css += '.full-start__button, .full-start-new .full-start__button { background: transparent !important; border: none !important; border-radius: 8px !important; padding: 6px 8px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: center !important; gap: 5px !important; flex: 1 !important; min-width: 0 !important; transition: background 0.2s ease, transform 0.2s ease, opacity 0.2s ease; } ';
+        css += '.full-start__button:hover, .full-start-new .full-start__button:hover { background: rgba(255, 255, 255, 0.1) !important; } ';
+        css += '.full-start__button:active, .full-start-new .full-start__button:active { transform: scale(0.95); opacity: 0.7; background: rgba(255, 255, 255, 0.15) !important; } ';
         
         css += '.full-start__button svg, .full-start__button img, .full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 18px !important; height: 18px !important; margin-bottom: 0 !important; fill: #fff !important; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); flex-shrink: 0; } ';
         
         css += '.full-start__button span, .full-start-new .full-start__button span { font-size: 10px !important; text-transform: none !important; opacity: 0.9 !important; font-weight: 500; letter-spacing: normal !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; } ';
-        css += '} ';
+        } ';
 
         style.textContent = css;
     }
