@@ -135,6 +135,7 @@
         css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';
         css += '.background { background: #000 !important; } ';
         
+        css += '.full-start-new { position: relative !important; } ';
         css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 62vh !important; ';
         css += (isUIAnim ? 'animation: poster_fade_in 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards; ' : '') + '} ';
         
@@ -149,8 +150,8 @@
         var animTiming = animEffect === 'elastic' ? 'cubic-bezier(0.34, 1.56, 0.64, 1)' : 'cubic-bezier(0.16, 1, 0.3, 1)';
         var uiAnimClass = isUIAnim ? 'animation: ' + chosenAnimName + ' 0.8s ' + animTiming + ' forwards; opacity: 0; will-change: transform, opacity, filter; transform: translateZ(0); ' : '';
 
-        // ВИПРАВЛЕНО: тепер контейнер чітко у верхньому правому кутку постера
-        css += '.quality-row-inline { position: absolute; top: -62vh; right: 15px; z-index: 10; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; pointer-events: none; } '; 
+        // ВИПРАВЛЕНО: позиціонування поверх усього контейнера у правому верхньому куті постера
+        css += '.quality-row-inline { position: absolute; top: 15px; right: 15px; z-index: 99; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; pointer-events: none; } '; 
 
         css += '.studio-header-brand { ' + uiAnimClass + ' animation-delay: 0.08s; order: 1; width: 100%; display: flex; justify-content: flex-start; align-items: center; padding-left: 5vw; margin-bottom: -2px !important; } ';
         css += '.studio-header-brand img { height: 18px !important; width: auto; max-width: 110px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; } ';
@@ -414,10 +415,13 @@
                 var startIndex = renderRatings($render.find('.full-start-new__right'), e);
                 loadMovieDetails(movie, $render);
 
-                var $posterBlock = $render.find('.full-start-new__poster');
-                $posterBlock.find('.quality-row-inline').remove();
+                // ВИПРАВЛЕНО: додаємо бейджи безпосередньо у головний контейнер картки, минаючи overflow-hidden у постера
+                var $mainContainer = $render.find('.full-start-new');
+                if ($mainContainer.length === 0) $mainContainer = $render;
+                
+                $mainContainer.find('.quality-row-inline').remove();
                 var $qRow = $('<div class="quality-row-inline"></div>');
-                $posterBlock.append($qRow);
+                $mainContainer.append($qRow);
 
                 if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Parser && Lampa.Parser.get) {
                     Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
@@ -460,6 +464,7 @@
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_logo_size_v2', type: 'select', values: { '125': 'Малий', '150': 'Середній', '180': 'Стандартний', '210': 'Великий' }, default: '125' }, field: { name: 'Висота логотипу тайтлу' }, onChange: applyStyles });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_show_tagline', type: 'trigger', default: true }, field: { name: 'Відображати слоган' }, onChange: applyStyles });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_blocks_gap', type: 'select', values: { '8px': 'Компактний', '12px': 'Стандартний', '18px': 'Просторий', '24px': 'Панорамний' }, default: '8px' }, field: { name: 'Відступи між блоками' }, onChange: applyStyles });
+        Lampa.SettingsApi.addParserParam = Lampa.SettingsApi.addParam; // fallback protection
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_ratings_size', type: 'select', values: { '0.4em': 'Дрібний', '0.45em': 'Звичайний', '0.5em': 'Великий', '0.55em': 'Дуже великий' }, default: '0.45em' }, field: { name: 'Розмір шрифту інфо-блоків' }, onChange: applyStyles });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_studios', type: 'trigger', default: true }, field: { name: 'Показувати логотип студії' } });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_quality', type: 'trigger', default: true }, field: { name: 'Бейджі якості та звуку' } });
