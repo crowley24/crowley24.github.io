@@ -432,11 +432,19 @@
             max-height: 200px;  
             width: auto;  
             height: auto;  
-            transform: scale(var(--cas-logo-scale));  
+            transform: scale(var(--cas-logo-scale)) translate3d(0, 6px, 0);  
             transform-origin: left center;  
             display: block;  
             object-fit: contain;  
+            opacity: 0;
+            transition: opacity 0.4s var(--cas-curve-slide), transform 0.4s var(--cas-curve-slide);
+            will-change: opacity, transform;
         }  
+
+        .cas-logo.loaded img {
+            opacity: 1;
+            transform: scale(var(--cas-logo-scale)) translate3d(0, 0, 0);
+        }
         
         .cas-tagline {
             font-size: calc(var(--cas-meta-size) * 0.95);
@@ -584,7 +592,7 @@
         }                
     }                
                 
-             function startSlideshow(render, backdrops, currentLang) {  
+    function startSlideshow(render, backdrops, currentLang) {  
         stopSlideshow();  
         if (!backdrops || backdrops.length <= 1) return;  
       
@@ -624,16 +632,11 @@
             let $bgImg = render.find('.full-start__background img, img.full-start__background').last();  
             if (!$bgImg.length) return;  
       
-            // Попереднє завантаження зображення в пам'ять приставки
             let img = new Image();  
             img.onload = () => {  
                 if (!is_active) return;  
                 
-                // Щоб уникнути будь-яких шлейфів у WebView ТВ, робимо легке згасання самого контейнера фону в нуль, 
-                // підміна картинки "в сліпу", і плавне повернення назад. Це дає ідеально чистий перехід без артефактів.
-                let $container = render.find('.full-start__background');
-                
-                $container.css({
+                let $container = render.find('.full-start__background');$container.css({
                     transition: 'opacity 0.4s ease',
                     opacity: 0
                 });
@@ -642,10 +645,9 @@
                     if (!is_active) return;
                     $bgImg.attr('src', nextSrc);
                     
-                    // Невелика затримка перед проявом нового фону
                     setTimeout(() => {
                         if (!is_active) return;
-                        $container.css('opacity', 0.35); // або 1, залежно від вашого стилю затемнення
+                        $container.css('opacity', 0.35); 
                     }, 100);
                 }, 400);
             };  
@@ -654,7 +656,7 @@
         }, intervalTime);  
       
         window.casBgInterval = currentInterval;  
-    } 
+    }               
                 
     function renderStudioLogosWithColorAnalysis(container, data) {    
         container.empty();
@@ -705,21 +707,32 @@
             let bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];  
             if (!bestLogo && res.logos.length > 0) bestLogo = res.logos[0];  
       
+            const logoContainer = render.find('.cas-logo');
+            logoContainer.removeClass('loaded');
+
             if (bestLogo) {  
                 const quality = Lampa.Storage.get('cas_logo_quality') || 'original';  
                 const logoSrc = Lampa.TMDB.image('/t/p/' + quality + bestLogo.file_path);  
+                
                 await preloadImage(logoSrc);  
-                render.find('.cas-logo').html(`<img src="${logoSrc}">`);  
+                
+                logoContainer.html(`<img src="${logoSrc}">`);  
+                
+                requestAnimationFrame(() => {
+                    logoContainer.addClass('loaded');
+                });
             } else {  
-                render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);  
+                logoContainer.html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);  
+                logoContainer.addClass('loaded');
             }  
+
             stopSlideshow();  
             if (Lampa.Storage.get('cas_slideshow_enabled') && res.backdrops && res.backdrops.length > 1) {  
                 let current_lang = Lampa.Storage.get('tmdb_lang') || 'uk';  
                 startSlideshow(render, res.backdrops, current_lang);  
             }  
         } catch (error) {  
-            render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);  
+            render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`).addClass('loaded');  
         }  
     }    
                 
@@ -879,7 +892,7 @@
                             setCachedData(cacheId, res);                
                             processImagesWrapper(res);                
                         }).fail(() => {                
-                            render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);                
+                            render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`).addClass('loaded');                
                             requestAnimationFrame(() => {
                                 cardRoot.addClass('cas-animated');
                             });
