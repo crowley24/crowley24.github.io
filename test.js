@@ -1,14 +1,13 @@
 (function () {
     'use strict';
-
     /**
      * ПЕРЕМІННІ ТА КЕШУВАННЯ
      */
-    var slideshowTimer = null;
+    var slideshowTimer = null; 
     var pluginPath = 'https://crowley24.github.io/Icons/';
     var detailsCache = {};
     var currentActiveId = null;
-
+    
     var settings_list = [
         { id: 'mobile_interface_animation', default: true },
         { id: 'mobile_interface_ui_anim', default: true },
@@ -48,8 +47,7 @@
     };
 
     var ratingIcons = {
-        tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',
-        cub: 'https://raw.githubusercontent.com/yumata/lampa/9381985ad4371d2a7d5eb5ca8e3daf0f32669eb7/img/logo-icon.svg'
+        tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg'
     };
 
     function stopSlideshow() {
@@ -60,20 +58,17 @@
     }
 
     /**
-     * АНАЛІЗ ЗОБРАЖЕННЯ НА ТЕМНОТУ
+     * АНАЛІЗ ЗОБРАЖЕННЯ НА ТЕМНОТУ ТА НАЯВНІСТЬ КОЛЬОРУ
      */
     function isImageDark(imgSrc, callback) {
         var img = new Image();
         img.crossOrigin = 'Anonymous';
-
         img.onload = function () {
             try {
                 var canvas = document.createElement('canvas');
                 var ctx = canvas.getContext('2d');
-
                 canvas.width = 40;
                 canvas.height = 40;
-
                 ctx.drawImage(img, 0, 0, 40, 40);
 
                 var imgData = ctx.getImageData(0, 0, 40, 40);
@@ -84,8 +79,7 @@
 
                 for (var i = 0; i < data.length; i += 4) {
                     var alpha = data[i + 3];
-
-                    if (alpha > 50) {
+                    if (alpha > 50) { 
                         var r = data[i];
                         var g = data[i + 1];
                         var b = data[i + 2];
@@ -96,8 +90,7 @@
 
                         var max = Math.max(r, g, b);
                         var min = Math.min(r, g, b);
-
-                        if ((max - min) > 30) {
+                        if ((max - min) > 30) { 
                             hasColor = true;
                         }
                     }
@@ -105,27 +98,20 @@
 
                 var avgBrightness = count > 0 ? (totalBrightness / count) : 255;
                 var isDark = (avgBrightness < 110) && !hasColor;
-
                 callback(isDark);
-
             } catch (e) {
                 callback(false);
             }
         };
-
-        img.onerror = function () {
-            callback(false);
-        };
-
+        img.onerror = function () { callback(false); };
         img.src = imgSrc;
     }
 
     /**
-     * СТИЛІ ІНТЕРФЕЙСУ
+     * СТИЛІ ІНТЕРФЕЙСУ (CSS)
      */
     function applyStyles() {
         var style = document.getElementById('mobile-interface-styles');
-
         if (!style) {
             style = document.createElement('style');
             style.id = 'mobile-interface-styles';
@@ -137,940 +123,372 @@
         var animEffect = Lampa.Storage.get('mobile_interface_ui_anim_effect', 'fluid');
         var badgeAnim = Lampa.Storage.get('mobile_interface_badge_anim', 'pulse');
         var rSize = Lampa.Storage.get('mobile_interface_ratings_size', '0.45em');
-        var lHeight = Lampa.Storage.get('mobile_interface_logo_size_v2', '125');
+        var lHeight = Lampa.Storage.get('mobile_interface_logo_size_v2', '125'); 
         var showTagline = Lampa.Storage.get('mobile_interface_show_tagline');
         var blocksGap = Lampa.Storage.get('mobile_interface_blocks_gap', '8px');
-
+        
         var css = '';
-
+        
         css += '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } } ';
-
+        
         css += '@keyframes anim_fluid { ';
-        css += '0% { opacity: 0; transform: translate3d(0,25px,0) scale(0.95); filter: blur(10px); } ';
-        css += '100% { opacity: 1; transform: translate3d(0,0,0) scale(1); filter: blur(0); } ';
+        css += '  0% { opacity: 0; transform: translate3d(0, 25px, 0) scale(0.95); filter: blur(10px); } ';
+        css += '  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0px); } ';
         css += '} ';
 
         css += '@keyframes anim_cyber { ';
-        css += '0% { opacity: 0; transform: translate3d(-40px,0,0) scale(0.9); filter: brightness(1.5); } ';
-        css += '100% { opacity: 1; transform: translate3d(0,0,0) scale(1); filter: brightness(1); } ';
+        css += '  0% { opacity: 0; transform: translate3d(-40px, 0, 0) scale(0.9); filter: brightness(1.5); } ';
+        css += '  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: brightness(1); } ';
         css += '} ';
 
         css += '@keyframes anim_cinematic { ';
-        css += '0% { opacity: 0; transform: translate3d(0,15px,0) scale(1.08); filter: blur(6px); } ';
-        css += '100% { opacity: 1; transform: translate3d(0,0,0) scale(1); filter: blur(0); } ';
+        css += '  0% { opacity: 0; transform: translate3d(0, 15px, 0) scale(1.08); filter: blur(6px); } ';
+        css += '  100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0px); } ';
         css += '} ';
 
         css += '@keyframes anim_elastic { ';
-        css += '0% { opacity: 0; transform: scale(0.7); } ';
-        css += '70% { opacity: 1; transform: scale(1.04); } ';
-        css += '100% { opacity: 1; transform: scale(1); } ';
+        css += '  0% { opacity: 0; transform: scale(0.7); } ';
+        css += '  70% { opacity: 1; transform: scale(1.04); } ';
+        css += '  100% { opacity: 1; transform: scale(1); } ';
         css += '} ';
 
         css += '@keyframes anim_minimal { ';
-        css += '0% { opacity: 0; transform: translate3d(0,10px,0); } ';
-        css += '100% { opacity: 1; transform: translate3d(0,0,0); } ';
+        css += '  0% { opacity: 0; transform: translate3d(0, 10px, 0); } ';
+        css += '  100% { opacity: 1; transform: translate3d(0, 0, 0); } ';
         css += '} ';
 
         css += '@keyframes wave_cascade { ';
-        css += '0% { opacity: 0; transform: scale(0.5) translateY(10px); filter: blur(4px); } ';
-        css += '100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); } ';
+        css += '  0% { opacity: 0; transform: scale(0.5) translateY(10px); filter: blur(4px); } ';
+        css += '  100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0px); } ';
         css += '} ';
 
         css += '@keyframes badge_anim_pulse { ';
-        css += '0%,100% { transform: scale(1); } ';
-        css += '50% { transform: scale(1.1); } ';
+        css += '  0%, 100% { transform: scale(1); } ';
+        css += '  50% { transform: scale(1.1); } ';
         css += '} ';
 
         css += '@keyframes badge_anim_breathe { ';
-        css += '0%,100% { transform: scale(1); opacity: 0.85; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); } ';
-        css += '50% { transform: scale(1.06); opacity: 1; filter: drop-shadow(0 0 10px rgba(255,255,255,0.6)); } ';
+        css += '  0%, 100% { transform: scale(1); opacity: 0.85; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); } ';
+        css += '  50% { transform: scale(1.06); opacity: 1; filter: drop-shadow(0 0 10px rgba(255,255,255,0.6)); } ';
         css += '} ';
 
         css += '@keyframes badge_anim_spin_slow { ';
-        css += '0% { transform: rotate(0); } ';
-        css += '25% { transform: rotate(4deg); } ';
-        css += '75% { transform: rotate(-4deg); } ';
-        css += '100% { transform: rotate(0); } ';
+        css += '  0% { transform: rotate(0deg); } ';
+        css += '  25% { transform: rotate(4deg); } ';
+        css += '  75% { transform: rotate(-4deg); } ';
+        css += '  100% { transform: rotate(0deg); } ';
         css += '} ';
 
         css += '@keyframes badge_anim_float { ';
-        css += '0%,100% { transform: translateY(0); } ';
-        css += '50% { transform: translateY(-4px); } ';
+        css += '  0%, 100% { transform: translateY(0); } ';
+        css += '  50% { transform: translateY(-4px); } ';
         css += '} ';
 
         css += '@keyframes poster_fade_in { ';
-        css += '0% { opacity: 0; transform: scale(1.05); } ';
-        css += '100% { opacity: 1; transform: scale(1); } ';
+        css += '  0% { opacity: 0; transform: scale(1.05); } ';
+        css += '  100% { opacity: 1; transform: scale(1); } ';
         css += '} ';
-
+        
         css += '@media screen and (max-width: 480px) { ';
-
-        css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, ';
-        css += '.full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], ';
-        css += '[class*="rating-count"], [class*="status"] { display:none !important; } ';
-
-        css += '.full-start-new__right > div:first-child { display:none !important; } ';
-
-        css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display:none !important; } ';
-
-        /*
-         * ПОВНЕ ПРИХОВУВАННЯ РЕАКЦІЙ
-         */
-        css += '.full-start__reactions, .full-start-new__reactions, ';
-        css += '.full-start__reaction, .full-start-new__reaction, ';
-        css += '[class*="reaction"], [class*="Reaction"], ';
-        css += '[class*="reactions"], [class*="Reactions"] { display:none !important; } ';
-
-        css += '.background { background:#000 !important; } ';
-
-        css += '.full-start-new__poster { ';
-        css += 'position:relative !important; ';
-        css += 'overflow:hidden !important; ';
-        css += 'background:#000; ';
-        css += 'z-index:1; ';
-        css += 'height:62vh !important; ';
-        css += 'pointer-events:none !important; ';
-
-        css += (isUIAnim
-            ? 'animation:poster_fade_in 0.9s cubic-bezier(0.16,1,0.3,1) forwards; '
-            : '');
-
-        css += '} ';
-
-        css += '.full-start-new__poster img { ';
-        css += 'filter:none !important; ';
-
-        css += (isPosterAnim
-            ? 'animation:kenBurnsEffect 25s ease-in-out infinite !important; '
-            : '');
-
-        css += 'transform-origin:center center !important; ';
-        css += 'transition:opacity 1.2s ease-in-out !important; ';
-        css += 'position:absolute; ';
-        css += 'top:0; ';
-        css += 'left:0; ';
-        css += 'width:100%; ';
-        css += 'height:100%; ';
-        css += 'object-fit:cover; ';
-        css += 'mask-image:linear-gradient(to bottom,#000 0%,#000 55%,transparent 100%) !important; ';
-        css += '-webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 55%,transparent 100%) !important; ';
-        css += '} ';
-
-        css += '.full-start-new__right { ';
-        css += 'background:none !important; ';
-        css += 'margin-top:-160px !important; ';
-        css += 'z-index:2 !important; ';
-        css += 'display:flex !important; ';
-        css += 'flex-direction:column !important; ';
-        css += 'align-items:center !important; ';
-        css += 'padding:0 10px !important; ';
-        css += 'gap:' + blocksGap + ' !important; ';
-        css += 'width:100% !important; ';
-        css += 'box-sizing:border-box !important; ';
-        css += '} ';
-
+        css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="rating-count"], [class*="status"] { display:none !important; } ';
+        css += '.full-start-new__right > div:first-child { display: none !important; } ';
+        css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';
+        
+        /* ПОВНЕ ПРИХОВУВАННЯ ШТАТНИХ РЕАКЦІЙ LAMPA */
+        css += '.full-start-new__reactions, .full-start__reactions, .full-start-new__reaction, .full-start__reaction, [class*="reaction"], [class*="reactions"] { display: none !important; } ';
+        
+        css += '.background { background: #000 !important; } ';
+        
+        css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 62vh !important; pointer-events: none !important; ';
+        css += (isUIAnim ? 'animation: poster_fade_in 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards; ' : '') + '} ';
+        
+        css += '.full-start-new__poster img { filter: none !important; ';
+        css += (isPosterAnim ? 'animation: kenBurnsEffect 25s ease-in-out infinite !important; ' : '');
+        css += 'transform-origin: center center !important; transition: opacity 1.2s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
+        css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
+        
+        css += '.full-start-new__right { background: none !important; margin-top: -160px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; padding: 0 10px !important; gap: ' + blocksGap + ' !important; } ';
+        
         var chosenAnimName = 'anim_' + animEffect;
+        var animTiming = animEffect === 'elastic' ? 'cubic-bezier(0.34, 1.56, 0.64, 1)' : 'cubic-bezier(0.16, 1, 0.3, 1)';
+        var uiAnimClass = isUIAnim ? 'animation: ' + chosenAnimName + ' 0.8s ' + animTiming + ' forwards; opacity: 0; will-change: transform, opacity, filter; transform: translateZ(0); ' : '';
 
-        var animTiming = animEffect === 'elastic'
-            ? 'cubic-bezier(0.34,1.56,0.64,1)'
-            : 'cubic-bezier(0.16,1,0.3,1)';
+        css += '.studio-header-brand { ' + uiAnimClass + ' animation-delay: 0.08s; order: 1; width: 100%; display: flex; justify-content: flex-start; align-items: center; padding-left: 5vw; margin-bottom: -2px !important; } ';
+        css += '.studio-header-brand img { height: 18px !important; width: auto; max-width: 110px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; } ';
+        css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
 
-        var uiAnimClass = isUIAnim
-            ? 'animation:' + chosenAnimName + ' 0.8s ' + animTiming + ' forwards; opacity:0; will-change:transform,opacity,filter; transform:translateZ(0); '
-            : '';
+        css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.15s; width: 100% !important; display: flex !important; justify-content: center !important; align-items: center !important; margin: 0 !important; min-height: 50px; order: 2; overflow: visible !important; } ';
+        css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 90vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';
 
-        css += '.studio-header-brand { ';
-        css += uiAnimClass;
-        css += 'animation-delay:0.08s; ';
-        css += 'order:1; ';
-        css += 'width:100%; ';
-        css += 'display:flex; ';
-        css += 'justify-content:flex-start; ';
-        css += 'align-items:center; ';
-        css += 'padding-left:5vw; ';
-        css += 'margin-bottom:-2px !important; ';
-        css += '} ';
+        css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.22s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: center !important; order: 3; } ';
+        
+        css += '.plugin-meta-row { ' + uiAnimClass + ' animation-delay: 0.28s; display: flex; justify-content: center; align-items: center; flex-wrap: nowrap; gap: 8px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.5); width: 100%; order: 4; color: rgba(255,255,255,0.85); font-family: "Inter", -apple-system, system-ui, sans-serif; } ';
+        
+        css += '.plugin-ratings-quality-row { ' + uiAnimClass + ' animation-delay: 0.35s; display: flex; justify-content: center; align-items: center; flex-wrap: nowrap; gap: 12px; margin: 0 !important; width: 100%; order: 5; font-size: calc(' + rSize + ' * 2.8); } ';
+        css += '.plugin-ratings-group { display: flex; align-items: center; gap: 10px; } ';
+        css += '.quality-row-inline { display: flex; align-items: center; gap: 6px; opacity: 0.9; } '; 
+        
+        var loopAnimName = badgeAnim !== 'none' ? 'badge_anim_' + badgeAnim : '';
+        var loopDuration = badgeAnim === 'spin_slow' ? '4s' : (badgeAnim === 'breathe' ? '3s' : '2.5s');
 
-        css += '.studio-header-brand img { ';
-        css += 'height:18px !important; ';
-        css += 'width:auto; ';
-        css += 'max-width:110px; ';
-        css += 'object-fit:contain; ';
-        css += 'filter:drop-shadow(0 2px 5px rgba(0,0,0,0.9)); ';
-        css += 'opacity:0.95; ';
-        css += '} ';
-
-        css += '.studio-header-brand img.is-dark-logo { ';
-        css += 'filter:brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; ';
-        css += '} ';
-
-        css += '.full-start-new__title { ';
-        css += uiAnimClass;
-        css += 'animation-delay:0.15s; ';
-        css += 'width:100% !important; ';
-        css += 'display:flex !important; ';
-        css += 'justify-content:center !important; ';
-        css += 'align-items:center !important; ';
-        css += 'margin:0 !important; ';
-        css += 'min-height:50px; ';
-        css += 'order:2; ';
-        css += 'overflow:visible !important; ';
-        css += '} ';
-
-        css += '.full-start-new__title img { ';
-        css += 'height:auto !important; ';
-        css += 'max-height:' + lHeight + 'px !important; ';
-        css += 'width:auto !important; ';
-        css += 'max-width:90vw !important; ';
-        css += 'object-fit:contain !important; ';
-        css += 'filter:drop-shadow(0 4px 20px rgba(0,0,0,0.9)); ';
-        css += 'margin:0 !important; ';
-        css += '} ';
-
-        css += '.full-start-new__tagline { ';
-        css += uiAnimClass;
-        css += 'animation-delay:0.22s; ';
-        css += 'display:' + (showTagline ? 'block' : 'none') + ' !important; ';
-        css += 'font-style:italic !important; ';
-        css += 'font-size:0.9em !important; ';
-        css += 'margin:0 !important; ';
-        css += 'color:rgba(255,255,255,0.8) !important; ';
-        css += 'text-align:center !important; ';
-        css += 'order:3; ';
-        css += '} ';
-
-        css += '.plugin-meta-row { ';
-        css += uiAnimClass;
-        css += 'animation-delay:0.28s; ';
-        css += 'display:flex; ';
-        css += 'justify-content:center; ';
-        css += 'align-items:center; ';
-        css += 'flex-wrap:nowrap; ';
-        css += 'gap:8px; ';
-        css += 'margin:0 !important; ';
-        css += 'font-size:calc(' + rSize + ' * 2.5); ';
-        css += 'width:100%; ';
-        css += 'order:4; ';
-        css += 'color:rgba(255,255,255,0.85); ';
-        css += 'font-family:"Inter",-apple-system,system-ui,sans-serif; ';
-        css += '} ';
-
-        css += '.plugin-ratings-quality-row { ';
-        css += uiAnimClass;
-        css += 'animation-delay:0.35s; ';
-        css += 'display:flex; ';
-        css += 'justify-content:center; ';
-        css += 'align-items:center; ';
-        css += 'flex-wrap:nowrap; ';
-        css += 'gap:12px; ';
-        css += 'margin:0 !important; ';
-        css += 'width:100%; ';
-        css += 'order:5; ';
-        css += 'font-size:calc(' + rSize + ' * 2.8); ';
-        css += '} ';
-
-        css += '.plugin-ratings-group { ';
-        css += 'display:flex; ';
-        css += 'align-items:center; ';
-        css += 'gap:10px; ';
-        css += '} ';
-
-        css += '.quality-row-inline { ';
-        css += 'display:flex; ';
-        css += 'align-items:center; ';
-        css += 'gap:6px; ';
-        css += 'opacity:0.9; ';
-        css += '} ';
-
-        var loopAnimName = badgeAnim !== 'none'
-            ? 'badge_anim_' + badgeAnim
-            : '';
-
-        var loopDuration = badgeAnim === 'spin_slow'
-            ? '4s'
-            : (badgeAnim === 'breathe' ? '3s' : '2.5s');
-
-        css += '.wave-item { ';
-        css += 'transform-origin:center center; ';
-        css += 'filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3)); ';
-
+        css += '.wave-item { transform-origin: center center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); ';
         if (isUIAnim) {
-            css += 'opacity:0; ';
-            css += 'animation:wave_cascade 0.5s cubic-bezier(0.16,1,0.3,1) forwards';
-
+            css += 'opacity: 0; animation: wave_cascade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards';
             if (badgeAnim !== 'none') {
                 css += ', ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite';
-                css += '; animation-delay:calc(0.35s + (var(--item-index) * 0.08s)),calc(1s + (var(--item-index) * 0.15s))';
+                css += '; animation-delay: calc(0.35s + (var(--item-index) * 0.08s)), calc(1s + (var(--item-index) * 0.15s))';
             } else {
-                css += '; animation-delay:calc(0.35s + (var(--item-index) * 0.08s))';
+                css += '; animation-delay: calc(0.35s + (var(--item-index) * 0.08s))';
             }
-
-            css += '; will-change:transform,opacity,filter; ';
-
+            css += '; will-change: transform, opacity, filter; ';
         } else if (badgeAnim !== 'none') {
-            css += 'animation:' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite; ';
-            css += 'animation-delay:calc(var(--item-index) * 0.15s); ';
+            css += 'animation: ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite; ';
+            css += 'animation-delay: calc(var(--item-index) * 0.15s); ';
         }
-
         css += '} ';
 
-        css += '.plugin-rating-item { ';
-        css += 'display:flex; ';
-        css += 'align-items:center; ';
-        css += 'gap:4px; ';
-        css += 'font-weight:700; ';
-        css += 'color:#fff; ';
-        css += '} ';
+        css += '.plugin-rating-item { display: flex; align-items: center; gap: 4px; font-weight: 700; color: #fff; } ';
+        css += '.plugin-rating-item img { height: 1.1em; width: auto; } ';
+        css += '.quality-item { height: 1.1em; } ';
+        css += '.quality-item img { height: 100%; width: auto; object-fit: contain; } ';
 
-        css += '.plugin-rating-item img { ';
-        css += 'height:1.1em; ';
-        css += 'width:auto; ';
-        css += '} ';
+        css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.85em; white-space: nowrap; } ';
+        css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
 
-        css += '.quality-item { height:1.1em; } ';
-
-        css += '.quality-item img { ';
-        css += 'height:100%; ';
-        css += 'width:auto; ';
-        css += 'object-fit:contain; ';
-        css += '} ';
-
-        css += '.info-text-item { ';
-        css += 'opacity:0.9; ';
-        css += 'font-weight:500; ';
-        css += 'font-size:0.85em; ';
-        css += 'white-space:nowrap; ';
-        css += '} ';
-
-        css += '.info-separator { ';
-        css += 'opacity:0.35; ';
-        css += 'font-size:0.8em; ';
-        css += 'margin:0 -2px; ';
-        css += '} ';
-
-        /*
-         * КНОПКИ
-         * Не даємо їм виходити за межі екрана
-         */
-        css += '.full-start-new__buttons { ';
-        css += uiAnimClass;
-        css += 'animation-delay:0.42s; ';
-        css += 'display:flex !important; ';
-        css += 'justify-content:center !important; ';
-        css += 'align-items:center !important; ';
-        css += 'flex-wrap:nowrap !important; ';
-        css += 'gap:8px !important; ';
-        css += 'width:100% !important; ';
-        css += 'max-width:100% !important; ';
-        css += 'padding:0 4px !important; ';
-        css += 'margin-top:6px !important; ';
-        css += 'box-sizing:border-box !important; ';
-        css += 'overflow:hidden !important; ';
-        css += 'order:6; ';
-        css += '} ';
-
-        css += '.full-start-new .full-start__button { ';
-        css += 'background:none !important; ';
-        css += 'border:none !important; ';
-        css += 'box-shadow:none !important; ';
-        css += 'display:flex !important; ';
-        css += 'flex-direction:column !important; ';
-        css += 'align-items:center !important; ';
-        css += 'justify-content:center !important; ';
-        css += 'width:52px !important; ';
-        css += 'min-width:52px !important; ';
-        css += 'max-width:52px !important; ';
-        css += 'flex:0 0 52px !important; ';
-        css += 'padding:0 !important; ';
-        css += 'margin:0 !important; ';
-        css += 'box-sizing:border-box !important; ';
-        css += 'transition:transform 0.2s ease,opacity 0.2s ease; ';
-        css += '} ';
-
-        css += '.full-start-new .full-start__button:active { ';
-        css += 'transform:scale(0.9); ';
-        css += 'opacity:0.7; ';
-        css += '} ';
-
-        css += '.full-start-new .full-start__button svg, ';
-        css += '.full-start-new .full-start__button img { ';
-        css += 'width:24px !important; ';
-        css += 'height:24px !important; ';
-        css += 'margin-bottom:5px !important; ';
-        css += 'fill:#fff !important; ';
-        css += 'filter:drop-shadow(0 2px 8px rgba(0,0,0,0.5)); ';
-        css += '} ';
-
-        css += '.full-start-new .full-start__button span { ';
-        css += 'font-size:8px !important; ';
-        css += 'text-transform:uppercase !important; ';
-        css += 'opacity:0.75 !important; ';
-        css += 'font-weight:600; ';
-        css += 'letter-spacing:0.05em; ';
-        css += 'white-space:nowrap; ';
-        css += '} ';
-
+        /* КНОПКИ: ВМІЩУЮТЬСЯ В ШИРИНУ ЕКРАНУ */
+        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; justify-content: center !important; align-items: center !important; gap: 8px !important; width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; padding: 0 8px !important; margin-top: 6px !important; order: 6; overflow: hidden !important; } ';
+        css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; flex: 0 1 52px !important; width: 52px !important; min-width: 0 !important; max-width: 52px !important; box-sizing: border-box !important; transition: transform 0.2s ease, opacity 0.2s ease; } ';
+        css += '.full-start-new .full-start__button:active { transform: scale(0.9); opacity: 0.7; } ';
+        css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 24px !important; height: 24px !important; margin-bottom: 5px !important; fill: #fff !important; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5)); } ';
+        css += '.full-start-new .full-start__button span { font-size: 8px !important; text-transform: uppercase !important; opacity: 0.75 !important; font-weight: 600; letter-spacing: 0.05em; } ';
         css += '} ';
 
         style.textContent = css;
     }
 
     /**
-     * КОЛІР РЕЙТИНГУ
+     * ЛОГІКА РЕЙТИНГІВ ТА ІНФОРМАЦІЇ
      */
     function getRatingColor(val) {
         var n = parseFloat(val);
-
         if (n >= 7.5) return '#2ecc71';
         if (n >= 6) return '#feca57';
         if (n > 0) return '#ff4d4d';
-
         return '#fff';
     }
 
     function formatTime(mins) {
         if (!mins) return '';
-
         var h = Math.floor(mins / 60);
         var m = mins % 60;
-
         return (h > 0 ? h + 'г ' : '') + m + 'хв';
     }
 
-    /**
-     * РЕЙТИНГИ
-     * CUB/реакції видалені
-     */
     function renderRatings(container, e) {
         container.find('.plugin-meta-row').remove();
         container.find('.plugin-ratings-quality-row').remove();
-
+        
         var sep = '<span class="info-separator">•</span>';
         var $metaRow = $('<div class="plugin-meta-row"></div>');
-
-        var year = (e.data.movie.release_date ||
-            e.data.movie.first_air_date ||
-            '').substring(0, 4);
-
+        
+        var year = (e.data.movie.release_date || e.data.movie.first_air_date || '').substring(0, 4);
         if (year) {
-            $metaRow.append(
-                '<div class="info-text-item">' + year + '</div>'
-            );
+            $metaRow.append('<div class="info-text-item">' + year + '</div>');
         }
 
         var country = '';
-
-        if (e.data.movie.production_countries &&
-            e.data.movie.production_countries.length > 0) {
-
-            country =
-                e.data.movie.production_countries[0].name ||
-                e.data.movie.production_countries[0].iso_3166_1;
-
-        } else if (e.data.movie.origin_country &&
-            e.data.movie.origin_country.length > 0) {
-
+        if (e.data.movie.production_countries && e.data.movie.production_countries.length > 0) {
+            country = e.data.movie.production_countries[0].name || e.data.movie.production_countries[0].iso_3166_1;
+        } else if (e.data.movie.origin_country && e.data.movie.origin_country.length > 0) {
             country = e.data.movie.origin_country[0];
         }
 
         if (country) {
-            if ($metaRow.children().length > 0) {
-                $metaRow.append(sep);
-            }
-
-            $metaRow.append(
-                '<div class="info-text-item">' + country + '</div>'
-            );
+            if ($metaRow.children().length > 0) $metaRow.append(sep);
+            $metaRow.append('<div class="info-text-item">' + country + '</div>');
         }
-
-        var runtime =
-            e.data.movie.runtime ||
-            (e.data.movie.episode_run_time
-                ? e.data.movie.episode_run_time[0]
-                : 0);
-
+        
+        var runtime = e.data.movie.runtime || (e.data.movie.episode_run_time ? e.data.movie.episode_run_time[0] : 0);
         if (runtime) {
-            if ($metaRow.children().length > 0) {
-                $metaRow.append(sep);
-            }
-
-            $metaRow.append(
-                '<div class="info-text-item">' +
-                formatTime(runtime) +
-                '</div>'
-            );
+            if ($metaRow.children().length > 0) $metaRow.append(sep);
+            $metaRow.append('<div class="info-text-item">' + formatTime(runtime) + '</div>');
         }
 
-        if (e.data.movie.genres &&
-            e.data.movie.genres.length > 0) {
-
-            if ($metaRow.children().length > 0) {
-                $metaRow.append(sep);
-            }
-
-            var genres = e.data.movie.genres
-                .slice(0, 2)
-                .map(function (g) {
-                    return g.name;
-                })
-                .join(', ');
-
-            $metaRow.append(
-                '<div class="info-text-item">' + genres + '</div>'
-            );
+        if (e.data.movie.genres && e.data.movie.genres.length > 0) {
+            if ($metaRow.children().length > 0) $metaRow.append(sep);
+            var genres = e.data.movie.genres.slice(0, 2).map(function(g) { return g.name; }).join(', ');
+            $metaRow.append('<div class="info-text-item">' + genres + '</div>');
         }
 
         var $rqRow = $('<div class="plugin-ratings-quality-row"></div>');
         var $ratingsGroup = $('<div class="plugin-ratings-group"></div>');
-
+        
         var globalIndex = 0;
 
-        var tmdb = parseFloat(
-            e.data.movie.vote_average || 0
-        ).toFixed(1);
-
+        var tmdb = parseFloat(e.data.movie.vote_average || 0).toFixed(1);
         if (tmdb > 0) {
-            var $tmdbItem = $(
-                '<div class="plugin-rating-item wave-item">' +
-                '<img src="' + ratingIcons.tmdb + '">' +
-                ' <span style="color:' +
-                getRatingColor(tmdb) +
-                '">' +
-                tmdb +
-                '</span>' +
-                '</div>'
-            );
-
+            var $tmdbItem = $('<div class="plugin-rating-item wave-item"><img src="'+ratingIcons.tmdb+'"> <span style="color:'+getRatingColor(tmdb)+'">'+tmdb+'</span></div>');
             $tmdbItem.css('--item-index', globalIndex++);
-
             $ratingsGroup.append($tmdbItem);
         }
 
         var $qRow = $('<div class="quality-row-inline"></div>');
-
-        $rqRow
-            .append($ratingsGroup)
-            .append($qRow);
-
-        container
-            .append($metaRow)
-            .append($rqRow);
+        $rqRow.append($ratingsGroup).append($qRow);
+        container.append($metaRow).append($rqRow);
 
         return globalIndex;
     }
 
-    /**
-     * ДАНІ TMDB
-     */
     function applyMovieDetailsData(data, movie, $render) {
-
-        if (data.images &&
-            data.images.logos &&
-            data.images.logos.length > 0) {
-
+        if (data.images && data.images.logos && data.images.logos.length > 0) {
             var lang = Lampa.Storage.get('language') || 'uk';
-
-            var logo =
-                data.images.logos.filter(function (l) {
-                    return l.iso_639_1 === lang;
-                })[0] ||
-
-                data.images.logos.filter(function (l) {
-                    return l.iso_639_1 === 'en';
-                })[0] ||
-
-                data.images.logos[0];
-
+            var logo = data.images.logos.filter(function(l) { return l.iso_639_1 === lang; })[0] || 
+                       data.images.logos.filter(function(l) { return l.iso_639_1 === 'en'; })[0] || 
+                       data.images.logos[0];
+            
             if (logo) {
-                var logoUrl = Lampa.TMDB.image(
-                    '/t/p/' +
-                    Lampa.Storage.get(
-                        'mobile_interface_logo_quality',
-                        'w500'
-                    ) +
-                    logo.file_path.replace('.svg', '.png')
-                );
-
-                $render
-                    .find('.full-start-new__title')
-                    .html('<img src="' + logoUrl + '">');
+                var logoUrl = Lampa.TMDB.image('/t/p/' + Lampa.Storage.get('mobile_interface_logo_quality', 'w500') + logo.file_path.replace('.svg', '.png'));
+                $render.find('.full-start-new__title').html('<img src="' + logoUrl + '">');
             }
         }
 
         if (Lampa.Storage.get('mobile_interface_studios')) {
-
             $render.find('.studio-header-brand').remove();
-
             var studio = null;
 
-            if (data.networks &&
-                data.networks.length > 0) {
-
-                studio = data.networks.find(function (n) {
-                    return n.logo_path;
-                });
+            if (data.networks && data.networks.length > 0) {
+                studio = data.networks.find(function(n) { return n.logo_path; });
             }
-
-            if (!studio &&
-                data.production_companies &&
-                data.production_companies.length > 0) {
-
-                studio = data.production_companies.find(function (c) {
-                    return c.logo_path;
-                });
+            if (!studio && data.production_companies && data.production_companies.length > 0) {
+                studio = data.production_companies.find(function(c) { return c.logo_path; });
             }
 
             if (studio && studio.logo_path) {
-
-                var studioLogoUrl = Lampa.TMDB.image(
-                    '/t/p/w200' + studio.logo_path
-                );
-
-                var $brand = $(
-                    '<div class="studio-header-brand">' +
-                    '<img src="' +
-                    studioLogoUrl +
-                    '" alt="' +
-                    (studio.name || '') +
-                    '">' +
-                    '</div>'
-                );
-
+                var studioLogoUrl = Lampa.TMDB.image('/t/p/w200' + studio.logo_path);
+                var $brand = $('<div class="studio-header-brand"><img src="' + studioLogoUrl + '" alt="' + (studio.name || '') + '"></div>');
                 var $img = $brand.find('img');
 
-                $img.on('error', function () {
-                    $brand.remove();
-                });
-
-                isImageDark(studioLogoUrl, function (isDark) {
+                $img.on('error', function() { $brand.remove(); });
+                
+                isImageDark(studioLogoUrl, function(isDark) {
                     if (isDark) {
                         $img.addClass('is-dark-logo');
                     }
                 });
 
-                $render
-                    .find('.full-start-new__title')
-                    .before($brand);
+                $render.find('.full-start-new__title').before($brand);
             }
         }
 
-        if (data.images &&
-            data.images.backdrops &&
-            data.images.backdrops.length > 1) {
-
-            var cleanBackdrops =
-                data.images.backdrops.filter(function (b) {
-                    return b.aspect_ratio > 1.5;
-                });
-
+        if (data.images && data.images.backdrops && data.images.backdrops.length > 1) {
+            var cleanBackdrops = data.images.backdrops.filter(function(b) { return b.aspect_ratio > 1.5; });
             if (cleanBackdrops.length > 0) {
-                startPosterSlideshow(
-                    $('.full-start-new__poster'),
-                    cleanBackdrops.slice(0, 15)
-                );
+                startPosterSlideshow($('.full-start-new__poster'), cleanBackdrops.slice(0, 15));
             }
         }
     }
 
-    /**
-     * ЗАВАНТАЖЕННЯ ДЕТАЛЕЙ ФІЛЬМУ
-     */
     function loadMovieDetails(movie, $render) {
         var movieId = movie.id;
-
         currentActiveId = movieId;
 
         if (detailsCache[movieId]) {
-            applyMovieDetailsData(
-                detailsCache[movieId],
-                movie,
-                $render
-            );
-
+            applyMovieDetailsData(detailsCache[movieId], movie, $render);
             return;
         }
 
-        var type =
-            (movie.name || movie.first_air_date)
-                ? 'tv'
-                : 'movie';
-
-        var url =
-            'https://api.themoviedb.org/3/' +
-            type +
-            '/' +
-            movieId +
-            '?api_key=' +
-            Lampa.TMDB.key() +
-            '&append_to_response=images' +
-            '&include_image_language=uk,en,null';
+        var type = (movie.name || movie.first_air_date) ? 'tv' : 'movie';
+        var url = 'https://api.themoviedb.org/3/' + type + '/' + movieId + '?api_key=' + Lampa.TMDB.key() + '&append_to_response=images&include_image_language=uk,en,null';
 
         $.ajax({
             url: url,
             type: 'GET',
             dataType: 'json',
-
-            success: function (data) {
-
-                if (currentActiveId !== movieId) {
-                    return;
-                }
-
+            success: function(data) {
+                if (currentActiveId !== movieId) return;
                 detailsCache[movieId] = data;
-
-                applyMovieDetailsData(
-                    data,
-                    movie,
-                    $render
-                );
+                applyMovieDetailsData(data, movie, $render);
             }
         });
     }
 
-    /**
-     * АНАЛІЗ ЯКОСТІ
-     */
     function getBestResults(results) {
-        var best = {
-            resolution: null,
-            hdr: false,
-            dolbyVision: false,
-            dub: false,
-            ukr: false
-        };
-
-        if (!results) {
-            return best;
-        }
-
-        results.slice(0, 15).forEach(function (item) {
-
+        var best = { resolution: null, hdr: false, dolbyVision: false, dub: false, ukr: false };
+        if (!results) return best;
+        results.slice(0, 15).forEach(function(item) {
             var t = (item.Title || '').toLowerCase();
-
-            if (t.indexOf('ukr') >= 0 ||
-                t.indexOf('укр') >= 0) {
-
-                best.ukr = true;
-            }
-
-            var res =
-                t.indexOf('4k') >= 0
-                    ? '4K'
-                    : t.indexOf('2k') >= 0
-                        ? '2K'
-                        : t.indexOf('1080') >= 0
-                            ? 'FULL HD'
-                            : t.indexOf('720') >= 0
-                                ? 'HD'
-                                : null;
-
-            if (
-                res &&
-                (
-                    !best.resolution ||
-                    ['HD', 'FULL HD', '2K', '4K'].indexOf(res) >
-                    ['HD', 'FULL HD', '2K', '4K'].indexOf(best.resolution)
-                )
-            ) {
-                best.resolution = res;
-            }
-
-            if (
-                t.indexOf('vision') >= 0 ||
-                t.indexOf(' dv ') >= 0
-            ) {
-                best.dolbyVision = true;
-            }
-
-            if (t.indexOf('hdr') >= 0) {
-                best.hdr = true;
-            }
-
-            if (
-                t.indexOf('dub') >= 0 ||
-                t.indexOf('дуб') >= 0
-            ) {
-                best.dub = true;
-            }
+            if (t.indexOf('ukr')>=0 || t.indexOf('укр')>=0) best.ukr = true;
+            var res = t.indexOf('4k')>=0 ? '4K' : t.indexOf('2k')>=0 ? '2K' : t.indexOf('1080')>=0 ? 'FULL HD' : t.indexOf('720')>=0 ? 'HD' : null;
+            if (res && (!best.resolution || ['HD', 'FULL HD', '2K', '4K'].indexOf(res) > ['HD', 'FULL HD', '2K', '4K'].indexOf(best.resolution))) best.resolution = res;
+            if (t.indexOf('vision')>=0 || t.indexOf(' dv ')>=0) best.dolbyVision = true;
+            if (t.indexOf('hdr')>=0) best.hdr = true;
+            if (t.indexOf('dub')>=0 || t.indexOf('дуб')>=0) best.dub = true;
         });
-
         return best;
     }
 
-    /**
-     * СЛАЙД-ШОУ ПОСТЕРІВ
-     */
     function startPosterSlideshow($poster, items) {
-
-        if (!Lampa.Storage.get('mobile_interface_slideshow')) {
-            return;
-        }
-
-        var index = 0;
-
+        if (!Lampa.Storage.get('mobile_interface_slideshow')) return;
+        var index = 0; 
         stopSlideshow();
 
-        slideshowTimer = setInterval(function () {
-
+        slideshowTimer = setInterval(function() {
             index = (index + 1) % items.length;
-
-            var imgUrl = Lampa.TMDB.image(
-                '/t/p/' +
-                Lampa.Storage.get(
-                    'mobile_interface_slideshow_quality',
-                    'w780'
-                ) +
-                items[index].file_path
-            );
-
+            var imgUrl = Lampa.TMDB.image('/t/p/' + Lampa.Storage.get('mobile_interface_slideshow_quality', 'w780') + items[index].file_path);
             var $current = $poster.find('img').first();
-
             var nextImg = new Image();
-
-            nextImg.onload = function () {
-
-                var $next = $(
-                    '<img src="' +
-                    imgUrl +
-                    '" style="opacity:0;transition:opacity 1.2s ease-in-out;">'
-                );
-
+            nextImg.onload = function() {
+                var $next = $('<img src="' + imgUrl + '" style="opacity: 0; transition: opacity 1.2s ease-in-out;">');
                 $poster.append($next);
-
-                setTimeout(function () {
-
-                    $next.css('opacity', '1');
-                    $current.css('opacity', '0');
-
-                    setTimeout(function () {
-                        $current.remove();
-                    }, 1200);
-
+                setTimeout(function() { 
+                    $next.css('opacity', '1'); 
+                    $current.css('opacity', '0'); 
+                    setTimeout(function(){ $current.remove(); }, 1200); 
                 }, 100);
-            };
-
+            }; 
             nextImg.src = imgUrl;
-
-        }, parseInt(
-            Lampa.Storage.get(
-                'mobile_interface_slideshow_time',
-                '10000'
-            )
-        ));
+        }, parseInt(Lampa.Storage.get('mobile_interface_slideshow_time', '10000')));
     }
 
-    /**
-     * ІНІЦІАЛІЗАЦІЯ
-     */
     function init() {
-
         Lampa.Listener.follow('full', function (e) {
-
             if (e.type === 'destroy') {
                 stopSlideshow();
                 currentActiveId = null;
             }
+            
+            if (window.innerWidth <= 480 && (e.type === 'complite' || e.type === 'complete')) {
+                stopSlideshow(); 
+                
+                var movie = e.data.movie, $render = e.object.activity.render();
+                
+                if (window.lampa_settings) window.lampa_settings.blur_poster = false;
 
-            if (
-                window.innerWidth <= 480 &&
-                (e.type === 'complite' || e.type === 'complete')
-            ) {
+                var startIndex = renderRatings($render.find('.full-start-new__right'), e);
+                loadMovieDetails(movie, $render);
 
-                stopSlideshow();
+                if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Parser && Lampa.Parser.get) {
+                    Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
+                        if (res && Array.isArray(res.Results)) {
+                            var b = getBestResults(res.Results), list = [];
+                            if (b.resolution) list.push(b.resolution);
+                            if (b.dolbyVision) list.push('Dolby Vision'); else if (b.hdr) list.push('HDR');
+                            if (b.dub) list.push('DUB'); 
+                            if (b.ukr) list.push('UKR');
+                            
+                            var $qRow = $render.find('.quality-row-inline');
+                            $qRow.empty();
 
-                var movie = e.data.movie;
-                var $render = e.object.activity.render();
-
-                if (window.lampa_settings) {
-                    window.lampa_settings.blur_poster = false;
-                }
-
-                var startIndex = renderRatings(
-                    $render.find('.full-start-new__right'),
-                    e
-                );
-
-                loadMovieDetails(
-                    movie,
-                    $render
-                );
-
-                if (
-                    Lampa.Storage.get('mobile_interface_quality') &&
-                    Lampa.Parser &&
-                    Lampa.Parser.get
-                ) {
-
-                    Lampa.Parser.get(
-                        {
-                            search: movie.title || movie.name,
-                            movie: movie,
-                            page: 1
-                        },
-                        function (res) {
-
-                            if (
-                                res &&
-                                Array.isArray(res.Results)
-                            ) {
-
-                                var b = getBestResults(
-                                    res.Results
-                                );
-
-                                var list = [];
-
-                                if (b.resolution) {
-                                    list.push(b.resolution);
+                            list.forEach(function(t, idx) { 
+                                if (svgIcons[t]) {
+                                    var currentItemIndex = startIndex + idx;
+                                    var $badge = $('<div class="quality-item wave-item"><img src="' + svgIcons[t] + '"></div>');
+                                    $badge.css('--item-index', currentItemIndex);
+                                    $qRow.append($badge);
                                 }
-
-                                if (b.dolbyVision) {
-                                    list.push('Dolby Vision');
-                                } else if (b.hdr) {
-                                    list.push('HDR');
-                                }
-
-                                if (b.dub) {
-                                    list.push('DUB');
-                                }
-
-                                if (b.ukr) {
-                                    list.push('UKR');
-                                }
-
-                                var $qRow =
-                                    $render.find(
-                                        '.quality-row-inline'
-                                    );
-
-                                $qRow.empty();
-
-                                list.forEach(function (t, idx) {
-
-                                    if (svgIcons[t]) {
-
-                                        var currentItemIndex =
-                                            startIndex + idx;
-
-                                        var $badge = $(
-                                            '<div class="quality-item wave-item">' +
-                                            '<img src="' +
-                                            svgIcons[t] +
-                                            '">' +
-                                            '</div>'
-                                        );
-
-                                        $badge.css(
-                                            '--item-index',
-                                            currentItemIndex
-                                        );
-
-                                        $qRow.append($badge);
-                                    }
-                                });
-                            }
+                            });
                         }
-                    );
+                    });
                 }
             }
         });
@@ -1080,220 +498,121 @@
      * ПАНЕЛЬ НАЛАШТУВАНЬ
      */
     function setupSettings() {
-
-        Lampa.SettingsApi.addComponent({
-            component: 'mobile_interface',
-            name: 'Мобільний інтерфейс',
-            icon:
-                '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg">' +
-                '<path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" fill="white"/>' +
-                '</svg>'
+        Lampa.SettingsApi.addComponent({ 
+            component: 'mobile_interface', 
+            name: 'Мобільний інтерфейс', 
+            icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" fill="white"/></svg>' 
         });
 
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: {
-                name: 'mobile_interface_animation',
-                type: 'trigger',
-                default: true
-            },
-            field: {
-                name: 'Зум-ефект постера (Ken Burns)'
-            },
-            onChange: applyStyles
+        Lampa.SettingsApi.addParam({ 
+            component: 'mobile_interface', 
+            param: { name: 'mobile_interface_animation', type: 'trigger', default: true }, 
+            field: { name: 'Зум-ефект постера (Ken Burns)' }, 
+            onChange: applyStyles 
         });
 
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: {
-                name: 'mobile_interface_ui_anim',
-                type: 'trigger',
-                default: true
-            },
-            field: {
-                name: 'Плавна анімація появи елементів'
-            },
-            onChange: applyStyles
+        Lampa.SettingsApi.addParam({ 
+            component: 'mobile_interface', 
+            param: { name: 'mobile_interface_ui_anim', type: 'trigger', default: true }, 
+            field: { name: 'Плавна анімація появи елементів' }, 
+            onChange: applyStyles 
         });
 
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: {
-                name: 'mobile_interface_ui_anim_effect',
-                type: 'select',
-                values: {
-                    'fluid': 'Apple Fluid (М’який розмитий вихід)',
-                    'cyber': 'Cyber Neon (Динамічний виліт зліва)',
-                    'cinematic': 'Cinematic Depth (Кінематографічне масштабування)',
-                    'elastic': 'Elastic Spring (Пружний пружинний ефект)',
-                    'minimal': 'Minimal Fade (Простий мінімалістичний плавний)'
-                },
-                default: 'fluid'
-            },
-            field: {
-                name: 'Стиль анімації появи'
-            },
-            onChange: applyStyles
+        Lampa.SettingsApi.addParam({ 
+            component: 'mobile_interface', 
+            param: { 
+                name: 'mobile_interface_ui_anim_effect', 
+                type: 'select', 
+                values: { 
+                    'fluid': 'Apple Fluid (М’який розмитий вихід)', 
+                    'cyber': 'Cyber Neon (Динамічний виліт зліва)', 
+                    'cinematic': 'Cinematic Depth (Кінематографічне масштабування)', 
+                    'elastic': 'Elastic Spring (Пружний пружинний ефект)', 
+                    'minimal': 'Minimal Fade (Простий мінімалістичний плавний)' 
+                }, 
+                default: 'fluid' 
+            }, 
+            field: { name: 'Стиль анімації появи' }, 
+            onChange: applyStyles 
         });
 
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: {
-                name: 'mobile_interface_badge_anim',
-                type: 'select',
-                values: {
-                    'none': 'Без циклічної анімації',
-                    'pulse': 'Пульсація (Збільшення)',
-                    'breathe': 'Дихання (М’яке сяйво)',
-                    'spin_slow': 'Легке гойдання (Маятник)',
-                    'float': 'Плавне підстрибування'
-                },
-                default: 'pulse'
-            },
-            field: {
-                name: 'Жива анімація бейджів та рейтингів'
-            },
-            onChange: applyStyles
+        Lampa.SettingsApi.addParam({ 
+            component: 'mobile_interface', 
+            param: { 
+                name: 'mobile_interface_badge_anim', 
+                type: 'select', 
+                values: { 
+                    'none': 'Без циклічної анімації', 
+                    'pulse': 'Пульсація (Збільшення)', 
+                    'breathe': 'Дихання (М’яке сяйво)', 
+                    'spin_slow': 'Легке гойдання (Маятник)', 
+                    'float': 'Плавне підстрибування' 
+                }, 
+                default: 'pulse' 
+            }, 
+            field: { name: 'Жива анімація бейджів та рейтингів' }, 
+            onChange: applyStyles 
         });
 
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: {
-                name: 'mobile_interface_slideshow',
-                type: 'trigger',
-                default: true
-            },
-            field: {
-                name: 'Автозміна фонових кадрів'
-            }
+        Lampa.SettingsApi.addParam({ 
+            component: 'mobile_interface', 
+            param: { name: 'mobile_interface_slideshow', type: 'trigger', default: true }, 
+            field: { name: 'Автозміна фонових кадрів' } 
         });
 
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: {
-                name: 'mobile_interface_slideshow_time',
-                type: 'select',
-                values: {
-                    '10000': '10 секунд',
-                    '15000': '15 секунд',
-                    '20000': '20 секунд'
-                },
-                default: '10000'
-            },
-            field: {
-                name: 'Інтервал зміни фону'
-            }
+        Lampa.SettingsApi.addParam({ 
+            component: 'mobile_interface', 
+            param: { name: 'mobile_interface_slideshow_time', type: 'select', values: { '10000': '10 секунд', '15000': '15 секунд', '20000': '20 секунд' }, default: '10000' }, 
+            field: { name: 'Інтервал зміни фону' } 
         });
 
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: {
-                name: 'mobile_interface_logo_size_v2',
-                type: 'select',
-                values: {
-                    '125': 'Малий',
-                    '150': 'Середній',
-                    '180': 'Стандартний',
-                    '210': 'Великий'
-                },
-                default: '125'
-            },
-            field: {
-                name: 'Висота логотипу тайтлу'
-            },
-            onChange: applyStyles
+        Lampa.SettingsApi.addParam({ 
+            component: 'mobile_interface', 
+            param: { name: 'mobile_interface_logo_size_v2', type: 'select', values: { '125': 'Малий', '150': 'Середній', '180': 'Стандартний', '210': 'Великий' }, default: '125' }, 
+            field: { name: 'Висота логотипу тайтлу' }, 
+            onChange: applyStyles 
         });
 
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: {
-                name: 'mobile_interface_show_tagline',
-                type: 'trigger',
-                default: true
-            },
-            field: {
-                name: 'Відображати слоган'
-            },
-            onChange: applyStyles
+        Lampa.SettingsApi.addParam({ 
+            component: 'mobile_interface', 
+            param: { name: 'mobile_interface_show_tagline', type: 'trigger', default: true }, 
+            field: { name: 'Відображати слоган' }, 
+            onChange: applyStyles 
         });
 
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: {
-                name: 'mobile_interface_blocks_gap',
-                type: 'select',
-                values: {
-                    '8px': 'Компактний',
-                    '12px': 'Стандартний',
-                    '18px': 'Просторий',
-                    '24px': 'Панорамний'
-                },
-                default: '8px'
-            },
-            field: {
-                name: 'Відступи між блоками'
-            },
-            onChange: applyStyles
+        Lampa.SettingsApi.addParam({ 
+            component: 'mobile_interface', 
+            param: { name: 'mobile_interface_blocks_gap', type: 'select', values: { '8px': 'Компактний', '12px': 'Стандартний', '18px': 'Просторий', '24px': 'Панорамний' }, default: '8px' }, 
+            field: { name: 'Відступи між блоками' }, 
+            onChange: applyStyles 
         });
 
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: {
-                name: 'mobile_interface_ratings_size',
-                type: 'select',
-                values: {
-                    '0.4em': 'Дрібний',
-                    '0.45em': 'Звичайний',
-                    '0.5em': 'Великий',
-                    '0.55em': 'Дуже великий'
-                },
-                default: '0.45em'
-            },
-            field: {
-                name: 'Розмір шрифту інфо-блоків'
-            },
-            onChange: applyStyles
+        Lampa.SettingsApi.addParam({ 
+            component: 'mobile_interface', 
+            param: { name: 'mobile_interface_ratings_size', type: 'select', values: { '0.4em': 'Дрібний', '0.45em': 'Звичайний', '0.5em': 'Великий', '0.55em': 'Дуже великий' }, default: '0.45em' }, 
+            field: { name: 'Розмір шрифту інфо-блоків' }, 
+            onChange: applyStyles 
         });
 
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: {
-                name: 'mobile_interface_studios',
-                type: 'trigger',
-                default: true
-            },
-            field: {
-                name: 'Показувати логотип студії'
-            }
+        Lampa.SettingsApi.addParam({ 
+            component: 'mobile_interface', 
+            param: { name: 'mobile_interface_studios', type: 'trigger', default: true }, 
+            field: { name: 'Показувати логотип студії' } 
         });
 
-        Lampa.SettingsApi.addParam({
-            component: 'mobile_interface',
-            param: {
-                name: 'mobile_interface_quality',
-                type: 'trigger',
-                default: true
-            },
-            field: {
-                name: 'Бейджі якості та звуку'
-            }
+        Lampa.SettingsApi.addParam({ 
+            component: 'mobile_interface', 
+            param: { name: 'mobile_interface_quality', type: 'trigger', default: true }, 
+            field: { name: 'Бейджі якості та звуку' } 
         });
     }
 
     function startPlugin() {
-        applyStyles();
-        setupSettings();
+        applyStyles(); 
+        setupSettings(); 
         init();
     }
 
-    if (window.appready) {
-        startPlugin();
-    } else {
-        Lampa.Listener.follow('app', function (e) {
-            if (e.type === 'ready') {
-                startPlugin();
-            }
-        });
-    }
-
+    if (window.appready) startPlugin();
+    else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') startPlugin(); });
 })();
