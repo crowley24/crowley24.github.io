@@ -580,7 +580,21 @@
         }                
     }                
                 
-function startSlideshow(render, backdrops, currentLang) {  
+
+                
+    function renderStudioLogosWithColorAnalysis(container, data) {    
+        container.empty();
+        const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 1);  
+            
+        studios.forEach((studio) => {    
+            const logoUrl = Lampa.TMDB.image('/t/p/w200' + studio.logo_path);    
+            const id = 'cas_studio_' + Math.random().toString(36).substr(2, 9);    
+                
+            container.append(`<div class="cas-studio-item cas-wave-studio" id="${id}"><img src="${logoUrl}"></div>`);    
+                
+            const img = new Image();    
+            img.crossOrigin = 'anonymous';    
+      function startSlideshow(render, backdrops, currentLang) {  
     stopSlideshow();  
     if (!backdrops || backdrops.length <= 1) return;  
   
@@ -650,25 +664,7 @@ function startSlideshow(render, backdrops, currentLang) {
     }, intervalTime);  
   
     window.casBgInterval = currentInterval;  
-  
-    var stop_watch = setInterval(function () {  
-        if (!is_active) clearInterval(stop_watch);  
-    }, 1000);  
-}                
-                
-    function renderStudioLogosWithColorAnalysis(container, data) {    
-        container.empty();
-        const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 1);  
-            
-        studios.forEach((studio) => {    
-            const logoUrl = Lampa.TMDB.image('/t/p/w200' + studio.logo_path);    
-            const id = 'cas_studio_' + Math.random().toString(36).substr(2, 9);    
-                
-            container.append(`<div class="cas-studio-item cas-wave-studio" id="${id}"><img src="${logoUrl}"></div>`);    
-                
-            const img = new Image();    
-            img.crossOrigin = 'anonymous';    
-            img.onload = function() {    
+}      img.onload = function() {    
                 const canvas = document.createElement('canvas');    
                 const ctx = canvas.getContext('2d');    
                 canvas.width = this.width;    
