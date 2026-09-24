@@ -713,9 +713,9 @@ async function processImages(render, data, res) {
         }  
         stopSlideshow();  
         if (Lampa.Storage.get('cas_slideshow_enabled') && res.backdrops && res.backdrops.length > 1) {  
-            var current_lang = Lampa.Storage.get('tmdb_lang') || 'uk';  
-            startSlideshow(render, res.backdrops, current_lang);  
-        }  
+    var current_lang = Lampa.Storage.get('tmdb_lang') || 'uk';  
+    startSlideshow(render, res.backdrops, current_lang);  
+}
     } catch (error) {  
         render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${data.title || data.name}</div>`);  
     }  
