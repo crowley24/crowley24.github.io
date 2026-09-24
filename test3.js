@@ -191,7 +191,7 @@
             stopSlideshow();          
           
             if (Lampa.Storage.get('cas_slideshow_enabled')) {          
-                const bg = currentCard.find('.full-start__background img, img.full-start__background');          
+                const bg = currentCard.find('.full-start__background');          
                 if (bg.length && bg.attr('src')) {          
                     const movieData = currentCard.data('movie');          
                     if (movieData && movieData.id) {          
@@ -325,21 +325,21 @@
             100% { transform: scale(1.08) rotate(0deg) translate3d(0, 0, 0); }
         }
                   
-        body.cas--zoom-kenburns .full-start__background img, 
+        body.cas--zoom-kenburns .full-start__background, 
         body.cas--zoom-kenburns img.full-start__background {  
             animation: casKenBurnsParallax 45s ease-in-out infinite !important;  
             will-change: transform;  
             transform-origin: center center;  
         }  
 
-        body.cas--zoom-panscan .full-start__background img, 
+        body.cas--zoom-panscan .full-start__background, 
         body.cas--zoom-panscan img.full-start__background {  
             animation: casCinematicPanScan 40s ease-in-out infinite !important;  
             will-change: transform;  
             transform-origin: center center;  
         }
 
-        body.cas--zoom-tiltzoom .full-start__background img, 
+        body.cas--zoom-tiltzoom .full-start__background, 
         body.cas--zoom-tiltzoom img.full-start__background {  
             animation: casDynamicTiltZoom 30s ease-in-out infinite !important;  
             will-change: transform;  
@@ -570,10 +570,6 @@
             clearInterval(currentInterval);                
             currentInterval = null;                
         }                
-        if (window.cardifyRotationTimer) {                
-            clearInterval(window.cardifyRotationTimer);                
-            window.cardifyRotationTimer = null;                
-        }                
     }                
                 
     function startSlideshow(render, backdrops, currentLang) {  
@@ -606,23 +602,25 @@
         if (final_backdrops.length <= 1) return;  
       
         var current_index = 0;  
-        var is_active = true;  
-        var quality = Lampa.Storage.field('cardify_slideshow_quality') || 'w1280';  
-        var duration = parseInt(Lampa.Storage.field('cardify_slideshow_duration')) || 18000; // Оновлено час за замовчуванням  
+        var quality = Lampa.Storage.field('cas_slideshow_quality') || 'w1280';  
+        var duration = parseInt(Lampa.Storage.field('cas_slideshow_duration')) || 12000;  
       
-        window.cardifyRotationTimer = setInterval(function () {  
-            if (!is_active) { clearInterval(window.cardifyRotationTimer); return; }  
+        currentInterval = setInterval(function () {  
+            var $render = render;  
+            if (!$render || !$render.length \vert{}\vert{} !$render.is(':visible')) {  
+                stopSlideshow();  
+                return;  
+            }  
       
             current_index = (current_index + 1) % final_backdrops.length;  
             var backdrop_url = Lampa.TMDB.image('t/p/' + quality + final_backdrops[current_index].file_path);  
       
-            var $render = render;  
             var $currentBg =$render.find('.full-start__background').last();  
             if ($currentBg.length === 0) return;  
       
             var img = new Image();  
             img.onload = function () {  
-                if (!is_active) return;  
+                if (!$render.is(':visible')) return;  
       
                 var $newBg =$currentBg.clone();  
                 $newBg.attr('src', backdrop_url);$newBg.css({  
@@ -647,7 +645,7 @@
                 });  
       
                 setTimeout(function () {  
-                    if (!is_active) return;  
+                    if (!$render.is(':visible')) return;  
                     $currentBg.remove();  
                     $render.find('.full-start__background').not($newBg).remove();  
                 }, 1900);  
@@ -927,3 +925,4 @@
     if (window.appready) startPlugin();                  
     else Lampa.Listener.follow('app', (e) => { if (e.type === 'ready') startPlugin(); });                  
 })();
+
