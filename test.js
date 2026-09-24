@@ -191,7 +191,6 @@
         
         css += '@media screen and (max-width: 480px) { ';
         css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="rating-count"], [class*="status"] { display:none !important; } ';
-        css += '.full-start-new__right > div:first-child { display: none !important; } ';
         css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';
         
         /* ПОВНЕ ПРИХОВУВАННЯ ШТАТНИХ РЕАКЦІЙ LAMPA */
@@ -255,12 +254,15 @@
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.85em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
 
-        /* КНОПКИ: ВМІЩУЮТЬСЯ В ШИРИНУ ЕКРАНУ */
-        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; justify-content: center !important; align-items: center !important; gap: 8px !important; width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; padding: 0 8px !important; margin-top: 6px !important; order: 6; overflow: hidden !important; } ';
+        /* КОНТЕЙНЕР КНОПОК ДІЙ ТА ІНТЕГРАЦІЇ ОНЛАЙН-ДЖЕРЕЛ */
+        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; justify-content: center !important; align-items: center !important; flex-wrap: wrap !important; gap: 8px !important; width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; padding: 0 8px !important; margin-top: 6px !important; order: 6; overflow: visible !important; } ';
         css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; flex: 0 1 52px !important; width: 52px !important; min-width: 0 !important; max-width: 52px !important; box-sizing: border-box !important; transition: transform 0.2s ease, opacity 0.2s ease; } ';
         css += '.full-start-new .full-start__button:active { transform: scale(0.9); opacity: 0.7; } ';
         css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 24px !important; height: 24px !important; margin-bottom: 5px !important; fill: #fff !important; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5)); } ';
         css += '.full-start-new .full-start__button span { font-size: 8px !important; text-transform: uppercase !important; opacity: 0.75 !important; font-weight: 600; letter-spacing: 0.05em; } ';
+        
+        /* ЗБЕРЕЖЕННЯ ВІДОБРАЖЕННЯ КНОПОК ОНЛАЙН-ДЖЕРЕЛ ТА ТОРРЕНТІВ ВІД ПОБІЧНИХ ПЛАГІНІВ */
+        css += '.full-start-new__buttons > div:not(.full-start__button) { display: flex !important; align-items: center !important; justify-content: center !important; flex-wrap: wrap !important; gap: 8px !important; } ';
         css += '} ';
 
         style.textContent = css;
@@ -464,7 +466,6 @@
                 
                 if (window.lampa_settings) window.lampa_settings.blur_poster = false;
 
-                // Запобігаємо повторній генерації та перетиранню елементів/кнопок при повторному відкритті з кешу
                 var $rightContainer = $render.find('.full-start-new__right');
                 if ($rightContainer.find('.plugin-meta-row').length > 0) {
                     loadMovieDetails(movie, $render);
