@@ -181,22 +181,16 @@
             currentCard.find('.cas-rate-items, .cas-bottom-ratings').toggle(!!Lampa.Storage.get('cas_show_rating'));
                         
             const buttons = currentCard.find('.full-start-new__buttons');          
-                      
-            if (!showDesc) {          
-                buttons.css('margin-top', '0px');          
-            } else {          
-                buttons.css('margin-top', '');          
-            }          
+            buttons.css('margin-top', showDesc ? '' : '0px');          
                         
             stopSlideshow();          
           
             if (Lampa.Storage.get('cas_slideshow_enabled')) {          
-                const bg = currentCard.find('.full-start__background');          
+                const bg = currentCard.find('.full-start__background img, img.full-start__background');          
                 if (bg.length && bg.attr('src')) {          
                     const movieData = currentCard.data('movie');          
                     if (movieData && movieData.id) {          
-                        const cacheId = 'tmdb_' + movieData.id;          
-                        const cached = getCachedData(cacheId);          
+                        const cached = getCachedData('tmdb_' + movieData.id);          
                         if (cached && cached.backdrops?.length > 1) {          
                             startSlideshow(currentCard, cached.backdrops);          
                         }          
@@ -217,21 +211,21 @@
                 </div>                      
                 <div class="full-start-new__right">                      
                     <div class="left-title__content">                      
-                        <div class="cas-logo-container" style="margin-bottom: calc(var(--cas-blocks-gap) * 1.2);">  
-                            <div class="cas-studios-row" style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;"></div>                  
+                        <div class="cas-logo-container">  
+                            <div class="cas-studios-row"></div>                  
                             <div class="cas-logo"></div>                    
                         </div>                    
                         <div class="cas-tagline" style="display: none;"></div>
-                        <div class="cas-meta-line" style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap;">      
+                        <div class="cas-meta-line">      
                             <div class="cas-meta-info"></div>      
-                            <div class="cas-quality-row" style="display: flex; gap: 6px; align-items: center;"></div>      
+                            <div class="cas-quality-row"></div>      
                         </div>  
-                        <div class="cas-description" style="margin-top: 2px;"></div>                    
-                        <div class="cas-details-wrapper" style="margin-top: 4px;">                  
+                        <div class="cas-description"></div>                    
+                        <div class="cas-details-wrapper">                  
                             <div class="full-start-new__head hide"></div>                      
                             <div class="full-start-new__details hide"></div>                      
                         </div>                  
-                        <div class="full-start-new__buttons" style="margin-top: 0px;">                      
+                        <div class="full-start-new__buttons">                      
                             <div class="full-start__button selector button--play">                      
                                 <svg width="28" height="29" viewBox="0 0 28 29" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="14" cy="14.5" r="13" stroke="currentColor" stroke-width="2.7"/><path d="M18.0739 13.634C18.7406 14.0189 18.7406 14.9811 18.0739 15.366L11.751 19.0166C11.0843 19.4015 10.251 18.9204 10.251 18.1506L10.251 10.8494C10.251 10.0796 11.0843 9.5985 11.751 9.9834L18.0739 13.634Z" fill="currentColor"/></svg>                      
                                 <span>#{title_watch}</span>                      
@@ -257,7 +251,7 @@
                         </div>                  
                     </div>                  
                     <div class="full-start-new__reactions selector hide"></div>                  
-                    <div class="cas-bottom-ratings" style="position: absolute; right: 2.5em; bottom: 2em; display: flex; align-items: center; gap: 15px; font-size: var(--cas-meta-size); font-weight: 600; z-index: 3;"></div>
+                    <div class="cas-bottom-ratings"></div>
                     <div class="full-start-new__rate-line hide"></div>                  
                     <div class="rating--modss" style="display: none;"></div>                  
                 </div>                  
@@ -291,31 +285,26 @@
             height: calc(100% + 6em);  
             left: 0 !important;  
             opacity: 0 !important;  
-            transition: opacity 1.8s cubic-bezier(0.4, 0, 0.2, 1) !important;  
-            will-change: opacity, transform;  
+            transition: opacity 1s cubic-bezier(0.2, 0.8, 0.2, 1) !important;  
+            will-change: opacity;  
             overflow: hidden !important;  
             transform: translateZ(0);
         }  
             
-        .full-start__background.loaded {  
-            opacity: 1 !important;  
-        }  
-      
-        .full-start__background.dim {  
-            opacity: 0.35 !important;  
-        }  
+        .full-start__background.loaded { opacity: 1 !important; }  
+        .full-start__background.dim { opacity: 0.35 !important; }  
                 
         @keyframes casKenBurnsParallax {  
-            0% { transform: scale(1.02) translateY(0px) translateX(0px) translateZ(0); }  
-            50% { transform: scale(1.10) translateY(-15px) translateX(5px) translateZ(0); }  
-            100% { transform: scale(1.02) translateY(0px) translateX(0px) translateZ(0); }  
+            0% { transform: scale(1.02) translate3d(0, 0, 0); }  
+            50% { transform: scale(1.10) translate3d(5px, -15px, 0); }  
+            100% { transform: scale(1.02) translate3d(0, 0, 0); }  
         }  
 
         @keyframes casCinematicPanScan {
-            0% { transform: scale(1.06) translate3d(0px, 0px, 0); }
+            0% { transform: scale(1.06) translate3d(0, 0, 0); }
             33% { transform: scale(1.12) translate3d(-25px, -12px, 0); }
             66% { transform: scale(1.10) translate3d(20px, 15px, 0); }
-            100% { transform: scale(1.06) translate3d(0px, 0px, 0); }
+            100% { transform: scale(1.06) translate3d(0, 0, 0); }
         }
 
         @keyframes casDynamicTiltZoom {
@@ -325,23 +314,23 @@
             100% { transform: scale(1.08) rotate(0deg) translate3d(0, 0, 0); }
         }
                   
-        body.cas--zoom-kenburns .full-start__background, 
+        body.cas--zoom-kenburns .full-start__background img, 
         body.cas--zoom-kenburns img.full-start__background {  
-            animation: casKenBurnsParallax 45s ease-in-out infinite !important;  
+            animation: casKenBurnsParallax 40s ease-in-out infinite !important;  
             will-change: transform;  
             transform-origin: center center;  
         }  
 
-        body.cas--zoom-panscan .full-start__background, 
+        body.cas--zoom-panscan .full-start__background img, 
         body.cas--zoom-panscan img.full-start__background {  
-            animation: casCinematicPanScan 40s ease-in-out infinite !important;  
+            animation: casCinematicPanScan 35s ease-in-out infinite !important;  
             will-change: transform;  
             transform-origin: center center;  
         }
 
-        body.cas--zoom-tiltzoom .full-start__background, 
+        body.cas--zoom-tiltzoom .full-start__background img, 
         body.cas--zoom-tiltzoom img.full-start__background {  
-            animation: casDynamicTiltZoom 30s ease-in-out infinite !important;  
+            animation: casDynamicTiltZoom 25s ease-in-out infinite !important;  
             will-change: transform;  
             transform-origin: center center;  
         }
@@ -355,7 +344,7 @@
         .cas-quality-row .cas-quality-item {
             opacity: 0;
             transform: translate3d(0, 6px, 0) scale(0.9);
-            transition: opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1), transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            transition: opacity 0.3s var(--cas-curve-slide), transform 0.3s var(--cas-curve-slide);
         }
 
         .cas-quality-row.show-quality .cas-quality-item {
@@ -419,8 +408,7 @@
         .full-start-new__body { display: flex; height: 85vh; position: relative; width: 100%; }  
         .full-start-new__left { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 4em 3em 2em 2em; position: relative; z-index: 2; }  
         .full-start-new__right { width: 60%; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start !important; text-align: left !important; padding: 4em 4em 2em 0; position: relative; z-index: 2; margin-left: 0 !important; }  
-        .full-start-new__poster { display: none; }  
-        .full-start-new__title { display: none; }  
+        .full-start-new__poster, .full-start-new__title { display: none; }  
                             
         .left-title .full-start-new__left { display: none !important; }  
         .left-title .full-start-new__right { width: 100% !important; padding-left: 2em !important; }  
@@ -430,7 +418,6 @@
             position: relative;  
             overflow: visible;  
             max-width: 100%;  
-            padding-left: 0%;  
             margin-bottom: calc(var(--cas-blocks-gap) * 1.2);  
             max-height: 300px;  
             display: flex;
@@ -461,21 +448,21 @@
             text-align: left !important;
         }
 
-        .cas-ratings-line {  
-            display: flex;  
-            align-items: center;  
-            justify-content: flex-start !important;
-            gap: 8px !important;  
-            flex-wrap: wrap;  
-            margin-bottom: 6px !important;  
-        }  
-        
+        .cas-meta-line {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
         .cas-meta-info {  
             margin-right: 0;  
             display: flex;  
             align-items: center;  
             justify-content: flex-start !important;
             gap: 8px;  
+            font-weight: 400; 
         }  
         
         .cas-quality-row {  
@@ -495,16 +482,13 @@
             margin-left: 0 !important;
             margin-top: 0px !important;
         }
-        
-        .cas-sep {  
-            margin: 0 2px !important;  
-        }  
                             
         .cas-studios-row {  
             display: flex;  
             flex-wrap: wrap;  
             justify-content: flex-start !important;
             gap: 8px;  
+            margin-bottom: 8px;
         }  
         
         .cas-studio-item {    
@@ -524,13 +508,37 @@
             opacity: 0.95;    
         }    
 
-        .cas-description { font-size: var(--cas-meta-size) !important; line-height: 1.35; color: rgba(255,255,255,0.7); display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-width: 650px; margin-top: 4px; margin-bottom: 8px; text-align: left !important; }    
+        .cas-description { 
+            font-size: var(--cas-meta-size) !important; 
+            line-height: 1.35; 
+            color: rgba(255,255,255,0.7); 
+            display: -webkit-box; 
+            -webkit-line-clamp: 4; 
+            -webkit-box-orient: vertical; 
+            overflow: hidden; 
+            max-width: 650px; 
+            margin-top: 4px; 
+            margin-bottom: 8px; 
+            text-align: left !important; 
+        }    
+        
         .cas-quality-item img { height: 12px; }    
-        .cas-ratings-line { display: flex; align-items: center; gap: 15px; margin-bottom: 4px; font-size: var(--cas-meta-size); font-weight: 600; height: 30px; }    
+        
+        .cas-bottom-ratings {
+            position: absolute; 
+            right: 2.5em; 
+            bottom: 2em; 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            font-size: var(--cas-meta-size); 
+            font-weight: 600; 
+            z-index: 3;
+        }
+
         .cas-rate-item { display: flex; align-items: center; gap: 6px; }    
         .cas-rate-item img { height: 1.1em; }    
         .left-title .full-start-new__body { height: 85vh; }    
-        .cas-meta-info { display: flex; align-items: center; gap: 8px; font-weight: 400; }    
                               
         .cas-audio-item {    
             background: rgba(255, 255, 255, 0.2);    
@@ -570,93 +578,99 @@
             clearInterval(currentInterval);                
             currentInterval = null;                
         }                
+        if (window.casBgInterval) {                
+            clearInterval(window.casBgInterval);                
+            window.casBgInterval = null;                
+        }                
     }                
                 
-    function startSlideshow(render, backdrops, currentLang) {  
+        function startSlideshow(render, backdrops, currentLang) {  
         stopSlideshow();  
-        if (!render || !render.length || !backdrops || backdrops.length <= 1) return;  
+        if (!backdrops || backdrops.length <= 1) return;  
       
-        var lang_backdrops = [];  
-        var no_lang_backdrops = [];  
-        var other_backdrops = [];  
+        let lang_backdrops = [];  
+        let no_lang_backdrops = [];  
+        let other_backdrops = [];  
       
-        backdrops.forEach(function (b) {  
-            var lang = b.iso_639_1;  
+        backdrops.forEach((b) => {  
+            let lang = b.iso_639_1;  
             if (lang === currentLang) lang_backdrops.push(b);  
             else if (!lang || lang === 'xx' || lang === 'null') no_lang_backdrops.push(b);  
             else other_backdrops.push(b);  
         });  
       
-        var final_backdrops = [].concat(no_lang_backdrops);  
+        let final_backdrops = [].concat(no_lang_backdrops);  
         if (final_backdrops.length < 3 && lang_backdrops.length > 0) {  
             final_backdrops = final_backdrops.concat(lang_backdrops);  
         }  
         if (final_backdrops.length < 3 && other_backdrops.length > 0) {  
-            other_backdrops.sort(function (a, b) {  
-                return (b.vote_average || 0) - (a.vote_average || 0);  
-            });  
+            other_backdrops.sort((a, b) => (b.vote_average || 0) - (a.vote_average || 0));  
             final_backdrops = final_backdrops.concat(other_backdrops);  
         }  
         final_backdrops = final_backdrops.slice(0, 15);  
       
         if (final_backdrops.length <= 1) return;  
       
-        var current_index = 0;  
-        var quality = Lampa.Storage.get('cas_slideshow_quality') || 'w1280';  
-        var duration = parseInt(Lampa.Storage.get('cas_slideshow_duration')) || 12000;  
+        let idx = 0;  
+        let is_active = true;  
+        let intervalTime = 15000;  
       
-        currentInterval = setInterval(function () {  
-            var $render = render;  
-            if (!$render || !$render.length \vert{}\vert{} !$render.is(':visible')) {  
-                stopSlideshow();  
-                return;  
-            }  
+        currentInterval = setInterval(() => {  
+            if (!is_active) { clearInterval(currentInterval); return; }  
       
-            current_index = (current_index + 1) % final_backdrops.length;  
-            var backdrop_url = Lampa.TMDB.image('t/p/' + quality + final_backdrops[current_index].file_path);  
+            idx = (idx + 1) % final_backdrops.length;  
+            let nextSrc = Lampa.TMDB.image('/t/p/original' + final_backdrops[idx].file_path);  
       
-            var $currentBg =$render.find('.full-start__background').last();  
-            if ($currentBg.length === 0) return;  
+            let $currentBg = render.find('.full-start__background img, img.full-start__background').last();  
+            if (!$currentBg.length) return;  
       
-            var img = new Image();  
-            img.onload = function () {  
-                if (!$render.is(':visible')) return;  
+            let img = new Image();  
+            img.onload = () => {  
+                if (!is_active) return;  
       
-                var $newBg =$currentBg.clone();  
-                $newBg.attr('src', backdrop_url);$newBg.css({  
-                    'opacity': '0',  
-                    'transition': 'opacity 1.8s cubic-bezier(0.4, 0, 0.2, 1)',  
-                    'will-change': 'opacity, transform',  
-                    'transform': 'translateZ(0)'  
-                });  
+                // Створюємо новий елемент фону поверх старого з нульовою прозорістю
+                let $newBg = $currentBg.clone();
+                $newBg.attr('src', nextSrc);  
+                $newBg.css({                       
+                    opacity: 0,                       
+                    transition: 'opacity 1.2s ease-in-out',                       
+                    transform: 'translateZ(0)',
+                    'will-change': 'opacity',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    'object-fit': 'cover'
+                });
+
+                // Блокуємо взаємодію зі старим шаром, щоб уникнути артефактів рендерингу
+                $currentBg.css('pointer-events', 'none');
+
+                $currentBg.after($newBg);
+                
+                // Примусовий перерахунок стилів (reflow) для коректного старту анімації на TV-приставках
+                $newBg[0].offsetHeight;  
       
-                var $overlay =$render.find('.cardify-effects-overlay');  
-                if ($overlay.length) {  
-                    $overlay.before($newBg);  
-                } else {  
-                    $currentBg.after($newBg);  
-                }  
+                // Запускаємо плавний перехід
+                $newBg.css('opacity', 1);
+                $currentBg.css('opacity', 0);  
       
-                if ($newBg[0])$newBg[0].offsetHeight;   
-      
-                $newBg.css('opacity', '1');$currentBg.css({  
-                    'transition': 'opacity 1.8s cubic-bezier(0.4, 0, 0.2, 1)',  
-                    'opacity': '0'  
-                });  
-      
-                setTimeout(function () {  
-                    if (!$render.is(':visible')) return;  
+                // Гарантоване видалення старого шару після завершення анимації
+                setTimeout(() => {  
+                    if (!is_active) return;  
                     $currentBg.remove();  
-                    $render.find('.full-start__background').not($newBg).remove();  
-                }, 1900);  
+                }, 1300);  
             };  
-            img.onerror = function () {};  
-            img.src = backdrop_url;  
-        }, duration);  
-    }               
+            img.onerror = () => {};  
+            img.src = nextSrc;  
+        }, intervalTime);  
+      
+        window.casBgInterval = currentInterval;  
+        }
+    
                 
     function renderStudioLogosWithColorAnalysis(container, data) {    
-        if (!container || !container.length) return;
         container.empty();
         const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 1);  
             
@@ -669,13 +683,13 @@
             const img = new Image();    
             img.crossOrigin = 'anonymous';    
             img.onload = function() {    
-                try {
-                    const canvas = document.createElement('canvas');    
-                    const ctx = canvas.getContext('2d');    
-                    canvas.width = this.width;    
-                    canvas.height = this.height;    
-                    ctx.drawImage(this, 0, 0);    
-                        
+                const canvas = document.createElement('canvas');    
+                const ctx = canvas.getContext('2d');    
+                canvas.width = this.width;    
+                canvas.height = this.height;    
+                ctx.drawImage(this, 0, 0);    
+                    
+                try {    
                     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;    
                     let r = 0, g = 0, b = 0, count = 0;    
                         
@@ -701,7 +715,6 @@
     }    
                 
     async function processImages(render, data, res) {  
-        if (!render || !render.length) return;
         try {  
             let bestLogo = res.logos.find(l => l.iso_639_1 === 'uk') || res.logos.find(l => l.iso_639_1 === 'en') || res.logos[0];  
             if (!bestLogo && res.logos.length > 0) bestLogo = res.logos[0];  
@@ -716,7 +729,7 @@
             }  
             stopSlideshow();  
             if (Lampa.Storage.get('cas_slideshow_enabled') && res.backdrops && res.backdrops.length > 1) {  
-                var current_lang = Lampa.Storage.get('tmdb_lang') || 'uk';  
+                let current_lang = Lampa.Storage.get('tmdb_lang') || 'uk';  
                 startSlideshow(render, res.backdrops, current_lang);  
             }  
         } catch (error) {  
@@ -725,7 +738,6 @@
     }    
                 
     async function loadMovieDataOptimized(render, data) {    
-        if (!render || !render.length) return;
         const tasks = [];    
             
         if (data.tagline && Lampa.Storage.get('cas_show_tagline')) {
@@ -759,7 +771,7 @@
                     if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; }          
                 });    
                 if (cnt >= 1) {    
-                    const isTv = data.name ? true : false;    
+                    const isTv = !!data.name;    
                     const cubV = (((isTv?7.4:6.5)*(isTv?50:150)+sum)/((isTv?50:150)+cnt)).toFixed(1);    
                     ratings += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;    
                 }    
@@ -819,25 +831,16 @@
                         if (qH) {    
                             qualityElement.html(qH).show();  
 
-                            let qualityShown = false;
-                            const showQualityClass = () => {
-                                if (!qualityShown) {
-                                    qualityShown = true;
-                                    qualityElement.addClass('show-quality');
-                                }
-                            };
-
                             if (buttonsBlock.length) {
                                 buttonsBlock.off('transitionend.casQuality animationend.casQuality');
                                 buttonsBlock.on('transitionend.casQuality animationend.casQuality', function handler(e) {
                                     if (e.target === this) {
-                                        showQualityClass();
+                                        qualityElement.addClass('show-quality');
                                         buttonsBlock.off('transitionend.casQuality animationend.casQuality', handler);
                                     }
                                 });
-                                setTimeout(showQualityClass, 450);
                             } else {
-                                showQualityClass();
+                                qualityElement.addClass('show-quality');
                             }
                         }    
                     }    
