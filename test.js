@@ -150,7 +150,7 @@
         var animTiming = animEffect === 'elastic' ? 'cubic-bezier(0.34, 1.56, 0.64, 1)' : 'cubic-bezier(0.16, 1, 0.3, 1)';
         var uiAnimClass = isUIAnim ? 'animation: ' + chosenAnimName + ' 0.8s ' + animTiming + ' forwards; opacity: 0; will-change: transform, opacity, filter; transform: translateZ(0); ' : '';
 
-        // ВИПРАВЛЕНО: позиціонування поверх усього контейнера у правому верхньому куті постера
+        // Правий верхній кут: загальний контейнер для бейджів і рейтингів
         css += '.quality-row-inline { position: absolute; top: 15px; right: 15px; z-index: 99; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; pointer-events: none; } '; 
 
         css += '.studio-header-brand { ' + uiAnimClass + ' animation-delay: 0.08s; order: 1; width: 100%; display: flex; justify-content: flex-start; align-items: center; padding-left: 5vw; margin-bottom: -2px !important; } ';
@@ -163,9 +163,6 @@
         css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.22s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: center !important; order: 3; } ';
         
         css += '.plugin-meta-row { ' + uiAnimClass + ' animation-delay: 0.28s; display: flex; justify-content: center; align-items: center; flex-wrap: nowrap; gap: 8px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.5); width: 100%; order: 4; color: rgba(255,255,255,0.85); font-family: "Inter", -apple-system, system-ui, sans-serif; } ';
-        
-        css += '.plugin-ratings-quality-row { ' + uiAnimClass + ' animation-delay: 0.35s; display: flex; justify-content: center; align-items: center; flex-wrap: nowrap; gap: 12px; margin: 0 !important; width: 100%; order: 5; font-size: calc(' + rSize + ' * 2.8); } ';
-        css += '.plugin-ratings-group { display: flex; align-items: center; gap: 10px; } ';
         
         var loopAnimName = badgeAnim !== 'none' ? 'badge_anim_' + badgeAnim : '';
         var loopDuration = badgeAnim === 'spin_slow' ? '4s' : (badgeAnim === 'breathe' ? '3s' : '2.5s');
@@ -186,8 +183,9 @@
         }
         css += '} ';
 
-        css += '.plugin-rating-item { display: flex; align-items: center; gap: 4px; font-weight: 700; color: #fff; } ';
-        css += '.plugin-rating-item img { height: 1.1em; width: auto; } ';
+        // Стилі для рейтингів у правому куті
+        css += '.quality-row-inline .plugin-rating-item { display: flex; align-items: center; gap: 4px; font-weight: 700; color: #fff; font-size: 1.1em; background: rgba(0, 0, 0, 0.55); padding: 3px 6px; border-radius: 6px; backdrop-filter: blur(4px); margin-bottom: 2px; } ';
+        css += '.quality-row-inline .plugin-rating-item img { height: 1.1em; width: auto; } ';
         
         css += '.quality-item { height: 1.4em; display: flex; align-items: center; justify-content: flex-end; } ';
         css += '.quality-item img { height: 100%; width: auto; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.8)); } ';
@@ -234,9 +232,8 @@
         return null;
     }
 
-    function renderRatings(container, e) {
+    function renderMeta(container, e) {
         container.find('.plugin-meta-row').remove();
-        container.find('.plugin-ratings-quality-row').remove();
         
         var sep = '<span class="info-separator">•</span>';
         var $metaRow = $('<div class="plugin-meta-row"></div>');
@@ -268,29 +265,7 @@
             $metaRow.append('<div class="info-text-item">' + genres + '</div>');
         }
 
-        var $rqRow = $('<div class="plugin-ratings-quality-row"></div>');
-        var $ratingsGroup = $('<div class="plugin-ratings-group"></div>');
-        
-        var globalIndex = 0;
-
-        var tmdb = parseFloat(e.data.movie.vote_average || 0).toFixed(1);
-        if (tmdb > 0) {
-            var $tmdbItem = $('<div class="plugin-rating-item wave-item"><img src="'+ratingIcons.tmdb+'"> <span style="color:'+getRatingColor(tmdb)+'">'+tmdb+'</span></div>');
-            $tmdbItem.css('--item-index', globalIndex++);
-            $ratingsGroup.append($tmdbItem);
-        }
-        
-        var cub = getCubRating(e);
-        if (cub) {
-            var $cubItem = $('<div class="plugin-rating-item wave-item"><img src="' + ratingIcons.cub + '"> <span style="color:' + getRatingColor(cub) + '">' + cub + '</span></div>');
-            $cubItem.css('--item-index', globalIndex++);
-            $ratingsGroup.append($cubItem);
-        }
-
-        $rqRow.append($ratingsGroup);
-        container.append($metaRow).append($rqRow);
-
-        return globalIndex;
+        container.append($metaRow);
     }
 
     function applyMovieDetailsData(data, movie, $render) {
@@ -412,10 +387,9 @@
                 
                 if (window.lampa_settings) window.lampa_settings.blur_poster = false;
 
-                var startIndex = renderRatings($render.find('.full-start-new__right'), e);
+                renderMeta($render.find('.full-start-new__right'), e);
                 loadMovieDetails(movie, $render);
 
-                // ВИПРАВЛЕНО: додаємо бейджи безпосередньо у головний контейнер картки, минаючи overflow-hidden у постера
                 var $mainContainer = $render.find('.full-start-new');
                 if ($mainContainer.length === 0) $mainContainer = $render;
                 
@@ -423,6 +397,24 @@
                 var $qRow = $('<div class="quality-row-inline"></div>');
                 $mainContainer.append($qRow);
 
+                var globalIndex = 0;
+
+                // Додаємо рейтинги у правий кут першими
+                var tmdb = parseFloat(e.data.movie.vote_average || 0).toFixed(1);
+                if (tmdb > 0) {
+                    var $tmdbItem = $('<div class="plugin-rating-item wave-item"><img src="'+ratingIcons.tmdb+'"> <span style="color:'+getRatingColor(tmdb)+'">'+tmdb+'</span></div>');
+                    $tmdbItem.css('--item-index', globalIndex++);
+                    $qRow.append($tmdbItem);
+                }
+                
+                var cub = getCubRating(e);
+                if (cub) {
+                    var $cubItem = $('<div class="plugin-rating-item wave-item"><img src="' + ratingIcons.cub + '"> <span style="color:' + getRatingColor(cub) + '">' + cub + '</span></div>');
+                    $cubItem.css('--item-index', globalIndex++);
+                    $qRow.append($cubItem);
+                }
+
+                // Додаємо бейджи якості відразу під рейтингами
                 if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Parser && Lampa.Parser.get) {
                     Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
                         if (res && Array.isArray(res.Results)) {
@@ -431,13 +423,10 @@
                             if (b.dolbyVision) list.push('Dolby Vision'); else if (b.hdr) list.push('HDR');
                             if (b.dub) list.push('DUB'); if (b.ukr) list.push('UKR');
                             
-                            $qRow.empty();
-
-                            list.forEach(function(t, idx) { 
+                            list.forEach(function(t) { 
                                 if (svgIcons[t]) {
-                                    var currentItemIndex = startIndex + idx;
                                     var $badge = $('<div class="quality-item wave-item"><img src="' + svgIcons[t] + '"></div>');
-                                    $badge.css('--item-index', currentItemIndex);
+                                    $badge.css('--item-index', globalIndex++);
                                     $qRow.append($badge);
                                 }
                             });
