@@ -143,11 +143,14 @@
         css += 'transform-origin: center center !important; transition: opacity 1.2s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
         
-        css += '.full-start-new__right { background: none !important; margin-top: -160px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; padding: 0 10px !important; gap: ' + blocksGap + ' !important; } ';
+        css += '.full-start-new__right { background: none !important; margin-top: -160px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; padding: 0 10px !important; gap: ' + blocksGap + ' !important; position: relative !important; } ';
         
         var chosenAnimName = 'anim_' + animEffect;
         var animTiming = animEffect === 'elastic' ? 'cubic-bezier(0.34, 1.56, 0.64, 1)' : 'cubic-bezier(0.16, 1, 0.3, 1)';
         var uiAnimClass = isUIAnim ? 'animation: ' + chosenAnimName + ' 0.8s ' + animTiming + ' forwards; opacity: 0; will-change: transform, opacity, filter; transform: translateZ(0); ' : '';
+
+        // СТОВПЧИК БЕЙДЖІВ ЯКОСТІ (позиціонується абсолютом у правому верхньому кутку поверх постера)
+        css += '.quality-row-inline { position: absolute; top: -145vh; right: 15px; z-index: 10; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; pointer-events: none; } '; 
 
         css += '.studio-header-brand { ' + uiAnimClass + ' animation-delay: 0.08s; order: 1; width: 100%; display: flex; justify-content: flex-start; align-items: center; padding-left: 5vw; margin-bottom: -2px !important; } ';
         css += '.studio-header-brand img { height: 18px !important; width: auto; max-width: 110px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; } ';
@@ -162,9 +165,6 @@
         
         css += '.plugin-ratings-quality-row { ' + uiAnimClass + ' animation-delay: 0.35s; display: flex; justify-content: center; align-items: center; flex-wrap: nowrap; gap: 12px; margin: 0 !important; width: 100%; order: 5; font-size: calc(' + rSize + ' * 2.8); } ';
         css += '.plugin-ratings-group { display: flex; align-items: center; gap: 10px; } ';
-        
-        // СТИЛІ ДЛЯ СТОВПЧИКА БЕЙДЖІВ ЯКОСТІ У ПРАВОМУ ВЕРХНЬОМУ КУТКУ
-        css += '.quality-row-inline { position: absolute; top: 15px; right: 15px; z-index: 5; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; pointer-events: none; } '; 
         
         var loopAnimName = badgeAnim !== 'none' ? 'badge_anim_' + badgeAnim : '';
         var loopDuration = badgeAnim === 'spin_slow' ? '4s' : (badgeAnim === 'breathe' ? '3s' : '2.5s');
@@ -188,7 +188,6 @@
         css += '.plugin-rating-item { display: flex; align-items: center; gap: 4px; font-weight: 700; color: #fff; } ';
         css += '.plugin-rating-item img { height: 1.1em; width: auto; } ';
         
-        // Розмір бейджів у стовпчику (налаштовується за потреби, висота близько 1.4em)
         css += '.quality-item { height: 1.4em; display: flex; align-items: center; justify-content: flex-end; } ';
         css += '.quality-item img { height: 100%; width: auto; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.8)); } ';
 
@@ -416,11 +415,11 @@
                 var startIndex = renderRatings($render.find('.full-start-new__right'), e);
                 loadMovieDetails(movie, $render);
 
-                // Додаємо контейнер стовпчика якості поверх постера
-                var $posterBlock = $render.find('.full-start-new__poster');
-                $posterBlock.find('.quality-row-inline').remove();
+                // Додаємо контейнер якості у загальний блок .full-start-new__right, але позиціонуємо його вгору
+                var $rightBlock = $render.find('.full-start-new__right');
+                $rightBlock.find('.quality-row-inline').remove();
                 var $qRow = $('<div class="quality-row-inline"></div>');
-                $posterBlock.append($qRow);
+                $rightBlock.append($qRow);
 
                 if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Parser && Lampa.Parser.get) {
                     Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
