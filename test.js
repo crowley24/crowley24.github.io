@@ -160,10 +160,10 @@
         
         css += '.plugin-meta-row { ' + uiAnimClass + ' animation-delay: 0.28s; display: flex; justify-content: center; align-items: center; flex-wrap: nowrap; gap: 8px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.5); width: 100%; order: 4; color: rgba(255,255,255,0.85); font-family: "Inter", -apple-system, system-ui, sans-serif; } ';
         
-        // ПЕРЕНЕСЕННЯ РЕЙТИНГІВ ТА ЯКОСТІ У ВЕРХНІЙ ПРАВИЙ КУТ (СТОВПЧИКОМ)
-        css += '.plugin-ratings-quality-row { position: absolute !important; top: 12px !important; right: 12px !important; z-index: 10 !important; display: flex !important; flex-direction: column !important; align-items: flex-end !important; gap: 8px !important; margin: 0 !important; font-size: calc(' + rSize + ' * 2.5); background: rgba(0, 0, 0, 0.45); padding: 8px 10px; border-radius: 10px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); } ';
-        css += '.plugin-ratings-group { display: flex; flex-direction: column !important; align-items: flex-end !important; gap: 6px; } ';
-        css += '.quality-row-inline { display: flex; flex-direction: column !important; align-items: flex-end !important; gap: 6px; opacity: 0.95; } '; 
+        // ОПТИМІЗОВАНИЙ СТОВПЧИК РЕЙТИНГІВ ТА ЯКОСТІ
+        css += '.plugin-ratings-quality-row { position: absolute !important; top: 12px !important; right: 12px !important; z-index: 10 !important; display: flex !important; flex-direction: column !important; align-items: flex-end !important; gap: 8px !important; margin: 0 !important; font-size: calc(' + rSize + ' * 2.3); background: rgba(0, 0, 0, 0.55); padding: 10px 12px; border-radius: 12px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); } ';
+        css += '.plugin-ratings-group { display: flex !important; flex-direction: column !important; align-items: flex-end !important; gap: 6px !important; width: 100% !important; } ';
+        css += '.quality-row-inline { display: flex !important; flex-direction: row !important; flex-wrap: wrap !important; justify-content: flex-end !important; align-items: center !important; gap: 6px !important; width: 100% !important; margin-top: 2px !important; border-top: 1px solid rgba(255,255,255,0.15); padding-top: 6px; } '; 
         
         var loopAnimName = badgeAnim !== 'none' ? 'badge_anim_' + badgeAnim : '';
         var loopDuration = badgeAnim === 'spin_slow' ? '4s' : (badgeAnim === 'breathe' ? '3s' : '2.5s');
@@ -186,13 +186,13 @@
 
         css += '.plugin-rating-item { display: flex; align-items: center; gap: 6px; font-weight: 700; color: #fff; } ';
         css += '.plugin-rating-item img { height: 1.2em; width: auto; } ';
-        css += '.quality-item { height: 1.2em; } ';
+        css += '.quality-item { height: 1.1em; } ';
         css += '.quality-item img { height: 100%; width: auto; object-fit: contain; } ';
 
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.85em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
 
-        // КНОПКИ ЗБЕРЕЖЕННЯ АДАПТИВНОСТІ
+        // КНОПКИ
         css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; justify-content: center !important; flex-wrap: wrap !important; gap: 8px !important; width: 100% !important; max-width: 100% !important; padding: 0 5px !important; box-sizing: border-box !important; margin-top: 6px !important; order: 6; } ';
         css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; display: flex !important; flex-direction: column !important; align-items: center !important; width: 52px !important; min-width: 45px !important; transition: transform 0.2s ease, opacity 0.2s ease; } ';
         css += '.full-start-new .full-start__button:active { transform: scale(0.9); opacity: 0.7; } ';
@@ -234,7 +234,6 @@
 
     function renderRatings(container, e) {
         container.find('.plugin-meta-row').remove();
-        // Рядок рейтингу та якості тепер додається безпосередньо у постер (.full-start-new__poster)
         var $poster = e.object.activity.render().find('.full-start-new__poster');
         $poster.find('.plugin-ratings-quality-row').remove();
         
@@ -290,7 +289,6 @@
         var $qRow = $('<div class="quality-row-inline"></div>');
         $rqRow.append($ratingsGroup).append($qRow);
         
-        // Додаємо блок на постер у правий верхній кут
         $poster.append($rqRow);
         container.append($metaRow);
 
