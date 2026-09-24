@@ -464,7 +464,14 @@
                 
                 if (window.lampa_settings) window.lampa_settings.blur_poster = false;
 
-                var startIndex = renderRatings($render.find('.full-start-new__right'), e);
+                // Запобігаємо повторній генерації та перетиранню елементів/кнопок при повторному відкритті з кешу
+                var $rightContainer = $render.find('.full-start-new__right');
+                if ($rightContainer.find('.plugin-meta-row').length > 0) {
+                    loadMovieDetails(movie, $render);
+                    return;
+                }
+
+                var startIndex = renderRatings($rightContainer, e);
                 loadMovieDetails(movie, $render);
 
                 if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Parser && Lampa.Parser.get) {
