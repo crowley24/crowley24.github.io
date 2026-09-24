@@ -570,9 +570,9 @@
             clearInterval(currentInterval);                
             currentInterval = null;                
         }                
-        if (window.casBgInterval) {                
-            clearInterval(window.casBgInterval);                
-            window.casBgInterval = null;                
+        if (window.cardifyRotationTimer) {                
+            clearInterval(window.cardifyRotationTimer);                
+            window.cardifyRotationTimer = null;                
         }                
     }                
                 
@@ -605,39 +605,56 @@
       
         if (final_backdrops.length <= 1) return;  
       
-        var idx = 0;  
+        var current_index = 0;  
         var is_active = true;  
-        var intervalTime = 18000; // Збільшено час показу одного фону до 18 секунд для плавності  
+        var quality = Lampa.Storage.field('cardify_slideshow_quality') || 'w1280';  
+        var duration = parseInt(Lampa.Storage.field('cardify_slideshow_duration')) || 18000; // Оновлено час за замовчуванням  
       
-        currentInterval = setInterval(function () {  
-            if (!is_active) { clearInterval(currentInterval); return; }  
+        window.cardifyRotationTimer = setInterval(function () {  
+            if (!is_active) { clearInterval(window.cardifyRotationTimer); return; }  
       
-            idx = (idx + 1) % final_backdrops.length;  
-            var nextSrc = Lampa.TMDB.image('/t/p/original' + final_backdrops[idx].file_path);  
+            current_index = (current_index + 1) % final_backdrops.length;  
+            var backdrop_url = Lampa.TMDB.image('t/p/' + quality + final_backdrops[current_index].file_path);  
       
-            var $currentBg = render.find('.full-start__background img, img.full-start__background').last();  
-            if (!$currentBg.length) return;  
+            var $render = render;  
+            var $currentBg =$render.find('.full-start__background').last();  
+            if ($currentBg.length === 0) return;  
       
             var img = new Image();  
             img.onload = function () {  
                 if (!is_active) return;  
       
-                var $newBg = $currentBg.clone();$newBg.attr('src', nextSrc);  
-                $newBg.css({                       opacity: 0,                       transition: 'opacity 2.2s cubic-bezier(0.4, 0, 0.2, 1)',                       transform: 'translateZ(0)'                   });$currentBg.after($newBg);$newBg[0].offsetHeight;  
+                var $newBg =$currentBg.clone();  
+                $newBg.attr('src', backdrop_url);$newBg.css({  
+                    'opacity': '0',  
+                    'transition': 'opacity 1.8s cubic-bezier(0.4, 0, 0.2, 1)',  
+                    'will-change': 'opacity, transform',  
+                    'transform': 'translateZ(0)'  
+                });  
       
-                // Плавний кросфейд (overlap)
-                $newBg.css('opacity', 1);$currentBg.css({ transition: 'opacity 2.2s cubic-bezier(0.4, 0, 0.2, 1)', opacity: 0 });  
+                var $overlay =$render.find('.cardify-effects-overlay');  
+                if ($overlay.length) {  
+                    $overlay.before($newBg);  
+                } else {  
+                    $currentBg.after($newBg);  
+                }  
+      
+                $newBg[0].offsetHeight;   
+      
+                $newBg.css('opacity', '1');$currentBg.css({  
+                    'transition': 'opacity 1.8s cubic-bezier(0.4, 0, 0.2, 1)',  
+                    'opacity': '0'  
+                });  
       
                 setTimeout(function () {  
                     if (!is_active) return;  
                     $currentBg.remove();  
-                }, 2300);  
+                    $render.find('.full-start__background').not($newBg).remove();  
+                }, 1900);  
             };  
             img.onerror = function () {};  
-            img.src = nextSrc;  
-        }, intervalTime);  
-      
-        window.casBgInterval = currentInterval;  
+            img.src = backdrop_url;  
+        }, duration);  
     }               
                 
     function renderStudioLogosWithColorAnalysis(container, data) {    
