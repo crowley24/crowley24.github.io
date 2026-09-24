@@ -47,7 +47,8 @@
     };
 
     var ratingIcons = {
-        tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg'
+        tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',
+        cub: 'https://raw.githubusercontent.com/yumata/lampa/9381985ad4371d2a7d5eb5ca8e3daf0f32669eb7/img/logo-icon.svg'
     };
 
     function stopSlideshow() {
@@ -108,7 +109,7 @@
     }
 
     /**
-     * СТИЛІ ІНТЕРФЕЙСУ (CSS)
+     * СТИЛІ ІНТЕРФЕЙСУ (CSS) — приховуємо візуальні реакції, залишаючи рейтинг
      */
     function applyStyles() {
         var style = document.getElementById('mobile-interface-styles');
@@ -190,6 +191,9 @@
         css += '} ';
         
         css += '@media screen and (max-width: 480px) { ';
+        // Повністю приховуємо блок реакцій (емодзі з лічильниками), який накладався на постер
+        css += '.full-start__reactions, [class*="reactions"] { display: none !important; } ';
+        
         css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="rating-count"], [class*="status"] { display:none !important; } ';
         css += '.full-start-new__right > div:first-child { display: none !important; } ';
         css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';
@@ -279,6 +283,21 @@
         return (h > 0 ? h + 'г ' : '') + m + 'хв';
     }
 
+    // Повертаємо розрахунок CUB-рейтингу на основі реакцій
+    function getCubRating(e) {
+        if (!e.data || !e.data.reactions || !e.data.reactions.result) return null;
+        var reactionCoef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };
+        var sum = 0, cnt = 0;
+        e.data.reactions.result.forEach(function(r) {
+            if (r.counter) { sum += (r.counter * reactionCoef[r.type]); cnt += r.counter; }
+        });
+        if (cnt >= 5) {
+            var isTv = e.object.method === 'tv', avg = isTv ? 7.4 : 6.5, m = isTv ? 50 : 150;
+            return ((avg * m + sum) / (m + cnt)).toFixed(1);
+        }
+        return null;
+    }
+
     function renderRatings(container, e) {
         container.find('.plugin-meta-row').remove();
         container.find('.plugin-ratings-quality-row').remove();
@@ -325,6 +344,14 @@
             var $tmdbItem = $('<div class="plugin-rating-item wave-item"><img src="'+ratingIcons.tmdb+'"> <span style="color:'+getRatingColor(tmdb)+'">'+tmdb+'</span></div>');
             $tmdbItem.css('--item-index', globalIndex++);
             $ratingsGroup.append($tmdbItem);
+        }
+        
+        // Повертаємо відображення рейтингу CUB біля TMDB
+        var cub = getCubRating(e);
+        if (cub) {
+            var $cubItem = $('<div class="plugin-rating-item wave-item"><img src="' + ratingIcons.cub + '"> <span style="color:' + getRatingColor(cub) + '">' + cub + '</span></div>');
+            $cubItem.css('--item-index', globalIndex++);
+            $ratingsGroup.append($cubItem);
         }
 
         var $qRow = $('<div class="quality-row-inline"></div>');
@@ -582,7 +609,7 @@
         });
 
         Lampa.SettingsApi.addParam({ 
-            component: 'mobile_interface', 
+            Component: 'mobile_interface', 
             param: { name: 'mobile_interface_ratings_size', type: 'select', values: { '0.4em': 'Дрібний', '0.45em': 'Звичайний', '0.5em': 'Великий', '0.55em': 'Дуже великий' }, default: '0.45em' }, 
             field: { name: 'Розмір шрифту інфо-блоків' }, 
             onChange: applyStyles 
