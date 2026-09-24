@@ -143,9 +143,9 @@
         css += 'transform-origin: center center !important; transition: opacity 1.2s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
         
-        // Виправлені стилі для TMDB у правому верхньому кутку (додано gap та більший відступ)
-        css += '.plugin-tmdb-top-right { position: absolute; top: 12px; right: 12px; z-index: 10; background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); padding: 5px 10px; border-radius: 8px; display: flex; align-items: center; gap: 7px; font-weight: 700; color: #fff; font-size: 0.9rem; border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 4px 12px rgba(0,0,0,0.5); } ';
-        css += '.plugin-tmdb-top-right img { height: 1.1em; width: auto; display: block; flex-shrink: 0; } ';
+        // Повністю прибрано темний фон, рамки та розмиття для TMDB у правому верхньому кутку
+        css += '.plugin-tmdb-top-right { position: absolute; top: 12px; right: 12px; z-index: 10; background: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; padding: 0 !important; border-radius: 0 !important; display: flex; align-items: center; gap: 6px; font-weight: 700; color: #fff; font-size: 0.9rem; border: none !important; box-shadow: 0 2px 8px rgba(0,0,0,0.8); } ';
+        css += '.plugin-tmdb-top-right img { height: 1.1em; width: auto; display: block; flex-shrink: 0; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); } ';
 
         css += '.full-start-new__right { background: none !important; margin-top: -160px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; padding: 0 10px !important; gap: ' + blocksGap + ' !important; } ';
         
@@ -195,7 +195,6 @@
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.85em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
 
-        // ВИПРАВЛЕННЯ ДЛЯ КНОПОК (не виходять за межі екрана)
         css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; justify-content: center !important; flex-wrap: wrap !important; gap: 8px !important; width: 100% !important; max-width: 100% !important; padding: 0 5px !important; box-sizing: border-box !important; margin-top: 6px !important; order: 6; } ';
         css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; display: flex !important; flex-direction: column !important; align-items: center !important; width: 52px !important; min-width: 45px !important; transition: transform 0.2s ease, opacity 0.2s ease; } ';
         css += '.full-start-new .full-start__button:active { transform: scale(0.9); opacity: 0.7; } ';
