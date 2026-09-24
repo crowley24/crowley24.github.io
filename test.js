@@ -143,9 +143,10 @@
         css += 'transform-origin: center center !important; transition: opacity 1.2s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
         
-        /* Виправлене позиціювання та порядок: логотип ліворуч, цифра праворуч */
-        css += '.plugin-tmdb-top-right { position: absolute; top: 24px; right: 18px; z-index: 10; background: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; padding: 0 !important; border-radius: 0 !important; display: flex; align-items: center; gap: 8px; font-weight: 700; color: #fff; font-size: 1.15rem; border: none !important; box-shadow: none !important; } ';
-        css += '.plugin-tmdb-top-right img { height: 1.8em; width: auto; display: block; flex-shrink: 0; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.8)); } ';
+        /* Жорстко фіксований блок рейтингу у правому верхньому кутку, щоб логотип не розривало */
+        css += '.plugin-tmdb-top-right { position: absolute !important; top: 20px !important; right: 16px !important; z-index: 9999 !important; display: flex !important; flex-direction: row !important; align-items: center !important; gap: 8px !important; background: rgba(0, 0, 0, 0.4) !important; padding: 4px 8px !important; border-radius: 8px !important; backdrop-filter: blur(4px) !important; width: auto !important; max-width: none !important; border: none !important; box-shadow: none !important; } ';
+        css += '.plugin-tmdb-top-right img { height: 22px !important; width: auto !important; max-width: none !important; display: block !important; flex-shrink: 0 !important; object-fit: contain !important; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; margin: 0 !important; } ';
+        css += '.plugin-tmdb-top-right span { font-size: 1.1rem !important; font-weight: 700 !important; line-height: 1 !important; white-space: nowrap !important; } ';
 
         css += '.full-start-new__right { background: none !important; margin-top: -160px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; padding: 0 10px !important; gap: ' + blocksGap + ' !important; } ';
         
@@ -278,7 +279,6 @@
 
         var tmdb = parseFloat(e.data.movie.vote_average || 0).toFixed(1);
         if (tmdb > 0) {
-            // Логотип ліворуч, цифра праворуч у правильному порядку
             var $tmdbTop = $('<div class="plugin-tmdb-top-right"><img src="'+ratingIcons.tmdb+'"><span style="color:'+getRatingColor(tmdb)+'">'+tmdb+'</span></div>');
             $poster.append($tmdbTop);
         }
