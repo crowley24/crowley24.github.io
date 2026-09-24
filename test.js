@@ -135,7 +135,7 @@
         css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';
         css += '.background { background: #000 !important; } ';
         
-        css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 62vh !important; pointer-events: none !important; ';
+        css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 62vh !important; ';
         css += (isUIAnim ? 'animation: poster_fade_in 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards; ' : '') + '} ';
         
         css += '.full-start-new__poster img { filter: none !important; ';
@@ -149,8 +149,8 @@
         var animTiming = animEffect === 'elastic' ? 'cubic-bezier(0.34, 1.56, 0.64, 1)' : 'cubic-bezier(0.16, 1, 0.3, 1)';
         var uiAnimClass = isUIAnim ? 'animation: ' + chosenAnimName + ' 0.8s ' + animTiming + ' forwards; opacity: 0; will-change: transform, opacity, filter; transform: translateZ(0); ' : '';
 
-        // СТОВПЧИК БЕЙДЖІВ ЯКОСТІ (позиціонується абсолютом у правому верхньому кутку поверх постера)
-        css += '.quality-row-inline { position: absolute; top: -145vh; right: 15px; z-index: 10; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; pointer-events: none; } '; 
+        // ВИПРАВЛЕНО: тепер контейнер чітко у верхньому правому кутку постера
+        css += '.quality-row-inline { position: absolute; top: -62vh; right: 15px; z-index: 10; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; pointer-events: none; } '; 
 
         css += '.studio-header-brand { ' + uiAnimClass + ' animation-delay: 0.08s; order: 1; width: 100%; display: flex; justify-content: flex-start; align-items: center; padding-left: 5vw; margin-bottom: -2px !important; } ';
         css += '.studio-header-brand img { height: 18px !important; width: auto; max-width: 110px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; } ';
@@ -194,7 +194,6 @@
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.85em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
 
-        // ВИПРАВЛЕННЯ ДЛЯ КНОПОК (не виходять за межі екрана)
         css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; justify-content: center !important; flex-wrap: wrap !important; gap: 8px !important; width: 100% !important; max-width: 100% !important; padding: 0 5px !important; box-sizing: border-box !important; margin-top: 6px !important; order: 6; } ';
         css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; display: flex !important; flex-direction: column !important; align-items: center !important; width: 52px !important; min-width: 45px !important; transition: transform 0.2s ease, opacity 0.2s ease; } ';
         css += '.full-start-new .full-start__button:active { transform: scale(0.9); opacity: 0.7; } ';
@@ -415,11 +414,10 @@
                 var startIndex = renderRatings($render.find('.full-start-new__right'), e);
                 loadMovieDetails(movie, $render);
 
-                // Додаємо контейнер якості у загальний блок .full-start-new__right, але позиціонуємо його вгору
-                var $rightBlock = $render.find('.full-start-new__right');
-                $rightBlock.find('.quality-row-inline').remove();
+                var $posterBlock = $render.find('.full-start-new__poster');
+                $posterBlock.find('.quality-row-inline').remove();
                 var $qRow = $('<div class="quality-row-inline"></div>');
-                $rightBlock.append($qRow);
+                $posterBlock.append($qRow);
 
                 if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Parser && Lampa.Parser.get) {
                     Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
