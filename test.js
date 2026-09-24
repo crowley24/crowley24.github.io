@@ -143,9 +143,9 @@
         css += 'transform-origin: center center !important; transition: opacity 1.2s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
         
-        // Повністю прибрано темний фон, рамки та розмиття для TMDB у правому верхньому кутку
-        css += '.plugin-tmdb-top-right { position: absolute; top: 12px; right: 12px; z-index: 10; background: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; padding: 0 !important; border-radius: 0 !important; display: flex; align-items: center; gap: 6px; font-weight: 700; color: #fff; font-size: 0.9rem; border: none !important; box-shadow: 0 2px 8px rgba(0,0,0,0.8); } ';
-        css += '.plugin-tmdb-top-right img { height: 1.1em; width: auto; display: block; flex-shrink: 0; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); } ';
+        /* Виправлене позиціювання та порядок: логотип ліворуч, цифра праворуч */
+        css += '.plugin-tmdb-top-right { position: absolute; top: 24px; right: 18px; z-index: 10; background: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; padding: 0 !important; border-radius: 0 !important; display: flex; align-items: center; gap: 8px; font-weight: 700; color: #fff; font-size: 1.15rem; border: none !important; box-shadow: none !important; } ';
+        css += '.plugin-tmdb-top-right img { height: 1.8em; width: auto; display: block; flex-shrink: 0; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.8)); } ';
 
         css += '.full-start-new__right { background: none !important; margin-top: -160px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; padding: 0 10px !important; gap: ' + blocksGap + ' !important; } ';
         
@@ -278,7 +278,8 @@
 
         var tmdb = parseFloat(e.data.movie.vote_average || 0).toFixed(1);
         if (tmdb > 0) {
-            var $tmdbTop = $('<div class="plugin-tmdb-top-right"><img src="'+ratingIcons.tmdb+'"> <span style="color:'+getRatingColor(tmdb)+'">'+tmdb+'</span></div>');
+            // Логотип ліворуч, цифра праворуч у правильному порядку
+            var $tmdbTop = $('<div class="plugin-tmdb-top-right"><img src="'+ratingIcons.tmdb+'"><span style="color:'+getRatingColor(tmdb)+'">'+tmdb+'</span></div>');
             $poster.append($tmdbTop);
         }
         
@@ -458,7 +459,7 @@
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_slideshow', type: 'trigger', default: true }, field: { name: 'Автозміна фонових кадрів' } });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_slideshow_time', type: 'select', values: { '10000': '10 сек', '15000': '15 сек', '20000': '20 сек' }, default: '10000' }, field: { name: 'Інтервал зміни фону' } });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_logo_size_v2', type: 'select', values: { '125': 'Малий', '150': 'Середній', '180': 'Стандартний', '210': 'Великий' }, default: '125' }, field: { name: 'Висота логотипу тайтлу' }, onChange: applyStyles });
-        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_show_tagline', type: 'trigger', default: true }, field: { name: 'Відображати слоган' }, onChange: applyStyles });
+        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_location', type: 'trigger', default: true }, field: { name: 'Відображати слоган' }, onChange: applyStyles });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_blocks_gap', type: 'select', values: { '8px': 'Компактний', '12px': 'Стандартний', '18px': 'Просторий', '24px': 'Панорамний' }, default: '8px' }, field: { name: 'Відступи між блоками' }, onChange: applyStyles });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_ratings_size', type: 'select', values: { '0.4em': 'Дрібний', '0.45em': 'Звичайний', '0.5em': 'Великий', '0.55em': 'Дуже великий' }, default: '0.45em' }, field: { name: 'Розмір шрифту інфо-блоків' }, onChange: applyStyles });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_studios', type: 'trigger', default: true }, field: { name: 'Показувати логотип студії' } });
