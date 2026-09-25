@@ -213,16 +213,16 @@
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.85em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
 
-        // Абсолютно рівне центрування медіакнопок та підтягування блоку "Детально"
+        // Точне центрування медіакнопок
         css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; justify-content: center !important; align-items: center !important; width: 100% !important; max-width: 100% !important; padding: 0 !important; box-sizing: border-box !important; margin-top: 2px !important; margin-bottom: 2px !important; gap: 4px !important; order: 6; } ';
         css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; display: flex !important; flex-direction: column !important; align-items: center !important; width: 38px !important; min-width: 34px !important; padding: 0 !important; margin: 0 2px !important; transition: transform 0.2s ease, opacity 0.2s ease; } ';
         css += '.full-start-new .full-start__button:active { transform: scale(0.9); opacity: 0.7; } ';
         css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 24px !important; height: 24px !important; margin-bottom: 4px !important; fill: #fff !important; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5)); } ';
         css += '.full-start-new .full-start__button span { font-size: 9px !important; text-transform: uppercase !important; opacity: 0.75 !important; font-weight: 600; letter-spacing: 0.05em; } ';
         
-        // Центрування блоку "Детально" (заголовка та тексту опису) безпосередньо під кнопками
-        css += '.full-start__descr, .full-start-new__descr, [class*="descr"], .full-start__details, [class*="details"] { text-align: center !important; margin-top: 2px !important; margin-bottom: 0 !important; width: 100% !important; } ';
-        css += '.full-start__head, [class*="head"] { justify-content: center !important; text-align: center !important; } ';
+        // Точкове центрування виключно напису "Детально" та опису фільму (без впливу на інші елементи)
+        css += '.full-start__descr, .full-start-new__descr { text-align: center !important; margin-top: 2px !important; margin-bottom: 0 !important; width: 100% !important; order: 7; } ';
+        css += '.full-start__head { justify-content: center !important; text-align: center !important; } ';
         css += '} ';
 
         style.textContent = css;
