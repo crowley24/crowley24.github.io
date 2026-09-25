@@ -5,7 +5,10 @@
   var style = document.createElement('style');  
   style.id = 'card-tweaks';  
   style.textContent =  
+    // приховати рік/країну над назвою  
     '.full-start-new__head, .full-start__tags { display: none !important; }' +  
+  
+    // рейтинг у верхній правий кут  
     '.full-start-new, .full-start { position: relative !important; }' +  
     '.full-start-new__rate-line, .full-start__rate-line {' +  
     '  position: absolute !important;' +  
@@ -15,12 +18,14 @@
     '  background: rgba(0,0,0,0.45);' +  
     '  padding: 0.4em 0.9em; border-radius: 0.5em;' +  
     '}' +  
+  
+    // кнопки під всім верхнім блоком, на всю ширину  
     '.card-tweaks__buttons { margin-top: 1.5em; width: 100%; }' +  
     '.card-tweaks__buttons .full-start-new__buttons,' +  
     '.card-tweaks__buttons .buttons--container { margin-top: 0.6em; }';  
   document.head.appendChild(style);  
   
-  /* ---------- НАЛАШТУВАННЯ: розділ "Картка" ---------- */  
+  /* ---------- НАЛАШТУВАННЯ ---------- */  
   function slideshowEnabled() {  
     return Lampa.Storage.get('card_slideshow', true);  
   }  
@@ -39,14 +44,10 @@
   
     Lampa.SettingsApi.addParam({  
       component: 'card_tweaks',  
-      param: {  
-        name: 'card_slideshow',  
-        type: 'trigger',  
-        default: true  
-      },  
-      field: {  
-        name: 'Слайдшоу фону',  
-        description: 'Крутити фонові арти фільму без написів'  
+      param: { name: 'card_slideshow', type: 'trigger', default: true },  
+      field: { name: 'Слайдшоу фону', description: 'Крутити фонові арти фільму без написів' },  
+      onChange: function () {  
+        if (!slideshowEnabled()) stopSlideshow();  
       }  
     });  
   
@@ -58,10 +59,7 @@
         values: { '5': '5 сек', '10': '10 сек', '15': '15 сек' },  
         default: '10'  
       },  
-      field: {  
-        name: 'Інтервал слайдшоу',  
-        description: 'Як часто змінювати фонове зображення'  
-      }  
+      field: { name: 'Інтервал слайдшоу', description: 'Як часто змінювати фонове зображення' }  
     });  
   }  
   
@@ -110,36 +108,50 @@
     return 'https://api.themoviedb.org/3/' + path;  
   }  
   function tmdbImg(path) {  
-    try { return Lampa.TMDB.image('t/p/original' + path); } catch (e) {}  
-    return 'https://image.tmdb.org/t/p/original' + path;  
+    try { return Lampa.TMDB.image('t/p/w1280' + path); } catch (e) {}  
+    return 'https://image.tmdb.org/t/p/w1280' + path;  
+  }  
+  
+  function swapCardBackground(render, url) {  
+    var img = render.find('.full-start-new__background img, .full-start__background img');  
+    if (img.length) {  
+      img.attr('src', url);  
+    } else {  
+      var bg = render.find('.full-start-new__background, .full-start__background');  
+      if (bg.length) bg.css('background-image', 'url(' + url + ')');  
+      else Lampa.Background.change(url); // fallback на глобальний шар  
+    }  
   }  
   
   function startSlideshow(e) {  
     if (!slideshowEnabled()) return;  
   
-    var movie = (e.data && e.data.movie) || e.object.movie || {};  
-    if (movie.id === bgCardId) return;  
+    var movie  = (e.data && e.data.movie) || e.object.movie || {};  
+    var render = e.object.activity.render();  
+    if (!movie.id || movie.id === bgCardId) return;  
     bgCardId = movie.id;  
     clearInterval(bgTimer); bgTimer = null;  
-    if (!movie.id) return;  
   
     var method = movie.number_of_seasons ? 'tv' : 'movie';  
+    var url = tmdbApi(method + '/' + movie.id + '/images?include_image_language=null');  
   
-    Lampa.Network.silent(  
-      tmdbApi(method + '/' + movie.id + '/images?include_image_language=null'),  
-      function (res) {  
+    console.log('[CARD-TWEAKS] slideshow fetch:', url);  
+  
+    Lampa.Network.silent(url, function (res) {  
         var backdrops = (res && res.backdrops || [])  
-          .filter(function (b) { return !b.iso_639_1; })  
+          .filter(function (b) { return !b.iso_639_1; }) // тільки арти без тексту  
           .slice(0, 8);  
+  
+        console.log('[CARD-TWEAKS] backdrops:', backdrops.length);  
         if (backdrops.length < 2) return;  
   
         var i = 0;  
         bgTimer = setInterval(function () {  
-          if (!Lampa.Activity.active() || bgCardId !== movie.id) return;  
-          Lampa.Background.change(tmdbImg(backdrops[i++ % backdrops.length].file_path));  
+          if (bgCardId !== movie.id) return stopSlideshow();  
+          swapCardBackground(render, tmdbImg(backdrops[i++ % backdrops.length].file_path));  
         }, slideshowInterval());  
       },  
-      function () {}  
+      function (err) { console.log('[CARD-TWEAKS] images error', err); }  
     );  
   }  
   
