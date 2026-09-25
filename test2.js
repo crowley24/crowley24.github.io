@@ -1,9 +1,6 @@
 (function () {  
   'use strict';  
 
-  /**
-   * ПЕРЕМІННІ ТА КЕШУВАННЯ
-   */
   var detailsCache = {}; 
   var currentActiveId = null;
   
@@ -65,10 +62,10 @@
   var style = document.createElement('style');  
   style.id = 'card-tweaks';  
   style.textContent =  
-    // приховати рік/країну над назвою  
-    '.full-start-new__head, .full-start__tags { display: none !important; }' +  
-  
-    // фон: чіткий на старті, плавне затемнення при скролі через фільтр
+    // Приховуємо стандартні теги внизу, бо переносимо їх наверх
+    '.full-start__tags { display: none !important; }' +  
+
+    // Анімація та налаштування фону
     '.full-start__background, .full-start-new__background, .background__one, .background__two {' +  
     '  opacity: 1 !important;' +  
     '  filter: brightness(1) contrast(1) !important;' +  
@@ -76,7 +73,6 @@
     '  transition: filter 0.4s ease, opacity 0.4s ease !important;' +  
     '}' +  
     
-    // Стан фону під час скролу (надійне затемнення арту)
     '.full-start.is-scrolled .full-start__background,' + 
     '.full-start.is-scrolled .full-start-new__background,' +
     '.full-start.is-scrolled .background__one,' + 
@@ -85,20 +81,21 @@
     '  -webkit-filter: brightness(0.35) contrast(1.1) !important;' +  
     '}' +  
 
-    // Рейтинг: прибрати чорний фон, підняти вище в правий кут
+    // Коригування розташування рейтингу (виводимо в рядку під логотипом)
     '.full-start-new__rate-line, .full-start__rate-line {' +  
-    '  position: absolute !important;' +  
-    '  top: 1.0em !important; right: 1.5em !important; z-index: 5 !important;' +  
-    '  margin: 0 !important;' +  
+    '  position: relative !important;' +  
+    '  top: auto !important; right: auto !important;' +  
+    '  margin: 6px 0 8px 0 !important;' +  
     '  display: flex; gap: 0.8em; align-items: center;' +  
     '  background: transparent !important;' +  
     '  padding: 0 !important;' +  
+    '  z-index: 2 !important;' +  
     '}' +  
-  
-    // кнопки під верхнім блоком  
-    '.card-tweaks__buttons { margin-top: 1.5em; width: 100%; position: relative; z-index: 2; }' +  
+
+    // Кнопки
+    '.card-tweaks__buttons { margin-top: 1.0em; width: 100%; position: relative; z-index: 2; }' +  
     '.card-tweaks__buttons .full-start-new__buttons,' +  
-    '.card-tweaks__buttons .buttons--container { margin-top: 0.6em; }';  
+    '.card-tweaks__buttons .buttons--container { margin-top: 0.4em; }';  
 
   function applyStyles() {
       var lHeight = Lampa.Storage.get('movie_card_logo_size', '120'); 
@@ -109,22 +106,22 @@
       var css = style.textContent;
       
       if (isEnabled) {
-          // Піднімаємо весь блок інформації на рівень верхньої частини постера
-          css += '.full-start-new__content, .full-start__content { position: relative !important; }';
-          css += '.full-start-new__details, .full-start__details { position: relative !important; }';
+          // Головна назва / логотип фільму
+          css += '.full-start-new__title { display: flex !important; justify-content: flex-start !important; align-items: center !important; height: auto !important; min-height: unset !important; overflow: visible !important; width: 100% !important; box-sizing: border-box !important; margin: 4px 0 2px 0 !important; z-index: 2 !important; position: relative !important; } ';
+          css += '.full-start-new__title:not(:has(img)) { color: transparent !important; }'; 
+          css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 55vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; display: block !important; } ';
           
-          // Логотип назви фільму
-          css += '.full-start-new__title { display: flex !important; justify-content: flex-start !important; align-items: center !important; height: auto !important; min-height: unset !important; overflow: visible !important; width: 100% !important; box-sizing: border-box !important; margin: 0 0 2px 0 !important; z-index: 2 !important; position: relative !important; } ';
-          css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 55vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';
-          
-          // Слоган фільму зі збільшеним відступом знизу до рядка тривалості/жанрів
-          css += '.full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 6px 0 20px 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; z-index: 2 !important; position: relative !important; } ';
+          // Слоган
+          css += '.full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 4px 0 10px 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; z-index: 2 !important; position: relative !important; } ';
+
+          // Верхній рядок: рік і країни (як на скріншоті)
+          css += '.full-start-new__head { display: block !important; font-size: 0.9em !important; color: rgba(255,255,255,0.75) !important; margin-bottom: 2px !important; z-index: 2 !important; position: relative !important; }';
 
           if (showStudio) {
-              // Жорстко піднімаємо логотип студій на самий верх до краю постера
-              css += '.full-start-new__body { display: flex; flex-direction: column; }';
-              css += '.studio-header-brand { order: -1; width: 100%; display: flex; justify-content: flex-start; align-items: center; margin: 0 0 4px 0 !important; z-index: 2 !important; position: relative !important; } ';
-              css += '.studio-header-brand img { height: 22px !important; width: auto; max-width: 130px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; } ';
+              // Логотип студії під роком/країнами, над назвою фільму
+              css += '.full-start-new__body { display: flex; flex-direction: column; position: relative; }';
+              css += '.studio-header-brand { order: 0; width: 100%; display: flex; justify-content: flex-start; align-items: center; margin: 2px 0 6px 0 !important; z-index: 2 !important; position: relative !important; } ';
+              css += '.studio-header-brand img { height: 20px !important; width: auto; max-width: 130px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; } ';
               css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
           }
       }
@@ -133,15 +130,7 @@
   }
   document.head.appendChild(style);  
 
-  /* ---------- НАЛАШТУВАННЯ СЛАЙДШОУ ---------- */  
-  function slideshowEnabled() {  
-    return Lampa.Storage.get('card_slideshow', true);  
-  }  
-  function slideshowInterval() {  
-    return parseInt(Lampa.Storage.get('card_slideshow_interval', '10'), 10) * 1000;  
-  }  
-  
-  /* ---------- СЛАЙДШОУ (preload + blind swap) ---------- */  
+  /* ---------- СЛАЙДШОУ ---------- */  
   var bgTimer = null, bgCardId = null, bgActive = false;  
   
   function stopSlideshow() {  
@@ -149,6 +138,13 @@
     if (bgTimer) { clearInterval(bgTimer); bgTimer = null; }  
     if (window.casBgInterval) { clearInterval(window.casBgInterval); window.casBgInterval = null; }  
     bgCardId = null;  
+  }  
+  
+  function slideshowEnabled() {  
+    return Lampa.Storage.get('card_slideshow', true);  
+  }  
+  function slideshowInterval() {  
+    return parseInt(Lampa.Storage.get('card_slideshow_interval', '10'), 10) * 1000;  
   }  
   
   function tmdbApi(path) {  
@@ -230,28 +226,27 @@
 
       var year = (data.release_date || data.first_air_date || '').split('-')[0];
       var countries = (data.production_countries && data.production_countries.length > 0) ? 
-          data.production_countries.map(function(c) { return c.name; }).join(', ') : '';
+          data.production_countries.map(function(c) { return c.name; }).join(' | ') : '';
       
       var extraInfo = [];
       if (year) extraInfo.push(year);
       if (countries) extraInfo.push(countries);
-      var formattedDetails = extraInfo.join(' • ');
+      var formattedDetails = extraInfo.join(', ');
 
+      // Виводимо рік і країни у блок .full-start-new__head (над студією та назвою)
       setTimeout(function() {
-          var $infoLine = $render.find('.full-start-new__info, .full-start__info');
-          if ($infoLine.length > 0 && formattedDetails) {
-              var originalText = $infoLine.attr('data-original-text');
-              if (!originalText) {
-                  originalText = $infoLine.text();
-                  $infoLine.attr('data-original-text', originalText);
-              }
-
-              if (originalText.indexOf(formattedDetails) === -1) {
-                  $infoLine.text(formattedDetails + ' • ' + originalText);
+          var $headLine = $render.find('.full-start-new__head');
+          if ($headLine.length > 0 && formattedDetails) {
+              $headLine.text(formattedDetails).show();
+          } else if ($headLine.length === 0 && formattedDetails) {
+              var $titleBlock = $render.find('.full-start-new__title');
+              if ($titleBlock.length > 0) {
+                  $titleBlock.before('<div class="full-start-new__head">' + formattedDetails + '</div>');
               }
           }
       }, 50);
 
+      // Логотип фільму
       if (data.images && data.images.logos && data.images.logos.length > 0) {
           var lang = Lampa.Storage.get('language') || 'uk';
           var logo = data.images.logos.filter(function(l) { return l.iso_639_1 === lang; })[0] || 
@@ -265,6 +260,7 @@
           }
       }
 
+      // Слоган
       var taglineText = '';
       if (translations && translations.translations) {
           var uaTrans = translations.translations.find(function(t) { return t.iso_639_1 === 'uk'; });
@@ -285,6 +281,7 @@
           $tagline.text(taglineText);
       }
 
+      // Логотип студії
       if (Lampa.Storage.get('movie_card_logo_studio', true)) {
           $render.find('.studio-header-brand').remove();
           var studio = null;
@@ -303,7 +300,14 @@
 
               $img.on('error', function() { $brand.remove(); });
               isImageDark(studioLogoUrl, function(isDark) { if (isDark) $img.addClass('is-dark-logo'); });
-              $render.find('.full-start-new__body').prepend($brand);
+              
+              // Вставляємо одразу після рядка з роком/країнами (перед назвою)
+              var $head = $render.find('.full-start-new__head');
+              if ($head.length > 0) {
+                  $head.after($brand);
+              } else {
+                  $render.find('.full-start-new__title').before($brand);
+              }
           }
       }
   }
@@ -336,15 +340,14 @@
       });
   }
 
-  /* ---------- ПЕРЕНЕСЕННЯ БЛОКІВ ТА СТАРТ ---------- */  
   function moveInfo(e) {  
     if (e.type !== 'complite' && e.type !== 'complete') return;  
   
     var render  = e.object.activity.render();  
     var details = render.find('.full-descr__details');  
-  
     var body    = render.find('.full-start-new__body');  
     var wrapper = render.find('.card-tweaks__buttons');  
+
     if (body.length && !wrapper.length) {  
       wrapper = $('<div class="card-tweaks__buttons"></div>');  
       render.find('.full-start-new__buttons, .buttons--container').each(function () {  
@@ -378,7 +381,6 @@
       }  
     }
 
-    // Слухач скролу для динамічного затемнення самого фонового арту
     var $scrollContainer = render.find('.scroll');
     if (!$scrollContainer.length) $scrollContainer = render;
 
@@ -395,8 +397,8 @@
     startSlideshow(e);
     loadMovieDetails((e.data && e.data.movie) || e.object.movie || {}, render);
   }  
-  
-  /* ---------- НАЛАШТУВАННЯ В МЕНЮ ---------- */  
+
+  /* ---------- НАЛАШТУВАННЯ ---------- */  
   var CARD_ICON = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="2"/><path d="M2 9h20" stroke="currentColor" stroke-width="2"/><circle cx="6" cy="6.5" r="0.8" fill="currentColor"/></svg>';  
   
   function addSettings() {  
@@ -470,7 +472,7 @@
     Lampa.SettingsApi.addParam({  
       component: 'card_tweaks',  
       param: {  
-        name: 'card_slideshtml_interval',  
+        name: 'card_slideshow_interval',  
         type: 'select',  
         values: { '5': '5 сек', '10': '10 сек', '15': '15 сек' },  
         default: '10'  
@@ -479,7 +481,6 @@
     });  
   }  
   
-  /* ---------- ЗАПУСК ---------- */  
   function onFull(e) {  
     if (e.type === 'complite' || e.type === 'complete') moveInfo(e);  
     if (e.type === 'destroy' || e.type === 'onBeforeDestroy') {
