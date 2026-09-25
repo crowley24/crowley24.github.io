@@ -336,7 +336,6 @@
         });
     }
 
-    // Функція для завантаження Badges.json з GitHub
     function loadEliteBadgesConfig(callback) {
         if (badgesConfigCache) {
             callback(badgesConfigCache);
@@ -469,18 +468,27 @@
                     $qRow.append($cubItem);
                 }
 
-                if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Parser && Lampa.Parser.get) {
-                    Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
-                        if (res && Array.isArray(res.Results)) {
-                            getEliteBadges(res.Results, function(eliteBadgesList) {
-                                eliteBadgesList.forEach(function(imgUrl) { 
-                                    var $badge = $('<div class="quality-item wave-item"><img src="' + imgUrl + '"></div>');
-                                    $badge.css('--item-index', globalIndex++);
-                                    $qRow.append($badge);
-                                });
+                if (Lampa.Storage.get('mobile_interface_quality')) {
+                    try {
+                        var searchTitle = movie.title || movie.name || '';
+                        var parserApi = Lampa.Parser || window.lampa_parser;
+                        
+                        if (parserApi && typeof parserApi.get === 'function') {
+                            parserApi.get({ search: searchTitle, movie: movie, page: 1 }, function(res) {
+                                if (res && Array.isArray(res.Results)) {
+                                    getEliteBadges(res.Results, function(eliteBadgesList) {
+                                        eliteBadgesList.forEach(function(imgUrl) { 
+                                            var $badge = $('<div class="quality-item wave-item"><img src="' + imgUrl + '"></div>');
+                                            $badge.css('--item-index', globalIndex++);
+                                            $qRow.append($badge);
+                                        });
+                                    });
+                                }
                             });
                         }
-                    });
+                    } catch (err) {
+                        console.log('MobileInterface: Parser error ->', err);
+                    }
                 }
             }
         });
