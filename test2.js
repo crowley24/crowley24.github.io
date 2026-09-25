@@ -9,6 +9,7 @@
     var settings_list = [
         { id: 'movie_card_logo_enabled', default: true },
         { id: 'movie_card_logo_studio', default: true },
+        { id: 'movie_card_logo_tagline', default: true },
         { id: 'movie_card_logo_size', default: '150' },
         { id: 'movie_card_logo_quality', default: 'w500' }
     ];
@@ -67,14 +68,17 @@
 
         var lHeight = Lampa.Storage.get('movie_card_logo_size', '150'); 
         var showStudio = Lampa.Storage.get('movie_card_logo_studio', true);
+        var showTagline = Lampa.Storage.get('movie_card_logo_tagline', true);
         var isEnabled = Lampa.Storage.get('movie_card_logo_enabled', true);
         
         var css = '';
         
         if (isEnabled) {
-            css += '.full-start-new__title { display: flex !important; justify-content: flex-start !important; align-items: center !important; min-height: 60px; overflow: visible !important; } ';
+            css += '.full-start-new__title { display: flex !important; justify-content: flex-start !important; align-items: center !important; min-height: 50px; overflow: visible !important; } ';
             css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 90vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';
             
+            css += '.full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 4px 0 0 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; } ';
+
             if (showStudio) {
                 css += '.studio-header-brand { width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: 4px !important; } ';
                 css += '.studio-header-brand img { height: 20px !important; width: auto; max-width: 120px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; } ';
@@ -96,9 +100,20 @@
                        data.images.logos[0];
             
             if (logo) {
-                var logoUrl = Lampa.TMDB.image('/t/p/' + Lampa.Storage.get('movie_card_logo_quality', 'w500') + logo.file_path.replace('.svg', '.png'));
+                var quality = Lampa.Storage.get('movie_card_logo_quality', 'w500');
+                var logoUrl = Lampa.TMDB.image('/t/p/' + quality + logo.file_path.replace('.svg', '.png'));
                 $render.find('.full-start-new__title').html('<img src="' + logoUrl + '">');
             }
+        }
+
+        // Відображення слогана
+        if (data.tagline && data.tagline.trim() !== '') {
+            var $tagline = $render.find('.full-start-new__tagline');
+            if ($tagline.length === 0) {
+                $tagline = $('<div class="full-start-new__tagline"></div>');
+                $render.find('.full-start-new__title').after($tagline);
+            }
+            $tagline.text(data.tagline);
         }
 
         // Відображення логотипа студії (якщо увімкнено)
@@ -187,19 +202,43 @@
 
         Lampa.SettingsApi.addParam({ 
             component: 'movie_card_logo', 
+            param: { name: 'movie_card_logo_tagline', type: 'trigger', default: true }, 
+            field: { name: 'Слоган фільму', description: 'Відображати чи не відображати слоган під логотипом' }, 
+            onChange: applyStyles 
+        });
+
+        Lampa.SettingsApi.addParam({ 
+            component: 'movie_card_logo', 
             param: { 
                 name: 'movie_card_logo_size', 
                 type: 'select', 
                 values: { 
-                    '90': 'Маленький', 
-                    '120': 'Середній', 
-                    '150': 'Стандартний', 
-                    '190': 'Великий', 
-                    '240': 'Дуже великий' 
+                    '75': 'Дуже малий', 
+                    '100': 'Малий', 
+                    '130': 'Стандартний', 
+                    '165': 'Великий', 
+                    '210': 'Дуже великий' 
                 }, 
                 default: '150' 
             }, 
             field: { name: 'Розмір логотипа назви фільму' }, 
+            onChange: applyStyles 
+        });
+
+        Lampa.SettingsApi.addParam({ 
+            component: 'movie_card_logo', 
+            param: { 
+                name: 'movie_card_logo_quality', 
+                type: 'select', 
+                values: { 
+                    'w300': 'Низька (w300)', 
+                    'w500': 'Середня (w500)', 
+                    'w780': 'Висока (w780)', 
+                    'original': 'Оригінал (original)' 
+                }, 
+                default: 'w500' 
+            }, 
+            field: { name: 'Якість логотипа назви' }, 
             onChange: applyStyles 
         });
     }
