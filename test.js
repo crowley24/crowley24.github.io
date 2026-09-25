@@ -56,6 +56,10 @@
             clearInterval(slideshowTimer);
             slideshowTimer = null;
         }
+        if (window.mobileInterfaceBgInterval) {
+            clearInterval(window.mobileInterfaceBgInterval);
+            window.mobileInterfaceBgInterval = null;
+        }
     }
 
     function isImageDark(imgSrc, callback) {
@@ -191,18 +195,12 @@
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.85em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
 
-        // Медіа-кнопки без фону та рамок
-        css += '.full-start__buttons, .full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; flex-direction: row !important; justify-content: center !important; flex-wrap: nowrap !important; gap: 6px !important; width: 100% !important; max-width: 100% !important; padding: 0 5px !important; box-sizing: border-box !important; margin-top: 6px !important; order: 6; } ';
-        
-        css += '.full-start__button, .full-start-new .full-start__button { background: transparent !important; border: none !important; border-radius: 8px !important; padding: 6px 8px !important; display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: center !important; gap: 5px !important; flex: 1 !important; min-width: 0 !important; transition: background 0.2s ease, transform 0.2s ease, opacity 0.2s ease; } ';
-        css += '.full-start__button:hover, .full-start-new .full-start__button:hover { background: rgba(255, 255, 255, 0.1) !important; } ';
-        css += '.full-start__button:active, .full-start-new .full-start__button:active { transform: scale(0.95); opacity: 0.7; background: rgba(255, 255, 255, 0.15) !important; } ';
-        
-        css += '.full-start__button svg, .full-start__button img, .full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 18px !important; height: 18px !important; margin-bottom: 0 !important; fill: #fff !important; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); flex-shrink: 0; } ';
-        
-        css += '.full-start__button span, .full-start-new .full-start__button span { font-size: 10px !important; text-transform: none !important; opacity: 0.9 !important; font-weight: 500; letter-spacing: normal !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; } ';
-        
-        css += '} '; // Закриття медіа-запиту @media screen and (max-width: 480px)
+        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; justify-content: center !important; flex-wrap: wrap !important; gap: 8px !important; width: 100% !important; max-width: 100% !important; padding: 0 5px !important; box-sizing: border-box !important; margin-top: 6px !important; order: 6; } ';
+        css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; display: flex !important; flex-direction: column !important; align-items: center !important; width: 52px !important; min-width: 45px !important; transition: transform 0.2s ease, opacity 0.2s ease; } ';
+        css += '.full-start-new .full-start__button:active { transform: scale(0.9); opacity: 0.7; } ';
+        css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 24px !important; height: 24px !important; margin-bottom: 5px !important; fill: #fff !important; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5)); } ';
+        css += '.full-start-new .full-start__button span { font-size: 8px !important; text-transform: uppercase !important; opacity: 0.75 !important; font-weight: 600; letter-spacing: 0.05em; } ';
+        css += '} ';
 
         style.textContent = css;
     }
@@ -307,10 +305,26 @@
             }
         }
 
+        // --- SMART SELECTION (Інтегровано з NewCard) ---
         if (data.images && data.images.backdrops && data.images.backdrops.length > 1) {
             var cleanBackdrops = data.images.backdrops.filter(function(b) { return b.aspect_ratio > 1.5; });
             if (cleanBackdrops.length > 0) {
-                startPosterSlideshow($('.full-start-new__poster'), cleanBackdrops.slice(0, 15));
+                var currentLang = Lampa.Storage.get('language') || 'uk';
+                
+                var langBackdrops = cleanBackdrops.filter(function(b) { return b.iso_639_1 === currentLang; });
+                var neutralBackdrops = cleanBackdrops.filter(function(b) { return !b.iso_639_1 || b.iso_639_1 === 'xx' || b.iso_639_1 === 'en'; });
+                var otherBackdrops = cleanBackdrops.filter(function(b) { 
+                    return b.iso_639_1 !== currentLang && b.iso_639_1 && b.iso_639_1 !== 'xx' && b.iso_639_1 !== 'en'; 
+                });
+
+                otherBackdrops.sort(function(a, b) { return (b.vote_average || 0) - (a.vote_average || 0); });
+
+                var finalBackdrops = langBackdrops.concat(neutralBackdrops, otherBackdrops);
+                finalBackdrops = finalBackdrops.slice(0, 15);
+
+                if (finalBackdrops.length > 0) {
+                    startPosterSlideshow($('.full-start-new__poster'), finalBackdrops);
+                }
             }
         }
     }
@@ -359,27 +373,39 @@
         var index = 0; 
         stopSlideshow();
 
+        var intervalTime = parseInt(Lampa.Storage.get('mobile_interface_slideshow_time', '10000'), 10);
+
         slideshowTimer = setInterval(function() {
+            if (!$poster || $poster.length === 0 || !document.body.contains($poster[0])) {
+                stopSlideshow();
+                return;
+            }
+
             index = (index + 1) % items.length;
             var imgUrl = Lampa.TMDB.image('/t/p/' + Lampa.Storage.get('mobile_interface_slideshow_quality', 'w780') + items[index].file_path);
             var $current = $poster.find('img').first();
             var nextImg = new Image();
+            
             nextImg.onload = function() {
                 var $next = $('<img src="' + imgUrl + '" style="opacity: 0; transition: opacity 1.2s ease-in-out;">');
                 $poster.append($next);
                 setTimeout(function() { 
                     $next.css('opacity', '1'); 
                     $current.css('opacity', '0'); 
-                    setTimeout(function(){ $current.remove(); }, 1200); 
+                    setTimeout(function(){ 
+                        if ($current && $current.length) $current.remove(); 
+                    }, 1200); 
                 }, 100);
             }; 
             nextImg.src = imgUrl;
-        }, parseInt(Lampa.Storage.get('mobile_interface_slideshow_time', '10000')));
+        }, intervalTime);
+
+        window.mobileInterfaceBgInterval = slideshowTimer;
     }
 
     function init() {
         Lampa.Listener.follow('full', function (e) {
-            if (e.type === 'destroy') {
+            if (e.type === 'destroy' || e.type === 'onBeforeDestroy') {
                 stopSlideshow();
                 currentActiveId = null;
             }
