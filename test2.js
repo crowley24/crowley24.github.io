@@ -74,8 +74,8 @@
         var css = '';
         
         if (isEnabled) {
-            // Приховуємо стандартний рік/країну зверху
-            css += '.full-start-new__details { display: none !important; } ';
+            // Повністю приховуємо старий блок року та країни над назвою
+            css += '.full-start-new__details, .full-start__details { display: none !important; } ';
             
             css += '.full-start-new__title { display: flex !important; justify-content: flex-start !important; align-items: center !important; height: auto !important; min-height: unset !important; overflow: visible !important; width: 100% !important; box-sizing: border-box !important; margin: 4px 0 !important; } ';
             css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 55vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';
@@ -95,23 +95,30 @@
     function applyMovieDetailsData(data, movie, $render, translations) {
         if (!Lampa.Storage.get('movie_card_logo_enabled', true)) return;
 
-        // 1. Перенесення та об'єднання року і країни у рядок тривалості/жанру
+        // 1. Формуємо комбінований рядок: рік • країна • тривалість • жанр
         var year = (data.release_date || data.first_air_date || '').split('-')[0];
         var countries = (data.production_countries && data.production_countries.length > 0) ? 
             data.production_countries.map(function(c) { return c.name; }).join(', ') : '';
         
-        var extraInfo = [];
-        if (year) extraInfo.push(year);
-        if (countries) extraInfo.push(countries);
+        // Шукаємо існуючі елементи з тривалістю/жанром у картці
+        var $infoLine = $render.find('.full-start-new__info, .full-start__info');
+        
+        if ($infoLine.length > 0) {
+            // Отримуємо поточний текст (зазвичай це "тривалість • жанр")
+            var originalText = $infoLine.attr('data-original-text');
+            if (!originalText) {
+                originalText = $infoLine.text();
+                $infoLine.attr('data-original-text', originalText);
+            }
 
-        if (extraInfo.length > 0) {
-            var $infoLine = $render.find('.full-start-new__info');
-            if ($infoLine.length > 0) {
-                var currentText = $infoLine.text();
-                // Додаємо рік і країну на початок через крапку з пробілом
-                if (currentText.indexOf(extraInfo[0]) === -1) {
-                    $infoLine.text(extraInfo.join(' • ') + ' • ' + currentText);
-                }
+            var extraInfo = [];
+            if (year) extraInfo.push(year);
+            if (countries) extraInfo.push(countries);
+
+            if (extraInfo.length > 0 && originalText) {
+                $infoLine.text(extraInfo.join(' • ') + ' • ' + originalText);
+            } else if (extraInfo.length > 0) {
+                $infoLine.text(extraInfo.join(' • '));
             }
         }
 
@@ -129,7 +136,7 @@
             }
         }
 
-        // 3. Слоган (шукаємо спочатку український у перекладах, якщо немає — беремо основний)
+        // 3. Слоган українською (або запасний варіант)
         var taglineText = '';
         if (translations && translations.translations) {
             var uaTrans = translations.translations.find(function(t) { return t.iso_639_1 === 'uk'; });
@@ -189,7 +196,6 @@
         var url = 'https://api.themoviedb.org/3/' + type + '/' + movieId + '?api_key=' + Lampa.TMDB.key() + '&append_to_response=images&include_image_language=uk,en,null';
         var transUrl = 'https://api.themoviedb.org/3/' + type + '/' + movieId + '/translations?api_key=' + Lampa.TMDB.key();
 
-        // Робимо паралельні запити для даних фільму та перекладів (щоб дістати український слоган)
         $.when(
             $.ajax({ url: url, type: 'GET', dataType: 'json' }),
             $.ajax({ url: transUrl, type: 'GET', dataType: 'json' })
