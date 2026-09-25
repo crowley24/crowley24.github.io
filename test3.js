@@ -8,29 +8,17 @@
     // приховати рік/країну над назвою  
     '.full-start-new__head, .full-start__tags { display: none !important; }' +  
   
-    // фон чіткий і яскравий  
-    '.full-start__background, .full-start-new__background,' +  
-    '.ct-bg-layer {' +  
+    // фон чіткий і яскравий + плавний fade для слайдшоу  
+    '.full-start__background, .full-start-new__background {' +  
     '  opacity: 1 !important;' +  
     '  filter: none !important;' +  
     '  -webkit-filter: none !important;' +  
+    '  transition: opacity 0.4s ease;' +  
     '}' +  
-  
-    // crossfade-шари слайдшоу (без "провалу" в чорне)  
-    '.ct-bg-layer {' +  
-    '  position: absolute !important;' +  
-    '  top: 0; left: 0; width: 100%; height: 100%;' +  
-    '  object-fit: cover; object-position: top center;' +  
-    '  z-index: -1;' +  
-    '  opacity: 0 !important;' +  
-    '  transition: opacity 0.7s ease-in-out, transform 16s linear !important;' +  
-    '  will-change: opacity, transform;' +  
-    '}' +  
-    '.ct-bg-layer.ct-on {' +  
+    '.background__one.visible, .background__two.visible {' +  
     '  opacity: 1 !important;' +  
-    '}' +  
-    '.ct-bg-layer.ct-zoom {' +  
-    '  transform: scale(1.12);' +  
+    '  filter: none !important;' +  
+    '  -webkit-filter: none !important;' +  
     '}' +  
   
     // рейтинг у верхній правий кут  
@@ -44,7 +32,7 @@
     '  padding: 0.4em 0.9em; border-radius: 0.5em;' +  
     '}' +  
   
-    // кнопки під верхнім блоком, на всю ширину  
+    // кнопки під верхнім блоком  
     '.card-tweaks__buttons { margin-top: 1.5em; width: 100%; }' +  
     '.card-tweaks__buttons .full-start-new__buttons,' +  
     '.card-tweaks__buttons .buttons--container { margin-top: 0.6em; }';  
@@ -55,146 +43,92 @@
     return Lampa.Storage.get('card_slideshow', true);  
   }  
   function slideshowInterval() {  
-    return (parseInt(Lampa.Storage.get('card_slideshow_interval', '10')) || 10) * 1000;  
+    return parseInt(Lampa.Storage.get('card_slideshow_interval', '10'), 10) * 1000;  
   }  
   
-  var CARD_ICON = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="4" width="20" height="16" rx="2" stroke="white" stroke-width="2"/><circle cx="8.5" cy="10" r="1.8" fill="white"/><path d="M3 18l5-5 3 3 4-4 6 6" stroke="white" stroke-width="2" fill="none"/></svg>';  
-  
-  function addSettings() {  
-    Lampa.SettingsApi.addComponent({  
-      component: 'card_tweaks',  
-      name: 'Картка',  
-      icon: CARD_ICON  
-    });  
-  
-    Lampa.SettingsApi.addParam({  
-      component: 'card_tweaks',  
-      param: {  
-        name: 'card_slideshow',  
-        type: 'trigger',  
-        default: true  
-      },  
-      field: {  
-        name: 'Слайдшоу фону',  
-        description: 'Крутити backdrops фільму як фон картки'  
-      },  
-      onChange: function (v) {  
-        if (!Lampa.Storage.get('card_slideshow', true)) stopSlideshow();  
-      }  
-    });  
-  
-    Lampa.SettingsApi.addParam({  
-      component: 'card_tweaks',  
-      param: {  
-        name: 'card_slideshow_interval',  
-        type: 'select',  
-        values: { 5: '5 сек', 10: '10 сек', 15: '15 сек' },  
-        default: '10'  
-      },  
-      field: {  
-        name: 'Інтервал слайдшоу',  
-        description: 'Як часто змінювати фонову картинку'  
-      }  
-    });  
-  }  
-  
-  /* ---------- СЛАЙДШОУ (двошаровий crossfade) ---------- */  
-  var bgTimer = null, bgCardId = null, bgActive = 0;  
+  /* ---------- СЛАЙДШОУ (preload + blind swap) ---------- */  
+  var bgTimer = null, bgCardId = null, bgActive = false;  
   
   function stopSlideshow() {  
-    clearInterval(bgTimer); bgTimer = null; bgCardId = null;  
+    bgActive = false;  
+    if (bgTimer) { clearInterval(bgTimer); bgTimer = null; }  
+    if (window.casBgInterval) { clearInterval(window.casBgInterval); window.casBgInterval = null; }  
+    bgCardId = null;  
   }  
   
   function tmdbApi(path) {  
     try { return Lampa.TMDB.api(path + '&api_key=' + Lampa.TMDB.key()); } catch (e) {}  
     return 'https://api.themoviedb.org/3/' + path;  
   }  
-  function tmdbImg(path) {  
-    try { return Lampa.TMDB.image('t/p/w1280' + path); } catch (e) {}  
-    return 'https://image.tmdb.org/t/p/w1280' + path;  
-  }  
-  
-  // два шари поверх рідного img — новий кадр напливає НА старий  
-  function bgLayers() {  
-    var host = document.querySelector('.full-start__background, .full-start-new__background');  
-    if (!host) return null;  
-    var wrap = host.parentNode;  
-    if (getComputedStyle(wrap).position === 'static')  
-      wrap.style.position = 'relative';  
-  
-    var a = wrap.querySelector('.ct-bg-layer.ct-a'),  
-        b = wrap.querySelector('.ct-bg-layer.ct-b');  
-  
-    if (!a) {  
-      a = document.createElement('img');  
-      a.className = 'ct-bg-layer ct-a';  
-      a.src = host.tagName === 'IMG' ? host.src : '';  
-      if (a.src) a.classList.add('ct-on');  
-      host.insertAdjacentElement('afterend', a);  
-      // ховаємо рідний img — його місце займають шари  
-      host.style.opacity = '0';  
-    }  
-    if (!b) {  
-      b = document.createElement('img');  
-      b.className = 'ct-bg-layer ct-b';  
-      a.insertAdjacentElement('afterend', b);  
-    }  
-    return [a, b];  
-  }  
-  
-  var origins = ['0 0', '100% 0', '100% 100%', '0 100%', '50% 50%'];  
-  
-  function swapCardBackground(url) {  
-    var layers = bgLayers();  
-    if (!layers) return false;  
-  
-    var cur  = layers[bgActive];       // зараз видимий  
-    var next = layers[1 - bgActive];   // новий кадр поверх  
-  
-    // preload перед показом — без ривків  
-    var pre = new Image();  
-    pre.onload = function () {  
-      if (bgCardId === null) return;  
-      next.style.transformOrigin = origins[Math.floor(Math.random() * origins.length)];  
-      next.classList.remove('ct-zoom');  
-      next.src = url;  
-  
-      requestAnimationFrame(function () {  
-        requestAnimationFrame(function () {  
-          next.classList.add('ct-on', 'ct-zoom'); // fade-in + zoom  
-          cur.classList.remove('ct-on');          // старий гасне ПІД новим  
-          bgActive = 1 - bgActive;  
-        });  
-      });  
-    };  
-    pre.src = url;  
-    return true;  
-  }  
   
   function startSlideshow(e) {  
-    var movie = (e.data && e.data.movie) || e.object.movie || {};  
-    if (movie.id === bgCardId) return;  
     stopSlideshow();  
-    bgCardId = movie.id;  
+    var movie = (e.data && e.data.movie) || e.object.movie || {};  
     if (!movie.id || !slideshowEnabled()) return;  
+    bgCardId = movie.id;  
+    bgActive = true;  
   
-    var method = movie.number_of_seasons ? 'tv' : 'movie';  
+    var render  = e.object.activity.render();  
+    var method  = movie.number_of_seasons ? 'tv' : 'movie';  
+    var curLang = (Lampa.Storage.get('language', 'uk') || 'uk').split('-')[0];  
   
     Lampa.Network.silent(  
-      tmdbApi(method + '/' + movie.id + '/images?include_image_language=null'),  
+      tmdbApi(method + '/' + movie.id + '/images?include_image_language=' + curLang + ',en,null'),  
       function (res) {  
-        var backdrops = (res && res.backdrops || [])  
-          .filter(function (b) { return !b.iso_639_1; })  
-          .slice(0, 8);  
-        if (backdrops.length < 2) return;  
+        if (!bgActive || bgCardId !== movie.id) return;  
+  
+        // пріоритет: безмовні арти → мова інтерфейсу → інші за рейтингом  
+        var langB = [], noLangB = [], otherB = [];  
+        (res && res.backdrops || []).forEach(function (b) {  
+          var lang = b.iso_639_1;  
+          if (lang === curLang) langB.push(b);  
+          else if (!lang || lang === 'xx' || lang === 'null') noLangB.push(b);  
+          else otherB.push(b);  
+        });  
+        var backdrops = [].concat(noLangB);  
+        if (backdrops.length < 3) backdrops = backdrops.concat(langB);  
+        if (backdrops.length < 3) {  
+          otherB.sort(function (a, b) { return (b.vote_average || 0) - (a.vote_average || 0); });  
+          backdrops = backdrops.concat(otherB);  
+        }  
+        backdrops = backdrops.slice(0, 15);  
+        if (backdrops.length <= 1) return;  
   
         var i = 0;  
         bgTimer = setInterval(function () {  
-          if (bgCardId !== movie.id) return stopSlideshow();  
-          swapCardBackground(tmdbImg(backdrops[i++ % backdrops.length].file_path));  
+          if (!bgActive || bgCardId !== movie.id) { clearInterval(bgTimer); bgTimer = null; return; }  
+  
+          var url = Lampa.TMDB.image('t/p/original' + backdrops[i++ % backdrops.length].file_path);  
+  
+          var $bgImg = render.find('.full-start__background img, img.full-start__background').last();  
+          if (!$bgImg.length) $bgImg = $(document).find('img.full-start__background').last();  
+          if (!$bgImg.length) return;  
+  
+          // preload кадру в пам'ять — ключ від ривків на TV  
+          var pre = new Image();  
+          pre.onload = function () {  
+            if (!bgActive || bgCardId !== movie.id) return;  
+            var $container = render.find('.full-start__background');  
+            if (!$container.length) $container = $bgImg;  
+  
+            // blind swap: гасимо → міняємо src → проявляємо  
+            $container.css('opacity', 0);  
+            setTimeout(function () {  
+              if (!bgActive) return;  
+              $bgImg.attr('src', url);  
+              setTimeout(function () {  
+                if (!bgActive) return;  
+                $container.css('opacity', 1);  
+              }, 80);  
+            }, 420);  
+          };  
+          pre.src = url;  
         }, slideshowInterval());  
+  
+        window.casBgInterval = bgTimer;  
       },  
-      function () {}  
+      function () {},  
+      false, { cache: { life: 60 * 60 } }  
     );  
   }  
   
@@ -204,25 +138,9 @@
   
     var render  = e.object.activity.render();  
     var details = render.find('.full-descr__details');  
-    if (details.length && !details.find('.full-descr__info--moved').length) {  
   
-      function toInfo(el, name) {  
-        if (!el.length || el.hasClass('hide')) return;  
-        details.append(  
-          '<div class="full-descr__info full-descr__info--moved">' +  
-            '<div class="full-descr__info-name">' + name + '</div>' +  
-            '<div class="full-descr__info-body">' + el.text().trim() + '</div>' +  
-          '</div>'  
-        );  
-        el.hide();  
-      }  
-  
-      toInfo(render.find('.full-start__pg'),     'Віковий рейтинг');  
-      toInfo(render.find('.full-start__status'), 'Статус');  
-    }  
-  
-    // кнопки під верхнім блоком (весь рядок, всю ширину)  
-    var body    = render.find('.full-start-new__body, .full-start__body');  
+    // кнопки під верхнім блоком, на всю ширину  
+    var body    = render.find('.full-start-new__body');  
     var wrapper = render.find('.card-tweaks__buttons');  
     if (body.length && !wrapper.length) {  
       wrapper = $('<div class="card-tweaks__buttons"></div>');  
@@ -232,23 +150,79 @@
       if (wrapper.children().length) body.after(wrapper);  
     }  
   
+    if (!details.length || details.find('.full-descr__info--moved').length) {  
+      startSlideshow(e);  
+      return;  
+    }  
+  
+    function addInfo(name, value) {  
+      details.append(  
+        '<div class="full-descr__info full-descr__info--moved">' +  
+          '<div class="full-descr__info-name">' + name + '</div>' +  
+          '<div class="full-descr__info-body">' + value + '</div>' +  
+        '</div>'  
+      );  
+    }  
+    function toInfo(el, name) {  
+      if (!el.length || el.hasClass('hide')) return;  
+      addInfo(name, el.text().trim());  
+      el.hide();  
+    }  
+  
+    toInfo(render.find('.full-start__pg'),     'Віковий рейтинг');  
+    toInfo(render.find('.full-start__status'), 'Статус');  
+  
+    var movie = (e.data && e.data.movie) || e.object.movie || {};  
+    var rd = movie.release_date || movie.first_air_date;  
+    if (rd && new Date(rd) > new Date()) {  
+      addInfo('У прокаті з', Lampa.Utils.parseTime(rd).full);  
+    }  
+  
     startSlideshow(e);  
   }  
   
-  /* ---------- ПІДПИСКА ---------- */  
-  function start() {  
-    addSettings();  
-    Lampa.Listener.follow('full', moveInfo);  
-    Lampa.Listener.follow('activity', function (e) {  
-      if (e.type === 'destroy') stopSlideshow();  
+  /* ---------- НАЛАШТУВАННЯ В МЕНЮ ---------- */  
+  var CARD_ICON = '<svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="2"/><path d="M2 9h20" stroke="currentColor" stroke-width="2"/><circle cx="6" cy="6.5" r="0.8" fill="currentColor"/></svg>';  
+  
+  function addSettings() {  
+    if (typeof Lampa.SettingsApi === 'undefined' || !Lampa.SettingsApi.addComponent) return;  
+  
+    Lampa.SettingsApi.addComponent({ component: 'card_tweaks', name: 'Картка', icon: CARD_ICON });  
+  
+    Lampa.SettingsApi.addParam({  
+      component: 'card_tweaks',  
+      param: { name: 'card_slideshow', type: 'trigger', "default": true },  
+      field: { name: 'Слайдшоу фону', description: 'Прокручувати арти фільму на тлі картки' },  
+      onChange: function (v) { if (v === false || v === 'false') stopSlideshow(); }  
+    });  
+  
+    Lampa.SettingsApi.addParam({  
+      component: 'card_tweaks',  
+      param: {  
+        name: 'card_slideshow_interval',  
+        type: 'select',  
+        values: { '5': '5 сек', '10': '10 сек', '15': '15 сек' },  
+        "default": '10'  
+      },  
+      field: { name: 'Інтервал слайдшоу', description: 'Як часто змінюється фонове зображення' }  
     });  
   }  
   
+  /* ---------- ЗАПУСК ---------- */  
+  function onFull(e) {  
+    if (e.type === 'complite') moveInfo(e);  
+    if (e.type === 'destroy') stopSlideshow();  
+  }  
+  
   if (window.appready) {  
-    start();  
+    addSettings();  
+    Lampa.Listener.follow('full', onFull);  
   } else {  
     Lampa.Listener.follow('app', function (e) {  
-      if (e.type === 'ready') start();  
+      if (e.type === 'ready') {  
+        addSettings();  
+        Lampa.Listener.follow('full', onFull);  
+      }  
     });  
   }  
 })();
