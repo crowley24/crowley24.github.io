@@ -112,35 +112,41 @@
     return 'https://image.tmdb.org/t/p/w1280' + path;  
   }  
   
-    function swapCardBackground(render, url) {  
+   function swapCardBackground(render, url) {  
     var swapped = false;  
   
-    // 1) глобальні шари Lampa — пишемо в ОБИДВА (незалежно від .visible)  
-    document.querySelectorAll('.background__one, .background__two').forEach(function (el) {  
-      var img = el.querySelector('img');  
-      if (img) {  
-        img.removeAttribute('data-src');  
-        img.src = url;  
+    // 1) головний видимий фон картки — <img class="full-start__background">  
+    document.querySelectorAll('.full-start__background, .full-start-new__background').forEach(function (el) {  
+      if (el.tagName === 'IMG') {  
+        el.removeAttribute('srcset');  
+        el.removeAttribute('data-src');  
+        // м'який перехід + гарантовано видимий  
+        el.style.transition = 'opacity 0.6s';  
+        el.style.opacity    = '0.5';   // як у рідному  
+        el.src = url;  
       } else {  
-        el.style.backgroundImage    = 'url("' + url + '")';  
-        el.style.backgroundSize     = 'cover';  
+        el.style.backgroundImage = 'url("' + url + '")';  
+        el.style.backgroundSize  = 'cover';  
         el.style.backgroundPosition = 'center';  
       }  
       swapped = true;  
     });  
   
-    // 2) декоративний img картки — для консистентності  
-    var cardBg = render.find('.full-start__background, .full-start-new__background');  
-    cardBg.each(function () {  
-      if (this.tagName === 'IMG') { this.removeAttribute('srcset'); this.src = url; }  
-      else {  
-        this.style.backgroundImage = 'url("' + url + '")';  
-        this.style.backgroundSize  = 'cover';  
-      }  
+    // 2) глобальні шари — самі даємо visible, бо Lampa їх не вмикає на картці  
+    var layers = document.querySelectorAll('.background__one, .background__two');  
+    layers.forEach(function (el, idx) {  
+      var img = el.querySelector('img');  
+      if (img) { img.removeAttribute('data-src'); img.src = url; }  
+      el.style.backgroundImage    = 'url("' + url + '")';  
+      el.style.backgroundSize     = 'cover';  
+      el.style.backgroundPosition = 'center';  
+      // робимо перший шар видимим  
+      if (idx === 0) el.classList.add('visible');  
     });  
+    if (layers.length) swapped = true;  
   
-    // 3) рідний API без fade-переходу — головний виклик  
-    try { Lampa.Background.immediately(url); swapped = true; } catch (e) {  
+    // 3) рідний API як запасний  
+    try { Lampa.Background.immediately(url); } catch (e) {  
       try { Lampa.Background.change(url); } catch (e2) {}  
     }  
   
