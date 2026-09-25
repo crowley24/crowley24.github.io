@@ -74,8 +74,8 @@
         var css = '';
         
         if (isEnabled) {
-            // Жорстко приховуємо будь-які варіанти верхнього блоку року та країни
-            css += '.full-start-new__details, .full-start__details, .full-start__head .full-start__details { display: none !important; } ';
+            // Приховуємо оригінальний рік та країну над назвою (використовуємо ваш перевірений селектор)
+            css += '.full-start-new__head, .full-start__tags { display: none !important; } ';
             
             css += '.full-start-new__title { display: flex !important; justify-content: flex-start !important; align-items: center !important; height: auto !important; min-height: unset !important; overflow: visible !important; width: 100% !important; box-sizing: border-box !important; margin: 4px 0 !important; } ';
             css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 55vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';
@@ -95,45 +95,20 @@
     function applyMovieDetailsData(data, movie, $render, translations) {
         if (!Lampa.Storage.get('movie_card_logo_enabled', true)) return;
 
-        // Даємо невелику затримку, щоб Lampa встигла повністю зрендерити DOM картки
+        // Збираємо рік та країну з даних API напряму для гарантії
+        var year = (data.release_date || data.first_air_date || '').split('-')[0];
+        var countries = (data.production_countries && data.production_countries.length > 0) ? 
+            data.production_countries.map(function(c) { return c.name; }).join(' • ') : '';
+        
+        var extraInfo = [];
+        if (year) extraInfo.push(year);
+        if (countries) extraInfo.push(countries);
+        var formattedDetails = extraInfo.join(' • ');
+
+        // Вставляємо у рядок з тривалістю та жанром
         setTimeout(function() {
-            // 1. Шукаємо текст року та країн із оригінального верхнього блоку
-            var $topDetails = $render.find('.full-start-new__details, .full-start__details');
-            var rawDetailsText = $topDetails.text().trim();
-            
-            // Якщо знайдено — приховуємо оригінальний блок
-            if ($topDetails.length > 0) {
-                $topDetails.hide();
-            }
-
-            // Якщо у DOM не знайшлося, збираємо з API вручну
-            if (!rawDetailsText) {
-                var year = (data.release_date || data.first_air_date || '').split('-')[0];
-                var countries = (data.production_countries && data.production_countries.length > 0) ? 
-                    data.production_countries.map(function(c) { return c.name; }).join(' | ') : '';
-                rawDetailsText = year + (countries ? ', ' + countries : '');
-            }
-
-            // Форматуємо через крапку: рік • країна1 • країна2
-            var formattedDetails = rawDetailsText.replace(/,\s*/g, ' • ').replace(/\s*\|\s*/g, ' • ');
-
-            // 2. Шукаємо рядок з тривалістю та жанром
             var $infoLine = $render.find('.full-start-new__info, .full-start__info');
             
-            // Альтернативний пошук за вмістом (якщо клас відрізняється)
-            if ($infoLine.length === 0) {
-                $render.find('div, span').each(function() {
-                    var txt = $(this).text();
-                    if (/^\d{2}:\d{2}\s*•/.test(txt) || txt.indexOf(' • ') !== -1 && txt.length < 50) {
-                        // Перевіряємо чи це схоже на рядок тривалість/жанр
-                        if ($(this).find('div').length === 0 && !$(this).hasClass('full-start-new__tagline')) {
-                            $infoLine = $(this);
-                            return false;
-                        }
-                    }
-                });
-            }
-
             if ($infoLine.length > 0 && formattedDetails) {
                 var originalText = $infoLine.attr('data-original-text');
                 if (!originalText) {
@@ -141,14 +116,13 @@
                     $infoLine.attr('data-original-text', originalText);
                 }
 
-                // Запобігаємо дублюванню, якщо код спрацював двічі
                 if (originalText.indexOf(formattedDetails) === -1) {
                     $infoLine.text(formattedDetails + ' • ' + originalText);
                 }
             }
         }, 50);
 
-        // 3. Відображення логотипа фільму замість назви
+        // Відображення логотипа фільму замість назви
         if (data.images && data.images.logos && data.images.logos.length > 0) {
             var lang = Lampa.Storage.get('language') || 'uk';
             var logo = data.images.logos.filter(function(l) { return l.iso_639_1 === lang; })[0] || 
@@ -162,7 +136,7 @@
             }
         }
 
-        // 4. Слоган українською (або запасний варіант)
+        // Слоган українською (або запасний варіант)
         var taglineText = '';
         if (translations && translations.translations) {
             var uaTrans = translations.translations.find(function(t) { return t.iso_639_1 === 'uk'; });
@@ -183,7 +157,7 @@
             $tagline.text(taglineText);
         }
 
-        // 5. Відображення логотипа студії
+        // Відображення логотипа студії
         if (Lampa.Storage.get('movie_card_logo_studio', true)) {
             $render.find('.studio-header-brand').remove();
             var studio = null;
