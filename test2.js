@@ -81,21 +81,27 @@
     '  -webkit-filter: none !important;' +  
     '}' +  
 
-    // ДОДАТКОВО: Затемнення поверх фону для кращого читання тексту при скролі  
-    '.full-start__background::after, .full-start-new__background::after {' +  
+    // Динамічний темний шар, який активується класом .is-scrolled
+    '.full-start-new, .full-start {' +  
+    '  position: relative !important;' +  
+    '}' +  
+    '.full-start-new::after, .full-start::after {' +  
     '  content: "" !important;' +  
     '  position: absolute !important;' +  
     '  top: 0; left: 0; right: 0; bottom: 0;' +  
-    '  background: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.75) 100%) !important;' +  
+    '  background: rgba(0,0,0,0) !important;' +  
     '  pointer-events: none !important;' +  
     '  z-index: 1 !important;' +  
+    '  transition: background 0.3s ease !important;' +  
+    '}' +  
+    '.full-start-new.is-scrolled::after, .full-start.is-scrolled::after {' +  
+    '  background: rgba(0,0,0,0.65) !important;' +  
     '}' +  
   
     // рейтинг у верхній правий кут  
-    '.full-start-new, .full-start { position: relative !important; }' +  
     '.full-start-new__rate-line, .full-start__rate-line {' +  
     '  position: absolute !important;' +  
-    '  top: 1.5em; right: 1.5em; z-index: 5;' +  
+    '  top: 1.5em; right: 1.5em; z-index: 5 !important;' +  
     '  margin: 0 !important;' +  
     '  display: flex; gap: 0.8em; align-items: center;' +  
     '  background: rgba(0,0,0,0.45);' +  
@@ -103,7 +109,7 @@
     '}' +  
   
     // кнопки під верхнім блоком  
-    '.card-tweaks__buttons { margin-top: 1.5em; width: 100%; }' +  
+    '.card-tweaks__buttons { margin-top: 1.5em; width: 100%; position: relative; z-index: 2; }' +  
     '.card-tweaks__buttons .full-start-new__buttons,' +  
     '.card-tweaks__buttons .buttons--container { margin-top: 0.6em; }';  
 
@@ -375,6 +381,20 @@
         addInfo('У прокаті з', Lampa.Utils.parseTime(rd).full);  
       }  
     }
+
+    // Слухач скролу для динамічного затемнення картки
+    var $scrollContainer = render.find('.scroll');
+    if (!$scrollContainer.length) $scrollContainer = render;
+
+    $scrollContainer.on('scroll', function() {
+        var scrollTop = $(this).scrollTop();
+        var $startBlock = render.find('.full-start-new, .full-start');
+        if (scrollTop > 80) {
+            $startBlock.addClass('is-scrolled');
+        } else {
+            $startBlock.removeClass('is-scrolled');
+        }
+    });
 
     startSlideshow(e);
     loadMovieDetails((e.data && e.data.movie) || e.object.movie || {}, render);
