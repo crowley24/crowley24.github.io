@@ -21,57 +21,52 @@
     '  border-radius: 0.5em;' +  
     '}' +  
   
-    // 3) ліва колонка вертикальна: постер зверху, кнопки знизу  
-    '.full-start-new__left {' +  
-    '  display: flex !important;' +  
-    '  flex-direction: column !important;' +  
-    '  flex-shrink: 0;' +  
-    '  width: 17em;' +  
+    // 3) кнопки — повна ширина, під всім верхнім блоком  
+    '.card-tweaks__buttons {' +  
+    '  margin-top: 1.5em;' +  
+    '  width: 100%;' +  
     '}' +  
-    // кнопки — в один рядок, з переносом при потребі  
-    '.full-start-new__left .full-start-new__buttons,' +  
-    '.full-start-new__left .buttons--container {' +  
-    '  display: flex !important;' +  
-    '  flex-direction: row !important;' +  
-    '  flex-wrap: wrap;' +  
-    '  align-items: center; gap: 0.6em;' +  
-    '  margin-top: 1em; width: 100%;' +  
-    '}' +  
-    '.full-start-new__left .full-start__button { margin-right: 0; }' +  
-    // права колонка займає решту ширини  
-    '.full-start-new__right { flex: 1 1 auto; min-width: 0; }';  
+    '.card-tweaks__buttons .full-start-new__buttons,' +  
+    '.card-tweaks__buttons .buttons--container {' +  
+    '  margin-top: 0.6em;' +  
+    '}';  
   document.head.appendChild(style);  
   
   /* ---------- ПЕРЕНЕСЕННЯ ЕЛЕМЕНТІВ ---------- */  
   function moveInfo(e) {  
     if (e.type !== 'complite') return;  
   
-    var render  = e.object.activity.render();  
-    var details = render.find('.full-descr__details');  
-    if (!details.length) return;  
-    if (details.find('.full-descr__info--moved').length) return;  
+    var render = e.object.activity.render();  
   
     // віковий рейтинг та статус → у блок "Детально"  
-    function toInfo(el, name) {  
-      if (!el.length || el.hasClass('hide')) return;  
-      details.append(  
-        '<div class="full-descr__info full-descr__info--moved">' +  
-          '<div class="full-descr__info-name">' + name + '</div>' +  
-          '<div class="full-descr__info-body">' + el.text().trim() + '</div>' +  
-        '</div>'  
-      );  
-      el.hide();  
+    var details = render.find('.full-descr__details');  
+    if (details.length && !details.find('.full-descr__info--moved').length) {  
+  
+      function toInfo(el, name) {  
+        if (!el.length || el.hasClass('hide')) return;  
+        details.append(  
+          '<div class="full-descr__info full-descr__info--moved">' +  
+            '<div class="full-descr__info-name">' + name + '</div>' +  
+            '<div class="full-descr__info-body">' + el.text().trim() + '</div>' +  
+          '</div>'  
+        );  
+        el.hide();  
+      }  
+  
+      toInfo(render.find('.full-start__pg'),     'Віковий рейтинг');  
+      toInfo(render.find('.full-start__status'), 'Статус');  
     }  
   
-    toInfo(render.find('.full-start__pg'),     'Віковий рейтинг');  
-    toInfo(render.find('.full-start__status'), 'Статус');  
-  
-    // кнопки → під постер  
-    var left = render.find('.full-start-new__left');  
-    if (left.length && !left.find('.full-start-new__buttons, .buttons--container').length) {  
-      render.find('.full-start-new__buttons, .buttons--container').each(function () {  
-        left.append(this);  
-      });  
+    // 3) кнопки → під весь верхній блок (на всю ширину, не під постер)  
+    var wrapper = render.find('.card-tweaks__buttons');  
+    if (!wrapper.length) {  
+      var body = render.find('.full-start-new__body');  
+      var btns = render.find('.full-start-new__buttons, .buttons--container');  
+      if (body.length && btns.length) {  
+        wrapper = $('<div class="card-tweaks__buttons"></div>');  
+        body.after(wrapper);  
+        btns.each(function () { wrapper.append(this); });  
+      }  
     }  
   }  
   
