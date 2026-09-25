@@ -115,27 +115,34 @@
     function swapCardBackground(render, url) {  
     var swapped = false;  
   
-    // 1) власний фон картки — пишемо background-image на сам div  
-    render.find('.full-start__background, .full-start-new__background').each(function () {  
-      this.style.backgroundImage    = 'url("' + url + '")';  
-      this.style.backgroundSize     = 'cover';  
-      this.style.backgroundPosition = 'center';  
+    // 1) глобальні шари Lampa — пишемо в ОБИДВА (незалежно від .visible)  
+    document.querySelectorAll('.background__one, .background__two').forEach(function (el) {  
+      var img = el.querySelector('img');  
+      if (img) {  
+        img.removeAttribute('data-src');  
+        img.src = url;  
+      } else {  
+        el.style.backgroundImage    = 'url("' + url + '")';  
+        el.style.backgroundSize     = 'cover';  
+        el.style.backgroundPosition = 'center';  
+      }  
       swapped = true;  
-  
-      // якщо всередині все ж є <img> — підміняємо і його  
-      var img = this.querySelector('img');  
-      if (img) { img.src = url; img.removeAttribute('data-src'); }  
     });  
   
-    // 2) глобальний шар Lampa — видимий .background__one/.background__two  
-    var visible = document.querySelector('.background__one.visible, .background__two.visible');  
-    if (visible) {  
-      visible.style.backgroundImage = 'url("' + url + '")';  
-      swapped = true;  
-    }  
+    // 2) декоративний img картки — для консистентності  
+    var cardBg = render.find('.full-start__background, .full-start-new__background');  
+    cardBg.each(function () {  
+      if (this.tagName === 'IMG') { this.removeAttribute('srcset'); this.src = url; }  
+      else {  
+        this.style.backgroundImage = 'url("' + url + '")';  
+        this.style.backgroundSize  = 'cover';  
+      }  
+    });  
   
-    // 3) стандартний API — запасний варіант  
-    try { Lampa.Background.change(url); swapped = true; } catch (e) {}  
+    // 3) рідний API без fade-переходу — головний виклик  
+    try { Lampa.Background.immediately(url); swapped = true; } catch (e) {  
+      try { Lampa.Background.change(url); } catch (e2) {}  
+    }  
   
     return swapped;  
   }
