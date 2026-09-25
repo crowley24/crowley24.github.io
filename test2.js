@@ -106,6 +106,9 @@
       var css = style.textContent;
       
       if (isEnabled) {
+          // Зміщення контенту праворуч (ближче до центру)
+          css += '.full-start-new__body { padding-left: 3.5em !important; } ';
+          
           css += '.full-start-new__title { display: flex !important; justify-content: flex-start !important; align-items: center !important; height: auto !important; min-height: unset !important; overflow: visible !important; width: 100% !important; box-sizing: border-box !important; margin: 4px 0 !important; } ';
           css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 55vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';
           css += '.full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 4px 0 0 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; } ';
@@ -212,36 +215,11 @@
     );  
   }  
   
-  /* ---------- ІНТЕГРАЦІЯ ДАНИХ (Логотипи, слоган, рік/країна в рядок) ---------- */  
+  /* ---------- ІНТЕГРАЦІЯ ДАНИХ (Логотипи, слоган) ---------- */  
   function applyMovieDetailsData(data, movie, $render, translations) {
       if (!Lampa.Storage.get('movie_card_logo_enabled', true)) return;
 
-      // Рік та країна у рядок з тривалістю/жанром
-      var year = (data.release_date || data.first_air_date || '').split('-')[0];
-      var countries = (data.production_countries && data.production_countries.length > 0) ? 
-          data.production_countries.map(function(c) { return c.name; }).join(', ') : '';
-      
-      var extraInfo = [];
-      if (year) extraInfo.push(year);
-      if (countries) extraInfo.push(countries);
-      var formattedDetails = extraInfo.join(' • ');
-
-      setTimeout(function() {
-          var $infoLine = $render.find('.full-start-new__info, .full-start__info');
-          if ($infoLine.length > 0 && formattedDetails) {
-              var originalText = $infoLine.attr('data-original-text');
-              if (!originalText) {
-                  originalText = $infoLine.text();
-                  $infoLine.attr('data-original-text', originalText);
-              }
-
-              if (originalText.indexOf(formattedDetails) === -1) {
-                  $infoLine.text(formattedDetails + ' • ' + originalText);
-              }
-          }
-      }, 50);
-
-      // Логотип фільму замість тексту назви
+      // Логотип фільму замість тексту назви (українська з фолбеком на англійську, згідно з загальною логікою)
       if (data.images && data.images.logos && data.images.logos.length > 0) {
           var lang = Lampa.Storage.get('language') || 'uk';
           var logo = data.images.logos.filter(function(l) { return l.iso_639_1 === lang; })[0] || 
