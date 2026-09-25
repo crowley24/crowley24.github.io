@@ -68,7 +68,7 @@
     // приховати рік/країну над назвою  
     '.full-start-new__head, .full-start__tags { display: none !important; }' +  
   
-    // фон: чіткий на старті, плавне затемнення при скролі через filter brightness/contrast
+    // фон: чіткий на старті, плавне затемнення при скролі через фільтр
     '.full-start__background, .full-start-new__background, .background__one, .background__two {' +  
     '  opacity: 1 !important;' +  
     '  filter: brightness(1) contrast(1) !important;' +  
@@ -76,13 +76,13 @@
     '  transition: filter 0.4s ease, opacity 0.4s ease !important;' +  
     '}' +  
     
-    // Стан фону під час скролу (затемнюємо арт)
+    // Стан фону під час скролу (надійне затемнення арту)
     '.full-start.is-scrolled .full-start__background,' + 
     '.full-start.is-scrolled .full-start-new__background,' +
     '.full-start.is-scrolled .background__one,' + 
     '.full-start.is-scrolled .background__two {' +  
-    '  filter: brightness(0.4) contrast(1.1) !important;' +  
-    '  -webkit-filter: brightness(0.4) contrast(1.1) !important;' +  
+    '  filter: brightness(0.35) contrast(1.1) !important;' +  
+    '  -webkit-filter: brightness(0.35) contrast(1.1) !important;' +  
     '}' +  
 
     // Рейтинг: прибрати чорний фон, підняти вище в правий кут
@@ -109,16 +109,22 @@
       var css = style.textContent;
       
       if (isEnabled) {
-          // Піднімаємо логотип вище (зменшуємо верхній відступ/margin)
-          css += '.full-start-new__title { display: flex !important; justify-content: flex-start !important; align-items: center !important; height: auto !important; min-height: unset !important; overflow: visible !important; width: 100% !important; box-sizing: border-box !important; margin: -10px 0 2px 0 !important; z-index: 2 !important; position: relative !important; } ';
+          // Піднімаємо весь блок інформації на рівень верхньої частини постера
+          css += '.full-start-new__content, .full-start__content { position: relative !important; }';
+          css += '.full-start-new__details, .full-start__details { position: relative !important; }';
+          
+          // Логотип назви фільму
+          css += '.full-start-new__title { display: flex !important; justify-content: flex-start !important; align-items: center !important; height: auto !important; min-height: unset !important; overflow: visible !important; width: 100% !important; box-sizing: border-box !important; margin: 0 0 2px 0 !important; z-index: 2 !important; position: relative !important; } ';
           css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 55vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';
           
-          // Збільшуємо відступ між слоганом та наступним рядком інформації
-          css += '.full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 6px 0 16px 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; z-index: 2 !important; position: relative !important; } ';
+          // Слоган фільму зі збільшеним відступом знизу до рядка тривалості/жанрів
+          css += '.full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 6px 0 20px 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; z-index: 2 !important; position: relative !important; } ';
 
           if (showStudio) {
-              css += '.studio-header-brand { width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: 2px !important; z-index: 2 !important; position: relative !important; } ';
-              css += '.studio-header-brand img { height: 20px !important; width: auto; max-width: 120px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; } ';
+              // Жорстко піднімаємо логотип студій на самий верх до краю постера
+              css += '.full-start-new__body { display: flex; flex-direction: column; }';
+              css += '.studio-header-brand { order: -1; width: 100%; display: flex; justify-content: flex-start; align-items: center; margin: 0 0 4px 0 !important; z-index: 2 !important; position: relative !important; } ';
+              css += '.studio-header-brand img { height: 22px !important; width: auto; max-width: 130px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; } ';
               css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
           }
       }
@@ -297,7 +303,7 @@
 
               $img.on('error', function() { $brand.remove(); });
               isImageDark(studioLogoUrl, function(isDark) { if (isDark) $img.addClass('is-dark-logo'); });
-              $render.find('.full-start-new__title').before($brand);
+              $render.find('.full-start-new__body').prepend($brand);
           }
       }
   }
@@ -464,7 +470,7 @@
     Lampa.SettingsApi.addParam({  
       component: 'card_tweaks',  
       param: {  
-        name: 'card_slideshow_interval',  
+        name: 'card_slideshtml_interval',  
         type: 'select',  
         values: { '5': '5 сек', '10': '10 сек', '15': '15 сек' },  
         default: '10'  
