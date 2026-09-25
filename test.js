@@ -31,19 +31,26 @@
         }
     });
 
-    var svgIcons = {
-        '4K': pluginPath + '4K.svg',
-        '2K': pluginPath + '2K.svg',
-        'FULL HD': pluginPath + 'FULL HD.svg',
-        'HD': pluginPath + 'HD.svg',
-        'HDR': pluginPath + 'HDR.svg',
-        'Dolby Vision': pluginPath + 'Dolby Vision.svg',
-        '7.1': pluginPath + '7.1.svg',
-        '5.1': pluginPath + '5.1.svg',
-        '4.0': pluginPath + '4.0.svg',
-        '2.0': pluginPath + '2.0.svg',
-        'DUB': pluginPath + 'DUB.svg',
-        'UKR': pluginPath + 'UKR.svg'
+    // Масив бейджів з вашими регулярними виразами та посиланнями на картинки
+    var eliteBadgesConfig = [
+        { id: '4k-ultra-hd', pattern: /(?i)\b(4k|2160p|uhd|ultra\s*hd)\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/4k_ultra_hd.png' },
+        { id: '1080p-full-hd', pattern: /(?i)\b(1080p|fhd|full\s*hd)\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/1080p_full_hd.png' },
+        { id: '720p-hd', pattern: /(?i)\b720p\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/720p_hd.png' },
+        { id: 'dolby-vision', pattern: /(?i)\b(dolby\s*vision|dovi|dv)\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_vision.png' },
+        { id: 'hdr10-plus', pattern: /(?i)\b(hdr10\+|hdr10\s*plus\b|hdr\s*10\s*\+)/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr10_plus.png' },
+        { id: 'hdr10', pattern: /(?i)\b(hdr10|hdr\s*10)\b(?!\s*\+|\s*plus)/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr10.png' },
+        { id: 'hdr', pattern: /(?i)\bhdr\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr.png' },
+        { id: 'sdr', pattern: /(?i)\bsdr\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/SDR_transparent_4x.png' },
+        { id: 'dolby-atmos', pattern: /(?i)\b(dolby\s*atmos|atmos)\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_atmos.png' },
+        { id: 'truehd', pattern: /(?i)\b(truehd|true\s*hd|dolby\s*truehd)\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/truehd.png' },
+        { id: 'dolby-digital-plus', pattern: /(?i)\b(ddp[\s._-]*[0-9][\s._-]*[0-9]|ddp|dd\+|dolby[\s._-]*digital[\s._-]*plus|e-?ac-?3)(?![a-z])/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_digital_plus.png' },
+        { id: 'dolby-digital', pattern: /(?i)\b(dd[\s._-]*[0-9][\s._-]*[0-9]|dd|dolby[\s._-]*digital|ac-?3)(?![\s._-]*plus|\+|p|[a-z])/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_digital.png' },
+        { id: 'dts-hd-master-audio', pattern: /(?i)\b(dts[\s._-]*hd[\s._-]*ma|dtshd\s*ma|dts[\s._-]*hd[\s._-]*master)\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts_hd_master_audio.png' },
+        { id: 'dts-hd', pattern: /(?i)\b(dts[\s._-]*hd|dtshd)(?![\s._-]*(ma|master)|ma)\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts_hd.png' },
+        { id: 'dts', pattern: /(?i)\bdts\b(?![\s._:-]*(x|hd))/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts.png' },
+        // Додатково підтягнемо локальні за потреби або збережемо сумісність для Укр/Дуб якщо є в каталозі
+        'UKR': { imageURL: pluginPath + 'UKR.svg' },
+        'DUB': { imageURL: pluginPath + 'DUB.svg' }
     };
 
     var ratingIcons = {
@@ -190,7 +197,7 @@
         css += '.quality-row-inline .plugin-rating-item img { height: 1em; width: auto; } ';
         
         css += '.quality-item { height: 1.15em; display: flex; align-items: center; justify-content: flex-end; } ';
-        css += '.quality-item img { height: 100%; width: auto; max-width: 55px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8)); } ';
+        css += '.quality-item img { height: 100%; width: auto; max-width: 60px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8)); } ';
 
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.85em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
@@ -350,19 +357,34 @@
         });
     }
 
-    function getBestResults(results) {
-        var best = { resolution: null, hdr: false, dolbyVision: false, dub: false, ukr: false };
-        if (!results) return best;
+    // Скануємо результати за допомогою ваших регулярних виразів
+    function getEliteBadges(results) {
+        var foundBadges = [];
+        if (!results) return foundBadges;
+
+        // Збираємо весь текст з перших 15 результатів парсеру
+        var combinedText = '';
         results.slice(0, 15).forEach(function(item) {
-            var t = (item.Title || '').toLowerCase();
-            if (t.indexOf('ukr')>=0 || t.indexOf('укр')>=0) best.ukr = true;
-            var res = t.indexOf('4k')>=0 ? '4K' : t.indexOf('2k')>=0 ? '2K' : t.indexOf('1080')>=0 ? 'FULL HD' : t.indexOf('720')>=0 ? 'HD' : null;
-            if (res && (!best.resolution || ['HD', 'FULL HD', '2K', '4K'].indexOf(res) > ['HD', 'FULL HD', '2K', '4K'].indexOf(best.resolution))) best.resolution = res;
-            if (t.indexOf('vision')>=0 || t.indexOf(' dv ')>=0) best.dolbyVision = true;
-            if (t.indexOf('hdr')>=0) best.hdr = true;
-            if (t.indexOf('dub')>=0 || t.indexOf('дуб')>=0) best.dub = true;
+            combinedText += ' ' + (item.Title || item.title || '');
         });
-        return best;
+
+        eliteBadgesConfig.forEach(function(badge) {
+            if (badge.pattern && badge.pattern.test(combinedText)) {
+                // Запобігаємо дублюванню конфліктних типів (наприклад, звичайний HDR при наявності HDR10 або Dolby Vision, якщо потрібно, або залишаємо як є)
+                foundBadges.push(badge.imageURL);
+            }
+        });
+
+        // Також перевіримо на наявность УКР / ДУБ
+        var hasUkr = /ukr|укр/i.test(combinedText);
+        var hasDub = /dub|дуб/i.test(combinedText);
+        if (hasUkr) foundBadges.push(pluginPath + 'UKR.svg');
+        if (hasDub) foundBadges.push(pluginPath + 'DUB.svg');
+
+        // Унікалізуємо масив іконок
+        return foundBadges.filter(function(elem, pos, arr) {
+            return arr.indexOf(elem) === pos;
+        });
     }
 
     function startPosterSlideshow($poster, items) {
@@ -443,17 +465,12 @@
                 if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Parser && Lampa.Parser.get) {
                     Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
                         if (res && Array.isArray(res.Results)) {
-                            var b = getBestResults(res.Results), list = [];
-                            if (b.resolution) list.push(b.resolution);
-                            if (b.dolbyVision) list.push('Dolby Vision'); else if (b.hdr) list.push('HDR');
-                            if (b.dub) list.push('DUB'); if (b.ukr) list.push('UKR');
+                            var eliteBadgesList = getEliteBadges(res.Results);
                             
-                            list.forEach(function(t) { 
-                                if (svgIcons[t]) {
-                                    var $badge = $('<div class="quality-item wave-item"><img src="' + svgIcons[t] + '"></div>');
-                                    $badge.css('--item-index', globalIndex++);
-                                    $qRow.append($badge);
-                                }
+                            eliteBadgesList.forEach(function(imgUrl) { 
+                                var $badge = $('<div class="quality-item wave-item"><img src="' + imgUrl + '"></div>');
+                                $badge.css('--item-index', globalIndex++);
+                                $qRow.append($badge);
                             });
                         }
                     });
