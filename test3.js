@@ -8,6 +8,18 @@
     // приховати рік/країну над назвою  
     '.full-start-new__head, .full-start__tags { display: none !important; }' +  
   
+    // фон без затемнення — чіткий і яскравий  
+    '.full-start__background, .full-start-new__background {' +  
+    '  opacity: 1 !important;' +  
+    '  filter: none !important;' +  
+    '  -webkit-filter: none !important;' +  
+    '}' +  
+    '.background__one.visible, .background__two.visible {' +  
+    '  opacity: 1 !important;' +  
+    '  filter: none !important;' +  
+    '  -webkit-filter: none !important;' +  
+    '}' +  
+  
     // рейтинг у верхній правий кут  
     '.full-start-new, .full-start { position: relative !important; }' +  
     '.full-start-new__rate-line, .full-start__rate-line {' +  
@@ -38,29 +50,37 @@
   
     Lampa.SettingsApi.addComponent({  
       component: 'card_tweaks',  
-      name: 'Картка',  
-      icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +  
-            '<rect x="3" y="4" width="18" height="14" rx="2"/>' +  
-            '<path d="M3 9h18M8 21h8"/></svg>'  
+      name: 'Картка'  
     });  
   
     Lampa.SettingsApi.addParam({  
       component: 'card_tweaks',  
       param: { name: 'card_slideshow', type: 'trigger', default: true },  
-      field: { name: 'Слайдшоу фону', description: 'Показувати по черзі арт-банери фільму як фон картки' },  
+      field: {  
+        name: 'Слайдшоу фону',  
+        description: 'Показувати зміну фонових артів у картці фільму'  
+      },  
       onChange: function () {  
-        if (!slideshowEnabled()) stopSlideshow();  
+        if (!Lampa.Storage.get('card_slideshow', true)) stopSlideshow();  
       }  
     });  
   
     Lampa.SettingsApi.addParam({  
       component: 'card_tweaks',  
-      param: { name: 'card_slideshow_interval', type: 'select', values: {5:'5 сек',10:'10 сек',15:'15 сек'}, default: '10' },  
-      field: { name: 'Інтервал слайдшоу', description: 'Як часто змінювати фонове зображення' }  
+      param: {  
+        name: 'card_slideshow_interval',  
+        type: 'select',  
+        values: { '5': '5 сек', '10': '10 сек', '15': '15 сек' },  
+        default: '10'  
+      },  
+      field: {  
+        name: 'Інтервал слайдшоу',  
+        description: 'Як часто змінювати фонове зображення'  
+      }  
     });  
   }  
   
-  /* ---------- ПЕРЕНОС БЛОКІВ У "ДЕТАЛЬНО" ---------- */  
+  /* ---------- ПЕРЕНОС БЛОКІВ ---------- */  
   function addInfo(details, name, value) {  
     details.append(  
       '<div class="full-descr__info full-descr__info--moved">' +  
@@ -75,30 +95,31 @@
   
     var render  = e.object.activity.render();  
     var details = render.find('.full-descr__details');  
-    if (!details.length) return;  
-    if (details.find('.full-descr__info--moved').length) return;  
-  
-    function toInfo(el, name) {  
-      if (!el.length || el.hasClass('hide')) return;  
-      addInfo(details, name, el.text().trim());  
-      el.hide();  
+    if (details.length && !details.find('.full-descr__info--moved').length) {  
+      var pg = render.find('.full-start__pg');  
+      if (pg.length && !pg.hasClass('hide')) {  
+        addInfo(details, 'Віковий рейтинг', pg.text().trim());  
+        pg.hide();  
+      }  
+      var status = render.find('.full-start__status');  
+      if (status.length && !status.hasClass('hide')) {  
+        addInfo(details, 'Статус', status.text().trim());  
+        status.hide();  
+      }  
     }  
   
-    toInfo(render.find('.full-start__pg'),     'Віковий рейтинг');  
-    toInfo(render.find('.full-start__status'), 'Статус');  
-  
-    // кнопки під всім верхнім блоком  
-    var body    = render.find('.full-start-new__body, .full-start__body');  
+    // кнопки під верхній блок  
+    var body    = render.find('.full-start-new__body');  
     var wrapper = render.find('.card-tweaks__buttons');  
     if (body.length && !wrapper.length) {  
       wrapper = $('<div class="card-tweaks__buttons"></div>');  
-      body.after(wrapper);  
       render.find('.full-start-new__buttons, .buttons--container').each(function () {  
         wrapper.append(this);  
       });  
+      body.after(wrapper);  
     }  
   
-    startSlideshow(e, render);  
+    startSlideshow(e);  
   }  
   
   /* ---------- СЛАЙДШОУ ФОНУ ---------- */  
@@ -113,38 +134,43 @@
     return 'https://api.themoviedb.org/3/' + path;  
   }  
   function tmdbImg(path) {  
-    try { return Lampa.TMDB.image('t/p/w1280' + path); } catch (e) {}  
-    return 'https://image.tmdb.org/t/p/w1280' + path;  
+    try { return Lampa.TMDB.image('t/p/original' + path); } catch (e) {}  
+    return 'https://image.tmdb.org/t/p/original' + path;  
   }  
   
-  // міняємо лише src у тому самому <img class="full-start__background">,  
-  // який Lampa використовує для рідного фону — той самий вигляд і яскравість  
   function swapCardBackground(url) {  
+    var swapped = false;  
+  
+    // рідний <img class="full-start__background"> — той самий елемент, що й початковий фон  
     document.querySelectorAll('.full-start__background, .full-start-new__background').forEach(function (el) {  
       if (el.tagName === 'IMG') {  
         el.removeAttribute('srcset');  
         el.removeAttribute('data-src');  
-        el.style.backgroundImage = '';  
         el.src = url;  
+      } else {  
+        el.style.backgroundImage    = 'url("' + url + '")';  
+        el.style.backgroundSize     = 'cover';  
+        el.style.backgroundPosition = 'center';  
       }  
+      swapped = true;  
     });  
+  
+    return swapped;  
   }  
   
   function startSlideshow(e) {  
-    if (!slideshowEnabled()) return;  
-  
     var movie = (e.data && e.data.movie) || e.object.movie || {};  
     if (movie.id === bgCardId) return;  
     bgCardId = movie.id;  
     clearInterval(bgTimer); bgTimer = null;  
-    if (!movie.id) return;  
+    if (!slideshowEnabled() || !movie.id) return;  
   
     var method = movie.number_of_seasons ? 'tv' : 'movie';  
   
     Lampa.Network.silent(  
+      // include_image_language=null — лише арти без тексту  
       tmdbApi(method + '/' + movie.id + '/images?include_image_language=null'),  
       function (res) {  
-        // лише арти без тексту (iso_639_1 = null)  
         var backdrops = (res && res.backdrops || [])  
           .filter(function (b) { return !b.iso_639_1; })  
           .slice(0, 8);  
@@ -161,20 +187,21 @@
     );  
   }  
   
-  /* ---------- ІНІЦІАЛІЗАЦІЯ ---------- */  
-  function init() {  
-    registerSettings();  
-    Lampa.Listener.follow('full', moveInfo);  
-    Lampa.Listener.follow('full', function (e) {  
-      if (e.type === 'destroy') stopSlideshow();  
-    });  
+  /* ---------- ЗАПУСК ---------- */  
+  function onFull(e) {  
+    if (e.type === 'complite') moveInfo(e);  
+    if (e.type === 'destroy')  stopSlideshow();  
   }  
   
-  if (window.appready) {  
-    init();  
-  } else {  
+  function start() {  
+    registerSettings();  
+    Lampa.Listener.follow('full', onFull);  
+  }  
+  
+  if (window.appready) start();  
+  else {  
     Lampa.Listener.follow('app', function (e) {  
-      if (e.type === 'ready') init();  
+      if (e.type === 'ready') start();  
     });  
   }  
 })();
