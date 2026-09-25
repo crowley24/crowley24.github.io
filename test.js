@@ -305,46 +305,24 @@
             }
         }
 
-        // --- ТОЧНИЙ АЛГОРИТМ ВИБОРУ ФОНІВ ЯК У NewCard ---
+        // --- ТОЧНИЙ АЛГОРИТМ ВИБОРУ ФОНІВ БЕЗ СЛІВ (як у NewCard) ---
         if (data.images && data.images.backdrops) {
             var backdrops = data.images.backdrops.filter(function (elem) {
-                return elem.aspect_ratio > 1.5;
+                return elem.aspect_ratio > 1.5 && (!elem.iso_639_1 || elem.iso_639_1 === 'xx');
             });
 
+            if (backdrops.length === 0) {
+                backdrops = data.images.backdrops.filter(function (elem) {
+                    return elem.aspect_ratio > 1.5;
+                });
+            }
+
             if (backdrops.length > 0) {
-                var currentLang = Lampa.Storage.get('language') || 'uk';
-                
-                // 1. Кадри поточної мови або нейтральні (без тексту / xx)
-                var filtered = backdrops.filter(function (elem) {
-                    return elem.iso_639_1 === currentLang || elem.iso_639_1 === 'xx' || !elem.iso_639_1;
+                backdrops.sort(function (a, b) {
+                    return (b.vote_average || 0) - (a.vote_average || 0);
                 });
 
-                // 2. Якщо таких мало, підмішуємо англійські
-                if (filtered.length < 3) {
-                    var english = backdrops.filter(function (elem) {
-                        return elem.iso_639_1 === 'en';
-                    });
-                    english.forEach(function (elem) {
-                        if (filtered.indexOf(elem) === -1) filtered.push(elem);
-                    });
-                }
-
-                // 3. Якщо все ще мало, беремо решту та сортуємо за рейтингом TMDb
-                if (filtered.length < 3) {
-                    var others = backdrops.filter(function (elem) {
-                        return filtered.indexOf(elem) === -1;
-                    });
-                    others.sort(function (a, b) {
-                        return (b.vote_average || 0) - (a.vote_average || 0);
-                    });
-                    others.forEach(function (elem) {
-                        if (filtered.indexOf(elem) === -1) filtered.push(elem);
-                    });
-                }
-
-                if (filtered.length > 0) {
-                    startPosterSlideshow($('.full-start-new__poster'), filtered.slice(0, 15));
-                }
+                startPosterSlideshow($('.full-start-new__poster'), backdrops.slice(0, 15));
             }
         }
     }
