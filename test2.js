@@ -10,7 +10,7 @@
         { id: 'movie_card_logo_enabled', default: true },
         { id: 'movie_card_logo_studio', default: true },
         { id: 'movie_card_logo_tagline', default: true },
-        { id: 'movie_card_logo_size', default: '130' },
+        { id: 'movie_card_logo_size', default: '120' },
         { id: 'movie_card_logo_quality', default: 'w500' }
     ];
 
@@ -66,7 +66,7 @@
             document.head.appendChild(style);
         }
 
-        var lHeight = Lampa.Storage.get('movie_card_logo_size', '130'); 
+        var lHeight = Lampa.Storage.get('movie_card_logo_size', '120'); 
         var showStudio = Lampa.Storage.get('movie_card_logo_studio', true);
         var showTagline = Lampa.Storage.get('movie_card_logo_tagline', true);
         var isEnabled = Lampa.Storage.get('movie_card_logo_enabled', true);
@@ -74,9 +74,8 @@
         var css = '';
         
         if (isEnabled) {
-            // Дозволяємо контейнеру адаптуватись, а зображенню масштабуватись пропорційно без жорстких обмежень блоку
             css += '.full-start-new__title { display: flex !important; justify-content: flex-start !important; align-items: center !important; height: auto !important; min-height: unset !important; overflow: visible !important; width: 100% !important; box-sizing: border-box !important; margin: 4px 0 !important; } ';
-            css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 80vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';
+            css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 55vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';
             
             css += '.full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 4px 0 0 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; } ';
 
@@ -93,7 +92,6 @@
     function applyMovieDetailsData(data, movie, $render) {
         if (!Lampa.Storage.get('movie_card_logo_enabled', true)) return;
 
-        // Відображення логотипа фільму замість назви
         if (data.images && data.images.logos && data.images.logos.length > 0) {
             var lang = Lampa.Storage.get('language') || 'uk';
             var logo = data.images.logos.filter(function(l) { return l.iso_639_1 === lang; })[0] || 
@@ -107,7 +105,6 @@
             }
         }
 
-        // Відображення слогана
         if (data.tagline && data.tagline.trim() !== '') {
             var $tagline = $render.find('.full-start-new__tagline');
             if ($tagline.length === 0) {
@@ -117,7 +114,6 @@
             $tagline.text(data.tagline);
         }
 
-        // Відображення логотипа студії (якщо увімкнено)
         if (Lampa.Storage.get('movie_card_logo_studio', true)) {
             $render.find('.studio-header-brand').remove();
             var studio = null;
