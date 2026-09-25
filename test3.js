@@ -1,8 +1,9 @@
 (function () {  
   'use strict';  
   
+  /* ---------- СТИЛІ ---------- */  
   var style = document.createElement('style');  
-  style.id = 'hide-year-country';  
+  style.id = 'card-tweaks';  
   style.textContent =  
     // 1) приховати рік/країну над назвою  
     '.full-start-new__head, .full-start__tags { display: none !important; }' +  
@@ -20,16 +21,28 @@
     '  border-radius: 0.5em;' +  
     '}' +  
   
-    // 3) кнопки під постером — вертикально, на ширину постера  
+    // 3) ліва колонка вертикальна: постер зверху, кнопки знизу  
+    '.full-start-new__left {' +  
+    '  display: flex !important;' +  
+    '  flex-direction: column !important;' +  
+    '  flex-shrink: 0;' +  
+    '  width: 17em;' +  
+    '}' +  
+    // кнопки — в один рядок, з переносом при потребі  
     '.full-start-new__left .full-start-new__buttons,' +  
     '.full-start-new__left .buttons--container {' +  
-    '  display: flex; flex-direction: column;' +  
-    '  align-items: stretch; gap: 0.6em;' +  
-    '  margin-top: 1em; width: 17em;' +   // ширина .full-start__img  
+    '  display: flex !important;' +  
+    '  flex-direction: row !important;' +  
+    '  flex-wrap: wrap;' +  
+    '  align-items: center; gap: 0.6em;' +  
+    '  margin-top: 1em; width: 100%;' +  
     '}' +  
-    '.full-start-new__left .full-start__button { margin-right: 0; justify-content: center; }';  
+    '.full-start-new__left .full-start__button { margin-right: 0; }' +  
+    // права колонка займає решту ширини  
+    '.full-start-new__right { flex: 1 1 auto; min-width: 0; }';  
   document.head.appendChild(style);  
   
+  /* ---------- ПЕРЕНЕСЕННЯ ЕЛЕМЕНТІВ ---------- */  
   function moveInfo(e) {  
     if (e.type !== 'complite') return;  
   
@@ -38,6 +51,7 @@
     if (!details.length) return;  
     if (details.find('.full-descr__info--moved').length) return;  
   
+    // віковий рейтинг та статус → у блок "Детально"  
     function toInfo(el, name) {  
       if (!el.length || el.hasClass('hide')) return;  
       details.append(  
@@ -52,7 +66,7 @@
     toInfo(render.find('.full-start__pg'),     'Віковий рейтинг');  
     toInfo(render.find('.full-start__status'), 'Статус');  
   
-    // 4) перемістити кнопки під постер  
+    // кнопки → під постер  
     var left = render.find('.full-start-new__left');  
     if (left.length && !left.find('.full-start-new__buttons, .buttons--container').length) {  
       render.find('.full-start-new__buttons, .buttons--container').each(function () {  
@@ -61,6 +75,7 @@
     }  
   }  
   
+  /* ---------- ПІДПИСКА ---------- */  
   if (window.appready) {  
     Lampa.Listener.follow('full', moveInfo);  
   } else {  
