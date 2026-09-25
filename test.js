@@ -195,10 +195,10 @@
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.85em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
 
-        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; justify-content: center !important; flex-wrap: wrap !important; gap: 8px !important; width: 100% !important; max-width: 100% !important; padding: 0 5px !important; box-sizing: border-box !important; margin-top: 6px !important; order: 6; } ';
-        css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; display: flex !important; flex-direction: column !important; align-items: center !important; width: 52px !important; min-width: 45px !important; transition: transform 0.2s ease, opacity 0.2s ease; } ';
+        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; justify-content: space-around !important; align-items: center !important; width: 100% !important; max-width: 100% !important; padding: 0 15px !important; box-sizing: border-box !important; margin-top: 4px !important; order: 6; } ';
+        css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; display: flex !important; flex-direction: column !important; align-items: center !important; width: 42px !important; min-width: 38px !important; transition: transform 0.2s ease, opacity 0.2s ease; } ';
         css += '.full-start-new .full-start__button:active { transform: scale(0.9); opacity: 0.7; } ';
-        css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 24px !important; height: 24px !important; margin-bottom: 5px !important; fill: #fff !important; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5)); } ';
+        css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 20px !important; height: 20px !important; margin-bottom: 4px !important; fill: #fff !important; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5)); } ';
         css += '.full-start-new .full-start__button span { font-size: 8px !important; text-transform: uppercase !important; opacity: 0.75 !important; font-weight: 600; letter-spacing: 0.05em; } ';
         css += '} ';
 
@@ -305,7 +305,6 @@
             }
         }
 
-        // --- ТОЧНИЙ АЛГОРИТМ ВИБОРУ ФОНІВ БЕЗ СЛІВ (як у NewCard) ---
         if (data.images && data.images.backdrops) {
             var backdrops = data.images.backdrops.filter(function (elem) {
                 return elem.aspect_ratio > 1.5 && (!elem.iso_639_1 || elem.iso_639_1 === 'xx');
