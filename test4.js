@@ -7,7 +7,6 @@
     var pluginPath = 'https://crowley24.github.io/Icons/';
     var detailsCache = {}; 
     var currentActiveId = null;
-    var badgesConfigCache = null; // Кеш для конфігу бейджів з GitHub
     
     var settings_list = [
         { id: 'mobile_interface_animation', default: true },
@@ -31,6 +30,28 @@
             Lampa.Storage.set(opt.id, opt.default);
         }
     });
+
+    // Масив бейджів з вашими регулярними виразами та посиланнями на картинки
+    var eliteBadgesConfig = [
+        { id: '4k-ultra-hd', pattern: /(?i)\b(4k|2160p|uhd|ultra\s*hd)\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/4k_ultra_hd.png' },
+        { id: '1080p-full-hd', pattern: /(?i)\b(1080p|fhd|full\s*hd)\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/1080p_full_hd.png' },
+        { id: '720p-hd', pattern: /(?i)\b720p\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/720p_hd.png' },
+        { id: 'dolby-vision', pattern: /(?i)\b(dolby\s*vision|dovi|dv)\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_vision.png' },
+        { id: 'hdr10-plus', pattern: /(?i)\b(hdr10\+|hdr10\s*plus\b|hdr\s*10\s*\+)/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr10_plus.png' },
+        { id: 'hdr10', pattern: /(?i)\b(hdr10|hdr\s*10)\b(?!\s*\+|\s*plus)/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr10.png' },
+        { id: 'hdr', pattern: /(?i)\bhdr\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr.png' },
+        { id: 'sdr', pattern: /(?i)\bsdr\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/SDR_transparent_4x.png' },
+        { id: 'dolby-atmos', pattern: /(?i)\b(dolby\s*atmos|atmos)\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_atmos.png' },
+        { id: 'truehd', pattern: /(?i)\b(truehd|true\s*hd|dolby\s*truehd)\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/truehd.png' },
+        { id: 'dolby-digital-plus', pattern: /(?i)\b(ddp[\s._-]*[0-9][\s._-]*[0-9]|ddp|dd\+|dolby[\s._-]*digital[\s._-]*plus|e-?ac-?3)(?![a-z])/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_digital_plus.png' },
+        { id: 'dolby-digital', pattern: /(?i)\b(dd[\s._-]*[0-9][\s._-]*[0-9]|dd|dolby[\s._-]*digital|ac-?3)(?![\s._-]*plus|\+|p|[a-z])/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_digital.png' },
+        { id: 'dts-hd-master-audio', pattern: /(?i)\b(dts[\s._-]*hd[\s._-]*ma|dtshd\s*ma|dts[\s._-]*hd[\s._-]*master)\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts_hd_master_audio.png' },
+        { id: 'dts-hd', pattern: /(?i)\b(dts[\s._-]*hd|dtshd)(?![\s._-]*(ma|master)|ma)\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts_hd.png' },
+        { id: 'dts', pattern: /(?i)\bdts\b(?![\s._:-]*(x|hd))/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts.png' },
+        // Додатково підтягнемо локальні за потреби або збережемо сумісність для Укр/Дуб якщо є в каталозі
+        'UKR': { imageURL: pluginPath + 'UKR.svg' },
+        'DUB': { imageURL: pluginPath + 'DUB.svg' }
+    };
 
     var ratingIcons = {
         tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',
@@ -336,60 +357,33 @@
         });
     }
 
-    function loadEliteBadgesConfig(callback) {
-        if (badgesConfigCache) {
-            callback(badgesConfigCache);
-            return;
-        }
-
-        $.ajax({
-            url: 'https://raw.githubusercontent.com/crowley24/crowley24.github.io/main/Icons/Badges.json',
-            type: 'GET',
-            dataType: 'json',
-            success: function (data) {
-                badgesConfigCache = data;
-                callback(data);
-            },
-            error: function () {
-                callback([]);
-            }
-        });
-    }
-
-    function getEliteBadges(results, callback) {
+    // Скануємо результати за допомогою ваших регулярних виразів
+    function getEliteBadges(results) {
         var foundBadges = [];
-        if (!results) {
-            callback(foundBadges);
-            return;
-        }
+        if (!results) return foundBadges;
 
+        // Збираємо весь текст з перших 15 результатів парсеру
         var combinedText = '';
         results.slice(0, 15).forEach(function(item) {
             combinedText += ' ' + (item.Title || item.title || '');
         });
 
-        loadEliteBadgesConfig(function(config) {
-            config.forEach(function(badge) {
-                if (badge.pattern) {
-                    try {
-                        var reg = new RegExp(badge.pattern, 'i');
-                        if (reg.test(combinedText)) {
-                            foundBadges.push(badge.imageURL);
-                        }
-                    } catch (e) {}
-                }
-            });
+        eliteBadgesConfig.forEach(function(badge) {
+            if (badge.pattern && badge.pattern.test(combinedText)) {
+                // Запобігаємо дублюванню конфліктних типів (наприклад, звичайний HDR при наявності HDR10 або Dolby Vision, якщо потрібно, або залишаємо як є)
+                foundBadges.push(badge.imageURL);
+            }
+        });
 
-            var hasUkr = /ukr|укр/i.test(combinedText);
-            var hasDub = /dub|дуб/i.test(combinedText);
-            if (hasUkr) foundBadges.push(pluginPath + 'UKR.svg');
-            if (hasDub) foundBadges.push(pluginPath + 'DUB.svg');
+        // Також перевіримо на наявность УКР / ДУБ
+        var hasUkr = /ukr|укр/i.test(combinedText);
+        var hasDub = /dub|дуб/i.test(combinedText);
+        if (hasUkr) foundBadges.push(pluginPath + 'UKR.svg');
+        if (hasDub) foundBadges.push(pluginPath + 'DUB.svg');
 
-            var uniqueBadges = foundBadges.filter(function(elem, pos, arr) {
-                return arr.indexOf(elem) === pos;
-            });
-
-            callback(uniqueBadges);
+        // Унікалізуємо масив іконок
+        return foundBadges.filter(function(elem, pos, arr) {
+            return arr.indexOf(elem) === pos;
         });
     }
 
@@ -468,27 +462,18 @@
                     $qRow.append($cubItem);
                 }
 
-                if (Lampa.Storage.get('mobile_interface_quality')) {
-                    try {
-                        var searchTitle = movie.title || movie.name || '';
-                        var parserApi = Lampa.Parser || window.lampa_parser;
-                        
-                        if (parserApi && typeof parserApi.get === 'function') {
-                            parserApi.get({ search: searchTitle, movie: movie, page: 1 }, function(res) {
-                                if (res && Array.isArray(res.Results)) {
-                                    getEliteBadges(res.Results, function(eliteBadgesList) {
-                                        eliteBadgesList.forEach(function(imgUrl) { 
-                                            var $badge = $('<div class="quality-item wave-item"><img src="' + imgUrl + '"></div>');
-                                            $badge.css('--item-index', globalIndex++);
-                                            $qRow.append($badge);
-                                        });
-                                    });
-                                }
+                if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Parser && Lampa.Parser.get) {
+                    Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
+                        if (res && Array.isArray(res.Results)) {
+                            var eliteBadgesList = getEliteBadges(res.Results);
+                            
+                            eliteBadgesList.forEach(function(imgUrl) { 
+                                var $badge = $('<div class="quality-item wave-item"><img src="' + imgUrl + '"></div>');
+                                $badge.css('--item-index', globalIndex++);
+                                $qRow.append($badge);
                             });
                         }
-                    } catch (err) {
-                        console.log('MobileInterface: Parser error ->', err);
-                    }
+                    });
                 }
             }
         });
@@ -510,6 +495,7 @@
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_logo_size_v2', type: 'select', values: { '125': 'Малий', '150': 'Середній', '180': 'Стандартний', '210': 'Великий' }, default: '125' }, field: { name: 'Висота логотипу тайтлу' }, onChange: applyStyles });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_show_tagline', type: 'trigger', default: true }, field: { name: 'Відображати слоган' }, onChange: applyStyles });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_blocks_gap', type: 'select', values: { '8px': 'Компактний', '12px': 'Стандартний', '18px': 'Просторий', '24px': 'Панорамний' }, default: '8px' }, field: { name: 'Відступи між блоками' }, onChange: applyStyles });
+        Lampa.SettingsApi.addParserParam = Lampa.SettingsApi.addParam; 
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_ratings_size', type: 'select', values: { '0.4em': 'Дрібний', '0.45em': 'Звичайний', '0.5em': 'Великий', '0.55em': 'Дуже великий' }, default: '0.45em' }, field: { name: 'Розмір шрифту інфо-блоків' }, onChange: applyStyles });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_studios', type: 'trigger', default: true }, field: { name: 'Показувати логотип студії' } });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_quality', type: 'trigger', default: true }, field: { name: 'Бейджі якості та звуку' } });
