@@ -144,7 +144,7 @@
         css += '.background { background: #000 !important; } ';
         
         css += '.full-start-new { position: relative !important; } ';
-        css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 60vh !important; ';
+        css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 62vh !important; ';
         css += (isUIAnim ? 'animation: poster_fade_in 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards; ' : '') + '} ';
         
         css += '.full-start-new__poster img { filter: none !important; ';
@@ -152,7 +152,8 @@
         css += 'transform-origin: center center !important; transition: opacity 1.2s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
         
-        css += '.full-start-new__right { background: none !important; margin-top: -150px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; padding: 0 10px !important; gap: ' + blocksGap + ' !important; position: relative !important; } ';
+        /* Змінено margin-top з -160px на -210px для зменшення пустого місця */
+        css += '.full-start-new__right { background: none !important; margin-top: -210px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; padding: 0 10px !important; gap: ' + blocksGap + ' !important; position: relative !important; } ';
         
         var chosenAnimName = 'anim_' + animEffect;
         var animTiming = animEffect === 'elastic' ? 'cubic-bezier(0.34, 1.56, 0.64, 1)' : 'cubic-bezier(0.16, 1, 0.3, 1)';
@@ -174,20 +175,19 @@
         var loopAnimName = badgeAnim !== 'none' ? 'badge_anim_' + badgeAnim : '';
         var loopDuration = badgeAnim === 'spin_slow' ? '4s' : (badgeAnim === 'breathe' ? '3s' : '2.5s');
 
-        // Послідовна каскадна анімація (хвиля) для кожного бейджя окремо
         css += '.wave-item { transform-origin: center center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); ';
         if (isUIAnim) {
             css += 'opacity: 0; animation: wave_cascade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards';
             if (badgeAnim !== 'none') {
                 css += ', ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite';
-                css += '; animation-delay: calc(0.35s + (var(--item-index, 0) * 0.1s)), calc(1s + (var(--item-index, 0) * 0.15s))';
+                css += '; animation-delay: calc(0.35s + (var(--item-index) * 0.08s)), calc(1s + (var(--item-index) * 0.15s))';
             } else {
-                css += '; animation-delay: calc(0.35s + (var(--item-index, 0) * 0.1s))';
+                css += '; animation-delay: calc(0.35s + (var(--item-index) * 0.08s))';
             }
             css += '; will-change: transform, opacity, filter; ';
         } else if (badgeAnim !== 'none') {
             css += 'animation: ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite; ';
-            css += 'animation-delay: calc(var(--item-index, 0) * 0.15s); ';
+            css += 'animation-delay: calc(var(--item-index) * 0.15s); ';
         }
         css += '} ';
 
@@ -199,14 +199,14 @@
             css += 'opacity: 0; animation: wave_cascade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards';
             if (badgeAnim !== 'none') {
                 css += ', ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite';
-                css += '; animation-delay: calc(0.35s + (var(--item-index, 0) * 0.1s)), calc(1s + (var(--item-index, 0) * 0.15s))';
+                css += '; animation-delay: calc(0.35s + (var(--item-index) * 0.08s)), calc(1s + (var(--item-index) * 0.15s))';
             } else {
-                css += '; animation-delay: calc(0.35s + (var(--item-index, 0) * 0.1s))';
+                css += '; animation-delay: calc(0.35s + (var(--item-index) * 0.08s))';
             }
             css += '; will-change: transform, opacity, filter; ';
         } else if (badgeAnim !== 'none') {
             css += 'animation: ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite; ';
-            css += 'animation-delay: calc(var(--item-index, 0) * 0.15s); ';
+            css += 'animation-delay: calc(var(--item-index) * 0.15s); ';
         }
         css += '} ';
         css += '.quality-item img { height: 100%; width: auto; max-width: 60px; object-fit: contain; } ';
@@ -214,17 +214,11 @@
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.85em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
 
-        // Медійні кнопки
-        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; justify-content: center !important; align-items: center !important; width: 100% !important; max-width: 100% !important; padding: 0 !important; box-sizing: border-box !important; margin-top: 2px !important; margin-bottom: 2px !important; gap: 4px !important; order: 6; } ';
-        css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; display: flex !important; flex-direction: column !important; align-items: center !important; width: 38px !important; min-width: 34px !important; padding: 0 !important; margin: 0 2px !important; transition: transform 0.2s ease, opacity 0.2s ease; } ';
+        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; justify-content: space-around !important; align-items: center !important; width: 100% !important; max-width: 100% !important; padding: 0 4px !important; box-sizing: border-box !important; margin-top: 4px !important; order: 6; } ';
+        css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; display: flex !important; flex-direction: column !important; align-items: center !important; width: 42px !important; min-width: 36px !important; padding: 0 !important; transition: transform 0.2s ease, opacity 0.2s ease; } ';
         css += '.full-start-new .full-start__button:active { transform: scale(0.9); opacity: 0.7; } ';
         css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 24px !important; height: 24px !important; margin-bottom: 4px !important; fill: #fff !important; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5)); } ';
         css += '.full-start-new .full-start__button span { font-size: 9px !important; text-transform: uppercase !important; opacity: 0.75 !important; font-weight: 600; letter-spacing: 0.05em; } ';
-        
-        // Чітке центрування та підтягування блоку "Детально" й опису під медійні кнопки
-        css += '.full-start__head, .full-start-new__head, .full-start__descr, .full-start-new__descr { text-align: center !important; justify-content: center !important; width: 100% !important; margin-left: auto !important; margin-right: auto !important; } ';
-        css += '.full-start__head, .full-start-new__head { display: flex !important; align-items: center !important; margin-top: 2px !important; margin-bottom: 0 !important; order: 7; } ';
-        css += '.full-start__descr, .full-start-new__descr { font-family: "Inter", system-ui, -apple-system, sans-serif !important; font-size: 0.95em !important; line-height: 1.45 !important; opacity: 0.9 !important; margin-top: 2px !important; margin-bottom: 0 !important; order: 8; } ';
         css += '} ';
 
         style.textContent = css;
