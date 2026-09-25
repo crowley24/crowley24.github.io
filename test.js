@@ -305,25 +305,45 @@
             }
         }
 
-        // --- SMART SELECTION (Інтегровано з NewCard) ---
-        if (data.images && data.images.backdrops && data.images.backdrops.length > 1) {
-            var cleanBackdrops = data.images.backdrops.filter(function(b) { return b.aspect_ratio > 1.5; });
-            if (cleanBackdrops.length > 0) {
+        // --- ТОЧНИЙ АЛГОРИТМ ВИБОРУ ФОНІВ ЯК У NewCard ---
+        if (data.images && data.images.backdrops) {
+            var backdrops = data.images.backdrops.filter(function (elem) {
+                return elem.aspect_ratio > 1.5;
+            });
+
+            if (backdrops.length > 0) {
                 var currentLang = Lampa.Storage.get('language') || 'uk';
                 
-                var langBackdrops = cleanBackdrops.filter(function(b) { return b.iso_639_1 === currentLang; });
-                var neutralBackdrops = cleanBackdrops.filter(function(b) { return !b.iso_639_1 || b.iso_639_1 === 'xx' || b.iso_639_1 === 'en'; });
-                var otherBackdrops = cleanBackdrops.filter(function(b) { 
-                    return b.iso_639_1 !== currentLang && b.iso_639_1 && b.iso_639_1 !== 'xx' && b.iso_639_1 !== 'en'; 
+                // 1. Кадри поточної мови або нейтральні (без тексту / xx)
+                var filtered = backdrops.filter(function (elem) {
+                    return elem.iso_639_1 === currentLang || elem.iso_639_1 === 'xx' || !elem.iso_639_1;
                 });
 
-                otherBackdrops.sort(function(a, b) { return (b.vote_average || 0) - (a.vote_average || 0); });
+                // 2. Якщо таких мало, підмішуємо англійські
+                if (filtered.length < 3) {
+                    var english = backdrops.filter(function (elem) {
+                        return elem.iso_639_1 === 'en';
+                    });
+                    english.forEach(function (elem) {
+                        if (filtered.indexOf(elem) === -1) filtered.push(elem);
+                    });
+                }
 
-                var finalBackdrops = langBackdrops.concat(neutralBackdrops, otherBackdrops);
-                finalBackdrops = finalBackdrops.slice(0, 15);
+                // 3. Якщо все ще мало, беремо решту та сортуємо за рейтингом TMDb
+                if (filtered.length < 3) {
+                    var others = backdrops.filter(function (elem) {
+                        return filtered.indexOf(elem) === -1;
+                    });
+                    others.sort(function (a, b) {
+                        return (b.vote_average || 0) - (a.vote_average || 0);
+                    });
+                    others.forEach(function (elem) {
+                        if (filtered.indexOf(elem) === -1) filtered.push(elem);
+                    });
+                }
 
-                if (finalBackdrops.length > 0) {
-                    startPosterSlideshow($('.full-start-new__poster'), finalBackdrops);
+                if (filtered.length > 0) {
+                    startPosterSlideshow($('.full-start-new__poster'), filtered.slice(0, 15));
                 }
             }
         }
