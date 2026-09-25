@@ -174,38 +174,40 @@
         var loopAnimName = badgeAnim !== 'none' ? 'badge_anim_' + badgeAnim : '';
         var loopDuration = badgeAnim === 'spin_slow' ? '4s' : (badgeAnim === 'breathe' ? '3s' : '2.5s');
 
+        // Виправлена каскадна анімація (хвиля) з урахуванням індексу кожного елемента
         css += '.wave-item { transform-origin: center center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); ';
         if (isUIAnim) {
             css += 'opacity: 0; animation: wave_cascade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards';
             if (badgeAnim !== 'none') {
                 css += ', ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite';
-                css += '; animation-delay: calc(0.35s + (var(--item-index) * 0.08s)), calc(1s + (var(--item-index) * 0.15s))';
+                css += '; animation-delay: calc(0.35s + (var(--item-index, 0) * 0.1s)), calc(1s + (var(--item-index, 0) * 0.15s))';
             } else {
-                css += '; animation-delay: calc(0.35s + (var(--item-index) * 0.08s))';
+                css += '; animation-delay: calc(0.35s + (var(--item-index, 0) * 0.1s))';
             }
             css += '; will-change: transform, opacity, filter; ';
         } else if (badgeAnim !== 'none') {
             css += 'animation: ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite; ';
-            css += 'animation-delay: calc(var(--item-index) * 0.15s); ';
+            css += 'animation-delay: calc(var(--item-index, 0) * 0.15s); ';
         }
         css += '} ';
 
         css += '.quality-row-inline .plugin-rating-item { display: flex; align-items: center; gap: 4px; font-weight: 700; color: #fff; font-size: 0.95em; padding: 2px 0; } ';
         css += '.quality-row-inline .plugin-rating-item img { height: 1em; width: auto; } ';
         
+        // Поширення хвилі й на бейджі якості/форматів
         css += '.quality-item { transform-origin: center center; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8)); height: 1.15em; display: flex; align-items: center; justify-content: flex-end; ';
         if (isUIAnim) {
             css += 'opacity: 0; animation: wave_cascade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards';
             if (badgeAnim !== 'none') {
                 css += ', ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite';
-                css += '; animation-delay: calc(0.35s + (var(--item-index) * 0.08s)), calc(1s + (var(--item-index) * 0.15s))';
+                css += '; animation-delay: calc(0.35s + (var(--item-index, 0) * 0.1s)), calc(1s + (var(--item-index, 0) * 0.15s))';
             } else {
-                css += '; animation-delay: calc(0.35s + (var(--item-index) * 0.08s))';
+                css += '; animation-delay: calc(0.35s + (var(--item-index, 0) * 0.1s))';
             }
             css += '; will-change: transform, opacity, filter; ';
         } else if (badgeAnim !== 'none') {
             css += 'animation: ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite; ';
-            css += 'animation-delay: calc(var(--item-index) * 0.15s); ';
+            css += 'animation-delay: calc(var(--item-index, 0) * 0.15s); ';
         }
         css += '} ';
         css += '.quality-item img { height: 100%; width: auto; max-width: 60px; object-fit: contain; } ';
@@ -213,16 +215,17 @@
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.85em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
 
-        // Точне центрування медіакнопок
+        // Кнопки дій
         css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; justify-content: center !important; align-items: center !important; width: 100% !important; max-width: 100% !important; padding: 0 !important; box-sizing: border-box !important; margin-top: 2px !important; margin-bottom: 2px !important; gap: 4px !important; order: 6; } ';
         css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; display: flex !important; flex-direction: column !important; align-items: center !important; width: 38px !important; min-width: 34px !important; padding: 0 !important; margin: 0 2px !important; transition: transform 0.2s ease, opacity 0.2s ease; } ';
         css += '.full-start-new .full-start__button:active { transform: scale(0.9); opacity: 0.7; } ';
         css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 24px !important; height: 24px !important; margin-bottom: 4px !important; fill: #fff !important; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5)); } ';
         css += '.full-start-new .full-start__button span { font-size: 9px !important; text-transform: uppercase !important; opacity: 0.75 !important; font-weight: 600; letter-spacing: 0.05em; } ';
         
-        // Точкове центрування виключно напису "Детально" та опису фільму (без впливу на інші елементи)
-        css += '.full-start__descr, .full-start-new__descr { text-align: center !important; margin-top: 2px !important; margin-bottom: 0 !important; width: 100% !important; order: 7; } ';
-        css += '.full-start__head { justify-content: center !important; text-align: center !important; } ';
+        // Повне центрування та зміна шрифту для блоку "Детально" та опису фільму
+        css += '.full-start__head, .full-start-new__head, .full-start__descr, .full-start-new__descr { text-align: center !important; justify-content: center !important; width: 100% !important; margin-left: auto !important; margin-right: auto !important; } ';
+        css += '.full-start__head { display: flex !important; align-items: center !important; } ';
+        css += '.full-start__descr, .full-start-new__descr { font-family: "Inter", system-ui, -apple-system, sans-serif !important; font-size: 0.95em !important; line-height: 1.45 !important; opacity: 0.9 !important; margin-top: 6px !important; margin-bottom: 0 !important; order: 7; } ';
         css += '} ';
 
         style.textContent = css;
