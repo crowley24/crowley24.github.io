@@ -31,23 +31,23 @@
         }
     });
 
-    // Масив бейджів з регулярними виразами та посиланнями на Elite-Badges
+    // Виправлений масив бейджів з правильним синтаксисом RegExp
     var eliteBadgesConfig = [
-        { id: '4k-ultra-hd', pattern: /(?i)\b(4k|2160p|uhd|ultra\s*hd)\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/4k_ultra_hd.png' },
-        { id: '1080p-full-hd', pattern: /(?i)\b(1080p|fhd|full\s*hd)\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/1080p_full_hd.png' },
-        { id: '720p-hd', pattern: /(?i)\b720p\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/720p_hd.png' },
-        { id: 'dolby-vision', pattern: /(?i)\b(dolby\s*vision|dovi|dv)\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_vision.png' },
-        { id: 'hdr10-plus', pattern: /(?i)\b(hdr10\+|hdr10\s*plus\b|hdr\s*10\s*\+)/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr10_plus.png' },
-        { id: 'hdr10', pattern: /(?i)\b(hdr10|hdr\s*10)\b(?!\s*\+|\s*plus)/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr10.png' },
-        { id: 'hdr', pattern: /(?i)\bhdr\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr.png' },
-        { id: 'sdr', pattern: /(?i)\bsdr\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/SDR_transparent_4x.png' },
-        { id: 'dolby-atmos', pattern: /(?i)\b(dolby\s*atmos|atmos)\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_atmos.png' },
-        { id: 'truehd', pattern: /(?i)\b(truehd|true\s*hd|dolby\s*truehd)\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/truehd.png' },
-        { id: 'dolby-digital-plus', pattern: /(?i)\b(ddp[\s._-]*[0-9][\s._-]*[0-9]|ddp|dd\+|dolby[\s._-]*digital[\s._-]*plus|e-?ac-?3)(?![a-z])/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_digital_plus.png' },
-        { id: 'dolby-digital', pattern: /(?i)\b(dd[\s._-]*[0-9][\s._-]*[0-9]|dd|dolby[\s._-]*digital|ac-?3)(?![\s._-]*plus|\+|p|[a-z])/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_digital.png' },
-        { id: 'dts-hd-master-audio', pattern: /(?i)\b(dts[\s._-]*hd[\s._-]*ma|dtshd\s*ma|dts[\s._-]*hd[\s._-]*master)\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts_hd_master_audio.png' },
-        { id: 'dts-hd', pattern: /(?i)\b(dts[\s._-]*hd|dtshd)(?![\s._-]*(ma|master)|ma)\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts_hd.png' },
-        { id: 'dts', pattern: /(?i)\bdts\b(?![\s._:-]*(x|hd))/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts.png' }
+        { id: '4k-ultra-hd', pattern: /\b(4k|2160p|uhd|ultra\s*hd)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/4k_ultra_hd.png' },
+        { id: '1080p-full-hd', pattern: /\b(1080p|fhd|full\s*hd)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/1080p_full_hd.png' },
+        { id: '720p-hd', pattern: /\b720p\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/720p_hd.png' },
+        { id: 'dolby-vision', pattern: /\b(dolby\s*vision|dovi|dv)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_vision.png' },
+        { id: 'hdr10-plus', pattern: /\b(hdr10\+|hdr10\s*plus\b|hdr\s*10\s*\+)/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr10_plus.png' },
+        { id: 'hdr10', pattern: /\b(hdr10|hdr\s*10)\b(?!\s*\+|\s*plus)/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr10.png' },
+        { id: 'hdr', pattern: /\bhdr\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr.png' },
+        { id: 'sdr', pattern: /\bsdr\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/SDR_transparent_4x.png' },
+        { id: 'dolby-atmos', pattern: /\b(dolby\s*atmos|atmos)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_atmos.png' },
+        { id: 'truehd', pattern: /\b(truehd|true\s*hd|dolby\s*truehd)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/truehd.png' },
+        { id: 'dolby-digital-plus', pattern: /\b(ddp[\s._-]*[0-9][\s._-]*[0-9]|ddp|dd\+|dolby[\s._-]*digital[\s._-]*plus|e-?ac-?3)(?![a-z])/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_digital_plus.png' },
+        { id: 'dolby-digital', pattern: /\b(dd[\s._-]*[0-9][\s._-]*[0-9]|dd|dolby[\s._-]*digital|ac-?3)(?![\s._-]*plus|\+|p|[a-z])/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_digital.png' },
+        { id: 'dts-hd-master-audio', pattern: /\b(dts[\s._-]*hd[\s._-]*ma|dtshd\s*ma|dts[\s._-]*hd[\s._-]*master)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts_hd_master_audio.png' },
+        { id: 'dts-hd', pattern: /\b(dts[\s._-]*hd|dtshd)(?![\s._-]*(ma|master)|ma)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts_hd.png' },
+        { id: 'dts', pattern: /\bdts\b(?![\s._:-]*(x|hd))/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts.png' }
     ];
 
     var ratingIcons = {
@@ -354,7 +354,6 @@
         });
     }
 
-    // Скануємо результати за допомогою регулярних виразів та підтягуємо бейджі
     function getEliteBadges(results) {
         var foundBadges = [];
         if (!results) return foundBadges;
@@ -370,7 +369,6 @@
             }
         });
 
-        // Перевірка на мову (УКР / ДУБ)
         var hasUkr = /ukr|укр/i.test(combinedText);
         var hasDub = /dub|дуб/i.test(combinedText);
         if (hasUkr) foundBadges.push(pluginPath + 'UKR.svg');
