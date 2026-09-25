@@ -4,7 +4,6 @@
      * ПЕРЕМІННІ ТА КЕШУВАННЯ
      */
     var slideshowTimer = null; 
-    var pluginPath = 'https://crowley24.github.io/Icons/';
     var badgesPath = 'https://raw.githubusercontent.com/crowley24/crowley24.github.io/main/Badges/';
     var detailsCache = {}; 
     var currentActiveId = null;
@@ -32,21 +31,18 @@
         }
     });
 
-    // Масив бейджів з посиланнями на вашу пакку Badges у репозиторії
+    // Масив бейджів з посиланнями на папку Badges у репозиторії
     var eliteBadgesConfig = [
-        { id: '4k-ultra-hd', pattern: /\b(4k|2160p|uhd|ultra\s*hd)\b/i, imageURL: badgesPath + '4k_ultra_hd.png' },
-        { id: '1080p-full-hd', pattern: /\b(1080p|fhd|full\s*hd)\b/i, imageURL: badgesPath + '1080p_full_hd.png' },
-        { id: '720p-hd', pattern: /\b720p\b/i, imageURL: badgesPath + '720p_hd.png' },
+        { id: '4k-ultra-hd', group: 'resolution', priority: 3, pattern: /\b(4k|2160p|uhd|ultra\s*hd)\b/i, imageURL: badgesPath + '4k_ultra_hd.png' },
+        { id: '1080p-full-hd', group: 'resolution', priority: 2, pattern: /\b(1080p|fhd|full\s*hd)\b/i, imageURL: badgesPath + '1080p_full_hd.png' },
+        { id: '720p-hd', group: 'resolution', priority: 1, pattern: /\b720p\b/i, imageURL: badgesPath + '720p_hd.png' },
         { id: 'dolby-vision', pattern: /\b(dolby\s*vision|dovi|dv)\b/i, imageURL: badgesPath + 'dolby_vision.png' },
-        { id: 'hdr10-plus', pattern: /\b(hdr10\+|hdr10\s*plus\b|hdr\s*10\s*\+)/i, imageURL: badgesPath + 'hdr10_plus.png' },
-        { id: 'hdr10', pattern: /\b(hdr10|hdr\s*10)\b(?!\s*\+|\s*plus)/i, imageURL: badgesPath + 'hdr10.png' }, // за потреби додайте hdr10.png в папку, якщо з'явиться
+        { id: 'hdr10-plus', pattern: /\b(hdr10\+|hdr10\s*plus\s*|hdr\s*10\s*\+)/i, imageURL: badgesPath + 'hdr10_plus.png' },
         { id: 'hdr', pattern: /\bhdr\b/i, imageURL: badgesPath + 'hdr.png' },
         { id: 'sdr', pattern: /\bsdr\b/i, imageURL: badgesPath + 'SDR_transparent_4x.png' },
         { id: 'dolby-atmos', pattern: /\b(dolby\s*atmos|atmos)\b/i, imageURL: badgesPath + 'dolby_atmos.png' },
-        { id: 'truehd', pattern: /\b(truehd|true\s*hd|dolby\s*truehd)\b/i, imageURL: badgesPath + 'truehd.png' }, // за потреби додайте файл у репо
         { id: 'dolby-digital-plus', pattern: /\b(ddp[\s._-]*[0-9][\s._-]*[0-9]|ddp|dd\+|dolby[\s._-]*digital[\s._-]*plus|e-?ac-?3)(?![a-z])/i, imageURL: badgesPath + 'dolby_digital_plus.png' },
         { id: 'dolby-digital', pattern: /\b(dd[\s._-]*[0-9][\s._-]*[0-9]|dd|dolby[\s._-]*digital|ac-?3)(?![\s._-]*plus|\+|p|[a-z])/i, imageURL: badgesPath + 'dolby_digital.png' },
-        { id: 'dts-hd-master-audio', pattern: /\b(dts[\s._-]*hd[\s._-]*ma|dtshd\s*ma|dts[\s._-]*hd[\s._-]*master)\b/i, imageURL: badgesPath + 'dts_hd_master_audio.png' }, // за потреби додайте файл у репо
         { id: 'dts-hd', pattern: /\b(dts[\s._-]*hd|dtshd)(?![\s._-]*(ma|master)|ma)\b/i, imageURL: badgesPath + 'dts_hd.png' },
         { id: 'dts', pattern: /\bdts\b(?![\s._:-]*(x|hd))/i, imageURL: badgesPath + 'dts.png' }
     ];
@@ -364,16 +360,31 @@
             combinedText += ' ' + (item.Title || item.title || '');
         });
 
+        var maxResolutionPriority = -1;
+        var bestResolutionUrl = null;
+
         eliteBadgesConfig.forEach(function(badge) {
             if (badge.pattern && badge.pattern.test(combinedText)) {
-                foundBadges.push(badge.imageURL);
+                if (badge.group === 'resolution') {
+                    if (badge.priority > maxResolutionPriority) {
+                        maxResolutionPriority = badge.priority;
+                        bestResolutionUrl = badge.imageURL;
+                    }
+                } else {
+                    foundBadges.push(badge.imageURL);
+                }
             }
         });
 
+        // Додаємо лише найкращу якість екрана на початок списку бейджів
+        if (bestResolutionUrl) {
+            foundBadges.unshift(bestResolutionUrl);
+        }
+
         var hasUkr = /ukr|укр/i.test(combinedText);
         var hasDub = /dub|дуб/i.test(combinedText);
-        if (hasUkr) foundBadges.push(pluginPath + 'UKR.svg');
-        if (hasDub) foundBadges.push(pluginPath + 'DUB.svg');
+        if (hasUkr) foundBadges.push(badgesPath + 'UKR.svg');
+        if (hasDub) foundBadges.push(badgesPath + 'DUB.svg');
 
         return foundBadges.filter(function(elem, pos, arr) {
             return arr.indexOf(elem) === pos;
