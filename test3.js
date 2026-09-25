@@ -112,24 +112,33 @@
     return 'https://image.tmdb.org/t/p/w1280' + path;  
   }  
   
-  function swapCardBackground(render, url) {  
+    function swapCardBackground(render, url) {  
     var swapped = false;  
   
-    // якщо в картці є img-бекграунд — підміняємо src  
-    var img = render.find('.full-start__background img, .full-start-new__background img');  
-    if (img.length) {  
-      img.attr('src', url).removeAttr('data-src');  
+    // 1) власний фон картки — пишемо background-image на сам div  
+    render.find('.full-start__background, .full-start-new__background').each(function () {  
+      this.style.backgroundImage    = 'url("' + url + '")';  
+      this.style.backgroundSize     = 'cover';  
+      this.style.backgroundPosition = 'center';  
+      swapped = true;  
+  
+      // якщо всередині все ж є <img> — підміняємо і його  
+      var img = this.querySelector('img');  
+      if (img) { img.src = url; img.removeAttribute('data-src'); }  
+    });  
+  
+    // 2) глобальний шар Lampa — видимий .background__one/.background__two  
+    var visible = document.querySelector('.background__one.visible, .background__two.visible');  
+    if (visible) {  
+      visible.style.backgroundImage = 'url("' + url + '")';  
       swapped = true;  
     }  
   
-    // і завжди міняємо глобальний фоновий шар Lampa — саме він видимий  
-    try {  
-      Lampa.Background.change(url);  
-      swapped = true;  
-    } catch (e) {}  
+    // 3) стандартний API — запасний варіант  
+    try { Lampa.Background.change(url); swapped = true; } catch (e) {}  
   
     return swapped;  
-  }  
+  }
   
   function startSlideshow(e) {  
     if (!slideshowEnabled()) return;  
