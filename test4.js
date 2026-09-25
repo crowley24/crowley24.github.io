@@ -31,7 +31,7 @@
         }
     });
 
-    // Масив бейджів з регулярними виразами та посиланнями на Elite-Badges
+    // Масив бейджів з вашими регулярними виразами та посиланнями на картинки
     var eliteBadgesConfig = [
         { id: '4k-ultra-hd', pattern: /(?i)\b(4k|2160p|uhd|ultra\s*hd)\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/4k_ultra_hd.png' },
         { id: '1080p-full-hd', pattern: /(?i)\b(1080p|fhd|full\s*hd)\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/1080p_full_hd.png' },
@@ -47,8 +47,11 @@
         { id: 'dolby-digital', pattern: /(?i)\b(dd[\s._-]*[0-9][\s._-]*[0-9]|dd|dolby[\s._-]*digital|ac-?3)(?![\s._-]*plus|\+|p|[a-z])/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_digital.png' },
         { id: 'dts-hd-master-audio', pattern: /(?i)\b(dts[\s._-]*hd[\s._-]*ma|dtshd\s*ma|dts[\s._-]*hd[\s._-]*master)\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts_hd_master_audio.png' },
         { id: 'dts-hd', pattern: /(?i)\b(dts[\s._-]*hd|dtshd)(?![\s._-]*(ma|master)|ma)\b/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts_hd.png' },
-        { id: 'dts', pattern: /(?i)\bdts\b(?![\s._:-]*(x|hd))/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts.png' }
-    ];
+        { id: 'dts', pattern: /(?i)\bdts\b(?![\s._:-]*(x|hd))/, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts.png' },
+        // Додатково підтягнемо локальні за потреби або збережемо сумісність для Укр/Дуб якщо є в каталозі
+        'UKR': { imageURL: pluginPath + 'UKR.svg' },
+        'DUB': { imageURL: pluginPath + 'DUB.svg' }
+    };
 
     var ratingIcons = {
         tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',
@@ -354,11 +357,12 @@
         });
     }
 
-    // Скануємо результати за допомогою регулярних виразів та підтягуємо бейджі
+    // Скануємо результати за допомогою ваших регулярних виразів
     function getEliteBadges(results) {
         var foundBadges = [];
         if (!results) return foundBadges;
 
+        // Збираємо весь текст з перших 15 результатів парсеру
         var combinedText = '';
         results.slice(0, 15).forEach(function(item) {
             combinedText += ' ' + (item.Title || item.title || '');
@@ -366,16 +370,18 @@
 
         eliteBadgesConfig.forEach(function(badge) {
             if (badge.pattern && badge.pattern.test(combinedText)) {
+                // Запобігаємо дублюванню конфліктних типів (наприклад, звичайний HDR при наявності HDR10 або Dolby Vision, якщо потрібно, або залишаємо як є)
                 foundBadges.push(badge.imageURL);
             }
         });
 
-        // Перевірка на мову (УКР / ДУБ)
+        // Також перевіримо на наявность УКР / ДУБ
         var hasUkr = /ukr|укр/i.test(combinedText);
         var hasDub = /dub|дуб/i.test(combinedText);
         if (hasUkr) foundBadges.push(pluginPath + 'UKR.svg');
         if (hasDub) foundBadges.push(pluginPath + 'DUB.svg');
 
+        // Унікалізуємо масив іконок
         return foundBadges.filter(function(elem, pos, arr) {
             return arr.indexOf(elem) === pos;
         });
