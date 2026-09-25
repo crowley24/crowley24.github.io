@@ -130,7 +130,6 @@
         css += '@keyframes anim_elastic { 0% { opacity: 0; transform: scale(0.7); } 70% { opacity: 1; transform: scale(1.04); } 100% { opacity: 1; transform: scale(1); } } ';
         css += '@keyframes anim_minimal { 0% { opacity: 0; transform: translate3d(0, 10px, 0); } 100% { opacity: 1; transform: translate3d(0, 0, 0); } } ';
         css += '@keyframes wave_cascade { 0% { opacity: 0; transform: scale(0.5) translateY(10px); filter: blur(4px); } 100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0px); } } ';
-        css += '@keyframes quality_fade_in { 0% { opacity: 0; transform: scale(0.7) translateY(8px); filter: blur(4px); } 100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0px); } } ';
         css += '@keyframes badge_anim_pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } } ';
         css += '@keyframes badge_anim_breathe { 0%, 100% { transform: scale(1); opacity: 0.85; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); } 50% { transform: scale(1.06); opacity: 1; filter: drop-shadow(0 0 10px rgba(255,255,255,0.6)); } } ';
         css += '@keyframes badge_anim_spin_slow { 0% { transform: rotate(0deg); } 25% { transform: rotate(4deg); } 75% { transform: rotate(-4deg); } 100% { transform: rotate(0deg); } } ';
@@ -194,15 +193,30 @@
         css += '.quality-row-inline .plugin-rating-item { display: flex; align-items: center; gap: 4px; font-weight: 700; color: #fff; font-size: 0.95em; padding: 2px 0; } ';
         css += '.quality-row-inline .plugin-rating-item img { height: 1em; width: auto; } ';
         
-        css += '.quality-item { height: 1.15em; display: flex; align-items: center; justify-content: flex-end; opacity: 0; animation: quality_fade_in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; } ';
-        css += '.quality-item img { height: 100%; width: auto; max-width: 60px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8)); } ';
+        // Виправлена анімація для бейджів якості (включно з каскадом та нескінченним циклом)
+        css += '.quality-item { transform-origin: center center; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8)); height: 1.15em; display: flex; align-items: center; justify-content: flex-end; ';
+        if (isUIAnim) {
+            css += 'opacity: 0; animation: wave_cascade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+            if (badgeAnim !== 'none') {
+                css += ', ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite';
+                css += '; animation-delay: calc(0.35s + (var(--item-index) * 0.08s)), calc(1s + (var(--item-index) * 0.15s))';
+            } else {
+                css += '; animation-delay: calc(0.35s + (var(--item-index) * 0.08s))';
+            }
+            css += '; will-change: transform, opacity, filter; ';
+        } else if (badgeAnim !== 'none') {
+            css += 'animation: ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite; ';
+            css += 'animation-delay: calc(var(--item-index) * 0.15s); ';
+        }
+        css += '} ';
+        css += '.quality-item img { height: 100%; width: auto; max-width: 60px; object-fit: contain; } ';
 
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.85em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
 
-        // Збільшені кнопки
-        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; justify-content: space-around !important; align-items: center !important; width: 100% !important; max-width: 100% !important; padding: 0 15px !important; box-sizing: border-box !important; margin-top: 4px !important; order: 6; } ';
-        css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; display: flex !important; flex-direction: column !important; align-items: center !important; width: 48px !important; min-width: 42px !important; transition: transform 0.2s ease, opacity 0.2s ease; } ';
+        // Оптимізовані кнопки (відступи зменшені, щоб нічого не вилазило за екран)
+        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; justify-content: space-around !important; align-items: center !important; width: 100% !important; max-width: 100% !important; padding: 0 4px !important; box-sizing: border-box !important; margin-top: 4px !important; order: 6; } ';
+        css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; display: flex !important; flex-direction: column !important; align-items: center !important; width: 42px !important; min-width: 36px !important; padding: 0 !important; transition: transform 0.2s ease, opacity 0.2s ease; } ';
         css += '.full-start-new .full-start__button:active { transform: scale(0.9); opacity: 0.7; } ';
         css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 24px !important; height: 24px !important; margin-bottom: 4px !important; fill: #fff !important; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5)); } ';
         css += '.full-start-new .full-start__button span { font-size: 9px !important; text-transform: uppercase !important; opacity: 0.75 !important; font-weight: 600; letter-spacing: 0.05em; } ';
@@ -478,7 +492,8 @@
                             var eliteBadgesList = getEliteBadges(res.Results);
                             
                             eliteBadgesList.forEach(function(imgUrl) { 
-                                var $badge = $('<div class="quality-item"><img src="' + imgUrl + '"></div>');
+                                var $badge = $('<div class="quality-item wave-item"><img src="' + imgUrl + '"></div>');
+                                $badge.css('--item-index', globalIndex++);
                                 $qRow.append($badge);
                             });
                         }
