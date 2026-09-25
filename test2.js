@@ -10,7 +10,7 @@
         { id: 'movie_card_logo_enabled', default: true },
         { id: 'movie_card_logo_studio', default: true },
         { id: 'movie_card_logo_tagline', default: true },
-        { id: 'movie_card_logo_size', default: '150' },
+        { id: 'movie_card_logo_size', default: '130' },
         { id: 'movie_card_logo_quality', default: 'w500' }
     ];
 
@@ -66,7 +66,7 @@
             document.head.appendChild(style);
         }
 
-        var lHeight = Lampa.Storage.get('movie_card_logo_size', '150'); 
+        var lHeight = Lampa.Storage.get('movie_card_logo_size', '130'); 
         var showStudio = Lampa.Storage.get('movie_card_logo_studio', true);
         var showTagline = Lampa.Storage.get('movie_card_logo_tagline', true);
         var isEnabled = Lampa.Storage.get('movie_card_logo_enabled', true);
@@ -74,8 +74,8 @@
         var css = '';
         
         if (isEnabled) {
-            css += '.full-start-new__title { display: flex !important; justify-content: flex-start !important; align-items: center !important; min-height: 50px; overflow: visible !important; } ';
-            css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 90vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';
+            css += '.full-start-new__title { display: flex !important; justify-content: flex-start !important; align-items: center !important; height: auto !important; min-height: unset !important; overflow: visible !important; width: 100% !important; box-sizing: border-box !important; margin: 4px 0 !important; } ';
+            css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 85vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';
             
             css += '.full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 4px 0 0 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; } ';
 
@@ -213,13 +213,13 @@
                 name: 'movie_card_logo_size', 
                 type: 'select', 
                 values: { 
-                    '75': 'Дуже малий', 
-                    '100': 'Малий', 
+                    '50': 'Дуже малий', 
+                    '80': 'Малий', 
                     '130': 'Стандартний', 
-                    '165': 'Великий', 
-                    '210': 'Дуже великий' 
+                    '180': 'Великий', 
+                    '240': 'Дуже великий' 
                 }, 
-                default: '150' 
+                default: '130' 
             }, 
             field: { name: 'Розмір логотипа назви фільму' }, 
             onChange: applyStyles 
