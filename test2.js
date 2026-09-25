@@ -68,44 +68,31 @@
     // приховати рік/країну над назвою  
     '.full-start-new__head, .full-start__tags { display: none !important; }' +  
   
-    // фон чіткий і яскравий + плавний fade для слайдшоу  
-    '.full-start__background, .full-start-new__background {' +  
+    // фон: чіткий на старті, плавне затемнення при скролі через filter brightness/contrast
+    '.full-start__background, .full-start-new__background, .background__one, .background__two {' +  
     '  opacity: 1 !important;' +  
-    '  filter: none !important;' +  
-    '  -webkit-filter: none !important;' +  
-    '  transition: opacity 0.4s ease;' +  
+    '  filter: brightness(1) contrast(1) !important;' +  
+    '  -webkit-filter: brightness(1) contrast(1) !important;' +  
+    '  transition: filter 0.4s ease, opacity 0.4s ease !important;' +  
     '}' +  
-    '.background__one.visible, .background__two.visible {' +  
-    '  opacity: 1 !important;' +  
-    '  filter: none !important;' +  
-    '  -webkit-filter: none !important;' +  
+    
+    // Стан фону під час скролу (затемнюємо арт)
+    '.full-start.is-scrolled .full-start__background,' + 
+    '.full-start.is-scrolled .full-start-new__background,' +
+    '.full-start.is-scrolled .background__one,' + 
+    '.full-start.is-scrolled .background__two {' +  
+    '  filter: brightness(0.4) contrast(1.1) !important;' +  
+    '  -webkit-filter: brightness(0.4) contrast(1.1) !important;' +  
     '}' +  
 
-    // Динамічний темний шар, який активується класом .is-scrolled
-    '.full-start-new, .full-start {' +  
-    '  position: relative !important;' +  
-    '}' +  
-    '.full-start-new::after, .full-start::after {' +  
-    '  content: "" !important;' +  
-    '  position: absolute !important;' +  
-    '  top: 0; left: 0; right: 0; bottom: 0;' +  
-    '  background: rgba(0,0,0,0) !important;' +  
-    '  pointer-events: none !important;' +  
-    '  z-index: 1 !important;' +  
-    '  transition: background 0.3s ease !important;' +  
-    '}' +  
-    '.full-start-new.is-scrolled::after, .full-start.is-scrolled::after {' +  
-    '  background: rgba(0,0,0,0.65) !important;' +  
-    '}' +  
-  
-    // рейтинг у верхній правий кут  
+    // Рейтинг: прибрати чорний фон, підняти вище в правий кут
     '.full-start-new__rate-line, .full-start__rate-line {' +  
     '  position: absolute !important;' +  
-    '  top: 1.5em; right: 1.5em; z-index: 5 !important;' +  
+    '  top: 1.0em !important; right: 1.5em !important; z-index: 5 !important;' +  
     '  margin: 0 !important;' +  
     '  display: flex; gap: 0.8em; align-items: center;' +  
-    '  background: rgba(0,0,0,0.45);' +  
-    '  padding: 0.4em 0.9em; border-radius: 0.5em;' +  
+    '  background: transparent !important;' +  
+    '  padding: 0 !important;' +  
     '}' +  
   
     // кнопки під верхнім блоком  
@@ -122,12 +109,15 @@
       var css = style.textContent;
       
       if (isEnabled) {
-          css += '.full-start-new__title { display: flex !important; justify-content: flex-start !important; align-items: center !important; height: auto !important; min-height: unset !important; overflow: visible !important; width: 100% !important; box-sizing: border-box !important; margin: 4px 0 !important; z-index: 2 !important; position: relative !important; } ';
+          // Піднімаємо логотип вище (зменшуємо верхній відступ/margin)
+          css += '.full-start-new__title { display: flex !important; justify-content: flex-start !important; align-items: center !important; height: auto !important; min-height: unset !important; overflow: visible !important; width: 100% !important; box-sizing: border-box !important; margin: -10px 0 2px 0 !important; z-index: 2 !important; position: relative !important; } ';
           css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 55vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';
-          css += '.full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 4px 0 0 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; z-index: 2 !important; position: relative !important; } ';
+          
+          // Збільшуємо відступ між слоганом та наступним рядком інформації
+          css += '.full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 6px 0 16px 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; z-index: 2 !important; position: relative !important; } ';
 
           if (showStudio) {
-              css += '.studio-header-brand { width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: 4px !important; z-index: 2 !important; position: relative !important; } ';
+              css += '.studio-header-brand { width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: 2px !important; z-index: 2 !important; position: relative !important; } ';
               css += '.studio-header-brand img { height: 20px !important; width: auto; max-width: 120px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; } ';
               css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
           }
@@ -382,7 +372,7 @@
       }  
     }
 
-    // Слухач скролу для динамічного затемнення картки
+    // Слухач скролу для динамічного затемнення самого фонового арту
     var $scrollContainer = render.find('.scroll');
     if (!$scrollContainer.length) $scrollContainer = render;
 
