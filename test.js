@@ -31,24 +31,49 @@
         }
     });
 
-    // Виправлений масив бейджів з правильним синтаксисом RegExp
+    // Резервний конфіг на випадок, якщо json ще не підтягнувся
     var eliteBadgesConfig = [
-        { id: '4k-ultra-hd', pattern: /\b(4k|2160p|uhd|ultra\s*hd)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/4k_ultra_hd.png' },
-        { id: '1080p-full-hd', pattern: /\b(1080p|fhd|full\s*hd)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/1080p_full_hd.png' },
-        { id: '720p-hd', pattern: /\b720p\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/720p_hd.png' },
-        { id: 'dolby-vision', pattern: /\b(dolby\s*vision|dovi|dv)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_vision.png' },
-        { id: 'hdr10-plus', pattern: /\b(hdr10\+|hdr10\s*plus\b|hdr\s*10\s*\+)/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr10_plus.png' },
-        { id: 'hdr10', pattern: /\b(hdr10|hdr\s*10)\b(?!\s*\+|\s*plus)/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr10.png' },
-        { id: 'hdr', pattern: /\bhdr\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr.png' },
-        { id: 'sdr', pattern: /\bsdr\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/SDR_transparent_4x.png' },
-        { id: 'dolby-atmos', pattern: /\b(dolby\s*atmos|atmos)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_atmos.png' },
-        { id: 'truehd', pattern: /\b(truehd|true\s*hd|dolby\s*truehd)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/truehd.png' },
-        { id: 'dolby-digital-plus', pattern: /\b(ddp[\s._-]*[0-9][\s._-]*[0-9]|ddp|dd\+|dolby[\s._-]*digital[\s._-]*plus|e-?ac-?3)(?![a-z])/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_digital_plus.png' },
-        { id: 'dolby-digital', pattern: /\b(dd[\s._-]*[0-9][\s._-]*[0-9]|dd|dolby[\s._-]*digital|ac-?3)(?![\s._-]*plus|\+|p|[a-z])/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_digital.png' },
-        { id: 'dts-hd-master-audio', pattern: /\b(dts[\s._-]*hd[\s._-]*ma|dtshd\s*ma|dts[\s._-]*hd[\s._-]*master)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts_hd_master_audio.png' },
-        { id: 'dts-hd', pattern: /\b(dts[\s._-]*hd|dtshd)(?![\s._-]*(ma|master)|ma)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts_hd.png' },
-        { id: 'dts', pattern: /\bdts\b(?![\s._:-]*(x|hd))/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts.png' }
+        { id: '4k-ultra-hd', pattern: '\\b(4k|2160p|uhd|ultra\\s*hd)\\b', file: '4k_ultra_hd.png' },
+        { id: '1080p-full-hd', pattern: '\\b(1080p|fhd|full\\s*hd)\\b', file: '1080p_full_hd.png' },
+        { id: '720p-hd', pattern: '\\b720p\\b', file: '720p_hd.png' },
+        { id: 'dolby-vision', pattern: '\\b(dolby\\s*vision|dovi|dv)\\b', file: 'dolby_vision.png' },
+        { id: 'hdr10-plus', pattern: '\\b(hdr10\\+|hdr10\\s*plus\\b|hdr\\s*10\\s*\\+)', file: 'hdr10_plus.png' },
+        { id: 'hdr10', pattern: '\\b(hdr10|hdr\\s*10)\\b(?!\\s*\\+|\\s*plus)', file: 'hdr10.png' },
+        { id: 'hdr', pattern: '\\bhdr\\b', file: 'hdr.png' },
+        { id: 'sdr', pattern: '\\bsdr\\b', file: 'SDR_transparent_4x.png' },
+        { id: 'dolby-atmos', pattern: '\\b(dolby\\s*atmos|atmos)\\b', file: 'dolby_atmos.png' },
+        { id: 'truehd', pattern: '\\b(truehd|true\\s*hd|dolby\\s*truehd)\\b', file: 'truehd.png' },
+        { id: 'dolby-digital-plus', pattern: '\\b(ddp[\\s._-]*[0-9][\\s._-]*[0-9]|ddp|dd\\+|dolby[\\s._-]*digital[\\s._-]*plus|e-?ac-?3)(?![a-z])', file: 'dolby_digital_plus.png' },
+        { id: 'dolby-digital', pattern: '\\b(dd[\\s._-]*[0-9][\\s._-]*[0-9]|dd|dolby[\\s._-]*digital|ac-?3)(?![\\s._-]*plus|\\+|p|[a-z])', file: 'dolby_digital.png' },
+        { id: 'dts-hd-master-audio', pattern: '\\b(dts[\\s._-]*hd[\\s._-]*ma|dtshd\\s*ma|dts[\\s._-]*hd[\\s._-]*master)\\b', file: 'dts_hd_master_audio.png' },
+        { id: 'dts-hd', pattern: '\\b(dts[\\s._-]*hd|dtshd)(?![\\s._-]*(ma|master)|ma)\\b', file: 'dts_hd.png' },
+        { id: 'dts', pattern: '\\bdts\\b(?!\\s*[_:-]*(x|hd))', file: 'dts.png' }
     ];
+
+    function prepareBadges(configList) {
+        return configList.map(function(item) {
+            return {
+                id: item.id,
+                pattern: new RegExp(item.pattern, 'i'),
+                imageURL: pluginPath + (item.file || item.imageURL.split('/').pop())
+            };
+        });
+    }
+
+    var compiledBadgesConfig = prepareBadges(eliteBadgesConfig);
+
+    function loadBadgesJson() {
+        $.ajax({
+            url: pluginPath + 'badges.json?_=' + new Date().getTime(),
+            type: 'GET',
+            dataType: 'json',
+            success: function(data) {
+                if (Array.isArray(data) && data.length > 0) {
+                    compiledBadgesConfig = prepareBadges(data);
+                }
+            }
+        });
+    }
 
     var ratingIcons = {
         tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',
@@ -363,7 +388,7 @@
             combinedText += ' ' + (item.Title || item.title || '');
         });
 
-        eliteBadgesConfig.forEach(function(badge) {
+        compiledBadgesConfig.forEach(function(badge) {
             if (badge.pattern && badge.pattern.test(combinedText)) {
                 foundBadges.push(badge.imageURL);
             }
@@ -415,6 +440,8 @@
     }
 
     function init() {
+        loadBadgesJson();
+
         Lampa.Listener.follow('full', function (e) {
             if (e.type === 'destroy' || e.type === 'onBeforeDestroy') {
                 stopSlideshow();
