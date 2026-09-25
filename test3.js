@@ -113,14 +113,22 @@
   }  
   
   function swapCardBackground(render, url) {  
-    var img = render.find('.full-start-new__background img, .full-start__background img');  
+    var swapped = false;  
+  
+    // якщо в картці є img-бекграунд — підміняємо src  
+    var img = render.find('.full-start__background img, .full-start-new__background img');  
     if (img.length) {  
-      img.attr('src', url);  
-    } else {  
-      var bg = render.find('.full-start-new__background, .full-start__background');  
-      if (bg.length) bg.css('background-image', 'url(' + url + ')');  
-      else Lampa.Background.change(url); // fallback на глобальний шар  
+      img.attr('src', url).removeAttr('data-src');  
+      swapped = true;  
     }  
+  
+    // і завжди міняємо глобальний фоновий шар Lampa — саме він видимий  
+    try {  
+      Lampa.Background.change(url);  
+      swapped = true;  
+    } catch (e) {}  
+  
+    return swapped;  
   }  
   
   function startSlideshow(e) {  
@@ -139,7 +147,7 @@
   
     Lampa.Network.silent(url, function (res) {  
         var backdrops = (res && res.backdrops || [])  
-          .filter(function (b) { return !b.iso_639_1; }) // тільки арти без тексту  
+          .filter(function (b) { return !b.iso_639_1; })  
           .slice(0, 8);  
   
         console.log('[CARD-TWEAKS] backdrops:', backdrops.length);  
@@ -148,7 +156,10 @@
         var i = 0;  
         bgTimer = setInterval(function () {  
           if (bgCardId !== movie.id) return stopSlideshow();  
-          swapCardBackground(render, tmdbImg(backdrops[i++ % backdrops.length].file_path));  
+          var u = tmdbImg(backdrops[i++ % backdrops.length].file_path);  
+          console.log('[CARD-TWEAKS] tick ->', u);  
+          var ok = swapCardBackground(render, u);  
+          console.log('[CARD-TWEAKS] swapped:', ok);  
         }, slideshowInterval());  
       },  
       function (err) { console.log('[CARD-TWEAKS] images error', err); }  
