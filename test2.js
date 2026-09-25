@@ -74,7 +74,7 @@
         var css = '';
         
         if (isEnabled) {
-            // Приховуємо оригінальний рік та країну над назвою (використовуємо ваш перевірений селектор)
+            // Приховуємо оригінальний рік та країну над назвою
             css += '.full-start-new__head, .full-start__tags { display: none !important; } ';
             
             css += '.full-start-new__title { display: flex !important; justify-content: flex-start !important; align-items: center !important; height: auto !important; min-height: unset !important; overflow: visible !important; width: 100% !important; box-sizing: border-box !important; margin: 4px 0 !important; } ';
@@ -89,13 +89,18 @@
             }
         }
 
+        // Перенесення рейтингу та налаштування кнопок
+        css += '.full-start-new, .full-start { position: relative !important; }';
+        css += '.full-start-new__rate-line, .full-start__rate-line { position: absolute !important; top: 1.5em; right: 1.5em; z-index: 5; margin: 0 !important; display: flex; gap: 0.8em; align-items: center; background: rgba(0,0,0,0.45); padding: 0.4em 0.9em; border-radius: 0.5em; }';
+        css += '.card-tweaks__buttons { margin-top: 1.5em; width: 100%; }';
+        css += '.card-tweaks__buttons .full-start-new__buttons, .card-tweaks__buttons .buttons--container { margin-top: 0.6em; }';
+
         style.textContent = css;
     }
 
     function applyMovieDetailsData(data, movie, $render, translations) {
         if (!Lampa.Storage.get('movie_card_logo_enabled', true)) return;
 
-        // Збираємо рік та країну з даних API напряму для гарантії
         var year = (data.release_date || data.first_air_date || '').split('-')[0];
         var countries = (data.production_countries && data.production_countries.length > 0) ? 
             data.production_countries.map(function(c) { return c.name; }).join(' • ') : '';
@@ -105,7 +110,6 @@
         if (countries) extraInfo.push(countries);
         var formattedDetails = extraInfo.join(' • ');
 
-        // Вставляємо у рядок з тривалістю та жанром
         setTimeout(function() {
             var $infoLine = $render.find('.full-start-new__info, .full-start__info');
             
@@ -122,7 +126,6 @@
             }
         }, 50);
 
-        // Відображення логотипа фільму замість назви
         if (data.images && data.images.logos && data.images.logos.length > 0) {
             var lang = Lampa.Storage.get('language') || 'uk';
             var logo = data.images.logos.filter(function(l) { return l.iso_639_1 === lang; })[0] || 
@@ -136,7 +139,6 @@
             }
         }
 
-        // Слоган українською (або запасний варіант)
         var taglineText = '';
         if (translations && translations.translations) {
             var uaTrans = translations.translations.find(function(t) { return t.iso_639_1 === 'uk'; });
@@ -157,7 +159,6 @@
             $tagline.text(taglineText);
         }
 
-        // Відображення логотипа студії
         if (Lampa.Storage.get('movie_card_logo_studio', true)) {
             $render.find('.studio-header-brand').remove();
             var studio = null;
