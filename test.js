@@ -31,16 +31,17 @@
         }
     });
 
-    // Виправлений масив бейджів з правильним синтаксисом RegExp
     var eliteBadgesConfig = [
-        { id: '4k-ultra-hd', pattern: /\b(4k|2160p|uhd|ultra\s*hd)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/4k_ultra_hd.png' },
-        { id: '1080p-full-hd', pattern: /\b(1080p|fhd|full\s*hd)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/1080p_full_hd.png' },
-        { id: '720p-hd', pattern: /\b720p\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/720p_hd.png' },
+        { id: '4k-ultra-hd', pattern: /\b(4k|2160p|uhd|ultra\s*hd)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/4k_ultra_hd.png', group: 'resolution', priority: 3 },
+        { id: '1080p-full-hd', pattern: /\b(1080p|fhd|full\s*hd)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/1080p_full_hd.png', group: 'resolution', priority: 2 },
+        { id: '720p-hd', pattern: /\b720p\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/720p_hd.png', group: 'resolution', priority: 1 },
+        
         { id: 'dolby-vision', pattern: /\b(dolby\s*vision|dovi|dv)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_vision.png' },
-        { id: 'hdr10-plus', pattern: /\b(hdr10\+|hdr10\s*plus\b|hdr\s*10\s*\+)/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr10_plus.png' },
-        { id: 'hdr10', pattern: /\b(hdr10|hdr\s*10)\b(?!\s*\+|\s*plus)/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr10.png' },
-        { id: 'hdr', pattern: /\bhdr\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr.png' },
+        
+        // Всі варіанти HDR тепер посилаються на звичайний бейдж HDR
+        { id: 'hdr', pattern: /\b(hdr10\+|hdr10\s*plus\b|hdr\s*10\s*\+|hdr10|hdr\s*10|hdr)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr.png', group: 'hdr' },
         { id: 'sdr', pattern: /\bsdr\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/SDR_transparent_4x.png' },
+        
         { id: 'dolby-atmos', pattern: /\b(dolby\s*atmos|atmos)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_atmos.png' },
         { id: 'truehd', pattern: /\b(truehd|true\s*hd|dolby\s*truehd)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/truehd.png' },
         { id: 'dolby-digital-plus', pattern: /\b(ddp[\s._-]*[0-9][\s._-]*[0-9]|ddp|dd\+|dolby[\s._-]*digital[\s._-]*plus|e-?ac-?3)(?![a-z])/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_digital_plus.png' },
@@ -363,8 +364,26 @@
             combinedText += ' ' + (item.Title || item.title || '');
         });
 
+        var matchedBadges = [];
         eliteBadgesConfig.forEach(function(badge) {
             if (badge.pattern && badge.pattern.test(combinedText)) {
+                matchedBadges.push(badge);
+            }
+        });
+
+        // Фільтрація за пріоритетом якості (залишаємо тільки найвищу роздільну здатність)
+        var highestResolution = null;
+        matchedBadges.forEach(function(b) {
+            if (b.group === 'resolution') {
+                if (!highestResolution || b.priority > highestResolution.priority) {
+                    highestResolution = b;
+                }
+            }
+        });
+
+        matchedBadges.forEach(function(badge) {
+            // Додаємо бейдж, якщо він не належить до групи роздільної здатності, або є найвищою роздільною здатністю
+            if (badge.group !== 'resolution' || badge.id === highestResolution.id) {
                 foundBadges.push(badge.imageURL);
             }
         });
