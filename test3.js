@@ -1,13 +1,14 @@
 (function () {  
   'use strict';  
   
+  /* ---------- 1) СТИЛІ ---------- */  
   var style = document.createElement('style');  
-  style.id = 'hide-year-country';  
+  style.id = 'card-tweaks';  
   style.textContent =  
-    // 1) приховати рік/країну над назвою  
+    // приховати рік/країну над назвою (новий і старий шаблони)  
     '.full-start-new__head, .full-start__tags { display: none !important; }' +  
   
-    // 2) рейтинг у верхній правий кут картки  
+    // рейтинг у верхній правий кут картки  
     '.full-start-new, .full-start { position: relative !important; }' +  
     '.full-start-new__rate-line, .full-start__rate-line {' +  
     '  position: absolute !important;' +  
@@ -21,30 +22,47 @@
     '}';  
   document.head.appendChild(style);  
   
-  // 3) Перенести віковий рейтинг та статус у блок "Детально"  
+  /* ---------- 2) ПЕРЕНЕСЕННЯ БЛОКІВ У "ДЕТАЛЬНО" ---------- */  
+  function addInfo(details, name, value) {  
+    details.append(  
+      '<div class="full-descr__info full-descr__info--moved">' +  
+        '<div class="full-descr__info-name">' + name + '</div>' +  
+        '<div class="full-descr__info-body">' + value + '</div>' +  
+      '</div>'  
+    );  
+  }  
+  
   function moveInfo(e) {  
     if (e.type !== 'complite') return;  
   
     var render  = e.object.activity.render();  
     var details = render.find('.full-descr__details');  
     if (!details.length) return;  
-    if (details.find('.full-descr__info--moved').length) return;  
+    if (details.find('.full-descr__info--moved').length) return; // захист від дублікатів  
   
-    function toInfo(el, name) {  
-      if (!el.length || el.hasClass('hide')) return;  
-      details.append(  
-        '<div class="full-descr__info full-descr__info--moved">' +  
-          '<div class="full-descr__info-name">' + name + '</div>' +  
-          '<div class="full-descr__info-body">' + el.text().trim() + '</div>' +  
-        '</div>'  
-      );  
-      el.hide();  
+    // віковий рейтинг  
+    var pg = render.find('.full-start__pg');  
+    if (pg.length && !pg.hasClass('hide')) {  
+      addInfo(details, 'Віковий рейтинг', pg.text().trim());  
+      pg.hide();  
     }  
   
-    toInfo(render.find('.full-start__pg'),     'Віковий рейтинг');  
-    toInfo(render.find('.full-start__status'), 'Статус');  
+    // статус ("Випущено" тощо)  
+    var status = render.find('.full-start__status');  
+    if (status.length && !status.hasClass('hide')) {  
+      addInfo(details, 'Статус', status.text().trim());  
+      status.hide();  
+    }  
+  
+    // дата виходу в прокат — тільки якщо реліз ще попереду  
+    var movie = e.data && e.data.movie ? e.data.movie : (e.object.movie || {});  
+    var rd = movie.release_date || movie.first_air_date;  
+    if (rd && new Date(rd) > new Date()) {  
+      addInfo(details, 'У прокаті з', Lampa.Utils.parseTime(rd).full);  
+    }  
   }  
   
+  /* ---------- 3) ПІДПИСКА ---------- */  
   if (window.appready) {  
     Lampa.Listener.follow('full', moveInfo);  
   } else {  
