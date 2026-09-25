@@ -80,6 +80,16 @@
     '  filter: none !important;' +  
     '  -webkit-filter: none !important;' +  
     '}' +  
+
+    // ДОДАТКОВО: Затемнення поверх фону для кращого читання тексту при скролі  
+    '.full-start__background::after, .full-start-new__background::after {' +  
+    '  content: "" !important;' +  
+    '  position: absolute !important;' +  
+    '  top: 0; left: 0; right: 0; bottom: 0;' +  
+    '  background: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.75) 100%) !important;' +  
+    '  pointer-events: none !important;' +  
+    '  z-index: 1 !important;' +  
+    '}' +  
   
     // рейтинг у верхній правий кут  
     '.full-start-new, .full-start { position: relative !important; }' +  
@@ -106,12 +116,12 @@
       var css = style.textContent;
       
       if (isEnabled) {
-          css += '.full-start-new__title { display: flex !important; justify-content: flex-start !important; align-items: center !important; height: auto !important; min-height: unset !important; overflow: visible !important; width: 100% !important; box-sizing: border-box !important; margin: 4px 0 !important; } ';
+          css += '.full-start-new__title { display: flex !important; justify-content: flex-start !important; align-items: center !important; height: auto !important; min-height: unset !important; overflow: visible !important; width: 100% !important; box-sizing: border-box !important; margin: 4px 0 !important; z-index: 2 !important; position: relative !important; } ';
           css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 55vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';
-          css += '.full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 4px 0 0 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; } ';
+          css += '.full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 4px 0 0 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; z-index: 2 !important; position: relative !important; } ';
 
           if (showStudio) {
-              css += '.studio-header-brand { width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: 4px !important; } ';
+              css += '.studio-header-brand { width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: 4px !important; z-index: 2 !important; position: relative !important; } ';
               css += '.studio-header-brand img { height: 20px !important; width: auto; max-width: 120px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; } ';
               css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
           }
@@ -212,11 +222,10 @@
     );  
   }  
   
-  /* ---------- ІНТЕГРАЦІЯ ДАНИХ (Логотипи, слоган, рік/країна в рядок) ---------- */  
+  /* ---------- ІНТЕГРАЦІЯ ДАНИХ ---------- */  
   function applyMovieDetailsData(data, movie, $render, translations) {
       if (!Lampa.Storage.get('movie_card_logo_enabled', true)) return;
 
-      // Рік та країна у рядок з тривалістю/жанром
       var year = (data.release_date || data.first_air_date || '').split('-')[0];
       var countries = (data.production_countries && data.production_countries.length > 0) ? 
           data.production_countries.map(function(c) { return c.name; }).join(', ') : '';
@@ -241,7 +250,6 @@
           }
       }, 50);
 
-      // Логотип фільму замість тексту назви
       if (data.images && data.images.logos && data.images.logos.length > 0) {
           var lang = Lampa.Storage.get('language') || 'uk';
           var logo = data.images.logos.filter(function(l) { return l.iso_639_1 === lang; })[0] || 
@@ -255,7 +263,6 @@
           }
       }
 
-      // Слоган українською
       var taglineText = '';
       if (translations && translations.translations) {
           var uaTrans = translations.translations.find(function(t) { return t.iso_639_1 === 'uk'; });
@@ -276,7 +283,6 @@
           $tagline.text(taglineText);
       }
 
-      // Логотип студії
       if (Lampa.Storage.get('movie_card_logo_studio', true)) {
           $render.find('.studio-header-brand').remove();
           var studio = null;
@@ -335,7 +341,6 @@
     var render  = e.object.activity.render();  
     var details = render.find('.full-descr__details');  
   
-    // Кнопки під верхнім блоком, на всю ширину  
     var body    = render.find('.full-start-new__body');  
     var wrapper = render.find('.card-tweaks__buttons');  
     if (body.length && !wrapper.length) {  
