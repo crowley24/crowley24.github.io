@@ -2,6 +2,7 @@
     'use strict';
 
     var detailsCache = {}; 
+    var logoDarkCache = {};
     var currentActiveId = null;
     var pluginPath = 'https://crowley24.github.io/Icons/';
     var TMDB_LOGO_URL = 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg';
@@ -39,6 +40,10 @@
     ];
 
     function isImageDark(imgSrc, callback) {
+        if (logoDarkCache[imgSrc] !== undefined) {
+            callback(logoDarkCache[imgSrc]);
+            return;
+        }
         var img = new Image();
         img.crossOrigin = 'Anonymous';
         img.onload = function () {
@@ -67,12 +72,18 @@
                 }
 
                 var avgBrightness = count > 0 ? (totalBrightness / count) : 255;
-                callback((avgBrightness < 110) && !hasColor);
+                var isDark = (avgBrightness < 110) && !hasColor;
+                logoDarkCache[imgSrc] = isDark;
+                callback(isDark);
             } catch (e) {
+                logoDarkCache[imgSrc] = false;
                 callback(false);
             }
         };
-        img.onerror = function () { callback(false); };
+        img.onerror = function () { 
+            logoDarkCache[imgSrc] = false;
+            callback(false); 
+        };
         img.src = imgSrc;
     }
 
@@ -91,6 +102,10 @@
         
         var css = '';
         
+        // Додаємо загальні плавнні анімації появи (Fade-in)
+        css += '@keyframes cardLogoFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } } ';
+        css += '.full-start-new__title img, .studio-header-brand, .full-start-new__tagline, .tmdb-rate-badge, .card-quality-row { animation: cardLogoFadeIn 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; will-change: opacity, transform; } ';
+
         if (!isEnabled) {
             css += '.full-start-new__title { display: block !important; } ';
             css += '.full-start-new__title img { display: none !important; } ';
@@ -104,19 +119,16 @@
             css += '.full-start-new__title { display: flex !important; justify-content: flex-start !important; align-items: center !important; height: auto !important; min-height: unset !important; overflow: visible !important; width: 100% !important; box-sizing: border-box !important; margin: 2px 0 !important; } ';
             css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 55vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; display: block; } ';
             
-            // Нижній відступ для слогана, щоб він не прилипав до тривалості/жанру
             css += '.full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 4px 0 10px 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; } ';
 
             if (showStudio) {
                 css += '.studio-header-brand { width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: 2px !important; } ';
-                css += '.studio-header-brand img { height: 20px !important; width: auto; max-width: 120px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; } ';
+                css += '.studio-header-brand img { height: 20px !important; width: auto; max-width: 120px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; transition: opacity 0.2s ease; } ';
                 css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
             }
 
-            // Відступ зверху для рядка з тривалістю/жанром
             css += '.full-start-new__info, .full-start__info { margin-top: 12px !important; } ';
 
-            // Правий верхній куток: позиціонування та суворе приховування стандартних елементів Lampa
             css += '.full-start-new__rate-line, .full-start__rate-line { position: absolute !important; top: 0.6em !important; right: 1.5em !important; left: auto !important; margin: 0 !important; background: none !important; background-color: transparent !important; padding: 0 !important; z-index: 10 !important; display: flex !important; flex-direction: column !important; align-items: flex-end !important; } ';
             
             css += '.full-start-new__rate-line > *:not(.tmdb-rate-badge):not(.card-quality-row) { display: none !important; } ';
@@ -127,7 +139,6 @@
             css += '.tmdb-rate-badge img { height: 1.1em !important; width: auto !important; display: block !important; } ';
             css += '.tmdb-rate-badge .tmdb-rate-value { font-size: 1.15em !important; font-weight: 700 !important; text-shadow: 0 1px 4px rgba(0,0,0,0.7) !important; } ';
 
-            // Вертикальний стовпчик бейджів та CUB під TMDB рейтингом
             css += '.card-quality-row { display: flex !important; flex-direction: column !important; align-items: flex-end !important; gap: 6px !important; margin-top: 8px !important; width: auto !important; } ';
             css += '.card-quality-item { height: 1.3em !important; display: flex !important; align-items: center !important; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)) !important; } ';
             css += '.card-quality-item img { height: 100% !important; width: auto !important; max-width: 80px !important; object-fit: contain !important; } ';
@@ -236,19 +247,17 @@
         if (countries) extraInfo.push(countries);
         var formattedDetails = extraInfo.join(' • ');
 
-        setTimeout(function() {
-            var $infoLine = $render.find('.full-start-new__info, .full-start__info');
-            if ($infoLine.length > 0 && formattedDetails) {
-                var originalText = $infoLine.attr('data-original-text');
-                if (!originalText) {
-                    originalText = $infoLine.text();
-                    $infoLine.attr('data-original-text', originalText);
-                }
-                if (originalText.indexOf(formattedDetails) === -1) {
-                    $infoLine.text(formattedDetails + ' • ' + originalText);
-                }
+        var $infoLine = $render.find('.full-start-new__info, .full-start__info');
+        if ($infoLine.length > 0 && formattedDetails) {
+            var originalText = $infoLine.attr('data-original-text');
+            if (!originalText) {
+                originalText = $infoLine.text();
+                $infoLine.attr('data-original-text', originalText);
             }
-        }, 50);
+            if (originalText.indexOf(formattedDetails) === -1) {
+                $infoLine.text(formattedDetails + ' • ' + originalText);
+            }
+        }
 
         if (data.images && data.images.logos && data.images.logos.length > 0) {
             var lang = Lampa.Storage.get('language') || 'uk';
