@@ -62,20 +62,25 @@
         var css = '';  
         if (isEnabled) {  
             css += '.full-start-new__head, .full-start__tags { display: none !important; } ';  
+  
             css += '.logo-top-wrap { display: flex !important; flex-direction: column !important; align-items: flex-start !important; width: 100% !important; } ';  
             css += '.logo-top-wrap .full-start-new__title { margin: 0 0 2px 0 !important; display: flex !important; align-items: center !important; height: auto !important; min-height: unset !important; overflow: visible !important; width: 100% !important; } ';  
             css += '.logo-top-wrap .full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 55vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';  
             css += '.logo-top-wrap .full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 0 0 14px 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; } ';  
-            css += '.logo-top-wrap .full-start-new__info, .logo-top-wrap .full-start__info { margin: 6px 0 6px 0 !important; padding: 0 !important; font-family: Roboto, sans-serif !important; font-size: 0.95em !important; font-weight: 300 !important; letter-spacing: 0.02em !important; color: rgba(255,255,255,0.75) !important; } ';  
+            css += '.logo-top-wrap .full-start-new__info, .logo-top-wrap .full-start__info { margin: 6px 0 6px 0 !important; padding: 0 !important; font-family: Roboto, sans-serif !important; font-weight: 300 !important; font-size: 0.95em !important; letter-spacing: 0.02em !important; } ';  
   
-            // Рейтинг: TMDB-лого + число, без фону, у правому верхньому куті  
+            // Рейтинг у правий верхній кут — весь старий вміст ховаємо, показуємо свій бейдж  
             css += '.full-start-new, .full-start { position: relative !important; } ';  
-            css += '.full-start-new__rate-line, .full-start__rate-line { position: absolute !important; top: 0.6em !important; right: 1.5em; z-index: 5; margin: 0 !important; display: flex; gap: 0.6em; align-items: center; background: none !important; padding: 0 !important; border-radius: 0 !important; } ';  
-            css += '.full-start .info__rate, .full-start-new .info__rate { background-color: transparent !important; padding: 0 !important; } ';  
-            css += '.tmdb-rate-icon { height: 0.9em !important; width: auto !important; display: inline-block !important; flex-shrink: 0; } ';  
-            css += '.full-start-new__rate-line *, .full-start__rate-line * { font-weight: 600 !important; text-shadow: 0 1px 4px rgba(0,0,0,0.8) !important; } ';  
+            css += '.full-start-new__rate-line, .full-start__rate-line { position: absolute !important; top: 0.6em !important; right: 1.5em; z-index: 5; margin: 0 !important; background: none !important; padding: 0 !important; } ';  
+            css += '.full-start-new__rate-line > :not(.tmdb-rate-badge), .full-start__rate-line > :not(.tmdb-rate-badge) { display: none !important; } ';  
+            css += '.full-start .info__rate, .full-start-new .info__rate { display: none !important; } ';  
   
-            // Кнопки під верхнім блоком, на всю ширину  
+            // Новий бейдж: лого TMDB + цифра  
+            css += '.tmdb-rate-badge { display: flex !important; align-items: center; gap: 0.5em; } ';  
+            css += '.tmdb-rate-badge img { height: 1.1em; width: auto; display: block; } ';  
+            css += '.tmdb-rate-badge .tmdb-rate-value { font-size: 1.5em; font-weight: 600; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.8); } ';  
+  
+            // Кнопки під верхнім блоком  
             css += '.card-tweaks__buttons { margin-top: 1.5em; width: 100%; } ';  
             css += '.card-tweaks__buttons .full-start-new__buttons, .card-tweaks__buttons .buttons--container, .card-tweaks__buttons .full-start__buttons { margin-top: 0.6em; } ';  
   
@@ -88,8 +93,8 @@
         style.textContent = css;  
     }  
   
-    // Перебудова: wrap на місці title (справа від постера), кнопки під body  
-    function rebuildLayout($render) {  
+    // Перебудова: wrap на місці title, свій бейдж рейтингу, кнопки під body  
+    function rebuildLayout($render, rating) {  
         // 1. Wrap — на місці title  
         var $title = $render.find('.full-start-new__title').first();  
         var $wrap = $render.find('.logo-top-wrap');  
@@ -101,12 +106,9 @@
             } else if ($title.parent()[0] !== $wrap[0]) {  
                 $wrap.append($title);  
             }  
-        } else if (!$wrap.length) {  
-            var $left = $render.find('.full-start-new__left, .full-start__left').first();  
-            if ($left.length) $left.prepend($('<div class="logo-top-wrap"></div>'));  
         }  
   
-        // 2. Слоган та інфо-рядок — у wrap одразу під title  
+        // 2. Слоган та інфо — у wrap під title  
         $wrap = $render.find('.logo-top-wrap');  
         if ($wrap.length) {  
             ['.full-start-new__tagline', '.full-start-new__info', '.full-start__info'].forEach(function (sel) {  
@@ -117,10 +119,21 @@
             });  
         }  
   
-        // 3. TMDB-лого замість зірки перед рейтингом  
+        // 3. Свій бейдж рейтингу: лого TMDB + цифра (старий вміст ховається через CSS)  
         var $rate = $render.find('.full-start-new__rate-line, .full-start__rate-line').first();  
-        if ($rate.length && !$rate.find('.tmdb-rate-icon').length) {  
-            $rate.prepend('<img class="tmdb-rate-icon" src="' + TMDB_LOGO_URL + '" alt="TMDB">');  
+        if ($rate.length && !$rate.find('.tmdb-rate-badge').length) {  
+            var value = '';  
+            if (rating && rating > 0) {  
+                value = rating.toFixed(1);  
+            } else {  
+                // fallback: витягуємо число з рідного рейтингу  
+                var txt = $rate.text().replace(',', '.');  
+                var m = txt.match(/\d+\.?\d*/);  
+                if (m) value = m[0];  
+            }  
+            if (value) {  
+                $rate.append('<div class="tmdb-rate-badge"><img src="' + TMDB_LOGO_URL + '" alt="TMDB"><span class="tmdb-rate-value">' + value + '</span></div>');  
+            }  
         }  
   
         // 4. Кнопки під усім верхнім блоком, на всю ширину  
@@ -137,7 +150,8 @@
     function applyMovieDetailsData(data, movie, $render, translations) {  
         if (!Lampa.Storage.get('movie_card_logo_enabled', true)) return;  
   
-        rebuildLayout($render);  
+        var rating = parseFloat(data.vote_average || movie.vote_average || 0);  
+        rebuildLayout($render, rating);  
   
         var year = (data.release_date || data.first_air_date || '').split('-')[0];  
         var countries = (data.production_countries && data.production_countries.length > 0) ?  
@@ -149,7 +163,7 @@
         var formattedDetails = extraInfo.join(' • ');  
   
         setTimeout(function () {  
-            rebuildLayout($render);  
+            rebuildLayout($render, rating);  
   
             var $infoLine = $render.find('.full-start-new__info, .full-start__info').first();  
             if ($infoLine.length && formattedDetails) {  
@@ -181,36 +195,45 @@
             }  
         }, 50);  
   
-        // Логотип назви фільму  
+        // Логотип назви  
+        var logoPath = '';  
         if (data.images && data.images.logos && data.images.logos.length > 0) {  
-            var logo = data.images.logos.find(function (l) { return l.iso_639_1 === 'uk'; }) ||  
-                       data.images.logos.find(function (l) { return l.iso_639_1 === 'en'; }) ||  
-                       data.images.logos[0];  
+            var ukLogo = data.images.logos.find(function (l) { return l.iso_639_1 === 'uk'; });  
+            var enLogo = data.images.logos.find(function (l) { return l.iso_639_1 === 'en'; });  
+            var nullLogo = data.images.logos.find(function (l) { return !l.iso_639_1; });  
+            var logo = ukLogo || enLogo || nullLogo || data.images.logos[0];  
+            if (logo) logoPath = logo.file_path;  
+        }  
   
-            if (logo && logo.file_path) {  
-                var quality = Lampa.Storage.get('movie_card_logo_quality', 'w500');  
-                var logoUrl = Lampa.TMDB.image('/t/p/' + quality + logo.file_path.replace('.svg', '.png'));  
-                $render.find('.full-start-new__title').html('<img src="' + logoUrl + '">');  
-            }  
+        var quality = Lampa.Storage.get('movie_card_logo_quality', 'w500');  
+        var logoUrl = Lampa.TMDB.image('/t/p/' + quality + logoPath);  
+        var $titleEl = $render.find('.full-start-new__title').first();  
+  
+        if (logoPath && $titleEl.length) {  
+            var $imgTitle = $('<img src="' + logoUrl + '" alt="' + (movie.title || movie.name || '') + '">');  
+            $imgTitle.on('error', function () {  
+                $titleEl.text(movie.title || movie.name || '');  
+            });  
+            $titleEl.html($imgTitle);  
         }  
   
         // Слоган  
-        var taglineText = '';  
-        if (translations && translations.translations) {  
-            var uaTrans = translations.translations.find(function (t) { return t.iso_639_1 === 'uk'; });  
-            if (uaTrans && uaTrans.data && uaTrans.data.tagline) {  
-                taglineText = uaTrans.data.tagline;  
+        if (Lampa.Storage.get('movie_card_logo_tagline', true)) {  
+            var taglineText = '';  
+            if (translations && translations.translations) {  
+                var uaTrans = translations.translations.find(function (t) { return t.iso_639_1 === 'uk'; });  
+                if (uaTrans && uaTrans.data && uaTrans.data.tagline) taglineText = uaTrans.data.tagline;  
             }  
-        }  
-        if (!taglineText && data.tagline) taglineText = data.tagline;  
+            if (!taglineText && data.tagline) taglineText = data.tagline;  
   
-        if (taglineText && taglineText.trim() !== '') {  
-            var $tagline = $render.find('.full-start-new__tagline');  
-            if ($tagline.length === 0) {  
-                $tagline = $('<div class="full-start-new__tagline"></div>');  
-                $render.find('.logo-top-wrap').append($tagline);  
+            if (taglineText && taglineText.trim() !== '') {  
+                var $tagline = $render.find('.full-start-new__tagline');  
+                if ($tagline.length === 0) {  
+                    $tagline = $('<div class="full-start-new__tagline"></div>');  
+                    $titleEl.after($tagline);  
+                }  
+                $tagline.text(taglineText);  
             }  
-            $tagline.text(taglineText);  
         }  
   
         // Логотип студії  
