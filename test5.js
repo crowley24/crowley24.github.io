@@ -292,6 +292,31 @@
   
         Lampa.SettingsApi.addParam({   
             component: 'movie_card_logo',   
+            param: { name: 'movie_card_logo_tagline', type: 'trigger', default: true },   
+            field: { name: 'Слоган фільму', description: 'Відображати чи не відображати слоган під логотипом' },   
+            onChange: applyStyles   
+        });  
+  
+        Lampa.SettingsApi.addParam({   
+            component: 'movie_card_logo',   
+            param: {   
+                name: 'movie_card_logo_size',   
+                type: 'select',   
+                values: {   
+                    '50': 'Дуже малий',   
+                    '80': 'Малий',   
+                    '120': 'Стандартний',  
+                    '160': 'Великий',   
+                    '210': 'Дуже великий'   
+                },   
+                default: '120'   
+            },   
+            field: { name: 'Розмір логотипа назви фільму' },   
+            onChange: applyStyles   
+        });  
+  
+        Lampa.SettingsApi.addParam({   
+            component: 'movie_card_logo',   
             param: {   
                 name: 'movie_card_logo_quality',   
                 type: 'select',   
