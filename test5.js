@@ -71,12 +71,6 @@
         },
 
         {
-            id: 'sdr',
-            pattern: /\bsdr\b/i,
-            imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/SDR_transparent_4x.png'
-        },
-
-        {
             id: 'dolby-atmos',
             pattern: /\b(dolby[\s._-]*atmos|atmos)\b/i,
             imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_atmos.png'
@@ -256,11 +250,20 @@
 
         css += '@keyframes anim_minimal { 0% { opacity: 0; transform: translate3d(0, 10px, 0); } 100% { opacity: 1; transform: translate3d(0, 0, 0); } } ';
 
-        css += '@keyframes wave_cascade { 0% { opacity: 0; transform: scale(0.5) translateY(10px); filter: blur(4px); } 100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0px); } } ';
+        /*
+         * ОПТИМІЗОВАНА АНІМАЦІЯ БЕЙДЖІВ
+         *
+         * Без blur/filter.
+         * Тільки opacity + GPU-friendly transform.
+         */
+        css += '@keyframes wave_cascade { 0% { opacity: 0; transform: translate3d(0, 8px, 0) scale(0.96); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } } ';
 
         css += '@keyframes badge_anim_pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } } ';
 
-        css += '@keyframes badge_anim_breathe { 0%, 100% { transform: scale(1); opacity: 0.85; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); } 50% { transform: scale(1.06); opacity: 1; filter: drop-shadow(0 0 10px rgba(255,255,255,0.6)); } } ';
+        /*
+         * Breathe також без filter/drop-shadow.
+         */
+        css += '@keyframes badge_anim_breathe { 0%, 100% { transform: scale(1); opacity: 0.9; } 50% { transform: scale(1.04); opacity: 1; } } ';
 
         css += '@keyframes badge_anim_spin_slow { 0% { transform: rotate(0deg); } 25% { transform: rotate(4deg); } 75% { transform: rotate(-4deg); } 100% { transform: rotate(0deg); } } ';
 
@@ -333,22 +336,29 @@
                 '2.5s'
             );
 
-        css += '.wave-item { transform-origin: center center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); ';
+        /*
+         * БЕЙДЖІ
+         *
+         * Немає drop-shadow.
+         * Немає filter.
+         * Немає will-change: filter.
+         */
+        css += '.wave-item { transform-origin: center center; ';
 
         if (isUIAnim) {
-            css += 'opacity: 0; animation: wave_cascade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+            css += 'opacity: 0; animation: wave_cascade 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards';
 
             if (badgeAnim !== 'none') {
                 css += ', ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite';
-                css += '; animation-delay: calc(0.35s + (var(--item-index) * 0.08s)), calc(1s + (var(--item-index) * 0.15s))';
+                css += '; animation-delay: calc(0.35s + (var(--item-index) * 0.06s)), calc(0.9s + (var(--item-index) * 0.12s))';
             } else {
-                css += '; animation-delay: calc(0.35s + (var(--item-index) * 0.08s))';
+                css += '; animation-delay: calc(0.35s + (var(--item-index) * 0.06s))';
             }
 
-            css += '; will-change: transform, opacity, filter; ';
+            css += '; will-change: transform, opacity; ';
         } else if (badgeAnim !== 'none') {
             css += 'animation: ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite; ';
-            css += 'animation-delay: calc(var(--item-index) * 0.15s); ';
+            css += 'animation-delay: calc(var(--item-index) * 0.12s); ';
         }
 
         css += '} ';
@@ -357,22 +367,22 @@
 
         css += '.quality-row-inline .plugin-rating-item img { height: 1.1em; width: auto; } ';
 
-        css += '.quality-item { transform-origin: center center; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8)); height: 1.3em; display: flex; align-items: center; justify-content: flex-end; ';
+        css += '.quality-item { transform-origin: center center; height: 1.3em; display: flex; align-items: center; justify-content: flex-end; ';
 
         if (isUIAnim) {
-            css += 'opacity: 0; animation: wave_cascade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+            css += 'opacity: 0; animation: wave_cascade 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards';
 
             if (badgeAnim !== 'none') {
                 css += ', ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite';
-                css += '; animation-delay: calc(0.35s + (var(--item-index) * 0.08s)), calc(1s + (var(--item-index) * 0.15s))';
+                css += '; animation-delay: calc(0.35s + (var(--item-index) * 0.06s)), calc(0.9s + (var(--item-index) * 0.12s))';
             } else {
-                css += '; animation-delay: calc(0.35s + (var(--item-index) * 0.08s))';
+                css += '; animation-delay: calc(0.35s + (var(--item-index) * 0.06s))';
             }
 
-            css += '; will-change: transform, opacity, filter; ';
+            css += '; will-change: transform, opacity; ';
         } else if (badgeAnim !== 'none') {
             css += 'animation: ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite; ';
-            css += 'animation-delay: calc(var(--item-index) * 0.15s); ';
+            css += 'animation-delay: calc(var(--item-index) * 0.12s); ';
         }
 
         css += '} ';
@@ -774,12 +784,6 @@
 
     /**
      * ОТРИМАННЯ ТЕКСТУ З РЕЗУЛЬТАТУ PARSER
-     *
-     * Не використовуємо JSON.stringify()
-     * для всього об'єкта.
-     *
-     * Беремо типові поля, де Parser/Jackett
-     * може містити інформацію про роздачу.
      */
     function getParserItemText(item) {
         if (!item) return '';
@@ -823,10 +827,6 @@
             }
         }
 
-        /**
-         * Деякі парсери можуть повертати
-         * додаткові дані всередині params.
-         */
         if (
             item.params &&
             typeof item.params === 'object'
@@ -871,14 +871,6 @@
 
         var combinedText = '';
 
-        /**
-         * Для плавності не обробляємо
-         * безмежну кількість результатів.
-         *
-         * 30 достатньо, щоб знайти
-         * рідкісні аудіоформати,
-         * але навантаження залишається мінімальним.
-         */
         var limit =
             Math.min(
                 results.length,
@@ -919,10 +911,6 @@
             }
         }
 
-        /**
-         * Виводимо тільки найвищу
-         * знайдену роздільну здатність.
-         */
         var highestResolution =
             null;
 
@@ -974,6 +962,8 @@
 
         /**
          * Українська озвучка
+         *
+         * DUB навмисно прибраний.
          */
         if (
             /\b(ukr|ukrainian|укр|украин)\b/i
@@ -984,21 +974,6 @@
             );
         }
 
-        /**
-         * Дубляж
-         */
-        if (
-            /\b(dub|dubbed|дуб|дубляж)\b/i
-                .test(combinedText)
-        ) {
-            foundBadges.push(
-                pluginPath + 'DUB.svg'
-            );
-        }
-
-        /**
-         * Прибираємо дублікати
-         */
         return foundBadges.filter(
             function (
                 elem,
@@ -1051,9 +1026,6 @@
             return;
         }
 
-        /**
-         * Є готовий кеш
-         */
         if (
             qualityCache[key] !==
             undefined
@@ -1064,10 +1036,6 @@
             return;
         }
 
-        /**
-         * Запит для цього фільму
-         * вже виконується
-         */
         if (qualityLoading[key]) {
             qualityLoading[key]
                 .push(callback);
@@ -1180,12 +1148,6 @@
 
                 img.src = imgUrl;
                 img.draggable = false;
-
-                /**
-                 * Невеликі картинки
-                 * не створюють великого
-                 * навантаження.
-                 */
                 img.decoding = 'async';
 
                 item.appendChild(img);
@@ -1203,16 +1165,6 @@
 
     /**
      * ВІДКЛАДЕНИЙ ЗАПУСК PARSER
-     *
-     * Головна оптимізація:
-     *
-     * відкрив картку
-     *       ↓
-     * 650 мс очікування
-     *       ↓
-     * перевіряємо currentActiveId
-     *       ↓
-     * тільки після цього Parser
      */
     function loadQualityBadges(
         movie,
@@ -1242,16 +1194,9 @@
             return;
         }
 
-        /**
-         * Запам'ятовуємо саме цю картку.
-         */
         var activeMovieId =
             movie.id;
 
-        /**
-         * Якщо для цього фільму
-         * вже був таймер — скасовуємо.
-         */
         if (
             qualityTimers[key]
         ) {
@@ -1262,10 +1207,6 @@
             delete qualityTimers[key];
         }
 
-        /**
-         * Якщо результат уже є,
-         * Parser взагалі не потрібен.
-         */
         if (
             qualityCache[key] !==
             undefined
@@ -1284,11 +1225,6 @@
                 function () {
                     delete qualityTimers[key];
 
-                    /**
-                     * КАРТКА ВЖЕ ЗМІНИЛАСЯ
-                     *
-                     * Parser навіть не запускаємо.
-                     */
                     if (
                         currentActiveId !==
                         activeMovieId
@@ -1296,10 +1232,6 @@
                         return;
                     }
 
-                    /**
-                     * На всяк випадок
-                     * перевіряємо DOM.
-                     */
                     if (
                         !$qRow ||
                         !$qRow.length ||
@@ -1315,11 +1247,6 @@
                         function (
                             eliteBadgesList
                         ) {
-                            /**
-                             * Користувач міг
-                             * перейти на інший
-                             * фільм ПІД ЧАС Parser.
-                             */
                             if (
                                 currentActiveId !==
                                 activeMovieId
@@ -1532,13 +1459,6 @@
 
                     /**
                      * QUALITY / AUDIO
-                     *
-                     * Тут Parser більше
-                     * НЕ запускається одразу.
-                     *
-                     * Спочатку 650 мс.
-                     * Потім перевірка,
-                     * чи картка ще активна.
                      */
                     loadQualityBadges(
                         movie,
