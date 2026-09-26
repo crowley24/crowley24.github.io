@@ -26,44 +26,29 @@
             try {  
                 var canvas = document.createElement('canvas');  
                 var ctx = canvas.getContext('2d');  
-                canvas.width = 40; canvas.height = 40;  
-                ctx.drawImage(img, 0, 0, 40, 40);  
-                var data = ctx.getImageData(0, 0, 40, 40).data;  
-                var totalBrightness = 0, hasColor = false, count = 0;  
+                canvas.width = img.width; canvas.height = img.height;  
+                ctx.drawImage(img, 0, 0);  
+                var data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;  
+                var light = 0, total = 0;  
                 for (var i = 0; i < data.length; i += 4) {  
-                    if (data[i + 3] > 50) {  
-                        var r = data[i], g = data[i + 1], b = data[i + 2];  
-                        totalBrightness += (0.299 * r + 0.587 * g + 0.114 * b);  
-                        if (Math.abs(r - g) > 15 || Math.abs(g - b) > 15 || Math.abs(r - b) > 15) hasColor = true;  
-                        count++;  
+                    if (data[i + 3] > 128) {  
+                        var lum = 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];  
+                        if (lum > 128) light++;  
+                        total++;  
                     }  
                 }  
-                callback(count > 0 && (totalBrightness / count) < 110 && !hasColor);  
+                callback(total > 0 && light / total > 0.5);  
             } catch (e) { callback(false); }  
         };  
         img.onerror = function () { callback(false); };  
         img.src = imgSrc;  
     }  
   
-    // Пороги кольору цифри рейтингу  
+    // Колір цифри рейтингу за порогами  
     function rateColor(rating) {  
-        if (rating >= 7) return '#3fd97f'; // зелений  
-        if (rating >= 5) return '#f5c518'; // жовтий  
-        return '#e34b4b';                  // червоний  
-    }  
-  
-    // Пріоритет слогана: uk → ru → оригінал  
-    function pickTagline(data, translations) {  
-        if (translations && translations.translations) {  
-            var langs = ['uk', 'ru'];  
-            for (var i = 0; i < langs.length; i++) {  
-                var tr = translations.translations.find(function (t) {  
-                    return t.iso_639_1 === langs[i] && t.data && t.data.tagline && t.data.tagline.trim();  
-                });  
-                if (tr) return tr.data.tagline.trim();  
-            }  
-        }  
-        return (data.tagline || '').trim();  
+        if (rating >= 7) return '#3fd97f';  
+        if (rating >= 5) return '#f5c518';  
+        return '#e34b4b';  
     }  
   
     function applyStyles() {  
@@ -79,90 +64,116 @@
         var showTagline = Lampa.Storage.get('movie_card_logo_tagline', true);  
         var isEnabled = Lampa.Storage.get('movie_card_logo_enabled', true);  
   
-        // px-шкала: значення опції -> max-height лого  
-        var logoSizes = { '50': '60px', '80': '90px', '120': '130px', '160': '190px', '210': '270px' };  
-        var logoH = logoSizes[String(lHeight)] || '130px';  
+        // px-шкала: висота лого, ширина обмежена колонкою  
+        var logoSizes = { '50': 60, '80': 95, '120': 140, '160': 200, '210': 270 };  
+        var logoH = logoSizes[lHeight] || 140;  
   
         var css = '';  
-        if (isEnabled) {  
-            css += '.full-start-new__head, .full-start__tags { display: none !important; } ';  
+        if (!isEnabled) {  
+            css = '.logo-top-wrap, .studio-header-brand, .card-tweaks__buttons, .tmdb-rate-badge { display: none !important; }';  
+        } else {  
+            // Приховуємо head (рік/країни) — він видається в details через formattedDetails  
+            css += '.full-start-new__head { display: none !important; } ';  
   
-            // Обгортка лого: піднята вгору + великий відступ до інфо-рядка  
-            css += '.logo-top-wrap { display: flex !important; flex-direction: column !important; align-items: flex-start !important; width: 100% !important; margin-top: -0.4em !important; margin-bottom: 1.6em !important; } ';  
+            // Wrap: блок лого в текстовій колонці .full-start-new__right  
+            css += '.logo-top-wrap { display: flex; flex-direction: column; align-items: flex-start; margin-top: -0.4em; margin-bottom: 1.6em; } ';  
   
-            // Скидання теми на title: без обрізки, базовий font-size (em вже не множить розмір лого)  
-            css += '.logo-top-wrap .full-start-new__title { font-size: 1em !important; font-weight: normal !important; line-height: 1 !important; max-width: 100% !important; max-height: none !important; overflow: visible !important; margin: 0 0 4px 0 !important; } ';  
-            css += '.logo-top-wrap .full-start-new__title img { display: block; height: auto; width: auto; max-height: ' + logoH + ' !important; max-width: 100% !important; object-fit: contain; } ';  
+            // Слоган — компактний  
+            css += '.logo-top-wrap .full-start-new__tagline { font-size: 0.85em !important; font-style: italic !important; font-weight: 400 !important; color: rgba(255,255,255,0.72) !important; line-height: 1.4 !important; margin: 0 !important; } ';  
   
-            // Слоган — компактний під лого  
-            css += '.logo-top-wrap .full-start-new__tagline { font-size: 0.8em !important; font-style: italic !important; font-weight: 400 !important; color: rgba(255,255,255,0.72) !important; line-height: 1.35 !important; margin: 2px 0 0 0 !important; } ';  
+            // Рядок тривалість/жанри — преміальний стиль + великий відступ  
+            css += '.logo-top-wrap .full-start-new__details { font-size: 0.95em !important; font-weight: 500 !important; letter-spacing: 0.12em !important; text-transform: uppercase !important; color: rgba(255,255,255,0.6) !important; line-height: 1.5 !important; margin-top: 1.4em !important; } ';  
   
-            // Інфо-рядок — преміальний стиль + великий відступ  
-            css += '.logo-top-wrap .full-start-new__info, .logo-top-wrap .full-start__info { margin-top: 1em !important; font-size: 0.9em !important; font-weight: 500 !important; letter-spacing: 0.12em !important; text-transform: uppercase !important; color: rgba(255,255,255,0.75) !important; } ';  
+            // Title: скинути обрізку теми, задати розмір лого  
+            css += '.logo-top-wrap .full-start-new__title { margin: 0 0 0.3em 0 !important; max-width: 100% !important; max-height: none !important; overflow: visible !important; } ';  
+            css += '.logo-top-wrap .full-start-new__title img { max-height: ' + logoH + 'px !important; max-width: 100% !important; width: auto !important; height: auto !important; object-fit: contain !important; display: block; } ';  
   
-            // Рейтинг у правий верхній кут, без фону; старий вміст приховано  
-            css += '.full-start-new__rate-line, .full-start__rate-line { position: absolute !important; top: 0.8em !important; right: 1.5em !important; z-index: 5; margin: 0 !important; display: flex; align-items: center; } ';  
+            // Rate-line: новий бейдж у правому верхньому куті  
+            css += '.full-start-new__rate-line, .full-start__rate-line { position: absolute !important; top: 0.6em !important; right: 1.5em !important; margin: 0 !important; z-index: 5 !important; background: none !important; padding: 0 !important; } ';  
+            css += '.full-start .info__rate, .full-start-new .info__rate { display: none !important; } ';  
             css += '.full-start-new__rate-line > :not(.tmdb-rate-badge), .full-start__rate-line > :not(.tmdb-rate-badge) { display: none !important; } ';  
-            css += '.full-start .info__rate, .full-start-new .info__rate { display: none !important; background: none !important; } ';  
   
-            // Новий бейдж рейтингу: лого TMDB + цифра  
-            css += '.tmdb-rate-badge { display: inline-flex; align-items: center; gap: 0.4em; } ';  
-            css += '.tmdb-rate-badge img { height: 1.1em; width: auto; display: inline-block; } ';  
-            css += '.tmdb-rate-badge .tmdb-rate-value { font-size: 1.15em !important; font-weight: 700 !important; line-height: 1 !important; text-shadow: 0 1px 4px rgba(0,0,0,0.7) !important; } ';  
+            // TMDB-бейдж  
+            css += '.tmdb-rate-badge { display: inline-flex !important; align-items: center !important; gap: 0.4em; } ';  
+            css += '.tmdb-rate-badge img { height: 1.1em !important; width: auto !important; display: block; } ';  
+            css += '.tmdb-rate-badge .tmdb-rate-value { font-size: 1.15em !important; font-weight: 700 !important; text-shadow: 0 1px 4px rgba(0,0,0,0.7) !important; line-height: 1 !important; } ';  
   
-            // Кнопки під body на всю ширину  
-            css += '.card-tweaks__buttons { margin-top: 1.5em; width: 100%; } ';  
-            css += '.card-tweaks__buttons .full-start-new__buttons, .card-tweaks__buttons .buttons--container, .card-tweaks__buttons .full-start__buttons { margin-top: 0.6em; } ';  
+            // Кнопки під body в один рядок  
+            css += '.card-tweaks__buttons { display: flex; flex-wrap: nowrap; gap: 0.5em; width: 100%; margin-top: 1em; } ';  
+            css += '.card-tweaks__buttons .full-start__button { flex-shrink: 0; } ';  
+            css += '.card-tweaks__buttons .full-start-new__buttons, .card-tweaks__buttons .full-start__buttons, .card-tweaks__buttons .buttons--container { margin-top: 0 !important; } ';  
+  
+            if (!showTagline) css += '.logo-top-wrap .full-start-new__tagline { display: none !important; } ';  
   
             if (showStudio) {  
-                css += '.studio-header-brand { width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: 6px !important; } ';  
+                css += '.studio-header-brand { display: flex; align-items: center; margin-bottom: 4px !important; } ';  
                 css += '.studio-header-brand img { height: 20px !important; width: auto; max-width: 120px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; } ';  
                 css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';  
+            } else {  
+                css += '.studio-header-brand { display: none !important; } ';  
             }  
         }  
         style.textContent = css;  
     }  
   
+    // Вік/статус → в .full-descr__details (рядок бюджету)  
+    function toInfo(render, selector, label) {  
+        var el = render.find(selector).first();  
+        if (!el.length || el.hasClass('hide')) return;  
+        var text = el.text().trim();  
+        if (!text) return;  
+        el.hide();  
+        var details = render.find('.full-descr__details');  
+        if (!details.length) return;  
+        if (details.find('.full-descr__info--moved[data-sel="' + selector + '"]').length) return;  
+        var row = $('<div class="full-descr__info full-descr__info--moved" data-sel="' + selector + '">' +  
+            '<div class="full-descr__info-name">' + label + '</div>' +  
+            '<div class="full-descr__info-value">' + text + '</div></div>');  
+        details.append(row);  
+    }  
+  
+    // Перебудова: wrap на місці title в .full-start-new__right,  
+    // details — у wrap, кнопки — під body, бейдж — у куті  
     function rebuildLayout($render, rating) {  
-        // 1. Wrap — на місці title  
+        // 1. Wrap на місці title  
         var $title = $render.find('.full-start-new__title').first();  
         var $wrap = $render.find('.logo-top-wrap');  
         if ($title.length) {  
             if (!$wrap.length) {  
                 $wrap = $('<div class="logo-top-wrap"></div>');  
                 $title.before($wrap);  
-                $wrap.append($title);  
-            } else if ($title.parent()[0] !== $wrap[0]) {  
-                $wrap.append($title);  
             }  
+            if ($title.parent()[0] !== $wrap[0]) $wrap.append($title);  
         } else if (!$wrap.length) {  
-            var $left = $render.find('.full-start-new__left, .full-start__left').first();  
-            if ($left.length) $left.prepend($('<div class="logo-top-wrap"></div>'));  
+            var $col = $render.find('.full-start-new__right, .full-start__left').first();  
+            if ($col.length) $wrap = $('<div class="logo-top-wrap"></div>').prependTo($col);  
         }  
+        if (!$wrap || !$wrap.length) return;  
   
-        // 2. Слоган та інфо-рядок — у wrap під title  
-        $wrap = $render.find('.logo-top-wrap');  
-        if ($wrap.length) {  
-            ['.full-start-new__tagline', '.full-start-new__info', '.full-start__info'].forEach(function (sel) {  
-                var $el = $render.find(sel).first();  
-                if ($el.length && $el.parent()[0] !== $wrap[0]) $wrap.append($el);  
-            });  
-        }  
+        // 2. Слоган та details — у wrap під лого (порядок: title → tagline → details)  
+        ['.full-start-new__tagline', '.full-start-new__details'].forEach(function (sel) {  
+            var $el = $render.find(sel).first();  
+            if ($el.length && $el.parent()[0] !== $wrap[0]) $wrap.append($el);  
+        });  
   
         // 3. Новий рейтинг: лого TMDB + кольорова цифра  
         var $rate = $render.find('.full-start-new__rate-line, .full-start__rate-line').first();  
         if ($rate.length && !$rate.find('.tmdb-rate-badge').length && rating) {  
             $rate.append(  
                 '<div class="tmdb-rate-badge">' +  
-                    '<img src="' + TMDB_LOGO_URL + '" alt="TMDB">' +  
-                    '<span class="tmdb-rate-value" style="color:' + rateColor(rating) + ';">' + rating.toFixed(1) + '</span>' +  
+                '<img src="' + TMDB_LOGO_URL + '" alt="TMDB">' +  
+                '<span class="tmdb-rate-value" style="color:' + rateColor(rating) + '">' + rating.toFixed(1) + '</span>' +  
                 '</div>'  
             );  
         }  
   
-        // 4. Кнопки під body, на всю ширину  
+        // 4. Вік та статус → рядок деталей  
+        toInfo($render, '.full-start__pg', 'Вік');  
+        toInfo($render, '.full-start__status', 'Статус');  
+  
+        // 5. Кнопки під body  
+        var $wrapper = $render.find('.card-tweaks__buttons').first();  
         var $body = $render.find('.full-start-new__body, .full-start__body').first();  
-        var $wrapper = $render.find('.card-tweaks__buttons');  
         if ($body.length && !$wrapper.length) {  
             $wrapper = $('<div class="card-tweaks__buttons"></div>');  
             $render.find('.full-start-new__buttons, .full-start__buttons, .buttons--container').each(function () {  
@@ -170,7 +181,9 @@
             });  
             if ($wrapper.children().length) $body.after($wrapper);  
         }  
-    }
+    }  
+  
+    // Слоган: uk → ru → en → оригінал  
     function pickTagline(translations, fallback) {  
         if (translations && translations.translations) {  
             var order = ['uk', 'ru', 'en'];  
@@ -202,108 +215,66 @@
         setTimeout(function () {  
             rebuildLayout($render, rating);  
   
-            var $infoLine = $render.find('.full-start-new__info, .full-start__info').first();  
+            // Рік/країни додаємо в details (head прихований)  
+            var $infoLine = $render.find('.full-start-new__details').first();  
             if ($infoLine.length && formattedDetails) {  
-                var originalText = $infoLine.attr('data-original-text');  
-                if (!originalText) {  
-                    originalText = $infoLine.text();  
-                    $infoLine.attr('data-original-text', originalText);  
-                }  
-                if (originalText.indexOf(formattedDetails) === -1) {  
-                    $infoLine.text(formattedDetails + ' • ' + originalText);  
+                var cur = $infoLine.text().trim();  
+                if (cur && cur.indexOf(year) === -1) $infoLine.text(formattedDetails + ' ● ' + cur);  
+            }  
+  
+            var titleEl = $render.find('.full-start-new__title').get(0);  
+  
+            // Лого назви  
+            var quality = Lampa.Storage.get('movie_card_logo_quality', 'w500');  
+            var logoUrl = null;  
+            if (data.images && data.images.logos && data.images.logos.length) {  
+                var logo = data.images.logos.find(function (l) { return l.iso_639_1 === 'uk'; }) ||  
+                           data.images.logos.find(function (l) { return l.iso_639_1 === 'en'; }) ||  
+                           data.images.logos.find(function (l) { return !l.iso_639_1; }) ||  
+                           data.images.logos[0];  
+                logoUrl = Lampa.TMDB.image('/t/p/' + quality + logo.file_path);  
+            }  
+  
+            if (titleEl && logoUrl) {  
+                titleEl.innerHTML = '';  
+                var $logo = $('<img src="' + logoUrl + '" alt="logo">');  
+                $logo.on('error', function () { titleEl.textContent = data.title || data.name; });  
+                titleEl.appendChild($logo.get(0));  
+            }  
+  
+            // Слоган  
+            var taglineText = pickTagline(translations, data.tagline);  
+            if (Lampa.Storage.get('movie_card_logo_tagline', true) && taglineText && titleEl) {  
+                var $tagline = $render.find('.full-start-new__tagline');  
+                if (!$tagline.length) {  
+                    $tagline = $('<div class="full-start-new__tagline"></div>').text(taglineText);  
+                    $(titleEl).after($tagline);  
+                } else {  
+                    $tagline.text(taglineText);  
                 }  
             }  
   
-            // Вік/статус → у деталі  
-            var $details = $render.find('.full-descr__details').first();  
-            if ($details.length) {  
-                var toInfo = function ($el, label) {  
-                    if ($el.length && !$el.hasClass('hide')) {  
-                        var text = $el.text().trim();  
-                        if (text && !$details.find('.full-descr__info--moved').filter(function () {  
-                            return $(this).text().indexOf(text) !== -1;  
-                        }).length) {  
-                            $details.append(  
-                                $('<div class="full-descr__info full-descr__info--moved">' +  
-                                  '<div class="full-descr__info-name">' + label + '</div>' +  
-                                  '<div class="full-descr__info-value">' + text + '</div></div>')  
-                            );  
-                        }  
-                        $el.hide();  
-                    }  
-                };  
-                toInfo($render.find('.full-start__pg'), 'Віковий рейтинг');  
-                toInfo($render.find('.full-start__status'), 'Статус');  
+            // Логотип студії (network → companies)  
+            if (Lampa.Storage.get('movie_card_logo_studio', true)) {  
+                var studio = null;  
+                if (data.networks && data.networks.length > 0) {  
+                    studio = data.networks.find(function (n) { return n.logo_path; });  
+                }  
+                if (!studio && data.production_companies && data.production_companies.length > 0) {  
+                    studio = data.production_companies.find(function (c) { return c.logo_path; });  
+                }  
+  
+                if (studio && studio.logo_path) {  
+                    var studioLogoUrl = Lampa.TMDB.image('/t/p/w200' + studio.logo_path);  
+                    var $brand = $('<div class="studio-header-brand"><img src="' + studioLogoUrl + '" alt="' + (studio.name || '') + '"></div>');  
+                    var $img = $brand.find('img');  
+  
+                    $img.on('error', function () { $brand.remove(); });  
+                    isImageDark(studioLogoUrl, function (isDark) { if (isDark) $img.addClass('is-dark-logo'); });  
+                    $render.find('.logo-top-wrap').prepend($brand);  
+                }  
             }  
         }, 50);  
-  
-        // Логотип назви — без height-атрибута, розмір із CSS  
-        var logoUrl = null;  
-        var languages = ['uk', 'ru', 'en'];  
-        for (var li = 0; li < languages.length; li++) {  
-            var found = (data.images && data.images.logos || []).find(function (l) {  
-                return l.iso_639_1 === languages[li];  
-            });  
-            if (found) { logoUrl = found.file_path; break; }  
-        }  
-        if (!logoUrl && data.images && data.images.logos && data.images.logos.length) {  
-            logoUrl = data.images.logos[0].file_path;  
-        }  
-  
-        var $titleEl = $render.find('.full-start-new__title').first();  
-        var quality = Lampa.Storage.get('movie_card_logo_quality', 'w500');  
-        var $logo;  
-        if (logoUrl) {  
-            $logo = $('<img src="' + Lampa.TMDB.image('/t/p/' + quality + logoUrl) + '" alt="' + (data.title || data.name || '') + '">');  
-            $logo.on('error', function () {  
-                $logo.remove();  
-                $titleEl.text(data.title || data.name || movie.title || movie.name || '');  
-            });  
-        } else {  
-            $logo = $('<span></span>').text(data.title || data.name || movie.title || movie.name || '');  
-        }  
-        $titleEl.empty().append($logo);  
-  
-        // Слоган — українською (або фолбек)  
-        var taglineText = Lampa.Storage.get('movie_card_logo_tagline', true) ?  
-            pickTagline(translations, data.tagline) : '';  
-        var $tagline = $render.find('.full-start-new__tagline').first();  
-        if (!$tagline.length && taglineText) {  
-            $tagline = $('<div class="full-start-new__tagline"></div>');  
-            $titleEl.after($tagline);  
-        }  
-        if ($tagline.length) {  
-            if (taglineText) {  
-                $tagline.text(taglineText);  
-                var $w = $render.find('.logo-top-wrap');  
-                if ($w.length && $tagline.parent()[0] !== $w[0]) $w.append($tagline);  
-            } else {  
-                $tagline.remove();  
-            }  
-        }  
-  
-        // Логотип студії  
-        if (Lampa.Storage.get('movie_card_logo_studio', true)) {  
-            $render.find('.studio-header-brand').remove();  
-            var studio = null;  
-  
-            if (data.networks && data.networks.length > 0) {  
-                studio = data.networks.find(function (n) { return n.logo_path; });  
-            }  
-            if (!studio && data.production_companies && data.production_companies.length > 0) {  
-                studio = data.production_companies.find(function (c) { return c.logo_path; });  
-            }  
-  
-            if (studio && studio.logo_path) {  
-                var studioLogoUrl = Lampa.TMDB.image('/t/p/w200' + studio.logo_path);  
-                var $brand = $('<div class="studio-header-brand"><img src="' + studioLogoUrl + '" alt="' + (studio.name || '') + '"></div>');  
-                var $img = $brand.find('img');  
-  
-                $img.on('error', function () { $brand.remove(); });  
-                isImageDark(studioLogoUrl, function (isDark) { if (isDark) $img.addClass('is-dark-logo'); });  
-                $render.find('.logo-top-wrap').prepend($brand);  
-            }  
-        }  
     }  
   
     function loadMovieDetails(movie, $render) {  
@@ -326,16 +297,20 @@
             $.ajax({ url: transUrl, type: 'GET', dataType: 'json' })  
         ).done(function (resData, resTrans) {  
             if (currentActiveId !== movieId) return;  
-            detailsCache[movieId] = { data: resData[0], translations: resTrans[0] };  
-            applyMovieDetailsData(resData[0], movie, $render, resTrans[0]);  
+            var data = resData[0];  
+            var translations = resTrans[0];  
+  
+            detailsCache[movieId] = { data: data, translations: translations };  
+            applyMovieDetailsData(data, movie, $render, translations);  
         });  
     }  
   
     function init() {  
         Lampa.Listener.follow('full', function (e) {  
-            if (e.type === 'destroy' || e.type === 'onBeforeDestroy') {  
+            if (e.type === 'destroy') {  
                 currentActiveId = null;  
             }  
+  
             if (e.type === 'complite' || e.type === 'complete') {  
                 var movie = e.data.movie, $render = e.object.activity.render();  
                 loadMovieDetails(movie, $render);  
@@ -360,23 +335,30 @@
         Lampa.SettingsApi.addParam({  
             component: 'movie_card_logo',  
             param: { name: 'movie_card_logo_studio', type: 'trigger', default: true },  
-            field: { name: 'Логотип студії', description: 'Відображати логотип студії/телеканалу' },  
+            field: { name: 'Логотип студії', description: 'Відображати чи не відображати логотип студії/телеканалу' },  
             onChange: applyStyles  
         });  
   
         Lampa.SettingsApi.addParam({  
             component: 'movie_card_logo',  
             param: { name: 'movie_card_logo_tagline', type: 'trigger', default: true },  
-            field: { name: 'Слоган фільму', description: 'Відображати слоган під логотипом' },  
+            field: { name: 'Слоган фільму', description: 'Відображати чи не відображати слоган під логотипом' },  
             onChange: applyStyles  
         });  
   
         Lampa.SettingsApi.addParam({  
             component: 'movie_card_logo',  
             param: {  
-                name: 'movie_card_logo_size', type: 'select',  
-                values: { '50': 'Дуже малий', '80': 'Малий', '120': 'Стандартний', '160': 'Великий', '210': 'Дуже великий' },  
-                default: '120'  
+                name: 'movie_card_logo_size',  
+                type: 'select',  
+                values: {  
+                    '60': 'Дуже малий',  
+                    '90': 'Малий',  
+                    '140': 'Стандартний',  
+                    '200': 'Великий',  
+                    '270': 'Дуже великий'  
+                },  
+                default: '140'  
             },  
             field: { name: 'Розмір логотипа назви' },  
             onChange: applyStyles  
