@@ -8,15 +8,15 @@
     var currentActiveId = null;
     
     var settings_list = [
-        { id: 'mobile_interface_ui_anim', default: true },
-        { id: 'mobile_interface_ui_anim_effect', default: 'fluid' },
-        { id: 'mobile_interface_badge_anim', default: 'pulse' },
-        { id: 'mobile_interface_logo_quality', default: 'w500' },
-        { id: 'mobile_interface_show_tagline', default: true },
-        { id: 'mobile_interface_blocks_gap', default: '8px' },
-        { id: 'mobile_interface_ratings_size', default: '0.45em' },
-        { id: 'mobile_interface_studios', default: true },
-        { id: 'mobile_interface_quality', default: true }
+        { id: 'tv_interface_ui_anim', default: true },
+        { id: 'tv_interface_ui_anim_effect', default: 'fluid' },
+        { id: 'tv_interface_badge_anim', default: 'pulse' },
+        { id: 'tv_interface_logo_quality', default: 'w500' },
+        { id: 'tv_interface_show_tagline', default: true },
+        { id: 'tv_interface_blocks_gap', default: '8px' },
+        { id: 'tv_interface_ratings_size', default: '0.45em' },
+        { id: 'tv_interface_studios', default: true },
+        { id: 'tv_interface_quality', default: true }
     ];
 
     settings_list.forEach(function (opt) {
@@ -88,19 +88,19 @@
     }
 
     function applyStyles() {
-        var style = document.getElementById('mobile-interface-styles');
+        var style = document.getElementById('tv-interface-styles');
         if (!style) {
             style = document.createElement('style');
-            style.id = 'mobile-interface-styles';
+            style.id = 'tv-interface-styles';
             document.head.appendChild(style);
         }
 
-        var isUIAnim = Lampa.Storage.get('mobile_interface_ui_anim');
-        var animEffect = Lampa.Storage.get('mobile_interface_ui_anim_effect', 'fluid');
-        var badgeAnim = Lampa.Storage.get('mobile_interface_badge_anim', 'pulse');
-        var rSize = Lampa.Storage.get('mobile_interface_ratings_size', '0.45em');
-        var showTagline = Lampa.Storage.get('mobile_interface_show_tagline');
-        var blocksGap = Lampa.Storage.get('mobile_interface_blocks_gap', '8px');
+        var isUIAnim = Lampa.Storage.get('tv_interface_ui_anim');
+        var animEffect = Lampa.Storage.get('tv_interface_ui_anim_effect', 'fluid');
+        var badgeAnim = Lampa.Storage.get('tv_interface_badge_anim', 'pulse');
+        var rSize = Lampa.Storage.get('tv_interface_ratings_size', '0.45em');
+        var showTagline = Lampa.Storage.get('tv_interface_show_tagline');
+        var blocksGap = Lampa.Storage.get('tv_interface_blocks_gap', '8px');
         
         var css = '';
         
@@ -129,24 +129,24 @@
         css += '.full-start-new__poster img { filter: none !important; transform-origin: center center !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
         
-        css += '.full-start-new__right { background: none !important; margin-top: -160px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; padding: 0 10px !important; gap: ' + blocksGap + ' !important; position: relative !important; } ';
+        css += '.full-start-new__right { background: none !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; padding: 20px !important; gap: ' + blocksGap + ' !important; position: relative !important; } ';
         
         var chosenAnimName = 'anim_' + animEffect;
         var animTiming = animEffect === 'elastic' ? 'cubic-bezier(0.34, 1.56, 0.64, 1)' : 'cubic-bezier(0.16, 1, 0.3, 1)';
         var uiAnimClass = isUIAnim ? 'animation: ' + chosenAnimName + ' 0.8s ' + animTiming + ' forwards; opacity: 0; will-change: transform, opacity, filter; transform: translateZ(0); ' : '';
 
-        css += '.quality-row-inline { position: absolute; top: 30px; right: 12px; z-index: 99; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; pointer-events: none; } '; 
+        css += '.quality-row-inline { position: absolute; top: 30px; right: 24px; z-index: 99; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; pointer-events: none; } '; 
 
-        css += '.studio-header-brand { ' + uiAnimClass + ' animation-delay: 0.08s; order: 1; width: 100%; display: flex; justify-content: flex-start; align-items: center; padding-left: 5vw; margin-bottom: -2px !important; } ';
-        css += '.studio-header-brand img { height: 18px !important; width: auto; max-width: 110px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; } ';
+        css += '.studio-header-brand { ' + uiAnimClass + ' animation-delay: 0.08s; order: 1; width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: -2px !important; } ';
+        css += '.studio-header-brand img { height: 22px !important; width: auto; max-width: 130px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; } ';
         css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
 
-        css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.15s; width: 100% !important; display: flex !important; justify-content: center !important; align-items: center !important; margin: 0 !important; min-height: 50px; order: 2; overflow: visible !important; } ';
-        css += '.full-start-new__title img { height: auto !important; max-height: 125px !important; width: auto !important; max-width: 90vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';
+        css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.15s; width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; min-height: 50px; order: 2; overflow: visible !important; } ';
+        css += '.full-start-new__title img { height: auto !important; max-height: 140px !important; width: auto !important; max-width: 80vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';
 
-        css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.22s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: center !important; order: 3; } ';
+        css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.22s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 1em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; order: 3; } ';
         
-        css += '.plugin-meta-row { ' + uiAnimClass + ' animation-delay: 0.28s; display: flex; justify-content: center; align-items: center; flex-wrap: nowrap; gap: 8px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.5); width: 100%; order: 4; color: rgba(255,255,255,0.85); font-family: "Inter", -apple-system, system-ui, sans-serif; } ';
+        css += '.plugin-meta-row { ' + uiAnimClass + ' animation-delay: 0.28s; display: flex; justify-content: flex-start; align-items: center; flex-wrap: nowrap; gap: 10px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.8); width: 100%; order: 4; color: rgba(255,255,255,0.85); font-family: "Inter", -apple-system, system-ui, sans-serif; } ';
         
         var loopAnimName = badgeAnim !== 'none' ? 'badge_anim_' + badgeAnim : '';
         var loopDuration = badgeAnim === 'spin_slow' ? '4s' : (badgeAnim === 'breathe' ? '3s' : '2.5s');
@@ -167,10 +167,10 @@
         }
         css += '} ';
 
-        css += '.quality-row-inline .plugin-rating-item { display: flex; align-items: center; gap: 4px; font-weight: 700; color: #fff; font-size: 0.95em; padding: 2px 0; } ';
-        css += '.quality-row-inline .plugin-rating-item img { height: 1em; width: auto; } ';
+        css += '.quality-row-inline .plugin-rating-item { display: flex; align-items: center; gap: 6px; font-weight: 700; color: #fff; font-size: 1.05em; padding: 2px 0; } ';
+        css += '.quality-row-inline .plugin-rating-item img { height: 1.1em; width: auto; } ';
         
-        css += '.quality-item { transform-origin: center center; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8)); height: 1.15em; display: flex; align-items: center; justify-content: flex-end; ';
+        css += '.quality-item { transform-origin: center center; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8)); height: 1.3em; display: flex; align-items: center; justify-content: flex-end; ';
         if (isUIAnim) {
             css += 'opacity: 0; animation: wave_cascade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards';
             if (badgeAnim !== 'none') {
@@ -185,16 +185,13 @@
             css += 'animation-delay: calc(var(--item-index) * 0.15s); ';
         }
         css += '} ';
-        css += '.quality-item img { height: 100%; width: auto; max-width: 60px; object-fit: contain; } ';
+        css += '.quality-item img { height: 100%; width: auto; max-width: 70px; object-fit: contain; } ';
 
-        css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.85em; white-space: nowrap; } ';
-        css += '.info-separator { opacity: 0.35; font-size: 0.8em; margin: 0 -2px; } ';
+        css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.9em; white-space: nowrap; } ';
+        css += '.info-separator { opacity: 0.35; font-size: 0.85em; margin: 0 -2px; } ';
 
-        css += '.full-start-new__buttons { ' + uiAnimClass + ' animation-delay: 0.42s; display: flex !important; justify-content: space-around !important; align-items: center !important; width: 100% !important; max-width: 100% !important; padding: 0 4px !important; box-sizing: border-box !important; margin-top: 4px !important; order: 6; } ';
-        css += '.full-start-new .full-start__button { background: none !important; border: none !important; box-shadow: none !important; display: flex !important; flex-direction: column !important; align-items: center !important; width: 42px !important; min-width: 36px !important; padding: 0 !important; transition: transform 0.2s ease, opacity 0.2s ease; } ';
-        css += '.full-start-new .full-start__button:active { transform: scale(0.9); opacity: 0.7; } ';
-        css += '.full-start-new .full-start__button svg, .full-start-new .full-start__button img { width: 24px !important; height: 24px !important; margin-bottom: 4px !important; fill: #fff !important; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5)); } ';
-        css += '.full-start-new .full-start__button span { font-size: 9px !important; text-transform: uppercase !important; opacity: 0.75 !important; font-weight: 600; letter-spacing: 0.05em; } ';
+        /* Стандартна обгортка для кнопок під постером на повну ширину без кастомних ефектів */
+        css += '.card-tweaks__buttons { width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 15px !important; margin-top: 15px !important; order: 5; } ';
 
         style.textContent = css;
     }
@@ -277,7 +274,7 @@
             }
         }
 
-        if (Lampa.Storage.get('mobile_interface_studios')) {
+        if (Lampa.Storage.get('tv_interface_studios')) {
             $render.find('.studio-header-brand').remove();
             var studio = null;
 
@@ -379,6 +376,16 @@
                 renderMeta($render.find('.full-start-new__right'), e);
                 loadMovieDetails(movie, $render);
 
+                // Механізм перенесення кнопок в .card-tweaks__buttons одразу після .full-start-new__body
+                var $body = $render.find('.full-start-new__body');
+                var $buttons = $render.find('.full-start-new__buttons');
+                
+                if ($body.length && $buttons.length && $render.find('.card-tweaks__buttons').length === 0) {
+                    var $tweaksButtons = $('<div class="card-tweaks__buttons"></div>');
+                    $buttons.detach().appendTo($tweaksButtons);
+                    $tweaksButtons.insertAfter($body);
+                }
+
                 var $mainContainer = $render.find('.full-start-new');
                 if ($mainContainer.length === 0) $mainContainer = $render;
                 
@@ -402,7 +409,7 @@
                     $qRow.append($cubItem);
                 }
 
-                if (Lampa.Storage.get('mobile_interface_quality') && Lampa.Parser && Lampa.Parser.get) {
+                if (Lampa.Storage.get('tv_interface_quality') && Lampa.Parser && Lampa.Parser.get) {
                     Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
                         if (res && Array.isArray(res.Results)) {
                             var eliteBadgesList = getEliteBadges(res.Results);
@@ -421,19 +428,19 @@
 
     function setupSettings() {
         Lampa.SettingsApi.addComponent({ 
-            component: 'mobile_interface', 
-            name: 'Інтерфейс картки', 
-            icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" fill="white"/></svg>' 
+            component: 'tv_interface', 
+            name: 'Інтерфейс картки (TV)', 
+            icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z" fill="white"/></svg>' 
         });
 
-        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_ui_anim', type: 'trigger', default: true }, field: { name: 'Плавна анімація появи елементів' }, onChange: applyStyles });
-        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_ui_anim_effect', type: 'select', values: { 'fluid': 'Apple Fluid', 'cyber': 'Cyber Neon', 'cinematic': 'Cinematic Depth', 'elastic': 'Elastic Spring', 'minimal': 'Minimal Fade' }, default: 'fluid' }, field: { name: 'Стиль анімації появи' }, onChange: applyStyles });
-        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_badge_anim', type: 'select', values: { 'none': 'Без анімації', 'pulse': 'Пульсація', 'breathe': 'Дихання', 'spin_slow': 'Гойдання', 'float': 'Підстрибування' }, default: 'pulse' }, field: { name: 'Анімація бейджів' }, onChange: applyStyles });
-        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_show_tagline', type: 'trigger', default: true }, field: { name: 'Відображати слоган' }, onChange: applyStyles });
-        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_blocks_gap', type: 'select', values: { '8px': 'Компактний', '12px': 'Стандартний', '18px': 'Просторий', '24px': 'Панорамний' }, default: '8px' }, field: { name: 'Відступи між блоками' }, onChange: applyStyles });
-        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_ratings_size', type: 'select', values: { '0.4em': 'Дрібний', '0.45em': 'Звичайний', '0.5em': 'Великий', '0.55em': 'Дуже великий' }, default: '0.45em' }, field: { name: 'Розмір шрифту інфо-блоків' }, onChange: applyStyles });
-        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_studios', type: 'trigger', default: true }, field: { name: 'Показувати логотип студії' } });
-        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_quality', type: 'trigger', default: true }, field: { name: 'Бейджі якості та звуку' } });
+        Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_ui_anim', type: 'trigger', default: true }, field: { name: 'Плавна анімація появи елементів' }, onChange: applyStyles });
+        Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_ui_anim_effect', type: 'select', values: { 'fluid': 'Apple Fluid', 'cyber': 'Cyber Neon', 'cinematic': 'Cinematic Depth', 'elastic': 'Elastic Spring', 'minimal': 'Minimal Fade' }, default: 'fluid' }, field: { name: 'Стиль анімації появи' }, onChange: applyStyles });
+        Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_badge_anim', type: 'select', values: { 'none': 'Без анімації', 'pulse': 'Пульсація', 'breathe': 'Дихання', 'spin_slow': 'Гойдання', 'float': 'Підстрибування' }, default: 'pulse' }, field: { name: 'Анімація бейджів' }, onChange: applyStyles });
+        Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_show_tagline', type: 'trigger', default: true }, field: { name: 'Відображати слоган' }, onChange: applyStyles });
+        Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_blocks_gap', type: 'select', values: { '8px': 'Компактний', '12px': 'Стандартний', '18px': 'Просторий', '24px': 'Панорамний' }, default: '8px' }, field: { name: 'Відступи між блоками' }, onChange: applyStyles });
+        Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_ratings_size', type: 'select', values: { '0.4em': 'Дрібний', '0.45em': 'Звичайний', '0.5em': 'Великий', '0.55em': 'Дуже великий' }, default: '0.45em' }, field: { name: 'Розмір шрифту інфо-блоків' }, onChange: applyStyles });
+        Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_studios', type: 'trigger', default: true }, field: { name: 'Показувати логотип студії' } });
+        Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_quality', type: 'trigger', default: true }, field: { name: 'Бейджі якості та звуку' } });
     }
 
     function startPlugin() {
