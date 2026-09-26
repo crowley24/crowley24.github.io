@@ -13,9 +13,7 @@
         { id: 'movie_card_logo_studio', default: true },  
         { id: 'movie_card_logo_tagline', default: true },  
         { id: 'movie_card_logo_size', default: '120' },  
-        { id: 'movie_card_logo_quality', default: 'w500' },  
-        { id: 'movie_card_slideshow', default: true },  
-        { id: 'movie_card_slideshow_interval', default: '10' }  
+        { id: 'movie_card_logo_quality', default: 'w500' }  
     ];  
   
     settings_list.forEach(function (opt) {  
@@ -47,88 +45,6 @@
         img.src = imgSrc;  
     }  
   
-    /* ---------- СЛАЙДШОУ ФОНУ (preload + blind swap) ---------- */  
-    var bgTimer = null, bgCardId = null, bgActive = false;  
-  
-    function slideshowEnabled() {  
-        return Lampa.Storage.get('movie_card_slideshow', true) &&  
-               Lampa.Storage.get('movie_card_logo_enabled', true);  
-    }  
-  
-    function slideshowInterval() {  
-        return parseInt(Lampa.Storage.get('movie_card_slideshow_interval', '10'), 10) * 1000;  
-    }  
-  
-    function stopSlideshow() {  
-        bgActive = false;  
-        if (bgTimer) { clearInterval(bgTimer); bgTimer = null; }  
-        if (window.casBgInterval) { clearInterval(window.casBgInterval); window.casBgInterval = null; }  
-        bgCardId = null;  
-    }  
-  
-    function startSlideshow(movie, $render, images) {  
-        stopSlideshow();  
-        if (!movie || !movie.id || !slideshowEnabled()) return;  
-  
-        var curLang = (Lampa.Storage.get('language', 'uk') || 'uk').split('-')[0];  
-  
-        // Пріоритет: безмовні арти → мова інтерфейсу → інші за рейтингом  
-        var langB = [], noLangB = [], otherB = [];  
-        ((images && images.backdrops) || []).forEach(function (b) {  
-            var lang = b.iso_639_1;  
-            if (lang === curLang) langB.push(b);  
-            else if (!lang || lang === 'xx' || lang === 'null') noLangB.push(b);  
-            else otherB.push(b);  
-        });  
-        var backdrops = [].concat(noLangB);  
-        if (backdrops.length < 3) backdrops = backdrops.concat(langB);  
-        if (backdrops.length < 3) {  
-            otherB.sort(function (a, b) { return (b.vote_average || 0) - (a.vote_average || 0); });  
-            backdrops = backdrops.concat(otherB);  
-        }  
-        backdrops = backdrops.slice(0, 15);  
-        if (backdrops.length <= 1) return;  
-  
-        bgCardId = movie.id;  
-        bgActive = true;  
-  
-        var i = 0;  
-        bgTimer = setInterval(function () {  
-            if (!bgActive || bgCardId !== movie.id || currentActiveId !== movie.id) {  
-                clearInterval(bgTimer); bgTimer = null; return;  
-            }  
-  
-            var url = Lampa.TMDB.image('/t/p/original' + backdrops[i++ % backdrops.length].file_path);  
-  
-            var $bgImg = $render.find('.full-start__background img, img.full-start__background').last();  
-            if (!$bgImg.length) $bgImg = $(document).find('img.full-start__background').last();  
-            if (!$bgImg.length) return;  
-  
-            // preload кадру в пам'ять — ключ від ривків на TV  
-            var pre = new Image();  
-            pre.onload = function () {  
-                if (!bgActive || bgCardId !== movie.id) return;  
-                var $container = $render.find('.full-start__background');  
-                if (!$container.length) $container = $bgImg;  
-  
-                // blind swap: гасимо → міняємо src → проявляємо  
-                $container.css('opacity', 0);  
-                setTimeout(function () {  
-                    if (!bgActive) return;  
-                    $bgImg.attr('src', url);  
-                    setTimeout(function () {  
-                        if (!bgActive) return;  
-                        $container.css('opacity', 1);  
-                    }, 80);  
-                }, 420);  
-            };  
-            pre.src = url;  
-        }, slideshowInterval());  
-  
-        window.casBgInterval = bgTimer;  
-    }  
-    /* ---------- /СЛАЙДШОУ ---------- */  
-  
     function applyStyles() {  
         var style = document.getElementById('movie-card-logo-styles');  
         if (!style) {  
@@ -154,10 +70,6 @@
   
             // СТАТУС фільма — видалено повністю  
             css += '.full-start__status, .full-start-new__status { display: none !important; } ';  
-  
-            // Фон чіткий + плавний fade для слайдшоу  
-            css += '.full-start__background, .full-start-new__background { opacity: 1 !important; filter: none !important; -webkit-filter: none !important; transition: opacity 0.4s ease !important; } ';  
-            css += '.background__one.visible, .background__two.visible { opacity: 1 !important; filter: none !important; -webkit-filter: none !important; } ';  
   
             // Обгортка лого: трохи піднята, відступ від рядка details  
             css += '.logo-top-wrap { display: flex; flex-direction: column; align-items: flex-start; width: 100%; margin-top: -0.4em; } ';  
@@ -255,8 +167,7 @@
             });  
             if ($wrapper.children().length) $body.after($wrapper);  
         }  
-    }  
-  
+    }
     function pickTagline(translations, fallback) {  
         if (translations && translations.translations) {  
             var order = ['uk', 'ru', 'en'];  
@@ -270,7 +181,7 @@
         return (fallback || '').trim();  
     }  
   
-   // Копіює текстове значення $src у рядок деталей і ховає оригінал  
+    // Копіює текстове значення $src у рядок деталей і ховає оригінал  
     function toInfo(name, $src, $details) {  
         if (!$src.length || $src.hasClass('hide')) return;  
         var val = $src.text().trim();  
@@ -294,9 +205,6 @@
   
         var rating = parseFloat(data.vote_average || movie.vote_average || 0);  
         rebuildLayout($render, rating);  
-  
-        // Слайдшоу: backdrops уже є в data.images (append_to_response=images)  
-        startSlideshow(movie, $render, data.images);  
   
         setTimeout(function () {  
             rebuildLayout($render, rating);  
@@ -406,9 +314,6 @@
             if (e.type === 'complite' || e.type === 'complete') {  
                 loadMovieDetails(e.data.movie, e.object.activity.render());  
             }  
-            if (e.type === 'destroy') {  
-                stopSlideshow();  
-            }  
         });  
     }  
   
@@ -422,10 +327,7 @@
             component: 'movie_card_logo',  
             param: { name: 'movie_card_logo_enabled', type: 'trigger', default: true },  
             field: { name: 'Увімкнути плагін' },  
-            onChange: function (v) {  
-                applyStyles();  
-                if (v === false || v === 'false') stopSlideshow();  
-            }  
+            onChange: applyStyles  
         });  
         Lampa.SettingsApi.addParam({  
             component: 'movie_card_logo',  
@@ -458,21 +360,6 @@
             },  
             field: { name: 'Якість логотипа' },  
             onChange: applyStyles  
-        });  
-        Lampa.SettingsApi.addParam({  
-            component: 'movie_card_logo',  
-            param: { name: 'movie_card_slideshow', type: 'trigger', default: true },  
-            field: { name: 'Слайдшоу фону', description: 'Прокручувати арти фільму на тлі картки' },  
-            onChange: function (v) { if (v === false || v === 'false') stopSlideshow(); }  
-        });  
-        Lampa.SettingsApi.addParam({  
-            component: 'movie_card_logo',  
-            param: {  
-                name: 'movie_card_slideshow_interval', type: 'select',  
-                values: { '5': '5 сек', '10': '10 сек', '15': '15 сек' },  
-                default: '10'  
-            },  
-            field: { name: 'Інтервал слайдшоу', description: 'Як часто змінюється фонове зображення' }  
         });  
     }  
   
