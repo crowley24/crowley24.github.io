@@ -5,6 +5,7 @@
      */
     var pluginPath = 'https://crowley24.github.io/Icons/';
     var detailsCache = {}; 
+    var badgesCache = {}; // Кеш для розрахованих бейджів
     var currentActiveId = null;
     
     var settings_list = [
@@ -151,7 +152,7 @@
         var loopAnimName = badgeAnim !== 'none' ? 'badge_anim_' + badgeAnim : '';
         var loopDuration = badgeAnim === 'spin_slow' ? '4s' : (badgeAnim === 'breathe' ? '3s' : '2.5s');
 
-        css += '.wave-item { transform-origin: center center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3); ';
+        css += '.wave-item { transform-origin: center center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); ';
         if (isUIAnim) {
             css += 'opacity: 0; animation: wave_cascade 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards';
             if (badgeAnim !== 'none') {
@@ -325,7 +326,8 @@
         if (!results) return foundBadges;
 
         var combinedText = '';
-        results.slice(0, 15).forEach(function(item) {
+        // Зменшено кількість елементів для аналізу до 8 для зниження навантаження на процесор TV
+        results.slice(0, 8).forEach(function(item) {
             combinedText += ' ' + (item.Title || item.title || '');
         });
 
@@ -358,6 +360,15 @@
 
         return foundBadges.filter(function(elem, pos, arr) {
             return arr.indexOf(elem) === pos;
+        });
+    }
+
+    function renderBadges(badgesList, $qRow, startIndex) {
+        var idx = startIndex;
+        badgesList.forEach(function(imgUrl) { 
+            var $badge = $('<div class="quality-item wave-item"><img src="' + imgUrl + '"></div>');
+            $badge.css('--item-index', idx++);
+            $qRow.append($badge);
         });
     }
 
@@ -407,22 +418,25 @@
                     $qRow.append($cubItem);
                 }
 
-                // Відкладений виклик важкого парсера якості для розвантаження первинної анімації
+                // Відкладений виклик та використання кешу бейджів для повного усунення мікролагів
                 if (Lampa.Storage.get('tv_interface_quality') && Lampa.Parser && Lampa.Parser.get) {
                     setTimeout(function() {
                         if (currentActiveId !== movie.id) return;
+                        
+                        if (badgesCache[movie.id]) {
+                            renderBadges(badgesCache[movie.id], $qRow, globalIndex);
+                            return;
+                        }
+
                         Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
+                            if (currentActiveId !== movie.id) return;
                             if (res && Array.isArray(res.Results)) {
                                 var eliteBadgesList = getEliteBadges(res.Results);
-                                
-                                eliteBadgesList.forEach(function(imgUrl) { 
-                                    var $badge = $('<div class="quality-item wave-item"><img src="' + imgUrl + '"></div>');
-                                    $badge.css('--item-index', globalIndex++);
-                                    $qRow.append($badge);
-                                });
+                                badgesCache[movie.id] = eliteBadgesList;
+                                renderBadges(eliteBadgesList, $qRow, globalIndex);
                             }
                         });
-                    }, 180);
+                    }, 350);
                 }
             }
         });
