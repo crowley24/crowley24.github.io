@@ -112,11 +112,12 @@
                 css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
             }
 
-            css += '.card-quality-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 8px; width: 100%; } ';
-            css += '.card-quality-item { height: 1.15em; display: flex; align-items: center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); } ';
-            css += '.card-quality-item img { height: 100%; width: auto; max-width: 60px; object-fit: contain; } ';
-            css += '.card-rating-item { display: flex; align-items: center; gap: 4px; font-weight: 700; font-size: 0.9em; color: #fff; } ';
-            css += '.card-rating-item img { height: 1.1em; width: auto; } ';
+            // Стилі для вертикального стовпчика бейджів та CUB-рейтингу
+            css += '.card-quality-row { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-top: 8px; width: 100%; } ';
+            css += '.card-quality-item { height: 1.3em; display: flex; align-items: center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); } ';
+            css += '.card-quality-item img { height: 100%; width: auto; max-width: 80px; object-fit: contain; } ';
+            css += '.card-rating-item { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.95em; color: #fff; margin-bottom: 2px; } ';
+            css += '.card-rating-item img { height: 1.2em; width: auto; } ';
 
             css += '.full-start-new__rate-line, .full-start__rate-line { position: absolute !important; top: 0.6em !important; right: 1.5em !important; left: auto !important; margin: 0 !important; background: none !important; background-color: transparent !important; padding: 0 !important; z-index: 10 !important; } ';
             css += '.full-start-new__rate-line > :not(.tmdb-rate-badge), .full-start__rate-line > :not(.tmdb-rate-badge) { display: none !important; } ';
