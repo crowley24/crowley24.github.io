@@ -3,20 +3,14 @@
     /**
      * ПЕРЕМІННІ ТА КЕШУВАННЯ
      */
-    var slideshowTimer = null; 
     var pluginPath = 'https://crowley24.github.io/Icons/';
     var detailsCache = {}; 
     var currentActiveId = null;
     
     var settings_list = [
-        { id: 'mobile_interface_animation', default: true },
         { id: 'mobile_interface_ui_anim', default: true },
         { id: 'mobile_interface_ui_anim_effect', default: 'fluid' },
         { id: 'mobile_interface_badge_anim', default: 'pulse' },
-        { id: 'mobile_interface_slideshow', default: true },
-        { id: 'mobile_interface_slideshow_time', default: '10000' },
-        { id: 'mobile_interface_slideshow_quality', default: 'w780' },
-        { id: 'mobile_interface_logo_size_v2', default: '125' },
         { id: 'mobile_interface_logo_quality', default: 'w500' },
         { id: 'mobile_interface_show_tagline', default: true },
         { id: 'mobile_interface_blocks_gap', default: '8px' },
@@ -54,17 +48,6 @@
         tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',
         cub: 'https://raw.githubusercontent.com/yumata/lampa/9381985ad4371d2a7d5eb5ca8e3daf0f32669eb7/img/logo-icon.svg'
     };
-
-    function stopSlideshow() {
-        if (slideshowTimer) {
-            clearInterval(slideshowTimer);
-            slideshowTimer = null;
-        }
-        if (window.mobileInterfaceBgInterval) {
-            clearInterval(window.mobileInterfaceBgInterval);
-            window.mobileInterfaceBgInterval = null;
-        }
-    }
 
     function isImageDark(imgSrc, callback) {
         var img = new Image();
@@ -112,18 +95,15 @@
             document.head.appendChild(style);
         }
 
-        var isPosterAnim = Lampa.Storage.get('mobile_interface_animation');
         var isUIAnim = Lampa.Storage.get('mobile_interface_ui_anim');
         var animEffect = Lampa.Storage.get('mobile_interface_ui_anim_effect', 'fluid');
         var badgeAnim = Lampa.Storage.get('mobile_interface_badge_anim', 'pulse');
         var rSize = Lampa.Storage.get('mobile_interface_ratings_size', '0.45em');
-        var lHeight = Lampa.Storage.get('mobile_interface_logo_size_v2', '125'); 
         var showTagline = Lampa.Storage.get('mobile_interface_show_tagline');
         var blocksGap = Lampa.Storage.get('mobile_interface_blocks_gap', '8px');
         
         var css = '';
         
-        css += '@keyframes kenBurnsEffect { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } } ';
         css += '@keyframes anim_fluid { 0% { opacity: 0; transform: translate3d(0, 25px, 0) scale(0.95); filter: blur(10px); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0px); } } ';
         css += '@keyframes anim_cyber { 0% { opacity: 0; transform: translate3d(-40px, 0, 0) scale(0.9); filter: brightness(1.5); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: brightness(1); } } ';
         css += '@keyframes anim_cinematic { 0% { opacity: 0; transform: translate3d(0, 15px, 0) scale(1.08); filter: blur(6px); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0px); } } ';
@@ -136,7 +116,6 @@
         css += '@keyframes badge_anim_float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } } ';
         css += '@keyframes poster_fade_in { 0% { opacity: 0; transform: scale(1.05); } 100% { opacity: 1; transform: scale(1); } } ';
         
-        // Загальні стилі для екрана картки фільму (без жорсткого обмеження max-width: 480px)
         css += '.full-start__reactions, [class*="reactions"] { display: none !important; } ';
         css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="rating-count"], [class*="status"] { display:none !important; } ';
         css += '.full-start-new__right > div:first-child { display: none !important; } ';
@@ -147,9 +126,7 @@
         css += '.full-start-new__poster { position: relative !important; overflow: hidden !important; background: #000; z-index: 1; height: 62vh !important; ';
         css += (isUIAnim ? 'animation: poster_fade_in 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards; ' : '') + '} ';
         
-        css += '.full-start-new__poster img { filter: none !important; ';
-        css += (isPosterAnim ? 'animation: kenBurnsEffect 25s ease-in-out infinite !important; ' : '');
-        css += 'transform-origin: center center !important; transition: opacity 1.2s ease-in-out !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
+        css += '.full-start-new__poster img { filter: none !important; transform-origin: center center !important; position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; ';
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 55%, transparent 100%) !important; } ';
         
         css += '.full-start-new__right { background: none !important; margin-top: -160px !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: center !important; padding: 0 10px !important; gap: ' + blocksGap + ' !important; position: relative !important; } ';
@@ -165,7 +142,7 @@
         css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
 
         css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.15s; width: 100% !important; display: flex !important; justify-content: center !important; align-items: center !important; margin: 0 !important; min-height: 50px; order: 2; overflow: visible !important; } ';
-        css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 90vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';
+        css += '.full-start-new__title img { height: auto !important; max-height: 125px !important; width: auto !important; max-width: 90vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';
 
         css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.22s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: center !important; order: 3; } ';
         
@@ -295,7 +272,7 @@
                        data.images.logos[0];
             
             if (logo) {
-                var logoUrl = Lampa.TMDB.image('/t/p/' + Lampa.Storage.get('mobile_interface_logo_quality', 'w500') + logo.file_path.replace('.svg', '.png'));
+                var logoUrl = Lampa.TMDB.image('/t/p/w500' + logo.file_path.replace('.svg', '.png'));
                 $render.find('.full-start-new__title').html('<img src="' + logoUrl + '">');
             }
         }
@@ -319,26 +296,6 @@
                 $img.on('error', function() { $brand.remove(); });
                 isImageDark(studioLogoUrl, function(isDark) { if (isDark) $img.addClass('is-dark-logo'); });
                 $render.find('.full-start-new__title').before($brand);
-            }
-        }
-
-        if (data.images && data.images.backdrops) {
-            var backdrops = data.images.backdrops.filter(function (elem) {
-                return elem.aspect_ratio > 1.5 && (!elem.iso_639_1 || elem.iso_639_1 === 'xx');
-            });
-
-            if (backdrops.length === 0) {
-                backdrops = data.images.backdrops.filter(function (elem) {
-                    return elem.aspect_ratio > 1.5;
-                });
-            }
-
-            if (backdrops.length > 0) {
-                backdrops.sort(function (a, b) {
-                    return (b.vote_average || 0) - (a.vote_average || 0);
-                });
-
-                startPosterSlideshow($('.full-start-new__poster'), backdrops.slice(0, 15));
             }
         }
     }
@@ -408,52 +365,13 @@
         });
     }
 
-    function startPosterSlideshow($poster, items) {
-        if (!Lampa.Storage.get('mobile_interface_slideshow')) return;
-        var index = 0; 
-        stopSlideshow();
-
-        var intervalTime = parseInt(Lampa.Storage.get('mobile_interface_slideshow_time', '10000'), 10);
-
-        slideshowTimer = setInterval(function() {
-            if (!$poster || $poster.length === 0 || !document.body.contains($poster[0])) {
-                stopSlideshow();
-                return;
-            }
-
-            index = (index + 1) % items.length;
-            var imgUrl = Lampa.TMDB.image('/t/p/' + Lampa.Storage.get('mobile_interface_slideshow_quality', 'w780') + items[index].file_path);
-            var $current = $poster.find('img').first();
-            var nextImg = new Image();
-            
-            nextImg.onload = function() {
-                var $next = $('<img src="' + imgUrl + '" style="opacity: 0; transition: opacity 1.2s ease-in-out;">');
-                $poster.append($next);
-                setTimeout(function() { 
-                    $next.css('opacity', '1'); 
-                    $current.css('opacity', '0'); 
-                    setTimeout(function(){ 
-                        if ($current && $current.length) $current.remove(); 
-                    }, 1200); 
-                }, 100);
-            }; 
-            nextImg.src = imgUrl;
-        }, intervalTime);
-
-        window.mobileInterfaceBgInterval = slideshowTimer;
-    }
-
     function init() {
         Lampa.Listener.follow('full', function (e) {
             if (e.type === 'destroy' || e.type === 'onBeforeDestroy') {
-                stopSlideshow();
                 currentActiveId = null;
             }
             
-            // Замінено перевірку width <= 480 на спрацьовування для будь-якого екрана (телевізори, приставки, планшети)
             if (e.type === 'complite' || e.type === 'complete') {
-                stopSlideshow(); 
-                
                 var movie = e.data.movie, $render = e.object.activity.render();
                 
                 if (window.lampa_settings) window.lampa_settings.blur_poster = false;
@@ -508,13 +426,9 @@
             icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z" fill="white"/></svg>' 
         });
 
-        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_animation', type: 'trigger', default: true }, field: { name: 'Зум-ефект постера (Ken Burns)' }, onChange: applyStyles });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_ui_anim', type: 'trigger', default: true }, field: { name: 'Плавна анімація появи елементів' }, onChange: applyStyles });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_ui_anim_effect', type: 'select', values: { 'fluid': 'Apple Fluid', 'cyber': 'Cyber Neon', 'cinematic': 'Cinematic Depth', 'elastic': 'Elastic Spring', 'minimal': 'Minimal Fade' }, default: 'fluid' }, field: { name: 'Стиль анімації появи' }, onChange: applyStyles });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_badge_anim', type: 'select', values: { 'none': 'Без анімації', 'pulse': 'Пульсація', 'breathe': 'Дихання', 'spin_slow': 'Гойдання', 'float': 'Підстрибування' }, default: 'pulse' }, field: { name: 'Анімація бейджів' }, onChange: applyStyles });
-        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_slideshow', type: 'trigger', default: true }, field: { name: 'Автозміна фонових кадрів' } });
-        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_slideshow_time', type: 'select', values: { '10000': '10 сек', '15000': '15 сек', '20000': '20 сек' }, default: '10000' }, field: { name: 'Інтервал зміни фону' } });
-        Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_logo_size_v2', type: 'select', values: { '125': 'Малий', '150': 'Середній', '180': 'Стандартний', '210': 'Великий' }, default: '125' }, field: { name: 'Висота логотипу тайтлу' }, onChange: applyStyles });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_show_tagline', type: 'trigger', default: true }, field: { name: 'Відображати слоган' }, onChange: applyStyles });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_blocks_gap', type: 'select', values: { '8px': 'Компактний', '12px': 'Стандартний', '18px': 'Просторий', '24px': 'Панорамний' }, default: '8px' }, field: { name: 'Відступи між блоками' }, onChange: applyStyles });
         Lampa.SettingsApi.addParam({ component: 'mobile_interface', param: { name: 'mobile_interface_ratings_size', type: 'select', values: { '0.4em': 'Дрібний', '0.45em': 'Звичайний', '0.5em': 'Великий', '0.55em': 'Дуже великий' }, default: '0.45em' }, field: { name: 'Розмір шрифту інфо-блоків' }, onChange: applyStyles });
