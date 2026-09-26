@@ -88,12 +88,9 @@
             // Слоган впритул до лого назви  
             css += '.full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 0 0 6px 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; } ';  
   
-            // Рейтинги у правому верхньому куті  
-            css += '.full-start, .full-start-new { position: relative !important; } ';  
-            css += '.full-start__ratings { position: absolute !important; top: 1em !important; right: 1.5em !important; margin-left: 0 !important; z-index: 5 !important; } ';  
-  
-            // Рядок деталей (вік, статус "випущено")  
-            css += '.full-start-new__details-line { display: flex; flex-wrap: wrap; align-items: center; margin: 4px 0; } ';  
+            // Рейтинг у правий верхній кут (селектори з робочого плагіна)  
+            css += '.full-start-new, .full-start { position: relative !important; } ';  
+            css += '.full-start-new__rate-line, .full-start__rate-line { position: absolute !important; top: 1.5em; right: 1.5em; z-index: 5; margin: 0 !important; display: flex; gap: 0.8em; align-items: center; background: rgba(0,0,0,0.45); padding: 0.4em 0.9em; border-radius: 0.5em; } ';  
   
             if (showStudio) {  
                 css += '.studio-header-brand { width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: 4px !important; } ';  
@@ -132,29 +129,46 @@
         if (countries) extraInfo.push(countries);  
         var formattedDetails = extraInfo.join(' • ');  
   
-        // Вставляємо у рядок з тривалістю та жанром + переносимо теги віку/статусу  
+        // Інфо-рядок + перенесення віку/статусу в панель деталей (де бюджет)  
         setTimeout(function() {  
             var $infoLine = $render.find('.full-start-new__info, .full-start__info');  
               
-            if ($infoLine.length > 0) {  
+            if ($infoLine.length > 0 && formattedDetails) {  
                 var originalText = $infoLine.attr('data-original-text');  
                 if (!originalText) {  
                     originalText = $infoLine.text();  
                     $infoLine.attr('data-original-text', originalText);  
                 }  
-  
-                if (formattedDetails && originalText.indexOf(formattedDetails) === -1) {  
+                if (originalText.indexOf(formattedDetails) === -1) {  
                     $infoLine.text(formattedDetails + ' • ' + originalText);  
                 }  
+            }  
   
-                // Переносимо теги (вік, статус "випущено") в окремий рядок деталей  
-                var $details = $render.find('.full-start-new__details-line');  
-                if ($details.length === 0) {  
-                    $details = $('<div class="full-start-new__details-line"></div>');  
-                    $infoLine.after($details);  
+            // Вік + статус → у .full-descr__details (рядок де бюджет)  
+            var $details = $render.find('.full-descr__details');  
+            if ($details.length && !$details.find('.full-descr__info--moved').length) {  
+                function addInfo(name, value) {  
+                    $details.append(  
+                        '<div class="full-descr__info full-descr__info--moved">' +  
+                            '<div class="full-descr__info-name">' + name + '</div>' +  
+                            '<div class="full-descr__info-body">' + value + '</div>' +  
+                        '</div>'  
+                    );  
                 }  
-                $render.find('.full-start-new__tags .full-start__tag, .full-start__tags .full-start__tag')  
-                    .appendTo($details);  
+                function toInfo($el, name) {  
+                    if (!$el.length || $el.hasClass('hide')) return;  
+                    addInfo(name, $el.text().trim());  
+                    $el.hide();  
+                }  
+  
+                toInfo($render.find('.full-start__pg'),     'Віковий рейтинг');  
+                toInfo($render.find('.full-start__status'), 'Статус');  
+  
+                // Дата виходу для майбутніх релізів  
+                var rd = movie.release_date || movie.first_air_date;  
+                if (rd && new Date(rd) > new Date() && typeof Lampa.Utils.parseTime === 'function') {  
+                    addInfo('У прокаті з', Lampa.Utils.parseTime(rd).full);  
+                }  
             }  
         }, 50);  
   
@@ -305,7 +319,7 @@
                 values: {   
                     '50': 'Дуже малий',   
                     '80': 'Малий',   
-                    '120': 'Стандартний',  
+                    '120': 'Стандартний',   
                     '160': 'Великий',   
                     '210': 'Дуже великий'   
                 },   
