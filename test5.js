@@ -3,6 +3,7 @@
   
     var detailsCache = {};  
     var currentActiveId = null;  
+    var TMDB_LOGO_URL = 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg';  
   
     var settings_list = [  
         { id: 'movie_card_logo_enabled', default: true },  
@@ -61,23 +62,18 @@
         var css = '';  
         if (isEnabled) {  
             css += '.full-start-new__head, .full-start__tags { display: none !important; } ';  
-  
-            // Обгортка лого — на місці title у текстовій колонці  
             css += '.logo-top-wrap { display: flex !important; flex-direction: column !important; align-items: flex-start !important; width: 100% !important; } ';  
             css += '.logo-top-wrap .full-start-new__title { margin: 0 0 2px 0 !important; display: flex !important; align-items: center !important; height: auto !important; min-height: unset !important; overflow: visible !important; width: 100% !important; } ';  
             css += '.logo-top-wrap .full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 55vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';  
-  
-            // Слоган + більший відступ до інфо-рядка  
             css += '.logo-top-wrap .full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 0 0 14px 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; } ';  
-  
-            // Інфо-рядок (тривалість/жанр): відступ зверху + інший шрифт  
             css += '.logo-top-wrap .full-start-new__info, .logo-top-wrap .full-start__info { margin: 6px 0 6px 0 !important; padding: 0 !important; font-family: Roboto, sans-serif !important; font-size: 0.95em !important; font-weight: 300 !important; letter-spacing: 0.02em !important; color: rgba(255,255,255,0.75) !important; } ';  
   
-            // Рейтинг: без темного фону, вище у куті  
+            // Рейтинг: TMDB-лого + число, без фону, у правому верхньому куті  
             css += '.full-start-new, .full-start { position: relative !important; } ';  
-            css += '.full-start-new__rate-line, .full-start__rate-line { position: absolute !important; top: 0.6em !important; right: 1.5em; z-index: 5; margin: 0 !important; display: flex; gap: 0.8em; align-items: center; background: none !important; padding: 0 !important; border-radius: 0 !important; } ';  
+            css += '.full-start-new__rate-line, .full-start__rate-line { position: absolute !important; top: 0.6em !important; right: 1.5em; z-index: 5; margin: 0 !important; display: flex; gap: 0.6em; align-items: center; background: none !important; padding: 0 !important; border-radius: 0 !important; } ';  
             css += '.full-start .info__rate, .full-start-new .info__rate { background-color: transparent !important; padding: 0 !important; } ';  
-            css += '.full-start-new__rate-line .tmdb-rate-icon, .full-start__rate-line .tmdb-rate-icon { margin-right: 0.4em; vertical-align: middle; } ';  
+            css += '.tmdb-rate-icon { height: 0.9em !important; width: auto !important; display: inline-block !important; flex-shrink: 0; } ';  
+            css += '.full-start-new__rate-line *, .full-start__rate-line * { font-weight: 600 !important; text-shadow: 0 1px 4px rgba(0,0,0,0.8) !important; } ';  
   
             // Кнопки під верхнім блоком, на всю ширину  
             css += '.card-tweaks__buttons { margin-top: 1.5em; width: 100%; } ';  
@@ -110,7 +106,7 @@
             if ($left.length) $left.prepend($('<div class="logo-top-wrap"></div>'));  
         }  
   
-        // 2. Слоган та інфо-рядок — у wrap під title  
+        // 2. Слоган та інфо-рядок — у wrap одразу під title  
         $wrap = $render.find('.logo-top-wrap');  
         if ($wrap.length) {  
             ['.full-start-new__tagline', '.full-start-new__info', '.full-start__info'].forEach(function (sel) {  
@@ -121,10 +117,10 @@
             });  
         }  
   
-        // 3. Зірка-іконка перед рейтингом (інлайн SVG)  
+        // 3. TMDB-лого замість зірки перед рейтингом  
         var $rate = $render.find('.full-start-new__rate-line, .full-start__rate-line').first();  
         if ($rate.length && !$rate.find('.tmdb-rate-icon').length) {  
-            $rate.prepend('<svg class="tmdb-rate-icon" viewBox="0 0 17 16" style="width:1em;height:1em;flex-shrink:0;"><path d="M8.39 0.19L10.99 5.31L16.79 6.20L12.55 10.43L13.58 15.93L8.39 13.24L3.21 15.93L4.24 10.43L0 6.20L5.80 5.31Z" fill="#fff"/></svg>');  
+            $rate.prepend('<img class="tmdb-rate-icon" src="' + TMDB_LOGO_URL + '" alt="TMDB">');  
         }  
   
         // 4. Кнопки під усім верхнім блоком, на всю ширину  
@@ -137,8 +133,7 @@
             });  
             if ($wrapper.children().length) $body.after($wrapper);  
         }  
-    }  
-  
+    }
     function applyMovieDetailsData(data, movie, $render, translations) {  
         if (!Lampa.Storage.get('movie_card_logo_enabled', true)) return;  
   
@@ -171,38 +166,28 @@
             // Вік + статус → у .full-descr__details (де бюджет)  
             var $details = $render.find('.full-descr__details');  
             if ($details.length && !$details.find('.full-descr__info--moved').length) {  
-                function addInfo(name, value) {  
+                function toInfo($el, name) {  
+                    if (!$el.length || $el.hasClass('hide')) return;  
                     $details.append(  
                         '<div class="full-descr__info full-descr__info--moved">' +  
                             '<div class="full-descr__info-name">' + name + '</div>' +  
-                            '<div class="full-descr__info-body">' + value + '</div>' +  
+                            '<div class="full-descr__info-body">' + $el.text().trim() + '</div>' +  
                         '</div>'  
                     );  
-                }  
-                function toInfo($el, name) {  
-                    if (!$el.length || $el.hasClass('hide')) return;  
-                    addInfo(name, $el.text().trim());  
                     $el.hide();  
                 }  
-  
                 toInfo($render.find('.full-start__pg'), 'Віковий рейтинг');  
                 toInfo($render.find('.full-start__status'), 'Статус');  
-  
-                var rd = movie.release_date || movie.first_air_date;  
-                if (rd && new Date(rd) > new Date() && typeof Lampa.Utils !== 'undefined') {  
-                    addInfo('У прокаті з', Lampa.Utils.parseTime(rd).full);  
-                }  
             }  
         }, 50);  
   
-        // Логотип назви  
+        // Логотип назви фільму  
         if (data.images && data.images.logos && data.images.logos.length > 0) {  
-            var lang = Lampa.Storage.get('language') || 'uk';  
-            var logo = data.images.logos.filter(function (l) { return l.iso_639_1 === lang; })[0] ||  
-                       data.images.logos.filter(function (l) { return l.iso_639_1 === 'en'; })[0] ||  
+            var logo = data.images.logos.find(function (l) { return l.iso_639_1 === 'uk'; }) ||  
+                       data.images.logos.find(function (l) { return l.iso_639_1 === 'en'; }) ||  
                        data.images.logos[0];  
   
-            if (logo) {  
+            if (logo && logo.file_path) {  
                 var quality = Lampa.Storage.get('movie_card_logo_quality', 'w500');  
                 var logoUrl = Lampa.TMDB.image('/t/p/' + quality + logo.file_path.replace('.svg', '.png'));  
                 $render.find('.full-start-new__title').html('<img src="' + logoUrl + '">');  
@@ -264,7 +249,7 @@
         }  
   
         var type = (movie.name || movie.first_air_date) ? 'tv' : 'movie';  
-var url = 'https://api.themoviedb.org/3/' + type + '/' + movieId + '?api_key=' + Lampa.TMDB.key() + '&append_to_response=images&include_image_language=uk,en,null';  
+        var url = 'https://api.themoviedb.org/3/' + type + '/' + movieId + '?api_key=' + Lampa.TMDB.key() + '&append_to_response=images&include_image_language=uk,en,null';  
         var transUrl = 'https://api.themoviedb.org/3/' + type + '/' + movieId + '/translations?api_key=' + Lampa.TMDB.key();  
   
         $.when(  
