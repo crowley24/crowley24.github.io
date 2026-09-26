@@ -50,29 +50,22 @@
             try {
                 var canvas = document.createElement('canvas');
                 var ctx = canvas.getContext('2d');
-                canvas.width = 40;
-                canvas.height = 40;
-                ctx.drawImage(img, 0, 0, 40, 40);
-
-                var imgData = ctx.getImageData(0, 0, 40, 40);
+                canvas.width = 30;
+                canvas.height = 30;
+                ctx.drawImage(img, 0, 0, 30, 30);
+                var imgData = ctx.getImageData(0, 0, 30, 30);
                 var data = imgData.data;
-                var totalBrightness = 0;
-                var hasColor = false;
-                var count = 0;
+                var totalBrightness = 0, count = 0, hasColor = false;
 
                 for (var i = 0; i < data.length; i += 4) {
-                    var alpha = data[i + 3];
-                    if (alpha > 50) { 
+                    if (data[i + 3] > 40) {
                         var r = data[i], g = data[i + 1], b = data[i + 2];
-                        var brightness = (r * 299 + g * 587 + b * 114) / 1000;
-                        totalBrightness += brightness;
+                        totalBrightness += (r * 299 + g * 587 + b * 114) / 1000;
                         count++;
-                        if ((Math.max(r, g, b) - Math.min(r, g, b)) > 30) hasColor = true;
+                        if ((Math.max(r, g, b) - Math.min(r, g, b)) > 25) hasColor = true;
                     }
                 }
-
-                var avgBrightness = count > 0 ? (totalBrightness / count) : 255;
-                var isDark = (avgBrightness < 110) && !hasColor;
+                var isDark = (count > 0 ? (totalBrightness / count) : 255 < 110) && !hasColor;
                 logoDarkCache[imgSrc] = isDark;
                 callback(isDark);
             } catch (e) {
@@ -80,10 +73,7 @@
                 callback(false);
             }
         };
-        img.onerror = function () { 
-            logoDarkCache[imgSrc] = false;
-            callback(false); 
-        };
+        img.onerror = function () { logoDarkCache[imgSrc] = false; callback(false); };
         img.src = imgSrc;
     }
 
@@ -102,15 +92,17 @@
         
         var css = '';
         
-        // Додаємо загальні плавнні анімації появи (Fade-in)
-        css += '@keyframes cardLogoFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } } ';
-        css += '.full-start-new__title img, .studio-header-brand, .full-start-new__tagline, .tmdb-rate-badge, .card-quality-row { animation: cardLogoFadeIn 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; will-change: opacity, transform; } ';
+        // Преміальна плавна анімація для всього блоку інформації картки (зникають ривки окремих елементів)
+        css += '@keyframes cardSmoothAppear { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: translateY(0); } } ';
+        css += '.full-start-new__body, .full-start__body { animation: cardSmoothAppear 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; will-change: opacity, transform; } ';
 
         if (!isEnabled) {
             css += '.full-start-new__title { display: block !important; } ';
             css += '.full-start-new__title img { display: none !important; } ';
             css += '.studio-header-brand, .tmdb-rate-badge, .card-quality-row { display: none !important; } ';
         } else {
+            //Миттєве приховування початкового тексту назви ще до завантаження картинки (ліквідація моргання)
+            css += '.full-start-new__title { font-size: 0 !important; color: transparent !important; user-select: none !important; } ';
             css += '.full-start-new__head, .full-start__tags { display: none !important; } ';
             
             css += '.card-tweaks__buttons { margin-top: 1.5em; width: 100%; clear: both; } ';
@@ -123,7 +115,7 @@
 
             if (showStudio) {
                 css += '.studio-header-brand { width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: 2px !important; } ';
-                css += '.studio-header-brand img { height: 20px !important; width: auto; max-width: 120px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; transition: opacity 0.2s ease; } ';
+                css += '.studio-header-brand img { height: 20px !important; width: auto; max-width: 120px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; } ';
                 css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
             }
 
@@ -176,7 +168,7 @@
         if (!results) return foundBadges;
 
         var combinedText = '';
-        results.slice(0, 15).forEach(function(item) {
+        results.slice(0, 10).forEach(function(item) {
             combinedText += ' ' + (item.Title || item.title || '');
         });
 
@@ -202,161 +194,156 @@
             }
         });
 
-        var hasUkr = /ukr|укр/i.test(combinedText);
-        var hasDub = /dub|дуб/i.test(combinedText);
-        if (hasUkr) foundBadges.push(pluginPath + 'UKR.svg');
-        if (hasDub) foundBadges.push(pluginPath + 'DUB.svg');
+        if (/ukr|укр/i.test(combinedText)) foundBadges.push(pluginPath + 'UKR.svg');
+        if (/dub|дуб/i.test(combinedText)) foundBadges.push(pluginPath + 'DUB.svg');
 
-        return foundBadges.filter(function(elem, pos, arr) {
-            return arr.indexOf(elem) === pos;
-        });
+        return foundBadges.filter(function(elem, pos, arr) { return arr.indexOf(elem) === pos; });
     }
 
     function applyMovieDetailsData(data, movie, $render, translations) {  
         if (!Lampa.Storage.get('movie_card_logo_enabled', true)) return;  
 
-        var body    = $render.find('.full-start-new__body');  
-        var wrapper = $render.find('.card-tweaks__buttons');  
-        if (body.length && !wrapper.length) {  
-            wrapper = $('<div class="card-tweaks__buttons"></div>');  
-            $render.find('.full-start-new__buttons, .buttons--container').each(function () {  
-                wrapper.append(this);  
-            });  
-            if (wrapper.children().length) body.after(wrapper);  
-        }
-
-        var rating = parseFloat(data.vote_average || movie.vote_average || 0);  
-
-        var $rate = $render.find('.full-start-new__rate-line, .full-start__rate-line').first();  
-        if ($rate.length && !$rate.find('.tmdb-rate-badge').length && rating) {  
-            var value = rating.toFixed(1);  
-            var color = rateColor(rating);  
-            var $badge = $('<div class="tmdb-rate-badge">' +  
-                '<img src="' + TMDB_LOGO_URL + '" alt="TMDB">' +  
-                '<span class="tmdb-rate-value" style="color:' + color + '">' + value + '</span>' +  
-            '</div>');  
-            $rate.append($badge);  
-        }  
-
-        var year = (data.release_date || data.first_air_date || '').split('-')[0];
-        var countries = (data.production_countries && data.production_countries.length > 0) ? 
-            data.production_countries.map(function(c) { return c.name; }).join(' • ') : '';
-        
-        var extraInfo = [];
-        if (year) extraInfo.push(year);
-        if (countries) extraInfo.push(countries);
-        var formattedDetails = extraInfo.join(' • ');
-
-        var $infoLine = $render.find('.full-start-new__info, .full-start__info');
-        if ($infoLine.length > 0 && formattedDetails) {
-            var originalText = $infoLine.attr('data-original-text');
-            if (!originalText) {
-                originalText = $infoLine.text();
-                $infoLine.attr('data-original-text', originalText);
+        window.requestAnimationFrame(function() {
+            var body    = $render.find('.full-start-new__body');  
+            var wrapper = $render.find('.card-tweaks__buttons');  
+            if (body.length && !wrapper.length) {  
+                wrapper = $('<div class="card-tweaks__buttons"></div>');  
+                $render.find('.full-start-new__buttons, .buttons--container').each(function () {  
+                    wrapper.append(this);  
+                });  
+                if (wrapper.children().length) body.after(wrapper);  
             }
-            if (originalText.indexOf(formattedDetails) === -1) {
-                $infoLine.text(formattedDetails + ' • ' + originalText);
-            }
-        }
 
-        if (data.images && data.images.logos && data.images.logos.length > 0) {
-            var lang = Lampa.Storage.get('language') || 'uk';
-            var logo = data.images.logos.filter(function(l) { return l.iso_639_1 === lang; })[0] || 
-                       data.images.logos.filter(function(l) { return l.iso_639_1 === 'en'; })[0] || 
-                       data.images.logos[0];
+            var rating = parseFloat(data.vote_average || movie.vote_average || 0);  
+            var $rate = $render.find('.full-start-new__rate-line, .full-start__rate-line').first();  
+            if ($rate.length && !$rate.find('.tmdb-rate-badge').length && rating) {  
+                var value = rating.toFixed(1);  
+                var color = rateColor(rating);  
+                var $badge = $('<div class="tmdb-rate-badge">' +  
+                    '<img src="' + TMDB_LOGO_URL + '" alt="TMDB">' +  
+                    '<span class="tmdb-rate-value" style="color:' + color + '">' + value + '</span>' +  
+                '</div>');  
+                $rate.append($badge);  
+            }  
+
+            var year = (data.release_date || data.first_air_date || '').split('-')[0];
+            var countries = (data.production_countries && data.production_countries.length > 0) ? 
+                data.production_countries.map(function(c) { return c.name; }).join(' • ') : '';
             
-            if (logo && logo.file_path) {
-                var quality = Lampa.Storage.get('movie_card_logo_quality', 'w500');
-                var logoUrl = Lampa.TMDB.image('/t/p/' + quality + logo.file_path.replace('.svg', '.png'));
-                var $title = $render.find('.full-start-new__title');
-                
-                if ($title.length) {
-                    var $logoImg = $('<img src="' + logoUrl + '" alt="' + (movie.title || movie.name || '') + '">');
-                    $logoImg.on('error', function() {
-                        $logoImg.remove();
-                    });
-                    $title.html($logoImg);
+            var extraInfo = [];
+            if (year) extraInfo.push(year);
+            if (countries) extraInfo.push(countries);
+            var formattedDetails = extraInfo.join(' • ');
+
+            var $infoLine = $render.find('.full-start-new__info, .full-start__info');
+            if ($infoLine.length > 0 && formattedDetails) {
+                var originalText = $infoLine.attr('data-original-text');
+                if (!originalText) {
+                    originalText = $infoLine.text();
+                    $infoLine.attr('data-original-text', originalText);
+                }
+                if (originalText.indexOf(formattedDetails) === -1) {
+                    $infoLine.text(formattedDetails + ' • ' + originalText);
                 }
             }
-        }
 
-        var taglineText = '';
-        if (translations && translations.translations) {
-            var uaTrans = translations.translations.find(function(t) { return t.iso_639_1 === 'uk'; });
-            if (uaTrans && uaTrans.data && uaTrans.data.tagline) {
-                taglineText = uaTrans.data.tagline;
-            }
-        }
-        if (!taglineText && data.tagline) {
-            taglineText = data.tagline;
-        }
-
-        var $tagline = $render.find('.full-start-new__tagline');
-        if (Lampa.Storage.get('movie_card_logo_tagline', true) && taglineText && taglineText.trim() !== '') {
-            if ($tagline.length === 0) {
-                $tagline = $('<div class="full-start-new__tagline"></div>');
-                $render.find('.full-start-new__title').after($tagline);
-            }
-            $tagline.text(taglineText).show();
-        } else {
-            if ($tagline.length) $tagline.hide();
-        }
-
-        if (Lampa.Storage.get('movie_card_logo_quality_badges', true)) {
-            $render.find('.card-quality-row').remove();
-            var $qRow = $('<div class="card-quality-row"></div>');
-            
-            var cub = getCubRating(data.reactions, movie);
-            if (cub) {
-                var $cubItem = $('<div class="card-rating-item"><img src="' + CUB_LOGO_URL + '"> <span style="color:' + rateColor(cub) + '">' + cub + '</span></div>');
-                $qRow.append($cubItem);
-            }
-
-            if (Lampa.Parser && Lampa.Parser.get) {
-                Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
-                    if (res && Array.isArray(res.Results)) {
-                        var eliteBadgesList = getEliteBadges(res.Results);
-                        eliteBadgesList.forEach(function(imgUrl) { 
-                            var $badge = $('<div class="card-quality-item"><img src="' + imgUrl + '"></div>');
-                            $qRow.append($badge);
-                        });
+            if (data.images && data.images.logos && data.images.logos.length > 0) {
+                var lang = Lampa.Storage.get('language') || 'uk';
+                var logo = data.images.logos.filter(function(l) { return l.iso_639_1 === lang; })[0] || 
+                           data.images.logos.filter(function(l) { return l.iso_639_1 === 'en'; })[0] || 
+                           data.images.logos[0];
+                
+                if (logo && logo.file_path) {
+                    var quality = Lampa.Storage.get('movie_card_logo_quality', 'w500');
+                    var logoUrl = Lampa.TMDB.image('/t/p/' + quality + logo.file_path.replace('.svg', '.png'));
+                    var $title = $render.find('.full-start-new__title');
+                    
+                    if ($title.length) {
+                        var $logoImg = $('<img src="' + logoUrl + '" alt="' + (movie.title || movie.name || '') + '">');
+                        $logoImg.on('error', function() { $logoImg.remove(); });
+                        $title.html($logoImg);
                     }
-                });
-            }
-
-            var $rateLine = $render.find('.full-start-new__rate-line, .full-start__rate-line').first();
-            if ($rateLine.length) {
-                $rateLine.append($qRow);
-            }
-        }
-
-        if (Lampa.Storage.get('movie_card_logo_studio', true)) {
-            $render.find('.studio-header-brand').remove();
-            var studio = null;
-
-            if (data.networks && data.networks.length > 0) {
-                studio = data.networks.find(function(n) { return n.logo_path; });
-            }
-            if (!studio && data.production_companies && data.production_companies.length > 0) {
-                studio = data.production_companies.find(function(c) { return c.logo_path; });
-            }
-
-            if (studio && studio.logo_path) {
-                var studioLogoUrl = Lampa.TMDB.image('/t/p/w200' + studio.logo_path);
-                var $brand = $('<div class="studio-header-brand"><img src="' + studioLogoUrl + '" alt="' + (studio.name || '') + '"></div>');
-                var $img = $brand.find('img');
-
-                $img.on('error', function() { $brand.remove(); });
-                isImageDark(studioLogoUrl, function(isDark) { 
-                    if (isDark) $img.addClass('is-dark-logo'); 
-                });
-                
-                var $titleElem = $render.find('.full-start-new__title');
-                if ($titleElem.length) {
-                    $titleElem.before($brand);
                 }
             }
-        }
+
+            var taglineText = '';
+            if (translations && translations.translations) {
+                var uaTrans = translations.translations.find(function(t) { return t.iso_639_1 === 'uk'; });
+                if (uaTrans && uaTrans.data && uaTrans.data.tagline) {
+                    taglineText = uaTrans.data.tagline;
+                }
+            }
+            if (!taglineText && data.tagline) {
+                taglineText = data.tagline;
+            }
+
+            var $tagline = $render.find('.full-start-new__tagline');
+            if (Lampa.Storage.get('movie_card_logo_tagline', true) && taglineText && taglineText.trim() !== '') {
+                if ($tagline.length === 0) {
+                    $tagline = $('<div class="full-start-new__tagline"></div>');
+                    $render.find('.full-start-new__title').after($tagline);
+                }
+                $tagline.text(taglineText).show();
+            } else {
+                if ($tagline.length) $tagline.hide();
+            }
+
+            if (Lampa.Storage.get('movie_card_logo_quality_badges', true)) {
+                $render.find('.card-quality-row').remove();
+                var $qRow = $('<div class="card-quality-row"></div>');
+                
+                var cub = getCubRating(data.reactions, movie);
+                if (cub) {
+                    var $cubItem = $('<div class="card-rating-item"><img src="' + CUB_LOGO_URL + '"> <span style="color:' + rateColor(cub) + '">' + cub + '</span></div>');
+                    $qRow.append($cubItem);
+                }
+
+                if (Lampa.Parser && Lampa.Parser.get) {
+                    Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
+                        if (res && Array.isArray(res.Results)) {
+                            var eliteBadgesList = getEliteBadges(res.Results);
+                            eliteBadgesList.forEach(function(imgUrl) { 
+                                var $badge = $('<div class="card-quality-item"><img src="' + imgUrl + '"></div>');
+                                $qRow.append($badge);
+                            });
+                        }
+                    });
+                }
+
+                var $rateLine = $render.find('.full-start-new__rate-line, .full-start__rate-line').first();
+                if ($rateLine.length) {
+                    $rateLine.append($qRow);
+                }
+            }
+
+            if (Lampa.Storage.get('movie_card_logo_studio', true)) {
+                $render.find('.studio-header-brand').remove();
+                var studio = null;
+
+                if (data.networks && data.networks.length > 0) {
+                    studio = data.networks.find(function(n) { return n.logo_path; });
+                }
+                if (!studio && data.production_companies && data.production_companies.length > 0) {
+                    studio = data.production_companies.find(function(c) { return c.logo_path; });
+                }
+
+                if (studio && studio.logo_path) {
+                    var studioLogoUrl = Lampa.TMDB.image('/t/p/w200' + studio.logo_path);
+                    var $brand = $('<div class="studio-header-brand"><img src="' + studioLogoUrl + '" alt="' + (studio.name || '') + '"></div>');
+                    var $img = $brand.find('img');
+
+                    $img.on('error', function() { $brand.remove(); });
+                    isImageDark(studioLogoUrl, function(isDark) { 
+                        if (isDark) $img.addClass('is-dark-logo'); 
+                    });
+                    
+                    var $titleElem = $render.find('.full-start-new__title');
+                    if ($titleElem.length) {
+                        $titleElem.before($brand);
+                    }
+                }
+            }
+        });
     }  
 
     function loadMovieDetails(movie, $render) {  
