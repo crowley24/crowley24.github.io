@@ -101,21 +101,23 @@
             css += '.card-tweaks__buttons { margin-top: 1.5em; width: 100%; clear: both; } ';
             css += '.card-tweaks__buttons .full-start-new__buttons, .card-tweaks__buttons .buttons--container { margin-top: 0.6em; } ';
             
-            css += '.full-start-new__title { display: flex !important; justify-content: flex-start !important; align-items: center !important; height: auto !important; min-height: unset !important; overflow: visible !important; width: 100% !important; box-sizing: border-box !important; margin: 4px 0 !important; } ';
+            css += '.full-start-new__title { display: flex !important; justify-content: flex-start !important; align-items: center !important; height: auto !important; min-height: unset !important; overflow: visible !important; width: 100% !important; box-sizing: border-box !important; margin: 2px 0 !important; } ';
             css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 55vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; display: block; } ';
             
             css += '.full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 4px 0 0 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; } ';
 
             if (showStudio) {
-                css += '.studio-header-brand { width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: 4px !important; } ';
+                css += '.studio-header-brand { width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: 2px !important; } ';
                 css += '.studio-header-brand img { height: 20px !important; width: auto; max-width: 120px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; } ';
                 css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
             }
 
-            // Правий верхній куток: позиціонування контейнера та суворе приховування стандартних рідних елементів Lampa (статус, віковий рейтинг тощо)
+            // Збільшуємо відступ зверху для інформаційного рядка (тривалість, рік, країни), щоб підняти весь верхній блок вище
+            css += '.full-start-new__info, .full-start__info { margin-top: 1.2em !important; } ';
+
+            // Правий верхній куток: позиціонування та суворе приховування стандартних рідних елементів Lampa
             css += '.full-start-new__rate-line, .full-start__rate-line { position: absolute !important; top: 0.6em !important; right: 1.5em !important; left: auto !important; margin: 0 !important; background: none !important; background-color: transparent !important; padding: 0 !important; z-index: 10 !important; display: flex !important; flex-direction: column !important; align-items: flex-end !important; } ';
             
-            // Приховуємо всередині правого блоку все, крім нашого кастомного значка TMDB і бейджів
             css += '.full-start-new__rate-line > *:not(.tmdb-rate-badge):not(.card-quality-row) { display: none !important; } ';
             css += '.full-start__rate-line > *:not(.tmdb-rate-badge):not(.card-quality-row) { display: none !important; } ';
             css += '.full-start .info__rate, .full-start-new .info__rate { display: none !important; } ';
@@ -124,7 +126,7 @@
             css += '.tmdb-rate-badge img { height: 1.1em !important; width: auto !important; display: block !important; } ';
             css += '.tmdb-rate-badge .tmdb-rate-value { font-size: 1.15em !important; font-weight: 700 !important; text-shadow: 0 1px 4px rgba(0,0,0,0.7) !important; } ';
 
-            // Вертикальний стовпчик бейджів та CUB під нашим TMDB рейтингом
+            // Вертикальний стовпчик бейджів та CUB під TMDB рейтингом
             css += '.card-quality-row { display: flex !important; flex-direction: column !important; align-items: flex-end !important; gap: 6px !important; margin-top: 8px !important; width: auto !important; } ';
             css += '.card-quality-item { height: 1.3em !important; display: flex !important; align-items: center !important; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)) !important; } ';
             css += '.card-quality-item img { height: 100% !important; width: auto !important; max-width: 80px !important; object-fit: contain !important; } ';
