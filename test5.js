@@ -112,15 +112,19 @@
                 css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
             }
 
-            // Блок праворуч у кутку: містить TMDB і вертикальну колонку бейджів під ним
+            // Правий верхній куток: позиціонування контейнера та суворе приховування стандартних рідних елементів Lampa (статус, віковий рейтинг тощо)
             css += '.full-start-new__rate-line, .full-start__rate-line { position: absolute !important; top: 0.6em !important; right: 1.5em !important; left: auto !important; margin: 0 !important; background: none !important; background-color: transparent !important; padding: 0 !important; z-index: 10 !important; display: flex !important; flex-direction: column !important; align-items: flex-end !important; } ';
+            
+            // Приховуємо всередині правого блоку все, крім нашого кастомного значка TMDB і бейджів
+            css += '.full-start-new__rate-line > *:not(.tmdb-rate-badge):not(.card-quality-row) { display: none !important; } ';
+            css += '.full-start__rate-line > *:not(.tmdb-rate-badge):not(.card-quality-row) { display: none !important; } ';
             css += '.full-start .info__rate, .full-start-new .info__rate { display: none !important; } ';
             
-            css += '.tmdb-rate-badge { display: inline-flex; align-items: center; gap: 0.5em; } ';
-            css += '.tmdb-rate-badge img { height: 1.1em; width: auto; display: block; } ';
+            css += '.tmdb-rate-badge { display: inline-flex !important; align-items: center !important; gap: 0.5em !important; } ';
+            css += '.tmdb-rate-badge img { height: 1.1em !important; width: auto !important; display: block !important; } ';
             css += '.tmdb-rate-badge .tmdb-rate-value { font-size: 1.15em !important; font-weight: 700 !important; text-shadow: 0 1px 4px rgba(0,0,0,0.7) !important; } ';
 
-            // Вертикальний стовпчик бейджів та CUB у правому верхньому кутку під TMDB
+            // Вертикальний стовпчик бейджів та CUB під нашим TMDB рейтингом
             css += '.card-quality-row { display: flex !important; flex-direction: column !important; align-items: flex-end !important; gap: 6px !important; margin-top: 8px !important; width: auto !important; } ';
             css += '.card-quality-item { height: 1.3em !important; display: flex !important; align-items: center !important; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)) !important; } ';
             css += '.card-quality-item img { height: 100% !important; width: auto !important; max-width: 80px !important; object-fit: contain !important; } ';
@@ -308,7 +312,6 @@
                 });
             }
 
-            // Додаємо блок бейджів безпосередньо в правий верхній контейнер під TMDB
             var $rateLine = $render.find('.full-start-new__rate-line, .full-start__rate-line').first();
             if ($rateLine.length) {
                 $rateLine.append($qRow);
