@@ -2,6 +2,7 @@
     'use strict';
 
     var detailsCache = {}; 
+    var logoDarkCache = {};
     var currentActiveId = null;
     var pluginPath = 'https://crowley24.github.io/Icons/';
     var TMDB_LOGO_URL = 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg';
@@ -38,6 +39,44 @@
         { id: 'dts', pattern: /\bdts\b(?![\s._:-]*(x|hd))/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts.png' }
     ];
 
+    function isImageDark(imgSrc, callback) {
+        if (logoDarkCache[imgSrc] !== undefined) {
+            callback(logoDarkCache[imgSrc]);
+            return;
+        }
+        var img = new Image();
+        img.crossOrigin = 'Anonymous';
+        img.onload = function () {
+            try {
+                var canvas = document.createElement('canvas');
+                var ctx = canvas.getContext('2d');
+                canvas.width = 30;
+                canvas.height = 30;
+                ctx.drawImage(img, 0, 0, 30, 30);
+                var imgData = ctx.getImageData(0, 0, 30, 30);
+                var data = imgData.data;
+                var totalBrightness = 0, count = 0, hasColor = false;
+
+                for (var i = 0; i < data.length; i += 4) {
+                    if (data[i + 3] > 40) {
+                        var r = data[i], g = data[i + 1], b = data[i + 2];
+                        totalBrightness += (r * 299 + g * 587 + b * 114) / 1000;
+                        count++;
+                        if ((Math.max(r, g, b) - Math.min(r, g, b)) > 25) hasColor = true;
+                    }
+                }
+                var isDark = (count > 0 ? (totalBrightness / count) : 255 < 110) && !hasColor;
+                logoDarkCache[imgSrc] = isDark;
+                callback(isDark);
+            } catch (e) {
+                logoDarkCache[imgSrc] = false;
+                callback(false);
+            }
+        };
+        img.onerror = function () { logoDarkCache[imgSrc] = false; callback(false); };
+        img.src = imgSrc;
+    }
+
     function applyStyles() {
         var style = document.getElementById('movie-card-logo-styles');
         if (!style) {
@@ -53,7 +92,6 @@
         
         var css = '';
         
-        // Плавна поява картки та анімація для всіх вкладених зображень (ліквідація різких ривків)
         css += '@keyframes cardSmoothAppear { 0% { opacity: 0; transform: translateY(6px); } 100% { opacity: 1; transform: translateY(0); } } ';
         css += '.full-start-new__body, .full-start__body { animation: cardSmoothAppear 0.3s ease-out forwards; will-change: opacity, transform; } ';
         css += '.full-start-new__title img, .studio-header-brand img, .card-quality-item img, .tmdb-rate-badge img { opacity: 0; animation: imgFadeIn 0.3s ease forwards; } ';
@@ -76,9 +114,9 @@
             css += '.full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 4px 0 10px 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; } ';
 
             if (showStudio) {
-                // Забезпечуємо ідеальну видимість студійних логотипів на чорному фоні через акуратну підкладку та фільтр
-                css += '.studio-header-brand { width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: 4px !important; } ';
-                css += '.studio-header-brand img { height: 22px !important; width: auto; max-width: 130px; object-fit: contain; padding: 2px 6px; background: rgba(255, 255, 255, 0.08); border-radius: 4px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.6)); } ';
+                css += '.studio-header-brand { width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: 2px !important; } ';
+                css += '.studio-header-brand img { height: 20px !important; width: auto; max-width: 120px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; } ';
+                css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
             }
 
             css += '.full-start-new__info, .full-start__info { margin-top: 12px !important; } ';
@@ -156,8 +194,8 @@
             }
         });
 
-        // Use English logo if Ukrainian is absent
         if (/ukr|укр/i.test(combinedText)) foundBadges.push(pluginPath + 'UKR.svg');
+        else foundBadges.push(pluginPath + 'EN.svg');
         if (/dub|дуб/i.test(combinedText)) foundBadges.push(pluginPath + 'DUB.svg');
 
         return foundBadges.filter(function(elem, pos, arr) { return arr.indexOf(elem) === pos; });
@@ -294,7 +332,11 @@
                     var studioLogoUrl = Lampa.TMDB.image('/t/p/w200' + studio.logo_path);
                     var $brand = $('<div class="studio-header-brand"><img src="' + studioLogoUrl + '" alt="' + (studio.name || '') + '"></div>');
                     var $img = $brand.find('img');
+
                     $img.on('error', function() { $brand.remove(); });
+                    isImageDark(studioLogoUrl, function(isDark) { 
+                        if (isDark) $img.addClass('is-dark-logo'); 
+                    });
                     
                     var $titleElem = $render.find('.full-start-new__title');
                     if ($titleElem.length) {
@@ -311,7 +353,6 @@
         var movieId = movie.id;  
         currentActiveId = movieId;  
 
-        // Якщо дані вже в кеші — застосовуємо їх миттєво без жодних затримок
         if (detailsCache[movieId]) {  
             applyMovieDetailsData(detailsCache[movieId].data, movie, $render, detailsCache[movieId].translations);  
             return;  
@@ -363,7 +404,7 @@
         Lampa.SettingsApi.addParam({  
             component: 'movie_card_logo',  
             param: { name: 'movie_card_logo_studio', type: 'trigger', default: true },  
-            field: { name: 'Логотип студії', description: 'Відображати логотип виробника на акуратній підкладці' },  
+            field: { name: 'Логотип студії', description: 'Відображати логотип виробника з інверсією темних значків' },  
             onChange: applyStyles  
         });  
 
@@ -371,7 +412,7 @@
             component: 'movie_card_logo',  
             param: { name: 'movie_card_logo_tagline', type: 'trigger', default: true },  
             field: { name: 'Слоган фільму', description: 'Відображати слоган під логотипом' },  
-            onChange: applyStats = applyStyles  
+            onChange: applyStyles  
         });  
 
         Lampa.SettingsApi.addParam({  
