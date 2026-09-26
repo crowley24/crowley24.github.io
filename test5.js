@@ -5,7 +5,8 @@
     var currentActiveId = null;  
     var TMDB_LOGO_URL = 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg';  
 
-    var LOGO_SIZES = { '50': 50, '80': 80, '120': 120, '160': 160, '210': 210 };  
+    // Збільшені межі розмірів логотипа
+    var LOGO_SIZES = { '50': 65, '80': 105, '120': 150, '160': 200, '210': 260 };  
 
     var settings_list = [  
         { id: 'movie_card_logo_enabled', default: true },  
@@ -23,7 +24,7 @@
 
     function logoSizePx() {  
         var v = String(Lampa.Storage.get('movie_card_logo_size', '120'));  
-        return LOGO_SIZES[v] || 120;  
+        return LOGO_SIZES[v] || 150;  
     }  
 
     function isImageDark(imgSrc, callback) {  
@@ -69,9 +70,10 @@
             
             css += '.logo-top-wrap { display: flex; flex-direction: column; align-items: flex-start; width: 100%; margin-top: -0.4em; } ';  
 
-            css += '.logo-top-wrap .full-start-new__title { order: 2; font-size: 1em !important; max-height: none !important; max-width: none !important; overflow: visible !important; margin-bottom: 8px !important; line-height: 1 !important; } ';  
+            // Жорсткі обмеження контейнера та картинки, щоб лого не ставало на весь екран
+            css += '.logo-top-wrap .full-start-new__title { order: 2; font-size: 1em !important; max-height: none !important; max-width: 100% !important; overflow: visible !important; margin-bottom: 8px !important; line-height: 1 !important; } ';  
             css += '.logo-top-wrap .full-start-new__title > *:not(img) { display: none !important; } ';  
-            css += '.logo-top-wrap .full-start-new__title img { display: block; width: auto; max-width: 100%; object-fit: contain; filter: drop-shadow(0 3px 8px rgba(0,0,0,0.85)); } ';  
+            css += '.logo-top-wrap .full-start-new__title img { display: block; width: auto; max-width: 85%; object-fit: contain; filter: drop-shadow(0 3px 8px rgba(0,0,0,0.85)); } ';  
 
             css += '.logo-top-wrap .full-start-new__tagline { order: 3; font-size: 0.9em !important; color: rgba(255,255,255,0.8) !important; margin: 0 0 10px 0 !important; line-height: 1.4 !important; } ';  
 
@@ -94,8 +96,10 @@
             css += '.tmdb-rate-badge img { height: 1.1em; width: auto; display: block; } ';  
             css += '.tmdb-rate-badge .tmdb-rate-value { font-size: 1.15em !important; font-weight: 700 !important; text-shadow: 0 1px 4px rgba(0,0,0,0.7) !important; } ';  
             css += '.full-descr__info--moved { font-family: inherit !important; font-size: inherit !important; font-weight: inherit !important; letter-spacing: normal !important; text-transform: none !important; color: inherit !important; } ';  
-            css += '.card-tweaks__buttons { width: 100%; margin-top: 0.5em; } ';  
-            css += '.card-tweaks__buttons .full-start__buttons { margin-top: 0.6em; } ';  
+            
+            // Збільшено відступ зверху для медіакнопок, щоб не прилягали до постера
+            css += '.card-tweaks__buttons { width: 100%; margin-top: 1.5em !important; } ';  
+            css += '.card-tweaks__buttons .full-start__buttons { margin-top: 0.8em; } ';  
         }  
         style.textContent = css;  
     }  
@@ -153,7 +157,8 @@
 
     function pickTagline(translations, fallback) {  
         if (translations && translations.translations) {  
-            var order = ['uk', 'ru', 'en'];  
+            // Суворий пріоритет: спочатку українська, якщо нема — англійська. Російська виключена.
+            var order = ['uk', 'en'];  
             for (var i = 0; i < order.length; i++) {  
                 var tr = translations.translations.find(function (t) {  
                     return t.iso_639_1 === order[i] && t.data && t.data.tagline && t.data.tagline.trim();  
@@ -161,7 +166,7 @@
                 if (tr) return tr.data.tagline.trim();  
             }  
         }  
-        return (fallback || '').trim();  
+        return '';  
     }  
 
     function toInfo(name, $src, $details) {  
@@ -210,7 +215,7 @@
                 var currentSize = logoSizePx();
                 $logo.css({  
                     'max-height': currentSize + 'px',  
-                    'max-width': '100%',  
+                    'max-width': '85%',  
                     'width': 'auto',  
                     'height': 'auto',  
                     'display': 'block',  
@@ -226,7 +231,7 @@
                 $title.empty().append($logo).css({  
                     'font-size': '0',  
                     'max-height': 'none',  
-                    'max-width': 'none',  
+                    'max-width': '100%',  
                     'overflow': 'visible',  
                     'line-height': '1'  
                 }).show();  
@@ -331,7 +336,7 @@
             component: 'movie_card_logo',  
             param: {  
                 name: 'movie_card_logo_size', type: 'select',  
-                values: { '50': 'Дуже малий (50px)', '80': 'Малий (80px)', '120': 'Стандартний (120px)', '160': 'Великий (160px)', '210': 'Дуже великий (210px)' },  
+                values: { '50': 'Дуже малий (65px)', '80': 'Малий (105px)', '120': 'Стандартний (150px)', '160': 'Великий (200px)', '210': 'Дуже великий (260px)' },  
                 default: '120'  
             },  
             field: { name: 'Розмір логотипа' },  
