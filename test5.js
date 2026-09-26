@@ -112,19 +112,20 @@
                 css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
             }
 
-            // Стилі для вертикального стовпчика бейджів та CUB-рейтингу
-            css += '.card-quality-row { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-top: 8px; width: 100%; } ';
-            css += '.card-quality-item { height: 1.3em; display: flex; align-items: center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); } ';
-            css += '.card-quality-item img { height: 100%; width: auto; max-width: 80px; object-fit: contain; } ';
-            css += '.card-rating-item { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.95em; color: #fff; margin-bottom: 2px; } ';
-            css += '.card-rating-item img { height: 1.2em; width: auto; } ';
-
-            css += '.full-start-new__rate-line, .full-start__rate-line { position: absolute !important; top: 0.6em !important; right: 1.5em !important; left: auto !important; margin: 0 !important; background: none !important; background-color: transparent !important; padding: 0 !important; z-index: 10 !important; } ';
-            css += '.full-start-new__rate-line > :not(.tmdb-rate-badge), .full-start__rate-line > :not(.tmdb-rate-badge) { display: none !important; } ';
+            // Блок праворуч у кутку: містить TMDB і вертикальну колонку бейджів під ним
+            css += '.full-start-new__rate-line, .full-start__rate-line { position: absolute !important; top: 0.6em !important; right: 1.5em !important; left: auto !important; margin: 0 !important; background: none !important; background-color: transparent !important; padding: 0 !important; z-index: 10 !important; display: flex !important; flex-direction: column !important; align-items: flex-end !important; } ';
             css += '.full-start .info__rate, .full-start-new .info__rate { display: none !important; } ';
+            
             css += '.tmdb-rate-badge { display: inline-flex; align-items: center; gap: 0.5em; } ';
             css += '.tmdb-rate-badge img { height: 1.1em; width: auto; display: block; } ';
             css += '.tmdb-rate-badge .tmdb-rate-value { font-size: 1.15em !important; font-weight: 700 !important; text-shadow: 0 1px 4px rgba(0,0,0,0.7) !important; } ';
+
+            // Вертикальний стовпчик бейджів та CUB у правому верхньому кутку під TMDB
+            css += '.card-quality-row { display: flex !important; flex-direction: column !important; align-items: flex-end !important; gap: 6px !important; margin-top: 8px !important; width: auto !important; } ';
+            css += '.card-quality-item { height: 1.3em !important; display: flex !important; align-items: center !important; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)) !important; } ';
+            css += '.card-quality-item img { height: 100% !important; width: auto !important; max-width: 80px !important; object-fit: contain !important; } ';
+            css += '.card-rating-item { display: flex !important; align-items: center !important; gap: 6px !important; font-weight: 700 !important; font-size: 0.95em !important; color: #fff !important; margin-bottom: 2px !important; } ';
+            css += '.card-rating-item img { height: 1.2em !important; width: auto !important; } ';
         }
 
         style.textContent = css;
@@ -286,7 +287,6 @@
         }
 
         if (Lampa.Storage.get('movie_card_logo_quality_badges', true)) {
-            var $insertTarget = $tagline.length && $tagline.is(':visible') ? $tagline : $render.find('.full-start-new__title');
             $render.find('.card-quality-row').remove();
             var $qRow = $('<div class="card-quality-row"></div>');
             
@@ -308,8 +308,10 @@
                 });
             }
 
-            if ($insertTarget.length) {
-                $insertTarget.after($qRow);
+            // Додаємо блок бейджів безпосередньо в правий верхній контейнер під TMDB
+            var $rateLine = $render.find('.full-start-new__rate-line, .full-start__rate-line').first();
+            if ($rateLine.length) {
+                $rateLine.append($qRow);
             }
         }
 
