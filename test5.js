@@ -104,7 +104,8 @@
             css += '.full-start-new__title { display: flex !important; justify-content: flex-start !important; align-items: center !important; height: auto !important; min-height: unset !important; overflow: visible !important; width: 100% !important; box-sizing: border-box !important; margin: 2px 0 !important; } ';
             css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 55vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; display: block; } ';
             
-            css += '.full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 4px 0 0 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; } ';
+            // Нижній відступ для слогана, щоб він не прилипав до тривалості/жанру
+            css += '.full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 4px 0 10px 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; } ';
 
             if (showStudio) {
                 css += '.studio-header-brand { width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: 2px !important; } ';
@@ -112,10 +113,10 @@
                 css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
             }
 
-            // Збільшуємо відступ зверху для інформаційного рядка (тривалість, рік, країни), щоб підняти весь верхній блок вище
-            css += '.full-start-new__info, .full-start__info { margin-top: 1.2em !important; } ';
+            // Відступ зверху для рядка з тривалістю/жанром
+            css += '.full-start-new__info, .full-start__info { margin-top: 12px !important; } ';
 
-            // Правий верхній куток: позиціонування та суворе приховування стандартних рідних елементів Lampa
+            // Правий верхній куток: позиціонування та суворе приховування стандартних елементів Lampa
             css += '.full-start-new__rate-line, .full-start__rate-line { position: absolute !important; top: 0.6em !important; right: 1.5em !important; left: auto !important; margin: 0 !important; background: none !important; background-color: transparent !important; padding: 0 !important; z-index: 10 !important; display: flex !important; flex-direction: column !important; align-items: flex-end !important; } ';
             
             css += '.full-start-new__rate-line > *:not(.tmdb-rate-badge):not(.card-quality-row) { display: none !important; } ';
