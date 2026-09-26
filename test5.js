@@ -5,7 +5,7 @@
      */
     var pluginPath = 'https://crowley24.github.io/Icons/';
     var detailsCache = {}; 
-    var badgesCache = {}; // Кеш для розрахованих бейджів
+    var badgesCache = {}; 
     var currentActiveId = null;
     
     var settings_list = [
@@ -105,7 +105,6 @@
         
         var css = '';
         
-        // Оптимізовані анімації без важких фільтрів розмиття (Blur) для плавності на TV
         css += '@keyframes anim_fluid { 0% { opacity: 0; transform: translate3d(0, 20px, 0) scale(0.96); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } } ';
         css += '@keyframes anim_cyber { 0% { opacity: 0; transform: translate3d(-30px, 0, 0) scale(0.95); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } } ';
         css += '@keyframes anim_cinematic { 0% { opacity: 0; transform: scale(1.05); } 100% { opacity: 1; transform: scale(1); } } ';
@@ -124,7 +123,6 @@
         css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';
         css += '.background { background: #000 !important; } ';
         
-        // Стандартний вигляд постера
         css += '.full-start-new { position: relative !important; } ';
         css += '.full-start-new__poster { position: relative !important; background: #000; z-index: 1; } ';
         css += '.full-start-new__poster img { filter: none !important; width: 100% !important; height: auto !important; object-fit: contain !important; ';
@@ -326,7 +324,6 @@
         if (!results) return foundBadges;
 
         var combinedText = '';
-        // Зменшено кількість елементів для аналізу до 8 для зниження навантаження на процесор TV
         results.slice(0, 8).forEach(function(item) {
             combinedText += ' ' + (item.Title || item.title || '');
         });
@@ -418,25 +415,29 @@
                     $qRow.append($cubItem);
                 }
 
-                // Відкладений виклик та використання кешу бейджів для повного усунення мікролагів
+                // Парсинг та рендер бейджів якості перенесено на абсолютний кінець (1000мс затримки + подвійний requestAnimationFrame)
                 if (Lampa.Storage.get('tv_interface_quality') && Lampa.Parser && Lampa.Parser.get) {
                     setTimeout(function() {
-                        if (currentActiveId !== movie.id) return;
-                        
-                        if (badgesCache[movie.id]) {
-                            renderBadges(badgesCache[movie.id], $qRow, globalIndex);
-                            return;
-                        }
+                        window.requestAnimationFrame(function() {
+                            window.requestAnimationFrame(function() {
+                                if (currentActiveId !== movie.id) return;
+                                
+                                if (badgesCache[movie.id]) {
+                                    renderBadges(badgesCache[movie.id], $qRow, globalIndex);
+                                    return;
+                                }
 
-                        Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
-                            if (currentActiveId !== movie.id) return;
-                            if (res && Array.isArray(res.Results)) {
-                                var eliteBadgesList = getEliteBadges(res.Results);
-                                badgesCache[movie.id] = eliteBadgesList;
-                                renderBadges(eliteBadgesList, $qRow, globalIndex);
-                            }
+                                Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
+                                    if (currentActiveId !== movie.id) return;
+                                    if (res && Array.isArray(res.Results)) {
+                                        var eliteBadgesList = getEliteBadges(res.Results);
+                                        badgesCache[movie.id] = eliteBadgesList;
+                                        renderBadges(eliteBadgesList, $qRow, globalIndex);
+                                    }
+                                });
+                            });
                         });
-                    }, 350);
+                    }, 1000);
                 }
             }
         });
