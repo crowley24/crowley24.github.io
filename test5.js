@@ -19,7 +19,7 @@
         }
     });
 
-    // Покращений аналіз яскравісті та кольоровості студій (40x40 Canvas з перевіркою альфа-каналу)
+    // Аналіз яскравісті та кольоровості студій (40x40 Canvas з перевіркою альфа-каналу)
     function isImageDark(imgSrc, callback) {
         var img = new Image();
         img.crossOrigin = 'Anonymous';
@@ -81,8 +81,8 @@
             // Приховуємо зайві метадані над назвою та готуємо чистий Flex-контейнер для лого
             css += '.full-start-new__head, .full-start__tags { display: none !important; } ';
             
-            // Жорстка фіксація медіакнопок чітко під постером та блоком опису
-            css += '.full-start__buttons, .full-start-new__buttons, .buttons--container { margin-top: 1.5em !important; clear: both !important; } ';
+            // Стилі для кнопок, коли вони розташовані під постером у лівій колонці
+            css += '.full-start__left .full-start__buttons, .full-start-new__left .full-start-new__buttons, .full-start-new__left .buttons--container { margin-top: 15px !important; width: 100% !important; display: flex !important; flex-wrap: wrap !important; gap: 10px !important; } ';
             
             css += '.full-start-new__title { display: flex !important; justify-content: flex-start !important; align-items: center !important; height: auto !important; min-height: unset !important; overflow: visible !important; width: 100% !important; box-sizing: border-box !important; margin: 4px 0 !important; } ';
             css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 55vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; display: block; } ';
@@ -115,6 +115,13 @@
 
     function applyMovieDetailsData(data, movie, $render, translations) {  
         if (!Lampa.Storage.get('movie_card_logo_enabled', true)) return;  
+
+        // Примусове перенесення блоку кнопок під постер (у ліву колонку)
+        var $buttons = $render.find('.full-start__buttons, .full-start-new__buttons, .buttons--container');
+        var $leftCol = $render.find('.full-start__left, .full-start-new__left');
+        if ($leftCol.length && $buttons.length && !$leftCol.has($buttons).length) {
+            $leftCol.append($buttons);
+        }
 
         var rating = parseFloat(data.vote_average || movie.vote_average || 0);  
 
