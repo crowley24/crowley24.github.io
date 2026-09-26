@@ -38,7 +38,6 @@
         { id: 'dts', pattern: /\bdts\b(?![\s._:-]*(x|hd))/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts.png' }
     ];
 
-    // Аналіз яскравості та кольоровості студій (40x40 Canvas з перевіркою альфа-каналу)
     function isImageDark(imgSrc, callback) {
         var img = new Image();
         img.crossOrigin = 'Anonymous';
@@ -113,7 +112,6 @@
                 css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
             }
 
-            // Стилі для рядка бейджів якості та CUB-рейтингу
             css += '.card-quality-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 8px; width: 100%; } ';
             css += '.card-quality-item { height: 1.15em; display: flex; align-items: center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); } ';
             css += '.card-quality-item img { height: 100%; width: auto; max-width: 60px; object-fit: contain; } ';
@@ -138,15 +136,16 @@
         return '#fff';
     }
 
-    function getCubRating(e) {
-        if (!e.data || !e.data.reactions || !e.data.reactions.result) return null;
+    function getCubRating(reactionsData, movieObject) {
+        if (!reactionsData || !reactionsData.result) return null;
         var reactionCoef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };
         var sum = 0, cnt = 0;
-        e.data.reactions.result.forEach(function(r) {
+        reactionsData.result.forEach(function(r) {
             if (r.counter) { sum += (r.counter * reactionCoef[r.type]); cnt += r.counter; }
         });
         if (cnt >= 5) {
-            var isTv = e.object.method === 'tv', avg = isTv ? 7.4 : 6.5, m = isTv ? 50 : 150;
+            var isTv = movieObject && movieObject.method === 'tv';
+            var avg = isTv ? 7.4 : 6.5, m = isTv ? 50 : 150;
             return ((avg * m + sum) / (m + cnt)).toFixed(1);
         }
         return null;
@@ -285,13 +284,12 @@
             if ($tagline.length) $tagline.hide();
         }
 
-        // Рендеринг бейджів якості та CUB-рейтингу нижче слогану/назви
         if (Lampa.Storage.get('movie_card_logo_quality_badges', true)) {
             var $insertTarget = $tagline.length && $tagline.is(':visible') ? $tagline : $render.find('.full-start-new__title');
             $render.find('.card-quality-row').remove();
             var $qRow = $('<div class="card-quality-row"></div>');
             
-            var cub = getCubRating(e || { data: { reactions: data.reactions }, object: movie });
+            var cub = getCubRating(data.reactions, movie);
             if (cub) {
                 var $cubItem = $('<div class="card-rating-item"><img src="' + CUB_LOGO_URL + '"> <span style="color:' + rateColor(cub) + '">' + cub + '</span></div>');
                 $qRow.append($cubItem);
