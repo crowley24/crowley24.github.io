@@ -78,7 +78,7 @@
             // Новий бейдж: лого TMDB + цифра  
             css += '.tmdb-rate-badge { display: flex !important; align-items: center; gap: 0.5em; } ';  
             css += '.tmdb-rate-badge img { height: 1.1em; width: auto; display: block; } ';  
-            css += '.tmdb-rate-badge .tmdb-rate-value { font-size: 1.5em; font-weight: 600; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.8); } ';  
+            css += '.tmdb-rate-badge .tmdb-rate-value { font-size: 1.5em !important; font-weight: 700 !important; color: #01b4e4 !important; text-shadow: 0 1px 4px rgba(0,0,0,0.7) !important; } ';
   
             // Кнопки під верхнім блоком  
             css += '.card-tweaks__buttons { margin-top: 1.5em; width: 100%; } ';  
