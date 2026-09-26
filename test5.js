@@ -62,14 +62,14 @@
         if (isEnabled) {  
             css += '.full-start-new__head, .full-start__tags { display: none !important; } ';  
   
-            // Лого-блок — перший у .full-start__left → верх = верх постера  
+            // Обгортка лого — на місці title у текстовій колонці  
             css += '.logo-top-wrap { display: flex !important; flex-direction: column !important; align-items: flex-start !important; width: 100% !important; } ';  
             css += '.logo-top-wrap .full-start-new__title { margin: 0 0 2px 0 !important; display: flex !important; align-items: center !important; height: auto !important; min-height: unset !important; overflow: visible !important; width: 100% !important; } ';  
             css += '.logo-top-wrap .full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 55vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';  
             css += '.logo-top-wrap .full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 0 0 2px 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; } ';  
             css += '.logo-top-wrap .full-start-new__info, .logo-top-wrap .full-start__info { margin: 0 0 6px 0 !important; padding: 0 !important; } ';  
   
-            // Рейтинг у правий верхній кут (з робочого плагіна)  
+            // Рейтинг у правий верхній кут  
             css += '.full-start-new, .full-start { position: relative !important; } ';  
             css += '.full-start-new__rate-line, .full-start__rate-line { position: absolute !important; top: 1.5em; right: 1.5em; z-index: 5; margin: 0 !important; display: flex; gap: 0.8em; align-items: center; background: rgba(0,0,0,0.45); padding: 0.4em 0.9em; border-radius: 0.5em; } ';  
   
@@ -85,20 +85,28 @@
         }  
         style.textContent = css;  
     }
-    // Перебудова розкладки: лого-блок першим у .full-start__left,  
-    // кнопки — у wrapper ПІСЛЯ body (як у робочому card-tweaks)  
+    // Перебудова: wrap на місці title (справа від постера), кнопки під body  
     function rebuildLayout($render) {  
-        // 1. Лого-блок — перший елемент текстової колонки  
-        var $left = $render.find('.full-start-new__left, .full-start__left').first();  
-        if ($left.length) {  
-            var $wrap = $render.find('.logo-top-wrap');  
+        // 1. Wrap — на місці title, як у версії, що працювала  
+        var $title = $render.find('.full-start-new__title').first();  
+        var $wrap = $render.find('.logo-top-wrap');  
+        if ($title.length) {  
             if (!$wrap.length) {  
                 $wrap = $('<div class="logo-top-wrap"></div>');  
+                $title.before($wrap);  
+                $wrap.append($title);  
+            } else if ($title.parent()[0] !== $wrap[0]) {  
+                $wrap.append($title);  
             }  
-            $left.prepend($wrap);  
+        } else if (!$wrap.length) {  
+            var $left = $render.find('.full-start-new__left, .full-start__left').first();  
+            if ($left.length) $left.prepend($('<div class="logo-top-wrap"></div>'));  
+        }  
   
-            // Порядок у wrap: title → tagline → info  
-            ['.full-start-new__title', '.full-start-new__tagline', '.full-start-new__info', '.full-start__info'].forEach(function (sel) {  
+        // 2. Слоган та інфо-рядок — у wrap одразу під title  
+        $wrap = $render.find('.logo-top-wrap');  
+        if ($wrap.length) {  
+            ['.full-start-new__tagline', '.full-start-new__info', '.full-start__info'].forEach(function (sel) {  
                 var $el = $render.find(sel).first();  
                 if ($el.length && $el.parent()[0] !== $wrap[0]) {  
                     $wrap.append($el);  
@@ -106,7 +114,7 @@
             });  
         }  
   
-        // 2. Кнопки під верхнім блоком, на всю ширину — body.after(wrapper)  
+        // 3. Кнопки під усім верхнім блоком, на всю ширину (як у card-tweaks)  
         var $body = $render.find('.full-start-new__body, .full-start__body').first();  
         var $wrapper = $render.find('.card-tweaks__buttons');  
         if ($body.length && !$wrapper.length) {  
@@ -133,7 +141,7 @@
         var formattedDetails = extraInfo.join(' • ');  
   
         setTimeout(function () {  
-            rebuildLayout($render); // ловимо асинхронно додані елементи теми  
+            rebuildLayout($render); // ловимо елементи, додані темою асинхронно  
   
             var $infoLine = $render.find('.full-start-new__info, .full-start__info').first();  
             if ($infoLine.length && formattedDetails) {  
@@ -174,7 +182,7 @@
             }  
         }, 50);  
   
-        // Логотип назви замість тексту  
+        // Логотип назви  
         if (data.images && data.images.logos && data.images.logos.length > 0) {  
             var lang = Lampa.Storage.get('language') || 'uk';  
             var logo = data.images.logos.filter(function (l) { return l.iso_639_1 === lang; })[0] ||  
@@ -192,20 +200,22 @@
         var taglineText = '';  
         if (translations && translations.translations) {  
             var uaTrans = translations.translations.find(function (t) { return t.iso_639_1 === 'uk'; });  
-            if (uaTrans && uaTrans.data && uaTrans.data.tagline) taglineText = uaTrans.data.tagline;  
+            if (uaTrans && uaTrans.data && uaTrans.data.tagline) {  
+                taglineText = uaTrans.data.tagline;  
+            }  
         }  
         if (!taglineText && data.tagline) taglineText = data.tagline;  
   
         if (taglineText && taglineText.trim() !== '') {  
             var $tagline = $render.find('.full-start-new__tagline');  
-            if ($tagline.length === 0) $tagline = $('<div class="full-start-new__tagline"></div>');  
+            if ($tagline.length === 0) {  
+                $tagline = $('<div class="full-start-new__tagline"></div>');  
+                $render.find('.logo-top-wrap').append($tagline);  
+            }  
             $tagline.text(taglineText);  
-            var $titleEl = $render.find('.logo-top-wrap .full-start-new__title');  
-            if ($titleEl.length) $titleEl.after($tagline);  
-            else $render.find('.logo-top-wrap').append($tagline);  
         }  
   
-        // Логотип студії — першим у wrap  
+        // Логотип студії  
         if (Lampa.Storage.get('movie_card_logo_studio', true)) {  
             $render.find('.studio-header-brand').remove();  
             var studio = null;  
@@ -249,16 +259,22 @@
             $.ajax({ url: transUrl, type: 'GET', dataType: 'json' })  
         ).done(function (resData, resTrans) {  
             if (currentActiveId !== movieId) return;  
-            detailsCache[movieId] = { data: resData[0], translations: resTrans[0] };  
-            applyMovieDetailsData(resData[0], movie, $render, resTrans[0]);  
+            var data = resData[0];  
+            var translations = resTrans[0];  
+  
+            detailsCache[movieId] = { data: data, translations: translations };  
+            applyMovieDetailsData(data, movie, $render, translations);  
         });  
     }  
   
     function init() {  
         Lampa.Listener.follow('full', function (e) {  
-            if (e.type === 'destroy' || e.type === 'onBeforeDestroy') currentActiveId = null;  
+            if (e.type === 'destroy' || e.type === 'onBeforeDestroy') {  
+                currentActiveId = null;  
+            }  
             if (e.type === 'complite' || e.type === 'complete') {  
-                loadMovieDetails(e.data.movie, e.object.activity.render());  
+                var movie = e.data.movie, $render = e.object.activity.render();  
+                loadMovieDetails(movie, $render);  
             }  
         });  
     }  
