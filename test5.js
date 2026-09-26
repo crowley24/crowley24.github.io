@@ -81,6 +81,9 @@
             // Приховуємо зайві метадані над назвою та готуємо чистий Flex-контейнер для лого
             css += '.full-start-new__head, .full-start__tags { display: none !important; } ';
             
+            // Жорстка фіксація медіакнопок чітко під постером та блоком опису
+            css += '.full-start__buttons, .full-start-new__buttons, .buttons--container { margin-top: 1.5em !important; clear: both !important; } ';
+            
             css += '.full-start-new__title { display: flex !important; justify-content: flex-start !important; align-items: center !important; height: auto !important; min-height: unset !important; overflow: visible !important; width: 100% !important; box-sizing: border-box !important; margin: 4px 0 !important; } ';
             css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 55vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; display: block; } ';
             
