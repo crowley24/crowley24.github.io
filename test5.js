@@ -45,7 +45,7 @@
         img.src = imgSrc;  
     }  
   
-    function applyStyles() {  
+function applyStyles() {  
         var style = document.getElementById('movie-card-logo-styles');  
         if (!style) {  
             style = document.createElement('style');  
@@ -66,14 +66,19 @@
             css += '.logo-top-wrap { display: flex !important; flex-direction: column !important; align-items: flex-start !important; width: 100% !important; } ';  
             css += '.logo-top-wrap .full-start-new__title { margin: 0 0 2px 0 !important; display: flex !important; align-items: center !important; height: auto !important; min-height: unset !important; overflow: visible !important; width: 100% !important; } ';  
             css += '.logo-top-wrap .full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 55vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';  
-            css += '.logo-top-wrap .full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 0 0 2px 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; } ';  
-            css += '.logo-top-wrap .full-start-new__info, .logo-top-wrap .full-start__info { margin: 0 0 6px 0 !important; padding: 0 !important; } ';  
   
-            // Рейтинг у правий верхній кут  
+            // Слоган + БІЛЬШИЙ відступ до інфо-рядка  
+            css += '.logo-top-wrap .full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 0 0 14px 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; } ';  
+  
+            // Інфо-рядок (тривалість/жанр): відступ зверху + інший шрифт  
+            css += '.logo-top-wrap .full-start-new__info, .logo-top-wrap .full-start__info { margin: 6px 0 6px 0 !important; padding: 0 !important; font-family: Roboto, sans-serif !important; font-size: 0.95em !important; font-weight: 300 !important; letter-spacing: 0.02em !important; color: rgba(255,255,255,0.75) !important; } ';  
+  
+            // Рейтинг: без темного фону, вище у куті  
             css += '.full-start-new, .full-start { position: relative !important; } ';  
-            css += '.full-start-new__rate-line, .full-start__rate-line { position: absolute !important; top: 1.5em; right: 1.5em; z-index: 5; margin: 0 !important; display: flex; gap: 0.8em; align-items: center; background: rgba(0,0,0,0.45); padding: 0.4em 0.9em; border-radius: 0.5em; } ';  
+            css += '.full-start-new__rate-line, .full-start__rate-line { position: absolute !important; top: 0.6em !important; right: 1.5em; z-index: 5; margin: 0 !important; display: flex; gap: 0.8em; align-items: center; background: none !important; padding: 0 !important; border-radius: 0 !important; } ';  
+            css += '.full-start .info__rate, .full-start-new .info__rate { background-color: transparent !important; padding: 0 !important; } ';  
   
-            // Кнопки під верхнім блоком, на всю ширину (як у card-tweaks)  
+            // Кнопки під верхнім блоком, на всю ширину  
             css += '.card-tweaks__buttons { margin-top: 1.5em; width: 100%; } ';  
             css += '.card-tweaks__buttons .full-start-new__buttons, .card-tweaks__buttons .buttons--container, .card-tweaks__buttons .full-start__buttons { margin-top: 0.6em; } ';  
   
