@@ -97,7 +97,6 @@
             css += '.tmdb-rate-badge .tmdb-rate-value { font-size: 1.15em !important; font-weight: 700 !important; text-shadow: 0 1px 4px rgba(0,0,0,0.7) !important; } ';  
             css += '.full-descr__info--moved { font-family: inherit !important; font-size: inherit !important; font-weight: inherit !important; letter-spacing: normal !important; text-transform: none !important; color: inherit !important; } ';  
             
-            // Збільшено відступ зверху для медіакнопок, щоб не прилягали до постера
             css += '.card-tweaks__buttons { width: 100%; margin-top: 1.5em !important; } ';  
             css += '.card-tweaks__buttons .full-start__buttons { margin-top: 0.8em; } ';  
         }  
@@ -157,7 +156,6 @@
 
     function pickTagline(translations, fallback) {  
         if (translations && translations.translations) {  
-            // Суворий пріоритет: спочатку українська, якщо нема — англійська. Російська виключена.
             var order = ['uk', 'en'];  
             for (var i = 0; i < order.length; i++) {  
                 var tr = translations.translations.find(function (t) {  
@@ -212,6 +210,7 @@
                 var url = Lampa.TMDB.image('/t/p/' + quality + logo.file_path);  
                 var $logo = $('<img class="logo-img" src="' + url + '" alt="' + (movie.title || movie.name || '') + '">');  
 
+                // ВИКОРИСТАННЯ НАЛАШТУВАННЯ РОЗМІРУ ЛОГОТИПА
                 var currentSize = logoSizePx();
                 $logo.css({  
                     'max-height': currentSize + 'px',  
@@ -256,6 +255,7 @@
                 $wrap.append($detailsElem);
             }
 
+            // ЛОГОТИП СТУДІЇ З АНАЛІЗОМ ЯКРАВОСТІ ТА ІНВЕРСІЄЮ
             if (Lampa.Storage.get('movie_card_logo_studio', true)) {  
                 var studio = null;  
                 if (data.networks && data.networks.length) {  
