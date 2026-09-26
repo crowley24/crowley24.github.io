@@ -45,7 +45,24 @@
         img.src = imgSrc;  
     }  
   
-function applyStyles() {  
+
+    // Перебудова: wrap на місці title (справа від постера), кнопки під body  
+    function rebuildLayout($render) {  
+        // 1. Wrap — на місці title, як у версії, що працювала  
+        var $title = $render.find('.full-start-new__title').first();  
+        var $wrap = $render.find('.logo-top-wrap');  
+        if ($title.length) {  
+            if (!$wrap.length) {  
+                $wrap = $('<div class="logo-top-wrap"></div>');  
+                $title.before($wrap);  
+                $wrap.append($title);  
+            } else if ($title.parent()[0] !== $wrap[0]) {  
+                $wrap.append($title);  
+            }  
+        } else if (!$wrap.length) {  
+            var $left = $render.find('.full-start-new__left, .full-start__left').first();  
+            if ($left.length) $left.prepend($('<div class="logo-top-wrap"></div>'));  
+        }  function applyStyles() {  
         var style = document.getElementById('movie-card-logo-styles');  
         if (!style) {  
             style = document.createElement('style');  
@@ -77,6 +94,7 @@ function applyStyles() {
             css += '.full-start-new, .full-start { position: relative !important; } ';  
             css += '.full-start-new__rate-line, .full-start__rate-line { position: absolute !important; top: 0.6em !important; right: 1.5em; z-index: 5; margin: 0 !important; display: flex; gap: 0.8em; align-items: center; background: none !important; padding: 0 !important; border-radius: 0 !important; } ';  
             css += '.full-start .info__rate, .full-start-new .info__rate { background-color: transparent !important; padding: 0 !important; } ';  
+            css += '.full-start-new__rate-line .tmdb-rate-icon, .full-start__rate-line .tmdb-rate-icon { margin-right: 0.4em; vertical-align: middle; flex-shrink: 0; } ';  
   
             // Кнопки під верхнім блоком, на всю ширину  
             css += '.card-tweaks__buttons { margin-top: 1.5em; width: 100%; } ';  
@@ -90,23 +108,6 @@ function applyStyles() {
         }  
         style.textContent = css;  
     }
-    // Перебудова: wrap на місці title (справа від постера), кнопки під body  
-    function rebuildLayout($render) {  
-        // 1. Wrap — на місці title, як у версії, що працювала  
-        var $title = $render.find('.full-start-new__title').first();  
-        var $wrap = $render.find('.logo-top-wrap');  
-        if ($title.length) {  
-            if (!$wrap.length) {  
-                $wrap = $('<div class="logo-top-wrap"></div>');  
-                $title.before($wrap);  
-                $wrap.append($title);  
-            } else if ($title.parent()[0] !== $wrap[0]) {  
-                $wrap.append($title);  
-            }  
-        } else if (!$wrap.length) {  
-            var $left = $render.find('.full-start-new__left, .full-start__left').first();  
-            if ($left.length) $left.prepend($('<div class="logo-top-wrap"></div>'));  
-        }  
   
         // 2. Слоган та інфо-рядок — у wrap одразу під title  
         $wrap = $render.find('.logo-top-wrap');  
@@ -119,7 +120,13 @@ function applyStyles() {
             });  
         }  
   
-        // 3. Кнопки під усім верхнім блоком, на всю ширину (як у card-tweaks)  
+        // 3. Зірка-іконка перед рейтингом (інлайн SVG, без зовнішніх URL)  
+        var $rate = $render.find('.full-start-new__rate-line, .full-start__rate-line').first();  
+        if ($rate.length && !$rate.find('.tmdb-rate-icon').length) {  
+            $rate.prepend('<svg class="tmdb-rate-icon" viewBox="0 0 17 16" style="width:1em;height:1em;flex-shrink:0;"><path d="M8.39 0.19L10.99 5.31L16.79 6.20L12.55 10.43L13.58 15.93L8.39 13.24L3.21 15.93L4.24 10.43L0 6.20L5.80 5.31Z" fill="#fff"/></svg>');  
+        }  
+        
+        // 4. Кнопки під усім верхнім блоком, на всю ширину (як у card-tweaks)  
         var $body = $render.find('.full-start-new__body, .full-start__body').first();  
         var $wrapper = $render.find('.card-tweaks__buttons');  
         if ($body.length && !$wrapper.length) {  
