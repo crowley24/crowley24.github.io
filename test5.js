@@ -5,7 +5,6 @@
     var currentActiveId = null;  
     var TMDB_LOGO_URL = 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg';  
 
-    // Покращена шкала розміру лого у пікселях
     var LOGO_SIZES = { '50': 50, '80': 80, '120': 120, '160': 160, '210': 210 };  
 
     var settings_list = [  
@@ -68,21 +67,16 @@
             css += '.full-start-new__head { display: none !important; } ';  
             css += '.full-start__status, .full-start-new__status { display: none !important; } ';  
             
-            // Загальна обгортка: суворий вертикальний порядок флекс-елементів
             css += '.logo-top-wrap { display: flex; flex-direction: column; align-items: flex-start; width: 100%; margin-top: -0.4em; } ';  
 
-            // Налаштування блоку заголовка/логотипа
             css += '.logo-top-wrap .full-start-new__title { order: 2; font-size: 1em !important; max-height: none !important; max-width: none !important; overflow: visible !important; margin-bottom: 8px !important; line-height: 1 !important; } ';  
             css += '.logo-top-wrap .full-start-new__title > *:not(img) { display: none !important; } ';  
             css += '.logo-top-wrap .full-start-new__title img { display: block; width: auto; max-width: 100%; object-fit: contain; filter: drop-shadow(0 3px 8px rgba(0,0,0,0.85)); } ';  
 
-            // Слоган завжди під логотипом (order: 3)
             css += '.logo-top-wrap .full-start-new__tagline { order: 3; font-size: 0.9em !important; color: rgba(255,255,255,0.8) !important; margin: 0 0 10px 0 !important; line-height: 1.4 !important; } ';  
 
-            // Деталі (тривалість • жанри) завжди нижче слогана (order: 4)
             css += '.logo-top-wrap .full-start-new__details { order: 4; margin-top: 0.4em !important; font-size: 0.9em !important; font-weight: 400 !important; color: rgba(255,255,255,0.75) !important; letter-spacing: 0.03em !important; } ';  
 
-            // Студія завжди нагорі (order: 1)
             if (showStudio) {  
                 css += '.studio-header-brand { order: 1; width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: 6px !important; } ';  
                 css += '.studio-header-brand img { height: 20px !important; width: auto; max-width: 120px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; } ';  
@@ -93,7 +87,6 @@
                 css += '.logo-top-wrap .full-start-new__tagline { display: none !important; } ';  
             }  
 
-            // Рейтинг та кнопки
             css += '.full-start-new__rate-line, .full-start__rate-line { position: absolute !important; top: 0.6em !important; right: 1.5em !important; left: auto !important; margin: 0 !important; background: none !important; background-color: transparent !important; padding: 0 !important; z-index: 10 !important; } ';  
             css += '.full-start-new__rate-line > :not(.tmdb-rate-badge), .full-start__rate-line > :not(.tmdb-rate-badge) { display: none !important; } ';  
             css += '.full-start .info__rate, .full-start-new .info__rate { display: none !important; } ';  
@@ -128,7 +121,6 @@
             return;  
         }  
 
-        // Гарантуємо правильний порядок елементів усередині контейнера через append
         ['.studio-header-brand', '.full-start-new__title', '.full-start-new__tagline', '.full-start-new__details'].forEach(function (sel) {  
             var $el = $render.find(sel).first();  
             if ($el.length) {  
@@ -215,7 +207,6 @@
                 var url = Lampa.TMDB.image('/t/p/' + quality + logo.file_path);  
                 var $logo = $('<img class="logo-img" src="' + url + '" alt="' + (movie.title || movie.name || '') + '">');  
 
-                // Покращено застосування розміру через чіткий CSS max-height
                 var currentSize = logoSizePx();
                 $logo.css({  
                     'max-height': currentSize + 'px',  
@@ -255,7 +246,6 @@
                 $tagline.hide();  
             }  
 
-            // Переносимо блок деталей наприкінці контейнера, щоб він завжди був нижче слогана
             var $detailsElem = $render.find('.full-start-new__details');
             if ($detailsElem.length) {
                 $wrap.append($detailsElem);
@@ -332,7 +322,7 @@
             onChange: applyStyles  
         });  
         Lampa.SettingsApi.addParam({  
-            Component: 'movie_card_logo',  
+            component: 'movie_card_logo',  
             param: { name: 'movie_card_logo_tagline', type: 'trigger', default: true },  
             field: { name: 'Слоган фільму' },  
             onChange: applyStyles  
@@ -355,7 +345,7 @@
                 default: 'w500'  
             },  
             field: { name: 'Якість логотипа' },  
-            onChange: applyStations || applyStyles  
+            onChange: applyStyles  
         });  
     }  
 
