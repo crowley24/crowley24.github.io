@@ -78,13 +78,22 @@
             css += '.full-start-new__head, .full-start__tags { display: none !important; } ';  
               
             // Обгортка для логотипів (студія + назва + слоган)  
-            css += '.logo-top-wrap { display: flex !important; flex-direction: column !important; justify-content: flex-start !important; align-items: flex-start !important; width: 100% !important; } ';  
+            css += '.logo-top-wrap { display: flex !important; flex-direction: column !important; justify-content: flex-start !important; align-items: flex-start !important; width: 100% !important; margin-bottom: 0 !important; } ';  
             css += '.logo-top-wrap .full-start-new__title, .logo-top-wrap .full-start-new__tagline { margin-left: 0 !important; } ';  
+            css += '.logo-top-wrap .full-start-new__title { margin-bottom: 2px !important; } ';  
               
             css += '.full-start-new__title { display: flex !important; justify-content: flex-start !important; align-items: center !important; height: auto !important; min-height: unset !important; overflow: visible !important; width: 100% !important; box-sizing: border-box !important; margin: 4px 0 !important; } ';  
             css += '.full-start-new__title img { height: auto !important; max-height: ' + lHeight + 'px !important; width: auto !important; max-width: 55vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';  
               
-            css += '.full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 4px 0 0 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; } ';  
+            // Слоган впритул до лого назви  
+            css += '.full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 0.9em !important; margin: 0 0 6px 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; } ';  
+  
+            // Рейтинги у правому верхньому куті  
+            css += '.full-start, .full-start-new { position: relative !important; } ';  
+            css += '.full-start__ratings { position: absolute !important; top: 1em !important; right: 1.5em !important; margin-left: 0 !important; z-index: 5 !important; } ';  
+  
+            // Рядок деталей (вік, статус "випущено")  
+            css += '.full-start-new__details-line { display: flex; flex-wrap: wrap; align-items: center; margin: 4px 0; } ';  
   
             if (showStudio) {  
                 css += '.studio-header-brand { width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: 4px !important; } ';  
@@ -96,16 +105,16 @@
         style.textContent = css;  
     }  
   
-    // Вирівнювання верху обгортки логотипів по верху постера  
+    // Вирівнювання верху обгортки логотипів по верху постера (з невеликим зсувом вниз)  
     function alignLogoTop($render) {  
         var $wrap = $render.find('.logo-top-wrap');  
         var $poster = $render.find('.full-start-new__poster, .full-start__poster');  
         if ($wrap.length === 0 || $poster.length === 0) return;  
   
-        var diff = Math.round($poster.offset().top - $wrap.offset().top);  
+        var OFFSET = 8; // px вниз від верху постера — збільшуйте за потреби (12–16)  
+        var diff = Math.round($poster.offset().top - $wrap.offset().top) + OFFSET;  
   
-        // піднімаємо лише вгору, з обмеженням від аномалій  
-        if (diff < 0 && Math.abs(diff) < 500) {  
+        if (Math.abs(diff) < 500) {  
             $wrap.css('transform', 'translateY(' + diff + 'px)');  
         }  
     }  
@@ -123,20 +132,29 @@
         if (countries) extraInfo.push(countries);  
         var formattedDetails = extraInfo.join(' • ');  
   
-        // Вставляємо у рядок з тривалістю та жанром  
+        // Вставляємо у рядок з тривалістю та жанром + переносимо теги віку/статусу  
         setTimeout(function() {  
             var $infoLine = $render.find('.full-start-new__info, .full-start__info');  
               
-            if ($infoLine.length > 0 && formattedDetails) {  
+            if ($infoLine.length > 0) {  
                 var originalText = $infoLine.attr('data-original-text');  
                 if (!originalText) {  
                     originalText = $infoLine.text();  
                     $infoLine.attr('data-original-text', originalText);  
                 }  
   
-                if (originalText.indexOf(formattedDetails) === -1) {  
+                if (formattedDetails && originalText.indexOf(formattedDetails) === -1) {  
                     $infoLine.text(formattedDetails + ' • ' + originalText);  
                 }  
+  
+                // Переносимо теги (вік, статус "випущено") в окремий рядок деталей  
+                var $details = $render.find('.full-start-new__details-line');  
+                if ($details.length === 0) {  
+                    $details = $('<div class="full-start-new__details-line"></div>');  
+                    $infoLine.after($details);  
+                }  
+                $render.find('.full-start-new__tags .full-start__tag, .full-start__tags .full-start__tag')  
+                    .appendTo($details);  
             }  
         }, 50);  
   
@@ -269,31 +287,6 @@
             component: 'movie_card_logo',   
             param: { name: 'movie_card_logo_studio', type: 'trigger', default: true },   
             field: { name: 'Логотип студії', description: 'Відображати чи не відображати логотип студії/телеканалу' },   
-            onChange: applyStyles   
-        });  
-  
-        Lampa.SettingsApi.addParam({   
-            component: 'movie_card_logo',   
-            param: { name: 'movie_card_logo_tagline', type: 'trigger', default: true },   
-            field: { name: 'Слоган фільму', description: 'Відображати чи не відображати слоган під логотипом' },   
-            onChange: applyStyles   
-        });  
-  
-        Lampa.SettingsApi.addParam({   
-            component: 'movie_card_logo',   
-            param: {   
-                name: 'movie_card_logo_size',   
-                type: 'select',   
-                values: {   
-                    '50': 'Дуже малий',   
-                    '80': 'Малий',   
-                    '120': 'Стандартний',   
-                    '160': 'Великий',   
-                    '210': 'Дуже великий'   
-                },   
-                default: '120'   
-            },   
-            field: { name: 'Розмір логотипа назви фільму' },   
             onChange: applyStyles   
         });  
   
