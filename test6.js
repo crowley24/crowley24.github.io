@@ -121,13 +121,15 @@
         css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';
         css += '.background { background: #000 !important; } ';
         
-        // Стандартний вигляд постера
-        css += '.full-start-new { position: relative !important; } ';
-        css += '.full-start-new__poster { position: relative !important; background: #000; z-index: 1; } ';
-        css += '.full-start-new__poster img { filter: none !important; width: 100% !important; height: auto !important; object-fit: contain !important; ';
-        css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 75%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 75%, transparent 100%) !important; } ';
+        // Повернення постера на праву половину екрана з градієнтами
+        css += '.full-start-new { position: relative !important; overflow: hidden !important; } ';
+        css += '.full-start-new__poster { position: absolute !important; top: 0; right: 0; width: 50% !important; height: 100% !important; background: #000; z-index: 1; pointer-events: none; } ';
+        css += '.full-start-new__poster img { filter: none !important; width: 100% !important; height: 100% !important; object-fit: cover !important; ';
+        css += 'mask-image: linear-gradient(to right, transparent 0%, #000 20%, #000 100%), linear-gradient(to bottom, #000 0%, #000 75%, transparent 100%) !important; ';
+        css += '-webkit-mask-image: linear-gradient(to right, transparent 0%, #000 20%, #000 100%), linear-gradient(to bottom, #000 0%, #000 75%, transparent 100%) !important; ';
+        css += '-webkit-mask-composite: source-in; mask-composite: intersect; } ';
         
-        css += '.full-start-new__right { background: none !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; padding: 20px !important; gap: ' + blocksGap + ' !important; position: relative !important; } ';
+        css += '.full-start-new__right { background: none !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; padding: 20px !important; width: 60% !important; gap: ' + blocksGap + ' !important; position: relative !important; } ';
         
         var chosenAnimName = 'anim_' + animEffect;
         var animTiming = animEffect === 'elastic' ? 'cubic-bezier(0.34, 1.56, 0.64, 1)' : 'cubic-bezier(0.16, 1, 0.3, 1)';
