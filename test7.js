@@ -15,8 +15,7 @@
         { id: 'tv_interface_show_tagline', default: true },
         { id: 'tv_interface_blocks_gap', default: '8px' },
         { id: 'tv_interface_ratings_size', default: '0.45em' },
-        { id: 'tv_interface_studios', default: true },
-        { id: 'tv_interface_quality', default: true }
+        { id: 'tv_interface_studios', default: true }
     ];
 
     settings_list.forEach(function (opt) {
@@ -24,25 +23,6 @@
             Lampa.Storage.set(opt.id, opt.default);
         }
     });
-
-    var eliteBadgesConfig = [
-        { id: '4k-ultra-hd', pattern: /\b(4k|2160p|uhd|ultra\s*hd)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/4k_ultra_hd.png', group: 'resolution', priority: 3 },
-        { id: '1080p-full-hd', pattern: /\b(1080p|fhd|full\s*hd)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/1080p_full_hd.png', group: 'resolution', priority: 2 },
-        { id: '720p-hd', pattern: /\b720p\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/720p_hd.png', group: 'resolution', priority: 1 },
-        
-        { id: 'dolby-vision', pattern: /\b(dolby\s*vision|dovi|dv)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_vision.png' },
-        
-        { id: 'hdr', pattern: /\b(hdr10\+|hdr10\s*plus\b|hdr\s*10\s*\+|hdr10|hdr\s*10|hdr)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr.png', group: 'hdr' },
-        { id: 'sdr', pattern: /\bsdr\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/SDR_transparent_4x.png' },
-        
-        { id: 'dolby-atmos', pattern: /\b(dolby\s*atmos|atmos)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_atmos.png' },
-        { id: 'truehd', pattern: /\b(truehd|true\s*hd|dolby\s*truehd)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/truehd.png' },
-        { id: 'dolby-digital-plus', pattern: /\b(ddp[\s._-]*[0-9][\s._-]*[0-9]|ddp|dd\+|dolby[\s._-]*digital[\s._-]*plus|e-?ac-?3)(?![a-z])/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_digital_plus.png' },
-        { id: 'dolby-digital', pattern: /\b(dd[\s._-]*[0-9][\s._-]*[0-9]|dd|dolby[\s._-]*digital|ac-?3)(?![\s._-]*plus|\+|p|[a-z])/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_digital.png' },
-        { id: 'dts-hd-master-audio', pattern: /\b(dts[\s._-]*hd[\s._-]*ma|dtshd\s*ma|dts[\s._-]*hd[\s._-]*master)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts_hd_master_audio.png' },
-        { id: 'dts-hd', pattern: /\b(dts[\s._-]*hd|dtshd)(?![\s._-]*(ma|master)|ma)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts_hd.png' },
-        { id: 'dts', pattern: /\bdts\b(?![\s._:-]*(x|hd))/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts.png' }
-    ];
 
     var ratingIcons = {
         tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',
@@ -166,23 +146,6 @@
 
         css += '.quality-row-inline .plugin-rating-item { display: flex; align-items: center; gap: 6px; font-weight: 700; color: #fff; font-size: 1.05em; padding: 2px 0; } ';
         css += '.quality-row-inline .plugin-rating-item img { height: 1.1em; width: auto; } ';
-        
-        css += '.quality-item { transform-origin: center center; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8)); height: 1.3em; display: flex; align-items: center; justify-content: flex-end; ';
-        if (isUIAnim) {
-            css += 'opacity: 0; animation: wave_cascade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards';
-            if (badgeAnim !== 'none') {
-                css += ', ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite';
-                css += '; animation-delay: calc(0.35s + (var(--item-index) * 0.08s)), calc(1s + (var(--item-index) * 0.15s))';
-            } else {
-                css += '; animation-delay: calc(0.35s + (var(--item-index) * 0.08s))';
-            }
-            css += '; will-change: transform, opacity, filter; ';
-        } else if (badgeAnim !== 'none') {
-            css += 'animation: ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite; ';
-            css += 'animation-delay: calc(var(--item-index) * 0.15s); ';
-        }
-        css += '} ';
-        css += '.quality-item img { height: 100%; width: auto; max-width: 70px; object-fit: contain; } ';
 
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.9em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.85em; margin: 0 -2px; } ';
@@ -317,47 +280,6 @@
         });
     }
 
-    function getEliteBadges(results) {
-        var foundBadges = [];
-        if (!results) return foundBadges;
-
-        var combinedText = '';
-        results.slice(0, 15).forEach(function(item) {
-            combinedText += ' ' + (item.Title || item.title || '');
-        });
-
-        var matchedBadges = [];
-        eliteBadgesConfig.forEach(function(badge) {
-            if (badge.pattern && badge.pattern.test(combinedText)) {
-                matchedBadges.push(badge);
-            }
-        });
-
-        var highestResolution = null;
-        matchedBadges.forEach(function(b) {
-            if (b.group === 'resolution') {
-                if (!highestResolution || b.priority > highestResolution.priority) {
-                    highestResolution = b;
-                }
-            }
-        });
-
-        matchedBadges.forEach(function(badge) {
-            if (badge.group !== 'resolution' || badge.id === highestResolution.id) {
-                foundBadges.push(badge.imageURL);
-            }
-        });
-
-        var hasUkr = /ukr|укр/i.test(combinedText);
-        var hasDub = /dub|дуб/i.test(combinedText);
-        if (hasUkr) foundBadges.push(pluginPath + 'UKR.svg');
-        if (hasDub) foundBadges.push(pluginPath + 'DUB.svg');
-
-        return foundBadges.filter(function(elem, pos, arr) {
-            return arr.indexOf(elem) === pos;
-        });
-    }
-
     function init() {
         Lampa.Listener.follow('full', function (e) {
             if (e.type === 'destroy' || e.type === 'onBeforeDestroy') {
@@ -403,20 +325,6 @@
                     $cubItem.css('--item-index', globalIndex++);
                     $qRow.append($cubItem);
                 }
-
-                if (Lampa.Storage.get('tv_interface_quality') && Lampa.Parser && Lampa.Parser.get) {
-                    Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
-                        if (res && Array.isArray(res.Results)) {
-                            var eliteBadgesList = getEliteBadges(res.Results);
-                            
-                            eliteBadgesList.forEach(function(imgUrl) { 
-                                var $badge = $('<div class="quality-item wave-item"><img src="' + imgUrl + '"></div>');
-                                $badge.css('--item-index', globalIndex++);
-                                $qRow.append($badge);
-                            });
-                        }
-                    });
-                }
             }
         });
     }
@@ -435,7 +343,6 @@
         Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_blocks_gap', type: 'select', values: { '8px': 'Компактний', '12px': 'Стандартний', '18px': 'Просторий', '24px': 'Панорамний' }, default: '8px' }, field: { name: 'Відступи між блоками' }, onChange: applyStyles });
         Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_ratings_size', type: 'select', values: { '0.4em': 'Дрібний', '0.45em': 'Звичайний', '0.5em': 'Великий', '0.55em': 'Дуже великий' }, default: '0.45em' }, field: { name: 'Розмір шрифту інфо-блоків' }, onChange: applyStyles });
         Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_studios', type: 'trigger', default: true }, field: { name: 'Показувати логотип студії' } });
-        Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_quality', type: 'trigger', default: true }, field: { name: 'Бейджі якості та звуку' } });
     }
 
     function startPlugin() {
