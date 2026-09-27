@@ -26,14 +26,14 @@
     });
 
     var eliteBadgesConfig = [
+        // Dolby Vision на першому місці
+        { id: 'dolby-vision', pattern: /\b(dolby\s*vision|dovi|dv)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_vision.png', group: 'dv', priority: 10 },
+        
         { id: '4k-ultra-hd', pattern: /\b(4k|2160p|uhd|ultra\s*hd)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/4k_ultra_hd.png', group: 'resolution', priority: 3 },
         { id: '1080p-full-hd', pattern: /\b(1080p|fhd|full\s*hd)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/1080p_full_hd.png', group: 'resolution', priority: 2 },
         { id: '720p-hd', pattern: /\b720p\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/720p_hd.png', group: 'resolution', priority: 1 },
         
-        { id: 'dolby-vision', pattern: /\b(dolby\s*vision|dovi|dv)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_vision.png' },
-        
         { id: 'hdr', pattern: /\b(hdr10\+|hdr10\s*plus\b|hdr\s*10\s*\+|hdr10|hdr\s*10|hdr)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr.png', group: 'hdr' },
-        { id: 'sdr', pattern: /\bsdr\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/SDR_transparent_4x.png' },
         
         { id: 'dolby-atmos', pattern: /\b(dolby\s*atmos|atmos)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_atmos.png' },
         { id: 'truehd', pattern: /\b(truehd|true\s*hd|dolby\s*truehd)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/truehd.png' },
@@ -164,10 +164,11 @@
         }
         css += '} ';
 
-        css += '.quality-row-inline .plugin-rating-item { display: flex; align-items: center; gap: 6px; font-weight: 700; color: #fff; font-size: 1.05em; padding: 2px 0; } ';
-        css += '.quality-row-inline .plugin-rating-item img { height: 1.1em; width: auto; } ';
+        // Однаковий розмір та вертикальне вирівнювання для іконок рейтингів та бейджів якості
+        css += '.quality-row-inline .plugin-rating-item { display: flex; align-items: center; gap: 6px; font-weight: 700; color: #fff; font-size: 1.05em; padding: 2px 0; height: 1.25em; } ';
+        css += '.quality-row-inline .plugin-rating-item img { height: 1.25em !important; width: auto; object-fit: contain; } ';
         
-        css += '.quality-item { transform-origin: center center; height: 1.3em; display: flex; align-items: center; justify-content: flex-end; will-change: transform, opacity; ';
+        css += '.quality-item { transform-origin: center center; height: 1.25em !important; display: flex; align-items: center; justify-content: flex-end; will-change: transform, opacity; ';
         if (isUIAnim) {
             css += 'opacity: 0; animation: wave_cascade 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards';
             if (badgeAnim !== 'none') {
@@ -181,7 +182,7 @@
             css += 'animation-delay: calc(var(--item-index) * 0.1s); ';
         }
         css += '} ';
-        css += '.quality-item img { height: 100%; width: auto; max-width: 70px; object-fit: contain; } ';
+        css += '.quality-item img { height: 100% !important; width: auto; max-width: 70px; object-fit: contain; } ';
 
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.9em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.85em; margin: 0 -2px; } ';
@@ -332,6 +333,11 @@
             }
         });
 
+        // Сортуємо бейджі за пріоритетом (щоб Dolby Vision завжди йшов першим)
+        matchedBadges.sort(function(a, b) {
+            return (b.priority || 0) - (a.priority || 0);
+        });
+
         var highestResolution = null;
         matchedBadges.forEach(function(b) {
             if (b.group === 'resolution') {
@@ -348,9 +354,7 @@
         });
 
         var hasUkr = /ukr|укр/i.test(combinedText);
-        var hasDub = /dub|дуб/i.test(combinedText);
         if (hasUkr) foundBadges.push(pluginPath + 'UKR.svg');
-        if (hasDub) foundBadges.push(pluginPath + 'DUB.svg');
 
         return foundBadges.filter(function(elem, pos, arr) {
             return arr.indexOf(elem) === pos;
