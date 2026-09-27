@@ -833,15 +833,15 @@
             'body:not(.ifx-type-badges) .card.card--tv .card__view > .release-badges{top:3.2em}',
             '.release-badges--full{left:.5em;top:.8em;gap:.3em}',
             '.release-badges__badge{display:inline-flex;align-items:center;justify-content:center;align-self:flex-start;min-width:2.2em;height:1.4em;padding:0 .35em;background-size:contain;background-repeat:no-repeat;background-position:center;color:#fff;font-size:.78em;font-weight:800;line-height:1;white-space:nowrap}',
-            /* Ваші власні іконки з GitHub */
-            '.release-badges__badge--ua{background-image:url("https://raw.githubusercontent.com/crowley24/crowley24.github.io/refs/heads/main/Badges/UKR.svg");width:2.4em;height:1.3em}',
+            /* Нові посилання на бейджі */
+            '.release-badges__badge--ua{background-image:url("https://raw.githubusercontent.com/crowley24/crowley24.github.io/refs/heads/main/Icons/UKR.svg");width:2.4em;height:1.3em}',
             '.release-badges__badge--ru{background:linear-gradient(135deg,#8e244d,#d75a74);border:1px solid rgba(215,90,116,.4);border-radius:.32em;padding:.32em .48em}',
             '.release-badges__badge--en{background:linear-gradient(135deg,#37474f,#78909c);border:1px solid rgba(120,144,156,.4);border-radius:.32em;padding:.32em .48em}',
-            '.release-badges__badge--4k{background-image:url("https://raw.githubusercontent.com/crowley24/crowley24.github.io/refs/heads/main/Badges/4K.svg");width:2.6em;height:1.3em}',
-            '.release-badges__badge--fhd{background-image:url("https://raw.githubusercontent.com/crowley24/crowley24.github.io/refs/heads/main/Badges/1080.svg");width:2.8em;height:1.3em}',
+            '.release-badges__badge--4k{background-image:url("https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/4k_ultra_hd.png");width:2.8em;height:1.3em}',
+            '.release-badges__badge--fhd{background-image:url("https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/1080p_full_hd.png");width:3.0em;height:1.3em}',
             '.release-badges__badge--hd{background:linear-gradient(135deg,#1b5e20,#66bb6a);border:1px solid rgba(102,187,106,.4);border-radius:.32em;padding:.32em .48em}',
-            '.release-badges__badge--hdr{background-image:url("https://raw.githubusercontent.com/crowley24/crowley24.github.io/refs/heads/main/Badges/HDR.svg");width:2.8em;height:1.3em}',
-            '.release-badges__badge--dv{background-image:url("https://raw.githubusercontent.com/crowley24/crowley24.github.io/refs/heads/main/Icons/Dolby%20Vision.svg");width:3.2em;height:1.3em}',
+            '.release-badges__badge--hdr{background-image:url("https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr.png");width:2.8em;height:1.3em}',
+            '.release-badges__badge--dv{background-image:url("https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_vision.png");width:3.2em;height:1.3em}',
             '.release-badges__badge--rating{background:linear-gradient(135deg,#1a1a2e,#16213e);color:#ffd700;border:1px solid rgba(255,215,0,.35);border-radius:.32em;padding:.32em .48em}',
             '.card.release-badges-has-rating .card__vote{display:none!important}',
             '.card.release-badges-has-quality .card__quality{display:none!important}'
