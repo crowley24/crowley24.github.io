@@ -5,7 +5,6 @@
      */
     var pluginPath = 'https://crowley24.github.io/Icons/';
     var detailsCache = {}; 
-    var qualityCache = {}; 
     var currentActiveId = null;
     
     var settings_list = [
@@ -27,11 +26,15 @@
     });
 
     var eliteBadgesConfig = [
-        { id: 'dolby-vision', pattern: /\b(dolby\s*vision|dovi|dv)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_vision.png', group: 'dv', priority: 10 },
         { id: '4k-ultra-hd', pattern: /\b(4k|2160p|uhd|ultra\s*hd)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/4k_ultra_hd.png', group: 'resolution', priority: 3 },
         { id: '1080p-full-hd', pattern: /\b(1080p|fhd|full\s*hd)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/1080p_full_hd.png', group: 'resolution', priority: 2 },
         { id: '720p-hd', pattern: /\b720p\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/720p_hd.png', group: 'resolution', priority: 1 },
+        
+        { id: 'dolby-vision', pattern: /\b(dolby\s*vision|dovi|dv)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_vision.png' },
+        
         { id: 'hdr', pattern: /\b(hdr10\+|hdr10\s*plus\b|hdr\s*10\s*\+|hdr10|hdr\s*10|hdr)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr.png', group: 'hdr' },
+        { id: 'sdr', pattern: /\bsdr\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/SDR_transparent_4x.png' },
+        
         { id: 'dolby-atmos', pattern: /\b(dolby\s*atmos|atmos)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_atmos.png' },
         { id: 'truehd', pattern: /\b(truehd|true\s*hd|dolby\s*truehd)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/truehd.png' },
         { id: 'dolby-digital-plus', pattern: /\b(ddp[\s._-]*[0-9][\s._-]*[0-9]|ddp|dd\+|dolby[\s._-]*digital[\s._-]*plus|e-?ac-?3)(?![a-z])/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_digital_plus.png' },
@@ -101,16 +104,16 @@
         
         var css = '';
         
-        css += '@keyframes anim_fluid { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } } ';
-        css += '@keyframes anim_cyber { 0% { opacity: 0; transform: translateX(-15px); } 100% { opacity: 1; transform: translateX(0); } } ';
-        css += '@keyframes anim_cinematic { 0% { opacity: 0; transform: scale(0.98); } 100% { opacity: 1; transform: scale(1); } } ';
-        css += '@keyframes anim_elastic { 0% { opacity: 0; transform: scale(0.9); } 80% { opacity: 1; transform: scale(1.01); } 100% { opacity: 1; transform: scale(1); } } ';
-        css += '@keyframes anim_minimal { 0% { opacity: 0; } 100% { opacity: 1; } } ';
-        
-        css += '@keyframes badge_anim_pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } } ';
-        css += '@keyframes badge_anim_breathe { 0%, 100% { opacity: 0.85; } 50% { opacity: 1; } } ';
-        css += '@keyframes badge_anim_spin_slow { 0% { transform: rotate(0deg); } 50% { transform: rotate(2deg); } 100% { transform: rotate(0deg); } } ';
-        css += '@keyframes badge_anim_float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } } ';
+        css += '@keyframes anim_fluid { 0% { opacity: 0; transform: translate3d(0, 25px, 0) scale(0.95); filter: blur(10px); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0px); } } ';
+        css += '@keyframes anim_cyber { 0% { opacity: 0; transform: translate3d(-40px, 0, 0) scale(0.9); filter: brightness(1.5); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: brightness(1); } } ';
+        css += '@keyframes anim_cinematic { 0% { opacity: 0; transform: translate3d(0, 15px, 0) scale(1.08); filter: blur(6px); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); filter: blur(0px); } } ';
+        css += '@keyframes anim_elastic { 0% { opacity: 0; transform: scale(0.7); } 70% { opacity: 1; transform: scale(1.04); } 100% { opacity: 1; transform: scale(1); } } ';
+        css += '@keyframes anim_minimal { 0% { opacity: 0; transform: translate3d(0, 10px, 0); } 100% { opacity: 1; transform: translate3d(0, 0, 0); } } ';
+        css += '@keyframes wave_cascade { 0% { opacity: 0; transform: scale(0.5) translateY(10px); filter: blur(4px); } 100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0px); } } ';
+        css += '@keyframes badge_anim_pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } } ';
+        css += '@keyframes badge_anim_breathe { 0%, 100% { transform: scale(1); opacity: 0.85; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); } 50% { transform: scale(1.06); opacity: 1; filter: drop-shadow(0 0 10px rgba(255,255,255,0.6)); } } ';
+        css += '@keyframes badge_anim_spin_slow { 0% { transform: rotate(0deg); } 25% { transform: rotate(4deg); } 75% { transform: rotate(-4deg); } 100% { transform: rotate(0deg); } } ';
+        css += '@keyframes badge_anim_float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } } ';
         
         css += '.full-start__reactions, [class*="reactions"] { display: none !important; } ';
         css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="rating-count"], [class*="status"] { display:none !important; } ';
@@ -123,47 +126,68 @@
         css += '.full-start-new__poster img { filter: none !important; width: 100% !important; height: auto !important; object-fit: contain !important; ';
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 75%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 75%, transparent 100%) !important; } ';
         
+        css += '.full-start-new__right { background: none !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; padding: 20px !important; gap: ' + blocksGap + ' !important; position: relative !important; } ';
+        
         var chosenAnimName = 'anim_' + animEffect;
-        var uiAnimStyle = isUIAnim ? 'animation: ' + chosenAnimName + ' 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; will-change: transform, opacity; transform: translateZ(0);' : '';
-
-        css += '.full-start-new__right { background: none !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; padding: 20px !important; gap: ' + blocksGap + ' !important; position: relative !important; ' + uiAnimStyle + ' } ';
+        var animTiming = animEffect === 'elastic' ? 'cubic-bezier(0.34, 1.56, 0.64, 1)' : 'cubic-bezier(0.16, 1, 0.3, 1)';
+        var uiAnimClass = isUIAnim ? 'animation: ' + chosenAnimName + ' 0.8s ' + animTiming + ' forwards; opacity: 0; will-change: transform, opacity, filter; transform: translateZ(0); ' : '';
 
         css += '.quality-row-inline { position: absolute; top: 30px; right: 24px; z-index: 99; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; pointer-events: none; } '; 
 
-        css += '.studio-header-brand { width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: -2px !important; } ';
-        css += '.studio-header-brand img { height: 22px !important; width: auto; max-width: 130px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); opacity: 0.95; } ';
+        css += '.studio-header-brand { ' + uiAnimClass + ' animation-delay: 0.08s; order: 1; width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: -2px !important; } ';
+        css += '.studio-header-brand img { height: 22px !important; width: auto; max-width: 130px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.9)); opacity: 0.95; } ';
         css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
 
-        css += '.full-start-new__title { width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; min-height: 50px; overflow: visible !important; } ';
+        css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.15s; width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; min-height: 50px; order: 2; overflow: visible !important; } ';
         css += '.full-start-new__title img { height: auto !important; max-height: 100px !important; width: auto !important; max-width: 45vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 15px rgba(0,0,0,0.8)); margin: 0 !important; } ';
 
-        css += '.full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 1em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; } ';
+        css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.22s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 1em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; order: 3; } ';
         
-        css += '.plugin-meta-row { display: flex; justify-content: flex-start; align-items: center; flex-wrap: nowrap; gap: 10px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.8); width: 100%; color: rgba(255,255,255,0.85); font-family: "Inter", -apple-system, system-ui, sans-serif; } ';
+        css += '.plugin-meta-row { ' + uiAnimClass + ' animation-delay: 0.28s; display: flex; justify-content: flex-start; align-items: center; flex-wrap: nowrap; gap: 10px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.8); width: 100%; order: 4; color: rgba(255,255,255,0.85); font-family: "Inter", -apple-system, system-ui, sans-serif; } ';
         
         var loopAnimName = badgeAnim !== 'none' ? 'badge_anim_' + badgeAnim : '';
         var loopDuration = badgeAnim === 'spin_slow' ? '4s' : (badgeAnim === 'breathe' ? '3s' : '2.5s');
 
-        css += '.wave-item { transform-origin: center center; ';
-        if (badgeAnim !== 'none') {
+        css += '.wave-item { transform-origin: center center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); ';
+        if (isUIAnim) {
+            css += 'opacity: 0; animation: wave_cascade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+            if (badgeAnim !== 'none') {
+                css += ', ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite';
+                css += '; animation-delay: calc(0.35s + (var(--item-index) * 0.08s)), calc(1s + (var(--item-index) * 0.15s))';
+            } else {
+                css += '; animation-delay: calc(0.35s + (var(--item-index) * 0.08s))';
+            }
+            css += '; will-change: transform, opacity, filter; ';
+        } else if (badgeAnim !== 'none') {
             css += 'animation: ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite; ';
+            css += 'animation-delay: calc(var(--item-index) * 0.15s); ';
         }
         css += '} ';
 
-        css += '.quality-row-inline .plugin-rating-item { display: flex; align-items: center; gap: 6px; font-weight: 700; color: #fff; font-size: 1.05em; padding: 2px 0; height: 1.25em; } ';
-        css += '.quality-row-inline .plugin-rating-item img { height: 1.25em !important; width: auto; object-fit: contain; } ';
+        css += '.quality-row-inline .plugin-rating-item { display: flex; align-items: center; gap: 6px; font-weight: 700; color: #fff; font-size: 1.05em; padding: 2px 0; } ';
+        css += '.quality-row-inline .plugin-rating-item img { height: 1.1em; width: auto; } ';
         
-        css += '.quality-item { transform-origin: center center; height: 1.25em !important; display: flex; align-items: center; justify-content: flex-end; ';
-        if (badgeAnim !== 'none') {
+        css += '.quality-item { transform-origin: center center; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.8)); height: 1.3em; display: flex; align-items: center; justify-content: flex-end; ';
+        if (isUIAnim) {
+            css += 'opacity: 0; animation: wave_cascade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+            if (badgeAnim !== 'none') {
+                css += ', ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite';
+                css += '; animation-delay: calc(0.35s + (var(--item-index) * 0.08s)), calc(1s + (var(--item-index) * 0.15s))';
+            } else {
+                css += '; animation-delay: calc(0.35s + (var(--item-index) * 0.08s))';
+            }
+            css += '; will-change: transform, opacity, filter; ';
+        } else if (badgeAnim !== 'none') {
             css += 'animation: ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite; ';
+            css += 'animation-delay: calc(var(--item-index) * 0.15s); ';
         }
         css += '} ';
-        css += '.quality-item img { height: 100% !important; width: auto; max-width: 70px; object-fit: contain; } ';
+        css += '.quality-item img { height: 100%; width: auto; max-width: 70px; object-fit: contain; } ';
 
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.9em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.85em; margin: 0 -2px; } ';
 
-        css += '.card-tweaks__buttons { width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 15px !important; margin-top: 15px !important; } ';
+        css += '.card-tweaks__buttons { width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 15px !important; margin-top: 15px !important; order: 5; } ';
 
         style.textContent = css;
     }
@@ -309,10 +333,6 @@
             }
         });
 
-        matchedBadges.sort(function(a, b) {
-            return (b.priority || 0) - (a.priority || 0);
-        });
-
         var highestResolution = null;
         matchedBadges.forEach(function(b) {
             if (b.group === 'resolution') {
@@ -329,55 +349,13 @@
         });
 
         var hasUkr = /ukr|укр/i.test(combinedText);
+        var hasDub = /dub|дуб/i.test(combinedText);
         if (hasUkr) foundBadges.push(pluginPath + 'UKR.svg');
+        if (hasDub) foundBadges.push(pluginPath + 'DUB.svg');
 
         return foundBadges.filter(function(elem, pos, arr) {
             return arr.indexOf(elem) === pos;
         });
-    }
-
-    function renderQualityBadges($qRow, movie, globalIndexOffset) {
-        if (!Lampa.Storage.get('tv_interface_quality')) return;
-
-        var cacheKey = 'tv_interface_quality_cache_' + (movie.id || movie.title);
-        var cachedBadges = qualityCache[cacheKey];
-
-        if (!cachedBadges) {
-            try {
-                var raw = Lampa.Storage.get(cacheKey, null);
-                if (raw && typeof raw === 'object' && raw.badges && (Date.now() - raw._ts < 24 * 60 * 60 * 1000)) {
-                    cachedBadges = raw.badges;
-                    qualityCache[cacheKey] = cachedBadges;
-                }
-            } catch (e) {}
-        }
-
-        if (cachedBadges) {
-            var idx = globalIndexOffset;
-            cachedBadges.forEach(function(imgUrl) {
-                var $badge = $('<div class="quality-item wave-item"><img src="' + imgUrl + '"></div>');
-                $badge.css('--item-index', idx++);
-                $qRow.append($badge);
-            });
-        } else if (Lampa.Parser && Lampa.Parser.get) {
-            Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
-                if (res && Array.isArray(res.Results)) {
-                    var eliteBadgesList = getEliteBadges(res.Results);
-                    
-                    qualityCache[cacheKey] = eliteBadgesList;
-                    try {
-                        Lampa.Storage.set(cacheKey, { badges: eliteBadgesList, _ts: Date.now() });
-                    } catch (e) {}
-
-                    var idx = globalIndexOffset;
-                    eliteBadgesList.forEach(function(imgUrl) { 
-                        var $badge = $('<div class="quality-item wave-item"><img src="' + imgUrl + '"></div>');
-                        $badge.css('--item-index', idx++);
-                        $qRow.append($badge);
-                    });
-                }
-            });
-        }
     }
 
     function init() {
@@ -426,7 +404,19 @@
                     $qRow.append($cubItem);
                 }
 
-                renderQualityBadges($qRow, movie, globalIndex);
+                if (Lampa.Storage.get('tv_interface_quality') && Lampa.Parser && Lampa.Parser.get) {
+                    Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
+                        if (res && Array.isArray(res.Results)) {
+                            var eliteBadgesList = getEliteBadges(res.Results);
+                            
+                            eliteBadgesList.forEach(function(imgUrl) { 
+                                var $badge = $('<div class="quality-item wave-item"><img src="' + imgUrl + '"></div>');
+                                $badge.css('--item-index', globalIndex++);
+                                $qRow.append($badge);
+                            });
+                        }
+                    });
+                }
             }
         });
     }
