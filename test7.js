@@ -5,7 +5,7 @@
      */
     var pluginPath = 'https://crowley24.github.io/Icons/';
     var detailsCache = {}; 
-    var qualityCache = {}; // Оперативний кеш для бейджів якості
+    var qualityCache = {}; 
     var currentActiveId = null;
     
     var settings_list = [
@@ -27,15 +27,11 @@
     });
 
     var eliteBadgesConfig = [
-        // Dolby Vision на першому місці
         { id: 'dolby-vision', pattern: /\b(dolby\s*vision|dovi|dv)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_vision.png', group: 'dv', priority: 10 },
-        
         { id: '4k-ultra-hd', pattern: /\b(4k|2160p|uhd|ultra\s*hd)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/4k_ultra_hd.png', group: 'resolution', priority: 3 },
         { id: '1080p-full-hd', pattern: /\b(1080p|fhd|full\s*hd)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/1080p_full_hd.png', group: 'resolution', priority: 2 },
         { id: '720p-hd', pattern: /\b720p\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/720p_hd.png', group: 'resolution', priority: 1 },
-        
         { id: 'hdr', pattern: /\b(hdr10\+|hdr10\s*plus\b|hdr\s*10\s*\+|hdr10|hdr\s*10|hdr)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr.png', group: 'hdr' },
-        
         { id: 'dolby-atmos', pattern: /\b(dolby\s*atmos|atmos)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_atmos.png' },
         { id: 'truehd', pattern: /\b(truehd|true\s*hd|dolby\s*truehd)\b/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/truehd.png' },
         { id: 'dolby-digital-plus', pattern: /\b(ddp[\s._-]*[0-9][\s._-]*[0-9]|ddp|dd\+|dolby[\s._-]*digital[\s._-]*plus|e-?ac-?3)(?![a-z])/i, imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_digital_plus.png' },
@@ -360,8 +356,9 @@
         });
     }
 
+    // МИТТЄВИЙ синхронний рендер бейджів з кешу без жодних таймерів
     function renderQualityBadges($qRow, movie, globalIndexOffset) {
-        if (!Lampa.Storage.get('tv_interface_quality') || !Lampa.Parser || !Lampa.Parser.get) return;
+        if (!Lampa.Storage.get('tv_interface_quality')) return;
 
         var cacheKey = 'tv_interface_quality_cache_' + (movie.id || movie.title);
         var cachedBadges = qualityCache[cacheKey];
@@ -376,7 +373,7 @@
             } catch (e) {}
         }
 
-        // Якщо бейджі вже є в кеші — рендеримо миттєво
+        // Якщо якість є в кеші — виводимо її МИТТЄВО під час побудови DOM
         if (cachedBadges) {
             var idx = globalIndexOffset;
             cachedBadges.forEach(function(imgUrl) {
@@ -384,16 +381,12 @@
                 $badge.css('--item-index', idx++);
                 $qRow.append($badge);
             });
-            return;
-        }
-
-        // Асинхронний фоновий запит без блокування анімації відкриття картки
-        setTimeout(function() {
+        } else if (Lampa.Parser && Lampa.Parser.get) {
+            // Якщо кешу немає — робимо фоновий запит і додаємо бейджі, коли вони будуть готові, не чіпаючи стартову анімацію
             Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
                 if (res && Array.isArray(res.Results)) {
                     var eliteBadgesList = getEliteBadges(res.Results);
                     
-                    // Зберігаємо у кеш
                     qualityCache[cacheKey] = eliteBadgesList;
                     try {
                         Lampa.Storage.set(cacheKey, { badges: eliteBadgesList, _ts: Date.now() });
@@ -407,7 +400,7 @@
                     });
                 }
             });
-        }, 150);
+        }
     }
 
     function init() {
@@ -456,7 +449,7 @@
                     $qRow.append($cubItem);
                 }
 
-                // Викликаємо оптимізовану функцію рендеру якості через кеш
+                // Синхронний виклик кешу бейджів якості
                 renderQualityBadges($qRow, movie, globalIndex);
             }
         });
