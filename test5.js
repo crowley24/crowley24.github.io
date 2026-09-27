@@ -40,6 +40,13 @@
      */
     var eliteBadgesConfig = [
         {
+            id: 'dolby-vision',
+            pattern: /\b(dolby\s*vision|dovi|dv)\b/i,
+            imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_vision.png',
+            group: 'dolby-vision',
+            priority: 4
+        },
+        {
             id: '4k-ultra-hd',
             pattern: /\b(4k|2160p|uhd|ultra\s*hd)\b/i,
             imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/4k_ultra_hd.png',
@@ -62,22 +69,10 @@
         },
 
         {
-            id: 'dolby-vision',
-            pattern: /\b(dolby\s*vision|dovi|dv)\b/i,
-            imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_vision.png'
-        },
-
-        {
             id: 'hdr',
             pattern: /\b(hdr10\+|hdr10\s*plus\b|hdr\s*10\s*\+|hdr10|hdr\s*10|hdr)\b/i,
             imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr.png',
             group: 'hdr'
-        },
-
-        {
-            id: 'sdr',
-            pattern: /\bsdr\b/i,
-            imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/SDR_transparent_4x.png'
         },
 
         {
@@ -611,9 +606,12 @@
                 data.images.logos[0];
 
             if (logo) {
+                var qualityOption = Lampa.Storage.get('tv_interface_logo_quality', 'w500');
+                var logoSizePath = qualityOption === 'original' ? '/t/p/original' : '/t/p/' + qualityOption;
+
                 var logoUrl =
                     Lampa.TMDB.image(
-                        '/t/p/w500' +
+                        logoSizePath +
                         logo.file_path.replace(
                             '.svg',
                             '.png'
@@ -933,6 +931,23 @@
             }
         }
 
+        var hasDolbyVision = false;
+        matchedBadges.forEach(function(badge) {
+            if (badge.group === 'dolby-vision') {
+                hasDolbyVision = true;
+            }
+        });
+
+        matchedBadges.sort(function(a, b) {
+            var priorityA = a.priority || 0;
+            var priorityB = b.priority || 0;
+            if (hasDolbyVision) {
+                if (a.group === 'dolby-vision') return -1;
+                if (b.group === 'dolby-vision') return 1;
+            }
+            return priorityB - priorityA;
+        });
+
         for (
             var m = 0;
             m < matchedBadges.length;
@@ -965,18 +980,6 @@
         ) {
             foundBadges.push(
                 pluginPath + 'UKR.svg'
-            );
-        }
-
-        /**
-         * Дубляж
-         */
-        if (
-            /\b(dub|dubbed|дуб|дубляж)\b/i
-                .test(combinedText)
-        ) {
-            foundBadges.push(
-                pluginPath + 'DUB.svg'
             );
         }
 
@@ -1597,6 +1600,38 @@
 
             onChange:
                 applyStyles
+        });
+
+        Lampa.SettingsApi.addParam({
+            component:
+                'tv_interface',
+
+            param: {
+                name:
+                    'tv_interface_logo_quality',
+
+                type:
+                    'select',
+
+                values: {
+                    'w300':
+                        'W300',
+
+                    'w500':
+                        'W500 (Стандарт)',
+
+                    'original':
+                        'Максимальна (Original)'
+                },
+
+                default:
+                    'w500'
+            },
+
+            field: {
+                name:
+                    'Якість логотипів'
+            }
         });
 
         Lampa.SettingsApi.addParam({
