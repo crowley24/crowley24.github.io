@@ -1,8 +1,5 @@
 (function () {
     'use strict';
-    /**
-     * ПЕРЕМІННІ ТА КЕШУВАННЯ
-     */
     var pluginPath = 'https://crowley24.github.io/Icons/';
     var detailsCache = {}; 
     var qualityCache = {}; 
@@ -130,7 +127,8 @@
         var animTiming = animEffect === 'elastic' ? 'cubic-bezier(0.34, 1.2, 0.64, 1)' : 'cubic-bezier(0.25, 1, 0.5, 1)';
         var uiAnimClass = isUIAnim ? 'animation: ' + chosenAnimName + ' 0.5s ' + animTiming + ' forwards; opacity: 0; will-change: transform, opacity; transform: translateZ(0); ' : '';
 
-        css += '.quality-row-inline { position: absolute; top: 30px; right: 24px; z-index: 99; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; pointer-events: none; } '; 
+        // Фіксована ширина колонки для рівності всіх бейджів та рейтингів
+        css += '.quality-row-inline { position: absolute; top: 30px; right: 24px; z-index: 99; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; width: 110px; pointer-events: none; } '; 
 
         css += '.studio-header-brand { ' + uiAnimClass + ' animation-delay: 0.04s; order: 1; width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: -2px !important; } ';
         css += '.studio-header-brand img { height: 22px !important; width: auto; max-width: 130px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); opacity: 0.95; } ';
@@ -161,10 +159,12 @@
         }
         css += '} ';
 
-        css += '.quality-row-inline .plugin-rating-item { display: flex; align-items: center; gap: 6px; font-weight: 700; color: #fff; font-size: 1.05em; padding: 2px 0; height: 1.25em; } ';
+        // Стилі для рейтингів (TMDB, CUB) з однаковою шириною
+        css += '.quality-row-inline .plugin-rating-item { display: flex; align-items: center; justify-content: flex-end; gap: 6px; font-weight: 700; color: #fff; font-size: 1.05em; width: 100%; height: 1.3em; } ';
         css += '.quality-row-inline .plugin-rating-item img { height: 1.25em !important; width: auto; object-fit: contain; } ';
         
-        css += '.quality-item { transform-origin: center center; height: 1.25em !important; display: flex; align-items: center; justify-content: flex-end; will-change: transform, opacity; ';
+        // Стилі для бейджів якості — розтягуємо їх по ширині контейнера
+        css += '.quality-item { transform-origin: center center; width: 100%; display: flex; align-items: center; justify-content: flex-end; will-change: transform, opacity; ';
         if (isUIAnim) {
             css += 'opacity: 0; animation: wave_cascade 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards';
             if (badgeAnim !== 'none') {
@@ -178,7 +178,7 @@
             css += 'animation-delay: calc(var(--item-index) * 0.1s); ';
         }
         css += '} ';
-        css += '.quality-item img { height: 100% !important; width: auto; max-width: 70px; object-fit: contain; } ';
+        css += '.quality-item img { width: 100% !important; max-width: 110px !important; height: auto !important; object-fit: contain; } ';
 
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.9em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.85em; margin: 0 -2px; } ';
@@ -356,7 +356,6 @@
         });
     }
 
-    // МИТТЄВИЙ синхронний рендер бейджів з кешу без жодних таймерів
     function renderQualityBadges($qRow, movie, globalIndexOffset) {
         if (!Lampa.Storage.get('tv_interface_quality')) return;
 
@@ -373,7 +372,6 @@
             } catch (e) {}
         }
 
-        // Якщо якість є в кеші — виводимо її МИТТЄВО під час побудови DOM
         if (cachedBadges) {
             var idx = globalIndexOffset;
             cachedBadges.forEach(function(imgUrl) {
@@ -382,7 +380,6 @@
                 $qRow.append($badge);
             });
         } else if (Lampa.Parser && Lampa.Parser.get) {
-            // Якщо кешу немає — робимо фоновий запит і додаємо бейджі, коли вони будуть готові, не чіпаючи стартову анімацію
             Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
                 if (res && Array.isArray(res.Results)) {
                     var eliteBadgesList = getEliteBadges(res.Results);
@@ -449,7 +446,6 @@
                     $qRow.append($cubItem);
                 }
 
-                // Синхронний виклик кешу бейджів якості
                 renderQualityBadges($qRow, movie, globalIndex);
             }
         });
