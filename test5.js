@@ -71,12 +71,6 @@
         },
 
         {
-            id: 'sdr',
-            pattern: /\bsdr\b/i,
-            imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/SDR_transparent_4x.png'
-        },
-
-        {
             id: 'dolby-atmos',
             pattern: /\b(dolby[\s._-]*atmos|atmos)\b/i,
             imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_atmos.png'
@@ -278,9 +272,9 @@
 
         css += '.full-start-new { position: relative !important; } ';
 
-        css += '.full-start-new__poster { position: relative !important; background: #000; z-index: 1; } ';
+        css += '.full-start-new__poster { position: relative !important; top: 0 !important; margin-top: 0 !important; align-self: flex-start !important; background: #000; z-index: 1; } ';
 
-        css += '.full-start-new__poster img { filter: none !important; width: 100% !important; height: auto !important; object-fit: contain !important; ';
+        css += '.full-start-new__poster img { display: block !important; filter: none !important; width: 100% !important; height: auto !important; object-fit: contain !important; ';
 
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 75%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 75%, transparent 100%) !important; } ';
 
@@ -981,18 +975,6 @@
         ) {
             foundBadges.push(
                 pluginPath + 'UKR.svg'
-            );
-        }
-
-        /**
-         * Дубляж
-         */
-        if (
-            /\b(dub|dubbed|дуб|дубляж)\b/i
-                .test(combinedText)
-        ) {
-            foundBadges.push(
-                pluginPath + 'DUB.svg'
             );
         }
 
