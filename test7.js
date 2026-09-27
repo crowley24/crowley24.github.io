@@ -262,7 +262,7 @@
                        data.images.logos[0];
             
             if (logo) {
-                var logoUrl = Lampa.TMDB.image('/t/p/w500' + logo.file_path.replace('.svg', '.png'));
+                var logoUrl = Lampa.TMDB.image('/t/p/original' + logo.file_path.replace('.svg', '.png'));
                 $render.find('.full-start-new__title').html('<img src="' + logoUrl + '">');
             }
         }
