@@ -115,8 +115,8 @@
         var animTiming = 'cubic-bezier(0.25, 1, 0.5, 1)';
         var uiAnimClass = isUIAnim ? 'animation: ' + chosenAnimName + ' 0.5s ' + animTiming + ' forwards; opacity: 0; will-change: transform, opacity; transform: translateZ(0); ' : '';
 
-        // Запобігання миготінню текстової назви перед появою логотипу
-        css += '.full-start-new__title { min-height: 60px; position: relative; ' + uiAnimClass + ' animation-delay: 0.08s; width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; order: 2; overflow: visible !important; } ';
+        // Жорстке приховування стандартного тексту та підготовка місця під логотип
+        css += '.full-start-new__title { min-height: 60px; position: relative; font-size: 0 !important; color: transparent !important; ' + uiAnimClass + ' animation-delay: 0.08s; width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; order: 2; overflow: visible !important; } ';
         css += '.full-start-new__title img { height: auto !important; max-height: 100px !important; width: auto !important; max-width: 45vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.7)); margin: 0 !important; opacity: 0; transition: opacity 0.3s ease-in-out; } ';
         css += '.full-start-new__title img.loaded { opacity: 1; } ';
 
@@ -303,6 +303,9 @@
             if (e.type === 'complite' || e.type === 'complete') {
                 var movie = e.data.movie, $render = e.object.activity.render();
                 
+                // Миттєво очищуємо системний текст, щоб він не блимав
+                $render.find('.full-start-new__title').empty();
+
                 if (window.lampa_settings) window.lampa_settings.blur_poster = false;
 
                 renderMeta($render.find('.full-start-new__right'), e);
