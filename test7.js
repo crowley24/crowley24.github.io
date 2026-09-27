@@ -137,7 +137,8 @@
         css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
 
         css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.08s; width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; min-height: 50px; order: 2; overflow: visible !important; } ';
-        css += '.full-start-new__title img { height: auto !important; max-height: 140px !important; width: auto !important; max-width: 80vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 15px rgba(0,0,0,0.8)); margin: 0 !important; } ';
+        /* Змінено параметри max-height та max-width, щоб логотип не виходив за межі у праву сторону */
+        css += '.full-start-new__title img { height: auto !important; max-height: 100px !important; width: auto !important; max-width: 45vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 15px rgba(0,0,0,0.8)); margin: 0 !important; } ';
 
         css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.12s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 1em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; order: 3; } ';
         
@@ -356,7 +357,6 @@
         });
     }
 
-    // МИТТЄВИЙ синхронний рендер бейджів з кешу без жодних таймерів
     function renderQualityBadges($qRow, movie, globalIndexOffset) {
         if (!Lampa.Storage.get('tv_interface_quality')) return;
 
@@ -373,7 +373,6 @@
             } catch (e) {}
         }
 
-        // Якщо якість є в кеші — виводимо її МИТТЄВО під час побудови DOM
         if (cachedBadges) {
             var idx = globalIndexOffset;
             cachedBadges.forEach(function(imgUrl) {
@@ -382,7 +381,6 @@
                 $qRow.append($badge);
             });
         } else if (Lampa.Parser && Lampa.Parser.get) {
-            // Якщо кешу немає — робимо фоновий запит і додаємо бейджі, коли вони будуть готові, не чіпаючи стартову анімацію
             Lampa.Parser.get({ search: movie.title || movie.name, movie: movie, page: 1 }, function(res) {
                 if (res && Array.isArray(res.Results)) {
                     var eliteBadgesList = getEliteBadges(res.Results);
@@ -449,7 +447,6 @@
                     $qRow.append($cubItem);
                 }
 
-                // Синхронний виклик кешу бейджів якості
                 renderQualityBadges($qRow, movie, globalIndex);
             }
         });
