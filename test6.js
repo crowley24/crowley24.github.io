@@ -84,17 +84,11 @@
         
         var css = '';
         
-        // НОВІ ПРЕМІАЛЬНІ АНІМАЦІЇ З АПАРАТНИМ ПРИСКОРЕННЯМ (60 FPS без фрізів)
-        // 1. Плавне наближення преміум-класу (як у нових інтерфейсах Apple TV)
         css += '@keyframes anim_smooth_zoom { 0% { opacity: 0; transform: translate3d(0, 8px, 0) scale(0.96); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } } ';
-        // 2. Кінематографічне м'яке зсунення знизу вгору
         css += '@keyframes anim_cine_slide { 0% { opacity: 0; transform: translate3d(0, 24px, 0); } 100% { opacity: 1; transform: translate3d(0, 0, 0); } } ';
-        // 3. Елітний розкішний підйом з мікро-збільшенням
         css += '@keyframes anim_luxury_fade { 0% { opacity: 0; transform: translate3d(0, 12px, 0) scale(1.02); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } } ';
-        // 4. Швидкий та чистий модерн-стиль
         css += '@keyframes anim_modern_shift { 0% { opacity: 0; transform: translate3d(-15px, 0, 0); } 100% { opacity: 1; transform: translate3d(0, 0, 0); } } ';
 
-        // Каскадна анімація бейджів рейтингу
         css += '@keyframes wave_cascade { 0% { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.9); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } } ';
         
         css += '@keyframes badge_anim_pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } } ';
@@ -102,7 +96,6 @@
         css += '@keyframes badge_anim_spin_slow { 0% { transform: rotate(0deg); } 25% { transform: rotate(2deg); } 75% { transform: rotate(-2deg); } 100% { transform: rotate(0deg); } } ';
         css += '@keyframes badge_anim_float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } } ';
         
-        // Приховування непотрібних стандартних елементів
         css += '.full-start__reactions, [class*="reactions"] { display: none !important; } ';
         css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="rating-count"], [class*="status"] { display:none !important; } ';
         css += '.full-start-new__right > div:first-child { display: none !important; } ';
@@ -117,10 +110,9 @@
         css += '.full-start-new__right { background: none !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; padding: 20px !important; gap: ' + blocksGap + ' !important; position: relative !important; } ';
         
         var chosenAnimName = 'anim_' + animEffect;
-        var animTiming = 'cubic-bezier(0.16, 1, 0.3, 1)'; // Преміальний фірмовий іузевський ізінг (швидкий старт, супер плавне гальмування)
+        var animTiming = 'cubic-bezier(0.16, 1, 0.3, 1)';
         var uiAnimClass = isUIAnim ? 'animation: ' + chosenAnimName + ' 0.45s ' + animTiming + ' forwards; opacity: 0; will-change: transform, opacity; transform: translateZ(0); ' : '';
 
-        // Жорстке приховування стандартного тексту та підготовка місця під логотип
         css += '.full-start-new__title { min-height: 60px; position: relative; font-size: 0 !important; color: transparent !important; ' + uiAnimClass + ' animation-delay: 0.06s; width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; order: 2; overflow: visible !important; } ';
         css += '.full-start-new__title img { height: auto !important; max-height: 100px !important; width: auto !important; max-width: 45vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.7)); margin: 0 !important; opacity: 0; transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out; will-change: opacity; } ';
         css += '.full-start-new__title img.loaded { opacity: 1; } ';
@@ -306,9 +298,11 @@
             }
             
             if (e.type === 'complite' || e.type === 'complete') {
+                // Страховка: гарантовано оновлюємо стилі при відкритті кожної картки, якщо DOM ще не встиг їх застосувати
+                applyStyles();
+
                 var movie = e.data.movie, $render = e.object.activity.render();
                 
-                // Миттєво очищуємо системний текст, щоб уникнути будь-якого блимання
                 $render.find('.full-start-new__title').empty();
 
                 if (window.lampa_settings) window.lampa_settings.blur_poster = false;
