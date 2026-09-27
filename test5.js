@@ -314,6 +314,7 @@
 
         css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.15s; width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; min-height: 50px; order: 2; overflow: visible !important; } ';
 
+        /* Суворий фіксований розмір контейнера логотипу, щоб він не стрибав, а якість підтягувалася всередині */
         css += '.full-start-new__title img { height: auto !important; max-height: 140px !important; width: auto !important; max-width: 80vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';
 
         css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.22s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 1em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; order: 3; } ';
@@ -606,12 +607,16 @@
                 data.images.logos[0];
 
             if (logo) {
-                var qualityOption = Lampa.Storage.get('tv_interface_logo_quality', 'w500');
-                var logoSizePath = qualityOption === 'original' ? '/t/p/original' : '/t/p/' + qualityOption;
+                var logoQuality =
+                    Lampa.Storage.get(
+                        'tv_interface_logo_quality',
+                        'w500'
+                    );
 
                 var logoUrl =
                     Lampa.TMDB.image(
-                        logoSizePath +
+                        '/t/p/' +
+                        logoQuality +
                         logo.file_path.replace(
                             '.svg',
                             '.png'
@@ -1297,7 +1302,6 @@
                     e.type === 'destroy' ||
                     e.type === 'onBeforeDestroy'
                 ) {
-                    // Очищаємо активний ID при виході з картки
                     currentActiveId = null;
                     return;
                 }
@@ -1615,13 +1619,13 @@
 
                 values: {
                     'w300':
-                        'W300',
+                        'Низька (w300)',
 
                     'w500':
-                        'W500 (Стандарт)',
+                        'Середня (w500)',
 
                     'original':
-                        'Максимальна (Original)'
+                        'Оригінальна / Висока (original)'
                 },
 
                 default:
@@ -1630,7 +1634,7 @@
 
             field: {
                 name:
-                    'Якість логотипів'
+                    'Якість логотипу (TMDB)'
             }
         });
 
