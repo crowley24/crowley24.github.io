@@ -40,13 +40,6 @@
      */
     var eliteBadgesConfig = [
         {
-            id: 'dolby-vision',
-            pattern: /\b(dolby\s*vision|dovi|dv)\b/i,
-            imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_vision.png',
-            group: 'dolby-vision',
-            priority: 4
-        },
-        {
             id: '4k-ultra-hd',
             pattern: /\b(4k|2160p|uhd|ultra\s*hd)\b/i,
             imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/4k_ultra_hd.png',
@@ -69,10 +62,22 @@
         },
 
         {
+            id: 'dolby-vision',
+            pattern: /\b(dolby\s*vision|dovi|dv)\b/i,
+            imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_vision.png'
+        },
+
+        {
             id: 'hdr',
             pattern: /\b(hdr10\+|hdr10\s*plus\b|hdr\s*10\s*\+|hdr10|hdr\s*10|hdr)\b/i,
             imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr.png',
             group: 'hdr'
+        },
+
+        {
+            id: 'sdr',
+            pattern: /\bsdr\b/i,
+            imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/SDR_transparent_4x.png'
         },
 
         {
@@ -314,7 +319,6 @@
 
         css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.15s; width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; min-height: 50px; order: 2; overflow: visible !important; } ';
 
-        /* Суворий фіксований розмір контейнера логотипу, щоб він не стрибав, а якість підтягувалася всередині */
         css += '.full-start-new__title img { height: auto !important; max-height: 140px !important; width: auto !important; max-width: 80vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';
 
         css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.22s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 1em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; order: 3; } ';
@@ -607,16 +611,9 @@
                 data.images.logos[0];
 
             if (logo) {
-                var logoQuality =
-                    Lampa.Storage.get(
-                        'tv_interface_logo_quality',
-                        'w500'
-                    );
-
                 var logoUrl =
                     Lampa.TMDB.image(
-                        '/t/p/' +
-                        logoQuality +
+                        '/t/p/w500' +
                         logo.file_path.replace(
                             '.svg',
                             '.png'
@@ -936,23 +933,6 @@
             }
         }
 
-        var hasDolbyVision = false;
-        matchedBadges.forEach(function(badge) {
-            if (badge.group === 'dolby-vision') {
-                hasDolbyVision = true;
-            }
-        });
-
-        matchedBadges.sort(function(a, b) {
-            var priorityA = a.priority || 0;
-            var priorityB = b.priority || 0;
-            if (hasDolbyVision) {
-                if (a.group === 'dolby-vision') return -1;
-                if (b.group === 'dolby-vision') return 1;
-            }
-            return priorityB - priorityA;
-        });
-
         for (
             var m = 0;
             m < matchedBadges.length;
@@ -985,6 +965,18 @@
         ) {
             foundBadges.push(
                 pluginPath + 'UKR.svg'
+            );
+        }
+
+        /**
+         * Дубляж
+         */
+        if (
+            /\b(dub|dubbed|дуб|дубляж)\b/i
+                .test(combinedText)
+        ) {
+            foundBadges.push(
+                pluginPath + 'DUB.svg'
             );
         }
 
@@ -1302,6 +1294,7 @@
                     e.type === 'destroy' ||
                     e.type === 'onBeforeDestroy'
                 ) {
+                    // Очищаємо активний ID при виході з картки
                     currentActiveId = null;
                     return;
                 }
@@ -1604,38 +1597,6 @@
 
             onChange:
                 applyStyles
-        });
-
-        Lampa.SettingsApi.addParam({
-            component:
-                'tv_interface',
-
-            param: {
-                name:
-                    'tv_interface_logo_quality',
-
-                type:
-                    'select',
-
-                values: {
-                    'w300':
-                        'Низька (w300)',
-
-                    'w500':
-                        'Середня (w500)',
-
-                    'original':
-                        'Оригінальна / Висока (original)'
-                },
-
-                default:
-                    'w500'
-            },
-
-            field: {
-                name:
-                    'Якість логотипу (TMDB)'
-            }
         });
 
         Lampa.SettingsApi.addParam({
