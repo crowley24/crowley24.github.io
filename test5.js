@@ -22,7 +22,7 @@
         { id: 'tv_interface_ui_anim_effect', default: 'fluid' },
         { id: 'tv_interface_badge_anim', default: 'pulse' },
 
-        /* НОВЕ: якість логотипа */
+        /* Якість логотипа */
         { id: 'tv_interface_logo_quality', default: 'w780' },
 
         { id: 'tv_interface_show_tagline', default: true },
@@ -199,11 +199,7 @@
     }
 
     /**
-     * НОРМАЛІЗАЦІЯ РОЗМІРУ ЛОГОТИПА
-     *
-     * Якість картинки може бути w300 / w500 / w780 / original,
-     * але фактичний розмір на екрані визначається
-     * натуральними пропорціями логотипа.
+     * НОРМАЛІЗАЦІЯ РОЗМІРУ ЛОГОТИПА З БАЛАНСУВАННЯМ ПЛОЩІ
      */
     function normalizeLogoSize($img) {
         if (!$img || !$img.length) return;
@@ -216,39 +212,45 @@
 
             if (!naturalWidth || !naturalHeight) return;
 
-            var targetHeight = 140;
-            var maxWidth = window.innerWidth * 0.8;
+            var ratio = naturalWidth / naturalHeight;
+            
+            var targetHeight = 110;
 
-            var ratio =
-                naturalWidth / naturalHeight;
+            // Компенсація візуальної ваги залежно від пропорцій логотипа
+            if (ratio > 3.0) {
+                targetHeight = 75; // Дуже широкі баннери
+            } else if (ratio > 2.2) {
+                targetHeight = 90; // Помірно широкі
+            } else if (ratio < 0.8) {
+                targetHeight = 125; // Високі / квадратні
+            }
 
-            var width =
-                targetHeight * ratio;
+            var width = targetHeight * ratio;
+            var height = targetHeight;
 
-            var height =
-                targetHeight;
+            var maxWidth = window.innerWidth * 0.45;
+            var maxHeight = 130;
 
             if (width > maxWidth) {
                 width = maxWidth;
                 height = width / ratio;
             }
 
-            $img.css({
-                '--tv-logo-width':
-                    width + 'px',
+            if (height > maxHeight) {
+                height = maxHeight;
+                width = height * ratio;
+            }
 
-                '--tv-logo-height':
-                    height + 'px'
+            $img.css({
+                '--tv-logo-width': width + 'px',
+                '--tv-logo-height': height + 'px'
             });
         }
 
         if (img.complete) {
             setSize();
         } else {
-            $img.one(
-                'load',
-                setSize
-            );
+            $img.one('load', setSize);
         }
     }
 
@@ -402,20 +404,14 @@
         css +=
             '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
 
-        /*
-         * ЛОГОТИП НАЗВИ
-         *
-         * Контейнер має фіксовану висоту.
-         * Сам логотип отримує розмір через CSS variables,
-         * які встановлюються normalizeLogoSize().
-         */
+        /* ЛОГОТИП НАЗВИ */
         css +=
             '.full-start-new__title { ' +
             uiAnimClass +
-            ' animation-delay: 0.15s; width: 100% !important; height: 140px !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; min-height: 140px !important; order: 2; overflow: visible !important; } ';
+            ' animation-delay: 0.15s; width: 100% !important; height: 130px !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; min-height: 130px !important; order: 2; overflow: visible !important; } ';
 
         css +=
-            '.full-start-new__title img { height: var(--tv-logo-height, 140px) !important; width: var(--tv-logo-width, auto) !important; max-height: 140px !important; max-width: 80vw !important; object-fit: contain !important; object-position: left center !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';
+            '.full-start-new__title img { height: var(--tv-logo-height, 110px) !important; width: var(--tv-logo-width, auto) !important; max-height: 130px !important; max-width: 45vw !important; object-fit: contain !important; object-position: left center !important; filter: drop-shadow(0 4px 20px rgba(0,0,0,0.9)); margin: 0 !important; } ';
 
         css +=
             '.full-start-new__tagline { ' +
@@ -761,10 +757,6 @@
                 data.images.logos[0];
 
             if (logo) {
-
-                /*
-                 * ВИБІР ЯКОСТІ ЛОГОТИПА
-                 */
                 var logoQuality =
                     Lampa.Storage.get(
                         'tv_interface_logo_quality',
@@ -774,9 +766,6 @@
                 var logoPath =
                     logo.file_path;
 
-                /*
-                 * SVG -> PNG
-                 */
                 if (
                     logoPath
                         .toLowerCase()
@@ -1775,9 +1764,6 @@
                 applyStyles
         });
 
-        /**
-         * НОВЕ НАЛАШТУВАННЯ ЯКОСТІ ЛОГОТИПА
-         */
         Lampa.SettingsApi.addParam({
             component:
                 'tv_interface',
