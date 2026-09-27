@@ -21,7 +21,7 @@
         { id: 'tv_interface_ui_anim', default: true },
         { id: 'tv_interface_ui_anim_effect', default: 'fluid' },
         { id: 'tv_interface_badge_anim', default: 'pulse' },
-        { id: 'tv_interface_logo_quality', default: 'w500' },
+        { id: 'tv_interface_logo_quality', default: 'w780' },
         { id: 'tv_interface_show_tagline', default: true },
         { id: 'tv_interface_blocks_gap', default: '8px' },
         { id: 'tv_interface_ratings_size', default: '0.45em' },
@@ -60,68 +60,57 @@
             group: 'resolution',
             priority: 1
         },
-
         {
             id: 'dolby-vision',
             pattern: /\b(dolby\s*vision|dovi|dv)\b/i,
             imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_vision.png'
         },
-
         {
             id: 'hdr',
             pattern: /\b(hdr10\+|hdr10\s*plus\b|hdr\s*10\s*\+|hdr10|hdr\s*10|hdr)\b/i,
             imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/hdr.png',
             group: 'hdr'
         },
-
         {
             id: 'sdr',
             pattern: /\bsdr\b/i,
             imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/SDR_transparent_4x.png'
         },
-
         {
             id: 'dolby-atmos',
             pattern: /\b(dolby[\s._-]*atmos|atmos)\b/i,
             imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_atmos.png'
         },
-
         {
             id: 'truehd',
             pattern: /\b(true[\s._-]*hd|truehd|dolby[\s._-]*truehd)\b/i,
             imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/truehd.png'
         },
-
         {
             id: 'dolby-digital-plus',
             pattern: /\b(ddp[\s._-]*[0-9][\s._-]*[0-9]|ddp|dd\+|dolby[\s._-]*digital[\s._-]*plus|e-?ac-?3)\b/i,
             imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_digital_plus.png'
         },
-
         {
             id: 'dolby-digital',
             pattern: /\b(dd[\s._-]*[0-9][\s._-]*[0-9]|dd|dolby[\s._-]*digital|ac-?3)(?![\s._-]*plus|\+|p|[a-z])/i,
             imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_digital.png'
         },
-
         {
             id: 'dts-hd-master-audio',
             pattern: /\b(dts[\s._-]*hd[\s._-]*ma|dtshd[\s._-]*ma|dts[\s._-]*hd[\s._-]*master)\b/i,
             imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts_hd_master_audio.png'
         },
-
         {
             id: 'dts-hd',
             pattern: /\b(dts[\s._-]*hd|dtshd)(?![\s._-]*(ma|master)|ma)\b/i,
             imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts_hd.png'
         },
-
         {
             id: 'dts-x',
             pattern: /\b(dts[\s._-]*x|dtsx)\b/i,
             imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dts.png'
         },
-
         {
             id: 'dts',
             pattern: /\bdts\b(?![\s._:-]*(x|hd))/i,
@@ -135,7 +124,7 @@
     };
 
     /**
-     * ВИЗНАЧЕННЯ ТЕМНОГО ЛОГО (Оптимізовано через єдиний глобальний Canvas)
+     * ВИЗНАЧЕННЯ ТЕМНОГО ЛОГО
      */
     function isImageDark(imgSrc, callback) {
         var img = new Image();
@@ -611,25 +600,31 @@
                 data.images.logos[0];
 
             if (logo) {
-              var logoQuality =
-    Lampa.Storage.get(
-        'tv_interface_logo_quality',
-        'w780'
-    );
 
-var logoPath =
-    logoQuality === 'original' ?
-    '/t/p/original' :
-    '/t/p/' + logoQuality;
+                /*
+                 * ЯКІСТЬ ЛОГОТИПА:
+                 * w300 / w500 / w780 / original
+                 */
+                var logoQuality =
+                    Lampa.Storage.get(
+                        'tv_interface_logo_quality',
+                        'w780'
+                    );
 
-var logoUrl =
-    Lampa.TMDB.image(
-        logoPath +
-        logo.file_path.replace(
-            '.svg',
-            '.png'
-        )
-    );
+                var logoPath =
+                    logoQuality === 'original' ?
+                    '/t/p/original' :
+                    '/t/p/' + logoQuality;
+
+                var logoUrl =
+                    Lampa.TMDB.image(
+                        logoPath +
+                        logo.file_path.replace(
+                            '.svg',
+                            '.png'
+                        )
+                    );
+
                 $render
                     .find('.full-start-new__title')
                     .html(
@@ -1179,7 +1174,7 @@ var logoUrl =
     }
 
     /**
-     * ВІДКЛАДЕНИЙ ЗАПУСК PARSER (з безпечним керуванням таймерами)
+     * ВІДКЛАДЕНИЙ ЗАПУСК PARSER
      */
     function loadQualityBadges(
         movie,
@@ -1304,7 +1299,6 @@ var logoUrl =
                     e.type === 'destroy' ||
                     e.type === 'onBeforeDestroy'
                 ) {
-                    // Очищаємо активний ID при виході з картки
                     currentActiveId = null;
                     return;
                 }
@@ -1607,6 +1601,44 @@ var logoUrl =
 
             onChange:
                 applyStyles
+        });
+
+        /*
+         * ЯКІСТЬ ЛОГОТИПА НАЗВИ ФІЛЬМУ
+         */
+        Lampa.SettingsApi.addParam({
+            component:
+                'tv_interface',
+
+            param: {
+                name:
+                    'tv_interface_logo_quality',
+
+                type:
+                    'select',
+
+                values: {
+                    'w300':
+                        'Низька — 300px',
+
+                    'w500':
+                        'Стандартна — 500px',
+
+                    'w780':
+                        'Висока — 780px',
+
+                    'original':
+                        'Максимальна — Original'
+                },
+
+                default:
+                    'w780'
+            },
+
+            field: {
+                name:
+                    'Якість логотипа назви фільму'
+            }
         });
 
         Lampa.SettingsApi.addParam({
