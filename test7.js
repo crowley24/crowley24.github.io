@@ -84,7 +84,7 @@
         
         var css = '';
         
-        // Оптимізовані анімації з використанням апаратного прискорення (translate3d / will-change)
+        // Оптимізовані анімації з використанням апаратного прискорення
         css += '@keyframes anim_fluid { 0% { opacity: 0; transform: translate3d(0, 15px, 0) scale(0.98); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } } ';
         css += '@keyframes anim_cyber { 0% { opacity: 0; transform: translate3d(-20px, 0, 0) scale(0.95); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } } ';
         css += '@keyframes anim_cinematic { 0% { opacity: 0; transform: translate3d(0, 10px, 0) scale(1.03); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } } ';
@@ -97,7 +97,7 @@
         css += '@keyframes badge_anim_spin_slow { 0% { transform: rotate(0deg); } 25% { transform: rotate(2deg); } 75% { transform: rotate(-2deg); } 100% { transform: rotate(0deg); } } ';
         css += '@keyframes badge_anim_float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } } ';
         
-        // Приховування зайвих стандартних елементів інтерфейсу
+        // Приховування непотрібних стандартних елементів
         css += '.full-start__reactions, [class*="reactions"] { display: none !important; } ';
         css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="rating-count"], [class*="status"] { display:none !important; } ';
         css += '.full-start-new__right > div:first-child { display: none !important; } ';
@@ -112,17 +112,19 @@
         css += '.full-start-new__right { background: none !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; padding: 20px !important; gap: ' + blocksGap + ' !important; position: relative !important; } ';
         
         var chosenAnimName = 'anim_' + animEffect;
-        var animTiming = 'cubic-bezier(0.25, 1, 0.5, 1)'; // Плавніша крива для швидкого відгуку на ТВ
+        var animTiming = 'cubic-bezier(0.25, 1, 0.5, 1)';
         var uiAnimClass = isUIAnim ? 'animation: ' + chosenAnimName + ' 0.5s ' + animTiming + ' forwards; opacity: 0; will-change: transform, opacity; transform: translateZ(0); ' : '';
+
+        // Запобігання миготінню текстової назви перед появою логотипу
+        css += '.full-start-new__title { min-height: 60px; position: relative; ' + uiAnimClass + ' animation-delay: 0.08s; width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; order: 2; overflow: visible !important; } ';
+        css += '.full-start-new__title img { height: auto !important; max-height: 100px !important; width: auto !important; max-width: 45vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.7)); margin: 0 !important; opacity: 0; transition: opacity 0.3s ease-in-out; } ';
+        css += '.full-start-new__title img.loaded { opacity: 1; } ';
 
         css += '.quality-row-inline { position: absolute; top: 30px; right: 24px; z-index: 99; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; pointer-events: none; } '; 
 
         css += '.studio-header-brand { ' + uiAnimClass + ' animation-delay: 0.04s; order: 1; width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: -2px !important; } ';
         css += '.studio-header-brand img { height: 22px !important; width: auto; max-width: 130px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); opacity: 0.95; transition: opacity 0.3s ease; } ';
         css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
-
-        css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.08s; width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; min-height: 50px; order: 2; overflow: visible !important; } ';
-        css += '.full-start-new__title img { height: auto !important; max-height: 100px !important; width: auto !important; max-width: 45vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.7)); margin: 0 !important; transition: transform 0.3s ease; } ';
 
         css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.12s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 1em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; order: 3; } ';
         
@@ -232,7 +234,16 @@
             
             if (logo) {
                 var logoUrl = Lampa.TMDB.image('/t/p/original' + logo.file_path.replace('.svg', '.png'));
-                $render.find('.full-start-new__title').html('<img src="' + logoUrl + '">');
+                var $titleContainer = $render.find('.full-start-new__title');
+                
+                var tempImg = new Image();
+                tempImg.onload = function() {
+                    $titleContainer.html('<img src="' + logoUrl + '">');
+                    setTimeout(function() {
+                        $titleContainer.find('img').addClass('loaded');
+                    }, 20);
+                };
+                tempImg.src = logoUrl;
             }
         }
 
