@@ -12,7 +12,7 @@
         { id: 'tv_interface_ui_anim', default: true },
         { id: 'tv_interface_ui_anim_effect', default: 'fluid' },
         { id: 'tv_interface_badge_anim', default: 'pulse' },
-        { id: 'tv_interface_logo_quality', default: 'w500' },
+        { id: 'tv_interface_logo_quality', default: 'original' },
         { id: 'tv_interface_show_tagline', default: true },
         { id: 'tv_interface_blocks_gap', default: '8px' },
         { id: 'tv_interface_ratings_size', default: '0.45em' },
@@ -101,17 +101,16 @@
         
         var css = '';
         
-        css += '@keyframes anim_fluid { 0% { opacity: 0; transform: translate3d(0, 20px, 0) scale(0.97); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } } ';
-        css += '@keyframes anim_cyber { 0% { opacity: 0; transform: translate3d(-25px, 0, 0) scale(0.95); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } } ';
-        css += '@keyframes anim_cinematic { 0% { opacity: 0; transform: translate3d(0, 15px, 0) scale(1.03); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } } ';
-        css += '@keyframes anim_elastic { 0% { opacity: 0; transform: scale(0.85); } 70% { opacity: 1; transform: scale(1.02); } 100% { opacity: 1; transform: scale(1); } } ';
-        css += '@keyframes anim_minimal { 0% { opacity: 0; transform: translate3d(0, 10px, 0); } 100% { opacity: 1; transform: translate3d(0, 0, 0); } } ';
-        css += '@keyframes wave_cascade { 0% { opacity: 0; transform: scale(0.8) translateY(6px); } 100% { opacity: 1; transform: scale(1) translateY(0); } } ';
+        css += '@keyframes anim_fluid { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } } ';
+        css += '@keyframes anim_cyber { 0% { opacity: 0; transform: translateX(-15px); } 100% { opacity: 1; transform: translateX(0); } } ';
+        css += '@keyframes anim_cinematic { 0% { opacity: 0; transform: scale(0.98); } 100% { opacity: 1; transform: scale(1); } } ';
+        css += '@keyframes anim_elastic { 0% { opacity: 0; transform: scale(0.9); } 80% { opacity: 1; transform: scale(1.01); } 100% { opacity: 1; transform: scale(1); } } ';
+        css += '@keyframes anim_minimal { 0% { opacity: 0; } 100% { opacity: 1; } } ';
         
-        css += '@keyframes badge_anim_pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } } ';
-        css += '@keyframes badge_anim_breathe { 0%, 100% { transform: scale(1); opacity: 0.85; } 50% { transform: scale(1.04); opacity: 1; } } ';
-        css += '@keyframes badge_anim_spin_slow { 0% { transform: rotate(0deg); } 25% { transform: rotate(3deg); } 75% { transform: rotate(-3deg); } 100% { transform: rotate(0deg); } } ';
-        css += '@keyframes badge_anim_float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } } ';
+        css += '@keyframes badge_anim_pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } } ';
+        css += '@keyframes badge_anim_breathe { 0%, 100% { opacity: 0.85; } 50% { opacity: 1; } } ';
+        css += '@keyframes badge_anim_spin_slow { 0% { transform: rotate(0deg); } 50% { transform: rotate(2deg); } 100% { transform: rotate(0deg); } } ';
+        css += '@keyframes badge_anim_float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } } ';
         
         css += '.full-start__reactions, [class*="reactions"] { display: none !important; } ';
         css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="rating-count"], [class*="status"] { display:none !important; } ';
@@ -124,59 +123,39 @@
         css += '.full-start-new__poster img { filter: none !important; width: 100% !important; height: auto !important; object-fit: contain !important; ';
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 75%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 75%, transparent 100%) !important; } ';
         
-        css += '.full-start-new__right { background: none !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; padding: 20px !important; gap: ' + blocksGap + ' !important; position: relative !important; } ';
-        
         var chosenAnimName = 'anim_' + animEffect;
-        var animTiming = animEffect === 'elastic' ? 'cubic-bezier(0.34, 1.2, 0.64, 1)' : 'cubic-bezier(0.25, 1, 0.5, 1)';
-        var uiAnimClass = isUIAnim ? 'animation: ' + chosenAnimName + ' 0.5s ' + animTiming + ' forwards; opacity: 0; will-change: transform, opacity; transform: translateZ(0); ' : '';
+        var uiAnimStyle = isUIAnim ? 'animation: ' + chosenAnimName + ' 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; will-change: transform, opacity; transform: translateZ(0);' : '';
+
+        css += '.full-start-new__right { background: none !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; padding: 20px !important; gap: ' + blocksGap + ' !important; position: relative !important; ' + uiAnimStyle + ' } ';
 
         css += '.quality-row-inline { position: absolute; top: 30px; right: 24px; z-index: 99; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; pointer-events: none; } '; 
 
-        css += '.studio-header-brand { ' + uiAnimClass + ' animation-delay: 0.04s; order: 1; width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: -2px !important; } ';
+        css += '.studio-header-brand { width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: -2px !important; } ';
         css += '.studio-header-brand img { height: 22px !important; width: auto; max-width: 130px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); opacity: 0.95; } ';
         css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
 
-        css += '.full-start-new__title { ' + uiAnimClass + ' animation-delay: 0.08s; width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; min-height: 50px; order: 2; overflow: visible !important; } ';
-        /* Змінено параметри max-height та max-width, щоб логотип не виходив за межі у праву сторону */
+        css += '.full-start-new__title { width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; min-height: 50px; overflow: visible !important; } ';
         css += '.full-start-new__title img { height: auto !important; max-height: 100px !important; width: auto !important; max-width: 45vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 15px rgba(0,0,0,0.8)); margin: 0 !important; } ';
 
-        css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.12s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 1em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; order: 3; } ';
+        css += '.full-start-new__tagline { display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 1em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; } ';
         
-        css += '.plugin-meta-row { ' + uiAnimClass + ' animation-delay: 0.16s; display: flex; justify-content: flex-start; align-items: center; flex-wrap: nowrap; gap: 10px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.8); width: 100%; order: 4; color: rgba(255,255,255,0.85); font-family: "Inter", -apple-system, system-ui, sans-serif; } ';
+        css += '.plugin-meta-row { display: flex; justify-content: flex-start; align-items: center; flex-wrap: nowrap; gap: 10px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.8); width: 100%; color: rgba(255,255,255,0.85); font-family: "Inter", -apple-system, system-ui, sans-serif; } ';
         
         var loopAnimName = badgeAnim !== 'none' ? 'badge_anim_' + badgeAnim : '';
         var loopDuration = badgeAnim === 'spin_slow' ? '4s' : (badgeAnim === 'breathe' ? '3s' : '2.5s');
 
-        css += '.wave-item { transform-origin: center center; will-change: transform, opacity; ';
-        if (isUIAnim) {
-            css += 'opacity: 0; animation: wave_cascade 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards';
-            if (badgeAnim !== 'none') {
-                css += ', ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite';
-                css += '; animation-delay: calc(0.2s + (var(--item-index) * 0.04s)), calc(0.6s + (var(--item-index) * 0.08s))';
-            } else {
-                css += '; animation-delay: calc(0.2s + (var(--item-index) * 0.04s))';
-            }
-        } else if (badgeAnim !== 'none') {
+        css += '.wave-item { transform-origin: center center; ';
+        if (badgeAnim !== 'none') {
             css += 'animation: ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite; ';
-            css += 'animation-delay: calc(var(--item-index) * 0.1s); ';
         }
         css += '} ';
 
         css += '.quality-row-inline .plugin-rating-item { display: flex; align-items: center; gap: 6px; font-weight: 700; color: #fff; font-size: 1.05em; padding: 2px 0; height: 1.25em; } ';
         css += '.quality-row-inline .plugin-rating-item img { height: 1.25em !important; width: auto; object-fit: contain; } ';
         
-        css += '.quality-item { transform-origin: center center; height: 1.25em !important; display: flex; align-items: center; justify-content: flex-end; will-change: transform, opacity; ';
-        if (isUIAnim) {
-            css += 'opacity: 0; animation: wave_cascade 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards';
-            if (badgeAnim !== 'none') {
-                css += ', ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite';
-                css += '; animation-delay: calc(0.2s + (var(--item-index) * 0.04s)), calc(0.6s + (var(--item-index) * 0.08s))';
-            } else {
-                css += '; animation-delay: calc(0.2s + (var(--item-index) * 0.04s))';
-            }
-        } else if (badgeAnim !== 'none') {
+        css += '.quality-item { transform-origin: center center; height: 1.25em !important; display: flex; align-items: center; justify-content: flex-end; ';
+        if (badgeAnim !== 'none') {
             css += 'animation: ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite; ';
-            css += 'animation-delay: calc(var(--item-index) * 0.1s); ';
         }
         css += '} ';
         css += '.quality-item img { height: 100% !important; width: auto; max-width: 70px; object-fit: contain; } ';
@@ -184,7 +163,7 @@
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.9em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.85em; margin: 0 -2px; } ';
 
-        css += '.card-tweaks__buttons { width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 15px !important; margin-top: 15px !important; order: 5; ' + uiAnimClass.replace('animation-delay: 0.08s', 'animation-delay: 0.2s') + ' } ';
+        css += '.card-tweaks__buttons { width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 15px !important; margin-top: 15px !important; } ';
 
         style.textContent = css;
     }
