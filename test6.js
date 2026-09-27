@@ -84,6 +84,7 @@
         
         var css = '';
         
+        // Оптимізовані анімації
         css += '@keyframes anim_smooth_zoom { 0% { opacity: 0; transform: translate3d(0, 8px, 0) scale(0.96); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } } ';
         css += '@keyframes anim_cine_slide { 0% { opacity: 0; transform: translate3d(0, 24px, 0); } 100% { opacity: 1; transform: translate3d(0, 0, 0); } } ';
         css += '@keyframes anim_luxury_fade { 0% { opacity: 0; transform: translate3d(0, 12px, 0) scale(1.02); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } } ';
@@ -96,6 +97,7 @@
         css += '@keyframes badge_anim_spin_slow { 0% { transform: rotate(0deg); } 25% { transform: rotate(2deg); } 75% { transform: rotate(-2deg); } 100% { transform: rotate(0deg); } } ';
         css += '@keyframes badge_anim_float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } } ';
         
+        // Приховування непотрібних стандартних елементів
         css += '.full-start__reactions, [class*="reactions"] { display: none !important; } ';
         css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="rating-count"], [class*="status"] { display:none !important; } ';
         css += '.full-start-new__right > div:first-child { display: none !important; } ';
@@ -111,38 +113,38 @@
         
         var chosenAnimName = 'anim_' + animEffect;
         var animTiming = 'cubic-bezier(0.16, 1, 0.3, 1)';
-        var uiAnimClass = isUIAnim ? 'animation: ' + chosenAnimName + ' 0.45s ' + animTiming + ' forwards; opacity: 0; will-change: transform, opacity; transform: translateZ(0); ' : '';
+        
+        // Гарантія відображення: якщо анімація вимкнена, елементи відразу мають opacity: 1
+        var animStyleRule = isUIAnim ? 'animation: ' + chosenAnimName + ' 0.4s ' + animTiming + ' forwards; will-change: transform, opacity;' : 'opacity: 1 !important;';
 
-        css += '.full-start-new__title { min-height: 60px; position: relative; font-size: 0 !important; color: transparent !important; ' + uiAnimClass + ' animation-delay: 0.06s; width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; order: 2; overflow: visible !important; } ';
-        css += '.full-start-new__title img { height: auto !important; max-height: 100px !important; width: auto !important; max-width: 45vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.7)); margin: 0 !important; opacity: 0; transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out; will-change: opacity; } ';
+        css += '.full-start-new__title { min-height: 60px; position: relative; font-size: 0 !important; color: transparent !important; ' + animStyleRule + ' width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; order: 2; overflow: visible !important; } ';
+        css += '.full-start-new__title img { height: auto !important; max-height: 100px !important; width: auto !important; max-width: 45vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.7)); margin: 0 !important; opacity: 0; transition: opacity 0.3s ease-in-out; } ';
         css += '.full-start-new__title img.loaded { opacity: 1; } ';
 
         css += '.quality-row-inline { position: absolute; top: 30px; right: 24px; z-index: 99; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; pointer-events: none; } '; 
 
-        css += '.studio-header-brand { ' + uiAnimClass + ' animation-delay: 0.02s; order: 1; width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: -2px !important; } ';
+        css += '.studio-header-brand { ' + animStyleRule + ' order: 1; width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: -2px !important; } ';
         css += '.studio-header-brand img { height: 22px !important; width: auto; max-width: 130px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); opacity: 0.95; transition: opacity 0.3s ease; } ';
         css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';
 
-        css += '.full-start-new__tagline { ' + uiAnimClass + ' animation-delay: 0.10s; display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 1em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; order: 3; } ';
+        css += '.full-start-new__tagline { ' + animStyleRule + ' display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 1em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; order: 3; } ';
         
-        css += '.plugin-meta-row { ' + uiAnimClass + ' animation-delay: 0.14s; display: flex; justify-content: flex-start; align-items: center; flex-wrap: nowrap; gap: 10px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.8); width: 100%; order: 4; color: rgba(255,255,255,0.85); font-family: "Inter", -apple-system, system-ui, sans-serif; } ';
+        css += '.plugin-meta-row { ' + animStyleRule + ' display: flex; justify-content: flex-start; align-items: center; flex-wrap: nowrap; gap: 10px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.8); width: 100%; order: 4; color: rgba(255,255,255,0.85); font-family: "Inter", -apple-system, system-ui, sans-serif; } ';
         
         var loopAnimName = badgeAnim !== 'none' ? 'badge_anim_' + badgeAnim : '';
         var loopDuration = badgeAnim === 'spin_slow' ? '4s' : (badgeAnim === 'breathe' ? '3s' : '2.5s');
 
         css += '.wave-item { transform-origin: center center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); ';
         if (isUIAnim) {
-            css += 'opacity: 0; animation: wave_cascade 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards';
+            css += 'animation: wave_cascade 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards';
             if (badgeAnim !== 'none') {
                 css += ', ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite';
-                css += '; animation-delay: calc(0.18s + (var(--item-index) * 0.04s)), calc(0.7s + (var(--item-index) * 0.1s))';
-            } else {
-                css += '; animation-delay: calc(0.18s + (var(--item-index) * 0.04s))';
             }
             css += '; will-change: transform, opacity; ';
         } else if (badgeAnim !== 'none') {
             css += 'animation: ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite; ';
-            css += 'animation-delay: calc(var(--item-index) * 0.1s); ';
+        } else {
+            css += 'opacity: 1 !important;';
         }
         css += '} ';
 
@@ -298,7 +300,6 @@
             }
             
             if (e.type === 'complite' || e.type === 'complete') {
-                // Страховка: гарантовано оновлюємо стилі при відкритті кожної картки, якщо DOM ще не встиг їх застосувати
                 applyStyles();
 
                 var movie = e.data.movie, $render = e.object.activity.render();
@@ -331,14 +332,12 @@
                 var tmdb = parseFloat(e.data.movie.vote_average || 0).toFixed(1);
                 if (tmdb > 0) {
                     var $tmdbItem = $('<div class="plugin-rating-item wave-item"><img src="'+ratingIcons.tmdb+'"> <span style="color:'+getRatingColor(tmdb)+'">'+tmdb+'</span></div>');
-                    $tmdbItem.css('--item-index', globalIndex++);
                     $qRow.append($tmdbItem);
                 }
                 
                 var cub = getCubRating(e);
                 if (cub) {
                     var $cubItem = $('<div class="plugin-rating-item wave-item"><img src="' + ratingIcons.cub + '"> <span style="color:' + getRatingColor(cub) + '">' + cub + '</span></div>');
-                    $cubItem.css('--item-index', globalIndex++);
                     $qRow.append($cubItem);
                 }
             }
