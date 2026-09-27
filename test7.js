@@ -159,12 +159,12 @@
         }
         css += '} ';
 
-        // Рейтинги тепер розтягнуті на всю ширину колонки (110px), вміст вирівняно праворуч
-        css += '.quality-row-inline .plugin-rating-item { display: flex; align-items: center; justify-content: flex-end; gap: 6px; font-weight: 700; color: #fff; font-size: 1.05em; width: 100%; height: 1.3em; box-sizing: border-box; } ';
-        css += '.quality-row-inline .plugin-rating-item img { height: 1.25em !important; width: auto; object-fit: contain; } ';
+        // Рейтинги: фіксована ширина 110px
+        css += '.quality-row-inline .plugin-rating-item { display: flex; align-items: center; justify-content: flex-end; gap: 6px; font-weight: 700; color: #fff; font-size: 1.05em; width: 110px; box-sizing: border-box; } ';
+        css += '.quality-row-inline .plugin-rating-item img { height: 1.25em !important; width: auto; max-width: 45px !important; object-fit: contain; } ';
         
-        // Бейджі якості
-        css += '.quality-item { transform-origin: center center; width: 100%; display: flex; align-items: center; justify-content: flex-end; will-change: transform, opacity; ';
+        // Бейджі якості: фіксована ширина 110px
+        css += '.quality-item { transform-origin: center center; width: 110px; display: flex; align-items: center; justify-content: flex-end; will-change: transform, opacity; ';
         if (isUIAnim) {
             css += 'opacity: 0; animation: wave_cascade 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards';
             if (badgeAnim !== 'none') {
@@ -178,7 +178,7 @@
             css += 'animation-delay: calc(var(--item-index) * 0.1s); ';
         }
         css += '} ';
-        css += '.quality-item img { width: 100% !important; max-width: 110px !important; height: auto !important; object-fit: contain; } ';
+        css += '.quality-item img { width: auto !important; max-width: 110px !important; height: auto !important; max-height: 28px !important; object-fit: contain; } ';
 
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.9em; white-space: nowrap; } ';
         css += '.info-separator { opacity: 0.35; font-size: 0.85em; margin: 0 -2px; } ';
