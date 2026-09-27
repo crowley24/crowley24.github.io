@@ -99,7 +99,7 @@
             if (response && response.Results) {
                 var best = getBest(response.Results);
                 var badges = [];
-                if (best.ukr) badges.push(createBadgeImg('UKR', false, badges.length));
+                if (best.ukr) badges.g(createBadgeImg('UKR', false, badges.length));
                 if (best.resolution) badges.push(createBadgeImg(best.resolution, false, badges.length));
                 if (best.dolbyVision) badges.push(createBadgeImg('Dolby Vision', false, badges.length));
                 if (best.hdr) badges.push(createBadgeImg('HDR', false, badges.length));
