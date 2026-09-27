@@ -13,6 +13,10 @@
     var qualityLoading = {};
     var qualityTimers = {};
 
+    /* Глобальний канвас для оптимізації перевірки темних логотипів */
+    var globalCanvas = null;
+    var globalCtx = null;
+
     var settings_list = [
         { id: 'tv_interface_ui_anim', default: true },
         { id: 'tv_interface_ui_anim_effect', default: 'fluid' },
@@ -71,6 +75,12 @@
         },
 
         {
+            id: 'sdr',
+            pattern: /\bsdr\b/i,
+            imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/SDR_transparent_4x.png'
+        },
+
+        {
             id: 'dolby-atmos',
             pattern: /\b(dolby[\s._-]*atmos|atmos)\b/i,
             imageURL: 'https://raw.githubusercontent.com/leonevz/Elite-Badges/main/Badges/dolby_atmos.png'
@@ -125,7 +135,7 @@
     };
 
     /**
-     * ВИЗНАЧЕННЯ ТЕМНОГО ЛОГО
+     * ВИЗНАЧЕННЯ ТЕМНОГО ЛОГО (Оптимізовано через єдиний глобальний Canvas)
      */
     function isImageDark(imgSrc, callback) {
         var img = new Image();
@@ -134,15 +144,17 @@
 
         img.onload = function () {
             try {
-                var canvas = document.createElement('canvas');
-                var ctx = canvas.getContext('2d');
+                if (!globalCanvas) {
+                    globalCanvas = document.createElement('canvas');
+                    globalCanvas.width = 40;
+                    globalCanvas.height = 40;
+                    globalCtx = globalCanvas.getContext('2d');
+                }
 
-                canvas.width = 40;
-                canvas.height = 40;
+                globalCtx.clearRect(0, 0, 40, 40);
+                globalCtx.drawImage(img, 0, 0, 40, 40);
 
-                ctx.drawImage(img, 0, 0, 40, 40);
-
-                var imgData = ctx.getImageData(0, 0, 40, 40);
+                var imgData = globalCtx.getImageData(0, 0, 40, 40);
                 var data = imgData.data;
 
                 var totalBrightness = 0;
@@ -272,9 +284,9 @@
 
         css += '.full-start-new { position: relative !important; } ';
 
-        css += '.full-start-new__poster { position: relative !important; top: 0 !important; margin-top: 0 !important; align-self: flex-start !important; background: #000; z-index: 1; } ';
+        css += '.full-start-new__poster { position: relative !important; background: #000; z-index: 1; } ';
 
-        css += '.full-start-new__poster img { display: block !important; filter: none !important; width: 100% !important; height: auto !important; object-fit: contain !important; ';
+        css += '.full-start-new__poster img { filter: none !important; width: 100% !important; height: auto !important; object-fit: contain !important; ';
 
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 75%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 75%, transparent 100%) !important; } ';
 
@@ -768,12 +780,6 @@
 
     /**
      * ОТРИМАННЯ ТЕКСТУ З РЕЗУЛЬТАТУ PARSER
-     *
-     * Не використовуємо JSON.stringify()
-     * для всього об'єкта.
-     *
-     * Беремо типові поля, де Parser/Jackett
-     * може містити інформацію про роздачу.
      */
     function getParserItemText(item) {
         if (!item) return '';
@@ -817,10 +823,6 @@
             }
         }
 
-        /**
-         * Деякі парсери можуть повертати
-         * додаткові дані всередині params.
-         */
         if (
             item.params &&
             typeof item.params === 'object'
@@ -865,14 +867,6 @@
 
         var combinedText = '';
 
-        /**
-         * Для плавності не обробляємо
-         * безмежну кількість результатів.
-         *
-         * 30 достатньо, щоб знайти
-         * рідкісні аудіоформати,
-         * але навантаження залишається мінімальним.
-         */
         var limit =
             Math.min(
                 results.length,
@@ -913,10 +907,6 @@
             }
         }
 
-        /**
-         * Виводимо тільки найвищу
-         * знайдену роздільну здатність.
-         */
         var highestResolution =
             null;
 
@@ -979,8 +969,17 @@
         }
 
         /**
-         * Прибираємо дублікати
+         * Дубляж
          */
+        if (
+            /\b(dub|dubbed|дуб|дубляж)\b/i
+                .test(combinedText)
+        ) {
+            foundBadges.push(
+                pluginPath + 'DUB.svg'
+            );
+        }
+
         return foundBadges.filter(
             function (
                 elem,
@@ -1033,9 +1032,6 @@
             return;
         }
 
-        /**
-         * Є готовий кеш
-         */
         if (
             qualityCache[key] !==
             undefined
@@ -1046,10 +1042,6 @@
             return;
         }
 
-        /**
-         * Запит для цього фільму
-         * вже виконується
-         */
         if (qualityLoading[key]) {
             qualityLoading[key]
                 .push(callback);
@@ -1162,16 +1154,9 @@
 
                 img.src = imgUrl;
                 img.draggable = false;
-
-                /**
-                 * Невеликі картинки
-                 * не створюють великого
-                 * навантаження.
-                 */
                 img.decoding = 'async';
 
                 item.appendChild(img);
-
                 fragment.appendChild(
                     item
                 );
@@ -1184,17 +1169,7 @@
     }
 
     /**
-     * ВІДКЛАДЕНИЙ ЗАПУСК PARSER
-     *
-     * Головна оптимізація:
-     *
-     * відкрив картку
-     *       ↓
-     * 650 мс очікування
-     *       ↓
-     * перевіряємо currentActiveId
-     *       ↓
-     * тільки після цього Parser
+     * ВІДКЛАДЕНИЙ ЗАПУСК PARSER (з безпечним керуванням таймерами)
      */
     function loadQualityBadges(
         movie,
@@ -1224,16 +1199,9 @@
             return;
         }
 
-        /**
-         * Запам'ятовуємо саме цю картку.
-         */
         var activeMovieId =
             movie.id;
 
-        /**
-         * Якщо для цього фільму
-         * вже був таймер — скасовуємо.
-         */
         if (
             qualityTimers[key]
         ) {
@@ -1244,10 +1212,6 @@
             delete qualityTimers[key];
         }
 
-        /**
-         * Якщо результат уже є,
-         * Parser взагалі не потрібен.
-         */
         if (
             qualityCache[key] !==
             undefined
@@ -1266,11 +1230,6 @@
                 function () {
                     delete qualityTimers[key];
 
-                    /**
-                     * КАРТКА ВЖЕ ЗМІНИЛАСЯ
-                     *
-                     * Parser навіть не запускаємо.
-                     */
                     if (
                         currentActiveId !==
                         activeMovieId
@@ -1278,10 +1237,6 @@
                         return;
                     }
 
-                    /**
-                     * На всяк випадок
-                     * перевіряємо DOM.
-                     */
                     if (
                         !$qRow ||
                         !$qRow.length ||
@@ -1297,11 +1252,6 @@
                         function (
                             eliteBadgesList
                         ) {
-                            /**
-                             * Користувач міг
-                             * перейти на інший
-                             * фільм ПІД ЧАС Parser.
-                             */
                             if (
                                 currentActiveId !==
                                 activeMovieId
@@ -1344,6 +1294,7 @@
                     e.type === 'destroy' ||
                     e.type === 'onBeforeDestroy'
                 ) {
+                    // Очищаємо активний ID при виході з картки
                     currentActiveId = null;
                     return;
                 }
@@ -1514,13 +1465,6 @@
 
                     /**
                      * QUALITY / AUDIO
-                     *
-                     * Тут Parser більше
-                     * НЕ запускається одразу.
-                     *
-                     * Спочатку 650 мс.
-                     * Потім перевірка,
-                     * чи картка ще активна.
                      */
                     loadQualityBadges(
                         movie,
