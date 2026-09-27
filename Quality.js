@@ -72,7 +72,14 @@
     var badges = [];
     if (best.ukr) badges.push(createBadgeImg('UKR', true, badges.length));
     if (best.resolution) badges.push(createBadgeImg(best.resolution, true, badges.length));
-    if (badges.length) card.find('.card__view').append('<div class="card-quality-badges">' + badges.join('') + '</div>');
+    if (badges.length) {
+      // Гарантуємо, що обгортка картки має відносне позиціювання для абсолютного блоку
+      var view = card.find('.card__view');
+      if (view.css('position') === 'static') {
+        view.css('position', 'relative');
+      }
+      view.append('<div class="card-quality-badges">' + badges.join('') + '</div>');
+    }
   }
 
   function processCards() {
@@ -99,7 +106,7 @@
             if (response && response.Results) {
                 var best = getBest(response.Results);
                 var badges = [];
-                if (best.ukr) badges.push(createBadgeImg('UKR', false, badges.length)); // Виправлено тут
+                if (best.ukr) badges.push(createBadgeImg('UKR', false, badges.length));
                 if (best.resolution) badges.push(createBadgeImg(best.resolution, false, badges.length));
                 if (best.dolbyVision) badges.push(createBadgeImg('Dolby Vision', false, badges.length));
                 if (best.hdr) badges.push(createBadgeImg('HDR', false, badges.length));
@@ -116,11 +123,12 @@
   var style = '<style>\
     .quality-badges-container { display: flex; align-items: center; gap: 0.8em; margin: 0.8em 0; min-height: 2em; flex-wrap: wrap; }\
     .quality-badge { height: 1.3em; opacity: 0; transform: translateY(8px); animation: qb_in 0.4s ease forwards; display: flex; align-items: center; }\
-    .card-quality-badges { position: absolute; top: 0.3em; right: 0.3em; display: flex; flex-direction: row; gap: 0.2em; pointer-events: none; z-index: 5; }\
+    .card__view { position: relative; }\
+    .card-quality-badges { position: absolute !important; top: 0.4em !important; right: 0.4em !important; left: auto !important; bottom: auto !important; display: flex !important; flex-direction: row !important; gap: 0.25em !important; pointer-events: none !important; z-index: 10 !important; }\
     .card-quality-badge { height: 0.9em; opacity: 0; transform: translateY(5px); animation: qb_in 0.3s ease forwards; }\
     @keyframes qb_in { to { opacity: 1; transform: translateY(0); } }\
     .quality-badge img, .card-quality-badge img { height: 100%; width: auto; display: block; }\
-    .card-quality-badge img { filter: drop-shadow(0 1px 2px #000); }\
+    .card-quality-badge img { filter: drop-shadow(0 1px 3px rgba(0,0,0,0.9)); }\
   </style>';
   $('body').append(style);
 
