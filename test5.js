@@ -611,15 +611,25 @@
                 data.images.logos[0];
 
             if (logo) {
-                var logoUrl =
-                    Lampa.TMDB.image(
-                        '/t/p/w500' +
-                        logo.file_path.replace(
-                            '.svg',
-                            '.png'
-                        )
-                    );
+              var logoQuality =
+    Lampa.Storage.get(
+        'tv_interface_logo_quality',
+        'w780'
+    );
 
+var logoPath =
+    logoQuality === 'original' ?
+    '/t/p/original' :
+    '/t/p/' + logoQuality;
+
+var logoUrl =
+    Lampa.TMDB.image(
+        logoPath +
+        logo.file_path.replace(
+            '.svg',
+            '.png'
+        )
+    );
                 $render
                     .find('.full-start-new__title')
                     .html(
