@@ -9,34 +9,25 @@
 
         if (window.Lampa && Lampa.Component) {
             Lampa.Component.add('epg_view', function () {
-                var scroll = new Lampa.Scroll({ fields: {} });
-                var html = $('<div><div style="padding: 20px; text-align: center;">Завантаження та обробка EPG...</div></div>');
-                
-                scroll.body().append(html);
+                var html = $('<div style="height: 100%; overflow-y: auto; padding: 20px; box-sizing: border-box;">' +
+                             '<div style="text-align: center; color: #fff; font-size: 18px;">Завантаження та обробка EPG...</div>' +
+                             '</div>');
 
-                // Розділяємо методи без рекурсії
                 this.create = function () {
-                    return scroll.render();
+                    return html;
                 };
 
                 this.render = function () {
-                    return scroll.render();
+                    return html;
                 };
 
                 this.start = function () {
                     Lampa.Controller.add('content', {
                         toggle: function () {
-                            Lampa.Controller.collectionSet(scroll.render());
                             Lampa.Controller.enable('content');
                         },
                         left: function () {
                             Lampa.Controller.toggle('menu');
-                        },
-                        up: function () {
-                            scroll.up();
-                        },
-                        down: function () {
-                            scroll.down();
                         },
                         back: function () {
                             Lampa.Activity.backward();
@@ -48,7 +39,7 @@
                         html.empty();
                         
                         var stats = $(`
-                            <div style="padding: 15px; background: rgba(255,255,255,0.05); margin-bottom: 10px; border-radius: 6px;">
+                            <div style="padding: 15px; background: rgba(255,255,255,0.05); margin-bottom: 15px; border-radius: 6px; color: #fff;">
                                 <div><b>Знайдено каналів:</b> ${channels.length}</div>
                                 <div><b>Знайдено передач (всього):</b> ${programmes.length}</div>
                             </div>
@@ -56,8 +47,7 @@
                         html.append(stats);
 
                         if (!channels.length) {
-                            html.append('<div style="padding: 20px; text-align: center; color: #ff5252;">Не вдалося завантажити EPG. Перевірте доступність посилання.</div>');
-                            scroll.update();
+                            html.append('<div style="padding: 20px; text-align: center; color: #ff5252;">Не вдалося завантажити EPG. Перевірте доступність посилання або CORS.</div>');
                             return;
                         }
 
@@ -65,8 +55,8 @@
                         
                         channels.forEach(function (channel) {
                             var item = $(`
-                                <div class="settings-item selector" style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                    <div class="settings-item__name">${channel.name}</div>
+                                <div class="settings-item selector" style="padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); color: #fff;">
+                                    <div class="settings-item__name" style="font-size: 16px;">${channel.name}</div>
                                     <div class="settings-item__descr" style="color: #aaa; font-size: 0.9em;">ID: ${channel.id}</div>
                                 </div>
                             `);
@@ -79,12 +69,11 @@
                         });
 
                         html.append(list);
-                        scroll.update();
                     });
                 };
 
                 this.destroy = function () {
-                    scroll.destroy();
+                    html.remove();
                 };
             });
         }
@@ -146,7 +135,6 @@
 
                     var programmes = [];
                     var progNodes = xmlDoc.getElementsByTagName('programme');
-                    // Зменшуємо ліміт до 5000, щоб приставка не зависала від перевантаження пам'яті
                     var limit = Math.min(progNodes.length, 5000);
                     for (var j = 0; j < limit; j++) {
                         var pNode = progNodes[j];
@@ -176,7 +164,7 @@
             return p.channel === channel.id; 
         });
         
-        var modalContent = $('<div style="max-height: 400px; overflow-y: auto; padding: 10px;"></div>');
+        var modalContent = $('<div style="max-height: 400px; overflow-y: auto; padding: 10px; color: #fff;"></div>');
         modalContent.append(`<div style="margin-bottom: 10px; color: #aaa;">Канал: ${channel.name} (ID: ${channel.id}) — Знайдено передач: ${filtered.length}</div>`);
 
         if (filtered.length === 0) {
