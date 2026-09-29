@@ -22,18 +22,10 @@
                 };
 
                 this.start = function () {
-                    Lampa.Controller.add('content', {
-                        toggle: function () {
-                            Lampa.Controller.enable('content');
-                        },
-                        left: function () {
-                            Lampa.Controller.toggle('menu');
-                        },
-                        back: function () {
-                            Lampa.Activity.backward();
-                        }
-                    });
-                    Lampa.Controller.toggle('content');
+                    // Безпечний запуск без перехоплення глобального контролера 'content'
+                    if (window.Lampa && Lampa.Controller) {
+                        Lampa.Controller.enable('content');
+                    }
 
                     loadEPGData(function (channels, programmes) {
                         html.empty();
