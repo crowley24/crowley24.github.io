@@ -7,7 +7,7 @@
 
         console.log('EPG Plugin: Starting registration...');
 
-        // 1. Реєструємо сторінку телепрограми
+        // 1. Реєструємо сторінку телепрограми з правильним методом render
         if (window.Lampa && Lampa.Component) {
             Lampa.Component.add('epg_view', function () {
                 var scroll = new Lampa.Scroll({ fields: {} });
@@ -15,7 +15,8 @@
                 
                 scroll.body().append(html);
 
-                this.create = function () {
+                // Правильна назва методу для Lampa - render замість create
+                this.render = function () {
                     return scroll.render();
                 };
 
@@ -85,7 +86,7 @@
             });
         }
 
-        // 2. Додаємо пункт у меню з перевіркою наявності списку
+        // 2. Додаємо пункт у меню
         function addMenuItem() {
             if ($('.menu__list').length &&$('#epg_menu_item').length === 0) {
                 var menu_item = $(`
@@ -109,9 +110,7 @@
                 });
 
                 $('.menu__list').append(menu_item);
-                console.log('EPG Plugin: Menu item added successfully');
             } else {
-                // Якщо меню ще не з'явилося, пробуємо ще раз за секунду
                 setTimeout(addMenuItem, 1000);
             }
         }
@@ -200,7 +199,6 @@
         return str.substring(6, 8) + '.' + str.substring(4, 6) + ' ' + str.substring(8, 10) + ':' + str.substring(10, 12);
     }
 
-    // Запуск одразу або після готовності додатку
     if (window.appready) {
         registerEPG();
     } else {
@@ -211,7 +209,6 @@
                 }
             });
         }
-        // Запасний варіант — примусовий виклик через 2 секунди
         setTimeout(registerEPG, 2000);
     }
 })();
