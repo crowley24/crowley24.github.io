@@ -164,19 +164,20 @@
   
         css += '.card-tweaks__buttons { ' + getAnimRule('0.3s') + ' width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 15px !important; margin-top: 15px !important; order: 5; } ';  
   
-        // Фон для слайдшоу — плавний перехід і апаратне прискорення  
+        // Фон для слайдшоу  
         css += '.full-start__background { will-change: opacity; transition: opacity 0.5s ease; } ';  
   
-        // ===== ФОНОВИЙ ТРЕЙЛЕР (YouTube) — 1/4 екрана у верхньому правому куті =====  
+        // ===== ФОНОВИЙ ТРЕЙЛЕР (YouTube) — М'які краї, закруглення та градієнти =====  
         css += '.tvi-trailer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0; transition: opacity .4s; pointer-events: none; } ';  
         css += '.tvi-trailer.display { opacity: 1; } ';  
-        css += '.tvi-trailer__yt { position: fixed; top: 0; right: 0; width: 50vw; height: 50vh; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; z-index: 0; border-bottom-left-radius: 16px; } ';  
+        css += '.tvi-trailer__yt { position: fixed; top: 0; right: 0; width: 50vw; height: 50vh; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; z-index: 0; border-bottom-left-radius: 24px; box-shadow: -10px 10px 30px rgba(0,0,0,0.8); } ';  
         css += '.tvi-trailer__yt iframe { border: 0; width: 100%; height: 100%; flex-shrink: 0; pointer-events: none; will-change: transform; transition: transform .3s; } ';  
   
-        // Оверлей для плавності від краю віджета до темного фону  
+        // Оверлей для розмиття та злиття меж відео з фоном  
         css += '.tvi-trailer__overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; ';  
-        css += 'background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.8) 100%), ';  
-        css += 'linear-gradient(to left, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.8) 100%); } ';  
+        css += 'background: linear-gradient(135deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.3) 30%, rgba(0,0,0,0) 60%), ';  
+        css += 'linear-gradient(to left, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 15%, rgba(0,0,0,0) 50%), ';  
+        css += 'linear-gradient(to bottom, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 15%, rgba(0,0,0,0) 50%); } ';  
   
         style.textContent = css;  
     }  
@@ -401,7 +402,7 @@
                             }, 400);  
                         }  
                         if (st.data === window.YT.PlayerState.ENDED && !destroyed) {  
-                            st.target.playVideo(); // нескінченний цикл  
+                            st.target.playVideo();  
                         }  
                         if (st.data === window.YT.PlayerState.BUFFERING) {  
                             st.target.setPlaybackQuality('hd1080');  
@@ -426,7 +427,7 @@
     }  
   
     /**  
-     * СЛАЙДШОУ ФОНОВИХ ЗОБРАЖЕНЬ (кросфейд backdrops з TMDB)  
+     * СЛАЙДШОУ ФОНОВИХ ЗОБРАЖЕНЬ  
      */  
     function startSlideshow(e, $render) {  
         if (!Lampa.Storage.get('tv_interface_slideshow')) return;  
@@ -539,7 +540,6 @@
                 renderMeta($render.find('.full-start-new__right'), e);  
                 loadMovieDetails(movie, $render);  
   
-                // Трейлер або слайдшоу (взаємовиключні)  
                 var isTrailerBg = Lampa.Storage.get('tv_interface_trailer_bg');  
                 var trailer = isTrailerBg ? pickTrailer(e.data) : null;  
   
@@ -610,12 +610,10 @@
         Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_ratings_size', type: 'select', values: { '0.4em': 'Дрібний', '0.45em': 'Звичайний', '0.5em': 'Великий', '0.55em': 'Дуже великий' }, default: '0.45em' }, field: { name: 'Розмір шрифту інфо-блоків' }, onChange: applyStyles });  
         Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_studios', type: 'trigger', default: true }, field: { name: 'Показувати логотип студії' } });  
   
-        // Слайдшоу  
         Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_slideshow', type: 'trigger', default: true }, field: { name: 'Слайдшоу фонових зображень', description: 'Плавна зміна backdrops з TMDB на фоні картки' } });  
         Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_slideshow_duration', type: 'select', values: { 5000: '5 секунд', 8000: '8 секунд', 10000: '10 секунд', 15000: '15 секунд' }, default: 8000 }, field: { name: 'Інтервал зміни зображень' } });  
         Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_slideshow_quality', type: 'select', values: { w780: 'Стандартна (W780)', w1280: 'Висока (W1280)', original: 'Оригінал' }, default: 'w1280' }, field: { name: 'Якість зображень слайдшоу' } });  
   
-        // ===== ФОНОВИЙ ТРЕЙЛЕР =====  
         Lampa.SettingsApi.addParam({  
             component: 'tv_interface',  
             param: { name: 'tv_interface_trailer_bg', type: 'trigger', default: false },  
