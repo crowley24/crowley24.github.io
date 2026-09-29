@@ -1,6 +1,6 @@
 // ==Lampa==  
 // name: IPTV PRO (EPG Built-in)  
-// version: 12.9  
+// version: 13.0  
   
 (function () {  
     'use strict';  
@@ -20,7 +20,7 @@
                 name: 'TEST',  
                 url: 'https://m3u.ch/pl/61b9ea4e90c4cf3165a4d19656e126a8_cf72fbb9e7ee647289c76620f1df15b4.m3u'  
             }],  
-            epg_url: 'http://only4.tv/epg/epg.xml',  
+            epg_url: 'http://1lot.tv/epg/epg.xml',  
             favorites: [],  
             current_pl_index: 0  
         });  
@@ -62,66 +62,71 @@
             return root;  
         };  
   
-        // Завантаження та парсинг XML EPG через Lampa.Reguest (обходить браузерний CORS)  
-        this.loadEPG = function () {  
-    if (!config.epg_url) return;  
-  
-    var network = new Lampa.Reguest();  
-    network.timeout(90000);  
-  
-    // пробуємо отримати бінарні дані, щоб перехопити gzip  
-    network.native(config.epg_url, function (resp) {  
-        var tryParse = function (xml_str) {  
-            try {  
-                var xmlDoc = new DOMParser().parseFromString(xml_str, "text/xml");  
-                if (xmlDoc.getElementsByTagName('parsererror').length) {  
-                    console.log('IPTV PRO: не XML. Початок відповіді:', xml_str.substr(0, 200));  
-                    Lampa.Noty.show('EPG: сервер віддав не-XML');  
-                    return;  
-                }  
-                var programmes = xmlDoc.getElementsByTagName('programme');  
-                epg_programs = {};  
-                for (var i = 0; i < programmes.length; i++) {  
-                    var p = programmes[i];  
-                    var channel_id = p.getAttribute('channel');  
-                    if (!channel_id) continue;  
-                    if (!epg_programs[channel_id]) epg_programs[channel_id] = [];  
-                    var t = p.getElementsByTagName('title')[0];  
-                    epg_programs[channel_id].push({  
-                        start: parseXMLDate(p.getAttribute('start')),  
-                        stop:  parseXMLDate(p.getAttribute('stop')),  
-                        title: t ? t.textContent : ''  
-                    });  
-                }  
-                Lampa.Noty.show('EPG: ' + Object.keys(epg_programs).length + ' каналів');  
-                if (current_list[index_c]) _this.showDetails(current_list[index_c]);  
-            } catch (e) {  
-                console.log('IPTV PRO: parse error', e);  
+        // Парсинг XMLTV-рядка у epg_programs  
+        function parseEPGString(xml_str) {  
+            var xmlDoc = new DOMParser().parseFromString(xml_str, "text/xml");  
+            if (xmlDoc.getElementsByTagName('parsererror').length) {  
+                console.log('IPTV PRO: не XML. Початок відповіді:', xml_str.substr(0, 200));  
+                Lampa.Noty.show('EPG: сервер віддав не-XML');  
+                return;  
             }  
+            var programmes = xmlDoc.getElementsByTagName('programme');  
+            epg_programs = {};  
+            for (var i = 0; i < programmes.length; i++) {  
+                var p = programmes[i];  
+                var channel_id = p.getAttribute('channel');  
+                if (!channel_id) continue;  
+                if (!epg_programs[channel_id]) epg_programs[channel_id] = [];  
+                var t = p.getElementsByTagName('title')[0];  
+                epg_programs[channel_id].push({  
+                    start: parseXMLDate(p.getAttribute('start')),  
+                    stop:  parseXMLDate(p.getAttribute('stop')),  
+                    title: t ? t.textContent : ''  
+                });  
+            }  
+            console.log('IPTV PRO: EPG завантажено, каналів: ' + Object.keys(epg_programs).length);  
+            Lampa.Noty.show('EPG: ' + Object.keys(epg_programs).length + ' каналів');  
+            if (current_list[index_c]) _this.showDetails(current_list[index_c]);  
+        }  
+  
+        // Завантаження EPG: native-запит + авто-розпаковка gzip  
+        this.loadEPG = function () {  
+            if (!config.epg_url) return;  
+  
+            var network = new Lampa.Reguest();  
+            network.timeout(90000);  
+  
+            network.native(config.epg_url, function (resp) {  
+                try {  
+                    if (typeof resp === 'string' && resp.charCodeAt(0) === 0x1f && resp.charCodeAt(1) === 0x8b) {  
+                        // gzip-сміття у строку -> Uint8Array -> DecompressionStream  
+                        var bytes = new Uint8Array(resp.length);  
+                        for (var i = 0; i < resp.length; i++) bytes[i] = resp.charCodeAt(i) & 0xff;  
+  
+                        if (typeof DecompressionStream === 'undefined') {  
+                            Lampa.Noty.show('EPG: gzip, а розпаковка недоступна на цьому пристрої');  
+                            return;  
+                        }  
+                        new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip')))  
+                            .text()  
+                            .then(function (txt) { try { parseEPGString(txt); } catch (e) { console.log('IPTV PRO: parse error', e); } })  
+                            .catch(function (e) {  
+                                console.log('IPTV PRO: gzip error', e);  
+                                Lampa.Noty.show('EPG: помилка розпаковки gzip');  
+                            });  
+                    } else {  
+                        parseEPGString(resp);  
+                    }  
+                } catch (e) {  
+                    console.log('IPTV PRO: EPG exception', e);  
+                }  
+            }, function (err) {  
+                console.log('IPTV PRO: EPG error', err);  
+                Lampa.Noty.show('Не вдалося завантажити EPG');  
+            }, false, { dataType: 'text' });  
         };  
   
-        // якщо відповідь прийшла як строка з gzip-сміттям (маркер \x1f\x8b)  
-        if (typeof resp === 'string' && resp.charCodeAt(0) === 0x1f && resp.charCodeAt(1) === 0x8b) {  
-            var bytes = new Uint8Array(resp.length);  
-            for (var i = 0; i < resp.length; i++) bytes[i] = resp.charCodeAt(i) & 0xff;  
-  
-            new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip')))  
-                .text()  
-                .then(tryParse)  
-                .catch(function (e) {  
-                    console.log('IPTV PRO: gzip error', e);  
-                    Lampa.Noty.show('EPG: не вдалося розпакувати gzip');  
-                });  
-        } else {  
-            tryParse(resp);  
-        }  
-    }, function (err) {  
-        console.log('IPTV PRO: EPG error', err);  
-        Lampa.Noty.show('Не вдалося завантажити EPG');  
-    }, false, { dataType: 'text' });  
-};
-  
-        // Конвертація дати XMLTV (YYYYMMDDHHMMSS +ZZZZ) у Unix timestamp (секунди), з урахуванням таймзони  
+        // XMLTV-дата (YYYYMMDDHHMMSS +ZZZZ) -> unix sec, з урахуванням таймзони  
         function parseXMLDate(str) {  
             if (!str) return 0;  
             var year   = parseInt(str.substr(0, 4), 10);  
@@ -131,15 +136,12 @@
             var minute = parseInt(str.substr(10, 2), 10);  
             var second = parseInt(str.substr(12, 2), 10) || 0;  
   
-            // час у XMLTV заданий у вказаній таймзоні — рахуємо UTC-момент  
             var utc_ms = Date.UTC(year, month, day, hour, minute, second);  
-  
-            var tz = (str.match(/([+-]\d{2})(\d{2})\s*$/) || null);  
+            var tz = str.match(/([+-])(\d{2})(\d{2})\s*$/);  
             if (tz) {  
-                var offset_min = parseInt(tz[1], 10) * 60 + (tz[1][0] === '-' ? -1 : 1) * parseInt(tz[2], 10);  
-                utc_ms -= offset_min * 60 * 1000;  
+                var off = (parseInt(tz[2], 10) * 60 + parseInt(tz[3], 10)) * 60 * 1000;  
+                utc_ms += (tz[1] === '+') ? -off : off;  
             }  
-  
             return utc_ms / 1000;  
         }  
   
@@ -149,7 +151,8 @@
             network.timeout(30000);  
             network.native(pl.url, function (str) {  
                 _this.parse(str);  
-            }, function () {  
+            }, function (err) {  
+                console.log('IPTV PRO: playlist error', err);  
                 Lampa.Noty.show('Помилка завантаження плейлиста');  
             }, false, { dataType: 'text' });  
         };  
@@ -157,6 +160,15 @@
         this.parse = function (str) {  
             var lines = str.split('\n');  
             groups_data = { '⭐ Обране': config.favorites };  
+  
+            // авто-EPG з url-tvg у першому рядку m3u  
+            var m = lines[0] && lines[0].match(/url-tvg="([^"]+)"/i);  
+            if (m && m[1] && m[1] !== config.epg_url) {  
+                console.log('IPTV PRO: url-tvg з плейлиста =', m[1]);  
+                config.epg_url = m[1];  
+                this.loadEPG();  
+            }  
+  
             for (var i = 0; i < lines.length; i++) {  
                 var l = lines[i].trim();  
                 if (l.indexOf('#EXTINF') === 0) {  
