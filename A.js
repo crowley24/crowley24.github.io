@@ -1,15 +1,12 @@
 (function () {
     'use strict';
 
-    // Перевірка, чи Lampa завантажена
     function initEPG() {
         console.log('EPG Plugin: Initialized');
 
-        // Додаємо пункт у головне меню або розділ налаштувань
-        Lampa.Component.add('epg_view', function (object) {
-            var network = new Lampa.Reguest();
-            var scroll = new Lampa.Scroll({, fields: {}});
-            var html = $('<div><div class="epg-loading">Завантаження телепрограми...</div></div>');
+        Lampa.Component.add('epg_view', function () {
+            var scroll = new Lampa.Scroll({ fields: {} });
+            var html = $('<div><div style="padding: 20px; text-align: center;">Завантаження телепрограми...</div></div>');
             
             scroll.body().append(html);
 
@@ -38,17 +35,16 @@
                 });
                 Lampa.Controller.toggle('content');
 
-                // Завантаження та парсинг XML файлу
                 loadEPGData(function (channels, programmes) {
                     html.empty();
                     if (!channels.length) {
-                        html.html('<div class="epg-error">Не вдалося завантажити програму передач</div>');
+                        html.html('<div style="padding: 20px; text-align: center; color: #ff5252;">Не вдалося завантажити або розібрати EPG (можливо блокування CORS)</div>');
+                        scroll.update();
                         return;
                     }
 
                     var list = $('<div class="settings-list"></div>');
                     
-                    // Виводимо список каналів та їх передачі (приклад базового виведення)
                     channels.forEach(function (channel) {
                         var item = $(`
                             <div class="settings-item selector" style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">
@@ -70,26 +66,18 @@
             };
 
             this.destroy = function () {
-                network.clear();
                 scroll.destroy();
             };
         });
-
-        // Додаємо кнопку до головного меню (або розділу плагінів)
-        if (window.menu) {
-            // Можна додати пункт у меню Lampa
-        }
     }
 
-    // Функція завантаження та простого парсингу XMLTV за допомогою DOMParser
     function loadEPGData(callback) {
         var epgUrl = 'http://only4.tv/epg/epg.xml';
         
-        // Увага: Через CORS прямий запит з браузера на сторонній домен може блокуватися. 
-        // Можливо, знадобиться простий проксі-сервер або запуск через CORS-політики пристрою.
         $.ajax({
             url: epgUrl,
             dataType: 'text',
+            timeout: 10000,
             success: function (xmlString) {
                 try {
                     var parser = new DOMParser();
@@ -109,7 +97,9 @@
 
                     var programmes = [];
                     var progNodes = xmlDoc.getElementsByTagName('programme');
-                    for (var j = 0; j < progNodes.length; j++) {
+                    // Обмежуємо першими 5000 елементами для стабільності на слабких приставках
+                    var limit = Math.min(progNodes.length, 5000);
+                    for (var j = 0; j < limit; j++) {
                         var pNode = progNodes[j];
                         programmes.push({
                             channel: pNode.getAttribute('channel'),
@@ -133,14 +123,14 @@
     }
 
     function showChannelPrograms(channelId, programmes) {
-        var filtered = programmes.filter(p => p.channel === channelId);
+        var filtered = programmes.filter(function(p) { return p.channel === channelId; });
         
-        var modalContent = $('<div class="scroll" style="max-height: 400px; overflow-y: auto; padding: 10px;"></div>');
+        var modalContent = $('<div style="max-height: 400px; overflow-y: auto; padding: 10px;"></div>');
         if (filtered.length === 0) {
             modalContent.append('<p>Немає даних про програми для цього каналу.</p>');
         } else {
             filtered.forEach(function (p) {
-                modalContent.append(`<div style="margin-bottom: 8px;"><b>${formatTime(p.start)}</b> — ${p.title}</div>`);
+                modalContent.append(`<div style="margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px;"><b>${formatTime(p.start)}</b> — ${p.title}</div>`);
             });
         }
 
@@ -156,14 +146,13 @@
 
     function formatTime(str) {
         if (!str || str.length < 12) return str;
-        // Формат XMLTV: YYYYMMDDhhmmss +ZZZZ -> витягуємо години та хвилини
         return str.substring(8, 10) + ':' + str.substring(10, 12);
     }
 
     if (window.appready) {
         initEPG();
     } else {
-        Listener.follow('app', function (e) {
+        Lampa.Listener.follow('app', function (e) {
             if (e.type == 'ready') {
                 initEPG();
             }
