@@ -74,7 +74,7 @@
         img.src = imgSrc;  
     }  
   
-    function applyStyles() {  
+        function applyStyles() {  
         var style = document.getElementById('tv-interface-styles');  
         if (!style) {  
             style = document.createElement('style');  
@@ -167,20 +167,22 @@
         // Фон для слайдшоу  
         css += '.full-start__background { will-change: opacity; transition: opacity 0.5s ease; } ';  
   
-        // ===== ФОНОВИЙ ТРЕЙЛЕР (YouTube) — Повноекранний режим під загальним фоном =====  
+        // ===== ФОНОВИЙ ТРЕЙЛЕР (YouTube) — Повноекранний режим з максимальним поглинанням країв =====  
         css += '.tvi-trailer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0; transition: opacity .5s ease; pointer-events: none; } ';  
         css += '.tvi-trailer.display { opacity: 1; } ';  
         css += '.tvi-trailer__yt { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; z-index: 0; } ';  
-        css += '.tvi-trailer__yt iframe { border: 0; width: 100%; height: 100%; flex-shrink: 0; pointer-events: none; will-change: transform; transition: transform .3s; opacity: 0.75; } ';  
+        css += '.tvi-trailer__iframe { width: 100%; height: 100%; pointer-events: none; } ';  
+        css += '.tvi-trailer__yt iframe { border: 0; width: 100%; height: 100%; flex-shrink: 0; pointer-events: none; will-change: transform; transition: transform .3s; opacity: 0.65; } ';  
   
-        // Багатошаровий оверлей для злиття відео з інтерфейсом  
+        // Потужний багатошаровий оверлей: зліва, зверху та знизу абсолютна чорнота, відео проступає лише на задньому плані правої частини
         css += '.tvi-trailer__overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; ';  
-        css += 'background: linear-gradient(90deg, rgba(15,15,15,0.95) 0%, rgba(15,15,15,0.75) 30%, rgba(15,15,15,0.4) 60%, rgba(15,15,15,0.85) 100%), ';  
-        css += 'linear-gradient(to top, rgba(15,15,15,1) 0%, rgba(15,15,15,0.6) 25%, rgba(15,15,15,0) 60%), ';  
-        css += 'linear-gradient(to bottom, rgba(15,15,15,0.8) 0%, rgba(15,15,15,0.2) 30%, rgba(15,15,15,0) 60%); } ';  
+        css += 'background: linear-gradient(90deg, #0f0f0f 0%, #0f0f0f 38%, rgba(15,15,15,0.95) 48%, rgba(15,15,15,0.5) 70%, rgba(15,15,15,0.85) 100%), ';  
+        css += 'linear-gradient(to top, #0f0f0f 0%, rgba(15,15,15,0.95) 35%, rgba(15,15,15,0.3) 65%, transparent 100%), ';  
+        css += 'linear-gradient(to bottom, #0f0f0f 0%, rgba(15,15,15,0.85) 30%, rgba(15,15,15,0.2) 60%, transparent 100%); } ';  
   
         style.textContent = css;  
-    }  
+        }
+    
   
     function getRatingColor(val) {  
         var n = parseFloat(val);  
