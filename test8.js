@@ -73,7 +73,6 @@
         img.onerror = function () { callback(false); };  
         img.src = imgSrc;  
     }  
-  
         function applyStyles() {  
         var style = document.getElementById('tv-interface-styles');  
         if (!style) {  
@@ -135,7 +134,6 @@
         css += '.quality-row-inline { position: absolute; top: 30px; right: 24px; z-index: 99; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; pointer-events: none; } ';  
   
         css += '.full-start-new__tagline { ' + getAnimRule('0.15s') + ' display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 1em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; order: 3; } ';  
-  
         css += '.plugin-meta-row { ' + getAnimRule('0.22s') + ' display: flex; justify-content: flex-start; align-items: center; flex-wrap: nowrap; gap: 10px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.8); width: 100%; order: 4; color: rgba(255,255,255,0.85); font-family: "Inter", -apple-system, system-ui, sans-serif; } ';  
   
         var loopAnimName = badgeAnim !== 'none' ? 'badge_anim_' + badgeAnim : '';  
@@ -143,8 +141,7 @@
   
         css += '.wave-item { transform-origin: center center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); ';  
         if (isUIAnim) {  
-            css += 'animation: wave_cascade 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards; opacity: 0;';  
-            css += ' will-change: transform, opacity; ';  
+            css += 'animation: wave_cascade 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards; opacity: 0; will-change: transform, opacity;';  
         } else if (badgeAnim !== 'none') {  
             css += 'animation: ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite; ';  
         } else {  
@@ -161,28 +158,25 @@
   
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.9em; white-space: nowrap; } ';  
         css += '.info-separator { opacity: 0.35; font-size: 0.85em; margin: 0 -2px; } ';  
-  
         css += '.card-tweaks__buttons { ' + getAnimRule('0.3s') + ' width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 15px !important; margin-top: 15px !important; order: 5; } ';  
   
-        // Фон для слайдшоу  
         css += '.full-start__background { will-change: opacity; transition: opacity 0.5s ease; } ';  
   
-        // ===== ФОНОВИЙ ТРЕЙЛЕР (YouTube) — Повноекранний режим з максимальним поглинанням країв =====  
+        // ===== ФОНОВИЙ ТРЕЙЛЕР (YouTube) — Зліва глухо, а права частина повністю відкрита для перегляду =====  
         css += '.tvi-trailer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0; transition: opacity .5s ease; pointer-events: none; } ';  
         css += '.tvi-trailer.display { opacity: 1; } ';  
         css += '.tvi-trailer__yt { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; z-index: 0; } ';  
         css += '.tvi-trailer__iframe { width: 100%; height: 100%; pointer-events: none; } ';  
-        css += '.tvi-trailer__yt iframe { border: 0; width: 100%; height: 100%; flex-shrink: 0; pointer-events: none; will-change: transform; transition: transform .3s; opacity: 0.65; } ';  
+        css += '.tvi-trailer__yt iframe { border: 0; width: 100%; height: 100%; flex-shrink: 0; pointer-events: none; will-change: transform; transition: transform .3s; opacity: 0.9; } ';  
   
-        // Потужний багатошаровий оверлей: зліва, зверху та знизу абсолютна чорнота, відео проступає лише на задньому плані правої частини
+        // Зліва та по краях темно, а середина і права сторона чисті й світлі  
         css += '.tvi-trailer__overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; ';  
-        css += 'background: linear-gradient(90deg, #0f0f0f 0%, #0f0f0f 38%, rgba(15,15,15,0.95) 48%, rgba(15,15,15,0.5) 70%, rgba(15,15,15,0.85) 100%), ';  
-        css += 'linear-gradient(to top, #0f0f0f 0%, rgba(15,15,15,0.95) 35%, rgba(15,15,15,0.3) 65%, transparent 100%), ';  
-        css += 'linear-gradient(to bottom, #0f0f0f 0%, rgba(15,15,15,0.85) 30%, rgba(15,15,15,0.2) 60%, transparent 100%); } ';  
+        css += 'background: linear-gradient(90deg, #0f0f0f 0%, #0f0f0f 35%, rgba(15,15,15,0.85) 42%, rgba(15,15,15,0.2) 58%, rgba(15,15,15,0.1) 100%), ';  
+        css += 'linear-gradient(to top, #0f0f0f 0%, rgba(15,15,15,0.8) 25%, rgba(15,15,15,0.1) 50%, transparent 100%), ';  
+        css += 'linear-gradient(to bottom, #0f0f0f 0%, rgba(15,15,15,0.7) 20%, rgba(15,15,15,0.1) 45%, transparent 100%); } ';  
   
         style.textContent = css;  
         }
-    
   
     function getRatingColor(val) {  
         var n = parseFloat(val);  
