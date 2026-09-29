@@ -1,109 +1,122 @@
 (function () {
     'use strict';
 
-    function initEPG() {
-        console.log('EPG Plugin: Initialized');
+    function registerEPG() {
+        if (window.epg_plugin_loaded) return;
+        window.epg_plugin_loaded = true;
 
-        // Реєструємо сторінку/компонент телепрограми
-        Lampa.Component.add('epg_view', function () {
-            var scroll = new Lampa.Scroll({ fields: {} });
-            var html = $('<div><div style="padding: 20px; text-align: center;">Завантаження та обробка EPG...</div></div>');
-            
-            scroll.body().append(html);
+        console.log('EPG Plugin: Starting registration...');
 
-            this.create = function () {
-                return scroll.render();
-            };
+        // 1. Реєструємо сторінку телепрограми
+        if (window.Lampa && Lampa.Component) {
+            Lampa.Component.add('epg_view', function () {
+                var scroll = new Lampa.Scroll({ fields: {} });
+                var html = $('<div><div style="padding: 20px; text-align: center;">Завантаження та обробка EPG...</div></div>');
+                
+                scroll.body().append(html);
 
-            this.start = function () {
-                Lampa.Controller.add('content', {
-                    toggle: function () {
-                        Lampa.Controller.collectionSet(scroll.render());
-                        Lampa.Controller.enable('content');
-                    },
-                    left: function () {
-                        Lampa.Controller.toggle('menu');
-                    },
-                    up: function () {
-                        scroll.up();
-                    },
-                    down: function () {
-                        scroll.down();
-                    },
-                    back: function () {
-                        Lampa.Activity.backward();
-                    }
-                });
-                Lampa.Controller.toggle('content');
+                this.create = function () {
+                    return scroll.render();
+                };
 
-                loadEPGData(function (channels, programmes) {
-                    html.empty();
-                    
-                    var stats = $(`
-                        <div style="padding: 15px; background: rgba(255,255,255,0.05); margin-bottom: 10px; border-radius: 6px;">
-                            <div><b>Знайдено каналів:</b> ${channels.length}</div>
-                            <div><b>Знайдено передач (всього):</b> ${programmes.length}</div>
-                        </div>
-                    `);
-                    html.append(stats);
+                this.start = function () {
+                    Lampa.Controller.add('content', {
+                        toggle: function () {
+                            Lampa.Controller.collectionSet(scroll.render());
+                            Lampa.Controller.enable('content');
+                        },
+                        left: function () {
+                            Lampa.Controller.toggle('menu');
+                        },
+                        up: function () {
+                            scroll.up();
+                        },
+                        down: function () {
+                            scroll.down();
+                        },
+                        back: function () {
+                            Lampa.Activity.backward();
+                        }
+                    });
+                    Lampa.Controller.toggle('content');
 
-                    if (!channels.length) {
-                        html.append('<div style="padding: 20px; text-align: center; color: #ff5252;">Не вдалося знайти канали у файлі. Перевірте CORS або посилання.</div>');
-                        scroll.update();
-                        return;
-                    }
-
-                    var list = $('<div class="settings-list"></div>');
-                    
-                    channels.forEach(function (channel) {
-                        var item = $(`
-                            <div class="settings-item selector" style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                                <div class="settings-item__name">${channel.name}</div>
-                                <div class="settings-item__descr" style="color: #aaa; font-size: 0.9em;">ID: ${channel.id}</div>
+                    loadEPGData(function (channels, programmes) {
+                        html.empty();
+                        
+                        var stats = $(`
+                            <div style="padding: 15px; background: rgba(255,255,255,0.05); margin-bottom: 10px; border-radius: 6px;">
+                                <div><b>Знайдено каналів:</b> ${channels.length}</div>
+                                <div><b>Знайдено передач (всього):</b> ${programmes.length}</div>
                             </div>
                         `);
+                        html.append(stats);
 
-                        item.on('hover:enter', function () {
-                            showChannelPrograms(channel, programmes);
+                        if (!channels.length) {
+                            html.append('<div style="padding: 20px; text-align: center; color: #ff5252;">Не вдалося завантажити EPG. Ймовірно, блокування CORS (HTTP посилання у HTTPS додатку).</div>');
+                            scroll.update();
+                            return;
+                        }
+
+                        var list = $('<div class="settings-list"></div>');
+                        
+                        channels.forEach(function (channel) {
+                            var item = $(`
+                                <div class="settings-item selector" style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                    <div class="settings-item__name">${channel.name}</div>
+                                    <div class="settings-item__descr" style="color: #aaa; font-size: 0.9em;">ID: ${channel.id}</div>
+                                </div>
+                            `);
+
+                            item.on('hover:enter', function () {
+                                showChannelPrograms(channel, programmes);
+                            });
+
+                            list.append(item);
                         });
 
-                        list.append(item);
+                        html.append(list);
+                        scroll.update();
                     });
+                };
 
-                    html.append(list);
-                    scroll.update();
-                });
-            };
-
-            this.destroy = function () {
-                scroll.destroy();
-            };
-        });
-
-        // Додаємо пункт у головне меню Lampa
-        if (window.menu) {
-            var menu_item = $(`
-                <li class="menu__item selector" data-action="epg">
-                    <div class="menu__ico">
-                        <svg height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
-                            <path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/>
-                        </svg>
-                    </div>
-                    <div class="menu__text">Телепрограма</div>
-                </li>
-            `);
-
-            menu_item.on('hover:enter', function () {
-                Lampa.Activity.push({
-                    url: '',
-                    component: 'epg_view',
-                    title: 'Телепрограма',
-                    page: 1
-                });
+                this.destroy = function () {
+                    scroll.destroy();
+                };
             });
-
-            $('.menu__list').append(menu_item);
         }
+
+        // 2. Додаємо пункт у меню з перевіркою наявності списку
+        function addMenuItem() {
+            if ($('.menu__list').length &&$('#epg_menu_item').length === 0) {
+                var menu_item = $(`
+                    <li class="menu__item selector" id="epg_menu_item" data-action="epg">
+                        <div class="menu__ico">
+                            <svg height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+                                <path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/>
+                            </svg>
+                        </div>
+                        <div class="menu__text">Телепрограма</div>
+                    </li>
+                `);
+
+                menu_item.on('hover:enter', function () {
+                    Lampa.Activity.push({
+                        url: '',
+                        component: 'epg_view',
+                        title: 'Телепрограма',
+                        page: 1
+                    });
+                });
+
+                $('.menu__list').append(menu_item);
+                console.log('EPG Plugin: Menu item added successfully');
+            } else {
+                // Якщо меню ще не з'явилося, пробуємо ще раз за секунду
+                setTimeout(addMenuItem, 1000);
+            }
+        }
+
+        addMenuItem();
     }
 
     function loadEPGData(callback) {
@@ -187,13 +200,18 @@
         return str.substring(6, 8) + '.' + str.substring(4, 6) + ' ' + str.substring(8, 10) + ':' + str.substring(10, 12);
     }
 
+    // Запуск одразу або після готовності додатку
     if (window.appready) {
-        initEPG();
+        registerEPG();
     } else {
-        Lampa.Listener.follow('app', function (e) {
-            if (e.type == 'ready') {
-                initEPG();
-            }
-        });
+        if (window.Lampa && Lampa.Listener) {
+            Lampa.Listener.follow('app', function (e) {
+                if (e.type == 'ready') {
+                    registerEPG();
+                }
+            });
+        }
+        // Запасний варіант — примусовий виклик через 2 секунди
+        setTimeout(registerEPG, 2000);
     }
 })();
