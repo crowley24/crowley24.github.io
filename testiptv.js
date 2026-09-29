@@ -1,114 +1,63 @@
 (function () {
     'use strict';
 
-    // Перевірка, чи Лампа завантажена
-    if (window.plugin_m3u_iptv) return;
-    window.plugin_m3u_iptv = true;
+    if (window.plugin_m3u_installed) return;
+    window.plugin_m3u_installed = true;
 
-    function M3UPlugin() {
-        let playlists = [];
-
-        // Ініціалізація плагіна в інтерфейсі Лампи
-        this.init = function () {
-            // Додаємо пункт в головне меню (розділ "Головна" або налаштування)
-            Lampa.Listener.follow('full', (e) => {
-                if (e.type == 'complite') {
-                    // Можна додати кнопку або інтегрувати в розділ джерел
-                }
-            });
-
-            // Реєструємо нову вкладку в меню налаштувань або як окремий розділ
-            console.log('IPTV M3U Plugin завантажено успішно');
-        };
-
-        // Парсер M3U формату
-        this.parseM3U = function (data) {
-            let lines = data.split('\n');
-            let items = [];
-            let currentItem = {};
-
-            lines.forEach(line => {
-                line = line.trim();
-                if (line.startsWith('#EXTINF:')) {
-                    currentItem = {};
-                    let info = line.substring(8);
-                    
-                    // Витягуємо назву каналу (після останньої коми)
-                    let commaIdx = info.lastIndexOf(',');
-                    if (commaIdx !== -1) {
-                        currentItem.title = info.substring(commaIdx + 1).trim();
-                    }
-                    
-                    // Витягуємо логотип (tvg-logo) якщо є
-                    let logoMatch = info.match(/tvg-logo="([^"]*)"/);
-                    if (logoMatch) {
-                        currentItem.img = logoMatch[1];
-                    }
-                } else if (line && !line.startsWith('#')) {
-                    // Це посилання на стрім
-                    currentItem.url = line;
-                    if (currentItem.title && currentItem.url) {
-                        items.push({
-                            title: currentItem.title,
-                            url: currentItem.url,
-                            img: currentItem.img || '',
-                            source: 'm3u_iptv'
-                        });
-                    }
-                    currentItem = {};
-                }
-            });
-
-            return items;
-        };
-
-        // Відтворення потоку
-        this.play = function (item) {
-            let player_url = item.url;
-            
-            Lampa.Player.play({
-                url: player_url,
-                title: item.title,
-                poster: item.img
-            });
-        };
-    }
-
-    let iptv = new M3UPlugin();
-    iptv.init();
-
-    // Додаємо іконку або розділ у головне меню Лампи
+    // Реєструємо компонент сторінки IPTV
     Lampa.Component.add('iptv_m3u', function (object) {
         let browser = new Lampa.Explorer(object);
-        
+
         browser.create = function () {
             this.activity.loader(true);
-            
-            // Приклад завантаження плейлиста за прямим посиланням
-            let playlist_url = Lampa.Storage.get('iptv_m3u_link', '');
-            
-            if (!playlist_url) {
-                let html = $('<div><div class="settings-param">Введіть посилання на M3U плейлист у налаштуваннях плагіна</div></div>');
-                this.timeHtml(html);
+
+            let url = Lampa.Storage.get('iptv_m3u_url', '');
+
+            if (!url) {
                 this.activity.loader(false);
+                Lampa.Noty.show('Будь ласка, вкажіть посилання на M3U в налаштуваннях');
+                
+                // Відкриваємо модальне вікно для введення посилання
+                Lampa.Input.edit({
+                    title: 'Посилання на M3U плейлист',
+                    value: '',
+                    free: true,
+                    nosave: true
+                }, (new_val) => {
+                    if (new_val) {
+                        Lampa.Storage.set('iptv_m3u_url', new_val);
+                        browser.start(); // Перезапуск сторінки
+                    }
+                });
                 return;
             }
 
-            $.get(playlist_url, (data) => {
-                let items = iptv.parseM3U(data);
+            // Завантажуємо плейлист
+            $.get(url, (data) => {
+                let items = parseM3U(data);
                 
+                if (items.length === 0) {
+                    Lampa.Noty.show('Плейлист порожній або має невірний формат');
+                    this.activity.loader(false);
+                    return;
+                }
+
                 let cards = items.map(elem => {
                     let card = Lampa.Template.get('card', {
                         title: elem.title,
-                        release_year: ''
+                        release_year: 'IPTV'
                     });
-                    
+
                     if (elem.img) {
                         card.find('.card__img').attr('src', elem.img);
                     }
 
                     card.on('hover:enter', () => {
-                        iptv.play(elem);
+                        Lampa.Player.play({
+                            url: elem.url,
+                            title: elem.title,
+                            poster: elem.img
+                        });
                     });
 
                     return card;
@@ -125,7 +74,71 @@
         return browser;
     });
 
-    // Додаємо кнопку в інтерфейс (наприклад, у меню плагінів або розширені параметри)
-    // Користувач зможе відкрити його через виклик компонента 'iptv_m3u'
+    // Простий парсер M3U
+    function parseM3U(data) {
+        let lines = data.split('\n');
+        let items = [];
+        let currentItem = {};
+
+        lines.forEach(line => {
+            line = line.trim();
+            if (line.startsWith('#EXTINF:')) {
+                currentItem = {};
+                let info = line.substring(8);
+                let commaIdx = info.lastIndexOf(',');
+                if (commaIdx !== -1) {
+                    currentItem.title = info.substring(commaIdx + 1).trim();
+                }
+                let logoMatch = info.match(/tvg-logo="([^"]*)"/);
+                if (logoMatch) {
+                    currentItem.img = logoMatch[1];
+                }
+            } else if (line && !line.startsWith('#')) {
+                currentItem.url = line;
+                if (currentItem.title && currentItem.url) {
+                    items.push({
+                        title: currentItem.title,
+                        url: currentItem.url,
+                        img: currentItem.img || ''
+                    });
+                }
+                currentItem = {};
+            }
+        });
+
+        return items;
+    }
+
+    // Додаємо кнопку в головне меню Лампи, коли інтерфейс готовий
+    Lampa.Listener.follow('app', (e) => {
+        if (e.type == 'ready') {
+            // Додаємо пункт у бокове меню
+            let menu_item = $(`
+                <li class="menu__item selector" data-action="iptv">
+                    <div class="menu__ico">
+                        <svg height="24" viewBox="0 0 24 24" width="24" fill="currentColor">
+                            <path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/>
+                        </svg>
+                    </div>
+                    <div class="menu__text">IPTV</div>
+                </li>
+            `);
+
+            menu_item.on('hover:enter', () => {
+                Lampa.Activity.push({
+                    url: '',
+                    component: 'iptv_m3u',
+                    title: 'IPTV M3U',
+                    page: 1
+                });
+            });
+
+            // Намагаємось додати в меню. Якщо структура відрізняється, виведемо через загальний список
+            let target_menu = $('.menu .menu__list');
+            if (target_menu.length) {
+                target_menu.append(menu_item);
+            }
+        }
+    });
 
 })(window, jQuery);
