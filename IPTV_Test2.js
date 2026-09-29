@@ -1,6 +1,6 @@
 // ==Lampa==  
 // name: IPTV PRO (EPG Built-in)  
-// version: 12.9  
+// version: 12.10  
   
 (function () {  
     'use strict';  
@@ -24,7 +24,7 @@
                 name: 'TEST',  
                 url: 'https://m3u.ch/pl/61b9ea4e90c4cf3165a4d19656e126a8_cf72fbb9e7ee647289c76620f1df15b4.m3u'  
             }],  
-            epg_url: 'https://iptvx.one/epg/epg.xml.gz',  
+            epg_url: 'https://crowley24.github.io/epg.xml',  
             favorites: [],  
             current_pl_index: 0  
         });  
@@ -94,14 +94,13 @@
             }  
         }  
   
-        // ---------- EPG через проксі-ланцюжок ----------  
+        // ---------- EPG: прямий запит на GitHub Pages ----------  
   
-        var EPG_PROXIES = [  
-            '',                                              // прямий запит  
-            'https://api.allorigins.win/raw?url=',  
-            'https://corsproxy.io/?url=',  
-            'https://api.codetabs.com/v1/proxy?quest='  
-        ];  
+        function fetchWithTimeout(url, ms) {  
+            var ctrl = new AbortController();  
+            var t = setTimeout(function () { ctrl.abort(); }, ms);  
+            return fetch(url, { signal: ctrl.signal }).finally(function () { clearTimeout(t); });  
+        }  
   
         this.loadEPG = function (onDone) {  
             if (onDone) epg_queue.push(onDone);  
@@ -109,38 +108,27 @@
             if (epg_loading) return;  
             epg_loading = true;  
   
-            var i = 0;  
-            var tryNext = function () {  
-                if (i >= EPG_PROXIES.length) {  
-                    console.log('[IPTV] EPG: усі джерела недоступні');  
+            console.log('[IPTV] EPG try:', config.epg_url);  
+            fetchWithTimeout(config.epg_url, 60000)  
+                .then(function (r) {  
+                    if (!r.ok) throw new Error('HTTP ' + r.status);  
+                    return r.arrayBuffer();  
+                })  
+                .then(function (buf) {  
+                    var bytes = new Uint8Array(buf);  
+                    var head = new TextDecoder().decode(bytes.slice(0, 100));  
+                    if (head.indexOf('<?xml') !== -1 || head.indexOf('<tv') !== -1) {  
+                        parseEPG(new TextDecoder().decode(bytes));  
+                    } else {  
+                        gunzipAndParse(bytes); // якщо раптом .gz  
+                    }  
+                })  
+                .catch(function (e) {  
+                    console.log('[IPTV] EPG fail:', e);  
+                    $('#epg-title').text('EPG недоступне');  
                     epg_loading = false;  
                     flushEPGQueue();  
-                    return;  
-                }  
-                var prefix = EPG_PROXIES[i++];  
-                var url = prefix === '' ? config.epg_url : prefix + encodeURIComponent(config.epg_url);  
-  
-                console.log('[IPTV] EPG try:', url);  
-                fetch(url)  
-                    .then(function (r) {  
-                        if (!r.ok) throw new Error('HTTP ' + r.status);  
-                        return r.arrayBuffer();  
-                    })  
-                    .then(function (buf) {  
-                        var bytes = new Uint8Array(buf);  
-                        var head = new TextDecoder().decode(bytes.slice(0, 100));  
-                        if (head.indexOf('<?xml') !== -1 || head.indexOf('<tv') !== -1) {  
-                            parseEPG(new TextDecoder().decode(bytes));  
-                        } else {  
-                            gunzipAndParse(bytes);  
-                        }  
-                    })  
-                    .catch(function (e) {  
-                        console.log('[IPTV] EPG fail:', url, e);  
-                        tryNext();  
-                    });  
-            };  
-            tryNext();  
+                });  
         };  
   
         // ---------- UI ----------  
