@@ -22,7 +22,6 @@
                 };
 
                 this.start = function () {
-                    // Безпечний запуск без перехоплення глобального контролера 'content'
                     if (window.Lampa && Lampa.Controller) {
                         Lampa.Controller.enable('content');
                     }
@@ -39,7 +38,7 @@
                         html.append(stats);
 
                         if (!channels.length) {
-                            html.append('<div style="padding: 20px; text-align: center; color: #ff5252;">Не вдалося завантажити EPG. Перевірте доступність посилання або CORS.</div>');
+                            html.append('<div style="padding: 20px; text-align: center; color: #ff5252;">Не вдалося завантажити EPG. Перевірте посилання або доступність сервера.</div>');
                             return;
                         }
 
@@ -102,53 +101,55 @@
     }
 
     function loadEPGData(callback) {
-        var epgUrl = 'http://only4.tv/epg/epg.xml';
+        var targetUrl = 'http://only4.tv/epg/epg.xml';
         
-        $.ajax({
-            url: epgUrl,
-            dataType: 'text',
-            timeout: 20000,
-            success: function (xmlString) {
-                try {
-                    var parser = new DOMParser();
-                    var xmlDoc = parser.parseFromString(xmlString, "text/xml");
-
-                    var channels = [];
-                    var channelNodes = xmlDoc.getElementsByTagName('channel');
-                    for (var i = 0; i < channelNodes.length; i++) {
-                        var node = channelNodes[i];
-                        var id = node.getAttribute('id');
-                        var nameNode = node.getElementsByTagName('display-name')[0];
-                        channels.push({
-                            id: id,
-                            name: nameNode ? nameNode.textContent : id
-                        });
-                    }
-
-                    var programmes = [];
-                    var progNodes = xmlDoc.getElementsByTagName('programme');
-                    var limit = Math.min(progNodes.length, 5000);
-                    for (var j = 0; j < limit; j++) {
-                        var pNode = progNodes[j];
-                        programmes.push({
-                            channel: pNode.getAttribute('channel'),
-                            start: pNode.getAttribute('start'),
-                            stop: pNode.getAttribute('stop'),
-                            title: pNode.getElementsByTagName('title')[0] ? pNode.getElementsByTagName('title')[0].textContent : ''
-                        });
-                    }
-
-                    callback(channels, programmes);
-                } catch (e) {
-                    console.error('EPG Parse Error:', e);
-                    callback([], []);
+        // Використовуємо Lampa.Network для обходу CORS блокувань
+        var network = new Lampa.Reguest();
+        
+        network.silent(targetUrl, function (xmlString) {
+            try {
+                // Якщо прийшов об'єкт або некоректний рядок
+                if (typeof xmlString !== 'string') {
+                    xmlString = JSON.stringify(xmlString);
                 }
-            },
-            error: function (xhr, status, error) {
-                console.error('EPG Load Error:', error);
+
+                var parser = new DOMParser();
+                var xmlDoc = parser.parseFromString(xmlString, "text/xml");
+
+                var channels = [];
+                var channelNodes = xmlDoc.getElementsByTagName('channel');
+                for (var i = 0; i < channelNodes.length; i++) {
+                    var node = channelNodes[i];
+                    var id = node.getAttribute('id');
+                    var nameNode = node.getElementsByTagName('display-name')[0];
+                    channels.push({
+                        id: id,
+                        name: nameNode ? nameNode.textContent : id
+                    });
+                }
+
+                var programmes = [];
+                var progNodes = xmlDoc.getElementsByTagName('programme');
+                var limit = Math.min(progNodes.length, 5000);
+                for (var j = 0; j < limit; j++) {
+                    var pNode = progNodes[j];
+                    programmes.push({
+                        channel: pNode.getAttribute('channel'),
+                        start: pNode.getAttribute('start'),
+                        stop: pNode.getAttribute('stop'),
+                        title: pNode.getElementsByTagName('title')[0] ? pNode.getElementsByTagName('title')[0].textContent : ''
+                    });
+                }
+
+                callback(channels, programmes);
+            } catch (e) {
+                console.error('EPG Parse Error:', e);
                 callback([], []);
             }
-        });
+        }, function (a, c) {
+            console.error('EPG Network Error:', a, c);
+            callback([], []);
+        }, false, { dataType: 'text' });
     }
 
     function showChannelPrograms(channel, programmes) {
