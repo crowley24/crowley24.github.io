@@ -90,7 +90,6 @@
   
         var css = '';  
   
-        // Преміальні ефекти з м'яким розгортанням  
         css += '@keyframes anim_smooth_zoom { 0% { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.94); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } } ';  
         css += '@keyframes anim_cine_slide { 0% { opacity: 0; transform: translate3d(0, 25px, 0); } 100% { opacity: 1; transform: translate3d(0, 0, 0); } } ';  
         css += '@keyframes anim_luxury_fade { 0% { opacity: 0; transform: translate3d(0, 12px, 0) scale(1.03); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } } ';  
@@ -103,7 +102,6 @@
         css += '@keyframes badge_anim_spin_slow { 0% { transform: rotate(0deg); } 25% { transform: rotate(2deg); } 75% { transform: rotate(-2deg); } 100% { transform: rotate(0deg); } } ';  
         css += '@keyframes badge_anim_float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } } ';  
   
-        // Приховування непотрібних стандартних елементів  
         css += '.full-start__reactions, [class*="reactions"] { display: none !important; } ';  
         css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="rating-count"], [class*="status"] { display:none !important; } ';  
         css += '.full-start-new__right > div:first-child { display: none !important; } ';  
@@ -165,14 +163,21 @@
   
         css += '.card-tweaks__buttons { ' + getAnimRule('0.3s') + ' width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 15px !important; margin-top: 15px !important; order: 5; } ';  
   
-        // Фон для слайдшоу — апаратне прискорення  
+        // FAILSAFE: якщо CSS keyframes не відпрацювали на ТВ — примусова видимість  
+        css += '.tvi-anim-done { opacity: 1 !important; transform: none !important; } ';  
+        css += '.tvi-anim-done img { opacity: 1 !important; } ';  
+  
+        // Фон для слайдшоу  
         css += '.full-start__background { will-change: opacity; } ';  
   
-        // Фоновий трейлер (YouTube)  
-        css += '.tvi-trailer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0; transition: opacity .4s; pointer-events: none; overflow: hidden; background: #000; } ';  
+        // Фоновий трейлер (YouTube) — z-index: 1, над .background але під контентом  
+        css += '.tvi-trailer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; opacity: 0; transition: opacity .4s; pointer-events: none; overflow: hidden; background: #000; } ';  
         css += '.tvi-trailer.display { opacity: 1; } ';  
         css += '.tvi-trailer__box { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; } ';  
         css += '.tvi-trailer iframe { border: 0; width: 100%; height: 100%; flex-shrink: 0; pointer-events: none; } ';  
+  
+        // Коли трейлер активний — ховаємо картинковий фон/постер  
+        css += 'body.tvi-trailer-on .full-start__background, body.tvi-trailer-on .full-start-new__poster img { opacity: 0 !important; transition: opacity .5s; } ';  
   
         style.textContent = css;  
     }  
@@ -194,10 +199,10 @@
   
     function getCubRating(e) {  
         if (!e.data || !e.data.reactions || !e.data.reactions.result) return null;  
-        var reactionCoef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };  
+        var reactionCoef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };
         var sum = 0, cnt = 0;  
-        e.data.reactions.result.forEach(function(r) {
-          if (r.counter) { sum += (r.counter * reactionCoef[r.type]); cnt += r.counter; }  
+        e.data.reactions.result.forEach(function(r) {  
+            if (r.counter) { sum += (r.counter * reactionCoef[r.type]); cnt += r.counter; }  
         });  
         if (cnt >= 5) {  
             var isTv = e.object.method === 'tv', avg = isTv ? 7.4 : 6.5, m = isTv ? 50 : 150;  
@@ -309,8 +314,7 @@
                 applyMovieDetailsData(data, movie, $render);  
             }  
         });  
-    }  
-  
+    }
     /**  
      * ВИБІР ТРЕЙЛЕРА з movie.videos.results  
      */  
@@ -349,24 +353,26 @@
     }  
   
     /**  
-     * ФОНОВИЙ ТРЕЙЛЕР (YouTube IFrame API, muted, loop)  
+     * ФОНОВИЙ ТРЕЙЛЕР (YouTube IFrame API)  
      */  
     function startTrailer(e, $render) {  
-        if (!Lampa.Storage.get('tv_interface_trailer_bg')) return;  
-        if (!(Lampa.Manifest && Lampa.Manifest.app_digital >= 220)) return;  
+        if (!Lampa.Storage.get('tv_interface_trailer_bg')) return false;  
+        if (!(Lampa.Manifest && Lampa.Manifest.app_digital >= 220)) return false;  
   
         var movie = e.data.movie || (e.object && e.object.card);  
         var video = pickTrailer(movie);  
-        if (!video) return;  
+        if (!video) return false; // fallback на слайдшоу  
   
         var activity = e.object.activity;  
         var player = null;  
         var destroyed = false;  
+  
+        // ВИПРАВЛЕНО: вставляємо в $render напряму — .activity__body може не існувати  
         var $wrap = $('<div class="tvi-trailer"><div class="tvi-trailer__box"></div></div>');  
-        $render.find('.activity__body').prepend($wrap);  
+        $render.prepend($wrap);  
   
         var zoom = parseInt(Lampa.Storage.get('tv_interface_trailer_zoom')) || 35;  
-        var scale = 1 + zoom / 100; // 35% → 1.35  
+        var scale = 1 + zoom / 100;  
   
         function initPlayer() {  
             if (destroyed) return;  
@@ -386,11 +392,14 @@
                         var iframe = $(player.getIframe());  
                         if (blur > 0) iframe.css('filter', 'blur(' + blur + 'px)');  
                         iframe.css('transform', 'scale(' + scale + ') translateZ(0)');  
+                        // ВИПРАВЛЕНО: явний mute+play — autoplay із playerVars на ТВ ігнорується  
+                        try { player.mute(); player.playVideo(); } catch (err) {}  
                         $wrap.addClass('display');  
+                        $('body').addClass('tvi-trailer-on');  
                     },  
                     onStateChange: function (st) {  
                         if (st.data === window.YT.PlayerState.ENDED) {  
-                            try { player.playVideo(); } catch (err) {} // зациклюємо  
+                            try { player.playVideo(); } catch (err) {} // цикл  
                         }  
                         if (st.data === window.YT.PlayerState.BUFFERING) {  
                             try { st.target.setPlaybackQuality('hd1080'); } catch (err) {}  
@@ -404,10 +413,11 @@
         function destroyTrailer() {  
             destroyed = true;  
             try { if (player) player.destroy(); } catch (err) {}  
+            $('body').removeClass('tvi-trailer-on');  
             $wrap.remove();  
         }  
   
-        // інʼєкція YouTube IFrame API (одноразово)  
+        // Інʼєкція YouTube IFrame API (одноразово)  
         if (window.YT && window.YT.Player) {  
             initPlayer();  
         } else {  
@@ -431,6 +441,8 @@
             }  
         };  
         Lampa.Listener.follow('activity', onDestroy);  
+  
+        return true;  
     }  
   
     /**  
@@ -499,7 +511,7 @@
                             'transform': 'translateZ(0)'  
                         });  
                         $currentBg.after($newBg);  
-                        $newBg[0].offsetHeight;  
+                        $newBg[0].offsetHeight; // reflow  
   
                         $newBg.css('opacity', '1');  
                         $currentBg.css({ 'transition': 'opacity 1.5s ease-in-out', 'opacity': '0' });  
@@ -523,8 +535,7 @@
                 Lampa.Listener.follow('activity', stop);  
             }  
         );  
-    }  
-  
+    }
     function init() {  
         Lampa.Listener.follow('full', function (e) {  
             if (e.type === 'destroy' || e.type === 'onBeforeDestroy') {  
@@ -547,12 +558,9 @@
                 renderMeta($render.find('.full-start-new__right'), e);  
                 loadMovieDetails(movie, $render);  
   
-                // Трейлер або слайдшоу — взаємовиключно  
-                if (Lampa.Storage.get('tv_interface_trailer_bg')) {  
-                    startTrailer(e, $render);  
-                } else {  
-                    startSlideshow(e, $render);  
-                }  
+                // Трейлер або слайдшоу — взаємовиключно + fallback  
+                var trailerStarted = startTrailer(e, $render);  
+                if (!trailerStarted) startSlideshow(e, $render);  
   
                 var $body = $render.find('.full-start-new__body');  
                 var $buttons = $render.find('.full-start-new__buttons');  
@@ -581,6 +589,12 @@
                     var $cubItem = $('<div class="plugin-rating-item wave-item"><img src="' + ratingIcons.cub + '"> <span style="color:' + getRatingColor(cub) + '">' + cub + '</span></div>');  
                     $qRow.append($cubItem);  
                 }  
+  
+                // FAILSAFE: якщо CSS-keyframes не відпрацювали на ТВ — примусово показуємо елементи  
+                setTimeout(function () {  
+                    $render.find('.studio-header-brand, .full-start-new__title, .full-start-new__tagline, .plugin-meta-row, .card-tweaks__buttons, .wave-item')  
+                        .addClass('tvi-anim-done');  
+                }, 1200);  
             }  
         });  
     }  
