@@ -4,9 +4,10 @@
     function initEPG() {
         console.log('EPG Plugin: Initialized');
 
+        // Реєструємо сторінку/компонент телепрограми
         Lampa.Component.add('epg_view', function () {
             var scroll = new Lampa.Scroll({ fields: {} });
-            var html = $('<div><div style="padding: 20px; text-align: center;">Завантаження телепрограми...</div></div>');
+            var html = $('<div><div style="padding: 20px; text-align: center;">Завантаження та обробка EPG...</div></div>');
             
             scroll.body().append(html);
 
@@ -37,8 +38,17 @@
 
                 loadEPGData(function (channels, programmes) {
                     html.empty();
+                    
+                    var stats = $(`
+                        <div style="padding: 15px; background: rgba(255,255,255,0.05); margin-bottom: 10px; border-radius: 6px;">
+                            <div><b>Знайдено каналів:</b> ${channels.length}</div>
+                            <div><b>Знайдено передач (всього):</b> ${programmes.length}</div>
+                        </div>
+                    `);
+                    html.append(stats);
+
                     if (!channels.length) {
-                        html.html('<div style="padding: 20px; text-align: center; color: #ff5252;">Не вдалося завантажити або розібрати EPG (можливо блокування CORS)</div>');
+                        html.append('<div style="padding: 20px; text-align: center; color: #ff5252;">Не вдалося знайти канали у файлі. Перевірте CORS або посилання.</div>');
                         scroll.update();
                         return;
                     }
@@ -49,12 +59,12 @@
                         var item = $(`
                             <div class="settings-item selector" style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">
                                 <div class="settings-item__name">${channel.name}</div>
-                                <div class="settings-item__descr" style="color: #aaa; font-size: 0.9em;">Натисніть для перегляду програми</div>
+                                <div class="settings-item__descr" style="color: #aaa; font-size: 0.9em;">ID: ${channel.id}</div>
                             </div>
                         `);
 
                         item.on('hover:enter', function () {
-                            showChannelPrograms(channel.id, programmes);
+                            showChannelPrograms(channel, programmes);
                         });
 
                         list.append(item);
@@ -69,6 +79,31 @@
                 scroll.destroy();
             };
         });
+
+        // Додаємо пункт у головне меню Lampa
+        if (window.menu) {
+            var menu_item = $(`
+                <li class="menu__item selector" data-action="epg">
+                    <div class="menu__ico">
+                        <svg height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+                            <path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z"/>
+                        </svg>
+                    </div>
+                    <div class="menu__text">Телепрограма</div>
+                </li>
+            `);
+
+            menu_item.on('hover:enter', function () {
+                Lampa.Activity.push({
+                    url: '',
+                    component: 'epg_view',
+                    title: 'Телепрограма',
+                    page: 1
+                });
+            });
+
+            $('.menu__list').append(menu_item);
+        }
     }
 
     function loadEPGData(callback) {
@@ -77,7 +112,7 @@
         $.ajax({
             url: epgUrl,
             dataType: 'text',
-            timeout: 10000,
+            timeout: 15000,
             success: function (xmlString) {
                 try {
                     var parser = new DOMParser();
@@ -97,8 +132,7 @@
 
                     var programmes = [];
                     var progNodes = xmlDoc.getElementsByTagName('programme');
-                    // Обмежуємо першими 5000 елементами для стабільності на слабких приставках
-                    var limit = Math.min(progNodes.length, 5000);
+                    var limit = Math.min(progNodes.length, 20000);
                     for (var j = 0; j < limit; j++) {
                         var pNode = progNodes[j];
                         programmes.push({
@@ -122,15 +156,19 @@
         });
     }
 
-    function showChannelPrograms(channelId, programmes) {
-        var filtered = programmes.filter(function(p) { return p.channel === channelId; });
+    function showChannelPrograms(channel, programmes) {
+        var filtered = programmes.filter(function(p) { 
+            return p.channel === channel.id; 
+        });
         
         var modalContent = $('<div style="max-height: 400px; overflow-y: auto; padding: 10px;"></div>');
+        modalContent.append(`<div style="margin-bottom: 10px; color: #aaa;">Канал: ${channel.name} (ID: ${channel.id}) — Знайдено передач: ${filtered.length}</div>`);
+
         if (filtered.length === 0) {
-            modalContent.append('<p>Немає даних про програми для цього каналу.</p>');
+            modalContent.append('<p style="color: #ff5252;">Немає програм для цього ID каналу. Можливо, у файлі EPG використовуються інші ідентифікатори.</p>');
         } else {
             filtered.forEach(function (p) {
-                modalContent.append(`<div style="margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px;"><b>${formatTime(p.start)}</b> — ${p.title}</div>`);
+                modalContent.append(`<div style="margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px;"><b>${formatTime(p.start)} - ${formatTime(p.stop)}</b> — ${p.title}</div>`);
             });
         }
 
@@ -146,7 +184,7 @@
 
     function formatTime(str) {
         if (!str || str.length < 12) return str;
-        return str.substring(8, 10) + ':' + str.substring(10, 12);
+        return str.substring(6, 8) + '.' + str.substring(4, 6) + ' ' + str.substring(8, 10) + ':' + str.substring(10, 12);
     }
 
     if (window.appready) {
