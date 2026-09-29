@@ -7,7 +7,6 @@
 
         console.log('EPG Plugin: Starting registration...');
 
-        // 1. Реєструємо сторінку телепрограми з обома методами (create та render)
         if (window.Lampa && Lampa.Component) {
             Lampa.Component.add('epg_view', function () {
                 var scroll = new Lampa.Scroll({ fields: {} });
@@ -15,8 +14,12 @@
                 
                 scroll.body().append(html);
 
-                // Дублюємо метод для сумісності з будь-якою версією ядра Lampa
-                this.create = this.render = function () {
+                // Розділяємо методи без рекурсії
+                this.create = function () {
+                    return scroll.render();
+                };
+
+                this.render = function () {
                     return scroll.render();
                 };
 
@@ -53,7 +56,7 @@
                         html.append(stats);
 
                         if (!channels.length) {
-                            html.append('<div style="padding: 20px; text-align: center; color: #ff5252;">Не вдалося завантажити EPG. Ймовірно, блокування CORS (HTTP посилання у HTTPS додатку).</div>');
+                            html.append('<div style="padding: 20px; text-align: center; color: #ff5252;">Не вдалося завантажити EPG. Перевірте доступність посилання.</div>');
                             scroll.update();
                             return;
                         }
@@ -86,7 +89,6 @@
             });
         }
 
-        // 2. Додаємо пункт у меню
         function addMenuItem() {
             if ($('.menu__list').length &&$('#epg_menu_item').length === 0) {
                 var menu_item = $(`
@@ -124,7 +126,7 @@
         $.ajax({
             url: epgUrl,
             dataType: 'text',
-            timeout: 15000,
+            timeout: 20000,
             success: function (xmlString) {
                 try {
                     var parser = new DOMParser();
@@ -144,7 +146,8 @@
 
                     var programmes = [];
                     var progNodes = xmlDoc.getElementsByTagName('programme');
-                    var limit = Math.min(progNodes.length, 20000);
+                    // Зменшуємо ліміт до 5000, щоб приставка не зависала від перевантаження пам'яті
+                    var limit = Math.min(progNodes.length, 5000);
                     for (var j = 0; j < limit; j++) {
                         var pNode = progNodes[j];
                         programmes.push({
