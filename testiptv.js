@@ -26,7 +26,13 @@
                 }, (new_val) => {
                     if (new_val) {
                         Lampa.Storage.set('iptv_m3u_url', new_val);
-                        browser.start(); // Перезапуск сторінки
+                        // Перезапускаємо активність коректно через Lampa.Activity.replace
+                        Lampa.Activity.replace({
+                            url: '',
+                            component: 'iptv_m3u',
+                            title: 'IPTV M3U',
+                            page: 1
+                        });
                     }
                 });
                 return;
@@ -112,7 +118,6 @@
     // Додаємо кнопку в головне меню Лампи, коли інтерфейс готовий
     Lampa.Listener.follow('app', (e) => {
         if (e.type == 'ready') {
-            // Додаємо пункт у бокове меню
             let menu_item = $(`
                 <li class="menu__item selector" data-action="iptv">
                     <div class="menu__ico">
@@ -133,7 +138,6 @@
                 });
             });
 
-            // Намагаємось додати в меню. Якщо структура відрізняється, виведемо через загальний список
             let target_menu = $('.menu .menu__list');
             if (target_menu.length) {
                 target_menu.append(menu_item);
