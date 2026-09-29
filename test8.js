@@ -167,16 +167,16 @@
         // Фон для слайдшоу — плавний перехід і апаратне прискорення  
         css += '.full-start__background { will-change: opacity; transition: opacity 0.5s ease; } ';  
   
-        // ===== ФОНОВИЙ ТРЕЙЛЕР (YouTube) =====  
+        // ===== ФОНОВИЙ ТРЕЙЛЕР (YouTube) — 1/4 екрана у верхньому правому куті =====  
         css += '.tvi-trailer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0; transition: opacity .4s; pointer-events: none; } ';  
         css += '.tvi-trailer.display { opacity: 1; } ';  
-        css += '.tvi-trailer__yt { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; z-index: 0; } ';  
+        css += '.tvi-trailer__yt { position: fixed; top: 0; right: 0; width: 50vw; height: 50vh; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; z-index: 0; border-bottom-left-radius: 16px; } ';  
         css += '.tvi-trailer__yt iframe { border: 0; width: 100%; height: 100%; flex-shrink: 0; pointer-events: none; will-change: transform; transition: transform .3s; } ';  
   
-        // Оверлей для затемнення зверху, знизу та зліва  
+        // Оверлей для плавності від краю віджета до темного фону  
         css += '.tvi-trailer__overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; ';  
-        css += 'background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 30%, rgba(0,0,0,0.2) 70%, rgba(0,0,0,0.9) 100%), ';  
-        css += 'linear-gradient(to right, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 35%, rgba(0,0,0,0) 100%); } ';  
+        css += 'background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.8) 100%), ';  
+        css += 'linear-gradient(to left, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.8) 100%); } ';  
   
         style.textContent = css;  
     }  
@@ -375,7 +375,7 @@
             if (destroyed || (item_id && currentActiveId !== item_id)) return;  
   
             player = new window.YT.Player($wrap.find('.tvi-trailer__iframe')[0], {  
-                height: window.innerHeight * 2,  
+                height: window.innerHeight,  
                 width: window.innerWidth,  
                 videoId: trailer.id,  
                 playerVars: {  
