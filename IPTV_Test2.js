@@ -1,6 +1,6 @@
 // ==Lampa==  
 // name: IPTV PRO (EPG Built-in)  
-// version: 13.0  
+// version: 12.8  
   
 (function () {  
     'use strict';  
@@ -12,7 +12,11 @@
         var current_list = [];  
         var active_col = 'groups';  
         var index_g = 0, index_c = 0;  
-        var epg_programs = {};  
+  
+        var epg_map = {};       // tvg-id (lowercase) -> [{title, desc, start, stop}]  
+        var epg_loaded = false;  
+        var epg_loading = false;  
+        var epg_queue = [];     // колбеки, що чекають на завантаження  
   
         var storage_key = 'iptv_pro_v12';  
         var config = Lampa.Storage.get(storage_key, {  
@@ -20,10 +24,125 @@
                 name: 'TEST',  
                 url: 'https://m3u.ch/pl/61b9ea4e90c4cf3165a4d19656e126a8_cf72fbb9e7ee647289c76620f1df15b4.m3u'  
             }],  
-            epg_url: 'http://1lot.tv/epg/epg.xml',  
+            epg_url: 'https://iptvx.one/epg/epg.xml.gz',  
             favorites: [],  
             current_pl_index: 0  
         });  
+  
+        // ---------- helpers ----------  
+  
+        function parseXMLTVTime(s) {  
+            // формат: 20240929120000 +0300  
+            if (!s) return 0;  
+            var m = s.match(/(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})\s*([+-]\d{4})?/);  
+            if (!m) return 0;  
+            var iso = m[1] + '-' + m[2] + '-' + m[3] + 'T' + m[4] + ':' + m[5] + ':' + m[6];  
+            if (m[7]) iso += m[7].slice(0, 3) + ':' + m[7].slice(3);  
+            var t = Date.parse(iso);  
+            return isNaN(t) ? 0 : t / 1000;  
+        }  
+  
+        function fmtTime(t) {  
+            var d = new Date(t * 1000);  
+            return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);  
+        }  
+  
+        function flushEPGQueue() {  
+            epg_queue.forEach(function (cb) { try { cb(); } catch (e) {} });  
+            epg_queue = [];  
+        }  
+  
+        function parseEPG(str) {  
+            try {  
+                var doc = $($.parseXML(str));  
+                doc.find('programme').each(function () {  
+                    var el = $(this);  
+                    var chan = (el.attr('channel') || '').toLowerCase();  
+                    if (!chan) return;  
+                    var item = {  
+                        title: el.find('title').first().text(),  
+                        desc: el.find('desc').first().text(),  
+                        start: parseXMLTVTime(el.attr('start')),  
+                        stop: parseXMLTVTime(el.attr('stop'))  
+                    };  
+                    (epg_map[chan] = epg_map[chan] || []).push(item);  
+                });  
+                epg_loaded = true;  
+                console.log('[IPTV] EPG loaded, channels:', Object.keys(epg_map).length);  
+            } catch (e) {  
+                console.log('[IPTV] EPG parse error', e);  
+            }  
+            epg_loading = false;  
+            flushEPGQueue();  
+        }  
+  
+        function gunzipAndParse(buf) {  
+            try {  
+                var bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf);  
+                var text;  
+                if (window.pako) {  
+                    text = new TextDecoder().decode(pako.ungzip(bytes));  
+                } else if (window.DecompressionStream) {  
+                    var ds = new DecompressionStream('gzip');  
+                    var stream = new Blob([bytes]).stream().pipeThrough(ds);  
+                    new Response(stream).text().then(parseEPG);  
+                    return;  
+                } else {  
+                    text = new TextDecoder().decode(bytes); // файл не стиснутий  
+                }  
+                parseEPG(text);  
+            } catch (e) {  
+                console.log('[IPTV] gunzip fail', e);  
+                epg_loading = false;  
+                flushEPGQueue();  
+            }  
+        }  
+  
+        this.loadEPG = function (onDone) {  
+            if (onDone) epg_queue.push(onDone);  
+            if (epg_loaded) { flushEPGQueue(); return; }  
+            if (epg_loading) return;  
+            epg_loading = true;  
+  
+            var url = config.epg_url;  
+            var is_gz = url.indexOf('.gz') !== -1;  
+  
+            // 1) через Lampa.Reguest (йде через проксі Lampac, обходить CORS)  
+            try {  
+                var network = new Lampa.Reguest();  
+                network.timeout(60000);  
+                network.silent(url,  
+                    function (str) {  
+                        if (typeof str === 'string' && str.indexOf('<?xml') !== -1) {  
+                            parseEPG(str);  
+                        } else {  
+                            gunzipAndParse(str);  
+                        }  
+                    },  
+                    function () { fetchEPG(url, is_gz); },  
+                    false, { dataType: is_gz ? 'arraybuffer' : 'text' }  
+                );  
+            } catch (e) {  
+                fetchEPG(url, is_gz);  
+            }  
+        };  
+  
+        // 2) fallback — прямий fetch  
+        function fetchEPG(url, is_gz) {  
+            fetch(url).then(function (r) { return r.arrayBuffer(); })  
+                .then(function (buf) {  
+                    var bytes = new Uint8Array(buf);  
+                    if (is_gz) gunzipAndParse(bytes);  
+                    else parseEPG(new TextDecoder().decode(bytes));  
+                })  
+                .catch(function (e) {  
+                    console.log('[IPTV] EPG load fail', e);  
+                    epg_loading = false;  
+                    flushEPGQueue();  
+                });  
+        }  
+  
+        // ---------- UI ----------  
   
         this.create = function () {  
             root = $('<div class="iptv-root"></div>');  
@@ -52,133 +171,41 @@
                     '.epg-title-big{font-size:1.6rem; color:#fff; font-weight:700; margin-bottom:1rem;}' +  
                     '.epg-now{color:#2962ff; font-size:1.1rem; font-weight:bold; margin-top:1.5rem;}' +  
                     '.epg-prog-name{font-size:1.4rem; color:#ccc; margin:.5rem 0;}' +  
+                    '.epg-time{color:#777; font-size:1rem;}' +  
+                    '.epg-next{margin-top:1rem; color:#888; font-size:1rem;}' +  
                     '.epg-bar{height:4px; background:rgba(255,255,255,0.1); border-radius:2px; overflow:hidden;}' +  
                     '.epg-bar-inner{height:100%; background:#2962ff; width:0%;}' +  
                     '</style>');  
             }  
   
-            this.loadEPG();  
             this.loadPlaylist();  
+            this.loadEPG(); // вантажимо EPG відразу у фоні  
             return root;  
         };  
   
-        // Парсинг XMLTV-рядка у epg_programs  
-        function parseEPGString(xml_str) {  
-            var xmlDoc = new DOMParser().parseFromString(xml_str, "text/xml");  
-            if (xmlDoc.getElementsByTagName('parsererror').length) {  
-                console.log('IPTV PRO: не XML. Початок відповіді:', xml_str.substr(0, 200));  
-                Lampa.Noty.show('EPG: сервер віддав не-XML');  
-                return;  
-            }  
-            var programmes = xmlDoc.getElementsByTagName('programme');  
-            epg_programs = {};  
-            for (var i = 0; i < programmes.length; i++) {  
-                var p = programmes[i];  
-                var channel_id = p.getAttribute('channel');  
-                if (!channel_id) continue;  
-                if (!epg_programs[channel_id]) epg_programs[channel_id] = [];  
-                var t = p.getElementsByTagName('title')[0];  
-                epg_programs[channel_id].push({  
-                    start: parseXMLDate(p.getAttribute('start')),  
-                    stop:  parseXMLDate(p.getAttribute('stop')),  
-                    title: t ? t.textContent : ''  
-                });  
-            }  
-            console.log('IPTV PRO: EPG завантажено, каналів: ' + Object.keys(epg_programs).length);  
-            Lampa.Noty.show('EPG: ' + Object.keys(epg_programs).length + ' каналів');  
-            if (current_list[index_c]) _this.showDetails(current_list[index_c]);  
-        }  
-  
-        // Завантаження EPG: native-запит + авто-розпаковка gzip  
-        this.loadEPG = function () {  
-            if (!config.epg_url) return;  
-  
-            var network = new Lampa.Reguest();  
-            network.timeout(90000);  
-  
-            network.native(config.epg_url, function (resp) {  
-                try {  
-                    if (typeof resp === 'string' && resp.charCodeAt(0) === 0x1f && resp.charCodeAt(1) === 0x8b) {  
-                        // gzip-сміття у строку -> Uint8Array -> DecompressionStream  
-                        var bytes = new Uint8Array(resp.length);  
-                        for (var i = 0; i < resp.length; i++) bytes[i] = resp.charCodeAt(i) & 0xff;  
-  
-                        if (typeof DecompressionStream === 'undefined') {  
-                            Lampa.Noty.show('EPG: gzip, а розпаковка недоступна на цьому пристрої');  
-                            return;  
-                        }  
-                        new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip')))  
-                            .text()  
-                            .then(function (txt) { try { parseEPGString(txt); } catch (e) { console.log('IPTV PRO: parse error', e); } })  
-                            .catch(function (e) {  
-                                console.log('IPTV PRO: gzip error', e);  
-                                Lampa.Noty.show('EPG: помилка розпаковки gzip');  
-                            });  
-                    } else {  
-                        parseEPGString(resp);  
-                    }  
-                } catch (e) {  
-                    console.log('IPTV PRO: EPG exception', e);  
-                }  
-            }, function (err) {  
-                console.log('IPTV PRO: EPG error', err);  
-                Lampa.Noty.show('Не вдалося завантажити EPG');  
-            }, false, { dataType: 'text' });  
-        };  
-  
-        // XMLTV-дата (YYYYMMDDHHMMSS +ZZZZ) -> unix sec, з урахуванням таймзони  
-        function parseXMLDate(str) {  
-            if (!str) return 0;  
-            var year   = parseInt(str.substr(0, 4), 10);  
-            var month  = parseInt(str.substr(4, 2), 10) - 1;  
-            var day    = parseInt(str.substr(6, 2), 10);  
-            var hour   = parseInt(str.substr(8, 2), 10);  
-            var minute = parseInt(str.substr(10, 2), 10);  
-            var second = parseInt(str.substr(12, 2), 10) || 0;  
-  
-            var utc_ms = Date.UTC(year, month, day, hour, minute, second);  
-            var tz = str.match(/([+-])(\d{2})(\d{2})\s*$/);  
-            if (tz) {  
-                var off = (parseInt(tz[2], 10) * 60 + parseInt(tz[3], 10)) * 60 * 1000;  
-                utc_ms += (tz[1] === '+') ? -off : off;  
-            }  
-            return utc_ms / 1000;  
-        }  
-  
         this.loadPlaylist = function () {  
             var pl = config.playlists[config.current_pl_index];  
-            var network = new Lampa.Reguest();  
-            network.timeout(30000);  
-            network.native(pl.url, function (str) {  
-                _this.parse(str);  
-            }, function (err) {  
-                console.log('IPTV PRO: playlist error', err);  
-                Lampa.Noty.show('Помилка завантаження плейлиста');  
-            }, false, { dataType: 'text' });  
+            $.ajax({  
+                url: pl.url,  
+                success: function (str) { _this.parse(str); },  
+                error: function () { Lampa.Noty.show('Помилка завантаження плейлиста'); }  
+            });  
         };  
   
         this.parse = function (str) {  
             var lines = str.split('\n');  
             groups_data = { '⭐ Обране': config.favorites };  
-  
-            // авто-EPG з url-tvg у першому рядку m3u  
-            var m = lines[0] && lines[0].match(/url-tvg="([^"]+)"/i);  
-            if (m && m[1] && m[1] !== config.epg_url) {  
-                console.log('IPTV PRO: url-tvg з плейлиста =', m[1]);  
-                config.epg_url = m[1];  
-                this.loadEPG();  
-            }  
-  
             for (var i = 0; i < lines.length; i++) {  
                 var l = lines[i].trim();  
                 if (l.indexOf('#EXTINF') === 0) {  
-                    var name   = (l.match(/,(.*)$/) || ['', ''])[1].trim();  
-                    var group  = (l.match(/group-title="([^"]+)"/i) || ['', 'ЗАГАЛЬНІ'])[1];  
-                    var logo   = (l.match(/tvg-logo="([^"]+)"/i) || ['', ''])[1];  
+                    var name = (l.match(/,(.*)$/) || ['', ''])[1].trim();  
+                    var group = (l.match(/group-title="([^"]+)"/i) || ['', 'ЗАГАЛЬНІ'])[1];  
+                    var logo = (l.match(/tvg-logo="([^"]+)"/i) || ['', ''])[1];  
                     var tvg_id = (l.match(/tvg-id="([^"]+)"/i) || ['', ''])[1];  
+                    var tvg_name = (l.match(/tvg-name="([^"]+)"/i) || ['', ''])[1];  
                     var url = lines[i + 1] ? lines[i + 1].trim() : '';  
                     if (url.indexOf('http') === 0) {  
-                        var item = { name: name, url: url, group: group, logo: logo, tvg_id: tvg_id };  
+                        var item = { name: name, url: url, group: group, logo: logo, tvg_id: tvg_id, tvg_name: tvg_name };  
                         if (!groups_data[group]) groups_data[group] = [];  
                         groups_data[group].push(item);  
                     }  
@@ -219,40 +246,45 @@
   
         this.showDetails = function (channel) {  
             colE.empty();  
-            var content = $('<div class="details-box">' +  
-                '<img src="' + (channel.logo || '') + '" style="width:100%; max-height:150px; object-fit:contain; margin-bottom:1rem; background:#000; padding:5px; border-radius:5px;" onerror="this.style.display=\'none\'">' +  
+            colE.append($('<div class="details-box">' +  
+                '<img src="' + channel.logo + '" style="width:100%; max-height:150px; object-fit:contain; margin-bottom:1rem; background:#000; padding:5px; border-radius:5px;">' +  
                 '<div class="epg-title-big">' + channel.name + '</div>' +  
                 '<div class="epg-now">ЗАРАЗ В ЕФІРІ:</div>' +  
                 '<div class="epg-prog-name" id="epg-title">Пошук програми...</div>' +  
+                '<div class="epg-time" id="epg-time"></div>' +  
                 '<div class="epg-bar"><div class="epg-bar-inner" id="epg-progress"></div></div>' +  
-                '<div style="margin-top:1rem; font-size:1.1rem; color:#777;">ID: ' + (channel.tvg_id || '---') + '</div>' +  
-            '</div>');  
-            colE.append(content);  
+                '<div class="epg-next" id="epg-next"></div>' +  
+                '<div style="margin-top:1rem; font-size:1.1rem; color:#555;">ID: ' + (channel.tvg_id || '---') + '</div>' +  
+            '</div>'));  
   
-            if (channel.tvg_id && epg_programs[channel.tvg_id]) {  
+            var render = function () {  
+                var keys = [channel.tvg_id, channel.tvg_name, channel.name]  
+                    .filter(function (k) { return k; })  
+                    .map(function (k) { return ('' + k).toLowerCase(); });  
+                var progs = [];  
+                keys.forEach(function (k) { if (epg_map[k]) progs = progs.concat(epg_map[k]); });  
+  
                 var now = Date.now() / 1000;  
-                var current_prog = null;  
-                var list = epg_programs[channel.tvg_id];  
-  
-                for (var i = 0; i < list.length; i++) {  
-                    if (now >= list[i].start && now < list[i].stop) {  
-                        current_prog = list[i];  
-                        break;  
-                    }  
+                var cur = null, next = null;  
+                for (var i = 0; i < progs.length; i++) {  
+                    var p = progs[i];  
+                    if (p.start <= now && now < p.stop) cur = p;  
+                    if (p.start > now && !next) next = p;  
                 }  
   
-                if (current_prog) {  
-                    $('#epg-title').text(current_prog.title);  
-                    var total = current_prog.stop - current_prog.start;  
-                    var passed = now - current_prog.start;  
-                    var perc = (passed / total) * 100;  
+                if (cur) {  
+                    $('#epg-title').text(cur.title || '—');  
+                    $('#epg-time').text(fmtTime(cur.start) + ' – ' + fmtTime(cur.stop));  
+                    var perc = (now - cur.start) / (cur.stop - cur.start) * 100;  
                     $('#epg-progress').css('width', Math.min(100, Math.max(0, perc)) + '%');  
+                    if (next) $('#epg-next').text('Далі: ' + fmtTime(next.start) + ' ' + next.title);  
                 } else {  
-                    $('#epg-title').text('Немає інформації про поточний ефір');  
+                    $('#epg-title').text(epg_loaded ? 'Програма недоступна' : 'EPG завантажується...');  
                 }  
-            } else {  
-                $('#epg-title').text('Програма відсутня (немає tvg-id)');  
-            }  
+            };  
+  
+            if (epg_loaded) render();  
+            else this.loadEPG(render);  
         };  
   
         this.updateFocus = function () {  
@@ -264,6 +296,8 @@
         };  
   
         this.start = function () {  
+            this.loadEPG();  
+  
             Lampa.Controller.add('iptv_pro', {  
                 up: function () {  
                     if (active_col === 'groups') index_g = Math.max(0, index_g - 1);  
@@ -301,6 +335,7 @@
   
     function init() {  
         Lampa.Component.add('iptv_pro', IPTVComponent);  
+  
         var item = $('<li class="menu__item selector"><div class="menu__text">IPTV PRO</div></li>');  
         item.on('hover:enter', function () {  
             Lampa.Activity.push({ title: 'IPTV PRO', component: 'iptv_pro' });  
