@@ -1,0 +1,18 @@
+name: epg  
+on:  
+  schedule: [{ cron: '0 */12 * * *' }]  
+  workflow_dispatch:  
+permissions:  
+  contents: write  
+jobs:  
+  fetch:  
+    runs-on: ubuntu-latest  
+    steps:  
+      - uses: actions/checkout@v4  
+      - run: curl -fsSL https://iptvx.one/epg/epg.xml.gz -o epg.xml.gz && gunzip -f epg.xml.gz  
+      - run: |  
+          git config user.name "github-actions"  
+          git config user.email "actions@github.com"  
+          git add epg.xml  
+          git commit -m "update epg" || echo "no changes"  
+          git push
