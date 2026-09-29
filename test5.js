@@ -73,7 +73,7 @@
         img.onerror = function () { callback(false); };  
         img.src = imgSrc;  
     }  
-            function applyStyles() {  
+                function applyStyles() {  
         var style = document.getElementById('tv-interface-styles');  
         if (!style) {  
             style = document.createElement('style');  
@@ -162,22 +162,23 @@
   
         css += '.full-start__background { will-change: opacity; transition: opacity 0.5s ease; } ';  
   
-        // ===== ФОНОВИЙ ТРЕЙЛЕР (YouTube) — Зліва глухо, а центр і права частина максимально яскраві =====  
+        // ===== ФОНОВИЙ ТРЕЙЛЕР (YouTube) — Зменшений і зміщений управо =====  
         css += '.tvi-trailer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0; transition: opacity .5s ease; pointer-events: none; } ';  
         css += '.tvi-trailer.display { opacity: 1; } ';  
         css += '.tvi-trailer__yt { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; z-index: 0; } ';  
         css += '.tvi-trailer__iframe { width: 100%; height: 100%; pointer-events: none; } ';  
-        // Піднімаємо яскравість самого відео плеєра до максимуму (1.0)
-        css += '.tvi-trailer__yt iframe { border: 0; width: 100%; height: 100%; flex-shrink: 0; pointer-events: none; will-change: transform; transition: transform .3s; opacity: 1; } ';  
+        
+        // Зменшуємо трейлер до 80% і зсуваємо праворуч (на 15% вікна), залишаючи максимум яскравості (1)
+        css += '.tvi-trailer__yt iframe { border: 0; width: 100%; height: 100%; flex-shrink: 0; pointer-events: none; will-change: transform; transition: transform .3s; opacity: 1; transform: scale(0.8) translate(15vw, 0); } ';  
   
-        // Робимо щільну чорноту тільки на лівій чверті екрана (де постер), а далі різко відкриваємо відео без зайвого затемнення зверху/знизу
+        // Плавний і акуратний градієнт лише зліва для постера, а права частина повністю чиста
         css += '.tvi-trailer__overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; ';  
-        css += 'background: linear-gradient(90deg, #0f0f0f 0%, #0f0f0f 28%, rgba(15,15,15,0.7) 34%, rgba(15,15,15,0.15) 42%, transparent 50%), ';  
-        css += 'linear-gradient(to top, rgba(15,15,15,0.85) 0%, rgba(15,15,15,0.3) 15%, transparent 35%), ';  
-        css += 'linear-gradient(to bottom, rgba(15,15,15,0.8) 0%, rgba(15,15,15,0.2) 15%, transparent 35%); } ';  
+        css += 'background: linear-gradient(90deg, #0f0f0f 0%, #0f0f0f 30%, rgba(15,15,15,0.75) 38%, rgba(15,15,15,0.2) 46%, transparent 55%), ';  
+        css += 'linear-gradient(to top, rgba(15,15,15,0.7) 0%, transparent 25%), ';  
+        css += 'linear-gradient(to bottom, rgba(15,15,15,0.6) 0%, transparent 25%); } ';  
   
         style.textContent = css;  
-            }
+                }
   
     function getRatingColor(val) {  
         var n = parseFloat(val);  
