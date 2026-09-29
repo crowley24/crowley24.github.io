@@ -7,7 +7,7 @@
 
         console.log('EPG Plugin: Starting registration...');
 
-        // 1. Реєструємо сторінку телепрограми з правильним методом render
+        // 1. Реєструємо сторінку телепрограми з обома методами (create та render)
         if (window.Lampa && Lampa.Component) {
             Lampa.Component.add('epg_view', function () {
                 var scroll = new Lampa.Scroll({ fields: {} });
@@ -15,8 +15,8 @@
                 
                 scroll.body().append(html);
 
-                // Правильна назва методу для Lampa - render замість create
-                this.render = function () {
+                // Дублюємо метод для сумісності з будь-якою версією ядра Lampa
+                this.create = this.render = function () {
                     return scroll.render();
                 };
 
