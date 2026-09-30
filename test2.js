@@ -102,8 +102,6 @@
         css += '@keyframes badge_anim_float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } } ';  
   
         css += '.full-start__reactions, [class*="reactions"] { display: none !important; } ';  
-        css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="rating-count"], [class*="status"] { display:none !important; } ';  
-        css += '.full-start-new__right > div:first-child { display: none !important; } ';  
         css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';  
         css += '.background { background: #000 !important; } ';  
   
@@ -112,7 +110,7 @@
         css += '.full-start-new__poster img { filter: none !important; width: 100% !important; height: auto !important; object-fit: contain !important; ';  
         css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 75%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 75%, transparent 100%) !important; } ';  
   
-        css += '.full-start-new__right { background: none !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; padding: 20px !important; gap: ' + blocksGap + ' !important; position: relative !important; } ';  
+        css += '.full-start-new__right { background: none !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; gap: ' + blocksGap + ' !important; position: relative !important; } ';  
   
         var chosenAnimName = 'anim_' + animEffect;  
         var animTiming = 'cubic-bezier(0.16, 1, 0.3, 1)';  
@@ -122,15 +120,15 @@
             return 'animation: ' + chosenAnimName + ' 0.45s ' + animTiming + ' ' + delay + ' forwards; opacity: 0; will-change: transform, opacity;';  
         }  
   
-        css += '.studio-header-brand { ' + getAnimRule('0.0s') + ' order: 1; width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: -2px !important; } ';  
+        css += '.studio-header-brand { ' + getAnimRule('0.0s') + ' order: 1; width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: 2px !important; } ';  
         css += '.studio-header-brand img { height: 22px !important; width: auto; max-width: 130px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); opacity: 0.95; transition: opacity 0.3s ease; } ';  
         css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';  
   
-        css += '.full-start-new__title { min-height: 60px; position: relative; font-size: 0 !important; color: transparent !important; ' + getAnimRule('0.08s') + ' width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; order: 2; overflow: visible !important; } ';  
-        css += '.full-start-new__title img { height: auto !important; max-height: 100px !important; width: auto !important; max-width: 45vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.7)); margin: 0 !important; opacity: 0; transition: opacity 0.3s ease-in-out; } ';  
+        css += '.full-start-new__title { min-height: 50px; position: relative; font-size: 0 !important; color: transparent !important; ' + getAnimRule('0.08s') + ' width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; order: 2; overflow: visible !important; } ';  
+        css += '.full-start-new__title img { height: auto !important; max-height: 90px !important; width: auto !important; max-width: 45vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.7)); margin: 0 !important; opacity: 0; transition: opacity 0.3s ease-in-out; } ';  
         css += '.full-start-new__title img.loaded { opacity: 1; } ';  
   
-        css += '.quality-row-inline { position: absolute; top: 30px; right: 24px; z-index: 99; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; pointer-events: none; } ';  
+        css += '.quality-row-inline { position: absolute; top: 20px; right: 24px; z-index: 99; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; pointer-events: none; } ';  
   
         css += '.full-start-new__tagline { ' + getAnimRule('0.15s') + ' display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 1em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; order: 3; } ';  
         css += '.plugin-meta-row { ' + getAnimRule('0.22s') + ' display: flex; justify-content: flex-start; align-items: center; flex-wrap: nowrap; gap: 10px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.8); width: 100%; order: 4; color: rgba(255,255,255,0.85); font-family: "Inter", -apple-system, system-ui, sans-serif; } ';  
@@ -151,19 +149,19 @@
   
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.9em; white-space: nowrap; } ';  
         css += '.info-separator { opacity: 0.35; font-size: 0.85em; margin: 0 -2px; } ';  
-        css += '.card-tweaks__buttons { ' + getAnimRule('0.3s') + ' width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 15px !important; margin-top: 15px !important; order: 5; } ';  
+        css += '.card-tweaks__buttons { ' + getAnimRule('0.3s') + ' width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 15px !important; margin-top: 10px !important; order: 5; } ';  
   
         css += '.full-start__background { will-change: opacity; transition: opacity 0.8s ease-in-out; } ';  
-  
-        /* ПОВНІСТЮ ПРИХОВУЄМО СТАТИЧНИЙ ФОН ПІД ЧАС АКТИВНОГО ТРЕЙЛЕРА */  
         css += 'body.has-active-trailer .full-start__background { opacity: 0 !important; visibility: hidden !important; } ';  
   
-        /* МАСКА ТРЕЙЛЕРА РОЗТЯГНУТА ВПРАВО (ЕЛІПС 90%x65% Z ЦЕНТРОМ НА 70%) */  
         css += '.tvi-trailer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0; transition: opacity .5s ease; pointer-events: none; } ';  
         css += '.tvi-trailer.display { opacity: 1; } ';  
-        css += '.tvi-trailer__yt { position: fixed; top: -12vh; left: 30vw; width: 70vw; height: 118vh; background: transparent; overflow: hidden; display: flex; align-items: center; justify-content: center; z-index: 0; ';  
-        css += '-webkit-mask-image: radial-gradient(ellipse 90% 65% at 70% 50%, #000 30%, transparent 85%); ';  
-        css += 'mask-image: radial-gradient(ellipse 90% 65% at 70% 50%, #000 30%, transparent 85%); } ';  
+        
+        /* РОЗШИРЕНА РАДІАЛЬНА МАСКА (М'ЯКИЙ ОВАЛ БЕЗ ОБРІЗАНЬ ВЕРХУ/НИЗУ) */  
+        css += '.tvi-trailer__yt { position: fixed; top: -10vh; left: 20vw; width: 80vw; height: 120vh; background: transparent; overflow: hidden; display: flex; align-items: center; justify-content: center; z-index: 0; ';  
+        css += '-webkit-mask-image: radial-gradient(ellipse 140% 100% at 65% 50%, #000 50%, transparent 95%); ';  
+        css += 'mask-image: radial-gradient(ellipse 140% 100% at 65% 50%, #000 50%, transparent 95%); } ';  
+        
         css += '.tvi-trailer__iframe { width: 100%; height: 100%; pointer-events: none; } ';  
         css += '.tvi-trailer__yt iframe { border: 0; width: 100%; height: 100%; flex-shrink: 0; pointer-events: none; will-change: transform; transition: transform .3s; opacity: 1; filter: contrast(105%) brightness(102%); } ';  
         css += '.tvi-trailer__overlay { display: none !important; } ';  
