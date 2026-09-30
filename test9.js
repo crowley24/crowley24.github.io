@@ -156,13 +156,12 @@
   
         css += '.full-start__background { will-change: opacity; transition: opacity 0.8s ease-in-out; } ';  
   
-        /* ЯСКРАВЕ ВІДЕО ТА ПЛАВНА ВІНЬЄТКА ПО КРАЯХ */  
+        /* ЯСКРАВЕ ВІДЕО, ПІДНЯТЕ ВИЩЕ ТА З ПЛАВНОЮ РАДІАЛЬНОЮ ВІНЬЄТКОЮ ПО КРАЯХ */  
         css += '.tvi-trailer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0; transition: opacity .5s ease; pointer-events: none; } ';  
         css += '.tvi-trailer.display { opacity: 1; } ';  
-        css += '.tvi-trailer__yt { position: fixed; top: 0; left: 32vw; width: 68vw; height: 100vh; background: transparent; overflow: hidden; display: flex; align-items: center; justify-content: center; z-index: 0; ';  
-        /* Маска, яка лишає центр відео 100% яскравим, а всі 4 краї м'яко розчиняє в чорне */  
-        css += '-webkit-mask-image: radial-gradient(ellipse 80% 75% at 60% 45%, #000 40%, transparent 95%); ';  
-        css += 'mask-image: radial-gradient(ellipse 80% 75% at 60% 45%, #000 40%, transparent 95%); } ';  
+        css += '.tvi-trailer__yt { position: fixed; top: -5vh; left: 30vw; width: 70vw; height: 105vh; background: transparent; overflow: hidden; display: flex; align-items: center; justify-content: center; z-index: 0; ';  
+        css += '-webkit-mask-image: radial-gradient(ellipse 65% 60% at 55% 40%, #000 20%, transparent 80%); ';  
+        css += 'mask-image: radial-gradient(ellipse 65% 60% at 55% 40%, #000 20%, transparent 80%); } ';  
         css += '.tvi-trailer__iframe { width: 100%; height: 100%; pointer-events: none; } ';  
         css += '.tvi-trailer__yt iframe { border: 0; width: 100%; height: 100%; flex-shrink: 0; pointer-events: none; will-change: transform; transition: transform .3s; opacity: 1; filter: contrast(105%) brightness(102%); } ';  
         css += '.tvi-trailer__overlay { display: none !important; } ';  
@@ -365,7 +364,7 @@
   
             player = new window.YT.Player($wrap.find('.tvi-trailer__iframe')[0], {  
                 height: window.innerHeight,  
-                width: Math.round(window.innerWidth * 0.68),  
+                width: Math.round(window.innerWidth * 0.70),  
                 videoId: trailer.id,  
                 playerVars: {  
                     controls: 0, autoplay: 1, mute: 1, disablekb: 1,  
