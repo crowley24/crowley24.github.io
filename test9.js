@@ -159,12 +159,13 @@
         /* ПОВНІСТЮ ПРИХОВУЄМО СТАТИЧНИЙ ФОН ПІД ЧАС АКТИВНОГО ТРЕЙЛЕРА */  
         css += 'body.has-active-trailer .full-start__background { opacity: 0 !important; visibility: hidden !important; } ';  
   
-        /* ТРЕЙЛЕР ПІДНЯТО ВИЩЕ, РАДІАЛЬНА МАСКА РОЗЧИНЯЄ ВЕНЬЄТКОЮ ВСІ 4 СТОРОНИ */  
+        /* ПІДНЯТИЙ ТРЕЙЛЕР ТА КОРЕКТНА ЛІНІЙНА МАСКА (ЗВЕРХУ, ЗЛІВА, ЗНИЗУ — М'ЯКИЙ ГРАДІЄНТ, СПРАВА — ПРЯМОКУТНИЙ КРАЙ) */  
         css += '.tvi-trailer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0; transition: opacity .5s ease; pointer-events: none; } ';  
         css += '.tvi-trailer.display { opacity: 1; } ';  
         css += '.tvi-trailer__yt { position: fixed; top: -12vh; left: 30vw; width: 70vw; height: 118vh; background: transparent; overflow: hidden; display: flex; align-items: center; justify-content: center; z-index: 0; ';  
-        css += '-webkit-mask-image: radial-gradient(ellipse 60% 50% at 55% 50%, #000 10%, transparent 75%); ';  
-        css += 'mask-image: radial-gradient(ellipse 60% 50% at 55% 50%, #000 10%, transparent 75%); } ';  
+        css += '-webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 15%, #000 85%, transparent 100%), linear-gradient(to right, transparent 0%, #000 25%, #000 100%); ';  
+        css += '-webkit-mask-composite: source-in; mask-composite: intersect; ';  
+        css += 'mask-image: linear-gradient(to bottom, transparent 0%, #000 15%, #000 85%, transparent 100%), linear-gradient(to right, transparent 0%, #000 25%, #000 100%); } ';  
         css += '.tvi-trailer__iframe { width: 100%; height: 100%; pointer-events: none; } ';  
         css += '.tvi-trailer__yt iframe { border: 0; width: 100%; height: 100%; flex-shrink: 0; pointer-events: none; will-change: transform; transition: transform .3s; opacity: 1; filter: contrast(105%) brightness(102%); } ';  
         css += '.tvi-trailer__overlay { display: none !important; } ';  
