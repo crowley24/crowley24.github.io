@@ -156,16 +156,16 @@
   
         css += '.full-start__background { will-change: opacity; transition: opacity 0.8s ease-in-out; } ';  
   
-        /* Позиціонування фонового трейлера у правій зоні */  
+        /* ЯСКРАВЕ ВІДЕО ТА ПЛАВНА ВІНЬЄТКА ПО КРАЯХ */  
         css += '.tvi-trailer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0; transition: opacity .5s ease; pointer-events: none; } ';  
         css += '.tvi-trailer.display { opacity: 1; } ';  
-        css += '.tvi-trailer__yt { position: fixed; top: 0; left: 35vw; width: 65vw; height: 100vh; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; z-index: 0; } ';  
+        css += '.tvi-trailer__yt { position: fixed; top: 0; left: 32vw; width: 68vw; height: 100vh; background: transparent; overflow: hidden; display: flex; align-items: center; justify-content: center; z-index: 0; ';  
+        /* Маска, яка лишає центр відео 100% яскравим, а всі 4 краї м'яко розчиняє в чорне */  
+        css += '-webkit-mask-image: radial-gradient(ellipse 80% 75% at 60% 45%, #000 40%, transparent 95%); ';  
+        css += 'mask-image: radial-gradient(ellipse 80% 75% at 60% 45%, #000 40%, transparent 95%); } ';  
         css += '.tvi-trailer__iframe { width: 100%; height: 100%; pointer-events: none; } ';  
-        css += '.tvi-trailer__yt iframe { border: 0; width: 100%; height: 100%; flex-shrink: 0; pointer-events: none; will-change: transform; transition: transform .3s; opacity: 1; } ';  
-        css += '.tvi-trailer__overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; ';  
-        css += 'background: linear-gradient(90deg, #0f0f0f 0%, rgba(15,15,15,0.85) 20%, rgba(15,15,15,0.2) 50%, transparent 100%), ';  
-        css += 'linear-gradient(to top, #0f0f0f 0%, rgba(15,15,15,0.7) 25%, transparent 60%), ';  
-        css += 'linear-gradient(to bottom, #0f0f0f 0%, rgba(15,15,15,0.7) 25%, transparent 60%); } ';  
+        css += '.tvi-trailer__yt iframe { border: 0; width: 100%; height: 100%; flex-shrink: 0; pointer-events: none; will-change: transform; transition: transform .3s; opacity: 1; filter: contrast(105%) brightness(102%); } ';  
+        css += '.tvi-trailer__overlay { display: none !important; } ';  
   
         style.textContent = css;  
     }  
@@ -337,7 +337,7 @@
     function startTrailer(e, $render, trailer) {  
         var movie = e.data.movie || (e.object && e.object.card);  
         var item_id = movie && movie.id;  
-        var $wrap = $('<div class="tvi-trailer"><div class="tvi-trailer__yt"><div class="tvi-trailer__iframe"></div><div class="tvi-trailer__overlay"></div></div></div>');  
+        var $wrap = $('<div class="tvi-trailer"><div class="tvi-trailer__yt"><div class="tvi-trailer__iframe"></div></div></div>');  
   
         $render.find('.activity__body').prepend($wrap);  
   
@@ -365,7 +365,7 @@
   
             player = new window.YT.Player($wrap.find('.tvi-trailer__iframe')[0], {  
                 height: window.innerHeight,  
-                width: Math.round(window.innerWidth * 0.65),  
+                width: Math.round(window.innerWidth * 0.68),  
                 videoId: trailer.id,  
                 playerVars: {  
                     controls: 0, autoplay: 1, mute: 1, disablekb: 1,  
@@ -386,7 +386,7 @@
                             setTimeout(function () {  
                                 if (destroyed || (item_id && currentActiveId !== item_id)) return;  
                                 $wrap.addClass('display');  
-                            }, 400);  
+                            }, 300);  
                         }  
                         if (st.data === window.YT.PlayerState.ENDED && !destroyed) {  
                             st.target.playVideo();  
