@@ -8,6 +8,7 @@
     var currentActiveId = null;  
   
     var settings_list = [  
+        { id: 'tv_interface_trailer_bg', default: false },  
         { id: 'tv_interface_ui_anim', default: true },  
         { id: 'tv_interface_ui_anim_effect', default: 'smooth_zoom' },  
         { id: 'tv_interface_badge_anim', default: 'pulse' },  
@@ -19,8 +20,6 @@
         { id: 'tv_interface_slideshow', default: true },  
         { id: 'tv_interface_slideshow_duration', default: 8000 },  
         { id: 'tv_interface_slideshow_quality', default: 'w1280' },  
-        { id: 'tv_interface_trailer_bg', default: false },  
-        { id: 'tv_interface_trailer_blur', default: '0' },  
         { id: 'tv_interface_trailer_zoom', default: '0' }  
     ];  
   
@@ -377,9 +376,7 @@
                 events: {  
                     onReady: function (ev) {  
                         var iframe = $(ev.target.getIframe());  
-                        var blur = parseInt(Lampa.Storage.get('tv_interface_trailer_blur')) || 0;  
                         var zoom = Lampa.Storage.get('tv_interface_trailer_zoom') || '0';  
-                        if (blur > 0) iframe.css('filter', 'blur(' + blur + 'px)');  
                         if (zoom !== '0') iframe.css('transform', 'scale(' + (1 + parseInt(zoom) / 100) + ') translateZ(0)');  
                         ev.target.playVideo();  
                     },  
@@ -567,6 +564,11 @@
             icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z" fill="white"/></svg>'  
         });  
   
+        Lampa.SettingsApi.addParam({  
+            component: 'tv_interface',  
+            param: { name: 'tv_interface_trailer_bg', type: 'trigger', default: false },  
+            field: { name: 'Фоновий відеоряд (Трейлер)', description: 'Увімкнути трейлер YouTube на фоні замість слайдшоу' }  
+        });  
         Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_ui_anim', type: 'trigger', default: true }, field: { name: 'Плавна анімація появи елементів' }, onChange: applyStyles });  
         Lampa.SettingsApi.addParam({  
             component: 'tv_interface',  
@@ -596,34 +598,13 @@
   
         Lampa.SettingsApi.addParam({  
             component: 'tv_interface',  
-            param: { name: 'tv_interface_trailer_bg', type: 'trigger', default: false },  
-            field: { name: 'Фоновий відеоряд (Трейлер)', description: 'Автоматично відтворювати трейлер YouTube на фоні без звуку замість слайдшоу' }  
-        });  
-        Lampa.SettingsApi.addParam({  
-            component: 'tv_interface',  
-            param: {  
-                name: 'tv_interface_trailer_blur',  
-                type: 'select',  
-                values: { '0': 'Вимкнено (0%)', '1': '1%', '2': '2%', '3': '3%', '4': '4%', '5': '5%', '10': '10%' },  
-                default: '0'  
-            },  
-            field: { name: 'Розмиття фонового відео', description: 'Ефект Blur для фонового плеєра' },  
-            onRender: function (item) {  
-                if (!Lampa.Storage.get('tv_interface_trailer_bg')) item.hide();  
-            }  
-        });  
-        Lampa.SettingsApi.addParam({  
-            component: 'tv_interface',  
             param: {  
                 name: 'tv_interface_trailer_zoom',  
                 type: 'select',  
                 values: { '0': 'Вимкнено (0%)', '25': '25%', '33': '33%', '40': '40%', '45': '45%', '50': '50%' },  
                 default: '0'  
             },  
-            field: { name: 'Масштабування відео', description: 'Збільшення відео для приховування чорних смуг' },  
-            onRender: function (item) {  
-                if (!Lampa.Storage.get('tv_interface_trailer_bg')) item.hide();  
-            }  
+            field: { name: 'Масштабування відео', description: 'Збільшення відео для приховування чорних смуг' }  
         });  
     }  
   
