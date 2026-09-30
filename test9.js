@@ -1,6 +1,5 @@
 (function () {
     'use strict';
-
     /**
      * TV INTERFACE — PERFORMANCE EDITION
      * Оптимізована версія без втрати функціоналу
