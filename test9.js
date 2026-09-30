@@ -157,15 +157,15 @@
         css += '.full-start__background { will-change: opacity; transition: opacity 0.8s ease-in-out; } ';  
         css += 'body.has-active-trailer .full-start__background { opacity: 0 !important; visibility: hidden !important; } ';  
   
-        /* ОНОВЛЕНІ СТИЛІ ТРЕЙЛЕРА: ГЛИБОКИЙ М'ЯКИЙ ГРАДІЄНТ ЗВЕРХУ, ЗЛІВА ТА ЗНИЗУ */  
+        /* ОНОВЛЕНІ СТИЛІ ТРЕЙЛЕРА: МАКСИМАЛЬНО М'ЯКЕ ЗГАСАННЯ В МЕЖАХ ЕКРАНА */  
         css += '.tvi-trailer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0; transition: opacity .5s ease; pointer-events: none; } ';  
         css += '.tvi-trailer.display { opacity: 1; } ';  
-        css += '.tvi-trailer__yt { position: fixed; top: -12vh; left: 28vw; width: 72vw; height: 124vh; background: transparent; overflow: hidden; display: flex; align-items: center; justify-content: center; z-index: 0; ';  
-        css += '-webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 25%, #000 75%, transparent 100%), linear-gradient(to right, transparent 0%, #000 25%, #000 100%); ';  
+        css += '.tvi-trailer__yt { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: transparent; overflow: hidden; display: flex; align-items: center; justify-content: center; z-index: 0; ';  
+        css += '-webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 35%, #000 65%, transparent 100%), linear-gradient(to right, transparent 0%, #000 30%, #000 100%); ';  
         css += '-webkit-mask-composite: source-in; mask-composite: intersect; ';  
-        css += 'mask-image: linear-gradient(to bottom, transparent 0%, #000 25%, #000 75%, transparent 100%), linear-gradient(to right, transparent 0%, #000 25%, #000 100%); } ';  
+        css += 'mask-image: linear-gradient(to bottom, transparent 0%, #000 35%, #000 65%, transparent 100%), linear-gradient(to right, transparent 0%, #000 30%, #000 100%); } ';  
         css += '.tvi-trailer__iframe { width: 100%; height: 100%; pointer-events: none; } ';  
-        css += '.tvi-trailer__yt iframe { border: 0; width: 100%; height: 100%; flex-shrink: 0; pointer-events: none; will-change: transform; transition: transform .3s; opacity: 1; filter: contrast(105%) brightness(102%); } ';  
+        css += '.tvi-trailer__yt iframe { border: 0; width: 100%; height: 100%; flex-shrink: 0; pointer-events: none; transform: scale(1.35); transform-origin: center center; will-change: transform; transition: transform .3s; opacity: 1; filter: contrast(105%) brightness(102%); } ';  
         css += '.tvi-trailer__overlay { display: none !important; } ';  
   
         style.textContent = css;  
@@ -367,7 +367,7 @@
   
             player = new window.YT.Player($wrap.find('.tvi-trailer__iframe')[0], {  
                 height: window.innerHeight,  
-                width: Math.round(window.innerWidth * 0.72),  
+                width: window.innerWidth,  
                 videoId: trailer.id,  
                 playerVars: {  
                     controls: 0, autoplay: 1, mute: 1, disablekb: 1,  
@@ -380,8 +380,7 @@
                         var blur = parseInt(Lampa.Storage.get('tv_interface_trailer_blur')) || 0;  
                         var zoom = Lampa.Storage.get('tv_interface_trailer_zoom') || '0';  
                         
-                        /* Стандартний легкий масштаб 1.15x для перекриття внутрішніх чорних рамок YouTube */  
-                        var scaleVal = zoom !== '0' ? (1 + parseInt(zoom) / 100) : 1.15;  
+                        var scaleVal = zoom !== '0' ? (1 + parseInt(zoom) / 100) : 1.35;  
                         
                         if (blur > 0) iframe.css('filter', 'blur(' + blur + 'px)');  
                         iframe.css('transform', 'scale(' + scaleVal + ') translateZ(0)');  
@@ -571,7 +570,7 @@
             icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z" fill="white"/></svg>'  
         });  
   
-        Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_ui_anim', type: 'trigger', default: true }, field: { name: 'Плавна анімація появи елементів' }, onChange: applyStyles });  
+        Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_ui_anim', type: 'trigger', default: true }, field: { name: 'Плавна анімація поява елементів' }, onChange: applyStyles });  
         Lampa.SettingsApi.addParam({  
             component: 'tv_interface',  
             param: {  
@@ -585,7 +584,7 @@
                 },  
                 default: 'smooth_zoom'  
             },  
-            field: { name: 'Стиль анімації появи' },  
+            field: { name: 'Стиль анімації поява' },  
             onChange: applyStyles  
         });  
         Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_badge_anim', type: 'select', values: { 'none': 'Без анімації', 'pulse': 'Пульсація', 'breathe': 'Дихання', 'spin_slow': 'Гойдання', 'float': 'Підстрибування' }, default: 'pulse' }, field: { name: 'Анімація бейджів' }, onChange: applyStyles });  
@@ -621,7 +620,7 @@
             param: {  
                 name: 'tv_interface_trailer_zoom',  
                 type: 'select',  
-                values: { '0': 'Авто (15%)', '25': '25%', '33': '33%', '40': '40%', '45': '45%', '50': '50%' },  
+                values: { '0': 'Авто (35%)', '25': '25%', '33': '33%', '40': '40%', '45': '45%', '50': '50%' },  
                 default: '0'  
             },  
             field: { name: 'Масштабування відео', description: 'Збільшення відео для приховування чорних смуг' },  
