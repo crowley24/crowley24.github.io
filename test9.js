@@ -155,17 +155,15 @@
         css += '.card-tweaks__buttons { ' + getAnimRule('0.3s') + ' width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 15px !important; margin-top: 15px !important; order: 5; } ';  
   
         css += '.full-start__background { will-change: opacity; transition: opacity 0.8s ease-in-out; } ';  
-  
-        /* ПОВНІСТЮ ПРИХОВУЄМО СТАТИЧНИЙ ФОН ПІД ЧАС АКТИВНОГО ТРЕЙЛЕРА */  
         css += 'body.has-active-trailer .full-start__background { opacity: 0 !important; visibility: hidden !important; } ';  
   
-        /* ПІДНЯТИЙ ТРЕЙЛЕР ТА КОРЕКТНА ЛІНІЙНА МАСКА (ЗВЕРХУ, ЗЛІВА, ЗНИЗУ — М'ЯКИЙ ГРАДІЄНТ, СПРАВА — ПРЯМОКУТНИЙ КРАЙ) */  
+        /* ОНОВЛЕНІ СТИЛІ ТРЕЙЛЕРА: ГЛИБОКИЙ М'ЯКИЙ ГРАДІЄНТ ЗВЕРХУ, ЗЛІВА ТА ЗНИЗУ */  
         css += '.tvi-trailer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0; transition: opacity .5s ease; pointer-events: none; } ';  
         css += '.tvi-trailer.display { opacity: 1; } ';  
-        css += '.tvi-trailer__yt { position: fixed; top: -12vh; left: 30vw; width: 70vw; height: 118vh; background: transparent; overflow: hidden; display: flex; align-items: center; justify-content: center; z-index: 0; ';  
-        css += '-webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 15%, #000 85%, transparent 100%), linear-gradient(to right, transparent 0%, #000 25%, #000 100%); ';  
+        css += '.tvi-trailer__yt { position: fixed; top: -12vh; left: 28vw; width: 72vw; height: 124vh; background: transparent; overflow: hidden; display: flex; align-items: center; justify-content: center; z-index: 0; ';  
+        css += '-webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 25%, #000 75%, transparent 100%), linear-gradient(to right, transparent 0%, #000 25%, #000 100%); ';  
         css += '-webkit-mask-composite: source-in; mask-composite: intersect; ';  
-        css += 'mask-image: linear-gradient(to bottom, transparent 0%, #000 15%, #000 85%, transparent 100%), linear-gradient(to right, transparent 0%, #000 25%, #000 100%); } ';  
+        css += 'mask-image: linear-gradient(to bottom, transparent 0%, #000 25%, #000 75%, transparent 100%), linear-gradient(to right, transparent 0%, #000 25%, #000 100%); } ';  
         css += '.tvi-trailer__iframe { width: 100%; height: 100%; pointer-events: none; } ';  
         css += '.tvi-trailer__yt iframe { border: 0; width: 100%; height: 100%; flex-shrink: 0; pointer-events: none; will-change: transform; transition: transform .3s; opacity: 1; filter: contrast(105%) brightness(102%); } ';  
         css += '.tvi-trailer__overlay { display: none !important; } ';  
@@ -369,7 +367,7 @@
   
             player = new window.YT.Player($wrap.find('.tvi-trailer__iframe')[0], {  
                 height: window.innerHeight,  
-                width: Math.round(window.innerWidth * 0.70),  
+                width: Math.round(window.innerWidth * 0.72),  
                 videoId: trailer.id,  
                 playerVars: {  
                     controls: 0, autoplay: 1, mute: 1, disablekb: 1,  
@@ -381,8 +379,12 @@
                         var iframe = $(ev.target.getIframe());  
                         var blur = parseInt(Lampa.Storage.get('tv_interface_trailer_blur')) || 0;  
                         var zoom = Lampa.Storage.get('tv_interface_trailer_zoom') || '0';  
+                        
+                        /* Стандартний легкий масштаб 1.15x для перекриття внутрішніх чорних рамок YouTube */  
+                        var scaleVal = zoom !== '0' ? (1 + parseInt(zoom) / 100) : 1.15;  
+                        
                         if (blur > 0) iframe.css('filter', 'blur(' + blur + 'px)');  
-                        if (zoom !== '0') iframe.css('transform', 'scale(' + (1 + parseInt(zoom) / 100) + ') translateZ(0)');  
+                        iframe.css('transform', 'scale(' + scaleVal + ') translateZ(0)');  
                         ev.target.playVideo();  
                     },  
                     onStateChange: function (st) {  
@@ -619,7 +621,7 @@
             param: {  
                 name: 'tv_interface_trailer_zoom',  
                 type: 'select',  
-                values: { '0': 'Вимкнено (0%)', '25': '25%', '33': '33%', '40': '40%', '45': '45%', '50': '50%' },  
+                values: { '0': 'Авто (15%)', '25': '25%', '33': '33%', '40': '40%', '45': '45%', '50': '50%' },  
                 default: '0'  
             },  
             field: { name: 'Масштабування відео', description: 'Збільшення відео для приховування чорних смуг' },  
