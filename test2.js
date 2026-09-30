@@ -163,7 +163,7 @@
         css += '.tvi-trailer.display { opacity: 1; } ';  
         css += '.tvi-trailer__yt { position: fixed; top: -12vh; left: 30vw; width: 70vw; height: 118vh; background: transparent; overflow: hidden; display: flex; align-items: center; justify-content: center; z-index: 0; ';  
         css += '-webkit-mask-image: radial-gradient(ellipse 60% 38% at 55% 50%, #000 10%, transparent 75%); ';  
-        css += 'mask-image: radial-gradient(ellipse 60% 38% at 55% 50%, #000 10%, transparent 75%); } ';  
+        css += 'mask-image: radial-gradient(ellipse 80% 50% at 55% 50%, #000 10%, transparent 75%); } ';  
         css += '.tvi-trailer__iframe { width: 100%; height: 100%; pointer-events: none; } ';  
         css += '.tvi-trailer__yt iframe { border: 0; width: 100%; height: 100%; flex-shrink: 0; pointer-events: none; will-change: transform; transition: transform .3s; opacity: 1; filter: contrast(105%) brightness(102%); } ';  
         css += '.tvi-trailer__overlay { display: none !important; } ';  
