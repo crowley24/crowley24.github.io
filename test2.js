@@ -4,22 +4,24 @@
     /**  
      * ПЕРЕМІННІ ТА КЕШУВАННЯ  
      */  
-    var pluginPath = 'https://crowley24.github.io/Icons/';  
-    var detailsCache = {};  
+    var detailsCache = {};          // кеш деталей TMDB (LRU, max 50)  
+    var detailsCacheOrder = [];     // порядок ключів для LRU  
+    var DETAILS_CACHE_MAX = 50;  
     var currentActiveId = null;  
+    var lastCssHash = null;         // щоб не перегенеровувати CSS без змін  
   
     var settings_list = [  
         { id: 'tv_interface_ui_anim', default: true },  
         { id: 'tv_interface_ui_anim_effect', default: 'smooth_zoom' },  
-        { id: 'tv_interface_badge_anim', default: 'pulse' },  
-        { id: 'tv_interface_logo_quality', default: 'original' },  
+        { id: 'tv_interface_badge_anim', default: 'none' },  
+        { id: 'tv_interface_logo_quality', default: 'w500' },  
         { id: 'tv_interface_show_tagline', default: true },  
         { id: 'tv_interface_blocks_gap', default: '8px' },  
         { id: 'tv_interface_ratings_size', default: '0.45em' },  
         { id: 'tv_interface_studios', default: true },  
         { id: 'tv_interface_slideshow', default: true },  
         { id: 'tv_interface_slideshow_duration', default: 8000 },  
-        { id: 'tv_interface_slideshow_quality', default: 'w1280' },  
+        { id: 'tv_interface_slideshow_quality', default: 'w780' },  
         { id: 'tv_interface_trailer_bg', default: false },  
         { id: 'tv_interface_trailer_blur', default: '0' },  
         { id: 'tv_interface_trailer_zoom', default: '0' }  
@@ -30,6 +32,33 @@
             Lampa.Storage.set(opt.id, opt.default);  
         }  
     });  
+  
+    /* Єдине читання налаштувань — замість розкиданих Storage.get */  
+    var cfg = {};  
+    function readSettings() {  
+        settings_list.forEach(function (opt) {  
+            cfg[opt.id] = Lampa.Storage.get(opt.id, opt.default);  
+        });  
+    }  
+    readSettings();  
+  
+    function cachePut(id, data) {  
+        if (detailsCache[id]) { detailsCache[id] = data; return; }  
+        detailsCacheOrder.push(id);  
+        detailsCache[id] = data;  
+        if (detailsCacheOrder.length > DETAILS_CACHE_MAX) {  
+            var oldest = detailsCacheOrder.shift();  
+            delete detailsCache[oldest];  
+        }  
+    }  
+    function cacheGet(id) {  
+        var d = detailsCache[id];  
+        if (!d) return null;  
+        // LRU-просування  
+        var i = detailsCacheOrder.indexOf(id);  
+        if (i > -1) { detailsCacheOrder.splice(i, 1); detailsCacheOrder.push(id); }  
+        return d;  
+    }  
   
     var ratingIcons = {  
         tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',  
@@ -73,8 +102,15 @@
         img.onerror = function () { callback(false); };  
         img.src = imgSrc;  
     }  
-
+  
     function applyStyles() {  
+        readSettings();  
+  
+        /* Не перегенеровуємо CSS, якщо налаштування не змінились */  
+        var hash = settings_list.map(function (o) { return String(cfg[o.id]); }).join('|');  
+        if (hash === lastCssHash) return;  
+        lastCssHash = hash;  
+  
         var style = document.getElementById('tv-interface-styles');  
         if (!style) {  
             style = document.createElement('style');  
@@ -82,12 +118,12 @@
             document.head.appendChild(style);  
         }  
   
-        var isUIAnim = Lampa.Storage.get('tv_interface_ui_anim');  
-        var animEffect = Lampa.Storage.get('tv_interface_ui_anim_effect', 'smooth_zoom');  
-        var badgeAnim = Lampa.Storage.get('tv_interface_badge_anim', 'pulse');  
-        var rSize = Lampa.Storage.get('tv_interface_ratings_size', '0.45em');  
-        var showTagline = Lampa.Storage.get('tv_interface_show_tagline');  
-        var blocksGap = Lampa.Storage.get('tv_interface_blocks_gap', '8px');  
+        var isUIAnim = cfg.tv_interface_ui_anim;  
+        var animEffect = cfg.tv_interface_ui_anim_effect;  
+        var badgeAnim = cfg.tv_interface_badge_anim;  
+        var rSize = cfg.tv_interface_ratings_size;  
+        var showTagline = cfg.tv_interface_show_tagline;  
+        var blocksGap = cfg.tv_interface_blocks_gap;  
   
         var css = '';  
   
@@ -95,6 +131,7 @@
         css += '@keyframes anim_cine_slide { 0% { opacity: 0; transform: translate3d(0, 25px, 0); } 100% { opacity: 1; transform: translate3d(0, 0, 0); } } ';  
         css += '@keyframes anim_luxury_fade { 0% { opacity: 0; transform: translate3d(0, 12px, 0) scale(1.03); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } } ';  
         css += '@keyframes anim_modern_shift { 0% { opacity: 0; transform: translate3d(-18px, 0, 0); } 100% { opacity: 1; transform: translate3d(0, 0, 0); } } ';  
+  
         css += '@keyframes wave_cascade { 0% { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.9); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } } ';  
   
         css += '@keyframes badge_anim_pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } } ';  
@@ -110,8 +147,9 @@
   
         css += '.full-start-new { position: relative !important; will-change: auto; } ';  
         css += '.full-start-new__poster { position: relative !important; background: #000; z-index: 1; } ';  
-        css += '.full-start-new__poster img { filter: none !important; width: 100% !important; height: auto !important; object-fit: contain !important; ';  
-        css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 75%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 75%, transparent 100%) !important; } ';  
+        /* Без mask-image — замість цього статичний градієнт-шар */  
+        css += '.full-start-new__poster img { filter: none !important; width: 100% !important; height: auto !important; object-fit: contain !important; } ';  
+        css += '.full-start-new__poster::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 25%; background: linear-gradient(to bottom, transparent 0%, #000 100%); pointer-events: none; } ';  
   
         css += '.full-start-new__right { background: none !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; padding: 20px !important; gap: ' + blocksGap + ' !important; position: relative !important; } ';  
   
@@ -124,11 +162,12 @@
         }  
   
         css += '.studio-header-brand { ' + getAnimRule('0.0s') + ' order: 1; width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: -2px !important; } ';  
-        css += '.studio-header-brand img { height: 22px !important; width: auto; max-width: 130px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); opacity: 0.95; transition: opacity 0.3s ease; } ';  
-        css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';  
+        /* Без drop-shadow — це дорогий GPU-фільтр на ТВ */  
+        css += '.studio-header-brand img { height: 22px !important; width: auto; max-width: 130px; object-fit: contain; opacity: 0.95; } ';  
+        css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) !important; } ';  
   
         css += '.full-start-new__title { min-height: 60px; position: relative; font-size: 0 !important; color: transparent !important; ' + getAnimRule('0.08s') + ' width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; order: 2; overflow: visible !important; } ';  
-        css += '.full-start-new__title img { height: auto !important; max-height: 100px !important; width: auto !important; max-width: 45vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.7)); margin: 0 !important; opacity: 0; transition: opacity 0.3s ease-in-out; } ';  
+        css += '.full-start-new__title img { height: auto !important; max-height: 100px !important; width: auto !important; max-width: 45vw !important; object-fit: contain !important; margin: 0 !important; opacity: 0; transition: opacity 0.3s ease-in-out; } ';  
         css += '.full-start-new__title img.loaded { opacity: 1; } ';  
   
         css += '.quality-row-inline { position: absolute; top: 30px; right: 24px; z-index: 99; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; pointer-events: none; } ';  
@@ -139,33 +178,46 @@
         var loopAnimName = badgeAnim !== 'none' ? 'badge_anim_' + badgeAnim : '';  
         var loopDuration = badgeAnim === 'spin_slow' ? '4s' : (badgeAnim === 'breathe' ? '3s' : '2.5s');  
   
-        css += '.wave-item { transform-origin: center center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); ';  
-        if (badgeAnim !== 'none') {  
+        /* Без filter: drop-shadow — лише transform/opacity анімації */  
+        css += '.wave-item { transform-origin: center center; ';  
+        if (isUIAnim) {  
+            css += 'animation: wave_cascade 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards; opacity: 0;';  
+        } else if (badgeAnim !== 'none') {  
             css += 'animation: ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite; ';  
         } else {  
             css += 'opacity: 1 !important;';  
         }  
         css += '} ';  
   
-        css += '.quality-row-inline .plugin-rating-item { display: flex; align-items: center; gap: 6px; font-weight: 700; color: #fff; font-size: 1.05em; padding: 2px 0; } ';  
+        if (isUIAnim && badgeAnim !== 'none') {  
+            css += '.wave-item { animation: wave_cascade 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards, ' + loopAnimName + ' ' + loopDuration + ' ease-in-out 0.65s infinite; opacity: 0; }';  
+        }  
+  
+        css += '.quality-row-inline .plugin-rating-item { display: flex; align-items: center; gap: 6px; font-weight: 700; color: #fff; font-size: 1.05em; padding: 2px 0; text-shadow: 0 1px 3px rgba(0,0,0,0.6); } ';  
         css += '.quality-row-inline .plugin-rating-item img { height: 1.1em; width: auto; } ';  
   
         css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.9em; white-space: nowrap; } ';  
         css += '.info-separator { opacity: 0.35; font-size: 0.85em; margin: 0 -2px; } ';  
         css += '.card-tweaks__buttons { ' + getAnimRule('0.3s') + ' width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 15px !important; margin-top: 15px !important; order: 5; } ';  
   
-        css += '.full-start__background { will-change: opacity; transition: opacity 0.8s ease-in-out; } ';  
+        css += '.full-start__background { transition: opacity 0.5s ease; } ';  
   
-        // Трейлер  
+        /* Один додатковий шар для слайдшоу — без clone()/remove() у DOM */  
+        css += '.tvi-bg-slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1.5s ease-in-out; pointer-events: none; } ';  
+        css += '.tvi-bg-slide.display { opacity: 1; } ';  
+  
+        // ===== ФОНОВИЙ ТРЕЙЛЕР (YouTube) =====  
         css += '.tvi-trailer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0; transition: opacity .5s ease; pointer-events: none; } ';  
         css += '.tvi-trailer.display { opacity: 1; } ';  
         css += '.tvi-trailer__yt { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; z-index: 0; } ';  
         css += '.tvi-trailer__iframe { width: 100%; height: 100%; pointer-events: none; } ';  
-        css += '.tvi-trailer__yt iframe { border: 0; width: 100%; height: 100%; flex-shrink: 0; pointer-events: none; will-change: transform; transition: transform .3s; opacity: 1; } ';  
+        /* will-change прибрано — зайвий композитний шар на ТВ */  
+        css += '.tvi-trailer__yt iframe { border: 0; width: 100%; height: 100%; flex-shrink: 0; pointer-events: none; transition: transform .3s; opacity: 0.9; } ';  
+  
         css += '.tvi-trailer__overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; ';  
-        css += 'background: linear-gradient(90deg, #0f0f0f 0%, rgba(15,15,15,0.85) 30%, rgba(15,15,15,0.35) 45%, rgba(15,15,15,0.05) 65%, transparent 100%), ';  
-        css += 'linear-gradient(to top, #0f0f0f 0%, rgba(15,15,15,0.7) 25%, rgba(15,15,15,0.2) 45%, transparent 60%), ';  
-        css += 'linear-gradient(to bottom, #0f0f0f 0%, rgba(15,15,15,0.7) 25%, rgba(15,15,15,0.2) 45%, transparent 60%); } ';  
+        css += 'background: linear-gradient(90deg, #0f0f0f 0%, #0f0f0f 35%, rgba(15,15,15,0.85) 42%, rgba(15,15,15,0.2) 58%, rgba(15,15,15,0.1) 100%), ';  
+        css += 'linear-gradient(to top, #0f0f0f 0%, rgba(15,15,15,0.8) 25%, rgba(15,15,15,0.1) 50%, transparent 100%), ';  
+        css += 'linear-gradient(to bottom, #0f0f0f 0%, rgba(15,15,15,0.7) 20%, rgba(15,15,15,0.1) 45%, transparent 100%); } ';  
   
         style.textContent = css;  
     }  
@@ -243,7 +295,9 @@
                        data.images.logos[0];  
   
             if (logo) {  
-                var logoUrl = Lampa.TMDB.image('/t/p/original' + logo.file_path.replace('.svg', '.png'));  
+                /* Раніше завжди 'original' — тепер якість з налаштувань */  
+                var logoQuality = cfg.tv_interface_logo_quality || 'w500';  
+                var logoUrl = Lampa.TMDB.image('/t/p/' + logoQuality + logo.file_path.replace('.svg', '.png'));  
                 var $titleContainer = $render.find('.full-start-new__title');  
   
                 var tempImg = new Image();  
@@ -257,7 +311,7 @@
             }  
         }  
   
-        if (Lampa.Storage.get('tv_interface_studios')) {  
+        if (cfg.tv_interface_studios) {  
             $render.find('.studio-header-brand').remove();  
             var studio = null;  
   
@@ -274,7 +328,16 @@
                 var $img = $brand.find('img');  
   
                 $img.on('error', function () { $brand.remove(); });  
-                isImageDark(studioLogoUrl, function (isDark) { if (isDark) $img.addClass('is-dark-logo'); });  
+  
+                /* Кешуємо результат canvas-аналізу, щоб не рахувати повторно */  
+                if (typeof data.__studioIsDark === 'boolean') {  
+                    if (data.__studioIsDark) $img.addClass('is-dark-logo');  
+                } else {  
+                    isImageDark(studioLogoUrl, function (isDark) {  
+                        data.__studioIsDark = isDark;  
+                        if (isDark) $img.addClass('is-dark-logo');  
+                    });  
+                }  
                 $render.find('.full-start-new__title').before($brand);  
             }  
         }  
@@ -284,8 +347,9 @@
         var movieId = movie.id;  
         currentActiveId = movieId;  
   
-        if (detailsCache[movieId]) {  
-            applyMovieDetailsData(detailsCache[movieId], movie, $render);  
+        var cached = cacheGet(movieId);  
+        if (cached) {  
+            applyMovieDetailsData(cached, movie, $render);  
             return;  
         }  
   
@@ -297,8 +361,8 @@
             type: 'GET',  
             dataType: 'json',  
             success: function (data) {  
+                cachePut(movieId, data);  
                 if (currentActiveId !== movieId) return;  
-                detailsCache[movieId] = data;  
                 applyMovieDetailsData(data, movie, $render);  
             }  
         });  
@@ -375,8 +439,8 @@
                 events: {  
                     onReady: function (ev) {  
                         var iframe = $(ev.target.getIframe());  
-                        var blur = parseInt(Lampa.Storage.get('tv_interface_trailer_blur')) || 0;  
-                        var zoom = Lampa.Storage.get('tv_interface_trailer_zoom') || '0';  
+                        var blur = parseInt(cfg.tv_interface_trailer_blur) || 0;  
+                        var zoom = cfg.tv_interface_trailer_zoom || '0';  
                         if (blur > 0) iframe.css('filter', 'blur(' + blur + 'px)');  
                         if (zoom !== '0') iframe.css('transform', 'scale(' + (1 + parseInt(zoom) / 100) + ') translateZ(0)');  
                         ev.target.playVideo();  
@@ -415,10 +479,11 @@
     }  
   
     /**  
-     * СЛАЙДШОУ ФОНОВИХ ЗОБРАЖЕНЬ (Оптимізовано без клонування DOM)  
+     * СЛАЙДШОУ — один додатковий <img>-шар замість clone()/remove(),  
+     * ланцюговий setTimeout замість setInterval (без накопичення викликів)  
      */  
     function startSlideshow(e, $render) {  
-        if (!Lampa.Storage.get('tv_interface_slideshow')) return;  
+        if (!cfg.tv_interface_slideshow) return;  
   
         var movie = e.data.movie || (e.object && e.object.card);  
         if (!movie || !movie.id) return;  
@@ -426,8 +491,8 @@
         var item_id = movie.id;  
         var media_type = (movie.name || movie.first_air_date) ? 'tv' : 'movie';  
         var current_lang = Lampa.Storage.field('tmdb_lang') || 'uk';  
-        var quality = Lampa.Storage.get('tv_interface_slideshow_quality') || 'w1280';  
-        var duration = parseInt(Lampa.Storage.get('tv_interface_slideshow_duration')) || 8000;  
+        var quality = cfg.tv_interface_slideshow_quality || 'w780';  
+        var duration = parseInt(cfg.tv_interface_slideshow_duration) || 8000;  
   
         Lampa.Api.sources.tmdb.get(  
             media_type + '/' + item_id + '/images?include_image_language=' + current_lang + ',xx,null,en',  
@@ -450,45 +515,61 @@
                     other_b.sort(function (a, b) { return (b.vote_average || 0) - (a.vote_average || 0); });  
                     final_b = final_b.concat(other_b);  
                 }  
-                final_b = final_b.slice(0, 15);  
+                /* 6 картинок замість 15 — менше декодування й трафіку на ТВ */  
+                final_b = final_b.slice(0, 6);  
                 if (final_b.length < 2) return;  
   
-                if (window.tviRotationTimer) clearInterval(window.tviRotationTimer);  
+                var $currentBg = $render.find('.full-start__background').last();  
+                if (!$currentBg.length) return;  
+  
+                /* Один постійний шар-переходу замість clone()+remove() кожні 8 сек */  
+                var $slide = $currentBg.parent().find('.tvi-bg-slide');  
+                if (!$slide.length) {  
+                    $slide = $('<img class="tvi-bg-slide">');  
+                    $currentBg.after($slide);  
+                }  
   
                 var idx = 0;  
                 var is_active = true;  
+                var slideTimer = null;  
   
-                window.tviRotationTimer = setInterval(function () {  
-                    if (!is_active || currentActiveId !== item_id) {  
-                        clearInterval(window.tviRotationTimer);  
-                        return;  
-                    }  
+                function nextSlide() {  
+                    if (!is_active || currentActiveId !== item_id) return;  
   
                     idx = (idx + 1) % final_b.length;  
                     var url = Lampa.TMDB.image('t/p/' + quality + final_b[idx].file_path);  
-                    var $bg = $render.find('.full-start__background').first();  
-                    if (!$bg.length) return;  
   
-                    // Легке завантаження без клонування вузлів DOM  
                     var img = new Image();  
                     img.onload = function () {  
                         if (!is_active || currentActiveId !== item_id) return;  
   
-                        // Плавна зміна зображення в існуючому тезі  
-                        $bg.css('opacity', '0');  
+                        /* Кросфейд: новий шар поверх, старий ховаємо; src міняємо лише в $slide */  
+                        $slide.attr('src', url);  
+                        /* reflow перед додаванням класу, щоб transition спрацював */  
+                        $slide[0].offsetHeight;  
+                        $slide.addClass('display');  
+                        $currentBg.css('opacity', '0');  
+  
                         setTimeout(function () {  
-                            if (!is_active || currentActiveId !== item_id) return;  
-                            $bg.attr('src', url);  
-                            $bg.css('opacity', '1');  
-                        }, 400);  
+                            if (!is_active) return;  
+                            /* Після завершення фейду переносимо картинку в основний фон і скидаємо шар */  
+                            $currentBg.attr('src', url).css('opacity', '1');  
+                            $slide.removeClass('display');  
+                        }, 1550);  
                     };  
                     img.src = url;  
-                }, duration);  
+  
+                    slideTimer = setTimeout(nextSlide, duration);  
+                }  
+  
+                /* Ланцюговий setTimeout — без накопичення викликів при затримках кадру */  
+                slideTimer = setTimeout(nextSlide, duration);  
   
                 var stop = function (a) {  
                     if (a.type === 'destroy' && a.object.activity === e.object.activity) {  
                         is_active = false;  
-                        clearInterval(window.tviRotationTimer);  
+                        clearTimeout(slideTimer);  
+                        $slide.remove();  
                         Lampa.Listener.remove('activity', stop);  
                     }  
                 };  
@@ -501,10 +582,6 @@
         Lampa.Listener.follow('full', function (e) {  
             if (e.type === 'destroy' || e.type === 'onBeforeDestroy') {  
                 currentActiveId = null;  
-                if (window.tviRotationTimer) {  
-                    clearInterval(window.tviRotationTimer);  
-                    window.tviRotationTimer = null;  
-                }  
             }  
   
             if (e.type === 'complite' || e.type === 'complete') {  
@@ -519,8 +596,7 @@
                 renderMeta($render.find('.full-start-new__right'), e);  
                 loadMovieDetails(movie, $render);  
   
-                var isTrailerBg = Lampa.Storage.get('tv_interface_trailer_bg');  
-                var trailer = isTrailerBg ? pickTrailer(e.data) : null;  
+                var trailer = cfg.tv_interface_trailer_bg ? pickTrailer(e.data) : null;  
   
                 if (trailer && Lampa.Manifest.app_digital >= 220) {  
                     startTrailer(e, $render, trailer);  
@@ -583,7 +659,8 @@
             field: { name: 'Стиль анімації появи' },  
             onChange: applyStyles  
         });  
-        Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_badge_anim', type: 'select', values: { 'none': 'Без анімації', 'pulse': 'Пульсація', 'breathe': 'Дихання', 'spin_slow': 'Гойдання', 'float': 'Підстрибування' }, default: 'pulse' }, field: { name: 'Анімація бейджів' }, onChange: applyStyles });  
+        Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_badge_anim', type: 'select', values: { 'none': 'Без анімації', 'pulse': 'Пульсація', 'breathe': 'Дихання', 'spin_slow': 'Гойдання', 'float': 'Підстрибування' }, default: 'none' }, field: { name: 'Анімація бейджів' }, onChange: applyStyles });  
+        Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_logo_quality', type: 'select', values: { 'w300': 'Низька (W300)', 'w500': 'Середня (W500)', 'original': 'Оригінал' }, default: 'w500' }, field: { name: 'Якість логотипу назви' }, onChange: applyStyles });  
         Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_show_tagline', type: 'trigger', default: true }, field: { name: 'Відображати слоган' }, onChange: applyStyles });  
         Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_blocks_gap', type: 'select', values: { '8px': 'Компактний', '12px': 'Стандартний', '18px': 'Просторий', '24px': 'Панорамний' }, default: '8px' }, field: { name: 'Відступи між блоками' }, onChange: applyStyles });  
         Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_ratings_size', type: 'select', values: { '0.4em': 'Дрібний', '0.45em': 'Звичайний', '0.5em': 'Великий', '0.55em': 'Дуже великий' }, default: '0.45em' }, field: { name: 'Розмір шрифту інфо-блоків' }, onChange: applyStyles });  
@@ -591,7 +668,7 @@
   
         Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_slideshow', type: 'trigger', default: true }, field: { name: 'Слайдшоу фонових зображень', description: 'Плавна зміна backdrops з TMDB на фоні картки' } });  
         Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_slideshow_duration', type: 'select', values: { 5000: '5 секунд', 8000: '8 секунд', 10000: '10 секунд', 15000: '15 секунд' }, default: 8000 }, field: { name: 'Інтервал зміни зображень' } });  
-        Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_slideshow_quality', type: 'select', values: { w780: 'Стандартна (W780)', w1280: 'Висока (W1280)', original: 'Оригінал' }, default: 'w1280' }, field: { name: 'Якість зображень слайдшоу' } });  
+        Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_slideshow_quality', type: 'select', values: { w780: 'Стандартна (W780)', w1280: 'Висока (W1280)', original: 'Оригінал' }, default: 'w780' }, field: { name: 'Якість зображень слайдшоу' } });  
   
         Lampa.SettingsApi.addParam({  
             component: 'tv_interface',  
