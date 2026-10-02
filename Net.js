@@ -4,26 +4,18 @@
     if (window.banner_hero_plugin) return;
     window.banner_hero_plugin = true;
 
-    var VERSION = '1.0.4';
+    var VERSION = '1.0.5';
     var SETTING = 'banner_hero_enabled';
     var logos = {};
     var focusTimer = null;
 
     // --- CSS Стилі: фіксований банер на весь екран зверху ---
     var CSS = [
-        // Додаємо відступ зверху для контенту, щоб ряди карток не ховалися під банером
         'body.banner-enabled .activity__body{padding-top:42vh !important;box-sizing:border-box}',
-        
-        // Використовуємо position: fixed, щоб розтягнути банер абсолютно від самого верху екрана
         '.banner-hero{position:fixed;left:0;right:0;top:0;height:48vh;overflow:hidden;pointer-events:none;z-index:0}',
-        
-        // Фонове зображення заповнює всю площу
         '.banner-hero__bg{position:absolute;inset:0;background-size:cover;background-position:center top;opacity:0;transition:opacity .5s ease}',
         '.banner-hero__bg.show{opacity:1}',
-        
-        // Градієнт: зверху м'яке затемнення під шапку, знизу — плавний перехід до темного тла
         '.banner-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg, rgba(11,12,16,0.9) 0%, rgba(11,12,16,0.3) 30%, rgba(11,12,16,1) 100%), linear-gradient(90deg,rgba(0,0,0,.85) 0%,rgba(0,0,0,.6) 35%,rgba(0,0,0,0) 70%)}',
-        
         '.banner-hero__info{position:absolute;left:3em;bottom:3em;width:46%;z-index:1}',
         '.banner-hero__logo{max-width:100%;max-height:7em;display:none;margin-bottom:.6em;filter:brightness(0) invert(1) drop-shadow(0 4px 12px rgba(0,0,0,.6))}',
         '.banner-hero__title{font-size:2.8em;font-weight:900;line-height:1.05;color:#f5f5f1;margin-bottom:.35em;text-shadow:0 3px 14px rgba(0,0,0,.7)}',
@@ -60,7 +52,6 @@
             var list = (json && json.logos) || [];
             var pick = null;
             
-            // Пріоритет: спочатку українська (uk), якщо немає — англійська (en)
             ['uk', 'en', null].some(function (lang) {
                 pick = list.filter(function (x) { return x.iso_639_1 === lang; })[0];
                 return !!pick;
@@ -76,8 +67,7 @@
     }
 
     // --- Створення глобального блоку банера ---
-    function heroFor(activity) {
-        // Шукаємо або створюємо банер на рівні всього документа, щоб він був поверх усього
+    function heroFor() {
         var hero = document.querySelector('.banner-hero');
         if (hero) return hero;
         
@@ -92,7 +82,6 @@
                 '<div class="banner-hero__descr"></div>' +
             '</div>';
             
-        // Вставляємо одразу в тіло документа або на початок активіті
         document.body.appendChild(hero);
         return hero;
     }
@@ -109,7 +98,6 @@
         titleEl.style.display = '';
         logo.style.display = 'none';
 
-        // Формування мета-даних (рейтинг, рік, тип)
         var meta = [];
         var vote = parseFloat(data.vote_average);
         if (vote) meta.push('<span class="banner-hero__rate">' + vote.toFixed(1) + '</span>');
@@ -122,7 +110,6 @@
         hero.querySelector('.banner-hero__meta').innerHTML = meta.join('');
         hero.querySelector('.banner-hero__descr').textContent = data.overview || '';
         
-        // Задній фон (backdrop)
         bg.classList.remove('show');
         if (data.backdrop_path) {
             var img = new Image();
@@ -134,7 +121,6 @@
             img.src = Lampa.Api.img(data.backdrop_path, 'w1280');
         }
 
-        // Завантаження логотипа
         loadLogo(data, function (src) {
             if (!src || hero.bannerId !== data.id) return;
             logo.onload = function () {
@@ -157,7 +143,6 @@
 
         clearTimeout(focusTimer);
         focusTimer = setTimeout(function () {
-            // Перевіряємо чи ми на головній або в категорії
             var active = Lampa.Activity.active();
             if (active && ['main', 'category'].indexOf(active.component) >= 0) {
                 showHero(heroFor(), card.card_data);
@@ -188,13 +173,12 @@
                     if (e.object && ['main', 'category'].indexOf(e.object.component) >= 0) {
                         hero.style.display = isEnabled() ? '' : 'none';
                     } else {
-                        hero.style.display = 'none'; // Ховаємо банер на інших сторінках (наприклад, у налаштуваннях чи картці фільму)
+                        hero.style.display = 'none';
                     }
                 }
             }
         });
 
-        // Додавання пункту в налаштування Lampa
         if (Lampa.SettingsApi) {
             Lampa.SettingsApi.addParam({
                 component: 'interface',
@@ -210,7 +194,7 @@
 
     if (window.appready) init();
     else {
-        Lampa.Listener.rules('app', function (e) {
+        Lampa.Listener.follow('app', function (e) {
             if (e.type === 'ready') init();
         });
     }
