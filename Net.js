@@ -4,25 +4,25 @@
     if (window.banner_hero_plugin) return;
     window.banner_hero_plugin = true;
 
-    var VERSION = '1.0.3';
+    var VERSION = '1.0.4';
     var SETTING = 'banner_hero_enabled';
     var logos = {};
     var focusTimer = null;
 
-    // --- CSS Стилі: банер розтягнуто наверх без чорної смуги ---
+    // --- CSS Стилі: фіксований банер на весь екран зверху ---
     var CSS = [
-        '.banner-host{position:relative}',
-        '.banner-host .activity__body{padding-top:42vh !important;box-sizing:border-box}',
+        // Додаємо відступ зверху для контенту, щоб ряди карток не ховалися під банером
+        'body.banner-enabled .activity__body{padding-top:42vh !important;box-sizing:border-box}',
         
-        // Повертаємо top: 0, щоб банер покривав увесь верхній простір
-        '.banner-hero{position:absolute;left:0;right:0;top:0;height:48vh;overflow:hidden;pointer-events:none;z-index:0}',
+        // Використовуємо position: fixed, щоб розтягнути банер абсолютно від самого верху екрана
+        '.banner-hero{position:fixed;left:0;right:0;top:0;height:48vh;overflow:hidden;pointer-events:none;z-index:0}',
         
-        // Картинка починається з самого верху, але центр вирівнюємо так, щоб обличчя не ховалося
-        '.banner-hero__bg{position:absolute;inset:0;background-size:cover;background-position:center 25%;opacity:0;transition:opacity .5s ease}',
+        // Фонове зображення заповнює всю площу
+        '.banner-hero__bg{position:absolute;inset:0;background-size:cover;background-position:center top;opacity:0;transition:opacity .5s ease}',
         '.banner-hero__bg.show{opacity:1}',
         
-        // Градієнт: зверху м'яке затемнення під шапку, знизу — до карток
-        '.banner-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg, rgba(11,12,16,0.85) 0%, rgba(11,12,16,0.2) 25%, var(--neo-bg, #0b0c10) 100%), linear-gradient(90deg,rgba(0,0,0,.85) 0%,rgba(0,0,0,.6) 35%,rgba(0,0,0,0) 70%)}',
+        // Градієнт: зверху м'яке затемнення під шапку, знизу — плавний перехід до темного тла
+        '.banner-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg, rgba(11,12,16,0.9) 0%, rgba(11,12,16,0.3) 30%, rgba(11,12,16,1) 100%), linear-gradient(90deg,rgba(0,0,0,.85) 0%,rgba(0,0,0,.6) 35%,rgba(0,0,0,0) 70%)}',
         
         '.banner-hero__info{position:absolute;left:3em;bottom:3em;width:46%;z-index:1}',
         '.banner-hero__logo{max-width:100%;max-height:7em;display:none;margin-bottom:.6em;filter:brightness(0) invert(1) drop-shadow(0 4px 12px rgba(0,0,0,.6))}',
@@ -75,9 +75,10 @@
         });
     }
 
-    // --- Створення блоку банера в DOM ---
+    // --- Створення глобального блоку банера ---
     function heroFor(activity) {
-        var hero = activity.querySelector('.banner-hero');
+        // Шукаємо або створюємо банер на рівні всього документа, щоб він був поверх усього
+        var hero = document.querySelector('.banner-hero');
         if (hero) return hero;
         
         hero = document.createElement('div');
@@ -91,8 +92,8 @@
                 '<div class="banner-hero__descr"></div>' +
             '</div>';
             
-        activity.insertBefore(hero, activity.firstChild);
-        activity.classList.add('banner-host');
+        // Вставляємо одразу в тіло документа або на початок активіті
+        document.body.appendChild(hero);
         return hero;
     }
 
@@ -152,24 +153,25 @@
         if (!card || !card.classList || !card.classList.contains('card') || !card.card_data) return;
 
         var activity = card.closest ? card.closest('.activity') : null;
-        if (!activity || !activity.classList.contains('banner-host')) return;
+        if (!activity) return;
 
         clearTimeout(focusTimer);
         focusTimer = setTimeout(function () {
-            showHero(heroFor(activity), card.card_data);
+            // Перевіряємо чи ми на головній або в категорії
+            var active = Lampa.Activity.active();
+            if (active && ['main', 'category'].indexOf(active.component) >= 0) {
+                showHero(heroFor(), card.card_data);
+            }
         }, 150);
-    }
-
-    function attach(object) {
-        if (!isEnabled() || !object || ['main', 'category'].indexOf(object.component) < 0) return;
-        var render = object.activity && object.activity.render && object.activity.render(true);
-        var el = render && render.jquery ? render[0] : render;
-        if (el && el.classList) heroFor(el);
     }
 
     function apply() {
         var on = isEnabled();
         document.body.classList.toggle('banner-enabled', on);
+        var hero = document.querySelector('.banner-hero');
+        if (hero) {
+            hero.style.display = on ? '' : 'none';
+        }
     }
 
     // --- Ініціалізація плагіна ---
@@ -180,12 +182,17 @@
         document.addEventListener('hover:focus', onCardFocus, true);
         
         Lampa.Listener.follow('activity', function (e) {
-            if (e.type === 'start') attach(e.object);
+            if (e.type === 'start') {
+                var hero = document.querySelector('.banner-hero');
+                if (hero) {
+                    if (e.object && ['main', 'category'].indexOf(e.object.component) >= 0) {
+                        hero.style.display = isEnabled() ? '' : 'none';
+                    } else {
+                        hero.style.display = 'none'; // Ховаємо банер на інших сторінках (наприклад, у налаштуваннях чи картці фільму)
+                    }
+                }
+            }
         });
-
-        if (Lampa.Activity && Lampa.Activity.active) {
-            attach(Lampa.Activity.active());
-        }
 
         // Додавання пункту в налаштування Lampa
         if (Lampa.SettingsApi) {
@@ -203,7 +210,7 @@
 
     if (window.appready) init();
     else {
-        Lampa.Listener.follow('app', function (e) {
+        Lampa.Listener.rules('app', function (e) {
             if (e.type === 'ready') init();
         });
     }
