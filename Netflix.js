@@ -3,10 +3,9 @@
     if (window.lampa_pure_hero) return;
     window.lampa_pure_hero = true;
 
-    var VERSION = '1.0.0';
+    var VERSION = '1.1.0';
     var SETTING = 'pure_hero_enabled';
     var HERO_COMPONENTS = ['main', 'category'];
-    var SHARP_DELAY = 1000;
     var logos = {};
     var focusTimer = null;
 
@@ -14,14 +13,15 @@
         return Lampa.Storage.get(SETTING, true) === true || Lampa.Storage.get(SETTING, true) === 'true';
     }
 
-    // ---------- Стилі лише для Hero-блоку ----------
+    // ---------- Стилі з виправленням позиції до самого верху та оптимізацією ----------
     var CSS = [
+        // Піднімаємо банер на самий верх екрана, під шапку
         '.pure-hero-host{position:relative}',
         '.pure-hero-host .activity__body{padding-top:42vh;box-sizing:border-box}',
-        '.p-hero{position:absolute;left:0;right:0;top:0;height:50vh;overflow:hidden;pointer-events:none;z-index:0;-webkit-mask-image:linear-gradient(180deg,#000 55%,transparent 100%);mask-image:linear-gradient(180deg,#000 55%,transparent 100%)}',
-        '.p-hero__bg{position:absolute;inset:0;background-size:cover;background-position:center 20%;opacity:0;transition:opacity .5s ease}',
+        '.p-hero{position:absolute;left:0;right:0;top:0;height:50vh;overflow:hidden;pointer-events:none;z-index:0;-webkit-mask-image:linear-gradient(180deg,#000 65%,transparent 100%);mask-image:linear-gradient(180deg,#000 65%,transparent 100%)}',
+        '.p-hero__bg{position:absolute;inset:0;background-size:cover;background-position:center 20%;opacity:0;transition:opacity .3s ease}', // Швидший плавний перехід без навантаження
         '.p-hero__bg.show{opacity:1}',
-        '.p-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.85) 0%,rgba(0,0,0,.6) 35%,rgba(0,0,0,0) 70%)}',
+        '.p-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.85) 0%,rgba(0,0,0,.6) 35%,rgba(0,0,0,0) 70%), linear-gradient(180deg, rgba(0,0,0,0.6) 0%, transparent 30%)}',
         '.p-hero__info{position:absolute;left:3em;bottom:5.5em;width:46%;z-index:1}',
         '.p-hero__logo{max-width:100%;max-height:7em;display:none;margin-bottom:.6em;filter:brightness(0) invert(1) drop-shadow(0 4px 12px rgba(0,0,0,.6))}',
         '.p-hero__title{font-size:2.8em;font-weight:900;line-height:1.05;color:#f5f5f1;margin-bottom:.35em;text-shadow:0 3px 14px rgba(0,0,0,.7)}',
@@ -38,7 +38,6 @@
         document.head.appendChild(style);
     }
 
-    // ---------- Допоміжні функції ----------
     function mediaType(data) {
         if (data.media_type) return data.media_type;
         return data.name && !data.title ? 'tv' : 'movie';
@@ -57,7 +56,6 @@
         }
     }
 
-    // Завантаження логотипу (українська -> англійська -> будь-яка)
     function loadLogo(data, done) {
         if (!data.id || (data.source && data.source !== 'tmdb')) return done('');
         var key = mediaType(data) + '_' + data.id;
@@ -83,7 +81,6 @@
         });
     }
 
-    // ---------- Логіка Hero-блоку ----------
     function heroFor(activity) {
         if (!enabled()) return null;
         var hero = activity.querySelector('.p-hero');
@@ -125,30 +122,18 @@
         hero.querySelector('.p-hero__descr').textContent = data.overview || '';
         
         bg.classList.remove('show');
-        clearTimeout(hero.pSharp);
 
+        // Оптимізація: використовуємо лише w1280 без додаткового завантаження original, що усуває фрізи
         if (data.backdrop_path) {
             var img = new Image();
             img.onload = function () {
                 if (hero.pId !== data.id) return;
                 bg.style.backgroundImage = 'url(' + img.src + ')';
                 bg.classList.add('show');
-                
-                hero.pSharp = setTimeout(function () {
-                    var full = new Image();
-                    full.onload = function () {
-                        if (hero.pId === data.id) bg.style.backgroundImage = 'url(' + full.src + ')';
-                    };
-                    full.src = Lampa.Api.img(data.backdrop_path, 'original');
-                }, SHARP_DELAY);
             };
             img.src = Lampa.Api.img(data.backdrop_path, 'w1280');
         }
 
-    linkLogo(data, hero, logo, titleEl);
-    }
-
-    function linkLogo(data, hero, logo, titleEl) {
         loadLogo(data, function (src) {
             if (!src || hero.pId !== data.id) return;
             logo.onload = function () {
@@ -171,10 +156,11 @@
         var hero = heroFor(activity);
         if (!hero) return;
 
+        // Збільшено затримку до 250мс, щоб при швидкому гортанні стрічки не вирубувати інтерфейс запитами
         clearTimeout(focusTimer);
         focusTimer = setTimeout(function () {
             showHero(hero, card.card_data);
-        }, 150);
+        }, 250);
     }
 
     function attach(object) {
@@ -188,7 +174,6 @@
         if (e.type === 'start') attach(e.object);
     }
 
-    // ---------- Налаштування та ініціалізація ----------
     function addSetting() {
         if (!Lampa.SettingsApi) return;
         Lampa.SettingsApi.addParam({
@@ -200,7 +185,7 @@
             },
             field: {
                 name: 'Банер над рядами (Hero)',
-                description: 'Показувати інформаційний банер з фоном та логотипом при виборі фільму на головному екрані.'
+                description: 'Показувати інформаційний банер з фоном та логотипом нагорі.'
             },
             onChange: function () {}
         });
