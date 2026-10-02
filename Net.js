@@ -4,25 +4,25 @@
     if (window.banner_hero_plugin) return;
     window.banner_hero_plugin = true;
 
-    var VERSION = '1.0.2';
+    var VERSION = '1.0.3';
     var SETTING = 'banner_hero_enabled';
     var logos = {};
     var focusTimer = null;
 
-    // --- CSS Стилі для банера (вирівняно під шапку Лампи) ---
+    // --- CSS Стилі: банер розтягнуто наверх без чорної смуги ---
     var CSS = [
         '.banner-host{position:relative}',
         '.banner-host .activity__body{padding-top:42vh !important;box-sizing:border-box}',
         
-        // Позиціюємо банер рівно під шапкою (top: 4.5em)
-        '.banner-hero{position:absolute;left:0;right:0;top:4.5em;height:45vh;overflow:hidden;pointer-events:none;z-index:0}',
+        // Повертаємо top: 0, щоб банер покривав увесь верхній простір
+        '.banner-hero{position:absolute;left:0;right:0;top:0;height:48vh;overflow:hidden;pointer-events:none;z-index:0}',
         
-        // Фонове зображення починається одразу під шапкою
-        '.banner-hero__bg{position:absolute;inset:0;background-size:cover;background-position:center 20%;opacity:0;transition:opacity .5s ease}',
+        // Картинка починається з самого верху, але центр вирівнюємо так, щоб обличчя не ховалося
+        '.banner-hero__bg{position:absolute;inset:0;background-size:cover;background-position:center 25%;opacity:0;transition:opacity .5s ease}',
         '.banner-hero__bg.show{opacity:1}',
         
-        // Плавний градієнт донизу до карток
-        '.banner-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg, rgba(11,12,16,0) 40%, var(--neo-bg, #0b0c10) 100%), linear-gradient(90deg,rgba(0,0,0,.85) 0%,rgba(0,0,0,.6) 35%,rgba(0,0,0,0) 70%)}',
+        // Градієнт: зверху м'яке затемнення під шапку, знизу — до карток
+        '.banner-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg, rgba(11,12,16,0.85) 0%, rgba(11,12,16,0.2) 25%, var(--neo-bg, #0b0c10) 100%), linear-gradient(90deg,rgba(0,0,0,.85) 0%,rgba(0,0,0,.6) 35%,rgba(0,0,0,0) 70%)}',
         
         '.banner-hero__info{position:absolute;left:3em;bottom:3em;width:46%;z-index:1}',
         '.banner-hero__logo{max-width:100%;max-height:7em;display:none;margin-bottom:.6em;filter:brightness(0) invert(1) drop-shadow(0 4px 12px rgba(0,0,0,.6))}',
