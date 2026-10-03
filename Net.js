@@ -4,7 +4,7 @@
     if (window.banner_hero_plugin) return;
     window.banner_hero_plugin = true;
 
-    var VERSION = '1.2.0';
+    var VERSION = '1.2.1';
     var SETTING = 'banner_hero_enabled';
     var SIZE_SETTING = 'interface_size';
     var logos = {};
@@ -156,7 +156,6 @@
             img.onload = function () {
                 if (hero.bannerId !== data.id) return;
                 bg.style.backgroundImage = 'url(' + img.src + ')';
-                // Невелика затримка для плавного старту анімації зуму/opacity
                 requestAnimationFrame(function() {
                     bg.classList.add('show');
                 });
@@ -186,7 +185,6 @@
         if (!activity || !activity.classList.contains('banner-host')) return;
 
         clearTimeout(focusTimer);
-        // Зменшено затримку до 70мс для миттєвого, але плавного відгуку
         focusTimer = setTimeout(function () {
             lastCardId = card.card_data.id;
             showHero(heroFor(activity), card.card_data);
@@ -247,7 +245,7 @@
 
             Lampa.SettingsApi.addParam({
                 component: 'interface_plus_settings',
-                param: { name: SETTING, type: 'trigger', default: default = true },
+                param: { name: SETTING, type: 'trigger', default: true },
                 field: { 
                     name: lang_data.banner_enable_name, 
                     description: lang_data.banner_enable_descr 
