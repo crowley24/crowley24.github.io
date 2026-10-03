@@ -13,24 +13,24 @@
     var CSS = [
         '.banner-host{position:relative}',
 
-        // Відступ під банер
-        '.banner-host .activity__body{padding-top:42vh;box-sizing:border-box}',
+        // Зменшений простір під банер, щоб картки не обрізались знизу
+        '.banner-host .activity__body{padding-top:29vh;box-sizing:border-box}',
 
-        // Банер піднімається під верхню панель Lampa
-        '.banner-hero{position:absolute;left:0;right:0;top:-72px;height:calc(50vh + 72px);overflow:hidden;pointer-events:none;z-index:0;-webkit-mask-image:linear-gradient(180deg,#000 55%,transparent 100%);mask-image:linear-gradient(180deg,#000 55%,transparent 100%)}',
+        // Банер заходить під верхню панель Lampa
+        '.banner-hero{position:absolute;left:0;right:0;top:-100px;height:calc(50vh + 100px);overflow:hidden;pointer-events:none;z-index:0;-webkit-mask-image:linear-gradient(180deg,#000 55%,transparent 100%);mask-image:linear-gradient(180deg,#000 55%,transparent 100%)}',
 
-        // Верхня панель Lampa завжди поверх банера
+        // Верхня панель Lampa залишається поверх банера
         '.head{position:relative;z-index:100!important}',
 
         // Фонове зображення
         '.banner-hero__bg{position:absolute;inset:0;background-size:cover;background-position:center 20%;opacity:0;transition:opacity .5s ease}',
         '.banner-hero__bg.show{opacity:1}',
 
-        // Затемнення зліва для читабельності тексту
+        // Затемнення зліва для читабельності
         '.banner-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.85) 0%,rgba(0,0,0,.6) 35%,rgba(0,0,0,0) 70%)}',
 
-        // Інформація банера
-        '.banner-hero__info{position:absolute;left:3em;bottom:5.5em;width:46%;z-index:1}',
+        // Інформація банера піднята трохи вище
+        '.banner-hero__info{position:absolute;left:3em;bottom:6.5em;width:46%;z-index:1}',
 
         // Логотип
         '.banner-hero__logo{max-width:100%;max-height:7em;display:none;margin-bottom:.6em;filter:brightness(0) invert(1) drop-shadow(0 4px 12px rgba(0,0,0,.6))}',
@@ -47,7 +47,7 @@
         // Опис
         '.banner-hero__descr{font-size:1.1em;line-height:1.45;color:#f5f5f1;opacity:.85;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}',
 
-        // Загальне затемнення фону Lampa
+        // Затемнення фону Lampa
         'body.banner-enabled .background::after{content:"";position:fixed;inset:0;background:rgba(11,12,16,.55);pointer-events:none}'
     ].join('\n');
 
@@ -89,37 +89,40 @@
 
         var network = new Lampa.Reguest();
 
-        network.silent(url, function (json) {
-            var list = (json && json.logos) || [];
-            var pick = null;
+        network.silent(
+            url,
+            function (json) {
+                var list = (json && json.logos) || [];
+                var pick = null;
 
-            // Пріоритет:
-            // 1. Український
-            // 2. Англійський
-            // 3. Без мови
-            ['uk', 'en', null].some(function (lang) {
-                pick = list.filter(function (x) {
-                    return x.iso_639_1 === lang;
-                })[0];
+                // Пріоритет:
+                // 1. Український
+                // 2. Англійський
+                // 3. Без мови
+                ['uk', 'en', null].some(function (lang) {
+                    pick = list.filter(function (x) {
+                        return x.iso_639_1 === lang;
+                    })[0];
 
-                return !!pick;
-            });
+                    return !!pick;
+                });
 
-            pick = pick || list[0];
+                pick = pick || list[0];
 
-            logos[key] = pick
-                ? Lampa.TMDB.image(
-                    't/p/w500' +
-                    pick.file_path.replace('.svg', '.png')
-                )
-                : '';
+                logos[key] = pick
+                    ? Lampa.TMDB.image(
+                        't/p/w500' +
+                        pick.file_path.replace('.svg', '.png')
+                    )
+                    : '';
 
-            done(logos[key]);
-
-        }, function () {
-            logos[key] = '';
-            done('');
-        });
+                done(logos[key]);
+            },
+            function () {
+                logos[key] = '';
+                done('');
+            }
+        );
     }
 
     // --- Створення блоку банера в DOM ---
@@ -199,7 +202,7 @@
         hero.querySelector('.banner-hero__descr').textContent =
             data.overview || '';
 
-        // --- Задній фон (backdrop) ---
+        // --- Задній фон ---
         bg.classList.remove('show');
         bg.style.backgroundImage = '';
 
@@ -312,14 +315,12 @@
         injectStyle();
         apply();
 
-        // Відстеження фокусу на картках
         document.addEventListener(
             'hover:focus',
             onCardFocus,
             true
         );
 
-        // Відстеження відкриття activity
         Lampa.Listener.follow(
             'activity',
             function (e) {
@@ -329,7 +330,6 @@
             }
         );
 
-        // Якщо activity вже активна
         if (
             Lampa.Activity &&
             Lampa.Activity.active
