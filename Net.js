@@ -4,12 +4,12 @@
     if (window.banner_hero_plugin) return;
     window.banner_hero_plugin = true;
 
-    var VERSION = '1.0.6';
+    var VERSION = '1.0.7';
     var SETTING = 'banner_hero_enabled';
     var logos = {};
     var focusTimer = null;
 
-    // --- CSS Стилі: виправлено відступ зліва, щоб не перекривати меню ---
+    // --- CSS Стилі: банер на весьверх, текст вирівняно по краю карток ---
     var CSS = [
         'body.banner-enabled .activity__body{padding-top:42vh !important;box-sizing:border-box}',
         '.banner-hero{position:fixed;left:0;right:0;top:0;height:48vh;overflow:hidden;pointer-events:none;z-index:0}',
@@ -17,8 +17,8 @@
         '.banner-hero__bg.show{opacity:1}',
         '.banner-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg, rgba(11,12,16,0.9) 0%, rgba(11,12,16,0.3) 30%, rgba(11,12,16,1) 100%), linear-gradient(90deg,rgba(0,0,0,.9) 0%,rgba(0,0,0,.7) 40%,rgba(0,0,0,0) 75%)}',
         
-        // Зрушуємо інформацію правіше (left: 16.5em), щоб вона не заходила на бічне меню
-        '.banner-hero__info{position:absolute;left:16.5em;bottom:3em;width:48%;z-index:1}',
+        // Вирівнюємо інформацію точно за лівим краєм карток (12.5em)
+        '.banner-hero__info{position:absolute;left:12.5em;bottom:3em;width:52%;z-index:1}',
         
         '.banner-hero__logo{max-width:100%;max-height:7em;display:none;margin-bottom:.6em;filter:brightness(0) invert(1) drop-shadow(0 4px 12px rgba(0,0,0,.6))}',
         '.banner-hero__title{font-size:2.8em;font-weight:900;line-height:1.05;color:#f5f5f1;margin-bottom:.35em;text-shadow:0 3px 14px rgba(0,0,0,.7)}',
