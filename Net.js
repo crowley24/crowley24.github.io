@@ -4,7 +4,7 @@
     if (window.banner_hero_plugin) return;
     window.banner_hero_plugin = true;
 
-    var VERSION = '1.2.0';
+    var VERSION = '1.2.1';
 
     var SETTING = 'banner_hero_enabled';
     var SIZE_SETTING = 'interface_size';
@@ -20,8 +20,6 @@
     var lastCardId = null;
     var lastActivity = null;
     var lastHero = null;
-
-    var makerPatched = false;
 
     /* =========================
        ЛОКАЛІЗАЦІЯ
@@ -57,7 +55,11 @@
 
         '.banner-hero__info{position:absolute;left:3em;bottom:5.5em;width:46%;z-index:1}',
 
-        '.banner-hero__logo{max-width:100%;max-height:7em;display:none;margin-bottom:.6em;filter:brightness(0) invert(1) drop-shadow(0 4px 12px rgba(0,0,0,.6))}',
+        /*
+         * ОРИГІНАЛЬНИЙ КОЛІР ЛОГОТИПА.
+         * Без brightness/invert.
+         */
+        '.banner-hero__logo{max-width:100%;max-height:7em;display:none;margin-bottom:.6em;filter:drop-shadow(0 4px 12px rgba(0,0,0,.6))}',
 
         '.banner-hero__title{font-size:2.8em;font-weight:900;line-height:1.05;color:#f5f5f1;margin-bottom:.35em;text-shadow:0 3px 14px rgba(0,0,0,.7)}',
 
@@ -84,6 +86,7 @@
 
     function isEnabled() {
         var val = Lampa.Storage.get(SETTING, true);
+
         return val === true || val === 'true';
     }
 
@@ -99,18 +102,26 @@
 
         var iSize = isMobile
             ? 10.1
-            : parseFloat(Lampa.Storage.field(SIZE_SETTING)) || 10.6;
+            : parseFloat(
+                Lampa.Storage.field(SIZE_SETTING)
+            ) || 10.6;
 
-        var currentSize = document.body.getAttribute('data-banner-interface-size');
+        var currentSize =
+            document.body.getAttribute(
+                'data-banner-interface-size'
+            );
 
-        if (currentSize === String(iSize)) return;
+        if (currentSize === String(iSize)) {
+            return;
+        }
 
         document.body.setAttribute(
             'data-banner-interface-size',
             String(iSize)
         );
 
-        document.body.style.fontSize = iSize + 'px';
+        document.body.style.fontSize =
+            iSize + 'px';
 
         var cardCount = 6;
 
@@ -124,42 +135,70 @@
     }
 
     function patchMaker(cardCount) {
-        if (!Lampa.Maker || !Lampa.Maker.map) return;
+        if (!Lampa.Maker || !Lampa.Maker.map) {
+            return;
+        }
 
-        ['Line', 'Category'].forEach(function (type) {
-            var mapItem = Lampa.Maker.map(type);
+        ['Line', 'Category'].forEach(
+            function (type) {
+                var mapItem =
+                    Lampa.Maker.map(type);
 
-            if (!mapItem || !mapItem.Items || !mapItem.Items.onInit) {
-                return;
-            }
-
-            if (mapItem.Items.__bannerHeroPatched) {
-                mapItem.Items.__bannerHeroCardCount = cardCount;
-                return;
-            }
-
-            var original = mapItem.Items.onInit;
-
-            mapItem.Items.onInit = function () {
-                original.call(this);
-
-                var count =
-                    mapItem.Items.__bannerHeroCardCount || cardCount;
-
-                if (type === 'Line') {
-                    this.view = count;
-                } else {
-                    this.limit_view = count;
+                if (
+                    !mapItem ||
+                    !mapItem.Items ||
+                    !mapItem.Items.onInit
+                ) {
+                    return;
                 }
-            };
 
-            mapItem.Items.__bannerHeroPatched = true;
-            mapItem.Items.__bannerHeroCardCount = cardCount;
-        });
+                /*
+                 * Не обгортаємо onInit повторно.
+                 */
+                if (
+                    mapItem.Items
+                        .__bannerHeroPatched
+                ) {
+                    mapItem.Items
+                        .__bannerHeroCardCount =
+                        cardCount;
+
+                    return;
+                }
+
+                var original =
+                    mapItem.Items.onInit;
+
+                mapItem.Items.onInit =
+                    function () {
+                        original.call(this);
+
+                        var count =
+                            mapItem.Items
+                                .__bannerHeroCardCount ||
+                            cardCount;
+
+                        if (type === 'Line') {
+                            this.view = count;
+                        } else {
+                            this.limit_view =
+                                count;
+                        }
+                    };
+
+                mapItem.Items
+                    .__bannerHeroPatched = true;
+
+                mapItem.Items
+                    .__bannerHeroCardCount =
+                    cardCount;
+            }
+        );
     }
 
     /* =========================
        LOGO
+       ОРИГІНАЛЬНА ЯКІСТЬ + КОЛІР
     ========================= */
 
     function loadLogo(data, done) {
@@ -168,7 +207,10 @@
             return;
         }
 
-        if (data.source && data.source !== 'tmdb') {
+        if (
+            data.source &&
+            data.source !== 'tmdb'
+        ) {
             done('');
             return;
         }
@@ -178,14 +220,27 @@
                 ? 'tv'
                 : 'movie';
 
-        var key = type + '_' + data.id;
+        var key =
+            type + '_' + data.id;
 
-        if (Object.prototype.hasOwnProperty.call(logos, key)) {
+        /*
+         * Логотип уже є в кеші.
+         */
+        if (
+            Object.prototype.hasOwnProperty.call(
+                logos,
+                key
+            )
+        ) {
             done(logos[key]);
             return;
         }
 
-        if (!Lampa.TMDB || !Lampa.TMDB.api || !Lampa.TMDB.key) {
+        if (
+            !Lampa.TMDB ||
+            !Lampa.TMDB.api ||
+            !Lampa.TMDB.key
+        ) {
             logos[key] = '';
             done('');
             return;
@@ -201,40 +256,72 @@
                 '&include_image_language=uk,en,null'
             );
 
-        var network = new Lampa.Reguest();
+        var network =
+            new Lampa.Reguest();
 
         network.silent(
             url,
+
             function (json) {
                 var list =
-                    json && Array.isArray(json.logos)
+                    json &&
+                    Array.isArray(json.logos)
                         ? json.logos
                         : [];
 
                 var pick = null;
 
-                ['uk', 'en', null].some(function (lang) {
-                    for (var i = 0; i < list.length; i++) {
-                        if (list[i].iso_639_1 === lang) {
-                            pick = list[i];
-                            return true;
+                /*
+                 * Пріоритет:
+                 * 1. Український
+                 * 2. Англійський
+                 * 3. Без мови
+                 * 4. Перший доступний
+                 */
+                ['uk', 'en', null].some(
+                    function (lang) {
+                        for (
+                            var i = 0;
+                            i < list.length;
+                            i++
+                        ) {
+                            if (
+                                list[i]
+                                    .iso_639_1 ===
+                                lang
+                            ) {
+                                pick = list[i];
+                                return true;
+                            }
                         }
+
+                        return false;
                     }
+                );
 
-                    return false;
-                });
+                pick =
+                    pick ||
+                    list[0];
 
-                pick = pick || list[0];
+                if (
+                    pick &&
+                    pick.file_path
+                ) {
+                    var path =
+                        pick.file_path
+                            .replace(
+                                '.svg',
+                                '.png'
+                            );
 
-                if (pick && pick.file_path) {
-                    var path = pick.file_path.replace(
-                        '.svg',
-                        '.png'
-                    );
-
+                    /*
+                     * ORIGINAL — максимальна
+                     * доступна якість TMDB.
+                     */
                     logos[key] =
                         Lampa.TMDB.image(
-                            't/p/w500' + path
+                            't/p/original' +
+                            path
                         );
                 } else {
                     logos[key] = '';
@@ -242,6 +329,7 @@
 
                 done(logos[key]);
             },
+
             function () {
                 logos[key] = '';
                 done('');
@@ -253,14 +341,25 @@
        BACKDROP
     ========================= */
 
-    function loadBackdrop(data, done) {
-        if (!data || !data.id || !data.backdrop_path) {
+    function loadBackdrop(
+        data,
+        done
+    ) {
+        if (
+            !data ||
+            !data.id ||
+            !data.backdrop_path
+        ) {
             done('');
             return;
         }
 
-        var key = String(data.id);
+        var key =
+            String(data.id);
 
+        /*
+         * Backdrop уже завантажувався.
+         */
         if (
             Object.prototype.hasOwnProperty.call(
                 backdrops,
@@ -271,53 +370,76 @@
             return;
         }
 
-        var src = Lampa.Api.img(
-            data.backdrop_path,
-            'w1280'
-        );
+        var src =
+            Lampa.Api.img(
+                data.backdrop_path,
+                'w1280'
+            );
 
-        var img = new Image();
+        var img =
+            new Image();
 
-        img.onload = function () {
-            backdrops[key] = src;
-            done(src);
-        };
+        img.onload =
+            function () {
+                backdrops[key] =
+                    src;
 
-        img.onerror = function () {
-            backdrops[key] = '';
-            done('');
-        };
+                done(src);
+            };
+
+        img.onerror =
+            function () {
+                backdrops[key] =
+                    '';
+
+                done('');
+            };
 
         img.src = src;
     }
 
     /* =========================
-       СТВОРЕННЯ HERO
+       HERO
     ========================= */
 
     function heroFor(activity) {
-        if (!activity) return null;
+        if (!activity) {
+            return null;
+        }
 
         if (
             activity.__bannerHero &&
-            activity.__bannerHero.parentNode === activity
+            activity.__bannerHero.parentNode ===
+                activity
         ) {
             return activity.__bannerHero;
         }
 
-        var hero = activity.querySelector('.banner-hero');
+        var hero =
+            activity.querySelector(
+                '.banner-hero'
+            );
 
         if (hero) {
             cacheHeroElements(hero);
 
-            activity.__bannerHero = hero;
-            activity.classList.add('banner-host');
+            activity.__bannerHero =
+                hero;
+
+            activity.classList.add(
+                'banner-host'
+            );
 
             return hero;
         }
 
-        hero = document.createElement('div');
-        hero.className = 'banner-hero';
+        hero =
+            document.createElement(
+                'div'
+            );
+
+        hero.className =
+            'banner-hero';
 
         hero.innerHTML =
             '<div class="banner-hero__bg"></div>' +
@@ -333,24 +455,52 @@
             activity.firstChild
         );
 
-        activity.classList.add('banner-host');
+        activity.classList.add(
+            'banner-host'
+        );
 
         cacheHeroElements(hero);
 
-        activity.__bannerHero = hero;
+        activity.__bannerHero =
+            hero;
 
         return hero;
     }
 
-    function cacheHeroElements(hero) {
-        if (hero.__bannerElements) return;
+    function cacheHeroElements(
+        hero
+    ) {
+        if (
+            hero.__bannerElements
+        ) {
+            return;
+        }
 
         hero.__bannerElements = {
-            bg: hero.querySelector('.banner-hero__bg'),
-            logo: hero.querySelector('.banner-hero__logo'),
-            title: hero.querySelector('.banner-hero__title'),
-            meta: hero.querySelector('.banner-hero__meta'),
-            descr: hero.querySelector('.banner-hero__descr')
+            bg:
+                hero.querySelector(
+                    '.banner-hero__bg'
+                ),
+
+            logo:
+                hero.querySelector(
+                    '.banner-hero__logo'
+                ),
+
+            title:
+                hero.querySelector(
+                    '.banner-hero__title'
+                ),
+
+            meta:
+                hero.querySelector(
+                    '.banner-hero__meta'
+                ),
+
+            descr:
+                hero.querySelector(
+                    '.banner-hero__descr'
+                )
         };
     }
 
@@ -358,11 +508,24 @@
        ПОКАЗ БАНЕРА
     ========================= */
 
-    function showHero(hero, data) {
-        if (!hero || !data) return;
+    function showHero(
+        hero,
+        data
+    ) {
+        if (
+            !hero ||
+            !data
+        ) {
+            return;
+        }
 
-        var id = data.id;
+        var id =
+            data.id;
 
+        /*
+         * Та сама картка — нічого
+         * повторно не робимо.
+         */
         if (
             hero.bannerId === id &&
             hero.bannerData
@@ -372,25 +535,39 @@
 
         cacheHeroElements(hero);
 
-        var el = hero.__bannerElements;
+        var el =
+            hero.__bannerElements;
 
-        hero.bannerId = id;
-        hero.bannerData = data;
+        hero.bannerId =
+            id;
+
+        hero.bannerData =
+            data;
 
         var title =
             data.title ||
             data.name ||
             '';
 
-        el.title.textContent = title;
+        el.title.textContent =
+            title;
 
-        el.title.style.display = '';
-        el.logo.style.display = 'none';
+        el.title.style.display =
+            '';
+
+        el.logo.style.display =
+            'none';
+
+        /* =====================
+           META
+        ===================== */
 
         var meta = [];
 
         var vote =
-            parseFloat(data.vote_average);
+            parseFloat(
+                data.vote_average
+            );
 
         if (vote) {
             meta.push(
@@ -407,7 +584,8 @@
                 ''
             ) + '';
 
-        year = year.slice(0, 4);
+        year =
+            year.slice(0, 4);
 
         if (year) {
             meta.push(
@@ -420,23 +598,28 @@
         meta.push(
             '<span>' +
             (
-                data.name && !data.title
+                data.name &&
+                !data.title
                     ? 'Серіал'
                     : 'Фільм'
             ) +
             '</span>'
         );
 
-        el.meta.innerHTML = meta.join('');
+        el.meta.innerHTML =
+            meta.join('');
 
         el.descr.textContent =
-            data.overview || '';
+            data.overview ||
+            '';
 
         /* =====================
            BACKDROP
         ===================== */
 
-        el.bg.classList.remove('show');
+        el.bg.classList.remove(
+            'show'
+        );
 
         loadBackdrop(
             data,
@@ -449,18 +632,22 @@
                 }
 
                 el.bg.style.backgroundImage =
-                    'url("' + src + '")';
+                    'url("' +
+                    src +
+                    '")';
 
-                /*
-                 * requestAnimationFrame дозволяє браузеру
-                 * спочатку застосувати background-image,
-                 * а вже потім зробити opacity.
-                 */
-                requestAnimationFrame(function () {
-                    if (hero.bannerId === id) {
-                        el.bg.classList.add('show');
+                requestAnimationFrame(
+                    function () {
+                        if (
+                            hero.bannerId ===
+                            id
+                        ) {
+                            el.bg.classList.add(
+                                'show'
+                            );
+                        }
                     }
-                });
+                );
             }
         );
 
@@ -478,19 +665,28 @@
                     return;
                 }
 
-                el.logo.onload = function () {
-                    if (hero.bannerId !== id) {
-                        return;
-                    }
+                /*
+                 * Логотип завантажується
+                 * в оригінальній якості.
+                 */
+                el.logo.onload =
+                    function () {
+                        if (
+                            hero.bannerId !==
+                            id
+                        ) {
+                            return;
+                        }
 
-                    el.logo.style.display =
-                        'block';
+                        el.logo.style.display =
+                            'block';
 
-                    el.title.style.display =
-                        'none';
-                };
+                        el.title.style.display =
+                            'none';
+                    };
 
-                el.logo.src = src;
+                el.logo.src =
+                    src;
             }
         );
     }
@@ -500,30 +696,46 @@
     ========================= */
 
     function onCardFocus(e) {
-        if (!isEnabled()) return;
+        if (!isEnabled()) {
+            return;
+        }
 
-        var card = e.target;
+        var card =
+            e.target;
 
         if (
             !card ||
             !card.classList ||
-            !card.classList.contains('card') ||
+            !card.classList.contains(
+                'card'
+            ) ||
             !card.card_data
         ) {
             return;
         }
 
-        var data = card.card_data;
+        var data =
+            card.card_data;
 
-        if (!data.id) return;
+        if (!data.id) {
+            return;
+        }
 
-        if (lastCardId === data.id) {
+        /*
+         * Та сама картка.
+         */
+        if (
+            lastCardId ===
+            data.id
+        ) {
             return;
         }
 
         var activity =
             card.closest
-                ? card.closest('.activity')
+                ? card.closest(
+                    '.activity'
+                )
                 : null;
 
         if (
@@ -536,57 +748,54 @@
         }
 
         /*
-         * Якщо користувач швидко гортає картки,
-         * попередній таймер скасовується.
+         * Скасовуємо попередній
+         * таймер при швидкому скролі.
          */
-        clearTimeout(focusTimer);
-
-        focusTimer = setTimeout(
-            function () {
-                /*
-                 * Перевіряємо, чи картка все ще
-                 * має фокус.
-                 */
-                if (
-                    document.activeElement &&
-                    !card.contains(
-                        document.activeElement
-                    ) &&
-                    document.activeElement !== card
-                ) {
-                    /*
-                     * Не блокуємо банер повністю:
-                     * Lampa іноді змінює activeElement
-                     * асинхронно.
-                     */
-                }
-
-                lastCardId = data.id;
-                lastActivity = activity;
-
-                var hero =
-                    activity.__bannerHero ||
-                    heroFor(activity);
-
-                lastHero = hero;
-
-                showHero(hero, data);
-            },
-            220
+        clearTimeout(
+            focusTimer
         );
+
+        focusTimer =
+            setTimeout(
+                function () {
+                    lastCardId =
+                        data.id;
+
+                    lastActivity =
+                        activity;
+
+                    var hero =
+                        activity.__bannerHero ||
+                        heroFor(
+                            activity
+                        );
+
+                    lastHero =
+                        hero;
+
+                    showHero(
+                        hero,
+                        data
+                    );
+                },
+                220
+            );
     }
 
     /* =========================
        ACTIVITY
     ========================= */
 
-    function attach(object) {
+    function attach(
+        object
+    ) {
         if (
             !isEnabled() ||
             !object ||
-            ['main', 'category'].indexOf(
-                object.component
-            ) < 0
+            ['main', 'category']
+                .indexOf(
+                    object.component
+                ) < 0
         ) {
             return;
         }
@@ -594,10 +803,13 @@
         var render =
             object.activity &&
             object.activity.render &&
-            object.activity.render(true);
+            object.activity.render(
+                true
+            );
 
         var el =
-            render && render.jquery
+            render &&
+            render.jquery
                 ? render[0]
                 : render;
 
@@ -614,24 +826,27 @@
     ========================= */
 
     function apply() {
-        var on = isEnabled();
+        var on =
+            isEnabled();
 
         document.body.classList.toggle(
             'banner-enabled',
             on
         );
 
-        /*
-         * При вимкненні скидаємо тільки стан,
-         * не видаляючи кеш — повторне включення
-         * буде швидким.
-         */
         if (!on) {
-            clearTimeout(focusTimer);
+            clearTimeout(
+                focusTimer
+            );
 
-            lastCardId = null;
-            lastActivity = null;
-            lastHero = null;
+            lastCardId =
+                null;
+
+            lastActivity =
+                null;
+
+            lastHero =
+                null;
         }
     }
 
@@ -644,35 +859,46 @@
             window.Lampa &&
             Lampa.Lang
         ) {
-            Lampa.Lang.add(lang_data);
+            Lampa.Lang.add(
+                lang_data
+            );
         }
 
         /* =====================
-           РОЗМІР ІНТЕРФЕЙСУ
+           PARAMS
         ===================== */
 
         if (Lampa.Params) {
-            if (!Lampa.Params.values) {
-                Lampa.Params.values = {};
+            if (
+                !Lampa.Params.values
+            ) {
+                Lampa.Params.values =
+                    {};
             }
 
             Lampa.Params.values[
                 SIZE_SETTING
             ] = {
                 '09.1':
-                    lang_data.settings_param_interface_size_mini,
+                    lang_data
+                        .settings_param_interface_size_mini,
 
                 '09.6':
-                    lang_data.settings_param_interface_size_very_small,
+                    lang_data
+                        .settings_param_interface_size_very_small,
 
                 '10.1':
-                    lang_data.settings_param_interface_size_small,
+                    lang_data
+                        .settings_param_interface_size_small,
 
                 '10.6':
-                    lang_data.settings_param_interface_size_medium
+                    lang_data
+                        .settings_param_interface_size_medium
             };
 
-            if (Lampa.Params.select) {
+            if (
+                Lampa.Params.select
+            ) {
                 Lampa.Params.select(
                     SIZE_SETTING,
                     Lampa.Params.values[
@@ -687,10 +913,10 @@
         apply();
         updateSize();
 
-        /*
-         * Один глобальний listener,
-         * але сама обробка дуже дешева.
-         */
+        /* =====================
+           FOCUS LISTENER
+        ===================== */
+
         document.addEventListener(
             'hover:focus',
             onCardFocus,
@@ -704,14 +930,15 @@
         Lampa.Listener.follow(
             'activity',
             function (e) {
-                if (e.type === 'start') {
-                    /*
-                     * Невелика затримка потрібна,
-                     * щоб activity встигла створити DOM.
-                     */
+                if (
+                    e.type ===
+                    'start'
+                ) {
                     requestAnimationFrame(
                         function () {
-                            attach(e.object);
+                            attach(
+                                e.object
+                            );
                         }
                     );
                 }
@@ -732,16 +959,19 @@
         }
 
         /* =====================
-           SETTINGS
+           SETTINGS API
         ===================== */
 
-        if (Lampa.SettingsApi) {
+        if (
+            Lampa.SettingsApi
+        ) {
             Lampa.SettingsApi.addComponent({
                 component:
                     'interface_plus_settings',
 
                 name:
-                    lang_data.banner_settings_name,
+                    lang_data
+                        .banner_settings_name,
 
                 icon:
                     '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">' +
@@ -754,20 +984,28 @@
                     'interface_plus_settings',
 
                 param: {
-                    name: SETTING,
-                    type: 'trigger',
-                    default: true
+                    name:
+                        SETTING,
+
+                    type:
+                        'trigger',
+
+                    default:
+                        true
                 },
 
                 field: {
                     name:
-                        lang_data.banner_enable_name,
+                        lang_data
+                            .banner_enable_name,
 
                     description:
-                        lang_data.banner_enable_descr
+                        lang_data
+                            .banner_enable_descr
                 },
 
-                onChange: apply
+                onChange:
+                    apply
             });
 
             Lampa.SettingsApi.addParam({
@@ -775,13 +1013,19 @@
                     'interface_plus_settings',
 
                 param: {
-                    name: SIZE_SETTING,
-                    type: 'select',
+                    name:
+                        SIZE_SETTING,
+
+                    type:
+                        'select',
+
                     values:
                         Lampa.Params.values[
                             SIZE_SETTING
                         ],
-                    default: '10.6'
+
+                    default:
+                        '10.6'
                 },
 
                 field: {
@@ -792,7 +1036,8 @@
                         'Виберіть бажаний масштаб елементів інтерфейсу'
                 },
 
-                onChange: updateSize
+                onChange:
+                    updateSize
             });
         }
     }
@@ -810,7 +1055,10 @@
         Lampa.Listener.follow(
             'app',
             function (e) {
-                if (e.type === 'ready') {
+                if (
+                    e.type ===
+                    'ready'
+                ) {
                     setTimeout(
                         init,
                         500
