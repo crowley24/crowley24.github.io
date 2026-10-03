@@ -4,10 +4,11 @@
     if (window.banner_hero_plugin) return;
     window.banner_hero_plugin = true;
 
-    var VERSION = '1.2.2';
+    var VERSION = '1.3.0';
 
     var SETTING = 'banner_hero_enabled';
     var SIZE_SETTING = 'interface_size';
+    var FONT_SETTING = 'fontchanger_selected';
 
     /* =========================
        КЕШ
@@ -33,7 +34,42 @@
         settings_param_interface_size_mini: 'Міні інтерфейс',
         settings_param_interface_size_very_small: 'Дуже малий інтерфейс',
         settings_param_interface_size_small: 'Малий інтерфейс',
-        settings_param_interface_size_medium: 'Середній інтерфейс'
+        settings_param_interface_size_medium: 'Середній інтерфейс',
+
+        font_setting_name: 'Шрифт інтерфейсу',
+        font_setting_descr: 'Виберіть стиль шрифту для всього інтерфейсу',
+        font_default: 'За замовчуванням (Roboto)',
+        font_netflix: 'Netflix Sans',
+        font_montserrat: 'Montserrat',
+        font_inter: 'Inter (Сучасний UI)',
+        font_nunito: 'Nunito (М\'який стиль)'
+    };
+
+    /* =========================
+       КОНФІГУРАЦІЯ ШРИФТІВ
+    ========================= */
+
+    var fonts = {
+        default: {
+            family: 'Roboto, Arial, sans-serif',
+            url: null
+        },
+        netflix: {
+            family: '"Netflix Sans", Arial, sans-serif',
+            url: 'https://assets.nflxext.com/ffe/siteui/fonts/netflix-sans/v3/NetflixSans_W_Rg.woff2'
+        },
+        montserrat: {
+            family: '"Montserrat", sans-serif',
+            url: 'https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap'
+        },
+        inter: {
+            family: '"Inter", sans-serif',
+            url: 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap'
+        },
+        nunito: {
+            family: '"Nunito", sans-serif',
+            url: 'https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap'
+        }
     };
 
     /* =========================
@@ -55,10 +91,6 @@
 
         '.banner-hero__info{position:absolute;left:3em;bottom:5.5em;width:46%;z-index:1}',
 
-        /*
-         * ОРИГІНАЛЬНИЙ КОЛІР ЛОГОТИПА.
-         * Без brightness/invert.
-         */
         '.banner-hero__logo{max-width:100%;max-height:7em;display:none;margin-bottom:.6em;filter:drop-shadow(0 4px 12px rgba(0,0,0,.6))}',
 
         '.banner-hero__title{font-size:2.8em;font-weight:900;line-height:1.05;color:#f5f5f1;margin-bottom:.35em;text-shadow:0 3px 14px rgba(0,0,0,.7)}',
@@ -76,6 +108,57 @@
         var style = document.createElement('style');
         style.id = 'banner-hero-style';
         style.textContent = CSS;
+
+        document.head.appendChild(style);
+    }
+
+    /* =========================
+       ЗАСТОСУВАННЯ ШРИФТУ
+    ========================= */
+
+    function applyFont(fontKey) {
+        var font = fonts[fontKey] || fonts.default;
+
+        var oldStyle = document.getElementById('interface-plus-font-style');
+        if (oldStyle) oldStyle.remove();
+
+        var oldFontFace = document.getElementById('interface-plus-fontface');
+        if (oldFontFace) oldFontFace.remove();
+
+        if (font.url) {
+            var fontFaceStyle = document.createElement('style');
+            fontFaceStyle.id = 'interface-plus-fontface';
+
+            if (font.url.includes('googleapis.com')) {
+                fontFaceStyle.textContent = '@import url("' + font.url + '");';
+            } else {
+                var fontName = font.family.split(',')[0].replace(/"/g, '');
+                fontFaceStyle.textContent = '@font-face { font-family: ' + fontName + '; src: url("' + font.url + '") format("woff2"); font-weight: 400; font-style: normal; }';
+            }
+
+            document.head.appendChild(fontFaceStyle);
+        }
+
+        var style = document.createElement('style');
+        style.id = 'interface-plus-font-style';
+        style.textContent = `
+            body, .body, * {
+                font-family: ${font.family} !important;
+            }
+            .full-start__title,
+            .full-start__tagline,
+            .card__title,
+            .card__view,
+            .menu__item,
+            .settings__title,
+            .settings__label,
+            .button,
+            .selector,
+            .filter__item,
+            .scroll__title {
+                font-family: ${font.family} !important;
+            }
+        `;
 
         document.head.appendChild(style);
     }
@@ -152,9 +235,6 @@
                     return;
                 }
 
-                /*
-                 * Не обгортаємо onInit повторно.
-                 */
                 if (
                     mapItem.Items
                         .__bannerHeroPatched
@@ -197,8 +277,7 @@
     }
 
     /* =========================
-       LOGO
-       ОПТИМІЗОВАНА ЯКІСТЬ w500
+       LOGO (w500)
     ========================= */
 
     function loadLogo(data, done) {
@@ -223,9 +302,6 @@
         var key =
             type + '_' + data.id;
 
-        /*
-         * Логотип уже є в кеші.
-         */
         if (
             Object.prototype.hasOwnProperty.call(
                 logos,
@@ -271,13 +347,6 @@
 
                 var pick = null;
 
-                /*
-                 * Пріоритет:
-                 * 1. Український
-                 * 2. Англійський
-                 * 3. Без мови
-                 * 4. Перший доступний
-                 */
                 ['uk', 'en', null].some(
                     function (lang) {
                         for (
@@ -314,10 +383,6 @@
                                 '.png'
                             );
 
-                    /*
-                     * W500 — швидке завантаження
-                     * без втрати візуальної якості.
-                     */
                     logos[key] =
                         Lampa.TMDB.image(
                             't/p/w500' +
@@ -357,9 +422,6 @@
         var key =
             String(data.id);
 
-        /*
-         * Backdrop уже завантажувався.
-         */
         if (
             Object.prototype.hasOwnProperty.call(
                 backdrops,
@@ -522,10 +584,6 @@
         var id =
             data.id;
 
-        /*
-         * Та сама картка — нічого
-         * повторно не робимо.
-         */
         if (
             hero.bannerId === id &&
             hero.bannerData
@@ -557,10 +615,6 @@
 
         el.logo.style.display =
             'none';
-
-        /* =====================
-           META
-        ===================== */
 
         var meta = [];
 
@@ -613,10 +667,6 @@
             data.overview ||
             '';
 
-        /* =====================
-           BACKDROP
-        ===================== */
-
         el.bg.classList.remove(
             'show'
         );
@@ -650,10 +700,6 @@
                 );
             }
         );
-
-        /* =====================
-           LOGO
-        ===================== */
 
         loadLogo(
             data,
@@ -717,9 +763,6 @@
             return;
         }
 
-        /*
-         * Та сама картка.
-         */
         if (
             lastCardId ===
             data.id
@@ -743,10 +786,6 @@
             return;
         }
 
-        /*
-         * Скасовуємо попередній
-         * таймер при швидкому скролі.
-         */
         clearTimeout(
             focusTimer
         );
@@ -909,6 +948,9 @@
         apply();
         updateSize();
 
+        var savedFont = Lampa.Storage.get(FONT_SETTING, 'default');
+        applyFont(savedFont);
+
         /* =====================
            FOCUS LISTENER
         ===================== */
@@ -1035,6 +1077,32 @@
                 onChange:
                     updateSize
             });
+
+            var fontValues = {
+                default: lang_data.font_default,
+                netflix: lang_data.font_netflix,
+                montserrat: lang_data.font_montserrat,
+                inter: lang_data.font_inter,
+                nunito: lang_data.font_nunito
+            };
+
+            Lampa.SettingsApi.addParam({
+                component:
+                    'interface_plus_settings',
+                param: {
+                    name: FONT_SETTING,
+                    type: 'select',
+                    values: fontValues,
+                    default: 'default'
+                },
+                field: {
+                    name: lang_data.font_setting_name,
+                    description: lang_data.font_setting_descr
+                },
+                onChange: function (value) {
+                    applyFont(value);
+                }
+            });
         }
     }
 
@@ -1088,6 +1156,13 @@
                     SETTING
                 ) {
                     apply();
+                }
+
+                if (
+                    e.name ===
+                    FONT_SETTING
+                ) {
+                    applyFont(e.value);
                 }
             }
         );
