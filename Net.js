@@ -4,7 +4,7 @@
     if (window.banner_hero_plugin) return;
     window.banner_hero_plugin = true;
 
-    var VERSION = '1.3.2';
+    var VERSION = '1.3.3';
 
     var SETTING = 'banner_hero_enabled';
     var SIZE_SETTING = 'interface_size';
@@ -87,7 +87,7 @@
 
         '.banner-hero__bg.show{opacity:1}',
 
-        '.banner-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.85) 0%,rgba(0,0,0,.6) 35%,rgba(0,0,0,0) 70%),linear-gradient(0deg,rgba(0,0,0,0.8) 0%,rgba(0,0,0,0) 40%);transform:translateY(15vh);pointer-events:none}',
+        '.banner-hero::after{content:"";position:absolute;left:0;right:0;top:30vh;bottom:0;background:linear-gradient(90deg,rgba(0,0,0,.85) 0%,rgba(0,0,0,.6) 35%,rgba(0,0,0,0) 70%),linear-gradient(0deg,rgba(0,0,0,0.9) 0%,rgba(0,0,0,0) 60%);pointer-events:none}',
 
         '.banner-hero__info{position:absolute;left:3em;bottom:5.5em;width:46%;z-index:1}',
 
