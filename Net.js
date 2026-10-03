@@ -4,7 +4,7 @@
     if (window.banner_hero_plugin) return;
     window.banner_hero_plugin = true;
 
-    var VERSION = '1.2.1';
+    var VERSION = '1.2.2';
 
     var SETTING = 'banner_hero_enabled';
     var SIZE_SETTING = 'interface_size';
@@ -198,7 +198,7 @@
 
     /* =========================
        LOGO
-       ОРИГІНАЛЬНА ЯКІСТЬ + КОЛІР
+       ОПТИМІЗОВАНА ЯКІСТЬ w500
     ========================= */
 
     function loadLogo(data, done) {
@@ -315,12 +315,12 @@
                             );
 
                     /*
-                     * ORIGINAL — максимальна
-                     * доступна якість TMDB.
+                     * W500 — швидке завантаження
+                     * без втрати візуальної якості.
                      */
                     logos[key] =
                         Lampa.TMDB.image(
-                            't/p/original' +
+                            't/p/w500' +
                             path
                         );
                 } else {
@@ -665,10 +665,6 @@
                     return;
                 }
 
-                /*
-                 * Логотип завантажується
-                 * в оригінальній якості.
-                 */
                 el.logo.onload =
                     function () {
                         if (
