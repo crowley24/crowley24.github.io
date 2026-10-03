@@ -4,14 +4,13 @@
     if (window.banner_hero_plugin) return;
     window.banner_hero_plugin = true;
 
-    var VERSION = '1.1.2';
+    var VERSION = '1.2.0';
     var SETTING = 'banner_hero_enabled';
     var SIZE_SETTING = 'interface_size';
     var logos = {};
     var focusTimer = null;
     var lastCardId = null;
 
-    // --- Локалізація ---
     var lang_data = {
         banner_settings_name: 'Інтерфейс +',
         banner_enable_name: 'Динамічні банери',
@@ -22,21 +21,24 @@
         settings_param_interface_size_medium: 'Середній інтерфейс'
     };
 
-    // --- CSS Стилі ---
+    // --- Преміальні CSS стилі з GPU-прискоренням ---
     var CSS = [
         '.banner-host{position:relative}',
         '.banner-host .activity__body{padding-top:42vh;box-sizing:border-box}',
-        '.banner-hero{position:absolute;left:0;right:0;top:0;height:50vh;overflow:hidden;pointer-events:none;z-index:0;-webkit-mask-image:linear-gradient(180deg,#000 55%,transparent 100%);mask-image:linear-gradient(180deg,#000 55%,transparent 100%)}',
-        '.banner-hero__bg{position:absolute;inset:0;background-size:cover;background-position:center 20%;opacity:0;transition:opacity .5s ease}',
-        '.banner-hero__bg.show{opacity:1}',
-        '.banner-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.85) 0%,rgba(0,0,0,.6) 35%,rgba(0,0,0,0) 70%)}',
-        '.banner-hero__info{position:absolute;left:3em;bottom:5.5em;width:46%;z-index:1}',
-        '.banner-hero__logo{max-width:100%;max-height:7em;display:none;margin-bottom:.6em;filter:brightness(0) invert(1) drop-shadow(0 4px 12px rgba(0,0,0,.6))}',
-        '.banner-hero__title{font-size:2.8em;font-weight:900;line-height:1.05;color:#f5f5f1;margin-bottom:.35em;text-shadow:0 3px 14px rgba(0,0,0,.7)}',
+        '.banner-hero{position:absolute;left:0;right:0;top:0;height:50vh;overflow:hidden;pointer-events:none;z-index:0;will-change:opacity;-webkit-mask-image:linear-gradient(180deg,#000 60%,transparent 100%);mask-image:linear-gradient(180deg,#000 60%,transparent 100%)}',
+        
+        /* Ефект плавності та кінематографічного зуму фону */
+        '.banner-hero__bg{position:absolute;inset:-20px;background-size:cover;background-position:center 25%;opacity:0;transform:scale(1.05);transition:opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);will-change:opacity, transform}',
+        '.banner-hero__bg.show{opacity:1;transform:scale(1)}',
+        
+        '.banner-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(11,12,16,.95) 0%,rgba(11,12,16,.75) 35%,rgba(11,12,16,0) 75%), linear-gradient(180deg,rgba(11,12,16,.2) 0%,rgba(11,12,16,.95) 100%)}',
+        '.banner-hero__info{position:absolute;left:3.5em;bottom:5em;width:48%;z-index:1;will-change:transform, opacity;transition:transform 0.3s ease, opacity 0.3s ease}',
+        '.banner-hero__logo{max-width:100%;max-height:6.5em;display:none;margin-bottom:.6em;filter:brightness(0) invert(1) drop-shadow(0 6px 16px rgba(0,0,0,.7))}',
+        '.banner-hero__title{font-size:2.8em;font-weight:900;line-height:1.05;color:#f5f5f1;margin-bottom:.35em;text-shadow:0 4px 16px rgba(0,0,0,.8)}',
         '.banner-hero__meta{font-size:1.15em;color:#f5f5f1;margin-bottom:.6em;display:flex;gap:.8em;align-items:center;flex-wrap:wrap}',
-        '.banner-hero__rate{padding:.1em .5em;border-radius:6px;font-weight:800;background:#1db954;color:#fff}',
+        '.banner-hero__rate{padding:.15em .6em;border-radius:6px;font-weight:800;background:#1db954;color:#fff;box-shadow:0 2px 8px rgba(29,185,84,.4)}',
         '.banner-hero__descr{font-size:1.1em;line-height:1.45;color:#f5f5f1;opacity:.85;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}',
-        'body.banner-enabled .background::after{content:"";position:fixed;inset:0;background:rgba(11,12,16,.55);pointer-events:none}'
+        'body.banner-enabled .background::after{content:"";position:fixed;inset:0;background:rgba(11,12,16,.5);pointer-events:none;z-index:-1}'
     ].join('\n');
 
     function injectStyle() {
@@ -52,7 +54,6 @@
         return val === true || val === 'true';
     }
 
-    // --- Логіка зміни розміру інтерфейсу ---
     var updateSize = function () {
         var isMobile = Lampa.Platform && Lampa.Platform.screen && Lampa.Platform.screen('mobile');
         var iSize = isMobile ? 10.1 : parseFloat(Lampa.Storage.field(SIZE_SETTING)) || 10.6;
@@ -78,7 +79,6 @@
         }
     };
 
-    // --- Завантаження логотипа ---
     function loadLogo(data, done) {
         if (!data.id || (data.source && data.source !== 'tmdb')) return done('');
         var type = data.name && !data.title ? 'tv' : 'movie';
@@ -107,7 +107,6 @@
         });
     }
 
-    // --- Створення банера ---
     function heroFor(activity) {
         var hero = activity.querySelector('.banner-hero');
         if (hero) return hero;
@@ -128,7 +127,6 @@
         return hero;
     }
 
-    // --- Відображення банера ---
     function showHero(hero, data) {
         var title = data.title || data.name || '';
         var bg = hero.querySelector('.banner-hero__bg');
@@ -158,7 +156,10 @@
             img.onload = function () {
                 if (hero.bannerId !== data.id) return;
                 bg.style.backgroundImage = 'url(' + img.src + ')';
-                bg.classList.add('show');
+                // Невелика затримка для плавного старту анімації зуму/opacity
+                requestAnimationFrame(function() {
+                    bg.classList.add('show');
+                });
             };
             img.src = Lampa.Api.img(data.backdrop_path, 'w1280');
         }
@@ -179,17 +180,17 @@
         var card = e.target;
         if (!card || !card.classList || !card.classList.contains('card') || !card.card_data) return;
 
-        // Захист від повторної обробки тієї ж картки
         if (lastCardId === card.card_data.id) return;
 
         var activity = card.closest ? card.closest('.activity') : null;
         if (!activity || !activity.classList.contains('banner-host')) return;
 
         clearTimeout(focusTimer);
+        // Зменшено затримку до 70мс для миттєвого, але плавного відгуку
         focusTimer = setTimeout(function () {
             lastCardId = card.card_data.id;
             showHero(heroFor(activity), card.card_data);
-        }, 150);
+        }, 70);
     }
 
     function attach(object) {
@@ -204,7 +205,6 @@
         document.body.classList.toggle('banner-enabled', on);
     }
 
-    // --- Ініціалізація ---
     function init() {
         if (window.Lampa && Lampa.Lang) {
             Lampa.Lang.add(lang_data);
@@ -247,7 +247,7 @@
 
             Lampa.SettingsApi.addParam({
                 component: 'interface_plus_settings',
-                param: { name: SETTING, type: 'trigger', default: true },
+                param: { name: SETTING, type: 'trigger', default: default = true },
                 field: { 
                     name: lang_data.banner_enable_name, 
                     description: lang_data.banner_enable_descr 
