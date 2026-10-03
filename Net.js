@@ -16,6 +16,10 @@
         // Зменшений простір під банер, щоб картки не обрізались знизу
         '.banner-host .activity__body{padding-top:29vh;box-sizing:border-box}',
 
+        // Фіксимо позицію лівого меню, щоб воно залишалося зверху
+        '.navigation{top:0!important}',
+        '.menu{top:0!important}',
+
         // Банер заходить під верхню панель Lampa
         '.banner-hero{position:absolute;left:0;right:0;top:-100px;height:calc(50vh + 100px);overflow:hidden;pointer-events:none;z-index:0;-webkit-mask-image:linear-gradient(180deg,#000 55%,transparent 100%);mask-image:linear-gradient(180deg,#000 55%,transparent 100%)}',
 
