@@ -88,7 +88,7 @@
 
         '.banner-hero__bg.show{opacity:1}',
 
-        '.banner-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.4) 0%,rgba(0,0,0,.2) 60%,rgba(0,0,0,.85) 90%,rgba(0,0,0,1) 100%),linear-gradient(90deg,rgba(0,0,0,.85) 0%,rgba(0,0,0,.5) 40%,rgba(0,0,0,0) 75%);pointer-events:none}',
+        '.banner-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.4) 0%,rgba(0,0,0,.2) 20%,rgba(0,0,0,.85) 90%,rgba(0,0,0,1) 100%),linear-gradient(90deg,rgba(0,0,0,.85) 0%,rgba(0,0,0,.5) 40%,rgba(0,0,0,0) 75%);pointer-events:none}',
 
         '.banner-hero__info{position:absolute;left:3em;bottom:5.5em;width:46%;z-index:1}',
 
