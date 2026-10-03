@@ -12,8 +12,8 @@
     // --- CSS Стилі для банера ---
     var CSS = [
         '.banner-host{position:relative}',
-        '.banner-host .activity__body{padding-top:50vh;box-sizing:border-box}',
-        '.banner-hero{position:absolute;left:0;right:0;top:0;height:10vh;overflow:hidden;pointer-events:none;z-index:0;-webkit-mask-image:linear-gradient(180deg,#000 55%,transparent 100%);mask-image:linear-gradient(180deg,#000 55%,transparent 100%)}',
+        '.banner-host .activity__body{padding-top:42vh;box-sizing:border-box}',
+        '.banner-hero{position:absolute;left:0;right:0;top:0;height:50vh;overflow:hidden;pointer-events:none;z-index:0;-webkit-mask-image:linear-gradient(180deg,#000 55%,transparent 100%);mask-image:linear-gradient(180deg,#000 55%,transparent 100%)}',
         '.banner-hero__bg{position:absolute;inset:0;background-size:cover;background-position:center 20%;opacity:0;transition:opacity .5s ease}',
         '.banner-hero__bg.show{opacity:1}',
         '.banner-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.85) 0%,rgba(0,0,0,.6) 35%,rgba(0,0,0,0) 70%)}',
