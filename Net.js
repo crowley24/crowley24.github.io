@@ -4,7 +4,7 @@
     if (window.banner_hero_plugin) return;
     window.banner_hero_plugin = true;
 
-    var VERSION = '1.2.1';
+    var VERSION = '1.3.0';
 
     var SETTING = 'banner_hero_enabled';
     var SIZE_SETTING = 'interface_size';
@@ -14,9 +14,13 @@
     ========================= */
 
     var logos = Object.create(null);
+    var logoLoading = Object.create(null);
     var backdrops = Object.create(null);
+    var backdropLoading = Object.create(null);
 
     var focusTimer = null;
+    var prefetchTimer = null;
+
     var lastCardId = null;
     var lastActivity = null;
     var lastHero = null;
@@ -56,12 +60,19 @@
         '.banner-hero__info{position:absolute;left:3em;bottom:5.5em;width:46%;z-index:1}',
 
         /*
-         * ОРИГІНАЛЬНИЙ КОЛІР ЛОГОТИПА.
+         * Оригінальний колір.
          * Без brightness/invert.
          */
-        '.banner-hero__logo{max-width:100%;max-height:7em;display:none;margin-bottom:.6em;filter:drop-shadow(0 4px 12px rgba(0,0,0,.6))}',
+        '.banner-hero__logo{max-width:100%;max-height:7em;display:none;margin-bottom:.6em;filter:drop-shadow(0 4px 12px rgba(0,0,0,.6));opacity:0;transition:opacity .2s ease}',
 
-        '.banner-hero__title{font-size:2.8em;font-weight:900;line-height:1.05;color:#f5f5f1;margin-bottom:.35em;text-shadow:0 3px 14px rgba(0,0,0,.7)}',
+        '.banner-hero__logo.show{display:block;opacity:1}',
+
+        /*
+         * Назва за замовчуванням прихована.
+         * Вона з'явиться тільки якщо логотип
+         * відсутній або не завантажився.
+         */
+        '.banner-hero__title{font-size:2.8em;font-weight:900;line-height:1.05;color:#f5f5f1;margin-bottom:.35em;text-shadow:0 3px 14px rgba(0,0,0,.7);display:none}',
 
         '.banner-hero__meta{font-size:1.15em;color:#f5f5f1;margin-bottom:.6em;display:flex;gap:.8em;align-items:center;flex-wrap:wrap}',
 
@@ -74,6 +85,7 @@
         if (document.getElementById('banner-hero-style')) return;
 
         var style = document.createElement('style');
+
         style.id = 'banner-hero-style';
         style.textContent = CSS;
 
@@ -85,7 +97,10 @@
     ========================= */
 
     function isEnabled() {
-        var val = Lampa.Storage.get(SETTING, true);
+        var val = Lampa.Storage.get(
+            SETTING,
+            true
+        );
 
         return val === true || val === 'true';
     }
@@ -103,7 +118,9 @@
         var iSize = isMobile
             ? 10.1
             : parseFloat(
-                Lampa.Storage.field(SIZE_SETTING)
+                Lampa.Storage.field(
+                    SIZE_SETTING
+                )
             ) || 10.6;
 
         var currentSize =
@@ -111,7 +128,10 @@
                 'data-banner-interface-size'
             );
 
-        if (currentSize === String(iSize)) {
+        if (
+            currentSize ===
+            String(iSize)
+        ) {
             return;
         }
 
@@ -135,7 +155,10 @@
     }
 
     function patchMaker(cardCount) {
-        if (!Lampa.Maker || !Lampa.Maker.map) {
+        if (
+            !Lampa.Maker ||
+            !Lampa.Maker.map
+        ) {
             return;
         }
 
@@ -152,9 +175,6 @@
                     return;
                 }
 
-                /*
-                 * Не обгортаємо onInit повторно.
-                 */
                 if (
                     mapItem.Items
                         .__bannerHeroPatched
@@ -179,7 +199,8 @@
                             cardCount;
 
                         if (type === 'Line') {
-                            this.view = count;
+                            this.view =
+                                count;
                         } else {
                             this.limit_view =
                                 count;
@@ -187,7 +208,8 @@
                     };
 
                 mapItem.Items
-                    .__bannerHeroPatched = true;
+                    .__bannerHeroPatched =
+                    true;
 
                 mapItem.Items
                     .__bannerHeroCardCount =
@@ -197,12 +219,43 @@
     }
 
     /* =========================
-       LOGO
-       ОРИГІНАЛЬНА ЯКІСТЬ + КОЛІР
+       ВИЗНАЧЕННЯ ТИПУ
     ========================= */
 
-    function loadLogo(data, done) {
+    function getMediaType(data) {
+        return (
+            data &&
+            data.name &&
+            !data.title
+        )
+            ? 'tv'
+            : 'movie';
+    }
+
+    function getLogoKey(data) {
         if (!data || !data.id) {
+            return '';
+        }
+
+        return (
+            getMediaType(data) +
+            '_' +
+            data.id
+        );
+    }
+
+    /* =========================
+       ПОШУК LOGO НА TMDB
+    ========================= */
+
+    function requestLogo(
+        data,
+        done
+    ) {
+        if (
+            !data ||
+            !data.id
+        ) {
             done('');
             return;
         }
@@ -215,16 +268,16 @@
             return;
         }
 
-        var type =
-            data.name && !data.title
-                ? 'tv'
-                : 'movie';
-
         var key =
-            type + '_' + data.id;
+            getLogoKey(data);
+
+        if (!key) {
+            done('');
+            return;
+        }
 
         /*
-         * Логотип уже є в кеші.
+         * Готовий результат.
          */
         if (
             Object.prototype.hasOwnProperty.call(
@@ -236,15 +289,32 @@
             return;
         }
 
+        /*
+         * Запит вже виконується.
+         * Не робимо другий TMDB request.
+         */
+        if (logoLoading[key]) {
+            logoLoading[key].push(done);
+            return;
+        }
+
+        logoLoading[key] = [done];
+
         if (
             !Lampa.TMDB ||
             !Lampa.TMDB.api ||
             !Lampa.TMDB.key
         ) {
-            logos[key] = '';
-            done('');
+            finishLogo(
+                key,
+                ''
+            );
+
             return;
         }
+
+        var type =
+            getMediaType(data);
 
         var url =
             Lampa.TMDB.api(
@@ -265,18 +335,16 @@
             function (json) {
                 var list =
                     json &&
-                    Array.isArray(json.logos)
+                    Array.isArray(
+                        json.logos
+                    )
                         ? json.logos
                         : [];
 
                 var pick = null;
 
                 /*
-                 * Пріоритет:
-                 * 1. Український
-                 * 2. Англійський
-                 * 3. Без мови
-                 * 4. Перший доступний
+                 * Пріоритет мов.
                  */
                 ['uk', 'en', null].some(
                     function (lang) {
@@ -290,7 +358,9 @@
                                     .iso_639_1 ===
                                 lang
                             ) {
-                                pick = list[i];
+                                pick =
+                                    list[i];
+
                                 return true;
                             }
                         }
@@ -307,17 +377,16 @@
                     pick &&
                     pick.file_path
                 ) {
-                    var path =
-                        pick.file_path
-                            .replace(
-                                '.svg',
-                                '.png'
-                            );
-
                     /*
-                     * ORIGINAL — максимальна
-                     * доступна якість TMDB.
+                     * ВАЖЛИВО:
+                     * SVG НЕ конвертуємо в PNG.
+                     *
+                     * Залишається оригінальний
+                     * файл TMDB.
                      */
+                    var path =
+                        pick.file_path;
+
                     logos[key] =
                         Lampa.TMDB.image(
                             't/p/original' +
@@ -327,14 +396,225 @@
                     logos[key] = '';
                 }
 
-                done(logos[key]);
+                finishLogo(
+                    key,
+                    logos[key]
+                );
             },
 
             function () {
-                logos[key] = '';
-                done('');
+                finishLogo(
+                    key,
+                    ''
+                );
             }
         );
+    }
+
+    function finishLogo(
+        key,
+        src
+    ) {
+        logos[key] =
+            src || '';
+
+        var callbacks =
+            logoLoading[key] || [];
+
+        delete logoLoading[key];
+
+        for (
+            var i = 0;
+            i < callbacks.length;
+            i++
+        ) {
+            try {
+                callbacks[i](
+                    logos[key]
+                );
+            } catch (e) {}
+        }
+    }
+
+    /* =========================
+       ПЕРЕВІРКА LOGO
+    ========================= */
+
+    function hasCachedLogo(data) {
+        var key =
+            getLogoKey(data);
+
+        return (
+            key &&
+            Object.prototype.hasOwnProperty.call(
+                logos,
+                key
+            )
+        );
+    }
+
+    /* =========================
+       PRELOAD LOGO
+    ========================= */
+
+    function preloadLogo(data) {
+        if (
+            !data ||
+            !data.id
+        ) {
+            return;
+        }
+
+        var key =
+            getLogoKey(data);
+
+        if (!key) {
+            return;
+        }
+
+        /*
+         * Уже є в кеші.
+         */
+        if (
+            Object.prototype.hasOwnProperty.call(
+                logos,
+                key
+            )
+        ) {
+            return;
+        }
+
+        /*
+         * Запит уже йде.
+         */
+        if (
+            logoLoading[key]
+        ) {
+            return;
+        }
+
+        requestLogo(
+            data,
+            function (src) {
+                /*
+                 * Тут нічого не показуємо.
+                 * Просто залишаємо результат
+                 * у кеші.
+                 */
+            }
+        );
+    }
+
+    /*
+     * Попереднє завантаження кількох
+     * карток після короткої паузи.
+     */
+    function prefetchNearbyCards(
+        activity,
+        currentCard
+    ) {
+        clearTimeout(
+            prefetchTimer
+        );
+
+        prefetchTimer =
+            setTimeout(
+                function () {
+                    if (
+                        !activity ||
+                        !currentCard
+                    ) {
+                        return;
+                    }
+
+                    var cards =
+                        activity.querySelectorAll(
+                            '.card'
+                        );
+
+                    if (!cards.length) {
+                        return;
+                    }
+
+                    var currentIndex =
+                        -1;
+
+                    for (
+                        var i = 0;
+                        i < cards.length;
+                        i++
+                    ) {
+                        if (
+                            cards[i] ===
+                            currentCard
+                        ) {
+                            currentIndex =
+                                i;
+
+                            break;
+                        }
+                    }
+
+                    if (
+                        currentIndex < 0
+                    ) {
+                        return;
+                    }
+
+                    /*
+                     * Не завантажуємо
+                     * весь ряд.
+                     *
+                     * Тільки кілька сусідніх.
+                     */
+                    var indexes = [
+                        currentIndex - 2,
+                        currentIndex - 1,
+                        currentIndex + 1,
+                        currentIndex + 2
+                    ];
+
+                    var count = 0;
+
+                    for (
+                        var j = 0;
+                        j < indexes.length;
+                        j++
+                    ) {
+                        if (
+                            count >= 2
+                        ) {
+                            break;
+                        }
+
+                        var index =
+                            indexes[j];
+
+                        if (
+                            index < 0 ||
+                            index >=
+                                cards.length
+                        ) {
+                            continue;
+                        }
+
+                        var card =
+                            cards[index];
+
+                        if (
+                            card &&
+                            card.card_data
+                        ) {
+                            preloadLogo(
+                                card.card_data
+                            );
+
+                            count++;
+                        }
+                    }
+                },
+                350
+            );
     }
 
     /* =========================
@@ -358,7 +638,7 @@
             String(data.id);
 
         /*
-         * Backdrop уже завантажувався.
+         * Готовий backdrop.
          */
         if (
             Object.prototype.hasOwnProperty.call(
@@ -366,9 +646,28 @@
                 key
             )
         ) {
-            done(backdrops[key]);
+            done(
+                backdrops[key]
+            );
+
             return;
         }
+
+        /*
+         * Завантаження вже йде.
+         */
+        if (
+            backdropLoading[key]
+        ) {
+            backdropLoading[key].push(
+                done
+            );
+
+            return;
+        }
+
+        backdropLoading[key] =
+            [done];
 
         var src =
             Lampa.Api.img(
@@ -384,7 +683,10 @@
                 backdrops[key] =
                     src;
 
-                done(src);
+                finishBackdrop(
+                    key,
+                    src
+                );
             };
 
         img.onerror =
@@ -392,10 +694,38 @@
                 backdrops[key] =
                     '';
 
-                done('');
+                finishBackdrop(
+                    key,
+                    ''
+                );
             };
 
         img.src = src;
+    }
+
+    function finishBackdrop(
+        key,
+        src
+    ) {
+        var callbacks =
+            backdropLoading[key] ||
+            [];
+
+        delete backdropLoading[
+            key
+        ];
+
+        for (
+            var i = 0;
+            i < callbacks.length;
+            i++
+        ) {
+            try {
+                callbacks[i](
+                    src
+                );
+            } catch (e) {}
+        }
     }
 
     /* =========================
@@ -421,7 +751,9 @@
             );
 
         if (hero) {
-            cacheHeroElements(hero);
+            cacheHeroElements(
+                hero
+            );
 
             activity.__bannerHero =
                 hero;
@@ -459,7 +791,9 @@
             'banner-host'
         );
 
-        cacheHeroElements(hero);
+        cacheHeroElements(
+            hero
+        );
 
         activity.__bannerHero =
             hero;
@@ -523,8 +857,8 @@
             data.id;
 
         /*
-         * Та сама картка — нічого
-         * повторно не робимо.
+         * Та сама картка —
+         * нічого не переробляємо.
          */
         if (
             hero.bannerId === id &&
@@ -533,7 +867,9 @@
             return;
         }
 
-        cacheHeroElements(hero);
+        cacheHeroElements(
+            hero
+        );
 
         var el =
             hero.__bannerElements;
@@ -544,23 +880,35 @@
         hero.bannerData =
             data;
 
-        var title =
-            data.title ||
-            data.name ||
-            '';
+        /*
+         * ==================================
+         * СПОЧАТКУ ХОВАЄМО І ТЕКСТ, І LOGO
+         * ==================================
+         */
 
-        el.title.textContent =
-            title;
-
-        el.title.style.display =
-            '';
+        el.logo.classList.remove(
+            'show'
+        );
 
         el.logo.style.display =
             'none';
 
-        /* =====================
-           META
-        ===================== */
+        el.title.style.display =
+            'none';
+
+        /*
+         * Старий logo src не повинен
+         * залишатися активним.
+         */
+        el.logo.removeAttribute(
+            'src'
+        );
+
+        /*
+         * ==================================
+         * META
+         * ==================================
+         */
 
         var meta = [];
 
@@ -613,9 +961,11 @@
             data.overview ||
             '';
 
-        /* =====================
-           BACKDROP
-        ===================== */
+        /*
+         * ==================================
+         * BACKDROP
+         * ==================================
+         */
 
         el.bg.classList.remove(
             'show'
@@ -625,7 +975,8 @@
             data,
             function (src) {
                 if (
-                    hero.bannerId !== id ||
+                    hero.bannerId !==
+                        id ||
                     !src
                 ) {
                     return;
@@ -651,25 +1002,52 @@
             }
         );
 
-        /* =====================
-           LOGO
-        ===================== */
+        /*
+         * ==================================
+         * LOGO
+         * ==================================
+         */
 
-        loadLogo(
+        requestLogo(
             data,
             function (src) {
+                /*
+                 * Користувач уже перейшов
+                 * на іншу картку.
+                 */
                 if (
-                    hero.bannerId !== id ||
-                    !src
+                    hero.bannerId !==
+                    id
                 ) {
                     return;
                 }
 
                 /*
-                 * Логотип завантажується
-                 * в оригінальній якості.
+                 * TMDB не має логотипа.
+                 * Тільки тепер показуємо
+                 * звичайну назву.
                  */
-                el.logo.onload =
+                if (!src) {
+                    el.logo.style.display =
+                        'none';
+
+                    el.title.style.display =
+                        '';
+
+                    return;
+                }
+
+                /*
+                 * Завантажуємо сам файл
+                 * logo.
+                 *
+                 * Це окремий етап після
+                 * TMDB /images.
+                 */
+                var testImage =
+                    new Image();
+
+                testImage.onload =
                     function () {
                         if (
                             hero.bannerId !==
@@ -678,14 +1056,58 @@
                             return;
                         }
 
+                        /*
+                         * Встановлюємо вже
+                         * перевірений файл.
+                         */
+                        el.logo.src =
+                            src;
+
                         el.logo.style.display =
                             'block';
 
+                        /*
+                         * Текст НЕ показується.
+                         */
                         el.title.style.display =
                             'none';
+
+                        requestAnimationFrame(
+                            function () {
+                                if (
+                                    hero.bannerId ===
+                                    id
+                                ) {
+                                    el.logo.classList.add(
+                                        'show'
+                                    );
+                                }
+                            }
+                        );
                     };
 
-                el.logo.src =
+                testImage.onerror =
+                    function () {
+                        if (
+                            hero.bannerId !==
+                            id
+                        ) {
+                            return;
+                        }
+
+                        /*
+                         * Якщо оригінальний
+                         * logo не завантажився —
+                         * fallback на назву.
+                         */
+                        el.logo.style.display =
+                            'none';
+
+                        el.title.style.display =
+                            '';
+                    };
+
+                testImage.src =
                     src;
             }
         );
@@ -721,9 +1143,6 @@
             return;
         }
 
-        /*
-         * Та сама картка.
-         */
         if (
             lastCardId ===
             data.id
@@ -748,8 +1167,8 @@
         }
 
         /*
-         * Скасовуємо попередній
-         * таймер при швидкому скролі.
+         * Скасовуємо попередню
+         * обробку при швидкому скролі.
          */
         clearTimeout(
             focusTimer
@@ -776,6 +1195,15 @@
                     showHero(
                         hero,
                         data
+                    );
+
+                    /*
+                     * Паралельно починаємо
+                     * готувати сусідні logo.
+                     */
+                    prefetchNearbyCards(
+                        activity,
+                        card
                     );
                 },
                 220
@@ -837,6 +1265,10 @@
         if (!on) {
             clearTimeout(
                 focusTimer
+            );
+
+            clearTimeout(
+                prefetchTimer
             );
 
             lastCardId =
@@ -914,7 +1346,7 @@
         updateSize();
 
         /* =====================
-           FOCUS LISTENER
+           FOCUS
         ===================== */
 
         document.addEventListener(
