@@ -4,13 +4,14 @@
     if (window.banner_hero_plugin) return;
     window.banner_hero_plugin = true;
 
-    var VERSION = '1.1.0';
+    var VERSION = '1.1.2';
     var SETTING = 'banner_hero_enabled';
     var SIZE_SETTING = 'interface_size';
     var logos = {};
     var focusTimer = null;
+    var lastCardId = null;
 
-    // --- Локалізація для розмірів інтерфейсу ---
+    // --- Локалізація ---
     var lang_data = {
         banner_settings_name: 'Інтерфейс +',
         banner_enable_name: 'Динамічні банери',
@@ -21,7 +22,7 @@
         settings_param_interface_size_medium: 'Середній інтерфейс'
     };
 
-    // --- CSS Стилі для банера ---
+    // --- CSS Стилі ---
     var CSS = [
         '.banner-host{position:relative}',
         '.banner-host .activity__body{padding-top:42vh;box-sizing:border-box}',
@@ -47,31 +48,37 @@
     }
 
     function isEnabled() {
-        return Lampa.Storage.get(SETTING, true) === true || Lampa.Storage.get(SETTING, true) === 'true';
+        var val = Lampa.Storage.get(SETTING, true);
+        return val === true || val === 'true';
     }
 
     // --- Логіка зміни розміру інтерфейсу ---
-    const updateSize = () => {
-        const iSize = Lampa.Platform.screen('mobile') ? 10.1 : parseFloat(Lampa.Storage.field(SIZE_SETTING)) || 10.6;
+    var updateSize = function () {
+        var isMobile = Lampa.Platform && Lampa.Platform.screen && Lampa.Platform.screen('mobile');
+        var iSize = isMobile ? 10.1 : parseFloat(Lampa.Storage.field(SIZE_SETTING)) || 10.6;
+        
         $('body').css({ fontSize: iSize + 'px' });  
       
-        let cardCount = 6;
+        var cardCount = 6;
         if (iSize <= 9.6) cardCount = 8;
         else if (iSize <= 11.1) cardCount = 7;
 
         if (Lampa.Maker && Lampa.Maker.map) {
-            ['Line', 'Category'].forEach(type => {
-                const original = Lampa.Maker.map(type).Items.onInit;
-                Lampa.Maker.map(type).Items.onInit = function() {
-                    original.call(this);
-                    if(type === 'Line') this.view = cardCount;
-                    else this.limit_view = cardCount;
-                };
+            ['Line', 'Category'].forEach(function (type) {
+                var mapItem = Lampa.Maker.map(type);
+                if (mapItem && mapItem.Items && mapItem.Items.onInit) {
+                    var original = mapItem.Items.onInit;
+                    mapItem.Items.onInit = function () {
+                        original.call(this);
+                        if (type === 'Line') this.view = cardCount;
+                        else this.limit_view = cardCount;
+                    };
+                }
             });
         }
     };
 
-    // --- Завантаження логотипа (Українська -> Англійська) ---
+    // --- Завантаження логотипа ---
     function loadLogo(data, done) {
         if (!data.id || (data.source && data.source !== 'tmdb')) return done('');
         var type = data.name && !data.title ? 'tv' : 'movie';
@@ -100,7 +107,7 @@
         });
     }
 
-    // --- Створення блоку банера в DOM ---
+    // --- Створення банера ---
     function heroFor(activity) {
         var hero = activity.querySelector('.banner-hero');
         if (hero) return hero;
@@ -121,7 +128,7 @@
         return hero;
     }
 
-    // --- Відображення даних фільму у банері ---
+    // --- Відображення банера ---
     function showHero(hero, data) {
         var title = data.title || data.name || '';
         var bg = hero.querySelector('.banner-hero__bg');
@@ -172,11 +179,15 @@
         var card = e.target;
         if (!card || !card.classList || !card.classList.contains('card') || !card.card_data) return;
 
+        // Захист від повторної обробки тієї ж картки
+        if (lastCardId === card.card_data.id) return;
+
         var activity = card.closest ? card.closest('.activity') : null;
         if (!activity || !activity.classList.contains('banner-host')) return;
 
         clearTimeout(focusTimer);
         focusTimer = setTimeout(function () {
+            lastCardId = card.card_data.id;
             showHero(heroFor(activity), card.card_data);
         }, 150);
     }
@@ -193,23 +204,24 @@
         document.body.classList.toggle('banner-enabled', on);
     }
 
-    // --- Ініціалізація плагіна ---
+    // --- Ініціалізація ---
     function init() {
         if (window.Lampa && Lampa.Lang) {
             Lampa.Lang.add(lang_data);
         }
 
-        // Налаштування значень розміру
-        if (Lampa.Params && Lampa.Params.values) {
-            Lampa.Params.values[SIZE_SETTING] = {};
-        }
-        if (Lampa.Params && Lampa.Params.select) {
-            Lampa.Params.select(SIZE_SETTING, {  
+        if (Lampa.Params) {
+            if (!Lampa.Params.values) Lampa.Params.values = {};
+            Lampa.Params.values[SIZE_SETTING] = {  
                 '09.1': lang_data.settings_param_interface_size_mini,        
                 '09.6': lang_data.settings_param_interface_size_very_small, 
                 '10.1': lang_data.settings_param_interface_size_small,       
                 '10.6': lang_data.settings_param_interface_size_medium    
-            }, '10.6');  
+            };
+            
+            if (Lampa.Params.select) {
+                Lampa.Params.select(SIZE_SETTING, Lampa.Params.values[SIZE_SETTING], '10.6');  
+            }
         }
 
         injectStyle();
@@ -226,7 +238,6 @@
             attach(Lampa.Activity.active());
         }
 
-        // Створення розділу «Інтерфейс +»
         if (Lampa.SettingsApi) {
             Lampa.SettingsApi.addComponent({
                 component: 'interface_plus_settings',
@@ -234,7 +245,6 @@
                 icon: '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 5h2v5h-2z"/></svg>'
             });
 
-            // Перемикач банерів
             Lampa.SettingsApi.addParam({
                 component: 'interface_plus_settings',
                 param: { name: SETTING, type: 'trigger', default: true },
@@ -245,7 +255,6 @@
                 onChange: apply
             });
 
-            // Селектор розміру інтерфейсу
             Lampa.SettingsApi.addParam({
                 component: 'interface_plus_settings',
                 param: { name: SIZE_SETTING, type: 'select', values: Lampa.Params.values[SIZE_SETTING], default: '10.6' },
@@ -267,8 +276,8 @@
     }
 
     if (window.Lampa && Lampa.Storage && Lampa.Storage.listener) {
-        Lampa.Storage.listener.follow('change', e => {  
-            if (e.name == SIZE_SETTING) updateSize();  
+        Lampa.Storage.listener.follow('change', function (e) {  
+            if (e.name === SIZE_SETTING) updateSize();  
         });
     }
 })();
