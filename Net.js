@@ -4,22 +4,20 @@
     if (window.banner_hero_plugin) return;
     window.banner_hero_plugin = true;
 
-    var VERSION = '1.0.7';
+    var VERSION = '1.0.0';
     var SETTING = 'banner_hero_enabled';
     var logos = {};
     var focusTimer = null;
 
-    // --- CSS Стилі: банер на весьверх, текст вирівняно по краю карток ---
+    // --- CSS Стилі для банера ---
     var CSS = [
-        'body.banner-enabled .activity__body{padding-top:42vh !important;box-sizing:border-box}',
-        '.banner-hero{position:fixed;left:0;right:0;top:0;height:48vh;overflow:hidden;pointer-events:none;z-index:0}',
-        '.banner-hero__bg{position:absolute;inset:0;background-size:cover;background-position:center top;opacity:0;transition:opacity .5s ease}',
+        '.banner-host{position:relative}',
+        '.banner-host .activity__body{padding-top:42vh;box-sizing:border-box}',
+        '.banner-hero{position:absolute;left:0;right:0;top:0;height:10vh;overflow:hidden;pointer-events:none;z-index:0;-webkit-mask-image:linear-gradient(180deg,#000 55%,transparent 100%);mask-image:linear-gradient(180deg,#000 55%,transparent 100%)}',
+        '.banner-hero__bg{position:absolute;inset:0;background-size:cover;background-position:center 20%;opacity:0;transition:opacity .5s ease}',
         '.banner-hero__bg.show{opacity:1}',
-        '.banner-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg, rgba(11,12,16,0.9) 0%, rgba(11,12,16,0.3) 30%, rgba(11,12,16,1) 100%), linear-gradient(90deg,rgba(0,0,0,.9) 0%,rgba(0,0,0,.7) 40%,rgba(0,0,0,0) 75%)}',
-        
-        // Вирівнюємо інформацію точно за лівим краєм карток (12.5em)
-        '.banner-hero__info{position:absolute;left:12.5em;bottom:3em;width:52%;z-index:1}',
-        
+        '.banner-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.85) 0%,rgba(0,0,0,.6) 35%,rgba(0,0,0,0) 70%)}',
+        '.banner-hero__info{position:absolute;left:3em;bottom:5.5em;width:46%;z-index:1}',
         '.banner-hero__logo{max-width:100%;max-height:7em;display:none;margin-bottom:.6em;filter:brightness(0) invert(1) drop-shadow(0 4px 12px rgba(0,0,0,.6))}',
         '.banner-hero__title{font-size:2.8em;font-weight:900;line-height:1.05;color:#f5f5f1;margin-bottom:.35em;text-shadow:0 3px 14px rgba(0,0,0,.7)}',
         '.banner-hero__meta{font-size:1.15em;color:#f5f5f1;margin-bottom:.6em;display:flex;gap:.8em;align-items:center;flex-wrap:wrap}',
@@ -55,6 +53,7 @@
             var list = (json && json.logos) || [];
             var pick = null;
             
+            // Пріоритет: спочатку українська (uk), якщо немає — англійська (en)
             ['uk', 'en', null].some(function (lang) {
                 pick = list.filter(function (x) { return x.iso_639_1 === lang; })[0];
                 return !!pick;
@@ -69,9 +68,9 @@
         });
     }
 
-    // --- Створення глобального блоку банера ---
-    function heroFor() {
-        var hero = document.querySelector('.banner-hero');
+    // --- Створення блоку банера в DOM ---
+    function heroFor(activity) {
+        var hero = activity.querySelector('.banner-hero');
         if (hero) return hero;
         
         hero = document.createElement('div');
@@ -85,7 +84,8 @@
                 '<div class="banner-hero__descr"></div>' +
             '</div>';
             
-        document.body.appendChild(hero);
+        activity.insertBefore(hero, activity.firstChild);
+        activity.classList.add('banner-host');
         return hero;
     }
 
@@ -101,6 +101,7 @@
         titleEl.style.display = '';
         logo.style.display = 'none';
 
+        // Формування мета-даних (рейтинг, рік, тип)
         var meta = [];
         var vote = parseFloat(data.vote_average);
         if (vote) meta.push('<span class="banner-hero__rate">' + vote.toFixed(1) + '</span>');
@@ -113,6 +114,7 @@
         hero.querySelector('.banner-hero__meta').innerHTML = meta.join('');
         hero.querySelector('.banner-hero__descr').textContent = data.overview || '';
         
+        // Задній фон (backdrop)
         bg.classList.remove('show');
         if (data.backdrop_path) {
             var img = new Image();
@@ -124,6 +126,7 @@
             img.src = Lampa.Api.img(data.backdrop_path, 'w1280');
         }
 
+        // Завантаження логотипа
         loadLogo(data, function (src) {
             if (!src || hero.bannerId !== data.id) return;
             logo.onload = function () {
@@ -142,24 +145,24 @@
         if (!card || !card.classList || !card.classList.contains('card') || !card.card_data) return;
 
         var activity = card.closest ? card.closest('.activity') : null;
-        if (!activity) return;
+        if (!activity || !activity.classList.contains('banner-host')) return;
 
         clearTimeout(focusTimer);
         focusTimer = setTimeout(function () {
-            var active = Lampa.Activity.active();
-            if (active && ['main', 'category'].indexOf(active.component) >= 0) {
-                showHero(heroFor(), card.card_data);
-            }
+            showHero(heroFor(activity), card.card_data);
         }, 150);
+    }
+
+    function attach(object) {
+        if (!isEnabled() || !object || ['main', 'category'].indexOf(object.component) < 0) return;
+        var render = object.activity && object.activity.render && object.activity.render(true);
+        var el = render && render.jquery ? render[0] : render;
+        if (el && el.classList) heroFor(el);
     }
 
     function apply() {
         var on = isEnabled();
         document.body.classList.toggle('banner-enabled', on);
-        var hero = document.querySelector('.banner-hero');
-        if (hero) {
-            hero.style.display = on ? '' : 'none';
-        }
     }
 
     // --- Ініціалізація плагіна ---
@@ -170,18 +173,14 @@
         document.addEventListener('hover:focus', onCardFocus, true);
         
         Lampa.Listener.follow('activity', function (e) {
-            if (e.type === 'start') {
-                var hero = document.querySelector('.banner-hero');
-                if (hero) {
-                    if (e.object && ['main', 'category'].indexOf(e.object.component) >= 0) {
-                        hero.style.display = isEnabled() ? '' : 'none';
-                    } else {
-                        hero.style.display = 'none';
-                    }
-                }
-            }
+            if (e.type === 'start') attach(e.object);
         });
 
+        if (Lampa.Activity && Lampa.Activity.active) {
+            attach(Lampa.Activity.active());
+        }
+
+        // Додавання пункту в налаштування Lampa
         if (Lampa.SettingsApi) {
             Lampa.SettingsApi.addParam({
                 component: 'interface',
