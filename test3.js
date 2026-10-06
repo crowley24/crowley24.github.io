@@ -4,23 +4,11 @@
     if (window.banner_hero_plugin) return;
     window.banner_hero_plugin = true;
 
-    var VERSION = '1.4.0';
+    var VERSION = '1.4.1';
 
     var SETTING = 'banner_hero_enabled';
     var SIZE_SETTING = 'interface_size';
     var FONT_SETTING = 'fontchanger_selected';
-
-    /* =========================
-       МОБІЛЬНИЙ РЕЖИМ
-    ========================= */
-
-    function isMobileDevice() {
-        return !!(
-            Lampa.Platform &&
-            Lampa.Platform.screen &&
-            Lampa.Platform.screen('mobile')
-        );
-    }
 
     /* =========================
        КЕШ
@@ -34,7 +22,17 @@
     var lastActivity = null;
     var lastHero = null;
 
-    var mobileResizeTimer = null;
+    /* =========================
+       MOBILE
+    ========================= */
+
+    function isMobileDevice() {
+        return !!(
+            Lampa.Platform &&
+            Lampa.Platform.screen &&
+            Lampa.Platform.screen('mobile')
+        );
+    }
 
     /* =========================
        ЛОКАЛІЗАЦІЯ
@@ -60,7 +58,7 @@
     };
 
     /* =========================
-       КОНФІГУРАЦІЯ ШРИФТІВ
+       ШРИФТИ
     ========================= */
 
     var fonts = {
@@ -95,9 +93,8 @@
     ========================= */
 
     var CSS = [
-
         /* =====================
-           БАЗОВИЙ / TV
+           БАЗА — TV / DESKTOP
         ===================== */
 
         '.banner-host{position:relative}',
@@ -126,236 +123,180 @@
 
 
         /* =====================
-           МОБІЛЬНА ОПТИМІЗАЦІЯ
+           ЛИШЕ МОБІЛЬНИЙ
         ===================== */
 
-        '@media screen and (max-width: 700px) {',
+        '@media screen and (max-width:700px){',
 
-        'body[data-banner-mobile="1"]{',
-            'overflow-x:hidden;',
-        '}',
+            /*
+             * ВАЖЛИВО:
+             * тут немає overflow-x:hidden,
+             * щоб не ламати свайпи Lampa.
+             */
 
-        '.banner-host{',
-            'width:100%;',
-            'max-width:100%;',
-            'overflow:visible;',
-        '}',
+            '.banner-host{',
+                'position:relative;',
+                'width:100%;',
+            '}',
 
-        '.banner-host .activity__body{',
-            'padding-top:clamp(250px,52vw,390px);',
-            'padding-left:0;',
-            'padding-right:0;',
-            'box-sizing:border-box;',
-            'overflow:visible;',
-        '}',
+            '.banner-host .activity__body{',
+                'padding-top:52vw;',
+                'box-sizing:border-box;',
+            '}',
 
-        '.banner-hero{',
-            'left:0;',
-            'right:0;',
-            'width:100%;',
-            'height:clamp(260px,58vw,430px);',
-            'max-height:55vh;',
-            'min-height:250px;',
-            'overflow:hidden;',
-            'pointer-events:none;',
-            'z-index:0;',
-            '-webkit-mask-image:linear-gradient(180deg,#000 48%,rgba(0,0,0,.95) 68%,transparent 100%);',
-            'mask-image:linear-gradient(180deg,#000 48%,rgba(0,0,0,.95) 68%,transparent 100%);',
-        '}',
+            '.banner-hero{',
+                'height:58vw;',
+                'min-height:260px;',
+                'max-height:390px;',
+                'left:0;',
+                'right:0;',
+                'width:100%;',
+                'overflow:hidden;',
+                'pointer-events:none;',
+                'z-index:0;',
+                '-webkit-mask-image:linear-gradient(180deg,#000 50%,transparent 100%);',
+                'mask-image:linear-gradient(180deg,#000 50%,transparent 100%);',
+            '}',
 
-        '.banner-hero__bg{',
-            'inset:-1px;',
-            'background-size:cover;',
-            'background-position:center 18%;',
-            'transition:opacity .25s ease;',
-            'will-change:opacity;',
-            'transform:translateZ(0);',
-        '}',
+            '.banner-hero__bg{',
+                'inset:0;',
+                'background-size:cover;',
+                'background-position:center 20%;',
+                'transition:opacity .25s ease;',
+                'will-change:opacity;',
+            '}',
 
-        '.banner-hero::after{',
-            'background:',
-            'linear-gradient(180deg,rgba(0,0,0,.05) 0%,rgba(0,0,0,.12) 30%,rgba(0,0,0,.55) 68%,rgba(0,0,0,.95) 100%),',
-            'linear-gradient(90deg,rgba(0,0,0,.62) 0%,rgba(0,0,0,.28) 55%,rgba(0,0,0,.05) 100%);',
-        '}',
+            '.banner-hero::after{',
+                'background:',
+                'linear-gradient(180deg,rgba(0,0,0,.05) 0%,rgba(0,0,0,.18) 42%,rgba(0,0,0,.82) 100%),',
+                'linear-gradient(90deg,rgba(0,0,0,.70) 0%,rgba(0,0,0,.30) 60%,rgba(0,0,0,.05) 100%);',
+            '}',
 
-        '.banner-hero__info{',
-            'left:clamp(12px,4vw,28px);',
-            'right:clamp(12px,4vw,28px);',
-            'bottom:clamp(28px,7vw,55px);',
-            'width:auto;',
-            'max-width:calc(100% - 24px);',
-            'z-index:2;',
-        '}',
+            '.banner-hero__info{',
+                'left:16px;',
+                'right:16px;',
+                'bottom:30px;',
+                'width:auto;',
+                'max-width:calc(100% - 32px);',
+            '}',
 
-        '.banner-hero__logo{',
-            'display:none;',
-            'width:auto;',
-            'height:auto;',
-            'max-width:min(72vw,360px);',
-            'max-height:clamp(55px,18vw,105px);',
-            'margin:0 0 8px 0;',
-            'object-fit:contain;',
-            'object-position:left bottom;',
-            'filter:drop-shadow(0 2px 7px rgba(0,0,0,.65));',
-        '}',
+            '.banner-hero__logo{',
+                'max-width:72vw;',
+                'max-height:90px;',
+                'width:auto;',
+                'height:auto;',
+                'margin-bottom:7px;',
+                'filter:drop-shadow(0 3px 8px rgba(0,0,0,.65));',
+            '}',
 
-        '.banner-hero__title{',
-            'font-size:clamp(22px,6vw,34px);',
-            'line-height:1.08;',
-            'font-weight:800;',
-            'margin:0 0 7px 0;',
-            'max-width:95%;',
-            'display:-webkit-box;',
-            '-webkit-line-clamp:2;',
-            '-webkit-box-orient:vertical;',
-            'overflow:hidden;',
-            'text-shadow:0 2px 10px rgba(0,0,0,.75);',
-        '}',
+            '.banner-hero__title{',
+                'font-size:clamp(22px,6vw,32px);',
+                'line-height:1.08;',
+                'margin-bottom:6px;',
+                'max-width:95%;',
+                'text-shadow:0 2px 9px rgba(0,0,0,.75);',
+            '}',
 
-        '.banner-hero__meta{',
-            'font-size:clamp(12px,3.2vw,16px);',
-            'line-height:1.2;',
-            'gap:6px;',
-            'margin-bottom:7px;',
-            'max-width:100%;',
-        '}',
+            '.banner-hero__meta{',
+                'font-size:clamp(12px,3.2vw,15px);',
+                'gap:6px;',
+                'margin-bottom:6px;',
+            '}',
 
-        '.banner-hero__rate{',
-            'padding:3px 6px;',
-            'border-radius:4px;',
-            'font-size:.9em;',
-        '}',
+            '.banner-hero__rate{',
+                'padding:3px 6px;',
+                'border-radius:4px;',
+            '}',
 
-        '.banner-hero__descr{',
-            'font-size:clamp(12px,3.1vw,15px);',
-            'line-height:1.35;',
-            'max-width:94%;',
-            'opacity:.8;',
-            '-webkit-line-clamp:2;',
-        '}',
+            '.banner-hero__descr{',
+                'font-size:clamp(12px,3.1vw,15px);',
+                'line-height:1.35;',
+                '-webkit-line-clamp:2;',
+                'max-width:92%;',
+            '}',
 
-        /* Картки */
 
-        '.banner-host .card,',
-        '.banner-host .card__view,',
-        '.banner-host .card__img,',
-        '.banner-host .card__body{',
-            'max-width:100%;',
-            'box-sizing:border-box;',
-        '}',
+            /* =====================
+               PORTRAIT
+            ===================== */
 
-        '.banner-host .scroll__body,',
-        '.banner-host .scroll__content{',
-            'padding-left:max(8px,env(safe-area-inset-left));',
-            'padding-right:max(8px,env(safe-area-inset-right));',
-            'box-sizing:border-box;',
-        '}',
+            '@media screen and (orientation:portrait){',
 
-        '.banner-host .scroll__body{',
-            'overflow-x:hidden;',
-        '}',
+                '.banner-host .activity__body{',
+                    'padding-top:63vw;',
+                '}',
 
-        /* Менше важких ефектів на мобільному */
+                '.banner-hero{',
+                    'height:68vw;',
+                    'min-height:280px;',
+                    'max-height:420px;',
+                '}',
 
-        '.banner-hero__logo,',
-        '.banner-hero__title,',
-        '.banner-hero__meta,',
-        '.banner-hero__descr{',
-            'transform:translateZ(0);',
-        '}',
+                '.banner-hero__info{',
+                    'bottom:28px;',
+                '}',
 
-        /* Portrait */
+            '}',
 
-        '@media screen and (orientation: portrait){',
 
-        '.banner-host .activity__body{',
-            'padding-top:clamp(270px,63vw,410px);',
-        '}',
+            /* =====================
+               LANDSCAPE
+            ===================== */
 
-        '.banner-hero{',
-            'height:clamp(280px,68vw,420px);',
-            'max-height:52vh;',
-        '}',
+            '@media screen and (orientation:landscape){',
 
-        '.banner-hero__info{',
-            'bottom:clamp(24px,6vw,42px);',
-        '}',
+                '.banner-host .activity__body{',
+                    'padding-top:42vw;',
+                '}',
 
-        '.banner-hero__descr{',
-            'max-width:90%;',
-        '}',
+                '.banner-hero{',
+                    'height:58vh;',
+                    'min-height:220px;',
+                    'max-height:360px;',
+                '}',
 
-        '}',
+                '.banner-hero__info{',
+                    'bottom:24px;',
+                    'max-width:70%;',
+                '}',
 
-        /* Landscape */
+                '.banner-hero__descr{',
+                    '-webkit-line-clamp:2;',
+                    'max-width:75%;',
+                '}',
 
-        '@media screen and (orientation: landscape){',
+            '}',
 
-        '.banner-host .activity__body{',
-            'padding-top:clamp(210px,42vw,330px);',
-        '}',
 
-        '.banner-hero{',
-            'height:clamp(230px,58vh,360px);',
-            'max-height:62vh;',
-        '}',
+            /* =====================
+               ДУЖЕ МАЛИЙ ЕКРАН
+            ===================== */
 
-        '.banner-hero__info{',
-            'bottom:clamp(20px,4vw,38px);',
-        '}',
+            '@media screen and (max-width:380px){',
 
-        '.banner-hero__descr{',
-            'max-width:70%;',
-            '-webkit-line-clamp:2;',
-        '}',
+                '.banner-host .activity__body{',
+                    'padding-top:285px;',
+                '}',
 
-        '}',
+                '.banner-hero{',
+                    'height:285px;',
+                    'min-height:285px;',
+                '}',
 
-        /* Дуже вузькі телефони */
+                '.banner-hero__logo{',
+                    'max-width:65vw;',
+                    'max-height:70px;',
+                '}',
 
-        '@media screen and (max-width: 380px){',
+                '.banner-hero__title{',
+                    'font-size:22px;',
+                '}',
 
-        '.banner-host .activity__body{',
-            'padding-top:285px;',
-        '}',
+                '.banner-hero__descr{',
+                    'font-size:12px;',
+                '}',
 
-        '.banner-hero{',
-            'height:285px;',
-        '}',
-
-        '.banner-hero__logo{',
-            'max-width:62vw;',
-            'max-height:70px;',
-        '}',
-
-        '.banner-hero__title{',
-            'font-size:23px;',
-        '}',
-
-        '.banner-hero__descr{',
-            'font-size:12px;',
-            '-webkit-line-clamp:2;',
-        '}',
-
-        '}',
-
-        /* Великі телефони / планшет у mobile mode */
-
-        '@media screen and (min-width: 600px) and (max-width: 700px){',
-
-        '.banner-host .activity__body{',
-            'padding-top:350px;',
-        '}',
-
-        '.banner-hero{',
-            'height:390px;',
-        '}',
-
-        '.banner-hero__info{',
-            'max-width:70%;',
-        '}',
-
-        '}',
+            '}',
 
         '}',
 
@@ -363,43 +304,54 @@
            SAFE AREA
         ===================== */
 
-        '@supports (padding: env(safe-area-inset-left)){',
+        '@supports (padding:env(safe-area-inset-left)){',
 
-        '@media screen and (max-width: 700px){',
+            '@media screen and (max-width:700px){',
 
-        '.banner-host .scroll__body{',
-            'padding-left:max(10px,env(safe-area-inset-left));',
-            'padding-right:max(10px,env(safe-area-inset-right));',
-        '}',
+                '.banner-hero__info{',
+                    'left:max(16px,env(safe-area-inset-left));',
+                    'right:max(16px,env(safe-area-inset-right));',
+                '}',
 
-        '.banner-hero__info{',
-            'left:max(14px,env(safe-area-inset-left));',
-            'right:max(14px,env(safe-area-inset-right));',
-        '}',
-
-        '}',
+            '}',
 
         '}'
 
     ].join('\n');
 
     function injectStyle() {
-        if (document.getElementById('banner-hero-style')) return;
+        if (
+            document.getElementById(
+                'banner-hero-style'
+            )
+        ) {
+            return;
+        }
 
-        var style = document.createElement('style');
+        var style =
+            document.createElement(
+                'style'
+            );
 
-        style.id = 'banner-hero-style';
-        style.textContent = CSS;
+        style.id =
+            'banner-hero-style';
 
-        document.head.appendChild(style);
+        style.textContent =
+            CSS;
+
+        document.head.appendChild(
+            style
+        );
     }
 
     /* =========================
-       ЗАСТОСУВАННЯ ШРИФТУ
+       ШРИФТ
     ========================= */
 
     function applyFont(fontKey) {
-        var font = fonts[fontKey] || fonts.default;
+        var font =
+            fonts[fontKey] ||
+            fonts.default;
 
         var oldStyle =
             document.getElementById(
@@ -421,7 +373,9 @@
 
         if (font.url) {
             var fontFaceStyle =
-                document.createElement('style');
+                document.createElement(
+                    'style'
+                );
 
             fontFaceStyle.id =
                 'interface-plus-fontface';
@@ -439,10 +393,13 @@
                 var fontName =
                     font.family
                         .split(',')[0]
-                        .replace(/"/g, '');
+                        .replace(
+                            /"/g,
+                            ''
+                        );
 
                 fontFaceStyle.textContent =
-                    '@font-face {' +
+                    '@font-face{' +
                     'font-family:' +
                     fontName +
                     ';src:url("' +
@@ -459,7 +416,9 @@
         }
 
         var style =
-            document.createElement('style');
+            document.createElement(
+                'style'
+            );
 
         style.id =
             'interface-plus-font-style';
@@ -485,11 +444,13 @@
             font.family +
             '!important}';
 
-        document.head.appendChild(style);
+        document.head.appendChild(
+            style
+        );
     }
 
     /* =========================
-       НАЛАШТУВАННЯ
+       ENABLE
     ========================= */
 
     function isEnabled() {
@@ -506,25 +467,21 @@
     }
 
     /* =========================
-       РОЗМІР ІНТЕРФЕЙСУ
+       РОЗМІР
     ========================= */
 
     function updateSize() {
         var mobile =
             isMobileDevice();
 
-        var iSize;
-
-        if (mobile) {
-            iSize = 10.1;
-        } else {
-            iSize =
-                parseFloat(
+        var iSize =
+            mobile
+                ? 10.1
+                : parseFloat(
                     Lampa.Storage.field(
                         SIZE_SETTING
                     )
                 ) || 10.6;
-        }
 
         var currentSize =
             document.body.getAttribute(
@@ -546,15 +503,16 @@
         document.body.style.fontSize =
             iSize + 'px';
 
+        /*
+         * Не змінюємо кількість карток
+         * на мобільному.
+         *
+         * Це важливо для штатного
+         * горизонтального скролу Lampa.
+         */
         var cardCount = 6;
 
-        if (mobile) {
-            /*
-             * На телефоні не даємо занадто
-             * багато карток у рядку.
-             */
-            cardCount = 3;
-        } else {
+        if (!mobile) {
             if (iSize <= 9.6) {
                 cardCount = 8;
             } else if (iSize <= 11.1) {
@@ -562,7 +520,9 @@
             }
         }
 
-        patchMaker(cardCount);
+        patchMaker(
+            cardCount
+        );
     }
 
     function patchMaker(cardCount) {
@@ -677,7 +637,10 @@
                 key
             )
         ) {
-            done(logos[key]);
+            done(
+                logos[key]
+            );
+
             return;
         }
 
@@ -687,7 +650,9 @@
             !Lampa.TMDB.key
         ) {
             logos[key] = '';
+
             done('');
+
             return;
         }
 
@@ -777,6 +742,7 @@
 
             function () {
                 logos[key] = '';
+
                 done('');
             }
         );
@@ -796,11 +762,14 @@
             !data.backdrop_path
         ) {
             done('');
+
             return;
         }
 
         var key =
-            String(data.id);
+            String(
+                data.id
+            );
 
         if (
             Object.prototype.hasOwnProperty.call(
@@ -811,12 +780,16 @@
             done(
                 backdrops[key]
             );
+
             return;
         }
 
         /*
-         * На мобільному w780.
-         * На TV залишається w1280.
+         * Тільки це відрізняється
+         * для мобільного:
+         *
+         * mobile -> w780
+         * TV     -> w1280
          */
         var quality =
             isMobileDevice()
@@ -965,7 +938,7 @@
     }
 
     /* =========================
-       ПОКАЗ БАНЕРА
+       SHOW HERO
     ========================= */
 
     function showHero(
@@ -1015,16 +988,6 @@
 
         el.logo.style.display =
             'none';
-
-        /*
-         * Важливо:
-         * скидаємо старий src,
-         * щоб старий логотип не залишався
-         * при швидкому перемиканні карток.
-         */
-        el.logo.removeAttribute(
-            'src'
-        );
 
         var meta = [];
 
@@ -1081,9 +1044,6 @@
             'show'
         );
 
-        el.bg.style.backgroundImage =
-            '';
-
         loadBackdrop(
             data,
             function (src) {
@@ -1100,11 +1060,6 @@
                     src +
                     '")';
 
-                /*
-                 * На мобільному даємо
-                 * браузеру завершити layout
-                 * перед появою backdrop.
-                 */
                 requestAnimationFrame(
                     function () {
                         if (
@@ -1147,20 +1102,6 @@
                             'none';
                     };
 
-                el.logo.onerror =
-                    function () {
-                        if (
-                            hero.bannerId ===
-                            id
-                        ) {
-                            el.logo.style.display =
-                                'none';
-
-                            el.title.style.display =
-                                '';
-                        }
-                    };
-
                 el.logo.src =
                     src;
             }
@@ -1198,9 +1139,9 @@
         }
 
         /*
-         * Враховуємо activity,
-         * щоб однаковий ID у різних
-         * рядах не блокував банер.
+         * Знаходимо activity,
+         * але НІЯК не втручаємося
+         * у touch / pointer events.
          */
         var activity =
             card.closest
@@ -1218,20 +1159,9 @@
             return;
         }
 
-        var activityId =
-            activity.__bannerHeroId ||
-            '';
-
-        var currentKey =
-            String(
-                activityId
-            ) +
-            '_' +
-            String(data.id);
-
         if (
             lastCardId ===
-            currentKey
+            data.id
         ) {
             return;
         }
@@ -1241,21 +1171,19 @@
         );
 
         /*
-         * На мобільному менша затримка,
-         * щоб банер реагував швидше,
-         * але не реагував на кожний
-         * мікрорух під час скролу.
+         * Трохи менша затримка
+         * тільки для mobile.
          */
         var delay =
             isMobileDevice()
-                ? 120
+                ? 150
                 : 220;
 
         focusTimer =
             setTimeout(
                 function () {
                     lastCardId =
-                        currentKey;
+                        data.id;
 
                     lastActivity =
                         activity;
@@ -1314,57 +1242,7 @@
             el.classList
         ) {
             heroFor(el);
-
-            /*
-             * Унікальний ID activity.
-             */
-            el.__bannerHeroId =
-                'activity_' +
-                Date.now() +
-                '_' +
-                Math.random()
-                    .toString(36)
-                    .slice(2, 7);
         }
-    }
-
-    /* =========================
-       MOBILE RESIZE
-    ========================= */
-
-    function updateMobileLayout() {
-        if (!isMobileDevice()) {
-            document.body.removeAttribute(
-                'data-banner-mobile'
-            );
-
-            return;
-        }
-
-        document.body.setAttribute(
-            'data-banner-mobile',
-            '1'
-        );
-
-        clearTimeout(
-            mobileResizeTimer
-        );
-
-        mobileResizeTimer =
-            setTimeout(
-                function () {
-                    updateSize();
-
-                    /*
-                     * Скидаємо тільки поточний
-                     * focus cache. Сам Hero
-                     * залишається.
-                     */
-                    lastCardId =
-                        null;
-                },
-                120
-            );
     }
 
     /* =========================
@@ -1379,19 +1257,6 @@
             'banner-enabled',
             on
         );
-
-        if (
-            isMobileDevice()
-        ) {
-            document.body.setAttribute(
-                'data-banner-mobile',
-                '1'
-            );
-        } else {
-            document.body.removeAttribute(
-                'data-banner-mobile'
-            );
-        }
 
         if (!on) {
             clearTimeout(
@@ -1485,56 +1350,7 @@
         );
 
         /* =====================
-           MOBILE
-        ===================== */
-
-        updateMobileLayout();
-
-        /*
-         * ResizeObserver краще реагує
-         * на зміну реального розміру
-         * viewport, ніж постійний polling.
-         */
-        if (
-            isMobileDevice() &&
-            window.ResizeObserver
-        ) {
-            var resizeTarget =
-                document.documentElement;
-
-            var resizeObserver =
-                new ResizeObserver(
-                    function () {
-                        updateMobileLayout();
-                    }
-                );
-
-            resizeObserver.observe(
-                resizeTarget
-            );
-
-            window.__bannerHeroResizeObserver =
-                resizeObserver;
-        } else {
-            window.addEventListener(
-                'resize',
-                updateMobileLayout,
-                {
-                    passive: true
-                }
-            );
-
-            window.addEventListener(
-                'orientationchange',
-                updateMobileLayout,
-                {
-                    passive: true
-                }
-            );
-        }
-
-        /* =====================
-           FOCUS LISTENER
+           FOCUS
         ===================== */
 
         document.addEventListener(
@@ -1579,7 +1395,7 @@
         }
 
         /* =====================
-           SETTINGS API
+           SETTINGS
         ===================== */
 
         if (
