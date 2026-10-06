@@ -55,7 +55,7 @@
                 });  
             }  
         } catch (e) { }  
-    }
+    }  
 
     function applyCaptionsClass(container) {  
         try {  
@@ -63,7 +63,7 @@
             const show = !!Lampa.Storage.get('ni_card_captions', true);  
             container.classList.toggle('ni-hide-captions', !show);  
         } catch (e) { }  
-    }
+    }  
   
     function applyCaptionsToAll() {  
         try {  
@@ -110,7 +110,12 @@
   
         add({  
             component: 'interface',  
-            param: { name: 'logo_size', type: 'select', values: { w300: 'w300', w500: 'w500', w780: 'w780', original: 'Оригінал' }, default: 'original' },  
+            param: {  
+                name: 'logo_size',  
+                type: 'select',  
+                values: { w300: 'w300', w500: 'w500', w780: 'w780', original: 'Оригінал' },  
+                default: 'original'  
+            },  
             field: { name: 'Розмір логотипа', description: 'Роздільна здатність завантажуваного зображення' }  
         });  
   
@@ -307,7 +312,6 @@
                 }  
   
                 const url = Lampa.TMDB.api(`${type}/${item.id}/images?api_key=${Lampa.TMDB.key()}&include_image_language=${lang},en,null`);  
-                const priority = item.__priority || 0;  
   
                 $.get(url, (res) => {  
                     let filePath = null;  
@@ -358,15 +362,15 @@
                 img.style.maxHeight = logoHeight;  
                 img.style.setProperty('max-height', logoHeight, 'important');  
             } else {  
-                img.style.maxHeight = '120px';  
-                img.style.setProperty('max-height', '120px', 'important');  
+                img.style.maxHeight = '130px';  
+                img.style.setProperty('max-height', '130px', 'important');  
             }  
   
             if (this.useTextHeight() && heightPx && heightPx > 0 && !logoHeight) {  
-                const scaledHeight = Math.min(heightPx * 1.2, 120);  
+                const scaledHeight = Math.min(heightPx * 1.1, 130);  
                 img.style.height = `${scaledHeight}px`;  
                 img.style.width = 'auto';  
-                img.style.maxWidth = '400px';  
+                img.style.maxWidth = '100%';  
             }  
         }  
 
@@ -381,24 +385,24 @@
   
             if (type === 'js') {  
                 container.style.transition = 'none';  
-                animateOpacity(container, 1, 0, 200, () => {  
+                animateOpacity(container, 1, 0, 150, () => {  
                     container.innerHTML = '';  
                     if (typeof newNode === 'string') container.textContent = newNode;  
                     else container.appendChild(newNode);  
                     container.style.opacity = '0';  
-                    animateOpacity(container, 0, 1, 300);  
+                    animateOpacity(container, 0, 1, 200);  
                 });  
             } else {  
-                container.style.transition = 'opacity 0.2s ease';  
+                container.style.transition = 'opacity 0.15s ease';  
                 container.style.opacity = '0';  
                 container.__ni_logo_timer = setTimeout(() => {  
                     container.__ni_logo_timer = null;  
                     container.innerHTML = '';  
                     if (typeof newNode === 'string') container.textContent = newNode;  
                     else container.appendChild(newNode);  
-                    container.style.transition = 'opacity 0.3s ease';  
+                    container.style.transition = 'opacity 0.2s ease';  
                     container.style.opacity = '1';  
-                }, 100);  
+                }, 80);  
             }  
         }  
   
@@ -521,6 +525,13 @@
             const reqId = (titleEl.__ni_logo_req_id || 0) + 1;  
             titleEl.__ni_logo_req_id = reqId;  
   
+            const descNode = wrapper.find('.new-interface-info__description');  
+            const overviewText = movie.overview || movie.description || '';  
+            if (descNode.length) {  
+                descNode.text(overviewText);  
+                descNode.toggle(!!overviewText);  
+            }  
+  
             if (!Logo.enabled()) {  
                 if (headNode && headNode.length) headNode.css('display', '');  
                 if (wrapper && wrapper.removeClass) wrapper.removeClass('ni-hide-head');  
@@ -633,7 +644,6 @@
     function shouldUseNewInterface(object) {  
         if (!object) return false;  
         if (object.source === 'other' && !object.backdrop_path) return false;  
-        // Обмеження ширини (<767) знято, щоб працювало на мобільних  
         return true;  
     }  
   
@@ -711,7 +721,7 @@
                     setTimeout(() => {  
                         background.src = this.backgroundLast;  
                     }, 300);  
-                }, 1000);  
+                }, 400);  
             },  
             reset() {  
                 info.empty();  
@@ -857,9 +867,6 @@
         Lampa.Template.add('new_interface_style_v3', `<style>  
 .new-interface{  
     position: relative;  
-    --ni-info-h: clamp(15em, 34vh, 24em);  
-}  
-.new-interface{  
     --ni-card-w: clamp(35px, 2.8vw, 60px);  
 }  
   
@@ -872,16 +879,19 @@
     padding-bottom: 150%;  
 }  
   
+/* Контейнер збільшено до середини екрану (близько 42vh), контент притиснутий донизу */  
 .new-interface-info{  
     position: relative;  
-    padding: 1.5em;  
+    padding: 1em 2em 1em 2em;  
     height: auto !important;  
-    min-height: 200px !important;  
-    max-height: 250px !important;  
-    overflow: visible !important;  
+    min-height: 42vh !important;  
+    max-height: 50vh !important;  
+    overflow: hidden !important;  
     z-index: 3;  
     display: flex !important;  
-    align-items: center !important;  
+    flex-direction: column !important;  
+    justify-content: flex-end !important;  
+    box-sizing: border-box;  
 }  
   
 .new-interface-info:before{  
@@ -892,25 +902,32 @@
     position: relative;  
     z-index: 1;  
     width: 100%;  
+    max-width: 100%;  
     padding-top: 0;  
-    display: block !important;  
+    display: flex !important;  
+    flex-direction: column !important;  
+    justify-content: flex-end !important;  
+    box-sizing: border-box;  
 }  
   
 .new-interface-info__left {  
     width: 100%;  
+    max-width: 100%;  
     display: flex;  
-    align-items: center;  
-    min-height: 120px;    
+    flex-direction: column;  
+    align-items: flex-start;  
+    justify-content: flex-end;  
+    box-sizing: border-box;  
 }  
   
 .new-interface-info__right{  
-    padding-top: clamp(0.2em, 2.2vh, 1.6em);  
+    padding-top: 0.5em;  
 }  
   
 .new-interface-info__head{  
     color: rgba(255, 255, 255, 0.6);  
-    margin-bottom: 1em;  
-    font-size: 1.3em;  
+    margin-bottom: 0.3em;  
+    font-size: 1em;  
     min-height: 1em;  
 }  
   
@@ -918,20 +935,21 @@
     color: #fff;  
 }  
   
+/* Логотип/назва знаходяться біля самого низу контейнера */  
 .new-interface-info__title {  
-    font-size: clamp(2.6em, 4.0vw, 3.6em);  
+    font-size: clamp(2.2em, 3.5vw, 3.2em);  
     font-weight: 600;  
-    margin: 0;  
+    margin: 0 0 0.3em 0;  
     display: flex;  
     align-items: center;  
-    min-height: 120px;  
-    max-height: 120px;  
-    overflow: visible; 
+    max-width: 100%;  
+    min-height: 1.1em;  
+    overflow: hidden;  
 }  
   
 .new-interface-info__title-logo {  
-    max-width: 400px !important;  
-    max-height: var(--ni-logo-max-h, 120px) !important;  
+    max-width: min(550px, 50vw) !important;  
+    max-height: var(--ni-logo-max-h, 130px) !important;  
     width: auto !important;  
     height: auto !important;  
     object-fit: contain !important;  
@@ -939,7 +957,7 @@
 }  
   
 .new-interface-full-logo {  
-    max-height: var(--ni-logo-max-h, 180px) !important;  
+    max-height: var(--ni-logo-max-h, 140px) !important;  
     width: auto !important;  
     max-width: 100% !important;  
     object-fit: contain !important;  
@@ -962,19 +980,21 @@
     display: none !important;  
 }  
   
+/* Опис розміщено одразу під логотипом, ближче до низу */  
 .new-interface-info__description{  
-    font-size: 0.87em;  
+    font-size: 0.9em;  
     font-weight: 300;  
-    line-height: 1.38;  
-    color: rgba(255, 255, 255, 0.90);  
-    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);  
+    line-height: 1.4;  
+    color: rgba(255, 255, 255, 0.85);  
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);  
     overflow: hidden;  
-    text-overflow: '.';  
+    text-overflow: ellipsis;  
     display: -webkit-box;  
-    -webkit-line-clamp: 7;  
-    line-clamp: 7;  
+    -webkit-line-clamp: 3;  
+    line-clamp: 3;  
     -webkit-box-orient: vertical;  
-    width: auto;  
+    max-width: min(800px, 85vw);  
+    margin-top: 0.2em;  
 }  
   
 .new-interface .full-start__background{  
@@ -991,19 +1011,21 @@
     padding-bottom: env(safe-area-inset-bottom, 0px);  
 }  
   
+/* Автоматичне позиціонування назви першого рядка (сьогодні у тренді тощо) одразу під контейнером */  
 .new-interface .items-line__head{  
     position: relative;  
     z-index: 5;  
-    transform: translateY(1vh);  
+    margin-top: 0 !important;  
+    transform: translateY(0) !important;  
 }  
   
 .new-interface{  
-    --ni-lines-up: -1vh;  
+    --ni-lines-up: 0vh;  
 }  
 .new-interface .items-line__body > .scroll.scroll--horizontal,  
 .new-interface .items-line__body .scroll.scroll--horizontal{  
     position: relative;  
-    top: calc(var(--ni-lines-up) * -1);  
+    top: 0;  
 }  
   
 .new-interface .card__promo{  
@@ -1016,46 +1038,55 @@
   
 body.light--version .new-interface-info__body{  
     width: min(92%, 72em);  
-    padding-top: 1.5em;  
 }  
   
+/* Мобільна адаптація */  
 @media (max-width: 767px) {  
     .new-interface-info {  
-        padding: 1em;  
-        min-height: 150px !important;  
-        max-height: 200px !important;  
+        padding: 0.6em 1em 0.8em 1em;  
+        min-height: 38vh !important;  
+        max-height: 48vh !important;  
     }  
     .new-interface-info__title {  
-        font-size: 2em;  
-        min-height: 80px;  
-        max-height: 80px;  
+        font-size: 1.6em;  
+        margin-bottom: 0.15em;  
     }  
     .new-interface-info__title-logo {  
-        max-height: 80px !important;  
+        max-width: min(250px, 65vw) !important;  
+        max-height: 60px !important;  
     }  
     .new-interface {  
-        --ni-card-w: clamp(70px, 18vw, 110px);  
+        --ni-card-w: clamp(85px, 24vw, 130px);  
+    }  
+    .new-interface-info__head {  
+        font-size: 0.85em;  
+        margin-bottom: 0.1em;  
+    }  
+    .new-interface-info__description {  
+        font-size: 0.75em;  
+        -webkit-line-clamp: 2;  
+        line-clamp: 2;  
+        max-width: 100%;  
     }  
 }  
   
 @media (max-height: 820px){  
     .new-interface{  
-        --ni-info-h: clamp(13em, 30vh, 20em);  
         --ni-card-w: clamp(60px, 4.2vw, 90px);  
     }   
   
     .new-interface-info__right{  
-        padding-top: clamp(0.15em, 1.8vh, 1.2em);  
+        padding-top: 0.2em;  
     }  
   
     .new-interface-info__title{  
-        font-size: clamp(2.4em, 3.6vw, 3.1em);  
+        font-size: clamp(2em, 3.2vw, 2.7em);  
     }  
   
     .new-interface-info__description{  
-        -webkit-line-clamp: 6;  
-        line-clamp: 6;  
-        font-size: 0.83em;  
+        -webkit-line-clamp: 2;  
+        line-clamp: 2;  
+        font-size: 0.8em;  
     }  
 }  
   
@@ -1089,6 +1120,7 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
                     <div class="new-interface-info__left">  
                         <div class="new-interface-info__head"></div>  
                         <div class="new-interface-info__title"></div>  
+                        <div class="new-interface-info__description"></div>  
                     </div>  
                 </div>  
             </div>`);  
@@ -1142,12 +1174,6 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
         draw(movie) {  
             if (!movie || !this.html) return;  
   
-            const create = ((movie.release_date || movie.first_air_date || '0000') + '').slice(0, 4);  
-            const vote = parseFloat((movie.vote_average || 0) + '').toFixed(1);  
-            const sources = Lampa.Api && Lampa.Api.sources && Lampa.Api.sources.tmdb ? Lampa.Api.sources.tmdb : null;  
-            const countries = sources && typeof sources.parseCountries === 'function' ? sources.parseCountries(movie) : [];  
-            const pg = sources && typeof sources.parsePG === 'function' ? sources.parsePG(movie) : '';  
-  
             const titleNode = this.html.find('.new-interface-info__title');  
             const headNode = this.html.find('.new-interface-info__head');  
             const titleText = movie.title || movie.name || '';  
@@ -1159,6 +1185,7 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
         empty() {  
             if (!this.html) return;  
             this.html.find('.new-interface-info__head').text('---');  
+            this.html.find('.new-interface-info__description').text('');  
         }  
   
         destroy() {  
@@ -1179,7 +1206,6 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
         return;  
     }  
 
-    // Стандартна версія (для старіших версій додатка) також без обмеження екрана  
     function startPlugin() {  
         window.plugin_interface_ready = true;  
         var old_interface = Lampa.InteractionMain;  
@@ -1187,7 +1213,7 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
   
         Lampa.InteractionMain = function (object) {  
             var use = new_interface;  
-            if (!(object.source == 'tmdb' || object.source == 'cub')) use = old_interface;  
+            if (!(object.source == 'tmdb' || object.source == 'cub')) use = old_info;  
             if (Lampa.Manifest.app_digital < 153) use = old_interface;  
             return new use(object);  
         };  
