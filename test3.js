@@ -264,6 +264,7 @@
                     return null;  
                 };  
   
+                // Використовуємо українську мову або англійську за замовчуванням
                 return pick(lang) || pick('en') || (logos[0] && logos[0].file_path) || null;  
             } catch (e) {  
                 return null;  
@@ -626,8 +627,8 @@
         wrap(mainMap.Items, 'onAppend', function (original, args) {  
             if (original) original.apply(this, args);  
             if (!this.__newInterfaceEnabled) return;  
-            const item = args && args[0];  
-            const element = args && args[1];  
+            const item = args && args[1];  
+            const element = args && args[0];  
             if (item && element) attachLineHandlers(this, item, element);  
         });  
   
@@ -879,7 +880,7 @@
     padding-bottom: 150%;  
 }  
   
-/* Контейнер збільшено до середини екрану (близько 42vh), контент притиснутий донизу */  
+/* Контейнер інформації займає верхню частину екрану */  
 .new-interface-info{  
     position: relative;  
     padding: 1em 2em 1em 2em;  
@@ -935,7 +936,6 @@
     color: #fff;  
 }  
   
-/* Логотип/назва знаходяться біля самого низу контейнера */  
 .new-interface-info__title {  
     font-size: clamp(2.2em, 3.5vw, 3.2em);  
     font-weight: 600;  
@@ -980,7 +980,6 @@
     display: none !important;  
 }  
   
-/* Опис розміщено одразу під логотипом, ближче до низу */  
 .new-interface-info__description{  
     font-size: 0.9em;  
     font-weight: 300;  
@@ -1009,14 +1008,19 @@
   
 .new-interface .full-start__lines{  
     padding-bottom: env(safe-area-inset-bottom, 0px);  
+    transform: none !important;  
 }  
   
-/* Автоматичне позиціонування назви першого рядка (сьогодні у тренді тощо) одразу під контейнером */  
+/* Жорстка фіксація позиції ліній, щоб вони не підстрибували вгору і не закривали опис */  
+.new-interface .items-line {  
+    transform: none !important;  
+}  
+  
 .new-interface .items-line__head{  
     position: relative;  
     z-index: 5;  
     margin-top: 0 !important;  
-    transform: translateY(0) !important;  
+    transform: none !important;  
 }  
   
 .new-interface{  
@@ -1026,6 +1030,7 @@
 .new-interface .items-line__body .scroll.scroll--horizontal{  
     position: relative;  
     top: 0;  
+    transform: none !important;  
 }  
   
 .new-interface .card__promo{  
