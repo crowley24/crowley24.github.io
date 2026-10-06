@@ -73,22 +73,31 @@
   
         window.__ni_interface2_settings_ready = true;  
         const add = (cfg) => { try { Lampa.SettingsApi.addParam(cfg); } catch (e) { } };  
+
+        // Реєстрація окремого розділу "Інтерфейс+" у налаштуваннях
+        if (typeof Lampa.SettingsApi.addComponent === 'function') {  
+            Lampa.SettingsApi.addComponent({  
+                component: 'interface_plus',  
+                name: 'Інтерфейс+',  
+                icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>`  
+            });  
+        }  
   
         add({  
-            component: 'interface',  
+            component: 'interface_plus',  
             param: { name: 'interface2_header_group', type: 'title', default: '' },  
             field: { name: 'Кастомний інтерфейс головної сторінки', description: 'Налаштування дизайну, логотипів та метаінформації' }  
         });  
   
         add({  
-            component: 'interface',  
+            component: 'interface_plus',  
             param: { name: 'logo_glav', type: 'select', values: { 1: 'Приховати', 0: 'Відображати' }, default: '0' },  
             field: { name: 'Логотипи замість назв', description: 'Відображає логотипи фільмів замість тексту' },  
             onChange: applyLogoCssVars  
         });  
   
         add({  
-            component: 'interface',  
+            component: 'interface_plus',  
             param: {  
                 name: 'logo_lang',  
                 type: 'select',  
@@ -110,7 +119,7 @@
         });  
   
         add({  
-            component: 'interface',  
+            component: 'interface_plus',  
             param: {  
                 name: 'logo_size',  
                 type: 'select',  
@@ -121,7 +130,7 @@
         });  
   
         add({  
-            component: 'interface',  
+            component: 'interface_plus',  
             param: {  
                 name: 'logo_height',  
                 type: 'select',  
@@ -144,25 +153,25 @@
         });  
   
         add({  
-            component: 'interface',  
+            component: 'interface_plus',  
             param: { name: 'logo_animation_type', type: 'select', values: { js: 'JavaScript', css: 'CSS' }, default: 'css' },  
             field: { name: 'Тип анімації логотипів', description: 'Спосіб анімації логотипів' }  
         });  
   
         add({  
-            component: 'interface',  
+            component: 'interface_plus',  
             param: { name: 'logo_hide_year', type: 'trigger', default: !0 },  
             field: { name: 'Приховати метаінформацію', description: 'Приховує дублюючий рік та жанри під логотипом у шапці' }  
         });  
   
         add({  
-            component: 'interface',  
+            component: 'interface_plus',  
             param: { name: 'logo_use_text_height', type: 'trigger', default: !1 },  
             field: { name: 'Логотип за висотою тексту', description: 'Розмір логотипа дорівнює висоті тексту' }  
         });  
   
         add({  
-            component: 'interface',  
+            component: 'interface_plus',  
             param: { name: 'ni_card_captions', type: 'trigger', default: true },  
             field: { name: 'Підписи під картками', description: 'Показувати / приховувати назви під постерами в лініях' },  
             onChange: function () {  
@@ -171,7 +180,7 @@
         });  
   
         add({  
-            component: 'interface',  
+            component: 'interface_plus',  
             param: { name: 'logo_clear_cache', type: 'button' },  
             field: { name: 'Скинути кеш логотипів', description: 'Натисніть для очищення кешу зображень' },  
             onChange: function () {  
@@ -1269,7 +1278,7 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
             return new use(object);  
         };  
     }  
-  
+
     if (!window.plugin_interface_ready && !window.plugin_interface_ready_v3) startPlugin();  
 
 })();
