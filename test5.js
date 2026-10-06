@@ -357,12 +357,12 @@
                 img.style.maxHeight = logoHeight;  
                 img.style.setProperty('max-height', logoHeight, 'important');  
             } else {  
-                img.style.maxHeight = '120px';  
-                img.style.setProperty('max-height', '120px', 'important');  
+                img.style.maxHeight = '90px';  
+                img.style.setProperty('max-height', '90px', 'important');  
             }  
   
             if (this.useTextHeight() && heightPx && heightPx > 0 && !logoHeight) {  
-                const scaledHeight = Math.min(heightPx * 1.2, 120);  
+                const scaledHeight = Math.min(heightPx * 1.1, 90);  
                 img.style.height = `${scaledHeight}px`;  
                 img.style.width = 'auto';  
                 img.style.maxWidth = '100%';  
@@ -862,9 +862,6 @@
         Lampa.Template.add('new_interface_style_v3', `<style>  
 .new-interface{  
     position: relative;  
-    --ni-info-h: clamp(16em, 36vh, 26em);  
-}  
-.new-interface{  
     --ni-card-w: clamp(35px, 2.8vw, 60px);  
 }  
   
@@ -877,17 +874,18 @@
     padding-bottom: 150%;  
 }  
   
-/* Жорстко фіксуємо блок інформації для запобігання стрибків висоти */  
+/* Компактний та адаптивний інфо-блок без величезних пропусків і налізань */  
 .new-interface-info{  
     position: relative;  
-    padding: 1.5em 2em;  
+    padding: 1.2em 2em 0.5em 2em;  
     height: auto !important;  
-    min-height: 220px !important;  
-    max-height: 320px !important;  
+    min-height: 160px !important;  
+    max-height: 220px !important;  
     overflow: hidden !important;  
     z-index: 3;  
     display: flex !important;  
     align-items: flex-start !important;  
+    box-sizing: border-box;  
 }  
   
 .new-interface-info:before{  
@@ -914,36 +912,36 @@
 }  
   
 .new-interface-info__right{  
-    padding-top: clamp(0.2em, 2.2vh, 1.6em);  
+    padding-top: 0.5em;  
 }  
   
 .new-interface-info__head{  
     color: rgba(255, 255, 255, 0.6);  
-    margin-bottom: 0.5em;  
-    font-size: 1.1em;  
-    min-height: 1.2em;  
+    margin-bottom: 0.3em;  
+    font-size: 1em;  
+    min-height: 1em;  
 }  
   
 .new-interface-info__head span{  
     color: #fff;  
 }  
   
-/* Фіксована висота рядка заголовка для усунення плавання елементів */  
+/* Коректне розміщення заголовка та логотипа без виходу за межі шапки */  
 .new-interface-info__title {  
-    font-size: clamp(2.4em, 3.8vw, 3.4em);  
+    font-size: clamp(2em, 3.2vw, 2.8em);  
     font-weight: 600;  
-    margin: 0 0 0.4em 0;  
+    margin: 0 0 0.3em 0;  
     display: flex;  
     align-items: center;  
     max-width: 100%;  
-    min-height: 1.2em;  
+    min-height: 1.1em;  
     overflow: hidden;  
 }  
   
-/* Збільшено максимальну ширину та простір для логотипа */  
+/* Зменшені та збалансовані максимальні розміри логотипів */  
 .new-interface-info__title-logo {  
-    max-width: min(650px, 55vw) !important;  
-    max-height: var(--ni-logo-max-h, 120px) !important;  
+    max-width: min(500px, 45vw) !important;  
+    max-height: var(--ni-logo-max-h, 85px) !important;  
     width: auto !important;  
     height: auto !important;  
     object-fit: contain !important;  
@@ -951,7 +949,7 @@
 }  
   
 .new-interface-full-logo {  
-    max-height: var(--ni-logo-max-h, 180px) !important;  
+    max-height: var(--ni-logo-max-h, 120px) !important;  
     width: auto !important;  
     max-width: 100% !important;  
     object-fit: contain !important;  
@@ -974,21 +972,21 @@
     display: none !important;  
 }  
   
-/* Збільшено простір для опису фільму */  
+/* Компактний опис на 2 рядки з обмеженою шириною */  
 .new-interface-info__description{  
-    font-size: 0.9em;  
+    font-size: 0.85em;  
     font-weight: 300;  
-    line-height: 1.4;  
+    line-height: 1.35;  
     color: rgba(255, 255, 255, 0.85);  
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);  
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);  
     overflow: hidden;  
     text-overflow: ellipsis;  
     display: -webkit-box;  
-    -webkit-line-clamp: 3;  
-    line-clamp: 3;  
+    -webkit-line-clamp: 2;  
+    line-clamp: 2;  
     -webkit-box-orient: vertical;  
-    max-width: min(850px, 90vw);  
-    margin-top: 0.2em;  
+    max-width: min(750px, 85vw);  
+    margin-top: 0.1em;  
 }  
   
 .new-interface .full-start__background{  
@@ -1008,16 +1006,16 @@
 .new-interface .items-line__head{  
     position: relative;  
     z-index: 5;  
-    transform: translateY(1vh);  
+    transform: translateY(0.5vh);  
 }  
   
 .new-interface{  
-    --ni-lines-up: -1vh;  
+    --ni-lines-up: 0vh;  
 }  
 .new-interface .items-line__body > .scroll.scroll--horizontal,  
 .new-interface .items-line__body .scroll.scroll--horizontal{  
     position: relative;  
-    top: calc(var(--ni-lines-up) * -1);  
+    top: 0;  
 }  
   
 .new-interface .card__promo{  
@@ -1030,33 +1028,33 @@
   
 body.light--version .new-interface-info__body{  
     width: min(92%, 72em);  
-    padding-top: 1.5em;  
+    padding-top: 1em;  
 }  
   
 /* Мобільна адаптація */  
 @media (max-width: 767px) {  
     .new-interface-info {  
-        padding: 0.8em 1em;  
-        min-height: 150px !important;  
-        max-height: 230px !important;  
+        padding: 0.6em 1em 0.3em 1em;  
+        min-height: 120px !important;  
+        max-height: 170px !important;  
     }  
     .new-interface-info__title {  
-        font-size: 1.6em;  
+        font-size: 1.4em;  
         margin-bottom: 0.2em;  
     }  
     .new-interface-info__title-logo {  
-        max-width: min(260px, 65vw) !important;  
-        max-height: 55px !important;  
+        max-width: min(220px, 60vw) !important;  
+        max-height: 45px !important;  
     }  
     .new-interface {  
         --ni-card-w: clamp(85px, 24vw, 130px);  
     }  
     .new-interface-info__head {  
-        font-size: 0.95em;  
-        margin-bottom: 0.2em;  
+        font-size: 0.85em;  
+        margin-bottom: 0.15em;  
     }  
     .new-interface-info__description {  
-        font-size: 0.78em;  
+        font-size: 0.75em;  
         -webkit-line-clamp: 2;  
         line-clamp: 2;  
         max-width: 100%;  
@@ -1065,22 +1063,21 @@ body.light--version .new-interface-info__body{
   
 @media (max-height: 820px){  
     .new-interface{  
-        --ni-info-h: clamp(14em, 32vh, 22em);  
         --ni-card-w: clamp(60px, 4.2vw, 90px);  
     }   
   
     .new-interface-info__right{  
-        padding-top: clamp(0.15em, 1.8vh, 1.2em);  
+        padding-top: 0.2em;  
     }  
   
     .new-interface-info__title{  
-        font-size: clamp(2.2em, 3.4vw, 2.9em);  
+        font-size: clamp(1.9em, 3vw, 2.5em);  
     }  
   
     .new-interface-info__description{  
         -webkit-line-clamp: 2;  
         line-clamp: 2;  
-        font-size: 0.8em;  
+        font-size: 0.78em;  
     }  
 }  
   
