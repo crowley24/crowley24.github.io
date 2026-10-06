@@ -561,7 +561,7 @@
                 img.src = url;  
   
                 Logo.setImageSizing(img, textHeightPx);  
-  
+                
                 const hideHead = !!Lampa.Storage.get('logo_hide_year', !0);  
                 if (hideHead && headNode && headNode.length) headNode.css('display', 'none');  
                 else if (headNode && headNode.length) headNode.css('display', '');  
@@ -844,6 +844,17 @@
   
         if (Array.isArray(line.items) && line.items.length) {  
             line.items.forEach(applyToCard);  
+              
+            // Виправлене завантаження даних першої реальної картки з невеликою затримкою для рендерингу DOM
+            try {  
+                const firstCard = line.items[0];  
+                const firstData = getCardData(firstCard, element, 0);  
+                if (firstData) {  
+                    setTimeout(() => {  
+                        state.update(firstData);  
+                    }, 50);  
+                }  
+            } catch (e) {}  
         }  
   
         if (line.last) {  
@@ -879,7 +890,6 @@
     padding-bottom: 150%;  
 }  
   
-/* Контейнер збільшено до середини екрану (близько 42vh), контент притиснутий донизу */  
 .new-interface-info{  
     position: relative;  
     padding: 1em 2em 1em 2em;  
@@ -935,7 +945,6 @@
     color: #fff;  
 }  
   
-/* Логотип/назва знаходяться біля самого низу контейнера */  
 .new-interface-info__title {  
     font-size: clamp(2.2em, 3.5vw, 3.2em);  
     font-weight: 600;  
@@ -980,7 +989,6 @@
     display: none !important;  
 }  
   
-/* Опис розміщено одразу під логотипом, ближче до низу */  
 .new-interface-info__description{  
     font-size: 0.9em;  
     font-weight: 300;  
@@ -1038,7 +1046,6 @@ body.light--version .new-interface-info__body{
     width: min(92%, 72em);  
 }  
   
-/* Мобільна адаптація */  
 @media (max-width: 767px) {  
     .new-interface-info {  
         padding: 0.6em 1em 0.8em 1em;  
