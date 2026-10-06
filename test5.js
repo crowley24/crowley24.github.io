@@ -34,7 +34,7 @@
         } catch (e) {}  
     }  
   
-    const LOGO_CACHE_PREFIX = 'logo_cache_width_based_v1_';  
+    const LOGO_CACHE_PREFIX = 'logo_cache_width_based_v2_';  
   
     function applyLogoCssVars() {  
         try {  
@@ -65,13 +65,15 @@
   
     function initInterface2Settings() {  
         if (window.__ni_interface2_settings_ready) return;  
+  
+        if (!Lampa.SettingsApi || typeof Lampa.SettingsApi.addParam !== 'function') {  
+            setTimeout(initInterface2Settings, 300);  
+            return;  
+        }  
+  
         window.__ni_interface2_settings_ready = true;  
-  
-        if (!Lampa.SettingsApi || typeof Lampa.SettingsApi.addParam !== 'function') return;  
-  
         const add = (cfg) => { try { Lampa.SettingsApi.addParam(cfg); } catch (e) { } };  
   
-        // Окремий розділ для налаштувань плагіна в меню Інтерфейс  
         add({  
             component: 'interface',  
             param: { name: 'interface2_header_group', type: 'title', default: '' },  
@@ -150,7 +152,7 @@
         add({  
             component: 'interface',  
             param: { name: 'logo_hide_year', type: 'trigger', default: !0 },  
-            field: { name: 'Приховати метаінформацію', description: 'Приховує рік, країну та жанри під логотипом' }  
+            field: { name: 'Приховати метаінформацію', description: 'Приховує дублюючий рік та жанри під логотипом у шапці' }  
         });  
   
         add({  
@@ -162,7 +164,7 @@
         add({  
             component: 'interface',  
             param: { name: 'ni_card_captions', type: 'trigger', default: true },  
-            field: { name: 'Підписи під картками', description: 'Показувати / приховувати назви (і рік) під постерами в лініях' },  
+            field: { name: 'Підписи під картками', description: 'Показувати / приховувати назви під постерами в лініях' },  
             onChange: function () {  
                 applyCaptionsToAll();  
             }  
@@ -199,6 +201,8 @@
         applyLogoCssVars();  
         applyCaptionsToAll();  
     }  
+  
+    setTimeout(initInterface2Settings, 500);  
   
     function animateOpacity(el, from, to, duration, done) {  
         if (!el) return done && done();  
@@ -518,27 +522,23 @@
     }  
   
     const Logo = new LogoEngine();  
-    initInterface2Settings();  
   
     function formatMeta(movie) {  
         try {  
             const parts = [];  
   
-            // 1. Країна  
             if (movie.production_countries && movie.production_countries.length) {  
                 parts.push(movie.production_countries[0].name);  
             } else if (movie.origin_country && movie.origin_country.length) {  
                 parts.push(movie.origin_country[0]);  
             }  
   
-            // 2. Рік  
             const dateStr = movie.release_date || movie.first_air_date || '';  
             if (dateStr) {  
                 const year = dateStr.split('-')[0];  
                 if (year) parts.push(year);  
             }  
   
-            // 3. Тривалість або Сезони  
             if (movie.number_of_seasons) {  
                 parts.push(`${movie.number_of_seasons} сезон${movie.number_of_seasons > 1 ? 'и' : ''}`);  
             } else if (movie.runtime) {  
@@ -547,7 +547,6 @@
                 parts.push(hours > 0 ? `${hours} год ${mins} хв` : `${mins} хв`);  
             }  
   
-            // 4. Жанри (перші 2)  
             if (movie.genres && Array.isArray(movie.genres) && movie.genres.length) {  
                 const genresStr = movie.genres.slice(0, 2).map(g => g.name).join(', ');  
                 if (genresStr) parts.push(genresStr);  
@@ -575,7 +574,6 @@
                 descNode.toggle(!!overviewText);  
             }  
   
-            // Формуємо та виводимо метаінформацію (під логотипом, над описом)  
             const hideHead = !!Lampa.Storage.get('logo_hide_year', !0);  
             if (headNode && headNode.length) {  
                 if (hideHead) {  
@@ -612,8 +610,6 @@
                 img.src = url;  
   
                 Logo.setImageSizing(img, textHeightPx);  
-                Logo.syncFullHead(container, true);  
-  
                 Logo.swapContent(titleEl, img);  
             });  
         } catch (e) { }  
@@ -978,7 +974,6 @@
     padding-top: 0.5em;  
 }  
   
-/* Метаінформація розміщена ПІД логотипом, НАД описом */  
 .new-interface-info__head{  
     color: rgba(255, 255, 255, 0.75);  
     margin-top: 0.3em;  
@@ -1039,7 +1034,6 @@
     display: none !important;  
 }  
   
-/* Шрифт опису зроблено трішки більшим */  
 .new-interface-info__description{  
     font-size: 1.05em;  
     font-weight: 300;  
