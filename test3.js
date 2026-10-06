@@ -4,7 +4,7 @@
     if (window.banner_hero_plugin) return;
     window.banner_hero_plugin = true;
 
-    var VERSION = '1.3.3';
+    var VERSION = '1.3.4';
 
     var SETTING = 'banner_hero_enabled';
     var SIZE_SETTING = 'interface_size';
@@ -19,8 +19,6 @@
 
     var focusTimer = null;
     var lastCardId = null;
-    var lastActivity = null;
-    var lastHero = null;
 
     /* =========================
        ЛОКАЛІЗАЦІЯ
@@ -735,84 +733,33 @@
        FOCUS
     ========================= */
 
+    function processCardNode(cardNode) {
+        if (!isEnabled()) return;
+        if (!cardNode || !cardNode.card_data || !cardNode.card_data.id) return;
+
+        var data = cardNode.card_data;
+
+        if (lastCardId === data.id) return;
+
+        var activity = cardNode.closest ? cardNode.closest('.activity') : null;
+        if (!activity || !activity.classList.contains('banner-host')) return;
+
+        clearTimeout(focusTimer);
+
+        focusTimer = setTimeout(function () {
+            lastCardId = data.id;
+            var hero = activity.__bannerHero || heroFor(activity);
+            if (hero) {
+                showHero(hero, data);
+            }
+        }, 120);
+    }
+
     function onCardFocus(e) {
-        if (!isEnabled()) {
-            return;
+        var card = e.target;
+        if (card && card.classList && card.classList.contains('card')) {
+            processCardNode(card);
         }
-
-        var card =
-            e.target;
-
-        if (
-            !card ||
-            !card.classList ||
-            !card.classList.contains(
-                'card'
-            ) ||
-            !card.card_data
-        ) {
-            return;
-        }
-
-        var data =
-            card.card_data;
-
-        if (!data.id) {
-            return;
-        }
-
-        if (
-            lastCardId ===
-            data.id
-        ) {
-            return;
-        }
-
-        var activity =
-            card.closest
-                ? card.closest(
-                    '.activity'
-                )
-                : null;
-
-        if (
-            !activity ||
-            !activity.classList.contains(
-                'banner-host'
-            )
-        ) {
-            return;
-        }
-
-        clearTimeout(
-            focusTimer
-        );
-
-        focusTimer =
-            setTimeout(
-                function () {
-                    lastCardId =
-                        data.id;
-
-                    lastActivity =
-                        activity;
-
-                    var hero =
-                        activity.__bannerHero ||
-                        heroFor(
-                            activity
-                        );
-
-                    lastHero =
-                        hero;
-
-                    showHero(
-                        hero,
-                        data
-                    );
-                },
-                220
-            );
     }
 
     /* =========================
@@ -850,7 +797,6 @@
         ) {
             var hero = heroFor(el);
 
-            // Скидаємо старий ID при вході або поверненні, щоб гарантовано оновити банер
             lastCardId = null;
 
             setTimeout(function () {
@@ -858,8 +804,6 @@
                     var activeCard = el.querySelector('.card.focus') || el.querySelector('.card');
                     if (activeCard && activeCard.card_data && activeCard.card_data.id) {
                         lastCardId = activeCard.card_data.id;
-                        lastActivity = el;
-                        lastHero = hero;
                         showHero(hero, activeCard.card_data);
                     }
                 }
@@ -886,12 +830,6 @@
             );
 
             lastCardId =
-                null;
-
-            lastActivity =
-                null;
-
-            lastHero =
                 null;
         }
     }
@@ -963,12 +901,23 @@
         applyFont(savedFont);
 
         /* =====================
-           FOCUS LISTENER
+           FOCUS LISTENERS
         ===================== */
 
         document.addEventListener(
             'hover:focus',
             onCardFocus,
+            true
+        );
+
+        document.addEventListener(
+            'mouseover',
+            function (e) {
+                var card = e.target.closest ? e.target.closest('.card') : null;
+                if (card) {
+                    processCardNode(card);
+                }
+            },
             true
         );
 
