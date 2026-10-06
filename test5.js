@@ -833,6 +833,39 @@
                     if (domData) state.update(domData);  
                 }, 32);  
             },  
+            // Додаємо обробку подій стрілок Вгору/Вниз для перемикання між рядами
+            onDown() {
+                try {
+                    if (main.items) {
+                        const lines = Array.from(main.items);
+                        const currentIndex = lines.indexOf(line);
+                        if (currentIndex >= 0 && currentIndex < lines.length - 1) {
+                            lines[currentIndex + 1].toggle();
+                            return true;
+                        }
+                    }
+                } catch (e) {}
+                return false;
+            },
+            onUp() {
+                try {
+                    if (main.items) {
+                        const lines = Array.from(main.items);
+                        const currentIndex = lines.indexOf(line);
+                        if (currentIndex > 0) {
+                            lines[currentIndex - 1].toggle();
+                            return true;
+                        } else {
+                            // Якщо це перший рядок і натиснули вгору — переводимо фокус на шапку (головне меню)
+                            if (Lampa.Controller.enabled('head')) {
+                                Lampa.Controller.toggle('head');
+                                return true;
+                            }
+                        }
+                    }
+                } catch (e) {}
+                return false;
+            },
             onMore() {  
                 state.reset();  
             },  
@@ -845,37 +878,10 @@
         if (Array.isArray(line.items) && line.items.length) {  
             line.items.forEach(applyToCard);  
               
-            // Автоматично завантажуємо дані першого реального фільму одразу при створенні лінії  
             try {  
-                let firstValidData = null;  
-                
-                // 1. Спочатку шукаємо через DOM першу картку, відкидаючи службові елементи  
-                const container = typeof line.render === 'function' ? line.render(true) : null;  
-                if (container && container.querySelector) {  
-                    const firstCardDom = container.querySelector('.card:not(.card-more):not(.card--back)');  
-                    if (firstCardDom && firstCardDom.card_data) {  
-                        firstValidData = firstCardDom.card_data;  
-                    }  
-                }  
-                
-                // 2. Якщо через DOM не знайдено, перебираємо масив items, пропускаючи службові типи  
-                if (!firstValidData) {  
-                    for (let i = 0; i < line.items.length; i++) {  
-                        const itemData = getCardData(line.items[i], element, i);  
-                        if (itemData && itemData.id && itemData.source !== 'other') {  
-                            firstValidData = itemData;  
-                            break;  
-                        }  
-                    }  
-                }  
-
-                // 3. Якщо все ж нічого не знайдено, беремо базовий нульовий елемент  
-                if (!firstValidData) {  
-                    firstValidData = getCardData(line.items[0], element, 0);  
-                }  
-
-                if (firstValidData) {  
-                    state.update(firstValidData);  
+                const firstData = getCardData(line.items[0], element, 0);  
+                if (firstData) {  
+                    state.update(firstData);  
                 }  
             } catch (e) {}  
         }  
