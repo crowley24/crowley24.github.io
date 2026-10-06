@@ -357,12 +357,12 @@
                 img.style.maxHeight = logoHeight;  
                 img.style.setProperty('max-height', logoHeight, 'important');  
             } else {  
-                img.style.maxHeight = '110px';  
-                img.style.setProperty('max-height', '110px', 'important');  
+                img.style.maxHeight = '120px';  
+                img.style.setProperty('max-height', '120px', 'important');  
             }  
   
             if (this.useTextHeight() && heightPx && heightPx > 0 && !logoHeight) {  
-                const scaledHeight = Math.min(heightPx * 1.2, 110);  
+                const scaledHeight = Math.min(heightPx * 1.2, 120);  
                 img.style.height = `${scaledHeight}px`;  
                 img.style.width = 'auto';  
                 img.style.maxWidth = '100%';  
@@ -380,24 +380,24 @@
   
             if (type === 'js') {  
                 container.style.transition = 'none';  
-                animateOpacity(container, 1, 0, 200, () => {  
+                animateOpacity(container, 1, 0, 150, () => {  
                     container.innerHTML = '';  
                     if (typeof newNode === 'string') container.textContent = newNode;  
                     else container.appendChild(newNode);  
                     container.style.opacity = '0';  
-                    animateOpacity(container, 0, 1, 300);  
+                    animateOpacity(container, 0, 1, 200);  
                 });  
             } else {  
-                container.style.transition = 'opacity 0.2s ease';  
+                container.style.transition = 'opacity 0.15s ease';  
                 container.style.opacity = '0';  
                 container.__ni_logo_timer = setTimeout(() => {  
                     container.__ni_logo_timer = null;  
                     container.innerHTML = '';  
                     if (typeof newNode === 'string') container.textContent = newNode;  
                     else container.appendChild(newNode);  
-                    container.style.transition = 'opacity 0.3s ease';  
+                    container.style.transition = 'opacity 0.2s ease';  
                     container.style.opacity = '1';  
-                }, 100);  
+                }, 80);  
             }  
         }  
   
@@ -862,7 +862,7 @@
         Lampa.Template.add('new_interface_style_v3', `<style>  
 .new-interface{  
     position: relative;  
-    --ni-info-h: clamp(15em, 34vh, 24em);  
+    --ni-info-h: clamp(16em, 36vh, 26em);  
 }  
 .new-interface{  
     --ni-card-w: clamp(35px, 2.8vw, 60px);  
@@ -877,13 +877,14 @@
     padding-bottom: 150%;  
 }  
   
+/* Жорстко фіксуємо блок інформації для запобігання стрибків висоти */  
 .new-interface-info{  
     position: relative;  
     padding: 1.5em 2em;  
     height: auto !important;  
-    min-height: 200px !important;  
-    max-height: 300px !important;  
-    overflow: visible !important;  
+    min-height: 220px !important;  
+    max-height: 320px !important;  
+    overflow: hidden !important;  
     z-index: 3;  
     display: flex !important;  
     align-items: flex-start !important;  
@@ -918,29 +919,31 @@
   
 .new-interface-info__head{  
     color: rgba(255, 255, 255, 0.6);  
-    margin-bottom: 0.6em;  
-    font-size: 1.2em;  
-    min-height: 1em;  
+    margin-bottom: 0.5em;  
+    font-size: 1.1em;  
+    min-height: 1.2em;  
 }  
   
 .new-interface-info__head span{  
     color: #fff;  
 }  
   
+/* Фіксована висота рядка заголовка для усунення плавання елементів */  
 .new-interface-info__title {  
     font-size: clamp(2.4em, 3.8vw, 3.4em);  
     font-weight: 600;  
-    margin: 0 0 0.5em 0;  
+    margin: 0 0 0.4em 0;  
     display: flex;  
     align-items: center;  
     max-width: 100%;  
+    min-height: 1.2em;  
     overflow: hidden;  
 }  
   
-/* Захист від виходу логотипа за межі екрана */  
+/* Збільшено максимальну ширину та простір для логотипа */  
 .new-interface-info__title-logo {  
-    max-width: min(550px, 50vw) !important;  
-    max-height: var(--ni-logo-max-h, 110px) !important;  
+    max-width: min(650px, 55vw) !important;  
+    max-height: var(--ni-logo-max-h, 120px) !important;  
     width: auto !important;  
     height: auto !important;  
     object-fit: contain !important;  
@@ -971,7 +974,7 @@
     display: none !important;  
 }  
   
-/* Стилі для опису фільму під логотипом */  
+/* Збільшено простір для опису фільму */  
 .new-interface-info__description{  
     font-size: 0.9em;  
     font-weight: 300;  
@@ -984,7 +987,7 @@
     -webkit-line-clamp: 3;  
     line-clamp: 3;  
     -webkit-box-orient: vertical;  
-    max-width: min(750px, 85vw);  
+    max-width: min(850px, 90vw);  
     margin-top: 0.2em;  
 }  
   
@@ -1034,23 +1037,23 @@ body.light--version .new-interface-info__body{
 @media (max-width: 767px) {  
     .new-interface-info {  
         padding: 0.8em 1em;  
-        min-height: 140px !important;  
-        max-height: 220px !important;  
+        min-height: 150px !important;  
+        max-height: 230px !important;  
     }  
     .new-interface-info__title {  
         font-size: 1.6em;  
-        margin-bottom: 0.3em;  
+        margin-bottom: 0.2em;  
     }  
     .new-interface-info__title-logo {  
-        max-width: min(240px, 60vw) !important;  
-        max-height: 50px !important;  
+        max-width: min(260px, 65vw) !important;  
+        max-height: 55px !important;  
     }  
     .new-interface {  
         --ni-card-w: clamp(85px, 24vw, 130px);  
     }  
     .new-interface-info__head {  
-        font-size: 1em;  
-        margin-bottom: 0.3em;  
+        font-size: 0.95em;  
+        margin-bottom: 0.2em;  
     }  
     .new-interface-info__description {  
         font-size: 0.78em;  
@@ -1062,7 +1065,7 @@ body.light--version .new-interface-info__body{
   
 @media (max-height: 820px){  
     .new-interface{  
-        --ni-info-h: clamp(13em, 30vh, 20em);  
+        --ni-info-h: clamp(14em, 32vh, 22em);  
         --ni-card-w: clamp(60px, 4.2vw, 90px);  
     }   
   
