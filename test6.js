@@ -5,21 +5,6 @@
 
     /* =========================================================
        INTERFACE+ PREMIUM OPTIMIZED
-       Збережено:
-       - логотипи TMDB
-       - вибір мови
-       - вибір якості
-       - висота логотипа
-       - CSS / JS animation
-       - приховування метаінформації
-       - logo by text height
-       - captions toggle
-       - logo cache
-       - Smart TV
-       - preload
-       - background
-       - старий API Lampa
-       - новий API Lampa
        ========================================================= */
 
     markSmartTV();
@@ -390,6 +375,7 @@
                 el.__ni_animation_frame = requestAnimationFrame(step);
             } else {
                 el.__ni_animation_frame = null;
+
                 if (done) done();
             }
         }
@@ -398,7 +384,8 @@
             cancelAnimationFrame(el.__ni_animation_frame);
         }
 
-        el.__ni_animation_frame = requestAnimationFrame(step);
+        el.__ni_animation_frame =
+            requestAnimationFrame(step);
     }
 
     /* =========================================================
@@ -406,62 +393,114 @@
        ========================================================= */
 
     class LogoEngine {
+
         constructor() {
             this.pending = {};
         }
 
         enabled() {
-            return String(storageGet('logo_glav', '0')) !== '1';
+            return String(
+                storageGet('logo_glav', '0')
+            ) !== '1';
         }
 
         lang() {
-            var forced = String(storageGet('logo_lang', '') || '');
-            var base = forced || String(storageGet('language', 'en') || 'en');
+            var forced =
+                String(
+                    storageGet('logo_lang', '') || ''
+                );
 
-            return (base.split('-')[0] || 'en').toLowerCase();
+            var base =
+                forced ||
+                String(
+                    storageGet('language', 'en') || 'en'
+                );
+
+            return (
+                base.split('-')[0] || 'en'
+            ).toLowerCase();
         }
 
         size() {
-            return String(storageGet('logo_size', 'original') || 'original');
+            return String(
+                storageGet(
+                    'logo_size',
+                    'original'
+                ) || 'original'
+            );
         }
 
         animationType() {
-            return String(storageGet('logo_animation_type', 'css') || 'css');
+            return String(
+                storageGet(
+                    'logo_animation_type',
+                    'css'
+                ) || 'css'
+            );
         }
 
         useTextHeight() {
-            return !!storageGet('logo_use_text_height', false);
+            return !!storageGet(
+                'logo_use_text_height',
+                false
+            );
         }
 
         cacheKey(type, id, lang) {
-            return LOGO_CACHE_PREFIX + type + '_' + id + '_' + lang;
+            return (
+                LOGO_CACHE_PREFIX +
+                type +
+                '_' +
+                id +
+                '_' +
+                lang
+            );
         }
 
         flush(key, value) {
-            var list = this.pending[key] || [];
+            var list =
+                this.pending[key] || [];
 
             delete this.pending[key];
 
-            for (var i = 0; i < list.length; i++) {
+            for (
+                var i = 0;
+                i < list.length;
+                i++
+            ) {
                 try {
-                    if (list[i]) list[i](value);
+                    if (list[i]) {
+                        list[i](value);
+                    }
                 } catch (e) {}
             }
         }
 
         resolveFromImages(item, lang) {
             try {
-                if (!item || !item.images || !Array.isArray(item.images.logos)) {
+                if (
+                    !item ||
+                    !item.images ||
+                    !Array.isArray(item.images.logos)
+                ) {
                     return null;
                 }
 
-                var logos = item.images.logos;
+                var logos =
+                    item.images.logos;
 
                 if (!logos.length) return null;
 
                 var pick = function (iso) {
-                    for (var i = 0; i < logos.length; i++) {
-                        if (logos[i] && logos[i].iso_639_1 === iso) {
+                    for (
+                        var i = 0;
+                        i < logos.length;
+                        i++
+                    ) {
+                        if (
+                            logos[i] &&
+                            logos[i].iso_639_1 === iso
+                        ) {
                             return logos[i].file_path;
                         }
                     }
@@ -469,10 +508,16 @@
                     return null;
                 };
 
-                return pick(lang) ||
+                return (
+                    pick(lang) ||
                     pick('en') ||
-                    (logos[0] && logos[0].file_path) ||
-                    null;
+                    (
+                        logos[0] &&
+                        logos[0].file_path
+                    ) ||
+                    null
+                );
+
             } catch (e) {
                 return null;
             }
@@ -481,9 +526,15 @@
         buildUrl(filePath) {
             if (!filePath) return null;
 
-            var normalized = String(filePath).replace('.svg', '.png');
+            var normalized =
+                String(filePath)
+                    .replace('.svg', '.png');
 
-            return Lampa.TMDB.image('/t/p/' + this.size() + normalized);
+            return Lampa.TMDB.image(
+                '/t/p/' +
+                this.size() +
+                normalized
+            );
         }
 
         getLogoUrl(item, cb) {
@@ -493,32 +544,46 @@
                     return;
                 }
 
-                var source = item.source || 'tmdb';
+                var source =
+                    item.source || 'tmdb';
 
-                if (source !== 'tmdb' && source !== 'cub') {
+                if (
+                    source !== 'tmdb' &&
+                    source !== 'cub'
+                ) {
                     if (cb) cb(null);
                     return;
                 }
 
-                if (!Lampa.TMDB ||
+                if (
+                    !Lampa.TMDB ||
                     typeof Lampa.TMDB.api !== 'function' ||
-                    typeof Lampa.TMDB.key !== 'function') {
+                    typeof Lampa.TMDB.key !== 'function'
+                ) {
                     if (cb) cb(null);
                     return;
                 }
 
                 var type =
-                    item.media_type === 'tv' || item.name
+                    item.media_type === 'tv' ||
+                    item.name
                         ? 'tv'
                         : 'movie';
 
                 var lang = this.lang();
-                var key = this.cacheKey(type, item.id, lang);
+
+                var key =
+                    this.cacheKey(
+                        type,
+                        item.id,
+                        lang
+                    );
 
                 var cached = null;
 
                 try {
-                    cached = localStorage.getItem(key);
+                    cached =
+                        localStorage.getItem(key);
                 } catch (e) {}
 
                 if (cached) {
@@ -531,17 +596,26 @@
                     return;
                 }
 
-                var direct = this.resolveFromImages(item, lang);
+                var direct =
+                    this.resolveFromImages(
+                        item,
+                        lang
+                    );
 
                 if (direct) {
-                    var directUrl = this.buildUrl(direct);
+                    var directUrl =
+                        this.buildUrl(direct);
 
                     if (directUrl) {
                         try {
-                            localStorage.setItem(key, directUrl);
+                            localStorage.setItem(
+                                key,
+                                directUrl
+                            );
                         } catch (e) {}
 
                         if (cb) cb(directUrl);
+
                         return;
                     }
                 }
@@ -553,83 +627,162 @@
 
                 this.pending[key] = [cb];
 
-                if (typeof $ === 'undefined' || !$.get) {
+                if (
+                    typeof $ === 'undefined' ||
+                    !$.get
+                ) {
                     try {
-                        localStorage.setItem(key, 'none');
+                        localStorage.setItem(
+                            key,
+                            'none'
+                        );
                     } catch (e) {}
 
-                    this.flush(key, null);
+                    this.flush(
+                        key,
+                        null
+                    );
+
                     return;
                 }
 
-                var url = Lampa.TMDB.api(
-                    type +
-                    '/' +
-                    item.id +
-                    '/images?api_key=' +
-                    Lampa.TMDB.key() +
-                    '&include_image_language=' +
-                    lang +
-                    ',en,null'
-                );
+                var url =
+                    Lampa.TMDB.api(
+                        type +
+                        '/' +
+                        item.id +
+                        '/images?api_key=' +
+                        Lampa.TMDB.key() +
+                        '&include_image_language=' +
+                        lang +
+                        ',en,null'
+                    );
 
-                $.get(url, function (res) {
-                    try {
-                        var filePath = null;
+                $.get(
+                    url,
+                    function (res) {
 
-                        if (res && Array.isArray(res.logos)) {
-                            var logos = res.logos;
+                        try {
+                            var filePath = null;
 
-                            for (var i = 0; i < logos.length; i++) {
-                                if (logos[i] && logos[i].iso_639_1 === lang) {
-                                    filePath = logos[i].file_path;
-                                    break;
-                                }
-                            }
+                            if (
+                                res &&
+                                Array.isArray(
+                                    res.logos
+                                )
+                            ) {
 
-                            if (!filePath) {
-                                for (var j = 0; j < logos.length; j++) {
-                                    if (logos[j] && logos[j].iso_639_1 === 'en') {
-                                        filePath = logos[j].file_path;
+                                var logos =
+                                    res.logos;
+
+                                for (
+                                    var i = 0;
+                                    i < logos.length;
+                                    i++
+                                ) {
+                                    if (
+                                        logos[i] &&
+                                        logos[i].iso_639_1 === lang
+                                    ) {
+                                        filePath =
+                                            logos[i].file_path;
                                         break;
                                     }
                                 }
+
+                                if (!filePath) {
+                                    for (
+                                        var j = 0;
+                                        j < logos.length;
+                                        j++
+                                    ) {
+                                        if (
+                                            logos[j] &&
+                                            logos[j].iso_639_1 === 'en'
+                                        ) {
+                                            filePath =
+                                                logos[j].file_path;
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                if (
+                                    !filePath &&
+                                    logos.length
+                                ) {
+                                    filePath =
+                                        logos[0] &&
+                                        logos[0].file_path;
+                                }
                             }
 
-                            if (!filePath && logos.length) {
-                                filePath = logos[0] && logos[0].file_path;
+                            if (filePath) {
+                                var result =
+                                    this.buildUrl(
+                                        filePath
+                                    );
+
+                                try {
+                                    localStorage.setItem(
+                                        key,
+                                        result || 'none'
+                                    );
+                                } catch (e) {}
+
+                                this.flush(
+                                    key,
+                                    result
+                                );
+
+                            } else {
+
+                                try {
+                                    localStorage.setItem(
+                                        key,
+                                        'none'
+                                    );
+                                } catch (e) {}
+
+                                this.flush(
+                                    key,
+                                    null
+                                );
                             }
-                        }
 
-                        if (filePath) {
-                            var result = this.buildUrl(filePath);
+                        } catch (err) {
 
                             try {
-                                localStorage.setItem(key, result || 'none');
+                                localStorage.setItem(
+                                    key,
+                                    'none'
+                                );
                             } catch (e) {}
 
-                            this.flush(key, result);
-                        } else {
-                            try {
-                                localStorage.setItem(key, 'none');
-                            } catch (e) {}
-
-                            this.flush(key, null);
+                            this.flush(
+                                key,
+                                null
+                            );
                         }
-                    } catch (err) {
+
+                    }.bind(this)
+                ).fail(
+                    function () {
+
                         try {
-                            localStorage.setItem(key, 'none');
+                            localStorage.setItem(
+                                key,
+                                'none'
+                            );
                         } catch (e) {}
 
-                        this.flush(key, null);
-                    }
-                }.bind(this)).fail(function () {
-                    try {
-                        localStorage.setItem(key, 'none');
-                    } catch (e) {}
+                        this.flush(
+                            key,
+                            null
+                        );
 
-                    this.flush(key, null);
-                }.bind(this));
+                    }.bind(this)
+                );
 
             } catch (e) {
                 if (cb) cb(null);
@@ -642,239 +795,508 @@
             img.style.width = 'auto';
             img.style.height = 'auto';
             img.style.maxWidth = '100%';
-            img.style.objectFit = 'contain';
-            img.style.objectPosition = 'left center';
 
-            var logoHeight = storageGet('logo_height', '');
+            img.style.objectFit =
+                'contain';
+
+            img.style.objectPosition =
+                'left center';
+
+            var logoHeight =
+                storageGet(
+                    'logo_height',
+                    ''
+                );
 
             if (logoHeight) {
-                img.style.maxHeight = logoHeight;
-                img.style.setProperty('max-height', logoHeight, 'important');
+
+                img.style.maxHeight =
+                    logoHeight;
+
+                img.style.setProperty(
+                    'max-height',
+                    logoHeight,
+                    'important'
+                );
+
             } else {
-                img.style.maxHeight = '95px';
-                img.style.setProperty('max-height', '95px', 'important');
+
+                img.style.maxHeight =
+                    '95px';
+
+                img.style.setProperty(
+                    'max-height',
+                    '95px',
+                    'important'
+                );
             }
 
-            if (this.useTextHeight() && heightPx > 0 && !logoHeight) {
-                var scaled = Math.min(heightPx * 1.08, 95);
+            if (
+                this.useTextHeight() &&
+                heightPx > 0 &&
+                !logoHeight
+            ) {
+                var scaled =
+                    Math.min(
+                        heightPx * 1.08,
+                        95
+                    );
 
-                img.style.height = scaled + 'px';
-                img.style.maxHeight = scaled + 'px';
+                img.style.height =
+                    scaled + 'px';
+
+                img.style.maxHeight =
+                    scaled + 'px';
             }
         }
 
-        swapContent(container, newNode) {
+        swapContent(
+            container,
+            newNode
+        ) {
             if (!container) return;
 
-            var type = this.animationType();
+            var type =
+                this.animationType();
 
-            if (container.__ni_logo_timer) {
-                clearTimeout(container.__ni_logo_timer);
-                container.__ni_logo_timer = null;
+            if (
+                container.__ni_logo_timer
+            ) {
+                clearTimeout(
+                    container.__ni_logo_timer
+                );
+
+                container.__ni_logo_timer =
+                    null;
             }
 
-            if (container.__ni_animation_frame) {
-                cancelAnimationFrame(container.__ni_animation_frame);
-                container.__ni_animation_frame = null;
+            if (
+                container.__ni_animation_frame
+            ) {
+                cancelAnimationFrame(
+                    container.__ni_animation_frame
+                );
+
+                container.__ni_animation_frame =
+                    null;
             }
 
             if (type === 'js') {
-                animateOpacity(container, 1, 0, 110, function () {
-                    container.innerHTML = '';
 
-                    if (typeof newNode === 'string') {
-                        container.textContent = newNode;
-                    } else {
-                        container.appendChild(newNode);
+                animateOpacity(
+                    container,
+                    1,
+                    0,
+                    110,
+                    function () {
+
+                        container.innerHTML =
+                            '';
+
+                        if (
+                            typeof newNode ===
+                            'string'
+                        ) {
+                            container.textContent =
+                                newNode;
+                        } else {
+                            container.appendChild(
+                                newNode
+                            );
+                        }
+
+                        animateOpacity(
+                            container,
+                            0,
+                            1,
+                            160
+                        );
                     }
+                );
 
-                    animateOpacity(container, 0, 1, 160);
-                });
             } else {
-                container.style.transition = 'opacity .12s ease';
-                container.style.opacity = '0';
 
-                container.__ni_logo_timer = setTimeout(function () {
-                    container.__ni_logo_timer = null;
+                container.style.transition =
+                    'opacity .12s ease';
 
-                    container.innerHTML = '';
+                container.style.opacity =
+                    '0';
 
-                    if (typeof newNode === 'string') {
-                        container.textContent = newNode;
-                    } else {
-                        container.appendChild(newNode);
-                    }
+                container.__ni_logo_timer =
+                    setTimeout(
+                        function () {
 
-                    requestAnimationFrame(function () {
-                        container.style.transition = 'opacity .18s ease';
-                        container.style.opacity = '1';
-                    });
-                }, 65);
+                            container.__ni_logo_timer =
+                                null;
+
+                            container.innerHTML =
+                                '';
+
+                            if (
+                                typeof newNode ===
+                                'string'
+                            ) {
+                                container.textContent =
+                                    newNode;
+                            } else {
+                                container.appendChild(
+                                    newNode
+                                );
+                            }
+
+                            requestAnimationFrame(
+                                function () {
+                                    container.style.transition =
+                                        'opacity .18s ease';
+
+                                    container.style.opacity =
+                                        '1';
+                                }
+                            );
+
+                        },
+                        65
+                    );
             }
         }
 
-        syncFullHead(container, logoActive) {
+        syncFullHead(
+            container,
+            logoActive
+        ) {
             try {
-                if (!container || typeof container.find !== 'function') return;
+                if (
+                    !container ||
+                    typeof container.find !==
+                    'function'
+                ) {
+                    return;
+                }
 
-                var headNode = container.find('.full-start-new__head');
-                var detailsNode = container.find('.full-start-new__details');
+                var headNode =
+                    container.find(
+                        '.full-start-new__head'
+                    );
 
-                if (!headNode.length || !detailsNode.length) return;
+                var detailsNode =
+                    container.find(
+                        '.full-start-new__details'
+                    );
 
-                var headEl = headNode[0];
-                var detailsEl = detailsNode[0];
+                if (
+                    !headNode.length ||
+                    !detailsNode.length
+                ) {
+                    return;
+                }
 
-                if (!headEl || !detailsEl) return;
+                var headEl =
+                    headNode[0];
 
-                var moved = detailsEl.querySelector('.logo-moved-head');
-                var movedSep = detailsEl.querySelector('.logo-moved-separator');
+                var detailsEl =
+                    detailsNode[0];
+
+                if (
+                    !headEl ||
+                    !detailsEl
+                ) {
+                    return;
+                }
+
+                var moved =
+                    detailsEl.querySelector(
+                        '.logo-moved-head'
+                    );
+
+                var movedSep =
+                    detailsEl.querySelector(
+                        '.logo-moved-separator'
+                    );
 
                 var wantMove =
                     !!logoActive &&
-                    !!storageGet('logo_hide_year', true);
+                    !!storageGet(
+                        'logo_hide_year',
+                        true
+                    );
 
                 if (!wantMove) {
-                    if (moved && moved.parentNode) {
-                        moved.parentNode.removeChild(moved);
+
+                    if (
+                        moved &&
+                        moved.parentNode
+                    ) {
+                        moved.parentNode.removeChild(
+                            moved
+                        );
                     }
 
-                    if (movedSep && movedSep.parentNode) {
-                        movedSep.parentNode.removeChild(movedSep);
+                    if (
+                        movedSep &&
+                        movedSep.parentNode
+                    ) {
+                        movedSep.parentNode.removeChild(
+                            movedSep
+                        );
                     }
 
-                    headEl.style.display = '';
+                    headEl.style.display =
+                        '';
+
                     return;
                 }
 
                 if (moved) {
-                    headEl.style.display = 'none';
+                    headEl.style.display =
+                        'none';
+
                     return;
                 }
 
-                var html = (headEl.innerHTML || '').trim();
+                var html =
+                    (
+                        headEl.innerHTML ||
+                        ''
+                    ).trim();
 
                 if (!html) return;
 
-                var headSpan = document.createElement('span');
-                headSpan.className = 'logo-moved-head';
-                headSpan.innerHTML = html;
+                var headSpan =
+                    document.createElement(
+                        'span'
+                    );
 
-                var sep = document.createElement('span');
-                sep.className = 'full-start-new__split logo-moved-separator';
-                sep.textContent = '●';
+                headSpan.className =
+                    'logo-moved-head';
 
-                detailsEl.appendChild(sep);
-                detailsEl.appendChild(headSpan);
+                headSpan.innerHTML =
+                    html;
 
-                headEl.style.display = 'none';
+                var sep =
+                    document.createElement(
+                        'span'
+                    );
+
+                sep.className =
+                    'full-start-new__split logo-moved-separator';
+
+                sep.textContent =
+                    '●';
+
+                detailsEl.appendChild(
+                    sep
+                );
+
+                detailsEl.appendChild(
+                    headSpan
+                );
+
+                headEl.style.display =
+                    'none';
+
             } catch (e) {}
         }
 
-        applyToFull(activity, item) {
+        applyToFull(
+            activity,
+            item
+        ) {
             try {
-                if (!activity || !activity.render || !item) return;
+                if (
+                    !activity ||
+                    !activity.render ||
+                    !item
+                ) {
+                    return;
+                }
 
-                var container = activity.render();
+                var container =
+                    activity.render();
 
-                if (!container || !container.find) return;
+                if (
+                    !container ||
+                    !container.find
+                ) {
+                    return;
+                }
 
-                var titleNode = container.find(
-                    '.full-start-new__title, .full-start__title'
-                );
+                var titleNode =
+                    container.find(
+                        '.full-start-new__title, .full-start__title'
+                    );
 
                 if (!titleNode.length) return;
 
-                var titleEl = titleNode[0];
+                var titleEl =
+                    titleNode[0];
 
-                var titleText = String(
-                    item.title ||
-                    item.name ||
-                    item.original_title ||
-                    item.original_name ||
-                    ''
-                ).trim();
+                var titleText =
+                    String(
+                        item.title ||
+                        item.name ||
+                        item.original_title ||
+                        item.original_name ||
+                        ''
+                    ).trim();
 
                 if (!titleText) {
-                    titleText = titleNode.text();
+                    titleText =
+                        titleNode.text();
                 }
 
-                if (!titleEl.__ni_full_title_text) {
-                    titleEl.__ni_full_title_text = titleText;
+                if (
+                    !titleEl.__ni_full_title_text
+                ) {
+                    titleEl.__ni_full_title_text =
+                        titleText;
                 }
 
-                var originalText = titleEl.__ni_full_title_text;
+                var originalText =
+                    titleEl.__ni_full_title_text;
 
                 if (!this.enabled()) {
-                    this.syncFullHead(container, false);
+
+                    this.syncFullHead(
+                        container,
+                        false
+                    );
 
                     var oldLogo =
                         titleEl.querySelector &&
-                        titleEl.querySelector('img.new-interface-full-logo');
+                        titleEl.querySelector(
+                            'img.new-interface-full-logo'
+                        );
 
                     if (oldLogo) {
-                        this.swapContent(titleEl, originalText);
-                    } else if (titleNode.text() !== originalText) {
-                        titleNode.text(originalText);
+                        this.swapContent(
+                            titleEl,
+                            originalText
+                        );
+                    } else if (
+                        titleNode.text() !==
+                        originalText
+                    ) {
+                        titleNode.text(
+                            originalText
+                        );
                     }
 
                     return;
                 }
 
-                if (titleNode.text() !== originalText) {
-                    titleNode.text(originalText);
+                if (
+                    titleNode.text() !==
+                    originalText
+                ) {
+                    titleNode.text(
+                        originalText
+                    );
                 }
 
                 var textHeight =
                     titleEl.getBoundingClientRect
-                        ? Math.round(titleEl.getBoundingClientRect().height)
+                        ? Math.round(
+                            titleEl.getBoundingClientRect().height
+                        )
                         : 0;
 
                 var requestId =
-                    (titleEl.__ni_logo_req_id || 0) + 1;
+                    (
+                        titleEl.__ni_logo_req_id ||
+                        0
+                    ) + 1;
 
-                titleEl.__ni_logo_req_id = requestId;
+                titleEl.__ni_logo_req_id =
+                    requestId;
 
-                this.getLogoUrl(item, function (url) {
-                    if (titleEl.__ni_logo_req_id !== requestId) return;
-                    if (!titleEl.isConnected) return;
+                this.getLogoUrl(
+                    item,
+                    function (url) {
 
-                    if (!url) {
-                        this.syncFullHead(container, false);
-
-                        var current =
-                            titleEl.querySelector &&
-                            titleEl.querySelector('img.new-interface-full-logo');
-
-                        if (current) {
-                            this.swapContent(titleEl, originalText);
+                        if (
+                            titleEl.__ni_logo_req_id !==
+                            requestId
+                        ) {
+                            return;
                         }
 
-                        return;
-                    }
+                        if (
+                            !titleEl.isConnected
+                        ) {
+                            return;
+                        }
 
-                    var img = new Image();
+                        if (!url) {
 
-                    img.className = 'new-interface-full-logo';
-                    img.alt = originalText;
+                            this.syncFullHead(
+                                container,
+                                false
+                            );
 
-                    this.setImageSizing(img, textHeight);
+                            var current =
+                                titleEl.querySelector &&
+                                titleEl.querySelector(
+                                    'img.new-interface-full-logo'
+                                );
 
-                    img.onload = function () {
-                        if (titleEl.__ni_logo_req_id !== requestId) return;
+                            if (current) {
+                                this.swapContent(
+                                    titleEl,
+                                    originalText
+                                );
+                            }
 
-                        this.syncFullHead(container, true);
-                        this.swapContent(titleEl, img);
-                    }.bind(this);
+                            return;
+                        }
 
-                    img.src = url;
-                }.bind(this));
+                        var img =
+                            new Image();
+
+                        img.className =
+                            'new-interface-full-logo';
+
+                        img.alt =
+                            originalText;
+
+                        this.setImageSizing(
+                            img,
+                            textHeight
+                        );
+
+                        img.onload =
+                            function () {
+
+                                if (
+                                    titleEl.__ni_logo_req_id !==
+                                    requestId
+                                ) {
+                                    return;
+                                }
+
+                                this.syncFullHead(
+                                    container,
+                                    true
+                                );
+
+                                this.swapContent(
+                                    titleEl,
+                                    img
+                                );
+
+                            }.bind(this);
+
+                        img.src =
+                            url;
+
+                    }.bind(this)
+                );
 
             } catch (e) {}
         }
     }
 
-    var Logo = new LogoEngine();
+    var Logo =
+        new LogoEngine();
 
     /* =========================================================
        META
@@ -884,12 +1306,21 @@
         try {
             var parts = [];
 
-            if (movie.production_countries &&
-                movie.production_countries.length) {
-                parts.push(movie.production_countries[0].name);
-            } else if (movie.origin_country &&
-                       movie.origin_country.length) {
-                parts.push(movie.origin_country[0]);
+            if (
+                movie.production_countries &&
+                movie.production_countries.length
+            ) {
+                parts.push(
+                    movie.production_countries[0].name
+                );
+
+            } else if (
+                movie.origin_country &&
+                movie.origin_country.length
+            ) {
+                parts.push(
+                    movie.origin_country[0]
+                );
             }
 
             var date =
@@ -898,41 +1329,70 @@
                 '';
 
             if (date) {
-                var year = date.split('-')[0];
+                var year =
+                    date.split('-')[0];
 
-                if (year) parts.push(year);
+                if (year) {
+                    parts.push(year);
+                }
             }
 
             if (movie.number_of_seasons) {
+
                 parts.push(
                     movie.number_of_seasons +
                     ' сезон' +
-                    (movie.number_of_seasons > 1 ? 'и' : '')
+                    (
+                        movie.number_of_seasons > 1
+                            ? 'и'
+                            : ''
+                    )
                 );
+
             } else if (movie.runtime) {
-                var hours = Math.floor(movie.runtime / 60);
-                var minutes = movie.runtime % 60;
+
+                var hours =
+                    Math.floor(
+                        movie.runtime / 60
+                    );
+
+                var minutes =
+                    movie.runtime % 60;
 
                 parts.push(
                     hours > 0
-                        ? hours + ' год ' + minutes + ' хв'
-                        : minutes + ' хв'
+                        ? hours +
+                          ' год ' +
+                          minutes +
+                          ' хв'
+                        : minutes +
+                          ' хв'
                 );
             }
 
-            if (Array.isArray(movie.genres) &&
-                movie.genres.length) {
-                var genres = movie.genres
-                    .slice(0, 2)
-                    .map(function (g) {
-                        return g.name;
-                    })
-                    .join(', ');
+            if (
+                Array.isArray(movie.genres) &&
+                movie.genres.length
+            ) {
+                var genres =
+                    movie.genres
+                        .slice(0, 2)
+                        .map(
+                            function (g) {
+                                return g.name;
+                            }
+                        )
+                        .join(', ');
 
-                if (genres) parts.push(genres);
+                if (genres) {
+                    parts.push(genres);
+                }
             }
 
-            return parts.join(' • ');
+            return parts.join(
+                ' • '
+            );
+
         } catch (e) {
             return '';
         }
@@ -950,19 +1410,31 @@
         titleText
     ) {
         try {
-            if (!titleNode || !titleNode.length) return;
+            if (
+                !titleNode ||
+                !titleNode.length
+            ) {
+                return;
+            }
 
-            var titleEl = titleNode[0];
+            var titleEl =
+                titleNode[0];
 
             if (!titleEl) return;
 
             var reqId =
-                (titleEl.__ni_logo_req_id || 0) + 1;
+                (
+                    titleEl.__ni_logo_req_id ||
+                    0
+                ) + 1;
 
-            titleEl.__ni_logo_req_id = reqId;
+            titleEl.__ni_logo_req_id =
+                reqId;
 
             var descNode =
-                wrapper.find('.new-interface-info__description');
+                wrapper.find(
+                    '.new-interface-info__description'
+                );
 
             var overviewText =
                 movie.overview ||
@@ -970,45 +1442,73 @@
                 '';
 
             if (descNode.length) {
-                descNode.text(overviewText);
-                descNode.toggle(!!overviewText);
+                descNode.text(
+                    overviewText
+                );
+
+                descNode.toggle(
+                    !!overviewText
+                );
             }
 
             var hideHead =
-                !!storageGet('logo_hide_year', true);
+                !!storageGet(
+                    'logo_hide_year',
+                    true
+                );
 
-            if (headNode && headNode.length) {
+            if (
+                headNode &&
+                headNode.length
+            ) {
+
                 if (hideHead) {
+
                     headNode
-                        .css('display', 'none')
+                        .css(
+                            'display',
+                            'none'
+                        )
                         .text('');
+
                 } else {
-                    var metaText = formatMeta(movie);
+
+                    var metaText =
+                        formatMeta(movie);
 
                     headNode
                         .text(metaText)
                         .css(
                             'display',
-                            metaText ? '' : 'none'
+                            metaText
+                                ? ''
+                                : 'none'
                         );
                 }
             }
 
             if (!Logo.enabled()) {
-                if (titleEl.querySelector &&
-                    titleEl.querySelector('img')) {
+
+                if (
+                    titleEl.querySelector &&
+                    titleEl.querySelector('img')
+                ) {
                     Logo.swapContent(
                         titleEl,
                         titleText
                     );
                 } else {
-                    titleNode.text(titleText);
+                    titleNode.text(
+                        titleText
+                    );
                 }
 
                 return;
             }
 
-            titleNode.text(titleText);
+            titleNode.text(
+                titleText
+            );
 
             var textHeight =
                 titleEl.getBoundingClientRect
@@ -1017,47 +1517,77 @@
                     )
                     : 0;
 
-            Logo.getLogoUrl(movie, function (url) {
-                if (titleEl.__ni_logo_req_id !== reqId) return;
-                if (!titleEl.isConnected) return;
+            Logo.getLogoUrl(
+                movie,
+                function (url) {
 
-                if (!url) {
-                    if (titleEl.querySelector &&
-                        titleEl.querySelector('img')) {
-                        Logo.swapContent(
-                            titleEl,
-                            titleText
-                        );
-                    } else {
-                        titleNode.text(titleText);
+                    if (
+                        titleEl.__ni_logo_req_id !==
+                        reqId
+                    ) {
+                        return;
                     }
 
-                    return;
-                }
+                    if (
+                        !titleEl.isConnected
+                    ) {
+                        return;
+                    }
 
-                var img = new Image();
+                    if (!url) {
 
-                img.className =
-                    'new-interface-info__title-logo';
+                        if (
+                            titleEl.querySelector &&
+                            titleEl.querySelector('img')
+                        ) {
+                            Logo.swapContent(
+                                titleEl,
+                                titleText
+                            );
+                        } else {
+                            titleNode.text(
+                                titleText
+                            );
+                        }
 
-                img.alt = titleText;
+                        return;
+                    }
 
-                Logo.setImageSizing(
-                    img,
-                    textHeight
-                );
+                    var img =
+                        new Image();
 
-                img.onload = function () {
-                    if (titleEl.__ni_logo_req_id !== reqId) return;
+                    img.className =
+                        'new-interface-info__title-logo';
 
-                    Logo.swapContent(
-                        titleEl,
-                        img
+                    img.alt =
+                        titleText;
+
+                    Logo.setImageSizing(
+                        img,
+                        textHeight
                     );
-                };
 
-                img.src = url;
-            });
+                    img.onload =
+                        function () {
+
+                            if (
+                                titleEl.__ni_logo_req_id !==
+                                reqId
+                            ) {
+                                return;
+                            }
+
+                            Logo.swapContent(
+                                titleEl,
+                                img
+                            );
+
+                        };
+
+                    img.src =
+                        url;
+                }
+            );
 
         } catch (e) {}
     }
@@ -1067,34 +1597,65 @@
        ========================================================= */
 
     function hookFullTitleLogos() {
-        if (window.__ni_interface2_full_logo_hooked) return;
-
-        window.__ni_interface2_full_logo_hooked = true;
-
-        if (!Lampa.Listener ||
-            typeof Lampa.Listener.follow !== 'function') {
+        if (
+            window.__ni_interface2_full_logo_hooked
+        ) {
             return;
         }
 
-        Lampa.Listener.follow('full', function (e) {
-            try {
-                if (!e || e.type !== 'complite') return;
-                if (!e.object || !e.object.activity) return;
+        window.__ni_interface2_full_logo_hooked =
+            true;
 
-                var data =
-                    e.data &&
-                    (e.data.movie || e.data)
-                        ? (e.data.movie || e.data)
-                        : null;
+        if (
+            !Lampa.Listener ||
+            typeof Lampa.Listener.follow !==
+            'function'
+        ) {
+            return;
+        }
 
-                if (!data) return;
+        Lampa.Listener.follow(
+            'full',
+            function (e) {
 
-                Logo.applyToFull(
-                    e.object.activity,
-                    data
-                );
-            } catch (err) {}
-        });
+                try {
+
+                    if (
+                        !e ||
+                        e.type !== 'complite'
+                    ) {
+                        return;
+                    }
+
+                    if (
+                        !e.object ||
+                        !e.object.activity
+                    ) {
+                        return;
+                    }
+
+                    var data =
+                        e.data &&
+                        (
+                            e.data.movie ||
+                            e.data
+                        )
+                            ? (
+                                e.data.movie ||
+                                e.data
+                            )
+                            : null;
+
+                    if (!data) return;
+
+                    Logo.applyToFull(
+                        e.object.activity,
+                        data
+                    );
+
+                } catch (err) {}
+            }
+        );
     }
 
     hookFullTitleLogos();
@@ -1104,37 +1665,56 @@
        ========================================================= */
 
     function startPluginV3() {
-        if (!Lampa.Maker ||
+
+        if (
+            !Lampa.Maker ||
             !Lampa.Maker.map ||
-            !Lampa.Utils) {
+            !Lampa.Utils
+        ) {
             return;
         }
 
-        if (window.plugin_interface_ready_v3) return;
+        if (
+            window.plugin_interface_ready_v3
+        ) {
+            return;
+        }
 
-        window.plugin_interface_ready_v3 = true;
+        window.plugin_interface_ready_v3 =
+            true;
 
         addStyleV3();
 
-        var mainMap = Lampa.Maker.map('Main');
+        var mainMap =
+            Lampa.Maker.map('Main');
 
-        if (!mainMap ||
+        if (
+            !mainMap ||
             !mainMap.Items ||
-            !mainMap.Create) {
+            !mainMap.Create
+        ) {
             return;
         }
 
         wrap(
             mainMap.Items,
             'onInit',
-            function (original, args) {
+            function (
+                original,
+                args
+            ) {
+
                 if (original) {
-                    original.apply(this, args);
+                    original.apply(
+                        this,
+                        args
+                    );
                 }
 
                 this.__newInterfaceEnabled =
                     shouldUseNewInterface(
-                        this && this.object
+                        this &&
+                        this.object
                     );
             }
         );
@@ -1142,31 +1722,56 @@
         wrap(
             mainMap.Create,
             'onCreate',
-            function (original, args) {
+            function (
+                original,
+                args
+            ) {
+
                 if (original) {
-                    original.apply(this, args);
+                    original.apply(
+                        this,
+                        args
+                    );
                 }
 
-                if (!this.__newInterfaceEnabled) return;
+                if (
+                    !this.__newInterfaceEnabled
+                ) {
+                    return;
+                }
 
-                ensureState(this).attach();
+                ensureState(
+                    this
+                ).attach();
             }
         );
 
         wrap(
             mainMap.Create,
             'onCreateAndAppend',
-            function (original, args) {
-                var element =
-                    args && args[0];
+            function (
+                original,
+                args
+            ) {
 
-                if (this.__newInterfaceEnabled &&
-                    element) {
-                    prepareLineData(element);
+                var element =
+                    args &&
+                    args[0];
+
+                if (
+                    this.__newInterfaceEnabled &&
+                    element
+                ) {
+                    prepareLineData(
+                        element
+                    );
                 }
 
                 return original
-                    ? original.apply(this, args)
+                    ? original.apply(
+                        this,
+                        args
+                    )
                     : undefined;
             }
         );
@@ -1174,17 +1779,36 @@
         wrap(
             mainMap.Items,
             'onAppend',
-            function (original, args) {
+            function (
+                original,
+                args
+            ) {
+
                 if (original) {
-                    original.apply(this, args);
+                    original.apply(
+                        this,
+                        args
+                    );
                 }
 
-                if (!this.__newInterfaceEnabled) return;
+                if (
+                    !this.__newInterfaceEnabled
+                ) {
+                    return;
+                }
 
-                var item = args && args[0];
-                var element = args && args[1];
+                var item =
+                    args &&
+                    args[0];
 
-                if (item && element) {
+                var element =
+                    args &&
+                    args[1];
+
+                if (
+                    item &&
+                    element
+                ) {
                     attachLineHandlers(
                         this,
                         item,
@@ -1197,26 +1821,41 @@
         wrap(
             mainMap.Items,
             'onDestroy',
-            function (original, args) {
-                if (this.__newInterfaceState) {
+            function (
+                original,
+                args
+            ) {
+
+                if (
+                    this.__newInterfaceState
+                ) {
+
                     this.__newInterfaceState.destroy();
+
                     delete this.__newInterfaceState;
                 }
 
                 delete this.__newInterfaceEnabled;
 
                 if (original) {
-                    original.apply(this, args);
+                    original.apply(
+                        this,
+                        args
+                    );
                 }
             }
         );
     }
 
-    function shouldUseNewInterface(object) {
+    function shouldUseNewInterface(
+        object
+    ) {
         if (!object) return false;
 
-        if (object.source === 'other' &&
-            !object.backdrop_path) {
+        if (
+            object.source === 'other' &&
+            !object.backdrop_path
+        ) {
             return false;
         }
 
@@ -1228,51 +1867,91 @@
        ========================================================= */
 
     function ensureState(main) {
-        if (main.__newInterfaceState) {
+
+        if (
+            main.__newInterfaceState
+        ) {
             return main.__newInterfaceState;
         }
 
         var state =
-            createInterfaceState(main);
+            createInterfaceState(
+                main
+            );
 
-        main.__newInterfaceState = state;
+        main.__newInterfaceState =
+            state;
 
         return state;
     }
 
-    function createInterfaceState(main) {
-        var info = new InterfaceInfo();
+    function createInterfaceState(
+        main
+    ) {
+
+        var info =
+            new InterfaceInfo();
 
         info.create();
 
         var background =
-            document.createElement('img');
+            document.createElement(
+                'img'
+            );
 
         background.className =
             'full-start__background';
 
+        /*
+         * ОКРЕМИЙ ШАР ЗАТЕМНЕННЯ.
+         * Він знаходиться тільки над backdrop,
+         * але під інформацією та картками.
+         */
+        var backgroundOverlay =
+            document.createElement(
+                'div'
+            );
+
+        backgroundOverlay.className =
+            'new-interface-background-overlay';
+
         var state = {
+
             main: main,
+
             info: info,
+
             background: background,
+
+            backgroundOverlay:
+                backgroundOverlay,
+
             infoElement: null,
 
             backgroundTimer: null,
+
             backgroundLast: '',
+
             backgroundRequest: 0,
 
             attached: false,
+
             lastDataId: null,
 
             updateFrame: null,
 
             attach: function () {
-                if (this.attached) return;
+
+                if (this.attached) {
+                    return;
+                }
 
                 var container =
                     main.render(true);
 
-                if (!container) return;
+                if (!container) {
+                    return;
+                }
 
                 container.classList.add(
                     'new-interface'
@@ -1282,56 +1961,92 @@
                     container
                 );
 
-                if (!background.parentElement) {
+                /*
+                 * BACKGROUND
+                 */
+                if (
+                    !background.parentElement
+                ) {
+
                     container.insertBefore(
                         background,
-                        container.firstChild || null
+                        container.firstChild ||
+                        null
                     );
                 }
 
+                /*
+                 * OVERLAY
+                 */
+                if (
+                    !backgroundOverlay.parentElement
+                ) {
+
+                    container.insertBefore(
+                        backgroundOverlay,
+                        background.nextSibling
+                    );
+                }
+
+                /*
+                 * INFO
+                 */
                 var infoNode =
                     info.render(true);
 
                 this.infoElement =
                     infoNode;
 
-                if (infoNode &&
-                    infoNode.parentNode !== container) {
+                if (
+                    infoNode &&
+                    infoNode.parentNode !==
+                    container
+                ) {
 
-                    if (background.parentElement === container) {
-                        container.insertBefore(
-                            infoNode,
-                            background.nextSibling
-                        );
-                    } else {
-                        container.insertBefore(
-                            infoNode,
-                            container.firstChild || null
-                        );
-                    }
+                    container.insertBefore(
+                        infoNode,
+                        backgroundOverlay.nextSibling
+                    );
                 }
 
-                if (main.scroll &&
-                    typeof main.scroll.minus === 'function') {
-                    main.scroll.minus(infoNode);
+                if (
+                    main.scroll &&
+                    typeof main.scroll.minus ===
+                    'function'
+                ) {
+
+                    main.scroll.minus(
+                        infoNode
+                    );
                 }
 
-                this.attached = true;
+                this.attached =
+                    true;
             },
 
             update: function (data) {
+
                 if (!data) return;
 
                 var id =
                     data.id +
                     '_' +
-                    (data.media_type || '');
+                    (
+                        data.media_type ||
+                        ''
+                    );
 
-                if (this.lastDataId === id) return;
+                if (
+                    this.lastDataId === id
+                ) {
+                    return;
+                }
 
-                this.lastDataId = id;
+                this.lastDataId =
+                    id;
 
                 if (this.updateFrame) {
+
                     cancelAnimationFrame(
                         this.updateFrame
                     );
@@ -1340,97 +2055,122 @@
                 this.updateFrame =
                     requestAnimationFrame(
                         function () {
-                            this.updateFrame = null;
 
-                            info.update(data);
-                            this.updateBackground(data);
+                            this.updateFrame =
+                                null;
+
+                            info.update(
+                                data
+                            );
+
+                            this.updateBackground(
+                                data
+                            );
+
                         }.bind(this)
                     );
             },
 
-            updateBackground: function (data) {
-                var path =
-                    data &&
-                    data.backdrop_path
-                        ? Lampa.Api.img(
-                            data.backdrop_path,
-                            'w1280'
-                        )
-                        : '';
+            updateBackground:
+                function (data) {
 
-                if (!path ||
-                    path === this.backgroundLast) {
-                    return;
-                }
+                    var path =
+                        data &&
+                        data.backdrop_path
+                            ? Lampa.Api.img(
+                                data.backdrop_path,
+                                'w1280'
+                            )
+                            : '';
 
-                clearTimeout(
-                    this.backgroundTimer
-                );
+                    if (
+                        !path ||
+                        path ===
+                        this.backgroundLast
+                    ) {
+                        return;
+                    }
 
-                var requestId =
-                    ++this.backgroundRequest;
-
-                this.backgroundTimer =
-                    setTimeout(
-                        function () {
-                            if (
-                                requestId !==
-                                this.backgroundRequest
-                            ) {
-                                return;
-                            }
-
-                            var preload =
-                                new Image();
-
-                            preload.onload =
-                                function () {
-                                    if (
-                                        requestId !==
-                                        this.backgroundRequest
-                                    ) {
-                                        return;
-                                    }
-
-                                    background.classList.remove(
-                                        'loaded'
-                                    );
-
-                                    background.src =
-                                        path;
-
-                                    requestAnimationFrame(
-                                        function () {
-                                            background.classList.add(
-                                                'loaded'
-                                            );
-                                        }
-                                    );
-
-                                    this.backgroundLast =
-                                        path;
-                                }.bind(this);
-
-                            preload.onerror =
-                                function () {};
-
-                            preload.src = path;
-                        }.bind(this),
-                        220
+                    clearTimeout(
+                        this.backgroundTimer
                     );
-            },
+
+                    var requestId =
+                        ++this.backgroundRequest;
+
+                    this.backgroundTimer =
+                        setTimeout(
+                            function () {
+
+                                if (
+                                    requestId !==
+                                    this.backgroundRequest
+                                ) {
+                                    return;
+                                }
+
+                                var preload =
+                                    new Image();
+
+                                preload.onload =
+                                    function () {
+
+                                        if (
+                                            requestId !==
+                                            this.backgroundRequest
+                                        ) {
+                                            return;
+                                        }
+
+                                        background.classList.remove(
+                                            'loaded'
+                                        );
+
+                                        background.src =
+                                            path;
+
+                                        requestAnimationFrame(
+                                            function () {
+
+                                                background.classList.add(
+                                                    'loaded'
+                                                );
+
+                                            }
+                                        );
+
+                                        this.backgroundLast =
+                                            path;
+
+                                    }.bind(this);
+
+                                preload.onerror =
+                                    function () {};
+
+                                preload.src =
+                                    path;
+
+                            }.bind(this),
+                            220
+                        );
+                },
 
             reset: function () {
-                this.lastDataId = null;
+
+                this.lastDataId =
+                    null;
+
                 info.empty();
             },
 
             destroy: function () {
+
                 clearTimeout(
                     this.backgroundTimer
                 );
 
                 if (this.updateFrame) {
+
                     cancelAnimationFrame(
                         this.updateFrame
                     );
@@ -1442,34 +2182,56 @@
                     main.render(true);
 
                 if (container) {
+
                     container.classList.remove(
                         'new-interface'
                     );
                 }
 
-                if (this.infoElement &&
-                    this.infoElement.parentNode) {
+                if (
+                    this.infoElement &&
+                    this.infoElement.parentNode
+                ) {
+
                     this.infoElement.parentNode.removeChild(
                         this.infoElement
                     );
                 }
 
-                if (background &&
-                    background.parentNode) {
+                if (
+                    background &&
+                    background.parentNode
+                ) {
+
                     background.parentNode.removeChild(
                         background
                     );
                 }
 
-                this.attached = false;
-                this.lastDataId = null;
+                if (
+                    backgroundOverlay &&
+                    backgroundOverlay.parentNode
+                ) {
+
+                    backgroundOverlay.parentNode.removeChild(
+                        backgroundOverlay
+                    );
+                }
+
+                this.attached =
+                    false;
+
+                this.lastDataId =
+                    null;
             }
         };
 
         return state;
     }
 
-    function prepareLineData(element) {
+    function prepareLineData(
+        element
+    ) {
         return;
     }
 
@@ -1477,31 +2239,48 @@
        CARDS
        ========================================================= */
 
-    function decorateCard(state, card) {
-        if (!card ||
+    function decorateCard(
+        state,
+        card
+    ) {
+
+        if (
+            !card ||
             card.__newInterfaceCard ||
-            typeof card.use !== 'function' ||
-            !card.data) {
+            typeof card.use !==
+            'function' ||
+            !card.data
+        ) {
             return;
         }
 
-        card.__newInterfaceCard = true;
+        card.__newInterfaceCard =
+            true;
 
-        card.params = card.params || {};
+        card.params =
+            card.params || {};
+
         card.params.style =
             card.params.style || {};
 
         card.use({
+
             onFocus: function () {
-                state.update(card.data);
+                state.update(
+                    card.data
+                );
             },
 
             onHover: function () {
-                state.update(card.data);
+                state.update(
+                    card.data
+                );
             },
 
             onTouch: function () {
-                state.update(card.data);
+                state.update(
+                    card.data
+                );
             },
 
             onDestroy: function () {
@@ -1515,12 +2294,20 @@
         element,
         index
     ) {
-        if (card && card.data) {
+
+        if (
+            card &&
+            card.data
+        ) {
             return card.data;
         }
 
-        if (element &&
-            Array.isArray(element.results)) {
+        if (
+            element &&
+            Array.isArray(
+                element.results
+            )
+        ) {
             return (
                 element.results[index] ||
                 element.results[0]
@@ -1530,7 +2317,10 @@
         return null;
     }
 
-    function getDomCardData(node) {
+    function getDomCardData(
+        node
+    ) {
+
         if (!node) return null;
 
         var current =
@@ -1546,21 +2336,29 @@
                 current.parentNode;
         }
 
-        return current &&
+        return (
+            current &&
             current.card_data
                 ? current.card_data
-                : null;
+                : null
+        );
     }
 
-    function getFocusedCardData(line) {
+    function getFocusedCardData(
+        line
+    ) {
+
         var container =
             line &&
-            typeof line.render === 'function'
+            typeof line.render ===
+            'function'
                 ? line.render(true)
                 : null;
 
-        if (!container ||
-            !container.querySelector) {
+        if (
+            !container ||
+            !container.querySelector
+        ) {
             return null;
         }
 
@@ -1572,7 +2370,9 @@
                 '.focus'
             );
 
-        return getDomCardData(focus);
+        return getDomCardData(
+            focus
+        );
     }
 
     function attachLineHandlers(
@@ -1580,9 +2380,15 @@
         line,
         element
     ) {
-        if (line.__newInterfaceLine) return;
 
-        line.__newInterfaceLine = true;
+        if (
+            line.__newInterfaceLine
+        ) {
+            return;
+        }
+
+        line.__newInterfaceLine =
+            true;
 
         var state =
             ensureState(main);
@@ -1595,8 +2401,12 @@
                 );
             };
 
-        if (element &&
-            Array.isArray(element.results)) {
+        if (
+            element &&
+            Array.isArray(
+                element.results
+            )
+        ) {
 
             var preloadCount =
                 Math.min(
@@ -1609,6 +2419,7 @@
                 i < preloadCount;
                 i++
             ) {
+
                 state.info.load(
                     element.results[i],
                     {
@@ -1619,62 +2430,80 @@
         }
 
         line.use({
-            onInstance: function (card) {
-                applyToCard(card);
-            },
 
-            onActive: function (
-                card,
-                itemData
-            ) {
-                var current =
-                    getCardData(
-                        card,
-                        itemData
+            onInstance:
+                function (card) {
+                    applyToCard(
+                        card
                     );
+                },
 
-                if (current) {
-                    state.update(current);
+            onActive:
+                function (
+                    card,
+                    itemData
+                ) {
+
+                    var current =
+                        getCardData(
+                            card,
+                            itemData
+                        );
+
+                    if (current) {
+                        state.update(
+                            current
+                        );
+                    }
+                },
+
+            onToggle:
+                function () {
+
+                    setTimeout(
+                        function () {
+
+                            var domData =
+                                getFocusedCardData(
+                                    line
+                                );
+
+                            if (domData) {
+                                state.update(
+                                    domData
+                                );
+                            }
+
+                        },
+                        24
+                    );
+                },
+
+            onMore:
+                function () {
+                    state.reset();
+                },
+
+            onDestroy:
+                function () {
+
+                    state.reset();
+
+                    delete line.__newInterfaceLine;
                 }
-            },
-
-            onToggle: function () {
-                setTimeout(
-                    function () {
-                        var domData =
-                            getFocusedCardData(
-                                line
-                            );
-
-                        if (domData) {
-                            state.update(
-                                domData
-                            );
-                        }
-                    },
-                    24
-                );
-            },
-
-            onMore: function () {
-                state.reset();
-            },
-
-            onDestroy: function () {
-                state.reset();
-                delete line.__newInterfaceLine;
-            }
         });
 
         if (
             Array.isArray(line.items) &&
             line.items.length
         ) {
+
             line.items.forEach(
                 applyToCard
             );
 
             try {
+
                 var firstData =
                     getCardData(
                         line.items[0],
@@ -1687,10 +2516,12 @@
                         firstData
                     );
                 }
+
             } catch (e) {}
         }
 
         if (line.last) {
+
             var lastData =
                 getDomCardData(
                     line.last
@@ -1713,15 +2544,18 @@
         method,
         handler
     ) {
+
         if (!target) return;
 
         var original =
-            typeof target[method] === 'function'
+            typeof target[method] ===
+            'function'
                 ? target[method]
                 : null;
 
         target[method] =
             function () {
+
                 var args =
                     Array.prototype.slice.call(
                         arguments
@@ -1740,47 +2574,107 @@
        ========================================================= */
 
     function addStyleV3() {
-        if (addStyleV3.added) return;
 
-        addStyleV3.added = true;
+        if (addStyleV3.added) {
+            return;
+        }
+
+        addStyleV3.added =
+            true;
 
         Lampa.Template.add(
             'new_interface_style_v3',
             `<style>
 
+/* =========================================================
+   ROOT
+   ========================================================= */
+
 .new-interface{
     position:relative;
     overflow:visible;
-    --ni-card-w:clamp(105px,14vw,150px);
+
+    --ni-card-w:clamp(
+        105px,
+        14vw,
+        150px
+    );
+
     --ni-radius:10px;
+
+    /*
+     * ВАЖЛИВО:
+     * Немає opacity/filter/mask на контейнері.
+     * Тому картки залишаються повністю яскравими.
+     */
+
+    isolation:isolate;
 }
 
-/* ===============================
+/* =========================================================
    CARDS
-   =============================== */
+   ========================================================= */
 
 .new-interface .card--small,
 .new-interface .card-more{
     width:var(--ni-card-w)!important;
 }
 
-.new-interface .card-more__box{
-    padding-bottom:150%;
+/*
+ * Картки знаходяться над усіма backdrop-шарами.
+ */
+
+.new-interface .items-line{
+    position:relative;
+    z-index:20!important;
 }
+
+/*
+ * Забороняємо будь-яке затемнення карток,
+ * яке могло прийти від батьківського шару.
+ */
+
+.new-interface .items-line,
+.new-interface .items-line .card,
+.new-interface .items-line .card--small,
+.new-interface .items-line .card-more,
+.new-interface .items-line .card__view,
+.new-interface .items-line .card__view img{
+    opacity:1!important;
+    filter:none!important;
+}
+
+/*
+ * Не використовуємо filter brightness
+ * навіть на focused card.
+ */
 
 .new-interface .card{
     contain:layout paint;
+    position:relative;
+    z-index:21;
 }
 
 .new-interface .card__view{
     border-radius:var(--ni-radius);
     overflow:hidden;
+
     transform:translateZ(0);
+
     backface-visibility:hidden;
+
+    /*
+     * Тільки transform.
+     * Без brightness/filter.
+     */
     transition:
-        transform .22s cubic-bezier(.22,.61,.36,1),
-        filter .22s ease;
+        transform .22s
+        cubic-bezier(.22,.61,.36,1);
 }
+
+/*
+ * Focus animation без затемнення/освітлення.
+ */
 
 body.advanced--animation:not(.no--animation)
 .new-interface .card.focus .card__view,
@@ -1788,27 +2682,66 @@ body.advanced--animation:not(.no--animation)
 body.advanced--animation:not(.no--animation)
 .new-interface .card--small.focus .card__view{
     animation:none!important;
-    transform:scale(1.035) translateZ(0);
-    filter:brightness(1.08);
+
+    transform:
+        scale(1.035)
+        translateZ(0);
+
+    opacity:1!important;
+    filter:none!important;
 }
 
-/* ===============================
+/*
+ * Повна гарантія яскравості poster image.
+ */
+
+.new-interface .card__view img,
+.new-interface .card__view picture,
+.new-interface .card__view video{
+    opacity:1!important;
+    filter:none!important;
+}
+
+/*
+ * More card.
+ */
+
+.new-interface .card-more__box{
+    padding-bottom:150%;
+}
+
+/* =========================================================
    INFO AREA
-   =============================== */
+   ========================================================= */
 
 .new-interface-info{
     position:relative;
-    padding:1.3em 2.6em .9em 2.6em;
+
+    padding:
+        1.3em
+        2.6em
+        .9em
+        2.6em;
+
     height:auto!important;
+
     min-height:43vh!important;
     max-height:49vh!important;
+
     overflow:hidden!important;
-    z-index:3;
+
+    z-index:10;
+
     display:flex!important;
+
     flex-direction:column!important;
+
     justify-content:flex-end!important;
+
     box-sizing:border-box;
+
     background:transparent!important;
+
     contain:layout style;
 }
 
@@ -1818,33 +2751,69 @@ body.advanced--animation:not(.no--animation)
 
 .new-interface-info__body{
     position:relative;
-    z-index:4;
+
+    z-index:11;
+
     width:100%;
+
     max-width:850px;
+
     display:flex!important;
+
     flex-direction:column!important;
+
     justify-content:flex-end!important;
+
     box-sizing:border-box;
 }
 
 .new-interface-info__left{
     width:100%;
+
     max-width:850px;
+
     display:flex;
+
     flex-direction:column;
+
     align-items:flex-start;
+
     justify-content:flex-end;
 }
 
 .new-interface-info__head{
-    color:rgba(255,255,255,.72);
-    margin:.45em 0 .35em;
+    color:
+        rgba(
+            255,
+            255,
+            255,
+            .72
+        );
+
+    margin:
+        .45em
+        0
+        .35em;
+
     font-size:.9em;
+
     font-weight:400;
+
     letter-spacing:.45px;
+
     line-height:1.25;
-    text-shadow:0 2px 7px rgba(0,0,0,.85);
+
+    text-shadow:
+        0 2px 7px
+        rgba(
+            0,
+            0,
+            0,
+            .85
+        );
+
     order:2;
+
     opacity:.9;
 }
 
@@ -1853,62 +2822,166 @@ body.advanced--animation:not(.no--animation)
 }
 
 .new-interface-info__title{
-    font-size:clamp(2rem,3vw,2.8em);
+    font-size:
+        clamp(
+            2rem,
+            3vw,
+            2.8em
+        );
+
     font-weight:600;
+
     margin:0;
+
     display:flex;
+
     align-items:center;
+
     max-width:100%;
+
     min-height:1.1em;
+
     line-height:1.05;
+
     order:1;
+
     contain:layout;
 }
 
 .new-interface-info__title-logo{
-    max-width:min(430px,45vw)!important;
-    max-height:var(--ni-logo-max-h,95px)!important;
+    max-width:
+        min(
+            430px,
+            45vw
+        )!important;
+
+    max-height:
+        var(
+            --ni-logo-max-h,
+            95px
+        )!important;
+
     width:auto!important;
+
     height:auto!important;
+
     object-fit:contain!important;
+
     object-position:left center!important;
+
     display:block;
+
     filter:
-        drop-shadow(0 2px 5px rgba(0,0,0,.65))
-        drop-shadow(0 7px 18px rgba(0,0,0,.28));
-    transform:translateZ(0);
+        drop-shadow(
+            0 2px 5px
+            rgba(
+                0,
+                0,
+                0,
+                .65
+            )
+        )
+        drop-shadow(
+            0 7px 18px
+            rgba(
+                0,
+                0,
+                0,
+                .28
+            )
+        );
+
+    transform:
+        translateZ(0);
 }
 
 .new-interface-info__description{
     font-size:.93em;
+
     font-weight:300;
+
     line-height:1.42;
-    color:rgba(255,255,255,.84);
-    text-shadow:0 2px 7px rgba(0,0,0,.9);
+
+    color:
+        rgba(
+            255,
+            255,
+            255,
+            .84
+        );
+
+    text-shadow:
+        0 2px 7px
+        rgba(
+            0,
+            0,
+            0,
+            .9
+        );
+
     overflow:hidden;
+
     text-overflow:ellipsis;
+
     display:-webkit-box;
+
     -webkit-line-clamp:2;
+
     line-clamp:2;
+
     -webkit-box-orient:vertical;
-    max-width:min(760px,82vw);
+
+    max-width:
+        min(
+            760px,
+            82vw
+        );
+
     margin-top:.35em;
+
     order:3;
 }
 
-/* ===============================
-   BACKGROUND
-   =============================== */
+/* =========================================================
+   BACKDROP
+   ========================================================= */
+
+/*
+ * Сам backdrop.
+ * НІЯКИХ overlay тут немає.
+ */
 
 .new-interface .full-start__background{
+    position:absolute!important;
+
+    z-index:0!important;
+
     height:112%;
+
     top:-7%;
+
+    left:0;
+
+    right:0;
+
     opacity:0;
-    transition:opacity .55s ease;
+
+    transition:
+        opacity .55s ease;
+
     object-fit:cover;
+
     object-position:center top;
-    transform:translateZ(0);
+
+    transform:
+        translateZ(0);
+
     backface-visibility:hidden;
+
+    /*
+     * Маска застосовується ТІЛЬКИ до backdrop.
+     * Вона не може вплинути на картки.
+     */
 
     mask-image:
         linear-gradient(
@@ -1927,68 +3000,125 @@ body.advanced--animation:not(.no--animation)
             rgba(0,0,0,.55) 76%,
             rgba(0,0,0,0) 94%
         );
+
+    pointer-events:none!important;
 }
 
 .new-interface .full-start__background.loaded{
     opacity:1;
 }
 
-.new-interface:after{
-    content:'';
-    position:absolute;
+/*
+ * ОКРЕМИЙ OVERLAY ДЛЯ BACKDROP.
+ *
+ * Він:
+ * - знаходиться над фоном;
+ * - знаходиться під info;
+ * - знаходиться під картками;
+ * - не приймає touch/click;
+ * - НЕ затемнює poster cards.
+ */
+
+.new-interface-background-overlay{
+    position:absolute!important;
+
     left:0;
     right:0;
     top:0;
-    height:70%;
-    z-index:2;
-    pointer-events:none;
+    bottom:0;
+
+    z-index:1!important;
+
+    pointer-events:none!important;
 
     background:
         linear-gradient(
             90deg,
             rgba(0,0,0,.30) 0%,
-            rgba(0,0,0,.04) 55%,
+            rgba(0,0,0,.08) 45%,
             rgba(0,0,0,0) 100%
         );
+
+    /*
+     * Внутрішній градієнт знизу.
+     * Тільки backdrop.
+     */
+
+    box-shadow:
+        inset 0 -42vh 55vh
+        rgba(10,10,10,.72);
 }
 
-.new-interface:before{
+/*
+ * Додатковий верхній захист читабельності.
+ * Все ще тільки backdrop layer.
+ */
+
+.new-interface-background-overlay:after{
     content:'';
+
     position:absolute;
+
     left:0;
     right:0;
-    bottom:0;
-    height:45%;
-    z-index:2;
+    top:0;
+
+    height:62%;
+
     pointer-events:none;
 
     background:
         linear-gradient(
             180deg,
-            rgba(10,10,10,0) 0%,
-            rgba(10,10,10,.52) 45%,
-            rgba(10,10,10,.96) 100%
+            rgba(0,0,0,.12) 0%,
+            rgba(0,0,0,0) 65%
         );
 }
 
-/* ===============================
+/*
+ * ВАЖЛИВО:
+ * Жодного .new-interface:before / :after,
+ * які могли б накривати картки.
+ */
+
+/* =========================================================
    FULL CARD LOGO
-   =============================== */
+   ========================================================= */
 
 .new-interface-full-logo{
-    max-height:var(--ni-logo-max-h,110px)!important;
+    max-height:
+        var(
+            --ni-logo-max-h,
+            110px
+        )!important;
+
     width:auto!important;
+
     height:auto!important;
+
     max-width:100%!important;
+
     object-fit:contain!important;
+
     object-position:left center!important;
+
     display:block;
-    filter:drop-shadow(0 3px 10px rgba(0,0,0,.7));
+
+    filter:
+        drop-shadow(
+            0 3px 10px
+            rgba(
+                0,
+                0,
+                0,
+                .7
+            )
+        );
 }
 
-/* ===============================
+/* =========================================================
    HIDE CAPTIONS
-   =============================== */
+   ========================================================= */
 
 .new-interface.ni-hide-captions
 .card__view ~ .card__title,
@@ -2016,26 +3146,60 @@ body.advanced--animation:not(.no--animation)
     display:none!important;
 }
 
-/* ===============================
+/* =========================================================
    ROWS
-   =============================== */
+   ========================================================= */
 
 .new-interface .items-line{
     margin-top:.35em;
+
     position:relative;
-    z-index:4;
+
+    z-index:20!important;
+
+    /*
+     * Критично:
+     * ряд карток не отримує opacity/filter.
+     */
+
+    opacity:1!important;
+
+    filter:none!important;
 }
 
-/* ===============================
+/*
+ * Всі дочірні елементи карток
+ * залишаються повністю яскравими.
+ */
+
+.new-interface .items-line > *,
+.new-interface .items-line .card,
+.new-interface .items-line .card--small,
+.new-interface .items-line .card-more,
+.new-interface .items-line .card__view,
+.new-interface .items-line .card__view img{
+    opacity:1!important;
+    filter:none!important;
+}
+
+/* =========================================================
    MOBILE
-   =============================== */
+   ========================================================= */
 
 @media(max-width:767px){
 
     .new-interface-info{
-        padding:1em 1.15em .55em;
-        min-height:39vh!important;
-        max-height:47vh!important;
+
+        padding:
+            1em
+            1.15em
+            .55em;
+
+        min-height:
+            39vh!important;
+
+        max-height:
+            47vh!important;
     }
 
     .new-interface-info__title{
@@ -2043,14 +3207,25 @@ body.advanced--animation:not(.no--animation)
     }
 
     .new-interface-info__title-logo{
-        max-width:min(235px,62vw)!important;
-        max-height:58px!important;
+
+        max-width:
+            min(
+                235px,
+                62vw
+            )!important;
+
+        max-height:
+            58px!important;
     }
 
     .new-interface-info__description{
+
         font-size:.84em;
+
         max-width:92vw;
+
         -webkit-line-clamp:2;
+
         line-clamp:2;
     }
 
@@ -2059,43 +3234,159 @@ body.advanced--animation:not(.no--animation)
     }
 
     .new-interface{
-        --ni-card-w:clamp(92px,25vw,125px);
+
+        --ni-card-w:
+            clamp(
+                92px,
+                25vw,
+                125px
+            );
     }
 
     .new-interface .full-start__background{
+
         height:105%;
+
         top:-3%;
+    }
+
+    .new-interface-background-overlay{
+
+        box-shadow:
+            inset
+            0 -30vh
+            38vh
+            rgba(
+                10,
+                10,
+                10,
+                .68
+            );
+    }
+
+    /*
+     * На мобільному картки гарантовано
+     * залишаються без затемнення.
+     */
+
+    .new-interface .items-line,
+    .new-interface .items-line .card,
+    .new-interface .items-line .card--small,
+    .new-interface .items-line .card-more,
+    .new-interface .items-line .card__view,
+    .new-interface .items-line .card__view img{
+
+        opacity:1!important;
+
+        filter:none!important;
     }
 }
 
-/* ===============================
+/* =========================================================
    SMALL TV
-   =============================== */
+   ========================================================= */
 
-@media(min-width:768px) and (max-width:1280px){
+@media(
+    min-width:768px
+) and (
+    max-width:1280px
+){
 
     .new-interface-info{
+
         padding-left:2em;
+
         padding-right:2em;
     }
 
     .new-interface-info__body,
     .new-interface-info__left{
+
         max-width:720px;
     }
 }
 
-/* ===============================
+/* =========================================================
    REDUCE MOTION
-   =============================== */
+   ========================================================= */
 
 @media(prefers-reduced-motion:reduce){
 
     .new-interface .card__view,
     .new-interface .full-start__background{
+
         transition:none!important;
+
         animation:none!important;
     }
+}
+
+/* =========================================================
+   EXTRA PROTECTION FROM LAMPA OVERLAYS
+   ========================================================= */
+
+/*
+ * Якщо тема Lampa додає власний opacity/filter
+ * на focus/hover — цей блок не дозволяє йому
+ * затемнювати сам poster.
+ */
+
+.new-interface
+.items-line
+.card.focus
+.card__view,
+
+.new-interface
+.items-line
+.card.focus
+.card__view img,
+
+.new-interface
+.items-line
+.card:hover
+.card__view,
+
+.new-interface
+.items-line
+.card:hover
+.card__view img{
+
+    opacity:1!important;
+
+    filter:none!important;
+}
+
+/*
+ * Не дозволяємо самому контейнеру карток
+ * успадковувати затемнення від premium overlay.
+ */
+
+.new-interface
+.items-line{
+
+    isolation:isolate;
+}
+
+/*
+ * Але overlay має залишатися позаду.
+ */
+
+.new-interface
+.new-interface-background-overlay{
+
+    z-index:1!important;
+}
+
+.new-interface
+.items-line{
+
+    z-index:20!important;
+}
+
+.new-interface
+.new-interface-info{
+
+    z-index:10!important;
 }
 
 </style>`
@@ -2115,17 +3406,33 @@ body.advanced--animation:not(.no--animation)
        ========================================================= */
 
     class InterfaceInfo {
+
         constructor() {
-            this.html = null;
-            this.timer = null;
-            this.network = new Lampa.Reguest();
-            this.loaded = {};
-            this.currentUrl = null;
-            this.currentId = null;
+
+            this.html =
+                null;
+
+            this.timer =
+                null;
+
+            this.network =
+                new Lampa.Reguest();
+
+            this.loaded =
+                {};
+
+            this.currentUrl =
+                null;
+
+            this.currentId =
+                null;
         }
 
         create() {
-            if (this.html) return;
+
+            if (this.html) {
+                return;
+            }
 
             this.html = $(`
                 <div class="new-interface-info">
@@ -2141,6 +3448,7 @@ body.advanced--animation:not(.no--animation)
         }
 
         render(js) {
+
             if (!this.html) {
                 this.create();
             }
@@ -2151,22 +3459,39 @@ body.advanced--animation:not(.no--animation)
         }
 
         update(data) {
-            if (!data) return;
+
+            if (!data) {
+                return;
+            }
 
             try {
+
                 Lampa.Background.change(
-                    Lampa.Utils.cardImgBackground(data)
+                    Lampa.Utils.cardImgBackground(
+                        data
+                    )
                 );
+
             } catch (e) {}
 
             this.load(data);
         }
 
-        load(data, options) {
-            if (!data || !data.id) return;
+        load(
+            data,
+            options
+        ) {
+
+            if (
+                !data ||
+                !data.id
+            ) {
+                return;
+            }
 
             var source =
-                data.source || 'tmdb';
+                data.source ||
+                'tmdb';
 
             if (
                 source !== 'tmdb' &&
@@ -2177,8 +3502,10 @@ body.advanced--animation:not(.no--animation)
 
             if (
                 !Lampa.TMDB ||
-                typeof Lampa.TMDB.api !== 'function' ||
-                typeof Lampa.TMDB.key !== 'function'
+                typeof Lampa.TMDB.api !==
+                'function' ||
+                typeof Lampa.TMDB.key !==
+                'function'
             ) {
                 return;
             }
@@ -2218,8 +3545,12 @@ body.advanced--animation:not(.no--animation)
                     language
                 );
 
-            if (this.loaded[url]) {
+            if (
+                this.loaded[url]
+            ) {
+
                 if (!preload) {
+
                     this.draw(
                         this.loaded[url]
                     );
@@ -2236,45 +3567,69 @@ body.advanced--animation:not(.no--animation)
             }
 
             if (!preload) {
-                this.currentUrl = url;
-                this.currentId = data.id;
+
+                this.currentUrl =
+                    url;
+
+                this.currentId =
+                    data.id;
             }
 
-            clearTimeout(this.timer);
-
-            this.timer = setTimeout(
-                function () {
-                    if (!preload) {
-                        this.network.clear();
-                    }
-
-                    this.network.timeout(5000);
-
-                    this.network.silent(
-                        url,
-                        function (movie) {
-                            if (!movie) return;
-
-                            this.loaded[url] =
-                                movie;
-
-                            this.cleanupCache();
-
-                            if (
-                                !preload &&
-                                this.currentUrl === url
-                            ) {
-                                this.draw(movie);
-                            }
-                        }.bind(this)
-                    );
-                }.bind(this),
-                preload ? 120 : 0
+            clearTimeout(
+                this.timer
             );
+
+            this.timer =
+                setTimeout(
+                    function () {
+
+                        if (!preload) {
+                            this.network.clear();
+                        }
+
+                        this.network.timeout(
+                            5000
+                        );
+
+                        this.network.silent(
+                            url,
+                            function (movie) {
+
+                                if (!movie) {
+                                    return;
+                                }
+
+                                this.loaded[url] =
+                                    movie;
+
+                                this.cleanupCache();
+
+                                if (
+                                    !preload &&
+                                    this.currentUrl ===
+                                    url
+                                ) {
+
+                                    this.draw(
+                                        movie
+                                    );
+                                }
+
+                            }.bind(this)
+                        );
+
+                    }.bind(this),
+
+                    preload
+                        ? 120
+                        : 0
+                );
         }
 
         cleanupCache() {
+
             try {
+
                 var keys =
                     Object.keys(
                         this.loaded
@@ -2296,15 +3651,23 @@ body.advanced--animation:not(.no--animation)
                     i < remove;
                     i++
                 ) {
+
                     delete this.loaded[
                         keys[i]
                     ];
                 }
+
             } catch (e) {}
         }
 
         draw(movie) {
-            if (!movie || !this.html) return;
+
+            if (
+                !movie ||
+                !this.html
+            ) {
+                return;
+            }
 
             var titleNode =
                 this.html.find(
@@ -2335,7 +3698,10 @@ body.advanced--animation:not(.no--animation)
         }
 
         empty() {
-            if (!this.html) return;
+
+            if (!this.html) {
+                return;
+            }
 
             this.html
                 .find(
@@ -2351,19 +3717,28 @@ body.advanced--animation:not(.no--animation)
         }
 
         destroy() {
+
             clearTimeout(
                 this.timer
             );
 
             this.network.clear();
 
-            this.loaded = {};
-            this.currentUrl = null;
-            this.currentId = null;
+            this.loaded =
+                {};
+
+            this.currentUrl =
+                null;
+
+            this.currentId =
+                null;
 
             if (this.html) {
+
                 this.html.remove();
-                this.html = null;
+
+                this.html =
+                    null;
             }
         }
     }
@@ -2376,7 +3751,9 @@ body.advanced--animation:not(.no--animation)
         Lampa.Manifest &&
         Lampa.Manifest.app_digital >= 300
     ) {
+
         startPluginV3();
+
         return;
     }
 
@@ -2385,11 +3762,15 @@ body.advanced--animation:not(.no--animation)
        ========================================================= */
 
     function startPlugin() {
-        if (window.plugin_interface_ready) {
+
+        if (
+            window.plugin_interface_ready
+        ) {
             return;
         }
 
-        window.plugin_interface_ready = true;
+        window.plugin_interface_ready =
+            true;
 
         var old_interface =
             Lampa.InteractionMain;
@@ -2399,6 +3780,7 @@ body.advanced--animation:not(.no--animation)
 
         Lampa.InteractionMain =
             function (object) {
+
                 var use =
                     new_interface;
 
@@ -2408,16 +3790,21 @@ body.advanced--animation:not(.no--animation)
                         object.source === 'cub'
                     )
                 ) {
-                    use = old_info;
+                    use =
+                        old_info;
                 }
 
                 if (
-                    Lampa.Manifest.app_digital < 153
+                    Lampa.Manifest.app_digital <
+                    153
                 ) {
-                    use = old_interface;
+                    use =
+                        old_interface;
                 }
 
-                return new use(object);
+                return new use(
+                    object
+                );
             };
     }
 
@@ -2425,6 +3812,7 @@ body.advanced--animation:not(.no--animation)
         !window.plugin_interface_ready &&
         !window.plugin_interface_ready_v3
     ) {
+
         startPlugin();
     }
 
