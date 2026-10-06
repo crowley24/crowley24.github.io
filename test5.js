@@ -1054,8 +1054,8 @@
     height: 108%;  
     top: -6em;  
     transition: opacity 0.4s ease;  
-    mask-image: linear-gradient(180deg, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 75%);  
-    -webkit-mask-image: linear-gradient(180deg, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 75%);  
+    mask-image: linear-gradient(180deg, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 90%);  
+    -webkit-mask-image: linear-gradient(180deg, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 90%);  
 }  
   
 .new-interface .full-start__background::after {  
@@ -1065,7 +1065,7 @@
     left: 0;  
     width: 100%;  
     height: 100%;  
-    background: linear-gradient(180deg, rgba(15,15,15,0) 15%, rgba(15,15,15,0.95) 60%);  
+    background: linear-gradient(180deg, rgba(15,15,15,0) 50%, rgba(15,15,15,0.98) 85%);  
     pointer-events: none;  
 }  
   
