@@ -4,7 +4,7 @@
     if (window.banner_hero_plugin) return;
     window.banner_hero_plugin = true;
 
-    var VERSION = '1.3.1';
+    var VERSION = '1.3.2';
 
     var SETTING = 'banner_hero_enabled';
     var SIZE_SETTING = 'interface_size';
@@ -850,19 +850,20 @@
         ) {
             var hero = heroFor(el);
 
-            // Оптимізація для мобільних: автоматично підтягуємо дані першої картки,
-            // щоб не було чорного екрана при вході в розділ.
+            // Скидаємо старий ID при вході або поверненні, щоб оновити банер під актуальну картку
+            lastCardId = null;
+
             setTimeout(function () {
-                if (el && hero && (!hero.bannerId)) {
-                    var firstCard = el.querySelector('.card');
-                    if (firstCard && firstCard.card_data && firstCard.card_data.id) {
-                        lastCardId = firstCard.card_data.id;
+                if (el && hero) {
+                    var activeCard = el.querySelector('.card.focus') || el.querySelector('.card');
+                    if (activeCard && activeCard.card_data && activeCard.card_data.id) {
+                        lastCardId = activeCard.card_data.id;
                         lastActivity = el;
                         lastHero = hero;
-                        showHero(hero, firstCard.card_data);
+                        showHero(hero, activeCard.card_data);
                     }
                 }
-            }, 400);
+            }, 300);
         }
     }
 
@@ -979,8 +980,8 @@
             'activity',
             function (e) {
                 if (
-                    e.type ===
-                    'start'
+                    e.type === 'start' || 
+                    e.type === 'visible'
                 ) {
                     requestAnimationFrame(
                         function () {
@@ -1049,7 +1050,7 @@
 
                     description:
                         lang_data
-                        .banner_enable_descr
+                            .banner_enable_descr
                 },
 
                 onChange:
@@ -1154,7 +1155,7 @@
         Lampa.Storage.listener.follow(
             'change',
             function (e) {
-                `if (
+                if (
                     e.name ===
                     SIZE_SETTING
                 ) {
@@ -1173,7 +1174,7 @@
                     FONT_SETTING
                 ) {
                     applyFont(e.value);
-                }`
+                }
             }
         );
     }
