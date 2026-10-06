@@ -55,7 +55,7 @@
                 });  
             }  
         } catch (e) { }  
-    }
+    }  
 
     function applyCaptionsClass(container) {  
         try {  
@@ -63,7 +63,7 @@
             const show = !!Lampa.Storage.get('ni_card_captions', true);  
             container.classList.toggle('ni-hide-captions', !show);  
         } catch (e) { }  
-    }
+    }  
   
     function applyCaptionsToAll() {  
         try {  
@@ -627,34 +627,6 @@
             delete this.__newInterfaceEnabled;  
             if (original) original.apply(this, args);  
         });  
-
-        // Глобальний слухач фокусу для перехоплення карток, які не спрацювали стандартно
-        let globalFocusTimer = null;
-        document.addEventListener('hover:focus', function (e) {
-            handleGlobalFocus(e.target);
-        }, true);
-        document.addEventListener('focus', function (e) {
-            handleGlobalFocus(e.target);
-        }, true);
-
-        function handleGlobalFocus(target) {
-            try {
-                if (!target) return;
-                var card = target.closest ? target.closest('.card') : target;
-                if (!card || !card.card_data) return;
-
-                var activity = card.closest ? card.closest('.activity') : null;
-                if (!activity) return;
-
-                // Шукаємо активний стан серед зареєстрованих інтерфейсів
-                if (window.__activeInterfaceState) {
-                    clearTimeout(globalFocusTimer);
-                    globalFocusTimer = setTimeout(function () {
-                        window.__activeInterfaceState.update(card.card_data);
-                    }, 50);
-                }
-            } catch (err) {}
-        }
     }  
   
     function shouldUseNewInterface(object) {  
@@ -667,7 +639,6 @@
         if (main.__newInterfaceState) return main.__newInterfaceState;  
         const state = createInterfaceState(main);  
         main.__newInterfaceState = state;  
-        window.__activeInterfaceState = state; // Зберігаємо як активний стейт для глобального слухача
         return state;  
     }  
   
@@ -714,11 +685,9 @@
                 main.scroll.minus(infoNode);  
   
                 this.attached = true;  
-                window.__activeInterfaceState = this;
             },  
             update(data) {  
                 if (!data) return;  
-                window.__activeInterfaceState = this;
                 info.update(data);  
                 this.updateBackground(data);  
             },  
@@ -740,7 +709,7 @@
                     setTimeout(() => {  
                         background.src = this.backgroundLast;  
                     }, 300);  
-                }, 100);  
+                }, 400); // Оптимізована затримка для плавного перемикання на мобільних  
             },  
             reset() {  
                 info.empty();  
@@ -761,9 +730,6 @@
                 }  
   
                 this.attached = false;  
-                if (window.__activeInterfaceState === this) {
-                    window.__activeInterfaceState = null;
-                }
             }  
         };  
   
@@ -1051,22 +1017,27 @@ body.light--version .new-interface-info__body{
     padding-top: 1.5em;  
 }  
   
+/* Мобільна адаптація */  
 @media (max-width: 767px) {  
     .new-interface-info {  
-        padding: 1em;  
-        min-height: 150px !important;  
-        max-height: 200px !important;  
+        padding: 0.8em 1em;  
+        min-height: 130px !important;  
+        max-height: 170px !important;  
     }  
     .new-interface-info__title {  
-        font-size: 2em;  
-        min-height: 80px;  
-        max-height: 80px;  
+        font-size: 1.8em;  
+        min-height: 60px;  
+        max-height: 60px;  
     }  
     .new-interface-info__title-logo {  
-        max-height: 80px !important;  
+        max-height: 60px !important;  
     }  
     .new-interface {  
-        --ni-card-w: clamp(70px, 18vw, 110px);  
+        --ni-card-w: clamp(85px, 24vw, 130px);  
+    }  
+    .new-interface-info__head {  
+        font-size: 1.1em;  
+        margin-bottom: 0.5em;  
     }  
 }  
   
@@ -1173,12 +1144,6 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
   
         draw(movie) {  
             if (!movie || !this.html) return;  
-  
-            const create = ((movie.release_date || movie.first_air_date || '0000') + '').slice(0, 4);  
-            const vote = parseFloat((movie.vote_average || 0) + '').toFixed(1);  
-            const sources = Lampa.Api && Lampa.Api.sources && Lampa.Api.sources.tmdb ? Lampa.Api.sources.tmdb : null;  
-            const countries = sources && typeof sources.parseCountries === 'function' ? sources.parseCountries(movie) : [];  
-            const pg = sources && typeof sources.parsePG === 'function' ? sources.parsePG(movie) : '';  
   
             const titleNode = this.html.find('.new-interface-info__title');  
             const headNode = this.html.find('.new-interface-info__head');  
