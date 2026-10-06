@@ -1,655 +1,1229 @@
 (function () {  
     'use strict';  
   
-    /**  
-     * ПЕРЕМІННІ ТА КЕШУВАННЯ  
-     */  
-    var pluginPath = 'https://crowley24.github.io/Icons/';  
-    var detailsCache = {};  
-    var currentActiveId = null;  
+    if (typeof Lampa === 'undefined') return;  
   
-    var settings_list = [  
-        { id: 'tv_interface_ui_anim', default: true },  
-        { id: 'tv_interface_ui_anim_effect', default: 'smooth_zoom' },  
-        { id: 'tv_interface_badge_anim', default: 'pulse' },  
-        { id: 'tv_interface_logo_quality', default: 'original' },  
-        { id: 'tv_interface_show_tagline', default: true },  
-        { id: 'tv_interface_blocks_gap', default: '8px' },  
-        { id: 'tv_interface_ratings_size', default: '0.45em' },  
-        { id: 'tv_interface_studios', default: true },  
-        { id: 'tv_interface_slideshow', default: true },  
-        { id: 'tv_interface_slideshow_duration', default: 8000 },  
-        { id: 'tv_interface_slideshow_quality', default: 'w1280' },  
-        { id: 'tv_interface_trailer_bg', default: false },  
-        { id: 'tv_interface_trailer_blur', default: '0' },  
-        { id: 'tv_interface_trailer_zoom', default: '0' }  
-    ];  
+    markSmartTV();  
   
-    settings_list.forEach(function (opt) {  
-        if (Lampa.Storage.get(opt.id, 'unset') === 'unset') {  
-            Lampa.Storage.set(opt.id, opt.default);  
-        }  
-    });  
+    function markSmartTV() {  
+        try {  
+            var ua = (navigator && navigator.userAgent) ? navigator.userAgent : '';  
+            var isTv = false;  
   
-    var ratingIcons = {  
-        tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',  
-        cub: 'https://raw.githubusercontent.com/yumata/lampa/9381985ad4371d2a7d5eb5ca8e3daf0f32669eb7/img/logo-icon.svg'  
-    };  
-  
-    function isImageDark(imgSrc, callback) {  
-        var img = new Image();  
-        img.crossOrigin = 'Anonymous';  
-        img.onload = function () {  
-            try {  
-                var canvas = document.createElement('canvas');  
-                var ctx = canvas.getContext('2d');  
-                canvas.width = 40;  
-                canvas.height = 40;  
-                ctx.drawImage(img, 0, 0, 40, 40);  
-  
-                var imgData = ctx.getImageData(0, 0, 40, 40);  
-                var data = imgData.data;  
-                var totalBrightness = 0;  
-                var hasColor = false;  
-                var count = 0;  
-  
-                for (var i = 0; i < data.length; i += 4) {  
-                    var alpha = data[i + 3];  
-                    if (alpha > 50) {  
-                        var r = data[i], g = data[i + 1], b = data[i + 2];  
-                        var brightness = (r * 299 + g * 587 + b * 114) / 1000;  
-                        totalBrightness += brightness;  
-                        count++;  
-                        if ((Math.max(r, g, b) - Math.min(r, g, b)) > 30) hasColor = true;  
+            if (typeof Lampa !== 'undefined' && Lampa.Platform) {  
+                try {  
+                    if (typeof Lampa.Platform.is === 'function') {  
+                        isTv = isTv || Lampa.Platform.is('tv') || Lampa.Platform.is('smarttv') || Lampa.Platform.is('tizen') || Lampa.Platform.is('webos') || Lampa.Platform.is('netcast');  
                     }  
-                }  
-  
-                var avgBrightness = count > 0 ? (totalBrightness / count) : 255;  
-                callback((avgBrightness < 110) && !hasColor);  
-            } catch (e) {  
-                callback(false);  
-            }  
-        };  
-        img.onerror = function () { callback(false); };  
-        img.src = imgSrc;  
-    }  
-
-    function applyStyles() {  
-        var style = document.getElementById('tv-interface-styles');  
-        if (!style) {  
-            style = document.createElement('style');  
-            style.id = 'tv-interface-styles';  
-            document.head.appendChild(style);  
-        }  
-  
-        var isUIAnim = Lampa.Storage.get('tv_interface_ui_anim');  
-        var animEffect = Lampa.Storage.get('tv_interface_ui_anim_effect', 'smooth_zoom');  
-        var badgeAnim = Lampa.Storage.get('tv_interface_badge_anim', 'pulse');  
-        var rSize = Lampa.Storage.get('tv_interface_ratings_size', '0.45em');  
-        var showTagline = Lampa.Storage.get('tv_interface_show_tagline');  
-        var blocksGap = Lampa.Storage.get('tv_interface_blocks_gap', '8px');  
-  
-        var css = '';  
-  
-        css += '@keyframes anim_smooth_zoom { 0% { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.94); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } } ';  
-        css += '@keyframes anim_cine_slide { 0% { opacity: 0; transform: translate3d(0, 25px, 0); } 100% { opacity: 1; transform: translate3d(0, 0, 0); } } ';  
-        css += '@keyframes anim_luxury_fade { 0% { opacity: 0; transform: translate3d(0, 12px, 0) scale(1.03); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } } ';  
-        css += '@keyframes anim_modern_shift { 0% { opacity: 0; transform: translate3d(-18px, 0, 0); } 100% { opacity: 1; transform: translate3d(0, 0, 0); } } ';  
-  
-        css += '@keyframes wave_cascade { 0% { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.9); } 100% { opacity: 1; transform: translate3d(0, 0, 0) scale(1); } } ';  
-  
-        css += '@keyframes badge_anim_pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } } ';  
-        css += '@keyframes badge_anim_breathe { 0%, 100% { transform: scale(1); opacity: 0.85; } 50% { transform: scale(1.04); opacity: 1; } } ';  
-        css += '@keyframes badge_anim_spin_slow { 0% { transform: rotate(0deg); } 25% { transform: rotate(2deg); } 75% { transform: rotate(-2deg); } 100% { transform: rotate(0deg); } } ';  
-        css += '@keyframes badge_anim_float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } } ';  
-  
-        css += '.full-start__reactions, [class*="reactions"] { display: none !important; } ';  
-        css += '.full-start-new__details, .full-start__info, .full-start__age, .full-start-new__age, .full-start__status, .full-start-new__status, [class*="age"], [class*="pg"], [class*="rating-count"], [class*="status"] { display:none !important; } ';  
-        css += '.full-start-new__right > div:first-child { display: none !important; } ';  
-        css += '.rate--tmdb, .rate--imdb, .rate--kp, .full-start__rates { display: none !important; } ';  
-        css += '.background { background: #000 !important; } ';  
-  
-        css += '.full-start-new { position: relative !important; will-change: auto; } ';  
-        css += '.full-start-new__poster { position: relative !important; background: #000; z-index: 1; } ';  
-        css += '.full-start-new__poster img { filter: none !important; width: 100% !important; height: auto !important; object-fit: contain !important; ';  
-        css += 'mask-image: linear-gradient(to bottom, #000 0%, #000 75%, transparent 100%) !important; -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 75%, transparent 100%) !important; } ';  
-  
-        css += '.full-start-new__right { background: none !important; z-index: 2 !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; padding: 20px !important; gap: ' + blocksGap + ' !important; position: relative !important; } ';  
-  
-        var chosenAnimName = 'anim_' + animEffect;  
-        var animTiming = 'cubic-bezier(0.16, 1, 0.3, 1)';  
-  
-        function getAnimRule(delay) {  
-            if (!isUIAnim) return 'opacity: 1 !important;';  
-            return 'animation: ' + chosenAnimName + ' 0.45s ' + animTiming + ' ' + delay + ' forwards; opacity: 0; will-change: transform, opacity;';  
-        }  
-  
-        css += '.studio-header-brand { ' + getAnimRule('0.0s') + ' order: 1; width: 100%; display: flex; justify-content: flex-start; align-items: center; margin-bottom: -2px !important; } ';  
-        css += '.studio-header-brand img { height: 22px !important; width: auto; max-width: 130px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8)); opacity: 0.95; transition: opacity 0.3s ease; } ';  
-        css += '.studio-header-brand img.is-dark-logo { filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8)) !important; } ';  
-  
-        css += '.full-start-new__title { min-height: 60px; position: relative; font-size: 0 !important; color: transparent !important; ' + getAnimRule('0.08s') + ' width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; margin: 0 !important; order: 2; overflow: visible !important; } ';  
-        css += '.full-start-new__title img { height: auto !important; max-height: 100px !important; width: auto !important; max-width: 45vw !important; object-fit: contain !important; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.7)); margin: 0 !important; opacity: 0; transition: opacity 0.3s ease-in-out; } ';  
-        css += '.full-start-new__title img.loaded { opacity: 1; } ';  
-  
-        css += '.quality-row-inline { position: absolute; top: 30px; right: 24px; z-index: 99; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; pointer-events: none; } ';  
-  
-        css += '.full-start-new__tagline { ' + getAnimRule('0.15s') + ' display: ' + (showTagline ? 'block' : 'none') + ' !important; font-style: italic !important; font-size: 1em !important; margin: 0 !important; color: rgba(255,255,255,0.8) !important; text-align: left !important; order: 3; } ';  
-        css += '.plugin-meta-row { ' + getAnimRule('0.22s') + ' display: flex; justify-content: flex-start; align-items: center; flex-wrap: nowrap; gap: 10px; margin: 0 !important; font-size: calc(' + rSize + ' * 2.8); width: 100%; order: 4; color: rgba(255,255,255,0.85); font-family: "Inter", -apple-system, system-ui, sans-serif; } ';  
-  
-        var loopAnimName = badgeAnim !== 'none' ? 'badge_anim_' + badgeAnim : '';  
-        var loopDuration = badgeAnim === 'spin_slow' ? '4s' : (badgeAnim === 'breathe' ? '3s' : '2.5s');  
-  
-        css += '.wave-item { transform-origin: center center; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); ';  
-        if (isUIAnim) {  
-            css += 'animation: wave_cascade 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards; opacity: 0; will-change: transform, opacity;';  
-        } else if (badgeAnim !== 'none') {  
-            css += 'animation: ' + loopAnimName + ' ' + loopDuration + ' ease-in-out infinite; ';  
-        } else {  
-            css += 'opacity: 1 !important;';  
-        }  
-        css += '} ';  
-  
-        if (isUIAnim && badgeAnim !== 'none') {  
-            css += '.wave-item { animation: wave_cascade 0.35s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards, ' + loopAnimName + ' ' + loopDuration + ' ease-in-out 0.65s infinite; opacity: 0; }';  
-        }  
-  
-        css += '.quality-row-inline .plugin-rating-item { display: flex; align-items: center; gap: 6px; font-weight: 700; color: #fff; font-size: 1.05em; padding: 2px 0; } ';  
-        css += '.quality-row-inline .plugin-rating-item img { height: 1.1em; width: auto; } ';  
-  
-        css += '.info-text-item { opacity: 0.9; font-weight: 500; font-size: 0.9em; white-space: nowrap; } ';  
-        css += '.info-separator { opacity: 0.35; font-size: 0.85em; margin: 0 -2px; } ';  
-        css += '.card-tweaks__buttons { ' + getAnimRule('0.3s') + ' width: 100% !important; display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 15px !important; margin-top: 15px !important; order: 5; } ';  
-  
-        css += '.full-start__background { will-change: opacity; transition: opacity 0.5s ease; } ';  
-  
-        // ===== ФОНОВИЙ ТРЕЙЛЕР (YouTube) — Зліва без змін, зверху і знизу помітно затемнено, справа і центр чисті =====  
-        css += '.tvi-trailer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; opacity: 0; transition: opacity .5s ease; pointer-events: none; } ';  
-        css += '.tvi-trailer.display { opacity: 1; } ';  
-        css += '.tvi-trailer__yt { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; z-index: 0; } ';  
-        css += '.tvi-trailer__iframe { width: 100%; height: 100%; pointer-events: none; } ';  
-        css += '.tvi-trailer__yt iframe { border: 0; width: 100%; height: 100%; flex-shrink: 0; pointer-events: none; will-change: transform; transition: transform .3s; opacity: 1; } ';  
-  
-        // Посилене затемнення зверху та знизу, збережена логіка зліва, право/центр відкриті  
-        css += '.tvi-trailer__overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; ';  
-        css += 'background: linear-gradient(90deg, #0f0f0f 0%, rgba(15,15,15,0.85) 30%, rgba(15,15,15,0.35) 45%, rgba(15,15,15,0.05) 65%, transparent 100%), ';  
-        css += 'linear-gradient(to top, #0f0f0f 0%, rgba(15,15,15,0.7) 25%, rgba(15,15,15,0.2) 45%, transparent 60%), ';  
-        css += 'linear-gradient(to bottom, #0f0f0f 0%, rgba(15,15,15,0.7) 25%, rgba(15,15,15,0.2) 45%, transparent 60%); } ';  
-  
-        style.textContent = css;  
-    }  
-  
-    function getRatingColor(val) {  
-        var n = parseFloat(val);  
-        if (n >= 7.5) return '#2ecc71';  
-        if (n >= 6) return '#feca57';  
-        if (n > 0) return '#ff4d4d';  
-        return '#fff';  
-    }  
-  
-    function formatTime(mins) {  
-        if (!mins) return '';  
-        var h = Math.floor(mins / 60);  
-        var m = mins % 60;  
-        return (h > 0 ? h + 'г ' : '') + m + 'хв';  
-    }  
-  
-    function getCubRating(e) {  
-        if (!e.data || !e.data.reactions || !e.data.reactions.result) return null;  
-        var reactionCoef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };  
-        var sum = 0, cnt = 0;  
-        e.data.reactions.result.forEach(function (r) {  
-            if (r.counter) { sum += (r.counter * reactionCoef[r.type]); cnt += r.counter; }  
-        });  
-        if (cnt >= 5) {  
-            var isTv = e.object.method === 'tv', avg = isTv ? 7.4 : 6.5, m = isTv ? 50 : 150;  
-            return ((avg * m + sum) / (m + cnt)).toFixed(1);  
-        }  
-        return null;  
-    }  
-  
-    function renderMeta(container, e) {  
-        container.find('.plugin-meta-row').remove();  
-  
-        var sep = '<span class="info-separator">•</span>';  
-        var $metaRow = $('<div class="plugin-meta-row"></div>');  
-  
-        var year = (e.data.movie.release_date || e.data.movie.first_air_date || '').substring(0, 4);  
-        if (year) $metaRow.append('<div class="info-text-item">' + year + '</div>');  
-  
-        var country = '';  
-        if (e.data.movie.production_countries && e.data.movie.production_countries.length > 0) {  
-            country = e.data.movie.production_countries[0].name || e.data.movie.production_countries[0].iso_3166_1;  
-        } else if (e.data.movie.origin_country && e.data.movie.origin_country.length > 0) {  
-            country = e.data.movie.origin_country[0];  
-        }  
-  
-        if (country) {  
-            if ($metaRow.children().length > 0) $metaRow.append(sep);  
-            $metaRow.append('<div class="info-text-item">' + country + '</div>');  
-        }  
-  
-        var runtime = e.data.movie.runtime || (e.data.movie.episode_run_time ? e.data.movie.episode_run_time[0] : 0);  
-        if (runtime) {  
-            if ($metaRow.children().length > 0) $metaRow.append(sep);  
-            $metaRow.append('<div class="info-text-item">' + formatTime(runtime) + '</div>');  
-        }  
-  
-        if (e.data.movie.genres && e.data.movie.genres.length > 0) {  
-            if ($metaRow.children().length > 0) $metaRow.append(sep);  
-            var genres = e.data.movie.genres.slice(0, 2).map(function (g) { return g.name; }).join(', ');  
-            $metaRow.append('<div class="info-text-item">' + genres + '</div>');  
-        }  
-  
-        container.append($metaRow);  
-    }  
-  
-    function applyMovieDetailsData(data, movie, $render) {  
-        if (data.images && data.images.logos && data.images.logos.length > 0) {  
-            var lang = Lampa.Storage.get('language') || 'uk';  
-            var logo = data.images.logos.filter(function (l) { return l.iso_639_1 === lang; })[0] ||  
-                       data.images.logos.filter(function (l) { return l.iso_639_1 === 'en'; })[0] ||  
-                       data.images.logos[0];  
-  
-            if (logo) {  
-                var logoUrl = Lampa.TMDB.image('/t/p/original' + logo.file_path.replace('.svg', '.png'));  
-                var $titleContainer = $render.find('.full-start-new__title');  
-  
-                var tempImg = new Image();  
-                tempImg.onload = function () {  
-                    $titleContainer.html('<img src="' + logoUrl + '">');  
-                    setTimeout(function () {  
-                        $titleContainer.find('img').addClass('loaded');  
-                    }, 20);  
-                };  
-                tempImg.src = logoUrl;  
-            }  
-        }  
-  
-        if (Lampa.Storage.get('tv_interface_studios')) {  
-            $render.find('.studio-header-brand').remove();  
-            var studio = null;  
-  
-            if (data.networks && data.networks.length > 0) {  
-                studio = data.networks.find(function (n) { return n.logo_path; });  
-            }  
-            if (!studio && data.production_companies && data.production_companies.length > 0) {  
-                studio = data.production_companies.find(function (c) { return c.logo_path; });  
+                    if (typeof Lampa.Platform.tv === 'function') {  
+                        isTv = isTv || !!Lampa.Platform.tv();  
+                    }  
+                    if (typeof Lampa.Platform.device === 'string') {  
+                        isTv = isTv || /tv|tizen|webos|netcast|smart/i.test(Lampa.Platform.device);  
+                    }  
+                } catch (e) {}  
             }  
   
-            if (studio && studio.logo_path) {  
-                var studioLogoUrl = Lampa.TMDB.image('/t/p/w200' + studio.logo_path);  
-                var $brand = $('<div class="studio-header-brand"><img src="' + studioLogoUrl + '" alt="' + (studio.name || '') + '"></div>');  
-                var $img = $brand.find('img');  
-  
-                $img.on('error', function () { $brand.remove(); });  
-                isImageDark(studioLogoUrl, function (isDark) { if (isDark) $img.addClass('is-dark-logo'); });  
-                $render.find('.full-start-new__title').before($brand);  
+            if (!isTv) {  
+                isTv = /(SMART-TV|SmartTV|HbbTV|NetCast|Tizen|Web0S|WebOS|Viera|BRAVIA|Android TV|AFTB|AFTT|AFTM|Fire TV)/i.test(ua);  
             }  
-        }  
+  
+            if (isTv && document && document.documentElement) {  
+                document.documentElement.classList.add('is-smarttv');  
+            }  
+        } catch (e) {}  
     }  
   
-    function loadMovieDetails(movie, $render) {  
-        var movieId = movie.id;  
-        currentActiveId = movieId;  
+    const LOGO_CACHE_PREFIX = 'logo_cache_width_based_v1_';  
   
-        if (detailsCache[movieId]) {  
-            applyMovieDetailsData(detailsCache[movieId], movie, $render);  
-            return;  
-        }  
+    function applyLogoCssVars() {  
+        try {  
+            const h = (Lampa.Storage && typeof Lampa.Storage.get === 'function') ? (Lampa.Storage.get('logo_height', '') || '') : '';  
+            const root = document.documentElement;  
   
-        var type = (movie.name || movie.first_air_date) ? 'tv' : 'movie';  
-        var url = 'https://api.themoviedb.org/3/' + type + '/' + movieId + '?api_key=' + Lampa.TMDB.key() + '&append_to_response=images&include_image_language=uk,en,null';  
-  
-        $.ajax({  
-            url: url,  
-            type: 'GET',  
-            dataType: 'json',  
-            success: function (data) {  
-                if (currentActiveId !== movieId) return;  
-                detailsCache[movieId] = data;  
-                applyMovieDetailsData(data, movie, $render);  
-            }  
-        });  
-    }  
-  
-    /**  
-     * ФОНОВИЙ ТРЕЙЛЕР (YouTube)  
-     */  
-    function pickTrailer(data) {  
-        var vids = data.videos || (data.movie && data.movie.videos) || (data.tv && data.tv.videos);  
-        if (!vids || !vids.results || !vids.results.length) return null;  
-  
-        var items = vids.results.map(function (v) {  
-            return {  
-                id: v.key,  
-                code: v.iso_639_1,  
-                time: new Date(v.published_at).getTime(),  
-                name_orig: (v.name || '').toLowerCase()  
-            };  
-        }).sort(function (a, b) { return b.time - a.time; });  
-  
-        var myLang = items.filter(function (n) { return n.code === Lampa.Storage.field('tmdb_lang'); });  
-        var enLang = items.filter(function (n) { return n.code === 'en' && myLang.indexOf(n) === -1; });  
-        var all = myLang.concat(enLang);  
-        if (!all.length) return null;  
-  
-        return all.find(function (n) {  
-            return n.name_orig.indexOf('official trailer') !== -1 ||  
-                   n.name_orig.indexOf('офіційний трейлер') !== -1 ||  
-                   n.name_orig.indexOf('официальный трейлер') !== -1;  
-        }) || all.find(function (n) {  
-            return n.name_orig.indexOf('trailer') !== -1 || n.name_orig.indexOf('трейлер') !== -1;  
-        }) || all[0];  
-    }  
-  
-    function startTrailer(e, $render, trailer) {  
-        var movie = e.data.movie || (e.object && e.object.card);  
-        var item_id = movie && movie.id;  
-        var $wrap = $('<div class="tvi-trailer"><div class="tvi-trailer__yt"><div class="tvi-trailer__iframe"></div><div class="tvi-trailer__overlay"></div></div></div>');  
-  
-        $render.find('.activity__body').prepend($wrap);  
-  
-        var player = null, destroyed = false, pollTimer = null;  
-  
-        var destroy = function () {  
-            if (destroyed) return;  
-            destroyed = true;  
-            clearInterval(pollTimer);  
-            try { if (player) player.destroy(); } catch (err) {}  
-            $wrap.remove();  
-            $render.find('.full-start__background').css('opacity', '');  
-        };  
-  
-        var stop = function (a) {  
-            if (a.type === 'destroy' && a.object.activity === e.object.activity) {  
-                destroy();  
-                Lampa.Listener.remove('activity', stop);  
-            }  
-        };  
-        Lampa.Listener.follow('activity', stop);  
-  
-        var initYT = function () {  
-            if (destroyed || (item_id && currentActiveId !== item_id)) return;  
-  
-            player = new window.YT.Player($wrap.find('.tvi-trailer__iframe')[0], {  
-                height: window.innerHeight,  
-                width: window.innerWidth,  
-                videoId: trailer.id,  
-                playerVars: {  
-                    controls: 0, autoplay: 1, mute: 1, disablekb: 1,  
-                    fs: 0, playsinline: 1, rel: 0, modestbranding: 1,  
-                    suggestedQuality: 'hd1080'  
-                },  
-                events: {  
-                    onReady: function (ev) {  
-                        var iframe = $(ev.target.getIframe());  
-                        var blur = parseInt(Lampa.Storage.get('tv_interface_trailer_blur')) || 0;  
-                        var zoom = Lampa.Storage.get('tv_interface_trailer_zoom') || '0';  
-                        if (blur > 0) iframe.css('filter', 'blur(' + blur + 'px)');  
-                        if (zoom !== '0') iframe.css('transform', 'scale(' + (1 + parseInt(zoom) / 100) + ') translateZ(0)');  
-                        ev.target.playVideo();  
-                    },  
-                    onStateChange: function (st) {  
-                        if (st.data === window.YT.PlayerState.PLAYING) {  
-                            setTimeout(function () {  
-                                if (destroyed || (item_id && currentActiveId !== item_id)) return;  
-                                $wrap.addClass('display');  
-                                $render.find('.full-start__background').css('opacity', '0');  
-                            }, 400);  
-                        }  
-                        if (st.data === window.YT.PlayerState.ENDED && !destroyed) {  
-                            st.target.playVideo();  
-                        }  
-                        if (st.data === window.YT.PlayerState.BUFFERING) {  
-                            st.target.setPlaybackQuality('hd1080');  
-                        }  
-                    },  
-                    onError: function () { destroy(); }  
-                }  
-            });  
-        };  
-  
-        if (window.YT && window.YT.Player) {  
-            initYT();  
-        } else {  
-            pollTimer = setInterval(function () {  
-                if (window.YT && window.YT.Player) { clearInterval(pollTimer); initYT(); }  
-            }, 100);  
-            if (!window.tvi_yt_loading) {  
-                window.tvi_yt_loading = true;  
-                Lampa.Utils.putScript(['https://www.youtube.com/iframe_api'], function () {});  
-            }  
-        }  
-    }  
-  
-    /**  
-     * СЛАЙДШОУ ФОНОВИХ ЗОБРАЖЕНЬ  
-     */  
-    function startSlideshow(e, $render) {  
-        if (!Lampa.Storage.get('tv_interface_slideshow')) return;  
-  
-        var movie = e.data.movie || (e.object && e.object.card);  
-        if (!movie || !movie.id) return;  
-  
-        var item_id = movie.id;  
-        var media_type = (movie.name || movie.first_air_date) ? 'tv' : 'movie';  
-        var current_lang = Lampa.Storage.field('tmdb_lang') || 'uk';  
-        var quality = Lampa.Storage.get('tv_interface_slideshow_quality') || 'w1280';  
-        var duration = parseInt(Lampa.Storage.get('tv_interface_slideshow_duration')) || 8000;  
-  
-        Lampa.Api.sources.tmdb.get(  
-            media_type + '/' + item_id + '/images?include_image_language=' + current_lang + ',xx,null,en',  
-            {},  
-            function (images_data) {  
-                if (currentActiveId !== item_id) return;  
-                if (!images_data || !images_data.backdrops || !images_data.backdrops.length) return;  
-  
-                var lang_b = [], clean_b = [], other_b = [];  
-                images_data.backdrops.forEach(function (b) {  
-                    var l = b.iso_639_1;  
-                    if (l === current_lang) lang_b.push(b);  
-                    else if (!l || l === 'xx' || l === 'null') clean_b.push(b);  
-                    else other_b.push(b);  
+            if (h) {  
+                root.style.setProperty('--ni-logo-max-h', h);  
+                document.querySelectorAll('.new-interface-info__title-logo, .new-interface-full-logo').forEach(img => {  
+                    img.style.maxHeight = h;  
+                    img.style.setProperty('max-height', h, 'important');  
                 });  
+            } else {  
+                root.style.removeProperty('--ni-logo-max-h');  
+                document.querySelectorAll('.new-interface-info__title-logo, .new-interface-full-logo').forEach(img => {  
+                    img.style.maxHeight = '';  
+                    img.style.removeProperty('max-height');  
+                });  
+            }  
+        } catch (e) { }  
+    }
+
+    function applyCaptionsClass(container) {  
+        try {  
+            if (!container) return;  
+            const show = !!Lampa.Storage.get('ni_card_captions', true);  
+            container.classList.toggle('ni-hide-captions', !show);  
+        } catch (e) { }  
+    }
   
-                var final_b = [].concat(clean_b);  
-                if (final_b.length < 3) final_b = final_b.concat(lang_b);  
-                if (final_b.length < 3) {  
-                    other_b.sort(function (a, b) { return (b.vote_average || 0) - (a.vote_average || 0); });  
-                    final_b = final_b.concat(other_b);  
+    function applyCaptionsToAll() {  
+        try {  
+            document.querySelectorAll('.new-interface').forEach((el) => applyCaptionsClass(el));  
+        } catch (e) { }  
+    }  
+  
+    function initInterface2Settings() {  
+        if (window.__ni_interface2_settings_ready) return;  
+        window.__ni_interface2_settings_ready = true;  
+  
+        if (!Lampa.SettingsApi || typeof Lampa.SettingsApi.addParam !== 'function') return;  
+  
+        const add = (cfg) => { try { Lampa.SettingsApi.addParam(cfg); } catch (e) { } };  
+  
+        add({  
+            component: 'interface',  
+            param: { name: 'logo_glav', type: 'select', values: { 1: 'Приховати', 0: 'Відображати' }, default: '0' },  
+            field: { name: 'Логотипи замість назв', description: 'Відображає логотипи фільмів замість тексту' },  
+            onChange: applyLogoCssVars  
+        });  
+  
+        add({  
+            component: 'interface',  
+            param: {  
+                name: 'logo_lang',  
+                type: 'select',  
+                values: {  
+                    '': 'Як в Lampa',  
+                    uk: 'Українська',  
+                    en: 'English',  
+                    be: 'Білоруська',  
+                    kz: 'Қазақша',  
+                    pt: 'Português',  
+                    es: 'Español',  
+                    fr: 'Français',  
+                    de: 'Deutsch',  
+                    it: 'Italiano'  
+                },  
+                default: ''  
+            },  
+            field: { name: 'Мова логотипа', description: 'Пріоритетна мова для пошуку логотипа' }  
+        });  
+  
+        add({  
+            component: 'interface',  
+            param: { name: 'logo_size', type: 'select', values: { w300: 'w300', w500: 'w500', w780: 'w780', original: 'Оригінал' }, default: 'original' },  
+            field: { name: 'Розмір логотипа', description: 'Роздільна здатність завантажуваного зображення' }  
+        });  
+  
+        add({  
+            component: 'interface',  
+            param: {  
+                name: 'logo_height',  
+                type: 'select',  
+                values: {  
+                    '': 'Авто (як в темі)',  
+                    '2.5em': '2.5em',  
+                    '3em': '3em',  
+                    '3.5em': '3.5em',  
+                    '4em': '4em',  
+                    '5em': '5em',  
+                    '6em': '6em',  
+                    '7em': '7em',  
+                    '8em': '8em',  
+                    '10vh': '10vh'  
+                },  
+                default: ''  
+            },  
+            field: { name: 'Висота логотипів', description: 'Максимальна висота логотипів (в інфо-блоці та в повній картці)' },  
+            onChange: applyLogoCssVars  
+        });  
+  
+        add({  
+            component: 'interface',  
+            param: { name: 'logo_animation_type', type: 'select', values: { js: 'JavaScript', css: 'CSS' }, default: 'css' },  
+            field: { name: 'Тип анімації логотипів', description: 'Спосіб анімації логотипів' }  
+        });  
+  
+        add({  
+            component: 'interface',  
+            param: { name: 'logo_hide_year', type: 'trigger', default: !0 },  
+            field: { name: 'Приховати рік і країну', description: 'Приховує інформацію над логотипом' }  
+        });  
+  
+        add({  
+            component: 'interface',  
+            param: { name: 'logo_use_text_height', type: 'trigger', default: !1 },  
+            field: { name: 'Логотип за висотою тексту', description: 'Розмір логотипа дорівнює висоті тексту' }  
+        });  
+  
+        add({  
+            component: 'interface',  
+            param: { name: 'logo_clear_cache', type: 'button' },  
+            field: { name: 'Скинути кеш логотипів', description: 'Натисніть для очищення кешу зображень' },  
+            onChange: function () {  
+                Lampa.Select.show({  
+                    title: 'Скинути кеш?',  
+                    items: [{ title: 'Так', confirm: !0 }, { title: 'Ні' }],  
+                    onSelect: function (e) {  
+                        if (e.confirm) {  
+                            const keys = [];  
+                            for (let i = 0; i < localStorage.length; i++) {  
+                                const k = localStorage.key(i);  
+                                if (k && k.indexOf(LOGO_CACHE_PREFIX) !== -1) keys.push(k);  
+                            }  
+                            keys.forEach((k) => localStorage.removeItem(k));  
+                            window.location.reload();  
+                        } else {  
+                            Lampa.Controller.toggle('settings_component');  
+                        }  
+                    },  
+                    onBack: function () {  
+                        Lampa.Controller.toggle('settings_component');  
+                    }  
+                });  
+            }  
+        });  
+  
+        add({  
+            component: 'interface',  
+            param: { name: 'ni_card_captions', type: 'trigger', default: true },  
+            field: { name: 'Підписи під картками', description: 'Показувати / приховувати назви (і рік) під постерами в лініях' },  
+            onChange: function () {  
+                applyCaptionsToAll();  
+            }  
+        });  
+  
+        applyLogoCssVars();  
+        applyCaptionsToAll();  
+    }  
+  
+    function animateOpacity(el, from, to, duration, done) {  
+        if (!el) return done && done();  
+        let start = null;  
+        const ease = (t) => 1 - Math.pow(1 - t, 3);  
+  
+        requestAnimationFrame(function step(ts) {  
+            if (!start) start = ts;  
+            const p = Math.min((ts - start) / duration, 1);  
+            el.style.opacity = (from + (to - from) * ease(p)).toString();  
+            if (p < 1) requestAnimationFrame(step);  
+            else if (done) done();  
+        });  
+    }  
+  
+    class LogoEngine {  
+        constructor() {  
+            this.pending = {};  
+        }  
+  
+        enabled() {  
+            return (Lampa.Storage.get('logo_glav', '0') + '') !== '1';  
+        }  
+  
+        lang() {  
+            const forced = (Lampa.Storage.get('logo_lang', '') || '') + '';  
+            const base = forced || (Lampa.Storage.get('language') || 'en') + '';  
+            return (base.split('-')[0] || 'en');  
+        }  
+  
+        size() {  
+            return (Lampa.Storage.get('logo_size', 'original') || 'original') + '';  
+        }  
+  
+        animationType() {  
+            return (Lampa.Storage.get('logo_animation_type', 'css') || 'css') + '';  
+        }  
+  
+        useTextHeight() {  
+            return !!Lampa.Storage.get('logo_use_text_height', !1);  
+        }  
+  
+        cacheKey(type, id, lang) {  
+            return `${LOGO_CACHE_PREFIX}${type}_${id}_${lang}`;  
+        }  
+  
+        flush(key, value) {  
+            const list = this.pending[key] || [];  
+            delete this.pending[key];  
+            list.forEach((fn) => { try { if (fn) fn(value); } catch (e) { } });  
+        }  
+  
+        resolveFromImages(item, lang) {  
+            try {  
+                if (!item || !item.images || !Array.isArray(item.images.logos) || !item.images.logos.length) return null;  
+  
+                const logos = item.images.logos.slice();  
+                const pick = (iso) => {  
+                    for (let i = 0; i < logos.length; i++) {  
+                        if (logos[i] && logos[i].iso_639_1 === iso) return logos[i].file_path;  
+                    }  
+                    return null;  
+                };  
+  
+                return pick(lang) || pick('en') || (logos[0] && logos[0].file_path) || null;  
+            } catch (e) {  
+                return null;  
+            }  
+        }  
+  
+        getLogoUrl(item, cb) {  
+            try {  
+                if (!item || !item.id) return cb && cb(null);  
+  
+                const source = item.source || 'tmdb';  
+                if (source !== 'tmdb' && source !== 'cub') return cb && cb(null);  
+  
+                if (!Lampa.TMDB || typeof Lampa.TMDB.api !== 'function' || typeof Lampa.TMDB.key !== 'function') return cb && cb(null);  
+  
+                const type = (item.media_type === 'tv' || item.name) ? 'tv' : 'movie';  
+                const lang = this.lang();  
+                const key = this.cacheKey(type, item.id, lang);  
+  
+                const cached = localStorage.getItem(key);  
+                if (cached) {  
+                    if (cached === 'none') return cb && cb(null);  
+                    return cb && cb(cached);  
                 }  
-                final_b = final_b.slice(0, 15);  
-                if (final_b.length < 2) return;  
   
-                if (window.tviRotationTimer) clearInterval(window.tviRotationTimer);  
+                const fromDetails = this.resolveFromImages(item, lang);  
+                if (fromDetails) {  
+                    const size = this.size();  
+                    const normalized = (fromDetails + '').replace('.svg', '.png');  
+                    const logoUrl = Lampa.TMDB.image('/t/p/' + size + normalized);  
+                    localStorage.setItem(key, logoUrl);  
+                    return cb && cb(logoUrl);  
+                }  
   
-                var idx = 0;  
-                var is_active = true;  
+                if (this.pending[key]) {  
+                    this.pending[key].push(cb);  
+                    return;  
+                }  
   
-                window.tviRotationTimer = setInterval(function () {  
-                    if (!is_active || currentActiveId !== item_id) {  
-                        clearInterval(window.tviRotationTimer);  
+                this.pending[key] = [cb];  
+  
+                if (typeof $ === 'undefined' || !$.get) {  
+                    localStorage.setItem(key, 'none');  
+                    this.flush(key, null);  
+                    return;  
+                }  
+  
+                const url = Lampa.TMDB.api(`${type}/${item.id}/images?api_key=${Lampa.TMDB.key()}&include_image_language=${lang},en,null`);  
+  
+                $.get(url, (res) => {  
+                    let filePath = null;  
+  
+                    if (res && Array.isArray(res.logos) && res.logos.length) {  
+                        for (let i = 0; i < res.logos.length; i++) {  
+                            if (res.logos[i] && res.logos[i].iso_639_1 === lang) { filePath = res.logos[i].file_path; break; }  
+                        }  
+                        if (!filePath) {  
+                            for (let i = 0; i < res.logos.length; i++) {  
+                                if (res.logos[i] && res.logos[i].iso_639_1 === 'en') { filePath = res.logos[i].file_path; break; }  
+                            }  
+                        }  
+                        if (!filePath) filePath = res.logos[0] && res.logos[0].file_path;  
+                    }  
+  
+                    if (filePath) {  
+                        const size = this.size();  
+                        const normalized = (filePath + '').replace('.svg', '.png');  
+                        const logoUrl = Lampa.TMDB.image('/t/p/' + size + normalized);  
+                        localStorage.setItem(key, logoUrl);  
+                        this.flush(key, logoUrl);  
+                    } else {  
+                        localStorage.setItem(key, 'none');  
+                        this.flush(key, null);  
+                    }  
+                }).fail(() => {  
+                    localStorage.setItem(key, 'none');  
+                    this.flush(key, null);  
+                });  
+            } catch (e) {  
+                if (cb) cb(null);  
+            }  
+        }  
+  
+        setImageSizing(img, heightPx) {  
+            if (!img) return;  
+  
+            img.style.height = '';  
+            img.style.width = '';  
+            img.style.maxHeight = '';  
+            img.style.maxWidth = '';  
+            img.style.objectFit = 'contain';  
+            img.style.objectPosition = 'left center';  
+  
+            const logoHeight = Lampa.Storage.get('logo_height', '');  
+            if (logoHeight) {  
+                img.style.maxHeight = logoHeight;  
+                img.style.setProperty('max-height', logoHeight, 'important');  
+            } else {  
+                img.style.maxHeight = '120px';  
+                img.style.setProperty('max-height', '120px', 'important');  
+            }  
+  
+            if (this.useTextHeight() && heightPx && heightPx > 0 && !logoHeight) {  
+                const scaledHeight = Math.min(heightPx * 1.2, 120);  
+                img.style.height = `${scaledHeight}px`;  
+                img.style.width = 'auto';  
+                img.style.maxWidth = '400px';  
+            }  
+        }  
+
+        swapContent(container, newNode) {  
+            if (!container) return;  
+            const type = this.animationType();  
+  
+            if (container.__ni_logo_timer) {  
+                clearTimeout(container.__ni_logo_timer);  
+                container.__ni_logo_timer = null;  
+            }  
+  
+            if (type === 'js') {  
+                container.style.transition = 'none';  
+                animateOpacity(container, 1, 0, 200, () => {  
+                    container.innerHTML = '';  
+                    if (typeof newNode === 'string') container.textContent = newNode;  
+                    else container.appendChild(newNode);  
+                    container.style.opacity = '0';  
+                    animateOpacity(container, 0, 1, 300);  
+                });  
+            } else {  
+                container.style.transition = 'opacity 0.2s ease';  
+                container.style.opacity = '0';  
+                container.__ni_logo_timer = setTimeout(() => {  
+                    container.__ni_logo_timer = null;  
+                    container.innerHTML = '';  
+                    if (typeof newNode === 'string') container.textContent = newNode;  
+                    else container.appendChild(newNode);  
+                    container.style.transition = 'opacity 0.3s ease';  
+                    container.style.opacity = '1';  
+                }, 100);  
+            }  
+        }  
+  
+        syncFullHead(container, logoActive) {  
+            try {  
+                if (!container || typeof container.find !== 'function') return;  
+  
+                const headNode = container.find('.full-start-new__head');  
+                const detailsNode = container.find('.full-start-new__details');  
+  
+                if (!headNode || !headNode.length || !detailsNode || !detailsNode.length) return;  
+  
+                const headEl = headNode[0];  
+                const detailsEl = detailsNode[0];  
+  
+                if (!headEl || !detailsEl) return;  
+  
+                const moved = detailsEl.querySelector ? detailsEl.querySelector('.logo-moved-head') : null;  
+                const movedSep = detailsEl.querySelector ? detailsEl.querySelector('.logo-moved-separator') : null;  
+  
+                const wantMove = !!logoActive && !!Lampa.Storage.get('logo_hide_year', !0);  
+  
+                if (!wantMove) {  
+                    if (moved && moved.parentNode) moved.parentNode.removeChild(moved);  
+                    if (movedSep && movedSep.parentNode) movedSep.parentNode.removeChild(movedSep);  
+  
+                    headEl.style.display = '';  
+                    headEl.style.opacity = '';  
+                    headEl.style.transition = '';  
+                    return;  
+                }  
+  
+                if (moved) {  
+                    headEl.style.display = 'none';  
+                    return;  
+                }  
+  
+                const html = (headEl.innerHTML || '').trim();  
+                if (!html) return;  
+  
+                const headSpan = document.createElement('span');  
+                headSpan.className = 'logo-moved-head';  
+                headSpan.innerHTML = html;  
+  
+                const sep = document.createElement('span');  
+                sep.className = 'full-start-new__split logo-moved-separator';  
+                sep.textContent = '●';  
+  
+                if (detailsEl.children && detailsEl.children.length > 0) detailsEl.appendChild(sep);  
+                detailsEl.appendChild(headSpan);  
+  
+                headEl.style.display = 'none';  
+            } catch (e) { }  
+        }  
+  
+        applyToFull(activity, item) {  
+            try {  
+                if (!activity || typeof activity.render !== 'function' || !item) return;  
+  
+                const container = activity.render();  
+                if (!container || typeof container.find !== 'function') return;  
+  
+                const titleNode = container.find('.full-start-new__title, .full-start__title');  
+                if (!titleNode || !titleNode.length) return;  
+  
+                const titleEl = titleNode[0];  
+                const titleText = ((item.title || item.name || item.original_title || item.original_name || '') + '').trim() || (titleNode.text() + '');  
+  
+                if (!titleEl.__ni_full_title_text) titleEl.__ni_full_title_text = titleText;  
+                const originalText = titleEl.__ni_full_title_text || titleText;  
+  
+                if (!this.enabled()) {  
+                    this.syncFullHead(container, false);  
+                    const existImg = titleEl.querySelector && titleEl.querySelector('img.new-interface-full-logo');  
+                    if (existImg) this.swapContent(titleEl, originalText);  
+                    else if (titleNode.text() !== originalText) titleNode.text(originalText);  
+                    return;  
+                }  
+  
+                if (titleNode.text() !== originalText) titleNode.text(originalText);  
+                const textHeightPx = titleEl.getBoundingClientRect ? Math.round(titleEl.getBoundingClientRect().height) : 0;  
+  
+                const requestId = (titleEl.__ni_logo_req_id || 0) + 1;  
+                titleEl.__ni_logo_req_id = requestId;  
+  
+                this.getLogoUrl(item, (url) => {  
+                    if (titleEl.__ni_logo_req_id !== requestId) return;  
+                    if (!titleEl.isConnected) return;  
+  
+                    if (!url) {  
+                        this.syncFullHead(container, false);  
+                        if (titleEl.querySelector && titleEl.querySelector('img.new-interface-full-logo')) this.swapContent(titleEl, originalText);  
+                        else if (titleNode.text() !== originalText) titleNode.text(originalText);  
                         return;  
                     }  
   
-                    idx = (idx + 1) % final_b.length;  
-                    var url = Lampa.TMDB.image('t/p/' + quality + final_b[idx].file_path);  
-                    var $currentBg = $render.find('.full-start__background').last();  
-                    if (!$currentBg.length) return;  
-  
-                    var img = new Image();  
-                    img.onload = function () {  
-                        if (!is_active || currentActiveId !== item_id) return;  
-  
-                        var $newBg = $currentBg.clone();  
-                        $newBg.attr('src', url).css({  
-                            'opacity': '0',  
-                            'transition': 'opacity 1.5s ease-in-out',  
-                            'transform': 'translateZ(0)'  
-                        });  
-                        $currentBg.after($newBg);  
-                        $newBg[0].offsetHeight;  
-  
-                        $newBg.css('opacity', '1');  
-                        $currentBg.css({ 'transition': 'opacity 1.5s ease-in-out', 'opacity': '0' });  
-  
-                        setTimeout(function () {  
-                            if (!is_active) return;  
-                            $render.find('.full-start__background').not($newBg).remove();  
-                        }, 1550);  
-                    };  
-                    img.onerror = function () {};  
+                    const img = new Image();  
+                    img.className = 'new-interface-full-logo';  
+                    img.alt = originalText;  
                     img.src = url;  
-                }, duration);  
   
-                var stop = function (a) {  
-                    if (a.type === 'destroy' && a.object.activity === e.object.activity) {  
-                        is_active = false;  
-                        clearInterval(window.tviRotationTimer);  
-                        Lampa.Listener.remove('activity', stop);  
-                    }  
-                };  
-                Lampa.Listener.follow('activity', stop);  
-            }  
-        );  
+                    this.setImageSizing(img, textHeightPx);  
+                    this.syncFullHead(container, true);  
+  
+                    this.swapContent(titleEl, img);  
+                });  
+            } catch (e) { }  
+        }  
     }  
   
-    function init() {  
+    const Logo = new LogoEngine();  
+    initInterface2Settings();  
+  
+    function applyInfoTitleLogo(wrapper, titleNode, headNode, movie, titleText) {  
+        try {  
+            if (!titleNode || !titleNode.length) return;  
+            const titleEl = titleNode[0];  
+            if (!titleEl) return;  
+  
+            const reqId = (titleEl.__ni_logo_req_id || 0) + 1;  
+            titleEl.__ni_logo_req_id = reqId;  
+  
+            if (!Logo.enabled()) {  
+                if (headNode && headNode.length) headNode.css('display', '');  
+                if (wrapper && wrapper.removeClass) wrapper.removeClass('ni-hide-head');  
+                if (titleEl.querySelector && titleEl.querySelector('img')) Logo.swapContent(titleEl, titleText);  
+                else titleNode.text(titleText);  
+                return;  
+            }  
+  
+            titleNode.text(titleText);  
+            const textHeightPx = titleEl.getBoundingClientRect ? Math.round(titleEl.getBoundingClientRect().height) : 0;  
+  
+            Logo.getLogoUrl(movie, (url) => {  
+                if (titleEl.__ni_logo_req_id !== reqId) return;  
+                if (!titleEl.isConnected) return;  
+  
+                if (!url) {  
+                    if (headNode && headNode.length) headNode.css('display', '');  
+                    if (wrapper && wrapper.removeClass) wrapper.removeClass('ni-hide-head');  
+                    if (titleEl.querySelector && titleEl.querySelector('img')) Logo.swapContent(titleEl, titleText);  
+                    else titleNode.text(titleText);  
+                    return;  
+                }  
+  
+                const img = new Image();  
+                img.className = 'new-interface-info__title-logo';  
+                img.alt = titleText;  
+                img.src = url;  
+  
+                Logo.setImageSizing(img, textHeightPx);  
+  
+                const hideHead = !!Lampa.Storage.get('logo_hide_year', !0);  
+                if (hideHead && headNode && headNode.length) headNode.css('display', 'none');  
+                else if (headNode && headNode.length) headNode.css('display', '');  
+  
+                Logo.swapContent(titleEl, img);  
+            });  
+        } catch (e) { }  
+    }  
+  
+    function hookFullTitleLogos() {  
+        if (window.__ni_interface2_full_logo_hooked) return;  
+        window.__ni_interface2_full_logo_hooked = true;  
+  
+        if (!Lampa.Listener || typeof Lampa.Listener.follow !== 'function') return;  
+  
         Lampa.Listener.follow('full', function (e) {  
-            if (e.type === 'destroy' || e.type === 'onBeforeDestroy') {  
-                currentActiveId = null;  
-                if (window.tviRotationTimer) {  
-                    clearInterval(window.tviRotationTimer);  
-                    window.tviRotationTimer = null;  
-                }  
+            try {  
+                if (!e || e.type !== 'complite') return;  
+                if (!e.object || !e.object.activity) return;  
+  
+                const data = (e.data && (e.data.movie || e.data)) ? (e.data.movie || e.data) : null;  
+                if (!data) return;  
+  
+                Logo.applyToFull(e.object.activity, data);  
+            } catch (err) { }  
+        });  
+    }  
+  
+    hookFullTitleLogos();  
+  
+    function startPluginV3() {  
+        if (!Lampa.Maker || !Lampa.Maker.map || !Lampa.Utils) return;  
+        if (window.plugin_interface_ready_v3) return;  
+        window.plugin_interface_ready_v3 = true;  
+  
+        addStyleV3();  
+  
+        const mainMap = Lampa.Maker.map('Main');  
+  
+        if (!mainMap || !mainMap.Items || !mainMap.Create) return;  
+  
+        wrap(mainMap.Items, 'onInit', function (original, args) {  
+            if (original) original.apply(this, args);  
+            this.__newInterfaceEnabled = shouldUseNewInterface(this && this.object);  
+        });  
+  
+        wrap(mainMap.Create, 'onCreate', function (original, args) {  
+            if (original) original.apply(this, args);  
+            if (!this.__newInterfaceEnabled) return;  
+            const state = ensureState(this);  
+            state.attach();  
+        });  
+  
+        wrap(mainMap.Create, 'onCreateAndAppend', function (original, args) {  
+            const element = args && args[0];  
+            if (this.__newInterfaceEnabled && element) {  
+                prepareLineData(element);  
             }  
+            return original ? original.apply(this, args) : undefined;  
+        });  
   
-            if (e.type === 'complite' || e.type === 'complete') {  
-                applyStyles();  
+        wrap(mainMap.Items, 'onAppend', function (original, args) {  
+            if (original) original.apply(this, args);  
+            if (!this.__newInterfaceEnabled) return;  
+            const item = args && args[0];  
+            const element = args && args[1];  
+            if (item && element) attachLineHandlers(this, item, element);  
+        });  
   
-                var movie = e.data.movie, $render = e.object.activity.render();  
+        wrap(mainMap.Items, 'onDestroy', function (original, args) {  
+            if (this.__newInterfaceState) {  
+                this.__newInterfaceState.destroy();  
+                delete this.__newInterfaceState;  
+            }  
+            delete this.__newInterfaceEnabled;  
+            if (original) original.apply(this, args);  
+        });  
+
+        // Глобальний слухач фокусу для перехоплення карток, які не спрацювали стандартно
+        let globalFocusTimer = null;
+        document.addEventListener('hover:focus', function (e) {
+            handleGlobalFocus(e.target);
+        }, true);
+        document.addEventListener('focus', function (e) {
+            handleGlobalFocus(e.target);
+        }, true);
+
+        function handleGlobalFocus(target) {
+            try {
+                if (!target) return;
+                var card = target.closest ? target.closest('.card') : target;
+                if (!card || !card.card_data) return;
+
+                var activity = card.closest ? card.closest('.activity') : null;
+                if (!activity) return;
+
+                // Шукаємо активний стан серед зареєстрованих інтерфейсів
+                if (window.__activeInterfaceState) {
+                    clearTimeout(globalFocusTimer);
+                    globalFocusTimer = setTimeout(function () {
+                        window.__activeInterfaceState.update(card.card_data);
+                    }, 50);
+                }
+            } catch (err) {}
+        }
+    }  
   
-                $render.find('.full-start-new__title').empty();  
+    function shouldUseNewInterface(object) {  
+        if (!object) return false;  
+        if (object.source === 'other' && !object.backdrop_path) return false;  
+        return true;  
+    }  
   
-                if (window.lampa_settings) window.lampa_settings.blur_poster = false;  
+    function ensureState(main) {  
+        if (main.__newInterfaceState) return main.__newInterfaceState;  
+        const state = createInterfaceState(main);  
+        main.__newInterfaceState = state;  
+        window.__activeInterfaceState = state; // Зберігаємо як активний стейт для глобального слухача
+        return state;  
+    }  
   
-                renderMeta($render.find('.full-start-new__right'), e);  
-                loadMovieDetails(movie, $render);  
+    function createInterfaceState(main) {  
+        const info = new InterfaceInfo();  
+        info.create();  
   
-                var isTrailerBg = Lampa.Storage.get('tv_interface_trailer_bg');  
-                var trailer = isTrailerBg ? pickTrailer(e.data) : null;  
+        const background = document.createElement('img');  
+        background.className = 'full-start__background';  
   
-                if (trailer && Lampa.Manifest.app_digital >= 220) {  
-                    startTrailer(e, $render, trailer);  
-                } else {  
-                    startSlideshow(e, $render);  
+        const state = {  
+            main,  
+            info,  
+            background,  
+            infoElement: null,  
+            backgroundTimer: null,  
+            backgroundLast: '',  
+            attached: false,  
+            attach() {  
+                if (this.attached) return;  
+  
+                const container = main.render(true);  
+                if (!container) return;  
+  
+                container.classList.add('new-interface');  
+  
+                applyCaptionsClass(container);  
+  
+                if (!background.parentElement) {  
+                    container.insertBefore(background, container.firstChild || null);  
                 }  
   
-                var $body = $render.find('.full-start-new__body');  
-                var $buttons = $render.find('.full-start-new__buttons');  
+                const infoNode = info.render(true);  
+                this.infoElement = infoNode;  
   
-                if ($body.length && $buttons.length && $render.find('.card-tweaks__buttons').length === 0) {  
-                    var $tweaksButtons = $('<div class="card-tweaks__buttons"></div>');  
-                    $buttons.detach().appendTo($tweaksButtons);  
-                    $tweaksButtons.insertAfter($body);  
+                if (infoNode && infoNode.parentNode !== container) {  
+                    if (background.parentElement === container) {  
+                        container.insertBefore(infoNode, background.nextSibling);  
+                    } else {  
+                        container.insertBefore(infoNode, container.firstChild || null);  
+                    }  
                 }  
   
-                var $mainContainer = $render.find('.full-start-new');  
-                if ($mainContainer.length === 0) $mainContainer = $render;  
+                main.scroll.minus(infoNode);  
   
-                $mainContainer.find('.quality-row-inline').remove();  
-                var $qRow = $('<div class="quality-row-inline"></div>');  
-                $mainContainer.append($qRow);  
+                this.attached = true;  
+                window.__activeInterfaceState = this;
+            },  
+            update(data) {  
+                if (!data) return;  
+                window.__activeInterfaceState = this;
+                info.update(data);  
+                this.updateBackground(data);  
+            },  
+            updateBackground(data) {  
+                const path = data && data.backdrop_path ? Lampa.Api.img(data.backdrop_path, 'w1280') : '';  
   
-                var tmdb = parseFloat(e.data.movie.vote_average || 0).toFixed(1);  
-                if (tmdb > 0) {  
-                    var $tmdbItem = $('<div class="plugin-rating-item wave-item"><img src="' + ratingIcons.tmdb + '"> <span style="color:' + getRatingColor(tmdb) + '">' + tmdb + '</span></div>');  
-                    $qRow.append($tmdbItem);  
+                if (!path || path === this.backgroundLast) return;  
+  
+                clearTimeout(this.backgroundTimer);  
+  
+                this.backgroundTimer = setTimeout(() => {  
+                    background.classList.remove('loaded');  
+  
+                    background.onload = () => background.classList.add('loaded');  
+                    background.onerror = () => background.classList.remove('loaded');  
+  
+                    this.backgroundLast = path;  
+  
+                    setTimeout(() => {  
+                        background.src = this.backgroundLast;  
+                    }, 300);  
+                }, 100);  
+            },  
+            reset() {  
+                info.empty();  
+            },  
+            destroy() {  
+                clearTimeout(this.backgroundTimer);  
+                info.destroy();  
+  
+                const container = main.render(true);  
+                if (container) container.classList.remove('new-interface');  
+  
+                if (this.infoElement && this.infoElement.parentNode) {  
+                    this.infoElement.parentNode.removeChild(this.infoElement);  
                 }  
   
-                var cub = getCubRating(e);  
-                if (cub) {  
-                    var $cubItem = $('<div class="plugin-rating-item wave-item"><img src="' + ratingIcons.cub + '"> <span style="color:' + getRatingColor(cub) + '">' + cub + '</span></div>');  
-                    $qRow.append($cubItem);  
+                if (background && background.parentNode) {  
+                    background.parentNode.removeChild(background);  
                 }  
+  
+                this.attached = false;  
+                if (window.__activeInterfaceState === this) {
+                    window.__activeInterfaceState = null;
+                }
+            }  
+        };  
+  
+        return state;  
+    }  
+  
+    function prepareLineData(element) {  
+        return;  
+    }  
+  
+    function decorateCard(state, card) {  
+        if (!card || card.__newInterfaceCard || typeof card.use !== 'function' || !card.data) return;  
+  
+        card.__newInterfaceCard = true;  
+  
+        card.params = card.params || {};  
+        card.params.style = card.params.style || {};  
+  
+        card.use({  
+            onFocus() {  
+                state.update(card.data);  
+            },  
+            onHover() {  
+                state.update(card.data);  
+            },  
+            onTouch() {  
+                state.update(card.data);  
+            },  
+            onDestroy() {  
+                delete card.__newInterfaceCard;  
             }  
         });  
     }  
   
-    function setupSettings() {  
-        Lampa.SettingsApi.addComponent({  
-            component: 'tv_interface',  
-            name: 'Інтерфейс картки (TV)',  
-            icon: '<svg height="36" viewBox="0 0 24 24" width="36" xmlns="http://www.w3.org/2000/svg"><path d="M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h5v2h8v-2h5c1.1 0 1.99-.9 1.99-2L23 5c0-1.1-.9-2-2-2zm0 14H3V5h18v12z" fill="white"/></svg>'  
-        });  
-  
-        Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_ui_anim', type: 'trigger', default: true }, field: { name: 'Плавна анімація появи елементів' }, onChange: applyStyles });  
-        Lampa.SettingsApi.addParam({  
-            component: 'tv_interface',  
-            param: {  
-                name: 'tv_interface_ui_anim_effect',  
-                type: 'select',  
-                values: {  
-                    'smooth_zoom': 'Apple Smooth Zoom (Рекомендовано)',  
-                    'cine_slide': 'Cinematic Slide Up',  
-                    'luxury_fade': 'Luxury Depth Fade',  
-                    'modern_shift': 'Modern Clean Shift'  
-                },  
-                default: 'smooth_zoom'  
-            },  
-            field: { name: 'Стиль анімації появи' },  
-            onChange: applyStyles  
-        });  
-        Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_badge_anim', type: 'select', values: { 'none': 'Без анімації', 'pulse': 'Пульсація', 'breathe': 'Дихання', 'spin_slow': 'Гойдання', 'float': 'Підстрибування' }, default: 'pulse' }, field: { name: 'Анімація бейджів' }, onChange: applyStyles });  
-        Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_show_tagline', type: 'trigger', default: true }, field: { name: 'Відображати слоган' }, onChange: applyStyles });  
-        Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_blocks_gap', type: 'select', values: { '8px': 'Компактний', '12px': 'Стандартний', '18px': 'Просторий', '24px': 'Панорамний' }, default: '8px' }, field: { name: 'Відступи між блоками' }, onChange: applyStyles });  
-        Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_ratings_size', type: 'select', values: { '0.4em': 'Дрібний', '0.45em': 'Звичайний', '0.5em': 'Великий', '0.55em': 'Дуже великий' }, default: '0.45em' }, field: { name: 'Розмір шрифту інфо-блоків' }, onChange: applyStyles });  
-        Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_studios', type: 'trigger', default: true }, field: { name: 'Показувати логотип студії' } });  
-  
-        Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_slideshow', type: 'trigger', default: true }, field: { name: 'Слайдшоу фонових зображень', description: 'Плавна зміна backdrops з TMDB на фоні картки' } });  
-        Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_slideshow_duration', type: 'select', values: { 5000: '5 секунд', 8000: '8 секунд', 10000: '10 секунд', 15000: '15 секунд' }, default: 8000 }, field: { name: 'Інтервал зміни зображень' } });  
-        Lampa.SettingsApi.addParam({ component: 'tv_interface', param: { name: 'tv_interface_slideshow_quality', type: 'select', values: { w780: 'Стандартна (W780)', w1280: 'Висока (W1280)', original: 'Оригінал' }, default: 'w1280' }, field: { name: 'Якість зображень слайдшоу' } });  
-  
-        Lampa.SettingsApi.addParam({  
-            component: 'tv_interface',  
-            param: { name: 'tv_interface_trailer_bg', type: 'trigger', default: false },  
-            field: { name: 'Фоновий відеоряд (Трейлер)', description: 'Автоматично відтворювати трейлер YouTube на фоні без звуку замість слайдшоу' }  
-        });  
-        Lampa.SettingsApi.addParam({  
-            component: 'tv_interface',  
-            param: {  
-                name: 'tv_interface_trailer_blur',  
-                type: 'select',  
-                values: { '0': 'Вимкнено (0%)', '1': '1%', '2': '2%', '3': '3%', '4': '4%', '5': '5%', '10': '10%' },  
-                default: '0'  
-            },  
-            field: { name: 'Розмиття фонового відео', description: 'Ефект Blur для фонового плеєра' },  
-            onRender: function (item) {  
-                if (!Lampa.Storage.get('tv_interface_trailer_bg')) item.hide();  
-            }  
-        });  
-        Lampa.SettingsApi.addParam({  
-            component: 'tv_interface',  
-            param: {  
-                name: 'tv_interface_trailer_zoom',  
-                type: 'select',  
-                values: { '0': 'Вимкнено (0%)', '25': '25%', '33': '33%', '40': '40%', '45': '45%', '50': '50%' },  
-                default: '0'  
-            },  
-            field: { name: 'Масштабування відео', description: 'Збільшення відео для приховування чорних смуг' },  
-            onRender: function (item) {  
-                if (!Lampa.Storage.get('tv_interface_trailer_bg')) item.hide();  
-            }  
-        });  
+    function getCardData(card, element, index = 0) {  
+        if (card && card.data) return card.data;  
+        if (element && Array.isArray(element.results)) return element.results[index] || element.results[0];  
+        return null;  
     }  
   
+    function getDomCardData(node) {  
+        if (!node) return null;  
+  
+        let current = node && node.jquery ? node[0] : node;  
+  
+        while (current && !current.card_data) {  
+            current = current.parentNode;  
+        }  
+  
+        return current && current.card_data ? current.card_data : null;  
+    }  
+  
+    function getFocusedCardData(line) {  
+        const container = line && typeof line.render === 'function' ? line.render(true) : null;  
+        if (!container || !container.querySelector) return null;  
+  
+        const focus = container.querySelector('.selector.focus') || container.querySelector('.focus');  
+  
+        return getDomCardData(focus);  
+    }  
+  
+    function attachLineHandlers(main, line, element) {  
+        if (line.__newInterfaceLine) return;  
+        line.__newInterfaceLine = true;  
+  
+        const state = ensureState(main);  
+        const applyToCard = (card) => decorateCard(state, card);  
+  
+        if (element && Array.isArray(element.results)) {  
+            element.results.slice(0, 5).forEach((item) => {  
+                state.info.load(item, { preload: true });  
+            });  
+        }  
+  
+        line.use({  
+            onInstance(card) {  
+                applyToCard(card);  
+            },  
+            onActive(card, itemData) {  
+                const current = getCardData(card, itemData);  
+                if (current) {  
+                    current.__priority = 1;  
+                    state.update(current);  
+                }  
+            },  
+            onToggle() {  
+                setTimeout(() => {  
+                    const domData = getFocusedCardData(line);  
+                    if (domData) state.update(domData);  
+                }, 32);  
+            },  
+            onMore() {  
+                state.reset();  
+            },  
+            onDestroy() {  
+                state.reset();  
+                delete line.__newInterfaceLine;  
+            }  
+        });  
+  
+        if (Array.isArray(line.items) && line.items.length) {  
+            line.items.forEach(applyToCard);  
+        }  
+  
+        if (line.last) {  
+            const lastData = getDomCardData(line.last);  
+            if (lastData) state.update(lastData);  
+        }  
+    }  
+  
+    function wrap(target, method, handler) {  
+        if (!target) return;  
+        const original = typeof target[method] === 'function' ? target[method] : null;  
+        target[method] = function (...args) {  
+            return handler.call(this, original, args);  
+        };  
+    }  
+  
+    function addStyleV3() {  
+        if (addStyleV3.added) return;  
+        addStyleV3.added = true;  
+  
+        Lampa.Template.add('new_interface_style_v3', `<style>  
+.new-interface{  
+    position: relative;  
+    --ni-info-h: clamp(15em, 34vh, 24em);  
+}  
+.new-interface{  
+    --ni-card-w: clamp(35px, 2.8vw, 60px);  
+}  
+  
+.new-interface .card--small,  
+.new-interface .card-more{  
+    width: var(--ni-card-w) !important;  
+}  
+  
+.new-interface .card-more__box{  
+    padding-bottom: 150%;  
+}  
+  
+.new-interface-info{  
+    position: relative;  
+    padding: 1.5em;  
+    height: auto !important;  
+    min-height: 200px !important;  
+    max-height: 250px !important;  
+    overflow: visible !important;  
+    z-index: 3;  
+    display: flex !important;  
+    align-items: center !important;  
+}  
+  
+.new-interface-info:before{  
+    display: none !important;  
+}  
+  
+.new-interface-info__body{  
+    position: relative;  
+    z-index: 1;  
+    width: 100%;  
+    padding-top: 0;  
+    display: block !important;  
+}  
+  
+.new-interface-info__left {  
+    width: 100%;  
+    display: flex;  
+    align-items: center;  
+    min-height: 120px;    
+}  
+  
+.new-interface-info__right{  
+    padding-top: clamp(0.2em, 2.2vh, 1.6em);  
+}  
+  
+.new-interface-info__head{  
+    color: rgba(255, 255, 255, 0.6);  
+    margin-bottom: 1em;  
+    font-size: 1.3em;  
+    min-height: 1em;  
+}  
+  
+.new-interface-info__head span{  
+    color: #fff;  
+}  
+  
+.new-interface-info__title {  
+    font-size: clamp(2.6em, 4.0vw, 3.6em);  
+    font-weight: 600;  
+    margin: 0;  
+    display: flex;  
+    align-items: center;  
+    min-height: 120px;  
+    max-height: 120px;  
+    overflow: visible; 
+}  
+  
+.new-interface-info__title-logo {  
+    max-width: 400px !important;  
+    max-height: var(--ni-logo-max-h, 120px) !important;  
+    width: auto !important;  
+    height: auto !important;  
+    object-fit: contain !important;  
+    object-position: left center !important;  
+}  
+  
+.new-interface-full-logo {  
+    max-height: var(--ni-logo-max-h, 180px) !important;  
+    width: auto !important;  
+    max-width: 100% !important;  
+    object-fit: contain !important;  
+    object-position: left center !important;  
+}  
+  
+.new-interface.ni-hide-captions .card__view ~ .card__title,  
+.new-interface.ni-hide-captions .card__view ~ .card__name,  
+.new-interface.ni-hide-captions .card__view ~ .card__text,  
+.new-interface.ni-hide-captions .card__view ~ .card__details,  
+.new-interface.ni-hide-captions .card__view ~ .card__description,  
+.new-interface.ni-hide-captions .card__view ~ .card__subtitle,  
+.new-interface.ni-hide-captions .card__view ~ .card__year,  
+.new-interface.ni-hide-captions .card__bottom,  
+.new-interface.ni-hide-captions .card__caption{  
+    display: none !important;  
+}  
+  
+.new-interface.ni-hide-captions .card > *:not(.card__view):not(.card__promo){  
+    display: none !important;  
+}  
+  
+.new-interface-info__description{  
+    font-size: 0.87em;  
+    font-weight: 300;  
+    line-height: 1.38;  
+    color: rgba(255, 255, 255, 0.90);  
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);  
+    overflow: hidden;  
+    text-overflow: '.';  
+    display: -webkit-box;  
+    -webkit-line-clamp: 7;  
+    line-clamp: 7;  
+    -webkit-box-orient: vertical;  
+    width: auto;  
+}  
+  
+.new-interface .full-start__background{  
+    height: 108%;  
+    top: -6em;  
+}  
+  
+.new-interface .full-start__rate{  
+    font-size: 1.3em;  
+    margin-right: 0;  
+}  
+  
+.new-interface .full-start__lines{  
+    padding-bottom: env(safe-area-inset-bottom, 0px);  
+}  
+  
+.new-interface .items-line__head{  
+    position: relative;  
+    z-index: 5;  
+    transform: translateY(1vh);  
+}  
+  
+.new-interface{  
+    --ni-lines-up: -1vh;  
+}  
+.new-interface .items-line__body > .scroll.scroll--horizontal,  
+.new-interface .items-line__body .scroll.scroll--horizontal{  
+    position: relative;  
+    top: calc(var(--ni-lines-up) * -1);  
+}  
+  
+.new-interface .card__promo{  
+    display: none;  
+}  
+  
+.new-interface .card .card-watched{  
+    display: none !important;  
+}  
+  
+body.light--version .new-interface-info__body{  
+    width: min(92%, 72em);  
+    padding-top: 1.5em;  
+}  
+  
+@media (max-width: 767px) {  
+    .new-interface-info {  
+        padding: 1em;  
+        min-height: 150px !important;  
+        max-height: 200px !important;  
+    }  
+    .new-interface-info__title {  
+        font-size: 2em;  
+        min-height: 80px;  
+        max-height: 80px;  
+    }  
+    .new-interface-info__title-logo {  
+        max-height: 80px !important;  
+    }  
+    .new-interface {  
+        --ni-card-w: clamp(70px, 18vw, 110px);  
+    }  
+}  
+  
+@media (max-height: 820px){  
+    .new-interface{  
+        --ni-info-h: clamp(13em, 30vh, 20em);  
+        --ni-card-w: clamp(60px, 4.2vw, 90px);  
+    }   
+  
+    .new-interface-info__right{  
+        padding-top: clamp(0.15em, 1.8vh, 1.2em);  
+    }  
+  
+    .new-interface-info__title{  
+        font-size: clamp(2.4em, 3.6vw, 3.1em);  
+    }  
+  
+    .new-interface-info__description{  
+        -webkit-line-clamp: 6;  
+        line-clamp: 6;  
+        font-size: 0.83em;  
+    }  
+}  
+  
+body.advanced--animation:not(.no--animation) .new-interface .card.focus .card__view,  
+body.advanced--animation:not(.no--animation) .new-interface .card--small.focus .card__view{  
+    animation: animation-card-focus 0.2s;  
+}  
+  
+body.advanced--animation:not(.no--animation) .new-interface .card.animate-trigger-enter .card__view,  
+body.advanced--animation:not(.no--animation) .new-interface .card--small.animate-trigger-enter .card__view{  
+    animation: animation-trigger-enter 0.2s forwards;  
+}  
+</style>`);  
+  
+        $('body').append(Lampa.Template.get('new_interface_style_v3', {}, true));  
+    }  
+  
+    class InterfaceInfo {  
+        constructor() {  
+            this.html = null;  
+            this.timer = null;  
+            this.network = new Lampa.Reguest();  
+            this.loaded = {};  
+        }  
+  
+        create() {  
+            if (this.html) return;  
+  
+            this.html = $(`<div class="new-interface-info">  
+                <div class="new-interface-info__body">  
+                    <div class="new-interface-info__left">  
+                        <div class="new-interface-info__head"></div>  
+                        <div class="new-interface-info__title"></div>  
+                    </div>  
+                </div>  
+            </div>`);  
+        }  
+  
+        render(js) {  
+            if (!this.html) this.create();  
+            return js ? this.html[0] : this.html;  
+        }  
+  
+        update(data) {  
+            if (!data) return;  
+            if (!this.html) this.create();  
+            Lampa.Background.change(Lampa.Utils.cardImgBackground(data));  
+            this.load(data);  
+        }  
+  
+        load(data, options) {  
+            if (!data || !data.id) return;  
+  
+            const source = data.source || 'tmdb';  
+            if (source !== 'tmdb' && source !== 'cub') return;  
+            if (!Lampa.TMDB || typeof Lampa.TMDB.api !== 'function' || typeof Lampa.TMDB.key !== 'function') return;  
+  
+            const preload = options && options.preload;  
+  
+            const type = data.media_type === 'tv' || data.name ? 'tv' : 'movie';  
+            const language = Lampa.Storage.get('language');  
+            const shortLang = (language || 'en').split('-')[0];  
+            const url = Lampa.TMDB.api(`${type}/${data.id}?api_key=${Lampa.TMDB.key()}&append_to_response=content_ratings,release_dates,images&include_image_language=${shortLang},en,null&language=${language}`);  
+  
+            this.currentUrl = url;  
+  
+            if (this.loaded[url]) {  
+                if (!preload) this.draw(this.loaded[url]);  
+                return;  
+            }  
+  
+            clearTimeout(this.timer);  
+  
+            this.timer = setTimeout(() => {  
+                this.network.clear();  
+                this.network.timeout(5000);  
+                this.network.silent(url, (movie) => {  
+                    this.loaded[url] = movie;  
+                    if (!preload && this.currentUrl === url) this.draw(movie);  
+                });  
+            }, 0);  
+        }  
+  
+        draw(movie) {  
+            if (!movie || !this.html) return;  
+  
+            const create = ((movie.release_date || movie.first_air_date || '0000') + '').slice(0, 4);  
+            const vote = parseFloat((movie.vote_average || 0) + '').toFixed(1);  
+            const sources = Lampa.Api && Lampa.Api.sources && Lampa.Api.sources.tmdb ? Lampa.Api.sources.tmdb : null;  
+            const countries = sources && typeof sources.parseCountries === 'function' ? sources.parseCountries(movie) : [];  
+            const pg = sources && typeof sources.parsePG === 'function' ? sources.parsePG(movie) : '';  
+  
+            const titleNode = this.html.find('.new-interface-info__title');  
+            const headNode = this.html.find('.new-interface-info__head');  
+            const titleText = movie.title || movie.name || '';  
+  
+            titleNode.text(titleText);  
+            applyInfoTitleLogo(this.html, titleNode, headNode, movie, titleText);  
+        }  
+  
+        empty() {  
+            if (!this.html) return;  
+            this.html.find('.new-interface-info__head').text('---');  
+        }  
+  
+        destroy() {  
+            clearTimeout(this.timer);  
+            this.network.clear();  
+            this.loaded = {};  
+            this.currentUrl = null;  
+  
+            if (this.html) {  
+                this.html.remove();  
+                this.html = null;  
+            }  
+        }  
+    }  
+  
+    if (Lampa.Manifest.app_digital >= 300) {  
+        startPluginV3();  
+        return;  
+    }  
+
     function startPlugin() {  
-        applyStyles();  
-        setupSettings();  
-        init();  
+        window.plugin_interface_ready = true;  
+        var old_interface = Lampa.InteractionMain;  
+        var new_interface = component;  
+  
+        Lampa.InteractionMain = function (object) {  
+            var use = new_interface;  
+            if (!(object.source == 'tmdb' || object.source == 'cub')) use = old_interface;  
+            if (Lampa.Manifest.app_digital < 153) use = old_interface;  
+            return new use(object);  
+        };  
     }  
   
-    if (window.appready) startPlugin();  
-    else Lampa.Listener.follow('app', function (e) { if (e.type === 'ready') startPlugin(); });  
+    if (!window.plugin_interface_ready && !window.plugin_interface_ready_v3) startPlugin();  
+  
 })();
