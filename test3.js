@@ -4,7 +4,7 @@
     if (window.banner_hero_plugin) return;
     window.banner_hero_plugin = true;
 
-    var VERSION = '1.4.1';
+    var VERSION = '1.3.0';
 
     var SETTING = 'banner_hero_enabled';
     var SIZE_SETTING = 'interface_size';
@@ -21,18 +21,6 @@
     var lastCardId = null;
     var lastActivity = null;
     var lastHero = null;
-
-    /* =========================
-       MOBILE
-    ========================= */
-
-    function isMobileDevice() {
-        return !!(
-            Lampa.Platform &&
-            Lampa.Platform.screen &&
-            Lampa.Platform.screen('mobile')
-        );
-    }
 
     /* =========================
        ЛОКАЛІЗАЦІЯ
@@ -58,7 +46,7 @@
     };
 
     /* =========================
-       ШРИФТИ
+       КОНФІГУРАЦІЯ ШРИФТІВ
     ========================= */
 
     var fonts = {
@@ -66,22 +54,18 @@
             family: 'Roboto, Arial, sans-serif',
             url: null
         },
-
         netflix: {
             family: '"Netflix Sans", Arial, sans-serif',
             url: 'https://assets.nflxext.com/ffe/siteui/fonts/netflix-sans/v3/NetflixSans_W_Rg.woff2'
         },
-
         montserrat: {
             family: '"Montserrat", sans-serif',
             url: 'https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap'
         },
-
         inter: {
             family: '"Inter", sans-serif',
             url: 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap'
         },
-
         nunito: {
             family: '"Nunito", sans-serif',
             url: 'https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap'
@@ -93,10 +77,6 @@
     ========================= */
 
     var CSS = [
-        /* =====================
-           БАЗА — TV / DESKTOP
-        ===================== */
-
         '.banner-host{position:relative}',
 
         '.banner-host .activity__body{padding-top:42vh;box-sizing:border-box}',
@@ -119,379 +99,102 @@
 
         '.banner-hero__rate{padding:.1em .5em;border-radius:6px;font-weight:800;background:#1db954;color:#fff}',
 
-        '.banner-hero__descr{font-size:1.1em;line-height:1.45;color:#f5f5f1;opacity:.85;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}',
-
-
-        /* =====================
-           ЛИШЕ МОБІЛЬНИЙ
-        ===================== */
-
-        '@media screen and (max-width:700px){',
-
-            /*
-             * ВАЖЛИВО:
-             * тут немає overflow-x:hidden,
-             * щоб не ламати свайпи Lampa.
-             */
-
-            '.banner-host{',
-                'position:relative;',
-                'width:100%;',
-            '}',
-
-            '.banner-host .activity__body{',
-                'padding-top:52vw;',
-                'box-sizing:border-box;',
-            '}',
-
-            '.banner-hero{',
-                'height:58vw;',
-                'min-height:260px;',
-                'max-height:390px;',
-                'left:0;',
-                'right:0;',
-                'width:100%;',
-                'overflow:hidden;',
-                'pointer-events:none;',
-                'z-index:0;',
-                '-webkit-mask-image:linear-gradient(180deg,#000 50%,transparent 100%);',
-                'mask-image:linear-gradient(180deg,#000 50%,transparent 100%);',
-            '}',
-
-            '.banner-hero__bg{',
-                'inset:0;',
-                'background-size:cover;',
-                'background-position:center 20%;',
-                'transition:opacity .25s ease;',
-                'will-change:opacity;',
-            '}',
-
-            '.banner-hero::after{',
-                'background:',
-                'linear-gradient(180deg,rgba(0,0,0,.05) 0%,rgba(0,0,0,.18) 42%,rgba(0,0,0,.82) 100%),',
-                'linear-gradient(90deg,rgba(0,0,0,.70) 0%,rgba(0,0,0,.30) 60%,rgba(0,0,0,.05) 100%);',
-            '}',
-
-            '.banner-hero__info{',
-                'left:16px;',
-                'right:16px;',
-                'bottom:30px;',
-                'width:auto;',
-                'max-width:calc(100% - 32px);',
-            '}',
-
-            '.banner-hero__logo{',
-                'max-width:72vw;',
-                'max-height:90px;',
-                'width:auto;',
-                'height:auto;',
-                'margin-bottom:7px;',
-                'filter:drop-shadow(0 3px 8px rgba(0,0,0,.65));',
-            '}',
-
-            '.banner-hero__title{',
-                'font-size:clamp(22px,6vw,32px);',
-                'line-height:1.08;',
-                'margin-bottom:6px;',
-                'max-width:95%;',
-                'text-shadow:0 2px 9px rgba(0,0,0,.75);',
-            '}',
-
-            '.banner-hero__meta{',
-                'font-size:clamp(12px,3.2vw,15px);',
-                'gap:6px;',
-                'margin-bottom:6px;',
-            '}',
-
-            '.banner-hero__rate{',
-                'padding:3px 6px;',
-                'border-radius:4px;',
-            '}',
-
-            '.banner-hero__descr{',
-                'font-size:clamp(12px,3.1vw,15px);',
-                'line-height:1.35;',
-                '-webkit-line-clamp:2;',
-                'max-width:92%;',
-            '}',
-
-
-            /* =====================
-               PORTRAIT
-            ===================== */
-
-            '@media screen and (orientation:portrait){',
-
-                '.banner-host .activity__body{',
-                    'padding-top:63vw;',
-                '}',
-
-                '.banner-hero{',
-                    'height:68vw;',
-                    'min-height:280px;',
-                    'max-height:420px;',
-                '}',
-
-                '.banner-hero__info{',
-                    'bottom:28px;',
-                '}',
-
-            '}',
-
-
-            /* =====================
-               LANDSCAPE
-            ===================== */
-
-            '@media screen and (orientation:landscape){',
-
-                '.banner-host .activity__body{',
-                    'padding-top:42vw;',
-                '}',
-
-                '.banner-hero{',
-                    'height:58vh;',
-                    'min-height:220px;',
-                    'max-height:360px;',
-                '}',
-
-                '.banner-hero__info{',
-                    'bottom:24px;',
-                    'max-width:70%;',
-                '}',
-
-                '.banner-hero__descr{',
-                    '-webkit-line-clamp:2;',
-                    'max-width:75%;',
-                '}',
-
-            '}',
-
-
-            /* =====================
-               ДУЖЕ МАЛИЙ ЕКРАН
-            ===================== */
-
-            '@media screen and (max-width:380px){',
-
-                '.banner-host .activity__body{',
-                    'padding-top:285px;',
-                '}',
-
-                '.banner-hero{',
-                    'height:285px;',
-                    'min-height:285px;',
-                '}',
-
-                '.banner-hero__logo{',
-                    'max-width:65vw;',
-                    'max-height:70px;',
-                '}',
-
-                '.banner-hero__title{',
-                    'font-size:22px;',
-                '}',
-
-                '.banner-hero__descr{',
-                    'font-size:12px;',
-                '}',
-
-            '}',
-
-        '}',
-
-        /* =====================
-           SAFE AREA
-        ===================== */
-
-        '@supports (padding:env(safe-area-inset-left)){',
-
-            '@media screen and (max-width:700px){',
-
-                '.banner-hero__info{',
-                    'left:max(16px,env(safe-area-inset-left));',
-                    'right:max(16px,env(safe-area-inset-right));',
-                '}',
-
-            '}',
-
-        '}'
-
+        '.banner-hero__descr{font-size:1.1em;line-height:1.45;color:#f5f5f1;opacity:.85;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}'
     ].join('\n');
 
     function injectStyle() {
-        if (
-            document.getElementById(
-                'banner-hero-style'
-            )
-        ) {
-            return;
-        }
+        if (document.getElementById('banner-hero-style')) return;
 
-        var style =
-            document.createElement(
-                'style'
-            );
+        var style = document.createElement('style');
+        style.id = 'banner-hero-style';
+        style.textContent = CSS;
 
-        style.id =
-            'banner-hero-style';
-
-        style.textContent =
-            CSS;
-
-        document.head.appendChild(
-            style
-        );
+        document.head.appendChild(style);
     }
 
     /* =========================
-       ШРИФТ
+       ЗАСТОСУВАННЯ ШРИФТУ
     ========================= */
 
     function applyFont(fontKey) {
-        var font =
-            fonts[fontKey] ||
-            fonts.default;
+        var font = fonts[fontKey] || fonts.default;
 
-        var oldStyle =
-            document.getElementById(
-                'interface-plus-font-style'
-            );
+        var oldStyle = document.getElementById('interface-plus-font-style');
+        if (oldStyle) oldStyle.remove();
 
-        if (oldStyle) {
-            oldStyle.remove();
-        }
-
-        var oldFontFace =
-            document.getElementById(
-                'interface-plus-fontface'
-            );
-
-        if (oldFontFace) {
-            oldFontFace.remove();
-        }
+        var oldFontFace = document.getElementById('interface-plus-fontface');
+        if (oldFontFace) oldFontFace.remove();
 
         if (font.url) {
-            var fontFaceStyle =
-                document.createElement(
-                    'style'
-                );
+            var fontFaceStyle = document.createElement('style');
+            fontFaceStyle.id = 'interface-plus-fontface';
 
-            fontFaceStyle.id =
-                'interface-plus-fontface';
-
-            if (
-                font.url.indexOf(
-                    'googleapis.com'
-                ) >= 0
-            ) {
-                fontFaceStyle.textContent =
-                    '@import url("' +
-                    font.url +
-                    '");';
+            if (font.url.includes('googleapis.com')) {
+                fontFaceStyle.textContent = '@import url("' + font.url + '");';
             } else {
-                var fontName =
-                    font.family
-                        .split(',')[0]
-                        .replace(
-                            /"/g,
-                            ''
-                        );
-
-                fontFaceStyle.textContent =
-                    '@font-face{' +
-                    'font-family:' +
-                    fontName +
-                    ';src:url("' +
-                    font.url +
-                    '") format("woff2");' +
-                    'font-weight:400;' +
-                    'font-style:normal;' +
-                    '}';
+                var fontName = font.family.split(',')[0].replace(/"/g, '');
+                fontFaceStyle.textContent = '@font-face { font-family: ' + fontName + '; src: url("' + font.url + '") format("woff2"); font-weight: 400; font-style: normal; }';
             }
 
-            document.head.appendChild(
-                fontFaceStyle
-            );
+            document.head.appendChild(fontFaceStyle);
         }
 
-        var style =
-            document.createElement(
-                'style'
-            );
+        var style = document.createElement('style');
+        style.id = 'interface-plus-font-style';
+        style.textContent = `
+            body, .body, * {
+                font-family: ${font.family} !important;
+            }
+            .full-start__title,
+            .full-start__tagline,
+            .card__title,
+            .card__view,
+            .menu__item,
+            .settings__title,
+            .settings__label,
+            .button,
+            .selector,
+            .filter__item,
+            .scroll__title {
+                font-family: ${font.family} !important;
+            }
+        `;
 
-        style.id =
-            'interface-plus-font-style';
-
-        style.textContent =
-            'body,.body,*{' +
-            'font-family:' +
-            font.family +
-            '!important}' +
-
-            '.full-start__title,' +
-            '.full-start__tagline,' +
-            '.card__title,' +
-            '.card__view,' +
-            '.menu__item,' +
-            '.settings__title,' +
-            '.settings__label,' +
-            '.button,' +
-            '.selector,' +
-            '.filter__item,' +
-            '.scroll__title{' +
-            'font-family:' +
-            font.family +
-            '!important}';
-
-        document.head.appendChild(
-            style
-        );
+        document.head.appendChild(style);
     }
 
     /* =========================
-       ENABLE
+       НАЛАШТУВАННЯ
     ========================= */
 
     function isEnabled() {
-        var val =
-            Lampa.Storage.get(
-                SETTING,
-                true
-            );
+        var val = Lampa.Storage.get(SETTING, true);
 
-        return (
-            val === true ||
-            val === 'true'
-        );
+        return val === true || val === 'true';
     }
 
     /* =========================
-       РОЗМІР
+       РОЗМІР ІНТЕРФЕЙСУ
     ========================= */
 
     function updateSize() {
-        var mobile =
-            isMobileDevice();
+        var isMobile =
+            Lampa.Platform &&
+            Lampa.Platform.screen &&
+            Lampa.Platform.screen('mobile');
 
-        var iSize =
-            mobile
-                ? 10.1
-                : parseFloat(
-                    Lampa.Storage.field(
-                        SIZE_SETTING
-                    )
-                ) || 10.6;
+        var iSize = isMobile
+            ? 10.1
+            : parseFloat(
+                Lampa.Storage.field(SIZE_SETTING)
+            ) || 10.6;
 
         var currentSize =
             document.body.getAttribute(
                 'data-banner-interface-size'
             );
 
-        if (
-            currentSize ===
-            String(iSize)
-        ) {
+        if (currentSize === String(iSize)) {
             return;
         }
 
@@ -503,42 +206,26 @@
         document.body.style.fontSize =
             iSize + 'px';
 
-        /*
-         * Не змінюємо кількість карток
-         * на мобільному.
-         *
-         * Це важливо для штатного
-         * горизонтального скролу Lampa.
-         */
         var cardCount = 6;
 
-        if (!mobile) {
-            if (iSize <= 9.6) {
-                cardCount = 8;
-            } else if (iSize <= 11.1) {
-                cardCount = 7;
-            }
+        if (iSize <= 9.6) {
+            cardCount = 8;
+        } else if (iSize <= 11.1) {
+            cardCount = 7;
         }
 
-        patchMaker(
-            cardCount
-        );
+        patchMaker(cardCount);
     }
 
     function patchMaker(cardCount) {
-        if (
-            !Lampa.Maker ||
-            !Lampa.Maker.map
-        ) {
+        if (!Lampa.Maker || !Lampa.Maker.map) {
             return;
         }
 
         ['Line', 'Category'].forEach(
             function (type) {
                 var mapItem =
-                    Lampa.Maker.map(
-                        type
-                    );
+                    Lampa.Maker.map(type);
 
                 if (
                     !mapItem ||
@@ -564,21 +251,15 @@
 
                 mapItem.Items.onInit =
                     function () {
-                        original.call(
-                            this
-                        );
+                        original.call(this);
 
                         var count =
                             mapItem.Items
                                 .__bannerHeroCardCount ||
                             cardCount;
 
-                        if (
-                            type ===
-                            'Line'
-                        ) {
-                            this.view =
-                                count;
+                        if (type === 'Line') {
+                            this.view = count;
                         } else {
                             this.limit_view =
                                 count;
@@ -586,8 +267,7 @@
                     };
 
                 mapItem.Items
-                    .__bannerHeroPatched =
-                    true;
+                    .__bannerHeroPatched = true;
 
                 mapItem.Items
                     .__bannerHeroCardCount =
@@ -597,17 +277,11 @@
     }
 
     /* =========================
-       LOGO
+       LOGO (w500)
     ========================= */
 
-    function loadLogo(
-        data,
-        done
-    ) {
-        if (
-            !data ||
-            !data.id
-        ) {
+    function loadLogo(data, done) {
+        if (!data || !data.id) {
             done('');
             return;
         }
@@ -621,15 +295,12 @@
         }
 
         var type =
-            data.name &&
-            !data.title
+            data.name && !data.title
                 ? 'tv'
                 : 'movie';
 
         var key =
-            type +
-            '_' +
-            data.id;
+            type + '_' + data.id;
 
         if (
             Object.prototype.hasOwnProperty.call(
@@ -637,10 +308,7 @@
                 key
             )
         ) {
-            done(
-                logos[key]
-            );
-
+            done(logos[key]);
             return;
         }
 
@@ -650,9 +318,7 @@
             !Lampa.TMDB.key
         ) {
             logos[key] = '';
-
             done('');
-
             return;
         }
 
@@ -675,41 +341,32 @@
             function (json) {
                 var list =
                     json &&
-                    Array.isArray(
-                        json.logos
-                    )
+                    Array.isArray(json.logos)
                         ? json.logos
                         : [];
 
-                var pick =
-                    null;
+                var pick = null;
 
-                ['uk', 'en', null]
-                    .some(
-                        function (
-                            lang
+                ['uk', 'en', null].some(
+                    function (lang) {
+                        for (
+                            var i = 0;
+                            i < list.length;
+                            i++
                         ) {
-                            for (
-                                var i = 0;
-                                i <
-                                list.length;
-                                i++
+                            if (
+                                list[i]
+                                    .iso_639_1 ===
+                                lang
                             ) {
-                                if (
-                                    list[i]
-                                        .iso_639_1 ===
-                                    lang
-                                ) {
-                                    pick =
-                                        list[i];
-
-                                    return true;
-                                }
+                                pick = list[i];
+                                return true;
                             }
-
-                            return false;
                         }
-                    );
+
+                        return false;
+                    }
+                );
 
                 pick =
                     pick ||
@@ -735,14 +392,11 @@
                     logos[key] = '';
                 }
 
-                done(
-                    logos[key]
-                );
+                done(logos[key]);
             },
 
             function () {
                 logos[key] = '';
-
                 done('');
             }
         );
@@ -762,14 +416,11 @@
             !data.backdrop_path
         ) {
             done('');
-
             return;
         }
 
         var key =
-            String(
-                data.id
-            );
+            String(data.id);
 
         if (
             Object.prototype.hasOwnProperty.call(
@@ -777,29 +428,14 @@
                 key
             )
         ) {
-            done(
-                backdrops[key]
-            );
-
+            done(backdrops[key]);
             return;
         }
-
-        /*
-         * Тільки це відрізняється
-         * для мобільного:
-         *
-         * mobile -> w780
-         * TV     -> w1280
-         */
-        var quality =
-            isMobileDevice()
-                ? 'w780'
-                : 'w1280';
 
         var src =
             Lampa.Api.img(
                 data.backdrop_path,
-                quality
+                'w1280'
             );
 
         var img =
@@ -821,17 +457,14 @@
                 done('');
             };
 
-        img.src =
-            src;
+        img.src = src;
     }
 
     /* =========================
        HERO
     ========================= */
 
-    function heroFor(
-        activity
-    ) {
+    function heroFor(activity) {
         if (!activity) {
             return null;
         }
@@ -850,9 +483,7 @@
             );
 
         if (hero) {
-            cacheHeroElements(
-                hero
-            );
+            cacheHeroElements(hero);
 
             activity.__bannerHero =
                 hero;
@@ -890,9 +521,7 @@
             'banner-host'
         );
 
-        cacheHeroElements(
-            hero
-        );
+        cacheHeroElements(hero);
 
         activity.__bannerHero =
             hero;
@@ -938,7 +567,7 @@
     }
 
     /* =========================
-       SHOW HERO
+       ПОКАЗ БАНЕРА
     ========================= */
 
     function showHero(
@@ -962,9 +591,7 @@
             return;
         }
 
-        cacheHeroElements(
-            hero
-        );
+        cacheHeroElements(hero);
 
         var el =
             hero.__bannerElements;
@@ -1048,8 +675,7 @@
             data,
             function (src) {
                 if (
-                    hero.bannerId !==
-                        id ||
+                    hero.bannerId !== id ||
                     !src
                 ) {
                     return;
@@ -1079,8 +705,7 @@
             data,
             function (src) {
                 if (
-                    hero.bannerId !==
-                        id ||
+                    hero.bannerId !== id ||
                     !src
                 ) {
                     return;
@@ -1138,11 +763,13 @@
             return;
         }
 
-        /*
-         * Знаходимо activity,
-         * але НІЯК не втручаємося
-         * у touch / pointer events.
-         */
+        if (
+            lastCardId ===
+            data.id
+        ) {
+            return;
+        }
+
         var activity =
             card.closest
                 ? card.closest(
@@ -1159,25 +786,9 @@
             return;
         }
 
-        if (
-            lastCardId ===
-            data.id
-        ) {
-            return;
-        }
-
         clearTimeout(
             focusTimer
         );
-
-        /*
-         * Трохи менша затримка
-         * тільки для mobile.
-         */
-        var delay =
-            isMobileDevice()
-                ? 150
-                : 220;
 
         focusTimer =
             setTimeout(
@@ -1202,7 +813,7 @@
                         data
                     );
                 },
-                delay
+                220
             );
     }
 
@@ -1334,23 +945,14 @@
         }
 
         injectStyle();
-
         apply();
-
         updateSize();
 
-        var savedFont =
-            Lampa.Storage.get(
-                FONT_SETTING,
-                'default'
-            );
-
-        applyFont(
-            savedFont
-        );
+        var savedFont = Lampa.Storage.get(FONT_SETTING, 'default');
+        applyFont(savedFont);
 
         /* =====================
-           FOCUS
+           FOCUS LISTENER
         ===================== */
 
         document.addEventListener(
@@ -1395,7 +997,7 @@
         }
 
         /* =====================
-           SETTINGS
+           SETTINGS API
         ===================== */
 
         if (
@@ -1477,58 +1079,29 @@
             });
 
             var fontValues = {
-                default:
-                    lang_data.font_default,
-
-                netflix:
-                    lang_data.font_netflix,
-
-                montserrat:
-                    lang_data.font_montserrat,
-
-                inter:
-                    lang_data.font_inter,
-
-                nunito:
-                    lang_data.font_nunito
+                default: lang_data.font_default,
+                netflix: lang_data.font_netflix,
+                montserrat: lang_data.font_montserrat,
+                inter: lang_data.font_inter,
+                nunito: lang_data.font_nunito
             };
 
             Lampa.SettingsApi.addParam({
                 component:
                     'interface_plus_settings',
-
                 param: {
-                    name:
-                        FONT_SETTING,
-
-                    type:
-                        'select',
-
-                    values:
-                        fontValues,
-
-                    default:
-                        'default'
+                    name: FONT_SETTING,
+                    type: 'select',
+                    values: fontValues,
+                    default: 'default'
                 },
-
                 field: {
-                    name:
-                        lang_data
-                            .font_setting_name,
-
-                    description:
-                        lang_data
-                            .font_setting_descr
+                    name: lang_data.font_setting_name,
+                    description: lang_data.font_setting_descr
                 },
-
-                onChange:
-                    function (
-                        value
-                    ) {
-                        applyFont(
-                            value
-                        );
-                    }
+                onChange: function (value) {
+                    applyFont(value);
+                }
             });
         }
     }
@@ -1571,7 +1144,6 @@
         Lampa.Storage.listener.follow(
             'change',
             function (e) {
-
                 if (
                     e.name ===
                     SIZE_SETTING
@@ -1590,9 +1162,7 @@
                     e.name ===
                     FONT_SETTING
                 ) {
-                    applyFont(
-                        e.value
-                    );
+                    applyFont(e.value);
                 }
             }
         );
