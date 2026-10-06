@@ -1,1171 +1,1198 @@
-(function () {
-    'use strict';
-
-    if (window.banner_hero_plugin) return;
-    window.banner_hero_plugin = true;
-
-    var VERSION = '1.3.0';
-
-    var SETTING = 'banner_hero_enabled';
-    var SIZE_SETTING = 'interface_size';
-    var FONT_SETTING = 'fontchanger_selected';
-
-    /* =========================
-       КЕШ
-    ========================= */
-
-    var logos = Object.create(null);
-    var backdrops = Object.create(null);
-
-    var focusTimer = null;
-    var lastCardId = null;
-    var lastActivity = null;
-    var lastHero = null;
-
-    /* =========================
-       ЛОКАЛІЗАЦІЯ
-    ========================= */
-
-    var lang_data = {
-        banner_settings_name: 'Інтерфейс +',
-        banner_enable_name: 'Динамічні банери',
-        banner_enable_descr: 'Показувати великий банер з фоном і логотипом над рядами карток',
-
-        settings_param_interface_size_mini: 'Міні інтерфейс',
-        settings_param_interface_size_very_small: 'Дуже малий інтерфейс',
-        settings_param_interface_size_small: 'Малий інтерфейс',
-        settings_param_interface_size_medium: 'Середній інтерфейс',
-
-        font_setting_name: 'Шрифт інтерфейсу',
-        font_setting_descr: 'Виберіть стиль шрифту для всього інтерфейсу',
-        font_default: 'За замовчуванням (Roboto)',
-        font_netflix: 'Netflix Sans',
-        font_montserrat: 'Montserrat',
-        font_inter: 'Inter (Сучасний UI)',
-        font_nunito: 'Nunito (М\'який стиль)'
-    };
-
-    /* =========================
-       КОНФІГУРАЦІЯ ШРИФТІВ
-    ========================= */
-
-    var fonts = {
-        default: {
-            family: 'Roboto, Arial, sans-serif',
-            url: null
-        },
-        netflix: {
-            family: '"Netflix Sans", Arial, sans-serif',
-            url: 'https://assets.nflxext.com/ffe/siteui/fonts/netflix-sans/v3/NetflixSans_W_Rg.woff2'
-        },
-        montserrat: {
-            family: '"Montserrat", sans-serif',
-            url: 'https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap'
-        },
-        inter: {
-            family: '"Inter", sans-serif',
-            url: 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap'
-        },
-        nunito: {
-            family: '"Nunito", sans-serif',
-            url: 'https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700&display=swap'
-        }
-    };
-
-    /* =========================
-       CSS
-    ========================= */
-
-    var CSS = [
-        '.banner-host{position:relative}',
-
-        '.banner-host .activity__body{padding-top:42vh;box-sizing:border-box}',
-
-        '.banner-hero{position:absolute;left:0;right:0;top:0;height:50vh;overflow:hidden;pointer-events:none;z-index:0;-webkit-mask-image:linear-gradient(180deg,#000 55%,transparent 100%);mask-image:linear-gradient(180deg,#000 55%,transparent 100%)}',
-
-        '.banner-hero__bg{position:absolute;inset:0;background-size:cover;background-position:center 20%;background-repeat:no-repeat;opacity:0;transition:opacity .35s ease;will-change:opacity}',
-
-        '.banner-hero__bg.show{opacity:1}',
-
-        '.banner-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.85) 0%,rgba(0,0,0,.6) 35%,rgba(0,0,0,0) 70%);pointer-events:none}',
-
-        '.banner-hero__info{position:absolute;left:3em;bottom:5.5em;width:46%;z-index:1}',
-
-        '.banner-hero__logo{max-width:100%;max-height:7em;display:none;margin-bottom:.6em;filter:drop-shadow(0 4px 12px rgba(0,0,0,.6))}',
-
-        '.banner-hero__title{font-size:2.8em;font-weight:900;line-height:1.05;color:#f5f5f1;margin-bottom:.35em;text-shadow:0 3px 14px rgba(0,0,0,.7)}',
-
-        '.banner-hero__meta{font-size:1.15em;color:#f5f5f1;margin-bottom:.6em;display:flex;gap:.8em;align-items:center;flex-wrap:wrap}',
-
-        '.banner-hero__rate{padding:.1em .5em;border-radius:6px;font-weight:800;background:#1db954;color:#fff}',
-
-        '.banner-hero__descr{font-size:1.1em;line-height:1.45;color:#f5f5f1;opacity:.85;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}'
-    ].join('\n');
-
-    function injectStyle() {
-        if (document.getElementById('banner-hero-style')) return;
-
-        var style = document.createElement('style');
-        style.id = 'banner-hero-style';
-        style.textContent = CSS;
-
-        document.head.appendChild(style);
+(function () {  
+    'use strict';  
+  
+    if (typeof Lampa === 'undefined') return;  
+  
+    markSmartTV();  
+  
+    function markSmartTV() {  
+        try {  
+            var ua = (navigator && navigator.userAgent) ? navigator.userAgent : '';  
+            var isTv = false;  
+  
+            if (typeof Lampa !== 'undefined' && Lampa.Platform) {  
+                try {  
+                    if (typeof Lampa.Platform.is === 'function') {  
+                        isTv = isTv || Lampa.Platform.is('tv') || Lampa.Platform.is('smarttv') || Lampa.Platform.is('tizen') || Lampa.Platform.is('webos') || Lampa.Platform.is('netcast');  
+                    }  
+                    if (typeof Lampa.Platform.tv === 'function') {  
+                        isTv = isTv || !!Lampa.Platform.tv();  
+                    }  
+                    if (typeof Lampa.Platform.device === 'string') {  
+                        isTv = isTv || /tv|tizen|webos|netcast|smart/i.test(Lampa.Platform.device);  
+                    }  
+                } catch (e) {}  
+            }  
+  
+            if (!isTv) {  
+                isTv = /(SMART-TV|SmartTV|HbbTV|NetCast|Tizen|Web0S|WebOS|Viera|BRAVIA|Android TV|AFTB|AFTT|AFTM|Fire TV)/i.test(ua);  
+            }  
+  
+            if (isTv && document && document.documentElement) {  
+                document.documentElement.classList.add('is-smarttv');  
+            }  
+        } catch (e) {}  
+    }  
+  
+    const LOGO_CACHE_PREFIX = 'logo_cache_width_based_v1_';  
+  
+    function applyLogoCssVars() {  
+        try {  
+            const h = (Lampa.Storage && typeof Lampa.Storage.get === 'function') ? (Lampa.Storage.get('logo_height', '') || '') : '';  
+            const root = document.documentElement;  
+  
+            if (h) {  
+                root.style.setProperty('--ni-logo-max-h', h);  
+                document.querySelectorAll('.new-interface-info__title-logo, .new-interface-full-logo').forEach(img => {  
+                    img.style.maxHeight = h;  
+                    img.style.setProperty('max-height', h, 'important');  
+                });  
+            } else {  
+                root.style.removeProperty('--ni-logo-max-h');  
+                document.querySelectorAll('.new-interface-info__title-logo, .new-interface-full-logo').forEach(img => {  
+                    img.style.maxHeight = '';  
+                    img.style.removeProperty('max-height');  
+                });  
+            }  
+        } catch (e) { }  
     }
 
-    /* =========================
-       ЗАСТОСУВАННЯ ШРИФТУ
-    ========================= */
-
-    function applyFont(fontKey) {
-        var font = fonts[fontKey] || fonts.default;
-
-        var oldStyle = document.getElementById('interface-plus-font-style');
-        if (oldStyle) oldStyle.remove();
-
-        var oldFontFace = document.getElementById('interface-plus-fontface');
-        if (oldFontFace) oldFontFace.remove();
-
-        if (font.url) {
-            var fontFaceStyle = document.createElement('style');
-            fontFaceStyle.id = 'interface-plus-fontface';
-
-            if (font.url.includes('googleapis.com')) {
-                fontFaceStyle.textContent = '@import url("' + font.url + '");';
-            } else {
-                var fontName = font.family.split(',')[0].replace(/"/g, '');
-                fontFaceStyle.textContent = '@font-face { font-family: ' + fontName + '; src: url("' + font.url + '") format("woff2"); font-weight: 400; font-style: normal; }';
-            }
-
-            document.head.appendChild(fontFaceStyle);
-        }
-
-        var style = document.createElement('style');
-        style.id = 'interface-plus-font-style';
-        style.textContent = `
-            body, .body, * {
-                font-family: ${font.family} !important;
-            }
-            .full-start__title,
-            .full-start__tagline,
-            .card__title,
-            .card__view,
-            .menu__item,
-            .settings__title,
-            .settings__label,
-            .button,
-            .selector,
-            .filter__item,
-            .scroll__title {
-                font-family: ${font.family} !important;
-            }
-        `;
-
-        document.head.appendChild(style);
+    function applyCaptionsClass(container) {  
+        try {  
+            if (!container) return;  
+            const show = !!Lampa.Storage.get('ni_card_captions', true);  
+            container.classList.toggle('ni-hide-captions', !show);  
+        } catch (e) { }  
     }
-
-    /* =========================
-       НАЛАШТУВАННЯ
-    ========================= */
-
-    function isEnabled() {
-        var val = Lampa.Storage.get(SETTING, true);
-
-        return val === true || val === 'true';
-    }
-
-    /* =========================
-       РОЗМІР ІНТЕРФЕЙСУ
-    ========================= */
-
-    function updateSize() {
-        var isMobile =
-            Lampa.Platform &&
-            Lampa.Platform.screen &&
-            Lampa.Platform.screen('mobile');
-
-        var iSize = isMobile
-            ? 10.1
-            : parseFloat(
-                Lampa.Storage.field(SIZE_SETTING)
-            ) || 10.6;
-
-        var currentSize =
-            document.body.getAttribute(
-                'data-banner-interface-size'
-            );
-
-        if (currentSize === String(iSize)) {
-            return;
-        }
-
-        document.body.setAttribute(
-            'data-banner-interface-size',
-            String(iSize)
-        );
-
-        document.body.style.fontSize =
-            iSize + 'px';
-
-        var cardCount = 6;
-
-        if (iSize <= 9.6) {
-            cardCount = 8;
-        } else if (iSize <= 11.1) {
-            cardCount = 7;
-        }
-
-        patchMaker(cardCount);
-    }
-
-    function patchMaker(cardCount) {
-        if (!Lampa.Maker || !Lampa.Maker.map) {
-            return;
-        }
-
-        ['Line', 'Category'].forEach(
-            function (type) {
-                var mapItem =
-                    Lampa.Maker.map(type);
-
-                if (
-                    !mapItem ||
-                    !mapItem.Items ||
-                    !mapItem.Items.onInit
-                ) {
-                    return;
-                }
-
-                if (
-                    mapItem.Items
-                        .__bannerHeroPatched
-                ) {
-                    mapItem.Items
-                        .__bannerHeroCardCount =
-                        cardCount;
-
-                    return;
-                }
-
-                var original =
-                    mapItem.Items.onInit;
-
-                mapItem.Items.onInit =
-                    function () {
-                        original.call(this);
-
-                        var count =
-                            mapItem.Items
-                                .__bannerHeroCardCount ||
-                            cardCount;
-
-                        if (type === 'Line') {
-                            this.view = count;
-                        } else {
-                            this.limit_view =
-                                count;
-                        }
-                    };
-
-                mapItem.Items
-                    .__bannerHeroPatched = true;
-
-                mapItem.Items
-                    .__bannerHeroCardCount =
-                    cardCount;
-            }
-        );
-    }
-
-    /* =========================
-       LOGO (w500)
-    ========================= */
-
-    function loadLogo(data, done) {
-        if (!data || !data.id) {
-            done('');
-            return;
-        }
-
-        if (
-            data.source &&
-            data.source !== 'tmdb'
-        ) {
-            done('');
-            return;
-        }
-
-        var type =
-            data.name && !data.title
-                ? 'tv'
-                : 'movie';
-
-        var key =
-            type + '_' + data.id;
-
-        if (
-            Object.prototype.hasOwnProperty.call(
-                logos,
-                key
-            )
-        ) {
-            done(logos[key]);
-            return;
-        }
-
-        if (
-            !Lampa.TMDB ||
-            !Lampa.TMDB.api ||
-            !Lampa.TMDB.key
-        ) {
-            logos[key] = '';
-            done('');
-            return;
-        }
-
-        var url =
-            Lampa.TMDB.api(
-                type +
-                '/' +
-                data.id +
-                '/images?api_key=' +
-                Lampa.TMDB.key() +
-                '&include_image_language=uk,en,null'
-            );
-
-        var network =
-            new Lampa.Reguest();
-
-        network.silent(
-            url,
-
-            function (json) {
-                var list =
-                    json &&
-                    Array.isArray(json.logos)
-                        ? json.logos
-                        : [];
-
-                var pick = null;
-
-                ['uk', 'en', null].some(
-                    function (lang) {
-                        for (
-                            var i = 0;
-                            i < list.length;
-                            i++
-                        ) {
-                            if (
-                                list[i]
-                                    .iso_639_1 ===
-                                lang
-                            ) {
-                                pick = list[i];
-                                return true;
-                            }
-                        }
-
-                        return false;
-                    }
-                );
-
-                pick =
-                    pick ||
-                    list[0];
-
-                if (
-                    pick &&
-                    pick.file_path
-                ) {
-                    var path =
-                        pick.file_path
-                            .replace(
-                                '.svg',
-                                '.png'
-                            );
-
-                    logos[key] =
-                        Lampa.TMDB.image(
-                            't/p/w500' +
-                            path
-                        );
-                } else {
-                    logos[key] = '';
-                }
-
-                done(logos[key]);
-            },
-
-            function () {
-                logos[key] = '';
-                done('');
-            }
-        );
-    }
-
-    /* =========================
-       BACKDROP
-    ========================= */
-
-    function loadBackdrop(
-        data,
-        done
-    ) {
-        if (
-            !data ||
-            !data.id ||
-            !data.backdrop_path
-        ) {
-            done('');
-            return;
-        }
-
-        var key =
-            String(data.id);
-
-        if (
-            Object.prototype.hasOwnProperty.call(
-                backdrops,
-                key
-            )
-        ) {
-            done(backdrops[key]);
-            return;
-        }
-
-        var src =
-            Lampa.Api.img(
-                data.backdrop_path,
-                'w1280'
-            );
-
-        var img =
-            new Image();
-
-        img.onload =
-            function () {
-                backdrops[key] =
-                    src;
-
-                done(src);
-            };
-
-        img.onerror =
-            function () {
-                backdrops[key] =
-                    '';
-
-                done('');
-            };
-
-        img.src = src;
-    }
-
-    /* =========================
-       HERO
-    ========================= */
-
-    function heroFor(activity) {
-        if (!activity) {
-            return null;
-        }
-
-        if (
-            activity.__bannerHero &&
-            activity.__bannerHero.parentNode ===
-                activity
-        ) {
-            return activity.__bannerHero;
-        }
-
-        var hero =
-            activity.querySelector(
-                '.banner-hero'
-            );
-
-        if (hero) {
-            cacheHeroElements(hero);
-
-            activity.__bannerHero =
-                hero;
-
-            activity.classList.add(
-                'banner-host'
-            );
-
-            return hero;
-        }
-
-        hero =
-            document.createElement(
-                'div'
-            );
-
-        hero.className =
-            'banner-hero';
-
-        hero.innerHTML =
-            '<div class="banner-hero__bg"></div>' +
-            '<div class="banner-hero__info">' +
-                '<img class="banner-hero__logo" />' +
-                '<div class="banner-hero__title"></div>' +
-                '<div class="banner-hero__meta"></div>' +
-                '<div class="banner-hero__descr"></div>' +
-            '</div>';
-
-        activity.insertBefore(
-            hero,
-            activity.firstChild
-        );
-
-        activity.classList.add(
-            'banner-host'
-        );
-
-        cacheHeroElements(hero);
-
-        activity.__bannerHero =
-            hero;
-
-        return hero;
-    }
-
-    function cacheHeroElements(
-        hero
-    ) {
-        if (
-            hero.__bannerElements
-        ) {
-            return;
-        }
-
-        hero.__bannerElements = {
-            bg:
-                hero.querySelector(
-                    '.banner-hero__bg'
-                ),
-
-            logo:
-                hero.querySelector(
-                    '.banner-hero__logo'
-                ),
-
-            title:
-                hero.querySelector(
-                    '.banner-hero__title'
-                ),
-
-            meta:
-                hero.querySelector(
-                    '.banner-hero__meta'
-                ),
-
-            descr:
-                hero.querySelector(
-                    '.banner-hero__descr'
-                )
-        };
-    }
-
-    /* =========================
-       ПОКАЗ БАНЕРА
-    ========================= */
-
-    function showHero(
-        hero,
-        data
-    ) {
-        if (
-            !hero ||
-            !data
-        ) {
-            return;
-        }
-
-        var id =
-            data.id;
-
-        if (
-            hero.bannerId === id &&
-            hero.bannerData
-        ) {
-            return;
-        }
-
-        cacheHeroElements(hero);
-
-        var el =
-            hero.__bannerElements;
-
-        hero.bannerId =
-            id;
-
-        hero.bannerData =
-            data;
-
-        var title =
-            data.title ||
-            data.name ||
-            '';
-
-        el.title.textContent =
-            title;
-
-        el.title.style.display =
-            '';
-
-        el.logo.style.display =
-            'none';
-
-        var meta = [];
-
-        var vote =
-            parseFloat(
-                data.vote_average
-            );
-
-        if (vote) {
-            meta.push(
-                '<span class="banner-hero__rate">' +
-                vote.toFixed(1) +
-                '</span>'
-            );
-        }
-
-        var year =
-            (
-                data.release_date ||
-                data.first_air_date ||
-                ''
-            ) + '';
-
-        year =
-            year.slice(0, 4);
-
-        if (year) {
-            meta.push(
-                '<span>' +
-                year +
-                '</span>'
-            );
-        }
-
-        meta.push(
-            '<span>' +
-            (
-                data.name &&
-                !data.title
-                    ? 'Серіал'
-                    : 'Фільм'
-            ) +
-            '</span>'
-        );
-
-        el.meta.innerHTML =
-            meta.join('');
-
-        el.descr.textContent =
-            data.overview ||
-            '';
-
-        el.bg.classList.remove(
-            'show'
-        );
-
-        loadBackdrop(
-            data,
-            function (src) {
-                if (
-                    hero.bannerId !== id ||
-                    !src
-                ) {
-                    return;
-                }
-
-                el.bg.style.backgroundImage =
-                    'url("' +
-                    src +
-                    '")';
-
-                requestAnimationFrame(
-                    function () {
-                        if (
-                            hero.bannerId ===
-                            id
-                        ) {
-                            el.bg.classList.add(
-                                'show'
-                            );
-                        }
-                    }
-                );
-            }
-        );
-
-        loadLogo(
-            data,
-            function (src) {
-                if (
-                    hero.bannerId !== id ||
-                    !src
-                ) {
-                    return;
-                }
-
-                el.logo.onload =
-                    function () {
-                        if (
-                            hero.bannerId !==
-                            id
-                        ) {
-                            return;
-                        }
-
-                        el.logo.style.display =
-                            'block';
-
-                        el.title.style.display =
-                            'none';
-                    };
-
-                el.logo.src =
-                    src;
-            }
-        );
-    }
-
-    /* =========================
-       FOCUS
-    ========================= */
-
-    function onCardFocus(e) {
-        if (!isEnabled()) {
-            return;
-        }
-
-        var card =
-            e.target;
-
-        if (
-            !card ||
-            !card.classList ||
-            !card.classList.contains(
-                'card'
-            ) ||
-            !card.card_data
-        ) {
-            return;
-        }
-
-        var data =
-            card.card_data;
-
-        if (!data.id) {
-            return;
-        }
-
-        if (
-            lastCardId ===
-            data.id
-        ) {
-            return;
-        }
-
-        var activity =
-            card.closest
-                ? card.closest(
-                    '.activity'
-                )
-                : null;
-
-        if (
-            !activity ||
-            !activity.classList.contains(
-                'banner-host'
-            )
-        ) {
-            return;
-        }
-
-        clearTimeout(
-            focusTimer
-        );
-
-        focusTimer =
-            setTimeout(
-                function () {
-                    lastCardId =
-                        data.id;
-
-                    lastActivity =
-                        activity;
-
-                    var hero =
-                        activity.__bannerHero ||
-                        heroFor(
-                            activity
-                        );
-
-                    lastHero =
-                        hero;
-
-                    showHero(
-                        hero,
-                        data
-                    );
-                },
-                220
-            );
-    }
-
-    /* =========================
-       ACTIVITY
-    ========================= */
-
-    function attach(
-        object
-    ) {
-        if (
-            !isEnabled() ||
-            !object ||
-            ['main', 'category']
-                .indexOf(
-                    object.component
-                ) < 0
-        ) {
-            return;
-        }
-
-        var render =
-            object.activity &&
-            object.activity.render &&
-            object.activity.render(
-                true
-            );
-
-        var el =
-            render &&
-            render.jquery
-                ? render[0]
-                : render;
-
-        if (
-            el &&
-            el.classList
-        ) {
-            heroFor(el);
-        }
-    }
-
-    /* =========================
-       APPLY
-    ========================= */
-
-    function apply() {
-        var on =
-            isEnabled();
-
-        document.body.classList.toggle(
-            'banner-enabled',
-            on
-        );
-
-        if (!on) {
-            clearTimeout(
-                focusTimer
-            );
-
-            lastCardId =
-                null;
-
-            lastActivity =
-                null;
-
-            lastHero =
-                null;
-        }
-    }
-
-    /* =========================
-       INIT
-    ========================= */
-
-    function init() {
-        if (
-            window.Lampa &&
-            Lampa.Lang
-        ) {
-            Lampa.Lang.add(
-                lang_data
-            );
-        }
-
-        /* =====================
-           PARAMS
-        ===================== */
-
-        if (Lampa.Params) {
-            if (
-                !Lampa.Params.values
-            ) {
-                Lampa.Params.values =
-                    {};
-            }
-
-            Lampa.Params.values[
-                SIZE_SETTING
-            ] = {
-                '09.1':
-                    lang_data
-                        .settings_param_interface_size_mini,
-
-                '09.6':
-                    lang_data
-                        .settings_param_interface_size_very_small,
-
-                '10.1':
-                    lang_data
-                        .settings_param_interface_size_small,
-
-                '10.6':
-                    lang_data
-                        .settings_param_interface_size_medium
-            };
-
-            if (
-                Lampa.Params.select
-            ) {
-                Lampa.Params.select(
-                    SIZE_SETTING,
-                    Lampa.Params.values[
-                        SIZE_SETTING
-                    ],
-                    '10.6'
-                );
-            }
-        }
-
-        injectStyle();
-        apply();
-        updateSize();
-
-        var savedFont = Lampa.Storage.get(FONT_SETTING, 'default');
-        applyFont(savedFont);
-
-        /* =====================
-           FOCUS LISTENER
-        ===================== */
-
-        document.addEventListener(
-            'hover:focus',
-            onCardFocus,
-            true
-        );
-
-        /* =====================
-           ACTIVITY
-        ===================== */
-
-        Lampa.Listener.follow(
-            'activity',
-            function (e) {
-                if (
-                    e.type ===
-                    'start'
-                ) {
-                    requestAnimationFrame(
-                        function () {
-                            attach(
-                                e.object
-                            );
-                        }
-                    );
-                }
-            }
-        );
-
-        if (
-            Lampa.Activity &&
-            Lampa.Activity.active
-        ) {
-            requestAnimationFrame(
-                function () {
-                    attach(
-                        Lampa.Activity.active()
-                    );
-                }
-            );
-        }
-
-        /* =====================
-           SETTINGS API
-        ===================== */
-
-        if (
-            Lampa.SettingsApi
-        ) {
-            Lampa.SettingsApi.addComponent({
-                component:
-                    'interface_plus_settings',
-
-                name:
-                    lang_data
-                        .banner_settings_name,
-
-                icon:
-                    '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">' +
-                    '<path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h2v7H7zm4-3h2v10h-2zm4 5h2v5h-2z"/>' +
-                    '</svg>'
-            });
-
-            Lampa.SettingsApi.addParam({
-                component:
-                    'interface_plus_settings',
-
-                param: {
-                    name:
-                        SETTING,
-
-                    type:
-                        'trigger',
-
-                    default:
-                        true
-                },
-
-                field: {
-                    name:
-                        lang_data
-                            .banner_enable_name,
-
-                    description:
-                        lang_data
-                            .banner_enable_descr
-                },
-
-                onChange:
-                    apply
-            });
-
-            Lampa.SettingsApi.addParam({
-                component:
-                    'interface_plus_settings',
-
-                param: {
-                    name:
-                        SIZE_SETTING,
-
-                    type:
-                        'select',
-
-                    values:
-                        Lampa.Params.values[
-                            SIZE_SETTING
-                        ],
-
-                    default:
-                        '10.6'
-                },
-
-                field: {
-                    name:
-                        'Розмір інтерфейсу',
-
-                    description:
-                        'Виберіть бажаний масштаб елементів інтерфейсу'
-                },
-
-                onChange:
-                    updateSize
-            });
-
-            var fontValues = {
-                default: lang_data.font_default,
-                netflix: lang_data.font_netflix,
-                montserrat: lang_data.font_montserrat,
-                inter: lang_data.font_inter,
-                nunito: lang_data.font_nunito
-            };
-
-            Lampa.SettingsApi.addParam({
-                component:
-                    'interface_plus_settings',
-                param: {
-                    name: FONT_SETTING,
-                    type: 'select',
-                    values: fontValues,
-                    default: 'default'
-                },
-                field: {
-                    name: lang_data.font_setting_name,
-                    description: lang_data.font_setting_descr
-                },
-                onChange: function (value) {
-                    applyFont(value);
-                }
-            });
-        }
-    }
-
-    /* =========================
-       START
-    ========================= */
-
-    if (window.appready) {
-        setTimeout(
-            init,
-            500
-        );
-    } else {
-        Lampa.Listener.follow(
-            'app',
-            function (e) {
-                if (
-                    e.type ===
-                    'ready'
-                ) {
-                    setTimeout(
-                        init,
-                        500
-                    );
-                }
-            }
-        );
-    }
-
-    /* =========================
-       STORAGE
-    ========================= */
-
-    if (
-        window.Lampa &&
-        Lampa.Storage &&
-        Lampa.Storage.listener
-    ) {
-        Lampa.Storage.listener.follow(
-            'change',
-            function (e) {
-                if (
-                    e.name ===
-                    SIZE_SETTING
-                ) {
-                    updateSize();
-                }
-
-                if (
-                    e.name ===
-                    SETTING
-                ) {
-                    apply();
-                }
-
-                if (
-                    e.name ===
-                    FONT_SETTING
-                ) {
-                    applyFont(e.value);
-                }
-            }
-        );
-    }
-
+  
+    function applyCaptionsToAll() {  
+        try {  
+            document.querySelectorAll('.new-interface').forEach((el) => applyCaptionsClass(el));  
+        } catch (e) { }  
+    }  
+  
+    function initInterface2Settings() {  
+        if (window.__ni_interface2_settings_ready) return;  
+        window.__ni_interface2_settings_ready = true;  
+  
+        if (!Lampa.SettingsApi || typeof Lampa.SettingsApi.addParam !== 'function') return;  
+  
+        const add = (cfg) => { try { Lampa.SettingsApi.addParam(cfg); } catch (e) { } };  
+  
+        add({  
+            component: 'interface',  
+            param: { name: 'logo_glav', type: 'select', values: { 1: 'Приховати', 0: 'Відображати' }, default: '0' },  
+            field: { name: 'Логотипи замість назв', description: 'Відображає логотипи фільмів замість тексту' },  
+            onChange: applyLogoCssVars  
+        });  
+  
+        add({  
+            component: 'interface',  
+            param: {  
+                name: 'logo_lang',  
+                type: 'select',  
+                values: {  
+                    '': 'Як в Lampa',  
+                    uk: 'Українська',  
+                    en: 'English',  
+                    be: 'Білоруська',  
+                    kz: 'Қазақша',  
+                    pt: 'Português',  
+                    es: 'Español',  
+                    fr: 'Français',  
+                    de: 'Deutsch',  
+                    it: 'Italiano'  
+                },  
+                default: ''  
+            },  
+            field: { name: 'Мова логотипа', description: 'Пріоритетна мова для пошуку логотипа' }  
+        });  
+  
+        add({  
+            component: 'interface',  
+            param: { name: 'logo_size', type: 'select', values: { w300: 'w300', w500: 'w500', w780: 'w780', original: 'Оригінал' }, default: 'original' },  
+            field: { name: 'Розмір логотипа', description: 'Роздільна здатність завантажуваного зображення' }  
+        });  
+  
+        add({  
+            component: 'interface',  
+            param: {  
+                name: 'logo_height',  
+                type: 'select',  
+                values: {  
+                    '': 'Авто (як в темі)',  
+                    '2.5em': '2.5em',  
+                    '3em': '3em',  
+                    '3.5em': '3.5em',  
+                    '4em': '4em',  
+                    '5em': '5em',  
+                    '6em': '6em',  
+                    '7em': '7em',  
+                    '8em': '8em',  
+                    '10vh': '10vh'  
+                },  
+                default: ''  
+            },  
+            field: { name: 'Висота логотипів', description: 'Максимальна висота логотипів (в інфо-блоці та в повній картці)' },  
+            onChange: applyLogoCssVars  
+        });  
+  
+        add({  
+            component: 'interface',  
+            param: { name: 'logo_animation_type', type: 'select', values: { js: 'JavaScript', css: 'CSS' }, default: 'css' },  
+            field: { name: 'Тип анімації логотипів', description: 'Спосіб анімації логотипів' }  
+        });  
+  
+        add({  
+            component: 'interface',  
+            param: { name: 'logo_hide_year', type: 'trigger', default: !0 },  
+            field: { name: 'Приховати рік і країну', description: 'Приховує інформацію над логотипом' }  
+        });  
+  
+        add({  
+            component: 'interface',  
+            param: { name: 'logo_use_text_height', type: 'trigger', default: !1 },  
+            field: { name: 'Логотип за висотою тексту', description: 'Розмір логотипа дорівнює висоті тексту' }  
+        });  
+  
+        add({  
+            component: 'interface',  
+            param: { name: 'logo_clear_cache', type: 'button' },  
+            field: { name: 'Скинути кеш логотипів', description: 'Натисніть для очищення кешу зображень' },  
+            onChange: function () {  
+                Lampa.Select.show({  
+                    title: 'Скинути кеш?',  
+                    items: [{ title: 'Так', confirm: !0 }, { title: 'Ні' }],  
+                    onSelect: function (e) {  
+                        if (e.confirm) {  
+                            const keys = [];  
+                            for (let i = 0; i < localStorage.length; i++) {  
+                                const k = localStorage.key(i);  
+                                if (k && k.indexOf(LOGO_CACHE_PREFIX) !== -1) keys.push(k);  
+                            }  
+                            keys.forEach((k) => localStorage.removeItem(k));  
+                            window.location.reload();  
+                        } else {  
+                            Lampa.Controller.toggle('settings_component');  
+                        }  
+                    },  
+                    onBack: function () {  
+                        Lampa.Controller.toggle('settings_component');  
+                    }  
+                });  
+            }  
+        });  
+  
+        add({  
+            component: 'interface',  
+            param: { name: 'ni_card_captions', type: 'trigger', default: true },  
+            field: { name: 'Підписи під картками', description: 'Показувати / приховувати назви (і рік) під постерами в лініях' },  
+            onChange: function () {  
+                applyCaptionsToAll();  
+            }  
+        });  
+  
+        applyLogoCssVars();  
+        applyCaptionsToAll();  
+    }  
+  
+    function animateOpacity(el, from, to, duration, done) {  
+        if (!el) return done && done();  
+        let start = null;  
+        const ease = (t) => 1 - Math.pow(1 - t, 3);  
+  
+        requestAnimationFrame(function step(ts) {  
+            if (!start) start = ts;  
+            const p = Math.min((ts - start) / duration, 1);  
+            el.style.opacity = (from + (to - from) * ease(p)).toString();  
+            if (p < 1) requestAnimationFrame(step);  
+            else if (done) done();  
+        });  
+    }  
+  
+    class LogoEngine {  
+        constructor() {  
+            this.pending = {};  
+        }  
+  
+        enabled() {  
+            return (Lampa.Storage.get('logo_glav', '0') + '') !== '1';  
+        }  
+  
+        lang() {  
+            const forced = (Lampa.Storage.get('logo_lang', '') || '') + '';  
+            const base = forced || (Lampa.Storage.get('language') || 'en') + '';  
+            return (base.split('-')[0] || 'en');  
+        }  
+  
+        size() {  
+            return (Lampa.Storage.get('logo_size', 'original') || 'original') + '';  
+        }  
+  
+        animationType() {  
+            return (Lampa.Storage.get('logo_animation_type', 'css') || 'css') + '';  
+        }  
+  
+        useTextHeight() {  
+            return !!Lampa.Storage.get('logo_use_text_height', !1);  
+        }  
+  
+        cacheKey(type, id, lang) {  
+            return `${LOGO_CACHE_PREFIX}${type}_${id}_${lang}`;  
+        }  
+  
+        flush(key, value) {  
+            const list = this.pending[key] || [];  
+            delete this.pending[key];  
+            list.forEach((fn) => { try { if (fn) fn(value); } catch (e) { } });  
+        }  
+  
+        resolveFromImages(item, lang) {  
+            try {  
+                if (!item || !item.images || !Array.isArray(item.images.logos) || !item.images.logos.length) return null;  
+  
+                const logos = item.images.logos.slice();  
+                const pick = (iso) => {  
+                    for (let i = 0; i < logos.length; i++) {  
+                        if (logos[i] && logos[i].iso_639_1 === iso) return logos[i].file_path;  
+                    }  
+                    return null;  
+                };  
+  
+                return pick(lang) || pick('en') || (logos[0] && logos[0].file_path) || null;  
+            } catch (e) {  
+                return null;  
+            }  
+        }  
+  
+        getLogoUrl(item, cb) {  
+            try {  
+                if (!item || !item.id) return cb && cb(null);  
+  
+                const source = item.source || 'tmdb';  
+                if (source !== 'tmdb' && source !== 'cub') return cb && cb(null);  
+  
+                if (!Lampa.TMDB || typeof Lampa.TMDB.api !== 'function' || typeof Lampa.TMDB.key !== 'function') return cb && cb(null);  
+  
+                const type = (item.media_type === 'tv' || item.name) ? 'tv' : 'movie';  
+                const lang = this.lang();  
+                const key = this.cacheKey(type, item.id, lang);  
+  
+                const cached = localStorage.getItem(key);  
+                if (cached) {  
+                    if (cached === 'none') return cb && cb(null);  
+                    return cb && cb(cached);  
+                }  
+  
+                const fromDetails = this.resolveFromImages(item, lang);  
+                if (fromDetails) {  
+                    const size = this.size();  
+                    const normalized = (fromDetails + '').replace('.svg', '.png');  
+                    const logoUrl = Lampa.TMDB.image('/t/p/' + size + normalized);  
+                    localStorage.setItem(key, logoUrl);  
+                    return cb && cb(logoUrl);  
+                }  
+  
+                if (this.pending[key]) {  
+                    this.pending[key].push(cb);  
+                    return;  
+                }  
+  
+                this.pending[key] = [cb];  
+  
+                if (typeof $ === 'undefined' || !$.get) {  
+                    localStorage.setItem(key, 'none');  
+                    this.flush(key, null);  
+                    return;  
+                }  
+  
+                const url = Lampa.TMDB.api(`${type}/${item.id}/images?api_key=${Lampa.TMDB.key()}&include_image_language=${lang},en,null`);  
+                const priority = item.__priority || 0;  
+  
+                $.get(url, (res) => {  
+                    let filePath = null;  
+  
+                    if (res && Array.isArray(res.logos) && res.logos.length) {  
+                        for (let i = 0; i < res.logos.length; i++) {  
+                            if (res.logos[i] && res.logos[i].iso_639_1 === lang) { filePath = res.logos[i].file_path; break; }  
+                        }  
+                        if (!filePath) {  
+                            for (let i = 0; i < res.logos.length; i++) {  
+                                if (res.logos[i] && res.logos[i].iso_639_1 === 'en') { filePath = res.logos[i].file_path; break; }  
+                            }  
+                        }  
+                        if (!filePath) filePath = res.logos[0] && res.logos[0].file_path;  
+                    }  
+  
+                    if (filePath) {  
+                        const size = this.size();  
+                        const normalized = (filePath + '').replace('.svg', '.png');  
+                        const logoUrl = Lampa.TMDB.image('/t/p/' + size + normalized);  
+                        localStorage.setItem(key, logoUrl);  
+                        this.flush(key, logoUrl);  
+                    } else {  
+                        localStorage.setItem(key, 'none');  
+                        this.flush(key, null);  
+                    }  
+                }).fail(() => {  
+                    localStorage.setItem(key, 'none');  
+                    this.flush(key, null);  
+                });  
+            } catch (e) {  
+                if (cb) cb(null);  
+            }  
+        }  
+  
+        setImageSizing(img, heightPx) {  
+            if (!img) return;  
+  
+            img.style.height = '';  
+            img.style.width = '';  
+            img.style.maxHeight = '';  
+            img.style.maxWidth = '';  
+            img.style.objectFit = 'contain';  
+            img.style.objectPosition = 'left center';  
+  
+            const logoHeight = Lampa.Storage.get('logo_height', '');  
+            if (logoHeight) {  
+                img.style.maxHeight = logoHeight;  
+                img.style.setProperty('max-height', logoHeight, 'important');  
+            } else {  
+                img.style.maxHeight = '120px';  
+                img.style.setProperty('max-height', '120px', 'important');  
+            }  
+  
+            if (this.useTextHeight() && heightPx && heightPx > 0 && !logoHeight) {  
+                const scaledHeight = Math.min(heightPx * 1.2, 120);  
+                img.style.height = `${scaledHeight}px`;  
+                img.style.width = 'auto';  
+                img.style.maxWidth = '400px';  
+            }  
+        }  
+
+        swapContent(container, newNode) {  
+            if (!container) return;  
+            const type = this.animationType();  
+  
+            if (container.__ni_logo_timer) {  
+                clearTimeout(container.__ni_logo_timer);  
+                container.__ni_logo_timer = null;  
+            }  
+  
+            if (type === 'js') {  
+                container.style.transition = 'none';  
+                animateOpacity(container, 1, 0, 200, () => {  
+                    container.innerHTML = '';  
+                    if (typeof newNode === 'string') container.textContent = newNode;  
+                    else container.appendChild(newNode);  
+                    container.style.opacity = '0';  
+                    animateOpacity(container, 0, 1, 300);  
+                });  
+            } else {  
+                container.style.transition = 'opacity 0.2s ease';  
+                container.style.opacity = '0';  
+                container.__ni_logo_timer = setTimeout(() => {  
+                    container.__ni_logo_timer = null;  
+                    container.innerHTML = '';  
+                    if (typeof newNode === 'string') container.textContent = newNode;  
+                    else container.appendChild(newNode);  
+                    container.style.transition = 'opacity 0.3s ease';  
+                    container.style.opacity = '1';  
+                }, 100);  
+            }  
+        }  
+  
+        syncFullHead(container, logoActive) {  
+            try {  
+                if (!container || typeof container.find !== 'function') return;  
+  
+                const headNode = container.find('.full-start-new__head');  
+                const detailsNode = container.find('.full-start-new__details');  
+  
+                if (!headNode || !headNode.length || !detailsNode || !detailsNode.length) return;  
+  
+                const headEl = headNode[0];  
+                const detailsEl = detailsNode[0];  
+  
+                if (!headEl || !detailsEl) return;  
+  
+                const moved = detailsEl.querySelector ? detailsEl.querySelector('.logo-moved-head') : null;  
+                const movedSep = detailsEl.querySelector ? detailsEl.querySelector('.logo-moved-separator') : null;  
+  
+                const wantMove = !!logoActive && !!Lampa.Storage.get('logo_hide_year', !0);  
+  
+                if (!wantMove) {  
+                    if (moved && moved.parentNode) moved.parentNode.removeChild(moved);  
+                    if (movedSep && movedSep.parentNode) movedSep.parentNode.removeChild(movedSep);  
+  
+                    headEl.style.display = '';  
+                    headEl.style.opacity = '';  
+                    headEl.style.transition = '';  
+                    return;  
+                }  
+  
+                if (moved) {  
+                    headEl.style.display = 'none';  
+                    return;  
+                }  
+  
+                const html = (headEl.innerHTML || '').trim();  
+                if (!html) return;  
+  
+                const headSpan = document.createElement('span');  
+                headSpan.className = 'logo-moved-head';  
+                headSpan.innerHTML = html;  
+  
+                const sep = document.createElement('span');  
+                sep.className = 'full-start-new__split logo-moved-separator';  
+                sep.textContent = '●';  
+  
+                if (detailsEl.children && detailsEl.children.length > 0) detailsEl.appendChild(sep);  
+                detailsEl.appendChild(headSpan);  
+  
+                headEl.style.display = 'none';  
+            } catch (e) { }  
+        }  
+  
+        applyToFull(activity, item) {  
+            try {  
+                if (!activity || typeof activity.render !== 'function' || !item) return;  
+  
+                const container = activity.render();  
+                if (!container || typeof container.find !== 'function') return;  
+  
+                const titleNode = container.find('.full-start-new__title, .full-start__title');  
+                if (!titleNode || !titleNode.length) return;  
+  
+                const titleEl = titleNode[0];  
+                const titleText = ((item.title || item.name || item.original_title || item.original_name || '') + '').trim() || (titleNode.text() + '');  
+  
+                if (!titleEl.__ni_full_title_text) titleEl.__ni_full_title_text = titleText;  
+                const originalText = titleEl.__ni_full_title_text || titleText;  
+  
+                if (!this.enabled()) {  
+                    this.syncFullHead(container, false);  
+                    const existImg = titleEl.querySelector && titleEl.querySelector('img.new-interface-full-logo');  
+                    if (existImg) this.swapContent(titleEl, originalText);  
+                    else if (titleNode.text() !== originalText) titleNode.text(originalText);  
+                    return;  
+                }  
+  
+                if (titleNode.text() !== originalText) titleNode.text(originalText);  
+                const textHeightPx = titleEl.getBoundingClientRect ? Math.round(titleEl.getBoundingClientRect().height) : 0;  
+  
+                const requestId = (titleEl.__ni_logo_req_id || 0) + 1;  
+                titleEl.__ni_logo_req_id = requestId;  
+  
+                this.getLogoUrl(item, (url) => {  
+                    if (titleEl.__ni_logo_req_id !== requestId) return;  
+                    if (!titleEl.isConnected) return;  
+  
+                    if (!url) {  
+                        this.syncFullHead(container, false);  
+                        if (titleEl.querySelector && titleEl.querySelector('img.new-interface-full-logo')) this.swapContent(titleEl, originalText);  
+                        else if (titleNode.text() !== originalText) titleNode.text(originalText);  
+                        return;  
+                    }  
+  
+                    const img = new Image();  
+                    img.className = 'new-interface-full-logo';  
+                    img.alt = originalText;  
+                    img.src = url;  
+  
+                    this.setImageSizing(img, textHeightPx);  
+                    this.syncFullHead(container, true);  
+  
+                    this.swapContent(titleEl, img);  
+                });  
+            } catch (e) { }  
+        }  
+    }  
+  
+    const Logo = new LogoEngine();  
+    initInterface2Settings();  
+  
+    function applyInfoTitleLogo(wrapper, titleNode, headNode, movie, titleText) {  
+        try {  
+            if (!titleNode || !titleNode.length) return;  
+            const titleEl = titleNode[0];  
+            if (!titleEl) return;  
+  
+            const reqId = (titleEl.__ni_logo_req_id || 0) + 1;  
+            titleEl.__ni_logo_req_id = reqId;  
+  
+            if (!Logo.enabled()) {  
+                if (headNode && headNode.length) headNode.css('display', '');  
+                if (wrapper && wrapper.removeClass) wrapper.removeClass('ni-hide-head');  
+                if (titleEl.querySelector && titleEl.querySelector('img')) Logo.swapContent(titleEl, titleText);  
+                else titleNode.text(titleText);  
+                return;  
+            }  
+  
+            titleNode.text(titleText);  
+            const textHeightPx = titleEl.getBoundingClientRect ? Math.round(titleEl.getBoundingClientRect().height) : 0;  
+  
+            Logo.getLogoUrl(movie, (url) => {  
+                if (titleEl.__ni_logo_req_id !== reqId) return;  
+                if (!titleEl.isConnected) return;  
+  
+                if (!url) {  
+                    if (headNode && headNode.length) headNode.css('display', '');  
+                    if (wrapper && wrapper.removeClass) wrapper.removeClass('ni-hide-head');  
+                    if (titleEl.querySelector && titleEl.querySelector('img')) Logo.swapContent(titleEl, titleText);  
+                    else titleNode.text(titleText);  
+                    return;  
+                }  
+  
+                const img = new Image();  
+                img.className = 'new-interface-info__title-logo';  
+                img.alt = titleText;  
+                img.src = url;  
+  
+                Logo.setImageSizing(img, textHeightPx);  
+  
+                const hideHead = !!Lampa.Storage.get('logo_hide_year', !0);  
+                if (hideHead && headNode && headNode.length) headNode.css('display', 'none');  
+                else if (headNode && headNode.length) headNode.css('display', '');  
+  
+                Logo.swapContent(titleEl, img);  
+            });  
+        } catch (e) { }  
+    }  
+  
+    function hookFullTitleLogos() {  
+        if (window.__ni_interface2_full_logo_hooked) return;  
+        window.__ni_interface2_full_logo_hooked = true;  
+  
+        if (!Lampa.Listener || typeof Lampa.Listener.follow !== 'function') return;  
+  
+        Lampa.Listener.follow('full', function (e) {  
+            try {  
+                if (!e || e.type !== 'complite') return;  
+                if (!e.object || !e.object.activity) return;  
+  
+                const data = (e.data && (e.data.movie || e.data)) ? (e.data.movie || e.data) : null;  
+                if (!data) return;  
+  
+                Logo.applyToFull(e.object.activity, data);  
+            } catch (err) { }  
+        });  
+    }  
+  
+    hookFullTitleLogos();  
+  
+    function startPluginV3() {  
+        if (!Lampa.Maker || !Lampa.Maker.map || !Lampa.Utils) return;  
+        if (window.plugin_interface_ready_v3) return;  
+        window.plugin_interface_ready_v3 = true;  
+  
+        addStyleV3();  
+  
+        const mainMap = Lampa.Maker.map('Main');  
+  
+        if (!mainMap || !mainMap.Items || !mainMap.Create) return;  
+  
+        wrap(mainMap.Items, 'onInit', function (original, args) {  
+            if (original) original.apply(this, args);  
+            this.__newInterfaceEnabled = shouldUseNewInterface(this && this.object);  
+        });  
+  
+        wrap(mainMap.Create, 'onCreate', function (original, args) {  
+            if (original) original.apply(this, args);  
+            if (!this.__newInterfaceEnabled) return;  
+            const state = ensureState(this);  
+            state.attach();  
+        });  
+  
+        wrap(mainMap.Create, 'onCreateAndAppend', function (original, args) {  
+            const element = args && args[0];  
+            if (this.__newInterfaceEnabled && element) {  
+                prepareLineData(element);  
+            }  
+            return original ? original.apply(this, args) : undefined;  
+        });  
+  
+        wrap(mainMap.Items, 'onAppend', function (original, args) {  
+            if (original) original.apply(this, args);  
+            if (!this.__newInterfaceEnabled) return;  
+            const item = args && args[0];  
+            const element = args && args[1];  
+            if (item && element) attachLineHandlers(this, item, element);  
+        });  
+  
+        wrap(mainMap.Items, 'onDestroy', function (original, args) {  
+            if (this.__newInterfaceState) {  
+                this.__newInterfaceState.destroy();  
+                delete this.__newInterfaceState;  
+            }  
+            delete this.__newInterfaceEnabled;  
+            if (original) original.apply(this, args);  
+        });  
+    }  
+  
+    function shouldUseNewInterface(object) {  
+        if (!object) return false;  
+        if (object.source === 'other' && !object.backdrop_path) return false;  
+        // Обмеження ширини (<767) знято, щоб працювало на мобільних  
+        return true;  
+    }  
+  
+    function ensureState(main) {  
+        if (main.__newInterfaceState) return main.__newInterfaceState;  
+        const state = createInterfaceState(main);  
+        main.__newInterfaceState = state;  
+        return state;  
+    }  
+  
+    function createInterfaceState(main) {  
+        const info = new InterfaceInfo();  
+        info.create();  
+  
+        const background = document.createElement('img');  
+        background.className = 'full-start__background';  
+  
+        const state = {  
+            main,  
+            info,  
+            background,  
+            infoElement: null,  
+            backgroundTimer: null,  
+            backgroundLast: '',  
+            attached: false,  
+            attach() {  
+                if (this.attached) return;  
+  
+                const container = main.render(true);  
+                if (!container) return;  
+  
+                container.classList.add('new-interface');  
+  
+                applyCaptionsClass(container);  
+  
+                if (!background.parentElement) {  
+                    container.insertBefore(background, container.firstChild || null);  
+                }  
+  
+                const infoNode = info.render(true);  
+                this.infoElement = infoNode;  
+  
+                if (infoNode && infoNode.parentNode !== container) {  
+                    if (background.parentElement === container) {  
+                        container.insertBefore(infoNode, background.nextSibling);  
+                    } else {  
+                        container.insertBefore(infoNode, container.firstChild || null);  
+                    }  
+                }  
+  
+                main.scroll.minus(infoNode);  
+  
+                this.attached = true;  
+            },  
+            update(data) {  
+                if (!data) return;  
+                info.update(data);  
+                this.updateBackground(data);  
+            },  
+            updateBackground(data) {  
+                const path = data && data.backdrop_path ? Lampa.Api.img(data.backdrop_path, 'w1280') : '';  
+  
+                if (!path || path === this.backgroundLast) return;  
+  
+                clearTimeout(this.backgroundTimer);  
+  
+                this.backgroundTimer = setTimeout(() => {  
+                    background.classList.remove('loaded');  
+  
+                    background.onload = () => background.classList.add('loaded');  
+                    background.onerror = () => background.classList.remove('loaded');  
+  
+                    this.backgroundLast = path;  
+  
+                    setTimeout(() => {  
+                        background.src = this.backgroundLast;  
+                    }, 300);  
+                }, 1000);  
+            },  
+            reset() {  
+                info.empty();  
+            },  
+            destroy() {  
+                clearTimeout(this.backgroundTimer);  
+                info.destroy();  
+  
+                const container = main.render(true);  
+                if (container) container.classList.remove('new-interface');  
+  
+                if (this.infoElement && this.infoElement.parentNode) {  
+                    this.infoElement.parentNode.removeChild(this.infoElement);  
+                }  
+  
+                if (background && background.parentNode) {  
+                    background.parentNode.removeChild(background);  
+                }  
+  
+                this.attached = false;  
+            }  
+        };  
+  
+        return state;  
+    }  
+  
+    function prepareLineData(element) {  
+        return;  
+    }  
+  
+    function decorateCard(state, card) {  
+        if (!card || card.__newInterfaceCard || typeof card.use !== 'function' || !card.data) return;  
+  
+        card.__newInterfaceCard = true;  
+  
+        card.params = card.params || {};  
+        card.params.style = card.params.style || {};  
+  
+        card.use({  
+            onFocus() {  
+                state.update(card.data);  
+            },  
+            onHover() {  
+                state.update(card.data);  
+            },  
+            onTouch() {  
+                state.update(card.data);  
+            },  
+            onDestroy() {  
+                delete card.__newInterfaceCard;  
+            }  
+        });  
+    }  
+  
+    function getCardData(card, element, index = 0) {  
+        if (card && card.data) return card.data;  
+        if (element && Array.isArray(element.results)) return element.results[index] || element.results[0];  
+        return null;  
+    }  
+  
+    function getDomCardData(node) {  
+        if (!node) return null;  
+  
+        let current = node && node.jquery ? node[0] : node;  
+  
+        while (current && !current.card_data) {  
+            current = current.parentNode;  
+        }  
+  
+        return current && current.card_data ? current.card_data : null;  
+    }  
+  
+    function getFocusedCardData(line) {  
+        const container = line && typeof line.render === 'function' ? line.render(true) : null;  
+        if (!container || !container.querySelector) return null;  
+  
+        const focus = container.querySelector('.selector.focus') || container.querySelector('.focus');  
+  
+        return getDomCardData(focus);  
+    }  
+  
+    function attachLineHandlers(main, line, element) {  
+        if (line.__newInterfaceLine) return;  
+        line.__newInterfaceLine = true;  
+  
+        const state = ensureState(main);  
+        const applyToCard = (card) => decorateCard(state, card);  
+  
+        if (element && Array.isArray(element.results)) {  
+            element.results.slice(0, 5).forEach((item) => {  
+                state.info.load(item, { preload: true });  
+            });  
+        }  
+  
+        line.use({  
+            onInstance(card) {  
+                applyToCard(card);  
+            },  
+            onActive(card, itemData) {  
+                const current = getCardData(card, itemData);  
+                if (current) {  
+                    current.__priority = 1;  
+                    state.update(current);  
+                }  
+            },  
+            onToggle() {  
+                setTimeout(() => {  
+                    const domData = getFocusedCardData(line);  
+                    if (domData) state.update(domData);  
+                }, 32);  
+            },  
+            onMore() {  
+                state.reset();  
+            },  
+            onDestroy() {  
+                state.reset();  
+                delete line.__newInterfaceLine;  
+            }  
+        });  
+  
+        if (Array.isArray(line.items) && line.items.length) {  
+            line.items.forEach(applyToCard);  
+        }  
+  
+        if (line.last) {  
+            const lastData = getDomCardData(line.last);  
+            if (lastData) state.update(lastData);  
+        }  
+    }  
+  
+    function wrap(target, method, handler) {  
+        if (!target) return;  
+        const original = typeof target[method] === 'function' ? target[method] : null;  
+        target[method] = function (...args) {  
+            return handler.call(this, original, args);  
+        };  
+    }  
+  
+    function addStyleV3() {  
+        if (addStyleV3.added) return;  
+        addStyleV3.added = true;  
+  
+        Lampa.Template.add('new_interface_style_v3', `<style>  
+.new-interface{  
+    position: relative;  
+    --ni-info-h: clamp(15em, 34vh, 24em);  
+}  
+.new-interface{  
+    --ni-card-w: clamp(35px, 2.8vw, 60px);  
+}  
+  
+.new-interface .card--small,  
+.new-interface .card-more{  
+    width: var(--ni-card-w) !important;  
+}  
+  
+.new-interface .card-more__box{  
+    padding-bottom: 150%;  
+}  
+  
+.new-interface-info{  
+    position: relative;  
+    padding: 1.5em;  
+    height: auto !important;  
+    min-height: 200px !important;  
+    max-height: 250px !important;  
+    overflow: visible !important;  
+    z-index: 3;  
+    display: flex !important;  
+    align-items: center !important;  
+}  
+  
+.new-interface-info:before{  
+    display: none !important;  
+}  
+  
+.new-interface-info__body{  
+    position: relative;  
+    z-index: 1;  
+    width: 100%;  
+    padding-top: 0;  
+    display: block !important;  
+}  
+  
+.new-interface-info__left {  
+    width: 100%;  
+    display: flex;  
+    align-items: center;  
+    min-height: 120px;    
+}  
+  
+.new-interface-info__right{  
+    padding-top: clamp(0.2em, 2.2vh, 1.6em);  
+}  
+  
+.new-interface-info__head{  
+    color: rgba(255, 255, 255, 0.6);  
+    margin-bottom: 1em;  
+    font-size: 1.3em;  
+    min-height: 1em;  
+}  
+  
+.new-interface-info__head span{  
+    color: #fff;  
+}  
+  
+.new-interface-info__title {  
+    font-size: clamp(2.6em, 4.0vw, 3.6em);  
+    font-weight: 600;  
+    margin: 0;  
+    display: flex;  
+    align-items: center;  
+    min-height: 120px;  
+    max-height: 120px;  
+    overflow: visible; 
+}  
+  
+.new-interface-info__title-logo {  
+    max-width: 400px !important;  
+    max-height: var(--ni-logo-max-h, 120px) !important;  
+    width: auto !important;  
+    height: auto !important;  
+    object-fit: contain !important;  
+    object-position: left center !important;  
+}  
+  
+.new-interface-full-logo {  
+    max-height: var(--ni-logo-max-h, 180px) !important;  
+    width: auto !important;  
+    max-width: 100% !important;  
+    object-fit: contain !important;  
+    object-position: left center !important;  
+}  
+  
+.new-interface.ni-hide-captions .card__view ~ .card__title,  
+.new-interface.ni-hide-captions .card__view ~ .card__name,  
+.new-interface.ni-hide-captions .card__view ~ .card__text,  
+.new-interface.ni-hide-captions .card__view ~ .card__details,  
+.new-interface.ni-hide-captions .card__view ~ .card__description,  
+.new-interface.ni-hide-captions .card__view ~ .card__subtitle,  
+.new-interface.ni-hide-captions .card__view ~ .card__year,  
+.new-interface.ni-hide-captions .card__bottom,  
+.new-interface.ni-hide-captions .card__caption{  
+    display: none !important;  
+}  
+  
+.new-interface.ni-hide-captions .card > *:not(.card__view):not(.card__promo){  
+    display: none !important;  
+}  
+  
+.new-interface-info__description{  
+    font-size: 0.87em;  
+    font-weight: 300;  
+    line-height: 1.38;  
+    color: rgba(255, 255, 255, 0.90);  
+    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);  
+    overflow: hidden;  
+    text-overflow: '.';  
+    display: -webkit-box;  
+    -webkit-line-clamp: 7;  
+    line-clamp: 7;  
+    -webkit-box-orient: vertical;  
+    width: auto;  
+}  
+  
+.new-interface .full-start__background{  
+    height: 108%;  
+    top: -6em;  
+}  
+  
+.new-interface .full-start__rate{  
+    font-size: 1.3em;  
+    margin-right: 0;  
+}  
+  
+.new-interface .full-start__lines{  
+    padding-bottom: env(safe-area-inset-bottom, 0px);  
+}  
+  
+.new-interface .items-line__head{  
+    position: relative;  
+    z-index: 5;  
+    transform: translateY(1vh);  
+}  
+  
+.new-interface{  
+    --ni-lines-up: -1vh;  
+}  
+.new-interface .items-line__body > .scroll.scroll--horizontal,  
+.new-interface .items-line__body .scroll.scroll--horizontal{  
+    position: relative;  
+    top: calc(var(--ni-lines-up) * -1);  
+}  
+  
+.new-interface .card__promo{  
+    display: none;  
+}  
+  
+.new-interface .card .card-watched{  
+    display: none !important;  
+}  
+  
+body.light--version .new-interface-info__body{  
+    width: min(92%, 72em);  
+    padding-top: 1.5em;  
+}  
+  
+@media (max-width: 767px) {  
+    .new-interface-info {  
+        padding: 1em;  
+        min-height: 150px !important;  
+        max-height: 200px !important;  
+    }  
+    .new-interface-info__title {  
+        font-size: 2em;  
+        min-height: 80px;  
+        max-height: 80px;  
+    }  
+    .new-interface-info__title-logo {  
+        max-height: 80px !important;  
+    }  
+    .new-interface {  
+        --ni-card-w: clamp(70px, 18vw, 110px);  
+    }  
+}  
+  
+@media (max-height: 820px){  
+    .new-interface{  
+        --ni-info-h: clamp(13em, 30vh, 20em);  
+        --ni-card-w: clamp(60px, 4.2vw, 90px);  
+    }   
+  
+    .new-interface-info__right{  
+        padding-top: clamp(0.15em, 1.8vh, 1.2em);  
+    }  
+  
+    .new-interface-info__title{  
+        font-size: clamp(2.4em, 3.6vw, 3.1em);  
+    }  
+  
+    .new-interface-info__description{  
+        -webkit-line-clamp: 6;  
+        line-clamp: 6;  
+        font-size: 0.83em;  
+    }  
+}  
+  
+body.advanced--animation:not(.no--animation) .new-interface .card.focus .card__view,  
+body.advanced--animation:not(.no--animation) .new-interface .card--small.focus .card__view{  
+    animation: animation-card-focus 0.2s;  
+}  
+  
+body.advanced--animation:not(.no--animation) .new-interface .card.animate-trigger-enter .card__view,  
+body.advanced--animation:not(.no--animation) .new-interface .card--small.animate-trigger-enter .card__view{  
+    animation: animation-trigger-enter 0.2s forwards;  
+}  
+</style>`);  
+  
+        $('body').append(Lampa.Template.get('new_interface_style_v3', {}, true));  
+    }  
+  
+    class InterfaceInfo {  
+        constructor() {  
+            this.html = null;  
+            this.timer = null;  
+            this.network = new Lampa.Reguest();  
+            this.loaded = {};  
+        }  
+  
+        create() {  
+            if (this.html) return;  
+  
+            this.html = $(`<div class="new-interface-info">  
+                <div class="new-interface-info__body">  
+                    <div class="new-interface-info__left">  
+                        <div class="new-interface-info__head"></div>  
+                        <div class="new-interface-info__title"></div>  
+                    </div>  
+                </div>  
+            </div>`);  
+        }  
+  
+        render(js) {  
+            if (!this.html) this.create();  
+            return js ? this.html[0] : this.html;  
+        }  
+  
+        update(data) {  
+            if (!data) return;  
+            if (!this.html) this.create();  
+            Lampa.Background.change(Lampa.Utils.cardImgBackground(data));  
+            this.load(data);  
+        }  
+  
+        load(data, options) {  
+            if (!data || !data.id) return;  
+  
+            const source = data.source || 'tmdb';  
+            if (source !== 'tmdb' && source !== 'cub') return;  
+            if (!Lampa.TMDB || typeof Lampa.TMDB.api !== 'function' || typeof Lampa.TMDB.key !== 'function') return;  
+  
+            const preload = options && options.preload;  
+  
+            const type = data.media_type === 'tv' || data.name ? 'tv' : 'movie';  
+            const language = Lampa.Storage.get('language');  
+            const shortLang = (language || 'en').split('-')[0];  
+            const url = Lampa.TMDB.api(`${type}/${data.id}?api_key=${Lampa.TMDB.key()}&append_to_response=content_ratings,release_dates,images&include_image_language=${shortLang},en,null&language=${language}`);  
+  
+            this.currentUrl = url;  
+  
+            if (this.loaded[url]) {  
+                if (!preload) this.draw(this.loaded[url]);  
+                return;  
+            }  
+  
+            clearTimeout(this.timer);  
+  
+            this.timer = setTimeout(() => {  
+                this.network.clear();  
+                this.network.timeout(5000);  
+                this.network.silent(url, (movie) => {  
+                    this.loaded[url] = movie;  
+                    if (!preload && this.currentUrl === url) this.draw(movie);  
+                });  
+            }, 0);  
+        }  
+  
+        draw(movie) {  
+            if (!movie || !this.html) return;  
+  
+            const create = ((movie.release_date || movie.first_air_date || '0000') + '').slice(0, 4);  
+            const vote = parseFloat((movie.vote_average || 0) + '').toFixed(1);  
+            const sources = Lampa.Api && Lampa.Api.sources && Lampa.Api.sources.tmdb ? Lampa.Api.sources.tmdb : null;  
+            const countries = sources && typeof sources.parseCountries === 'function' ? sources.parseCountries(movie) : [];  
+            const pg = sources && typeof sources.parsePG === 'function' ? sources.parsePG(movie) : '';  
+  
+            const titleNode = this.html.find('.new-interface-info__title');  
+            const headNode = this.html.find('.new-interface-info__head');  
+            const titleText = movie.title || movie.name || '';  
+  
+            titleNode.text(titleText);  
+            applyInfoTitleLogo(this.html, titleNode, headNode, movie, titleText);  
+        }  
+  
+        empty() {  
+            if (!this.html) return;  
+            this.html.find('.new-interface-info__head').text('---');  
+        }  
+  
+        destroy() {  
+            clearTimeout(this.timer);  
+            this.network.clear();  
+            this.loaded = {};  
+            this.currentUrl = null;  
+  
+            if (this.html) {  
+                this.html.remove();  
+                this.html = null;  
+            }  
+        }  
+    }  
+  
+    if (Lampa.Manifest.app_digital >= 300) {  
+        startPluginV3();  
+        return;  
+    }  
+
+    // Стандартна версія (для старіших версій додатка) також без обмеження екрана  
+    function startPlugin() {  
+        window.plugin_interface_ready = true;  
+        var old_interface = Lampa.InteractionMain;  
+        var new_interface = component;  
+  
+        Lampa.InteractionMain = function (object) {  
+            var use = new_interface;  
+            if (!(object.source == 'tmdb' || object.source == 'cub')) use = old_interface;  
+            if (Lampa.Manifest.app_digital < 153) use = old_interface;  
+            return new use(object);  
+        };  
+    }  
+  
+    if (!window.plugin_interface_ready && !window.plugin_interface_ready_v3) startPlugin();  
+  
 })();
