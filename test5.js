@@ -71,6 +71,13 @@
   
         const add = (cfg) => { try { Lampa.SettingsApi.addParam(cfg); } catch (e) { } };  
   
+        // Окремий розділ для налаштувань плагіна в меню Інтерфейс  
+        add({  
+            component: 'interface',  
+            param: { name: 'interface2_header_group', type: 'title', default: '' },  
+            field: { name: 'Кастомний інтерфейс головної сторінки', description: 'Налаштування дизайну, логотипів та метаінформації' }  
+        });  
+  
         add({  
             component: 'interface',  
             param: { name: 'logo_glav', type: 'select', values: { 1: 'Приховати', 0: 'Відображати' }, default: '0' },  
@@ -143,13 +150,22 @@
         add({  
             component: 'interface',  
             param: { name: 'logo_hide_year', type: 'trigger', default: !0 },  
-            field: { name: 'Приховати метаінформацію', description: 'Приховує рік, країну та жанри над логотипом' }  
+            field: { name: 'Приховати метаінформацію', description: 'Приховує рік, країну та жанри під логотипом' }  
         });  
   
         add({  
             component: 'interface',  
             param: { name: 'logo_use_text_height', type: 'trigger', default: !1 },  
             field: { name: 'Логотип за висотою тексту', description: 'Розмір логотипа дорівнює висоті тексту' }  
+        });  
+  
+        add({  
+            component: 'interface',  
+            param: { name: 'ni_card_captions', type: 'trigger', default: true },  
+            field: { name: 'Підписи під картками', description: 'Показувати / приховувати назви (і рік) під постерами в лініях' },  
+            onChange: function () {  
+                applyCaptionsToAll();  
+            }  
         });  
   
         add({  
@@ -177,15 +193,6 @@
                         Lampa.Controller.toggle('settings_component');  
                     }  
                 });  
-            }  
-        });  
-  
-        add({  
-            component: 'interface',  
-            param: { name: 'ni_card_captions', type: 'trigger', default: true },  
-            field: { name: 'Підписи під картками', description: 'Показувати / приховувати назви (і рік) під постерами в лініях' },  
-            onChange: function () {  
-                applyCaptionsToAll();  
             }  
         });  
   
@@ -568,7 +575,7 @@
                 descNode.toggle(!!overviewText);  
             }  
   
-            // Формуємо та виводимо метаінформацію  
+            // Формуємо та виводимо метаінформацію (під логотипом, над описом)  
             const hideHead = !!Lampa.Storage.get('logo_hide_year', !0);  
             if (headNode && headNode.length) {  
                 if (hideHead) {  
@@ -605,6 +612,8 @@
                 img.src = url;  
   
                 Logo.setImageSizing(img, textHeightPx);  
+                Logo.syncFullHead(container, true);  
+  
                 Logo.swapContent(titleEl, img);  
             });  
         } catch (e) { }  
@@ -969,13 +978,16 @@
     padding-top: 0.5em;  
 }  
   
+/* Метаінформація розміщена ПІД логотипом, НАД описом */  
 .new-interface-info__head{  
     color: rgba(255, 255, 255, 0.75);  
-    margin-bottom: 0.3em;  
-    font-size: 0.95em;  
+    margin-top: 0.3em;  
+    margin-bottom: 0.4em;  
+    font-size: 1.05em;  
     font-weight: 400;  
     min-height: 1em;  
     text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);  
+    order: 2;  
 }  
   
 .new-interface-info__head span{  
@@ -985,12 +997,13 @@
 .new-interface-info__title {  
     font-size: clamp(2.2em, 3.5vw, 3.2em);  
     font-weight: 600;  
-    margin: 0 0 0.3em 0;  
+    margin: 0;  
     display: flex;  
     align-items: center;  
     max-width: 100%;  
     min-height: 1.1em;  
     overflow: hidden;  
+    order: 1;  
 }  
   
 .new-interface-info__title-logo {  
@@ -1026,11 +1039,12 @@
     display: none !important;  
 }  
   
+/* Шрифт опису зроблено трішки більшим */  
 .new-interface-info__description{  
-    font-size: 0.9em;  
+    font-size: 1.05em;  
     font-weight: 300;  
-    line-height: 1.4;  
-    color: rgba(255, 255, 255, 0.85);  
+    line-height: 1.45;  
+    color: rgba(255, 255, 255, 0.9);  
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);  
     overflow: hidden;  
     text-overflow: ellipsis;  
@@ -1038,8 +1052,9 @@
     -webkit-line-clamp: 3;  
     line-clamp: 3;  
     -webkit-box-orient: vertical;  
-    max-width: min(800px, 85vw);  
-    margin-top: 0.2em;  
+    max-width: min(850px, 85vw);  
+    margin-top: 0.3em;  
+    order: 3;  
 }  
   
 .new-interface .full-start__background{  
@@ -1091,7 +1106,6 @@ body.light--version .new-interface-info__body{
     }  
     .new-interface-info__title {  
         font-size: 1.6em;  
-        margin-bottom: 0.15em;  
     }  
     .new-interface-info__title-logo {  
         max-width: min(250px, 65vw) !important;  
@@ -1101,11 +1115,12 @@ body.light--version .new-interface-info__body{
         --ni-card-w: clamp(85px, 24vw, 130px);  
     }  
     .new-interface-info__head {  
-        font-size: 0.85em;  
-        margin-bottom: 0.1em;  
+        font-size: 0.9em;  
+        margin-top: 0.2em;  
+        margin-bottom: 0.2em;  
     }  
     .new-interface-info__description {  
-        font-size: 0.75em;  
+        font-size: 0.9em;  
         -webkit-line-clamp: 2;  
         line-clamp: 2;  
         max-width: 100%;  
@@ -1128,7 +1143,7 @@ body.light--version .new-interface-info__body{
     .new-interface-info__description{  
         -webkit-line-clamp: 2;  
         line-clamp: 2;  
-        font-size: 0.8em;  
+        font-size: 0.95em;  
     }  
 }  
   
@@ -1160,8 +1175,8 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
             this.html = $(`<div class="new-interface-info">  
                 <div class="new-interface-info__body">  
                     <div class="new-interface-info__left">  
-                        <div class="new-interface-info__head"></div>  
                         <div class="new-interface-info__title"></div>  
+                        <div class="new-interface-info__head"></div>  
                         <div class="new-interface-info__description"></div>  
                     </div>  
                 </div>  
@@ -1262,5 +1277,5 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
     }  
   
     if (!window.plugin_interface_ready && !window.plugin_interface_ready_v3) startPlugin();  
-  
+
 })();
