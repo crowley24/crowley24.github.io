@@ -1025,7 +1025,7 @@
 .new-interface.ni-hide-captions .card__view ~ .card__name,  
 .new-interface.ni-hide-captions .card__view ~ .card__text,  
 .new-interface.ni-hide-captions .card__view ~ .card__details,  
-.new-interface.ni-hide-captions .card__view ~ .card__description,  
+.new-interface.ni-hide-captions .card__view ~ .card.ni-hide-captions .card__description,  
 .new-interface.ni-hide-captions .card__view ~ .card__subtitle,  
 .new-interface.ni-hide-captions .card__view ~ .card__year,  
 .new-interface.ni-hide-captions .card__bottom,  
@@ -1054,8 +1054,8 @@
     height: 108%;  
     top: -6em;  
     transition: opacity 0.4s ease;  
-    mask-image: linear-gradient(180deg, rgba(0,0,0,1) 40%, rgba(0,0,0,0.2) 100%);  
-    -webkit-mask-image: linear-gradient(180deg, rgba(0,0,0,1) 40%, rgba(0,0,0,0.2) 100%);  
+    mask-image: linear-gradient(180deg, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 75%);  
+    -webkit-mask-image: linear-gradient(180deg, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 75%);  
 }  
   
 .new-interface .full-start__background::after {  
@@ -1065,7 +1065,7 @@
     left: 0;  
     width: 100%;  
     height: 100%;  
-    background: linear-gradient(180deg, rgba(15,15,15,0) 40%, rgba(15,15,15,0.85) 85%);  
+    background: linear-gradient(180deg, rgba(15,15,15,0) 15%, rgba(15,15,15,0.95) 60%);  
     pointer-events: none;  
 }  
   
@@ -1092,7 +1092,7 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.focus .
 }  
   
 body.advanced--animation:not(.no--animation) .new-interface .card.animate-trigger-enter .card__view,  
-body.advanced--animation:not(.no--animation) .new-interface .card--small.animate-trigger-enter .card__view{  
+body.advanced--animation:not(.no--animation) .new-interface .card.animate-trigger-enter .card__view{  
     animation: animation-trigger-enter 0.2s forwards;  
 }  
 </style>`);  
