@@ -143,7 +143,7 @@
         add({  
             component: 'interface',  
             param: { name: 'logo_hide_year', type: 'trigger', default: !0 },  
-            field: { name: 'Приховати рік і країну', description: 'Приховує інформацію над логотипом' }  
+            field: { name: 'Приховати метаінформацію', description: 'Приховує рік, країну та жанри над логотипом' }  
         });  
   
         add({  
@@ -513,6 +513,45 @@
     const Logo = new LogoEngine();  
     initInterface2Settings();  
   
+    function formatMeta(movie) {  
+        try {  
+            const parts = [];  
+  
+            // 1. Країна  
+            if (movie.production_countries && movie.production_countries.length) {  
+                parts.push(movie.production_countries[0].name);  
+            } else if (movie.origin_country && movie.origin_country.length) {  
+                parts.push(movie.origin_country[0]);  
+            }  
+  
+            // 2. Рік  
+            const dateStr = movie.release_date || movie.first_air_date || '';  
+            if (dateStr) {  
+                const year = dateStr.split('-')[0];  
+                if (year) parts.push(year);  
+            }  
+  
+            // 3. Тривалість або Сезони  
+            if (movie.number_of_seasons) {  
+                parts.push(`${movie.number_of_seasons} сезон${movie.number_of_seasons > 1 ? 'и' : ''}`);  
+            } else if (movie.runtime) {  
+                const hours = Math.floor(movie.runtime / 60);  
+                const mins = movie.runtime % 60;  
+                parts.push(hours > 0 ? `${hours} год ${mins} хв` : `${mins} хв`);  
+            }  
+  
+            // 4. Жанри (перші 2)  
+            if (movie.genres && Array.isArray(movie.genres) && movie.genres.length) {  
+                const genresStr = movie.genres.slice(0, 2).map(g => g.name).join(', ');  
+                if (genresStr) parts.push(genresStr);  
+            }  
+  
+            return parts.join(' • ');  
+        } catch (e) {  
+            return '';  
+        }  
+    }  
+
     function applyInfoTitleLogo(wrapper, titleNode, headNode, movie, titleText) {  
         try {  
             if (!titleNode || !titleNode.length) return;  
@@ -529,9 +568,19 @@
                 descNode.toggle(!!overviewText);  
             }  
   
+            // Формуємо та виводимо метаінформацію  
+            const hideHead = !!Lampa.Storage.get('logo_hide_year', !0);  
+            if (headNode && headNode.length) {  
+                if (hideHead) {  
+                    headNode.css('display', 'none').text('');  
+                } else {  
+                    const metaText = formatMeta(movie);  
+                    headNode.text(metaText);  
+                    headNode.css('display', metaText ? '' : 'none');  
+                }  
+            }  
+  
             if (!Logo.enabled()) {  
-                if (headNode && headNode.length) headNode.css('display', '');  
-                if (wrapper && wrapper.removeClass) wrapper.removeClass('ni-hide-head');  
                 if (titleEl.querySelector && titleEl.querySelector('img')) Logo.swapContent(titleEl, titleText);  
                 else titleNode.text(titleText);  
                 return;  
@@ -545,8 +594,6 @@
                 if (!titleEl.isConnected) return;  
   
                 if (!url) {  
-                    if (headNode && headNode.length) headNode.css('display', '');  
-                    if (wrapper && wrapper.removeClass) wrapper.removeClass('ni-hide-head');  
                     if (titleEl.querySelector && titleEl.querySelector('img')) Logo.swapContent(titleEl, titleText);  
                     else titleNode.text(titleText);  
                     return;  
@@ -558,11 +605,6 @@
                 img.src = url;  
   
                 Logo.setImageSizing(img, textHeightPx);  
-  
-                const hideHead = !!Lampa.Storage.get('logo_hide_year', !0);  
-                if (hideHead && headNode && headNode.length) headNode.css('display', 'none');  
-                else if (headNode && headNode.length) headNode.css('display', '');  
-  
                 Logo.swapContent(titleEl, img);  
             });  
         } catch (e) { }  
@@ -928,10 +970,12 @@
 }  
   
 .new-interface-info__head{  
-    color: rgba(255, 255, 255, 0.6);  
+    color: rgba(255, 255, 255, 0.75);  
     margin-bottom: 0.3em;  
-    font-size: 1em;  
+    font-size: 0.95em;  
+    font-weight: 400;  
     min-height: 1em;  
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);  
 }  
   
 .new-interface-info__head span{  
