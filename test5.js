@@ -816,11 +816,20 @@
             });  
         }  
   
+        let isFirstRowAndNotReady = false;  
+        try {  
+            if (main && main.rows && main.rows[0] === line) {  
+                isFirstRowAndNotReady = true;  
+            }  
+        } catch (e) {}  
+  
         line.use({  
             onInstance(card) {  
                 applyToCard(card);  
             },  
             onActive(card, itemData) {  
+                if (isFirstRowAndNotReady) return;  
+  
                 const current = getCardData(card, itemData);  
                 if (current) {  
                     current.__priority = 1;  
@@ -828,6 +837,7 @@
                 }  
             },  
             onToggle() {  
+                if (isFirstRowAndNotReady) return;  
                 setTimeout(() => {  
                     const domData = getFocusedCardData(line);  
                     if (domData) state.update(domData);  
@@ -846,19 +856,21 @@
             line.items.forEach(applyToCard);  
         }  
   
-        // Надійне завантаження даних першого елемента напряму з API рядка  
         if (element && Array.isArray(element.results) && element.results.length) {  
             const firstData = element.results[0];  
             if (firstData) {  
                 setTimeout(() => {  
                     state.update(firstData);  
+                    setTimeout(() => {  
+                        isFirstRowAndNotReady = false;  
+                    }, 300);  
                 }, 50);  
             }  
         }  
   
         if (line.last) {  
             const lastData = getDomCardData(line.last);  
-            if (lastData) state.update(lastData);  
+            if (lastData && !isFirstRowAndNotReady) state.update(lastData);  
         }  
     }  
   
