@@ -43,16 +43,8 @@
   
             if (h) {  
                 root.style.setProperty('--ni-logo-max-h', h);  
-                document.querySelectorAll('.new-interface-info__title-logo, .new-interface-full-logo').forEach(img => {  
-                    img.style.maxHeight = h;  
-                    img.style.setProperty('max-height', h, 'important');  
-                });  
             } else {  
                 root.style.removeProperty('--ni-logo-max-h');  
-                document.querySelectorAll('.new-interface-info__title-logo, .new-interface-full-logo').forEach(img => {  
-                    img.style.maxHeight = '';  
-                    img.style.removeProperty('max-height');  
-                });  
             }  
         } catch (e) { }  
     }  
@@ -314,27 +306,32 @@
                 const url = Lampa.TMDB.api(`${type}/${item.id}/images?api_key=${Lampa.TMDB.key()}&include_image_language=${lang},en,null`);  
   
                 $.get(url, (res) => {  
-                    let filePath = null;  
+                    try {  
+                        let filePath = null;  
   
-                    if (res && Array.isArray(res.logos) && res.logos.length) {  
-                        for (let i = 0; i < res.logos.length; i++) {  
-                            if (res.logos[i] && res.logos[i].iso_639_1 === lang) { filePath = res.logos[i].file_path; break; }  
-                        }  
-                        if (!filePath) {  
+                        if (res && Array.isArray(res.logos) && res.logos.length) {  
                             for (let i = 0; i < res.logos.length; i++) {  
-                                if (res.logos[i] && res.logos[i].iso_639_1 === 'en') { filePath = res.logos[i].file_path; break; }  
+                                if (res.logos[i] && res.logos[i].iso_639_1 === lang) { filePath = res.logos[i].file_path; break; }  
                             }  
+                            if (!filePath) {  
+                                for (let i = 0; i < res.logos.length; i++) {  
+                                    if (res.logos[i] && res.logos[i].iso_639_1 === 'en') { filePath = res.logos[i].file_path; break; }  
+                                }  
+                            }  
+                            if (!filePath) filePath = res.logos[0] && res.logos[0].file_path;  
                         }  
-                        if (!filePath) filePath = res.logos[0] && res.logos[0].file_path;  
-                    }  
   
-                    if (filePath) {  
-                        const size = this.size();  
-                        const normalized = (filePath + '').replace('.svg', '.png');  
-                        const logoUrl = Lampa.TMDB.image('/t/p/' + size + normalized);  
-                        localStorage.setItem(key, logoUrl);  
-                        this.flush(key, logoUrl);  
-                    } else {  
+                        if (filePath) {  
+                            const size = this.size();  
+                            const normalized = (filePath + '').replace('.svg', '.png');  
+                            const logoUrl = Lampa.TMDB.image('/t/p/' + size + normalized);  
+                            localStorage.setItem(key, logoUrl);  
+                            this.flush(key, logoUrl);  
+                        } else {  
+                            localStorage.setItem(key, 'none');  
+                            this.flush(key, null);  
+                        }  
+                    } catch (err) {  
                         localStorage.setItem(key, 'none');  
                         this.flush(key, null);  
                     }  
@@ -833,39 +830,6 @@
                     if (domData) state.update(domData);  
                 }, 32);  
             },  
-            // Додаємо обробку подій стрілок Вгору/Вниз для перемикання між рядами
-            onDown() {
-                try {
-                    if (main.items) {
-                        const lines = Array.from(main.items);
-                        const currentIndex = lines.indexOf(line);
-                        if (currentIndex >= 0 && currentIndex < lines.length - 1) {
-                            lines[currentIndex + 1].toggle();
-                            return true;
-                        }
-                    }
-                } catch (e) {}
-                return false;
-            },
-            onUp() {
-                try {
-                    if (main.items) {
-                        const lines = Array.from(main.items);
-                        const currentIndex = lines.indexOf(line);
-                        if (currentIndex > 0) {
-                            lines[currentIndex - 1].toggle();
-                            return true;
-                        } else {
-                            // Якщо це перший рядок і натиснули вгору — переводимо фокус на шапку (головне меню)
-                            if (Lampa.Controller.enabled('head')) {
-                                Lampa.Controller.toggle('head');
-                                return true;
-                            }
-                        }
-                    }
-                } catch (e) {}
-                return false;
-            },
             onMore() {  
                 state.reset();  
             },  
