@@ -844,17 +844,16 @@
   
         if (Array.isArray(line.items) && line.items.length) {  
             line.items.forEach(applyToCard);  
-              
-            // Виправлене завантаження даних першої реальної картки з невеликою затримкою для рендерингу DOM
-            try {  
-                const firstCard = line.items[0];  
-                const firstData = getCardData(firstCard, element, 0);  
-                if (firstData) {  
-                    setTimeout(() => {  
-                        state.update(firstData);  
-                    }, 50);  
-                }  
-            } catch (e) {}  
+        }  
+  
+        // Надійне завантаження даних першого елемента напряму з API рядка  
+        if (element && Array.isArray(element.results) && element.results.length) {  
+            const firstData = element.results[0];  
+            if (firstData) {  
+                setTimeout(() => {  
+                    state.update(firstData);  
+                }, 50);  
+            }  
         }  
   
         if (line.last) {  
@@ -1101,7 +1100,7 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.focus .
 }  
   
 body.advanced--animation:not(.no--animation) .new-interface .card.animate-trigger-enter .card__view,  
-body.advanced--animation:not(.no--animation) .new-interface .card--small.animate-trigger-enter .card__view{  
+body.advanced--animation:not(.no--animation) .new-interface .card.animate-trigger-enter .card__view{  
     animation: animation-trigger-enter 0.2s forwards;  
 }  
 </style>`);  
