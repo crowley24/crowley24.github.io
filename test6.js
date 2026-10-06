@@ -34,7 +34,7 @@
         } catch (e) {}  
     }  
   
-    const LOGO_CACHE_PREFIX = 'logo_cache_width_based_v1_';  
+    const LOGO_CACHE_PREFIX = 'logo_cache_width_based_v3_';  
   
     function applyLogoCssVars() {  
         try {  
@@ -222,15 +222,23 @@
   
     function animateOpacity(el, from, to, duration, done) {  
         if (!el) return done && done();  
+        if (el.__ni_animation_frame) {  
+            cancelAnimationFrame(el.__ni_animation_frame);  
+            el.__ni_animation_frame = null;  
+        }  
         let start = null;  
         const ease = (t) => 1 - Math.pow(1 - t, 3);  
   
-        requestAnimationFrame(function step(ts) {  
+        el.__ni_animation_frame = requestAnimationFrame(function step(ts) {  
             if (!start) start = ts;  
             const p = Math.min((ts - start) / duration, 1);  
             el.style.opacity = (from + (to - from) * ease(p)).toString();  
-            if (p < 1) requestAnimationFrame(step);  
-            else if (done) done();  
+            if (p < 1) {  
+                el.__ni_animation_frame = requestAnimationFrame(step);  
+            } else {  
+                el.__ni_animation_frame = null;  
+                if (done) done();  
+            }  
         });  
     }  
   
@@ -369,10 +377,10 @@
         setImageSizing(img, heightPx) {  
             if (!img) return;  
   
-            img.style.height = '';  
-            img.style.width = '';  
+            img.style.width = 'auto';  
+            img.style.height = 'auto';  
+            img.style.maxWidth = '100%';  
             img.style.maxHeight = '';  
-            img.style.maxWidth = '';  
             img.style.objectFit = 'contain';  
             img.style.objectPosition = 'left center';  
   
@@ -404,24 +412,24 @@
   
             if (type === 'js') {  
                 container.style.transition = 'none';  
-                animateOpacity(container, 1, 0, 150, () => {  
+                animateOpacity(container, 1, 0, 120, () => {  
                     container.innerHTML = '';  
                     if (typeof newNode === 'string') container.textContent = newNode;  
                     else container.appendChild(newNode);  
                     container.style.opacity = '0';  
-                    animateOpacity(container, 0, 1, 200);  
+                    animateOpacity(container, 0, 1, 180);  
                 });  
             } else {  
-                container.style.transition = 'opacity 0.15s ease';  
+                container.style.transition = 'opacity 0.12s ease';  
                 container.style.opacity = '0';  
                 container.__ni_logo_timer = setTimeout(() => {  
                     container.__ni_logo_timer = null;  
                     container.innerHTML = '';  
                     if (typeof newNode === 'string') container.textContent = newNode;  
                     else container.appendChild(newNode);  
-                    container.style.transition = 'opacity 0.2s ease';  
+                    container.style.transition = 'opacity 0.18s ease';  
                     container.style.opacity = '1';  
-                }, 80);  
+                }, 70);  
             }  
         }  
   
@@ -685,7 +693,10 @@
             background,  
             infoElement: null,  
             backgroundTimer: null,  
+            backgroundRequest: 0,  
             backgroundLast: '',  
+            lastDataId: '',  
+            updateFrame: null,  
             attached: false,  
             attach() {  
                 if (this.attached) return;  
@@ -718,8 +729,19 @@
             },  
             update(data) {  
                 if (!data) return;  
-                info.update(data);  
-                this.updateBackground(data);  
+                const id = data.id + '_' + (data.media_type || '');  
+                if (this.lastDataId === id) return;  
+                this.lastDataId = id;  
+  
+                if (this.updateFrame) {  
+                    cancelAnimationFrame(this.updateFrame);  
+                }  
+  
+                this.updateFrame = requestAnimationFrame(() => {  
+                    this.updateFrame = null;  
+                    info.update(data);  
+                    this.updateBackground(data);  
+                });  
             },  
             updateBackground(data) {  
                 const path = data && data.backdrop_path ? Lampa.Api.img(data.backdrop_path, 'w1280') : '';  
@@ -727,24 +749,35 @@
                 if (!path || path === this.backgroundLast) return;  
   
                 clearTimeout(this.backgroundTimer);  
+                const currentReq = ++this.backgroundRequest;  
   
                 this.backgroundTimer = setTimeout(() => {  
-                    background.classList.remove('loaded');  
+                    if (this.backgroundRequest !== currentReq) return;  
   
-                    background.onload = () => background.classList.add('loaded');  
-                    background.onerror = () => background.classList.remove('loaded');  
-  
-                    this.backgroundLast = path;  
-  
-                    setTimeout(() => {  
-                        background.src = this.backgroundLast;  
-                    }, 300);  
-                }, 400);  
+                    const loader = new Image();  
+                    loader.onload = () => {  
+                        if (this.backgroundRequest !== currentReq) return;  
+                        background.classList.remove('loaded');  
+                        this.backgroundLast = path;  
+                        background.src = path;  
+                          
+                        requestAnimationFrame(() => {  
+                            if (this.backgroundRequest !== currentReq) return;  
+                            background.classList.add('loaded');  
+                        });  
+                    };  
+                    loader.src = path;  
+                }, 220);  
             },  
             reset() {  
+                this.lastDataId = '';  
                 info.empty();  
             },  
             destroy() {  
+                if (this.updateFrame) {  
+                    cancelAnimationFrame(this.updateFrame);  
+                    this.updateFrame = null;  
+                }  
                 clearTimeout(this.backgroundTimer);  
                 info.destroy();  
   
@@ -895,13 +928,23 @@
     --ni-card-w: clamp(35px, 2.8vw, 60px);  
 }  
   
+.new-interface .card,  
 .new-interface .card--small,  
 .new-interface .card-more{  
     width: var(--ni-card-w) !important;  
+    border-radius: 10px !important;  
+    transform: translateZ(0);  
+    backface-visibility: hidden;  
+}  
+  
+.new-interface .card .card__view {  
+    border-radius: 10px !important;  
+    transition: transform .22s cubic-bezier(.22,.61,.36,1), filter .22s ease !important;  
 }  
   
 .new-interface .card-more__box{  
     padding-bottom: 150%;  
+    border-radius: 10px !important;  
 }  
   
 .new-interface-info{  
@@ -926,7 +969,7 @@
     position: relative;  
     z-index: 1;  
     width: 100%;  
-    max-width: 100%;  
+    max-width: 850px;  
     padding-top: 0;  
     display: flex !important;  
     flex-direction: column !important;  
@@ -948,18 +991,8 @@
     padding-top: 0.5em;  
 }  
   
-.new-interface-info__head{  
-    color: rgba(255, 255, 255, 0.6);  
-    margin-bottom: 0.3em;  
-    font-size: 1em;  
-    min-height: 1em;  
-}  
-  
-.new-interface-info__head span{  
-    color: #fff;  
-}  
-  
 .new-interface-info__title {  
+    order: 1;  
     font-size: clamp(2.2em, 3.5vw, 3.2em);  
     font-weight: 600;  
     margin: 0 0 0.3em 0;  
@@ -970,8 +1003,37 @@
     overflow: hidden;  
 }  
   
+.new-interface-info__head {  
+    order: 2;  
+    color: rgba(255, 255, 255, 0.6);  
+    margin-bottom: 0.3em;  
+    font-size: 1em;  
+    min-height: 1em;  
+}  
+  
+.new-interface-info__head span{  
+    color: #fff;  
+}  
+  
+.new-interface-info__description{  
+    order: 3;  
+    font-size: 0.9em;  
+    font-weight: 300;  
+    line-height: 1.4;  
+    color: rgba(255, 255, 255, 0.85);  
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);  
+    overflow: hidden;  
+    text-overflow: ellipsis;  
+    display: -webkit-box;  
+    -webkit-line-clamp: 3;  
+    line-clamp: 3;  
+    -webkit-box-orient: vertical;  
+    max-width: min(800px, 85vw);  
+    margin-top: 0.2em;  
+}  
+  
 .new-interface-info__title-logo {  
-    max-width: min(550px, 50vw) !important;  
+    max-width: min(430px, 45vw) !important;  
     max-height: var(--ni-logo-max-h, 130px) !important;  
     width: auto !important;  
     height: auto !important;  
@@ -1003,25 +1065,15 @@
     display: none !important;  
 }  
   
-.new-interface-info__description{  
-    font-size: 0.9em;  
-    font-weight: 300;  
-    line-height: 1.4;  
-    color: rgba(255, 255, 255, 0.85);  
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);  
-    overflow: hidden;  
-    text-overflow: ellipsis;  
-    display: -webkit-box;  
-    -webkit-line-clamp: 3;  
-    line-clamp: 3;  
-    -webkit-box-orient: vertical;  
-    max-width: min(800px, 85vw);  
-    margin-top: 0.2em;  
-}  
-  
 .new-interface .full-start__background{  
     height: 108%;  
     top: -6em;  
+    opacity: 0;  
+    transition: opacity .55s ease;  
+}  
+  
+.new-interface .full-start__background.loaded{  
+    opacity: 1;  
 }  
   
 .new-interface .full-start__rate{  
@@ -1071,7 +1123,7 @@ body.light--version .new-interface-info__body{
         margin-bottom: 0.15em;  
     }  
     .new-interface-info__title-logo {  
-        max-width: min(250px, 65vw) !important;  
+        max-width: min(235px, 62vw) !important;  
         max-height: 60px !important;  
     }  
     .new-interface {  
@@ -1109,14 +1161,11 @@ body.light--version .new-interface-info__body{
     }  
 }  
   
-body.advanced--animation:not(.no--animation) .new-interface .card.focus .card__view,  
-body.advanced--animation:not(.no--animation) .new-interface .card--small.focus .card__view{  
-    animation: animation-card-focus 0.2s;  
-}  
-  
-body.advanced--animation:not(.no--animation) .new-interface .card.animate-trigger-enter .card__view,  
-body.advanced--animation:not(.no--animation) .new-interface .card--small.animate-trigger-enter .card__view{  
-    animation: animation-trigger-enter 0.2s forwards;  
+.new-interface .card.focus .card__view,  
+.new-interface .card--small.focus .card__view{  
+    transform: scale(1.035) translateZ(0) !important;  
+    filter: brightness(1.08) !important;  
+    animation: none !important;  
 }  
 </style>`);  
   
@@ -1129,6 +1178,8 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
             this.timer = null;  
             this.network = new Lampa.Reguest();  
             this.loaded = {};  
+            this.loadedKeys = [];  
+            this.DETAIL_CACHE_LIMIT = 80;  
         }  
   
         create() {  
@@ -1153,7 +1204,6 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
         update(data) {  
             if (!data) return;  
             if (!this.html) this.create();  
-            Lampa.Background.change(Lampa.Utils.cardImgBackground(data));  
             this.load(data);  
         }  
   
@@ -1181,9 +1231,18 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
             clearTimeout(this.timer);  
   
             this.timer = setTimeout(() => {  
-                this.network.clear();  
+                if (!preload) {  
+                    this.network.clear();  
+                }  
                 this.network.timeout(5000);  
                 this.network.silent(url, (movie) => {  
+                    if (!this.loaded[url]) {  
+                        this.loadedKeys.push(url);  
+                        if (this.loadedKeys.length > this.DETAIL_CACHE_LIMIT) {  
+                            const oldest = this.loadedKeys.shift();  
+                            delete this.loaded[oldest];  
+                        }  
+                    }  
                     this.loaded[url] = movie;  
                     if (!preload && this.currentUrl === url) this.draw(movie);  
                 });  
@@ -1211,6 +1270,7 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
             clearTimeout(this.timer);  
             this.network.clear();  
             this.loaded = {};  
+            this.loadedKeys = [];  
             this.currentUrl = null;  
   
             if (this.html) {  
