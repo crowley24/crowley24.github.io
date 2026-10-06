@@ -379,12 +379,12 @@
                 img.style.maxHeight = logoHeight;  
                 img.style.setProperty('max-height', logoHeight, 'important');  
             } else {  
-                img.style.maxHeight = '130px';  
-                img.style.setProperty('max-height', '130px', 'important');  
+                img.style.maxHeight = '95px';  
+                img.style.setProperty('max-height', '95px', 'important');  
             }  
   
             if (this.useTextHeight() && heightPx && heightPx > 0 && !logoHeight) {  
-                const scaledHeight = Math.min(heightPx * 1.1, 130);  
+                const scaledHeight = Math.min(heightPx * 1.1, 95);  
                 img.style.height = `${scaledHeight}px`;  
                 img.style.width = 'auto';  
                 img.style.maxWidth = '100%';  
@@ -927,7 +927,7 @@
         Lampa.Template.add('new_interface_style_v3', `<style>  
 .new-interface{  
     position: relative;  
-    --ni-card-w: clamp(35px, 2.8vw, 60px);  
+    --ni-card-w: clamp(100px, 14vw, 150px);  
 }  
   
 .new-interface .card--small,  
@@ -941,16 +941,17 @@
   
 .new-interface-info{  
     position: relative;  
-    padding: 1em 2em 1em 2em;  
+    padding: 1.5em 2.5em 0.8em 2.5em;  
     height: auto !important;  
-    min-height: 42vh !important;  
-    max-height: 50vh !important;  
+    min-height: 44vh !important;  
+    max-height: 48vh !important;  
     overflow: hidden !important;  
     z-index: 3;  
     display: flex !important;  
     flex-direction: column !important;  
     justify-content: flex-end !important;  
     box-sizing: border-box;  
+    background: linear-gradient(0deg, rgba(15,15,15,0.8) 0%, rgba(15,15,15,0) 100%);  
 }  
   
 .new-interface-info:before{  
@@ -962,7 +963,6 @@
     z-index: 1;  
     width: 100%;  
     max-width: 100%;  
-    padding-top: 0;  
     display: flex !important;  
     flex-direction: column !important;  
     justify-content: flex-end !important;  
@@ -976,21 +976,16 @@
     flex-direction: column;  
     align-items: flex-start;  
     justify-content: flex-end;  
-    box-sizing: border-box;  
-}  
-  
-.new-interface-info__right{  
-    padding-top: 0.5em;  
 }  
   
 .new-interface-info__head{  
-    color: rgba(255, 255, 255, 0.75);  
-    margin-top: 0.3em;  
-    margin-bottom: 0.4em;  
-    font-size: 1.05em;  
+    color: rgba(255, 255, 255, 0.7);  
+    margin-top: 0.4em;  
+    margin-bottom: 0.5em;  
+    font-size: 0.95em;  
     font-weight: 400;  
-    min-height: 1em;  
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);  
+    letter-spacing: 0.5px;  
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);  
     order: 2;  
 }  
   
@@ -999,28 +994,28 @@
 }  
   
 .new-interface-info__title {  
-    font-size: clamp(2.2em, 3.5vw, 3.2em);  
+    font-size: clamp(2rem, 3vw, 2.8em);  
     font-weight: 600;  
     margin: 0;  
     display: flex;  
     align-items: center;  
     max-width: 100%;  
     min-height: 1.1em;  
-    overflow: hidden;  
     order: 1;  
 }  
   
 .new-interface-info__title-logo {  
-    max-width: min(550px, 50vw) !important;  
-    max-height: var(--ni-logo-max-h, 130px) !important;  
+    max-width: min(420px, 45vw) !important;  
+    max-height: var(--ni-logo-max-h, 95px) !important;  
     width: auto !important;  
     height: auto !important;  
     object-fit: contain !important;  
     object-position: left center !important;  
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.6));  
 }  
   
 .new-interface-full-logo {  
-    max-height: var(--ni-logo-max-h, 140px) !important;  
+    max-height: var(--ni-logo-max-h, 110px) !important;  
     width: auto !important;  
     max-width: 100% !important;  
     object-fit: contain !important;  
@@ -1039,114 +1034,41 @@
     display: none !important;  
 }  
   
-.new-interface.ni-hide-captions .card > *:not(.card__view):not(.card__promo){  
-    display: none !important;  
-}  
-  
 .new-interface-info__description{  
-    font-size: 1.05em;  
+    font-size: 0.95em;  
     font-weight: 300;  
-    line-height: 1.45;  
-    color: rgba(255, 255, 255, 0.9);  
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);  
+    line-height: 1.4;  
+    color: rgba(255, 255, 255, 0.85);  
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);  
     overflow: hidden;  
     text-overflow: ellipsis;  
     display: -webkit-box;  
-    -webkit-line-clamp: 3;  
-    line-clamp: 3;  
+    -webkit-line-clamp: 2;  
+    line-clamp: 2;  
     -webkit-box-orient: vertical;  
-    max-width: min(850px, 85vw);  
-    margin-top: 0.3em;  
+    max-width: min(750px, 80vw);  
+    margin-top: 0.2em;  
     order: 3;  
 }  
   
 .new-interface .full-start__background{  
     height: 108%;  
     top: -6em;  
+    transition: opacity 0.4s ease;  
 }  
-  
-.new-interface .full-start__rate{  
-    font-size: 1.3em;  
-    margin-right: 0;  
-}  
-  
-.new-interface .full-start__lines{  
-    padding-bottom: env(safe-area-inset-bottom, 0px);  
-}  
-  
-.new-interface .items-line__head{  
-    position: relative;  
-    z-index: 5;  
-    transform: translateY(0.5vh);  
-}  
-  
-.new-interface{  
-    --ni-lines-up: 0vh;  
-}  
-.new-interface .items-line__body > .scroll.scroll--horizontal,  
-.new-interface .items-line__body .scroll.scroll--horizontal{  
-    position: relative;  
-    top: 0;  
-}  
-  
-.new-interface .card__promo{  
-    display: none;  
-}  
-  
-.new-interface .card .card-watched{  
-    display: none !important;  
-}  
-  
-body.light--version .new-interface-info__body{  
-    width: min(92%, 72em);  
+
+.new-interface .items-line{  
+    margin-top: 0.5em;  
 }  
   
 @media (max-width: 767px) {  
     .new-interface-info {  
-        padding: 0.6em 1em 0.8em 1em;  
-        min-height: 38vh !important;  
-        max-height: 48vh !important;  
-    }  
-    .new-interface-info__title {  
-        font-size: 1.6em;  
+        padding: 1em 1.2em 0.5em 1.2em;  
+        min-height: 40vh !important;  
     }  
     .new-interface-info__title-logo {  
-        max-width: min(250px, 65vw) !important;  
-        max-height: 60px !important;  
-    }  
-    .new-interface {  
-        --ni-card-w: clamp(85px, 24vw, 130px);  
-    }  
-    .new-interface-info__head {  
-        font-size: 0.9em;  
-        margin-top: 0.2em;  
-        margin-bottom: 0.2em;  
-    }  
-    .new-interface-info__description {  
-        font-size: 0.9em;  
-        -webkit-line-clamp: 2;  
-        line-clamp: 2;  
-        max-width: 100%;  
-    }  
-}  
-  
-@media (max-height: 820px){  
-    .new-interface{  
-        --ni-card-w: clamp(60px, 4.2vw, 90px);  
-    }   
-  
-    .new-interface-info__right{  
-        padding-top: 0.2em;  
-    }  
-  
-    .new-interface-info__title{  
-        font-size: clamp(2em, 3.2vw, 2.7em);  
-    }  
-  
-    .new-interface-info__description{  
-        -webkit-line-clamp: 2;  
-        line-clamp: 2;  
-        font-size: 0.95em;  
+        max-width: min(220px, 60vw) !important;  
+        max-height: 55px !important;  
     }  
 }  
   
