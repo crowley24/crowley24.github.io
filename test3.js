@@ -56,7 +56,7 @@
             }  
         } catch (e) { }  
     }  
-  
+
     function applyCaptionsClass(container) {  
         try {  
             if (!container) return;  
@@ -373,7 +373,7 @@
                 img.style.maxWidth = '100%';  
             }  
         }  
-  
+
         swapContent(container, newNode) {  
             if (!container) return;  
             const type = this.animationType();  
@@ -696,9 +696,6 @@
   
                 main.scroll.minus(infoNode);  
   
-                // === FIX: динамічний відступ зверху для нативного скролу (touch) ===  
-                syncLineScrollMargin(infoNode);  
-  
                 this.attached = true;  
             },  
             update(data) {  
@@ -749,50 +746,6 @@
         };  
   
         return state;  
-    }  
-  
-    // === FIX: задає CSS-змінну --ni-info-h = реальна висота інфо-блоку ===  
-    // Використовується в scroll-margin-top для .items-line, щоб нативний  
-    // скрол на тач-пристроях зупиняв рядок нижче панелі з логотипом.  
-    function syncLineScrollMargin(infoNode) {  
-        try {  
-            if (!infoNode) return;  
-            const apply = () => {  
-                const h = infoNode.offsetHeight || 0;  
-                if (h > 0) {  
-                    document.documentElement.style.setProperty('--ni-info-h', h + 'px');  
-                }  
-            };  
-            apply();  
-            // повтор після завантаження логотипу — висота може змінитись  
-            setTimeout(apply, 350);  
-            setTimeout(apply, 900);  
-        } catch (e) { }  
-    }  
-  
-    // === FIX: дотягує активний рядок під інфо-блок після свайпу/гортання ===  
-    // 1) штатний шлях: main.scroll.update(lineEl, true) — Lampa.Scroll сам  
-    //    враховує minus(infoNode) і ставить рядок нижче панелі;  
-    // 2) fallback: нативний scrollIntoView (touch-пристрої, overflow:auto).  
-    function snapLineBelowInfo(main, line) {  
-        try {  
-            const lineEl = line && typeof line.render === 'function' ? line.render(true) : null;  
-            if (!lineEl) return;  
-  
-            const scroll = main && main.scroll;  
-            if (scroll && typeof scroll.update === 'function') {  
-                scroll.update(lineEl, true);  
-            } else if (typeof lineEl.scrollIntoView === 'function') {  
-                lineEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });  
-            }  
-        } catch (e) {  
-            try {  
-                const lineEl = line && typeof line.render === 'function' ? line.render(true) : null;  
-                if (lineEl && typeof lineEl.scrollIntoView === 'function') {  
-                    lineEl.scrollIntoView({ block: 'nearest' });  
-                }  
-            } catch (e2) { }  
-        }  
     }  
   
     function prepareLineData(element) {  
@@ -878,10 +831,6 @@
                 setTimeout(() => {  
                     const domData = getFocusedCardData(line);  
                     if (domData) state.update(domData);  
-  
-                    // === FIX: після свайпу/гортання дотягнути цей рядок  
-                    // під контейнер з логотипом/описом ===  
-                    snapLineBelowInfo(main, line);  
                 }, 32);  
             },  
             onMore() {  
@@ -895,6 +844,14 @@
   
         if (Array.isArray(line.items) && line.items.length) {  
             line.items.forEach(applyToCard);  
+              
+            // Автоматично завантажуємо дані першої картки одразу при створенні лінії  
+            try {  
+                const firstData = getCardData(line.items[0], element, 0);  
+                if (firstData) {  
+                    state.update(firstData);  
+                }  
+            } catch (e) {}  
         }  
   
         if (line.last) {  
@@ -930,7 +887,6 @@
     padding-bottom: 150%;  
 }  
   
-/* Контейнер збільшено до середини екрану (близько 42vh), контент притиснутий донизу */  
 .new-interface-info{  
     position: relative;  
     padding: 1em 2em 1em 2em;  
@@ -986,7 +942,6 @@
     color: #fff;  
 }  
   
-/* Логотип/назва знаходяться біля самого низу контейнера */  
 .new-interface-info__title {  
     font-size: clamp(2.2em, 3.5vw, 3.2em);  
     font-weight: 600;  
@@ -1031,7 +986,6 @@
     display: none !important;  
 }  
   
-/* Опис розміщено одразу під логотипом, ближче до низу */  
 .new-interface-info__description{  
     font-size: 0.9em;  
     font-weight: 300;  
@@ -1070,14 +1024,6 @@
   
 .new-interface{  
     --ni-lines-up: 0vh;  
-    /* === FIX: запас зверху для рядків — реальна висота інфо-блоку.  
-       --ni-info-h виставляється JS (syncLineScrollMargin), 44vh — фолбек === */  
-    --ni-info-h: 44vh;  
-}  
-.new-interface .items-line{  
-    /* === FIX: нативний скрол (touch, overflow:auto) зупиняє рядок  
-       нижче панелі з логотипом, а не під нею === */  
-    scroll-margin-top: var(--ni-info-h);  
 }  
 .new-interface .items-line__body > .scroll.scroll--horizontal,  
 .new-interface .items-line__body .scroll.scroll--horizontal{  
@@ -1097,7 +1043,6 @@ body.light--version .new-interface-info__body{
     width: min(92%, 72em);  
 }  
   
-/* Мобільна адаптація */  
 @media (max-width: 767px) {  
     .new-interface-info {  
         padding: 0.6em 1em 0.8em 1em;  
@@ -1114,8 +1059,6 @@ body.light--version .new-interface-info__body{
     }  
     .new-interface {  
         --ni-card-w: clamp(85px, 24vw, 130px);  
-        /* === FIX: менший фолбек для мобільної висоти інфо-блоку === */  
-        --ni-info-h: 40vh;  
     }  
     .new-interface-info__head {  
         font-size: 0.85em;  
@@ -1132,7 +1075,7 @@ body.light--version .new-interface-info__body{
 @media (max-height: 820px){  
     .new-interface{  
         --ni-card-w: clamp(60px, 4.2vw, 90px);  
-    }  
+    }   
   
     .new-interface-info__right{  
         padding-top: 0.2em;  
@@ -1264,7 +1207,7 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
         startPluginV3();  
         return;  
     }  
-  
+
     function startPlugin() {  
         window.plugin_interface_ready = true;  
         var old_interface = Lampa.InteractionMain;  
