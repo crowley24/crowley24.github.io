@@ -561,7 +561,7 @@
                 img.src = url;  
   
                 Logo.setImageSizing(img, textHeightPx);  
-                
+  
                 const hideHead = !!Lampa.Storage.get('logo_hide_year', !0);  
                 if (hideHead && headNode && headNode.length) headNode.css('display', 'none');  
                 else if (headNode && headNode.length) headNode.css('display', '');  
@@ -816,20 +816,11 @@
             });  
         }  
   
-        let isFirstRowAndNotReady = false;  
-        try {  
-            if (main && main.rows && main.rows[0] === line) {  
-                isFirstRowAndNotReady = true;  
-            }  
-        } catch (e) {}  
-  
         line.use({  
             onInstance(card) {  
                 applyToCard(card);  
             },  
             onActive(card, itemData) {  
-                if (isFirstRowAndNotReady) return;  
-  
                 const current = getCardData(card, itemData);  
                 if (current) {  
                     current.__priority = 1;  
@@ -837,7 +828,6 @@
                 }  
             },  
             onToggle() {  
-                if (isFirstRowAndNotReady) return;  
                 setTimeout(() => {  
                     const domData = getFocusedCardData(line);  
                     if (domData) state.update(domData);  
@@ -854,23 +844,45 @@
   
         if (Array.isArray(line.items) && line.items.length) {  
             line.items.forEach(applyToCard);  
-        }  
-  
-        if (element && Array.isArray(element.results) && element.results.length) {  
-            const firstData = element.results[0];  
-            if (firstData) {  
-                setTimeout(() => {  
-                    state.update(firstData);  
-                    setTimeout(() => {  
-                        isFirstRowAndNotReady = false;  
-                    }, 300);  
-                }, 50);  
-            }  
+              
+            // Автоматично завантажуємо дані першого реального фільму одразу при створенні лінії  
+            try {  
+                let firstValidData = null;  
+                
+                // 1. Спочатку шукаємо через DOM першу картку, відкидаючи службові елементи  
+                const container = typeof line.render === 'function' ? line.render(true) : null;  
+                if (container && container.querySelector) {  
+                    const firstCardDom = container.querySelector('.card:not(.card-more):not(.card--back)');  
+                    if (firstCardDom && firstCardDom.card_data) {  
+                        firstValidData = firstCardDom.card_data;  
+                    }  
+                }  
+                
+                // 2. Якщо через DOM не знайдено, перебираємо масив items, пропускаючи службові типи  
+                if (!firstValidData) {  
+                    for (let i = 0; i < line.items.length; i++) {  
+                        const itemData = getCardData(line.items[i], element, i);  
+                        if (itemData && itemData.id && itemData.source !== 'other') {  
+                            firstValidData = itemData;  
+                            break;  
+                        }  
+                    }  
+                }  
+
+                // 3. Якщо все ж нічого не знайдено, беремо базовий нульовий елемент  
+                if (!firstValidData) {  
+                    firstValidData = getCardData(line.items[0], element, 0);  
+                }  
+
+                if (firstValidData) {  
+                    state.update(firstValidData);  
+                }  
+            } catch (e) {}  
         }  
   
         if (line.last) {  
             const lastData = getDomCardData(line.last);  
-            if (lastData && !isFirstRowAndNotReady) state.update(lastData);  
+            if (lastData) state.update(lastData);  
         }  
     }  
   
@@ -1112,7 +1124,7 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.focus .
 }  
   
 body.advanced--animation:not(.no--animation) .new-interface .card.animate-trigger-enter .card__view,  
-body.advanced--animation:not(.no--animation) .new-interface .card.animate-trigger-enter .card__view{  
+body.advanced--animation:not(.no--animation) .new-interface .card--small.animate-trigger-enter .card__view{  
     animation: animation-trigger-enter 0.2s forwards;  
 }  
 </style>`);  
