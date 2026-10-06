@@ -168,7 +168,7 @@
         add({  
             component: 'interface_plus',  
             param: { name: 'logo_hide_year', type: 'trigger', default: !0 },  
-            field: { name: 'Приховати рік і країну', description: 'Приховує інформацію над логотипом' }  
+            field: { name: 'Приховати рік і країну', description: 'Приховує інформацію над логотипом (вона тепер відображається під ним)' }  
         });  
   
         add({  
@@ -542,6 +542,34 @@
   
     const Logo = new LogoEngine();  
   
+    function formatMovieHead(movie) {  
+        try {  
+            let parts = [];  
+              
+            // Рік
+            let year = '';  
+            if (movie.release_date) year = movie.release_date.split('-')[0];  
+            else if (movie.first_air_date) year = movie.first_air_date.split('-')[0];  
+            else if (movie.year) year = movie.year;  
+            if (year) parts.push(year);  
+  
+            // Країна
+            if (Array.isArray(movie.production_countries) && movie.production_countries.length) {  
+                parts.push(movie.production_countries[0].name || movie.production_countries[0].iso_3166_1);  
+            }  
+  
+            // Жанри
+            if (Array.isArray(movie.genres) && movie.genres.length) {  
+                let genresStr = movie.genres.slice(0, 2).map(g => g.name).join(', ');  
+                if (genresStr) parts.push(genresStr);  
+            }  
+  
+            return parts.join(' • ');  
+        } catch (e) {  
+            return '';  
+        }  
+    }  
+
     function applyInfoTitleLogo(wrapper, titleNode, headNode, movie, titleText) {  
         try {  
             if (!titleNode || !titleNode.length) return;  
@@ -556,6 +584,12 @@
             if (descNode.length) {  
                 descNode.text(overviewText);  
                 descNode.toggle(!!overviewText);  
+            }  
+
+            const headText = formatMovieHead(movie);  
+            if (headNode && headNode.length) {  
+                headNode.text(headText);  
+                headNode.toggle(!!headText);  
             }  
   
             if (!Logo.enabled()) {  
@@ -589,8 +623,8 @@
                 Logo.setImageSizing(img, textHeightPx);  
   
                 const hideHead = !!Lampa.Storage.get('logo_hide_year', !0);  
-                if (hideHead && headNode && headNode.length) headNode.css('display', 'none');  
-                else if (headNode && headNode.length) headNode.css('display', '');  
+                // Метаінформація залишається видимою між логотипом та описом  
+                if (headNode && headNode.length) headNode.css('display', '');  
   
                 Logo.swapContent(titleEl, img);  
             });  
@@ -808,9 +842,6 @@
   
         card.__newInterfaceCard = true;  
   
-        card.params = card.params || {};  
-        card.params.style = card.params.style || {};  
-  
         card.use({  
             onFocus() {  
                 state.update(card.data);  
@@ -925,26 +956,6 @@
         Lampa.Template.add('new_interface_style_v3', `<style>  
 .new-interface{  
     position: relative;  
-    --ni-card-w: clamp(35px, 2.8vw, 60px);  
-}  
-  
-.new-interface .card,  
-.new-interface .card--small,  
-.new-interface .card-more{  
-    width: var(--ni-card-w) !important;  
-    border-radius: 10px !important;  
-    transform: translateZ(0);  
-    backface-visibility: hidden;  
-}  
-  
-.new-interface .card .card__view {  
-    border-radius: 10px !important;  
-    transition: transform .22s cubic-bezier(.22,.61,.36,1), filter .22s ease !important;  
-}  
-  
-.new-interface .card-more__box{  
-    padding-bottom: 150%;  
-    border-radius: 10px !important;  
 }  
   
 .new-interface-info{  
@@ -1005,14 +1016,12 @@
   
 .new-interface-info__head {  
     order: 2;  
-    color: rgba(255, 255, 255, 0.6);  
-    margin-bottom: 0.3em;  
-    font-size: 1em;  
+    color: rgba(255, 255, 255, 0.7);  
+    margin-bottom: 0.4em;  
+    font-size: 1.05em;  
     min-height: 1em;  
-}  
-  
-.new-interface-info__head span{  
-    color: #fff;  
+    font-weight: 400;  
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);  
 }  
   
 .new-interface-info__description{  
@@ -1029,7 +1038,7 @@
     line-clamp: 3;  
     -webkit-box-orient: vertical;  
     max-width: min(800px, 85vw);  
-    margin-top: 0.2em;  
+    margin-top: 0.1em;  
 }  
   
 .new-interface-info__title-logo {  
@@ -1126,12 +1135,9 @@ body.light--version .new-interface-info__body{
         max-width: min(235px, 62vw) !important;  
         max-height: 60px !important;  
     }  
-    .new-interface {  
-        --ni-card-w: clamp(85px, 24vw, 130px);  
-    }  
     .new-interface-info__head {  
         font-size: 0.85em;  
-        margin-bottom: 0.1em;  
+        margin-bottom: 0.2em;  
     }  
     .new-interface-info__description {  
         font-size: 0.75em;  
@@ -1142,10 +1148,6 @@ body.light--version .new-interface-info__body{
 }  
   
 @media (max-height: 820px){  
-    .new-interface{  
-        --ni-card-w: clamp(60px, 4.2vw, 90px);  
-    }   
-  
     .new-interface-info__right{  
         padding-top: 0.2em;  
     }  
@@ -1159,13 +1161,6 @@ body.light--version .new-interface-info__body{
         line-clamp: 2;  
         font-size: 0.8em;  
     }  
-}  
-  
-.new-interface .card.focus .card__view,  
-.new-interface .card--small.focus .card__view{  
-    transform: scale(1.035) translateZ(0) !important;  
-    filter: brightness(1.08) !important;  
-    animation: none !important;  
 }  
 </style>`);  
   
@@ -1188,8 +1183,8 @@ body.light--version .new-interface-info__body{
             this.html = $(`<div class="new-interface-info">  
                 <div class="new-interface-info__body">  
                     <div class="new-interface-info__left">  
-                        <div class="new-interface-info__head"></div>  
                         <div class="new-interface-info__title"></div>  
+                        <div class="new-interface-info__head"></div>  
                         <div class="new-interface-info__description"></div>  
                     </div>  
                 </div>  
@@ -1262,7 +1257,7 @@ body.light--version .new-interface-info__body{
   
         empty() {  
             if (!this.html) return;  
-            this.html.find('.new-interface-info__head').text('---');  
+            this.html.find('.new-interface-info__head').text('');  
             this.html.find('.new-interface-info__description').text('');  
         }  
   
