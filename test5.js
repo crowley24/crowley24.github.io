@@ -110,7 +110,12 @@
   
         add({  
             component: 'interface',  
-            param: { name: 'logo_size', type: 'select', values: { w300: 'w300', w500: 'w500', w780: 'w780', original: 'Оригінал' }, default: 'original' },  
+            param: {  
+                name: 'logo_size',  
+                type: 'select',  
+                values: { w300: 'w300', w500: 'w500', w780: 'w780', original: 'Оригінал' },  
+                default: 'original'  
+            },  
             field: { name: 'Розмір логотипа', description: 'Роздільна здатність завантажуваного зображення' }  
         });  
   
@@ -357,12 +362,12 @@
                 img.style.maxHeight = logoHeight;  
                 img.style.setProperty('max-height', logoHeight, 'important');  
             } else {  
-                img.style.maxHeight = '90px';  
-                img.style.setProperty('max-height', '90px', 'important');  
+                img.style.maxHeight = '130px';  
+                img.style.setProperty('max-height', '130px', 'important');  
             }  
   
             if (this.useTextHeight() && heightPx && heightPx > 0 && !logoHeight) {  
-                const scaledHeight = Math.min(heightPx * 1.1, 90);  
+                const scaledHeight = Math.min(heightPx * 1.1, 130);  
                 img.style.height = `${scaledHeight}px`;  
                 img.style.width = 'auto';  
                 img.style.maxWidth = '100%';  
@@ -874,17 +879,18 @@
     padding-bottom: 150%;  
 }  
   
-/* Компактний та адаптивний інфо-блок без величезних пропусків і налізань */  
+/* Контейнер збільшено до середини екрану (близько 42vh), контент притиснутий донизу */  
 .new-interface-info{  
     position: relative;  
-    padding: 1.2em 2em 0.5em 2em;  
+    padding: 1em 2em 1em 2em;  
     height: auto !important;  
-    min-height: 160px !important;  
-    max-height: 220px !important;  
+    min-height: 42vh !important;  
+    max-height: 50vh !important;  
     overflow: hidden !important;  
     z-index: 3;  
     display: flex !important;  
-    align-items: flex-start !important;  
+    flex-direction: column !important;  
+    justify-content: flex-end !important;  
     box-sizing: border-box;  
 }  
   
@@ -898,7 +904,9 @@
     width: 100%;  
     max-width: 100%;  
     padding-top: 0;  
-    display: block !important;  
+    display: flex !important;  
+    flex-direction: column !important;  
+    justify-content: flex-end !important;  
     box-sizing: border-box;  
 }  
   
@@ -908,6 +916,7 @@
     display: flex;  
     flex-direction: column;  
     align-items: flex-start;  
+    justify-content: flex-end;  
     box-sizing: border-box;  
 }  
   
@@ -926,9 +935,9 @@
     color: #fff;  
 }  
   
-/* Коректне розміщення заголовка та логотипа без виходу за межі шапки */  
+/* Логотип/назва знаходяться біля самого низу контейнера */  
 .new-interface-info__title {  
-    font-size: clamp(2em, 3.2vw, 2.8em);  
+    font-size: clamp(2.2em, 3.5vw, 3.2em);  
     font-weight: 600;  
     margin: 0 0 0.3em 0;  
     display: flex;  
@@ -938,10 +947,9 @@
     overflow: hidden;  
 }  
   
-/* Зменшені та збалансовані максимальні розміри логотипів */  
 .new-interface-info__title-logo {  
-    max-width: min(500px, 45vw) !important;  
-    max-height: var(--ni-logo-max-h, 85px) !important;  
+    max-width: min(550px, 50vw) !important;  
+    max-height: var(--ni-logo-max-h, 130px) !important;  
     width: auto !important;  
     height: auto !important;  
     object-fit: contain !important;  
@@ -949,7 +957,7 @@
 }  
   
 .new-interface-full-logo {  
-    max-height: var(--ni-logo-max-h, 120px) !important;  
+    max-height: var(--ni-logo-max-h, 140px) !important;  
     width: auto !important;  
     max-width: 100% !important;  
     object-fit: contain !important;  
@@ -972,21 +980,21 @@
     display: none !important;  
 }  
   
-/* Компактний опис на 2 рядки з обмеженою шириною */  
+/* Опис розміщено одразу під логотипом, ближче до низу */  
 .new-interface-info__description{  
-    font-size: 0.85em;  
+    font-size: 0.9em;  
     font-weight: 300;  
-    line-height: 1.35;  
+    line-height: 1.4;  
     color: rgba(255, 255, 255, 0.85);  
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);  
     overflow: hidden;  
     text-overflow: ellipsis;  
     display: -webkit-box;  
-    -webkit-line-clamp: 2;  
-    line-clamp: 2;  
+    -webkit-line-clamp: 3;  
+    line-clamp: 3;  
     -webkit-box-orient: vertical;  
-    max-width: min(750px, 85vw);  
-    margin-top: 0.1em;  
+    max-width: min(800px, 85vw);  
+    margin-top: 0.2em;  
 }  
   
 .new-interface .full-start__background{  
@@ -1028,30 +1036,29 @@
   
 body.light--version .new-interface-info__body{  
     width: min(92%, 72em);  
-    padding-top: 1em;  
 }  
   
 /* Мобільна адаптація */  
 @media (max-width: 767px) {  
     .new-interface-info {  
-        padding: 0.6em 1em 0.3em 1em;  
-        min-height: 120px !important;  
-        max-height: 170px !important;  
+        padding: 0.6em 1em 0.8em 1em;  
+        min-height: 38vh !important;  
+        max-height: 48vh !important;  
     }  
     .new-interface-info__title {  
-        font-size: 1.4em;  
-        margin-bottom: 0.2em;  
+        font-size: 1.6em;  
+        margin-bottom: 0.15em;  
     }  
     .new-interface-info__title-logo {  
-        max-width: min(220px, 60vw) !important;  
-        max-height: 45px !important;  
+        max-width: min(250px, 65vw) !important;  
+        max-height: 60px !important;  
     }  
     .new-interface {  
         --ni-card-w: clamp(85px, 24vw, 130px);  
     }  
     .new-interface-info__head {  
         font-size: 0.85em;  
-        margin-bottom: 0.15em;  
+        margin-bottom: 0.1em;  
     }  
     .new-interface-info__description {  
         font-size: 0.75em;  
@@ -1071,13 +1078,13 @@ body.light--version .new-interface-info__body{
     }  
   
     .new-interface-info__title{  
-        font-size: clamp(1.9em, 3vw, 2.5em);  
+        font-size: clamp(2em, 3.2vw, 2.7em);  
     }  
   
     .new-interface-info__description{  
         -webkit-line-clamp: 2;  
         line-clamp: 2;  
-        font-size: 0.78em;  
+        font-size: 0.8em;  
     }  
 }  
   
