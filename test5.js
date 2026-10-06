@@ -74,7 +74,6 @@
         window.__ni_interface2_settings_ready = true;  
         const add = (cfg) => { try { Lampa.SettingsApi.addParam(cfg); } catch (e) { } };  
 
-        // Реєстрація окремого розділу "Інтерфейс+" у налаштуваннях
         if (typeof Lampa.SettingsApi.addComponent === 'function') {  
             Lampa.SettingsApi.addComponent({  
                 component: 'interface_plus',  
@@ -951,7 +950,19 @@
     flex-direction: column !important;  
     justify-content: flex-end !important;  
     box-sizing: border-box;  
-    background: linear-gradient(0deg, rgba(15,15,15,0.8) 0%, rgba(15,15,15,0) 100%);  
+    background: transparent !important;  
+}  
+  
+.new-interface:after {  
+    content: '';  
+    position: absolute;  
+    bottom: 0;  
+    left: 0;  
+    width: 100%;  
+    height: 60vh;  
+    background: linear-gradient(180deg, rgba(15,15,15,0) 0%, rgba(15,15,15,0.85) 60%, rgba(15,15,15,0.95) 100%);  
+    pointer-events: none;  
+    z-index: 2;  
 }  
   
 .new-interface-info:before{  
@@ -960,7 +971,7 @@
   
 .new-interface-info__body{  
     position: relative;  
-    z-index: 1;  
+    z-index: 4;  
     width: 100%;  
     max-width: 100%;  
     display: flex !important;  
@@ -1056,9 +1067,11 @@
     top: -6em;  
     transition: opacity 0.4s ease;  
 }  
-
+  
 .new-interface .items-line{  
     margin-top: 0.5em;  
+    position: relative;  
+    z-index: 4;  
 }  
   
 @media (max-width: 767px) {  
