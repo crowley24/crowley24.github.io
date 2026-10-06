@@ -4,7 +4,7 @@
     if (window.banner_hero_plugin) return;
     window.banner_hero_plugin = true;
 
-    var VERSION = '1.3.2';
+    var VERSION = '1.3.3';
 
     var SETTING = 'banner_hero_enabled';
     var SIZE_SETTING = 'interface_size';
@@ -850,7 +850,7 @@
         ) {
             var hero = heroFor(el);
 
-            // Скидаємо старий ID при вході або поверненні, щоб оновити банер під актуальну картку
+            // Скидаємо старий ID при вході або поверненні, щоб гарантовано оновити банер
             lastCardId = null;
 
             setTimeout(function () {
