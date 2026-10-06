@@ -357,15 +357,15 @@
                 img.style.maxHeight = logoHeight;  
                 img.style.setProperty('max-height', logoHeight, 'important');  
             } else {  
-                img.style.maxHeight = '120px';  
-                img.style.setProperty('max-height', '120px', 'important');  
+                img.style.maxHeight = '110px';  
+                img.style.setProperty('max-height', '110px', 'important');  
             }  
   
             if (this.useTextHeight() && heightPx && heightPx > 0 && !logoHeight) {  
-                const scaledHeight = Math.min(heightPx * 1.2, 120);  
+                const scaledHeight = Math.min(heightPx * 1.2, 110);  
                 img.style.height = `${scaledHeight}px`;  
                 img.style.width = 'auto';  
-                img.style.maxWidth = '400px';  
+                img.style.maxWidth = '100%';  
             }  
         }  
 
@@ -519,6 +519,13 @@
   
             const reqId = (titleEl.__ni_logo_req_id || 0) + 1;  
             titleEl.__ni_logo_req_id = reqId;  
+  
+            const descNode = wrapper.find('.new-interface-info__description');  
+            const overviewText = movie.overview || movie.description || '';  
+            if (descNode.length) {  
+                descNode.text(overviewText);  
+                descNode.toggle(!!overviewText);  
+            }  
   
             if (!Logo.enabled()) {  
                 if (headNode && headNode.length) headNode.css('display', '');  
@@ -709,7 +716,7 @@
                     setTimeout(() => {  
                         background.src = this.backgroundLast;  
                     }, 300);  
-                }, 400); // Оптимізована затримка для плавного перемикання на мобільних  
+                }, 400);  
             },  
             reset() {  
                 info.empty();  
@@ -872,14 +879,14 @@
   
 .new-interface-info{  
     position: relative;  
-    padding: 1.5em;  
+    padding: 1.5em 2em;  
     height: auto !important;  
     min-height: 200px !important;  
-    max-height: 250px !important;  
+    max-height: 300px !important;  
     overflow: visible !important;  
     z-index: 3;  
     display: flex !important;  
-    align-items: center !important;  
+    align-items: flex-start !important;  
 }  
   
 .new-interface-info:before{  
@@ -890,15 +897,19 @@
     position: relative;  
     z-index: 1;  
     width: 100%;  
+    max-width: 100%;  
     padding-top: 0;  
     display: block !important;  
+    box-sizing: border-box;  
 }  
   
 .new-interface-info__left {  
     width: 100%;  
+    max-width: 100%;  
     display: flex;  
-    align-items: center;  
-    min-height: 120px;    
+    flex-direction: column;  
+    align-items: flex-start;  
+    box-sizing: border-box;  
 }  
   
 .new-interface-info__right{  
@@ -907,8 +918,8 @@
   
 .new-interface-info__head{  
     color: rgba(255, 255, 255, 0.6);  
-    margin-bottom: 1em;  
-    font-size: 1.3em;  
+    margin-bottom: 0.6em;  
+    font-size: 1.2em;  
     min-height: 1em;  
 }  
   
@@ -917,19 +928,19 @@
 }  
   
 .new-interface-info__title {  
-    font-size: clamp(2.6em, 4.0vw, 3.6em);  
+    font-size: clamp(2.4em, 3.8vw, 3.4em);  
     font-weight: 600;  
-    margin: 0;  
+    margin: 0 0 0.5em 0;  
     display: flex;  
     align-items: center;  
-    min-height: 120px;  
-    max-height: 120px;  
-    overflow: visible; 
+    max-width: 100%;  
+    overflow: hidden;  
 }  
   
+/* Захист від виходу логотипа за межі екрана */  
 .new-interface-info__title-logo {  
-    max-width: 400px !important;  
-    max-height: var(--ni-logo-max-h, 120px) !important;  
+    max-width: min(550px, 50vw) !important;  
+    max-height: var(--ni-logo-max-h, 110px) !important;  
     width: auto !important;  
     height: auto !important;  
     object-fit: contain !important;  
@@ -960,19 +971,21 @@
     display: none !important;  
 }  
   
+/* Стилі для опису фільму під логотипом */  
 .new-interface-info__description{  
-    font-size: 0.87em;  
+    font-size: 0.9em;  
     font-weight: 300;  
-    line-height: 1.38;  
-    color: rgba(255, 255, 255, 0.90);  
-    text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45);  
+    line-height: 1.4;  
+    color: rgba(255, 255, 255, 0.85);  
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);  
     overflow: hidden;  
-    text-overflow: '.';  
+    text-overflow: ellipsis;  
     display: -webkit-box;  
-    -webkit-line-clamp: 7;  
-    line-clamp: 7;  
+    -webkit-line-clamp: 3;  
+    line-clamp: 3;  
     -webkit-box-orient: vertical;  
-    width: auto;  
+    max-width: min(750px, 85vw);  
+    margin-top: 0.2em;  
 }  
   
 .new-interface .full-start__background{  
@@ -1021,23 +1034,29 @@ body.light--version .new-interface-info__body{
 @media (max-width: 767px) {  
     .new-interface-info {  
         padding: 0.8em 1em;  
-        min-height: 130px !important;  
-        max-height: 170px !important;  
+        min-height: 140px !important;  
+        max-height: 220px !important;  
     }  
     .new-interface-info__title {  
-        font-size: 1.8em;  
-        min-height: 60px;  
-        max-height: 60px;  
+        font-size: 1.6em;  
+        margin-bottom: 0.3em;  
     }  
     .new-interface-info__title-logo {  
-        max-height: 60px !important;  
+        max-width: min(240px, 60vw) !important;  
+        max-height: 50px !important;  
     }  
     .new-interface {  
         --ni-card-w: clamp(85px, 24vw, 130px);  
     }  
     .new-interface-info__head {  
-        font-size: 1.1em;  
-        margin-bottom: 0.5em;  
+        font-size: 1em;  
+        margin-bottom: 0.3em;  
+    }  
+    .new-interface-info__description {  
+        font-size: 0.78em;  
+        -webkit-line-clamp: 2;  
+        line-clamp: 2;  
+        max-width: 100%;  
     }  
 }  
   
@@ -1052,13 +1071,13 @@ body.light--version .new-interface-info__body{
     }  
   
     .new-interface-info__title{  
-        font-size: clamp(2.4em, 3.6vw, 3.1em);  
+        font-size: clamp(2.2em, 3.4vw, 2.9em);  
     }  
   
     .new-interface-info__description{  
-        -webkit-line-clamp: 6;  
-        line-clamp: 6;  
-        font-size: 0.83em;  
+        -webkit-line-clamp: 2;  
+        line-clamp: 2;  
+        font-size: 0.8em;  
     }  
 }  
   
@@ -1092,6 +1111,7 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
                     <div class="new-interface-info__left">  
                         <div class="new-interface-info__head"></div>  
                         <div class="new-interface-info__title"></div>  
+                        <div class="new-interface-info__description"></div>  
                     </div>  
                 </div>  
             </div>`);  
@@ -1156,6 +1176,7 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
         empty() {  
             if (!this.html) return;  
             this.html.find('.new-interface-info__head').text('---');  
+            this.html.find('.new-interface-info__description').text('');  
         }  
   
         destroy() {  
@@ -1183,7 +1204,7 @@ body.advanced--animation:not(.no--animation) .new-interface .card--small.animate
   
         Lampa.InteractionMain = function (object) {  
             var use = new_interface;  
-            if (!(object.source == 'tmdb' || object.source == 'cub')) use = old_interface;  
+            if (!(object.source == 'tmdb' || object.source == 'cub')) use = old_info;  
             if (Lampa.Manifest.app_digital < 153) use = old_interface;  
             return new use(object);  
         };  
