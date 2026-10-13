@@ -1,690 +1,1638 @@
 (function () {
 'use strict';
 
-/* 4K Pro 63.0.1 — Lampa / Jackett / TorrServer */
-if (window.uadv630_ready) return;
-window.uadv630_ready = true;
+if (window.uadv623_ready) return;
+window.uadv623_ready = true;
 
-var VERSION = '63.0.1';
-var P = 'uadv62_'; // Backward-compatible storage prefix
-var GB = 1073741824, MB = 1048576;
+var VERSION = '62.3.2';
+var P = 'uadv62_';
+var GB = 1073741824;
+var MB = 1048576;
+
 var MOVIE_CATS = '2000,2010,2020,2030,2040';
 var SERIES_CATS = '5000,5030,5040,5050,5060,5070';
-var VIDEO = /\.(mkv|mp4|avi|ts|m2ts|mpg|mpeg|mov|wmv|webm)$/i;
+
+var VIDEO = /\.(mkv|mp4|avi|ts|m2ts|mpg|mpeg|mov|wmv)$/i;
+
+var cache = {};
+var cacheKeys = [];
+var busy = false;
+var dialog = null;
+var toastTimer = null;
 var $ = window.jQuery || window.$;
-var cache = {}, cacheOrder = [], busy = false, dialog = null, toastTimer = null;
-var activeController = null, operationId = 0, mounted = false, settingsDone = false;
 
-function log() { try { console.log.apply(console, ['[4K Pro ' + VERSION + ']'].concat([].slice.call(arguments))); } catch (e) {} }
-function get(k, d) { try { var v = Lampa.Storage.get(P + k); return v == null ? d : v; } catch (e) { return d; } }
-function set(k, v) { try { Lampa.Storage.set(P + k, v); } catch (e) {} }
-function field(k) { try { return Lampa.Storage.field(k) || Lampa.Storage.get(k) || ''; } catch (e) { return ''; } }
-function on(k) { return String(get(k, 'false')) === 'true'; }
-function clean(s) { return String(s || '').replace(/[:\/\\|?*<>"']/g, ' ').replace(/\s+/g, ' ').trim(); }
-function normalize(s) { return clean(s).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim(); }
-function size(n) { return (Number(n || 0) / GB).toFixed(1) + ' GB'; }
-function scheme(s) { s = String(s || '').trim(); return /^https?:\/\//i.test(s) ? s : 'http://' + s; }
-function trim(s) { return String(s || '').replace(/\/+$/, ''); }
-function isSeries(m) { return !!(m && (m.media_type === 'tv' || m.first_air_date || m.number_of_seasons) && !m.release_date); }
-function titleOf(m) { return m.title || m.name || m.original_title || m.original_name || 'Відео'; }
-function yearOf(m) { return String(m.release_date || m.first_air_date || '').slice(0, 4); }
-function posterOf(m) { var p = m.poster_path || m.img || ''; return /^\//.test(p) ? 'https://image.tmdb.org/t/p/w500' + p : p; }
-function wait(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
-function err(e) { return e && e.message ? e.message : String(e); }
-function abortError() { return Error('Операцію скасовано'); }
-function check(id) { if (id !== operationId) throw abortError(); }
-function resetCache() { cache = {}; cacheOrder = []; }
-
-function note(message) {
-    var old = document.getElementById('uadv630-toast');
-    if (old) old.parentNode.removeChild(old);
-    if (toastTimer) clearTimeout(toastTimer);
-    var el = document.createElement('div');
-    el.id = 'uadv630-toast'; el.className = 'uadv630-toast';
-    el.textContent = String(message || ''); document.body.appendChild(el);
-    requestAnimationFrame(function () { el.classList.add('visible'); });
-    toastTimer = setTimeout(function () {
-        el.classList.remove('visible');
-        setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 240);
-    }, 3100);
-}
-
-async function request(url, options, ms) {
-    var ctrl = new AbortController();
-    var timer = setTimeout(function () { ctrl.abort(); }, ms || 12000);
-    var external = options && options.signal;
-    var abort = function () { ctrl.abort(); };
-    if (external) {
-        if (external.aborted) ctrl.abort();
-        else external.addEventListener('abort', abort);
-    }
+function get(k, d) {
     try {
-        var opt = Object.assign({}, options || {}, {signal: ctrl.signal});
-        var response = await fetch(url, opt);
-        if (!response.ok) throw Error('HTTP ' + response.status + ' — ' + url.split('?')[0]);
-        return response;
-    } finally {
-        clearTimeout(timer);
-        if (external) external.removeEventListener('abort', abort);
+        var v = Lampa.Storage.get(P + k);
+        return v == null ? d : v;
+    } catch (e) {
+        return d;
     }
 }
+
+function set(k, v) {
+    try {
+        Lampa.Storage.set(P + k, v);
+    } catch (e) {}
+}
+
+function field(k) {
+    try {
+        return Lampa.Storage.field(k) || '';
+    } catch (e) {
+        return '';
+    }
+}
+
+/* ==========================================
+   CUSTOM DARK NOTIFICATIONS
+   ========================================== */
+
+function note(s) {
+    var old = document.getElementById('uadv-toast');
+
+    if (old) old.remove();
+    if (toastTimer) clearTimeout(toastTimer);
+
+    var toast = document.createElement('div');
+    toast.id = 'uadv-toast';
+    toast.className = 'uadv-toast';
+    toast.textContent = String(s || '');
+
+    document.body.appendChild(toast);
+
+    requestAnimationFrame(function () {
+        toast.classList.add('uadv-toast-visible');
+    });
+
+    toastTimer = setTimeout(function () {
+        toast.classList.remove('uadv-toast-visible');
+
+        setTimeout(function () {
+            if (toast.parentNode) toast.remove();
+        }, 250);
+    }, 2600);
+}
+
+function log() {
+    console.log.apply(
+        console,
+        ['[4K]'].concat([].slice.call(arguments))
+    );
+}
+
+function scheme(u) {
+    u = String(u || '').trim();
+    return /^https?:\/\//i.test(u) ? u : 'http://' + u;
+}
+
+function trim(u) {
+    return String(u || '').replace(/\/+$/, '');
+}
+
+function clean(s) {
+    return String(s || '')
+        .replace(/[:\/\\|?*<>"']/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function human(n) {
+    return (Number(n || 0) / GB).toFixed(1) + ' GB';
+}
+
+function serial(m) {
+    return !!(
+        m &&
+        (
+            m.media_type === 'tv' ||
+            m.first_air_date ||
+            m.number_of_seasons
+        ) &&
+        !m.release_date
+    );
+}
+
+function timeout(url, opt, ms) {
+    var c = new AbortController();
+    var t = setTimeout(function () {
+        c.abort();
+    }, ms || 10000);
+
+    return fetch(
+        url,
+        Object.assign({}, opt || {}, {
+            signal: c.signal
+        })
+    ).then(
+        function (r) {
+            clearTimeout(t);
+            return r;
+        },
+        function (e) {
+            clearTimeout(t);
+            throw e;
+        }
+    );
+}
+
+/* ==========================================
+   JACKETT CONFIGURATION
+   ========================================== */
 
 function jackett() {
     var u = field('jackett_url');
-    if (!u) throw Error('Налаштуй адресу Jackett у Lampa');
-    return {base: trim(scheme(u)).replace(/\/api\/v2\.0.*$/i, '').replace(/\/jackett$/i, ''), key: field('jackett_key')};
-}
-function tsBase() {
-    var u = field('torrserver_url');
-    if (!u) throw Error('Налаштуй адресу TorrServer у Lampa');
-    return trim(scheme(u));
-}
-function tsHeaders() {
-    var h = {'Content-Type': 'application/json'};
-    var token = field('torrserver_token');
-    var user = field('torrserver_user') || field('torrserver_login');
-    var pass = field('torrserver_pass') || field('torrserver_password');
-    if (token) h.Authorization = 'Bearer ' + token;
-    else if (user || pass) {
-        try { h.Authorization = 'Basic ' + btoa(unescape(encodeURIComponent(user + ':' + pass))); } catch (e) {}
-    }
-    return h;
-}
-function tsStreamBase() {
-    var base = tsBase();
-    var u = field('torrserver_user') || field('torrserver_login');
-    var p = field('torrserver_pass') || field('torrserver_password');
-    if (u || p) {
-        try { var x = new URL(base); x.username = u; x.password = p; return trim(x.toString()); } catch (e) {}
-    }
-    return base;
-}
-function streamAuth() {
-    var t = field('torrserver_token');
-    return t ? '&authorization=' + encodeURIComponent('Bearer ' + t) : '';
-}
 
-function xmlResults(text) {
-    var doc = new DOMParser().parseFromString(text, 'application/xml');
-    if (doc.getElementsByTagName('parsererror').length) throw Error('Некоректна XML-відповідь Jackett');
-    return [].map.call(doc.getElementsByTagName('item'), function (it) {
-        var attrs = {};
-        [].forEach.call(it.getElementsByTagName('*'), function (el) {
-            if (el.localName === 'attr' && el.getAttribute('name')) attrs[el.getAttribute('name').toLowerCase()] = el.getAttribute('value') || '';
-        });
-        function val(tag) { var a = it.getElementsByTagName(tag); return a.length ? (a[0].textContent || '').trim() : ''; }
-        var en = it.getElementsByTagName('enclosure')[0];
-        var dl = en ? en.getAttribute('url') || '' : '';
-        var magnet = attrs.magneturl || '';
-        return {title: val('title'), link: magnet || val('link') || dl, magnet: magnet, dl: dl,
-            size: Number(val('size') || attrs.size || (en && en.getAttribute('length')) || 0),
-            seed: Number(attrs.seeders || attrs.peers || 0),
-            tracker: String(attrs.jackettindexer || attrs.indexer || attrs.jackettindexerid || '').toLowerCase()};
-    });
-}
-function jsonResults(json) {
-    var a = Array.isArray(json) ? json : (json.Results || json.results || json.items || []);
-    return (Array.isArray(a) ? a : []).map(function (x) {
-        var magnet = x.MagnetUri || x.MagnetUrl || x.magnet || '';
-        return {title: x.Title || x.title || '', link: magnet || x.Link || x.link || '',
-            magnet: magnet, dl: x.DownloadUrl || x.downloadUrl || '',
-            size: Number(x.Size || x.size || 0), seed: Number(x.Seeders || x.seeders || x.Peers || x.peers || 0),
-            tracker: String(x.Tracker || x.tracker || x.TrackerId || x.trackerId || '').toLowerCase()};
-    });
-}
-async function searchJackett(q, cats, mode, signal) {
-    var j = jackett(), params = new URLSearchParams();
-    if (j.key) params.set('apikey', j.key);
-    var endpoint;
-    if (mode === 'xml') {
-        params.set('t', 'search'); params.set('q', q);
-        cats.split(',').forEach(function (c) { params.append('cat', c); });
-        endpoint = '/api/v2.0/indexers/all/results/torznab/';
-    } else {
-        params.set('Query', q);
-        cats.split(',').forEach(function (c) { params.append('Category[]', c); });
-        endpoint = '/api/v2.0/indexers/all/results';
+    if (!u) {
+        throw Error('Вкажи jackett_url');
     }
-    var response = await request(j.base + endpoint + '?' + params.toString(), {method: 'GET', credentials: 'omit', signal: signal}, 11000);
-    return mode === 'xml' ? xmlResults(await response.text()) : jsonResults(await response.json());
-}
 
-function uaConfirmed(title) {
-    var t = String(title || '');
-    return /(?:^|[^a-zа-яіїєґ0-9])(?:ukr|ukrainian|українська|українською|укр(?:аїнська)?[. _-]*(?:озвучка|дубляж|дубл|звук|аудіо)|ua[. _-]*(?:dub|audio|voice|озвучка|дубляж)|(?:озвучка|дубляж|аудіо|мова)[. _:-]*(?:укр|українська)|ukr[. _-]*(?:dub|audio|voice))(?:$|[^a-zа-яіїєґ0-9])/i.test(t);
-}
-function releaseTraits(r) {
-    var t = String(r.title || '');
     return {
-        k4: /2160p|\b4k\b|\buhd\b/i.test(t), fhd: /1080p/i.test(t),
-        dv: /dolby[ ._-]*vision|\bdovi\b|(?:^|[ ._-])dv(?:$|[ ._-])/i.test(t),
-        hdrPlus: /hdr[ ._-]*10\+/i.test(t), hdr: /\bhdr(?:10)?\b/i.test(t),
-        remux: /remux/i.test(t), bluray: /blu[ ._-]?ray|bdrip|bdmv/i.test(t),
-        web: /web[ ._-]?dl/i.test(t), atmos: /atmos|truehd/i.test(t),
-        dts: /dts[ ._-]?(?:hd|x)/i.test(t), eac3: /e[ ._-]?ac[ ._-]?3|ddp/i.test(t)
+        base: trim(scheme(u))
+            .replace(/\/jackett(?:\/.*)?$/i, ''),
+        key: field('jackett_key')
     };
 }
-function score(r) {
-    var f = releaseTraits(r), s = 0;
-    var quality = String(get('quality', '4k'));
-    s += quality === '1080' ? (f.fhd ? 240 : f.k4 ? 100 : 0) : (f.k4 ? 240 : f.fhd ? 100 : 0);
+
+/* ==========================================
+   TORRSERVER CONFIGURATION
+   ========================================== */
+
+function tsBase() {
+    var u = field('torrserver_url');
+
+    if (!u) {
+        throw Error('Вкажи torrserver_url');
+    }
+
+    return trim(scheme(u));
+}
+
+function tsHeaders() {
+    var h = {
+        'Content-Type': 'application/json'
+    };
+
+    var token = field('torrserver_token');
+    var u = field('torrserver_user');
+    var p = field('torrserver_pass');
+
+    if (token) {
+        h.Authorization = 'Bearer ' + token;
+    } else if (u || p) {
+        try {
+            h.Authorization = 'Basic ' +
+                btoa(
+                    unescape(
+                        encodeURIComponent(u + ':' + p)
+                    )
+                );
+        } catch (e) {}
+    }
+
+    return h;
+}
+
+function tsStreamBase() {
+    var b = tsBase();
+    var u = field('torrserver_user');
+    var p = field('torrserver_pass');
+
+    try {
+        if (u || p) {
+            var x = new URL(b);
+            x.username = u;
+            x.password = p;
+            b = trim(x.toString());
+        }
+    } catch (e) {}
+
+    return b;
+}
+
+function streamAuth() {
+    var t = field('torrserver_token');
+
+    return t
+        ? '&authorization=' +
+          encodeURIComponent('Bearer ' + t)
+        : '';
+}
+
+/* ==========================================
+   PARSE TORZNAB XML
+   ========================================== */
+
+function xmlResults(s) {
+    var doc = new DOMParser().parseFromString(
+        s,
+        'application/xml'
+    );
+
+    if (doc.querySelector('parsererror')) {
+        return [];
+    }
+
+    return [].slice.call(
+        doc.querySelectorAll('item')
+    ).map(function (it) {
+        var attrs = {};
+
+        [].slice.call(
+            it.getElementsByTagName('*')
+        ).forEach(function (el) {
+            if (
+                el.localName === 'attr' &&
+                el.getAttribute('name')
+            ) {
+                attrs[
+                    el.getAttribute('name').toLowerCase()
+                ] = el.getAttribute('value') || '';
+            }
+        });
+
+        function val(t) {
+            var el = it.querySelector(t);
+            return el ? el.textContent.trim() : '';
+        }
+
+        var enc = it.querySelector('enclosure');
+        var dl = enc && enc.getAttribute('url') || '';
+        var mag = attrs.magneturl || '';
+        var link = /^magnet:/i.test(mag) ? mag : (val('link') || dl);
+
+        return {
+            title: val('title'),
+            link: link,
+            magnet: mag,
+            dl: dl,
+            size: Number(
+                val('size') ||
+                attrs.size ||
+                (enc && enc.getAttribute('length')) ||
+                0
+            ),
+            seed: Number(
+                attrs.seeders ||
+                attrs.peers ||
+                0
+            ),
+            tracker: String(
+                attrs.jackettindexer ||
+                attrs.indexer ||
+                attrs.jackettindexerid ||
+                ''
+            ).toLowerCase()
+        };
+    });
+}
+
+/* ==========================================
+   PARSE JACKETT JSON
+   ========================================== */
+
+function jsonResults(j) {
+    var a = Array.isArray(j)
+        ? j
+        : (j.Results || j.results || j.items || []);
+
+    return (Array.isArray(a) ? a : []).map(
+        function (x) {
+            var mag =
+                x.MagnetUri ||
+                x.MagnetUrl ||
+                x.magnet ||
+                '';
+
+            var link = /^magnet:/i.test(mag)
+                ? mag
+                : (x.Link || x.link || '');
+
+            return {
+                title: x.Title || x.title || '',
+                link: link,
+                magnet: mag,
+                dl: '',
+                size: Number(
+                    x.Size || x.size || 0
+                ),
+                seed: Number(
+                    x.Seeders ||
+                    x.seeders ||
+                    x.Peers ||
+                    x.peers ||
+                    0
+                ),
+                tracker: String(
+                    x.Tracker ||
+                    x.tracker ||
+                    x.TrackerId ||
+                    ''
+                ).toLowerCase()
+            };
+        }
+    );
+}
+
+/* ==========================================
+   JACKETT SEARCH
+   ========================================== */
+
+async function searchJackett(q, cats, mode, meta) {
+    var jb = jackett();
+    var p = new URLSearchParams();
+    var url;
+
+    if (jb.key) {
+        p.set('apikey', jb.key);
+    }
+
+    if (mode === 'xml') {
+        p.set('t', 'search');
+        p.set('q', clean(q));
+
+        cats.split(',').forEach(function (c) {
+            p.append('cat', c);
+        });
+
+        url = jb.base +
+            '/api/v2.0/indexers/all/results/torznab/?' +
+            p.toString();
+    } else {
+        p.set('Query', clean(q));
+
+        if (meta) {
+            p.set('title', meta.title || '');
+            p.set('title_original', meta.orig || '');
+
+            if (meta.year) {
+                p.set('year', meta.year);
+            }
+
+            p.set(
+                'is_serial',
+                meta.series ? '1' : '0'
+            );
+        }
+
+        cats.split(',').forEach(function (c) {
+            p.append('Category[]', c);
+        });
+
+        url = jb.base +
+            '/api/v2.0/indexers/all/results?' +
+            p.toString();
+    }
+
+    var r = await timeout(
+        url,
+        {
+            method: 'GET',
+            credentials: 'omit',
+            mode: 'cors'
+        },
+        10000
+    );
+
+    if (!r.ok) {
+        throw Error('Jackett HTTP ' + r.status);
+    }
+
+    return mode === 'xml'
+        ? xmlResults(await r.text())
+        : jsonResults(await r.json());
+}
+
+/* ==========================================
+   UKRAINIAN AUDIO DETECTION
+   ========================================== */
+
+function ukrainian(t) {
+    var str = String(t || '').toLowerCase();
+
+    var langPattern = /ukr|укр|украї|ukrainian|ukrainisch|гр\.|ua[-_\s]?dub|ua[-_\s]?audio/i;
+
+    var studiosPattern = new RegExp([
+        'незупиняйся', 'незупиняйсь', 'nezupyniays',
+        'однiею колією', 'однією колією', '1колія',
+        'цікава ідея', 'tsikava ideya',
+        'склянка соку', 'sklyanka soku',
+        'дворіччя', 'dvorichchya',
+        'озвучка ua', 'озвучка укр',
+        'urt', 'євгена малухи',
+        'євген малуха', 'postmodern', 'так треба',
+        'дивобудок', 'starlight',
+        'качан', 'фанвакс', 'fanvox',
+        'bamberg', 'бамберг', 'dniprofilm',
+        'дніпрофільм', 'кінокульт', 'kinokult',
+        'cinema hd', 'cinema_hd', 'аматорське',
+        'загін кіноманів', 'озвучено'
+    ].join('|'), 'i');
+
+    return langPattern.test(str) || studiosPattern.test(str);
+}
+
+/* ==========================================
+   RELEASE QUALITY SCORING
+   ========================================== */
+
+function score(x) {
+    var t = x.title || '';
+    var s = 0;
+
+    var q = String(get('quality', '4k'));
     var hdr = String(get('hdr', 'dv'));
-    if (hdr === 'sdr') s += (!f.dv && !f.hdrPlus && !f.hdr) ? 85 : 0;
-    else if (hdr === 'hdr') s += f.hdrPlus ? 85 : f.hdr ? 75 : f.dv ? 55 : 0;
-    else s += f.dv ? 85 : f.hdrPlus ? 75 : f.hdr ? 65 : 0;
     var source = String(get('source', 'auto'));
-    if (source === 'webdl') s += f.web ? 65 : f.remux ? 50 : f.bluray ? 40 : 0;
-    else if (source === 'bluray') s += f.bluray && !f.remux ? 65 : f.remux ? 58 : f.web ? 40 : 0;
-    else s += f.remux ? 65 : f.bluray ? 55 : f.web ? 40 : 0;
     var audio = String(get('audio', 'auto'));
-    if (audio === 'atmos' && f.atmos || audio === 'dts' && f.dts || audio === 'eac3' && f.eac3) s += 25;
-    s += Math.min(25, Math.log2(1 + Math.max(0, r.seed)) * 3);
-    s += Math.min(12, Number(r.size || 0) / GB / 6);
+
+    var k4 = /2160p|\b4k\b|\buhd\b/i.test(t);
+    var fhd = /1080p/i.test(t);
+
+    if (q === '1080') {
+        s += fhd ? 110 : k4 ? 50 : 0;
+    } else {
+        s += k4 ? 110 : fhd ? 60 : 0;
+    }
+
+    var dv = /dolby.?vision|dovi|(?:^|[.\s_-])dv(?:$|[.\s_-])/i.test(t);
+    var hp = /hdr10\+/i.test(t);
+    var h = /\bhdr10?\b/i.test(t);
+
+    if (hdr === 'sdr') {
+        s += !dv && !hp && !h ? 40 : 0;
+    } else if (hdr === 'hdr') {
+        s += hp ? 40 : h ? 35 : dv ? 15 : 0;
+    } else {
+        s += dv ? 40 : hp ? 32 : h ? 24 : 0;
+    }
+
+    var rem = /remux/i.test(t);
+    var blur = /blu.?ray|bdrip/i.test(t);
+    var web = /web.?dl/i.test(t);
+
+    if (source === 'webdl') {
+        s += web ? 35 : rem ? 20 : blur ? 15 : 0;
+    } else if (source === 'bluray') {
+        s += blur && !rem ? 35 : rem ? 27 : web ? 15 : 0;
+    } else {
+        s += rem ? 35 : blur ? 27 : web ? 20 : 0;
+    }
+
+    if (audio === 'atmos' && /atmos|truehd/i.test(t)) {
+        s += 20;
+    }
+
+    if (audio === 'dts' && /dts.?hd|dts.?x/i.test(t)) {
+        s += 20;
+    }
+
+    if (audio === 'eac3' && /e.?ac.?3|ddp/i.test(t)) {
+        s += 20;
+    }
+
+    s += Math.min(20, Math.log2(1 + Number(x.seed || 0)) * 3);
+    s += Math.min(12, Number(x.size || 0) / GB / 5);
+
     return s;
 }
-function searchQueries(movie) {
-    var orig = clean(movie.original_title || movie.original_name || titleOf(movie));
-    var local = clean(movie.title || movie.name || orig);
-    var year = yearOf(movie), series = isSeries(movie), pref = field('parse_lang') || (series ? 'df' : 'df_year');
-    var combos = {df: orig, df_year: orig + ' ' + year, df_lg: orig + ' ' + local,
-        df_lg_year: orig + ' ' + local + ' ' + year, lg: local, lg_year: local + ' ' + year,
-        lg_df: local + ' ' + orig, lg_df_year: local + ' ' + orig + ' ' + year};
-    var result = [];
-    function add(q) { q = clean(q); if (q && result.indexOf(q) < 0) result.push(q); }
-    add(combos[pref] || orig); add(orig);
-    if (local !== orig) add(local);
-    if (year && !series) add(orig + ' ' + year);
-    return result.slice(0, 4);
-}
-function releaseKey(r) {
-    var magnet = r.magnet || r.link || '';
-    var hash = magnet.match(/[?&]xt=urn:btih:([^&]+)/i);
-    return hash ? hash[1].toLowerCase() : normalize(r.title) + ':' + String(r.size);
-}
-function relevant(r, movie) {
-    var name = normalize(movie.original_title || movie.original_name || titleOf(movie));
-    var local = normalize(movie.title || movie.name || '');
-    var t = normalize(r.title);
-    function matches(s) {
-        if (!s) return false;
-        var words = s.split(' ').filter(function (w) { return w.length > 1; });
-        if (!words.length) return false;
-        return words.every(function (w) { return t.split(' ').indexOf(w) !== -1; });
+
+/* ==========================================
+   SEARCH TITLE VARIANTS
+   ========================================== */
+
+function queries(m) {
+    var orig = clean(
+        m.original_title ||
+        m.original_name ||
+        m.title ||
+        m.name
+    );
+
+    var local = clean(m.title || m.name);
+    var year = String(m.release_date || '').slice(0, 4);
+    var pref = field('parse_lang') || (serial(m) ? 'df' : 'df_year');
+
+    var combos = {
+        df: orig,
+        df_year: orig + ' ' + year,
+        df_lg: orig + ' ' + local,
+        df_lg_year: orig + ' ' + local + ' ' + year,
+        lg: local,
+        lg_year: local + ' ' + year,
+        lg_df: local + ' ' + orig,
+        lg_df_year: local + ' ' + orig + ' ' + year
+    };
+
+    var arr = [];
+
+    function add(x) {
+        x = clean(x);
+        if (x && arr.indexOf(x) < 0) {
+            arr.push(x);
+        }
     }
-    if (!matches(name) && !matches(local)) return false;
-    var year = yearOf(movie);
-    if (!isSeries(movie) && year) {
-        var years = String(r.title).match(/(?:19|20)\d{2}/g) || [];
-        if (years.length && years.indexOf(year) < 0) return false;
+
+    add(combos[pref] || orig);
+    add(orig);
+
+    if (local !== orig) {
+        add(local);
     }
-    return true;
+
+    if (!serial(m) && year) {
+        add(orig + ' ' + year);
+    }
+
+    return arr;
 }
-async function findReleases(movie, id) {
-    var series = isSeries(movie), cats = series ? SERIES_CATS : MOVIE_CATS, qs = searchQueries(movie);
-    var cfg = jackett();
-    var key = [cfg.base, cfg.key, cats, qs.join('|'), get('minSeeds','5'), get('maxSize','70'), get('uaPolicy','strict'), get('quality','4k'), get('hdr','dv'), get('source','auto'), get('audio','auto'), get('toloka','false')].join('~');
-    if (cache[key] && Date.now() - cache[key].time < 300000) return cache[key].items.slice();
-    var all = [], errors = [], success = false;
+
+/* ==========================================
+   FIND AND RANK RELEASES
+   ========================================== */
+
+async function findReleases(m) {
+    var show = serial(m);
+    var cats = show ? SERIES_CATS : MOVIE_CATS;
+    var qs = queries(m);
+
+    // FIX: Include all preferences/settings in cache key so cache invalidates on changes
+    var key = [
+        jackett().base,
+        field('jackett_key'),
+        cats,
+        qs.join('|'),
+        get('minSeeds', '5'),
+        get('maxSize', '70'),
+        get('quality', '4k'),
+        get('hdr', 'dv'),
+        get('source', 'auto'),
+        get('audio', 'auto'),
+        get('toloka', 'false')
+    ].join('~');
+
+    if (cache[key] && Date.now() - cache[key].at < 300000) {
+        return cache[key].items.slice();
+    }
+
+    var all = [];
+    var errors = [];
+    var successful = 0;
+
     for (var i = 0; i < qs.length; i++) {
-        check(id);
+        var meta = {
+            title: m.title || m.name,
+            orig: m.original_title || m.original_name,
+            year: String(m.release_date || '').slice(0, 4),
+            series: show
+        };
+
         var results = await Promise.allSettled([
-            searchJackett(qs[i], cats, 'xml', activeController.signal),
-            searchJackett(qs[i], cats, 'json', activeController.signal)
+            searchJackett(qs[i], cats, 'xml', meta),
+            searchJackett(qs[i], cats, 'json', meta)
         ]);
+
         results.forEach(function (r) {
-            if (r.status === 'fulfilled') { success = true; all = all.concat(r.value); }
-            else errors.push(err(r.reason));
+            if (r.status === 'fulfilled') {
+                successful++;
+                all = all.concat(r.value);
+            } else {
+                errors.push(String(r.reason));
+            }
         });
-        if (all.some(function (r) { return uaConfirmed(r.title) && relevant(r, movie); })) break;
+
+        if (i === 0 && all.some(function (x) {
+            return ukrainian(x.title);
+        })) {
+            break;
+        }
     }
-    check(id);
-    if (!success) throw Error('Jackett недоступний: ' + (errors[0] || 'помилка пошуку'));
-    var seen = {}, min = Number(get('minSeeds','5')), max = Number(get('maxSize','70')) * GB;
-    all = all.filter(function (r) {
-        if (!r.link || !r.title || !r.size || r.seed < min || (!series && r.size > max)) return false;
-        if (!relevant(r, movie)) return false;
-        var k = releaseKey(r);
-        if (seen[k]) return false;
-        seen[k] = true; return true;
+
+    if (!successful) {
+        throw Error('Jackett: ' + (errors[0] || 'помилка з’єднання'));
+    }
+
+    var seen = {};
+    var min = Number(get('minSeeds', '5'));
+    var max = Number(get('maxSize', '70')) * GB;
+
+    all = all.filter(function (x) {
+        if (!x.link || !x.title || x.size <= 0 || x.seed < min ||
+            (!show && x.size > max)) {
+            return false;
+        }
+
+        var id = (x.magnet || x.link || x.title).toLowerCase();
+        if (seen[id]) return false;
+
+        seen[id] = true;
+        return true;
     });
-    var toloka = on('toloka');
-    all.sort(function (a,b) {
-        if (toloka) {
-            var at = /toloka/i.test(a.tracker), bt = /toloka/i.test(b.tracker);
-            if (at !== bt) return at ? -1 : 1;
+
+    var tol = String(get('toloka', 'false')) === 'true';
+
+    all.sort(function (a, b) {
+        if (tol) {
+            var at = /toloka/i.test(a.tracker);
+            var bt = /toloka/i.test(b.tracker);
+            if (at !== bt) {
+                return at ? -1 : 1;
+            }
         }
         return score(b) - score(a);
     });
-    if (cacheOrder.length >= 20) delete cache[cacheOrder.shift()];
-    cacheOrder.push(key); cache[key] = {time: Date.now(), items: all.slice()};
-    log('Релізів:', all.length);
+
+    log('Знайдено', all.length, 'релізів', qs);
+
+    if (cacheKeys.length >= 20) {
+        var oldKey = cacheKeys.shift();
+        delete cache[oldKey];
+    }
+
+    cacheKeys.push(key);
+    cache[key] = {
+        at: Date.now(),
+        items: all.slice()
+    };
+
     return all;
 }
 
-async function tsPost(body, ms) {
-    var response = await request(tsBase() + '/torrents', {
-        method: 'POST', headers: tsHeaders(), body: JSON.stringify(body),
-        signal: activeController && activeController.signal
-    }, ms || 12000);
-    return response.json();
-}
-function hashOf(result, fallback) {
-    if (!result || typeof result !== 'object') return fallback;
-    var h = result.hash || result.Hash || result.id || result.Id || '';
-    return typeof h === 'string' && h ? h : fallback;
-}
-function fileStats(result) {
-    if (Array.isArray(result)) return result;
-    if (!result) return [];
-    return result.file_stats || result.FileStats || result.files || result.Files || (result.stats && result.stats.file_stats) || [];
-}
-async function addTorrent(release, movie, id) {
-    var link = release.magnet || release.dl || release.link;
-    if (!link) throw Error('Немає посилання на торрент');
-    var response = await tsPost({action:'add', link:link, title:'[LAMPA] ' + titleOf(movie),
-        poster:posterOf(movie), data:JSON.stringify({lampa:true, movie:{id:movie.id, title:titleOf(movie)}}), save_to_db:false}, 18000);
-    check(id);
-    return {hash:hashOf(response, link), link:link, response:response};
-}
-async function getFiles(hash, link, id) {
-    var attempts = 10;
-    for (var i = 0; i < attempts; i++) {
-        check(id);
-        try {
-            var data = await tsPost({action:'get', hash:hash}, 11000);
-            var files = fileStats(data);
-            if (Array.isArray(files) && files.length) return files;
-        } catch (e) { log('Files attempt:', i + 1, err(e)); }
-        if (i < attempts - 1) await wait(1300);
+/* ==========================================
+   TORRSERVER INTEGRATION
+   ========================================== */
+
+async function tsAdd(base, link, title, poster, movie) {
+    var body = {
+        action: 'add',
+        link: link,
+        title: '[LAMPA] ' + (title || ''),
+        poster: poster || '',
+        data: JSON.stringify({
+            lampa: true,
+            movie: movie || {}
+        }),
+        save_to_db: false
+    };
+
+    var r = await timeout(
+        base + '/torrents',
+        {
+            method: 'POST',
+            headers: tsHeaders(),
+            body: JSON.stringify(body)
+        },
+        10000
+    );
+
+    var j = {};
+    try {
+        j = await r.json();
+    } catch (e) {}
+
+    if (!r.ok) {
+        throw Error('TorrServer HTTP ' + r.status);
     }
-    throw Error('TorrServer не надав список файлів. Перевір доступність торента.');
-}
-function filePath(f) { return String(f.path || f.Path || f.name || f.Name || ''); }
-function fileSize(f) { return Number(f.length || f.Length || f.size || f.Size || 0); }
-function fileIndex(f, fallback) {
-    var raw = f.id != null ? f.id : (f.Id != null ? f.Id : (f.index != null ? f.index : f.Index));
-    var n = Number(raw);
-    return raw != null && isFinite(n) && n >= 0 ? n + 1 : fallback + 1;
-}
-function videos(files) {
-    return files.map(function (f, i) { return {file:f, path:filePath(f), size:fileSize(f), index:fileIndex(f,i)}; })
-        .filter(function (x) { return VIDEO.test(x.path) && x.size > 100 * MB && !/\b(sample|trailer|featurette|extra)\b/i.test(x.path); });
-}
-function streamUrl(hash, entry) {
-    var name = entry.path.split(/[\\/]/).pop() || 'video.mkv';
-    return tsStreamBase() + '/stream/' + encodeURIComponent(name) + '?link=' + encodeURIComponent(hash) + '&index=' + entry.index + '&play=1' + streamAuth();
-}
-function play(url, title) {
-    closeDialog();
-    if (window.Lampa && Lampa.Player && typeof Lampa.Player.play === 'function') {
-        Lampa.Player.play({url:url, title:title, timeline:0});
-    } else {
-        window.location.href = url;
-    }
-}
-async function startMovie(movie, release, id) {
-    note('Перевіряю відеофайли…');
-    var added = await addTorrent(release, movie, id);
-    var list = videos(await getFiles(added.hash, added.link, id));
-    check(id);
-    if (!list.length) throw Error('У торренті немає доступного відеофайлу');
-    list.sort(function (a,b) { return b.size - a.size; });
-    var best = list[0];
-    if (list.length > 1 && best.size < 0.55 * list.reduce(function (sum,x) { return sum + x.size; }, 0)) {
-        showFilePicker(movie, added.hash, list); return;
-    }
-    note('Запускаю ' + size(best.size));
-    play(streamUrl(added.hash, best), titleOf(movie));
+
+    var hash = j.hash || j.id || j.link || j.data || j.result || '';
+
+    return {
+        hash: typeof hash === 'string' ? hash : '',
+        raw: j
+    };
 }
 
-// Управління стеком діалогових вікон для запобігання конфліктам із пультом
-var dialogStack = [];
+function fileStats(j) {
+    if (!j) return [];
+    if (Array.isArray(j)) return j;
+    if (Array.isArray(j.file_stats)) return j.file_stats;
+    if (Array.isArray(j.FileStats)) return j.FileStats;
+    if (Array.isArray(j.files)) return j.files;
+    if (Array.isArray(j.Files)) return j.Files;
+    if (j.stats && Array.isArray(j.stats.file_stats)) return j.stats.file_stats;
+    return [];
+}
+
+async function tsFiles(base, linkOrHash) {
+    var body = { action: 'get' };
+
+    if (/^(magnet:|https?:)/i.test(linkOrHash)) {
+        body.link = linkOrHash;
+    } else {
+        body.hash = linkOrHash;
+    }
+
+    try {
+        var r = await timeout(
+            base + '/torrents',
+            {
+                method: 'POST',
+                headers: tsHeaders(),
+                body: JSON.stringify(body)
+            },
+            8000
+        );
+
+        if (r.ok) {
+            var j = await r.json();
+            var files = fileStats(j);
+            if (files.length) return files;
+        }
+    } catch (e) {
+        log('TorrServer get:', e);
+    }
+
+    try {
+        var url = base + '/stream/files?link=' + encodeURIComponent(linkOrHash);
+        var r2 = await timeout(url, {
+            method: 'GET',
+            headers: tsHeaders()
+        }, 8000);
+
+        if (r2.ok) {
+            var j2 = await r2.json();
+            return fileStats(j2);
+        }
+    } catch (e) {
+        log('TorrServer files:', e);
+    }
+
+    return [];
+}
+
+function safeFileName(s) {
+    return String(s || 'video')
+        .replace(/[^\w\d.-]+/g, '.')
+        .replace(/^\.+|\.+$/g, '') || 'video';
+}
+
+function streamLink(hash, file, title) {
+    var name = safeFileName(
+        String(file && file.path || title || 'video').split(/[\\/]/).pop()
+    );
+
+    var idx = 1;
+    if (file && file.id !== undefined) {
+        var n = Number(file.id);
+        if (!isNaN(n)) idx = n + 1;
+    }
+
+    return tsStreamBase() +
+        '/stream/' +
+        encodeURIComponent(name + '.mkv') +
+        '?link=' + encodeURIComponent(hash) +
+        '&index=' + idx +
+        '&play=1' +
+        streamAuth();
+}
 
 function closeDialog() {
-    if (dialogStack.length > 0) {
-        var top = dialogStack.pop();
-        if (top && top.element && top.element.parentNode) {
-            top.element.parentNode.removeChild(top.element);
-        }
-        if (top && top.onClose) {
-            try { top.onClose(); } catch (e) {}
-        }
-    }
-    if (dialogStack.length === 0) {
-        dialog = null;
-        document.removeEventListener('keydown', globalKeyboard, true);
-        // Повертаємо фокус на контролер Lampa
-        try { if (window.Lampa && Lampa.Controller) Lampa.Controller.toggle('content'); } catch (e) {}
+    if (!dialog) return;
+    var d = dialog;
+    dialog = null;
+    try {
+        d.close();
+    } catch (e) {}
+    
+    // FIX: Restore focus back to Lampa content/controller
+    try {
+        Lampa.Controller.toggle('content');
+    } catch (e) {}
+}
+
+function playStream(url, title) {
+    closeDialog();
+
+    if (window.Lampa && Lampa.Player &&
+        typeof Lampa.Player.play === 'function') {
+        Lampa.Player.play({
+            url: url,
+            title: title,
+            timeline: 0
+        });
     } else {
-        dialog = dialogStack[dialogStack.length - 1];
-        if (dialog && dialog.focus) dialog.focus(dialog.selected || 0);
+        location.href = url;
     }
 }
 
-function globalKeyboard(e) {
-    var k = e.key || e.keyCode;
-    if (k === 'Escape' || k === 'Backspace' || k === 'BrowserBack' || k === 27 || k === 8 || k === 461 || k === 10009) {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        closeDialog();
-    }
+function tsPlayById(hash, file, title) {
+    playStream(streamLink(hash, file, title), title);
 }
 
-function openDialog(title, items, onBack) {
-    var overlay = document.createElement('div'); overlay.className = 'uadv630-overlay';
-    var panel = document.createElement('div'); panel.className = 'uadv630-panel';
-    var header = document.createElement('div'); header.className = 'uadv630-header';
-    var heading = document.createElement('div'); heading.className = 'uadv630-heading'; heading.textContent = title;
-    var closeBtn = document.createElement('button'); closeBtn.className = 'uadv630-close'; closeBtn.textContent = '✕';
-    header.appendChild(heading); header.appendChild(closeBtn);
-    var list = document.createElement('div'); list.className = 'uadv630-list';
-    panel.appendChild(header); panel.appendChild(list); overlay.appendChild(panel);
+/* ==========================================
+   UNIFIED DIALOG UI
+   ========================================== */
+
+function openDialog(title, items) {
+    closeDialog();
+
+    var overlay = document.createElement('div');
+    overlay.className = 'uadv-dialog';
+
+    var panel = document.createElement('div');
+    panel.className = 'uadv-panel';
+
+    var head = document.createElement('div');
+    head.className = 'uadv-head';
+    head.textContent = title;
+
+    var list = document.createElement('div');
+    list.className = 'uadv-list';
+
+    panel.appendChild(head);
+    panel.appendChild(list);
+    overlay.appendChild(panel);
     document.body.appendChild(overlay);
 
-    var rows = [], selected = 0;
-    
+    var selected = 0;
+    var closed = false;
+    var rows = [];
+
     function focus(n) {
         if (!rows.length) return;
         selected = Math.max(0, Math.min(rows.length - 1, n));
-        rows.forEach(function (r,i) { r.classList.toggle('focus', i === selected); });
-        try { rows[selected].focus(); } catch(e) {}
-        if (rows[selected].scrollIntoView) rows[selected].scrollIntoView({block:'nearest'});
+
+        rows.forEach(function (r, i) {
+            r.classList.toggle('focus', i === selected);
+        });
+
+        try {
+            rows[selected].focus();
+            rows[selected].scrollIntoView({ block: 'nearest' });
+        } catch (e) {}
     }
 
-    var dialogObj = {
-        element: overlay,
-        selected: 0,
-        focus: function(n) { focus(n); },
-        onClose: onBack
-    };
+    function close() {
+        if (closed) return;
+        closed = true;
+        document.removeEventListener('keydown', keyboard, true);
+        overlay.remove();
+
+        if (dialog && dialog.close === close) {
+            dialog = null;
+        }
+
+        try {
+            Lampa.Controller.toggle('content');
+        } catch (e) {}
+    }
 
     function keyboard(e) {
-        // Перехоплюємо події лише для верхнього діалогу
-        if (dialogStack[dialogStack.length - 1] !== dialogObj) return;
         var k = e.key || e.keyCode;
-        if (k === 'ArrowDown' || k === 40 || k === 'ArrowUp' || k === 38) {
-            e.preventDefault(); e.stopImmediatePropagation();
-            focus(selected + (k === 'ArrowDown' || k === 40 ? 1 : -1));
-            dialogObj.selected = selected;
+
+        if (
+            k === 'Escape' || k === 'Backspace' || k === 'BrowserBack' ||
+            k === 27 || k === 8 || k === 461 || k === 10009
+        ) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            close();
             return;
         }
+
+        if (k === 'ArrowDown' || k === 40) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            focus(selected + 1);
+            return;
+        }
+
+        if (k === 'ArrowUp' || k === 38) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            focus(selected - 1);
+            return;
+        }
+
         if (k === 'Enter' || k === 13) {
-            e.preventDefault(); e.stopImmediatePropagation();
+            e.preventDefault();
+            e.stopImmediatePropagation();
             if (rows[selected]) rows[selected].click();
         }
     }
 
-    (items || []).forEach(function (item, index) {
-        var row = document.createElement('div'); row.className = 'uadv630-row selector'; row.tabIndex = 0;
-        var name = document.createElement('div'); name.className = 'uadv630-row-title'; name.textContent = item.title || '';
+    (items || []).forEach(function (item) {
+        var row = document.createElement('div');
+        row.className = 'uadv-row selector';
+        row.tabIndex = 0;
+
+        var name = document.createElement('div');
+        name.className = 'uadv-row-title';
+        name.textContent = item.title || '';
         row.appendChild(name);
-        if (item.subtitle) { var sub = document.createElement('div'); sub.className = 'uadv630-row-sub'; sub.textContent = item.subtitle; row.appendChild(sub); }
-        row.addEventListener('click', function () { selected = index; dialogObj.selected = index; if (item.action) item.action(); });
-        row.addEventListener('focus', function () { selected = index; dialogObj.selected = index; rows.forEach(function (r,i) { r.classList.toggle('focus', i === selected); }); });
-        list.appendChild(row); rows.push(row);
-    });
 
-    closeBtn.addEventListener('click', function(e) {
-        e.preventDefault(); e.stopImmediatePropagation();
-        closeDialog();
-    });
-    
-    overlay.addEventListener('click', function (e) { 
-        if (e.target === overlay) {
-            closeDialog();
+        if (item.subtitle) {
+            var sub = document.createElement('div');
+            sub.className = 'uadv-row-sub';
+            sub.textContent = item.subtitle;
+            row.appendChild(sub);
         }
+
+        row.addEventListener('click', function () {
+            if (item.action) item.action();
+        });
+
+        list.appendChild(row);
+        rows.push(row);
     });
 
-    if (dialogStack.length === 0) {
-        document.addEventListener('keydown', globalKeyboard, true);
-    }
-    
-    // Додаємо новий діалог у стек та слухаємо стрілочки
-    overlay.addEventListener('keydown', keyboard, true);
-    
-    dialogStack.push(dialogObj);
-    dialog = dialogObj;
+    document.addEventListener('keydown', keyboard, true);
+    dialog = { close: close };
     focus(0);
 }
 
-function info(r) {
-    var f = releaseTraits(r), labels = [];
-    labels.push(f.k4 ? '4K' : f.fhd ? '1080p' : 'Відео');
-    if (f.dv) labels.push('Dolby Vision'); else if (f.hdrPlus) labels.push('HDR10+'); else if (f.hdr) labels.push('HDR');
-    if (f.remux) labels.push('REMUX'); else if (f.bluray) labels.push('Blu-ray'); else if (f.web) labels.push('WEB-DL');
-    labels.push(size(r.size)); labels.push('Сідери: ' + r.seed);
-    return labels.join(' · ');
+/* ==========================================
+   MOVIE FLOW
+   ========================================== */
+
+function torrentLink(r) {
+    return r.dl || r.magnet || r.link;
 }
-function showFilePicker(movie, hash, list) {
-    openDialog('4K Pro · Відеофайли', list.map(function (entry) {
-        return {title:entry.path.split(/[\\/]/).pop(), subtitle:size(entry.size), action:function () { play(streamUrl(hash,entry), titleOf(movie)); }};
-    }));
+
+async function startMovieRelease(movie, release) {
+    var base = tsBase();
+    var link = torrentLink(release);
+    var hash = link;
+
+    try {
+        var added = await tsAdd(
+            base,
+            link,
+            movie.title || movie.name,
+            movie.poster_path || '',
+            movie
+        );
+
+        if (added.hash) hash = added.hash;
+    } catch (e) {
+        log('TorrServer add failed:', e);
+        hash = link;
+    }
+
+    var name = safeFileName(movie.title || movie.name || 'video') + '.mkv';
+
+    var url = tsStreamBase() +
+        '/stream/' + encodeURIComponent(name) +
+        '?link=' + encodeURIComponent(hash) +
+        '&index=1&play=1' +
+        streamAuth();
+
+    note('Запускаю відтворення…');
+    playStream(url, movie.title || movie.name);
 }
+
 function releasePicker(movie, releases) {
-    openDialog('4K Pro · Обери реліз', releases.slice(0,60).map(function (r) {
-        return {title:r.title, subtitle:info(r), action:function () { execute(function (id) { return startMovie(movie,r,id); }); }};
-    }));
+    openDialog(
+        '4K — Обери реліз',
+        releases.slice(0, 50).map(function (r) {
+            return {
+                title: r.title,
+                subtitle: human(r.size) + ' · Сідери: ' + r.seed,
+                action: function () {
+                    closeDialog();
+                    startMovieRelease(movie, r).catch(function (e) {
+                        note(e.message || String(e));
+                    });
+                }
+            };
+        })
+    );
 }
+
 function fallbackPicker(movie, releases) {
-    openDialog('Українську озвучку не підтверджено', [
-        {title:'Показати інші релізи', subtitle:'Вибрати вручну', action:function () { releasePicker(movie, releases); }},
-        {title:'Скасувати', action:closeDialog}
-    ]);
+    openDialog(
+        'Українську озвучку не знайдено',
+        [
+            {
+                title: 'Показати інші релізи',
+                subtitle: 'Вибір вручну',
+                action: function () {
+                    releasePicker(movie, releases);
+                }
+            },
+            {
+                title: 'Скасувати',
+                action: closeDialog
+            }
+        ]
+    );
 }
-async function movieFlow(movie, releases, id) {
-    var ua = releases.filter(function (r) { return uaConfirmed(r.title); });
+
+async function movieFlow(movie, releases) {
+    var ua = releases.filter(function (r) {
+        return ukrainian(r.title);
+    });
+
     if (ua.length) {
-        if (String(get('playMode','auto')) === 'manual') releasePicker(movie,ua);
-        else await startMovie(movie,ua[0],id);
+        if (get('playMode', 'auto') === 'manual') {
+            releasePicker(movie, ua);
+        } else {
+            await startMovieRelease(movie, ua[0]);
+        }
         return;
     }
-    if (get('uaPolicy','strict') === 'strict') { note('Немає релізів із підтвердженою українською озвучкою'); return; }
-    var fallback = String(get('fallback','ask'));
-    if (fallback === 'none') note('Українську озвучку не знайдено');
-    else if (fallback === 'auto') await startMovie(movie,releases[0],id);
-    else fallbackPicker(movie,releases);
+
+    var fallback = get('fallback', 'ask');
+
+    if (fallback === 'none') {
+        note('Українську озвучку не знайдено');
+        return;
+    }
+
+    if (fallback === 'auto') {
+        await startMovieRelease(movie, releases[0]);
+        return;
+    }
+
+    fallbackPicker(movie, releases);
 }
 
-function seasonsFromTitle(title) {
-    var t = String(title || ''), seasons = {}, m;
-    var range = /(?:season|сезон|\bS)\s*0*(\d{1,2})\s*[-–]\s*0*(\d{1,2})/i.exec(t);
+/* ==========================================
+   SERIES FLOW
+   ========================================== */
+
+function seasonsFromTitle(s) {
+    var result = {};
+    s = String(s || '');
+
+    var range = s.match(
+        /(?:season|сезон|s)\s*(\d{1,2})\s*[-–]\s*(\d{1,2})/i
+    );
+
     if (range) {
-        var a = Number(range[1]), b = Number(range[2]);
-        if (a > 0 && b >= a && b - a <= 30) for (var n = a; n <= b; n++) seasons[n] = true;
+        var a = Number(range[1]);
+        var b = Number(range[2]);
+
+        if (b >= a && b - a <= 30) {
+            for (var n = a; n <= b; n++) result[n] = true;
+        }
     }
-    var re = /\bS(\d{1,2})(?:E\d+|\b)|(?:season|сезон)\s*0*(\d{1,2})/gi;
-    while ((m = re.exec(t))) { var sn = Number(m[1] || m[2]); if (sn > 0) seasons[sn] = true; }
-    return Object.keys(seasons).map(Number);
+
+    var re = /(?:\bS(\d{1,2})(?:E\d+|\b)|(?:season|сезон)\s*(\d{1,2}))/gi;
+    var m;
+
+    while ((m = re.exec(s))) {
+        var sn = Number(m[1] || m[2]);
+        if (sn) result[sn] = true;
+    }
+
+    var keys = Object.keys(result).map(Number);
+    return keys.length ? keys : [1];
 }
+
 function episodeFromPath(path, season) {
     var name = String(path || '').split(/[\\/]/).pop();
-    var m = /S(\d{1,2})E(\d{1,3})/i.exec(name) || /(\d{1,2})x(\d{1,3})/i.exec(name);
-    if (m) return Number(m[1]) === season ? Number(m[2]) : 0;
-    m = /(?:episode|ep|серія|серия)[ ._-]*0*(\d{1,3})/i.exec(name);
+    var m = name.match(/S(\d{1,2})E(\d{1,3})/i) ||
+        name.match(/(\d{1,2})x(\d{1,3})/i);
+
+    if (m) {
+        return Number(m[1]) === season ? Number(m[2]) : 0;
+    }
+
+    m = name.match(/(?:episode|ep|серія|серия)\s*0*(\d{1,3})/i);
     return m ? Number(m[1]) : 0;
 }
+
 function showSeasons(movie, releases) {
-    var groups = {}, unknown = [];
+    var groups = {};
+
     releases.forEach(function (r) {
-        var seasons = seasonsFromTitle(r.title);
-        if (!seasons.length) { unknown.push(r); return; }
-        seasons.forEach(function (n) { (groups[n] || (groups[n] = [])).push(r); });
+        seasonsFromTitle(r.title).forEach(function (n) {
+            if (!groups[n]) groups[n] = [];
+            groups[n].push(r);
+        });
     });
-    var nums = Object.keys(groups).map(Number).sort(function (a,b) { return a-b; });
-    var items = nums.map(function (n) { return {title:'Сезон ' + n, subtitle:'Релізів: ' + groups[n].length,
-        action:function () { openSeason(movie,n,groups[n]); }}; });
-    if (unknown.length) items.push({title:'Сезон не визначено', subtitle:'Релізів: ' + unknown.length,
-        action:function () { chooseUnknownSeason(movie,unknown); }});
-    if (!items.length) { note('Не вдалося визначити сезони'); return; }
-    openDialog('4K Pro · Сезони',items);
-}
-function chooseUnknownSeason(movie, releases) {
-    var max = Math.max(1, Math.min(30, Number(movie.number_of_seasons || 10)));
-    var items = [];
-    for (var i=1; i<=max; i++) (function (n) {
-        items.push({title:'Сезон ' + n, subtitle:'Перевірити серії у файлах', action:function () { openSeason(movie,n,releases); }});
-    })(i);
-    openDialog('Вкажи сезон',items);
-}
-function openSeason(movie,season,releases) {
-    execute(function (id) { return loadEpisodes(movie,season,releases,id); });
-}
-async function loadEpisodes(movie, season, releases, id) {
-    closeDialog(); note('Шукаю серії сезону ' + season + '…');
-    var episodes = {}, limit = Math.min(8,releases.length), successful = 0;
-    for (var i=0; i<limit; i++) {
-        check(id);
-        var r = releases[i];
-        try {
-            var added = await addTorrent(r,movie,id);
-            var files = videos(await getFiles(added.hash,added.link,id));
-            successful++;
-            files.forEach(function (entry) {
-                if (entry.size < 250 * MB) return;
-                var ep = episodeFromPath(entry.path,season);
-                if (!ep) return;
-                if (!episodes[ep] || score(r) > episodes[ep].rank || (score(r) === episodes[ep].rank && entry.size > episodes[ep].entry.size)) {
-                    episodes[ep] = {entry:entry, hash:added.hash, rank:score(r)};
+
+    var numbers = Object.keys(groups).map(Number).sort(function (a, b) {
+        return a - b;
+    });
+
+    openDialog(
+        '4K — Обери сезон',
+        numbers.map(function (n) {
+            return {
+                title: 'Сезон ' + n,
+                subtitle: 'Релізів: ' + groups[n].length,
+                action: function () {
+                    openSeason(movie, n, groups[n]);
                 }
-            });
-        } catch (e) { check(id); log('Episode scan:',err(e)); }
-        if (Object.keys(episodes).length >= 24) break;
+            };
+        })
+    );
+}
+
+async function loadEpisodes(movie, season, releases) {
+    closeDialog();
+    note('Завантажую серії сезону ' + season);
+
+    var episodes = {};
+    var base = tsBase();
+
+    // FIX: Reduced limit from 10 to 3 top releases to avoid heavy consecutive network requests & hangs
+    for (var i = 0; i < Math.min(3, releases.length); i++) {
+        var r = releases[i];
+        var link = torrentLink(r);
+        var hash = link;
+
+        try {
+            var added = await tsAdd(
+                base,
+                link,
+                (movie.name || movie.title) + ' S' + season,
+                '',
+                movie
+            );
+
+            if (added.hash) hash = added.hash;
+        } catch (e) {
+            log('Series add:', e);
+        }
+
+        var files = await tsFiles(base, hash);
+
+        files.forEach(function (f) {
+            var path = String(f.path || f.Path || '');
+            var size = Number(f.length || f.Length || 0);
+
+            if (!VIDEO.test(path) || size < 500 * MB) return;
+
+            var ep = episodeFromPath(path, season);
+            if (!ep) return;
+
+            if (!episodes[ep] || size > episodes[ep].size) {
+                episodes[ep] = {
+                    file: f,
+                    hash: hash,
+                    size: size
+                };
+            }
+        });
     }
-    check(id);
-    var nums = Object.keys(episodes).map(Number).sort(function (a,b) { return a-b; });
-    if (!nums.length) {
-        if (!successful) throw Error('TorrServer не зміг прочитати файли серіалу');
-        note('Серії сезону ' + season + ' не розпізнано'); return;
+
+    var numbers = Object.keys(episodes).map(Number).sort(function (a, b) {
+        return a - b;
+    });
+
+    if (!numbers.length) {
+        note('Не знайдено відеосерій ≥500 MB');
+        return;
     }
-    openDialog('Сезон ' + season + ' · Серії', nums.map(function (n) {
-        var ep = episodes[n];
-        return {title:'Серія ' + n, subtitle:size(ep.entry.size) + ' · ' + ep.entry.path.split(/[\\/]/).pop(),
-            action:function () { play(streamUrl(ep.hash,ep.entry), titleOf(movie) + ' S' + season + 'E' + ('0'+n).slice(-2)); }};
-    }),function () { showSeasons(movie,releases); });
+
+    openDialog(
+        'Сезон ' + season + ' — серії',
+        numbers.map(function (n) {
+            var ep = episodes[n];
+
+            return {
+                title: 'Серія ' + n,
+                subtitle: human(ep.size),
+                action: function () {
+                    tsPlayById(
+                        ep.hash,
+                        ep.file,
+                        (movie.name || movie.title) +
+                        ' S' + season +
+                        'E' + String(n).padStart(2, '0')
+                    );
+                }
+            };
+        })
+    );
 }
-function seriesFlow(movie,releases) {
-    var ua = releases.filter(function (r) { return uaConfirmed(r.title); });
-    if (ua.length) { showSeasons(movie,ua); return; }
-    if (get('uaPolicy','strict') === 'strict') { note('Немає серіалів із підтвердженою українською озвучкою'); return; }
-    var fallback = get('fallback','ask');
-    if (fallback === 'none') note('Українську озвучку не знайдено');
-    else if (fallback === 'auto') showSeasons(movie,releases);
-    else openDialog('Українську озвучку не підтверджено',[
-        {title:'Показати інші сезони',action:function () { showSeasons(movie,releases); }},
-        {title:'Скасувати',action:closeDialog}
-    ]);
+
+function openSeason(movie, season, releases) {
+    var ua = releases.filter(function (r) {
+        return ukrainian(r.title);
+    });
+
+    if (ua.length) {
+        loadEpisodes(movie, season, ua);
+        return;
+    }
+
+    var fallback = get('fallback', 'ask');
+
+    if (fallback === 'none') {
+        note('Українську озвучку не знайдено');
+        return;
+    }
+
+    if (fallback === 'auto') {
+        loadEpisodes(movie, season, releases);
+        return;
+    }
+
+    openDialog(
+        'Українську озвучку не знайдено',
+        [
+            {
+                title: 'Показати інші серії',
+                action: function () {
+                    loadEpisodes(movie, season, releases);
+                }
+            },
+            {
+                title: 'Скасувати',
+                action: closeDialog
+            }
+        ]
+    );
 }
-async function execute(task) {
-    if (busy) { note('Дочекайся завершення попередньої операції'); return; }
-    busy = true; var id = ++operationId;
-    activeController = new AbortController();
-    try { await task(id); }
-    catch (e) { if (id === operationId) { log('Operation:',e); note(err(e)); } }
-    finally { if (id === operationId) { busy = false; activeController = null; } }
+
+function seriesFlow(movie, releases) {
+    var ua = releases.filter(function (r) {
+        return ukrainian(r.title);
+    });
+
+    if (ua.length) {
+        showSeasons(movie, ua);
+        return;
+    }
+
+    var fallback = get('fallback', 'ask');
+
+    if (fallback === 'none') {
+        note('Українську озвучку не знайдено');
+        return;
+    }
+
+    if (fallback === 'auto') {
+        showSeasons(movie, releases);
+        return;
+    }
+
+    openDialog(
+        'Українську озвучку не знайдено',
+        [
+            {
+                title: 'Показати інші сезони',
+                action: function () {
+                    showSeasons(movie, releases);
+                }
+            },
+            {
+                title: 'Скасувати',
+                action: closeDialog
+            }
+        ]
+    );
 }
-function run(data) {
-    execute(async function (id) {
-        var movie = data && data.movie;
-        if (!movie) throw Error('Не вдалося отримати дані фільму');
-        note('Шукаю: ' + titleOf(movie));
-        var releases = await findReleases(movie,id);
-        if (!releases.length) throw Error('Релізів не знайдено. Перевір Jackett, назву, сідерів і розмір.');
-        if (isSeries(movie)) seriesFlow(movie,releases);
-        else await movieFlow(movie,releases,id);
+
+/* ==========================================
+   SETTINGS
+   ========================================== */
+
+function addSetting(component, item) {
+    try {
+        Lampa.SettingsApi.addParam({
+            component: component,
+            param: {
+                name: P + item.name,
+                type: 'select',
+                values: item.values,
+                default: String(item.def)
+            },
+            field: {
+                name: item.title,
+                description: item.description || ''
+            },
+            onChange: function (value) {
+                set(item.name, value);
+
+                // FIX: Clear cache on any setting change so filtering/sorting takes immediate effect
+                cache = {};
+                cacheKeys = [];
+            }
+        });
+    } catch (e) {
+        log('Setting error:', item.name, e);
+    }
+}
+
+function registerSettings() {
+    if (!window.Lampa || !Lampa.SettingsApi) return;
+
+    try {
+        Lampa.SettingsApi.addComponent({
+            component: 'uadv62',
+            name: '4K',
+            icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M8 9v6M12 9v6M16 9v6"/></svg>'
+        });
+    } catch (e) {}
+
+    var settings = [
+        {
+            name: 'playMode',
+            title: 'Режим запуску фільмів',
+            description: 'Автоматично запускати найкращий український реліз або обирати вручну',
+            def: 'auto',
+            values: {
+                auto: 'Автоматично',
+                manual: 'Ручний вибір'
+            }
+        },
+        {
+            name: 'quality',
+            title: 'Пріоритет роздільності',
+            description: 'Бажана роздільність відео',
+            def: '4k',
+            values: {
+                '4k': '4K / 2160p',
+                '1080': 'Full HD / 1080p'
+            }
+        },
+        {
+            name: 'hdr',
+            title: 'Пріоритет HDR',
+            description: 'Вибір технології зображення',
+            def: 'dv',
+            values: {
+                dv: 'Dolby Vision → HDR10+ → HDR',
+                hdr: 'HDR10+ → HDR → Dolby Vision',
+                sdr: 'SDR'
+            }
+        },
+        {
+            name: 'source',
+            title: 'Пріоритет джерела',
+            description: 'Тип відеорелізу',
+            def: 'auto',
+            values: {
+                auto: 'REMUX → Blu-ray → WEB-DL',
+                bluray: 'Blu-ray → REMUX → WEB-DL',
+                webdl: 'WEB-DL → REMUX → Blu-ray'
+            }
+        },
+        {
+            name: 'audio',
+            title: 'Пріоритет аудіоформату',
+            description: 'Додатковий пріоритет звукової доріжки',
+            def: 'auto',
+            values: {
+                auto: 'Автоматично',
+                atmos: 'Dolby Atmos / TrueHD',
+                dts: 'DTS-HD / DTS:X',
+                eac3: 'Dolby Digital Plus'
+            }
+        },
+        {
+            name: 'minSeeds',
+            title: 'Мінімум сідерів',
+            description: 'Мінімальна кількість роздаючих',
+            def: '5',
+            values: {
+                '0': 'Без обмеження',
+                '1': '1',
+                '3': '3',
+                '5': '5',
+                '10': '10',
+                '20': '20'
+            }
+        },
+        {
+            name: 'maxSize',
+            title: 'Максимальний розмір фільму',
+            description: 'Обмеження розміру торента',
+            def: '70',
+            values: {
+                '30': '30 GB',
+                '50': '50 GB',
+                '70': '70 GB',
+                '90': '90 GB',
+                '120': '120 GB',
+                '200': '200 GB'
+            }
+        },
+        {
+            name: 'toloka',
+            title: 'Пріоритет Toloka',
+            description: 'Віддавати перевагу релізам із Toloka',
+            def: 'false',
+            values: {
+                'false': 'Вимкнено',
+                'true': 'Увімкнено'
+            }
+        },
+        {
+            name: 'fallback',
+            title: 'Якщо немає української озвучки',
+            description: 'Дія, коли українські релізи відсутні',
+            def: 'ask',
+            values: {
+                ask: 'Запитати перед вибором',
+                none: 'Не запускати',
+                auto: 'Запустити інший реліз'
+            }
+        }
+    ];
+
+    settings.forEach(function (item) {
+        addSetting('uadv62', item);
     });
 }
 
-function addSetting(item) {
+/* ==========================================
+   MAIN LAUNCHER & UI
+   ========================================== */
+
+async function runUaDV(data) {
+    if (busy) {
+        note('Пошук уже активний');
+        return;
+    }
+
+    busy = true;
+
     try {
-        Lampa.SettingsApi.addParam({component:'uadv62',
-            param:{name:P+item.name,type:'select',values:item.values,default:String(item.def)},
-            field:{name:item.title,description:item.description || ''},
-            onChange:function (v) { set(item.name,v); resetCache(); }
-        });
-    } catch (e) { log('Setting:',item.name,err(e)); }
+        var movie = data && data.movie;
+
+        if (!movie) {
+            throw Error('Не вдалося отримати інформацію про фільм');
+        }
+
+        note('Шукаю релізи: ' + (movie.title || movie.name || ''));
+
+        var releases = await findReleases(movie);
+
+        if (!releases.length) {
+            throw Error(
+                'Релізів не знайдено. Перевір налаштування Jackett, сідерів та максимальний розмір.'
+            );
+        }
+
+        if (serial(movie)) {
+            await seriesFlow(movie, releases);
+        } else {
+            await movieFlow(movie, releases);
+        }
+    } catch (e) {
+        log('Run error:', e);
+        note(e && e.message ? e.message : String(e));
+    } finally {
+        busy = false;
+    }
 }
-function registerSettings() {
-    if (settingsDone || !Lampa.SettingsApi) return;
-    settingsDone = true;
-    try { Lampa.SettingsApi.addComponent({component:'uadv62',name:'4K Pro',
-        icon:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M8 9v6M12 9v6M16 9v6"/></svg>'}); } catch (e) {}
-    [
-        {name:'playMode',title:'Запуск фільму',def:'auto',values:{auto:'Автоматично',manual:'Вибір вручну'}},
-        {name:'uaPolicy',title:'Українська озвучка',description:'Суворий режим вимагає явної мовної позначки в назві релізу',def:'strict',values:{strict:'Тільки підтверджена за назвою',prefer:'Пріоритет української + резерв'}},
-        {name:'quality',title:'Роздільність',def:'4k',values:{'4k':'4K / 2160p','1080':'Full HD / 1080p'}},
-        {name:'hdr',title:'Пріоритет HDR',def:'dv',values:{dv:'Dolby Vision → HDR10+ → HDR',hdr:'HDR10+ → HDR → DV',sdr:'SDR'}},
-        {name:'source',title:'Джерело',def:'auto',values:{auto:'REMUX → Blu-ray → WEB-DL',bluray:'Blu-ray → REMUX → WEB-DL',webdl:'WEB-DL → REMUX → Blu-ray'}},
-        {name:'audio',title:'Звукова доріжка',def:'auto',values:{auto:'Автоматично',atmos:'Dolby Atmos / TrueHD',dts:'DTS-HD / DTS:X',eac3:'Dolby Digital Plus'}},
-        {name:'minSeeds',title:'Мінімум сідерів',def:'5',values:{'0':'Без обмеження','1':'1','3':'3','5':'5','10':'10','20':'20'}},
-        {name:'maxSize',title:'Максимальний розмір фільму',def:'70',values:{'30':'30 GB','50':'50 GB','70':'70 GB','90':'90 GB','120':'120 GB','200':'200 GB'}},
-        {name:'toloka',title:'Пріоритет Toloka',def:'false',values:{'false':'Вимкнено','true':'Увімкнено'}},
-        {name:'fallback',title:'За відсутності української (резервний режим)',def:'ask',values:{ask:'Запитати',none:'Не запускати',auto:'Інший реліз автоматично'}},
-        {name:'design',title:'Інтерфейс',def:'premium',values:{premium:'Premium Dark',compact:'Compact TV'}}
-    ].forEach(addSetting);
+
+function findButtonsBar(root) {
+    var bar = root.find('.full-start-new__buttons').eq(0);
+    if (bar.length) return bar;
+
+    bar = root.find('.full-start__buttons').eq(0);
+    if (bar.length) return bar;
+
+    bar = root.find('.full-actions').eq(0);
+    if (bar.length) return bar;
+
+    return root.find('.full-start__right, .full-start').eq(0);
 }
-function button() {
-    var b = document.createElement('div');
-    b.className = 'full-start__button selector uadv630-button';
-    b.setAttribute('data-uadv630','1'); b.tabIndex = 0;
-    b.innerHTML = '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="4" width="20" height="16" rx="4"/><path d="M10 8.5l6 3.5-6 3.5z" fill="currentColor" stroke="none"/></svg><span>4K Pro</span>';
-    return $(b);
+
+function makeUaButton() {
+    var btn = document.createElement('div');
+
+    btn.className = 'full-start__button selector uadv-button';
+    btn.setAttribute('data-uadv-button', '1');
+    btn.tabIndex = 0;
+
+    btn.innerHTML =
+        '<svg xmlns="http://www.w3.org/2000/svg" ' +
+        'width="20" height="20" viewBox="0 0 24 24" ' +
+        'fill="none" stroke="currentColor" ' +
+        'stroke-width="1.8" stroke-linecap="round" ' +
+        'stroke-linejoin="round">' +
+        '<rect x="3" y="4" width="18" height="16" rx="3"/>' +
+        '<path d="M10 8.5 16 12l-6 3.5z" fill="currentColor" stroke="none"/>' +
+        '</svg>' +
+        '<span>4K</span>';
+
+    return $(btn);
 }
-function attach(root,ev) {
-    var bar = root.find('.full-start-new__buttons,.full-start__buttons,.full-actions').eq(0);
-    if (!bar.length) return false;
-    if (bar.find('[data-uadv630="1"]').length) return true;
-    bar.find('[data-uadv-button="1"]').remove();
-    var b = button();
-    var click = function () { run(ev.data); };
-    b.on('hover:enter click',click);
-    b.on('keydown',function (e) { if (e.key === 'Enter' || e.keyCode === 13) { e.preventDefault(); click(); } });
-    bar.prepend(b);
-    try { Lampa.Controller.collectionSet(bar); } catch (e) {}
+
+function attachButton(root, ev) {
+    if (!ev || !ev.data || !ev.data.movie) return true;
+
+    var bar = findButtonsBar(root);
+    if (!bar || !bar.length) return false;
+
+    if (bar.find('[data-uadv-button="1"]').length) return true;
+
+    var btn = makeUaButton();
+    var click = function () {
+        runUaDV(ev.data);
+    };
+
+    btn.on('hover:enter click', click);
+
+    btn.on('keydown', function (e) {
+        if (e.key === 'Enter' || e.keyCode === 13) click();
+    });
+
+    bar.prepend(btn);
+
+    try {
+        Lampa.Controller.collectionSet(bar);
+    } catch (e) {}
+
     return true;
 }
+
+function injectStyles() {
+    if (document.getElementById('uadv623-style')) return;
+
+    var css = [
+        '.full-start__button.uadv-button{background:#292b2f!important;color:#f4f4f4!important;border:1px solid rgba(255,255,255,.12)!important;order:-9999!important;box-shadow:0 2px 8px rgba(0,0,0,.28)!important;}',
+        '.full-start__button.uadv-button.focus,.full-start__button.uadv-button:hover{background:#3a3d42!important;border-color:rgba(255,255,255,.3)!important;filter:brightness(1.08);}',
+        '.full-start__button.uadv-button svg{flex-shrink:0;}',
+        '.uadv-toast{position:fixed;left:50%;bottom:7%;transform:translate(-50%,16px);z-index:1000000;max-width:88vw;padding:15px 24px;background:rgba(25,27,30,.96);color:#f4f4f4;border:1px solid rgba(255,255,255,.16);border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.38);font-size:17px;font-weight:500;text-align:center;opacity:0;visibility:hidden;transition:opacity .22s ease,transform .22s ease,visibility .22s;pointer-events:none;}',
+        '.uadv-toast.uadv-toast-visible{opacity:1;visibility:visible;transform:translate(-50%,0);}',
+        '.uadv-dialog{position:fixed;inset:0;z-index:999999;background:rgba(0,0,0,.78);display:flex;align-items:center;justify-content:center;}',
+        '.uadv-panel{width:min(1100px,94vw);max-height:88vh;background:#141414;color:#fff;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.12);box-shadow:0 15px 60px rgba(0,0,0,.55);}',
+        '.uadv-head{padding:22px 28px;font-size:27px;font-weight:800;background:rgba(255,255,255,.06);}',
+        '.uadv-list{padding:12px;overflow-y:auto;max-height:calc(88vh - 90px);}',
+        '.uadv-row{padding:16px 20px;margin-bottom:7px;border-radius:10px;cursor:pointer;outline:none;}',
+        '.uadv-row.focus,.uadv-row:hover{background:rgba(255,255,255,.12);box-shadow:inset 0 0 0 2px rgba(220,225,232,.9);}',
+        '.uadv-row-title{font-size:22px;font-weight:700;line-height:1.35;overflow-wrap:anywhere;}',
+        '.uadv-row-sub{font-size:16px;opacity:.72;margin-top:6px;}',
+        '@media(max-width:600px){.uadv-panel{width:96vw;}.uadv-head{font-size:20px;padding:16px;}.uadv-row{padding:12px;}.uadv-row-title{font-size:17px;}.uadv-row-sub{font-size:13px;}.uadv-toast{bottom:5%;padding:12px 17px;font-size:14px;border-radius:10px;}}'
+    ].join('');
+
+    var style = document.createElement('style');
+    style.id = 'uadv623-style';
+    style.textContent = css;
+    document.head.appendChild(style);
+}
+
 function mountButton() {
-    if (mounted) return; mounted = true;
-    Lampa.Listener.follow('full',function (ev) {
-        if (!ev || ev.type !== 'complite' || !ev.object || !ev.data || !ev.data.movie) return;
+    if (!window.Lampa || !Lampa.Listener) return;
+
+    Lampa.Listener.follow('full', function (ev) {
+        if (!ev || ev.type !== 'complite' || !ev.object) return;
+
         var root;
-        try { root = ev.object.activity.render(); } catch (e) { return; }
-        if (!root || !root.length || attach(root,ev)) return;
-        var observer = new MutationObserver(function () { if (attach(root,ev)) observer.disconnect(); });
-        observer.observe(root[0],{childList:true,subtree:true});
-        setTimeout(function () { observer.disconnect(); },7000);
+
+        try {
+            root = ev.object.activity.render();
+        } catch (e) {
+            return;
+        }
+
+        if (!root || !root.length) return;
+        if (attachButton(root, ev)) return;
+
+        try {
+            var target = root[0];
+
+            var observer = new MutationObserver(function () {
+                if (attachButton(root, ev)) {
+                    observer.disconnect();
+                }
+            });
+
+            observer.observe(target, {
+                childList: true,
+                subtree: true
+            });
+
+            setTimeout(function () {
+                observer.disconnect();
+            }, 8000);
+        } catch (e) {
+            log('Button observer:', e);
+        }
     });
 }
-function styles() {
-    if (document.getElementById('uadv630-css')) return;
-    var css = [
-        '.uadv630-button{background:#202733!important;color:#eef3fa!important;border:1px solid #394453!important;border-radius:10px!important;order:-9999!important;box-shadow:0 5px 18px rgba(0,0,0,.28)!important}',
-        '.uadv630-button.focus,.uadv630-button:hover{background:#344254!important;border-color:#a8c1db!important}',
-        '.uadv630-button svg{flex-shrink:0}',
-        '.uadv630-toast{position:fixed;left:50%;bottom:7%;transform:translate(-50%,12px);z-index:1000002;max-width:88vw;padding:14px 22px;background:#1a2029;color:#f3f6fa;border:1px solid #485365;border-radius:12px;box-shadow:0 12px 35px #0009;font-size:17px;text-align:center;opacity:0;visibility:hidden;transition:opacity .2s,transform .2s;pointer-events:none}',
-        '.uadv630-toast.visible{opacity:1;visibility:visible;transform:translate(-50%,0)}',
-        '.uadv630-overlay{position:fixed;inset:0;z-index:1000001;background:rgba(3,6,12,.85);display:flex;align-items:center;justify-content:center;padding:2vh 2vw;box-sizing:border-box}',
-        '.uadv630-panel{width:min(1050px,96vw);max-height:90vh;display:flex;flex-direction:column;background:#121820;color:#f3f6fb;border:1px solid #34404e;border-radius:18px;overflow:hidden;box-shadow:0 22px 70px #000b}',
-        '.uadv630-header{display:flex;align-items:center;justify-content:space-between;gap:15px;padding:22px 26px;background:#1b2530;border-bottom:1px solid #34404e}',
-        '.uadv630-heading{font-size:26px;font-weight:750;line-height:1.2}',
-        '.uadv630-close{border:1px solid #4c5867;border-radius:9px;background:#283441;color:#fff;font-size:19px;width:40px;height:40px;cursor:pointer}',
-        '.uadv630-list{padding:12px;overflow-y:auto;overscroll-behavior:contain}',
-        '.uadv630-row{padding:16px 20px;margin-bottom:8px;border:1px solid transparent;border-radius:12px;background:#1c2530;outline:none;cursor:pointer}',
-        '.uadv630-row.focus,.uadv630-row:hover{background:#304054;border-color:#b2c7e0;box-shadow:inset 0 0 0 1px #b2c7e0}',
-        '.uadv630-row-title{font-size:21px;font-weight:650;line-height:1.35;overflow-wrap:anywhere}',
-        '.uadv630-row-sub{font-size:15px;color:#afbfce;margin-top:6px;line-height:1.4}',
-        '@media(max-width:600px){.uadv630-panel{width:97vw;max-height:92vh;border-radius:13px}.uadv630-header{padding:15px}.uadv630-heading{font-size:19px}.uadv630-row{padding:12px}.uadv630-row-title{font-size:16px}.uadv630-row-sub{font-size:12px}.uadv630-toast{font-size:14px;padding:11px 15px}}',
-        '@media(prefers-reduced-motion:reduce){.uadv630-toast{transition:none}}'
-    ].join('');
-    var s = document.createElement('style'); s.id = 'uadv630-css'; s.textContent = css;
-    document.head.appendChild(s);
-}
+
 function init() {
-    if (!window.Lampa || !Lampa.Listener || !Lampa.Storage || !$) { setTimeout(init,600); return; }
-    var defaults = {playMode:'auto',uaPolicy:'strict',quality:'4k',hdr:'dv',source:'auto',audio:'auto',
-        minSeeds:'5',maxSize:'70',toloka:'false',fallback:'ask',design:'premium'};
-    Object.keys(defaults).forEach(function (k) { if (get(k,null) == null) set(k,defaults[k]); });
-    styles(); registerSettings(); mountButton();
-    log('Initialized; existing uadv62_ settings preserved');
+    if (!window.Lampa || !Lampa.Listener || !Lampa.Storage) {
+        setTimeout(init, 500);
+        return;
+    }
+
+    var defaults = {
+        playMode: 'auto',
+        quality: '4k',
+        hdr: 'dv',
+        source: 'auto',
+        audio: 'auto',
+        minSeeds: '5',
+        maxSize: '70',
+        toloka: 'false',
+        fallback: 'ask'
+    };
+
+    Object.keys(defaults).forEach(function (k) {
+        try {
+            if (Lampa.Storage.get(P + k) == null) {
+                set(k, defaults[k]);
+            }
+        } catch (e) {}
+    });
+
+    injectStyles();
+    registerSettings();
+    mountButton();
+
+    log('4K v' + VERSION + ' initialized');
 }
+
 init();
+
 })();
