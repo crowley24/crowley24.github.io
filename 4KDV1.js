@@ -1,10 +1,13 @@
+
 (function () {
 'use strict';
 
-if (window.uadv625_ready || window.uadv624_ready || window.uadv623_ready) return;
-window.uadv625_ready = true;
+if (window.uadv626_ready || window.uadv625_ready ||
+    window.uadv624_ready || window.uadv623_ready) return;
 
-var VERSION = '62.5.0 Premium Graphite Ultra';
+window.uadv626_ready = true;
+
+var VERSION = '62.6.0 Premium Graphite Ultra';
 var P = 'uadv62_';
 var GB = 1073741824;
 var MB = 1048576;
@@ -100,9 +103,7 @@ function setSearchStatus(message, progress) {
         searchIndicator = el;
 
         requestAnimationFrame(function () {
-            if (searchIndicator === el) {
-                el.classList.add('visible');
-            }
+            if (searchIndicator === el) el.classList.add('visible');
         });
     }
 
@@ -114,6 +115,7 @@ function setSearchStatus(message, progress) {
     if (bar) {
         if (typeof progress === 'number' && progress >= 0) {
             bar.style.width = Math.max(0, Math.min(100, progress)) + '%';
+            bar.classList.remove('indeterminate');
         } else {
             bar.style.width = '35%';
             bar.classList.add('indeterminate');
@@ -126,7 +128,6 @@ function hideSearchStatus() {
 
     var el = searchIndicator;
     searchIndicator = null;
-
     el.classList.remove('visible');
 
     setTimeout(function () {
@@ -165,11 +166,9 @@ function human(n) {
 function serial(m) {
     return !!(
         m &&
-        (
-            m.media_type === 'tv' ||
-            m.first_air_date ||
-            m.number_of_seasons
-        ) &&
+        (m.media_type === 'tv' ||
+         m.first_air_date ||
+         m.number_of_seasons) &&
         !m.release_date
     );
 }
@@ -180,19 +179,15 @@ function timeout(url, opt, ms) {
         c.abort();
     }, ms || 8500);
 
-    return fetch(
-        url,
-        Object.assign({}, opt || {}, { signal: c.signal })
-    ).then(
-        function (r) {
-            clearTimeout(t);
-            return r;
-        },
-        function (e) {
-            clearTimeout(t);
-            throw e;
-        }
-    );
+    return fetch(url, Object.assign({}, opt || {}, {
+        signal: c.signal
+    })).then(function (r) {
+        clearTimeout(t);
+        return r;
+    }, function (e) {
+        clearTimeout(t);
+        throw e;
+    });
 }
 
 /* ==========================================
@@ -259,11 +254,13 @@ function tsStreamBase() {
 
 function streamAuth() {
     var t = field('torrserver_token');
-    return t ? '&authorization=' + encodeURIComponent('Bearer ' + t) : '';
+    return t ? '&authorization=' +
+        encodeURIComponent('Bearer ' + t) : '';
 }
 
 /* ==========================================
    PARSE TORZNAB XML
+   Зберігаємо опис і додаткові мовні поля
    ========================================== */
 
 function xmlResults(s) {
@@ -276,8 +273,11 @@ function xmlResults(s) {
 
         [].slice.call(it.getElementsByTagName('*')).forEach(function (el) {
             if (el.localName === 'attr' && el.getAttribute('name')) {
-                attrs[el.getAttribute('name').toLowerCase()] =
-                    el.getAttribute('value') || '';
+                var key = el.getAttribute('name').toLowerCase();
+                var value = el.getAttribute('value') || '';
+
+                if (attrs[key]) attrs[key] += ' ' + value;
+                else attrs[key] = value;
             }
         });
 
@@ -291,8 +291,23 @@ function xmlResults(s) {
         var mag = attrs.magneturl || '';
         var link = /^magnet:/i.test(mag) ? mag : (val('link') || dl);
 
+        var description = [
+            val('description'),
+            attrs.language,
+            attrs.languages,
+            attrs.audio,
+            attrs.audiolanguage,
+            attrs.subtitle,
+            attrs.subtitles,
+            attrs.category,
+            attrs.categorydesc,
+            attrs.releasegroup,
+            attrs.tags
+        ].filter(Boolean).join(' ');
+
         return {
             title: val('title'),
+            description: description,
             link: link,
             magnet: mag,
             dl: dl,
@@ -326,15 +341,42 @@ function jsonResults(j) {
         var mag = x.MagnetUri || x.MagnetUrl || x.magnet || '';
         var link = /^magnet:/i.test(mag) ? mag : (x.Link || x.link || '');
 
+        var description = [
+            x.Description,
+            x.description,
+            x.CategoryDesc,
+            x.categorydesc,
+            x.Category,
+            x.category,
+            x.Language,
+            x.language,
+            x.Languages,
+            x.languages,
+            x.Audio,
+            x.audio,
+            x.AudioLanguage,
+            x.audiolanguage,
+            x.Subtitles,
+            x.subtitles,
+            x.ReleaseGroup,
+            x.releasegroup,
+            x.Tags,
+            x.tags
+        ].filter(Boolean).join(' ');
+
         return {
             title: x.Title || x.title || '',
+            description: description,
             link: link,
             magnet: mag,
             dl: x.Link || x.link || '',
             size: Number(x.Size || x.size || 0),
-            seed: Number(x.Seeders || x.seeders || x.Peers || x.peers || 0),
+            seed: Number(
+                x.Seeders || x.seeders || x.Peers || x.peers || 0
+            ),
             tracker: String(
-                x.Tracker || x.tracker || x.TrackerId || x.TrackerName || ''
+                x.Tracker || x.tracker || x.TrackerId ||
+                x.TrackerName || ''
             ).toLowerCase()
         };
     });
@@ -396,65 +438,64 @@ async function searchJackett(q, cats, mode, meta) {
 
 /* ==========================================
    UKRAINIAN AUDIO DETECTION
+   Перевіряємо назву і опис релізу.
+   Невідомі релізи не вважаємо підтверджено
+   неукраїнськими: вони лишаються для ручного вибору.
    ========================================== */
 
-function ukrainian(t) {
-    var str = String(t || '').toLowerCase();
+function ukrainian(title, description) {
+    var str = (
+        String(title || '') + ' ' + String(description || '')
+    ).toLowerCase();
 
     var langPatterns = [
-        /(?:^|[\s._()[\]-])ukr(?:$|[\s._()[\]-])/i,
-        /(?:^|[\s._()[\]-])ua[-_\s]?(?:dub|audio|sound|voice)(?:$|[\s._()[\]-])/i,
+        /(?:^|[\s._()[\]{}-])ukr(?:$|[\s._()[\]{}-])/i,
+        /(?:^|[\s._()[\]{}-])ukrainian(?:$|[\s._()[\]{}-])/i,
+        /\bukrainisch\b/i,
+        /\bua[-_. ]?(?:dub|audio|sound|voice| озвучка)\b/i,
+        /\bua[\s._-]*audio\b/i,
         /україн(?:ськ|а|ою|е|і)/i,
         /україномовн/i,
-        /украинск(?:ая|ий|ое|ие|ой|им)/i,
-        /ukrainian/i,
-        /ukrainisch/i,
-        /(?:^|[\s._()[\]-])укр(?:$|[\s._()[\]-])/i,
+        /озвучено українською/i,
+        /українськ.{0,30}(?:озвуч|доріж|аудіо|дубляж|переклад)/i,
+        /(?:озвуч|доріж|аудіо|дубляж|переклад).{0,30}українськ/i,
+        /(?:^|[\s._()[\]{}-])укр(?:$|[\s._()[\]{}-])/i,
         /гуртом/i,
-        /озвучка\s*(?:ua|укр|україн)/i,
-        /українськ.{0,15}(?:озвуч|доріж|аудіо|дубляж)/i
+        /незупиняйся/i,
+        /незупиняйсь/i,
+        /nezupyniays/i,
+        /однією колією/i,
+        /1колія/i,
+        /цікава ідея/i,
+        /tsikava ideya/i,
+        /склянка соку/i,
+        /sklyanka soku/i,
+        /дворіччя/i,
+        /dvorichchya/i,
+        /євген(?:а)? малух[аи]/i,
+        /postmodern/i,
+        /так треба/i,
+        /дивобудок/i,
+        /starlight/i,
+        /качан/i,
+        /фанвакс/i,
+        /fanvox/i,
+        /bamberg/i,
+        /бамберг/i,
+        /dniprofilm/i,
+        /дніпрофільм/i,
+        /кінокульт/i,
+        /kinokult/i,
+        /cinema[\s._-]*hd/i,
+        /загін кіноманів/i,
+        /українська доріжка/i
     ];
 
     for (var i = 0; i < langPatterns.length; i++) {
         if (langPatterns[i].test(str)) return true;
     }
 
-    var studiosPattern = new RegExp([
-        'незупиняйся',
-        'незупиняйсь',
-        'nezupyniays',
-        'однією колією',
-        'однiею колією',
-        '1колія',
-        'цікава ідея',
-        'tsikava ideya',
-        'склянка соку',
-        'sklyanka soku',
-        'дворіччя',
-        'dvorichchya',
-        'євгена малухи',
-        'євген малуха',
-        'postmodern',
-        'так треба',
-        'дивобудок',
-        'starlight',
-        'качан',
-        'фанвакс',
-        'fanvox',
-        'bamberg',
-        'бамберг',
-        'dniprofilm',
-        'дніпрофільм',
-        'кінокульт',
-        'kinokult',
-        'cinema hd',
-        'cinema_hd',
-        'загін кіноманів',
-        'озвучено українською',
-        'українська доріжка'
-    ].join('|'), 'i');
-
-    return studiosPattern.test(str);
+    return false;
 }
 
 /* ==========================================
@@ -473,11 +514,8 @@ function score(x) {
     var k4 = /2160p|\b4k\b|\buhd\b/i.test(t);
     var fhd = /1080p/i.test(t);
 
-    if (q === '1080') {
-        s += fhd ? 110 : k4 ? 50 : 0;
-    } else {
-        s += k4 ? 110 : fhd ? 60 : 0;
-    }
+    if (q === '1080') s += fhd ? 110 : k4 ? 50 : 0;
+    else s += k4 ? 110 : fhd ? 60 : 0;
 
     var dv = /dolby.?vision|dovi|(?:^|[.\s_-])dv(?:$|[.\s_-])/i.test(t);
     var hp = /hdr10\+/i.test(t);
@@ -534,10 +572,7 @@ function sortReleases(items) {
 
 function queries(m) {
     var orig = clean(
-        m.original_title ||
-        m.original_name ||
-        m.title ||
-        m.name
+        m.original_title || m.original_name || m.title || m.name
     );
 
     var local = clean(m.title || m.name);
@@ -591,25 +626,12 @@ function queries(m) {
 async function findReleases(m) {
     var show = serial(m);
     var cats = show ? SERIES_CATS : MOVIE_CATS;
-    var qs = queries(m);
-
-    /*
-     * Використовуємо чотири найважливіші запити:
-     * обраний варіант, оригінальна назва, локальна назва
-     * та оригінальна назва з роком.
-     * XML і JSON для кожного запиту запускаються паралельно.
-     */
-    qs = qs.slice(0, 4);
-
+    var qs = queries(m).slice(0, 4);
     var jb = jackett();
 
     var key = [
-        jb.base,
-        jb.key,
-        cats,
-        qs.join('|'),
-        get('minSeeds', '5'),
-        get('maxSize', '70')
+        jb.base, jb.key, cats, qs.join('|'),
+        get('minSeeds', '5'), get('maxSize', '70')
     ].join('~');
 
     if (cache[key] && Date.now() - cache[key].at < 300000) {
@@ -635,17 +657,13 @@ async function findReleases(m) {
     var completed = 0;
     var successful = 0;
     var errors = [];
-    var all = [];
 
     setSearchStatus('Підключення до Jackett…', 0);
 
     var results = await Promise.all(tasks.map(async function (task) {
         try {
             var items = await searchJackett(
-                task.q,
-                cats,
-                task.mode,
-                meta
+                task.q, cats, task.mode, meta
             );
 
             successful++;
@@ -659,7 +677,6 @@ async function findReleases(m) {
             return items;
         } catch (e) {
             completed++;
-
             errors.push(String(e && e.message || e));
 
             setSearchStatus(
@@ -678,8 +695,9 @@ async function findReleases(m) {
         );
     }
 
-    setSearchStatus('Сортування релізів…', 96);
+    setSearchStatus('Обробка результатів…', 96);
 
+    var all = [];
     results.forEach(function (items) {
         all = all.concat(items);
     });
@@ -689,17 +707,30 @@ async function findReleases(m) {
     var max = Number(get('maxSize', '70')) * GB;
 
     all = all.filter(function (x) {
-        if (
-            !x.link ||
-            !x.title ||
-            Number(x.size) <= 0 ||
-            Number(x.seed) < min ||
-            (!show && Number(x.size) > max)
-        ) {
+        if (!x.link || !x.title) return false;
+
+        /*
+         * Розмір може бути відсутнім у деяких індексаторів.
+         * Не відкидаємо такий реліз лише через невідомий розмір.
+         * Обмеження максимального розміру застосовуємо лише тоді,
+         * коли індексатор справді передав розмір.
+         */
+        if (Number(x.size) > 0 && !show && Number(x.size) > max) {
             return false;
         }
 
-        var id = String(x.magnet || x.link || x.title).toLowerCase();
+        /*
+         * Якщо сідери відомі — застосовуємо налаштування.
+         * Якщо індексатор не передав їх, не вважаємо це нулем.
+         */
+        if (x.seed !== null && x.seed !== undefined &&
+            Number(x.seed) > 0 && Number(x.seed) < min) {
+            return false;
+        }
+
+        var id = String(
+            x.magnet || x.link || x.title
+        ).toLowerCase();
 
         if (seen[id]) return false;
 
@@ -840,7 +871,6 @@ async function tsFiles(base, linkOrHash) {
         if (r.ok) {
             var j = await r.json();
             var files = fileStats(j);
-
             if (files.length) return files;
         }
     } catch (e) {
@@ -866,7 +896,7 @@ async function tsFiles(base, linkOrHash) {
 
 function safeFileName(s) {
     return String(s || 'video')
-        .replace(/[^\w\d.-]+/g, '.')
+        .replace(/[^\w\d.-]+/g, '.') 
         .replace(/^\.+|\.+$/g, '') || 'video';
 }
 
@@ -876,12 +906,10 @@ function streamLink(hash, file, title) {
 
     if (!/\.[a-z0-9]{2,5}$/i.test(name)) name += '.mkv';
 
-    var idx = fileIndex(file);
-
     return tsStreamBase() +
         '/stream/' + encodeURIComponent(name) +
         '?link=' + encodeURIComponent(hash) +
-        '&index=' + idx +
+        '&index=' + fileIndex(file) +
         '&play=1' + streamAuth();
 }
 
@@ -980,10 +1008,7 @@ function openDialog(title, items) {
 
         rows.forEach(function (r, i) {
             r.classList.toggle('focus', i === selected);
-            r.setAttribute(
-                'aria-selected',
-                i === selected ? 'true' : 'false'
-            );
+            r.setAttribute('aria-selected', i === selected ? 'true' : 'false');
         });
 
         try {
@@ -1014,11 +1039,8 @@ function openDialog(title, items) {
         if (dialog && dialog.close === close) dialog = null;
 
         try {
-            if (
-                previousFocus &&
-                previousFocus.focus &&
-                document.contains(previousFocus)
-            ) {
+            if (previousFocus && previousFocus.focus &&
+                document.contains(previousFocus)) {
                 previousFocus.focus();
             }
         } catch (e) {}
@@ -1055,7 +1077,6 @@ function openDialog(title, items) {
         if (k === 'Enter' || k === 13) {
             e.preventDefault();
             e.stopImmediatePropagation();
-
             if (rows[selected]) rows[selected].click();
         }
     }
@@ -1077,7 +1098,6 @@ function openDialog(title, items) {
         var name = document.createElement('div');
         name.className = 'uadv-row-title';
         name.textContent = item.title || '';
-
         content.appendChild(name);
 
         if (item.subtitle) {
@@ -1180,9 +1200,12 @@ async function startMovieRelease(movie, release) {
 
 function releasePicker(movie, releases) {
     openDialog('Обери реліз', releases.slice(0, 50).map(function (r) {
+        var size = Number(r.size) > 0 ? human(r.size) : 'Розмір невідомий';
+        var seeds = Number(r.seed) > 0 ? r.seed : 'невідомо';
+
         return {
             title: r.title,
-            subtitle: human(r.size) + '   ·   Сідери: ' + r.seed,
+            subtitle: size + '   ·   Сідери: ' + seeds,
             action: function () {
                 closeDialog();
 
@@ -1195,10 +1218,10 @@ function releasePicker(movie, releases) {
 }
 
 function fallbackPicker(movie, releases) {
-    openDialog('Українську озвучку не знайдено', [
+    openDialog('Мову озвучення не підтверджено', [
         {
-            title: 'Показати інші релізи',
-            subtitle: 'Вибрати відео вручну',
+            title: 'Показати всі релізи',
+            subtitle: 'Українська доріжка може не вказуватися в назві',
             action: function () {
                 releasePicker(movie, releases);
             }
@@ -1212,7 +1235,7 @@ function fallbackPicker(movie, releases) {
 
 async function movieFlow(movie, releases) {
     var ua = releases.filter(function (r) {
-        return ukrainian(r.title);
+        return ukrainian(r.title, r.description);
     });
 
     if (ua.length) {
@@ -1227,7 +1250,7 @@ async function movieFlow(movie, releases) {
     var fallback = get('fallback', 'ask');
 
     if (fallback === 'none') {
-        note('Українську озвучку не знайдено');
+        note('Не вдалося підтвердити українську озвучку');
         return;
     }
 
@@ -1327,12 +1350,12 @@ async function loadEpisodes(movie, season, releases) {
 
     var episodes = {};
     var base = tsBase();
+    var count = Math.min(10, releases.length);
 
-    for (var i = 0; i < Math.min(10, releases.length); i++) {
+    for (var i = 0; i < count; i++) {
         setSearchStatus(
-            'Перевірка торентів: ' + (i + 1) + '/' +
-            Math.min(10, releases.length),
-            (i + 1) / Math.min(10, releases.length) * 100
+            'Перевірка торентів: ' + (i + 1) + '/' + count,
+            (i + 1) / count * 100
         );
 
         var r = releases[i];
@@ -1362,7 +1385,6 @@ async function loadEpisodes(movie, season, releases) {
             if (!VIDEO.test(path) || size < 100 * MB) return;
 
             var ep = episodeFromPath(path, season);
-
             if (!ep) return;
 
             if (!episodes[ep] || size > episodes[ep].size) {
@@ -1408,7 +1430,7 @@ async function loadEpisodes(movie, season, releases) {
 
 function openSeason(movie, season, releases) {
     var ua = releases.filter(function (r) {
-        return ukrainian(r.title);
+        return ukrainian(r.title, r.description);
     });
 
     if (ua.length) {
@@ -1423,7 +1445,7 @@ function openSeason(movie, season, releases) {
     var fallback = get('fallback', 'ask');
 
     if (fallback === 'none') {
-        note('Українську озвучку не знайдено');
+        note('Не вдалося підтвердити українську озвучку');
         return;
     }
 
@@ -1435,9 +1457,10 @@ function openSeason(movie, season, releases) {
         return;
     }
 
-    openDialog('Українську озвучку не знайдено', [
+    openDialog('Мову озвучення не підтверджено', [
         {
-            title: 'Показати інші серії',
+            title: 'Показати всі серії',
+            subtitle: 'Перевірити доступні релізи вручну',
             action: function () {
                 loadEpisodes(movie, season, releases).catch(function (e) {
                     hideSearchStatus();
@@ -1454,7 +1477,7 @@ function openSeason(movie, season, releases) {
 
 function seriesFlow(movie, releases) {
     var ua = releases.filter(function (r) {
-        return ukrainian(r.title);
+        return ukrainian(r.title, r.description);
     });
 
     if (ua.length) {
@@ -1465,7 +1488,7 @@ function seriesFlow(movie, releases) {
     var fallback = get('fallback', 'ask');
 
     if (fallback === 'none') {
-        note('Українську озвучку не знайдено');
+        note('Не вдалося підтвердити українську озвучку');
         return;
     }
 
@@ -1474,9 +1497,10 @@ function seriesFlow(movie, releases) {
         return;
     }
 
-    openDialog('Українську озвучку не знайдено', [
+    openDialog('Мову озвучення не підтверджено', [
         {
-            title: 'Показати інші сезони',
+            title: 'Показати всі сезони',
+            subtitle: 'Українська доріжка може не вказуватися в назві',
             action: function () {
                 showSeasons(movie, releases);
             }
@@ -1535,7 +1559,7 @@ function registerSettings() {
         {
             name: 'playMode',
             title: 'Режим запуску фільмів',
-            description: 'Автоматично запускати найкращий український реліз або обирати вручну',
+            description: 'Автоматичний запуск або ручний вибір',
             def: 'auto',
             values: { auto: 'Автоматично', manual: 'Ручний вибір' }
         },
@@ -1560,7 +1584,7 @@ function registerSettings() {
         {
             name: 'source',
             title: 'Пріоритет джерела',
-            description: 'У режимі Авто джерело має помірний вплив на рейтинг',
+            description: 'Пріоритет типу відеорелізу',
             def: 'auto',
             values: {
                 auto: 'Авто — збалансований рейтинг',
@@ -1571,7 +1595,7 @@ function registerSettings() {
         {
             name: 'audio',
             title: 'Пріоритет аудіоформату',
-            description: 'Додатковий пріоритет звукової доріжки',
+            description: 'Додатковий пріоритет аудіоформату',
             def: 'auto',
             values: {
                 auto: 'Автоматично',
@@ -1617,8 +1641,8 @@ function registerSettings() {
         },
         {
             name: 'fallback',
-            title: 'Якщо немає української озвучки',
-            description: 'Дія, коли українські релізи відсутні',
+            title: 'Якщо озвучення не підтверджено',
+            description: 'Дія, коли назва й опис не підтверджують українську доріжку',
             def: 'ask',
             values: {
                 ask: 'Запитати перед вибором',
@@ -1662,7 +1686,7 @@ async function runUaDV(data) {
 
         if (!releases.length) {
             throw Error(
-                'Релізів не знайдено. Перевір Jackett, мінімум сідерів і максимальний розмір.'
+                'Релізів не знайдено. Перевір Jackett, сідерів і розмір.'
             );
         }
 
@@ -1711,18 +1735,13 @@ function makeUaButton() {
 
     btn.innerHTML =
         '<span class="uadv-button-icon">' +
-        '<svg xmlns="http://www.w3.org/2000/svg" ' +
-        'width="23" height="23" viewBox="0 0 24 24" ' +
-        'fill="none" stroke="currentColor" ' +
-        'stroke-width="1.7" stroke-linecap="round" ' +
-        'stroke-linejoin="round">' +
+        '<svg xmlns="http://www.w3.org/2000/svg" width="23" height="23" ' +
+        'viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+        'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
         '<rect x="2.5" y="4" width="19" height="16" rx="4"/>' +
-        '<path d="m10 8.5 5.5 3.5-5.5 3.5z" ' +
-        'fill="currentColor" stroke="none"/>' +
+        '<path d="m10 8.5 5.5 3.5-5.5 3.5z" fill="currentColor" stroke="none"/>' +
         '<path d="M7 2.5h10" opacity=".65"/>' +
-        '</svg>' +
-        '</span>' +
-        '<span class="uadv-button-label">ULTRA</span>';
+        '</svg></span><span class="uadv-button-label">ULTRA</span>';
 
     return $(btn);
 }
@@ -1769,62 +1788,47 @@ function attachButton(root, ev) {
    ========================================== */
 
 function injectStyles() {
-    if (document.getElementById('uadv625-style')) return;
+    if (document.getElementById('uadv626-style')) return;
 
     var css = [
         '.full-start__button.uadv-button{' +
             'position:relative!important;display:inline-flex!important;' +
             'align-items:center!important;justify-content:center!important;' +
             'gap:10px!important;min-height:46px;min-width:108px;' +
-            'padding:0 18px!important;margin-right:8px;' +
-            'overflow:hidden;border:1px solid rgba(210,220,235,.22)!important;' +
+            'padding:0 18px!important;margin-right:8px;overflow:hidden;' +
+            'border:1px solid rgba(210,220,235,.22)!important;' +
             'border-radius:11px!important;' +
             'background:linear-gradient(145deg,#353b45,#191c22)!important;' +
             'color:#f3f6fb!important;' +
-            'box-shadow:0 4px 16px rgba(0,0,0,.27),' +
-                'inset 0 1px 0 rgba(255,255,255,.07)!important;' +
-            'transition:background .18s ease,border-color .18s ease,' +
-                'box-shadow .18s ease!important;order:-9999!important;' +
+            'box-shadow:0 4px 16px rgba(0,0,0,.27),inset 0 1px 0 rgba(255,255,255,.07)!important;' +
+            'transition:background .18s ease,border-color .18s ease,box-shadow .18s ease!important;' +
+            'order:-9999!important;' +
         '}',
 
         '.full-start__button.uadv-button:before{' +
-            'content:"";position:absolute;left:0;top:18%;bottom:18%;' +
-            'width:2px;border-radius:2px;background:#c5d4e9;opacity:.9;' +
+            'content:"";position:absolute;left:0;top:18%;bottom:18%;width:2px;' +
+            'border-radius:2px;background:#c5d4e9;opacity:.9;' +
         '}',
 
-        '.uadv-button-icon{' +
-            'display:flex;align-items:center;justify-content:center;' +
-            'flex-shrink:0;color:#dce7f7;' +
-        '}',
-
-        '.uadv-button-label{' +
-            'font-size:13px;font-weight:850;letter-spacing:2px;line-height:1;' +
-        '}',
-
-        '.full-start__button.uadv-button.focus,' +
-        '.full-start__button.uadv-button:hover{' +
+        '.uadv-button-icon{display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#dce7f7;}',
+        '.uadv-button-label{font-size:13px;font-weight:850;letter-spacing:2px;line-height:1;}',
+        '.full-start__button.uadv-button.focus,.full-start__button.uadv-button:hover{' +
             'background:linear-gradient(145deg,#4a5361,#262b34)!important;' +
             'border-color:rgba(220,232,250,.62)!important;' +
-            'box-shadow:0 5px 20px rgba(0,0,0,.34),' +
-                'inset 0 1px 0 rgba(255,255,255,.1)!important;' +
+            'box-shadow:0 5px 20px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.1)!important;' +
             'filter:none!important;' +
         '}',
-
-        '.uadv-button svg{flex-shrink:0;}',
 
         '.uadv-toast{' +
             'position:fixed;left:50%;bottom:6%;transform:translate(-50%,12px);' +
             'z-index:1000000;display:flex;align-items:center;justify-content:center;' +
             'gap:10px;width:max-content;max-width:88vw;box-sizing:border-box;' +
-            'padding:15px 23px;' +
-            'background:linear-gradient(145deg,rgba(36,39,45,.98),' +
-                'rgba(19,21,25,.98));color:#f1f3f7;' +
-            'border:1px solid rgba(220,230,245,.17);border-radius:12px;' +
-            'box-shadow:0 12px 36px rgba(0,0,0,.42);font-size:16px;' +
-            'font-weight:500;line-height:1.4;text-align:center;' +
-            'overflow-wrap:anywhere;opacity:0;visibility:hidden;' +
-            'pointer-events:none;transition:opacity .2s ease,transform .2s ease,' +
-                'visibility .2s;' +
+            'padding:15px 23px;background:linear-gradient(145deg,rgba(36,39,45,.98),rgba(19,21,25,.98));' +
+            'color:#f1f3f7;border:1px solid rgba(220,230,245,.17);border-radius:12px;' +
+            'box-shadow:0 12px 36px rgba(0,0,0,.42);font-size:16px;font-weight:500;' +
+            'line-height:1.4;text-align:center;overflow-wrap:anywhere;' +
+            'opacity:0;visibility:hidden;pointer-events:none;' +
+            'transition:opacity .2s ease,transform .2s ease,visibility .2s;' +
         '}',
 
         '.uadv-toast:before{' +
@@ -1836,179 +1840,99 @@ function injectStyles() {
             'opacity:1;visibility:visible;transform:translate(-50%,0);' +
         '}',
 
-        /* SEARCH STATUS */
-
         '.uadv-search-status{' +
             'position:fixed;left:50%;bottom:6%;z-index:1000001;' +
-            'display:flex;align-items:center;gap:14px;' +
-            'width:min(390px,90vw);box-sizing:border-box;padding:17px 20px;' +
-            'border:1px solid rgba(205,218,238,.2);border-radius:14px;' +
-            'background:linear-gradient(145deg,rgba(36,40,48,.98),' +
-                'rgba(17,19,24,.99));color:#f2f5fa;' +
-            'box-shadow:0 14px 42px rgba(0,0,0,.46);' +
-            'opacity:0;visibility:hidden;pointer-events:none;' +
-            'transform:translate(-50%,12px);' +
+            'display:flex;align-items:center;gap:14px;width:min(390px,90vw);' +
+            'box-sizing:border-box;padding:17px 20px;border:1px solid rgba(205,218,238,.2);' +
+            'border-radius:14px;background:linear-gradient(145deg,rgba(36,40,48,.98),rgba(17,19,24,.99));' +
+            'color:#f2f5fa;box-shadow:0 14px 42px rgba(0,0,0,.46);' +
+            'opacity:0;visibility:hidden;pointer-events:none;transform:translate(-50%,12px);' +
             'transition:opacity .2s ease,transform .2s ease,visibility .2s;' +
         '}',
 
-        '.uadv-search-status.visible{' +
-            'opacity:1;visibility:visible;transform:translate(-50%,0);' +
-        '}',
-
+        '.uadv-search-status.visible{opacity:1;visibility:visible;transform:translate(-50%,0);}',
         '.uadv-search-spinner{' +
             'width:25px;height:25px;flex:0 0 25px;box-sizing:border-box;' +
-            'border:2px solid rgba(220,230,245,.18);' +
-            'border-top-color:#dce6f5;border-right-color:#9eafc8;' +
-            'border-radius:50%;animation:uadv-spin .75s linear infinite;' +
+            'border:2px solid rgba(220,230,245,.18);border-top-color:#dce6f5;' +
+            'border-right-color:#9eafc8;border-radius:50%;animation:uadv-spin .75s linear infinite;' +
         '}',
-
-        '.uadv-search-content{' +
-            'display:flex;flex:1;min-width:0;flex-direction:column;gap:6px;' +
-        '}',
-
-        '.uadv-search-title{' +
-            'font-size:10px;font-weight:850;letter-spacing:2px;' +
-            'color:#cbd8ea;opacity:.9;' +
-        '}',
-
-        '.uadv-search-message{' +
-            'font-size:14px;font-weight:500;line-height:1.35;' +
-            'color:#f1f4f9;overflow-wrap:anywhere;' +
-        '}',
-
-        '.uadv-search-track{' +
-            'height:3px;margin-top:4px;overflow:hidden;border-radius:5px;' +
-            'background:rgba(220,230,245,.12);' +
-        '}',
-
-        '.uadv-search-progress{' +
-            'display:block;width:0;height:100%;border-radius:5px;' +
-            'background:linear-gradient(90deg,#8fa5c3,#e0e9f6);' +
-            'transition:width .2s ease;' +
-        '}',
-
-        '.uadv-search-progress.indeterminate{' +
-            'width:35%;animation:uadv-progress 1.2s ease-in-out infinite;' +
-        '}',
-
+        '.uadv-search-content{display:flex;flex:1;min-width:0;flex-direction:column;gap:6px;}',
+        '.uadv-search-title{font-size:10px;font-weight:850;letter-spacing:2px;color:#cbd8ea;opacity:.9;}',
+        '.uadv-search-message{font-size:14px;font-weight:500;line-height:1.35;color:#f1f4f9;overflow-wrap:anywhere;}',
+        '.uadv-search-track{height:3px;margin-top:4px;overflow:hidden;border-radius:5px;background:rgba(220,230,245,.12);}',
+        '.uadv-search-progress{display:block;width:0;height:100%;border-radius:5px;background:linear-gradient(90deg,#8fa5c3,#e0e9f6);transition:width .2s ease;}',
+        '.uadv-search-progress.indeterminate{width:35%;animation:uadv-progress 1.2s ease-in-out infinite;}',
         '@keyframes uadv-spin{to{transform:rotate(360deg);}}',
-
-        '@keyframes uadv-progress{' +
-            '0%{transform:translateX(-110%);}' +
-            '100%{transform:translateX(310%);}' +
-        '}',
-
-        /* DIALOG */
+        '@keyframes uadv-progress{0%{transform:translateX(-110%);}100%{transform:translateX(310%);}}',
 
         '.uadv-dialog{' +
-            'position:fixed;inset:0;z-index:999999;display:flex;' +
-            'align-items:center;justify-content:center;padding:3vh 3vw;' +
-            'box-sizing:border-box;background:rgba(4,5,7,.80);' +
-            'backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);' +
-            'opacity:0;visibility:hidden;transition:opacity .18s ease,visibility .18s;' +
+            'position:fixed;inset:0;z-index:999999;display:flex;align-items:center;' +
+            'justify-content:center;padding:3vh 3vw;box-sizing:border-box;' +
+            'background:rgba(4,5,7,.80);backdrop-filter:blur(7px);' +
+            '-webkit-backdrop-filter:blur(7px);opacity:0;visibility:hidden;' +
+            'transition:opacity .18s ease,visibility .18s;' +
         '}',
-
         '.uadv-dialog.uadv-dialog-visible{opacity:1;visibility:visible;}',
-
         '.uadv-panel{' +
-            'position:relative;display:flex;flex-direction:column;' +
-            'width:min(1080px,94vw);max-height:88vh;max-height:88dvh;' +
-            'overflow:hidden;background:linear-gradient(145deg,#202329 0%,#15171b 70%);' +
-            'color:#f3f4f7;border:1px solid rgba(220,230,245,.15);' +
-            'border-radius:17px;box-shadow:0 24px 80px rgba(0,0,0,.56);' +
-            'transform:translateY(8px) scale(.99);transition:transform .18s ease;' +
+            'position:relative;display:flex;flex-direction:column;width:min(1080px,94vw);' +
+            'max-height:88vh;max-height:88dvh;overflow:hidden;' +
+            'background:linear-gradient(145deg,#202329 0%,#15171b 70%);color:#f3f4f7;' +
+            'border:1px solid rgba(220,230,245,.15);border-radius:17px;' +
+            'box-shadow:0 24px 80px rgba(0,0,0,.56);transform:translateY(8px) scale(.99);' +
+            'transition:transform .18s ease;' +
         '}',
-
         '.uadv-dialog-visible .uadv-panel{transform:translateY(0) scale(1);}',
-
         '.uadv-panel-accent{' +
             'position:absolute;left:0;right:0;top:0;height:2px;' +
             'background:linear-gradient(90deg,transparent,rgba(202,216,237,.78),transparent);' +
             'pointer-events:none;z-index:2;' +
         '}',
-
         '.uadv-head{' +
-            'display:flex;align-items:center;gap:16px;flex-shrink:0;' +
-            'box-sizing:border-box;padding:23px 27px 21px;' +
-            'background:linear-gradient(110deg,rgba(255,255,255,.045),' +
-                'rgba(255,255,255,.008));' +
+            'display:flex;align-items:center;gap:16px;flex-shrink:0;box-sizing:border-box;' +
+            'padding:23px 27px 21px;background:linear-gradient(110deg,rgba(255,255,255,.045),rgba(255,255,255,.008));' +
             'border-bottom:1px solid rgba(255,255,255,.075);' +
         '}',
-
         '.uadv-head-mark{' +
-            'display:flex;align-items:center;justify-content:center;' +
-            'width:49px;height:42px;flex-shrink:0;border-radius:9px;' +
-            'border:1px solid rgba(210,222,240,.24);' +
-            'background:linear-gradient(145deg,#343a44,#22262d);' +
-            'color:#f3f5f9;font-size:15px;font-weight:900;letter-spacing:1.2px;' +
+            'display:flex;align-items:center;justify-content:center;width:49px;height:42px;' +
+            'flex-shrink:0;border-radius:9px;border:1px solid rgba(210,222,240,.24);' +
+            'background:linear-gradient(145deg,#343a44,#22262d);color:#f3f5f9;' +
+            'font-size:15px;font-weight:900;letter-spacing:1.2px;' +
         '}',
-
         '.uadv-head-text{min-width:0;display:flex;flex-direction:column;gap:5px;}',
-
-        '.uadv-head-title{' +
-            'font-size:25px;font-weight:750;line-height:1.25;' +
-            'letter-spacing:-.35px;overflow-wrap:anywhere;color:#f3f4f7;' +
-        '}',
-
-        '.uadv-head-subtitle{' +
-            'font-size:9px;font-weight:700;letter-spacing:2.1px;' +
-            'color:#9ba5b4;opacity:.82;' +
-        '}',
-
+        '.uadv-head-title{font-size:25px;font-weight:750;line-height:1.25;letter-spacing:-.35px;overflow-wrap:anywhere;color:#f3f4f7;}',
+        '.uadv-head-subtitle{font-size:9px;font-weight:700;letter-spacing:2.1px;color:#9ba5b4;opacity:.82;}',
         '.uadv-list{' +
             'padding:12px 14px 15px;overflow-y:auto;overscroll-behavior:contain;' +
             'max-height:calc(88vh - 105px);max-height:calc(88dvh - 105px);' +
             'scrollbar-width:thin;scrollbar-color:rgba(190,202,220,.32) transparent;' +
         '}',
-
         '.uadv-list::-webkit-scrollbar{width:5px;}',
         '.uadv-list::-webkit-scrollbar-track{background:transparent;}',
         '.uadv-list::-webkit-scrollbar-thumb{background:rgba(190,202,220,.28);border-radius:8px;}',
-
         '.uadv-row{' +
-            'position:relative;display:flex;align-items:center;gap:15px;' +
-            'box-sizing:border-box;min-height:65px;width:100%;padding:13px 17px;' +
-            'margin:0 0 7px;border:1px solid transparent;border-radius:10px;' +
-            'background:rgba(255,255,255,.018);color:#f1f3f6;cursor:pointer;outline:none;' +
+            'position:relative;display:flex;align-items:center;gap:15px;box-sizing:border-box;' +
+            'min-height:65px;width:100%;padding:13px 17px;margin:0 0 7px;' +
+            'border:1px solid transparent;border-radius:10px;background:rgba(255,255,255,.018);' +
+            'color:#f1f3f6;cursor:pointer;outline:none;' +
             'transition:background .14s ease,border-color .14s ease;' +
         '}',
-
         '.uadv-row:last-child{margin-bottom:0;}',
-
         '.uadv-row-number{' +
-            'display:flex;align-items:center;justify-content:center;' +
-            'width:32px;min-width:32px;height:32px;border-radius:7px;' +
-            'background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.055);' +
+            'display:flex;align-items:center;justify-content:center;width:32px;min-width:32px;height:32px;' +
+            'border-radius:7px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.055);' +
             'color:#9da7b6;font-size:11px;font-weight:800;letter-spacing:.5px;' +
         '}',
-
         '.uadv-row-content{flex:1;min-width:0;overflow:hidden;}',
-
-        '.uadv-row-title{' +
-            'font-size:18px;font-weight:650;line-height:1.4;letter-spacing:-.1px;' +
-            'overflow-wrap:anywhere;color:#f0f2f6;' +
-        '}',
-
-        '.uadv-row-sub{' +
-            'font-size:13px;font-weight:450;line-height:1.45;color:#a6afbd;' +
-            'margin-top:5px;overflow-wrap:anywhere;' +
-        '}',
-
-        '.uadv-row-arrow{' +
-            'width:24px;min-width:24px;text-align:center;font-size:28px;line-height:1;' +
-            'color:#858f9f;opacity:.58;transition:opacity .14s ease,transform .14s ease;' +
-        '}',
-
+        '.uadv-row-title{font-size:18px;font-weight:650;line-height:1.4;letter-spacing:-.1px;overflow-wrap:anywhere;color:#f0f2f6;}',
+        '.uadv-row-sub{font-size:13px;font-weight:450;line-height:1.45;color:#a6afbd;margin-top:5px;overflow-wrap:anywhere;}',
+        '.uadv-row-arrow{width:24px;min-width:24px;text-align:center;font-size:28px;line-height:1;color:#858f9f;opacity:.58;transition:opacity .14s ease,transform .14s ease;}',
         '.uadv-row.focus,.uadv-row:hover{' +
-            'background:linear-gradient(100deg,rgba(185,202,226,.115),' +
-                'rgba(185,202,226,.045));border-color:rgba(202,216,237,.27);' +
+            'background:linear-gradient(100deg,rgba(185,202,226,.115),rgba(185,202,226,.045));' +
+            'border-color:rgba(202,216,237,.27);' +
         '}',
-
         '.uadv-row.focus .uadv-row-number,.uadv-row:hover .uadv-row-number{' +
-            'background:rgba(190,207,232,.12);border-color:rgba(202,216,237,.22);' +
-            'color:#f0f4fb;' +
+            'background:rgba(190,207,232,.12);border-color:rgba(202,216,237,.22);color:#f0f4fb;' +
         '}',
-
         '.uadv-row.focus .uadv-row-arrow,.uadv-row:hover .uadv-row-arrow{' +
             'opacity:1;transform:translateX(2px);color:#e0e8f4;' +
         '}',
@@ -2032,14 +1956,15 @@ function injectStyles() {
         '}',
 
         '@media(prefers-reduced-motion:reduce){' +
-            '.uadv-dialog,.uadv-panel,.uadv-toast,.uadv-row,.uadv-row-arrow,' +
-            '.full-start__button.uadv-button{transition:none!important;}' +
+            '.uadv-dialog,.uadv-panel,.uadv-toast,.uadv-row,.uadv-row-arrow,.full-start__button.uadv-button{' +
+                'transition:none!important;' +
+            '}' +
             '.uadv-search-spinner,.uadv-search-progress.indeterminate{animation:none!important;}' +
         '}'
     ].join('');
 
     var style = document.createElement('style');
-    style.id = 'uadv625-style';
+    style.id = 'uadv626-style';
     style.textContent = css;
     document.head.appendChild(style);
 }
