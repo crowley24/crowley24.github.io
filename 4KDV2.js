@@ -3,185 +3,232 @@
 'use strict';
 
 /*
- * 4K PRO v63.0.1
+ * 4K PRO v63.0.2
  * Lampa / Jackett / TorrServer
- * Premium Dark UI
- * Ukrainian release priority
- * Dialog navigation fix
+ *
+ * Improved search
+ * Premium release cards
+ * Remote control navigation
+ * Ukrainian audio priority
+ * Dolby Vision priority
+ * Video file verification
  */
 
-if (window.uadv6301_ready) return;
-window.uadv6301_ready = true;
+if (window.uadv632_ready) return;
+window.uadv632_ready = true;
 
-var VERSION = '63.0.1';
+var VERSION = '63.0.2';
 var P = 'uadv62_';
+
 var GB = 1073741824;
 var MB = 1048576;
 
 var MOVIE_CATS = '2000,2010,2020,2030,2040';
 var SERIES_CATS = '5000,5030,5040,5050,5060,5070';
 
-var VIDEO = /\.(mkv|mp4|avi|ts|m2ts|mpg|mpeg|mov|wmv|webm)$/i;
+var VIDEO_EXT = /\.(mkv|mp4|avi|ts|m2ts|mpg|mpeg|mov|wmv|webm)$/i;
 
 var $ = window.jQuery || window.$;
 
 var cache = {};
 var cacheOrder = [];
-var busy = false;
-var dialog = null;
-var toastTimer = null;
-var activeController = null;
-var operationId = 0;
-var mounted = false;
-var settingsDone = false;
 
-var dialogSequence = 0;
-var dialogTransition = null;
-var dialogLockUntil = 0;
+var busy = false;
+var operationId = 0;
+var activeController = null;
+
+var initialized = false;
+var settingsDone = false;
+var mounted = false;
+
+var currentDialog = null;
+var dialogCounter = 0;
 var lastActivation = 0;
+var toastTimer = null;
+
+var STYLE_ID = 'uadv632-css';
+var DIALOG_CONTROLLER = 'uadv632_dialog';
+
+/* ========================================
+   UTILITIES
+======================================== */
 
 function log() {
     try {
         console.log.apply(
             console,
             ['[4K Pro ' + VERSION + ']'].concat(
-                [].slice.call(arguments)
+                Array.prototype.slice.call(arguments)
             )
         );
     } catch (e) {}
 }
 
-function get(k, d) {
+function storageGet(key, fallback) {
     try {
-        var v = Lampa.Storage.get(P + k);
-        return v == null ? d : v;
+        var value = Lampa.Storage.get(P + key);
+        return value == null ? fallback : value;
     } catch (e) {
-        return d;
+        return fallback;
     }
 }
 
-function set(k, v) {
+function storageSet(key, value) {
     try {
-        Lampa.Storage.set(P + k, v);
+        Lampa.Storage.set(P + key, value);
     } catch (e) {}
 }
 
-function field(k) {
+function storageField(key) {
     try {
-        return Lampa.Storage.field(k) ||
-            Lampa.Storage.get(k) || '';
+        return Lampa.Storage.field(key) ||
+            Lampa.Storage.get(key) ||
+            '';
     } catch (e) {
         return '';
     }
 }
 
-function on(k) {
-    return String(get(k, 'false')) === 'true';
+function enabled(key) {
+    return String(
+        storageGet(key, 'false')
+    ) === 'true';
 }
 
-function clean(s) {
-    return String(s || '')
+function cleanText(value) {
+    return String(value || '')
         .replace(/[:\/\\|?*<>"']/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
 }
 
-function normalize(s) {
-    return clean(s)
+function normalize(value) {
+    return cleanText(value)
         .toLowerCase()
-        .replace(/[^\p{L}\p{N}]+/gu, ' ')
+        .replace(/[^a-z0-9а-яіїєґё]+/gi, ' ')
+        .replace(/\s+/g, ' ')
         .trim();
 }
 
-function human(n) {
-    return (Number(n || 0) / GB).toFixed(1) + ' GB';
+function sizeText(bytes) {
+    var n = Number(bytes || 0);
+
+    if (n >= GB) {
+        return (n / GB).toFixed(1) + ' GB';
+    }
+
+    return (n / MB).toFixed(0) + ' MB';
 }
 
-function scheme(s) {
-    s = String(s || '').trim();
-    return /^https?:\/\//i.test(s)
-        ? s : 'http://' + s;
+function normalizeUrl(url) {
+    url = String(url || '').trim();
+
+    if (!/^https?:\/\//i.test(url)) {
+        url = 'http://' + url;
+    }
+
+    return url.replace(/\/+$/, '');
 }
 
-function trim(s) {
-    return String(s || '').replace(/\/+$/, '');
+function errorText(error) {
+    return error && error.message
+        ? error.message
+        : String(error);
 }
 
-function isSeries(m) {
-    return !!(
-        m &&
-        (
-            m.media_type === 'tv' ||
-            m.first_air_date ||
-            m.number_of_seasons
-        ) &&
-        !m.release_date
-    );
-}
-
-function titleOf(m) {
-    return m.title ||
-        m.name ||
-        m.original_title ||
-        m.original_name ||
-        'Відео';
-}
-
-function yearOf(m) {
-    return String(
-        m.release_date ||
-        m.first_air_date ||
-        ''
-    ).slice(0, 4);
-}
-
-function posterOf(m) {
-    var p = m.poster_path || m.img || '';
-
-    return /^\//.test(p)
-        ? 'https://image.tmdb.org/t/p/w500' + p
-        : p;
-}
-
-function wait(ms) {
+function delay(ms) {
     return new Promise(function (resolve) {
         setTimeout(resolve, ms);
     });
 }
 
-function errorText(e) {
-    return e && e.message ? e.message : String(e);
+function create(tag, className, text) {
+    var el = document.createElement(tag);
+
+    if (className) {
+        el.className = className;
+    }
+
+    if (text !== undefined && text !== null) {
+        el.textContent = String(text);
+    }
+
+    return el;
 }
 
-function check(id) {
+function isSeries(movie) {
+    return !!(
+        movie &&
+        (
+            movie.media_type === 'tv' ||
+            movie.first_air_date ||
+            movie.number_of_seasons
+        ) &&
+        !movie.release_date
+    );
+}
+
+function movieTitle(movie) {
+    return movie.title ||
+        movie.name ||
+        movie.original_title ||
+        movie.original_name ||
+        'Відео';
+}
+
+function movieYear(movie) {
+    return String(
+        movie.release_date ||
+        movie.first_air_date ||
+        ''
+    ).slice(0, 4);
+}
+
+function moviePoster(movie) {
+    var path = movie.poster_path || movie.img || '';
+
+    if (path.charAt(0) === '/') {
+        return 'https://image.tmdb.org/t/p/w500' + path;
+    }
+
+    return path;
+}
+
+function clearCache() {
+    cache = {};
+    cacheOrder = [];
+}
+
+function checkOperation(id) {
     if (id !== operationId) {
         throw Error('Операцію скасовано');
     }
 }
 
-function resetCache() {
-    cache = {};
-    cacheOrder = [];
-}
-
-/* ==========================================
+/* ========================================
    NOTIFICATIONS
-   ========================================== */
+======================================== */
 
-function note(message) {
+function notify(message) {
     var old = document.getElementById(
-        'uadv6301-toast'
+        'uadv632-toast'
     );
 
-    if (old) old.remove();
+    if (old && old.parentNode) {
+        old.parentNode.removeChild(old);
+    }
 
-    if (toastTimer) clearTimeout(toastTimer);
+    if (toastTimer) {
+        clearTimeout(toastTimer);
+    }
 
-    var el = document.createElement('div');
+    var el = create(
+        'div',
+        'uadv632-toast',
+        message
+    );
 
-    el.id = 'uadv6301-toast';
-    el.className = 'uadv-toast';
-    el.textContent = String(message || '');
+    el.id = 'uadv632-toast';
 
     document.body.appendChild(el);
 
@@ -193,21 +240,23 @@ function note(message) {
         el.classList.remove('visible');
 
         setTimeout(function () {
-            if (el.parentNode) el.remove();
+            if (el.parentNode) {
+                el.parentNode.removeChild(el);
+            }
         }, 250);
     }, 3000);
 }
 
-/* ==========================================
+/* ========================================
    NETWORK
-   ========================================== */
+======================================== */
 
-async function request(url, options, ms) {
+async function httpRequest(url, options, timeout) {
     var controller = new AbortController();
 
     var timer = setTimeout(function () {
         controller.abort();
-    }, ms || 12000);
+    }, timeout || 12000);
 
     var external = options && options.signal;
 
@@ -227,13 +276,17 @@ async function request(url, options, ms) {
         var opt = Object.assign(
             {},
             options || {},
-            {signal: controller.signal}
+            {
+                signal: controller.signal
+            }
         );
 
         var response = await fetch(url, opt);
 
         if (!response.ok) {
-            throw Error('HTTP ' + response.status);
+            throw Error(
+                'HTTP ' + response.status
+            );
         }
 
         return response;
@@ -241,46 +294,70 @@ async function request(url, options, ms) {
         clearTimeout(timer);
 
         if (external) {
-            external.removeEventListener('abort', abort);
+            external.removeEventListener(
+                'abort',
+                abort
+            );
         }
     }
 }
 
-/* ==========================================
-   JACKETT
-   ========================================== */
+/* ========================================
+   JACKETT CONFIGURATION
+======================================== */
 
-function jackett() {
-    var url = field('jackett_url');
+function jackettConfig() {
+    var url = storageField('jackett_url');
 
     if (!url) {
-        throw Error('Налаштуй адресу Jackett');
+        throw Error(
+            'Не налаштовано адресу Jackett'
+        );
     }
 
+    url = normalizeUrl(url);
+
+    /*
+     * Preserve installations using /jackett
+     * as a reverse-proxy prefix.
+     */
+    url = url.replace(
+        /\/api\/v2\.0.*$/i,
+        ''
+    );
+
     return {
-        base: trim(scheme(url))
-            .replace(/\/api\/v2\.0.*$/i, '')
-            .replace(/\/jackett$/i, ''),
-        key: field('jackett_key')
+        base: url,
+        key: storageField('jackett_key')
     };
 }
 
-function xmlResults(text) {
+/* ========================================
+   XML PARSER
+======================================== */
+
+function parseXML(text) {
     var doc = new DOMParser().parseFromString(
         text,
         'application/xml'
     );
 
-    if (doc.getElementsByTagName('parsererror').length) {
-        throw Error('Некоректна XML-відповідь');
+    if (
+        doc.getElementsByTagName(
+            'parsererror'
+        ).length
+    ) {
+        throw Error(
+            'Помилка XML Jackett'
+        );
     }
 
-    return [].map.call(
+    return Array.prototype.map.call(
         doc.getElementsByTagName('item'),
         function (item) {
             var attrs = {};
 
-            [].forEach.call(
+            Array.prototype.forEach.call(
                 item.getElementsByTagName('*'),
                 function (el) {
                     if (
@@ -294,33 +371,41 @@ function xmlResults(text) {
                 }
             );
 
-            function val(tag) {
-                var a = item.getElementsByTagName(tag);
+            function value(tag) {
+                var nodes = item.getElementsByTagName(tag);
 
-                return a.length
-                    ? (a[0].textContent || '').trim()
+                return nodes.length
+                    ? String(
+                        nodes[0].textContent || ''
+                    ).trim()
                     : '';
             }
 
             var enclosure =
-                item.getElementsByTagName('enclosure')[0];
+                item.getElementsByTagName(
+                    'enclosure'
+                )[0];
 
-            var dl = enclosure
+            var download = enclosure
                 ? enclosure.getAttribute('url') || ''
                 : '';
 
             var magnet = attrs.magneturl || '';
 
             return {
-                title: val('title'),
-                link: magnet || val('link') || dl,
+                title: value('title'),
+                link: magnet ||
+                    download ||
+                    value('link'),
                 magnet: magnet,
-                dl: dl,
+                dl: download,
                 size: Number(
-                    val('size') ||
+                    value('size') ||
                     attrs.size ||
-                    (enclosure &&
-                        enclosure.getAttribute('length')) ||
+                    (
+                        enclosure &&
+                        enclosure.getAttribute('length')
+                    ) ||
                     0
                 ),
                 seed: Number(
@@ -331,15 +416,18 @@ function xmlResults(text) {
                 tracker: String(
                     attrs.jackettindexer ||
                     attrs.indexer ||
-                    attrs.jackettindexerid ||
                     ''
-                ).toLowerCase()
+                )
             };
         }
     );
 }
 
-function jsonResults(json) {
+/* ========================================
+   JSON PARSER
+======================================== */
+
+function parseJSON(json) {
     var items = Array.isArray(json)
         ? json
         : (
@@ -349,482 +437,669 @@ function jsonResults(json) {
             []
         );
 
-    return (Array.isArray(items) ? items : [])
-        .map(function (x) {
-            var magnet =
-                x.MagnetUri ||
-                x.MagnetUrl ||
-                x.magnet ||
-                '';
+    if (!Array.isArray(items)) {
+        return [];
+    }
 
-            return {
-                title: x.Title || x.title || '',
-                link: magnet ||
-                    x.Link ||
-                    x.link ||
-                    '',
-                magnet: magnet,
-                dl: x.DownloadUrl ||
-                    x.downloadUrl ||
-                    '',
-                size: Number(
-                    x.Size || x.size || 0
-                ),
-                seed: Number(
-                    x.Seeders ||
-                    x.seeders ||
-                    x.Peers ||
-                    x.peers ||
-                    0
-                ),
-                tracker: String(
-                    x.Tracker ||
-                    x.tracker ||
-                    x.TrackerId ||
-                    ''
-                ).toLowerCase()
-            };
-        });
+    return items.map(function (item) {
+        var magnet =
+            item.MagnetUri ||
+            item.MagnetUrl ||
+            item.magnet ||
+            '';
+
+        return {
+            title: item.Title ||
+                item.title ||
+                '',
+            link: magnet ||
+                item.DownloadUrl ||
+                item.downloadUrl ||
+                item.Link ||
+                item.link ||
+                '',
+            magnet: magnet,
+            dl: item.DownloadUrl ||
+                item.downloadUrl ||
+                '',
+            size: Number(
+                item.Size ||
+                item.size ||
+                0
+            ),
+            seed: Number(
+                item.Seeders ||
+                item.seeders ||
+                item.Peers ||
+                item.peers ||
+                0
+            ),
+            tracker: String(
+                item.Tracker ||
+                item.tracker ||
+                item.TrackerId ||
+                ''
+            )
+        };
+    });
 }
 
-async function searchJackett(q, cats, mode, signal) {
-    var cfg = jackett();
+/* ========================================
+   JACKETT SEARCH
+======================================== */
+
+async function searchJackett(
+    query,
+    categories,
+    mode,
+    signal
+) {
+    var cfg = jackettConfig();
+
     var params = new URLSearchParams();
 
     if (cfg.key) {
-        params.set('apikey', cfg.key);
+        params.set(
+            'apikey',
+            cfg.key
+        );
     }
 
     var endpoint;
 
     if (mode === 'xml') {
         params.set('t', 'search');
-        params.set('q', q);
+        params.set('q', query);
 
-        cats.split(',').forEach(function (c) {
-            params.append('cat', c);
-        });
+        categories.split(',').forEach(
+            function (cat) {
+                params.append(
+                    'cat',
+                    cat
+                );
+            }
+        );
 
         endpoint =
             '/api/v2.0/indexers/all/results/torznab/';
     } else {
-        params.set('Query', q);
+        params.set('Query', query);
 
-        cats.split(',').forEach(function (c) {
-            params.append('Category[]', c);
-        });
+        categories.split(',').forEach(
+            function (cat) {
+                params.append(
+                    'Category[]',
+                    cat
+                );
+            }
+        );
 
-        endpoint = '/api/v2.0/indexers/all/results';
+        endpoint =
+            '/api/v2.0/indexers/all/results';
     }
 
-    var response = await request(
-        cfg.base + endpoint + '?' + params.toString(),
+    var url = cfg.base +
+        endpoint +
+        '?' +
+        params.toString();
+
+    var response = await httpRequest(
+        url,
         {
             method: 'GET',
-            credentials: 'omit',
             signal: signal
         },
-        11000
+        14000
     );
 
-    return mode === 'xml'
-        ? xmlResults(await response.text())
-        : jsonResults(await response.json());
+    if (mode === 'xml') {
+        return parseXML(
+            await response.text()
+        );
+    }
+
+    return parseJSON(
+        await response.json()
+    );
 }
 
-/* ==========================================
-   UKRAINIAN LANGUAGE
-   ========================================== */
+/* ========================================
+   SEARCH QUERIES
+======================================== */
 
-function uaConfirmed(title) {
+function searchQueries(movie) {
+    var original = cleanText(
+        movie.original_title ||
+        movie.original_name ||
+        movieTitle(movie)
+    );
+
+    var local = cleanText(
+        movie.title ||
+        movie.name ||
+        original
+    );
+
+    var year = movieYear(movie);
+    var series = isSeries(movie);
+
+    var queries = [];
+
+    function add(value) {
+        value = cleanText(value);
+
+        if (
+            value &&
+            queries.indexOf(value) === -1
+        ) {
+            queries.push(value);
+        }
+    }
+
+    /*
+     * Broad search:
+     * do not restrict to four variants.
+     */
+    if (year && !series) {
+        add(original + ' ' + year);
+        add(local + ' ' + year);
+    }
+
+    add(original);
+    add(local);
+
+    if (
+        normalize(original) !==
+        normalize(local)
+    ) {
+        add(original + ' ' + local);
+        add(local + ' ' + original);
+    }
+
+    /*
+     * Alternative punctuation-free variants.
+     */
+    add(
+        normalize(original)
+    );
+
+    add(
+        normalize(local)
+    );
+
+    /*
+     * Series-specific queries.
+     */
+    if (series) {
+        add(original + ' S01');
+        add(local + ' S01');
+    }
+
+    return queries;
+}
+
+/* ========================================
+   UKRAINIAN AUDIO DETECTION
+======================================== */
+
+function hasUkrainianAudio(title) {
     var t = String(title || '');
 
     return /(?:^|[^a-zа-яіїєґ0-9])(?:ukr|ukrainian|українська|українською|укр(?:аїнська)?[. _-]*(?:озвучка|дубляж|дубл|звук|аудіо)|ua[. _-]*(?:dub|audio|voice|озвучка|дубляж)|(?:озвучка|дубляж|аудіо|мова)[. _:-]*(?:укр|українська)|ukr[. _-]*(?:dub|audio|voice))(?:$|[^a-zа-яіїєґ0-9])/i.test(t);
 }
 
-/* ==========================================
-   QUALITY
-   ========================================== */
+/* ========================================
+   RELEASE QUALITY
+======================================== */
 
-function traits(r) {
-    var t = String(r.title || '');
+function releaseInfo(release) {
+    var title = String(
+        release.title || ''
+    );
 
     return {
-        k4: /2160p|\b4k\b|\buhd\b/i.test(t),
-        fhd: /1080p/i.test(t),
-        dv: /dolby[ ._-]*vision|\bdovi\b|(?:^|[ ._-])dv(?:$|[ ._-])/i.test(t),
-        hdrPlus: /hdr[ ._-]*10\+/i.test(t),
-        hdr: /\bhdr(?:10)?\b/i.test(t),
-        remux: /remux/i.test(t),
-        bluray: /blu[ ._-]?ray|bdrip|bdmv/i.test(t),
-        web: /web[ ._-]?dl/i.test(t),
-        atmos: /atmos|truehd/i.test(t),
-        dts: /dts[ ._-]?(?:hd|x)/i.test(t),
-        eac3: /e[ ._-]?ac[ ._-]?3|ddp/i.test(t)
+        fourK: /2160p|\b4k\b|\buhd\b/i.test(title),
+        fullHD: /1080p/i.test(title),
+
+        dv: /dolby[ ._-]*vision|\bdovi\b|(?:^|[ ._-])dv(?:$|[ ._-])/i.test(title),
+
+        hdrPlus: /hdr[ ._-]*10\+/i.test(title),
+
+        hdr: /\bhdr(?:10)?\b/i.test(title),
+
+        remux: /remux/i.test(title),
+
+        bluray: /blu[ ._-]?ray|bdrip|bdmv/i.test(title),
+
+        webdl: /web[ ._-]?dl/i.test(title),
+
+        atmos: /atmos|truehd/i.test(title),
+
+        dts: /dts[ ._-]?(?:hd|x)/i.test(title),
+
+        eac3: /e[ ._-]?ac[ ._-]?3|ddp/i.test(title),
+
+        ua: hasUkrainianAudio(title)
     };
 }
 
-function score(r) {
-    var f = traits(r);
-    var s = 0;
+function titleSimilarity(release, movie) {
+    var releaseName = normalize(
+        release.title
+    );
 
-    var quality = String(get('quality', '4k'));
+    var names = [
+        normalize(
+            movie.original_title ||
+            movie.original_name ||
+            ''
+        ),
+        normalize(
+            movie.title ||
+            movie.name ||
+            ''
+        )
+    ];
 
-    s += quality === '1080'
-        ? (f.fhd ? 240 : f.k4 ? 100 : 0)
-        : (f.k4 ? 240 : f.fhd ? 100 : 0);
+    var best = 0;
 
-    var hdr = String(get('hdr', 'dv'));
+    names.forEach(function (name) {
+        if (!name) return;
+
+        if (
+            releaseName.indexOf(name) !== -1
+        ) {
+            best = Math.max(best, 100);
+            return;
+        }
+
+        var words = name.split(' ').filter(
+            function (word) {
+                return word.length > 1;
+            }
+        );
+
+        if (!words.length) return;
+
+        var found = words.filter(
+            function (word) {
+                return releaseName
+                    .split(' ')
+                    .indexOf(word) !== -1;
+            }
+        ).length;
+
+        best = Math.max(
+            best,
+            Math.round(
+                found / words.length * 100
+            )
+        );
+    });
+
+    return best;
+}
+
+function releaseScore(release, movie) {
+    var f = releaseInfo(release);
+    var score = 0;
+
+    var quality = String(
+        storageGet('quality', '4k')
+    );
+
+    if (quality === '1080') {
+        score += f.fullHD ? 240 :
+            f.fourK ? 110 : 0;
+    } else {
+        score += f.fourK ? 240 :
+            f.fullHD ? 110 : 0;
+    }
+
+    var hdr = String(
+        storageGet('hdr', 'dv')
+    );
 
     if (hdr === 'sdr') {
-        s += (!f.dv && !f.hdrPlus && !f.hdr)
-            ? 85 : 0;
+        score += (
+            !f.dv &&
+            !f.hdrPlus &&
+            !f.hdr
+        ) ? 90 : 0;
     } else if (hdr === 'hdr') {
-        s += f.hdrPlus ? 85 :
-            f.hdr ? 75 :
-            f.dv ? 55 : 0;
+        score += f.hdrPlus ? 90 :
+            f.hdr ? 80 :
+            f.dv ? 65 : 0;
     } else {
-        s += f.dv ? 85 :
-            f.hdrPlus ? 75 :
+        score += f.dv ? 100 :
+            f.hdrPlus ? 80 :
             f.hdr ? 65 : 0;
     }
 
-    var source = String(get('source', 'auto'));
+    var source = String(
+        storageGet('source', 'auto')
+    );
 
     if (source === 'webdl') {
-        s += f.web ? 65 :
+        score += f.webdl ? 65 :
             f.remux ? 50 :
             f.bluray ? 40 : 0;
     } else if (source === 'bluray') {
-        s += f.bluray && !f.remux ? 65 :
+        score += f.bluray && !f.remux ? 65 :
             f.remux ? 58 :
-            f.web ? 40 : 0;
+            f.webdl ? 40 : 0;
     } else {
-        s += f.remux ? 65 :
+        score += f.remux ? 65 :
             f.bluray ? 55 :
-            f.web ? 40 : 0;
+            f.webdl ? 40 : 0;
     }
 
-    var audio = String(get('audio', 'auto'));
+    var audio = String(
+        storageGet('audio', 'auto')
+    );
 
     if (
         (audio === 'atmos' && f.atmos) ||
         (audio === 'dts' && f.dts) ||
         (audio === 'eac3' && f.eac3)
     ) {
-        s += 25;
+        score += 25;
     }
 
-    s += Math.min(
-        25,
-        Math.log2(1 + Math.max(0, r.seed)) * 3
+    if (f.ua) {
+        score += 150;
+    }
+
+    score += Math.min(
+        30,
+        Math.log2(
+            Math.max(0, release.seed) + 1
+        ) * 4
     );
 
-    s += Math.min(
+    score += Math.min(
         12,
-        Number(r.size || 0) / GB / 6
+        release.size / GB / 6
     );
 
-    return s;
-}
+    /*
+     * Soft relevance ranking instead of
+     * strict filtering.
+     */
+    score += titleSimilarity(
+        release,
+        movie
+    ) * 0.5;
 
-function qualityBadges(r) {
-    var f = traits(r);
-    var a = [];
+    var year = movieYear(movie);
 
-    if (f.k4) a.push('4K');
-    else if (f.fhd) a.push('1080p');
-
-    if (f.dv) a.push('Dolby Vision');
-    else if (f.hdrPlus) a.push('HDR10+');
-    else if (f.hdr) a.push('HDR');
-
-    if (f.remux) a.push('REMUX');
-    else if (f.bluray) a.push('Blu-ray');
-    else if (f.web) a.push('WEB-DL');
-
-    if (f.atmos) a.push('Atmos');
-    else if (f.dts) a.push('DTS-HD');
-
-    if (uaConfirmed(r.title)) a.push('UA');
-
-    return a;
-}
-
-/* ==========================================
-   SEARCH QUERIES
-   ========================================== */
-
-function searchQueries(movie) {
-    var orig = clean(
-        movie.original_title ||
-        movie.original_name ||
-        titleOf(movie)
-    );
-
-    var local = clean(
-        movie.title ||
-        movie.name ||
-        orig
-    );
-
-    var year = yearOf(movie);
-    var series = isSeries(movie);
-
-    var pref = field('parse_lang') ||
-        (series ? 'df' : 'df_year');
-
-    var combos = {
-        df: orig,
-        df_year: orig + ' ' + year,
-        df_lg: orig + ' ' + local,
-        df_lg_year: orig + ' ' + local + ' ' + year,
-        lg: local,
-        lg_year: local + ' ' + year,
-        lg_df: local + ' ' + orig,
-        lg_df_year: local + ' ' + orig + ' ' + year
-    };
-
-    var result = [];
-
-    function add(q) {
-        q = clean(q);
-
-        if (q && result.indexOf(q) < 0) {
-            result.push(q);
-        }
+    if (
+        year &&
+        String(release.title)
+            .indexOf(year) !== -1
+    ) {
+        score += 15;
     }
 
-    add(combos[pref] || orig);
-    add(orig);
-
-    if (local !== orig) add(local);
-
-    if (year && !series) {
-        add(orig + ' ' + year);
-    }
-
-    return result.slice(0, 4);
+    return score;
 }
 
-function releaseKey(r) {
-    var magnet = r.magnet || r.link || '';
-    var hash = magnet.match(
+/* ========================================
+   RELEASE DEDUPLICATION
+======================================== */
+
+function releaseKey(release) {
+    var link = release.magnet ||
+        release.link ||
+        '';
+
+    var hash = link.match(
         /[?&]xt=urn:btih:([^&]+)/i
     );
 
-    return hash
-        ? hash[1].toLowerCase()
-        : normalize(r.title) + ':' + r.size;
+    if (hash) {
+        return hash[1].toLowerCase();
+    }
+
+    return normalize(
+        release.title
+    ) + ':' + release.size;
 }
 
-function relevant(r, movie) {
-    var name = normalize(
-        movie.original_title ||
-        movie.original_name ||
-        titleOf(movie)
-    );
-
-    var local = normalize(
-        movie.title || movie.name || ''
-    );
-
-    var t = normalize(r.title);
-    var titleWords = t.split(' ');
-
-    function matches(s) {
-        if (!s) return false;
-
-        var words = s.split(' ').filter(function (w) {
-            return w.length > 1;
-        });
-
-        return words.length > 0 &&
-            words.every(function (w) {
-                return titleWords.indexOf(w) !== -1;
-            });
-    }
-
-    if (!matches(name) && !matches(local)) {
-        return false;
-    }
-
-    var year = yearOf(movie);
-
-    if (!isSeries(movie) && year) {
-        var years = String(r.title).match(
-            /(?:19|20)\d{2}/g
-        ) || [];
-
-        if (years.length && years.indexOf(year) < 0) {
-            return false;
-        }
-    }
-
-    return true;
-}
+/* ========================================
+   FIND RELEASES
+======================================== */
 
 async function findReleases(movie, id) {
     var series = isSeries(movie);
-    var cats = series ? SERIES_CATS : MOVIE_CATS;
-    var qs = searchQueries(movie);
-    var cfg = jackett();
 
-    var key = [
+    var categories = series
+        ? SERIES_CATS
+        : MOVIE_CATS;
+
+    var queries = searchQueries(movie);
+
+    var cfg = jackettConfig();
+
+    var cacheKey = [
         cfg.base,
         cfg.key,
-        cats,
-        qs.join('|'),
-        get('minSeeds', '5'),
-        get('maxSize', '70'),
-        get('quality', '4k'),
-        get('hdr', 'dv'),
-        get('source', 'auto'),
-        get('audio', 'auto'),
-        get('toloka', 'false')
+        categories,
+        queries.join('|'),
+        storageGet('minSeeds', '5'),
+        storageGet('maxSize', '70'),
+        storageGet('quality', '4k'),
+        storageGet('hdr', 'dv'),
+        storageGet('source', 'auto'),
+        storageGet('audio', 'auto')
     ].join('~');
 
     if (
-        cache[key] &&
-        Date.now() - cache[key].time < 300000
+        cache[cacheKey] &&
+        Date.now() -
+        cache[cacheKey].time < 300000
     ) {
-        return cache[key].items.slice();
+        return cache[cacheKey].items.slice();
     }
 
-    var all = [];
+    var results = [];
     var errors = [];
-    var success = false;
+    var succeeded = false;
 
-    for (var i = 0; i < qs.length; i++) {
-        check(id);
+    /*
+     * Search every query.
+     * Do not stop after first UA release.
+     */
+    for (var i = 0; i < queries.length; i++) {
+        checkOperation(id);
 
-        var results = await Promise.allSettled([
+        var settled = await Promise.allSettled([
             searchJackett(
-                qs[i],
-                cats,
+                queries[i],
+                categories,
                 'xml',
                 activeController.signal
             ),
             searchJackett(
-                qs[i],
-                cats,
+                queries[i],
+                categories,
                 'json',
                 activeController.signal
             )
         ]);
 
-        results.forEach(function (r) {
-            if (r.status === 'fulfilled') {
-                success = true;
-                all = all.concat(r.value);
+        settled.forEach(function (item) {
+            if (item.status === 'fulfilled') {
+                succeeded = true;
+
+                results = results.concat(
+                    item.value
+                );
             } else {
-                errors.push(errorText(r.reason));
+                errors.push(
+                    errorText(item.reason)
+                );
             }
         });
-
-        if (all.some(function (r) {
-            return uaConfirmed(r.title) &&
-                relevant(r, movie);
-        })) {
-            break;
-        }
     }
 
-    check(id);
+    checkOperation(id);
 
-    if (!success) {
+    if (!succeeded) {
         throw Error(
             'Jackett недоступний: ' +
-            (errors[0] || 'помилка пошуку')
+            (errors[0] || 'Помилка пошуку')
         );
     }
 
-    var seen = {};
-    var min = Number(get('minSeeds', '5'));
-    var max = Number(get('maxSize', '70')) * GB;
+    var minSeeds = Number(
+        storageGet('minSeeds', '5')
+    );
 
-    all = all.filter(function (r) {
+    var maxSize = Number(
+        storageGet('maxSize', '70')
+    ) * GB;
+
+    var seen = {};
+
+    results = results.filter(function (r) {
         if (
-            !r.link ||
             !r.title ||
-            !r.size ||
-            r.seed < min ||
-            (!series && r.size > max)
+            !r.link
         ) {
             return false;
         }
 
-        if (!relevant(r, movie)) return false;
+        /*
+         * Missing size or seed count should
+         * not automatically hide a release.
+         */
+        if (
+            r.seed > 0 &&
+            r.seed < minSeeds
+        ) {
+            return false;
+        }
 
-        var k = releaseKey(r);
+        if (
+            !series &&
+            r.size > 0 &&
+            r.size > maxSize
+        ) {
+            return false;
+        }
 
-        if (seen[k]) return false;
+        /*
+         * Exclude only clearly unrelated
+         * titles. Partial matches remain.
+         */
+        var similarity = titleSimilarity(
+            r,
+            movie
+        );
 
-        seen[k] = true;
+        if (similarity < 35) {
+            return false;
+        }
+
+        var key = releaseKey(r);
+
+        if (seen[key]) {
+            return false;
+        }
+
+        seen[key] = true;
+
         return true;
     });
 
-    var toloka = on('toloka');
+    var toloka = enabled('toloka');
 
-    all.sort(function (a, b) {
+    results.sort(function (a, b) {
         if (toloka) {
-            var at = /toloka/i.test(a.tracker);
-            var bt = /toloka/i.test(b.tracker);
+            var at = /toloka/i.test(
+                a.tracker
+            );
+
+            var bt = /toloka/i.test(
+                b.tracker
+            );
 
             if (at !== bt) {
                 return at ? -1 : 1;
             }
         }
 
-        return score(b) - score(a);
+        return releaseScore(b, movie) -
+            releaseScore(a, movie);
     });
 
     if (cacheOrder.length >= 20) {
-        delete cache[cacheOrder.shift()];
+        delete cache[
+            cacheOrder.shift()
+        ];
     }
 
-    cacheOrder.push(key);
+    cacheOrder.push(cacheKey);
 
-    cache[key] = {
+    cache[cacheKey] = {
         time: Date.now(),
-        items: all.slice()
+        items: results.slice()
     };
 
-    return all;
+    log(
+        'Search:',
+        queries.length,
+        'queries,',
+        results.length,
+        'releases'
+    );
+
+    return results;
 }
 
-/* ==========================================
+/* ========================================
    TORRSERVER
-   ========================================== */
+======================================== */
 
-function tsBase() {
-    var u = field('torrserver_url');
+function torrServerBase() {
+    var url = storageField(
+        'torrserver_url'
+    );
 
-    if (!u) {
-        throw Error('Налаштуй адресу TorrServer');
+    if (!url) {
+        throw Error(
+            'Не налаштовано TorrServer'
+        );
     }
 
-    return trim(scheme(u));
+    return normalizeUrl(url);
 }
 
-function tsHeaders() {
-    var h = {
+function torrServerHeaders() {
+    var headers = {
         'Content-Type': 'application/json'
     };
 
-    var token = field('torrserver_token');
+    var token = storageField(
+        'torrserver_token'
+    );
 
-    var user = field('torrserver_user') ||
-        field('torrserver_login');
+    var user =
+        storageField('torrserver_user') ||
+        storageField('torrserver_login');
 
-    var pass = field('torrserver_pass') ||
-        field('torrserver_password');
+    var pass =
+        storageField('torrserver_pass') ||
+        storageField('torrserver_password');
 
     if (token) {
-        h.Authorization = 'Bearer ' + token;
+        headers.Authorization =
+            'Bearer ' + token;
     } else if (user || pass) {
         try {
-            h.Authorization = 'Basic ' +
+            headers.Authorization =
+                'Basic ' +
                 btoa(
                     unescape(
                         encodeURIComponent(
@@ -835,75 +1110,49 @@ function tsHeaders() {
         } catch (e) {}
     }
 
-    return h;
+    return headers;
 }
 
-function tsStreamBase() {
-    var base = tsBase();
-
-    var user = field('torrserver_user') ||
-        field('torrserver_login');
-
-    var pass = field('torrserver_pass') ||
-        field('torrserver_password');
-
-    if (user || pass) {
-        try {
-            var x = new URL(base);
-            x.username = user;
-            x.password = pass;
-
-            return trim(x.toString());
-        } catch (e) {}
-    }
-
-    return base;
-}
-
-function streamAuth() {
-    var token = field('torrserver_token');
-
-    return token
-        ? '&authorization=' +
-          encodeURIComponent('Bearer ' + token)
-        : '';
-}
-
-async function tsPost(body, ms) {
-    var response = await request(
-        tsBase() + '/torrents',
+async function torrServerPost(data, timeout) {
+    var response = await httpRequest(
+        torrServerBase() + '/torrents',
         {
             method: 'POST',
-            headers: tsHeaders(),
-            body: JSON.stringify(body),
-            signal: activeController &&
-                activeController.signal
+            headers: torrServerHeaders(),
+            body: JSON.stringify(data),
+            signal: activeController
+                ? activeController.signal
+                : undefined
         },
-        ms || 12000
+        timeout || 12000
     );
 
     return response.json();
 }
 
-function hashOf(result, fallback) {
-    if (!result || typeof result !== 'object') {
+function torrentHash(result, fallback) {
+    if (
+        !result ||
+        typeof result !== 'object'
+    ) {
         return fallback;
     }
 
-    var hash =
-        result.hash ||
+    return result.hash ||
         result.Hash ||
         result.id ||
         result.Id ||
-        '';
-
-    return typeof hash === 'string' && hash
-        ? hash : fallback;
+        fallback;
 }
 
-function fileStats(result) {
-    if (Array.isArray(result)) return result;
-    if (!result) return [];
+function torrentFiles(result) {
+    if (Array.isArray(result)) {
+        return result;
+    }
+
+    if (!result) {
+        return [];
+    }
 
     return result.file_stats ||
         result.FileStats ||
@@ -923,43 +1172,47 @@ async function addTorrent(release, movie, id) {
         release.link;
 
     if (!link) {
-        throw Error('Немає посилання на торрент');
+        throw Error(
+            'Відсутнє посилання на торрент'
+        );
     }
 
-    var response = await tsPost({
-        action: 'add',
-        link: link,
-        title: '[LAMPA] ' + titleOf(movie),
-        poster: posterOf(movie),
-        data: JSON.stringify({
-            lampa: true,
-            movie: {
-                id: movie.id,
-                title: titleOf(movie)
-            }
-        }),
-        save_to_db: false
-    }, 18000);
+    var response = await torrServerPost(
+        {
+            action: 'add',
+            link: link,
+            title: '[LAMPA] ' + movieTitle(movie),
+            poster: moviePoster(movie),
+            save_to_db: false
+        },
+        18000
+    );
 
-    check(id);
+    checkOperation(id);
 
     return {
-        hash: hashOf(response, link),
+        hash: torrentHash(
+            response,
+            link
+        ),
         link: link
     };
 }
 
-async function getFiles(hash, link, id) {
+async function getTorrentFiles(hash, link, id) {
     for (var i = 0; i < 10; i++) {
-        check(id);
+        checkOperation(id);
 
         try {
-            var data = await tsPost({
-                action: 'get',
-                hash: hash
-            }, 11000);
+            var data = await torrServerPost(
+                {
+                    action: 'get',
+                    hash: hash
+                },
+                11000
+            );
 
-            var files = fileStats(data);
+            var files = torrentFiles(data);
 
             if (
                 Array.isArray(files) &&
@@ -968,93 +1221,146 @@ async function getFiles(hash, link, id) {
                 return files;
             }
         } catch (e) {
-            log('Files:', errorText(e));
+            log(
+                'TorrServer files:',
+                errorText(e)
+            );
         }
 
-        if (i < 9) await wait(1300);
+        if (i < 9) {
+            await delay(1200);
+        }
     }
 
     throw Error(
-        'TorrServer не надав список файлів'
+        'TorrServer не повернув список файлів'
     );
 }
 
-function filePath(f) {
+function filePath(file) {
     return String(
-        f.path ||
-        f.Path ||
-        f.name ||
-        f.Name ||
+        file.path ||
+        file.Path ||
+        file.name ||
+        file.Name ||
         ''
     );
 }
 
-function fileSize(f) {
+function fileSize(file) {
     return Number(
-        f.length ||
-        f.Length ||
-        f.size ||
-        f.Size ||
+        file.length ||
+        file.Length ||
+        file.size ||
+        file.Size ||
         0
     );
 }
 
-function fileIndex(f, fallback) {
-    var raw = f.id != null
-        ? f.id
-        : f.Id != null
-            ? f.Id
-            : f.index != null
-                ? f.index
-                : f.Index;
+function fileIndex(file, fallback) {
+    /*
+     * TorrServer file_stats.id is commonly
+     * zero-based, while stream index is
+     * one-based. Preserve explicit stream
+     * indexes when available.
+     */
+    if (file.stream_index != null) {
+        return Number(file.stream_index);
+    }
 
-    var n = Number(raw);
+    if (file.StreamIndex != null) {
+        return Number(file.StreamIndex);
+    }
 
-    return raw != null &&
-        isFinite(n) &&
-        n >= 0
-        ? n + 1
-        : fallback + 1;
+    var raw = file.id != null
+        ? file.id
+        : file.Id != null
+            ? file.Id
+            : file.index != null
+                ? file.index
+                : file.Index;
+
+    if (raw == null) {
+        return fallback + 1;
+    }
+
+    var number = Number(raw);
+
+    if (!isFinite(number)) {
+        return fallback + 1;
+    }
+
+    return number + 1;
 }
 
-function videos(files) {
-    return files.map(function (f, i) {
+function videoFiles(files) {
+    return files.map(function (file, index) {
         return {
-            file: f,
-            path: filePath(f),
-            size: fileSize(f),
-            index: fileIndex(f, i)
+            path: filePath(file),
+            size: fileSize(file),
+            index: fileIndex(
+                file,
+                index
+            )
         };
-    }).filter(function (x) {
-        return VIDEO.test(x.path) &&
-            x.size > 100 * MB &&
+    }).filter(function (entry) {
+        return VIDEO_EXT.test(entry.path) &&
+            entry.size > 100 * MB &&
             !/\b(sample|trailer|featurette|extra)\b/i.test(
-                x.path
+                entry.path
             );
     });
 }
 
-function streamUrl(hash, entry) {
-    var name = entry.path
+function streamBase() {
+    var base = torrServerBase();
+
+    var user =
+        storageField('torrserver_user') ||
+        storageField('torrserver_login');
+
+    var pass =
+        storageField('torrserver_pass') ||
+        storageField('torrserver_password');
+
+    if (user || pass) {
+        try {
+            var url = new URL(base);
+
+            url.username = user;
+            url.password = pass;
+
+            return url.toString()
+                .replace(/\/+$/, '');
+        } catch (e) {}
+    }
+
+    return base;
+}
+
+function streamUrl(hash, file) {
+    var filename = file.path
         .split(/[\\/]/)
         .pop() || 'video.mkv';
 
-    return tsStreamBase() +
+    return streamBase() +
         '/stream/' +
-        encodeURIComponent(name) +
+        encodeURIComponent(filename) +
         '?link=' +
         encodeURIComponent(hash) +
         '&index=' +
-        entry.index +
-        '&play=1' +
-        streamAuth();
+        file.index +
+        '&play=1';
 }
 
-function play(url, title) {
+/* ========================================
+   PLAYER
+======================================== */
+
+function startPlayer(url, title) {
     closeDialog();
 
     if (
-        window.Lampa &&
         Lampa.Player &&
         typeof Lampa.Player.play === 'function'
     ) {
@@ -1069,7 +1375,7 @@ function play(url, title) {
 }
 
 async function startMovie(movie, release, id) {
-    note('Перевіряю відеофайли…');
+    notify('Перевіряю файли торента…');
 
     var added = await addTorrent(
         release,
@@ -1077,217 +1383,287 @@ async function startMovie(movie, release, id) {
         id
     );
 
-    var list = videos(
-        await getFiles(
+    var files = videoFiles(
+        await getTorrentFiles(
             added.hash,
             added.link,
             id
         )
     );
 
-    check(id);
+    checkOperation(id);
 
-    if (!list.length) {
+    if (!files.length) {
         throw Error(
             'У торренті немає відеофайлів'
         );
     }
 
-    list.sort(function (a, b) {
+    files.sort(function (a, b) {
         return b.size - a.size;
     });
 
-    var best = list[0];
+    var largest = files[0];
 
-    var total = list.reduce(function (s, x) {
-        return s + x.size;
-    }, 0);
+    var total = files.reduce(
+        function (sum, file) {
+            return sum + file.size;
+        },
+        0
+    );
 
     if (
-        list.length > 1 &&
-        best.size < total * 0.55
+        files.length > 1 &&
+        largest.size < total * 0.55
     ) {
-        showFilePicker(movie, added.hash, list);
+        showFilePicker(
+            movie,
+            added.hash,
+            files
+        );
+
         return;
     }
 
-    note('Запускаю ' + human(best.size));
-
-    play(
-        streamUrl(added.hash, best),
-        titleOf(movie)
+    startPlayer(
+        streamUrl(
+            added.hash,
+            largest
+        ),
+        movieTitle(movie)
     );
 }
 
-/* ==========================================
-   PREMIUM DIALOG ENGINE v2
-   ========================================== */
+/* ========================================
+   PREMIUM DIALOG SYSTEM
+======================================== */
 
 function closeDialog() {
-    if (dialogTransition) {
-        clearTimeout(dialogTransition);
-        dialogTransition = null;
-    }
+    if (!currentDialog) return;
 
-    if (!dialog) return;
+    var dialog = currentDialog;
+    currentDialog = null;
 
-    var current = dialog;
-    dialog = null;
-
-    current.close();
+    dialog.destroy();
 }
 
-function makeElement(tag, cls, text) {
-    var el = document.createElement(tag);
+function dialogBadges(release) {
+    var info = releaseInfo(release);
+    var badges = [];
 
-    if (cls) el.className = cls;
-
-    if (text != null) {
-        el.textContent = String(text);
+    if (info.fourK) {
+        badges.push({
+            text: '4K ULTRA HD',
+            type: 'quality'
+        });
+    } else if (info.fullHD) {
+        badges.push({
+            text: '1080P',
+            type: 'normal'
+        });
     }
 
-    return el;
+    if (info.dv) {
+        badges.push({
+            text: 'DOLBY VISION',
+            type: 'dv'
+        });
+    } else if (info.hdrPlus) {
+        badges.push({
+            text: 'HDR10+',
+            type: 'hdr'
+        });
+    } else if (info.hdr) {
+        badges.push({
+            text: 'HDR',
+            type: 'hdr'
+        });
+    }
+
+    if (info.remux) {
+        badges.push({
+            text: 'REMUX',
+            type: 'normal'
+        });
+    } else if (info.bluray) {
+        badges.push({
+            text: 'BLU-RAY',
+            type: 'normal'
+        });
+    } else if (info.webdl) {
+        badges.push({
+            text: 'WEB-DL',
+            type: 'normal'
+        });
+    }
+
+    if (info.atmos) {
+        badges.push({
+            text: 'ATMOS',
+            type: 'normal'
+        });
+    } else if (info.dts) {
+        badges.push({
+            text: 'DTS-HD',
+            type: 'normal'
+        });
+    }
+
+    if (info.ua) {
+        badges.push({
+            text: 'УКРАЇНСЬКА',
+            type: 'ua'
+        });
+    }
+
+    return badges;
 }
 
-function badgeClass(text) {
-    if (text === 'UA') return 'ua';
-
-    if (text === 'Dolby Vision') {
-        return 'dv';
-    }
-
-    if (text === '4K') return 'fourk';
-
-    if (
-        text === 'HDR10+' ||
-        text === 'HDR'
-    ) {
-        return 'hdr';
-    }
-
-    return '';
-}
-
-function openDialog(title, items, options) {
-    options = options || {};
-
+function openDialog(config) {
     closeDialog();
 
-    var sequence = ++dialogSequence;
+    var id = ++dialogCounter;
+
+    var items = config.items || [];
+    var selected = 0;
+    var closed = false;
+    var openingTime = Date.now();
+
     var previousFocus = document.activeElement;
+    var previousController = '';
 
-    var overlay = makeElement(
+    try {
+        if (
+            Lampa.Controller &&
+            typeof Lampa.Controller.enabled === 'function'
+        ) {
+            previousController =
+                Lampa.Controller.enabled() || '';
+        }
+    } catch (e) {}
+
+    var overlay = create(
         'div',
-        'uadv-dialog-overlay'
+        'uadv632-overlay'
     );
 
-    var panel = makeElement(
+    var panel = create(
         'div',
-        'uadv-dialog-panel'
+        'uadv632-panel'
     );
 
-    if (get('design', 'premium') === 'compact') {
-        panel.classList.add('compact');
+    if (
+        storageGet('design', 'premium') ===
+        'compact'
+    ) {
+        panel.classList.add(
+            'uadv632-compact'
+        );
     }
 
-    var header = makeElement(
+    var header = create(
         'div',
-        'uadv-dialog-header'
+        'uadv632-header'
     );
 
-    var eyebrow = makeElement(
+    var headerText = create(
         'div',
-        'uadv-dialog-eyebrow',
-        '4K PRO  /  PREMIUM PLAYER'
+        'uadv632-header-text'
     );
 
-    var heading = makeElement(
+    var eyebrow = create(
         'div',
-        'uadv-dialog-title',
-        title
+        'uadv632-eyebrow',
+        '4K PRO  /  RELEASE MANAGER'
     );
 
-    var headingWrap = makeElement(
+    var title = create(
         'div',
-        'uadv-dialog-heading-wrap'
+        'uadv632-title',
+        config.title || '4K Pro'
     );
 
-    headingWrap.appendChild(eyebrow);
-    headingWrap.appendChild(heading);
+    var subtitle = create(
+        'div',
+        'uadv632-subtitle',
+        config.subtitle || ''
+    );
 
-    var closeBtn = makeElement(
+    headerText.appendChild(eyebrow);
+    headerText.appendChild(title);
+
+    if (config.subtitle) {
+        headerText.appendChild(subtitle);
+    }
+
+    var closeButton = create(
         'button',
-        'uadv-dialog-close',
+        'uadv632-close',
         '✕'
     );
 
-    closeBtn.type = 'button';
-    closeBtn.setAttribute(
-        'aria-label',
-        'Закрити'
+    closeButton.type = 'button';
+
+    header.appendChild(headerText);
+    header.appendChild(closeButton);
+
+    var list = create(
+        'div',
+        'uadv632-list'
     );
 
-    header.appendChild(headingWrap);
-    header.appendChild(closeBtn);
-
-    var list = makeElement(
+    var footer = create(
         'div',
-        'uadv-dialog-list'
-    );
-
-    var footer = makeElement(
-        'div',
-        'uadv-dialog-footer'
+        'uadv632-footer'
     );
 
     footer.appendChild(
-        makeElement(
+        create(
             'span',
             '',
-            '↑ ↓ Навігація'
+            '↑ ↓  Навігація'
         )
     );
 
     footer.appendChild(
-        makeElement(
+        create(
             'span',
             '',
-            'OK Вибрати'
+            'OK  Вибрати'
         )
     );
 
     footer.appendChild(
-        makeElement(
+        create(
             'span',
             '',
-            'Назад Закрити'
+            '↩  Назад'
         )
     );
 
     panel.appendChild(header);
     panel.appendChild(list);
     panel.appendChild(footer);
-    overlay.appendChild(panel);
 
+    overlay.appendChild(panel);
     document.body.appendChild(overlay);
 
     var rows = [];
-    var selected = 0;
-    var closed = false;
-    var activated = false;
-    var openedAt = Date.now();
 
-    function focus(n) {
+    function focus(index) {
         if (closed || !rows.length) return;
 
         selected = Math.max(
             0,
-            Math.min(rows.length - 1, n)
+            Math.min(
+                rows.length - 1,
+                index
+            )
         );
 
-        rows.forEach(function (r, i) {
-            r.classList.toggle(
-                'focus',
+        rows.forEach(function (row, i) {
+            row.classList.toggle(
+                'uadv632-focused',
                 i === selected
             );
         });
@@ -1302,20 +1678,36 @@ function openDialog(title, items, options) {
 
         try {
             rows[selected].scrollIntoView({
-                block: 'nearest',
-                behavior: 'auto'
+                block: 'nearest'
             });
         } catch (e) {}
     }
 
-    function destroy(restoreFocus) {
+    function restoreController() {
+        try {
+            if (
+                previousController &&
+                previousController !==
+                    DIALOG_CONTROLLER &&
+                Lampa.Controller &&
+                typeof Lampa.Controller.toggle ===
+                    'function'
+            ) {
+                Lampa.Controller.toggle(
+                    previousController
+                );
+            }
+        } catch (e) {}
+    }
+
+    function destroy() {
         if (closed) return;
 
         closed = true;
 
         document.removeEventListener(
             'keydown',
-            keyboard,
+            keydown,
             true
         );
 
@@ -1325,19 +1717,28 @@ function openDialog(title, items, options) {
             true
         );
 
+        document.removeEventListener(
+            'pointerdown',
+            pointerCapture,
+            true
+        );
+
         if (overlay.parentNode) {
-            overlay.parentNode.removeChild(overlay);
+            overlay.parentNode.removeChild(
+                overlay
+            );
         }
 
         if (
-            dialog &&
-            dialog.sequence === sequence
+            currentDialog &&
+            currentDialog.id === id
         ) {
-            dialog = null;
+            currentDialog = null;
         }
 
+        restoreController();
+
         if (
-            restoreFocus &&
             previousFocus &&
             document.contains(previousFocus)
         ) {
@@ -1350,20 +1751,21 @@ function openDialog(title, items, options) {
     function back() {
         if (closed) return;
 
-        destroy(true);
+        destroy();
 
-        if (typeof options.onBack === 'function') {
-            dialogTransition = setTimeout(function () {
-                dialogTransition = null;
-                options.onBack();
-            }, 90);
+        if (
+            typeof config.onBack ===
+            'function'
+        ) {
+            setTimeout(function () {
+                config.onBack();
+            }, 80);
         }
     }
 
     function activate(index) {
         if (
             closed ||
-            activated ||
             !items[index]
         ) {
             return;
@@ -1372,71 +1774,73 @@ function openDialog(title, items, options) {
         var now = Date.now();
 
         if (
-            now < dialogLockUntil ||
-            now - openedAt < 160 ||
-            now - lastActivation < 180
+            now - openingTime < 180 ||
+            now - lastActivation < 220
         ) {
             return;
         }
 
-        activated = true;
         lastActivation = now;
-        dialogLockUntil = now + 260;
 
         var action = items[index].action;
 
         /*
-         * Important:
-         * Remove keyboard listeners and the old dialog
-         * BEFORE running the next action.
+         * Destroy first, execute next.
+         * Prevents repeated Enter from
+         * activating the new dialog.
          */
-        destroy(false);
+        destroy();
 
         if (typeof action === 'function') {
-            dialogTransition = setTimeout(function () {
-                dialogTransition = null;
-
+            setTimeout(function () {
                 try {
                     action();
                 } catch (e) {
-                    log('Dialog action:', e);
-                    note(errorText(e));
+                    log(
+                        'Dialog action:',
+                        e
+                    );
+
+                    notify(
+                        errorText(e)
+                    );
                 }
-            }, 90);
+            }, 100);
         }
     }
 
-    function keyboard(e) {
+    function keydown(e) {
         if (closed) return;
 
-        var k = e.key || e.keyCode;
+        var code = e.keyCode || e.which;
+        var key = e.key || '';
 
         var isBack =
-            k === 'Escape' ||
-            k === 'Backspace' ||
-            k === 'BrowserBack' ||
-            k === 27 ||
-            k === 8 ||
-            k === 461 ||
-            k === 10009;
-
-        var isDown =
-            k === 'ArrowDown' ||
-            k === 40;
+            key === 'Escape' ||
+            key === 'Backspace' ||
+            key === 'BrowserBack' ||
+            code === 27 ||
+            code === 8 ||
+            code === 461 ||
+            code === 10009;
 
         var isUp =
-            k === 'ArrowUp' ||
-            k === 38;
+            key === 'ArrowUp' ||
+            code === 38;
+
+        var isDown =
+            key === 'ArrowDown' ||
+            code === 40;
 
         var isEnter =
-            k === 'Enter' ||
-            k === 'NumpadEnter' ||
-            k === 13;
+            key === 'Enter' ||
+            key === 'NumpadEnter' ||
+            code === 13;
 
         if (
             !isBack &&
-            !isDown &&
             !isUp &&
+            !isDown &&
             !isEnter
         ) {
             return;
@@ -1450,41 +1854,36 @@ function openDialog(title, items, options) {
         }
 
         if (isBack) {
-            if (e.repeat) return;
-            back();
-            return;
-        }
-
-        if (isDown) {
-            if (Date.now() < dialogLockUntil) return;
-            focus(selected + 1);
+            if (!e.repeat) back();
             return;
         }
 
         if (isUp) {
-            if (Date.now() < dialogLockUntil) return;
             focus(selected - 1);
             return;
         }
 
-        if (isEnter) {
-            if (e.repeat) return;
+        if (isDown) {
+            focus(selected + 1);
+            return;
+        }
 
-            /*
-             * Enter is handled only here.
-             * No synthetic row.click() is dispatched.
-             */
+        if (isEnter && !e.repeat) {
             activate(selected);
         }
     }
 
     function keyup(e) {
-        var k = e.key || e.keyCode;
+        if (closed) return;
+
+        var code = e.keyCode || e.which;
 
         if (
-            k === 'Enter' ||
-            k === 13 ||
-            k === 'NumpadEnter'
+            code === 13 ||
+            code === 8 ||
+            code === 27 ||
+            code === 461 ||
+            code === 10009
         ) {
             e.preventDefault();
             e.stopPropagation();
@@ -1495,81 +1894,150 @@ function openDialog(title, items, options) {
         }
     }
 
-    (items || []).forEach(function (item, index) {
-        var row = makeElement(
+    function pointerCapture(e) {
+        if (closed) return;
+
+        if (overlay.contains(e.target)) {
+            e.stopPropagation();
+        }
+    }
+
+    items.forEach(function (item, index) {
+        var card = create(
             'div',
-            'uadv-dialog-row selector'
+            'uadv632-card selector'
         );
 
-        row.tabIndex = 0;
+        card.tabIndex = 0;
 
-        var main = makeElement(
+        if (item.featured) {
+            card.classList.add(
+                'uadv632-featured'
+            );
+        }
+
+        var body = create(
             'div',
-            'uadv-dialog-row-main'
+            'uadv632-card-body'
         );
 
-        var name = makeElement(
+        if (item.featured) {
+            var recommended = create(
+                'div',
+                'uadv632-recommended',
+                '★  РЕКОМЕНДОВАНО'
+            );
+
+            body.appendChild(
+                recommended
+            );
+        }
+
+        var name = create(
             'div',
-            'uadv-dialog-row-name',
+            'uadv632-card-title',
             item.title || ''
         );
 
-        main.appendChild(name);
+        body.appendChild(name);
 
-        if (item.badges && item.badges.length) {
-            var badges = makeElement(
+        if (
+            item.badges &&
+            item.badges.length
+        ) {
+            var badges = create(
                 'div',
-                'uadv-dialog-badges'
+                'uadv632-badges'
             );
 
-            item.badges.forEach(function (b) {
-                var badge = makeElement(
+            item.badges.forEach(function (badge) {
+                var badgeEl = create(
                     'span',
-                    'uadv-dialog-badge ' +
-                        badgeClass(b),
-                    b
+                    'uadv632-badge ' +
+                        'uadv632-badge-' +
+                        (badge.type || 'normal'),
+                    badge.text
                 );
 
-                badges.appendChild(badge);
+                badges.appendChild(
+                    badgeEl
+                );
             });
 
-            main.appendChild(badges);
+            body.appendChild(badges);
+        }
+
+        if (item.stats) {
+            var stats = create(
+                'div',
+                'uadv632-stats'
+            );
+
+            item.stats.forEach(function (stat) {
+                var cell = create(
+                    'div',
+                    'uadv632-stat'
+                );
+
+                cell.appendChild(
+                    create(
+                        'div',
+                        'uadv632-stat-label',
+                        stat.label
+                    )
+                );
+
+                cell.appendChild(
+                    create(
+                        'div',
+                        'uadv632-stat-value',
+                        stat.value
+                    )
+                );
+
+                stats.appendChild(cell);
+            });
+
+            body.appendChild(stats);
         }
 
         if (item.subtitle) {
-            main.appendChild(
-                makeElement(
+            body.appendChild(
+                create(
                     'div',
-                    'uadv-dialog-row-sub',
+                    'uadv632-card-subtitle',
                     item.subtitle
                 )
             );
         }
 
-        row.appendChild(main);
+        card.appendChild(body);
 
-        var arrow = makeElement(
-            'div',
-            'uadv-dialog-arrow',
-            '›'
+        card.appendChild(
+            create(
+                'div',
+                'uadv632-card-arrow',
+                '›'
+            )
         );
 
-        row.appendChild(arrow);
+        card.addEventListener(
+            'focus',
+            function () {
+                selected = index;
 
-        row.addEventListener(
-            'pointerdown',
-            function (e) {
-                e.stopPropagation();
+                rows.forEach(function (row, i) {
+                    row.classList.toggle(
+                        'uadv632-focused',
+                        i === selected
+                    );
+                });
             }
         );
 
-        row.addEventListener(
+        card.addEventListener(
             'click',
             function (e) {
-                /*
-                 * Ignore keyboard-generated click events.
-                 * Keyboard activation is handled separately.
-                 */
                 if (e.detail === 0) return;
 
                 e.preventDefault();
@@ -1579,27 +2047,11 @@ function openDialog(title, items, options) {
             }
         );
 
-        row.addEventListener(
-            'focus',
-            function () {
-                if (closed) return;
-
-                selected = index;
-
-                rows.forEach(function (r, i) {
-                    r.classList.toggle(
-                        'focus',
-                        i === selected
-                    );
-                });
-            }
-        );
-
-        list.appendChild(row);
-        rows.push(row);
+        list.appendChild(card);
+        rows.push(card);
     });
 
-    closeBtn.addEventListener(
+    closeButton.addEventListener(
         'click',
         function (e) {
             e.preventDefault();
@@ -1619,7 +2071,7 @@ function openDialog(title, items, options) {
 
     document.addEventListener(
         'keydown',
-        keyboard,
+        keydown,
         true
     );
 
@@ -1629,43 +2081,118 @@ function openDialog(title, items, options) {
         true
     );
 
-    dialog = {
-        sequence: sequence,
-        close: function () {
-            destroy(true);
+    document.addEventListener(
+        'pointerdown',
+        pointerCapture,
+        true
+    );
+
+    /*
+     * Lampa Controller integration.
+     * Back action is registered explicitly.
+     */
+    try {
+        if (
+            Lampa.Controller &&
+            typeof Lampa.Controller.add ===
+                'function'
+        ) {
+            Lampa.Controller.add(
+                DIALOG_CONTROLLER,
+                {
+                    toggle: function () {
+                        focus(selected);
+                    },
+                    up: function () {
+                        focus(selected - 1);
+                    },
+                    down: function () {
+                        focus(selected + 1);
+                    },
+                    left: function () {},
+                    right: function () {},
+                    enter: function () {
+                        activate(selected);
+                    },
+                    back: function () {
+                        back();
+                    }
+                }
+            );
+
+            if (
+                typeof Lampa.Controller.toggle ===
+                'function'
+            ) {
+                Lampa.Controller.toggle(
+                    DIALOG_CONTROLLER
+                );
+            }
         }
+    } catch (e) {
+        log(
+            'Controller fallback:',
+            errorText(e)
+        );
+    }
+
+    currentDialog = {
+        id: id,
+        destroy: destroy,
+        back: back
     };
 
     requestAnimationFrame(function () {
         if (closed) return;
 
-        overlay.classList.add('visible');
+        overlay.classList.add(
+            'uadv632-visible'
+        );
+
         focus(0);
     });
 }
 
-/* ==========================================
+/* ========================================
    RELEASE PICKER
-   ========================================== */
+======================================== */
 
-function releasePicker(movie, releases) {
-    var items = releases.slice(0, 60).map(
-        function (r) {
+function showReleasePicker(movie, releases) {
+    var items = releases.slice(0, 80).map(
+        function (release, index) {
             return {
-                title: r.title,
-                badges: qualityBadges(r),
+                title: release.title,
+                featured: index === 0,
+                badges: dialogBadges(release),
+                stats: [
+                    {
+                        label: 'РОЗМІР',
+                        value: sizeText(
+                            release.size
+                        )
+                    },
+                    {
+                        label: 'СІДЕРИ',
+                        value: String(
+                            release.seed
+                        )
+                    },
+                    {
+                        label: 'ОЗВУЧКА',
+                        value: hasUkrainianAudio(
+                            release.title
+                        )
+                            ? 'UA'
+                            : 'Не визначено'
+                    }
+                ],
                 subtitle:
-                    human(r.size) +
-                    '  ·  Сідери: ' +
-                    r.seed +
-                    (r.tracker
-                        ? '  ·  ' + r.tracker
-                        : ''),
+                    release.tracker || '',
                 action: function () {
                     execute(function (id) {
                         return startMovie(
                             movie,
-                            r,
+                            release,
                             id
                         );
                     });
@@ -1674,24 +2201,40 @@ function releasePicker(movie, releases) {
         }
     );
 
-    openDialog(
-        'Обери реліз',
-        items
-    );
+    openDialog({
+        title: 'Доступні релізи',
+        subtitle:
+            'Знайдено ' +
+            releases.length +
+            ' варіантів · Вибери якість',
+        items: items
+    });
 }
 
-function fallbackPicker(movie, releases) {
-    openDialog(
-        'Українську озвучку не підтверджено',
-        [
+/* ========================================
+   NO UKRAINIAN AUDIO DIALOG
+======================================== */
+
+function showFallbackPicker(movie, releases) {
+    openDialog({
+        title: 'Українську озвучку не підтверджено',
+        subtitle:
+            'Можна переглянути інші доступні релізи',
+        items: [
             {
                 title: 'Показати інші релізи',
                 subtitle:
-                    'Знайдено: ' +
+                    'Доступно: ' +
                     releases.length +
                     ' · Ручний вибір',
+                badges: [
+                    {
+                        text: 'ПЕРЕГЛЯНУТИ',
+                        type: 'quality'
+                    }
+                ],
                 action: function () {
-                    releasePicker(
+                    showReleasePicker(
                         movie,
                         releases
                     );
@@ -1704,47 +2247,70 @@ function fallbackPicker(movie, releases) {
                 action: function () {}
             }
         ]
-    );
+    });
 }
 
+/* ========================================
+   FILE PICKER
+======================================== */
+
 function showFilePicker(movie, hash, files) {
-    openDialog(
-        'Обери відеофайл',
-        files.map(function (entry) {
+    openDialog({
+        title: 'Відеофайли',
+        subtitle:
+            'Вибери файл для відтворення',
+        items: files.map(function (file) {
             return {
-                title: entry.path
+                title: file.path
                     .split(/[\\/]/)
                     .pop(),
-                subtitle: human(entry.size),
+                stats: [
+                    {
+                        label: 'РОЗМІР',
+                        value: sizeText(
+                            file.size
+                        )
+                    }
+                ],
                 action: function () {
-                    play(
-                        streamUrl(hash, entry),
-                        titleOf(movie)
+                    startPlayer(
+                        streamUrl(hash, file),
+                        movieTitle(movie)
                     );
                 }
             };
         })
-    );
+    });
 }
 
-/* ==========================================
+/* ========================================
    MOVIE FLOW
-   ========================================== */
+======================================== */
 
 async function movieFlow(movie, releases, id) {
-    var ua = releases.filter(function (r) {
-        return uaConfirmed(r.title);
-    });
+    var ukrainian = releases.filter(
+        function (release) {
+            return hasUkrainianAudio(
+                release.title
+            );
+        }
+    );
 
-    if (ua.length) {
+    if (ukrainian.length) {
         if (
-            get('playMode', 'auto') === 'manual'
+            storageGet(
+                'playMode',
+                'auto'
+            ) === 'manual'
         ) {
-            releasePicker(movie, ua);
+            showReleasePicker(
+                movie,
+                ukrainian
+            );
         } else {
             await startMovie(
                 movie,
-                ua[0],
+                ukrainian[0],
                 id
             );
         }
@@ -1752,17 +2318,27 @@ async function movieFlow(movie, releases, id) {
         return;
     }
 
-    if (get('uaPolicy', 'strict') === 'strict') {
-        note(
-            'Немає релізів із підтвердженою українською озвучкою'
+    var policy = storageGet(
+        'uaPolicy',
+        'prefer'
+    );
+
+    if (policy === 'strict') {
+        notify(
+            'Українську озвучку не знайдено'
         );
         return;
     }
 
-    var fallback = get('fallback', 'ask');
+    var fallback = storageGet(
+        'fallback',
+        'ask'
+    );
 
     if (fallback === 'none') {
-        note('Українську озвучку не знайдено');
+        notify(
+            'Немає підтвердженої української озвучки'
+        );
     } else if (fallback === 'auto') {
         await startMovie(
             movie,
@@ -1770,31 +2346,37 @@ async function movieFlow(movie, releases, id) {
             id
         );
     } else {
-        fallbackPicker(movie, releases);
+        showFallbackPicker(
+            movie,
+            releases
+        );
     }
 }
 
-/* ==========================================
+/* ========================================
    SERIES
-   ========================================== */
+======================================== */
 
 function seasonsFromTitle(title) {
-    var t = String(title || '');
+    var text = String(title || '');
     var seasons = {};
-    var m;
 
-    var range = /(?:season|сезон|\bS)\s*0*(\d{1,2})\s*[-–]\s*0*(\d{1,2})/i.exec(t);
+    var range = /(?:season|сезон|\bS)\s*0*(\d{1,2})\s*[-–]\s*0*(\d{1,2})/i.exec(text);
 
     if (range) {
-        var a = Number(range[1]);
-        var b = Number(range[2]);
+        var from = Number(range[1]);
+        var to = Number(range[2]);
 
         if (
-            a > 0 &&
-            b >= a &&
-            b - a <= 30
+            from > 0 &&
+            to >= from &&
+            to - from <= 30
         ) {
-            for (var n = a; n <= b; n++) {
+            for (
+                var n = from;
+                n <= to;
+                n++
+            ) {
                 seasons[n] = true;
             }
         }
@@ -1802,15 +2384,22 @@ function seasonsFromTitle(title) {
 
     var re = /\bS(\d{1,2})(?:E\d+|\b)|(?:season|сезон)\s*0*(\d{1,2})/gi;
 
-    while ((m = re.exec(t))) {
-        var sn = Number(m[1] || m[2]);
+    var match;
 
-        if (sn > 0) {
-            seasons[sn] = true;
+    while (
+        (match = re.exec(text))
+    ) {
+        var number = Number(
+            match[1] || match[2]
+        );
+
+        if (number > 0) {
+            seasons[number] = true;
         }
     }
 
-    return Object.keys(seasons).map(Number);
+    return Object.keys(seasons)
+        .map(Number);
 }
 
 function episodeFromPath(path, season) {
@@ -1818,60 +2407,72 @@ function episodeFromPath(path, season) {
         .split(/[\\/]/)
         .pop();
 
-    var m =
+    var match =
         /S(\d{1,2})E(\d{1,3})/i.exec(name) ||
         /(\d{1,2})x(\d{1,3})/i.exec(name);
 
-    if (m) {
-        return Number(m[1]) === season
-            ? Number(m[2])
+    if (match) {
+        return Number(match[1]) === season
+            ? Number(match[2])
             : 0;
     }
 
-    m = /(?:episode|ep|серія|серия)[ ._-]*0*(\d{1,3})/i.exec(name);
+    match = /(?:episode|ep|серія|серия)[ ._-]*0*(\d{1,3})/i.exec(name);
 
-    return m ? Number(m[1]) : 0;
+    return match
+        ? Number(match[1])
+        : 0;
 }
 
 function showSeasons(movie, releases) {
     var groups = {};
     var unknown = [];
 
-    releases.forEach(function (r) {
-        var seasons = seasonsFromTitle(r.title);
+    releases.forEach(function (release) {
+        var seasons = seasonsFromTitle(
+            release.title
+        );
 
         if (!seasons.length) {
-            unknown.push(r);
+            unknown.push(release);
             return;
         }
 
-        seasons.forEach(function (n) {
-            if (!groups[n]) groups[n] = [];
-            groups[n].push(r);
+        seasons.forEach(function (number) {
+            if (!groups[number]) {
+                groups[number] = [];
+            }
+
+            groups[number].push(
+                release
+            );
         });
     });
 
-    var nums = Object.keys(groups)
+    var numbers = Object.keys(groups)
         .map(Number)
         .sort(function (a, b) {
             return a - b;
         });
 
-    var items = nums.map(function (n) {
-        return {
-            title: 'Сезон ' + n,
-            subtitle:
-                'Релізів: ' +
-                groups[n].length,
-            action: function () {
-                openSeason(
-                    movie,
-                    n,
-                    groups[n]
-                );
-            }
-        };
-    });
+    var items = numbers.map(
+        function (number) {
+            return {
+                title:
+                    'Сезон ' + number,
+                subtitle:
+                    'Релізів: ' +
+                    groups[number].length,
+                action: function () {
+                    openSeason(
+                        movie,
+                        number,
+                        groups[number]
+                    );
+                }
+            };
+        }
+    );
 
     if (unknown.length) {
         items.push({
@@ -1889,11 +2490,18 @@ function showSeasons(movie, releases) {
     }
 
     if (!items.length) {
-        note('Не вдалося визначити сезони');
+        notify(
+            'Не вдалося визначити сезони'
+        );
         return;
     }
 
-    openDialog('Обери сезон', items);
+    openDialog({
+        title: 'Сезони',
+        subtitle:
+            'Вибери сезон серіалу',
+        items: items
+    });
 }
 
 function chooseUnknownSeason(movie, releases) {
@@ -1901,22 +2509,23 @@ function chooseUnknownSeason(movie, releases) {
         1,
         Math.min(
             30,
-            Number(movie.number_of_seasons || 10)
+            Number(
+                movie.number_of_seasons || 10
+            )
         )
     );
 
     var items = [];
 
     for (var i = 1; i <= max; i++) {
-        (function (n) {
+        (function (number) {
             items.push({
-                title: 'Сезон ' + n,
-                subtitle:
-                    'Перевірити серії у файлах',
+                title:
+                    'Сезон ' + number,
                 action: function () {
                     openSeason(
                         movie,
-                        n,
+                        number,
                         releases
                     );
                 }
@@ -1924,7 +2533,10 @@ function chooseUnknownSeason(movie, releases) {
         })(i);
     }
 
-    openDialog('Вкажи сезон', items);
+    openDialog({
+        title: 'Вибери сезон',
+        items: items
+    });
 }
 
 function openSeason(movie, season, releases) {
@@ -1938,33 +2550,41 @@ function openSeason(movie, season, releases) {
     });
 }
 
-async function loadEpisodes(movie, season, releases, id) {
+async function loadEpisodes(
+    movie,
+    season,
+    releases,
+    id
+) {
     closeDialog();
 
-    note(
+    notify(
         'Шукаю серії сезону ' +
-        season +
-        '…'
+        season
     );
 
     var episodes = {};
-    var limit = Math.min(8, releases.length);
+    var limit = Math.min(
+        8,
+        releases.length
+    );
+
     var successful = 0;
 
     for (var i = 0; i < limit; i++) {
-        check(id);
+        checkOperation(id);
 
-        var r = releases[i];
+        var release = releases[i];
 
         try {
             var added = await addTorrent(
-                r,
+                release,
                 movie,
                 id
             );
 
-            var files = videos(
-                await getFiles(
+            var files = videoFiles(
+                await getTorrentFiles(
                     added.hash,
                     added.link,
                     id
@@ -1973,137 +2593,175 @@ async function loadEpisodes(movie, season, releases, id) {
 
             successful++;
 
-            files.forEach(function (entry) {
-                if (entry.size < 250 * MB) return;
+            files.forEach(function (file) {
+                if (
+                    file.size < 250 * MB
+                ) {
+                    return;
+                }
 
-                var ep = episodeFromPath(
-                    entry.path,
+                var episode = episodeFromPath(
+                    file.path,
                     season
                 );
 
-                if (!ep) return;
+                if (!episode) return;
 
-                var rank = score(r);
+                var rank = releaseScore(
+                    release,
+                    movie
+                );
 
                 if (
-                    !episodes[ep] ||
-                    rank > episodes[ep].rank ||
-                    (
-                        rank === episodes[ep].rank &&
-                        entry.size >
-                        episodes[ep].entry.size
-                    )
+                    !episodes[episode] ||
+                    rank >
+                    episodes[episode].rank
                 ) {
-                    episodes[ep] = {
-                        entry: entry,
+                    episodes[episode] = {
+                        file: file,
                         hash: added.hash,
                         rank: rank
                     };
                 }
             });
         } catch (e) {
-            check(id);
-            log('Episode scan:', errorText(e));
+            checkOperation(id);
+
+            log(
+                'Episode scan:',
+                errorText(e)
+            );
         }
 
-        if (Object.keys(episodes).length >= 24) {
+        if (
+            Object.keys(episodes)
+                .length >= 24
+        ) {
             break;
         }
     }
 
-    check(id);
+    checkOperation(id);
 
-    var nums = Object.keys(episodes)
+    var numbers = Object.keys(episodes)
         .map(Number)
         .sort(function (a, b) {
             return a - b;
         });
 
-    if (!nums.length) {
-        if (!successful) {
-            throw Error(
-                'TorrServer не зміг прочитати серії'
-            );
-        }
-
-        note(
-            'Серії сезону ' +
-            season +
-            ' не розпізнано'
+    if (!numbers.length) {
+        throw Error(
+            successful
+                ? 'Не вдалося розпізнати серії'
+                : 'TorrServer не прочитав файли'
         );
-
-        return;
     }
 
-    openDialog(
-        'Сезон ' + season + ' · Серії',
-        nums.map(function (n) {
-            var ep = episodes[n];
+    openDialog({
+        title:
+            'Сезон ' +
+            season +
+            ' · Серії',
+        subtitle:
+            'Знайдено ' +
+            numbers.length +
+            ' серій',
+        onBack: function () {
+            showSeasons(
+                movie,
+                releases
+            );
+        },
+        items: numbers.map(
+            function (number) {
+                var episode =
+                    episodes[number];
 
-            return {
-                title: 'Серія ' + n,
-                subtitle:
-                    human(ep.entry.size) +
-                    ' · ' +
-                    ep.entry.path
-                        .split(/[\\/]/)
-                        .pop(),
-                action: function () {
-                    play(
-                        streamUrl(
-                            ep.hash,
-                            ep.entry
-                        ),
-                        titleOf(movie) +
-                        ' S' + season +
-                        'E' +
-                        ('0' + n).slice(-2)
-                    );
-                }
-            };
-        }),
-        {
-            onBack: function () {
-                showSeasons(
-                    movie,
-                    releases
-                );
+                return {
+                    title:
+                        'Серія ' + number,
+                    subtitle:
+                        episode.file.path,
+                    stats: [
+                        {
+                            label: 'РОЗМІР',
+                            value: sizeText(
+                                episode.file.size
+                            )
+                        }
+                    ],
+                    action: function () {
+                        startPlayer(
+                            streamUrl(
+                                episode.hash,
+                                episode.file
+                            ),
+                            movieTitle(movie) +
+                            ' S' + season +
+                            'E' +
+                            ('0' + number)
+                                .slice(-2)
+                        );
+                    }
+                };
             }
-        }
-    );
+        )
+    });
 }
 
 function seriesFlow(movie, releases) {
-    var ua = releases.filter(function (r) {
-        return uaConfirmed(r.title);
-    });
+    var ukrainian = releases.filter(
+        function (release) {
+            return hasUkrainianAudio(
+                release.title
+            );
+        }
+    );
 
-    if (ua.length) {
-        showSeasons(movie, ua);
-        return;
-    }
-
-    if (get('uaPolicy', 'strict') === 'strict') {
-        note(
-            'Немає серіалів із підтвердженою українською озвучкою'
+    if (ukrainian.length) {
+        showSeasons(
+            movie,
+            ukrainian
         );
         return;
     }
 
-    var fallback = get('fallback', 'ask');
+    if (
+        storageGet(
+            'uaPolicy',
+            'prefer'
+        ) === 'strict'
+    ) {
+        notify(
+            'Українську озвучку не знайдено'
+        );
+        return;
+    }
+
+    var fallback = storageGet(
+        'fallback',
+        'ask'
+    );
 
     if (fallback === 'none') {
-        note('Українську озвучку не знайдено');
+        notify(
+            'Українську озвучку не знайдено'
+        );
     } else if (fallback === 'auto') {
-        showSeasons(movie, releases);
+        showSeasons(
+            movie,
+            releases
+        );
     } else {
-        openDialog(
-            'Українську озвучку не підтверджено',
-            [
+        openDialog({
+            title:
+                'Українську озвучку не підтверджено',
+            subtitle:
+                'Доступні інші релізи серіалу',
+            items: [
                 {
-                    title: 'Показати інші сезони',
-                    subtitle:
-                        'Вибрати сезон вручну',
+                    title:
+                        'Показати інші сезони',
                     action: function () {
                         showSeasons(
                             movie,
@@ -2116,18 +2774,18 @@ function seriesFlow(movie, releases) {
                     action: function () {}
                 }
             ]
-        );
+        });
     }
 }
 
-/* ==========================================
+/* ========================================
    OPERATIONS
-   ========================================== */
+======================================== */
 
 async function execute(task) {
     if (busy) {
-        note(
-            'Дочекайся завершення попередньої операції'
+        notify(
+            'Попередня операція ще виконується'
         );
         return;
     }
@@ -2136,14 +2794,21 @@ async function execute(task) {
 
     var id = ++operationId;
 
-    activeController = new AbortController();
+    activeController =
+        new AbortController();
 
     try {
         await task(id);
     } catch (e) {
         if (id === operationId) {
-            log('Operation:', e);
-            note(errorText(e));
+            log(
+                'Operation error:',
+                e
+            );
+
+            notify(
+                errorText(e)
+            );
         }
     } finally {
         if (id === operationId) {
@@ -2159,11 +2824,14 @@ function run(data) {
 
         if (!movie) {
             throw Error(
-                'Не вдалося отримати дані фільму'
+                'Немає даних фільму'
             );
         }
 
-        note('Шукаю: ' + titleOf(movie));
+        notify(
+            'Шукаю: ' +
+            movieTitle(movie)
+        );
 
         var releases = await findReleases(
             movie,
@@ -2172,12 +2840,15 @@ function run(data) {
 
         if (!releases.length) {
             throw Error(
-                'Релізів не знайдено. Перевір Jackett, сідерів і розмір.'
+                'Релізів не знайдено. Перевір Jackett або параметри пошуку.'
             );
         }
 
         if (isSeries(movie)) {
-            seriesFlow(movie, releases);
+            seriesFlow(
+                movie,
+                releases
+            );
         } else {
             await movieFlow(
                 movie,
@@ -2188,9 +2859,9 @@ function run(data) {
     });
 }
 
-/* ==========================================
+/* ========================================
    SETTINGS
-   ========================================== */
+======================================== */
 
 function addSetting(item) {
     try {
@@ -2200,7 +2871,9 @@ function addSetting(item) {
                 name: P + item.name,
                 type: 'select',
                 values: item.values,
-                default: String(item.def)
+                default: String(
+                    item.defaultValue
+                )
             },
             field: {
                 name: item.title,
@@ -2208,12 +2881,20 @@ function addSetting(item) {
                     item.description || ''
             },
             onChange: function (value) {
-                set(item.name, value);
-                resetCache();
+                storageSet(
+                    item.name,
+                    value
+                );
+
+                clearCache();
             }
         });
     } catch (e) {
-        log('Setting:', item.name, e);
+        log(
+            'Settings:',
+            item.name,
+            errorText(e)
+        );
     }
 }
 
@@ -2239,11 +2920,11 @@ function registerSettings() {
         });
     } catch (e) {}
 
-    var settings = [
+    [
         {
             name: 'playMode',
             title: 'Запуск фільму',
-            def: 'auto',
+            defaultValue: 'auto',
             values: {
                 auto: 'Автоматично',
                 manual: 'Вибір вручну'
@@ -2252,7 +2933,7 @@ function registerSettings() {
         {
             name: 'uaPolicy',
             title: 'Українська озвучка',
-            def: 'prefer',
+            defaultValue: 'prefer',
             values: {
                 strict: 'Тільки українська',
                 prefer: 'Пріоритет української'
@@ -2261,7 +2942,7 @@ function registerSettings() {
         {
             name: 'quality',
             title: 'Роздільність',
-            def: '4k',
+            defaultValue: '4k',
             values: {
                 '4k': '4K / 2160p',
                 '1080': 'Full HD / 1080p'
@@ -2270,7 +2951,7 @@ function registerSettings() {
         {
             name: 'hdr',
             title: 'Пріоритет HDR',
-            def: 'dv',
+            defaultValue: 'dv',
             values: {
                 dv: 'Dolby Vision → HDR10+ → HDR',
                 hdr: 'HDR10+ → HDR → DV',
@@ -2280,7 +2961,7 @@ function registerSettings() {
         {
             name: 'source',
             title: 'Джерело',
-            def: 'auto',
+            defaultValue: 'auto',
             values: {
                 auto: 'REMUX → Blu-ray → WEB-DL',
                 bluray: 'Blu-ray → REMUX → WEB-DL',
@@ -2290,7 +2971,7 @@ function registerSettings() {
         {
             name: 'audio',
             title: 'Звукова доріжка',
-            def: 'auto',
+            defaultValue: 'auto',
             values: {
                 auto: 'Автоматично',
                 atmos: 'Dolby Atmos / TrueHD',
@@ -2301,7 +2982,7 @@ function registerSettings() {
         {
             name: 'minSeeds',
             title: 'Мінімум сідерів',
-            def: '5',
+            defaultValue: '5',
             values: {
                 '0': 'Без обмеження',
                 '1': '1',
@@ -2314,7 +2995,7 @@ function registerSettings() {
         {
             name: 'maxSize',
             title: 'Максимальний розмір',
-            def: '70',
+            defaultValue: '70',
             values: {
                 '30': '30 GB',
                 '50': '50 GB',
@@ -2327,7 +3008,7 @@ function registerSettings() {
         {
             name: 'toloka',
             title: 'Пріоритет Toloka',
-            def: 'false',
+            defaultValue: 'false',
             values: {
                 'false': 'Вимкнено',
                 'true': 'Увімкнено'
@@ -2336,7 +3017,7 @@ function registerSettings() {
         {
             name: 'fallback',
             title: 'Якщо немає української',
-            def: 'ask',
+            defaultValue: 'ask',
             values: {
                 ask: 'Запитати',
                 none: 'Не запускати',
@@ -2346,98 +3027,104 @@ function registerSettings() {
         {
             name: 'design',
             title: 'Стиль інтерфейсу',
-            def: 'premium',
+            defaultValue: 'premium',
             values: {
                 premium: 'Premium Dark',
                 compact: 'Compact TV'
             }
         }
-    ];
-
-    settings.forEach(addSetting);
+    ].forEach(addSetting);
 }
 
-/* ==========================================
-   BUTTON
-   ========================================== */
+/* ========================================
+   LAMPA BUTTON
+======================================== */
 
 function makeButton() {
-    var btn = document.createElement('div');
+    var element = create(
+        'div',
+        'full-start__button selector uadv632-button'
+    );
 
-    btn.className =
-        'full-start__button selector uadv-button';
+    element.tabIndex = 0;
 
-    btn.setAttribute(
-        'data-uadv6301',
+    element.setAttribute(
+        'data-uadv632',
         '1'
     );
 
-    btn.tabIndex = 0;
-
-    btn.innerHTML =
-        '<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' +
+    element.innerHTML =
+        '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' +
         '<rect x="2" y="4" width="20" height="16" rx="4"/>' +
         '<path d="M10 8.5l6 3.5-6 3.5z" fill="currentColor" stroke="none"/>' +
         '</svg>' +
         '<span>4K Pro</span>';
 
-    return $(btn);
+    return $(element);
 }
 
-function attach(root, ev) {
+function attachButton(root, event) {
     var bar = root.find(
         '.full-start-new__buttons,' +
         '.full-start__buttons,' +
         '.full-actions'
     ).eq(0);
 
-    if (!bar.length) return false;
+    if (!bar.length) {
+        return false;
+    }
 
     if (
         bar.find(
-            '[data-uadv6301="1"]'
+            '[data-uadv632="1"]'
         ).length
     ) {
         return true;
     }
 
     bar.find(
-        '[data-uadv-button="1"],' +
-        '[data-uadv630="1"]'
+        '[data-uadv630="1"],' +
+        '[data-uadv6301="1"],' +
+        '[data-uadv-button="1"]'
     ).remove();
 
-    var btn = makeButton();
+    var button = makeButton();
 
     var lastClick = 0;
 
-    function click() {
+    function activate() {
         var now = Date.now();
 
-        if (now - lastClick < 450) {
+        if (
+            now - lastClick < 450
+        ) {
             return;
         }
 
         lastClick = now;
-        run(ev.data);
+
+        run(event.data);
     }
 
-    btn.on('hover:enter click', click);
+    button.on(
+        'hover:enter click',
+        activate
+    );
 
-    btn.on('keydown', function (e) {
-        if (
-            e.key === 'Enter' ||
-            e.keyCode === 13
-        ) {
-            e.preventDefault();
-            click();
+    button.on(
+        'keydown',
+        function (e) {
+            if (
+                e.key === 'Enter' ||
+                e.keyCode === 13
+            ) {
+                e.preventDefault();
+                activate();
+            }
         }
-    });
+    );
 
-    bar.prepend(btn);
-
-    try {
-        Lampa.Controller.collectionSet(bar);
-    } catch (e) {}
+    bar.prepend(button);
 
     return true;
 }
@@ -2449,13 +3136,13 @@ function mountButton() {
 
     Lampa.Listener.follow(
         'full',
-        function (ev) {
+        function (event) {
             if (
-                !ev ||
-                ev.type !== 'complite' ||
-                !ev.object ||
-                !ev.data ||
-                !ev.data.movie
+                !event ||
+                event.type !== 'complite' ||
+                !event.object ||
+                !event.data ||
+                !event.data.movie
             ) {
                 return;
             }
@@ -2463,27 +3150,48 @@ function mountButton() {
             var root;
 
             try {
-                root = ev.object.activity.render();
+                root = event.object.activity.render();
             } catch (e) {
                 return;
             }
 
-            if (!root || !root.length) return;
+            if (
+                !root ||
+                !root.length
+            ) {
+                return;
+            }
 
-            if (attach(root, ev)) return;
+            if (
+                attachButton(
+                    root,
+                    event
+                )
+            ) {
+                return;
+            }
 
-            var observer = new MutationObserver(
-                function () {
-                    if (attach(root, ev)) {
-                        observer.disconnect();
+            var observer =
+                new MutationObserver(
+                    function () {
+                        if (
+                            attachButton(
+                                root,
+                                event
+                            )
+                        ) {
+                            observer.disconnect();
+                        }
                     }
+                );
+
+            observer.observe(
+                root[0],
+                {
+                    childList: true,
+                    subtree: true
                 }
             );
-
-            observer.observe(root[0], {
-                childList: true,
-                subtree: true
-            });
 
             setTimeout(function () {
                 observer.disconnect();
@@ -2492,14 +3200,14 @@ function mountButton() {
     );
 }
 
-/* ==========================================
-   PREMIUM DARK CSS
-   ========================================== */
+/* ========================================
+   PREMIUM CSS
+======================================== */
 
 function injectStyles() {
     if (
         document.getElementById(
-            'uadv6301-style'
+            STYLE_ID
         )
     ) {
         return;
@@ -2507,414 +3215,501 @@ function injectStyles() {
 
     var css = `
 
-.uadv-button {
-    background: #202733 !important;
-    color: #eef3fa !important;
-    border: 1px solid #394453 !important;
-    border-radius: 10px !important;
-    order: -9999 !important;
-    box-shadow: 0 5px 18px rgba(0,0,0,.28) !important;
+/* BUTTON */
+
+.uadv632-button {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 9px;
+    background: #263446 !important;
+    border: 1px solid #526985 !important;
+    border-radius: 11px !important;
+    color: #fff !important;
+    box-shadow: 0 6px 20px #0005;
 }
 
-.uadv-button.focus,
-.uadv-button:hover {
-    background: #344254 !important;
-    border-color: #a8c1db !important;
+.uadv632-button.focus,
+.uadv632-button:hover {
+    background: #456181 !important;
+    border-color: #d3e4ff !important;
 }
 
-.uadv-button svg {
-    flex-shrink: 0;
-}
+/* TOAST */
 
-/* Toast */
-
-.uadv-toast {
+.uadv632-toast {
     position: fixed;
+    z-index: 1000005;
     left: 50%;
     bottom: 7%;
     transform: translate(-50%,12px);
-    z-index: 1000002;
     max-width: 88vw;
     padding: 14px 22px;
-    background: #1a2029;
-    color: #f3f6fa;
-    border: 1px solid #485365;
+    color: #f4f7fc;
+    background: #1b2634;
+    border: 1px solid #52647a;
     border-radius: 12px;
-    box-shadow: 0 12px 35px #0009;
-    font-size: 17px;
+    box-shadow: 0 15px 45px #0009;
     text-align: center;
+    font-size: 17px;
     opacity: 0;
-    visibility: hidden;
-    transition:
-        opacity .2s,
-        transform .2s;
     pointer-events: none;
+    transition: opacity .2s,transform .2s;
 }
 
-.uadv-toast.visible {
+.uadv632-toast.visible {
     opacity: 1;
-    visibility: visible;
     transform: translate(-50%,0);
 }
 
-/* Overlay */
+/* OVERLAY */
 
-.uadv-dialog-overlay {
+.uadv632-overlay {
     position: fixed;
     inset: 0;
-    z-index: 1000001;
+    z-index: 1000004;
     display: flex;
-    align-items: center;
     justify-content: center;
+    align-items: center;
     padding: 2vh 2vw;
     box-sizing: border-box;
-    background: rgba(3,6,12,.88);
+    background: rgba(4,8,15,.91);
     opacity: 0;
     transition: opacity .18s ease;
 }
 
-.uadv-dialog-overlay.visible {
+.uadv632-overlay.uadv632-visible {
     opacity: 1;
 }
 
-/* Main panel */
+/* PANEL */
 
-.uadv-dialog-panel {
-    width: min(1080px,96vw);
-    max-height: 90vh;
+.uadv632-panel {
     display: flex;
     flex-direction: column;
+    width: min(1100px,96vw);
+    max-height: 91vh;
     overflow: hidden;
-    color: #f3f6fb;
+    color: #f3f6fc;
     background:
         linear-gradient(
-            145deg,
-            #1b2430 0%,
-            #111821 58%,
-            #0e141c 100%
+            150deg,
+            #202d3d 0%,
+            #121b27 55%,
+            #0d141e 100%
         );
-    border: 1px solid #344455;
-    border-radius: 20px;
+    border: 1px solid #43556b;
+    border-radius: 22px;
     box-shadow:
-        0 25px 80px rgba(0,0,0,.65),
-        inset 0 1px 0 rgba(255,255,255,.06);
-    transform: translateY(12px) scale(.985);
+        0 28px 90px #000c,
+        inset 0 1px 0 #ffffff12;
+    transform: translateY(14px) scale(.985);
     transition: transform .2s ease;
 }
 
-.uadv-dialog-overlay.visible .uadv-dialog-panel {
+.uadv632-visible .uadv632-panel {
     transform: translateY(0) scale(1);
 }
 
-/* Header */
+/* HEADER */
 
-.uadv-dialog-header {
+.uadv632-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
-    padding: 24px 28px;
+    gap: 18px;
+    padding: 25px 30px;
+    border-bottom: 1px solid #3a4a5d;
     background:
         linear-gradient(
             90deg,
-            rgba(50,68,88,.55),
-            rgba(22,31,43,.4)
+            #31455f88,
+            #17233155
         );
-    border-bottom: 1px solid #344455;
 }
 
-.uadv-dialog-heading-wrap {
+.uadv632-header-text {
     min-width: 0;
 }
 
-.uadv-dialog-eyebrow {
-    margin-bottom: 7px;
-    color: #88a9c7;
+.uadv632-eyebrow {
+    color: #9ebfe3;
     font-size: 12px;
-    font-weight: 750;
+    font-weight: 800;
     letter-spacing: 2px;
+    margin-bottom: 9px;
 }
 
-.uadv-dialog-title {
+.uadv632-title {
     color: #fff;
-    font-size: 27px;
+    font-size: 29px;
     font-weight: 800;
     line-height: 1.2;
 }
 
-.uadv-dialog-close {
+.uadv632-subtitle {
+    color: #a9b9cc;
+    font-size: 15px;
+    margin-top: 9px;
+}
+
+.uadv632-close {
     flex-shrink: 0;
-    width: 44px;
-    height: 44px;
+    width: 46px;
+    height: 46px;
     border-radius: 12px;
-    border: 1px solid #465668;
-    background: #283746;
-    color: #e9f1f8;
-    font-size: 20px;
+    border: 1px solid #586c82;
+    background: #304154;
+    color: #fff;
+    font-size: 22px;
     cursor: pointer;
 }
 
-.uadv-dialog-close:hover,
-.uadv-dialog-close:focus {
-    background: #43576c;
+.uadv632-close:hover,
+.uadv632-close:focus {
+    background: #58728f;
 }
 
-/* Release list */
+/* LIST */
 
-.uadv-dialog-list {
+.uadv632-list {
     flex: 1;
     min-height: 0;
-    padding: 14px;
     overflow-y: auto;
     overscroll-behavior: contain;
+    padding: 17px;
     scrollbar-width: thin;
-    scrollbar-color: #50657b transparent;
+    scrollbar-color: #607993 transparent;
 }
 
-.uadv-dialog-row {
+/* PREMIUM CARDS */
+
+.uadv632-card {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 14px;
-    margin-bottom: 9px;
-    padding: 18px 20px;
-    border: 1px solid #303d4b;
-    border-radius: 13px;
-    background: #1b2530;
+    gap: 15px;
+    margin-bottom: 12px;
+    padding: 19px 22px;
+    background:
+        linear-gradient(
+            125deg,
+            #26364a,
+            #1b2838
+        );
+    border: 1px solid #3b4d63;
+    border-radius: 16px;
     outline: none;
     cursor: pointer;
+    box-shadow: 0 5px 15px #0003;
     transition:
         background .12s ease,
-        border-color .12s ease;
+        border-color .12s ease,
+        box-shadow .12s ease;
 }
 
-.uadv-dialog-row.focus,
-.uadv-dialog-row:hover {
-    background: #304154;
-    border-color: #b2c7e0;
+.uadv632-card:hover,
+.uadv632-card.uadv632-focused {
+    background:
+        linear-gradient(
+            125deg,
+            #3d5471,
+            #2b3d53
+        );
+    border-color: #c5dcff;
     box-shadow:
-        inset 0 0 0 1px #b2c7e0;
+        inset 0 0 0 1px #c5dcff,
+        0 8px 24px #0005;
 }
 
-.uadv-dialog-row-main {
-    min-width: 0;
+.uadv632-card-body {
     flex: 1;
+    min-width: 0;
 }
 
-.uadv-dialog-row-name {
-    color: #f5f8fc;
+.uadv632-card-title {
+    color: #fff;
     font-size: 20px;
-    font-weight: 700;
-    line-height: 1.35;
-    overflow-wrap: anywhere;
-}
-
-.uadv-dialog-row-sub {
-    margin-top: 9px;
-    color: #afbfce;
-    font-size: 15px;
+    font-weight: 750;
     line-height: 1.4;
     overflow-wrap: anywhere;
 }
 
-.uadv-dialog-arrow {
+.uadv632-card-subtitle {
+    margin-top: 12px;
+    color: #a9bad0;
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.uadv632-card-arrow {
     flex-shrink: 0;
-    color: #829db7;
-    font-size: 35px;
+    color: #9ab5d2;
+    font-size: 38px;
     font-weight: 300;
 }
 
-.uadv-dialog-row.focus .uadv-dialog-arrow {
+.uadv632-focused .uadv632-card-arrow {
     color: #fff;
 }
 
-/* Quality badges */
+/* RECOMMENDED */
 
-.uadv-dialog-badges {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 10px;
+.uadv632-featured {
+    border-color: #647fa0;
 }
 
-.uadv-dialog-badge {
+.uadv632-recommended {
     display: inline-flex;
     align-items: center;
-    padding: 5px 9px;
-    border-radius: 6px;
-    background: #344253;
-    border: 1px solid #46566a;
-    color: #dce7f3;
-    font-size: 12px;
-    font-weight: 750;
-    letter-spacing: .3px;
-    line-height: 1;
+    padding: 5px 10px;
+    margin-bottom: 12px;
+    color: #c4f2da;
+    background: #23513d;
+    border: 1px solid #3c8463;
+    border-radius: 7px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .6px;
 }
 
-.uadv-dialog-badge.fourk {
-    color: #f4f7ff;
-    background: #3b4d6b;
-    border-color: #607a9f;
-}
+/* BADGES */
 
-.uadv-dialog-badge.dv {
-    color: #e4d8ff;
-    background: #47345f;
-    border-color: #71539b;
-}
-
-.uadv-dialog-badge.hdr {
-    color: #ffe6bb;
-    background: #59462c;
-    border-color: #8d7043;
-}
-
-.uadv-dialog-badge.ua {
-    color: #d4f8e9;
-    background: #214c40;
-    border-color: #397d66;
-}
-
-/* Footer */
-
-.uadv-dialog-footer {
+.uadv632-badges {
     display: flex;
-    justify-content: center;
     flex-wrap: wrap;
-    gap: 24px;
-    padding: 14px 20px;
-    border-top: 1px solid #344455;
-    background: #151d27;
-    color: #91a4b7;
-    font-size: 13px;
+    gap: 7px;
+    margin-top: 12px;
 }
 
-/* Compact TV */
-
-.uadv-dialog-panel.compact {
-    width: min(900px,94vw);
-    border-radius: 13px;
+.uadv632-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    color: #e3ebf7;
+    background: #34455b;
+    border: 1px solid #50637b;
+    border-radius: 7px;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: .35px;
 }
 
-.uadv-dialog-panel.compact .uadv-dialog-header {
-    padding: 15px 20px;
+.uadv632-badge-quality {
+    color: #e8f3ff;
+    background: #34577d;
+    border-color: #6694c4;
 }
 
-.uadv-dialog-panel.compact .uadv-dialog-title {
-    font-size: 22px;
+.uadv632-badge-dv {
+    color: #f1e3ff;
+    background: #563b75;
+    border-color: #9369bd;
 }
 
-.uadv-dialog-panel.compact .uadv-dialog-row {
-    padding: 11px 15px;
-    margin-bottom: 5px;
-    border-radius: 8px;
+.uadv632-badge-hdr {
+    color: #ffe9c6;
+    background: #67502c;
+    border-color: #a58249;
 }
 
-.uadv-dialog-panel.compact .uadv-dialog-row-name {
+.uadv632-badge-ua {
+    color: #d3f9e5;
+    background: #255d46;
+    border-color: #4b9974;
+}
+
+/* STATS */
+
+.uadv632-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 15px;
+    padding-top: 14px;
+    border-top: 1px solid #ffffff18;
+}
+
+.uadv632-stat {
+    min-width: 105px;
+    flex: 1;
+}
+
+.uadv632-stat-label {
+    color: #94a8be;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+.uadv632-stat-value {
+    color: #f4f8ff;
     font-size: 17px;
-}
-
-.uadv-dialog-panel.compact .uadv-dialog-row-sub {
-    font-size: 13px;
+    font-weight: 700;
     margin-top: 5px;
 }
 
-.uadv-dialog-panel.compact .uadv-dialog-badge {
-    font-size: 10px;
-    padding: 4px 7px;
+/* FOOTER */
+
+.uadv632-footer {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 26px;
+    padding: 15px 20px;
+    background: #121c28;
+    border-top: 1px solid #34485e;
+    color: #91a8c0;
+    font-size: 13px;
 }
 
-/* Mobile */
+/* COMPACT MODE */
 
-@media (max-width:600px) {
-    .uadv-dialog-overlay {
-        padding: 2vh 1.5vw;
+.uadv632-compact {
+    width: min(930px,94vw);
+    border-radius: 14px;
+}
+
+.uadv632-compact .uadv632-header {
+    padding: 16px 22px;
+}
+
+.uadv632-compact .uadv632-title {
+    font-size: 23px;
+}
+
+.uadv632-compact .uadv632-card {
+    padding: 12px 16px;
+    margin-bottom: 7px;
+    border-radius: 10px;
+}
+
+.uadv632-compact .uadv632-card-title {
+    font-size: 17px;
+}
+
+.uadv632-compact .uadv632-stats {
+    margin-top: 10px;
+    padding-top: 9px;
+}
+
+.uadv632-compact .uadv632-stat-value {
+    font-size: 14px;
+}
+
+/* MOBILE */
+
+@media(max-width:600px) {
+
+    .uadv632-overlay {
+        padding: 2vh 1vw;
     }
 
-    .uadv-dialog-panel {
-        width: 97vw;
-        max-height: 92vh;
+    .uadv632-panel {
+        width: 98vw;
+        max-height: 94vh;
         border-radius: 14px;
     }
 
-    .uadv-dialog-header {
+    .uadv632-header {
         padding: 17px;
     }
 
-    .uadv-dialog-eyebrow {
+    .uadv632-eyebrow {
         font-size: 10px;
-        letter-spacing: 1.3px;
+        letter-spacing: 1px;
     }
 
-    .uadv-dialog-title {
+    .uadv632-title {
         font-size: 20px;
     }
 
-    .uadv-dialog-close {
-        width: 36px;
-        height: 36px;
-    }
-
-    .uadv-dialog-list {
-        padding: 9px;
-    }
-
-    .uadv-dialog-row {
-        padding: 13px;
-        gap: 8px;
-        border-radius: 10px;
-    }
-
-    .uadv-dialog-row-name {
-        font-size: 16px;
-    }
-
-    .uadv-dialog-row-sub {
+    .uadv632-subtitle {
         font-size: 12px;
     }
 
-    .uadv-dialog-badge {
-        font-size: 10px;
-        padding: 4px 6px;
+    .uadv632-close {
+        width: 36px;
+        height: 36px;
+        font-size: 18px;
     }
 
-    .uadv-dialog-arrow {
-        font-size: 26px;
+    .uadv632-list {
+        padding: 9px;
     }
 
-    .uadv-dialog-footer {
+    .uadv632-card {
+        padding: 13px;
+        gap: 8px;
+        border-radius: 11px;
+    }
+
+    .uadv632-card-title {
+        font-size: 15px;
+    }
+
+    .uadv632-card-subtitle {
+        font-size: 11px;
+    }
+
+    .uadv632-badge {
+        padding: 5px 7px;
+        font-size: 9px;
+    }
+
+    .uadv632-stat {
+        min-width: 75px;
+    }
+
+    .uadv632-stat-label {
+        font-size: 9px;
+    }
+
+    .uadv632-stat-value {
+        font-size: 13px;
+    }
+
+    .uadv632-card-arrow {
+        font-size: 27px;
+    }
+
+    .uadv632-footer {
         gap: 12px;
-        font-size: 10px;
         padding: 11px;
+        font-size: 10px;
     }
 
-    .uadv-toast {
+    .uadv632-toast {
         font-size: 14px;
         padding: 11px 15px;
     }
 }
 
-@media (prefers-reduced-motion:reduce) {
-    .uadv-dialog-overlay,
-    .uadv-dialog-panel,
-    .uadv-dialog-row,
-    .uadv-toast {
+@media(prefers-reduced-motion:reduce) {
+    .uadv632-overlay,
+    .uadv632-panel,
+    .uadv632-card,
+    .uadv632-toast {
         transition: none !important;
     }
 }
 `;
 
-    var style = document.createElement('style');
+    var style = create(
+        'style',
+        ''
+    );
 
-    style.id = 'uadv6301-style';
+    style.id = STYLE_ID;
     style.textContent = css;
 
     document.head.appendChild(style);
 }
 
-/* ==========================================
+/* ========================================
    INITIALIZATION
-   ========================================== */
+======================================== */
 
 function init() {
     if (
@@ -2923,9 +3718,16 @@ function init() {
         !Lampa.Storage ||
         !$
     ) {
-        setTimeout(init, 600);
+        setTimeout(
+            init,
+            600
+        );
         return;
     }
+
+    if (initialized) return;
+
+    initialized = true;
 
     var defaults = {
         playMode: 'auto',
@@ -2941,17 +3743,29 @@ function init() {
         design: 'premium'
     };
 
-    Object.keys(defaults).forEach(function (k) {
-        if (get(k, null) == null) {
-            set(k, defaults[k]);
+    Object.keys(defaults).forEach(
+        function (key) {
+            if (
+                storageGet(
+                    key,
+                    null
+                ) == null
+            ) {
+                storageSet(
+                    key,
+                    defaults[key]
+                );
+            }
         }
-    });
+    );
 
     injectStyles();
     registerSettings();
     mountButton();
 
-    log('Initialized successfully');
+    log(
+        'Initialized successfully'
+    );
 }
 
 init();
