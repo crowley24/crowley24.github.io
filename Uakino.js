@@ -1,4 +1,4 @@
-/* UAKino Lite для Lampa — перегляд відео з uakino.ax за допомогою кнопки на картці. */
+/* UAKino Lite для Lampa (з підтримкою локальної історії Lampa) */
 (function () {
     'use strict';
     if (window.uakino_lite_ready) return;
@@ -6,7 +6,6 @@
 
     var API = 'https://uakino.ax';
 
-    // XHR для підтримки старих телевізорів (webOS тощо), де немає fetch
     var uakinoFetch = (typeof window.fetch === 'function') ? function (u, o) { return window.fetch(u, o); } : function (url, opts) {
         opts = opts || {};
         return new Promise(function (resolve, reject) {
@@ -97,13 +96,24 @@
         return u && !/\.m3u8($|\?)/.test(u) ? u + '.m3u8' : u;
     }
 
-    function start(p, title, view, meta) {
+    function timeline(movie, s, e) {
+        try {
+            var orig = movie.original_title || movie.original_name || movie.title || movie.name || '';
+            var key = s != null ? [s, s > 10 ? ':' : '', e, orig].join('') : orig;
+            return Lampa.Timeline.view(Lampa.Utils.hash(key));
+        } catch (err) {
+            return undefined;
+        }
+    }
+
+    function start(p, title, view, meta, movie) {
         var url = p.manifest_abs || (API + p.manifest);
         var item = {
             title: title,
             url: m3u8(url),
             timeline: view,
             uakino: meta,
+            movie: movie, // Додано для збереження в системну історію Lampa
             hls_type: 'hlsjs'
         };
         if (p.subs && p.subs.length) {
@@ -113,16 +123,6 @@
         }
         Lampa.Player.play(item);
         Lampa.Player.playlist([item]);
-    }
-
-    function timeline(movie, s, e) {
-        try {
-            var orig = movie.original_title || movie.original_name || movie.title || movie.name || '';
-            var key = s != null ? [s, s > 10 ? ':' : '', e, orig].join('') : orig;
-            return Lampa.Timeline.view(Lampa.Utils.hash(key));
-        } catch (err) {
-            return undefined;
-        }
     }
 
     function back() {
@@ -162,12 +162,12 @@
                     chooseVoice(function (v, qq) {
                         var meta = { movie: f.movie_id, voice: v };
                         if (!qq && (v === p.current.voice || voices.length < 2)) {
-                            return start(p, name, timeline(movie), meta);
+                            return start(p, name, timeline(movie), meta, movie);
                         }
                         Lampa.Loading.start(function () { Lampa.Loading.stop(); });
                         play(f.movie_id, { voice: v, q: qq }).then(function (pp) {
                             Lampa.Loading.stop();
-                            start(pp, name + (qq ? ' • 4K' : v ? ' • ' + v : ''), timeline(movie), meta);
+                            start(pp, name + (qq ? ' • 4K' : v ? ' • ' + v : ''), timeline(movie), meta, movie);
                         }).catch(function (e) {
                             Lampa.Loading.stop();
                             Lampa.Noty.show('UAKino: ' + (e && e.message || 'помилка'));
@@ -214,6 +214,7 @@
                                         title: name + ' • С' + s + ' Е' + e.episode,
                                         url: m3u8(pp.manifest_abs || (API + pp.manifest)),
                                         timeline: timeline(movie, s, e.episode),
+                                        movie: movie, // Додано для збереження в системну історію Lampa
                                         hls_type: 'hlsjs',
                                         uakino: { movie: f.movie_id, voice: v, season: s, episode: e.episode }
                                     };
