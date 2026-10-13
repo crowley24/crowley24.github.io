@@ -1,10 +1,10 @@
 (function () {
 'use strict';
 
-if (window.uadv624_ready) return;
-window.uadv624_ready = true;
+if (window.uadv625_ready) return;
+window.uadv625_ready = true;
 
-var VERSION = '62.4.0';
+var VERSION = '62.5.0';
 var P = 'uadv62_';
 var GB = 1073741824;
 var MB = 1048576;
@@ -43,9 +43,14 @@ function field(k) {
     }
 }
 
+// Преміальний мінімалістичний лог замість яскраво-зелених сповіщень Lampa.Noty
 function note(s) {
     try {
-        Lampa.Noty.show('UaDV: ' + s);
+        if (window.Lampa && Lampa.Noty) {
+            Lampa.Noty.show('UaDV: ' + s);
+        } else {
+            console.log('[UaDV]', s);
+        }
     } catch (e) {
         console.log('[UaDV]', s);
     }
@@ -119,7 +124,6 @@ function timeout(url, opt, ms) {
 
 function jackett() {
     var u = field('jackett_url');
-
     if (!u) {
         throw Error('Вкажи jackett_url');
     }
@@ -137,19 +141,14 @@ function jackett() {
 
 function tsBase() {
     var u = field('torrserver_url');
-
     if (!u) {
         throw Error('Вкажи torrserver_url');
     }
-
     return trim(scheme(u));
 }
 
 function tsHeaders() {
-    var h = {
-        'Content-Type': 'application/json'
-    };
-
+    var h = { 'Content-Type': 'application/json' };
     var token = field('torrserver_token');
     var u = field('torrserver_user');
     var p = field('torrserver_pass');
@@ -158,15 +157,9 @@ function tsHeaders() {
         h.Authorization = 'Bearer ' + token;
     } else if (u || p) {
         try {
-            h.Authorization = 'Basic ' +
-                btoa(
-                    unescape(
-                        encodeURIComponent(u + ':' + p)
-                    )
-                );
+            h.Authorization = 'Basic ' + btoa(unescape(encodeURIComponent(u + ':' + p)));
         } catch (e) {}
     }
-
     return h;
 }
 
@@ -189,42 +182,22 @@ function tsStreamBase() {
 
 function streamAuth() {
     var t = field('torrserver_token');
-
-    return t
-        ? '&authorization=' +
-          encodeURIComponent('Bearer ' + t)
-        : '';
+    return t ? '&authorization=' + encodeURIComponent('Bearer ' + t) : '';
 }
 
 /* ==========================================
-   PARSE TORZNAB XML
+   PARSE TORZNAB XML & JSON
    ========================================== */
 
 function xmlResults(s) {
-    var doc = new DOMParser().parseFromString(
-        s,
-        'application/xml'
-    );
+    var doc = new DOMParser().parseFromString(s, 'application/xml');
+    if (doc.querySelector('parsererror')) return [];
 
-    if (doc.querySelector('parsererror')) {
-        return [];
-    }
-
-    return [].slice.call(
-        doc.querySelectorAll('item')
-    ).map(function (it) {
+    return [].slice.call(doc.querySelectorAll('item')).map(function (it) {
         var attrs = {};
-
-        [].slice.call(
-            it.getElementsByTagName('*')
-        ).forEach(function (el) {
-            if (
-                el.localName === 'attr' &&
-                el.getAttribute('name')
-            ) {
-                attrs[
-                    el.getAttribute('name').toLowerCase()
-                ] = el.getAttribute('value') || '';
+        [].slice.call(it.getElementsByTagName('*')).forEach(function (el) {
+            if (el.localName === 'attr' && el.getAttribute('name')) {
+                attrs[el.getAttribute('name').toLowerCase()] = el.getAttribute('value') || '';
             }
         });
 
@@ -243,152 +216,67 @@ function xmlResults(s) {
             link: link,
             magnet: mag,
             dl: dl,
-            size: Number(
-                val('size') ||
-                attrs.size ||
-                (enc && enc.getAttribute('length')) ||
-                0
-            ),
-            seed: Number(
-                attrs.seeders ||
-                attrs.peers ||
-                0
-            ),
-            tracker: String(
-                attrs.jackettindexer ||
-                attrs.indexer ||
-                attrs.jackettindexerid ||
-                ''
-            ).toLowerCase()
+            size: Number(val('size') || attrs.size || (enc && enc.getAttribute('length')) || 0),
+            seed: Number(attrs.seeders || attrs.peers || 0),
+            tracker: String(attrs.jackettindexer || attrs.indexer || attrs.jackettindexerid || '').toLowerCase()
         };
     });
 }
 
-/* ==========================================
-   PARSE JACKETT JSON
-   ========================================== */
-
 function jsonResults(j) {
-    var a = Array.isArray(j)
-        ? j
-        : (j.Results || j.results || j.items || []);
-
-    return (Array.isArray(a) ? a : []).map(
-        function (x) {
-            var mag =
-                x.MagnetUri ||
-                x.MagnetUrl ||
-                x.magnet ||
-                '';
-
-            var link = /^magnet:/i.test(mag)
-                ? mag
-                : (x.Link || x.link || '');
-
-            return {
-                title: x.Title || x.title || '',
-                link: link,
-                magnet: mag,
-                dl: '',
-                size: Number(
-                    x.Size || x.size || 0
-                ),
-                seed: Number(
-                    x.Seeders ||
-                    x.seeders ||
-                    x.Peers ||
-                    x.peers ||
-                    0
-                ),
-                tracker: String(
-                    x.Tracker ||
-                    x.tracker ||
-                    x.TrackerId ||
-                    ''
-                ).toLowerCase()
-            };
-        }
-    );
+    var a = Array.isArray(j) ? j : (j.Results || j.results || j.items || []);
+    return (Array.isArray(a) ? a : []).map(function (x) {
+        var mag = x.MagnetUri || x.MagnetUrl || x.magnet || '';
+        var link = /^magnet:/i.test(mag) ? mag : (x.Link || x.link || '');
+        return {
+            title: x.Title || x.title || '',
+            link: link,
+            magnet: mag,
+            dl: '',
+            size: Number(x.Size || x.size || 0),
+            seed: Number(x.Seeders || x.seeders || x.Peers || x.peers || 0),
+            tracker: String(x.Tracker || x.tracker || x.TrackerId || '').toLowerCase()
+        };
+    });
 }
-
-/* ==========================================
-   JACKETT SEARCH
-   ========================================== */
 
 async function searchJackett(q, cats, mode, meta) {
     var jb = jackett();
     var p = new URLSearchParams();
     var url;
 
-    if (jb.key) {
-        p.set('apikey', jb.key);
-    }
+    if (jb.key) p.set('apikey', jb.key);
 
     if (mode === 'xml') {
         p.set('t', 'search');
         p.set('q', clean(q));
-
-        cats.split(',').forEach(function (c) {
-            p.append('cat', c);
-        });
-
-        url = jb.base +
-            '/api/v2.0/indexers/all/results/torznab/?' +
-            p.toString();
+        cats.split(',').forEach(function (c) { p.append('cat', c); });
+        url = jb.base + '/api/v2.0/indexers/all/results/torznab/?' + p.toString();
     } else {
         p.set('Query', clean(q));
-
         if (meta) {
             p.set('title', meta.title || '');
             p.set('title_original', meta.orig || '');
-
-            if (meta.year) {
-                p.set('year', meta.year);
-            }
-
-            p.set(
-                'is_serial',
-                meta.series ? '1' : '0'
-            );
+            if (meta.year) p.set('year', meta.year);
+            p.set('is_serial', meta.series ? '1' : '0');
         }
-
-        cats.split(',').forEach(function (c) {
-            p.append('Category[]', c);
-        });
-
-        url = jb.base +
-            '/api/v2.0/indexers/all/results?' +
-            p.toString();
+        cats.split(',').forEach(function (c) { p.append('Category[]', c); });
+        url = jb.base + '/api/v2.0/indexers/all/results?' + p.toString();
     }
 
-    var r = await timeout(
-        url,
-        {
-            method: 'GET',
-            credentials: 'omit',
-            mode: 'cors'
-        },
-        10000
-    );
+    var r = await timeout(url, { method: 'GET', credentials: 'omit', mode: 'cors' }, 10000);
+    if (!r.ok) throw Error('Jackett HTTP ' + r.status);
 
-    if (!r.ok) {
-        throw Error('Jackett HTTP ' + r.status);
-    }
-
-    return mode === 'xml'
-        ? xmlResults(await r.text())
-        : jsonResults(await r.json());
+    return mode === 'xml' ? xmlResults(await r.text()) : jsonResults(await r.json());
 }
 
 /* ==========================================
-   LANGUAGE DETECTION (OPTIMIZED & EXPANDED)
+   LANGUAGE DETECTION
    ========================================== */
 
 function ukrainian(t) {
     var str = String(t || '').toLowerCase();
-
     var langPattern = /ukr|укр|украї|ukrainian|ukrainisch|гр\.|ua[-_\s]?dub|ua[-_\s]?audio/i;
-
     var studiosPattern = new RegExp([
         'незупиняйся', 'незупиняйсь', 'nezupyniays',
         'однiею колією', 'однією колією', '1колія',
@@ -396,10 +284,9 @@ function ukrainian(t) {
         'склянка соку', 'sklyanka soku',
         'дворіччя', 'dvorichchya',
         'озвучка ua', 'озвучка укр',
-        'urt', 'євгена малухи',
-        'євген малуха', 'postmodern', 'так треба',
-        'дивобудок', 'starlight',
-        'качан', 'фанвакс', 'fanvox',
+        'urt', 'євгена малухи', 'євген малуха',
+        'postmodern', 'так треба', 'дивобудок',
+        'starlight', 'качан', 'фанвакс', 'fanvox',
         'bamberg', 'бамберг', 'dniprofilm',
         'дніпрофільм', 'кінокульт', 'kinokult',
         'cinema hd', 'cinema_hd', 'аматорське',
@@ -416,7 +303,6 @@ function ukrainian(t) {
 function score(x) {
     var t = x.title || '';
     var s = 0;
-
     var q = String(get('quality', '4k'));
     var hdr = String(get('hdr', 'dv'));
     var source = String(get('source', 'auto'));
@@ -455,17 +341,9 @@ function score(x) {
         s += rem ? 35 : blur ? 27 : web ? 20 : 0;
     }
 
-    if (audio === 'atmos' && /atmos|truehd/i.test(t)) {
-        s += 20;
-    }
-
-    if (audio === 'dts' && /dts.?hd|dts.?x/i.test(t)) {
-        s += 20;
-    }
-
-    if (audio === 'eac3' && /e.?ac.?3|ddp/i.test(t)) {
-        s += 20;
-    }
+    if (audio === 'atmos' && /atmos|truehd/i.test(t)) s += 20;
+    if (audio === 'dts' && /dts.?hd|dts.?x/i.test(t)) s += 20;
+    if (audio === 'eac3' && /e.?ac.?3|ddp/i.test(t)) s += 20;
 
     s += Math.min(20, Math.log2(1 + Number(x.seed || 0)) * 3);
     s += Math.min(12, Number(x.size || 0) / GB / 5);
@@ -473,18 +351,8 @@ function score(x) {
     return s;
 }
 
-/* ==========================================
-   SEARCH TITLE VARIANTS
-   ========================================== */
-
 function queries(m) {
-    var orig = clean(
-        m.original_title ||
-        m.original_name ||
-        m.title ||
-        m.name
-    );
-
+    var orig = clean(m.original_title || m.original_name || m.title || m.name);
     var local = clean(m.title || m.name);
     var year = String(m.release_date || '').slice(0, 4);
     var pref = field('parse_lang') || (serial(m) ? 'df' : 'df_year');
@@ -501,31 +369,18 @@ function queries(m) {
     };
 
     var arr = [];
-
     function add(x) {
         x = clean(x);
-        if (x && arr.indexOf(x) < 0) {
-            arr.push(x);
-        }
+        if (x && arr.indexOf(x) < 0) arr.push(x);
     }
 
     add(combos[pref] || orig);
     add(orig);
-
-    if (local !== orig) {
-        add(local);
-    }
-
-    if (!serial(m) && year) {
-        add(orig + ' ' + year);
-    }
+    if (local !== orig) add(local);
+    if (!serial(m) && year) add(orig + ' ' + year);
 
     return arr;
 }
-
-/* ==========================================
-   FIND AND RANK RELEASES (CACHED)
-   ========================================== */
 
 async function findReleases(m) {
     var show = serial(m);
@@ -588,10 +443,8 @@ async function findReleases(m) {
         if (!x.link || !x.title || x.size <= 0 || x.seed < min || (!show && x.size > max)) {
             return false;
         }
-
         var id = (x.magnet || x.link || x.title).toLowerCase();
         if (seen[id]) return false;
-
         seen[id] = true;
         return true;
     });
@@ -602,30 +455,23 @@ async function findReleases(m) {
         if (tol) {
             var at = /toloka/i.test(a.tracker);
             var bt = /toloka/i.test(b.tracker);
-            if (at !== bt) {
-                return at ? -1 : 1;
-            }
+            if (at !== bt) return at ? -1 : 1;
         }
         return score(b) - score(a);
     });
-
-    log('Знайдено', all.length, 'релізів', qs);
 
     if (cacheKeys.length >= 20) {
         var oldKey = cacheKeys.shift();
         delete cache[oldKey];
     }
     cacheKeys.push(key);
-    cache[key] = {
-        at: Date.now(),
-        items: all.slice()
-    };
+    cache[key] = { at: Date.now(), items: all.slice() };
 
     return all;
 }
 
 /* ==========================================
-   TORRSERVER INTEGRATION
+   TORRSERVER & UI FLOW
    ========================================== */
 
 async function tsAdd(base, link, title, poster, movie) {
@@ -634,38 +480,23 @@ async function tsAdd(base, link, title, poster, movie) {
         link: link,
         title: '[LAMPA] ' + (title || ''),
         poster: poster || '',
-        data: JSON.stringify({
-            lampa: true,
-            movie: movie || {}
-        }),
+        data: JSON.stringify({ lampa: true, movie: movie || {} }),
         save_to_db: false
     };
 
-    var r = await timeout(
-        base + '/torrents',
-        {
-            method: 'POST',
-            headers: tsHeaders(),
-            body: JSON.stringify(body)
-        },
-        10000
-    );
+    var r = await timeout(base + '/torrents', {
+        method: 'POST',
+        headers: tsHeaders(),
+        body: JSON.stringify(body)
+    }, 10000);
 
     var j = {};
-    try {
-        j = await r.json();
-    } catch (e) {}
+    try { j = await r.json(); } catch (e) {}
 
-    if (!r.ok) {
-        throw Error('TorrServer HTTP ' + r.status);
-    }
+    if (!r.ok) throw Error('TorrServer HTTP ' + r.status);
 
     var hash = j.hash || j.id || j.link || j.data || j.result || '';
-
-    return {
-        hash: typeof hash === 'string' ? hash : '',
-        raw: j
-    };
+    return { hash: typeof hash === 'string' ? hash : '', raw: j };
 }
 
 function fileStats(j) {
@@ -681,91 +512,62 @@ function fileStats(j) {
 
 async function tsFiles(base, linkOrHash) {
     var body = { action: 'get' };
-
-    if (/^(magnet:|https?:)/i.test(linkOrHash)) {
-        body.link = linkOrHash;
-    } else {
-        body.hash = linkOrHash;
-    }
+    if (/^(magnet:|https?:)/i.test(linkOrHash)) body.link = linkOrHash;
+    else body.hash = linkOrHash;
 
     try {
-        var r = await timeout(
-            base + '/torrents',
-            {
-                method: 'POST',
-                headers: tsHeaders(),
-                body: JSON.stringify(body)
-            },
-            8000
-        );
+        var r = await timeout(base + '/torrents', {
+            method: 'POST',
+            headers: tsHeaders(),
+            body: JSON.stringify(body)
+        }, 8000);
 
         if (r.ok) {
             var j = await r.json();
             var files = fileStats(j);
             if (files.length) return files;
         }
-    } catch (e) {
-        log('TorrServer get:', e);
-    }
+    } catch (e) {}
 
     try {
         var url = base + '/stream/files?link=' + encodeURIComponent(linkOrHash);
         var r2 = await timeout(url, { method: 'GET', headers: tsHeaders() }, 8000);
-
         if (r2.ok) {
             var j2 = await r2.json();
             return fileStats(j2);
         }
-    } catch (e) {
-        log('TorrServer files:', e);
-    }
+    } catch (e) {}
 
     return [];
 }
 
 function safeFileName(s) {
-    return String(s || 'video')
-        .replace(/[^\w\d.-]+/g, '.')
-        .replace(/^\.+|\.+$/g, '') || 'video';
+    return String(s || 'video').replace(/[^\w\d.-]+/g, '.').replace(/^\.+|\.+$/g, '') || 'video';
 }
 
 function streamLink(hash, file, title) {
-    var name = safeFileName(
-        String(file && file.path || title || 'video').split(/[\\/]/).pop()
-    );
-
+    var name = safeFileName(String(file && file.path || title || 'video').split(/[\\/]/).pop());
     var idx = 1;
     if (file && file.id !== undefined) {
         var n = Number(file.id);
         if (!isNaN(n)) idx = n + 1;
     }
 
-    return tsStreamBase() +
-        '/stream/' +
-        encodeURIComponent(name + '.mkv') +
-        '?link=' + encodeURIComponent(hash) +
-        '&index=' + idx +
-        '&play=1' +
-        streamAuth();
+    return tsStreamBase() + '/stream/' + encodeURIComponent(name + '.mkv') +
+        '?link=' + encodeURIComponent(hash) + '&index=' + idx + '&play=1' + streamAuth();
 }
 
 function closeDialog() {
     if (!dialog) return;
     var d = dialog;
     dialog = null;
-    try {
-        d.close();
-    } catch (e) {}
+    try { d.close(); } catch (e) {}
 }
 
 function playStream(url, title) {
     closeDialog();
     if (window.Lampa && Lampa.Player && typeof Lampa.Player.play === 'function') {
-        Lampa.Player.play({
-            url: url,
-            title: title,
-            timeline: 0
-        });
+        Lampa.Player.play({ url: url, title: title, timeline: 0 });
     } else {
         location.href = url;
     }
@@ -774,10 +576,6 @@ function playStream(url, title) {
 function tsPlayById(hash, file, title) {
     playStream(streamLink(hash, file, title), title);
 }
-
-/* ==========================================
-   UNIFIED DIALOG UI
-   ========================================== */
 
 function openDialog(title, items) {
     closeDialog();
@@ -807,11 +605,7 @@ function openDialog(title, items) {
     function focus(n) {
         if (!rows.length) return;
         selected = Math.max(0, Math.min(rows.length - 1, n));
-
-        rows.forEach(function (r, i) {
-            r.classList.toggle('focus', i === selected);
-        });
-
+        rows.forEach(function (r, i) { r.classList.toggle('focus', i === selected); });
         try {
             rows[selected].focus();
             rows[selected].scrollIntoView({ block: 'nearest' });
@@ -823,44 +617,33 @@ function openDialog(title, items) {
         closed = true;
         document.removeEventListener('keydown', keyboard, true);
         overlay.remove();
-        if (dialog && dialog.close === close) {
-            dialog = null;
-        }
+        if (dialog && dialog.close === close) dialog = null;
     }
 
     function keyboard(e) {
         var k = e.key || e.keyCode;
-
-        if (
-            k === 'Escape' || k === 'Backspace' || k === 'BrowserBack' ||
-            k === 27 || k === 8 || k === 461 || k === 10009
-        ) {
+        if (k === 'Escape' || k === 'Backspace' || k === 'BrowserBack' || k === 27 || k === 8 || k === 461 || k === 10009) {
             e.preventDefault();
             e.stopImmediatePropagation();
             close();
             return;
         }
-
         if (k === 'ArrowDown' || k === 40) {
             e.preventDefault();
             e.stopImmediatePropagation();
             focus(selected + 1);
             return;
         }
-
         if (k === 'ArrowUp' || k === 38) {
             e.preventDefault();
             e.stopImmediatePropagation();
             focus(selected - 1);
             return;
         }
-
         if (k === 'Enter' || k === 13) {
             e.preventDefault();
             e.stopImmediatePropagation();
-            if (rows[selected]) {
-                rows[selected].click();
-            }
+            if (rows[selected]) rows[selected].click();
         }
     }
 
@@ -881,10 +664,7 @@ function openDialog(title, items) {
             row.appendChild(sub);
         }
 
-        row.addEventListener('click', function () {
-            if (item.action) item.action();
-        });
-
+        row.addEventListener('click', function () { if (item.action) item.action(); });
         list.appendChild(row);
         rows.push(row);
     });
@@ -894,13 +674,7 @@ function openDialog(title, items) {
     focus(0);
 }
 
-/* ==========================================
-   MOVIE FLOW
-   ========================================== */
-
-function torrentLink(r) {
-    return r.dl || r.magnet || r.link;
-}
+function torrentLink(r) { return r.dl || r.magnet || r.link; }
 
 async function startMovieRelease(movie, release) {
     var base = tsBase();
@@ -908,102 +682,56 @@ async function startMovieRelease(movie, release) {
     var hash = link;
 
     try {
-        var added = await tsAdd(
-            base,
-            link,
-            movie.title || movie.name,
-            movie.poster_path || '',
-            movie
-        );
-
+        var added = await tsAdd(base, link, movie.title || movie.name, movie.poster_path || '', movie);
         if (added.hash) hash = added.hash;
     } catch (e) {
-        log('TorrServer add failed:', e);
         hash = link;
     }
 
     var name = safeFileName(movie.title || movie.name || 'video') + '.mkv';
+    var url = tsStreamBase() + '/stream/' + encodeURIComponent(name) + '?link=' + encodeURIComponent(hash) + '&index=1&play=1' + streamAuth();
 
-    var url = tsStreamBase() +
-        '/stream/' + encodeURIComponent(name) +
-        '?link=' + encodeURIComponent(hash) +
-        '&index=1&play=1' +
-        streamAuth();
-
-    note('Запускаю відтворення…');
+    note('Запуск відтворення…');
     playStream(url, movie.title || movie.name);
 }
 
 function releasePicker(movie, releases) {
-    openDialog(
-        'UaDV — Обери реліз',
-        releases.slice(0, 50).map(function (r) {
-            return {
-                title: r.title,
-                subtitle: human(r.size) + ' · Сідери: ' + r.seed,
-                action: function () {
-                    closeDialog();
-                    startMovieRelease(movie, r).catch(function (e) {
-                        note(e.message || String(e));
-                    });
-                }
-            };
-        })
-    );
+    openDialog('UaDV — Обери реліз', releases.slice(0, 50).map(function (r) {
+        return {
+            title: r.title,
+            subtitle: human(r.size) + ' · Сідери: ' + r.seed,
+            action: function () {
+                closeDialog();
+                startMovieRelease(movie, r).catch(function (e) { note(e.message || String(e)); });
+            }
+        };
+    }));
 }
 
 function fallbackPicker(movie, releases) {
-    openDialog(
-        'Українську озвучку не знайдено',
-        [
-            {
-                title: 'Показати інші релізи',
-                subtitle: 'Вибір вручну',
-                action: function () { releasePicker(movie, releases); }
-            },
-            {
-                title: 'Скасувати',
-                action: closeDialog
-            }
-        ]
-    );
+    openDialog('Українську озвучку не знайдено', [
+        { title: 'Показати інші релізи', subtitle: 'Вибір вручну', action: function () { releasePicker(movie, releases); } },
+        { title: 'Скасувати', action: closeDialog }
+    ]);
 }
 
 async function movieFlow(movie, releases) {
     var ua = releases.filter(function (r) { return ukrainian(r.title); });
-
     if (ua.length) {
-        if (get('playMode', 'auto') === 'manual') {
-            releasePicker(movie, ua);
-        } else {
-            await startMovieRelease(movie, ua[0]);
-        }
+        if (get('playMode', 'auto') === 'manual') releasePicker(movie, ua);
+        else await startMovieRelease(movie, ua[0]);
         return;
     }
 
     var fallback = get('fallback', 'ask');
-
-    if (fallback === 'none') {
-        note('Українську озвучку не знайдено');
-        return;
-    }
-
-    if (fallback === 'auto') {
-        await startMovieRelease(movie, releases[0]);
-        return;
-    }
-
+    if (fallback === 'none') { note('Українську озвучку не знайдено'); return; }
+    if (fallback === 'auto') { await startMovieRelease(movie, releases[0]); return; }
     fallbackPicker(movie, releases);
 }
-
-/* ==========================================
-   SERIES FLOW
-   ========================================== */
 
 function seasonsFromTitle(s) {
     var result = {};
     s = String(s || '');
-
     var range = s.match(/(?:season|сезон|s)\s*(\d{1,2})\s*[-–]\s*(\d{1,2})/i);
     if (range) {
         var a = Number(range[1]);
@@ -1012,14 +740,12 @@ function seasonsFromTitle(s) {
             for (var n = a; n <= b; n++) result[n] = true;
         }
     }
-
     var re = /(?:\bS(\d{1,2})(?:E\d+|\b)|(?:season|сезон)\s*(\d{1,2}))/gi;
     var m;
     while ((m = re.exec(s))) {
         var sn = Number(m[1] || m[2]);
         if (sn) result[sn] = true;
     }
-
     var keys = Object.keys(result).map(Number);
     return keys.length ? keys : [1];
 }
@@ -1027,18 +753,13 @@ function seasonsFromTitle(s) {
 function episodeFromPath(path, season) {
     var name = String(path || '').split(/[\\/]/).pop();
     var m = name.match(/S(\d{1,2})E(\d{1,3})/i) || name.match(/(\d{1,2})x(\d{1,3})/i);
-
-    if (m) {
-        return Number(m[1]) === season ? Number(m[2]) : 0;
-    }
-
+    if (m) return Number(m[1]) === season ? Number(m[2]) : 0;
     m = name.match(/(?:episode|ep|серія|серия)\s*0*(\d{1,3})/i);
     return m ? Number(m[1]) : 0;
 }
 
 function showSeasons(movie, releases) {
     var groups = {};
-
     releases.forEach(function (r) {
         seasonsFromTitle(r.title).forEach(function (n) {
             if (!groups[n]) groups[n] = [];
@@ -1047,19 +768,13 @@ function showSeasons(movie, releases) {
     });
 
     var numbers = Object.keys(groups).map(Number).sort(function (a, b) { return a - b; });
-
-    openDialog(
-        'UaDV — Обери сезон',
-        numbers.map(function (n) {
-            return {
-                title: 'Сезон ' + n,
-                subtitle: 'Релізів: ' + groups[n].length,
-                action: function () {
-                    openSeason(movie, n, groups[n]);
-                }
-            };
-        })
-    );
+    openDialog('UaDV — Обери сезон', numbers.map(function (n) {
+        return {
+            title: 'Сезон ' + n,
+            subtitle: 'Релізів: ' + groups[n].length,
+            action: function () { openSeason(movie, n, groups[n]); }
+        };
+    }));
 }
 
 async function loadEpisodes(movie, season, releases) {
@@ -1077,16 +792,12 @@ async function loadEpisodes(movie, season, releases) {
         try {
             var added = await tsAdd(base, link, (movie.name || movie.title) + ' S' + season, '', movie);
             if (added.hash) hash = added.hash;
-        } catch (e) {
-            log('Series add:', e);
-        }
+        } catch (e) {}
 
         var files = await tsFiles(base, hash);
-
         files.forEach(function (f) {
             var path = String(f.path || f.Path || '');
             var size = Number(f.length || f.Length || 0);
-
             if (!VIDEO.test(path) || size < 500 * MB) return;
 
             var ep = episodeFromPath(path, season);
@@ -1099,83 +810,46 @@ async function loadEpisodes(movie, season, releases) {
     }
 
     var numbers = Object.keys(episodes).map(Number).sort(function (a, b) { return a - b; });
+    if (!numbers.length) { note('Не знайдено відеосерій ≥500 MB'); return; }
 
-    if (!numbers.length) {
-        note('Не знайдено відеосерій ≥500 MB');
-        return;
-    }
-
-    openDialog(
-        'Сезон ' + season + ' — серії',
-        numbers.map(function (n) {
-            var ep = episodes[n];
-            return {
-                title: 'Серія ' + n,
-                subtitle: human(ep.size),
-                action: function () {
-                    tsPlayById(
-                        ep.hash,
-                        ep.file,
-                        (movie.name || movie.title) + ' S' + season + 'E' + String(n).padStart(2, '0')
-                    );
-                }
-            };
-        })
-    );
+    openDialog('Сезон ' + season + ' — серії', numbers.map(function (n) {
+        var ep = episodes[n];
+        return {
+            title: 'Серія ' + n,
+            subtitle: human(ep.size),
+            action: function () {
+                tsPlayById(ep.hash, ep.file, (movie.name || movie.title) + ' S' + season + 'E' + String(n).padStart(2, '0'));
+            }
+        };
+    }));
 }
 
 function openSeason(movie, season, releases) {
     var ua = releases.filter(function (r) { return ukrainian(r.title); });
-
-    if (ua.length) {
-        loadEpisodes(movie, season, ua);
-        return;
-    }
+    if (ua.length) { loadEpisodes(movie, season, ua); return; }
 
     var fallback = get('fallback', 'ask');
-    if (fallback === 'none') {
-        note('Українську озвучку не знайдено');
-        return;
-    }
-    if (fallback === 'auto') {
-        loadEpisodes(movie, season, releases);
-        return;
-    }
+    if (fallback === 'none') { note('Українську озвучку не знайдено'); return; }
+    if (fallback === 'auto') { loadEpisodes(movie, season, releases); return; }
 
-    openDialog(
-        'Українську озвучку не знайдено',
-        [
-            { title: 'Показати інші серії', action: function () { loadEpisodes(movie, season, releases); } },
-            { title: 'Скасувати', action: closeDialog }
-        ]
-    );
+    openDialog('Українську озвучку не знайдено', [
+        { title: 'Показати інші серії', action: function () { loadEpisodes(movie, season, releases); } },
+        { title: 'Скасувати', action: closeDialog }
+    ]);
 }
 
 function seriesFlow(movie, releases) {
     var ua = releases.filter(function (r) { return ukrainian(r.title); });
-
-    if (ua.length) {
-        showSeasons(movie, ua);
-        return;
-    }
+    if (ua.length) { showSeasons(movie, ua); return; }
 
     var fallback = get('fallback', 'ask');
-    if (fallback === 'none') {
-        note('Українську озвучку не знайдено');
-        return;
-    }
-    if (fallback === 'auto') {
-        showSeasons(movie, releases);
-        return;
-    }
+    if (fallback === 'none') { note('Українську озвучку не знайдено'); return; }
+    if (fallback === 'auto') { showSeasons(movie, releases); return; }
 
-    openDialog(
-        'Українську озвучку не знайдено',
-        [
-            { title: 'Показати інші сезони', action: function () { showSeasons(movie, releases); } },
-            { title: 'Скасувати', action: closeDialog }
-        ]
-    );
+    openDialog('Українську озвучку не знайдено', [
+        { title: 'Показати інші сезони', action: function () { showSeasons(movie, releases); } },
+        { title: 'Скасувати', action: closeDialog }
+    ]);
 }
 
 /* ==========================================
@@ -1186,32 +860,18 @@ function addSetting(component, item) {
     try {
         Lampa.SettingsApi.addParam({
             component: component,
-            param: {
-                name: P + item.name,
-                type: 'select',
-                values: item.values,
-                default: String(item.def)
-            },
-            field: {
-                name: item.title,
-                description: item.description || ''
-            },
+            param: { name: P + item.name, type: 'select', values: item.values, default: String(item.def) },
+            field: { name: item.title, description: item.description || '' },
             onChange: function (value) {
                 set(item.name, value);
-                if (item.name === 'minSeeds' || item.name === 'maxSize') {
-                    cache = {};
-                    cacheKeys = [];
-                }
+                if (item.name === 'minSeeds' || item.name === 'maxSize') { cache = {}; cacheKeys = []; }
             }
         });
-    } catch (e) {
-        log('Setting error:', item.name, e);
-    }
+    } catch (e) {}
 }
 
 function registerSettings() {
     if (!window.Lampa || !Lampa.SettingsApi) return;
-
     try {
         Lampa.SettingsApi.addComponent({
             component: 'uadv62',
@@ -1232,41 +892,24 @@ function registerSettings() {
         { name: 'fallback', title: 'Якщо немає української озвучки', description: 'Дія, коли українські релізи відсутні', def: 'ask', values: { ask: 'Запитати перед вибором', none: 'Не запускати', auto: 'Запустити інший реліз' } }
     ];
 
-    settings.forEach(function (item) {
-        addSetting('uadv62', item);
-    });
+    settings.forEach(function (item) { addSetting('uadv62', item); });
 }
 
-/* ==========================================
-   MAIN LAUNCHER & UI
-   ========================================== */
-
 async function runUaDV(data) {
-    if (busy) {
-        note('Пошук уже виконується');
-        return;
-    }
-
+    if (busy) { note('Пошук уже виконується'); return; }
     busy = true;
 
     try {
         var movie = data && data.movie;
-        if (!movie) {
-            throw Error('Не вдалося отримати інформацію про фільм');
-        }
+        if (!movie) throw Error('Не вдалося отримати інформацію про фільм');
 
         note('Шукаю релізи: ' + (movie.title || movie.name || ''));
         var releases = await findReleases(movie);
 
-        if (!releases.length) {
-            throw Error('Релізів не знайдено. Перевір налаштування Jackett, сідерів та максимальний розмір.');
-        }
+        if (!releases.length) throw Error('Релізів не знайдено.');
 
-        if (serial(movie)) {
-            await seriesFlow(movie, releases);
-        } else {
-            await movieFlow(movie, releases);
-        }
+        if (serial(movie)) await seriesFlow(movie, releases);
+        else await movieFlow(movie, releases);
     } catch (e) {
         log('Run error:', e);
         note(e && e.message ? e.message : String(e));
@@ -1278,25 +921,22 @@ async function runUaDV(data) {
 function findButtonsBar(root) {
     var bar = root.find('.full-start-new__buttons').eq(0);
     if (bar.length) return bar;
-
     bar = root.find('.full-start__buttons').eq(0);
     if (bar.length) return bar;
-
     bar = root.find('.full-actions').eq(0);
     if (bar.length) return bar;
-
     return root.find('.full-start__right, .full-start').eq(0);
 }
 
+// Повністю перероблена мінімалістична іконка кнопки (сучасний преміальний вектор)
 function makeUaButton() {
     var btn = document.createElement('div');
     btn.className = 'full-start__button selector uadv-button';
     btn.setAttribute('data-uadv-button', '1');
     btn.tabIndex = 0;
     btn.innerHTML =
-        '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 16 16" fill="currentColor">' +
-        '<path d="M3.577 8.9v.03h1.828V5.898h-.062a47 47 0 0 0-1.766 3.001z"/>' +
-        '<path d="M2 2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm2.372 3.715.435-.714h1.71v3.93h.733v.957h-.733V11H5.405V9.888H2.5v-.971c.574-1.077 1.225-2.142 1.872-3.202m7.73-.714h1.306l-2.142.584L13.5 11h-1.428l-1.679-2.624-.615.7V11H8.59V5.001h1.187v2.686h.057L12.1025z"/>' +
+        '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+        '<polygon points="5 3 19 12 5 21 5 3"></polygon>' +
         '</svg>' +
         '<span>UaDV</span>';
     return $(btn);
@@ -1304,7 +944,6 @@ function makeUaButton() {
 
 function attachButton(root, ev) {
     if (!ev || !ev.data || !ev.data.movie) return true;
-
     var bar = findButtonsBar(root);
     if (!bar || !bar.length) return false;
 
@@ -1314,135 +953,113 @@ function attachButton(root, ev) {
     var click = function () { runUaDV(ev.data); };
 
     btn.on('hover:enter click', click);
-    btn.on('keydown', function (e) {
-        if (e.key === 'Enter' || e.keyCode === 13) click();
-    });
+    btn.on('keydown', function (e) { if (e.key === 'Enter' || e.keyCode === 13) click(); });
 
     bar.prepend(btn);
-
-    try {
-        Lampa.Controller.collectionSet(bar);
-    } catch (e) {}
-
+    try { Lampa.Controller.collectionSet(bar); } catch (e) {}
     return true;
 }
 
 /* ==========================================
-   PREMIUM UI STYLES
+   CLASSIC & CLEAN UI STYLES (NO GREEN NOTY)
    ========================================== */
 
 function injectStyles() {
-    if (document.getElementById('uadv624-style')) return;
+    if (document.getElementById('uadv625-style')) return;
 
     var css = [
+        /* Кнопка на головній сторінці фільму у стилі Lampa */
         '.full-start__button.uadv-button{',
-        'background: linear-gradient(135deg, #2c3e50, #1a252f) !important;',
+        'background: rgba(255, 255, 255, 0.08) !important;',
         'color: #fff !important;',
-        'border: 1px solid rgba(255,255,255,0.15) !important;',
-        'border-radius: 12px !important;',
+        'border: 1px solid rgba(255, 255, 255, 0.12) !important;',
+        'border-radius: 14px !important;',
         'order: -9999 !important;',
-        'box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important;',
-        'transition: all 0.25s ease !important;',
+        'backdrop-filter: blur(10px);',
+        'transition: all 0.2s ease !important;',
         '}',
 
         '.full-start__button.uadv-button.focus,',
         '.full-start__button.uadv-button:hover{',
-        'background: linear-gradient(135deg, #3498db, #2980b9) !important;',
-        'border-color: rgba(255,255,255,0.4) !important;',
-        'transform: scale(1.03);',
-        'box-shadow: 0 6px 25px rgba(52,152,219,0.4) !important;',
+        'background: rgba(255, 255, 255, 0.22) !important;',
+        'border-color: rgba(255, 255, 255, 0.4) !important;',
+        'transform: scale(1.02);',
         '}',
 
+        /* Стильні неагресивні системні сповіщення замість зеленого плагіна */
+        '.lampa-noty__item{',
+        'background: #1a1a1e !important;',
+        'color: #fff !important;',
+        'border: 1px solid rgba(255,255,255,0.1) !important;',
+        '}',
+
+        /* Класичні оригінальні темні вікна Lampa */
         '.uadv-dialog{',
         'position: fixed;',
         'inset: 0;',
         'z-index: 999999;',
-        'background: rgba(10, 10, 12, 0.82);',
-        'backdrop-filter: blur(14px);',
-        '-webkit-backdrop-filter: blur(14px);',
+        'background: rgba(0, 0, 0, 0.75);',
         'display: flex;',
         'align-items: center;',
         'justify-content: center;',
-        'animation: uadvFadeIn 0.25s ease;',
         '}',
 
         '.uadv-panel{',
-        'width: min(1050px, 92vw);',
+        'width: min(1000px, 92vw);',
         'max-height: 85vh;',
-        'background: linear-gradient(145deg, #18181b, #121214);',
+        'background: #161619;',
         'color: #fff;',
-        'border-radius: 22px;',
+        'border-radius: 14px;',
         'overflow: hidden;',
-        'border: 1px solid rgba(255, 255, 255, 0.08);',
-        'box-shadow: 0 25px 70px rgba(0, 0, 0, 0.7);',
-        'animation: uadvScaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);',
+        'border: 1px solid rgba(255, 255, 255, 0.1);',
+        'box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);',
         '}',
 
         '.uadv-head{',
-        'padding: 24px 32px;',
-        'font-size: 26px;',
+        'padding: 20px 24px;',
+        'font-size: 24px;',
         'font-weight: 700;',
-        'letter-spacing: 0.5px;',
-        'background: rgba(255, 255, 255, 0.03);',
+        'background: rgba(255, 255, 255, 0.04);',
         'border-bottom: 1px solid rgba(255, 255, 255, 0.06);',
         '}',
 
         '.uadv-list{',
-        'padding: 16px;',
+        'padding: 12px;',
         'overflow-y: auto;',
-        'max-height: calc(85vh - 95px);',
+        'max-height: calc(85vh - 80px);',
         '}',
 
         '.uadv-row{',
-        'padding: 16px 22px;',
-        'margin-bottom: 8px;',
-        'border-radius: 14px;',
+        'padding: 14px 18px;',
+        'margin-bottom: 6px;',
+        'border-radius: 10px;',
         'cursor: pointer;',
         'outline: none;',
         'background: rgba(255, 255, 255, 0.02);',
-        'border: 1px solid rgba(255, 255, 255, 0.04);',
-        'transition: all 0.2s ease;',
-        'display: flex;',
-        'flex-direction: column;',
-        'gap: 4px;',
+        'transition: background 0.15s ease;',
         '}',
 
         '.uadv-row.focus,',
         '.uadv-row:hover{',
-        'background: linear-gradient(90deg, rgba(52, 152, 219, 0.18), rgba(255, 255, 255, 0.06));',
-        'border-color: rgba(52, 152, 219, 0.6);',
-        'transform: scale(1.01);',
-        'box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(52, 152, 219, 0.4);',
+        'background: rgba(255, 255, 255, 0.1);',
         '}',
 
         '.uadv-row-title{',
         'font-size: 20px;',
         'font-weight: 600;',
         'line-height: 1.35;',
-        'color: #f1f1f1;',
         'overflow-wrap: anywhere;',
         '}',
 
         '.uadv-row-sub{',
         'font-size: 15px;',
-        'color: rgba(255, 255, 255, 0.55);',
-        'font-weight: 400;',
-        '}',
-
-        '@keyframes uadvFadeIn { from { opacity: 0; } to { opacity: 1; } }',
-        '@keyframes uadvScaleUp { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }',
-
-        '@media(max-width: 600px){',
-        '.uadv-panel{ width: 96vw; border-radius: 16px; }',
-        '.uadv-head{ font-size: 20px; padding: 18px 20px; }',
-        '.uadv-row{ padding: 12px 16px; }',
-        '.uadv-row-title{ font-size: 16px; }',
-        '.uadv-row-sub{ font-size: 13px; }',
+        'opacity: 0.6;',
+        'margin-top: 4px;',
         '}'
     ].join('');
 
     var style = document.createElement('style');
-    style.id = 'uadv624-style';
+    style.id = 'uadv625-style';
     style.textContent = css;
     document.head.appendChild(style);
 }
@@ -1454,11 +1071,7 @@ function mountButton() {
         if (!ev || ev.type !== 'complite' || !ev.object) return;
 
         var root;
-        try {
-            root = ev.object.activity.render();
-        } catch (e) {
-            return;
-        }
+        try { root = ev.object.activity.render(); } catch (e) { return; }
 
         if (!root || !root.length) return;
         if (attachButton(root, ev)) return;
@@ -1466,16 +1079,11 @@ function mountButton() {
         try {
             var target = root[0];
             var observer = new MutationObserver(function () {
-                if (attachButton(root, ev)) {
-                    observer.disconnect();
-                }
+                if (attachButton(root, ev)) observer.disconnect();
             });
-
             observer.observe(target, { childList: true, subtree: true });
             setTimeout(function () { observer.disconnect(); }, 8000);
-        } catch (e) {
-            log('Button observer:', e);
-        }
+        } catch (e) {}
     });
 }
 
@@ -1499,9 +1107,7 @@ function init() {
 
     Object.keys(defaults).forEach(function (k) {
         try {
-            if (Lampa.Storage.get(P + k) == null) {
-                set(k, defaults[k]);
-            }
+            if (Lampa.Storage.get(P + k) == null) set(k, defaults[k]);
         } catch (e) {}
     });
 
