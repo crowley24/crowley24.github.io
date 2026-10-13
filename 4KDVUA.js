@@ -32,7 +32,7 @@
 
                         var svgIcon = '<svg width="100%" height="100%" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">' + defs + body + '</svg>';
 
-                        // Кнопка стала ще компактнішою (125x34)
+                        // Кнопка (125x34)
                         var btn = $('<div class="full-start__button selector open-4k-ukr" style="width: 125px; height: 34px; background: rgba(255,255,255,0.08) !important; border-radius: 6px; padding: 0 !important; margin: 3px; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; overflow: hidden; border: none !important;">' +
                             '<div style="width: 100%; height: 100%; pointer-events: none;">' + svgIcon + '</div>' +
                             '</div>');
@@ -86,10 +86,26 @@
 
         this.play = function (torrent, movie) {
             var link = torrent.MagnetUri || torrent.Link || torrent.magnet || torrent.link;
+            var caption = (movie.title || movie.name) + ' (4K UA)';
+
             var ts_url = Lampa.Storage.field('torrserver_url');
-            if (!ts_url) return Lampa.Noty.show('Налаштуйте TorrServer');
+            if (!ts_url) {
+                Lampa.Noty.show('Налаштуйте TorrServer');
+                return;
+            }
+
             var playUrl = ts_url.replace(/\/$/, '') + '/stream/?link=' + encodeURIComponent(link) + '&index=1&play=1';
-            Lampa.Player.play({ url: playUrl, title: movie.title + ' (4K UA)', movie: movie });
+            
+            // Використовуємо стандартну структуру запуску медіафайлу в плеєрі Lampa
+            Lampa.Player.play({
+                url: playUrl,
+                title: caption,
+                movie: movie
+            });
+            
+            if (typeof Lampa.Player.updateQuery === 'function') {
+                Lampa.Player.updateQuery(caption);
+            }
         };
     }
 
