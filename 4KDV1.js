@@ -2,36 +2,34 @@
 (function () {
 'use strict';
 
-if (window.plugin_playua_ready) return;
-window.plugin_playua_ready = true;
+if (window.uadv621_ready) return;
+window.uadv621_ready = true;
 
-var VERSION = '62.0.0';
+var VERSION = '62.1.0';
 var PREFIX = 'uadv62_';
-
 var MOVIE_CATS = '2000,2010,2020,2030,2040';
 var SERIES_CATS = '5000,5030,5040,5050,5060,5070';
-var VIDEO = /\.(mkv|mp4|avi|ts|m2ts|mpg|mpeg|mov|wmv)$/i;
+var GB = 1073741824;
+var MB = 1048576;
+var VIDEO = /\.(mkv|mp4|avi|ts|m2ts|mov|mpg|mpeg)$/i;
 
-var MB = 1024 * 1024;
-var GB = 1024 * MB;
+var $;
 var busy = false;
-var cache = {};
 var activeDialog = null;
-var $ = window.jQuery || window.$;
+var searchCache = {};
+var currentSearch = 0;
 
-function setting(k, d) {
+function get(k, def) {
     try {
         var v = Lampa.Storage.get(PREFIX + k);
-        return v === undefined || v === null ? d : v;
+        return v === undefined || v === null ? def : v;
     } catch (e) {
-        return d;
+        return def;
     }
 }
 
-function save(k, v) {
-    try {
-        Lampa.Storage.set(PREFIX + k, v);
-    } catch (e) {}
+function set(k, v) {
+    Lampa.Storage.set(PREFIX + k, v);
 }
 
 function field(k) {
@@ -42,118 +40,113 @@ function field(k) {
     }
 }
 
-function notify(s) {
+function bool(k, def) {
+    var v = get(k, def);
+    return v === true || v === 'true';
+}
+
+function notice(s) {
     try {
         Lampa.Noty.show('UaDV: ' + s);
+    } catch (e) {
+        console.log('[UaDV]', s);
+    }
+}
+
+function log() {
+    try {
+        console.log.apply(console, ['[UaDV]'].concat(
+            Array.prototype.slice.call(arguments)
+        ));
     } catch (e) {}
 }
 
-function base(u) {
-    u = String(u || '').trim().replace(/\/+$/, '');
-    return /^https?:\/\//i.test(u) ? u : 'http://' + u;
-}
-
-function text(s) {
-    return String(s || '').replace(/\s+/g, ' ').trim();
-}
-
 function clean(s) {
-    return text(s).replace(/[:\/\\|?*<>"']/g, ' ');
+    return String(s || '')
+        .replace(/[:\/\\|?*<>"']/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
 }
 
-function size(n) {
+function norm(s) {
+    return clean(s).toLowerCase()
+        .replace(/[^a-zа-яіїєґ0-9]+/gi, ' ')
+        .trim();
+}
+
+function base(s) {
+    s = String(s || '').trim().replace(/\/+$/, '');
+    return /^https?:\/\//i.test(s) ? s : 'http://' + s;
+}
+
+function formatSize(n) {
     return (Number(n || 0) / GB).toFixed(1) + ' GB';
 }
 
-function serial(m) {
-    return !!(m &&
-        (m.first_air_date || m.number_of_seasons || m.media_type === 'tv') &&
-        !m.release_date);
+function isSeries(m) {
+    return !!(
+        m && (
+            m.media_type === 'tv' ||
+            m.number_of_seasons ||
+            m.first_air_date
+        ) && !m.release_date
+    );
 }
 
-function fetchTimed(url, opt, ms) {
-    var c = new AbortController();
-    var t = setTimeout(function () {
-        c.abort();
-    }, ms || 12000);
+function timeoutFetch(url, options, ms) {
+    var controller = new AbortController();
+    var timer = setTimeout(function () {
+        controller.abort();
+    }, ms || 15000);
 
-    return fetch(url, Object.assign({}, opt || {}, {
-        signal: c.signal
+    return fetch(url, Object.assign({}, options || {}, {
+        signal: controller.signal
     })).then(function (r) {
-        clearTimeout(t);
+        clearTimeout(timer);
         if (!r.ok) throw Error('HTTP ' + r.status);
         return r;
     }, function (e) {
-        clearTimeout(t);
+        clearTimeout(timer);
         throw e;
     });
 }
 
-function jackett() {
+/* ========================================
+   JACKETT
+   ======================================== */
+
+function jackettConfig() {
     var url = field('jackett_url');
     var key = field('jackett_key');
 
-    if (!url) throw Error('Вкажи jackett_url');
+    if (!url) throw Error('Не налаштовано Jackett');
+
+    url = base(url);
+
+    // Зберігаємо /jackett для reverse proxy,
+    // але прибираємо шлях API, якщо його вставили.
+    url = url.replace(
+        /\/api\/v2\.0\/.*$/i, ''
+    );
 
     return {
-        url: base(url).replace(/\/jackett(?:\/.*)?$/i, ''),
+        url: url,
         key: key
     };
 }
 
-function torr() {
-    var url = field('torrserver_url');
-    if (!url) throw Error('Вкажи torrserver_url');
-    return base(url);
-}
-
-function auth() {
-    var h = {
-        'Content-Type': 'application/json'
-    };
-
-    var token = field('torrserver_token');
-    var u = field('torrserver_user');
-    var p = field('torrserver_pass');
-
-    if (token) {
-        h.Authorization = 'Bearer ' + token;
-    } else if (u || p) {
-        try {
-            h.Authorization = 'Basic ' +
-                btoa(unescape(encodeURIComponent(u + ':' + p)));
-        } catch (e) {}
-    }
-
-    return h;
-}
-
-function streamBase() {
-    var b = torr();
-    var u = field('torrserver_user');
-    var p = field('torrserver_pass');
-
-    if (u || p) {
-        try {
-            var x = new URL(b);
-            x.username = u;
-            x.password = p;
-            return x.toString().replace(/\/$/, '');
-        } catch (e) {}
-    }
-
-    return b;
-}
-
-function attributes(item) {
+function xmlAttrs(item) {
     var out = {};
 
     Array.prototype.forEach.call(
         item.getElementsByTagName('*'),
-        function (n) {
-            if (n.localName === 'attr' && n.getAttribute('name')) {
-                out[n.getAttribute('name').toLowerCase()] =
-                    n.getAttribute('value') || '';
+        function (node) {
+            if (node.localName !== 'attr') return;
+
+            var name = node.getAttribute('name');
+            if (name) {
+                out[name.toLowerCase()] =
+                    node.getAttribute('value') || '';
             }
         }
     );
@@ -161,510 +154,534 @@ function attributes(item) {
     return out;
 }
 
-function parseXML(src) {
-    var xml = new DOMParser().parseFromString(
-        src, 'application/xml'
+function parseXML(source) {
+    var doc = new DOMParser().parseFromString(
+        source, 'application/xml'
     );
 
-    if (xml.getElementsByTagName('parsererror').length) return [];
+    if (doc.getElementsByTagName('parsererror').length) {
+        throw Error('Некоректна XML-відповідь Jackett');
+    }
 
-    return Array.prototype.map.call(
-        xml.getElementsByTagName('item'),
-        function (n) {
-            var a = attributes(n);
+    var items = doc.getElementsByTagName('item');
 
-            var get = function (tag) {
-                var e = n.getElementsByTagName(tag)[0];
-                return e ? text(e.textContent) : '';
-            };
+    return Array.prototype.map.call(items, function (item) {
+        var a = xmlAttrs(item);
 
-            var enc = n.getElementsByTagName('enclosure')[0];
-            var mag = a.magneturl || '';
-
-            var link = mag || get('link') ||
-                (enc && enc.getAttribute('url')) || '';
-
-            return {
-                title: get('title'),
-                link: link,
-                download: (enc && enc.getAttribute('url')) || '',
-                size: Number(get('size') || a.size || 0),
-                seed: Number(a.seeders || 0),
-                tracker: text(
-                    a.jackettindexer ||
-                    a.indexer ||
-                    a.jackettindexerid
-                ).toLowerCase()
-            };
+        function value(tag) {
+            var node = item.getElementsByTagName(tag)[0];
+            return node ? node.textContent.trim() : '';
         }
-    );
-}
 
-function parseJSON(j) {
-    var arr = Array.isArray(j) ?
-        j : (j.Results || j.results || j.items || []);
+        var enclosure =
+            item.getElementsByTagName('enclosure')[0];
 
-    return arr.map(function (x) {
+        var enclosureUrl = enclosure ?
+            enclosure.getAttribute('url') || '' : '';
+
+        var link = a.magneturl ||
+            value('link') ||
+            enclosureUrl;
+
         return {
-            title: x.Title || x.title || '',
-            link: x.MagnetUri || x.MagnetUrl ||
-                x.magnet || x.Link || x.link || '',
-            download: x.Link || x.link || '',
-            size: Number(x.Size || x.size || 0),
-            seed: Number(x.Seeders || x.seeders || 0),
-            tracker: text(
-                x.Tracker || x.tracker || x.TrackerId || ''
+            title: value('title'),
+            link: link,
+            download: enclosureUrl || link,
+            size: Number(
+                value('size') || a.size ||
+                (enclosure && enclosure.getAttribute('length')) ||
+                0
+            ),
+            seed: Number(a.seeders || a.peers || 0),
+            tracker: String(
+                a.jackettindexer ||
+                a.indexer ||
+                a.jackettindexerid || ''
             ).toLowerCase()
         };
     });
 }
 
-async function searchOne(query, cats, mode) {
-    var j = jackett();
-    var p = new URLSearchParams();
+function parseJSON(data) {
+    var arr = Array.isArray(data) ?
+        data : (
+            data.Results ||
+            data.results ||
+            data.items || []
+        );
 
-    if (j.key) p.set('apikey', j.key);
+    if (!Array.isArray(arr)) return [];
 
+    return arr.map(function (x) {
+        var link = x.MagnetUri ||
+            x.MagnetUrl ||
+            x.Link ||
+            x.link || '';
+
+        return {
+            title: x.Title || x.title || '',
+            link: link,
+            download: x.Link || x.link || link,
+            size: Number(x.Size || x.size || 0),
+            seed: Number(x.Seeders || x.seeders || 0),
+            tracker: String(
+                x.Tracker || x.tracker ||
+                x.TrackerId || ''
+            ).toLowerCase()
+        };
+    });
+}
+
+async function searchJackett(query, categories, mode) {
+    var config = jackettConfig();
+    var params = new URLSearchParams();
     var url;
 
-    if (mode === 'xml') {
-        p.set('t', 'search');
-        p.set('q', query);
-
-        cats.split(',').forEach(function (c) {
-            p.append('cat', c);
-        });
-
-        url = j.url +
-            '/api/v2.0/indexers/all/results/torznab/?' + p;
-    } else {
-        p.set('Query', query);
-
-        cats.split(',').forEach(function (c) {
-            p.append('Category[]', c);
-        });
-
-        url = j.url +
-            '/api/v2.0/indexers/all/results?' + p;
+    if (config.key) {
+        params.set('apikey', config.key);
     }
 
-    var r = await fetchTimed(
-        url, { credentials: 'omit' }, 12000
+    if (mode === 'xml') {
+        params.set('t', 'search');
+        params.set('q', query);
+
+        // Torznab: один параметр cat.
+        params.set('cat', categories);
+
+        url = config.url +
+            '/api/v2.0/indexers/all/results/torznab/?' +
+            params.toString();
+    } else {
+        params.set('Query', query);
+
+        categories.split(',').forEach(function (c) {
+            params.append('Category[]', c);
+        });
+
+        url = config.url +
+            '/api/v2.0/indexers/all/results?' +
+            params.toString();
+    }
+
+    var response = await timeoutFetch(
+        url, { credentials: 'omit' }, 15000
     );
 
     return mode === 'xml' ?
-        parseXML(await r.text()) :
-        parseJSON(await r.json());
+        parseXML(await response.text()) :
+        parseJSON(await response.json());
 }
 
-function ukrainian(t) {
-    return /(?:^|[^a-zа-яіїєґ])(ukr|ukrainian|українськ(?:а|ий|е|ою|і)|україн|укр\.?|ua\s*(?:dub|audio|voice)|укр\s*(?:озв|дуб|звук)|дубляж\s*укр)(?:$|[^a-zа-яіїєґ])/i.test(t);
+/* ========================================
+   LANGUAGE + QUALITY
+   ======================================== */
+
+function ukrainian(title) {
+    return /(?:^|[^a-zа-яіїєґ])(?:ukr|ukrainian|укр|україн|українська|українською|ua[\s._-]*(?:dub|audio|voice)|дубляж[\s._-]*укр)(?:$|[^a-zа-яіїєґ])/i
+        .test(title || '');
 }
 
-function otherLang(t) {
-    return /(?:^|[.\s\[(])(rus|russian|eng|english|multi|рус|російська|англ)(?:[.\s\])]|$)/i.test(t);
+function resolution(title) {
+    if (/2160p|4k|uhd/i.test(title)) return 2160;
+    if (/1080p|full.?hd/i.test(title)) return 1080;
+    if (/720p/i.test(title)) return 720;
+    return 0;
 }
 
-function titleMatch(t, m) {
-    var year = String(
-        m.release_date || m.first_air_date || ''
-    ).slice(0, 4);
-
-    var orig = clean(
-        m.original_title || m.original_name || ''
-    );
-
-    var local = clean(m.title || m.name || '');
-
-    function norm(s) {
-        return s.toLowerCase()
-            .replace(/[^a-zа-яіїєґ0-9]+/gi, ' ')
-            .trim();
-    }
-
-    var n = norm(t);
-    var o = norm(orig);
-    var l = norm(local);
-
-    var ok =
-        (o.length > 2 && n.indexOf(o) >= 0) ||
-        (l.length > 2 && n.indexOf(l) >= 0);
-
-    if (!ok) return false;
-
-    var ys = t.match(/(?:19|20)\d{2}/g) || [];
-
-    if (year && ys.length &&
-        !ys.some(function (y) {
-            return Math.abs(Number(y) - Number(year)) <= 1;
-        })) {
-        return false;
-    }
-
-    return true;
-}
-
-function rank(x) {
+function scoreRelease(x) {
     var t = x.title || '';
     var score = 0;
 
-    var q = setting('quality', '4k');
-    var hdr = setting('hdr', 'dv');
-    var source = setting('source', 'auto');
+    var quality = String(get('quality', '4k'));
+    var hdr = String(get('hdr', 'dv'));
+    var source = String(get('source', 'auto'));
+    var audio = String(get('audio', 'auto'));
 
-    var four = /\b(2160p|4k|uhd)\b/i.test(t);
-    var full = /\b1080p\b/i.test(t);
+    var res = resolution(t);
 
-    score += q === '1080' ?
-        (full ? 90 : four ? 65 : 0) :
-        (four ? 90 : full ? 50 : 0);
+    if (quality === '1080') {
+        score += res === 1080 ? 110 :
+            res === 2160 ? 65 : 10;
+    } else {
+        score += res === 2160 ? 110 :
+            res === 1080 ? 65 : 10;
+    }
 
-    var dv = /dolby.?vision|dovi|(?:^|[.\s])dv(?:[.\s]|$)/i.test(t);
-    var h10p = /hdr10\+/i.test(t);
-    var h10 = /\bhdr10?\b/i.test(t);
+    var dv = /dolby.?vision|dovi|(?:^|[\s._-])dv(?:$|[\s._-])/i.test(t);
+    var hdr10plus = /hdr10\+/i.test(t);
+    var hdr10 = /\bhdr10?\b/i.test(t);
 
-    score += hdr === 'sdr' ?
-        (!dv && !h10p && !h10 ? 36 : 0) :
-        hdr === 'hdr' ?
-        (h10p ? 36 : h10 ? 30 : dv ? 20 : 0) :
-        (dv ? 36 : h10p ? 30 : h10 ? 22 : 0);
+    if (hdr === 'sdr') {
+        score += !dv && !hdr10plus && !hdr10 ? 45 : 0;
+    } else if (hdr === 'hdr') {
+        score += hdr10plus ? 45 :
+            hdr10 ? 35 : dv ? 20 : 0;
+    } else {
+        score += dv ? 45 :
+            hdr10plus ? 35 : hdr10 ? 25 : 0;
+    }
 
     var remux = /remux/i.test(t);
     var bluray = /blu.?ray|bdrip/i.test(t);
     var webdl = /web.?dl/i.test(t);
 
-    score += source === 'webdl' ?
-        (webdl ? 32 : remux ? 18 : bluray ? 15 : 0) :
-        remux ? 32 : bluray ? 24 : webdl ? 20 : 0;
+    if (source === 'webdl') {
+        score += webdl ? 38 :
+            remux ? 20 : bluray ? 15 : 0;
+    } else if (source === 'bluray') {
+        score += bluray && !remux ? 38 :
+            remux ? 28 : webdl ? 15 : 0;
+    } else {
+        score += remux ? 38 :
+            bluray ? 28 : webdl ? 20 : 0;
+    }
 
-    score += Math.min(18, Math.log2(1 + x.seed) * 3);
-    score += Math.min(14, x.size / GB / 5);
+    if (audio === 'atmos' &&
+        /atmos|truehd/i.test(t)) score += 20;
+
+    if (audio === 'dts' &&
+        /dts.?hd|dts.?x/i.test(t)) score += 20;
+
+    if (audio === 'eac3' &&
+        /e.?ac.?3|ddp/i.test(t)) score += 20;
+
+    score += Math.min(
+        20,
+        Math.log2(1 + Number(x.seed || 0)) * 3
+    );
+
+    score += Math.min(
+        15,
+        Number(x.size || 0) / GB / 5
+    );
 
     return score;
 }
 
-async function findReleases(m, isShow) {
-    var cats = isShow ? SERIES_CATS : MOVIE_CATS;
-    var y = String(m.release_date || '').slice(0, 4);
+/* ========================================
+   IMPROVED SEARCH
+   ======================================== */
 
+function searchNames(m) {
+    var names = [];
+    var original = clean(
+        m.original_title || m.original_name
+    );
+    var local = clean(m.title || m.name);
+    var year = String(
+        m.release_date || m.first_air_date || ''
+    ).slice(0, 4);
+
+    function add(s) {
+        if (s && names.indexOf(s) < 0) {
+            names.push(s);
+        }
+    }
+
+    [original, local].forEach(function (name) {
+        if (!name) return;
+
+        if (!isSeries(m) && year) {
+            add(name + ' ' + year);
+        }
+
+        add(name);
+    });
+
+    return names;
+}
+
+function looseMatch(release, movie) {
+    var title = norm(release.title);
     var names = [
-        clean(m.original_title || m.original_name || ''),
-        clean(m.title || m.name || '')
+        norm(movie.original_title || movie.original_name),
+        norm(movie.title || movie.name)
     ].filter(Boolean);
 
-    var qs = [];
+    return names.some(function (name) {
+        if (title.indexOf(name) >= 0) return true;
 
-    names.forEach(function (n) {
-        if (!isShow && y) qs.push(n + ' ' + y);
-        qs.push(n);
+        var words = name.split(' ').filter(function (w) {
+            return w.length >= 3;
+        });
+
+        if (!words.length) return false;
+
+        var hits = words.filter(function (w) {
+            return title.indexOf(w) >= 0;
+        }).length;
+
+        return hits / words.length >= 0.75;
     });
+}
 
-    qs = qs.filter(function (x, i) {
-        return qs.indexOf(x) === i;
-    });
+async function findReleases(m, show) {
+    var cats = show ? SERIES_CATS : MOVIE_CATS;
+    var queries = searchNames(m);
 
-    var key = [
-        jackett().url,
-        jackett().key,
+    if (!queries.length) {
+        throw Error('Немає назви для пошуку');
+    }
+
+    var config = jackettConfig();
+
+    var cacheKey = [
+        config.url,
+        config.key,
         cats,
-        qs.join('|'),
-        setting('minSeeds', 5),
-        setting('maxSize', 70)
+        queries.join('|'),
+        get('minSeeds', 5),
+        get('maxSize', 70)
     ].join('~');
 
-    if (cache[key] &&
-        Date.now() - cache[key].at < 5 * 60 * 1000) {
-        return cache[key].data;
+    var cached = searchCache[cacheKey];
+
+    if (cached &&
+        Date.now() - cached.time < 300000) {
+        return cached.data.slice();
     }
 
     var all = [];
+    var successes = 0;
+    var errors = [];
 
-    for (var i = 0; i < qs.length; i++) {
+    for (var i = 0; i < queries.length; i++) {
+        var query = queries[i];
+
+        log('Пошук:', query);
+
         var batch = await Promise.allSettled([
-            searchOne(qs[i], cats, 'xml'),
-            searchOne(qs[i], cats, 'json')
+            searchJackett(query, cats, 'xml'),
+            searchJackett(query, cats, 'json')
         ]);
 
         batch.forEach(function (r) {
             if (r.status === 'fulfilled') {
-                all = all.concat(r.value);
+                successes++;
+                all = all.concat(r.value || []);
+            } else {
+                errors.push(String(r.reason));
+                log('Помилка Jackett:', r.reason);
             }
         });
-
-        if (all.some(function (x) {
-            return ukrainian(x.title) && titleMatch(x.title, m);
-        })) break;
     }
+
+    log('Отримано до фільтрації:', all.length);
+
+    if (!successes) {
+        throw Error(
+            'Jackett не відповідає: ' +
+            (errors[0] || 'невідома помилка')
+        );
+    }
+
+    var minSeeds = Number(get('minSeeds', 5));
+    var maxSize = Number(get('maxSize', 70)) * GB;
 
     var seen = {};
 
     all = all.filter(function (x) {
-        if (!x.link ||
-            x.seed < Number(setting('minSeeds', 5)) ||
-            x.size <= 0 ||
-            x.size > Number(setting('maxSize', 70)) * GB ||
-            !titleMatch(x.title, m)) {
+        if (!x.title || !x.link) return false;
+
+        if (Number(x.seed) < minSeeds) return false;
+
+        if (Number(x.size) <= 0) return false;
+
+        if (!show && Number(x.size) > maxSize) {
             return false;
         }
 
-        var id = x.link || x.title;
+        var id = String(x.link).toLowerCase();
 
         if (seen[id]) return false;
-        seen[id] = 1;
+        seen[id] = true;
 
         return true;
     });
 
-    var tol = all.filter(function (x) {
-        return /toloka/i.test(x.tracker);
+    // Спочатку релізи, які відповідають назві.
+    // Але не видаляємо решту на етапі пошуку.
+    all.forEach(function (x) {
+        x.match = looseMatch(x, m);
     });
 
-    if (tol.length && setting('toloka', false)) {
-        all = tol;
+    var matched = all.filter(function (x) {
+        return x.match;
+    });
+
+    if (matched.length) {
+        all = matched;
     }
 
+    var preferToloka = bool('toloka', false);
+
     all.sort(function (a, b) {
-        return rank(b) - rank(a);
+        if (preferToloka) {
+            var at = /toloka/i.test(a.tracker);
+            var bt = /toloka/i.test(b.tracker);
+
+            if (at !== bt) return at ? -1 : 1;
+        }
+
+        return scoreRelease(b) - scoreRelease(a);
     });
 
-    cache[key] = {
-        at: Date.now(),
-        data: all
+    log('Релізів після фільтрації:', all.length);
+
+    searchCache[cacheKey] = {
+        time: Date.now(),
+        data: all.slice()
     };
 
     return all;
 }
 
-/* ==========================================
-   UaDV v62.0 — PART 2/3
-   TorrServer + Playback + Dialogs + Series
-   ========================================== */
+/* ========================================
+   TORRSERVER
+   ======================================== */
 
-var dialogToken = 0;
-var playbackToken = 0;
-var playbackStarting = false;
+function torrBase() {
+    var url = field('torrserver_url');
 
-function videoPath(f) {
+    if (!url) throw Error('Не налаштовано TorrServer');
+
+    return base(url);
+}
+
+function torrHeaders() {
+    var headers = {
+        'Content-Type': 'application/json'
+    };
+
+    var token = field('torrserver_token');
+    var user = field('torrserver_user');
+    var pass = field('torrserver_pass');
+
+    if (token) {
+        headers.Authorization = 'Bearer ' + token;
+    } else if (user || pass) {
+        try {
+            headers.Authorization = 'Basic ' +
+                btoa(unescape(encodeURIComponent(
+                    user + ':' + pass
+                )));
+        } catch (e) {}
+    }
+
+    return headers;
+}
+
+async function torrRequest(body) {
+    var response = await timeoutFetch(
+        torrBase() + '/torrents',
+        {
+            method: 'POST',
+            headers: torrHeaders(),
+            body: JSON.stringify(body)
+        },
+        20000
+    );
+
+    return response.json();
+}
+
+function extractFiles(data) {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+
+    var files = data.file_stats ||
+        data.FileStats ||
+        data.files ||
+        data.Files;
+
+    if (Array.isArray(files)) return files;
+
+    if (data.data) return extractFiles(data.data);
+    if (data.stats) return extractFiles(data.stats);
+
+    return [];
+}
+
+async function torrentFiles(release) {
+    var link = release.download || release.link;
+
+    var added = await torrRequest({
+        action: 'add',
+        link: link,
+        title: release.title,
+        save_to_db: false
+    });
+
+    var hash = added.hash ||
+        added.Hash ||
+        (added.data && added.data.hash) ||
+        link;
+
+    var result = await torrRequest({
+        action: 'get',
+        link: link
+    });
+
+    var files = extractFiles(result);
+
+    if (!files.length && hash !== link) {
+        result = await torrRequest({
+            action: 'get',
+            hash: hash
+        });
+
+        files = extractFiles(result);
+    }
+
+    return {
+        hash: hash,
+        link: link,
+        files: files
+    };
+}
+
+function filePath(f) {
     return String(
         f.path || f.Path ||
-        f.name || f.Name || ''
+        f.name || f.Name ||
+        f.filename || ''
     );
 }
 
-function videoLength(f) {
+function fileSize(f) {
     return Number(
         f.length || f.Length ||
         f.size || f.Size || 0
     );
 }
 
-function fileIndex(f, fallback) {
-    var n = f.id;
-
-    if (n === undefined) n = f.Id;
-    if (n === undefined) n = f.index;
-    if (n === undefined) n = f.Index;
-
-    n = Number(n);
-
-    return Number.isFinite(n) && n >= 0 ?
-        n + 1 : fallback + 1;
-}
-
-function isVideoFile(f) {
-    return VIDEO.test(videoPath(f)) &&
-        videoLength(f) >= 500 * MB;
-}
-
-function tsHash(j) {
-    if (!j || typeof j !== 'object') return '';
-
-    var h = j.hash || j.Hash ||
-        j.id || j.ID || '';
-
-    if (!h && j.data && typeof j.data === 'object') {
-        h = j.data.hash || j.data.Hash || '';
-    }
-
-    return String(h || '');
-}
-
-async function tsRequest(body, timeout) {
-    var r = await fetchTimed(
-        torr() + '/torrents',
-        {
-            method: 'POST',
-            headers: auth(),
-            body: JSON.stringify(body)
-        },
-        timeout || 12000
-    );
-
-    return await r.json();
-}
-
-async function tsAddRelease(rel, meta) {
-    var link = rel.download || rel.link;
-
-    if (!link) throw Error('Немає посилання на торрент');
-
-    var poster = meta.poster_path ?
-        'https://image.tmdb.org/t/p/w342' +
-        meta.poster_path : '';
-
-    var body = {
-        action: 'add',
-        link: link,
-        title: '[UaDV] ' +
-            (meta.title || meta.name || ''),
-        poster: poster,
-        save_to_db: false,
-        data: JSON.stringify({
-            lampa: true,
-            movie: meta
-        })
-    };
-
-    var j = await tsRequest(body, 15000);
-
-    return {
-        link: link,
-        hash: tsHash(j),
-        raw: j
-    };
-}
-
-function extractFiles(j) {
-    if (!j) return [];
-
-    if (Array.isArray(j)) return j;
-    if (Array.isArray(j.file_stats)) return j.file_stats;
-    if (Array.isArray(j.FileStats)) return j.FileStats;
-    if (Array.isArray(j.files)) return j.files;
-    if (Array.isArray(j.Files)) return j.Files;
-
-    if (j.data && typeof j.data === 'object') {
-        return extractFiles(j.data);
-    }
-
-    if (j.stats && typeof j.stats === 'object') {
-        return extractFiles(j.stats);
-    }
-
-    return [];
-}
-
-async function tsGetFiles(added) {
-    var identifiers = [];
-
-    if (added.hash) {
-        identifiers.push({
-            action: 'get',
-            hash: added.hash
-        });
-    }
-
-    identifiers.push({
-        action: 'get',
-        link: added.link
-    });
-
-    for (var i = 0; i < identifiers.length; i++) {
-        try {
-            var j = await tsRequest(
-                identifiers[i], 10000
-            );
-
-            var files = extractFiles(j);
-
-            if (files.length) {
-                return {
-                    files: files,
-                    raw: j,
-                    identifier: added.hash || added.link
-                };
-            }
-        } catch (e) {}
-    }
-
-    try {
-        var r = await fetchTimed(
-            torr() + '/stream/files?link=' +
-            encodeURIComponent(added.link),
-            {
-                method: 'GET',
-                headers: auth()
-            },
-            10000
-        );
-
-        var json = await r.json();
+function videoFiles(files) {
+    return files.map(function (f, i) {
+        var id = f.id !== undefined ? f.id :
+            f.Id !== undefined ? f.Id :
+            f.index !== undefined ? f.index : i;
 
         return {
-            files: extractFiles(json),
-            raw: json,
-            identifier: added.hash || added.link
-        };
-    } catch (e) {}
-
-    return {
-        files: [],
-        raw: null,
-        identifier: added.hash || added.link
-    };
-}
-
-function bestMovieFile(files) {
-    var candidates = [];
-
-    files.forEach(function (f, i) {
-        if (!isVideoFile(f)) return;
-
-        var path = videoPath(f);
-
-        var penalty =
-            /sample|trailer|bonus|extra|featurette/i
-                .test(path) ? 1 : 0;
-
-        candidates.push({
             file: f,
-            index: fileIndex(f, i),
-            size: videoLength(f),
-            penalty: penalty
-        });
+            path: filePath(f),
+            size: fileSize(f),
+            index: Number(id) + 1
+        };
+    }).filter(function (x) {
+        return VIDEO.test(x.path) &&
+            x.size >= 500 * MB &&
+            !/sample|trailer|featurette/i.test(x.path);
     });
-
-    candidates.sort(function (a, b) {
-        if (a.penalty !== b.penalty) {
-            return a.penalty - b.penalty;
-        }
-
-        return b.size - a.size;
-    });
-
-    return candidates.length ?
-        candidates[0] : null;
 }
 
-function safeFilename(s) {
-    var name = String(s || 'video')
-        .split(/[\\/]/).pop()
-        .replace(/\.[^.]+$/, '')
-        .replace(/[^\wа-яіїєґ0-9-]+/gi, '.')
-        .replace(/^\.+|\.+$/g, '');
+function streamUrl(hash, video) {
+    var filename = video.path.split(/[\\/]/).pop();
 
-    return (name || 'video') + '.mkv';
-}
-
-function streamUrl(identifier, file, index) {
-    var url = streamBase() +
+    var url = torrBase() +
         '/stream/' +
-        encodeURIComponent(
-            safeFilename(videoPath(file))
-        ) +
-        '?link=' +
-        encodeURIComponent(identifier) +
-        '&index=' + index +
+        encodeURIComponent(filename || 'video.mkv') +
+        '?link=' + encodeURIComponent(hash) +
+        '&index=' + video.index +
         '&play=1';
 
     var token = field('torrserver_token');
@@ -677,275 +694,102 @@ function streamUrl(identifier, file, index) {
     return url;
 }
 
-function closeDialog() {
-    dialogToken++;
+function playVideo(hash, video, title) {
+    closeDialog();
 
+    Lampa.Player.play({
+        url: streamUrl(hash, video),
+        title: title,
+        timeline: 0
+    });
+}
+
+/* ========================================
+   MODAL
+   ======================================== */
+
+function closeDialog() {
     if (!activeDialog) return;
 
     var d = activeDialog;
     activeDialog = null;
-
-    try {
-        if (d.close) d.close();
-    } catch (e) {}
-
-    try {
-        if (d.element && d.element.parentNode) {
-            d.element.parentNode.removeChild(d.element);
-        }
-    } catch (e) {}
+    d.close();
 }
 
-function playVideo(url, title) {
+function dialog(title, choices) {
     closeDialog();
-
-    if (!url) throw Error('Порожнє посилання відео');
-
-    if (window.Lampa &&
-        Lampa.Player &&
-        typeof Lampa.Player.play === 'function') {
-
-        Lampa.Player.play({
-            url: url,
-            title: title || 'UaDV',
-            timeline: 0
-        });
-
-    } else {
-        window.location.href = url;
-    }
-}
-
-async function prepareRelease(rel, meta) {
-    var added = await tsAddRelease(rel, meta);
-    var result = await tsGetFiles(added);
-
-    if (!result.files.length) {
-        throw Error('TorrServer не повернув файли');
-    }
-
-    var best = bestMovieFile(result.files);
-
-    if (!best) {
-        throw Error('Відеофайл не знайдено');
-    }
-
-    return {
-        url: streamUrl(
-            result.identifier,
-            best.file,
-            best.index
-        ),
-        file: best.file,
-        size: best.size,
-        release: rel
-    };
-}
-
-async function autoPlayMovie(releases, meta) {
-    if (playbackStarting) return;
-
-    playbackStarting = true;
-    var token = ++playbackToken;
-
-    try {
-        var maxAttempts = Math.min(
-            releases.length, 5
-        );
-
-        for (var i = 0; i < maxAttempts; i++) {
-            if (token !== playbackToken) return;
-
-            var rel = releases[i];
-
-            try {
-                notify(
-                    'Перевірка релізу ' +
-                    (i + 1) + '/' + maxAttempts
-                );
-
-                var ready = await prepareRelease(
-                    rel, meta
-                );
-
-                if (token !== playbackToken) return;
-
-                notify(
-                    'Запуск: ' +
-                    size(ready.size)
-                );
-
-                playVideo(
-                    ready.url,
-                    meta.title || meta.name
-                );
-
-                return;
-            } catch (e) {
-                console.warn(
-                    '[UaDV] Release failed:',
-                    rel.title, e
-                );
-            }
-        }
-
-        notify(
-            'Не вдалося підготувати відео. ' +
-            'Перевір TorrServer.'
-        );
-    } finally {
-        playbackStarting = false;
-    }
-}
-
-/* ==========================================
-   Dialog interface
-   ========================================== */
-
-function dialogStyles() {
-    if (document.getElementById('uadv62-dialog-css')) {
-        return;
-    }
-
-    var css = ''
-    + '.uadv62-overlay{position:fixed;inset:0;'
-    + 'z-index:999999;background:rgba(0,0,0,.82);'
-    + 'display:flex;align-items:center;'
-    + 'justify-content:center;padding:20px;}'
-
-    + '.uadv62-panel{width:min(900px,94vw);'
-    + 'max-height:86vh;overflow:hidden;'
-    + 'background:#171717;color:#fff;'
-    + 'border-radius:16px;display:flex;'
-    + 'flex-direction:column;'
-    + 'box-shadow:0 12px 45px #0009;}'
-
-    + '.uadv62-head{padding:20px 24px;'
-    + 'font-size:26px;font-weight:800;'
-    + 'border-bottom:1px solid #ffffff20;}'
-
-    + '.uadv62-content{overflow-y:auto;'
-    + 'padding:18px 22px;overscroll-behavior:contain;}'
-
-    + '.uadv62-text{font-size:21px;'
-    + 'line-height:1.5;margin-bottom:18px;}'
-
-    + '.uadv62-item{padding:15px 18px;'
-    + 'margin-bottom:9px;background:#292929;'
-    + 'border-radius:10px;cursor:pointer;'
-    + 'border:2px solid transparent;}'
-
-    + '.uadv62-item.focus,'
-    + '.uadv62-item:focus,'
-    + '.uadv62-item:hover{background:#383838;'
-    + 'border-color:#fff;outline:none;}'
-
-    + '.uadv62-item-title{font-size:21px;'
-    + 'font-weight:700;overflow-wrap:anywhere;}'
-
-    + '.uadv62-item-sub{font-size:16px;'
-    + 'opacity:.72;margin-top:5px;}'
-
-    + '.uadv62-actions{display:flex;'
-    + 'gap:12px;flex-wrap:wrap;}'
-
-    + '.uadv62-action{flex:1;min-width:140px;'
-    + 'text-align:center;}'
-
-    + '@media(max-width:600px){'
-    + '.uadv62-head{font-size:21px;padding:15px;}'
-    + '.uadv62-content{padding:12px;}'
-    + '.uadv62-item-title{font-size:17px;}'
-    + '.uadv62-text{font-size:17px;}'
-    + '}';
-
-    var s = document.createElement('style');
-    s.id = 'uadv62-dialog-css';
-    s.textContent = css;
-    document.head.appendChild(s);
-}
-
-function createDialog(title) {
-    closeDialog();
-    dialogStyles();
 
     var overlay = document.createElement('div');
-    overlay.className = 'uadv62-overlay';
+    overlay.className = 'uadv-overlay';
 
     var panel = document.createElement('div');
-    panel.className = 'uadv62-panel';
+    panel.className = 'uadv-panel';
 
-    var head = document.createElement('div');
-    head.className = 'uadv62-head';
-    head.textContent = title || 'UaDV';
+    var heading = document.createElement('div');
+    heading.className = 'uadv-heading';
+    heading.textContent = title;
 
-    var content = document.createElement('div');
-    content.className = 'uadv62-content';
+    var list = document.createElement('div');
+    list.className = 'uadv-list';
 
-    panel.appendChild(head);
-    panel.appendChild(content);
+    panel.appendChild(heading);
+    panel.appendChild(list);
     overlay.appendChild(panel);
     document.body.appendChild(overlay);
 
+    var index = 0;
     var closed = false;
 
-    function focus(el) {
-        var items = content.querySelectorAll(
-            '.uadv62-item'
+    function rows() {
+        return list.querySelectorAll('.uadv-choice');
+    }
+
+    function focus(i) {
+        var items = rows();
+        if (!items.length) return;
+
+        index = Math.max(
+            0, Math.min(items.length - 1, i)
         );
 
         Array.prototype.forEach.call(
             items,
-            function (n) {
-                n.classList.remove('focus');
+            function (el, n) {
+                el.classList.toggle('focus', n === index);
             }
         );
 
-        if (el) {
-            el.classList.add('focus');
-            el.focus();
+        items[index].focus();
+        items[index].scrollIntoView({
+            block: 'nearest'
+        });
+    }
 
-            el.scrollIntoView({
-                block: 'nearest'
-            });
+    function close() {
+        if (closed) return;
+
+        closed = true;
+        document.removeEventListener(
+            'keydown', keyboard, true
+        );
+
+        overlay.remove();
+
+        if (activeDialog &&
+            activeDialog.close === close) {
+            activeDialog = null;
         }
     }
 
-    function move(step) {
-        var items = Array.prototype.slice.call(
-            content.querySelectorAll('.uadv62-item')
-        );
-
-        if (!items.length) return;
-
-        var index = items.findIndex(function (x) {
-            return x.classList.contains('focus');
-        });
-
-        if (index < 0) index = 0;
-
-        index = Math.max(
-            0,
-            Math.min(items.length - 1, index + step)
-        );
-
-        focus(items[index]);
-    }
-
-    function keyHandler(e) {
-        if (closed) return;
-
+    function keyboard(e) {
         var k = e.key || e.keyCode;
 
         if (
             k === 'Escape' ||
             k === 'Backspace' ||
             k === 'BrowserBack' ||
-            k === 'GoBack' ||
-            k === 8 ||
-            k === 27 ||
-            k === 461 ||
-            k === 10009
+            k === 27 || k === 8 ||
+            k === 461 || k === 10009
         ) {
             e.preventDefault();
             e.stopImmediatePropagation();
@@ -956,389 +800,321 @@ function createDialog(title) {
         if (k === 'ArrowDown' || k === 40) {
             e.preventDefault();
             e.stopImmediatePropagation();
-            move(1);
+            focus(index + 1);
         }
 
         if (k === 'ArrowUp' || k === 38) {
             e.preventDefault();
             e.stopImmediatePropagation();
-            move(-1);
+            focus(index - 1);
         }
 
         if (k === 'Enter' || k === 13) {
             e.preventDefault();
             e.stopImmediatePropagation();
 
-            var selected = content.querySelector(
-                '.uadv62-item.focus'
-            );
-
+            var selected = rows()[index];
             if (selected) selected.click();
         }
     }
 
     document.addEventListener(
-        'keydown', keyHandler, true
+        'keydown', keyboard, true
     );
 
-    function close() {
-        if (closed) return;
+    (choices || []).forEach(function (x) {
+        var row = document.createElement('div');
+        row.className = 'uadv-choice selector';
+        row.tabIndex = 0;
 
-        closed = true;
+        var name = document.createElement('div');
+        name.className = 'uadv-choice-title';
+        name.textContent = x.label;
 
-        document.removeEventListener(
-            'keydown', keyHandler, true
-        );
+        row.appendChild(name);
 
-        if (overlay.parentNode) {
-            overlay.parentNode.removeChild(overlay);
+        if (x.sub) {
+            var sub = document.createElement('div');
+            sub.className = 'uadv-choice-sub';
+            sub.textContent = x.sub;
+            row.appendChild(sub);
         }
 
-        if (activeDialog &&
-            activeDialog.element === overlay) {
-            activeDialog = null;
-        }
-    }
-
-    function clear() {
-        content.innerHTML = '';
-    }
-
-    function message(t) {
-        var el = document.createElement('div');
-        el.className = 'uadv62-text';
-        el.textContent = t;
-        content.appendChild(el);
-    }
-
-    function item(title, subtitle, callback) {
-        var el = document.createElement('div');
-        el.className = 'uadv62-item';
-        el.tabIndex = 0;
-
-        var t = document.createElement('div');
-        t.className = 'uadv62-item-title';
-        t.textContent = title;
-
-        var sub = document.createElement('div');
-        sub.className = 'uadv62-item-sub';
-        sub.textContent = subtitle || '';
-
-        el.appendChild(t);
-        el.appendChild(sub);
-
-        el.addEventListener('click', function () {
-            if (callback) callback();
+        row.addEventListener('click', function () {
+            if (x.action) x.action();
         });
 
-        content.appendChild(el);
-
-        return el;
-    }
-
-    function focusFirst() {
-        var first = content.querySelector(
-            '.uadv62-item'
-        );
-
-        if (first) focus(first);
-    }
+        list.appendChild(row);
+    });
 
     activeDialog = {
-        element: overlay,
         close: close
     };
 
-    return {
-        clear: clear,
-        message: message,
-        item: item,
-        focusFirst: focusFirst,
-        close: close,
-        content: content
-    };
+    focus(0);
 }
 
-/* ==========================================
-   Other language fallback
-   ========================================== */
+/* ========================================
+   MOVIES
+   ======================================== */
 
-function showOtherLanguagePrompt(releases, meta) {
-    var d = createDialog('UaDV — Озвучення');
+async function playBest(movie, releases) {
+    var lastError = '';
 
-    d.message(
-        'Українську озвучку не знайдено. ' +
-        'Бажаєш переглянути доступні релізи ' +
-        'з іншою озвучкою?'
-    );
+    for (var i = 0; i < Math.min(5, releases.length); i++) {
+        var rel = releases[i];
 
-    d.item(
-        'Показати релізи',
-        'Вибрати фільм вручну',
-        function () {
-            showReleaseList(releases, meta);
+        try {
+            notice(
+                'Перевіряю реліз ' +
+                (i + 1) + '/' +
+                Math.min(5, releases.length)
+            );
+
+            var torrent = await torrentFiles(rel);
+            var videos = videoFiles(torrent.files);
+
+            if (!videos.length) {
+                throw Error('Відеофайли відсутні');
+            }
+
+            videos.sort(function (a, b) {
+                return b.size - a.size;
+            });
+
+            var video = videos[0];
+
+            notice('Запускаю ' + formatSize(video.size));
+
+            playVideo(
+                torrent.hash,
+                video,
+                movie.title || movie.name || rel.title
+            );
+
+            return true;
+        } catch (e) {
+            lastError = e.message || String(e);
+            log('Помилка релізу:', rel.title, e);
         }
-    );
-
-    d.item(
-        'Скасувати',
-        'Повернутися до картки фільму',
-        function () {
-            d.close();
-        }
-    );
-
-    d.focusFirst();
-}
-
-function showReleaseList(releases, meta) {
-    var d = createDialog('UaDV — Доступні релізи');
-
-    if (!releases.length) {
-        d.message('Релізів не знайдено');
-        d.item('Закрити', '', function () {
-            d.close();
-        });
-        d.focusFirst();
-        return;
     }
 
-    releases.forEach(function (rel) {
-        d.item(
-            rel.title,
-            size(rel.size) +
-            ' · Сідери: ' + rel.seed,
-            function () {
-                d.close();
+    notice('Не вдалося запустити: ' + lastError);
+    return false;
+}
 
-                autoPlayMovie(
-                    [rel],
-                    meta
-                );
-            }
-        );
+function releaseDialog(movie, releases) {
+    var choices = releases.slice(0, 40).map(
+        function (r) {
+            return {
+                label: r.title,
+                sub: formatSize(r.size) +
+                    ' · Сідери: ' + r.seed,
+                action: function () {
+                    closeDialog();
+
+                    if (busy) return;
+
+                    busy = true;
+
+                    playBest(movie, [r]).finally(
+                        function () {
+                            busy = false;
+                        }
+                    );
+                }
+            };
+        }
+    );
+
+    choices.push({
+        label: 'Скасувати',
+        action: closeDialog
     });
 
-    d.item(
-        'Назад',
-        'Повернутися до картки фільму',
-        function () {
-            d.close();
-        }
-    );
-
-    d.focusFirst();
+    dialog('UaDV — Вибір релізу', choices);
 }
 
-/* ==========================================
-   Movie flow
-   ========================================== */
-
-async function startMovie(meta) {
-    var releases = await findReleases(
-        meta, false
+function otherLanguageDialog(movie, releases) {
+    dialog(
+        'Українську озвучку не знайдено',
+        [
+            {
+                label: 'Показати інші релізи',
+                sub: 'Вибрати озвучку вручну',
+                action: function () {
+                    releaseDialog(movie, releases);
+                }
+            },
+            {
+                label: 'Скасувати',
+                action: closeDialog
+            }
+        ]
     );
+}
 
-    if (!releases.length) {
-        notify('Релізів не знайдено');
-        return;
-    }
-
+async function startMovie(movie, releases) {
     var ua = releases.filter(function (x) {
         return ukrainian(x.title);
     });
 
-    var others = releases.filter(function (x) {
-        return !ukrainian(x.title);
-    });
-
     if (ua.length) {
-        var mode = setting('playMode', 'auto');
-
-        if (mode === 'manual') {
-            showReleaseList(ua, meta);
+        if (get('playMode', 'auto') === 'manual') {
+            releaseDialog(movie, ua);
         } else {
-            await autoPlayMovie(ua, meta);
+            await playBest(movie, ua);
         }
-
         return;
     }
 
-    var fallback = setting(
-        'fallback', 'ask'
-    );
+    var fallback = get('fallback', 'ask');
 
     if (fallback === 'none') {
-        notify('Українську озвучку не знайдено');
+        notice('Українську озвучку не знайдено');
         return;
     }
 
     if (fallback === 'auto') {
-        await autoPlayMovie(
-            others, meta
-        );
+        await playBest(movie, releases);
         return;
     }
 
-    showOtherLanguagePrompt(
-        others, meta
-    );
+    otherLanguageDialog(movie, releases);
 }
 
-/* ==========================================
-   Series — seasons and episodes
-   ========================================== */
+/* ========================================
+   SERIES
+   ======================================== */
 
-function seasonNumbers(title) {
+function seasonsInTitle(title) {
+    var result = {};
     var s = String(title || '');
-    var found = {};
 
     var range = s.match(
-        /(?:season|сезон|s)\s*(\d{1,2})\s*[-–]\s*(\d{1,2})/i
+        /(?:season|сезон|s)\s*(\d{1,2})\s*[-–]\s*s?(\d{1,2})/i
     );
 
     if (range) {
-        var a = Number(range[1]);
-        var b = Number(range[2]);
+        var from = Number(range[1]);
+        var to = Number(range[2]);
 
-        if (b >= a && b - a <= 30) {
-            for (var i = a; i <= b; i++) {
-                found[i] = true;
+        if (to >= from && to - from <= 30) {
+            for (var i = from; i <= to; i++) {
+                result[i] = true;
             }
         }
     }
 
-    var re = /(?:\bS(\d{1,2})\b|(?:season|сезон)\s*(\d{1,2}))/gi;
-    var m;
+    var re = /(?:\bS(\d{1,2})(?:E\d+|\b)|(?:season|сезон)\s*(\d{1,2}))/gi;
+    var match;
 
-    while ((m = re.exec(s))) {
-        found[Number(m[1] || m[2])] = true;
+    while ((match = re.exec(s))) {
+        result[Number(match[1] || match[2])] = true;
     }
 
-    var nums = Object.keys(found).map(Number);
-
-    return nums.length ? nums : [1];
+    return Object.keys(result)
+        .map(Number)
+        .filter(function (n) {
+            return n > 0;
+        });
 }
 
-function episodeInfo(path, hint) {
-    var p = String(path || '');
+function episodeNumber(path, season) {
+    var s = String(path || '');
 
-    var m = p.match(
-        /s(\d{1,2})e(\d{1,3})/i
+    var m = s.match(/S(\d{1,2})E(\d{1,3})/i) ||
+        s.match(/(\d{1,2})x(\d{1,3})/i);
+
+    if (m) {
+        return Number(m[1]) === season ?
+            Number(m[2]) : 0;
+    }
+
+    m = s.match(
+        /(?:episode|ep|серія|серия)\s*0*(\d{1,3})/i
     );
 
-    if (m) {
-        return {
-            season: Number(m[1]),
-            episode: Number(m[2])
-        };
-    }
-
-    m = p.match(/(\d{1,2})x(\d{1,3})/i);
-
-    if (m) {
-        return {
-            season: Number(m[1]),
-            episode: Number(m[2])
-        };
-    }
-
-    m = p.match(
-        /(?:episode|ep|серія|серия)\s*(\d{1,3})/i
-    );
-
-    if (m) {
-        return {
-            season: hint,
-            episode: Number(m[1])
-        };
-    }
-
-    return {
-        season: hint,
-        episode: 0
-    };
+    return m ? Number(m[1]) : 0;
 }
 
-function groupSeasons(releases) {
+function showSeasons(movie, releases) {
     var groups = {};
 
     releases.forEach(function (r) {
-        seasonNumbers(r.title).forEach(function (n) {
+        var numbers = seasonsInTitle(r.title);
+
+        if (!numbers.length) {
+            numbers = [1];
+        }
+
+        numbers.forEach(function (n) {
             if (!groups[n]) groups[n] = [];
             groups[n].push(r);
         });
     });
 
-    return groups;
-}
+    var seasons = Object.keys(groups)
+        .map(Number)
+        .sort(function (a, b) {
+            return a - b;
+        });
 
-async function showEpisodes(meta, season, releases) {
-    var d = createDialog(
-        'UaDV — Сезон ' + season
-    );
-
-    d.message('Завантаження серій...');
-
-    var episodes = {};
-    var maxReleases = Math.min(
-        releases.length, 8
-    );
-
-    for (var i = 0; i < maxReleases; i++) {
-        var rel = releases[i];
-
-        try {
-            var added = await tsAddRelease(
-                rel, meta
-            );
-
-            var response = await tsGetFiles(added);
-
-            response.files.forEach(function (f, index) {
-                if (!isVideoFile(f)) return;
-
-                var info = episodeInfo(
-                    videoPath(f), season
-                );
-
-                if (
-                    info.season !== season ||
-                    !info.episode
-                ) return;
-
-                var ep = info.episode;
-                var candidate = {
-                    file: f,
-                    index: fileIndex(f, index),
-                    identifier: response.identifier,
-                    release: rel,
-                    score: rank(rel)
-                };
-
-                if (
-                    !episodes[ep] ||
-                    candidate.score >
-                    episodes[ep].score
-                ) {
-                    episodes[ep] = candidate;
-                }
-            });
-
-        } catch (e) {
-            console.warn(
-                '[UaDV] Series release error',
-                e
-            );
-        }
-    }
-
-    if (!activeDialog ||
-        activeDialog.element !== d.content.parentNode.parentNode) {
+    if (!seasons.length) {
+        notice('Сезонів не знайдено');
         return;
     }
 
-    d.clear();
+    dialog(
+        'UaDV — Вибір сезону',
+        seasons.map(function (n) {
+            return {
+                label: 'Сезон ' + n,
+                sub: 'Релізів: ' + groups[n].length,
+                action: function () {
+                    openSeason(movie, n, groups[n]);
+                }
+            };
+        })
+    );
+}
+
+async function loadEpisodes(movie, season, releases) {
+    closeDialog();
+    notice('Завантажую серії сезону ' + season);
+
+    var episodes = {};
+    var sorted = releases.slice().sort(function (a, b) {
+        return scoreRelease(b) - scoreRelease(a);
+    });
+
+    for (var i = 0; i < Math.min(10, sorted.length); i++) {
+        var rel = sorted[i];
+
+        try {
+            var torrent = await torrentFiles(rel);
+
+            videoFiles(torrent.files).forEach(function (v) {
+                var ep = episodeNumber(v.path, season);
+
+                if (!ep) return;
+
+                var candidate = {
+                    torrent: torrent,
+                    video: v,
+                    release: rel,
+                    score: scoreRelease(rel)
+                };
+
+                if (!episodes[ep] ||
+                    candidate.score > episodes[ep].score) {
+                    episodes[ep] = candidate;
+                }
+            });
+        } catch (e) {
+            log('Помилка серіалу:', e);
+        }
+    }
 
     var numbers = Object.keys(episodes)
         .map(Number)
@@ -1347,223 +1123,202 @@ async function showEpisodes(meta, season, releases) {
         });
 
     if (!numbers.length) {
-        d.message(
-            'Серії цього сезону не знайдено'
-        );
-
-        d.item('Закрити', '', function () {
-            d.close();
-        });
-
-        d.focusFirst();
+        notice('Відеосерій не знайдено');
         return;
     }
 
-    numbers.forEach(function (ep) {
-        var e = episodes[ep];
+    dialog(
+        'Сезон ' + season + ' — серії',
+        numbers.map(function (n) {
+            var ep = episodes[n];
 
-        d.item(
-            'Серія ' + ep,
-            size(videoLength(e.file)) +
-            ' · ' + e.release.title,
-            function () {
-                var url = streamUrl(
-                    e.identifier,
-                    e.file,
-                    e.index
-                );
-
-                playVideo(
-                    url,
-                    (meta.name || meta.title) +
-                    ' S' + season +
-                    'E' + String(ep).padStart(2, '0')
-                );
-            }
-        );
-    });
-
-    d.focusFirst();
-}
-
-async function startSeries(meta) {
-    var releases = await findReleases(
-        meta, true
-    );
-
-    if (!releases.length) {
-        notify('Релізів серіалу не знайдено');
-        return;
-    }
-
-    var ua = releases.filter(function (r) {
-        return ukrainian(r.title);
-    });
-
-    if (!ua.length) {
-        var fallback = setting(
-            'fallback', 'ask'
-        );
-
-        if (fallback === 'none') {
-            notify(
-                'Українську озвучку не знайдено'
-            );
-            return;
-        }
-
-        if (fallback === 'ask') {
-            var d = createDialog(
-                'UaDV — Озвучення серіалу'
-            );
-
-            d.message(
-                'Українську озвучку не знайдено. ' +
-                'Показати сезони з іншою озвучкою?'
-            );
-
-            d.item(
-                'Показати сезони',
-                '',
-                function () {
-                    showSeasonList(
-                        meta, releases
+            return {
+                label: 'Серія ' + n,
+                sub: formatSize(ep.video.size) +
+                    ' · ' + ep.release.title,
+                action: function () {
+                    playVideo(
+                        ep.torrent.hash,
+                        ep.video,
+                        (movie.name || movie.title) +
+                        ' S' + season +
+                        'E' + String(n).padStart(2, '0')
                     );
                 }
-            );
+            };
+        })
+    );
+}
 
-            d.item(
-                'Скасувати',
-                '',
-                function () {
-                    d.close();
+function openSeason(movie, season, releases) {
+    var ua = releases.filter(function (x) {
+        return ukrainian(x.title);
+    });
+
+    if (ua.length) {
+        loadEpisodes(movie, season, ua);
+        return;
+    }
+
+    var fallback = get('fallback', 'ask');
+
+    if (fallback === 'none') {
+        notice('Українську озвучку не знайдено');
+        return;
+    }
+
+    if (fallback === 'auto') {
+        loadEpisodes(movie, season, releases);
+        return;
+    }
+
+    dialog(
+        'Українську озвучку не знайдено',
+        [
+            {
+                label: 'Показати інші серії',
+                action: function () {
+                    loadEpisodes(
+                        movie, season, releases
+                    );
                 }
-            );
+            },
+            {
+                label: 'Скасувати',
+                action: closeDialog
+            }
+        ]
+    );
+}
 
-            d.focusFirst();
+function startSeries(movie, releases) {
+    var ua = releases.filter(function (x) {
+        return ukrainian(x.title);
+    });
+
+    if (ua.length) {
+        showSeasons(movie, ua);
+        return;
+    }
+
+    var fallback = get('fallback', 'ask');
+
+    if (fallback === 'none') {
+        notice('Українську озвучку не знайдено');
+        return;
+    }
+
+    if (fallback === 'auto') {
+        showSeasons(movie, releases);
+        return;
+    }
+
+    dialog(
+        'Українську озвучку не знайдено',
+        [
+            {
+                label: 'Показати інші сезони',
+                action: function () {
+                    showSeasons(movie, releases);
+                }
+            },
+            {
+                label: 'Скасувати',
+                action: closeDialog
+            }
+        ]
+    );
+}
+
+/* ========================================
+   MAIN
+   ======================================== */
+
+async function run(movie) {
+    if (busy) {
+        notice('Пошук уже виконується');
+        return;
+    }
+
+    if (!movie) {
+        notice('Фільм не визначено');
+        return;
+    }
+
+    busy = true;
+    var searchId = ++currentSearch;
+
+    try {
+        jackettConfig();
+        torrBase();
+
+        notice('Шукаю релізи...');
+
+        var series = isSeries(movie);
+        var releases = await findReleases(movie, series);
+
+        if (searchId !== currentSearch) return;
+
+        if (!releases.length) {
+            notice(
+                'Релізів не знайдено. ' +
+                'Спробуй зменшити мінімум сідерів.'
+            );
             return;
         }
 
-        ua = releases;
-    }
+        log('Знайдені релізи:', releases);
 
-    showSeasonList(meta, ua);
-}
-
-function showSeasonList(meta, releases) {
-    var groups = groupSeasons(releases);
-    var seasons = Object.keys(groups)
-        .map(Number)
-        .sort(function (a, b) {
-            return a - b;
-        });
-
-    var d = createDialog(
-        'UaDV — Вибір сезону'
-    );
-
-    seasons.forEach(function (sn) {
-        d.item(
-            'Сезон ' + sn,
-            'Релізів: ' + groups[sn].length,
-            function () {
-                showEpisodes(
-                    meta,
-                    sn,
-                    groups[sn]
-                );
-            }
-        );
-    });
-
-    d.focusFirst();
-}
-
-/* ==========================================
-   UaDV v62.0 — PART 3/3
-   Settings + Button + Initialization
-   ========================================== */
-
-/* ---------- Settings ---------- */
-
-function addSetting(params) {
-    try {
-        Lampa.SettingsApi.addParam(params);
+        if (series) {
+            startSeries(movie, releases);
+        } else {
+            await startMovie(movie, releases);
+        }
     } catch (e) {
-        console.warn('[UaDV] Settings error', e);
+        log('Помилка:', e);
+        notice(e.message || String(e));
+    } finally {
+        busy = false;
     }
 }
+
+/* ========================================
+   SETTINGS
+   ======================================== */
 
 function registerSettings() {
-    if (!window.Lampa || !Lampa.SettingsApi) return;
+    if (!Lampa.SettingsApi) return;
 
-    try {
-        Lampa.SettingsApi.addComponent({
-            component: 'uadv62',
-            name: 'UaDV AutoPlay',
-            icon: '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zm2 4v6h2V9H6zm4 0v6h2V9h-2zm4 0v6h4V9h-4z"/></svg>'
-        });
-    } catch (e) {}
+    var api = Lampa.SettingsApi;
 
-    function select(name, title, values, def) {
-        var key = PREFIX + name;
+    api.addComponent({
+        component: 'uadv62',
+        name: 'UaDV AutoPlay',
+        icon: '<svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>'
+    });
 
-        if (setting(name, null) === null) {
-            save(name, def);
-        }
-
-        addSetting({
+    function select(name, label, values, def) {
+        api.addParam({
             component: 'uadv62',
             param: {
-                name: key,
+                name: PREFIX + name,
                 type: 'select',
                 values: values,
                 default: def
             },
             field: {
-                name: title
+                name: label
             },
             onChange: function (value) {
-                save(name, value);
-            }
-        });
-    }
-
-    function slider(name, title, min, max, step, def) {
-        var key = PREFIX + name;
-
-        if (setting(name, null) === null) {
-            save(name, def);
-        }
-
-        addSetting({
-            component: 'uadv62',
-            param: {
-                name: key,
-                type: 'select',
-                values: (function () {
-                    var obj = {};
-
-                    for (var i = min; i <= max; i += step) {
-                        obj[String(i)] = String(i);
-                    }
-
-                    return obj;
-                })(),
-                default: String(def)
-            },
-            field: {
-                name: title
-            },
-            onChange: function (value) {
-                save(name, Number(value));
+                set(name, value);
+                searchCache = {};
             }
         });
     }
 
     select(
         'quality',
-        'Пріоритет роздільної здатності',
+        'Пріоритет якості',
         {
             '4k': '4K / 2160p',
             '1080': '1080p'
@@ -1576,7 +1331,7 @@ function registerSettings() {
         'Пріоритет HDR',
         {
             'dv': 'Dolby Vision → HDR10+ → HDR10',
-            'hdr': 'HDR10+ → HDR10 → Dolby Vision',
+            'hdr': 'HDR10+ → HDR10 → DV',
             'sdr': 'SDR у пріоритеті'
         },
         'dv'
@@ -1584,47 +1339,73 @@ function registerSettings() {
 
     select(
         'source',
-        'Пріоритет джерела',
+        'Джерело відео',
+        {
+            'auto': 'REMUX → Blu-ray → WEB-DL',
+            'bluray': 'Blu-ray у пріоритеті',
+            'webdl': 'WEB-DL у пріоритеті'
+        },
+        'auto'
+    );
+
+    select(
+        'audio',
+        'Пріоритет аудіокодека',
         {
             'auto': 'Автоматично',
-            'remux': 'Blu-ray REMUX',
-            'bluray': 'Blu-ray',
-            'webdl': 'WEB-DL'
+            'atmos': 'Dolby Atmos / TrueHD',
+            'dts': 'DTS-HD / DTS:X',
+            'eac3': 'E-AC3 / Dolby Digital Plus'
         },
         'auto'
     );
 
     select(
         'playMode',
-        'Режим відтворення',
+        'Запуск українських релізів',
         {
-            'auto': 'Автоматичний запуск',
-            'manual': 'Вибір релізу вручну'
+            'auto': 'Автоматично',
+            'manual': 'Вибирати вручну'
         },
         'auto'
     );
 
     select(
         'fallback',
-        'Якщо українську озвучку не знайдено',
+        'Якщо немає української озвучки',
         {
-            'ask': 'Запропонувати інші релізи',
+            'ask': 'Запитати перед вибором',
             'none': 'Не відтворювати',
-            'auto': 'Автоматично вибрати інший'
+            'auto': 'Автоматичний запуск'
         },
         'ask'
     );
 
-    slider(
+    select(
         'maxSize',
-        'Максимальний розмір фільму (GB)',
-        10, 120, 5, 70
+        'Максимальний розмір фільму',
+        {
+            '20': '20 GB',
+            '40': '40 GB',
+            '70': '70 GB',
+            '100': '100 GB',
+            '120': '120 GB'
+        },
+        '70'
     );
 
-    slider(
+    select(
         'minSeeds',
         'Мінімум сідерів',
-        1, 30, 1, 5
+        {
+            '0': 'Без обмеження',
+            '1': '1',
+            '3': '3',
+            '5': '5',
+            '10': '10',
+            '20': '20'
+        },
+        '5'
     );
 
     select(
@@ -1632,286 +1413,220 @@ function registerSettings() {
         'Пріоритет Toloka',
         {
             'false': 'Усі трекери',
-            'true': 'Лише Toloka, якщо доступна'
+            'true': 'Toloka у пріоритеті'
         },
         'false'
     );
-
-    addSetting({
-        component: 'uadv62',
-        param: {
-            name: PREFIX + 'info',
-            type: 'static'
-        },
-        field: {
-            name: 'UaDV AutoPlay',
-            description: 'Версія ' + VERSION +
-                ' · Українська озвучка у пріоритеті'
-        }
-    });
 }
 
-/* ---------- Button styles ---------- */
+/* ========================================
+   STYLES
+   ======================================== */
 
-function injectButtonStyles() {
-    if (document.getElementById('uadv62-button-css')) {
-        return;
-    }
-
-    var css = ''
-    + '.full-start__button.uadv62-btn{'
-    + 'background:#333!important;'
-    + 'color:#fff!important;'
-    + 'border:0!important;'
-    + 'box-shadow:0 2px 8px #0005!important;'
-    + 'order:-9999!important;'
-    + '}'
-
-    + '.full-start__button.uadv62-btn.focus,'
-    + '.full-start__button.uadv62-btn:hover{'
-    + 'background:#484848!important;'
-    + 'color:#fff!important;'
-    + 'transform:translateY(-1px);'
-    + '}'
-
-    + '.uadv62-btn svg{'
-    + 'width:18px;'
-    + 'height:18px;'
-    + 'fill:currentColor;'
-    + '}';
+function addStyles() {
+    if (document.getElementById('uadv621-css')) return;
 
     var style = document.createElement('style');
-    style.id = 'uadv62-button-css';
-    style.textContent = css;
+    style.id = 'uadv621-css';
+
+    style.textContent = `
+.uadv-button {
+    order: -9999 !important;
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+}
+.uadv-button svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+.uadv-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    background: rgba(0,0,0,.84);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+}
+.uadv-panel {
+    width: min(1000px,94vw);
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    background: #171717;
+    color: white;
+    border-radius: 14px;
+    overflow: hidden;
+}
+.uadv-heading {
+    font-size: 25px;
+    font-weight: 700;
+    padding: 20px 24px;
+    border-bottom: 1px solid #444;
+}
+.uadv-list {
+    overflow-y: auto;
+    padding: 12px;
+}
+.uadv-choice {
+    padding: 15px 18px;
+    border-radius: 10px;
+    margin: 4px 0;
+    cursor: pointer;
+}
+.uadv-choice.focus,
+.uadv-choice:hover {
+    background: #404040;
+    outline: 2px solid white;
+}
+.uadv-choice-title {
+    font-size: 20px;
+    overflow-wrap: anywhere;
+}
+.uadv-choice-sub {
+    font-size: 15px;
+    opacity: .75;
+    margin-top: 5px;
+}
+@media(max-width:600px) {
+    .uadv-heading {font-size:20px;padding:15px}
+    .uadv-choice-title {font-size:17px}
+    .uadv-choice {padding:12px}
+}`;
+
     document.head.appendChild(style);
 }
 
-/* ---------- Media button ---------- */
+/* ========================================
+   BUTTON
+   ======================================== */
 
-function createButton() {
-    var btn = document.createElement('div');
+function attachButton(event) {
+    if (
+        !event ||
+        event.type !== 'complite' ||
+        !event.object ||
+        !event.data ||
+        !event.data.movie
+    ) return;
 
-    btn.className =
-        'full-start__button selector uadv62-btn';
-
-    btn.setAttribute('data-uadv62', '1');
-    btn.setAttribute('tabindex', '0');
-
-    btn.innerHTML =
-        '<svg xmlns="http://www.w3.org/2000/svg" ' +
-        'viewBox="0 0 16 16">' +
-        '<path d="M2 2a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zm2.372 3.715.435-.714h1.71v3.93h.733v.957h-.733V11H5.405V9.888H2.5v-.971c.574-1.077 1.225-2.142 1.872-3.202m7.73-.714h1.306l-2.14 2.584L13.5 11h-1.428l-1.679-2.624-.615.7V11H8.59V5.001h1.187v2.686h.057L12.102 5z"/>' +
-        '</svg>' +
-        '<span>UaDV</span>';
-
-    return btn;
-}
-
-function findButtonBar(root) {
-    var selectors = [
-        '.full-start-new__buttons',
-        '.full-start__buttons',
-        '.full-actions'
-    ];
-
-    for (var i = 0; i < selectors.length; i++) {
-        var bar = root.querySelector(selectors[i]);
-
-        if (bar) return bar;
-    }
-
-    return null;
-}
-
-/* ---------- Main launch ---------- */
-
-async function launchUaDV(movie) {
-    if (busy || playbackStarting) {
-        notify('Пошук уже виконується');
-        return;
-    }
-
-    if (!movie) {
-        notify('Не вдалося визначити фільм');
-        return;
-    }
-
-    busy = true;
+    var movie = event.data.movie;
+    var root;
 
     try {
-        jackett();
-        torr();
+        root = event.object.activity.render();
+    } catch (e) {
+        return;
+    }
 
-        notify('Шукаю найкращий реліз...');
+    if (!root || !root.find) return;
 
-        if (serial(movie)) {
-            await startSeries(movie);
-        } else {
-            await startMovie(movie);
+    function attach() {
+        var bar = root.find(
+            '.full-start-new__buttons,' +
+            '.full-start__buttons,' +
+            '.full-actions'
+        ).first();
+
+        if (!bar.length) return false;
+
+        if (root.find('.uadv-button').length) {
+            return true;
         }
 
-    } catch (e) {
-        console.error('[UaDV] Error:', e);
+        var button = $(`
+<div class="full-start__button selector uadv-button"
+     tabindex="0">
+    <svg viewBox="0 0 24 24">
+        <path d="M8 5v14l11-7z"/>
+    </svg>
+    <span>UaDV</span>
+</div>`);
 
-        notify(
-            e && e.message ?
-            e.message :
-            'Помилка запуску'
-        );
-    } finally {
-        busy = false;
-    }
-}
+        var lastClick = 0;
 
-/* ---------- Attach button ---------- */
+        function activate() {
+            var now = Date.now();
 
-function attachButton(root, movie) {
-    if (!root || !movie) return false;
+            if (now - lastClick < 400) return;
+            lastClick = now;
 
-    var bar = findButtonBar(root);
+            run(movie);
+        }
 
-    if (!bar) return false;
+        button.on('hover:enter click', activate);
 
-    if (bar.querySelector('[data-uadv62="1"]')) {
+        button.on('keydown', function (e) {
+            if (e.key === 'Enter' || e.keyCode === 13) {
+                e.preventDefault();
+                activate();
+            }
+        });
+
+        bar.prepend(button);
+
         return true;
     }
 
-    var btn = createButton();
-    var lastActivation = 0;
+    if (attach()) return;
 
-    function activate() {
-        var now = Date.now();
+    var node = root[0];
 
-        if (now - lastActivation < 450) return;
+    if (!node) return;
 
-        lastActivation = now;
-        launchUaDV(movie);
-    }
-
-    btn.addEventListener('click', activate);
-
-    btn.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.keyCode === 13) {
-            e.preventDefault();
-            activate();
-        }
+    var observer = new MutationObserver(function () {
+        if (attach()) observer.disconnect();
     });
 
-    if ($) {
-        $(btn).on('hover:enter', activate);
-    }
-
-    bar.insertBefore(btn, bar.firstChild);
-
-    try {
-        if (Lampa.Controller &&
-            typeof Lampa.Controller.collectionSet === 'function') {
-            Lampa.Controller.collectionSet($(bar));
-        }
-    } catch (e) {}
-
-    return true;
-}
-
-/* ---------- Full card listener ---------- */
-
-function registerFullListener() {
-    if (!window.Lampa ||
-        !Lampa.Listener ||
-        typeof Lampa.Listener.follow !== 'function') {
-        return;
-    }
-
-    Lampa.Listener.follow('full', function (ev) {
-        if (!ev || ev.type !== 'complite') return;
-
-        var movie = ev.data && ev.data.movie;
-
-        if (!movie || !ev.object ||
-            !ev.object.activity) return;
-
-        var render;
-
-        try {
-            render = ev.object.activity.render();
-        } catch (e) {
-            return;
-        }
-
-        var root = render && render[0] ?
-            render[0] : render;
-
-        if (!root) return;
-
-        if (attachButton(root, movie)) return;
-
-        try {
-            var observer = new MutationObserver(
-                function () {
-                    if (attachButton(root, movie)) {
-                        observer.disconnect();
-                    }
-                }
-            );
-
-            observer.observe(root, {
-                childList: true,
-                subtree: true
-            });
-
-            setTimeout(function () {
-                observer.disconnect();
-            }, 8000);
-
-        } catch (e) {}
+    observer.observe(node, {
+        childList: true,
+        subtree: true
     });
+
+    setTimeout(function () {
+        observer.disconnect();
+    }, 7000);
 }
 
-/* ---------- Initialization ---------- */
-
-function initializeUaDV() {
-    if (!window.Lampa) return false;
-
-    try {
-        injectButtonStyles();
-        dialogStyles();
-        registerSettings();
-        registerFullListener();
-
-        console.log(
-            '[UaDV] AutoPlay v' +
-            VERSION + ' initialized'
-        );
-
-        return true;
-    } catch (e) {
-        console.error('[UaDV] Initialization:', e);
-        return false;
-    }
-}
+/* ========================================
+   INITIALIZATION
+   ======================================== */
 
 var initAttempts = 0;
 
-function waitForLampa() {
+function init() {
     if (
-        window.Lampa &&
-        Lampa.Listener &&
-        Lampa.Storage &&
-        Lampa.SettingsApi
+        !window.Lampa ||
+        !Lampa.Listener ||
+        !Lampa.Storage ||
+        !window.$
     ) {
-        initializeUaDV();
+        if (++initAttempts < 60) {
+            setTimeout(init, 500);
+        } else {
+            console.error('[UaDV] Lampa not ready');
+        }
         return;
     }
 
-    if (++initAttempts < 40) {
-        setTimeout(waitForLampa, 500);
-    } else {
-        console.warn(
-            '[UaDV] Lampa initialization timeout'
-        );
+    $ = window.jQuery || window.$;
+
+    addStyles();
+
+    try {
+        registerSettings();
+    } catch (e) {
+        log('Налаштування:', e);
     }
+
+    Lampa.Listener.follow('full', attachButton);
+
+    log('UaDV v' + VERSION + ' initialized');
 }
 
-waitForLampa();
+init();
 
 })();
