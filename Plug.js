@@ -3,55 +3,39 @@
     'use strict';
 
     /*
-     * CROWLEY PLUGIN MANAGER 3.5.0
+     * CROWLEY PLUGIN MANAGER 3.5.1
      * Lampa / Android TV / Mobile
      *
-     * CHANGES:
-     * 1. Smart restart button
-     * 2. Remember selected plugin
-     * 3. Navigation without fixed 80ms timers
-     * 4. HTTPS for Custom Buttons
-     *
-     * UNCHANGED:
-     * - Exact URL comparison
-     * - Four categories
-     * - Twelve plugins
-     * - One settings component
-     * - No immediate plugin execution
+     * FIX:
+     * - Correct Back navigation
+     * - Restore settings controller
+     * - Preserve selected plugin
+     * - No duplicate category components
+     * - Smart restart in root only
+     * - No immediate script loading
      */
 
-    var GLOBAL_KEY = 'crowley_plugin_manager_v35';
-
-    if (window[GLOBAL_KEY]) return;
-    window[GLOBAL_KEY] = true;
-
-    var VERSION = '3.5.0';
-
+    var VERSION = '3.5.1';
+    var READY = 'crowley_plugin_manager_v351';
     var ROOT = 'plugin_manager_page';
-    var STORAGE_KEY = 'plugins';
+    var STORAGE = 'plugins';
+    var PENDING_KEY = 'crowley_pm_pending_v351';
+
+    if (window[READY]) return;
+    window[READY] = true;
 
     var initialized = false;
     var attempts = 0;
-    var maxAttempts = 100;
 
+    var selected = {};
+    var rows = {};
     var pending = false;
-
-    var rootRows = {};
-    var selectedPlugins = {};
-
-    var currentCategory = null;
-    var currentPlugin = null;
-
-    /* =====================================
-       CATALOG
-       ===================================== */
 
     var CATEGORIES = [
         {
             id: 'online',
             name: 'Онлайн-перегляд',
             icon: '▶',
-
             plugins: [
                 {
                     id: 'Uakino',
@@ -63,12 +47,10 @@
                 }
             ]
         },
-
         {
             id: 'interface',
             name: 'Інтерфейс',
             icon: '▣',
-
             plugins: [
                 {
                     id: 'NewCard',
@@ -82,7 +64,7 @@
                     id: 'mob_interface',
                     name: 'Mobile Interface',
                     description:
-                        'Адаптивний мобільний інтерфейс картки фільму',
+                        'Мобільний інтерфейс картки фільму',
                     url:
                         'https://crowley24.github.io/main/Mob_Interface.js'
                 },
@@ -90,7 +72,7 @@
                     id: 'NewMenu_Mob',
                     name: 'Mobile Menu',
                     description:
-                        'Оновлене нижнє меню для мобільних пристроїв',
+                        'Оновлене мобільне меню',
                     url:
                         'https://crowley24.github.io/NewMenu_Mob.js'
                 },
@@ -98,16 +80,9 @@
                     id: 'custom_buttons',
                     name: 'Custom Buttons',
                     description:
-                        'Розширена кастомізація кнопок картки фільму',
+                        'Налаштування кнопок картки фільму',
                     url:
-                        'https://crowley24.github.io/main/ButtonsManager+.js',
-
-                    /*
-                     * Existing HTTP installation
-                     * is migrated separately below.
-                     */
-                    oldUrl:
-                        'http://crowley24.github.io/main/ButtonsManager+.js'
+                        'https://crowley24.github.io/main/ButtonsManager+.js'
                 },
                 {
                     id: 'InterfaceSize',
@@ -121,18 +96,16 @@
                     id: 'InterfaceHize',
                     name: 'Interface Hide',
                     description:
-                        'Приховування елементів меню',
+                        'Приховування елементів інтерфейсу',
                     url:
                         'https://crowley24.github.io/interface_hide.js'
                 }
             ]
         },
-
         {
             id: 'movies',
             name: 'Фільми та персоналізація',
             icon: '★',
-
             plugins: [
                 {
                     id: 'UA-Finder',
@@ -146,7 +119,7 @@
                     id: 'Watching',
                     name: 'Continue Watching',
                     description:
-                        'Історія перегляду на головній сторінці',
+                        'Продовження перегляду',
                     url:
                         'https://crowley24.github.io/Watching.js'
                 },
@@ -160,18 +133,16 @@
                 }
             ]
         },
-
         {
             id: 'tools',
             name: 'Додаткові інструменти',
             icon: '⚙',
-
             plugins: [
                 {
                     id: 'Clock',
                     name: 'Clock',
                     description:
-                        'Стильний годинник',
+                        'Годинник для Lampa',
                     url:
                         'https://crowley24.github.io/main/Clock.js'
                 },
@@ -179,7 +150,7 @@
                     id: 'Ukr',
                     name: 'Ukrainisation',
                     description:
-                        'Лагідна Українізація',
+                        'Українізація інтерфейсу',
                     url:
                         'https://crowley24.github.io/main/Ukr.js'
                 }
@@ -192,13 +163,13 @@
        ===================================== */
 
     function getPlugins() {
-        var list = Lampa.Storage.get(STORAGE_KEY);
+        var data = Lampa.Storage.get(STORAGE);
 
-        return Array.isArray(list) ? list : [];
+        return Array.isArray(data) ? data : [];
     }
 
-    function savePlugins(list) {
-        Lampa.Storage.set(STORAGE_KEY, list);
+    function savePlugins(data) {
+        Lampa.Storage.set(STORAGE, data);
     }
 
     function findPlugin(url) {
@@ -227,12 +198,10 @@
         );
     }
 
-    function getState(url) {
-        var item = findPlugin(url);
+    function getState(plugin) {
+        var item = findPlugin(plugin.url);
 
-        if (!item) {
-            return 'absent';
-        }
+        if (!item) return 'absent';
 
         return isEnabled(item)
             ? 'enabled'
@@ -243,67 +212,10 @@
         var count = 0;
 
         category.plugins.forEach(function (plugin) {
-            if (findPlugin(plugin.url)) {
-                count++;
-            }
+            if (findPlugin(plugin.url)) count++;
         });
 
         return count;
-    }
-
-    /* =====================================
-       HTTPS MIGRATION
-       ===================================== */
-
-    /*
-     * This is a one-time migration for
-     * the exact old Custom Buttons URL.
-     *
-     * No general URL normalization
-     * or duplicate detection is added.
-     */
-
-    function migrateCustomButtons() {
-        var oldUrl =
-            'http://crowley24.github.io/main/ButtonsManager+.js';
-
-        var newUrl =
-            'https://crowley24.github.io/main/ButtonsManager+.js';
-
-        var list = getPlugins();
-
-        var oldItem = null;
-        var newItem = null;
-
-        for (var i = 0; i < list.length; i++) {
-            if (!list[i]) continue;
-
-            if (list[i].url === oldUrl) {
-                oldItem = list[i];
-            }
-
-            if (list[i].url === newUrl) {
-                newItem = list[i];
-            }
-        }
-
-        if (!oldItem) return;
-
-        if (newItem) {
-            /*
-             * Both exact addresses exist.
-             * Keep the HTTPS record and
-             * remove only the legacy one.
-             */
-
-            list = list.filter(function (item) {
-                return item && item.url !== oldUrl;
-            });
-        } else {
-            oldItem.url = newUrl;
-        }
-
-        savePlugins(list);
     }
 
     /* =====================================
@@ -320,6 +232,59 @@
     }
 
     /* =====================================
+       HTTPS MIGRATION
+       ===================================== */
+
+    function migrateCustomButtons() {
+        var oldUrl =
+            'http://crowley24.github.io/main/ButtonsManager+.js';
+
+        var newUrl =
+            'https://crowley24.github.io/main/ButtonsManager+.js';
+
+        var list = getPlugins();
+        var hasNew = false;
+        var changed = false;
+
+        list.forEach(function (item) {
+            if (
+                item &&
+                item.url === newUrl
+            ) {
+                hasNew = true;
+            }
+        });
+
+        if (hasNew) {
+            var filtered = list.filter(
+                function (item) {
+                    return item && item.url !== oldUrl;
+                }
+            );
+
+            if (filtered.length !== list.length) {
+                savePlugins(filtered);
+            }
+
+            return;
+        }
+
+        list.forEach(function (item) {
+            if (
+                item &&
+                item.url === oldUrl
+            ) {
+                item.url = newUrl;
+                changed = true;
+            }
+        });
+
+        if (changed) {
+            savePlugins(list);
+        }
+    }
+
+    /* =====================================
        RESTART STATE
        ===================================== */
 
@@ -327,8 +292,11 @@
         pending = true;
 
         /*
-         * Only root restart row is updated.
-         * No rebuilding of plugin menus.
+         * This marker is kept until
+         * the next page reload.
+         *
+         * Plugin state changes themselves
+         * are already stored by Lampa.
          */
 
         updateRestartRow();
@@ -438,59 +406,45 @@
     }
 
     /* =====================================
-       SELECT NAVIGATION
+       NAVIGATION
        ===================================== */
 
     /*
-     * Lampa.Select normally closes the
-     * current selection before invoking
-     * its onSelect callback.
+     * IMPORTANT:
      *
-     * Therefore the next menu can be
-     * opened directly without 80ms timers.
+     * Lampa.Select uses its own
+     * "select" controller.
      *
-     * onBack restores the parent menu.
+     * When the last Select window closes,
+     * we must restore "settings_component".
+     *
+     * Otherwise the Select controller may
+     * remain active and intercept Back.
      */
 
-    function showSelect(
-        title,
-        items,
-        onSelect,
-        onBack
-    ) {
-        Lampa.Select.show({
-            title: title,
-            items: items,
+    function restoreSettingsController() {
+        if (
+            Lampa.Controller &&
+            typeof Lampa.Controller.toggle === 'function'
+        ) {
+            Lampa.Controller.toggle(
+                'settings_component'
+            );
+        }
+    }
 
-            onSelect: function (item) {
-                if (
-                    typeof onSelect === 'function'
-                ) {
-                    onSelect(item);
-                }
-            },
-
-            onBack: function () {
-                if (
-                    typeof onBack === 'function'
-                ) {
-                    onBack();
-                }
-            }
-        });
+    function showSelect(options) {
+        Lampa.Select.show(options);
     }
 
     /* =====================================
-       CATEGORY ITEMS
+       CATEGORY MENU
        ===================================== */
 
-    function categoryItems(category) {
-        var selectedId =
-            selectedPlugins[category.id];
-
+    function buildCategoryItems(category) {
         return category.plugins.map(
             function (plugin) {
-                var state = getState(plugin.url);
+                var state = getState(plugin);
 
                 var marker =
                     state === 'enabled'
@@ -509,36 +463,31 @@
                     plugin: plugin,
 
                     selected:
-                        selectedId === plugin.id
+                        selected[category.id] === plugin.id
                 };
             }
         );
     }
 
-    /* =====================================
-       CATEGORY MENU
-       ===================================== */
-
     function openCategory(category) {
         if (!category) return;
 
-        currentCategory = category;
+        showSelect({
+            title:
+                category.icon + ' ' +
+                category.name,
 
-        showSelect(
-            category.icon + ' ' + category.name,
+            items:
+                buildCategoryItems(category),
 
-            categoryItems(category),
-
-            function (item) {
+            onSelect: function (item) {
                 if (
                     !item ||
                     !item.plugin
                 ) return;
 
-                selectedPlugins[category.id] =
+                selected[category.id] =
                     item.plugin.id;
-
-                currentPlugin = item.plugin;
 
                 openPlugin(
                     item.plugin,
@@ -546,28 +495,27 @@
                 );
             },
 
-            function () {
-                currentCategory = null;
-                currentPlugin = null;
-
+            onBack: function () {
                 /*
-                 * Return to the native
-                 * Settings component.
+                 * CATEGORY -> ROOT SETTINGS
                  *
-                 * No extra Select opened.
+                 * This is the crucial fix.
                  */
+
+                updateFolderRows();
+                updateRestartRow();
+
+                restoreSettingsController();
             }
-        );
+        });
     }
 
     /* =====================================
-       PLUGIN ACTION MENU
+       PLUGIN MENU
        ===================================== */
 
     function openPlugin(plugin, category) {
-        currentPlugin = plugin;
-
-        var state = getState(plugin.url);
+        var state = getState(plugin);
         var items = [];
 
         if (state === 'absent') {
@@ -594,11 +542,12 @@
             });
         }
 
-        showSelect(
-            plugin.name,
-            items,
+        showSelect({
+            title: plugin.name,
 
-            function (item) {
+            items: items,
+
+            onSelect: function (item) {
                 if (!item) {
                     openCategory(category);
                     return;
@@ -627,24 +576,23 @@
                         break;
                 }
 
-                /*
-                 * Reopen the same category
-                 * with the same plugin selected.
-                 */
-
-                selectedPlugins[category.id] =
+                selected[category.id] =
                     plugin.id;
 
                 openCategory(category);
             },
 
-            function () {
-                selectedPlugins[category.id] =
+            onBack: function () {
+                /*
+                 * PLUGIN -> CATEGORY
+                 */
+
+                selected[category.id] =
                     plugin.id;
 
                 openCategory(category);
             }
-        );
+        });
     }
 
     /* =====================================
@@ -652,10 +600,11 @@
        ===================================== */
 
     function confirmRemove(plugin, category) {
-        showSelect(
-            'Видалити ' + plugin.name + '?',
+        showSelect({
+            title:
+                'Видалити ' + plugin.name + '?',
 
-            [
+            items: [
                 {
                     title: 'Скасувати',
                     action: 'cancel'
@@ -666,7 +615,7 @@
                 }
             ],
 
-            function (item) {
+            onSelect: function (item) {
                 if (
                     item &&
                     item.action === 'remove'
@@ -674,33 +623,37 @@
                     removePlugin(plugin);
                 }
 
-                selectedPlugins[category.id] =
+                selected[category.id] =
                     plugin.id;
 
                 openCategory(category);
             },
 
-            function () {
-                selectedPlugins[category.id] =
-                    plugin.id;
+            onBack: function () {
+                /*
+                 * CONFIRMATION -> PLUGIN
+                 */
 
-                openCategory(category);
+                openPlugin(
+                    plugin,
+                    category
+                );
             }
-        );
+        });
     }
 
     /* =====================================
-       ROOT UI
+       ROOT ROWS
        ===================================== */
 
     function updateFolderRow(category) {
-        var item = rootRows[
+        var row = rows[
             'folder_' + category.id
         ];
 
-        if (!item || !item.length) return;
+        if (!row || !row.length) return;
 
-        var description = item.find(
+        var description = row.find(
             '.settings-param__descr'
         ).first();
 
@@ -721,26 +674,26 @@
     }
 
     /* =====================================
-       SMART RESTART BUTTON
+       SMART RESTART
        ===================================== */
 
     function injectStyles() {
         if (
             document.getElementById(
-                'crowley-pm35-style'
+                'crowley-pm351-style'
             )
         ) return;
 
         var style = document.createElement('style');
 
-        style.id = 'crowley-pm35-style';
+        style.id = 'crowley-pm351-style';
 
         style.textContent = `
-            .crowley-pm35-hidden {
+            .crowley-pm351-hidden {
                 display: none !important;
             }
 
-            .crowley-pm35-restart
+            .crowley-pm351-restart
             .settings-param__name {
                 color: #ffad24;
             }
@@ -750,32 +703,14 @@
     }
 
     function updateRestartRow() {
-        var item = rootRows.restart;
+        var row = rows.restart;
 
-        if (!item || !item.length) return;
+        if (!row || !row.length) return;
 
-        /*
-         * This row exists only on
-         * the manager's root page.
-         *
-         * It is hidden until at least
-         * one plugin state changes.
-         */
-
-        item.toggleClass(
-            'crowley-pm35-hidden',
+        row.toggleClass(
+            'crowley-pm351-hidden',
             !pending
         );
-
-        var title = item.find(
-            '.settings-param__name'
-        ).first();
-
-        if (title.length) {
-            title.text(
-                '♻️ Застосувати зміни'
-            );
-        }
     }
 
     /* =====================================
@@ -797,10 +732,6 @@
         });
     }
 
-    /* =====================================
-       CATEGORY BUTTONS
-       ===================================== */
-
     function registerFolders() {
         CATEGORIES.forEach(function (category) {
             Lampa.SettingsApi.addParam({
@@ -808,7 +739,7 @@
 
                 param: {
                     name:
-                        'crowley_pm35_folder_' +
+                        'crowley_pm351_folder_' +
                         category.id,
 
                     type: 'button'
@@ -827,7 +758,7 @@
                 },
 
                 onRender: function (item) {
-                    rootRows[
+                    rows[
                         'folder_' + category.id
                     ] = item;
 
@@ -835,39 +766,36 @@
                 },
 
                 onChange: function () {
-                    updateFolderRows();
-
                     openCategory(category);
                 }
             });
         });
     }
 
-    /* =====================================
-       RESTART BUTTON
-       ===================================== */
-
     function registerRestart() {
         Lampa.SettingsApi.addParam({
             component: ROOT,
 
             param: {
-                name: 'crowley_pm35_restart',
+                name:
+                    'crowley_pm351_restart',
+
                 type: 'button'
             },
 
             field: {
-                name: '♻️ Застосувати зміни',
+                name:
+                    '♻️ Застосувати зміни',
 
                 description:
-                    'Перезапустити Lampa для застосування змін'
+                    'Перезапустити Lampa'
             },
 
             onRender: function (item) {
-                rootRows.restart = item;
+                rows.restart = item;
 
                 item.addClass(
-                    'crowley-pm35-restart'
+                    'crowley-pm351-restart'
                 );
 
                 updateRestartRow();
@@ -880,7 +808,7 @@
     }
 
     /* =====================================
-       INIT
+       INITIALIZATION
        ===================================== */
 
     function init() {
@@ -893,18 +821,14 @@
             !Lampa.SettingsApi.addParam ||
             !Lampa.Storage ||
             !Lampa.Select ||
-            !Lampa.Select.show
+            !Lampa.Select.show ||
+            !Lampa.Controller ||
+            !Lampa.Controller.toggle
         ) {
             return false;
         }
 
         initialized = true;
-
-        /*
-         * Preserve installed plugins.
-         * Only migrate the one known
-         * HTTP URL to HTTPS.
-         */
 
         migrateCustomButtons();
 
@@ -917,22 +841,18 @@
         return true;
     }
 
-    /* =====================================
-       WAIT FOR LAMPA
-       ===================================== */
-
     function waitForLampa() {
         if (init()) return;
 
         attempts++;
 
-        if (attempts < maxAttempts) {
+        if (attempts < 100) {
             setTimeout(
                 waitForLampa,
                 200
             );
         } else {
-            window[GLOBAL_KEY] = false;
+            window[READY] = false;
         }
     }
 
