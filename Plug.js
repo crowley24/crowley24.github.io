@@ -531,18 +531,18 @@
             }
 
             .crowley-pm-status-enabled:before,
-            .crowley-pm-status-disabled:before,
-            .crowley-pm-status-absent:before {
-                content: '';
-                position: absolute;
-                left: 10px;
-                top: 1.05em;
-                width: 6px;
-                height: 6px;
-                border-radius: 50%;
-                transform: translateY(-50%);
-                pointer-events: none;
-            }
+.crowley-pm-status-disabled:before,
+.crowley-pm-status-absent:before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 1.45em;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
 
             .crowley-pm-status-enabled:before {
                 background: #36c58b;
