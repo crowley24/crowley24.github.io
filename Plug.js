@@ -3,24 +3,19 @@
     'use strict';
 
     /*
-     * CROWLEY PLUGIN MANAGER 3.1
+     * CROWLEY PLUGIN MANAGER 3.2
      * Lampa / Android TV / Mobile
      *
-     * - Вкладені категорії
-     * - Окремі сторінки плагінів
-     * - Індикатори стану
-     * - Підтвердження видалення
-     * - Розумний перезапуск
-     * - Захист від повторного завантаження
-     * - Сумісність зі Storage Lampa
+     * Один компонент у налаштуваннях.
+     * Внутрішні папки без addComponent.
      */
 
-    var GLOBAL_KEY = 'crowley_plugin_manager_v31';
+    var GLOBAL_KEY = 'crowley_plugin_manager_v32';
 
     if (window[GLOBAL_KEY]) return;
     window[GLOBAL_KEY] = true;
 
-    var VERSION = '3.1.0';
+    var VERSION = '3.2.0';
     var ROOT = 'plugin_manager_page';
     var STORAGE_KEY = 'plugins';
 
@@ -28,13 +23,15 @@
     var attempts = 0;
     var maxAttempts = 100;
 
-    var rendered = {};
-    var loading = {};
+    var currentCategory = null;
     var pending = false;
-    var restartItems = [];
+    var loading = {};
+    var rendered = {};
+    var lastNotice = '';
+    var lastNoticeTime = 0;
 
     /* =====================================
-       CATEGORIES
+       PLUGIN CATALOG
        ===================================== */
 
     var CATEGORIES = [
@@ -225,13 +222,25 @@
        ===================================== */
 
     function notify(message) {
+        var now = Date.now();
+
+        if (
+            lastNotice === message &&
+            now - lastNoticeTime < 1200
+        ) {
+            return;
+        }
+
+        lastNotice = message;
+        lastNoticeTime = now;
+
         if (Lampa.Noty && Lampa.Noty.show) {
             Lampa.Noty.show(message);
         }
     }
 
     /* =====================================
-       SCRIPT LOADING
+       SCRIPT LOADER
        ===================================== */
 
     function normalizeUrl(url) {
@@ -265,6 +274,7 @@
         loading[url] = true;
 
         var script = document.createElement('script');
+
         script.src = url;
         script.async = true;
 
@@ -292,12 +302,12 @@
     }
 
     /* =====================================
-       PENDING RESTART
+       RESTART
        ===================================== */
 
     function setPending(value) {
         pending = !!value;
-        updateRestartButtons();
+        refreshUI();
     }
 
     function restartLampa() {
@@ -325,6 +335,7 @@
         });
 
         savePlugins(list);
+
         refreshUI();
 
         notify('🟢 Плагін встановлено');
@@ -344,7 +355,6 @@
         savePlugins(list);
 
         setPending(true);
-        refreshUI();
 
         notify('🟢 Плагін увімкнено');
     }
@@ -361,7 +371,6 @@
         savePlugins(list);
 
         setPending(true);
-        refreshUI();
 
         notify('🟠 Плагін вимкнено');
     }
@@ -376,13 +385,12 @@
         savePlugins(list);
 
         setPending(true);
-        refreshUI();
 
         notify('🔴 Плагін видалено');
     }
 
     /* =====================================
-       CONFIRM DELETE
+       CONFIRM REMOVE
        ===================================== */
 
     function confirmRemove(plugin) {
@@ -411,159 +419,7 @@
     }
 
     /* =====================================
-       STYLES
-       ===================================== */
-
-    function injectStyles() {
-        if (
-            document.getElementById(
-                'crowley-pm31-styles'
-            )
-        ) return;
-
-        var style = document.createElement('style');
-        style.id = 'crowley-pm31-styles';
-
-        style.textContent = `
-            .crowley-pm31-indicator {
-                display: inline-block;
-                width: 10px;
-                height: 10px;
-                min-width: 10px;
-                margin-left: 10px;
-                border-radius: 50%;
-                vertical-align: middle;
-            }
-
-            .crowley-pm31-indicator.enabled {
-                background: #11e400;
-                box-shadow:
-                    0 0 6px rgba(17,228,0,.35);
-            }
-
-            .crowley-pm31-indicator.disabled {
-                background: #ffad24;
-                box-shadow:
-                    0 0 6px rgba(255,173,36,.35);
-            }
-
-            .crowley-pm31-indicator.not_installed {
-                background: #ff3030;
-                box-shadow:
-                    0 0 6px rgba(255,48,48,.3);
-            }
-
-            .crowley-pm31-folder-count {
-                display: inline-block;
-                margin-left: 12px;
-                font-size: .75em;
-                opacity: .65;
-                vertical-align: middle;
-            }
-
-            .crowley-pm31-restart {
-                color: #ffad24;
-            }
-        `;
-
-        document.head.appendChild(style);
-    }
-
-    /* =====================================
-       RENDERED ITEMS
-       ===================================== */
-
-    function applyIndicator(item, plugin) {
-        if (!item || !item.length) return;
-
-        var title = item.find(
-            '.settings-param__name'
-        ).first();
-
-        if (!title.length) return;
-
-        var indicator = title.find(
-            '.crowley-pm31-indicator'
-        );
-
-        if (!indicator.length) {
-            indicator = $(
-                '<span class="crowley-pm31-indicator"></span>'
-            );
-
-            title.append(indicator);
-        }
-
-        indicator.removeClass(
-            'enabled disabled not_installed'
-        );
-
-        indicator.addClass(
-            getState(plugin.url)
-        );
-    }
-
-    function updateFolderCounts() {
-        CATEGORIES.forEach(function (category) {
-            var item = rendered[
-                'folder_' + category.id
-            ];
-
-            if (!item || !item.length) return;
-
-            var title = item.find(
-                '.settings-param__name'
-            ).first();
-
-            if (!title.length) return;
-
-            var count = title.find(
-                '.crowley-pm31-folder-count'
-            );
-
-            if (!count.length) {
-                count = $(
-                    '<span class="crowley-pm31-folder-count"></span>'
-                );
-
-                title.append(count);
-            }
-
-            count.text(
-                getCategoryCount(category) +
-                ' / ' +
-                category.plugins.length
-            );
-        });
-    }
-
-    function updateRestartButtons() {
-        restartItems.forEach(function (item) {
-            if (item && item.length) {
-                item.toggle(pending);
-            }
-        });
-    }
-
-    function refreshUI() {
-        CATEGORIES.forEach(function (category) {
-            category.plugins.forEach(function (plugin) {
-                var item = rendered[
-                    'plugin_' + plugin.id
-                ];
-
-                if (item && item.length) {
-                    applyIndicator(item, plugin);
-                }
-            });
-        });
-
-        updateFolderCounts();
-        updateRestartButtons();
-    }
-
-    /* =====================================
-       PLUGIN MENU
+       PLUGIN ACTION MENU
        ===================================== */
 
     function showPluginMenu(plugin) {
@@ -625,29 +481,259 @@
     }
 
     /* =====================================
-       COMPONENT REGISTRATION
+       STYLES
        ===================================== */
 
-    function registerComponent(id, name, icon) {
+    function injectStyles() {
+        if (
+            document.getElementById(
+                'crowley-pm32-styles'
+            )
+        ) return;
+
+        var style = document.createElement('style');
+        style.id = 'crowley-pm32-styles';
+
+        style.textContent = `
+            .crowley-pm32-indicator {
+                display: inline-block;
+                width: 10px;
+                height: 10px;
+                min-width: 10px;
+                margin-left: 10px;
+                border-radius: 50%;
+                vertical-align: middle;
+            }
+
+            .crowley-pm32-indicator.enabled {
+                background: #11e400;
+                box-shadow:
+                    0 0 6px rgba(17,228,0,.35);
+            }
+
+            .crowley-pm32-indicator.disabled {
+                background: #ffad24;
+                box-shadow:
+                    0 0 6px rgba(255,173,36,.35);
+            }
+
+            .crowley-pm32-indicator.not_installed {
+                background: #ff3030;
+                box-shadow:
+                    0 0 6px rgba(255,48,48,.3);
+            }
+
+            .crowley-pm32-count {
+                margin-left: 10px;
+                font-size: .75em;
+                opacity: .65;
+            }
+
+            .crowley-pm32-hidden {
+                display: none !important;
+            }
+
+            .crowley-pm32-restart {
+                color: #ffad24;
+            }
+        `;
+
+        document.head.appendChild(style);
+    }
+
+    /* =====================================
+       UI HELPERS
+       ===================================== */
+
+    function setVisible(item, visible) {
+        if (!item || !item.length) return;
+
+        item.toggleClass(
+            'crowley-pm32-hidden',
+            !visible
+        );
+    }
+
+    function applyIndicator(item, plugin) {
+        if (!item || !item.length) return;
+
+        var title = item.find(
+            '.settings-param__name'
+        ).first();
+
+        if (!title.length) return;
+
+        var indicator = title.find(
+            '.crowley-pm32-indicator'
+        );
+
+        if (!indicator.length) {
+            indicator = $(
+                '<span class="crowley-pm32-indicator"></span>'
+            );
+
+            title.append(indicator);
+        }
+
+        indicator.removeClass(
+            'enabled disabled not_installed'
+        );
+
+        indicator.addClass(
+            getState(plugin.url)
+        );
+    }
+
+    function applyFolderCount(item, category) {
+        if (!item || !item.length) return;
+
+        var title = item.find(
+            '.settings-param__name'
+        ).first();
+
+        if (!title.length) return;
+
+        var count = title.find(
+            '.crowley-pm32-count'
+        );
+
+        if (!count.length) {
+            count = $(
+                '<span class="crowley-pm32-count"></span>'
+            );
+
+            title.append(count);
+        }
+
+        count.text(
+            getCategoryCount(category) +
+            ' / ' +
+            category.plugins.length
+        );
+    }
+
+    /* =====================================
+       INTERNAL FOLDER NAVIGATION
+       ===================================== */
+
+    function openCategory(categoryId) {
+        currentCategory = categoryId;
+        refreshUI();
+    }
+
+    function closeCategory() {
+        currentCategory = null;
+        refreshUI();
+    }
+
+    function refreshUI() {
+        CATEGORIES.forEach(function (category) {
+            var folder = rendered[
+                'folder_' + category.id
+            ];
+
+            if (folder) {
+                setVisible(
+                    folder,
+                    currentCategory === null
+                );
+
+                applyFolderCount(
+                    folder,
+                    category
+                );
+            }
+
+            category.plugins.forEach(function (plugin) {
+                var item = rendered[
+                    'plugin_' + plugin.id
+                ];
+
+                if (item) {
+                    setVisible(
+                        item,
+                        currentCategory === category.id
+                    );
+
+                    applyIndicator(
+                        item,
+                        plugin
+                    );
+                }
+            });
+        });
+
+        setVisible(
+            rendered.back,
+            currentCategory !== null
+        );
+
+        setVisible(
+            rendered.restart,
+            pending
+        );
+    }
+
+    /* =====================================
+       ROOT COMPONENT
+       ===================================== */
+
+    function registerComponent() {
         Lampa.SettingsApi.addComponent({
-            component: id,
-            name: name,
-            icon: icon || ''
+            component: ROOT,
+            name: 'Менеджер Плагінів',
+
+            icon:
+                '<svg width="40" height="40" ' +
+                'viewBox="0 0 24 24" fill="none">' +
+                '<path d="M12 6V18M6 12H18" ' +
+                'stroke="white" stroke-width="2"/>' +
+                '</svg>'
         });
     }
 
     /* =====================================
-       FOLDER ENTRY
+       BACK BUTTON
        ===================================== */
 
-    function registerFolder(category) {
-        var page = 'crowley_pm31_' + category.id;
-
+    function registerBack() {
         Lampa.SettingsApi.addParam({
             component: ROOT,
 
             param: {
-                name: 'folder_' + category.id,
+                name: 'crowley_pm32_back',
+                type: 'button'
+            },
+
+            field: {
+                name: '← Назад до категорій',
+                description:
+                    'Повернутися до списку папок'
+            },
+
+            onRender: function (item) {
+                rendered.back = item;
+                refreshUI();
+            },
+
+            onChange: function () {
+                closeCategory();
+            }
+        });
+    }
+
+    /* =====================================
+       FOLDER BUTTONS
+       ===================================== */
+
+    function registerFolder(category) {
+        Lampa.SettingsApi.addParam({
+            component: ROOT,
+
+            param: {
+                name:
+                    'crowley_pm32_folder_' +
+                    category.id,
                 type: 'button'
             },
 
@@ -664,38 +750,27 @@
                     'folder_' + category.id
                 ] = item;
 
-                updateFolderCounts();
+                refreshUI();
             },
 
             onChange: function () {
-                /*
-                 * Відкриваємо вкладену
-                 * сторінку налаштувань Lampa.
-                 */
-                if (
-                    Lampa.Settings &&
-                    Lampa.Settings.create
-                ) {
-                    Lampa.Settings.create(page);
-                } else {
-                    notify(
-                        '❌ Не вдалося відкрити категорію'
-                    );
-                }
+                openCategory(category.id);
             }
         });
     }
 
     /* =====================================
-       PLUGIN ENTRY
+       PLUGIN BUTTONS
        ===================================== */
 
-    function registerPlugin(page, plugin) {
+    function registerPlugin(category, plugin) {
         Lampa.SettingsApi.addParam({
-            component: page,
+            component: ROOT,
 
             param: {
-                name: plugin.id,
+                name:
+                    'crowley_pm32_plugin_' +
+                    plugin.id,
                 type: 'button'
             },
 
@@ -709,7 +784,7 @@
                     'plugin_' + plugin.id
                 ] = item;
 
-                applyIndicator(item, plugin);
+                refreshUI();
             },
 
             onChange: function () {
@@ -719,16 +794,15 @@
     }
 
     /* =====================================
-       APPLY CHANGES BUTTON
+       RESTART BUTTON
        ===================================== */
 
-    function registerRestart(page) {
+    function registerRestart() {
         Lampa.SettingsApi.addParam({
-            component: page,
+            component: ROOT,
 
             param: {
-                name:
-                    'crowley_pm31_restart_' + page,
+                name: 'crowley_pm32_restart',
                 type: 'button'
             },
 
@@ -739,13 +813,13 @@
             },
 
             onRender: function (item) {
-                restartItems.push(item);
+                rendered.restart = item;
 
                 item.addClass(
-                    'crowley-pm31-restart'
+                    'crowley-pm32-restart'
                 );
 
-                updateRestartButtons();
+                refreshUI();
             },
 
             onChange: function () {
@@ -778,52 +852,26 @@
 
         injectStyles();
 
-        registerComponent(
-            ROOT,
-            'Менеджер Плагінів',
-            '<svg width="40" height="40" ' +
-            'viewBox="0 0 24 24" fill="none">' +
-            '<path d="M12 6V18M6 12H18" ' +
-            'stroke="white" stroke-width="2"/>' +
-            '</svg>'
-        );
+        registerComponent();
 
-        /*
-         * Головна сторінка:
-         * лише папки та кнопка
-         * застосування змін.
-         */
+        registerBack();
 
         CATEGORIES.forEach(function (category) {
             registerFolder(category);
         });
 
-        registerRestart(ROOT);
-
-        /*
-         * Вкладені сторінки:
-         * кожна категорія отримує
-         * власний компонент Settings.
-         */
-
         CATEGORIES.forEach(function (category) {
-            var page =
-                'crowley_pm31_' + category.id;
-
-            registerComponent(
-                page,
-                category.name,
-                ''
-            );
-
             category.plugins.forEach(
                 function (plugin) {
-                    registerPlugin(page, plugin);
+                    registerPlugin(
+                        category,
+                        plugin
+                    );
                 }
             );
-
-            registerRestart(page);
         });
+
+        registerRestart();
 
         return true;
     }
