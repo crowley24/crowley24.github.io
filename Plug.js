@@ -3,15 +3,21 @@
     'use strict';
 
     /*
-     * CROWLEY PLUGIN MANAGER 3.6.1 PREMIUM
+     * CROWLEY PLUGIN MANAGER 3.6.2 PREMIUM
      * Lampa / Android TV / Mobile
+     *
+     * Compact indicators aligned with titles
+     * Premium category icons
+     * Elegant plugin descriptions
+     * Clean action menus
+     * Back navigation
      */
 
-    var VERSION = '3.6.1';
-    var READY = 'crowley_plugin_manager_v361';
+    var VERSION = '3.6.2';
+    var READY = 'crowley_plugin_manager_v362';
     var ROOT = 'plugin_manager_page';
     var STORAGE = 'plugins';
-    var STYLE_ID = 'crowley-pm361-style';
+    var STYLE_ID = 'crowley-pm362-style';
 
     if (window[READY]) return;
     window[READY] = true;
@@ -27,6 +33,7 @@
     var navigationLock = false;
     var navigationTimer = null;
     var decorationTimer = null;
+    var decorationGeneration = 0;
 
     /* =====================================
        SVG ICONS
@@ -238,6 +245,7 @@
 
     function getPlugins() {
         var data = Lampa.Storage.get(STORAGE);
+
         return Array.isArray(data) ? data : [];
     }
 
@@ -249,7 +257,10 @@
         var list = getPlugins();
 
         for (var i = 0; i < list.length; i++) {
-            if (list[i] && list[i].url === url) {
+            if (
+                list[i] &&
+                list[i].url === url
+            ) {
                 return list[i];
             }
         }
@@ -319,7 +330,10 @@
         var changed = false;
 
         list.forEach(function (item) {
-            if (item && item.url === newUrl) {
+            if (
+                item &&
+                item.url === newUrl
+            ) {
                 hasNew = true;
             }
         });
@@ -337,7 +351,10 @@
         }
 
         list.forEach(function (item) {
-            if (item && item.url === oldUrl) {
+            if (
+                item &&
+                item.url === oldUrl
+            ) {
                 item.url = newUrl;
                 changed = true;
             }
@@ -361,6 +378,7 @@
         if (!pending) return;
 
         notify('Застосування змін...');
+
         window.location.reload();
     }
 
@@ -435,7 +453,9 @@
             return item && item.url !== plugin.url;
         });
 
-        if (filtered.length === list.length) return;
+        if (filtered.length === list.length) {
+            return;
+        }
 
         savePlugins(filtered);
         markPending();
@@ -456,6 +476,10 @@
         style.id = STYLE_ID;
 
         style.textContent = `
+            /*
+             * GENERAL
+             */
+
             .crowley-pm-hidden {
                 display: none !important;
             }
@@ -466,7 +490,8 @@
 
             .crowley-pm-folder {
                 position: relative;
-                transition: background-color .18s ease;
+                transition:
+                    background-color .18s ease;
             }
 
             .crowley-pm-folder
@@ -521,49 +546,56 @@
             }
 
             /*
-             * SMALL STATUS DOTS
+             * STATUS INDICATORS
+             *
+             * The indicator belongs to the
+             * plugin title, not the entire row.
              */
 
-            .crowley-pm-status-enabled,
-            .crowley-pm-status-disabled,
-            .crowley-pm-status-absent {
+            .crowley-pm-select-row
+            .crowley-pm-plugin-title {
+                display: inline-flex !important;
+                align-items: center !important;
+                gap: 9px !important;
+                vertical-align: middle;
                 position: relative;
             }
 
-            .crowley-pm-status-enabled:before,
-.crowley-pm-status-disabled:before,
-.crowley-pm-status-absent:before {
-    content: '';
-    position: absolute;
-    left: 10px;
-    top: 1.45em;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    transform: translateY(-50%);
-    pointer-events: none;
-}
+            .crowley-pm-plugin-title::before {
+                content: '';
+                display: inline-block;
+                position: static !important;
+                flex: 0 0 6px;
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                transform: none !important;
+                pointer-events: none;
+            }
 
-            .crowley-pm-status-enabled:before {
+            .crowley-pm-status-enabled
+            .crowley-pm-plugin-title::before {
                 background: #36c58b;
                 box-shadow:
                     0 0 0 3px rgba(54,197,139,.12);
             }
 
-            .crowley-pm-status-disabled:before {
+            .crowley-pm-status-disabled
+            .crowley-pm-plugin-title::before {
                 background: #e5a54b;
                 box-shadow:
                     0 0 0 3px rgba(229,165,75,.12);
             }
 
-            .crowley-pm-status-absent:before {
+            .crowley-pm-status-absent
+            .crowley-pm-plugin-title::before {
                 background: #9096a1;
                 box-shadow:
                     0 0 0 3px rgba(144,150,161,.12);
             }
 
             /*
-             * PLUGIN DESCRIPTION
+             * PLUGIN DESCRIPTIONS
              */
 
             .crowley-pm-select-row
@@ -581,7 +613,7 @@
             }
 
             /*
-             * ACTIONS
+             * DANGER ACTION
              */
 
             .crowley-pm-action-danger {
@@ -624,6 +656,11 @@
                 }
 
                 .crowley-pm-select-row
+                .crowley-pm-plugin-title {
+                    gap: 8px !important;
+                }
+
+                .crowley-pm-select-row
                 .selectbox-item__subtitle,
                 .crowley-pm-select-row
                 .select__subtitle,
@@ -648,31 +685,147 @@
        SELECT DECORATION
        ===================================== */
 
+    function findTitleElement(element, titleText) {
+        var selectors = [
+            '.selectbox-item__title',
+            '.selectbox-item__name',
+            '.select__title',
+            '.selector-item__title',
+            '.selectbox__title'
+        ];
+
+        for (var i = 0; i < selectors.length; i++) {
+            var found = element.querySelector(
+                selectors[i]
+            );
+
+            if (
+                found &&
+                found.textContent.trim() === titleText
+            ) {
+                return found;
+            }
+        }
+
+        /*
+         * Fallback:
+         * Find a leaf element containing
+         * exactly the plugin name.
+         */
+
+        var descendants =
+            element.querySelectorAll('*');
+
+        for (
+            var j = 0;
+            j < descendants.length;
+            j++
+        ) {
+            var node = descendants[j];
+
+            if (
+                node.children.length === 0 &&
+                node.textContent.trim() === titleText
+            ) {
+                return node;
+            }
+        }
+
+        return null;
+    }
+
     function decorateSelect(items) {
         var retries = 0;
+        var generation = ++decorationGeneration;
 
         clearTimeout(decorationTimer);
 
         function apply() {
-            if (menuDepth <= 0) return;
+            if (
+                menuDepth <= 0 ||
+                generation !== decorationGeneration
+            ) {
+                return;
+            }
 
-            var root = document.querySelector(
+            var roots = document.querySelectorAll(
                 '.selectbox, .select, .select-modal'
             );
 
-            if (!root) {
+            var root = null;
+            var candidates = null;
+
+            /*
+             * Prefer the latest visible
+             * Select container.
+             */
+
+            for (
+                var r = roots.length - 1;
+                r >= 0;
+                r--
+            ) {
+                var candidateRoot = roots[r];
+
+                if (
+                    !candidateRoot.getClientRects().length
+                ) {
+                    continue;
+                }
+
+                var foundRows =
+                    candidateRoot.querySelectorAll(
+                        '.selectbox-item, ' +
+                        '.select__item, ' +
+                        '.selector-item'
+                    );
+
+                if (foundRows.length >= items.length) {
+                    root = candidateRoot;
+                    candidates = foundRows;
+                    break;
+                }
+            }
+
+            if (!root || !candidates) {
                 retry();
                 return;
             }
 
-            var candidates = root.querySelectorAll(
-                '.selectbox-item, .select__item, .selector-item'
+            /*
+             * Remove old decoration from
+             * the currently visible menu.
+             */
+
+            var oldRows = root.querySelectorAll(
+                '.crowley-pm-select-row'
             );
 
-            if (!candidates.length) {
-                retry();
-                return;
+            for (var x = 0; x < oldRows.length; x++) {
+                oldRows[x].classList.remove(
+                    'crowley-pm-select-row',
+                    'crowley-pm-status-enabled',
+                    'crowley-pm-status-disabled',
+                    'crowley-pm-status-absent',
+                    'crowley-pm-action-danger'
+                );
             }
+
+            var oldTitles = root.querySelectorAll(
+                '.crowley-pm-plugin-title'
+            );
+
+            for (var y = 0; y < oldTitles.length; y++) {
+                oldTitles[y].classList.remove(
+                    'crowley-pm-plugin-title'
+                );
+            }
+
+            /*
+             * Decorate current items.
+             */
+
+            var matched = 0;
 
             for (
                 var i = 0;
@@ -686,18 +839,24 @@
                     'crowley-pm-select-row'
                 );
 
-                element.classList.remove(
-                    'crowley-pm-status-enabled',
-                    'crowley-pm-status-disabled',
-                    'crowley-pm-status-absent',
-                    'crowley-pm-action-danger'
-                );
-
                 if (item.pmState) {
-                    element.classList.add(
-                        'crowley-pm-status-' +
-                        item.pmState
+                    var title = findTitleElement(
+                        element,
+                        item.title
                     );
+
+                    if (title) {
+                        element.classList.add(
+                            'crowley-pm-status-' +
+                            item.pmState
+                        );
+
+                        title.classList.add(
+                            'crowley-pm-plugin-title'
+                        );
+
+                        matched++;
+                    }
                 }
 
                 if (item.action === 'remove') {
@@ -705,6 +864,24 @@
                         'crowley-pm-action-danger'
                     );
                 }
+            }
+
+            /*
+             * Retry if Lampa has not finished
+             * rendering the plugin titles.
+             */
+
+            var expected = items.filter(
+                function (item) {
+                    return !!item.pmState;
+                }
+            ).length;
+
+            if (
+                expected > 0 &&
+                matched < expected
+            ) {
+                retry();
             }
         }
 
@@ -714,12 +891,15 @@
             if (retries < 10) {
                 decorationTimer = setTimeout(
                     apply,
-                    50
+                    70
                 );
             }
         }
 
-        decorationTimer = setTimeout(apply, 40);
+        decorationTimer = setTimeout(
+            apply,
+            60
+        );
     }
 
     /* =====================================
@@ -728,6 +908,7 @@
 
     function restoreSettingsController() {
         menuDepth = 0;
+        decorationGeneration++;
 
         clearTimeout(decorationTimer);
 
@@ -763,7 +944,9 @@
             navigationLock = true;
 
             try {
-                if (typeof originalBack === 'function') {
+                if (
+                    typeof originalBack === 'function'
+                ) {
                     originalBack();
                 } else {
                     restoreSettingsController();
@@ -781,7 +964,9 @@
         };
 
         options.onSelect = function (item) {
-            if (typeof originalSelect === 'function') {
+            if (
+                typeof originalSelect === 'function'
+            ) {
                 originalSelect(item);
             }
         };
@@ -811,7 +996,8 @@
                     pmState: state,
 
                     selected:
-                        selected[category.id] === plugin.id
+                        selected[category.id] ===
+                        plugin.id
                 };
             }
         );
@@ -823,10 +1009,14 @@
         showSelect({
             title: category.name,
 
-            items: buildCategoryItems(category),
+            items:
+                buildCategoryItems(category),
 
             onSelect: function (item) {
-                if (!item || !item.plugin) {
+                if (
+                    !item ||
+                    !item.plugin
+                ) {
                     return;
                 }
 
@@ -888,7 +1078,9 @@
                     return;
                 }
 
-                if (item.action === 'remove') {
+                if (
+                    item.action === 'remove'
+                ) {
                     confirmRemove(
                         plugin,
                         category
@@ -980,7 +1172,9 @@
             'folder_' + category.id
         ];
 
-        if (!row || !row.length) return;
+        if (!row || !row.length) {
+            return;
+        }
 
         var description = row.find(
             '.settings-param__descr'
@@ -1003,18 +1197,26 @@
     }
 
     function decorateFolderRow(row, category) {
-        if (!row || !row.length) return;
+        if (!row || !row.length) {
+            return;
+        }
 
-        row.addClass('crowley-pm-folder');
+        row.addClass(
+            'crowley-pm-folder'
+        );
 
         var name = row.find(
             '.settings-param__name'
         ).first();
 
-        if (!name.length) return;
+        if (!name.length) {
+            return;
+        }
 
         if (
-            name.find('.crowley-pm-icon').length
+            name.find(
+                '.crowley-pm-icon'
+            ).length
         ) {
             return;
         }
@@ -1023,12 +1225,25 @@
 
         name.empty();
 
-        var icon = document.createElement('span');
-        icon.className = 'crowley-pm-icon';
-        icon.innerHTML = svgIcon(category.icon, 22);
+        var icon = document.createElement(
+            'span'
+        );
 
-        var label = document.createElement('span');
-        label.className = 'crowley-pm-label';
+        icon.className =
+            'crowley-pm-icon';
+
+        icon.innerHTML = svgIcon(
+            category.icon,
+            22
+        );
+
+        var label = document.createElement(
+            'span'
+        );
+
+        label.className =
+            'crowley-pm-label';
+
         label.textContent = original;
 
         name.append(icon);
@@ -1042,7 +1257,9 @@
     function updateRestartRow() {
         var row = rows.restart;
 
-        if (!row || !row.length) return;
+        if (!row || !row.length) {
+            return;
+        }
 
         row.toggleClass(
             'crowley-pm-hidden',
@@ -1058,12 +1275,14 @@
         Lampa.SettingsApi.addComponent({
             component: ROOT,
 
-            name: 'Менеджер Плагінів',
+            name:
+                'Менеджер Плагінів',
 
             icon:
                 '<svg width="40" height="40" ' +
                 'viewBox="0 0 24 24" ' +
-                'fill="none" stroke="white" ' +
+                'fill="none" ' +
+                'stroke="white" ' +
                 'stroke-width="1.7" ' +
                 'stroke-linecap="round" ' +
                 'stroke-linejoin="round">' +
@@ -1076,46 +1295,53 @@
     }
 
     function registerFolders() {
-        CATEGORIES.forEach(function (category) {
-            Lampa.SettingsApi.addParam({
-                component: ROOT,
+        CATEGORIES.forEach(
+            function (category) {
+                Lampa.SettingsApi.addParam({
+                    component: ROOT,
 
-                param: {
-                    name:
-                        'crowley_pm361_folder_' +
-                        category.id,
+                    param: {
+                        name:
+                            'crowley_pm362_folder_' +
+                            category.id,
 
-                    type: 'button'
-                },
+                        type: 'button'
+                    },
 
-                field: {
-                    name: category.name,
+                    field: {
+                        name: category.name,
 
-                    description:
-                        getCount(category) +
-                        ' із ' +
-                        category.plugins.length +
-                        ' встановлено'
-                },
+                        description:
+                            getCount(category) +
+                            ' із ' +
+                            category.plugins.length +
+                            ' встановлено'
+                    },
 
-                onRender: function (item) {
-                    rows[
-                        'folder_' + category.id
-                    ] = item;
+                    onRender: function (item) {
+                        rows[
+                            'folder_' +
+                            category.id
+                        ] = item;
 
-                    decorateFolderRow(
-                        item,
-                        category
-                    );
+                        decorateFolderRow(
+                            item,
+                            category
+                        );
 
-                    updateFolderRow(category);
-                },
+                        updateFolderRow(
+                            category
+                        );
+                    },
 
-                onChange: function () {
-                    openCategory(category);
-                }
-            });
-        });
+                    onChange: function () {
+                        openCategory(
+                            category
+                        );
+                    }
+                });
+            }
+        );
     }
 
     function registerRestart() {
@@ -1124,14 +1350,17 @@
 
             param: {
                 name:
-                    'crowley_pm361_restart',
+                    'crowley_pm362_restart',
 
                 type: 'button'
             },
 
             field: {
-                name: 'Застосувати зміни',
-                description: 'Перезапустити Lampa'
+                name:
+                    'Застосувати зміни',
+
+                description:
+                    'Перезапустити Lampa'
             },
 
             onRender: function (item) {
@@ -1155,7 +1384,9 @@
        ===================================== */
 
     function init() {
-        if (initialized) return true;
+        if (initialized) {
+            return true;
+        }
 
         if (
             !window.Lampa ||
@@ -1185,7 +1416,9 @@
     }
 
     function waitForLampa() {
-        if (init()) return;
+        if (init()) {
+            return;
+        }
 
         attempts++;
 
