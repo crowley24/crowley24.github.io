@@ -3,21 +3,15 @@
     'use strict';
 
     /*
-     * CROWLEY PLUGIN MANAGER 3.6.0 PREMIUM
+     * CROWLEY PLUGIN MANAGER 3.6.1 PREMIUM
      * Lampa / Android TV / Mobile
-     *
-     * Premium UI
-     * Compact status indicators
-     * SVG category icons
-     * Back navigation
-     * Restart after changes
      */
 
-    var VERSION = '3.6.0';
-    var READY = 'crowley_plugin_manager_v360';
+    var VERSION = '3.6.1';
+    var READY = 'crowley_plugin_manager_v361';
     var ROOT = 'plugin_manager_page';
     var STORAGE = 'plugins';
-    var STYLE_ID = 'crowley-pm360-style';
+    var STYLE_ID = 'crowley-pm361-style';
 
     if (window[READY]) return;
     window[READY] = true;
@@ -32,9 +26,10 @@
     var menuDepth = 0;
     var navigationLock = false;
     var navigationTimer = null;
+    var decorationTimer = null;
 
     /* =====================================
-       ICONS
+       SVG ICONS
        ===================================== */
 
     function svgIcon(type, size) {
@@ -51,7 +46,8 @@
 
             movies:
                 '<rect x="3" y="7" width="18" height="14" rx="2"/>' +
-                '<path d="M3 7 6 3h15l-3 4M8 3l-3 4M15 3l-3 4"/>' +
+                '<path d="M3 7 6 3h15l-3 4"/>' +
+                '<path d="M8 3 5 7M15 3l-3 4"/>' +
                 '<path d="m10 11 5 3-5 3z"/>',
 
             tools:
@@ -63,13 +59,7 @@
                 '<rect x="3" y="3" width="7" height="7" rx="1.5"/>' +
                 '<rect x="14" y="3" width="7" height="7" rx="1.5"/>' +
                 '<rect x="3" y="14" width="7" height="7" rx="1.5"/>' +
-                '<rect x="14" y="14" width="7" height="7" rx="1.5"/>',
-
-            refresh:
-                '<path d="M20 7v5h-5"/>' +
-                '<path d="M4 17v-5h5"/>' +
-                '<path d="M5.5 9A7 7 0 0 1 18 6l2 1"/>' +
-                '<path d="M18.5 15A7 7 0 0 1 6 18l-2-1"/>'
+                '<rect x="14" y="14" width="7" height="7" rx="1.5"/>'
         };
 
         return (
@@ -248,7 +238,6 @@
 
     function getPlugins() {
         var data = Lampa.Storage.get(STORAGE);
-
         return Array.isArray(data) ? data : [];
     }
 
@@ -315,7 +304,7 @@
     }
 
     /* =====================================
-       URL MIGRATION
+       HTTPS MIGRATION
        ===================================== */
 
     function migrateCustomButtons() {
@@ -372,7 +361,6 @@
         if (!pending) return;
 
         notify('Застосування змін...');
-
         window.location.reload();
     }
 
@@ -447,9 +435,7 @@
             return item && item.url !== plugin.url;
         });
 
-        if (filtered.length === list.length) {
-            return;
-        }
+        if (filtered.length === list.length) return;
 
         savePlugins(filtered);
         markPending();
@@ -458,7 +444,7 @@
     }
 
     /* =====================================
-       PREMIUM STYLES
+       PREMIUM CSS
        ===================================== */
 
     function injectStyles() {
@@ -470,37 +456,37 @@
         style.id = STYLE_ID;
 
         style.textContent = `
-            /*
-             * CROWLEY PREMIUM UI
-             */
-
             .crowley-pm-hidden {
                 display: none !important;
             }
 
+            /*
+             * CATEGORY ROWS
+             */
+
             .crowley-pm-folder {
-                transition:
-                    background-color .18s ease,
-                    transform .18s ease;
+                position: relative;
+                transition: background-color .18s ease;
             }
 
-            .crowley-pm-folder .settings-param__name {
+            .crowley-pm-folder
+            .settings-param__name {
+                display: flex;
+                align-items: center;
+                gap: 12px;
                 font-weight: 500;
                 letter-spacing: .1px;
             }
 
-            .crowley-pm-folder .settings-param__descr {
-                opacity: .68;
-                font-size: .9em;
-            }
-
-            .crowley-pm-folder .crowley-pm-icon {
+            .crowley-pm-folder
+            .crowley-pm-icon {
                 display: inline-flex;
+                flex: 0 0 22px;
+                width: 22px;
                 align-items: center;
                 justify-content: center;
-                vertical-align: middle;
-                margin-right: 12px;
-                opacity: .85;
+                margin: 0;
+                opacity: .88;
             }
 
             .crowley-pm-icon svg {
@@ -509,14 +495,17 @@
                 height: 22px;
             }
 
-            .crowley-pm-restart
-            .settings-param__name {
-                color: #e8b86b;
+            .crowley-pm-folder
+            .settings-param__descr {
+                padding-left: 34px;
+                font-size: .82em;
+                line-height: 1.35;
+                opacity: .65;
+                letter-spacing: .1px;
             }
 
             /*
-             * Select rows are marked only while
-             * a Crowley menu is open.
+             * SELECT ROWS
              */
 
             .crowley-pm-select-row {
@@ -532,9 +521,7 @@
             }
 
             /*
-             * Compact status indicator.
-             * A small colored dot is drawn with
-             * CSS instead of a large emoji.
+             * SMALL STATUS DOTS
              */
 
             .crowley-pm-status-enabled,
@@ -548,10 +535,10 @@
             .crowley-pm-status-absent:before {
                 content: '';
                 position: absolute;
-                left: 13px;
-                top: 50%;
-                width: 7px;
-                height: 7px;
+                left: 10px;
+                top: 1.05em;
+                width: 6px;
+                height: 6px;
                 border-radius: 50%;
                 transform: translateY(-50%);
                 pointer-events: none;
@@ -575,20 +562,55 @@
                     0 0 0 3px rgba(144,150,161,.12);
             }
 
-            .crowley-pm-status-enabled,
-            .crowley-pm-status-disabled,
-            .crowley-pm-status-absent {
-                padding-left: 19px;
+            /*
+             * PLUGIN DESCRIPTION
+             */
+
+            .crowley-pm-select-row
+            .selectbox-item__subtitle,
+            .crowley-pm-select-row
+            .select__subtitle,
+            .crowley-pm-select-row
+            .selector-item__subtitle {
+                font-size: .82em;
+                font-style: italic;
+                font-weight: 400;
+                opacity: .68;
+                line-height: 1.4;
+                letter-spacing: .1px;
             }
+
+            /*
+             * ACTIONS
+             */
 
             .crowley-pm-action-danger {
                 color: #e58b8b;
             }
 
+            /*
+             * RESTART
+             */
+
+            .crowley-pm-restart
+            .settings-param__name {
+                color: #e8b86b;
+            }
+
+            /*
+             * MOBILE
+             */
+
             @media (max-width: 600px) {
                 .crowley-pm-folder
+                .settings-param__name {
+                    gap: 9px;
+                }
+
+                .crowley-pm-folder
                 .crowley-pm-icon {
-                    margin-right: 9px;
+                    flex-basis: 19px;
+                    width: 19px;
                 }
 
                 .crowley-pm-icon svg {
@@ -596,11 +618,18 @@
                     height: 19px;
                 }
 
-                .crowley-pm-status-enabled:before,
-                .crowley-pm-status-disabled:before,
-                .crowley-pm-status-absent:before {
-                    width: 6px;
-                    height: 6px;
+                .crowley-pm-folder
+                .settings-param__descr {
+                    padding-left: 28px;
+                }
+
+                .crowley-pm-select-row
+                .selectbox-item__subtitle,
+                .crowley-pm-select-row
+                .select__subtitle,
+                .crowley-pm-select-row
+                .selector-item__subtitle {
+                    font-size: .8em;
                 }
             }
 
@@ -619,24 +648,10 @@
        SELECT DECORATION
        ===================================== */
 
-    function escapeHtml(value) {
-        return String(value)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
-    }
-
     function decorateSelect(items) {
-        /*
-         * The original Select item titles remain
-         * plain text for compatibility.
-         *
-         * The DOM is decorated after rendering.
-         */
-
         var retries = 0;
+
+        clearTimeout(decorationTimer);
 
         function apply() {
             if (menuDepth <= 0) return;
@@ -646,12 +661,7 @@
             );
 
             if (!root) {
-                retries++;
-
-                if (retries < 8) {
-                    setTimeout(apply, 45);
-                }
-
+                retry();
                 return;
             }
 
@@ -660,12 +670,7 @@
             );
 
             if (!candidates.length) {
-                retries++;
-
-                if (retries < 8) {
-                    setTimeout(apply, 45);
-                }
-
+                retry();
                 return;
             }
 
@@ -703,7 +708,18 @@
             }
         }
 
-        setTimeout(apply, 30);
+        function retry() {
+            retries++;
+
+            if (retries < 10) {
+                decorationTimer = setTimeout(
+                    apply,
+                    50
+                );
+            }
+        }
+
+        decorationTimer = setTimeout(apply, 40);
     }
 
     /* =====================================
@@ -712,6 +728,8 @@
 
     function restoreSettingsController() {
         menuDepth = 0;
+
+        clearTimeout(decorationTimer);
 
         updateFolderRows();
         updateRestartRow();
@@ -727,7 +745,10 @@
     }
 
     function showSelect(options) {
-        if (!Lampa.Select || !Lampa.Select.show) {
+        if (
+            !Lampa.Select ||
+            !Lampa.Select.show
+        ) {
             return;
         }
 
@@ -750,9 +771,12 @@
             } finally {
                 clearTimeout(navigationTimer);
 
-                navigationTimer = setTimeout(function () {
-                    navigationLock = false;
-                }, 120);
+                navigationTimer = setTimeout(
+                    function () {
+                        navigationLock = false;
+                    },
+                    120
+                );
             }
         };
 
@@ -772,43 +796,34 @@
        ===================================== */
 
     function buildCategoryItems(category) {
-        return category.plugins.map(function (plugin) {
-            var state = getState(plugin);
+        return category.plugins.map(
+            function (plugin) {
+                var state = getState(plugin);
 
-            var statusText =
-                state === 'enabled'
-                    ? 'Активний'
-                    : state === 'disabled'
-                        ? 'Вимкнений'
-                        : 'Не встановлено';
+                return {
+                    title: plugin.name,
 
-            return {
-                title: plugin.name,
+                    subtitle:
+                        plugin.description,
 
-                subtitle:
-                    plugin.description +
-                    '  ·  ' +
-                    statusText,
+                    plugin: plugin,
 
-                plugin: plugin,
+                    pmState: state,
 
-                pmState: state,
-
-                selected:
-                    selected[category.id] === plugin.id
-            };
-        });
+                    selected:
+                        selected[category.id] === plugin.id
+                };
+            }
+        );
     }
 
     function openCategory(category) {
         if (!category) return;
 
-        var items = buildCategoryItems(category);
-
         showSelect({
             title: category.name,
 
-            items: items,
+            items: buildCategoryItems(category),
 
             onSelect: function (item) {
                 if (!item || !item.plugin) {
@@ -818,7 +833,10 @@
                 selected[category.id] =
                     item.plugin.id;
 
-                openPlugin(item.plugin, category);
+                openPlugin(
+                    item.plugin,
+                    category
+                );
             },
 
             onBack: function () {
@@ -838,30 +856,23 @@
         if (state === 'absent') {
             items.push({
                 title: 'Встановити',
-                subtitle: 'Додати плагін до Lampa',
                 action: 'install'
             });
         } else {
-            if (state === 'enabled') {
-                items.push({
-                    title: 'Вимкнути',
-                    subtitle:
-                        'Зупинити запуск після перезапуску',
-                    action: 'disable'
-                });
-            } else {
-                items.push({
-                    title: 'Увімкнути',
-                    subtitle:
-                        'Активувати після перезапуску',
-                    action: 'enable'
-                });
-            }
+            items.push({
+                title:
+                    state === 'enabled'
+                        ? 'Вимкнути'
+                        : 'Увімкнути',
+
+                action:
+                    state === 'enabled'
+                        ? 'disable'
+                        : 'enable'
+            });
 
             items.push({
                 title: 'Видалити',
-                subtitle:
-                    'Прибрати плагін зі списку',
                 action: 'remove'
             });
         }
@@ -878,7 +889,11 @@
                 }
 
                 if (item.action === 'remove') {
-                    confirmRemove(plugin, category);
+                    confirmRemove(
+                        plugin,
+                        category
+                    );
+
                     return;
                 }
 
@@ -896,13 +911,15 @@
                         break;
                 }
 
-                selected[category.id] = plugin.id;
+                selected[category.id] =
+                    plugin.id;
 
                 openCategory(category);
             },
 
             onBack: function () {
-                selected[category.id] = plugin.id;
+                selected[category.id] =
+                    plugin.id;
 
                 openCategory(category);
             }
@@ -915,18 +932,18 @@
 
     function confirmRemove(plugin, category) {
         showSelect({
-            title: 'Видалити ' + plugin.name + '?',
+            title:
+                'Видалити ' +
+                plugin.name +
+                '?',
 
             items: [
                 {
                     title: 'Скасувати',
-                    subtitle: 'Залишити плагін',
                     action: 'cancel'
                 },
                 {
                     title: 'Видалити',
-                    subtitle:
-                        'Підтвердити видалення',
                     action: 'remove'
                 }
             ],
@@ -939,13 +956,17 @@
                     removePlugin(plugin);
                 }
 
-                selected[category.id] = plugin.id;
+                selected[category.id] =
+                    plugin.id;
 
                 openCategory(category);
             },
 
             onBack: function () {
-                openPlugin(plugin, category);
+                openPlugin(
+                    plugin,
+                    category
+                );
             }
         });
     }
@@ -1042,8 +1063,7 @@
             icon:
                 '<svg width="40" height="40" ' +
                 'viewBox="0 0 24 24" ' +
-                'fill="none" ' +
-                'stroke="white" ' +
+                'fill="none" stroke="white" ' +
                 'stroke-width="1.7" ' +
                 'stroke-linecap="round" ' +
                 'stroke-linejoin="round">' +
@@ -1062,7 +1082,7 @@
 
                 param: {
                     name:
-                        'crowley_pm360_folder_' +
+                        'crowley_pm361_folder_' +
                         category.id,
 
                     type: 'button'
@@ -1103,7 +1123,9 @@
             component: ROOT,
 
             param: {
-                name: 'crowley_pm360_restart',
+                name:
+                    'crowley_pm361_restart',
+
                 type: 'button'
             },
 
@@ -1168,7 +1190,10 @@
         attempts++;
 
         if (attempts < 100) {
-            setTimeout(waitForLampa, 200);
+            setTimeout(
+                waitForLampa,
+                200
+            );
         } else {
             window[READY] = false;
         }
