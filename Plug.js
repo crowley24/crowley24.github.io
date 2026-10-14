@@ -79,7 +79,7 @@
                     description:
                         'Оновлене нижнє меню для мобільних пристроїв',
                     url:
-                        'https://crowley24.github.io/NewMenu_Mob.js'
+                        'https://crowley24.github.io/main/NewMenu_Mob.js'
                 },
                 {
                     id: 'custom_buttons',
