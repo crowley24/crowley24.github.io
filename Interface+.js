@@ -4,16 +4,16 @@
 
 /*
  * @name INTERFACE+
- * @version 1.5.0
+ * @version 1.5.1
  * @author Crowley24
- * @description Premium interface, dynamic banners and TMDB logos
+ * @description Premium interface, dynamic banners, Ukrainian TMDB logos
  * @platforms Lampa | Android TV
  */
 
 if (window.banner_hero_plugin) return;
 window.banner_hero_plugin = true;
 
-var VERSION = '1.5.0';
+var VERSION = '1.5.1';
 
 var SETTING = 'banner_hero_enabled';
 var SIZE_SETTING = 'interface_size';
@@ -23,8 +23,9 @@ var QUALITY_SETTING = 'interface_plus_logo_quality';
 var SCALE_SETTING = 'interface_plus_logo_scale';
 
 var CACHE_TTL = 24 * 60 * 60 * 1000;
+var ERROR_TTL = 60 * 1000;
 var CACHE_MAX = 100;
-var CACHE_KEY = 'interface_plus_logo_cache_v150';
+var CACHE_KEY = 'interface_plus_logo_cache_v151';
 
 var initialized = false;
 
@@ -44,6 +45,7 @@ var card = {
     observer: null,
     timer: null,
     src: '',
+    title: '',
     data: null
 };
 
@@ -68,7 +70,7 @@ var texts = {
 
     card_logo_name: 'Логотип у картці фільму',
     card_logo_descr:
-        'Замінювати назву фільму або серіалу логотипом TMDB',
+        'Український логотип, англійський або українська текстова назва',
 
     logo_quality_name: 'Якість логотипів',
     logo_quality_descr:
@@ -342,11 +344,20 @@ function scale() {
 ========================= */
 
 function kind(d) {
-    return d && (
+    if (!d) return 'movie';
+
+    if (
         d.media_type === 'tv' ||
         d.type === 'tv' ||
+        d.type === 'series' ||
+        d.first_air_date ||
+        d.number_of_seasons ||
         (d.name && !d.title)
-    ) ? 'tv' : 'movie';
+    ) {
+        return 'tv';
+    }
+
+    return 'movie';
 }
 
 function key(d) {
@@ -441,7 +452,6 @@ function preload(src, cb) {
         if (done) return;
 
         done = true;
-
         im.onload = null;
         im.onerror = null;
 
@@ -464,23 +474,112 @@ function preload(src, cb) {
 }
 
 /* =========================
-   TMDB LOGO URL
+   TMDB HELPERS
 ========================= */
+
+function tmdbURL(type, id) {
+    return (
+        'https://api.themoviedb.org/3/' +
+        type + '/' +
+        encodeURIComponent(id) +
+        '?api_key=' +
+        encodeURIComponent(Lampa.TMDB.key()) +
+        '&language=uk-UA' +
+        '&append_to_response=images' +
+        '&include_image_language=uk,en,null'
+    );
+}
 
 function logoURL(path) {
     if (!path) return '';
 
+    var p = String(path);
+
+    if (/\.svg$/i.test(p)) {
+        p = p.replace(/\.svg$/i, '.png');
+    }
+
     try {
         return Lampa.TMDB.image(
-            '/t/p/' + quality() + path
+            '/t/p/' + quality() + p
         );
     } catch (e) {
         return '';
     }
 }
 
+function ukrainianTitle(json, d) {
+    var title = '';
+
+    if (json) {
+        title = kind(d) === 'tv'
+            ? json.name
+            : json.title;
+    }
+
+    if (
+        title &&
+        String(title).trim()
+    ) {
+        return String(title).trim();
+    }
+
+    return (
+        d.title ||
+        d.name ||
+        d.original_title ||
+        d.original_name ||
+        ''
+    );
+}
+
 /* =========================
-   PERSISTENT LOGO CACHE
+   STRICT LOGO SELECTION
+========================= */
+
+function chooseLogo(list) {
+    if (!Array.isArray(list)) {
+        return null;
+    }
+
+    var groups = ['uk', 'en'];
+
+    for (var g = 0; g < groups.length; g++) {
+        var lang = groups[g];
+
+        var candidates = list.filter(function (x) {
+            return x &&
+                x.file_path &&
+                x.iso_639_1 === lang;
+        });
+
+        if (!candidates.length) {
+            continue;
+        }
+
+        candidates.sort(function (a, b) {
+            var voteA = Number(a.vote_average) || 0;
+            var voteB = Number(b.vote_average) || 0;
+
+            if (voteB !== voteA) {
+                return voteB - voteA;
+            }
+
+            return (
+                Number(b.vote_count) || 0
+            ) - (
+                Number(a.vote_count) || 0
+            );
+        });
+
+        return candidates[0];
+    }
+
+    return null;
+}
+
+/* =========================
+   CACHE
 ========================= */
 
 function logoStoreRead() {
@@ -501,37 +600,46 @@ function logoStoreWrite(cache) {
     } catch (e) {}
 }
 
-/* =========================
-   LOGO SELECTION
-========================= */
+function validCache(item) {
+    return item &&
+        typeof item === 'object' &&
+        item.time &&
+        Date.now() - item.time <
+        (item.failed ? ERROR_TTL : CACHE_TTL);
+}
 
-function chooseLogo(list) {
-    if (!Array.isArray(list) || !list.length) {
-        return null;
-    }
+function saveLogo(k, result, failed) {
+    var item = {
+        path: result.path || '',
+        title: result.title || '',
+        time: Date.now(),
+        failed: !!failed
+    };
 
-    var groups = ['uk', 'en', null];
+    logoCache[k] = item;
 
-    for (var g = 0; g < groups.length; g++) {
-        var candidates = list.filter(function (x) {
-            return x &&
-                x.file_path &&
-                x.iso_639_1 === groups[g];
+    if (failed) return;
+
+    var db = logoStoreRead();
+    db[k] = item;
+
+    var keys = Object.keys(db);
+
+    if (keys.length > CACHE_MAX) {
+        keys.sort(function (a, b) {
+            return (db[a].time || 0) -
+                   (db[b].time || 0);
         });
 
-        if (candidates.length) {
-            candidates.sort(function (a, b) {
-                return (b.vote_average || 0) -
-                       (a.vote_average || 0);
-            });
-
-            return candidates[0];
-        }
+        keys.slice(
+            0,
+            keys.length - CACHE_MAX
+        ).forEach(function (x) {
+            delete db[x];
+        });
     }
 
-    return list.filter(function (x) {
-        return x && x.file_path;
-    })[0] || null;
+    logoStoreWrite(db);
 }
 
 /* =========================
@@ -544,26 +652,37 @@ function loadLogo(d, cb) {
         !d.id ||
         (d.source && d.source !== 'tmdb')
     ) {
-        cb('');
+        cb({
+            src: '',
+            title: d ? (d.title || d.name || '') : ''
+        });
         return;
     }
 
     var k = key(d);
-    var now = Date.now();
-
     var hit = logoCache[k];
 
-    if (hit && now - hit.time < CACHE_TTL) {
-        cb(logoURL(hit.path));
+    function result(item) {
+        return {
+            src: logoURL(item.path),
+            title: item.title ||
+                   d.title ||
+                   d.name ||
+                   ''
+        };
+    }
+
+    if (validCache(hit)) {
+        cb(result(hit));
         return;
     }
 
-    var persisted = logoStoreRead();
-    var saved = persisted[k];
+    var db = logoStoreRead();
+    var saved = db[k];
 
-    if (saved && now - saved.time < CACHE_TTL) {
+    if (validCache(saved)) {
         logoCache[k] = saved;
-        cb(logoURL(saved.path));
+        cb(result(saved));
         return;
     }
 
@@ -574,52 +693,34 @@ function loadLogo(d, cb) {
 
     if (
         !Lampa.TMDB ||
-        !Lampa.TMDB.api ||
         !Lampa.TMDB.key
     ) {
-        cb('');
+        cb({
+            src: '',
+            title: d.title || d.name || ''
+        });
         return;
     }
 
     pending[k] = [cb];
 
-    function finish(path) {
-        var item = {
+    function finish(path, title, failed) {
+        var value = {
             path: path || '',
-            time: Date.now()
+            title: title || '',
+            failed: !!failed
         };
 
-        logoCache[k] = item;
+        saveLogo(k, value, failed);
 
-        var db = logoStoreRead();
-        db[k] = item;
-
-        var keys = Object.keys(db);
-
-        if (keys.length > CACHE_MAX) {
-            keys.sort(function (a, b) {
-                return (db[a].time || 0) -
-                       (db[b].time || 0);
-            });
-
-            keys.slice(
-                0,
-                keys.length - CACHE_MAX
-            ).forEach(function (x) {
-                delete db[x];
-            });
-        }
-
-        logoStoreWrite(db);
-
-        var cbs = pending[k] || [];
+        var callbacks = pending[k] || [];
         delete pending[k];
 
-        var src = logoURL(item.path);
+        var output = result(logoCache[k]);
 
-        cbs.forEach(function (fn) {
+        callbacks.forEach(function (fn) {
             try {
-                fn(src);
+                fn(output);
             } catch (e) {}
         });
     }
@@ -627,40 +728,42 @@ function loadLogo(d, cb) {
     var url;
 
     try {
-        url = Lampa.TMDB.api(
-            kind(d) +
-            '/' +
-            d.id +
-            '/images?api_key=' +
-            Lampa.TMDB.key() +
-            '&include_image_language=uk,en,null'
-        );
+        url = tmdbURL(kind(d), d.id);
     } catch (e) {
-        finish('');
+        finish('', '', true);
         return;
     }
 
-    try {
-        var req = new Lampa.Reguest();
+    $.ajax({
+        url: url,
+        type: 'GET',
+        dataType: 'json',
+        timeout: 12000,
 
-        req.silent(
-            url,
-            function (json) {
-                var best = chooseLogo(
-                    json && json.logos
-                );
+        success: function (json) {
+            var logos = json &&
+                json.images &&
+                json.images.logos;
 
-                finish(
-                    best ? best.file_path : ''
-                );
-            },
-            function () {
-                finish('');
-            }
-        );
-    } catch (e) {
-        finish('');
-    }
+            var best = chooseLogo(logos);
+
+            var title = ukrainianTitle(json, d);
+
+            finish(
+                best ? best.file_path : '',
+                title,
+                false
+            );
+        },
+
+        error: function () {
+            finish(
+                '',
+                d.title || d.name || '',
+                true
+            );
+        }
+    });
 }
 
 /* =========================
@@ -1004,25 +1107,37 @@ function showHero(h, d) {
         });
     });
 
-    loadLogo(d, function (src) {
+    loadLogo(d, function (result) {
         if (
             h.bannerId !== id ||
-            h.logoToken !== token ||
-            !src
+            h.logoToken !== token
         ) {
             return;
         }
 
-        preload(src, function (ok) {
+        if (result.title) {
+            p.title.textContent = result.title;
+        }
+
+        if (!result.src) {
+            p.title.style.display = '';
+            return;
+        }
+
+        preload(result.src, function (ok) {
             if (
                 h.bannerId !== id ||
-                h.logoToken !== token ||
-                !ok
+                h.logoToken !== token
             ) {
                 return;
             }
 
-            p.logo.src = src;
+            if (!ok) {
+                p.title.style.display = '';
+                return;
+            }
+
+            p.logo.src = result.src;
             p.logo.style.display = 'block';
 
             requestAnimationFrame(function () {
@@ -1220,6 +1335,7 @@ function stopCard(restoreTitle) {
     card.root = null;
     card.key = '';
     card.src = '';
+    card.title = '';
     card.data = null;
 }
 
@@ -1297,11 +1413,39 @@ function prepareTitle(title, id) {
 }
 
 /* =========================
+   UKRAINIAN TEXT FALLBACK
+========================= */
+
+function putText(token, id, value) {
+    if (!current(token, id)) {
+        return;
+    }
+
+    var title = findTitle(card.root);
+
+    if (!title) {
+        scheduleCheck(token, id, 80);
+        return;
+    }
+
+    restore(title);
+
+    if (value) {
+        title.textContent = value;
+    }
+}
+
+/* =========================
    DISPLAY CARD LOGO
 ========================= */
 
 function putLogo(token, id, src) {
-    if (!current(token, id) || !src) {
+    if (!current(token, id)) {
+        return;
+    }
+
+    if (!src) {
+        putText(token, id, card.title);
         return;
     }
 
@@ -1323,7 +1467,13 @@ function putLogo(token, id, src) {
         'left center';
 
     logo.onload = null;
-    logo.onerror = null;
+
+    logo.onerror = function () {
+        if (!current(token, id)) return;
+
+        card.src = '';
+        putText(token, id, card.title);
+    };
 
     logo.src = src;
 
@@ -1350,15 +1500,14 @@ function scheduleCheck(token, id, delay) {
     card.timer = setTimeout(function () {
         card.timer = null;
 
-        if (
-            current(token, id) &&
-            card.src
-        ) {
-            putLogo(
-                token,
-                id,
-                card.src
-            );
+        if (!current(token, id)) {
+            return;
+        }
+
+        if (card.src) {
+            putLogo(token, id, card.src);
+        } else if (card.title) {
+            putText(token, id, card.title);
         }
     }, delay || 70);
 }
@@ -1376,7 +1525,7 @@ function watchCard(root, token, id) {
         function (mutations) {
             if (
                 !current(token, id) ||
-                !card.src
+                (!card.src && !card.title)
             ) {
                 return;
             }
@@ -1424,6 +1573,7 @@ function watchCard(root, token, id) {
             var title = findTitle(root);
 
             if (
+                card.src &&
                 title &&
                 title.classList.contains(
                     'interface-plus-logo-active'
@@ -1468,11 +1618,9 @@ function startCard(o, override) {
         card.root === root
     ) {
         if (card.src) {
-            putLogo(
-                card.token,
-                id,
-                card.src
-            );
+            putLogo(card.token, id, card.src);
+        } else if (card.title) {
+            putText(card.token, id, card.title);
         }
 
         return;
@@ -1488,29 +1636,36 @@ function startCard(o, override) {
 
     watchCard(root, token, id);
 
-    loadLogo(d, function (src) {
-        if (
-            !current(token, id) ||
-            !src
-        ) {
+    loadLogo(d, function (result) {
+        if (!current(token, id)) {
             return;
         }
 
-        preload(src, function (ok) {
-            if (
-                !current(token, id) ||
-                !ok
-            ) {
+        card.title = result.title ||
+            d.title ||
+            d.name ||
+            '';
+
+        if (!result.src) {
+            card.src = '';
+            putText(token, id, card.title);
+            return;
+        }
+
+        preload(result.src, function (ok) {
+            if (!current(token, id)) {
                 return;
             }
 
-            card.src = src;
+            if (!ok) {
+                card.src = '';
+                putText(token, id, card.title);
+                return;
+            }
 
-            putLogo(
-                token,
-                id,
-                src
-            );
+            card.src = result.src;
+
+            putLogo(token, id, result.src);
         });
     });
 }
@@ -1539,12 +1694,6 @@ function refreshCard() {
 ========================= */
 
 function refreshLogos() {
-    Object.keys(logoCache).forEach(
-        function (k) {
-            delete logoCache[k];
-        }
-    );
-
     lastCardId = '';
     lastActivity = null;
 
@@ -1760,10 +1909,6 @@ function init() {
         true
     );
 
-    /* =========================
-       ACTIVITY LISTENER
-    ========================= */
-
     if (Lampa.Listener) {
         Lampa.Listener.follow(
             'activity',
@@ -1793,16 +1938,15 @@ function init() {
             }
         );
 
-        /* =========================
-           FULL CARD COMPLETED
-        ========================= */
-
         Lampa.Listener.follow(
             'full',
             function (e) {
                 if (
                     !e ||
-                    e.type !== 'complite'
+                    (
+                        e.type !== 'complite' &&
+                        e.type !== 'complete'
+                    )
                 ) {
                     return;
                 }
@@ -1828,10 +1972,6 @@ function init() {
         );
     }
 
-    /* =========================
-       CURRENT ACTIVITY
-    ========================= */
-
     if (
         Lampa.Activity &&
         Lampa.Activity.active
@@ -1850,10 +1990,6 @@ function init() {
     }
 
     settings();
-
-    /* =========================
-       STORAGE LISTENER
-    ========================= */
 
     if (
         Lampa.Storage.listener &&
