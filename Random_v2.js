@@ -3,39 +3,41 @@
     'use strict';
 
     /*
-     * RANDOM PRO 2.1
-     * Smart Random Edition
+     * Random Pro 2.1.1
+     * Minimal Edition
      * Lampa / TMDB
-     *
-     * Simple outside. Smart inside.
      */
 
-    var VERSION = '2.1.0';
+    var VERSION = '2.1.1';
     var PLUGIN_ID = 'lampa_random_pro';
 
-    if (window.random_pro_21_loaded) return;
-    window.random_pro_21_loaded = true;
+    if (window.random_pro_211_loaded) return;
+    window.random_pro_211_loaded = true;
 
     var STORAGE_KEY = 'lampa_random_pro_settings';
     var CACHE_KEY = 'lampa_random_pro_cache';
     var HISTORY_KEY = 'lampa_random_pro_history';
     var CURRENT_KEY = 'lampa_random_pro_current';
 
-    var CACHE_TIME = 5 * 60 * 1000;
+    var CACHE_TIME = 300000;
     var HISTORY_LIMIT = 200;
     var RESULTS_LIMIT = 20;
     var REQUEST_TIMEOUT = 12000;
 
-    var menuAdded = false;
-    var menuObserver = null;
-    var rowInstalled = false;
-    var componentInstalled = false;
     var started = false;
-
-    var requestId = 0;
-    var activeJob = null;
+    var menuObserver = null;
+    var currentResults = [];
     var memoryCache = null;
-    var currentResults = null;
+    var activeJob = null;
+    var requestSerial = 0;
+    var refreshLock = false;
+
+    var DEFAULTS = {
+        type: 'all',
+        genres: [],
+        years: 'all',
+        minRating: 6.5
+    };
 
     var MOVIE_GENRES = {
         28: 'Бойовик',
@@ -77,12 +79,7 @@
         37: 'Вестерн'
     };
 
-    /*
-     * Logical genre groups.
-     * Used for movie -> TV conversion.
-     */
-
-    var GENRE_GROUPS = {
+    var GENRE_MAP = {
         28: [10759],
         12: [10759],
         878: [10765],
@@ -102,21 +99,17 @@
         37: [37]
     };
 
-    var DEFAULTS = {
-        type: 'all',
-        genres: [],
-        years: 'all',
-        minRating: 6.5
-    };
-
-    /*
-     * Utility
-     */
+    var STRATEGIES = [
+        { id: 'quality', quota: 8 },
+        { id: 'gems', quota: 5 },
+        { id: 'popular', quota: 4 },
+        { id: 'surprise', quota: 3 }
+    ];
 
     function log() {
         try {
             var args = Array.prototype.slice.call(arguments);
-            args.unshift('[Random Pro 2.1]');
+            args.unshift('[Random Pro]');
             console.log.apply(console, args);
         } catch (e) {}
     }
@@ -131,18 +124,16 @@
         }
     }
 
-    function storageGet(key, fallback) {
+    function getStorage(key, fallback) {
         try {
             var value = Lampa.Storage.get(key);
-            return value === undefined || value === null
-                ? fallback
-                : value;
+            return value == null ? fallback : value;
         } catch (e) {
             return fallback;
         }
     }
 
-    function storageSet(key, value) {
+    function setStorage(key, value) {
         try {
             Lampa.Storage.set(key, value);
         } catch (e) {
@@ -150,35 +141,37 @@
         }
     }
 
-    function clone(data) {
+    function clone(value) {
         try {
-            return JSON.parse(JSON.stringify(data));
+            return JSON.parse(JSON.stringify(value));
         } catch (e) {
-            return data;
+            return value;
         }
     }
 
-    function unique(array) {
-        return array.filter(function (item, index) {
-            return array.indexOf(item) === index;
+    function unique(items) {
+        return items.filter(function (value, index) {
+            return items.indexOf(value) === index;
         });
     }
 
-    function shuffle(array) {
-        var result = array.slice();
+    function shuffle(items) {
+        var result = items.slice();
 
         for (var i = result.length - 1; i > 0; i--) {
             var j = Math.floor(Math.random() * (i + 1));
-            var temp = result[i];
+            var tmp = result[i];
             result[i] = result[j];
-            result[j] = temp;
+            result[j] = tmp;
         }
 
         return result;
     }
 
     function random(min, max) {
-        return Math.floor(Math.random() * (max - min + 1)) + min;
+        return Math.floor(
+            Math.random() * (max - min + 1)
+        ) + min;
     }
 
     function notify(message) {
@@ -189,32 +182,19 @@
         }
     }
 
-    /*
-     * Settings
-     */
-
     function getSettings() {
-        var saved = storageGet(STORAGE_KEY, {});
+        var saved = getStorage(STORAGE_KEY, {});
+        var settings = Object.assign({}, DEFAULTS, saved || {});
 
-        var settings = Object.assign(
-            {},
-            DEFAULTS,
-            saved || {}
-        );
+        settings.genres = Array.isArray(settings.genres)
+            ? unique(settings.genres.map(String))
+            : [];
 
-        if (!Array.isArray(settings.genres)) {
-            settings.genres = [];
-        }
-
-        settings.genres = unique(
-            settings.genres.map(String)
-        );
-
-        if (['all', 'movie', 'tv'].indexOf(settings.type) === -1) {
+        if (['all', 'movie', 'tv'].indexOf(settings.type) < 0) {
             settings.type = 'all';
         }
 
-        if (['all', 'new', 'retro', '90s'].indexOf(settings.years) === -1) {
+        if (['all', 'new', 'retro', '90s'].indexOf(settings.years) < 0) {
             settings.years = 'all';
         }
 
@@ -233,11 +213,11 @@
     }
 
     function saveSettings(settings) {
-        storageSet(STORAGE_KEY, settings);
+        setStorage(STORAGE_KEY, settings);
         clearCache();
     }
 
-    function settingsSignature(settings) {
+    function signature(settings) {
         return JSON.stringify({
             type: settings.type,
             genres: settings.genres.slice().sort(),
@@ -246,59 +226,44 @@
         });
     }
 
-    /*
-     * Cache
-     */
-
     function clearCache() {
         memoryCache = null;
-        storageSet(CACHE_KEY, null);
+        setStorage(CACHE_KEY, null);
     }
 
     function getCache(settings) {
         var cache = memoryCache ||
-                    storageGet(CACHE_KEY, null);
+            getStorage(CACHE_KEY, null);
 
         if (!cache || !Array.isArray(cache.results)) {
             return null;
         }
 
-        if (Date.now() - cache.time > CACHE_TIME) {
+        if (Date.now() - cache.time >= CACHE_TIME) {
             return null;
         }
 
-        if (cache.signature !== settingsSignature(settings)) {
+        if (cache.signature !== signature(settings)) {
             return null;
         }
 
         return clone(cache.results);
     }
 
-    function setCache(settings, results) {
+    function saveCache(settings, results) {
         var cache = {
             time: Date.now(),
-            signature: settingsSignature(settings),
+            signature: signature(settings),
             results: clone(results)
         };
 
         memoryCache = cache;
-        storageSet(CACHE_KEY, cache);
+        setStorage(CACHE_KEY, cache);
     }
-
-    /*
-     * History
-     */
 
     function getHistory() {
-        var history = storageGet(HISTORY_KEY, []);
+        var history = getStorage(HISTORY_KEY, []);
         return Array.isArray(history) ? history : [];
-    }
-
-    function saveHistory(history) {
-        storageSet(
-            HISTORY_KEY,
-            unique(history).slice(-HISTORY_LIMIT)
-        );
     }
 
     function remember(results) {
@@ -308,12 +273,11 @@
             history.push(item.type + '_' + item.id);
         });
 
-        saveHistory(history);
+        setStorage(
+            HISTORY_KEY,
+            unique(history).slice(-HISTORY_LIMIT)
+        );
     }
-
-    /*
-     * Genres
-     */
 
     function mapGenres(genres, type) {
         var result = [];
@@ -322,34 +286,28 @@
             var id = Number(genre);
 
             if (type === 'movie') {
-                if (MOVIE_GENRES[id]) {
-                    result.push(id);
-                }
-            } else {
-                if (TV_GENRES[id]) {
-                    result.push(id);
-                } else if (GENRE_GROUPS[id]) {
-                    result = result.concat(GENRE_GROUPS[id]);
-                }
+                if (MOVIE_GENRES[id]) result.push(id);
+            } else if (TV_GENRES[id]) {
+                result.push(id);
+            } else if (GENRE_MAP[id]) {
+                result = result.concat(GENRE_MAP[id]);
             }
         });
 
         return unique(result);
     }
 
-    /*
-     * Years
-     */
-
     function applyYears(params, type, settings) {
         var key = type === 'movie'
             ? 'primary_release_date'
             : 'first_air_date';
 
-        var year = new Date().getFullYear();
+        var current = new Date().getFullYear();
 
         if (settings.years === 'new') {
-            params[key + '.gte'] = (year - 5) + '-01-01';
+            params[key + '.gte'] =
+                (current - 5) + '-01-01';
+
             params[key + '.lte'] =
                 new Date().toISOString().substring(0, 10);
         } else if (settings.years === 'retro') {
@@ -364,8 +322,7 @@
         if (settings.years === 'all') return true;
 
         var date = item.release_date ||
-                   item.first_air_date ||
-                   '';
+            item.first_air_date || '';
 
         var year = parseInt(date.substring(0, 4), 10);
 
@@ -375,7 +332,7 @@
 
         if (settings.years === 'new') {
             return year >= current - 5 &&
-                   year <= current;
+                year <= current;
         }
 
         if (settings.years === 'retro') {
@@ -389,24 +346,6 @@
         return true;
     }
 
-    /*
-     * Smart Random Engine
-     *
-     * Target balance:
-     *
-     * 40% Quality
-     * 25% Hidden Gems
-     * 20% Popular
-     * 15% Surprise
-     */
-
-    var STRATEGIES = [
-        { id: 'quality', count: 8 },
-        { id: 'gems', count: 5 },
-        { id: 'popular', count: 4 },
-        { id: 'surprise', count: 3 }
-    ];
-
     function buildParams(type, strategy, page, settings) {
         var params = {
             language: tr('uk-UA', 'ru-RU'),
@@ -415,28 +354,29 @@
             'vote_average.gte': settings.minRating
         };
 
-        if (strategy === 'quality') {
-            params.sort_by = 'vote_average.desc';
-            params['vote_count.gte'] = 500;
-        }
+        switch (strategy) {
+            case 'quality':
+                params.sort_by = 'vote_average.desc';
+                params['vote_count.gte'] = 500;
+                break;
 
-        if (strategy === 'gems') {
-            params.sort_by = 'vote_average.desc';
-            params['vote_count.gte'] = 50;
-            params['vote_count.lte'] = 2500;
-        }
+            case 'gems':
+                params.sort_by = 'vote_average.desc';
+                params['vote_count.gte'] = 50;
+                params['vote_count.lte'] = 2500;
+                break;
 
-        if (strategy === 'popular') {
-            params.sort_by = 'popularity.desc';
-            params['vote_count.gte'] = 200;
-        }
+            case 'popular':
+                params.sort_by = 'popularity.desc';
+                params['vote_count.gte'] = 200;
+                break;
 
-        if (strategy === 'surprise') {
-            params.sort_by = Math.random() < 0.5
-                ? 'popularity.desc'
-                : 'vote_average.desc';
+            default:
+                params.sort_by = Math.random() < 0.5
+                    ? 'popularity.desc'
+                    : 'vote_average.desc';
 
-            params['vote_count.gte'] = 30;
+                params['vote_count.gte'] = 30;
         }
 
         applyYears(params, type, settings);
@@ -466,40 +406,34 @@
             Math.log(popularity + 1) * 15
         );
 
-        if (strategy === 'quality') {
-            return quality * 0.85 +
-                   popular * 0.15 +
-                   Math.random() * 5;
-        }
+        switch (strategy) {
+            case 'quality':
+                return quality * 0.85 +
+                    popular * 0.15 +
+                    Math.random() * 5;
 
-        if (strategy === 'gems') {
-            return quality * 0.9 +
-                   Math.max(0, 20 - popular * 0.2) +
-                   Math.random() * 10;
-        }
+            case 'gems':
+                return quality * 0.9 +
+                    Math.max(0, 20 - popular * 0.2) +
+                    Math.random() * 10;
 
-        if (strategy === 'popular') {
-            return popular * 0.75 +
-                   quality * 0.25 +
-                   Math.random() * 5;
-        }
+            case 'popular':
+                return popular * 0.75 +
+                    quality * 0.25 +
+                    Math.random() * 5;
 
-        return quality * 0.3 +
-               popular * 0.15 +
-               Math.random() * 50;
+            default:
+                return quality * 0.3 +
+                    popular * 0.15 +
+                    Math.random() * 50;
+        }
     }
 
-    /*
-     * TMDB request
-     */
-
-    function tmdbRequest(type, params, callback) {
+    function requestTmdb(type, params, callback) {
         var completed = false;
 
         var timeout = setTimeout(function () {
-            if (completed) return;
-            completed = true;
-            callback(null);
+            finish(null);
         }, REQUEST_TIMEOUT);
 
         function finish(data) {
@@ -526,10 +460,6 @@
         }
     }
 
-    /*
-     * Candidate tasks
-     */
-
     function buildTasks(settings) {
         var tasks = [];
 
@@ -540,14 +470,8 @@
         STRATEGIES.forEach(function (strategy) {
             types.forEach(function (type) {
                 var pages = [];
-
-                var maxPage = strategy.id === 'gems'
-                    ? 10
-                    : 12;
-
-                var count = settings.type === 'all'
-                    ? 2
-                    : 3;
+                var count = types.length === 2 ? 2 : 3;
+                var maxPage = strategy.id === 'gems' ? 10 : 12;
 
                 while (pages.length < count) {
                     var page = random(1, maxPage);
@@ -570,16 +494,13 @@
         return shuffle(tasks);
     }
 
-    /*
-     * Candidate filtering
-     */
-
     function filterCandidates(items, settings, history) {
         var seen = {};
 
         return items.filter(function (item) {
-            if (!item || !item.id) return false;
-            if (!item.poster_path) return false;
+            if (!item || !item.id || !item.poster_path) {
+                return false;
+            }
 
             var key = item.type + '_' + item.id;
 
@@ -595,19 +516,19 @@
                 return false;
             }
 
-            var genres = mapGenres(
+            var selectedGenres = mapGenres(
                 settings.genres,
                 item.type
             );
 
-            if (genres.length) {
+            if (selectedGenres.length) {
                 var itemGenres = item.genre_ids || [];
 
-                var matched = genres.some(function (id) {
+                if (!selectedGenres.some(function (id) {
                     return itemGenres.indexOf(id) !== -1;
-                });
-
-                if (!matched) return false;
+                })) {
+                    return false;
+                }
             }
 
             if (history.indexOf(key) !== -1) {
@@ -618,21 +539,17 @@
         });
     }
 
-    /*
-     * Balanced selection
-     */
-
     function selectBalanced(items, settings) {
         var history = getHistory();
 
-        var filtered = filterCandidates(
+        var available = filterCandidates(
             items,
             settings,
             history
         );
 
-        if (filtered.length < RESULTS_LIMIT) {
-            filtered = filterCandidates(
+        if (available.length < RESULTS_LIMIT) {
+            available = filterCandidates(
                 items,
                 settings,
                 []
@@ -643,26 +560,27 @@
         var used = {};
 
         STRATEGIES.forEach(function (strategy) {
-            var candidates = filtered.map(function (item) {
+            var candidates = available.map(function (item) {
                 return {
                     item: item,
-                    value: score(item, strategy.id)
+                    score: score(item, strategy.id)
                 };
             });
 
             candidates.sort(function (a, b) {
-                return b.value - a.value;
+                return b.score - a.score;
             });
 
             var pool = candidates.slice(0, 50);
-
             var added = 0;
 
-            while (pool.length && added < strategy.count) {
-                var range = Math.min(10, pool.length);
-                var index = random(0, range - 1);
-                var candidate = pool.splice(index, 1)[0].item;
+            while (pool.length && added < strategy.quota) {
+                var index = random(
+                    0,
+                    Math.min(9, pool.length - 1)
+                );
 
+                var candidate = pool.splice(index, 1)[0].item;
                 var key = candidate.type + '_' + candidate.id;
 
                 if (used[key]) continue;
@@ -673,27 +591,19 @@
             }
         });
 
-        if (selected.length < RESULTS_LIMIT) {
-            var rest = shuffle(filtered);
+        shuffle(available).forEach(function (item) {
+            if (selected.length >= RESULTS_LIMIT) return;
 
-            rest.forEach(function (item) {
-                if (selected.length >= RESULTS_LIMIT) return;
+            var key = item.type + '_' + item.id;
 
-                var key = item.type + '_' + item.id;
-
-                if (!used[key]) {
-                    used[key] = true;
-                    selected.push(item);
-                }
-            });
-        }
+            if (!used[key]) {
+                used[key] = true;
+                selected.push(item);
+            }
+        });
 
         return shuffle(selected.slice(0, RESULTS_LIMIT));
     }
-
-    /*
-     * Discovery
-     */
 
     function discover(force, callback) {
         var settings = getSettings();
@@ -706,36 +616,35 @@
                 callback(cached);
                 return;
             }
+
+            if (activeJob &&
+                activeJob.signature === signature(settings)) {
+                activeJob.callbacks.push(callback);
+                return;
+            }
         }
 
-        if (!force && activeJob &&
-            activeJob.signature === settingsSignature(settings)) {
-            activeJob.callbacks.push(callback);
-            return;
-        }
-
-        var id = ++requestId;
-        var tasks = buildTasks(settings);
+        var id = ++requestSerial;
 
         var job = {
             id: id,
-            signature: settingsSignature(settings),
+            signature: signature(settings),
             callbacks: [callback],
-            tasks: tasks,
+            tasks: buildTasks(settings),
             index: 0,
             active: 0,
             finished: 0,
             results: [],
-            done: false
+            completed: false
         };
 
         activeJob = job;
 
         function finish() {
-            if (job.done) return;
-            job.done = true;
+            if (job.completed) return;
+            job.completed = true;
 
-            if (job.id !== requestId) return;
+            if (job.id !== requestSerial) return;
 
             var results = selectBalanced(
                 job.results,
@@ -743,12 +652,11 @@
             );
 
             if (results.length) {
-                currentResults = results;
-
-                setCache(settings, results);
+                currentResults = clone(results);
+                saveCache(settings, results);
                 remember(results);
 
-                storageSet(
+                setStorage(
                     CURRENT_KEY,
                     clone(results)
                 );
@@ -766,10 +674,13 @@
         }
 
         function next() {
-            if (job.done || job.id !== requestId) return;
+            if (job.completed || job.id !== requestSerial) {
+                return;
+            }
 
             while (job.active < 2 &&
-                   job.index < job.tasks.length) {
+                job.index < job.tasks.length) {
+
                 (function (task) {
                     job.active++;
 
@@ -780,20 +691,23 @@
                         settings
                     );
 
-                    tmdbRequest(
+                    requestTmdb(
                         task.type,
                         params,
                         function (json) {
                             job.active--;
                             job.finished++;
 
-                            if (job.id !== requestId) return;
+                            if (job.id !== requestSerial) return;
 
                             if (json &&
                                 Array.isArray(json.results)) {
+
                                 json.results.forEach(function (item) {
                                     item.type = task.type;
                                     item.media_type = task.type;
+                                    item.__random_strategy =
+                                        task.strategy;
 
                                     job.results.push(item);
                                 });
@@ -819,72 +733,64 @@
     }
 
     /*
-     * Main page
-     */
-
-    function injectMain() {
-        if (!Lampa.ContentRows ||
-            typeof Lampa.ContentRows.call !== 'function') {
-            return;
-        }
-
-        if (Lampa.ContentRows.call.__random_pro_21) {
-            return;
-        }
-
-        var original = Lampa.ContentRows.call;
-
-        function wrapped(screen, params, calls) {
-            if (screen === 'main' &&
-                Array.isArray(calls)) {
-                calls.unshift(function (call) {
-                    discover(false, function (results) {
-                        call({
-                            title: '🎲 ' +
-                                tr('Може, подивимось?', 'Может, посмотрим?'),
-                            results: results || []
-                        });
-                    });
-                });
-            }
-
-            return original.apply(this, arguments);
-        }
-
-        wrapped.__random_pro_21 = true;
-
-        Lampa.ContentRows.call = wrapped;
-        rowInstalled = true;
-    }
-
-    /*
-     * Results component
+     * Results screen
      *
-     * Uses Lampa's standard category card rendering
-     * where available.
+     * Standard Lampa cards and controller.
      */
 
     function registerComponent() {
-        if (componentInstalled) return;
-
         if (!Lampa.Component ||
             typeof Lampa.Component.add !== 'function') {
             return;
         }
 
         Lampa.Component.add('random_pro_results', function () {
-            var network = new Lampa.Reguest();
-            var scroll = new Lampa.Scroll({ mask: true });
+            var self = this;
             var html = $('<div class="random-pro-results"></div>');
+            var scroll = new Lampa.Scroll({ mask: true });
             var body = $('<div class="random-pro-grid"></div>');
             var cards = [];
+            var lastFocus = null;
+            var destroyed = false;
 
             html.append(scroll.render());
             scroll.append(body);
 
+            function focusFirst() {
+                var selectors = body.find('.selector');
+
+                if (!selectors.length) return;
+
+                var target = lastFocus &&
+                    $.contains(body[0], lastFocus)
+                    ? $(lastFocus)
+                    : selectors.eq(0);
+
+                Lampa.Controller.collectionFocus(
+                    target,
+                    scroll.render()
+                );
+            }
+
+            function openCard(item) {
+                try {
+                    Lampa.Activity.push({
+                        url: item.type + '/' + item.id,
+                        component: 'full',
+                        id: item.id,
+                        method: item.type,
+                        card: item,
+                        source: 'tmdb'
+                    });
+                } catch (e) {
+                    log('Open card error', e);
+                }
+            }
+
             this.create = function () {
-                var results = currentResults ||
-                    storageGet(CURRENT_KEY, []);
+                var results = currentResults.length
+                    ? currentResults
+                    : getStorage(CURRENT_KEY, []);
 
                 body.empty();
                 cards = [];
@@ -897,21 +803,20 @@
 
                         card.create();
 
-                        card.on('hover:enter', function () {
-                            Lampa.Activity.push({
-                                url: item.type + '/' + item.id,
-                                component: 'full',
-                                id: item.id,
-                                method: item.type,
-                                card: item,
-                                source: 'tmdb'
-                            });
+                        var element = card.render();
+
+                        element.on('hover:focus', function () {
+                            lastFocus = element[0];
                         });
 
-                        body.append(card.render());
+                        element.on('hover:enter', function () {
+                            openCard(item);
+                        });
+
+                        body.append(element);
                         cards.push(card);
                     } catch (e) {
-                        log('Card error', e);
+                        log('Card rendering error', e);
                     }
                 });
 
@@ -923,26 +828,41 @@
             };
 
             this.start = function () {
+                /*
+                 * collectionSet requires a DOM container
+                 * as its second argument in this Lampa build.
+                 */
+
                 Lampa.Controller.add('content', {
                     toggle: function () {
+                        var container = body[0];
+
+                        if (!container) return;
+
                         Lampa.Controller.collectionSet(
-                            body.find('.selector')
+                            'content',
+                            container
                         );
 
-                        Lampa.Controller.collectionFocus(
-                            body.find('.selector').eq(0),
-                            scroll.render()
-                        );
+                        focusFirst();
                     },
+
                     up: function () {
-                        Lampa.Controller.collectionFocus(
-                            body.find('.selector').eq(0),
-                            scroll.render()
-                        );
+                        Lampa.Controller.collectionUp();
                     },
-                    down: function () {},
-                    left: function () {},
-                    right: function () {},
+
+                    down: function () {
+                        Lampa.Controller.collectionDown();
+                    },
+
+                    left: function () {
+                        Lampa.Controller.collectionLeft();
+                    },
+
+                    right: function () {
+                        Lampa.Controller.collectionRight();
+                    },
+
                     back: function () {
                         Lampa.Activity.backward();
                     }
@@ -952,20 +872,26 @@
             };
 
             this.pause = function () {};
+
             this.stop = function () {};
+
             this.destroy = function () {
+                if (destroyed) return;
+                destroyed = true;
+
                 cards.forEach(function (card) {
-                    if (card.destroy) card.destroy();
+                    try {
+                        if (card.destroy) card.destroy();
+                    } catch (e) {}
                 });
 
-                if (scroll.destroy) scroll.destroy();
-                if (network.clear) network.clear();
+                try {
+                    if (scroll.destroy) scroll.destroy();
+                } catch (e) {}
 
                 html.remove();
             };
         });
-
-        componentInstalled = true;
     }
 
     function openResults(results) {
@@ -978,64 +904,104 @@
         }
 
         currentResults = clone(results);
-        storageSet(CURRENT_KEY, currentResults);
+        setStorage(CURRENT_KEY, currentResults);
 
         try {
             Lampa.Activity.push({
-                title: '🎲 ' +
-                    tr('Може, подивимось?', 'Может, посмотрим?'),
+                title: tr(
+                    'Може, подивимось?',
+                    'Может, посмотрим?'
+                ),
                 component: 'random_pro_results',
                 page: 1
             });
         } catch (e) {
-            log('Open results error', e);
+            log('Results screen error', e);
             notify(tr(
-                'Помилка відкриття добірки',
-                'Ошибка открытия подборки'
+                'Не вдалося відкрити добірку',
+                'Не удалось открыть подборку'
             ));
         }
     }
 
-    /*
-     * Refresh
-     */
-
     function surpriseMe() {
+        if (refreshLock) return;
+
+        refreshLock = true;
         clearCache();
 
         notify(tr(
-            '🎲 Шукаю щось цікаве...',
-            '🎲 Ищу что-нибудь интересное...'
+            'Шукаю щось цікаве...',
+            'Ищу что-нибудь интересное...'
         ));
 
         discover(true, function (results) {
+            refreshLock = false;
+
             if (!results.length) {
                 notify(tr(
-                    'Спробуй інші жанри або рейтинг',
-                    'Попробуй другие жанры или рейтинг'
+                    'Спробуй змінити жанри або рейтинг',
+                    'Попробуй изменить жанры или рейтинг'
                 ));
                 return;
             }
-
-            notify(tr(
-                '✨ Знайшла дещо цікаве!',
-                '✨ Нашла кое-что интересное!'
-            ));
 
             openResults(results);
         });
     }
 
     /*
-     * Settings UI
+     * Main page row
+     */
+
+    function injectMain() {
+        if (!Lampa.ContentRows ||
+            typeof Lampa.ContentRows.call !== 'function') {
+            return;
+        }
+
+        if (Lampa.ContentRows.call.__random_pro_211) {
+            return;
+        }
+
+        var original = Lampa.ContentRows.call;
+
+        function wrapped(screen, params, calls) {
+            if (screen === 'main' &&
+                Array.isArray(calls)) {
+
+                calls.unshift(function (call) {
+                    discover(false, function (results) {
+                        call({
+                            title: tr(
+                                'Може, подивимось?',
+                                'Может, посмотрим?'
+                            ),
+                            results: results || []
+                        });
+                    });
+                });
+            }
+
+            return original.apply(this, arguments);
+        }
+
+        wrapped.__random_pro_211 = true;
+        Lampa.ContentRows.call = wrapped;
+    }
+
+    /*
+     * Minimal settings
      */
 
     function showSelect(title, items, onSelect, onBack) {
         Lampa.Select.show({
             title: title,
             items: items,
-            onSelect: function (item) {
-                if (item && onSelect) onSelect(item);
+            onSelect: function (selected) {
+                if (selected && onSelect) {
+                    onSelect(selected);
+                }
             },
             onBack: function () {
                 if (onBack) onBack();
@@ -1052,7 +1018,7 @@
         };
     }
 
-    function typeTitle(type) {
+    function typeName(type) {
         if (type === 'movie') {
             return tr('Фільми', 'Фильмы');
         }
@@ -1061,18 +1027,21 @@
             return tr('Серіали', 'Сериалы');
         }
 
-        return tr('Фільми та серіали', 'Фильмы и сериалы');
+        return tr(
+            'Фільми та серіали',
+            'Фильмы и сериалы'
+        );
     }
 
-    function yearsTitle(years) {
+    function yearName(value) {
         var names = {
             all: tr('Усі роки', 'Все годы'),
             new: tr('Останні 5 років', 'Последние 5 лет'),
-            retro: tr('Класика до 2005', 'Классика до 2005'),
+            retro: tr('До 2005 року', 'До 2005 года'),
             '90s': tr('90-ті', '90-е')
         };
 
-        return names[years] || names.all;
+        return names[value] || names.all;
     }
 
     function openSettings() {
@@ -1080,12 +1049,12 @@
 
         var items = [
             item(
-                '🎬 ' + tr('Що шукаємо?', 'Что ищем?'),
-                typeTitle(settings.type),
+                tr('Тип контенту', 'Тип контента'),
+                typeName(settings.type),
                 'type'
             ),
             item(
-                '🎭 ' + tr('Жанри', 'Жанры'),
+                tr('Жанри', 'Жанры'),
                 settings.genres.length
                     ? tr('Обрано: ', 'Выбрано: ') +
                       settings.genres.length
@@ -1093,25 +1062,24 @@
                 'genres'
             ),
             item(
-                '📅 ' + tr('Період', 'Период'),
-                yearsTitle(settings.years),
+                tr('Період', 'Период'),
+                yearName(settings.years),
                 'years'
             ),
             item(
-                '⭐ ' + tr('Рейтинг', 'Рейтинг'),
-                tr('Від ', 'От ') +
+                tr('Мінімальний рейтинг', 'Минимальный рейтинг'),
                 settings.minRating.toFixed(1),
                 'rating'
             ),
             item(
-                '🎲 ' + tr('Здивуй мене!', 'Удиви меня!'),
-                tr('Знайти нову добірку', 'Найти новую подборку'),
+                tr('Здивуй мене', 'Удиви меня'),
+                tr('Нова добірка', 'Новая подборка'),
                 'surprise'
             )
         ];
 
         showSelect(
-            '🎲 Random Pro 2.1',
+            'Random Pro',
             items,
             function (selected) {
                 switch (selected.value) {
@@ -1139,15 +1107,13 @@
     }
 
     function openType() {
-        var options = [
-            item(tr('Фільми та серіали', 'Фильмы и сериалы'), '', 'all'),
-            item(tr('Фільми', 'Фильмы'), '', 'movie'),
-            item(tr('Серіали', 'Сериалы'), '', 'tv')
-        ];
-
         showSelect(
-            tr('Що шукаємо?', 'Что ищем?'),
-            options,
+            tr('Тип контенту', 'Тип контента'),
+            [
+                item(typeName('all'), '', 'all'),
+                item(typeName('movie'), '', 'movie'),
+                item(typeName('tv'), '', 'tv')
+            ],
             function (selected) {
                 var settings = getSettings();
                 settings.type = selected.value;
@@ -1170,13 +1136,9 @@
         });
 
         var items = [
+            item(tr('Готово', 'Готово'), '', '__done'),
             item(
-                '✓ ' + tr('Готово', 'Готово'),
-                '',
-                '__done'
-            ),
-            item(
-                '✕ ' + tr('Очистити вибір', 'Очистить выбор'),
+                tr('Очистити вибір', 'Очистить выбор'),
                 '',
                 '__clear'
             )
@@ -1196,7 +1158,7 @@
         });
 
         showSelect(
-            tr('Оберіть жанри', 'Выберите жанры'),
+            tr('Жанри', 'Жанры'),
             items,
             function (selected) {
                 if (selected.value === '__done') {
@@ -1225,16 +1187,14 @@
     }
 
     function openYears() {
-        var options = [
-            item(tr('Усі роки', 'Все годы'), '', 'all'),
-            item(tr('Останні 5 років', 'Последние 5 лет'), '', 'new'),
-            item(tr('Класика до 2005', 'Классика до 2005'), '', 'retro'),
-            item(tr('90-ті', '90-е'), '', '90s')
-        ];
-
         showSelect(
-            tr('Період випуску', 'Период выпуска'),
-            options,
+            tr('Період', 'Период'),
+            [
+                item(yearName('all'), '', 'all'),
+                item(yearName('new'), '', 'new'),
+                item(yearName('retro'), '', 'retro'),
+                item(yearName('90s'), '', '90s')
+            ],
             function (selected) {
                 var settings = getSettings();
                 settings.years = selected.value;
@@ -1247,21 +1207,21 @@
     }
 
     function openRating() {
-        var options = [];
+        var items = [];
 
-        for (var n = 5; n <= 9; n += 0.5) {
-            options.push(
+        for (var rating = 5; rating <= 9; rating += 0.5) {
+            items.push(
                 item(
-                    '⭐ ' + n.toFixed(1),
+                    rating.toFixed(1),
                     '',
-                    String(n)
+                    String(rating)
                 )
             );
         }
 
         showSelect(
             tr('Мінімальний рейтинг', 'Минимальный рейтинг'),
-            options,
+            items,
             function (selected) {
                 var settings = getSettings();
                 settings.minRating = Number(selected.value);
@@ -1274,7 +1234,7 @@
     }
 
     /*
-     * Menu
+     * Side menu
      */
 
     function addButton() {
@@ -1283,20 +1243,16 @@
         var selector =
             '.menu__item[data-action="' + PLUGIN_ID + '"]';
 
-        if ($(selector).length) {
-            menuAdded = true;
-            return;
-        }
+        if ($(selector).length) return;
 
         var menu = $('.menu .menu__list').eq(0);
-
         if (!menu.length) return;
 
         var button = $(
             '<li class="menu__item selector" ' +
             'data-action="' + PLUGIN_ID + '">' +
             '<div class="menu__ico">' +
-            '<span class="random-pro-icon">🎲</span>' +
+            '<span class="random-pro-menu-mark">R</span>' +
             '</div>' +
             '<div class="menu__text">Random Pro</div>' +
             '</li>'
@@ -1311,7 +1267,6 @@
         });
 
         menu.append(button);
-        menuAdded = true;
     }
 
     /*
@@ -1319,26 +1274,22 @@
      */
 
     function installStyles() {
-        if (document.getElementById('random-pro-21-style')) {
+        if (document.getElementById('random-pro-211-style')) {
             return;
         }
 
         var css = [
-            '.menu__item[data-action="lampa_random_pro"] .menu__ico{',
+            '.random-pro-menu-mark{',
             'display:flex;',
             'align-items:center;',
             'justify-content:center;',
-            '}',
-
-            '.random-pro-icon{',
-            'font-size:1.35em;',
-            'line-height:1;',
-            'transition:transform .2s ease;',
-            '}',
-
-            '.menu__item[data-action="lampa_random_pro"].focus ',
-            '.random-pro-icon{',
-            'transform:scale(1.1);',
+            'width:1.6em;',
+            'height:1.6em;',
+            'border:1px solid currentColor;',
+            'border-radius:50%;',
+            'font-size:.8em;',
+            'font-weight:500;',
+            'letter-spacing:-.03em;',
             '}',
 
             '.random-pro-results{',
@@ -1360,27 +1311,19 @@
             'flex-shrink:0;',
             '}',
 
-            '@media (max-width:600px){',
+            '@media(max-width:600px){',
             '.random-pro-results{padding:1em;}',
             '.random-pro-grid{gap:.6em;}',
             '.random-pro-grid .card{width:30%;}',
-            '}',
-
-            '@media (prefers-reduced-motion:reduce){',
-            '.random-pro-icon{transition:none!important;}',
             '}'
         ].join('');
 
         var style = document.createElement('style');
-        style.id = 'random-pro-21-style';
+        style.id = 'random-pro-211-style';
         style.textContent = css;
 
         document.head.appendChild(style);
     }
-
-    /*
-     * Menu observer
-     */
 
     function watchMenu() {
         if (menuObserver ||
@@ -1389,16 +1332,12 @@
         }
 
         var menu = document.querySelector('.menu');
-
         if (!menu) return;
 
         menuObserver = new MutationObserver(function () {
-            var button = document.querySelector(
+            if (!document.querySelector(
                 '.menu__item[data-action="' + PLUGIN_ID + '"]'
-            );
-
-            if (!button) {
-                menuAdded = false;
+            )) {
                 addButton();
             }
         });
@@ -1408,10 +1347,6 @@
             subtree: true
         });
     }
-
-    /*
-     * Initialization
-     */
 
     function start() {
         if (started) return;
@@ -1430,7 +1365,7 @@
         addButton();
         watchMenu();
 
-        log('Smart Random Edition started');
+        log('Random Pro ' + VERSION + ' ready');
     }
 
     if (window.appready) {
