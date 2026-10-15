@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    // Ініціалізація стандартних значень
+    // Ініціалізація
     if (!Lampa.Storage.get('gemina_api_key')) {
         Lampa.Storage.set('gemina_api_key', '');
     }
@@ -21,7 +21,7 @@
     function askGemina(promptText, callback) {
         let apiKey = getApiKey();
         if (!apiKey) {
-            Lampa.Noty.show('Вкажіть Gemini API Key у Налаштуваннях -> Gemina!');
+            Lampa.Noty.show('Вкажіть Gemini API Key у Налаштуваннях (Gemina)!');
             return;
         }
 
@@ -67,86 +67,62 @@
         });
     }
 
-    // 1. Окремий розділ «Gemina» в головному меню Налаштувань Lampa
-    Lampa.Settings.listener.follow('open', function (e) {
-        if (e.name === 'main') {
-            let item = $(`
-                <div class="settings-folder selector" data-component="gemina_settings">
-                    <div class="settings-folder__icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/>
-                            <path d="M12 6v6l4 2"/>
-                        </svg>
-                    </div>
-                    <div class="settings-folder__title">Gemina</div>
-                    <div class="settings-folder__descr">Налаштування ШІ-помічниці Джеміна</div>
-                </div>
-            `);
-
-            item.on('click', function () {
-                Lampa.Settings.main().render().find('.settings__content').empty().append(renderSettings());
+    // Реєстрація окремого розділу налаштувань через SettingsApi
+    function registerSettings() {
+        // Додаємо компонент-розділ
+        if (Lampa.SettingsApi.add) {
+            Lampa.SettingsApi.add({
+                component: 'gemina_settings',
+                name: 'Gemina',
+                icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/>
+                    <path d="M12 6v6l4 2"/>
+                </svg>`
             });
-
-            // Вставляємо розділ Gemina у список налаштувань
-            e.body.find('.settings-param').first().before(item);
         }
-    });
 
-    // Рендер сторінки налаштувань Gemina
-    function renderSettings() {
-        let body = $('<div class="settings-list"></div>');
-
-        // Поле API Key
-        let keyInput = $(`
-            <div class="settings-param selector" data-type="input">
-                <div class="settings-param__name">Gemini API Key</div>
-                <div class="settings-param__value">${getApiKey() || 'Не вказано'}</div>
-                <div class="settings-param__descr">Вкажіть безкоштовний ключ з Google AI Studio</div>
-            </div>
-        `);
-
-        keyInput.on('click', function () {
-            Lampa.Input.edit({
-                title: 'Gemini API Key',
-                value: getApiKey(),
-                free: true
-            }, function (value) {
-                let cleanValue = (value || '').trim();
-                Lampa.Storage.set('gemina_api_key', cleanValue);
-                keyInput.find('.settings-param__value').text(cleanValue || 'Не вказано');
-            });
+        // Параметр: API Key
+        Lampa.SettingsApi.addParam({
+            component: 'gemina_settings',
+            param: {
+                name: 'gemina_api_key',
+                type: 'input',
+                values: '',
+                default: ''
+            },
+            field: {
+                name: 'Gemini API Key',
+                description: 'Введіть безкоштовний ключ з Google AI Studio'
+            },
+            onChange: function (value) {
+                Lampa.Storage.set('gemina_api_key', (value || '').trim());
+            }
         });
 
-        // Вибір моделі
-        let modelSelect = $(`
-            <div class="settings-param selector" data-type="select">
-                <div class="settings-param__name">Модель ШІ</div>
-                <div class="settings-param__value">${getModel()}</div>
-                <div class="settings-param__descr">Оберіть модель Google Gemini</div>
-            </div>
-        `);
-
-        modelSelect.on('click', function () {
-            Lampa.Select.show({
-                title: 'Оберіть модель',
-                items: [
-                    { title: 'gemini-2.5-flash (Рекомендована)', value: 'gemini-2.5-flash' },
-                    { title: 'gemini-1.5-flash', value: 'gemini-1.5-flash' },
-                    { title: 'gemini-1.5-pro', value: 'gemini-1.5-pro' }
-                ],
-                onSelect: function (a) {
-                    Lampa.Storage.set('gemina_model', a.value);
-                    modelSelect.find('.settings-param__value').text(a.value);
-                }
-            });
+        // Параметр: Вибір моделі
+        Lampa.SettingsApi.addParam({
+            component: 'gemina_settings',
+            param: {
+                name: 'gemina_model',
+                type: 'select',
+                values: {
+                    'gemini-2.5-flash': 'gemini-2.5-flash (Рекомендована)',
+                    'gemini-1.5-flash': 'gemini-1.5-flash',
+                    'gemini-1.5-pro': 'gemini-1.5-pro'
+                },
+                default: 'gemini-2.5-flash'
+            },
+            field: {
+                name: 'Модель ШІ',
+                description: 'Оберіть робочу модель Gemini'
+            },
+            onChange: function (value) {
+                Lampa.Storage.set('gemina_model', value);
+            }
         });
-
-        body.append(keyInput);
-        body.append(modelSelect);
-        return body;
     }
 
-    // 2. Чат у модальному вікні
+    // Чат у модальному вікні
     function openChatModal() {
         let chatHtml = $(`
             <div class="gemina-chat" style="padding: 15px; font-size: 18px; max-height: 70vh; display: flex; flex-direction: column; gap: 15px;">
@@ -201,7 +177,7 @@
         });
     }
 
-    // 3. Додавання пункту «Джеміна» у ліве бокове меню Lampa
+    // Додавання пункту в бокове меню Lampa
     function addMenuItem() {
         if ($('.menu .menu__list [data-action="gemina_chat"]').length) return;
 
@@ -223,7 +199,7 @@
         $('.menu .menu__list').append(menuItem);
     }
 
-    // 4. Кнопка «Джеміна» в картці фільму
+    // Кнопка у картці фільму
     Lampa.Listener.follow('full', function (e) {
         if (e.type === 'complite') {
             let cardData = e.data.movie;
@@ -270,8 +246,9 @@
         }
     });
 
-    // Старт
+    // Ініціалізація
     function startPlugin() {
+        registerSettings();
         addMenuItem();
 
         Lampa.Listener.follow('app', function (e) {
@@ -291,10 +268,10 @@
 
     Lampa.Plugins.add({
         name: 'Gemina Helper',
-        version: '1.3.0',
-        description: 'Персональна ШІ-помічниця Джеміна з окремим розділом налаштувань',
+        version: '1.4.0',
+        description: 'Персональна ШІ-помічниця Джеміна',
         onStart: function () {
-            Lampa.Noty.show('Плагін Gemina завантажено!');
+            Lampa.Noty.show('Плагін Gemina успішно завантажено!');
         }
     });
 
