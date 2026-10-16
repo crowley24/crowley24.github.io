@@ -2,29 +2,47 @@
 (function () {
     'use strict';
 
-    /* Original Soundtrack — OSTMusic Test 1.0 */
+    /* OSTMusic Dual Test 1.1 — Lampa */
 
-    if (window.ostmusic_test_100) return;
-    window.ostmusic_test_100 = true;
+    if (window.ostmusic_dual_110) return;
+    window.ostmusic_dual_110 = true;
 
-    var NAME = 'OSTMusic Test';
-    var AUDIO_URL =
-        'https://www.ostmusic.org/?format=raw&id=1293&view=file';
+    var PREFIX = '[OSTMusic 1.1]';
+    var BASE = 'https://www.ostmusic.org/?format=raw&id=';
+    var SUFFIX = '&view=file';
 
-    var audio = null;
-    var timer = null;
+    var TRACKS = {
+        '157336': {
+            movie: 'Interstellar',
+            title: 'Cornfield Chase',
+            artist: 'Hans Zimmer',
+            id: 1293
+        },
+        '27205': {
+            movie: 'Inception',
+            title: 'Time',
+            artist: 'Hans Zimmer',
+            id: 1399
+        }
+    };
+
+    var player = null;
+    var startTimer = null;
     var fadeTimer = null;
     var generation = 0;
-    var cardActive = false;
-    var cardId = '';
-    var enabled = false;
+    var activeMovieId = '';
+    var enabled = true;
 
-    var volume = 0.20;
-    var delay = 2000;
-    var fragment = 30;
+    var VOLUME = 0.20;
+    var DELAY = 2000;
+    var FRAGMENT = 30;
+
+    function log(message) {
+        console.log(PREFIX, message);
+    }
 
     function notify(message) {
-        console.log('[OSTMusic Test] ' + message);
+        log(message);
 
         try {
             if (window.Lampa &&
@@ -36,9 +54,9 @@
     }
 
     function clearTimers() {
-        if (timer) {
-            clearTimeout(timer);
-            timer = null;
+        if (startTimer) {
+            clearTimeout(startTimer);
+            startTimer = null;
         }
 
         if (fadeTimer) {
@@ -51,26 +69,31 @@
         generation++;
         clearTimers();
 
-        if (audio) {
-            try {
-                audio.pause();
-                audio.removeAttribute('src');
-                audio.load();
-            } catch (e) {}
+        if (player) {
+            var old = player;
+            player = null;
 
-            audio = null;
+            try {
+                old.pause();
+                old.removeAttribute('src');
+                old.load();
+            } catch (e) {}
         }
     }
 
-    function startFade(player, token) {
-        var steps = 20;
+    function fadeIn(audio, token) {
         var step = 0;
+        var steps = 20;
 
-        player.volume = 0;
+        audio.volume = 0;
+
+        if (fadeTimer) {
+            clearInterval(fadeTimer);
+        }
 
         fadeTimer = setInterval(function () {
             if (token !== generation ||
-                audio !== player) {
+                player !== audio) {
                 clearInterval(fadeTimer);
                 fadeTimer = null;
                 return;
@@ -79,8 +102,8 @@
             step++;
 
             try {
-                player.volume =
-                    volume * Math.min(step / steps, 1);
+                audio.volume = VOLUME *
+                    Math.min(step / steps, 1);
             } catch (e) {}
 
             if (step >= steps) {
@@ -90,103 +113,110 @@
         }, 100);
     }
 
-    function play() {
+    function playTrack(track) {
+        if (!track) return;
+
         stop();
 
         var token = generation;
-        var player = new Audio();
+        var audio = new Audio();
 
-        audio = player;
+        player = audio;
+        audio.preload = 'auto';
+        audio.volume = 0;
+        audio.src = BASE + track.id + SUFFIX;
 
-        player.preload = 'auto';
-        player.volume = 0;
-        player.src = AUDIO_URL;
-
-        player.addEventListener('error', function () {
+        audio.addEventListener('playing', function () {
             if (token !== generation) return;
 
-            var code = player.error
-                ? player.error.code
-                : 'unknown';
+            notify(
+                'OST: ' + track.artist +
+                ' — ' + track.title
+            );
 
-            notify('OSTMusic: помилка аудіо (' + code + ')');
-            stop();
-        });
-
-        player.addEventListener('playing', function () {
-            if (token !== generation) return;
-
-            notify('OSTMusic: аудіо відтворюється');
-            startFade(player, token);
+            fadeIn(audio, token);
         }, { once: true });
 
-        player.addEventListener('timeupdate', function () {
+        audio.addEventListener('timeupdate', function () {
             if (token !== generation) return;
 
-            if (fragment > 0 &&
-                player.currentTime >= fragment) {
+            if (audio.currentTime >= FRAGMENT) {
                 try {
-                    player.currentTime = 0;
+                    audio.currentTime = 0;
                 } catch (e) {}
             }
         });
 
-        player.addEventListener('ended', function () {
+        audio.addEventListener('ended', function () {
             if (token !== generation) return;
 
             try {
-                player.currentTime = 0;
+                audio.currentTime = 0;
 
-                var result = player.play();
+                var promise = audio.play();
 
-                if (result && result.catch) {
-                    result.catch(function () {});
+                if (promise && promise.catch) {
+                    promise.catch(function () {});
                 }
             } catch (e) {}
         });
 
-        notify('OSTMusic: підключення до аудіо...');
+        audio.addEventListener('error', function () {
+            if (token !== generation) return;
+
+            var code = audio.error
+                ? audio.error.code
+                : '?';
+
+            notify(
+                'OSTMusic: помилка аудіо ' + code
+            );
+
+            stop();
+        });
 
         try {
-            var result = player.play();
+            var promise = audio.play();
 
-            if (result && result.catch) {
-                result.catch(function (error) {
+            if (promise && promise.catch) {
+                promise.catch(function (error) {
                     if (token !== generation) return;
 
                     notify(
-                        'OSTMusic: запуск заблоковано — ' +
-                        (error.name || 'невідома помилка')
+                        'OSTMusic: ' +
+                        (error.name || 'Play error')
                     );
 
                     stop();
                 });
             }
-        } catch (error) {
-            notify('OSTMusic: ' + error.message);
+        } catch (e) {
+            notify('OSTMusic: ' + e.message);
             stop();
         }
     }
 
-    function schedulePlay() {
+    function schedule(movieId) {
         stop();
 
-        if (!enabled || !cardActive) return;
+        if (!enabled || !TRACKS[movieId]) return;
 
         var token = generation;
 
-        timer = setTimeout(function () {
-            timer = null;
+        startTimer = setTimeout(function () {
+            startTimer = null;
 
             if (token !== generation ||
                 !enabled ||
-                !cardActive) return;
+                activeMovieId !== movieId) {
+                return;
+            }
 
-            play();
-        }, delay);
+            playTrack(TRACKS[movieId]);
+        }, DELAY);
     }
 
-    function extractMovie(event) {
+    function getMovie(event) {
         var data = event && event.data;
 
         if (!data) return null;
@@ -202,221 +232,246 @@
                data;
     }
 
-    function isInterstellar(movie) {
-        if (!movie) return false;
+    function resolveId(movie) {
+        if (!movie) return '';
 
-        var id = movie.id || movie.tmdb_id;
+        var id = String(
+            movie.id ||
+            movie.tmdb_id ||
+            ''
+        );
 
-        if (String(id) === '157336') return true;
+        if (TRACKS[id]) return id;
 
         var title = String(
             movie.original_title ||
             movie.title ||
             movie.name ||
             ''
-        ).toLowerCase();
+        ).toLowerCase().trim();
 
-        return title.indexOf('interstellar') !== -1 ||
-               title.indexOf('інтерстеллар') !== -1 ||
-               title.indexOf('интерстеллар') !== -1;
+        var year = String(
+            movie.release_date ||
+            movie.year ||
+            ''
+        ).slice(0, 4);
+
+        if (title === 'interstellar' ||
+            title === 'інтерстеллар') {
+            return year && year !== '2014'
+                ? ''
+                : '157336';
+        }
+
+        if (title === 'inception' ||
+            title === 'початок' ||
+            title === 'начало') {
+            return year && year !== '2010'
+                ? ''
+                : '27205';
+        }
+
+        return '';
     }
 
-    function handleFull(event) {
+    function onFull(event) {
         if (!event) return;
 
-        var type = String(event.type || '').toLowerCase();
+        var type = String(
+            event.type || ''
+        ).toLowerCase();
 
         if (type === 'destroy' ||
             type === 'close') {
-            cardActive = false;
-            cardId = '';
+            activeMovieId = '';
             stop();
             return;
         }
 
-        if (type !== 'complite' &&
-            type !== 'complete') return;
+        if (type !== 'complete' &&
+            type !== 'complite') {
+            return;
+        }
 
-        var movie = extractMovie(event);
+        var id = resolveId(getMovie(event));
 
-        if (!isInterstellar(movie)) {
-            cardActive = false;
-            cardId = '';
+        if (!id) {
+            activeMovieId = '';
             stop();
             return;
         }
 
-        var nextId = String(
-            movie.id ||
-            movie.tmdb_id ||
-            'interstellar'
-        );
+        if (activeMovieId === id &&
+            (player || startTimer)) {
+            return;
+        }
 
-        if (cardActive &&
-            cardId === nextId &&
-            audio) return;
+        activeMovieId = id;
 
-        cardActive = true;
-        cardId = nextId;
+        log('Movie: ' + TRACKS[id].movie);
+        schedule(id);
+    }
 
-        schedulePlay();
+    function onPlayer(event) {
+        var type = String(
+            event && event.type || ''
+        ).toLowerCase();
+
+        if (type === 'start' ||
+            type === 'play' ||
+            type === 'open') {
+            activeMovieId = '';
+            stop();
+        }
+    }
+
+    function onActivity(event) {
+        var type = String(
+            event && event.type || ''
+        ).toLowerCase();
+
+        if (type !== 'start') return;
+
+        var data = event.data || {};
+        var component = String(
+            data.component || ''
+        ).toLowerCase();
+
+        if (component && component !== 'full') {
+            activeMovieId = '';
+            stop();
+        }
     }
 
     function addSettings() {
-        if (!window.Lampa ||
-            !Lampa.SettingsApi) return;
+        if (!Lampa.SettingsApi) return;
 
         try {
             Lampa.SettingsApi.addComponent({
-                component: 'ostmusic_test',
-                name: 'OSTMusic Test',
+                component: 'ostmusic_dual',
+                name: 'OSTMusic Dual Test',
                 icon: 'music'
             });
 
             Lampa.SettingsApi.addParam({
-                component: 'ostmusic_test',
+                component: 'ostmusic_dual',
                 param: {
-                    name: 'ostmusic_test_play',
-                    type: 'trigger',
-                    default: false
+                    name: 'ostmusic_dual_auto',
+                    type: 'select',
+                    values: {
+                        'true': 'Увімкнено',
+                        'false': 'Вимкнено'
+                    },
+                    default: 'true'
                 },
                 field: {
-                    name: 'Тест: відтворити Cornfield Chase',
-                    description: 'Прямий MP3 із OSTMusic'
+                    name: 'Автоматична фонова музика',
+                    description:
+                        'Interstellar та Inception'
                 },
-                onChange: function () {
-                    play();
+                onChange: function (value) {
+                    enabled = String(value) === 'true';
+
+                    if (!enabled) {
+                        stop();
+                    } else if (activeMovieId) {
+                        schedule(activeMovieId);
+                    }
                 }
             });
 
             Lampa.SettingsApi.addParam({
-                component: 'ostmusic_test',
+                component: 'ostmusic_dual',
                 param: {
-                    name: 'ostmusic_test_stop',
+                    name: 'ostmusic_dual_interstellar',
+                    type: 'trigger',
+                    default: false
+                },
+                field: {
+                    name: 'Тест: Cornfield Chase'
+                },
+                onChange: function () {
+                    playTrack(TRACKS['157336']);
+                }
+            });
+
+            Lampa.SettingsApi.addParam({
+                component: 'ostmusic_dual',
+                param: {
+                    name: 'ostmusic_dual_inception',
+                    type: 'trigger',
+                    default: false
+                },
+                field: {
+                    name: 'Тест: Time'
+                },
+                onChange: function () {
+                    playTrack(TRACKS['27205']);
+                }
+            });
+
+            Lampa.SettingsApi.addParam({
+                component: 'ostmusic_dual',
+                param: {
+                    name: 'ostmusic_dual_stop',
                     type: 'trigger',
                     default: false
                 },
                 field: {
                     name: 'Зупинити музику'
                 },
-                onChange: function () {
-                    stop();
-                }
-            });
-
-            Lampa.SettingsApi.addParam({
-                component: 'ostmusic_test',
-                param: {
-                    name: 'ostmusic_test_auto',
-                    type: 'select',
-                    values: {
-                        'false': 'Вимкнено',
-                        'true': 'Увімкнено'
-                    },
-                    default: 'false'
-                },
-                field: {
-                    name: 'Автозапуск у картці Interstellar',
-                    description: 'Через 2 секунди після відкриття'
-                },
-                onChange: function (value) {
-                    enabled = String(value) === 'true';
-
-                    if (enabled && cardActive) {
-                        schedulePlay();
-                    } else {
-                        stop();
-                    }
-                }
+                onChange: stop
             });
 
             enabled = String(
                 Lampa.Storage.get(
-                    'ostmusic_test_auto',
-                    'false'
+                    'ostmusic_dual_auto',
+                    'true'
                 )
             ) === 'true';
 
         } catch (e) {
-            console.warn(
-                '[OSTMusic Test] Settings:',
-                e
-            );
+            console.warn(PREFIX, e);
         }
     }
 
-    function addListeners() {
-        if (!window.Lampa ||
-            !Lampa.Listener ||
-            !Lampa.Listener.follow) return;
+    function init() {
+        addSettings();
 
-        Lampa.Listener.follow('full', handleFull);
+        if (Lampa.Listener &&
+            Lampa.Listener.follow) {
+            Lampa.Listener.follow('full', onFull);
+            Lampa.Listener.follow('player', onPlayer);
+            Lampa.Listener.follow('activity', onActivity);
+        }
 
-        Lampa.Listener.follow('player', function (event) {
-            if (!event) return;
-
-            var type = String(
-                event.type || ''
-            ).toLowerCase();
-
-            if (type === 'start' ||
-                type === 'play' ||
-                type === 'open') {
-                cardActive = false;
-                stop();
-            }
-        });
-
-        Lampa.Listener.follow('activity', function (event) {
-            if (!event) return;
-
-            var type = String(
-                event.type || ''
-            ).toLowerCase();
-
-            if (type !== 'start') return;
-
-            var data = event.data || {};
-            var component = String(
-                data.component || ''
-            ).toLowerCase();
-
-            if (component &&
-                component !== 'full') {
-                cardActive = false;
-                stop();
-            }
-        });
+        log('Ready');
     }
 
-    window.OSTMusicTest = {
-        version: '1.0',
-        play: play,
+    window.OSTMusicDual = {
+        version: '1.1',
+        tracks: TRACKS,
+        play: function (id) {
+            var key = String(id);
+
+            if (TRACKS[key]) {
+                playTrack(TRACKS[key]);
+            }
+        },
         stop: stop,
-        url: AUDIO_URL,
         status: function () {
             return {
                 enabled: enabled,
-                cardActive: cardActive,
+                movie: activeMovieId,
                 playing: !!(
-                    audio &&
-                    !audio.paused
+                    player && !player.paused
                 ),
-                currentTime: audio
-                    ? audio.currentTime
+                currentTime: player
+                    ? player.currentTime
                     : 0
             };
         }
     };
-
-    function init() {
-        addSettings();
-        addListeners();
-
-        console.log(
-            '[OSTMusic Test] Ready v1.0'
-        );
-    }
 
     if (window.Lampa) {
         init();
