@@ -3,32 +3,30 @@
     'use strict';
 
     /*
-     * Original Soundtrack 1.1.1
+     * Original Soundtrack 1.2.0
      * Lampa / Android TV
-     * Audio diagnostics and soundtrack playback
+     *
+     * - Web Audio diagnostic test
+     * - External MP3 test on movie cards
+     * - TMDB ID soundtrack library
+     * - 30-second fragment looping
+     * - Fade in / fade out
+     * - Stop on card exit / player launch
+     *
+     * External demo audio:
+     * MDN CC0 audio example (sound effect).
      */
 
-    var VERSION = '1.1.1';
+    var VERSION = '1.2.0';
     var PREFIX = 'ost10_';
     var COMPONENT = 'original_soundtrack';
 
-    if (window.ost111_ready) return;
-    window.ost111_ready = true;
+    if (window.ost120_ready) return;
+    window.ost120_ready = true;
 
-    var audio = null;
-    var startTimer = null;
-    var fadeTimer = null;
-    var operation = 0;
-
-    var currentId = '';
-    var cardActive = false;
-    var initialized = false;
-
-    var testContext = null;
-    var testNodes = [];
-    var testTimer = null;
-    var testActive = false;
-    var testGeneration = 0;
+    var DEMO_URL =
+        'https://interactive-examples.mdn.mozilla.net/' +
+        'media/cc0-audio/t-rex-roar.mp3';
 
     var defaults = {
         enabled: true,
@@ -37,8 +35,45 @@
         fade: true,
         loop: true,
         series: false,
-        test_sound: false
+        demo_card: false,
+        test_sound: false,
+        fragment: '30'
     };
+
+    var audio = null;
+    var playTimer = null;
+    var fadeTimer = null;
+    var operation = 0;
+
+    var cardActive = false;
+    var currentId = '';
+    var currentUrl = '';
+    var currentIsDemo = false;
+
+    var initialized = false;
+
+    var testContext = null;
+    var testNodes = [];
+    var testTimer = null;
+    var testActive = false;
+
+    var audioUnlocked = false;
+
+    function log() {
+        try {
+            var args = Array.prototype.slice.call(arguments);
+            args.unshift('[OST 1.2]');
+            console.log.apply(console, args);
+        } catch (e) {}
+    }
+
+    function notify(message) {
+        try {
+            Lampa.Noty.show(message);
+        } catch (e) {
+            log(message);
+        }
+    }
 
     function get(key) {
         try {
@@ -57,9 +92,12 @@
 
     function set(key, value) {
         try {
-            Lampa.Storage.set(PREFIX + key, value);
+            Lampa.Storage.set(
+                PREFIX + key,
+                value
+            );
         } catch (e) {
-            console.warn('[OST] Storage error:', e);
+            log('Storage error', e);
         }
     }
 
@@ -70,112 +108,29 @@
                value === '1';
     }
 
-    function number(value, fallback) {
-        var n = Number(value);
-        return isFinite(n) ? n : fallback;
+    function num(value, fallback) {
+        var result = Number(value);
+
+        return isFinite(result)
+            ? result
+            : fallback;
     }
 
-    function volume() {
-        return Math.max(
+    function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    function targetVolume() {
+        return clamp(
+            num(get('volume'), 20) / 100,
             0,
-            Math.min(
-                1,
-                number(get('volume'), 20) / 100
-            )
+            1
         );
     }
 
-    function notify(message) {
-        try {
-            Lampa.Noty.show(message);
-        } catch (e) {
-            console.log('[OST]', message);
-        }
-    }
-
-    function clearPlaybackTimers() {
-        clearTimeout(startTimer);
-        clearInterval(fadeTimer);
-
-        startTimer = null;
-        fadeTimer = null;
-    }
-
-    function ensureAudio() {
-        if (audio) return audio;
-
-        audio = document.createElement('audio');
-        audio.preload = 'auto';
-        audio.loop = bool(get('loop'));
-        audio.volume = 0;
-
-        audio.addEventListener('error', function () {
-            if (audio.error) {
-                console.warn(
-                    '[OST] Audio error:',
-                    audio.error.code
-                );
-            }
-        });
-
-        return audio;
-    }
-
-    function stopPlayback() {
-        operation++;
-        clearPlaybackTimers();
-
-        cardActive = false;
-        currentId = '';
-
-        if (audio) {
-            try {
-                audio.pause();
-                audio.removeAttribute('src');
-                audio.load();
-                audio.volume = 0;
-            } catch (e) {
-                console.warn('[OST] Stop error:', e);
-            }
-        }
-    }
-
-    function fadeIn() {
-        if (!audio) return;
-
-        clearInterval(fadeTimer);
-
-        var target = volume();
-
-        if (!bool(get('fade'))) {
-            audio.volume = target;
-            return;
-        }
-
-        var step = 0;
-        var steps = 20;
-
-        audio.volume = 0;
-
-        fadeTimer = setInterval(function () {
-            if (!audio || audio.paused) {
-                clearInterval(fadeTimer);
-                fadeTimer = null;
-                return;
-            }
-
-            step++;
-
-            audio.volume = Math.min(
-                target,
-                target * step / steps
-            );
-
-            if (step >= steps) {
-                clearInterval(fadeTimer);
-                fadeTimer = null;
-            }
-        }, 100);
+    function validUrl(url) {
+        return typeof url === 'string' &&
+               /^https?:\/\/\S+$/i.test(url.trim());
     }
 
     function library() {
@@ -189,41 +144,264 @@
                 ? JSON.parse(raw)
                 : raw;
 
-            return data &&
-                   typeof data === 'object' &&
-                   !Array.isArray(data)
-                ? data
-                : {};
+            if (data &&
+                typeof data === 'object' &&
+                !Array.isArray(data)) {
+                return data;
+            }
         } catch (e) {
-            return {};
+            log('Library error', e);
         }
+
+        return {};
     }
 
-    function saveTrack(id, url) {
-        if (!id || !validUrl(url)) return false;
+    function saveLibrary(data) {
+        set('library', JSON.stringify(data));
+    }
+
+    function addTrack(id, url) {
+        if (!id || !validUrl(url)) {
+            return false;
+        }
 
         var data = library();
-        data[String(id)] = String(url).trim();
 
-        set('library', JSON.stringify(data));
+        data[String(id)] = url.trim();
+
+        saveLibrary(data);
+
+        log('Track added', id);
+
         return true;
     }
 
     function removeTrack(id) {
         var data = library();
+
         delete data[String(id)];
 
-        set('library', JSON.stringify(data));
+        saveLibrary(data);
     }
 
-    function validUrl(url) {
-        return /^https?:\/\/\S+$/i.test(url || '');
+    function ensureAudio() {
+        if (audio) return audio;
+
+        audio = document.createElement('audio');
+
+        audio.preload = 'auto';
+        audio.volume = 0;
+        audio.loop = false;
+
+        audio.setAttribute(
+            'playsinline',
+            'playsinline'
+        );
+
+        audio.addEventListener(
+            'loadedmetadata',
+            function () {
+                log(
+                    'Audio metadata loaded',
+                    audio.duration
+                );
+            }
+        );
+
+        audio.addEventListener(
+            'playing',
+            function () {
+                log('Audio playing');
+            }
+        );
+
+        audio.addEventListener(
+            'error',
+            function () {
+                if (!audio.error) return;
+
+                log(
+                    'Audio error',
+                    audio.error.code,
+                    audio.error.message || ''
+                );
+            }
+        );
+
+        audio.addEventListener(
+            'timeupdate',
+            function () {
+                if (!cardActive ||
+                    !bool(get('loop'))) {
+                    return;
+                }
+
+                var limit = clamp(
+                    num(get('fragment'), 30),
+                    10,
+                    60
+                );
+
+                if (audio.currentTime >= limit) {
+                    try {
+                        audio.currentTime = 0;
+                    } catch (e) {}
+                }
+            }
+        );
+
+        audio.addEventListener(
+            'ended',
+            function () {
+                if (!cardActive ||
+                    !bool(get('loop'))) {
+                    return;
+                }
+
+                try {
+                    audio.currentTime = 0;
+
+                    var promise = audio.play();
+
+                    if (promise && promise.catch) {
+                        promise.catch(function (e) {
+                            log('Loop error', e);
+                        });
+                    }
+                } catch (e) {
+                    log('Loop restart failed', e);
+                }
+            }
+        );
+
+        /*
+         * Append audio element to the document
+         * for compatibility with some WebViews.
+         */
+        audio.style.display = 'none';
+
+        try {
+            (document.body ||
+             document.documentElement).appendChild(audio);
+        } catch (e) {}
+
+        return audio;
     }
 
-    function playTrack(url, id, token) {
+    function clearPlaybackTimers() {
+        clearTimeout(playTimer);
+        clearInterval(fadeTimer);
+
+        playTimer = null;
+        fadeTimer = null;
+    }
+
+    function releaseAudio() {
+        if (!audio) return;
+
+        try {
+            audio.pause();
+            audio.removeAttribute('src');
+            audio.load();
+            audio.volume = 0;
+        } catch (e) {
+            log('Release error', e);
+        }
+    }
+
+    function stopPlayback() {
+        operation++;
+
+        clearPlaybackTimers();
+
+        cardActive = false;
+        currentId = '';
+        currentUrl = '';
+        currentIsDemo = false;
+
+        releaseAudio();
+    }
+
+    function fadeIn(token) {
+        if (!audio) return;
+
+        clearInterval(fadeTimer);
+
+        var target = targetVolume();
+
+        if (!bool(get('fade'))) {
+            audio.volume = target;
+            return;
+        }
+
+        var step = 0;
+        var steps = 20;
+
+        audio.volume = 0;
+
+        fadeTimer = setInterval(function () {
+            if (!audio ||
+                audio.paused ||
+                token !== operation) {
+
+                clearInterval(fadeTimer);
+                fadeTimer = null;
+                return;
+            }
+
+            step++;
+
+            audio.volume = clamp(
+                target * step / steps,
+                0,
+                target
+            );
+
+            if (step >= steps) {
+                clearInterval(fadeTimer);
+                fadeTimer = null;
+            }
+        }, 100);
+    }
+
+    function fadeOut(callback) {
+        if (!audio || audio.paused) {
+            if (callback) callback();
+            return;
+        }
+
+        clearInterval(fadeTimer);
+
+        var initial = audio.volume;
+        var step = 0;
+        var steps = 8;
+
+        fadeTimer = setInterval(function () {
+            step++;
+
+            if (audio) {
+                audio.volume = clamp(
+                    initial * (1 - step / steps),
+                    0,
+                    1
+                );
+            }
+
+            if (step >= steps) {
+                clearInterval(fadeTimer);
+                fadeTimer = null;
+
+                if (callback) callback();
+            }
+        }, 50);
+    }
+
+    function playUrl(url, id, token) {
         if (!cardActive ||
             token !== operation ||
-            id !== currentId) return;
+            currentId !== id) {
+            return;
+        }
 
         if (!validUrl(url)) return;
 
@@ -231,79 +409,57 @@
 
         var player = ensureAudio();
 
-        player.pause();
-        player.src = url;
-        player.loop = bool(get('loop'));
-        player.volume = 0;
-
         try {
+            player.pause();
+
+            player.src = url;
+            player.volume = 0;
+            player.loop = false;
+
+            player.load();
+
             var result = player.play();
 
             if (result && result.then) {
                 result.then(function () {
-                    if (token !== operation ||
-                        !cardActive) {
+                    if (!cardActive ||
+                        token !== operation) {
                         player.pause();
                         return;
                     }
 
-                    fadeIn();
+                    audioUnlocked = true;
+
+                    fadeIn(token);
                 }).catch(function (error) {
-                    console.warn(
-                        '[OST] Playback error:',
-                        error
-                    );
+                    log('External audio blocked', error);
+
+                    if (token === operation) {
+                        notify(
+                            'OST: зовнішній звук не запустився'
+                        );
+                    }
                 });
             } else {
-                fadeIn();
+                audioUnlocked = true;
+                fadeIn(token);
             }
         } catch (e) {
-            console.warn('[OST] Play failed:', e);
+            log('Playback exception', e);
+
+            notify('OST: помилка відтворення MP3');
         }
     }
 
-    function openCard(card) {
-        if (!bool(get('enabled')) ||
-            !card ||
-            !card.id) {
-            stopPlayback();
-            return;
-        }
-
-        var isSeries =
-            card.first_air_date !== undefined ||
-            card.number_of_seasons !== undefined;
-
-        if (isSeries && !bool(get('series'))) {
-            stopPlayback();
-            return;
-        }
-
-        var id = String(card.id);
-
-        if (cardActive && currentId === id) return;
-
-        stopPlayback();
-
-        cardActive = true;
-        currentId = id;
-
-        var url = library()[id];
-        var token = operation;
-
-        if (!url) {
-            console.log('[OST] No track:', id);
-            return;
-        }
-
-        var delay = Math.max(
-            0,
-            number(get('delay'), 2)
+    function isSeries(card) {
+        return !!(
+            card &&
+            (
+                card.number_of_seasons !== undefined ||
+                card.first_air_date !== undefined ||
+                card.media_type === 'tv'
+            )
         );
-
-        startTimer = setTimeout(function () {
-            playTrack(url, id, token);
-        }, delay * 1000);
     }
 
     function extractCard(event) {
@@ -311,15 +467,113 @@
 
         var data = event.data || event;
 
-        return data.movie ||
-               data.card ||
-               data.object ||
-               (data.id ? data : null);
+        if (data.movie && data.movie.id) {
+            return data.movie;
+        }
+
+        if (data.card && data.card.id) {
+            return data.card;
+        }
+
+        if (data.object && data.object.id) {
+            return data.object;
+        }
+
+        if (data.data && data.data.id) {
+            return data.data;
+        }
+
+        if (data.id) {
+            return data;
+        }
+
+        return null;
     }
 
-    function stopTest(resetSwitch) {
-        testGeneration++;
+    function resolveUrl(id) {
+        var tracks = library();
+        var url = tracks[String(id)];
 
+        if (validUrl(url)) {
+            return {
+                url: url,
+                demo: false
+            };
+        }
+
+        if (bool(get('demo_card'))) {
+            return {
+                url: DEMO_URL,
+                demo: true
+            };
+        }
+
+        return null;
+    }
+
+    function openCard(card) {
+        if (!card || !card.id) return;
+
+        if (!bool(get('enabled'))) {
+            stopPlayback();
+            return;
+        }
+
+        if (isSeries(card) &&
+            !bool(get('series'))) {
+            stopPlayback();
+            return;
+        }
+
+        var id = String(card.id);
+
+        if (cardActive && currentId === id) {
+            return;
+        }
+
+        stopPlayback();
+
+        cardActive = true;
+        currentId = id;
+
+        var source = resolveUrl(id);
+
+        if (!source) {
+            log('No soundtrack for TMDB', id);
+            return;
+        }
+
+        currentUrl = source.url;
+        currentIsDemo = source.demo;
+
+        var token = operation;
+
+        var delay = clamp(
+            num(get('delay'), 2),
+            0,
+            10
+        );
+
+        log(
+            'Opening card',
+            id,
+            source.demo ? 'DEMO' : 'TRACK'
+        );
+
+        playTimer = setTimeout(function () {
+            playUrl(
+                source.url,
+                id,
+                token
+            );
+        }, delay * 1000);
+    }
+
+    /*
+     * Web Audio diagnostic melody
+     */
+
+    function stopTest(resetSwitch) {
         clearTimeout(testTimer);
         testTimer = null;
 
@@ -337,10 +591,10 @@
 
         if (testContext) {
             try {
-                var closing = testContext.close();
+                var result = testContext.close();
 
-                if (closing && closing.catch) {
-                    closing.catch(function () {});
+                if (result && result.catch) {
+                    result.catch(function () {});
                 }
             } catch (e) {}
 
@@ -358,26 +612,25 @@
         stopPlayback();
         stopTest(false);
 
-        var generation = testGeneration;
-
-        var AudioContextClass =
+        var Context =
             window.AudioContext ||
             window.webkitAudioContext;
 
-        if (!AudioContextClass) {
-            notify('Web Audio API не підтримується');
+        if (!Context) {
+            notify('Web Audio не підтримується');
             set('test_sound', false);
             return;
         }
 
         try {
-            var ctx = new AudioContextClass();
+            var ctx = new Context();
 
             testContext = ctx;
             testActive = true;
 
             var master = ctx.createGain();
-            master.gain.value = volume();
+
+            master.gain.value = targetVolume();
             master.connect(ctx.destination);
 
             var notes = [
@@ -394,71 +647,64 @@
             var now = ctx.currentTime + 0.1;
 
             notes.forEach(function (note) {
-                var oscillator = ctx.createOscillator();
+                var osc = ctx.createOscillator();
                 var gain = ctx.createGain();
 
-                oscillator.type = 'sine';
-                oscillator.frequency.value = note[0];
+                osc.type = 'sine';
+                osc.frequency.value = note[0];
 
                 var start = now + note[1];
                 var end = start + note[2];
 
                 gain.gain.setValueAtTime(0, start);
+
                 gain.gain.linearRampToValueAtTime(
                     0.5,
                     start + 0.05
                 );
+
                 gain.gain.exponentialRampToValueAtTime(
                     0.001,
                     end
                 );
 
-                oscillator.connect(gain);
+                osc.connect(gain);
                 gain.connect(master);
 
-                oscillator.start(start);
-                oscillator.stop(end + 0.05);
+                osc.start(start);
+                osc.stop(end + 0.05);
 
-                testNodes.push(oscillator);
+                testNodes.push(osc);
             });
 
             if (ctx.state === 'suspended') {
-                var resumed = ctx.resume();
+                var resume = ctx.resume();
 
-                if (resumed && resumed.catch) {
-                    resumed.catch(function (error) {
-                        console.warn(
-                            '[OST] AudioContext resume:',
-                            error
-                        );
-
-                        if (generation === testGeneration) {
-                            notify('Запуск звуку заблоковано');
-                        }
+                if (resume && resume.catch) {
+                    resume.catch(function (e) {
+                        log('Web Audio resume error', e);
                     });
                 }
             }
 
             testTimer = setTimeout(function () {
-                if (generation !== testGeneration) return;
-
                 stopTest(true);
-                console.log('[OST] Test completed');
             }, 8000);
 
-            notify('Тест звуку запущено');
-
+            notify('OST: тестова мелодія запущена');
         } catch (e) {
             stopTest(true);
-            console.error('[OST] Test error:', e);
-            notify('Не вдалося запустити тест');
+
+            log('Web Audio error', e);
+            notify('OST: помилка звукового тесту');
         }
     }
 
-    function registerListeners() {
-        if (!Lampa.Listener ||
-            !Lampa.Listener.follow) return;
+    /*
+     * Lampa lifecycle
+     */
 
+    function registerListeners() {
         Lampa.Listener.follow('full', function (event) {
             if (!event || !event.type) return;
 
@@ -484,6 +730,7 @@
             if (event.type === 'start' ||
                 event.type === 'play' ||
                 event.type === 'open') {
+
                 stopPlayback();
                 stopTest(true);
             }
@@ -493,11 +740,16 @@
             if (!event) return;
 
             if (event.type === 'start' &&
+                event.component &&
                 event.component !== 'full') {
                 stopPlayback();
             }
         });
     }
+
+    /*
+     * Settings
+     */
 
     function registerSettings() {
         var api = Lampa.SettingsApi;
@@ -508,7 +760,7 @@
             icon: 'music'
         });
 
-        function trigger(key, title, description, callback) {
+        function trigger(key, name, description, onChange) {
             api.addParam({
                 component: COMPONENT,
                 param: {
@@ -517,16 +769,16 @@
                     default: defaults[key]
                 },
                 field: {
-                    name: title,
+                    name: name,
                     description: description || ''
                 },
                 onChange: function (value) {
-                    if (callback) callback(value);
+                    if (onChange) onChange(value);
                 }
             });
         }
 
-        function select(key, title, values, callback) {
+        function select(key, name, values, onChange) {
             api.addParam({
                 component: COMPONENT,
                 param: {
@@ -536,10 +788,10 @@
                     values: values
                 },
                 field: {
-                    name: title
+                    name: name
                 },
                 onChange: function (value) {
-                    if (callback) callback(value);
+                    if (onChange) onChange(value);
                 }
             });
         }
@@ -547,7 +799,7 @@
         trigger(
             'enabled',
             'Увімкнути саундтреки',
-            'Автоматична фонова музика',
+            'Фонова музика в картках фільмів',
             function (value) {
                 if (!bool(value)) {
                     stopPlayback();
@@ -569,12 +821,10 @@
             },
             function (value) {
                 if (audio && !audio.paused) {
-                    audio.volume = Math.max(
+                    audio.volume = clamp(
+                        num(value, 20) / 100,
                         0,
-                        Math.min(
-                            1,
-                            number(value, 20) / 100
-                        )
+                        1
                     );
                 }
             }
@@ -592,6 +842,18 @@
             }
         );
 
+        select(
+            'fragment',
+            'Тривалість фрагмента',
+            {
+                '10': '10 секунд',
+                '20': '20 секунд',
+                '30': '30 секунд',
+                '45': '45 секунд',
+                '60': '60 секунд'
+            }
+        );
+
         trigger(
             'fade',
             'Плавне наростання',
@@ -601,25 +863,26 @@
         trigger(
             'loop',
             'Повторювати музику',
-            'Безперервне відтворення',
-            function (value) {
-                if (audio) {
-                    audio.loop = bool(value);
-                }
-            }
+            'Повторювати обраний фрагмент'
         );
 
         trigger(
             'series',
             'Підтримка серіалів',
-            'Фонова музика для серіалів'
+            'Відтворювати музику для серіалів'
         );
 
-        /*
-         * Interactive test switch.
-         * Uses the same trigger type as other
-         * working Lampa settings.
-         */
+        trigger(
+            'demo_card',
+            'Тест MP3 у картці',
+            'Відтворювати тестовий аудіоефект MDN, якщо немає саундтреку',
+            function (value) {
+                if (!bool(value) && currentIsDemo) {
+                    stopPlayback();
+                }
+            }
+        );
+
         trigger(
             'test_sound',
             'Перевірити звук',
@@ -634,27 +897,11 @@
         );
     }
 
-    function init() {
-        if (initialized) return;
-        initialized = true;
+    /*
+     * Public API
+     */
 
-        registerListeners();
-
-        /*
-         * Reset persisted test switch
-         * after a previous application session.
-         */
-        set('test_sound', false);
-
-        try {
-            registerSettings();
-        } catch (e) {
-            console.error(
-                '[OST] Settings error:',
-                e
-            );
-        }
-
+    function registerPublicApi() {
         window.OriginalSoundtrack = {
             version: VERSION,
 
@@ -670,42 +917,85 @@
             },
 
             add: function (id, url) {
-                if (!validUrl(url)) {
-                    notify('Некоректне аудіопосилання');
-                    return false;
-                }
+                var result = addTrack(id, url);
 
-                var saved = saveTrack(id, url);
+                notify(
+                    result
+                        ? 'OST: саундтрек збережено'
+                        : 'OST: некоректне посилання'
+                );
 
-                if (saved) {
-                    notify('Саундтрек збережено');
-                }
-
-                return saved;
+                return result;
             },
 
             remove: function (id) {
                 removeTrack(id);
-                notify('Саундтрек видалено');
+                notify('OST: саундтрек видалено');
             },
 
             library: library,
+
+            /*
+             * Manual external audio test.
+             * Not linked to a movie card.
+             */
+            testMp3: function () {
+                stopPlayback();
+                stopTest(true);
+
+                var player = ensureAudio();
+
+                player.pause();
+                player.src = DEMO_URL;
+                player.volume = targetVolume();
+                player.loop = false;
+
+                var result = player.play();
+
+                if (result && result.catch) {
+                    result.catch(function (e) {
+                        log('Manual MP3 test failed', e);
+                        notify('OST: MP3 не запустився');
+                    });
+                }
+
+                return result;
+            },
 
             status: function () {
                 return {
                     version: VERSION,
                     currentId: currentId,
                     cardActive: cardActive,
+                    currentIsDemo: currentIsDemo,
                     testActive: testActive,
-                    playing: !!audio && !audio.paused
+                    audioUnlocked: audioUnlocked,
+                    playing: !!audio && !audio.paused,
+                    audioUrl: currentUrl
                 };
             }
         };
+    }
 
-        console.log(
-            '[OST] Original Soundtrack ' +
-            VERSION + ' ready'
-        );
+    function init() {
+        if (initialized) return;
+        initialized = true;
+
+        /*
+         * Reset saved diagnostic switch.
+         */
+        set('test_sound', false);
+
+        registerPublicApi();
+        registerListeners();
+
+        try {
+            registerSettings();
+        } catch (e) {
+            log('Settings error', e);
+        }
+
+        log('Original Soundtrack ' + VERSION + ' ready');
     }
 
     var attempts = 0;
@@ -725,9 +1015,7 @@
         if (attempts >= 60) {
             clearInterval(wait);
 
-            console.warn(
-                '[OST] Lampa initialization timeout'
-            );
+            log('Initialization timeout');
         }
     }, 500);
 
