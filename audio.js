@@ -3,23 +3,23 @@
 'use strict';
 
 /*
- * ORIGINAL SOUNDTRACK 1.5.0
+ * ORIGINAL SOUNDTRACK 1.5.1
  * Lampa / Android TV
  *
- * MusicBrainz album + track discovery
+ * MusicBrainz OST discovery
  * Main theme selection
- * Jamendo Audio Source Finder
- * Strict original artist matching
- * Manual MP3 playback
- * Demo and sound test
+ * Jamendo diagnostic source finder
+ * Manual MP3 library
+ * HTML5 audio player
+ * Web Audio test
  *
- * Source Finder is diagnostic only.
+ * Jamendo results are NOT played automatically.
  */
 
-if (window.ost150_ready) return;
-window.ost150_ready = true;
+if (window.ost151_ready) return;
+window.ost151_ready = true;
 
-var VERSION = '1.5.0';
+var VERSION = '1.5.1';
 var P = 'ost10_';
 var COMPONENT = 'original_soundtrack';
 
@@ -30,7 +30,7 @@ var DEMO =
     'https://interactive-examples.mdn.mozilla.net/' +
     'media/cc0-audio/t-rex-roar.mp3';
 
-var CACHE_KEY = P + 'discovery_v150';
+var CACHE_KEY = P + 'discovery_v151';
 var CACHE_TTL = 14 * 86400000;
 
 var defaults = {
@@ -38,7 +38,6 @@ var defaults = {
     search_enabled: true,
     show_result: false,
     source_enabled: true,
-    source_test: false,
     source_card: false,
     jamendo_id: '',
     volume: '20',
@@ -47,13 +46,12 @@ var defaults = {
     fade: true,
     loop: true,
     series: false,
-    demo_card: false,
-    test_sound: false,
-    search_test: false
+    demo_card: false
 };
 
 var ready = false;
 var cache = {};
+
 var lastResult = null;
 var lastSource = null;
 var lastError = '';
@@ -82,18 +80,18 @@ var sourceBusy = false;
 
 function log() {
     var args = Array.prototype.slice.call(arguments);
-    args.unshift('[OST 1.5]');
+    args.unshift('[OST 1.5.1]');
 
     try {
         console.log.apply(console, args);
     } catch (e) {}
 }
 
-function notify(text) {
+function notify(message) {
     try {
-        Lampa.Noty.show(text);
+        Lampa.Noty.show(String(message));
     } catch (e) {
-        log(text);
+        log(message);
     }
 }
 
@@ -104,7 +102,9 @@ function get(key) {
             defaults[key]
         );
 
-        return value == null ? defaults[key] : value;
+        return value == null
+            ? defaults[key]
+            : value;
     } catch (e) {
         return defaults[key];
     }
@@ -114,43 +114,50 @@ function set(key, value) {
     try {
         Lampa.Storage.set(P + key, value);
     } catch (e) {
-        log('Storage:', e);
+        log('Storage error:', e);
     }
 }
 
 function enabled(value) {
     return value === true ||
-           value === 'true' ||
-           value === 1 ||
-           value === '1';
+        value === 'true' ||
+        value === 1 ||
+        value === '1';
 }
 
 function num(value, fallback) {
     var result = Number(value);
-    return isFinite(result) ? result : fallback;
+
+    return isFinite(result)
+        ? result
+        : fallback;
 }
 
 function clamp(value, min, max) {
-    return Math.min(max, Math.max(min, value));
+    return Math.min(
+        max,
+        Math.max(min, value)
+    );
 }
 
 function normalize(value) {
-    var text = String(value || '').toLowerCase();
+    var result = String(value || '')
+        .toLowerCase();
 
     try {
-        text = text.normalize('NFD')
+        result = result.normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '');
     } catch (e) {}
 
-    return text
+    return result
         .replace(/&/g, ' and ')
         .replace(/[^a-z0-9а-яіїєґ]+/gi, ' ')
         .replace(/\s+/g, ' ')
         .trim();
 }
 
-function cleanQuery(text) {
-    return String(text || '')
+function cleanQuery(value) {
+    return String(value || '')
         .replace(/[+\-&|!(){}\[\]^"~*?:\\/]/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
@@ -162,12 +169,17 @@ function urlOK(url) {
 }
 
 function artistName(object) {
-    var credits = object && object['artist-credit'];
+    var credits = object &&
+        object['artist-credit'];
 
-    if (!Array.isArray(credits)) return '';
+    if (!Array.isArray(credits)) {
+        return '';
+    }
 
     return credits.map(function (item) {
-        if (typeof item === 'string') return item;
+        if (typeof item === 'string') {
+            return item;
+        }
 
         return item.name ||
             (item.artist && item.artist.name) ||
@@ -181,12 +193,19 @@ function artistName(object) {
 
 function loadCache() {
     try {
-        var raw = Lampa.Storage.get(CACHE_KEY, '{}');
+        var raw = Lampa.Storage.get(
+            CACHE_KEY,
+            '{}'
+        );
+
         var data = typeof raw === 'string'
             ? JSON.parse(raw)
             : raw;
 
-        if (data && typeof data === 'object') {
+        if (
+            data &&
+            typeof data === 'object'
+        ) {
             cache = data;
         }
     } catch (e) {
@@ -195,16 +214,19 @@ function loadCache() {
 }
 
 function cacheGet(key) {
-    var entry = cache[key];
+    var item = cache[key];
 
-    if (!entry) return null;
+    if (!item) return null;
 
-    if (Date.now() - entry.time > CACHE_TTL) {
+    if (
+        Date.now() - item.time >
+        CACHE_TTL
+    ) {
         delete cache[key];
         return null;
     }
 
-    return entry.data;
+    return item.data;
 }
 
 function cacheSet(key, data) {
@@ -217,7 +239,8 @@ function cacheSet(key, data) {
 
     if (keys.length > 80) {
         keys.sort(function (a, b) {
-            return cache[a].time - cache[b].time;
+            return cache[a].time -
+                cache[b].time;
         });
 
         while (keys.length > 80) {
@@ -226,9 +249,12 @@ function cacheSet(key, data) {
     }
 
     try {
-        set('discovery_v150', JSON.stringify(cache));
+        Lampa.Storage.set(
+            CACHE_KEY,
+            JSON.stringify(cache)
+        );
     } catch (e) {
-        log('Cache error', e);
+        log('Cache save error:', e);
     }
 }
 
@@ -238,11 +264,12 @@ function cacheSet(key, data) {
 
 function request(url, callback) {
     var xhr = new XMLHttpRequest();
-    var done = false;
+    var finished = false;
 
-    function finish(error, data) {
-        if (done) return;
-        done = true;
+    function done(error, data) {
+        if (finished) return;
+
+        finished = true;
         callback(error, data);
     }
 
@@ -251,40 +278,44 @@ function request(url, callback) {
         xhr.timeout = 15000;
 
         xhr.onreadystatechange = function () {
-            if (xhr.readyState !== 4) return;
+            if (xhr.readyState !== 4) {
+                return;
+            }
 
-            if (xhr.status >= 200 && xhr.status < 300) {
+            if (
+                xhr.status >= 200 &&
+                xhr.status < 300
+            ) {
                 try {
-                    finish(
+                    done(
                         null,
                         JSON.parse(xhr.responseText)
                     );
                 } catch (e) {
-                    finish('Помилка JSON');
+                    done('Помилка JSON');
                 }
             } else {
-                finish('HTTP ' + xhr.status);
+                done('HTTP ' + xhr.status);
             }
         };
 
         xhr.onerror = function () {
-            finish('Помилка мережі або CORS');
+            done('Помилка мережі або CORS');
         };
 
         xhr.ontimeout = function () {
-            finish('Перевищено час очікування');
+            done('Перевищено час очікування');
         };
 
         xhr.send();
     } catch (e) {
-        finish(String(e.message || e));
+        done(String(e.message || e));
     }
 }
 
-/*
- * MusicBrainz allows no more than
- * one request per second per client.
- */
+/* ===================================
+   MUSICBRAINZ REQUEST QUEUE
+=================================== */
 
 function mbRequest(url, callback) {
     mbQueue.push({
@@ -296,13 +327,20 @@ function mbRequest(url, callback) {
 }
 
 function processMB() {
-    if (mbBusy || !mbQueue.length) return;
+    if (
+        mbBusy ||
+        !mbQueue.length
+    ) {
+        return;
+    }
 
     mbBusy = true;
 
     var wait = Math.max(
         0,
-        1300 - (Date.now() - mbLastRequest)
+        1300 - (
+            Date.now() - mbLastRequest
+        )
     );
 
     setTimeout(function () {
@@ -315,74 +353,113 @@ function processMB() {
 
         mbLastRequest = Date.now();
 
-        request(item.url, function (error, data) {
-            mbBusy = false;
+        request(
+            item.url,
+            function (error, data) {
+                mbBusy = false;
 
-            try {
-                item.callback(error, data);
-            } catch (e) {
-                log('MB callback:', e);
+                try {
+                    item.callback(
+                        error,
+                        data
+                    );
+                } catch (e) {
+                    log('MB callback:', e);
+                }
+
+                processMB();
             }
-
-            processMB();
-        });
+        );
     }, wait);
 }
 
 /* ===================================
-   MUSICBRAINZ ALBUM
+   ALBUM SEARCH
 =================================== */
 
 function scoreAlbum(group, title, year) {
     var wanted = normalize(title);
     var actual = normalize(group.title);
 
-    if (!wanted || !actual) return -100;
+    if (
+        !wanted ||
+        !actual
+    ) {
+        return -100;
+    }
 
     var score = 0;
 
     if (actual === wanted) {
         score += 80;
-    } else if (actual.indexOf(wanted + ' ') === 0) {
+    } else if (
+        actual.indexOf(wanted + ' ') === 0
+    ) {
         score += 70;
-    } else if (actual.indexOf(wanted) >= 0) {
+    } else if (
+        actual.indexOf(wanted) >= 0
+    ) {
         score += 45;
     } else {
         return -100;
     }
 
-    var types = group['secondary-types'] || [];
+    var types =
+        group['secondary-types'] || [];
 
-    if (types.indexOf('Soundtrack') >= 0) {
+    if (
+        types.indexOf('Soundtrack') >= 0
+    ) {
         score += 35;
     }
 
-    if (/original (motion picture|soundtrack|score)/i
-        .test(group.title)) {
+    if (
+        /original (motion picture|soundtrack|score)/i
+            .test(group.title)
+    ) {
         score += 20;
     }
 
-    if (/\b(score|soundtrack)\b/i.test(group.title)) {
+    if (
+        /\b(score|soundtrack)\b/i
+            .test(group.title)
+    ) {
         score += 12;
     }
 
     var albumYear = parseInt(
-        String(group['first-release-date'] || '')
-            .slice(0, 4),
+        String(
+            group['first-release-date'] || ''
+        ).slice(0, 4),
         10
     );
 
-    var movieYear = parseInt(year, 10);
+    var movieYear = parseInt(
+        year,
+        10
+    );
 
-    if (albumYear && movieYear) {
-        var diff = Math.abs(albumYear - movieYear);
+    if (
+        albumYear &&
+        movieYear
+    ) {
+        var diff = Math.abs(
+            albumYear - movieYear
+        );
 
-        if (diff <= 1) score += 20;
-        else if (diff <= 3) score += 8;
-        else if (diff > 15) score -= 15;
+        if (diff <= 1) {
+            score += 20;
+        } else if (diff <= 3) {
+            score += 8;
+        } else if (diff > 15) {
+            score -= 15;
+        }
     }
 
-    score += Math.min(10, num(group.score, 0) / 10);
+    score += Math.min(
+        10,
+        num(group.score, 0) / 10
+    );
 
     return score;
 }
@@ -394,88 +471,147 @@ function findAlbum(info, callback) {
         '" AND secondarytype:soundtrack';
 
     var url =
-        MB + 'release-group/?query=' +
+        MB +
+        'release-group/?query=' +
         encodeURIComponent(query) +
         '&fmt=json&limit=20';
 
-    mbRequest(url, function (error, data) {
-        if (error) return callback(error);
+    mbRequest(
+        url,
+        function (error, data) {
+            if (error) {
+                callback(error);
+                return;
+            }
 
-        var groups = data['release-groups'] || [];
+            var groups =
+                data['release-groups'] || [];
 
-        groups.sort(function (a, b) {
-            return scoreAlbum(b, info.title, info.year) -
-                   scoreAlbum(a, info.title, info.year);
-        });
+            groups.sort(function (a, b) {
+                return scoreAlbum(
+                    b,
+                    info.title,
+                    info.year
+                ) - scoreAlbum(
+                    a,
+                    info.title,
+                    info.year
+                );
+            });
 
-        if (
-            !groups.length ||
-            scoreAlbum(groups[0], info.title, info.year) < 85
-        ) {
-            callback(null, null);
-            return;
+            if (
+                !groups.length ||
+                scoreAlbum(
+                    groups[0],
+                    info.title,
+                    info.year
+                ) < 85
+            ) {
+                callback(null, null);
+                return;
+            }
+
+            var group = groups[0];
+
+            callback(null, {
+                id: group.id,
+                title: group.title,
+                artist: artistName(group),
+                date:
+                    group['first-release-date'] ||
+                    ''
+            });
         }
-
-        var group = groups[0];
-
-        callback(null, {
-            id: group.id,
-            title: group.title,
-            artist: artistName(group),
-            date: group['first-release-date'] || ''
-        });
-    });
+    );
 }
 
 /* ===================================
-   MUSICBRAINZ RELEASE
+   RELEASE SEARCH
 =================================== */
 
 function releaseScore(release) {
     var score = 0;
 
-    if (release.status === 'Official') score += 35;
-    if (release.status === 'Bootleg') score -= 60;
-    if (release.country === 'US') score += 10;
-    if (release.country === 'GB') score += 8;
+    if (
+        release.status === 'Official'
+    ) {
+        score += 35;
+    }
 
-    var media = release.media || [];
+    if (
+        release.status === 'Bootleg'
+    ) {
+        score -= 60;
+    }
+
+    if (release.country === 'US') {
+        score += 10;
+    }
+
+    if (release.country === 'GB') {
+        score += 8;
+    }
+
     var count = 0;
 
-    media.forEach(function (item) {
-        count += num(item['track-count'], 0);
-    });
+    (release.media || [])
+        .forEach(function (medium) {
+            count += num(
+                medium['track-count'],
+                0
+            );
+        });
 
-    if (count >= 8 && count <= 45) score += 15;
-    if (count > 60) score -= 10;
+    if (
+        count >= 8 &&
+        count <= 45
+    ) {
+        score += 15;
+    }
+
+    if (count > 60) {
+        score -= 10;
+    }
 
     return score;
 }
 
 function findRelease(album, callback) {
     var url =
-        MB + 'release/?release-group=' +
+        MB +
+        'release/?release-group=' +
         encodeURIComponent(album.id) +
         '&fmt=json&limit=50';
 
-    mbRequest(url, function (error, data) {
-        if (error) return callback(error);
+    mbRequest(
+        url,
+        function (error, data) {
+            if (error) {
+                callback(error);
+                return;
+            }
 
-        var releases = data.releases || [];
+            var releases =
+                data.releases || [];
 
-        releases.sort(function (a, b) {
-            return releaseScore(b) - releaseScore(a);
-        });
+            releases.sort(function (a, b) {
+                return releaseScore(b) -
+                    releaseScore(a);
+            });
 
-        if (!releases.length) {
-            return callback('Реліз не знайдено');
+            if (!releases.length) {
+                callback(
+                    'Реліз не знайдено'
+                );
+                return;
+            }
+
+            callback(null, {
+                id: releases[0].id,
+                title: releases[0].title
+            });
         }
-
-        callback(null, {
-            id: releases[0].id,
-            title: releases[0].title
-        });
-    });
+    );
 }
 
 /* ===================================
@@ -489,32 +625,40 @@ var KNOWN_THEMES = {
         'Stay',
         'No Time for Caution'
     ],
+
     'inception|2010': [
         'Time',
         'Dream Is Collapsing'
     ],
+
     'gladiator|2000': [
         'Now We Are Free',
         'The Battle'
     ],
+
     'the dark knight|2008': [
         'Why So Serious',
         'A Dark Knight'
     ],
+
     'jurassic park|1993': [
         'Theme from Jurassic Park',
         'Journey to the Island'
     ],
+
     'harry potter and the philosophers stone|2001': [
         'Hedwigs Theme'
     ],
+
     'harry potter and the sorcerers stone|2001': [
         'Hedwigs Theme'
     ],
+
     'pirates of the caribbean the curse of the black pearl|2003': [
         'Hes a Pirate',
         'The Medallion Calls'
     ],
+
     'the lord of the rings the fellowship of the ring|2001': [
         'The Fellowship',
         'Concerning Hobbits'
@@ -522,31 +666,87 @@ var KNOWN_THEMES = {
 };
 
 function scoreTrack(track, movie) {
-    var title = normalize(track.title);
+    var title = normalize(
+        track.title
+    );
+
     var film = normalize(movie);
     var score = 0;
 
-    if (/\bmain theme\b/.test(title)) score += 120;
-    if (/\bmain titles?\b/.test(title)) score += 115;
-    if (/\bopening titles?\b/.test(title)) score += 105;
-    if (/\bopening theme\b/.test(title)) score += 105;
-    if (/\btitle theme\b/.test(title)) score += 105;
-    if (/\btheme from\b/.test(title)) score += 95;
-    if (/\btheme\b/.test(title)) score += 70;
-    if (/\boverture\b/.test(title)) score += 65;
+    if (
+        /\bmain theme\b/.test(title)
+    ) {
+        score += 120;
+    }
 
-    if (film && title === film) score += 105;
+    if (
+        /\bmain titles?\b/.test(title)
+    ) {
+        score += 115;
+    }
 
-    if (/\b(remix|karaoke|interview|dialogue|trailer)\b/
-        .test(title)) {
+    if (
+        /\bopening titles?\b/.test(title)
+    ) {
+        score += 105;
+    }
+
+    if (
+        /\bopening theme\b/.test(title)
+    ) {
+        score += 105;
+    }
+
+    if (
+        /\btitle theme\b/.test(title)
+    ) {
+        score += 105;
+    }
+
+    if (
+        /\btheme from\b/.test(title)
+    ) {
+        score += 95;
+    }
+
+    if (
+        /\btheme\b/.test(title)
+    ) {
+        score += 70;
+    }
+
+    if (
+        /\boverture\b/.test(title)
+    ) {
+        score += 65;
+    }
+
+    if (
+        film &&
+        title === film
+    ) {
+        score += 105;
+    }
+
+    if (
+        /\b(remix|karaoke|interview|dialogue|trailer)\b/
+            .test(title)
+    ) {
         score -= 70;
     }
 
-    if (track.position === 1) score += 15;
-    else if (track.position === 2) score += 8;
+    if (track.position === 1) {
+        score += 15;
+    } else if (
+        track.position === 2
+    ) {
+        score += 8;
+    }
 
-    if (track.length >= 60000 &&
-        track.length <= 480000) {
+    if (
+        track.length >= 60000 &&
+        track.length <= 480000
+    ) {
         score += 10;
     }
 
@@ -554,38 +754,63 @@ function scoreTrack(track, movie) {
 }
 
 function chooseTheme(tracks, movie, year) {
-    if (!tracks.length) return null;
+    if (!tracks.length) {
+        return null;
+    }
 
-    var key = normalize(movie) + '|' + year;
-    var known = KNOWN_THEMES[key] || [];
+    var key =
+        normalize(movie) +
+        '|' +
+        year;
 
-    for (var i = 0; i < known.length; i++) {
-        var wanted = normalize(known[i]);
+    var known =
+        KNOWN_THEMES[key] || [];
 
-        for (var j = 0; j < tracks.length; j++) {
-            var actual = normalize(tracks[j].title);
+    for (
+        var i = 0;
+        i < known.length;
+        i++
+    ) {
+        var wanted =
+            normalize(known[i]);
+
+        for (
+            var j = 0;
+            j < tracks.length;
+            j++
+        ) {
+            var actual =
+                normalize(tracks[j].title);
 
             if (
                 actual === wanted ||
-                actual.indexOf(wanted + ' ') === 0
+                actual.indexOf(
+                    wanted + ' '
+                ) === 0
             ) {
                 return {
                     id: tracks[j].id,
                     title: tracks[j].title,
                     score: 200 - i,
                     confidence: 'high',
-                    reason: 'Відома тема фільму'
+                    reason:
+                        'Відома тема фільму'
                 };
             }
         }
     }
 
-    var ranked = tracks.map(function (track) {
-        return {
-            track: track,
-            score: scoreTrack(track, movie)
-        };
-    });
+    var ranked = tracks.map(
+        function (track) {
+            return {
+                track: track,
+                score: scoreTrack(
+                    track,
+                    movie
+                )
+            };
+        }
+    );
 
     ranked.sort(function (a, b) {
         return b.score - a.score;
@@ -599,156 +824,248 @@ function chooseTheme(tracks, movie, year) {
             title: best.track.title,
             score: best.score,
             confidence:
-                best.score >= 85 ? 'high' : 'medium',
-            reason: 'Автоматичний вибір'
+                best.score >= 85
+                    ? 'high'
+                    : 'medium',
+            reason:
+                'Автоматичний вибір'
         };
     }
 
-    var candidates = tracks.filter(function (track) {
-        return !/\b(remix|karaoke|dialogue|interview|trailer)\b/
-            .test(normalize(track.title)) &&
-            (track.length >= 60000 || !track.length);
-    });
+    var candidates = tracks.filter(
+        function (track) {
+            return !/\b(remix|karaoke|dialogue|interview|trailer)\b/
+                .test(
+                    normalize(track.title)
+                ) &&
+                (
+                    track.length >= 60000 ||
+                    !track.length
+                );
+        }
+    );
 
-    if (!candidates.length) return null;
+    if (!candidates.length) {
+        return null;
+    }
 
     return {
         id: candidates[0].id,
         title: candidates[0].title,
-        score: scoreTrack(candidates[0], movie),
+        score: scoreTrack(
+            candidates[0],
+            movie
+        ),
         confidence: 'low',
-        reason: 'Резервний кандидат'
+        reason:
+            'Резервний кандидат'
     };
 }
 
 function findTracks(release, info, callback) {
     var url =
-        MB + 'release/' +
+        MB +
+        'release/' +
         encodeURIComponent(release.id) +
         '?inc=recordings&fmt=json';
 
-    mbRequest(url, function (error, data) {
-        if (error) return callback(error);
+    mbRequest(
+        url,
+        function (error, data) {
+            if (error) {
+                callback(error);
+                return;
+            }
 
-        var tracks = [];
+            var tracks = [];
 
-        (data.media || []).forEach(function (medium, disc) {
-            (medium.tracks || []).forEach(function (item, index) {
-                var recording = item.recording || {};
-                var title = item.title || recording.title;
+            (data.media || [])
+                .forEach(
+                    function (medium, disc) {
+                        (medium.tracks || [])
+                            .forEach(
+                                function (
+                                    item,
+                                    index
+                                ) {
+                                    var recording =
+                                        item.recording ||
+                                        {};
 
-                if (!title) return;
+                                    var title =
+                                        item.title ||
+                                        recording.title;
 
-                tracks.push({
-                    id: recording.id || item.id || '',
-                    title: title,
-                    disc: disc + 1,
-                    position: num(item.position, index + 1),
-                    length: num(
-                        item.length || recording.length,
-                        0
-                    )
-                });
+                                    if (!title) {
+                                        return;
+                                    }
+
+                                    tracks.push({
+                                        id:
+                                            recording.id ||
+                                            item.id ||
+                                            '',
+                                        title: title,
+                                        disc: disc + 1,
+                                        position: num(
+                                            item.position,
+                                            index + 1
+                                        ),
+                                        length: num(
+                                            item.length ||
+                                            recording.length,
+                                            0
+                                        )
+                                    });
+                                }
+                            );
+                    }
+                );
+
+            if (!tracks.length) {
+                callback(
+                    'Треклист порожній'
+                );
+                return;
+            }
+
+            callback(null, {
+                tracks: tracks,
+                theme: chooseTheme(
+                    tracks,
+                    info.title,
+                    info.year
+                )
             });
-        });
-
-        if (!tracks.length) {
-            return callback('Треклист порожній');
         }
-
-        callback(null, {
-            tracks: tracks,
-            theme: chooseTheme(
-                tracks,
-                info.title,
-                info.year
-            )
-        });
-    });
+    );
 }
+
+/* ===================================
+   DISCOVERY
+=================================== */
 
 function discover(info, callback) {
     var key =
-        info.id + '|' +
-        normalize(info.title) + '|' +
+        info.id +
+        '|' +
+        normalize(info.title) +
+        '|' +
         info.year;
 
     var cached = cacheGet(key);
 
     if (cached) {
-        return callback(null, cached, true);
+        callback(
+            null,
+            cached,
+            true
+        );
+        return;
     }
 
-    findAlbum(info, function (error, album) {
-        if (error) return callback(error);
-
-        if (!album) {
-            var empty = {
-                found: false,
-                album: null,
-                release: null,
-                theme: null,
-                tracks: []
-            };
-
-            cacheSet(key, empty);
-            return callback(null, empty, false);
-        }
-
-        findRelease(album, function (releaseError, release) {
-            if (releaseError) {
-                return callback(releaseError);
+    findAlbum(
+        info,
+        function (error, album) {
+            if (error) {
+                callback(error);
+                return;
             }
 
-            findTracks(release, info, function (trackError, data) {
-                if (trackError) {
-                    return callback(trackError);
-                }
-
-                var result = {
-                    found: true,
-                    movie: info.title,
-                    year: info.year,
-                    album: album,
-                    release: release,
-                    theme: data.theme,
-                    tracks: data.tracks
+            if (!album) {
+                var empty = {
+                    found: false,
+                    album: null,
+                    release: null,
+                    theme: null,
+                    tracks: []
                 };
 
-                cacheSet(key, result);
-                callback(null, result, false);
-            });
-        });
-    });
+                cacheSet(key, empty);
+
+                callback(
+                    null,
+                    empty,
+                    false
+                );
+                return;
+            }
+
+            findRelease(
+                album,
+                function (
+                    releaseError,
+                    release
+                ) {
+                    if (releaseError) {
+                        callback(releaseError);
+                        return;
+                    }
+
+                    findTracks(
+                        release,
+                        info,
+                        function (
+                            trackError,
+                            data
+                        ) {
+                            if (trackError) {
+                                callback(trackError);
+                                return;
+                            }
+
+                            var result = {
+                                found: true,
+                                movie: info.title,
+                                year: info.year,
+                                album: album,
+                                release: release,
+                                theme: data.theme,
+                                tracks: data.tracks
+                            };
+
+                            cacheSet(
+                                key,
+                                result
+                            );
+
+                            callback(
+                                null,
+                                result,
+                                false
+                            );
+                        }
+                    );
+                }
+            );
+        }
+    );
 }
 
 /* ===================================
-   AUDIO SOURCE FINDER
+   JAMENDO SOURCE FINDER
 =================================== */
-
-/*
- * Jamendo results are NOT assumed
- * to be original soundtrack recordings.
- *
- * Strict matching requires both:
- * 1. Track title
- * 2. Artist name
- *
- * A stream URL is metadata only here.
- * This version does not auto-play it.
- */
 
 function sourceScore(item, theme, artist) {
     var title = normalize(item.name);
     var wanted = normalize(theme);
-    var performer = normalize(item.artist_name);
+
+    var performer = normalize(
+        item.artist_name
+    );
+
     var expected = normalize(artist);
 
-    var score = 0;
-
-    if (!title || !wanted || !performer || !expected) {
+    if (
+        !title ||
+        !wanted ||
+        !performer ||
+        !expected
+    ) {
         return 0;
     }
+
+    var score = 0;
 
     if (title === wanted) {
         score += 60;
@@ -776,90 +1093,133 @@ function sourceScore(item, theme, artist) {
     return Math.max(0, score);
 }
 
-function searchJamendo(theme, artist, callback) {
+function searchJamendo(
+    theme,
+    artist,
+    callback
+) {
     var clientId = String(
         get('jamendo_id') || ''
     ).trim();
 
     if (!clientId) {
         callback(
-            'Не задано Jamendo client_id'
+            'Не задано Jamendo Client ID'
         );
         return;
     }
 
-    if (!theme || !artist) {
+    if (
+        !theme ||
+        !artist
+    ) {
         callback(
             'Немає назви композиції або виконавця'
         );
         return;
     }
 
+    /*
+     * namesearch searches track names.
+     * We still verify artist separately.
+     */
+
     var url =
         JAM +
-        '?client_id=' + encodeURIComponent(clientId) +
+        '?client_id=' +
+        encodeURIComponent(clientId) +
         '&format=json' +
         '&limit=50' +
-        '&search=' + encodeURIComponent(theme) +
+        '&namesearch=' +
+        encodeURIComponent(theme) +
         '&audioformat=mp31';
 
-    request(url, function (error, data) {
-        if (error) return callback(error);
+    request(
+        url,
+        function (error, data) {
+            if (error) {
+                callback(error);
+                return;
+            }
 
-        if (
-            !data ||
-            !data.headers ||
-            data.headers.status !== 'success'
-        ) {
-            var message = data && data.headers
-                ? data.headers.error_message
-                : 'Невідома помилка Jamendo';
+            if (
+                !data ||
+                !data.headers ||
+                data.headers.status !== 'success'
+            ) {
+                var message =
+                    data &&
+                    data.headers &&
+                    data.headers.error_message;
 
-            return callback(
-                message || 'Помилка Jamendo API'
+                callback(
+                    message ||
+                    'Помилка Jamendo API'
+                );
+                return;
+            }
+
+            var items =
+                data.results || [];
+
+            var ranked = items.map(
+                function (item) {
+                    return {
+                        id: item.id,
+                        title: item.name,
+                        artist:
+                            item.artist_name,
+                        album:
+                            item.album_name ||
+                            '',
+                        duration:
+                            item.duration ||
+                            0,
+                        audio:
+                            item.audio ||
+                            '',
+                        license:
+                            item.license_ccurl ||
+                            '',
+                        score: sourceScore(
+                            item,
+                            theme,
+                            artist
+                        )
+                    };
+                }
             );
+
+            ranked.sort(function (a, b) {
+                return b.score -
+                    a.score;
+            });
+
+            var exact = ranked.filter(
+                function (item) {
+                    return (
+                        item.score >= 90 &&
+                        urlOK(item.audio)
+                    );
+                }
+            );
+
+            callback(null, {
+                provider: 'Jamendo',
+                searchedTitle: theme,
+                searchedArtist: artist,
+                candidates:
+                    ranked.slice(0, 10),
+                exactMatches: exact,
+                found:
+                    exact.length > 0,
+                status:
+                    exact.length
+                        ? 'Точний збіг знайдено'
+                        : 'Точного збігу немає'
+            });
         }
-
-        var items = data.results || [];
-
-        var ranked = items.map(function (item) {
-            return {
-                id: item.id,
-                title: item.name,
-                artist: item.artist_name,
-                album: item.album_name || '',
-                duration: item.duration || 0,
-                audio: item.audio || '',
-                license: item.license_ccurl || '',
-                score: sourceScore(
-                    item,
-                    theme,
-                    artist
-                )
-            };
-        });
-
-        ranked.sort(function (a, b) {
-            return b.score - a.score;
-        });
-
-        var exact = ranked.filter(function (item) {
-            return item.score >= 90 &&
-                   urlOK(item.audio);
-        });
-
-        callback(null, {
-            provider: 'Jamendo',
-            searchedTitle: theme,
-            searchedArtist: artist,
-            candidates: ranked.slice(0, 10),
-            exactMatches: exact,
-            found: exact.length > 0,
-            status: exact.length
-                ? 'Точний збіг у каталозі'
-                : 'Точного збігу немає'
-        });
-    });
+    );
 }
 
 function findSource(result, callback) {
@@ -869,15 +1229,17 @@ function findSource(result, callback) {
         !result.theme ||
         !result.album
     ) {
-        return callback(
-            'Головну композицію ще не визначено'
+        callback(
+            'Головну композицію не визначено'
         );
+        return;
     }
 
     if (sourceBusy) {
-        return callback(
+        callback(
             'Пошук джерела вже виконується'
         );
+        return;
     }
 
     sourceBusy = true;
@@ -888,56 +1250,235 @@ function findSource(result, callback) {
         function (error, data) {
             sourceBusy = false;
 
-            lastError = error || '';
-            lastSource = data || null;
+            lastError =
+                error || '';
 
-            log('Audio Source Finder:', error, data);
+            lastSource =
+                data || null;
 
-            callback(error, data);
+            log(
+                'Source Finder:',
+                error,
+                data
+            );
+
+            callback(
+                error,
+                data
+            );
         }
     );
 }
 
 function sourceMessage(error, data) {
-    if (error) return 'OST: ' + error;
-
-    if (data && data.found) {
-        return 'OST: точний збіг знайдено у Jamendo';
+    if (error) {
+        return 'OST: ' + error;
     }
 
-    return 'OST: оригінальний запис у Jamendo не знайдено';
+    if (
+        data &&
+        data.found
+    ) {
+        return (
+            'OST: точний збіг знайдено у Jamendo'
+        );
+    }
+
+    return (
+        'OST: оригінальний запис у Jamendo не знайдено'
+    );
 }
 
-function testSource() {
-    if (sourceBusy) {
-        notify('OST: пошук уже виконується');
-        return;
+/* ===================================
+   JAMENDO ID INPUT
+=================================== */
+
+/*
+ * No type:'input' SettingsApi parameter.
+ *
+ * Use a trigger plus the Lampa.Input
+ * dialog when available.
+ */
+
+function enterJamendoId() {
+    var current = String(
+        get('jamendo_id') || ''
+    );
+
+    function saveValue(value) {
+        if (
+            value === null ||
+            value === undefined
+        ) {
+            return;
+        }
+
+        var id = String(value)
+            .trim();
+
+        if (
+            id &&
+            !/^[a-zA-Z0-9_-]+$/.test(id)
+        ) {
+            notify(
+                'OST: некоректний формат Client ID'
+            );
+            return;
+        }
+
+        set(
+            'jamendo_id',
+            id
+        );
+
+        notify(
+            id
+                ? 'OST: Jamendo Client ID збережено'
+                : 'OST: Jamendo Client ID очищено'
+        );
     }
 
-    notify('OST: перевірка джерела Interstellar...');
+    try {
+        if (
+            Lampa.Input &&
+            typeof Lampa.Input.edit === 'function'
+        ) {
+            Lampa.Input.edit({
+                title:
+                    'Jamendo Client ID',
+                value: current,
+                free: true,
+                nosave: true
+            }, function (value) {
+                saveValue(value);
+            });
+
+            return;
+        }
+
+        if (
+            Lampa.Input &&
+            typeof Lampa.Input.open === 'function'
+        ) {
+            Lampa.Input.open({
+                title:
+                    'Jamendo Client ID',
+                value: current
+            }, function (value) {
+                saveValue(value);
+            });
+
+            return;
+        }
+
+        notify(
+            'OST: клавіатура Lampa недоступна'
+        );
+    } catch (e) {
+        log(
+            'Input dialog error:',
+            e
+        );
+
+        notify(
+            'OST: помилка відкриття клавіатури'
+        );
+    }
+}
+
+/* ===================================
+   TESTS
+=================================== */
+
+function testSearch() {
+    notify(
+        'OST: пошук композиції Interstellar...'
+    );
 
     discover({
         id: '157336',
         title: 'Interstellar',
         year: '2014'
     }, function (error, result) {
-        set('source_test', false);
-
         if (error) {
+            lastError = error;
             notify('OST: ' + error);
             return;
         }
 
         lastResult = result;
+        lastError = '';
 
-        findSource(result, function (sourceError, data) {
-            notify(sourceMessage(sourceError, data));
-        });
+        if (
+            result &&
+            result.theme
+        ) {
+            notify(
+                'OST: ' +
+                result.theme.title +
+                ' — ' +
+                result.album.artist
+            );
+        } else {
+            notify(
+                'OST: головну тему не визначено'
+            );
+        }
+    });
+}
+
+function testSource() {
+    if (sourceBusy) {
+        notify(
+            'OST: пошук уже виконується'
+        );
+        return;
+    }
+
+    if (!get('jamendo_id')) {
+        notify(
+            'OST: спочатку введи Jamendo Client ID'
+        );
+        return;
+    }
+
+    notify(
+        'OST: перевірка джерела Interstellar...'
+    );
+
+    discover({
+        id: '157336',
+        title: 'Interstellar',
+        year: '2014'
+    }, function (error, result) {
+        if (error) {
+            notify(
+                'OST: ' + error
+            );
+            return;
+        }
+
+        lastResult = result;
+
+        findSource(
+            result,
+            function (
+                sourceError,
+                data
+            ) {
+                notify(
+                    sourceMessage(
+                        sourceError,
+                        data
+                    )
+                );
+            }
+        );
     });
 }
 
 /* ===================================
-   MANUAL AUDIO LIBRARY
+   MANUAL MP3 LIBRARY
 =================================== */
 
 function library() {
@@ -947,26 +1488,38 @@ function library() {
             '{}'
         );
 
-        var data = typeof raw === 'string'
-            ? JSON.parse(raw)
-            : raw;
+        var data =
+            typeof raw === 'string'
+                ? JSON.parse(raw)
+                : raw;
 
-        return data && typeof data === 'object'
-            ? data
-            : {};
+        return (
+            data &&
+            typeof data === 'object'
+        ) ? data : {};
     } catch (e) {
         return {};
     }
 }
 
 function addTrack(id, url) {
-    if (!id || !urlOK(url)) return false;
+    if (
+        !id ||
+        !urlOK(url)
+    ) {
+        return false;
+    }
 
     var data = library();
 
-    data[String(id)] = url.trim();
+    data[String(id)] =
+        url.trim();
 
-    set('library', JSON.stringify(data));
+    set(
+        'library',
+        JSON.stringify(data)
+    );
+
     return true;
 }
 
@@ -974,11 +1527,15 @@ function removeTrack(id) {
     var data = library();
 
     delete data[String(id)];
-    set('library', JSON.stringify(data));
+
+    set(
+        'library',
+        JSON.stringify(data)
+    );
 }
 
 /* ===================================
-   AUDIO PLAYBACK
+   AUDIO PLAYER
 =================================== */
 
 function stopAudio() {
@@ -1001,63 +1558,100 @@ function stopAudio() {
 }
 
 function ensureAudio() {
-    if (audio) return audio;
+    if (audio) {
+        return audio;
+    }
 
-    audio = document.createElement('audio');
+    audio =
+        document.createElement('audio');
 
     audio.preload = 'auto';
     audio.volume = 0;
     audio.style.display = 'none';
 
-    audio.setAttribute('playsinline', 'playsinline');
+    audio.setAttribute(
+        'playsinline',
+        'playsinline'
+    );
 
-    audio.addEventListener('timeupdate', function () {
-        if (!activeCard || !enabled(get('loop'))) {
-            return;
+    audio.addEventListener(
+        'timeupdate',
+        function () {
+            if (
+                !activeCard ||
+                !enabled(get('loop'))
+            ) {
+                return;
+            }
+
+            var fragment = clamp(
+                num(
+                    get('fragment'),
+                    30
+                ),
+                10,
+                60
+            );
+
+            if (
+                audio.currentTime >= fragment
+            ) {
+                try {
+                    audio.currentTime = 0;
+                } catch (e) {}
+            }
         }
+    );
 
-        var fragment = clamp(
-            num(get('fragment'), 30),
-            10,
-            60
-        );
+    audio.addEventListener(
+        'ended',
+        function () {
+            if (
+                !activeCard ||
+                !enabled(get('loop'))
+            ) {
+                return;
+            }
 
-        if (audio.currentTime >= fragment) {
             try {
                 audio.currentTime = 0;
+
+                var p = audio.play();
+
+                if (
+                    p &&
+                    p.catch
+                ) {
+                    p.catch(
+                        function () {}
+                    );
+                }
             } catch (e) {}
         }
-    });
+    );
 
-    audio.addEventListener('ended', function () {
-        if (!activeCard || !enabled(get('loop'))) {
-            return;
-        }
-
-        try {
-            audio.currentTime = 0;
-            var p = audio.play();
-
-            if (p && p.catch) {
-                p.catch(function () {});
-            }
-        } catch (e) {}
-    });
-
-    (document.body || document.documentElement)
-        .appendChild(audio);
+    (
+        document.body ||
+        document.documentElement
+    ).appendChild(audio);
 
     return audio;
 }
 
 function fadeIn(generation) {
+    if (!audio) {
+        return;
+    }
+
     var player = audio;
-    if (!player) return;
 
     clearInterval(fadeTimer);
 
     var target = clamp(
-        num(get('volume'), 20) / 100,
+        num(
+            get('volume'),
+            20
+        ) / 100,
         0,
         1
     );
@@ -1070,27 +1664,30 @@ function fadeIn(generation) {
     var step = 0;
     player.volume = 0;
 
-    fadeTimer = setInterval(function () {
-        if (
-            generation !== audioGeneration ||
-            player.paused
-        ) {
-            clearInterval(fadeTimer);
-            return;
-        }
+    fadeTimer = setInterval(
+        function () {
+            if (
+                generation !== audioGeneration ||
+                player.paused
+            ) {
+                clearInterval(fadeTimer);
+                return;
+            }
 
-        step++;
+            step++;
 
-        player.volume = clamp(
-            target * step / 20,
-            0,
-            target
-        );
+            player.volume = clamp(
+                target * step / 20,
+                0,
+                target
+            );
 
-        if (step >= 20) {
-            clearInterval(fadeTimer);
-        }
-    }, 100);
+            if (step >= 20) {
+                clearInterval(fadeTimer);
+            }
+        },
+        100
+    );
 }
 
 function playAudio(url, generation) {
@@ -1114,7 +1711,10 @@ function playAudio(url, generation) {
 
         var p = player.play();
 
-        if (p && p.then) {
+        if (
+            p &&
+            p.then
+        ) {
             p.then(function () {
                 if (
                     generation !== audioGeneration ||
@@ -1126,13 +1726,19 @@ function playAudio(url, generation) {
 
                 fadeIn(generation);
             }).catch(function (error) {
-                log('Playback:', error);
+                log(
+                    'Playback error:',
+                    error
+                );
             });
         } else {
             fadeIn(generation);
         }
     } catch (e) {
-        log('Audio:', e);
+        log(
+            'Audio error:',
+            e
+        );
     }
 }
 
@@ -1144,25 +1750,34 @@ function stopTest(reset) {
     clearTimeout(testTimer);
     testTimer = null;
 
-    testOscillators.forEach(function (osc) {
-        try { osc.stop(); } catch (e) {}
-        try { osc.disconnect(); } catch (e) {}
-    });
+    testOscillators.forEach(
+        function (osc) {
+            try {
+                osc.stop();
+            } catch (e) {}
+
+            try {
+                osc.disconnect();
+            } catch (e) {}
+        }
+    );
 
     testOscillators = [];
 
     if (testContext) {
         try {
             var p = testContext.close();
-            if (p && p.catch) {
+
+            if (
+                p &&
+                p.catch
+            ) {
                 p.catch(function () {});
             }
         } catch (e) {}
 
         testContext = null;
     }
-
-    if (reset) set('test_sound', false);
 }
 
 function testSound() {
@@ -1174,7 +1789,9 @@ function testSound() {
         window.webkitAudioContext;
 
     if (!Context) {
-        notify('OST: Web Audio недоступний');
+        notify(
+            'OST: Web Audio недоступний'
+        );
         return;
     }
 
@@ -1182,15 +1799,21 @@ function testSound() {
         var ctx = new Context();
         testContext = ctx;
 
-        var master = ctx.createGain();
+        var master =
+            ctx.createGain();
 
         master.gain.value = clamp(
-            num(get('volume'), 20) / 100,
+            num(
+                get('volume'),
+                20
+            ) / 100,
             0,
             1
         );
 
-        master.connect(ctx.destination);
+        master.connect(
+            ctx.destination
+        );
 
         var notes = [
             261.63,
@@ -1203,80 +1826,139 @@ function testSound() {
             261.63
         ];
 
-        var start = ctx.currentTime + 0.1;
+        var start =
+            ctx.currentTime + 0.1;
 
-        notes.forEach(function (frequency, index) {
-            var osc = ctx.createOscillator();
-            var gain = ctx.createGain();
+        notes.forEach(
+            function (
+                frequency,
+                index
+            ) {
+                var osc =
+                    ctx.createOscillator();
 
-            var from = start + index * 0.7;
-            var to = from + 0.6;
+                var gain =
+                    ctx.createGain();
 
-            osc.type = 'sine';
-            osc.frequency.value = frequency;
+                var from =
+                    start +
+                    index * 0.7;
 
-            gain.gain.setValueAtTime(0, from);
-            gain.gain.linearRampToValueAtTime(
-                0.5,
-                from + 0.05
-            );
-            gain.gain.exponentialRampToValueAtTime(
-                0.001,
-                to
-            );
+                var to =
+                    from + 0.6;
 
-            osc.connect(gain);
-            gain.connect(master);
+                osc.type = 'sine';
 
-            osc.start(from);
-            osc.stop(to + 0.05);
+                osc.frequency.value =
+                    frequency;
 
-            testOscillators.push(osc);
-        });
+                gain.gain.setValueAtTime(
+                    0,
+                    from
+                );
 
-        if (ctx.state === 'suspended') {
+                gain.gain.linearRampToValueAtTime(
+                    0.5,
+                    from + 0.05
+                );
+
+                gain.gain.exponentialRampToValueAtTime(
+                    0.001,
+                    to
+                );
+
+                osc.connect(gain);
+                gain.connect(master);
+
+                osc.start(from);
+                osc.stop(to + 0.05);
+
+                testOscillators.push(osc);
+            }
+        );
+
+        if (
+            ctx.state === 'suspended'
+        ) {
             var resume = ctx.resume();
 
-            if (resume && resume.catch) {
-                resume.catch(function () {});
+            if (
+                resume &&
+                resume.catch
+            ) {
+                resume.catch(
+                    function () {}
+                );
             }
         }
 
-        testTimer = setTimeout(function () {
-            stopTest(true);
-        }, 7000);
+        testTimer = setTimeout(
+            function () {
+                stopTest(false);
+            },
+            7000
+        );
 
-        notify('OST: тестова мелодія');
+        notify(
+            'OST: тестова мелодія'
+        );
     } catch (e) {
-        stopTest(true);
-        log('Web Audio:', e);
+        stopTest(false);
+
+        log(
+            'Web Audio error:',
+            e
+        );
     }
 }
 
 /* ===================================
-   LAMPA CARD
+   CARD DETECTION
 =================================== */
 
 function extractCard(event) {
-    var data = event && (event.data || event);
+    var data =
+        event &&
+        (
+            event.data ||
+            event
+        );
 
-    if (!data) return null;
+    if (!data) {
+        return null;
+    }
 
     return data.movie ||
         data.card ||
         data.object ||
-        (data.data && data.data.id ? data.data : null) ||
-        (data.id ? data : null);
+        (
+            data.data &&
+            data.data.id
+                ? data.data
+                : null
+        ) ||
+        (
+            data.id
+                ? data
+                : null
+        );
 }
 
 function isSeries(card) {
-    return card.media_type === 'tv' ||
+    return (
+        card.media_type === 'tv' ||
         card.number_of_seasons !== undefined ||
-        card.first_air_date !== undefined;
+        card.first_air_date !== undefined
+    );
 }
 
 function movieInfo(card) {
-    if (!card || !card.id) return null;
+    if (
+        !card ||
+        !card.id
+    ) {
+        return null;
+    }
 
     var title =
         card.original_title ||
@@ -1290,12 +1972,17 @@ function movieInfo(card) {
         card.first_air_date ||
         '';
 
-    var year = String(date).slice(0, 4);
+    var year =
+        String(date).slice(0, 4);
 
     return {
         id: String(card.id),
-        title: String(title).trim(),
-        year: /^\d{4}$/.test(year) ? year : ''
+        title:
+            String(title).trim(),
+        year:
+            /^\d{4}$/.test(year)
+                ? year
+                : ''
     };
 }
 
@@ -1306,9 +1993,16 @@ function closeCard() {
 }
 
 function openCard(card) {
-    if (!card || !card.id) return;
+    if (
+        !card ||
+        !card.id
+    ) {
+        return;
+    }
 
-    if (!enabled(get('enabled'))) {
+    if (
+        !enabled(get('enabled'))
+    ) {
         closeCard();
         return;
     }
@@ -1322,7 +2016,10 @@ function openCard(card) {
     }
 
     var info = movieInfo(card);
-    if (!info) return;
+
+    if (!info) {
+        return;
+    }
 
     if (
         activeCard &&
@@ -1334,120 +2031,187 @@ function openCard(card) {
     closeCard();
 
     activeCard = info;
+
     var token = cardToken;
 
     var saved = library();
     var url = saved[info.id];
 
-    if (!urlOK(url) && enabled(get('demo_card'))) {
+    if (
+        !urlOK(url) &&
+        enabled(get('demo_card'))
+    ) {
         url = DEMO;
     }
 
     if (urlOK(url)) {
-        var generation = audioGeneration;
+        var generation =
+            audioGeneration;
 
-        audioTimer = setTimeout(function () {
-            if (token !== cardToken) return;
+        audioTimer = setTimeout(
+            function () {
+                if (
+                    token !== cardToken
+                ) {
+                    return;
+                }
 
-            playAudio(url, generation);
-        }, clamp(
-            num(get('delay'), 2),
-            0,
-            10
-        ) * 1000);
+                playAudio(
+                    url,
+                    generation
+                );
+            },
+            clamp(
+                num(
+                    get('delay'),
+                    2
+                ),
+                0,
+                10
+            ) * 1000
+        );
     }
 
-    if (!enabled(get('search_enabled'))) return;
+    if (
+        !enabled(get('search_enabled'))
+    ) {
+        return;
+    }
 
-    discover(info, function (error, result) {
-        if (token !== cardToken) return;
-
-        if (error) {
-            lastError = error;
-
-            if (enabled(get('show_result'))) {
-                notify('OST: ' + error);
+    discover(
+        info,
+        function (error, result) {
+            if (
+                token !== cardToken
+            ) {
+                return;
             }
 
-            return;
-        }
+            if (error) {
+                lastError = error;
 
-        lastResult = result;
-        lastError = '';
-
-        if (enabled(get('show_result'))) {
-            if (result.theme) {
-                notify(
-                    'OST: ' + result.theme.title +
-                    ' — ' + result.album.artist
-                );
-            } else {
-                notify('OST: головну тему не визначено');
-            }
-        }
-
-        if (
-            enabled(get('source_enabled')) &&
-            enabled(get('source_card')) &&
-            result.theme
-        ) {
-            findSource(result, function (sourceError, data) {
                 if (
-                    token === cardToken &&
                     enabled(get('show_result'))
                 ) {
                     notify(
-                        sourceMessage(sourceError, data)
+                        'OST: ' + error
                     );
                 }
-            });
+
+                return;
+            }
+
+            lastResult = result;
+            lastError = '';
+
+            if (
+                enabled(get('show_result'))
+            ) {
+                if (
+                    result.theme
+                ) {
+                    notify(
+                        'OST: ' +
+                        result.theme.title +
+                        ' — ' +
+                        result.album.artist
+                    );
+                } else {
+                    notify(
+                        'OST: головну тему не визначено'
+                    );
+                }
+            }
+
+            if (
+                enabled(get('source_enabled')) &&
+                enabled(get('source_card')) &&
+                result.theme
+            ) {
+                findSource(
+                    result,
+                    function (
+                        sourceError,
+                        data
+                    ) {
+                        if (
+                            token === cardToken &&
+                            enabled(get('show_result'))
+                        ) {
+                            notify(
+                                sourceMessage(
+                                    sourceError,
+                                    data
+                                )
+                            );
+                        }
+                    }
+                );
+            }
         }
-    });
+    );
 }
 
+/* ===================================
+   LAMPA EVENTS
+=================================== */
+
 function registerListeners() {
-    Lampa.Listener.follow('full', function (event) {
-        if (!event) return;
+    Lampa.Listener.follow(
+        'full',
+        function (event) {
+            if (!event) return;
 
-        if (
-            event.type === 'complite' ||
-            event.type === 'complete'
-        ) {
-            var card = extractCard(event);
-            if (card) openCard(card);
+            if (
+                event.type === 'complite' ||
+                event.type === 'complete'
+            ) {
+                var card =
+                    extractCard(event);
+
+                if (card) {
+                    openCard(card);
+                }
+            }
+
+            if (
+                event.type === 'destroy' ||
+                event.type === 'close'
+            ) {
+                closeCard();
+            }
         }
+    );
 
-        if (
-            event.type === 'destroy' ||
-            event.type === 'close'
-        ) {
-            closeCard();
+    Lampa.Listener.follow(
+        'player',
+        function (event) {
+            if (!event) return;
+
+            if (
+                event.type === 'start' ||
+                event.type === 'play' ||
+                event.type === 'open'
+            ) {
+                closeCard();
+                stopTest(false);
+            }
         }
-    });
+    );
 
-    Lampa.Listener.follow('player', function (event) {
-        if (!event) return;
-
-        if (
-            event.type === 'start' ||
-            event.type === 'play' ||
-            event.type === 'open'
-        ) {
-            closeCard();
-            stopTest(true);
+    Lampa.Listener.follow(
+        'activity',
+        function (event) {
+            if (
+                event &&
+                event.type === 'start' &&
+                event.component &&
+                event.component !== 'full'
+            ) {
+                closeCard();
+            }
         }
-    });
-
-    Lampa.Listener.follow('activity', function (event) {
-        if (
-            event &&
-            event.type === 'start' &&
-            event.component &&
-            event.component !== 'full'
-        ) {
-            closeCard();
-        }
-    });
+    );
 }
 
 /* ===================================
@@ -1455,7 +2219,8 @@ function registerListeners() {
 =================================== */
 
 function registerSettings() {
-    var api = Lampa.SettingsApi;
+    var api =
+        Lampa.SettingsApi;
 
     api.addComponent({
         component: COMPONENT,
@@ -1463,25 +2228,40 @@ function registerSettings() {
         icon: 'music'
     });
 
-    function trigger(key, name, description, callback) {
+    function trigger(
+        key,
+        name,
+        description,
+        callback
+    ) {
         api.addParam({
             component: COMPONENT,
             param: {
                 name: P + key,
                 type: 'trigger',
-                default: defaults[key]
+                default: defaults[key] === undefined
+                    ? false
+                    : defaults[key]
             },
             field: {
                 name: name,
-                description: description || ''
+                description:
+                    description || ''
             },
             onChange: function (value) {
-                if (callback) callback(value);
+                if (callback) {
+                    callback(value);
+                }
             }
         });
     }
 
-    function select(key, name, values, callback) {
+    function select(
+        key,
+        name,
+        values,
+        callback
+    ) {
         api.addParam({
             component: COMPONENT,
             param: {
@@ -1494,7 +2274,9 @@ function registerSettings() {
                 name: name
             },
             onChange: function (value) {
-                if (callback) callback(value);
+                if (callback) {
+                    callback(value);
+                }
             }
         });
     }
@@ -1504,92 +2286,87 @@ function registerSettings() {
         'Увімкнути Original Soundtrack',
         'Основний перемикач',
         function (value) {
-            if (!enabled(value)) closeCard();
+            if (!enabled(value)) {
+                closeCard();
+            }
         }
     );
 
     trigger(
         'search_enabled',
-        'Пошук саундтреків MusicBrainz',
-        'Автоматичне визначення головної теми'
+        'Пошук MusicBrainz',
+        'Визначення оригінального саундтреку'
     );
 
     trigger(
         'show_result',
         'Показувати результат пошуку',
-        'Повідомлення на картці'
+        'Повідомлення при відкритті картки'
     );
 
     trigger(
         'search_test',
         'Перевірити Interstellar',
-        'Перевірка головної композиції',
+        'Тест визначення головної теми',
         function (value) {
-            if (!enabled(value)) return;
+            if (!enabled(value)) {
+                return;
+            }
 
-            notify('OST: пошук Cornfield Chase...');
+            testSearch();
 
-            discover({
-                id: '157336',
-                title: 'Interstellar',
-                year: '2014'
-            }, function (error, result) {
-                set('search_test', false);
-
-                if (error) {
-                    notify('OST: ' + error);
-                    return;
-                }
-
-                lastResult = result;
-
-                notify(
-                    result.theme
-                        ? 'OST: ' + result.theme.title
-                        : 'OST: головну тему не визначено'
-                );
-            });
+            set(
+                'search_test',
+                false
+            );
         }
     );
 
     trigger(
         'source_enabled',
         'Audio Source Finder',
-        'Модуль перевірки джерел'
+        'Діагностичний пошук аудіоджерел'
     );
 
     trigger(
         'source_card',
-        'Шукати джерело при відкритті картки',
-        'Лише діагностика, без відтворення'
+        'Шукати джерело у картці',
+        'Без автоматичного відтворення'
     );
 
-    /*
-     * Lampa uses input parameters
-     * for editable text fields.
-     */
+    trigger(
+        'jamendo_enter',
+        'Ввести Jamendo Client ID',
+        'Відкрити клавіатуру Lampa',
+        function (value) {
+            if (!enabled(value)) {
+                return;
+            }
 
-    api.addParam({
-        component: COMPONENT,
-        param: {
-            name: P + 'jamendo_id',
-            type: 'input',
-            default: ''
-        },
-        field: {
-            name: 'Jamendo Client ID',
-            description: 'Ідентифікатор застосунку Jamendo API'
+            set(
+                'jamendo_enter',
+                false
+            );
+
+            enterJamendoId();
         }
-    });
+    );
 
     trigger(
         'source_test',
         'Перевірити джерело Interstellar',
-        'Пошук Cornfield Chase у Jamendo',
+        'Тест Jamendo API',
         function (value) {
-            if (enabled(value)) {
-                testSource();
+            if (!enabled(value)) {
+                return;
             }
+
+            set(
+                'source_test',
+                false
+            );
+
+            testSource();
         }
     );
 
@@ -1606,9 +2383,15 @@ function registerSettings() {
             '50': '50%'
         },
         function (value) {
-            if (audio && !audio.paused) {
+            if (
+                audio &&
+                !audio.paused
+            ) {
                 audio.volume = clamp(
-                    num(value, 20) / 100,
+                    num(
+                        value,
+                        20
+                    ) / 100,
                     0,
                     1
                 );
@@ -1655,19 +2438,19 @@ function registerSettings() {
     trigger(
         'series',
         'Підтримка серіалів',
-        'Пошук саундтреків серіалів'
+        'Пошук музики для серіалів'
     );
 
     trigger(
         'demo_card',
         'Тестовий MP3 у картці',
-        'Діагностичний звук, не саундтрек'
+        'Діагностичний звук'
     );
 
     trigger(
         'test_sound',
         'Перевірити звук',
-        'Синтезована мелодія',
+        'Синтезована тестова мелодія',
         function (value) {
             if (enabled(value)) {
                 testSound();
@@ -1687,7 +2470,8 @@ function registerAPI() {
         version: VERSION,
 
         add: function (id, url) {
-            var success = addTrack(id, url);
+            var success =
+                addTrack(id, url);
 
             notify(
                 success
@@ -1702,40 +2486,55 @@ function registerAPI() {
         library: library,
 
         test: testSound,
-        testSearch: function () {
-            discover({
-                id: '157336',
-                title: 'Interstellar',
-                year: '2014'
-            }, function (error, result) {
-                lastError = error || '';
-                lastResult = result || null;
-
-                notify(
-                    error
-                        ? 'OST: ' + error
-                        : result.theme
-                            ? 'OST: ' + result.theme.title
-                            : 'OST: тему не визначено'
-                );
-            });
-        },
-
+        testSearch: testSearch,
         testSource: testSource,
 
-        search: function (title, year, callback) {
+        setJamendoId: function (id) {
+            var value =
+                String(id || '').trim();
+
+            if (
+                value &&
+                !/^[a-zA-Z0-9_-]+$/.test(value)
+            ) {
+                return false;
+            }
+
+            set(
+                'jamendo_id',
+                value
+            );
+
+            return true;
+        },
+
+        search: function (
+            title,
+            year,
+            callback
+        ) {
             discover({
-                id: 'manual_' +
+                id:
+                    'manual_' +
                     normalize(title) +
-                    '_' + (year || ''),
+                    '_' +
+                    (year || ''),
                 title: title,
                 year: year || ''
             }, function (error, result) {
-                lastError = error || '';
-                lastResult = result || null;
+                lastError =
+                    error || '';
 
-                if (typeof callback === 'function') {
-                    callback(error, result);
+                lastResult =
+                    result || null;
+
+                if (
+                    typeof callback === 'function'
+                ) {
+                    callback(
+                        error,
+                        result
+                    );
                 }
             });
         },
@@ -1743,21 +2542,34 @@ function registerAPI() {
         findSource: function (callback) {
             findSource(
                 lastResult,
-                callback || function (error, data) {
-                    notify(sourceMessage(error, data));
-                }
+                callback ||
+                    function (error, data) {
+                        notify(
+                            sourceMessage(
+                                error,
+                                data
+                            )
+                        );
+                    }
             );
         },
 
         stop: function () {
             closeCard();
-            stopTest(true);
+            stopTest(false);
         },
 
         clearCache: function () {
             cache = {};
-            set('discovery_v150', '{}');
-            notify('OST: кеш очищено');
+
+            Lampa.Storage.set(
+                CACHE_KEY,
+                '{}'
+            );
+
+            notify(
+                'OST: кеш очищено'
+            );
         },
 
         lastResult: function () {
@@ -1769,9 +2581,10 @@ function registerAPI() {
         },
 
         tracks: function () {
-            return lastResult && lastResult.tracks
-                ? lastResult.tracks
-                : [];
+            return (
+                lastResult &&
+                lastResult.tracks
+            ) ? lastResult.tracks : [];
         },
 
         theme: function () {
@@ -1784,61 +2597,88 @@ function registerAPI() {
             return {
                 version: VERSION,
                 card: activeCard,
-                playing: !!audio && !audio.paused,
-                theme: lastResult && lastResult.theme,
+                playing:
+                    !!audio &&
+                    !audio.paused,
+                theme:
+                    lastResult &&
+                    lastResult.theme,
                 source: lastSource,
                 lastError: lastError,
                 sourceBusy: sourceBusy,
-                mbQueue: mbQueue.length
+                mbQueue:
+                    mbQueue.length
             };
         }
     };
 }
 
 /* ===================================
-   START
+   INITIALIZATION
 =================================== */
 
 function init() {
-    if (ready) return;
+    if (ready) {
+        return;
+    }
+
     ready = true;
 
-    set('test_sound', false);
+    /*
+     * Reset transient trigger flags.
+     */
+
     set('search_test', false);
     set('source_test', false);
+    set('jamendo_enter', false);
+    set('test_sound', false);
 
     loadCache();
+
     registerAPI();
     registerListeners();
 
     try {
         registerSettings();
     } catch (e) {
-        log('Settings error:', e);
+        log(
+            'Settings error:',
+            e
+        );
     }
 
-    log('Original Soundtrack ' + VERSION + ' ready');
+    log(
+        'Original Soundtrack ' +
+        VERSION +
+        ' ready'
+    );
 }
 
 var attempts = 0;
 
-var wait = setInterval(function () {
-    attempts++;
+var wait = setInterval(
+    function () {
+        attempts++;
 
-    if (
-        window.Lampa &&
-        Lampa.Storage &&
-        Lampa.Listener &&
-        Lampa.SettingsApi
-    ) {
-        clearInterval(wait);
-        init();
-    }
+        if (
+            window.Lampa &&
+            Lampa.Storage &&
+            Lampa.Listener &&
+            Lampa.SettingsApi
+        ) {
+            clearInterval(wait);
+            init();
+        }
 
-    if (attempts >= 60) {
-        clearInterval(wait);
-        log('Initialization timeout');
-    }
-}, 500);
+        if (attempts >= 60) {
+            clearInterval(wait);
+
+            log(
+                'Initialization timeout'
+            );
+        }
+    },
+    500
+);
 
 })();
