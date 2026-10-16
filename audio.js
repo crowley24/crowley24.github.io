@@ -3,24 +3,30 @@
     'use strict';
 
     /*
-     * Original Soundtrack 1.0.1
+     * Original Soundtrack 1.1.0
      * Lampa / Android TV
+     * Audio diagnostics + soundtrack playback
      */
 
-    var VERSION = '1.0.1';
+    var VERSION = '1.1.0';
     var PREFIX = 'ost10_';
+    var COMPONENT = 'original_soundtrack';
 
-    if (window.ost101_ready) return;
-    window.ost101_ready = true;
+    if (window.ost110_ready) return;
+    window.ost110_ready = true;
 
     var audio = null;
     var startTimer = null;
     var fadeTimer = null;
     var operation = 0;
     var currentId = '';
-    var currentCard = null;
     var cardActive = false;
     var initialized = false;
+
+    var testContext = null;
+    var testNodes = [];
+    var testTimer = null;
+    var testActive = false;
 
     var defaults = {
         enabled: true,
@@ -58,6 +64,13 @@
         return isFinite(n) ? n : fallback;
     }
 
+    function volume() {
+        return Math.max(
+            0,
+            Math.min(1, number(get('volume'), 20) / 100)
+        );
+    }
+
     function notify(message) {
         try {
             Lampa.Noty.show(message);
@@ -93,13 +106,12 @@
         return audio;
     }
 
-    function stop() {
+    function stopPlayback() {
         operation++;
         clearTimers();
 
         cardActive = false;
         currentId = '';
-        currentCard = null;
 
         if (audio) {
             audio.pause();
@@ -114,13 +126,7 @@
 
         clearInterval(fadeTimer);
 
-        var target = Math.max(
-            0,
-            Math.min(
-                1,
-                number(get('volume'), 20) / 100
-            )
-        );
+        var target = volume();
 
         if (!bool(get('fade'))) {
             audio.volume = target;
@@ -188,7 +194,6 @@
 
     function removeTrack(id) {
         var data = library();
-
         delete data[String(id)];
 
         Lampa.Storage.set(
@@ -197,27 +202,18 @@
         );
     }
 
-    function findTrack(card) {
-        if (!card || !card.id) return '';
-
-        return library()[String(card.id)] || '';
-    }
-
     function validUrl(url) {
         return /^https?:\/\/\S+$/i.test(url || '');
     }
 
-    function play(url, id, token) {
+    function playTrack(url, id, token) {
         if (!cardActive ||
             token !== operation ||
-            id !== currentId) {
-            return;
-        }
+            id !== currentId) return;
 
-        if (!validUrl(url)) {
-            console.warn('[OST] Invalid URL');
-            return;
-        }
+        if (!validUrl(url)) return;
+
+        stopTest();
 
         var player = ensureAudio();
 
@@ -226,32 +222,74 @@
         player.loop = bool(get('loop'));
         player.volume = 0;
 
-        var result;
-
         try {
-            result = player.play();
+            var promise = player.play();
+
+            if (promise && promise.then) {
+                promise.then(function () {
+                    if (token !== operation ||
+                        !cardActive) {
+                        player.pause();
+                        return;
+                    }
+
+                    fadeIn();
+                }).catch(function (error) {
+                    console.warn(
+                        '[OST] Playback error:',
+                        error
+                    );
+                });
+            } else {
+                fadeIn();
+            }
         } catch (e) {
             console.warn('[OST] Play failed:', e);
+        }
+    }
+
+    function openCard(card) {
+        if (!bool(get('enabled')) ||
+            !card ||
+            !card.id) {
+            stopPlayback();
             return;
         }
 
-        if (result && result.then) {
-            result.then(function () {
-                if (token !== operation || !cardActive) {
-                    player.pause();
-                    return;
-                }
+        var isSeries =
+            card.first_air_date !== undefined ||
+            card.number_of_seasons !== undefined;
 
-                fadeIn();
-            }).catch(function (error) {
-                console.warn(
-                    '[OST] Autoplay blocked:',
-                    error
-                );
-            });
-        } else {
-            fadeIn();
+        if (isSeries && !bool(get('series'))) {
+            stopPlayback();
+            return;
         }
+
+        var id = String(card.id);
+
+        if (cardActive && currentId === id) return;
+
+        stopPlayback();
+
+        cardActive = true;
+        currentId = id;
+
+        var url = library()[id];
+        var token = operation;
+
+        if (!url) {
+            console.log('[OST] No track:', id);
+            return;
+        }
+
+        var delay = Math.max(
+            0,
+            number(get('delay'), 2)
+        );
+
+        startTimer = setTimeout(function () {
+            playTrack(url, id, token);
+        }, delay * 1000);
     }
 
     function extractCard(event) {
@@ -265,126 +303,171 @@
                (data.id ? data : null);
     }
 
-    function openCard(card) {
-        if (!bool(get('enabled')) ||
-            !card ||
-            !card.id) {
-            stop();
-            return;
+    function stopTest() {
+        clearTimeout(testTimer);
+        testTimer = null;
+
+        testNodes.forEach(function (node) {
+            try {
+                node.stop();
+            } catch (e) {}
+
+            try {
+                node.disconnect();
+            } catch (e) {}
+        });
+
+        testNodes = [];
+
+        if (testContext) {
+            try {
+                testContext.close();
+            } catch (e) {}
+            testContext = null;
         }
 
-        var isSeries =
-            card.first_air_date !== undefined ||
-            card.number_of_seasons !== undefined;
-
-        if (isSeries && !bool(get('series'))) {
-            stop();
-            return;
-        }
-
-        var id = String(card.id);
-
-        if (cardActive && currentId === id) return;
-
-        stop();
-
-        cardActive = true;
-        currentId = id;
-        currentCard = card;
-
-        var url = findTrack(card);
-        var token = operation;
-
-        if (!url) {
-            console.log(
-                '[OST] No soundtrack for TMDB:',
-                id
-            );
-            return;
-        }
-
-        var delay = Math.max(
-            0,
-            number(get('delay'), 2)
-        );
-
-        startTimer = setTimeout(function () {
-            play(url, id, token);
-        }, delay * 1000);
+        testActive = false;
     }
 
-    function handleFull(event) {
-        if (!event || !event.type) return;
+    function testSound() {
+        stopPlayback();
+        stopTest();
 
-        if (event.type === 'complite' ||
-            event.type === 'complete') {
+        var AudioContextClass =
+            window.AudioContext ||
+            window.webkitAudioContext;
 
-            var card = extractCard(event);
-
-            if (card && card.id) {
-                openCard(card);
-            }
+        if (!AudioContextClass) {
+            notify('Web Audio API не підтримується');
+            return;
         }
 
-        if (event.type === 'destroy' ||
-            event.type === 'close') {
-            stop();
+        try {
+            var ctx = new AudioContextClass();
+            testContext = ctx;
+            testActive = true;
+
+            var master = ctx.createGain();
+            master.gain.value = volume();
+            master.connect(ctx.destination);
+
+            var notes = [
+                [261.63, 0.00, 0.65],
+                [329.63, 0.75, 0.65],
+                [392.00, 1.50, 0.65],
+                [523.25, 2.25, 0.95],
+                [392.00, 3.40, 0.65],
+                [329.63, 4.20, 0.65],
+                [293.66, 5.00, 0.65],
+                [261.63, 5.80, 1.20]
+            ];
+
+            var now = ctx.currentTime + 0.1;
+
+            notes.forEach(function (note) {
+                var oscillator = ctx.createOscillator();
+                var gain = ctx.createGain();
+
+                oscillator.type = 'sine';
+                oscillator.frequency.value = note[0];
+
+                var start = now + note[1];
+                var end = start + note[2];
+
+                gain.gain.setValueAtTime(0, start);
+                gain.gain.linearRampToValueAtTime(
+                    0.5, start + 0.05
+                );
+                gain.gain.exponentialRampToValueAtTime(
+                    0.001, end
+                );
+
+                oscillator.connect(gain);
+                gain.connect(master);
+
+                oscillator.start(start);
+                oscillator.stop(end + 0.05);
+
+                testNodes.push(oscillator);
+            });
+
+            if (ctx.state === 'suspended') {
+                ctx.resume().catch(function (error) {
+                    console.warn(
+                        '[OST] AudioContext resume:',
+                        error
+                    );
+                });
+            }
+
+            testTimer = setTimeout(function () {
+                stopTest();
+            }, 8000);
+
+            notify('Тест звуку запущено');
+
+        } catch (e) {
+            stopTest();
+            console.error('[OST] Test error:', e);
+            notify('Не вдалося запустити тест');
         }
     }
 
     function registerListeners() {
         if (!Lampa.Listener ||
-            !Lampa.Listener.follow) {
-            return;
-        }
+            !Lampa.Listener.follow) return;
 
-        Lampa.Listener.follow(
-            'full',
-            handleFull
-        );
+        Lampa.Listener.follow('full', function (event) {
+            if (!event || !event.type) return;
 
-        Lampa.Listener.follow(
-            'player',
-            function (event) {
-                if (!event) return;
+            if (event.type === 'complite' ||
+                event.type === 'complete') {
+                var card = extractCard(event);
 
-                if (event.type === 'start' ||
-                    event.type === 'play' ||
-                    event.type === 'open') {
-                    stop();
+                if (card && card.id) {
+                    openCard(card);
                 }
             }
-        );
 
-        Lampa.Listener.follow(
-            'activity',
-            function (event) {
-                if (!event) return;
-
-                if (event.type === 'start' &&
-                    event.component !== 'full') {
-                    stop();
-                }
+            if (event.type === 'destroy' ||
+                event.type === 'close') {
+                stopPlayback();
             }
-        );
+        });
+
+        Lampa.Listener.follow('player', function (event) {
+            if (!event) return;
+
+            if (event.type === 'start' ||
+                event.type === 'play' ||
+                event.type === 'open') {
+                stopPlayback();
+                stopTest();
+            }
+        });
+
+        Lampa.Listener.follow('activity', function (event) {
+            if (!event) return;
+
+            if (event.type === 'start' &&
+                event.component !== 'full') {
+                stopPlayback();
+            }
+        });
     }
 
     function registerSettings() {
-        if (!Lampa.SettingsApi ||
-            !Lampa.SettingsApi.addComponent ||
-            !Lampa.SettingsApi.addParam) {
-            return;
-        }
+        var api = Lampa.SettingsApi;
 
-        Lampa.SettingsApi.addComponent({
-            component: 'original_soundtrack',
+        api.addComponent({
+            component: COMPONENT,
             name: 'Original Soundtrack',
             icon: 'music'
         });
 
-        function addTrigger(key, title, description) {
-            Lampa.SettingsApi.addParam({
-                component: 'original_soundtrack',
+        function trigger(key, title, description) {
+            api.addParam({
+                component: COMPONENT,
                 param: {
                     name: PREFIX + key,
                     type: 'trigger',
@@ -397,7 +480,7 @@
                 onChange: function (value) {
                     if (key === 'enabled' &&
                         !bool(value)) {
-                        stop();
+                        stopPlayback();
                     }
 
                     if (key === 'loop' && audio) {
@@ -407,14 +490,9 @@
             });
         }
 
-        function addSelect(
-            key,
-            title,
-            description,
-            values
-        ) {
-            Lampa.SettingsApi.addParam({
-                component: 'original_soundtrack',
+        function select(key, title, values) {
+            api.addParam({
+                component: COMPONENT,
                 param: {
                     name: PREFIX + key,
                     type: 'select',
@@ -422,77 +500,93 @@
                     values: values
                 },
                 field: {
-                    name: title,
-                    description: description || ''
+                    name: title
                 },
                 onChange: function (value) {
                     if (key === 'volume' &&
                         audio &&
                         !audio.paused) {
-
                         audio.volume = Math.max(
                             0,
-                            Math.min(
-                                1,
-                                number(value, 20) / 100
-                            )
+                            Math.min(1, Number(value) / 100)
                         );
                     }
                 }
             });
         }
 
-        addTrigger(
+        trigger(
             'enabled',
             'Увімкнути саундтреки',
-            'Автоматичне відтворення у картці фільму'
+            'Автоматична фонова музика'
         );
 
-        addSelect(
-            'volume',
-            'Гучність музики',
-            'Рекомендовано 20%',
-            {
-                '10': '10%',
-                '15': '15%',
-                '20': '20%',
-                '25': '25%',
-                '30': '30%',
-                '40': '40%',
-                '50': '50%'
-            }
-        );
+        select('volume', 'Гучність музики', {
+            '10': '10%',
+            '15': '15%',
+            '20': '20%',
+            '25': '25%',
+            '30': '30%',
+            '40': '40%',
+            '50': '50%'
+        });
 
-        addSelect(
-            'delay',
-            'Затримка запуску',
-            'Час після відкриття картки',
-            {
-                '0': 'Без затримки',
-                '1': '1 секунда',
-                '2': '2 секунди',
-                '3': '3 секунди',
-                '5': '5 секунд'
-            }
-        );
+        select('delay', 'Затримка запуску', {
+            '0': 'Без затримки',
+            '1': '1 секунда',
+            '2': '2 секунди',
+            '3': '3 секунди',
+            '5': '5 секунд'
+        });
 
-        addTrigger(
+        trigger(
             'fade',
             'Плавне наростання',
-            'Поступове збільшення гучності'
+            'Fade In протягом 2 секунд'
         );
 
-        addTrigger(
+        trigger(
             'loop',
             'Повторювати музику',
             'Безперервне відтворення'
         );
 
-        addTrigger(
+        trigger(
             'series',
             'Підтримка серіалів',
-            'Відтворювати музику в картках серіалів'
+            'Фонова музика для серіалів'
         );
+
+        api.addParam({
+            component: COMPONENT,
+            param: {
+                name: PREFIX + 'test_sound',
+                type: 'static'
+            },
+            field: {
+                name: 'Перевірити звук',
+                description: 'Відтворити тестову мелодію'
+            },
+            onChange: function () {
+                testSound();
+            }
+        });
+
+        api.addParam({
+            component: COMPONENT,
+            param: {
+                name: PREFIX + 'stop_test',
+                type: 'static'
+            },
+            field: {
+                name: 'Зупинити тест',
+                description: 'Негайно вимкнути звук'
+            },
+            onChange: function () {
+                stopTest();
+                notify('Тест зупинено');
+            }
+        });
     }
 
     function init() {
@@ -505,52 +599,32 @@
             registerSettings();
         } catch (e) {
             console.error(
-                '[OST] Settings registration failed:',
+                '[OST] Settings error:',
                 e
             );
         }
 
         window.OriginalSoundtrack = {
             version: VERSION,
-
-            add: function (tmdbId, url) {
-                if (!validUrl(url)) {
-                    notify('Некоректне посилання');
-                    return false;
-                }
-
-                var result = saveTrack(tmdbId, url);
-
-                if (result) {
-                    notify('Саундтрек збережено');
-                }
-
-                return result;
+            test: testSound,
+            stopTest: stopTest,
+            stop: function () {
+                stopPlayback();
+                stopTest();
             },
+            add: function (id, url) {
+                if (!validUrl(url)) return false;
 
-            remove: function (tmdbId) {
-                removeTrack(tmdbId);
-                notify('Саундтрек видалено');
+                return saveTrack(id, url);
             },
-
-            stop: stop,
-
-            play: function (url) {
-                stop();
-
-                cardActive = true;
-                currentId = 'manual';
-
-                play(url, 'manual', operation);
-            },
-
+            remove: removeTrack,
             library: library,
-
             status: function () {
                 return {
                     version: VERSION,
                     currentId: currentId,
                     active: cardActive,
+                    testActive: testActive,
                     playing: !!audio && !audio.paused
                 };
             }
@@ -571,17 +645,13 @@
             Lampa.Storage &&
             Lampa.Listener &&
             Lampa.SettingsApi) {
-
             clearInterval(wait);
             init();
         }
 
         if (attempts >= 60) {
             clearInterval(wait);
-
-            console.warn(
-                '[OST] Initialization timeout'
-            );
+            console.warn('[OST] Lampa init timeout');
         }
     }, 500);
 
