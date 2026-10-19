@@ -2,13 +2,13 @@
 'use strict';
 
 /*
- * INTERFACE+ 1.6.4 — CLEAN & FIXED NEWCARD
+ * INTERFACE+ 1.6.5 — CLEAN & FIXED NEWCARD
  * Dynamic hero banners + Studios, Tagline, Description + TMDB logos
  * Ukrainian > English > Ukrainian text
  */
 
-var VERSION = '1.6.4';
-var READY_KEY = 'interface_plus_tmdb_only_164';
+var VERSION = '1.6.5';
+var READY_KEY = 'interface_plus_tmdb_only_165';
 
 if (window[READY_KEY]) return;
 window[READY_KEY] = true;
@@ -30,7 +30,7 @@ var S = {
     casMetaSize: 'cas_meta_size'
 };
 
-var CACHE_KEY = P + 'tmdb_only_cache_v164';
+var CACHE_KEY = P + 'tmdb_only_cache_v165';
 var CACHE_LIMIT = 200;
 
 var TTL_LOGO = 24 * 60 * 60 * 1000;
@@ -717,7 +717,7 @@ function installNewCardTemplate() {
     .full-start__background.loaded { opacity: 1 !important; }  
     .full-start__background.dim { opacity: 0.35 !important; }  
 
-    /* Повністю приховуємо стандартні дубльовані метадані та зайві рядки */
+    /* Приховуємо стандартні дубльовані метадані та зайві рядки */
     .full-start-new__head, 
     .full-start-new__details,
     .full-start-new__right > div:has(> .full-start-new__head),
@@ -725,7 +725,7 @@ function installNewCardTemplate() {
         display: none !important; 
     }  
 
-    /* Примусово приховуємо текстовий блок з роком і країною під описом, якщо він генерується Lampa */
+    /* Примусово приховуємо будь-які додаткові текстові рядки під описом */
     .full-start-new__right > div[style*="font-size"],
     .full-start-new__right > div:not([class]) {
         display: none !important;
@@ -1432,6 +1432,11 @@ function startCard(o, override, force) {
 
     var key = identity(d);
 
+    if (!newCardEnabled()) {
+        stopCard(true);
+        return;
+    }
+
     if (!force && activeCard && activeCard.key === key && activeCard.root === root) {
         return;
     }
@@ -1448,74 +1453,34 @@ function startCard(o, override, force) {
         observer: null
     };
 
-    if (newCardEnabled()) {
-        installNewCardTemplate();
-        applyNewCardSettings();
+    installNewCardTemplate();
+    applyNewCardSettings();
 
-        var renderWrap = $(root);
-
-        loadLogo(d, function (result) {
-            if (!cardCurrent(token, key)) return;
-            processNewCard(renderWrap, d, { 
-                logos: result.src ? [{file_path: result.src.replace('https://image.tmdb.org/t/p/' + logoQuality(), ''), iso_639_1: 'uk'}] : [], 
-                backdrops: result.backdrops 
-            });
-        }, !!force);
-
-        loadNewCardMovieDetails(renderWrap, d);
-        return;
-    }
-
-    if (!force && showCardLogoInstant(root, d)) {
-        return;
-    }
-
-    if (window.MutationObserver) {
-        var observer = new MutationObserver(function () {
-            if (!cardCurrent(token, key)) return;
-            var title = findTitle(root);
-            if (!title) return;
-
-            if (activeCard.src && !title.querySelector('.interface-plus-card-logo')) {
-                var logo = prepareLogo(title);
-                if (logo) {
-                    logo.style.transform = 'scale(' + logoScale() + ')';
-                    logo.style.transformOrigin = 'left center';
-                    logo.src = activeCard.src;
-                    logo.classList.add('ready');
-                    title.classList.add('interface-plus-logo-active');
-                }
-            }
-        });
-
-        observer.observe(root, { childList: true, subtree: true });
-        activeCard.observer = observer;
-    }
+    var renderWrap = $(root);
 
     loadLogo(d, function (result) {
         if (!cardCurrent(token, key)) return;
-
-        activeCard.title = result.title || movieTitle(d);
-        if (!result.src) return;
-
-        activeCard.src = result.src;
-        var title = findTitle(root);
-        if (!title) return;
-
-        var logo = prepareLogo(title);
-        if (!logo) return;
-
-        logo.style.transform = 'scale(' + logoScale() + ')';
-        logo.style.transformOrigin = 'left center';
-        logo.src = result.src;
-        logo.classList.add('ready');
-        title.classList.add('interface-plus-logo-active');
+        processNewCard(renderWrap, d, { 
+            logos: result.src ? [{file_path: result.src.replace('https://image.tmdb.org/t/p/' + logoQuality(), ''), iso_639_1: 'uk'}] : [], 
+            backdrops: result.backdrops 
+        });
     }, !!force);
+
+    loadNewCardMovieDetails(renderWrap, d);
 }
 
 function refreshCard(force) {
     var a = activeActivity();
-    if (isFull(a)) startCard(a, null, !!force);
+    if (isFull(a)) {
+        if (!newCardEnabled()) {
+            stopCard(true);
+            try {
+                Lampa.Activity.replace(a);
+            } catch (e) {}
+        } else {
+            startCard(a, null, !!force);
+        }
+    }
 }
 
 function refreshAll(force) {
@@ -1614,6 +1579,18 @@ function applySize() {
    SETTINGS & LISTENERS
 ========================= */
 
+function updateSettingsVisibility() {
+    try {
+        var isNewCard = newCardEnabled();
+        var params = [S.casSlideshow, S.casStudios, S.casDesc, S.casTagline];
+        params.forEach(function(param) {
+            var $item =$('div[data-name="' + param + '"]');
+            if ($item.length) {$item.toggle(isNewCard);
+            }
+        });
+    } catch (e) {}
+}
+
 function addSettings() {
     if (!Lampa.SettingsApi) return;
     var api = Lampa.SettingsApi;
@@ -1634,7 +1611,10 @@ function addSettings() {
     }
 
     add(S.hero, 'trigger', true, 'Динамічні банери', 'Преміальні банери на головній сторінці', null, applyHero);
-    add(S.newcard, 'trigger', true, 'Сучасна картка (NewCard)', 'Увімкнути новий інтерфейс картки фільму', null, function () { refreshCard(true); });
+    add(S.newcard, 'trigger', true, 'Сучасна картка (NewCard)', 'Увімкнути новий інтерфейс картки фільму', null, function () { 
+        updateSettingsVisibility();
+        refreshCard(true); 
+    });
     
     add(S.casSlideshow, 'trigger', true, 'Слайд-шоу фону', 'Зміна кадрів на задньому плані картки', null, applyNewCardSettings);
     add(S.casStudios, 'trigger', true, 'Показувати студії', 'Логотипи компаній-виробників', null, applyNewCardSettings);
@@ -1646,6 +1626,8 @@ function addSettings() {
     add('interface_plus_clear_logo_cache', 'button', '', 'Очистити кеш', 'Повторно отримати дані та логотипи з TMDB', null, clearCache);
     add(S.size, 'select', '10.6', 'Розмір інтерфейсу', 'Масштаб елементів інтерфейсу', { '09.1': 'Міні', '09.6': 'Дуже малий', '10.1': 'Малий', '10.6': 'Середній' }, applySize);
     add(S.font, 'select', 'default', 'Шрифт інтерфейсу', 'Стиль тексту', { default: 'Roboto', netflix: 'Netflix Sans', montserrat: 'Montserrat', inter: 'Inter', nunito: 'Nunito' }, applyFont);
+
+    setTimeout(updateSettingsVisibility, 100);
 }
 
 function installListeners() {
@@ -1685,7 +1667,10 @@ function installListeners() {
             Lampa.Storage.listener.follow('change', function (e) {
                 if (!e || !e.name) return;
                 if (e.name === S.hero) applyHero();
-                if (e.name === S.newcard) refreshCard(true);
+                if (e.name === S.newcard) {
+                    updateSettingsVisibility();
+                    refreshCard(true);
+                }
                 if (e.name === S.font) { currentFont = ''; applyFont(); }
                 if (e.name === S.size) { currentSize = ''; applySize(); }
                 if (e.name === S.quality || e.name === S.scale) refreshAll(false);
@@ -1719,7 +1704,7 @@ function init() {
         if (isFull(a)) startCard(a);
     });
 
-    log('TMDB Only + Clean NewCard 1.6.4 initialized');
+    log('TMDB Only + Clean NewCard 1.6.5 initialized');
 }
 
 /* =========================
