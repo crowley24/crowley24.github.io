@@ -2,13 +2,13 @@
 'use strict';
 
 /*
- * INTERFACE+ 1.6.0 — TMDB ONLY + NEWCARD INTEGRATED
- * Dynamic hero banners + Advanced Movie Card + TMDB logos
+ * INTERFACE+ 1.6.1 — TMDB ONLY + CLEAN NEWCARD
+ * Dynamic hero banners + Studios, Tagline, Description + TMDB logos
  * Ukrainian > English > Ukrainian text
  */
 
-var VERSION = '1.6.0';
-var READY_KEY = 'interface_plus_tmdb_only_160';
+var VERSION = '1.6.1';
+var READY_KEY = 'interface_plus_tmdb_only_161';
 
 if (window[READY_KEY]) return;
 window[READY_KEY] = true;
@@ -22,13 +22,10 @@ var S = {
     card: P + 'card_logo',
     quality: P + 'logo_quality',
     scale: P + 'logo_scale',
-    // NewCard налаштування
     newcard: P + 'newcard_enabled',
     casBgAnim: 'cas_bg_animation',
-    casAnimStyle: 'cas_animation_style',
     casSlideshow: 'cas_slideshow_enabled',
     casStudios: 'cas_show_studios',
-    casQualRow: 'cas_show_quality',
     casRating: 'cas_show_rating',
     casDesc: 'cas_show_description',
     casTagline: 'cas_show_tagline',
@@ -36,7 +33,7 @@ var S = {
     casMetaSize: 'cas_meta_size'
 };
 
-var CACHE_KEY = P + 'tmdb_only_cache_v160';
+var CACHE_KEY = P + 'tmdb_only_cache_v161';
 var CACHE_LIMIT = 200;
 
 var TTL_LOGO = 24 * 60 * 60 * 1000;
@@ -59,24 +56,9 @@ var currentFont = '';
 var currentSize = '';
 var currentInterval = null;
 
-const ASSETS_PATH = 'https://crowley38.github.io/Icons/';
 const ICONS = {                
     tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',                
     cub: 'https://raw.githubusercontent.com/yumata/lampa/9381985ad4371d2a7d5eb5ca8e3daf0f32669eb7/img/logo-icon.svg'                
-};                
-const QUALITY_ICONS = {                
-    '4K': ASSETS_PATH + '4K.svg',                
-    '2K': ASSETS_PATH + '2K.svg',                
-    'FULL HD': ASSETS_PATH + 'FULL HD.svg',                
-    'HD': ASSETS_PATH + 'HD.svg',                
-    'HDR': ASSETS_PATH + 'HDR.svg',                
-    'Dolby Vision': ASSETS_PATH + 'Dolby Vision.svg',                
-    'UKR': ASSETS_PATH + 'UKR.svg',  
-    '7.1': ASSETS_PATH + '7.1.svg',  
-    '5.1': ASSETS_PATH + '5.1.svg',  
-    '4.0': ASSETS_PATH + '4.0.svg',  
-    '2.0': ASSETS_PATH + '2.0.svg',  
-    'DUB': ASSETS_PATH + 'DUB.svg'  
 };
 
 var TITLE_SELECTOR = [
@@ -512,23 +494,27 @@ function preload(url, callback) {
         callback(false);
         return;
     }
-    var img = new Image();
-    var completed = false;
+    try {
+        var img = new Image();
+        var completed = false;
 
-    function done(ok) {
-        if (completed) return;
-        completed = true;
-        img.onload = null;
-        img.onerror = null;
-        callback(ok);
-    }
+        function done(ok) {
+            if (completed) return;
+            completed = true;
+            img.onload = null;
+            img.onerror = null;
+            callback(ok);
+        }
 
-    img.onload = function () { done(true); };
-    img.onerror = function () { done(false); };
-    img.src = url;
+        img.onload = function () { done(true); };
+        img.onerror = function () { done(false); };
+        img.src = url;
 
-    if (img.complete && img.naturalWidth) {
-        done(true);
+        if (img.complete && img.naturalWidth) {
+            done(true);
+        }
+    } catch (e) {
+        callback(false);
     }
 }
 
@@ -652,14 +638,13 @@ function loadLogo(d, callback, force) {
 }
 
 /* =========================
-   CSS & TEMPLATE FOR NEWCARD
+   CLEAN CSS & TEMPLATE
 ========================= */
 
 function installNewCardTemplate() {
     if ($('#cas-main-styles').length) return;
     
-    const animStyle = storageGet(S.casAnimStyle, 'slide');
-    const template = `<div class="full-start-new left-title cas-anim-${animStyle}">                      
+    const template = `<div class="full-start-new left-title">                      
         <div class="full-start-new__body">                      
             <div class="full-start-new__left hide">                      
                 <div class="full-start-new__poster">                      
@@ -675,7 +660,6 @@ function installNewCardTemplate() {
                     <div class="cas-tagline" style="display: none;"></div>
                     <div class="cas-meta-line">      
                         <div class="cas-meta-info"></div>      
-                        <div class="cas-quality-row"></div>      
                     </div>  
                     <div class="cas-description"></div>                    
                     <div class="cas-details-wrapper">                  
@@ -693,7 +677,7 @@ function installNewCardTemplate() {
                         </div>                      
                         <div class="full-start__button selector button--reaction">                  
                             <svg width="38" height="34" viewBox="0 0 38 34" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M37.208 10.9742C37.1364 10.8013 37.0314 10.6441 36.899 10.5117C36.7666 10.3794 36.6095 10.2744 36.4365 10.2028L12.0658 0.108375C11.7166 -0.0361828 11.3242 -0.0361227 10.9749 0.108542C10.6257 0.253206 10.3482 0.530634 10.2034 0.879836L0.108666 25.2507C0.0369593 25.4236 3.37953e-05 25.609 2.3187e-08 25.7962C-3.37489e-05 25.9834 0.0368249 26.1688 0.108469 26.3418C0.180114 26.5147 0.28514 26.6719 0.417545 26.8042C0.54995 26.9366 0.707139 27.0416 0.880127 27.1131L17.2452 33.8917C17.5945 34.0361 17.9869 34.0361 18.3362 33.8917L29.6574 29.2017C29.8304 29.1301 29.9875 29.0251 30.1199 28.8928C30.2523 28.7604 30.3573 28.6032 30.4289 28.4303L37.2078 12.065C37.2795 11.8921 37.3164 11.7068 37.3165 11.5196C37.3165 11.3325 37.2796 11.1471 37.208 10.9742ZM20.425 29.9407L21.8784 26.4316L25.3873 27.885L20.425 29.9407ZM28.3407 26.0222L21.6524 23.252C21.3031 23.1075 20.9107 23.1076 20.5615 23.2523C20.2123 23.3969 19.9348 23.6743 19.79 24.0235L17.0194 30.7123L3.28783 25.0247L12.2918 3.28773L34.0286 12.2912L28.3407 26.0222Z" fill="currentColor"/><path d="M25.3493 16.976L24.258 14.3423L16.959 17.3666L15.7196 14.375L13.0859 15.4659L15.4161 21.0916L25.3493 16.976Z" fill="currentColor"/></svg>              
-                          <span>#{title_reactions}</span>              
+                            <span>#{title_reactions}</span>              
                         </div>  
                         <div class="full-start__button selector button--subscribe hide">                    
                             <svg width="25" height="30" viewBox="0 0 25 30" fill="none" xmlns="http://www.w3.org/2000/svg">        
@@ -729,17 +713,15 @@ function installNewCardTemplate() {
     const styles = `<style id="cas-main-styles">  
     :root { 
         --cas-logo-scale: 1; 
-        --cas-blocks-gap: 30px; 
+        --cas-blocks-gap: 20px; 
         --cas-meta-size: 1.3em; 
-        --cas-curve-slide: cubic-bezier(0.25, 1, 0.5, 1); 
-        --cas-curve-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }  
             
     .full-start__background {  
         height: calc(100% + 6em);  
         left: 0 !important;  
         opacity: 0 !important;  
-        transition: opacity 1s cubic-bezier(0.2, 0.8, 0.2, 1) !important;  
+        transition: opacity 0.6s ease !important;  
         will-change: opacity;  
         overflow: hidden !important;  
         transform: translateZ(0);
@@ -789,67 +771,6 @@ function installNewCardTemplate() {
         transform-origin: center center;  
     }
       
-    .cas-logo, .cas-tagline, .cas-studios-row, .cas-rate-items, .cas-meta-info, .cas-quality-row, .cas-description, .cas-details-wrapper, .full-start-new__buttons, .cas-bottom-ratings {  
-        opacity: 0 !important;  
-        will-change: transform, opacity;  
-        backface-visibility: hidden;
-    }  
-
-    .cas-quality-row .cas-quality-item {
-        opacity: 0;
-        transform: translate3d(0, 6px, 0) scale(0.9);
-        transition: opacity 0.3s var(--cas-curve-slide), transform 0.3s var(--cas-curve-slide);
-    }
-
-    .cas-quality-row.show-quality .cas-quality-item {
-        opacity: 1;
-        transform: translate3d(0, 0, 0) scale(1);
-    }
-
-    .cas-anim-slide .cas-logo, 
-    .cas-anim-slide .cas-tagline, 
-    .cas-anim-slide .cas-studios-row, 
-    .cas-anim-slide .cas-rate-items, 
-    .cas-anim-slide .cas-meta-info, 
-    .cas-anim-slide .cas-quality-row, 
-    .cas-anim-slide .cas-description, 
-    .cas-anim-slide .cas-details-wrapper, 
-    .cas-anim-slide .full-start-new__buttons,
-    .cas-anim-slide .cas-bottom-ratings {  
-        transform: translate3d(0, 8px, 0);  
-        transition: opacity 0.35s var(--cas-curve-slide), transform 0.35s var(--cas-curve-slide);  
-    }                        
-    .cas-anim-slide.cas-animated .cas-logo { opacity: 1 !important; transform: translate3d(0, 0, 0); transition-delay: 0.0s; }  
-    .cas-anim-slide.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: translate3d(0, 0, 0); transition-delay: 0.03s; }  
-    .cas-anim-slide.cas-animated .cas-tagline { opacity: 0.85 !important; transform: translate3d(0, 0, 0); transition-delay: 0.06s; }
-    .cas-anim-slide.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: translate3d(0, 0, 0); transition-delay: 0.09s; }    
-    .cas-anim-slide.cas-animated .cas-description { opacity: 0.75 !important; transform: translate3d(0, 0, 0); transition-delay: 0.12s; }  
-    .cas-anim-slide.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: translate3d(0, 0, 0); transition-delay: 0.16s; }  
-    .cas-anim-slide.cas-animated .cas-bottom-ratings { opacity: 1 !important; transform: translate3d(0, 0, 0); transition-delay: 0.16s; }  
-    .cas-anim-slide.cas-animated .cas-quality-row { opacity: 1 !important; transform: translate3d(0, 0, 0); transition-delay: 0.18s; }
-
-    .cas-anim-spring .cas-logo, 
-    .cas-anim-spring .cas-tagline, 
-    .cas-anim-spring .cas-studios-row, 
-    .cas-anim-spring .cas-rate-items, 
-    .cas-anim-spring .cas-meta-info, 
-    .cas-anim-spring .cas-quality-row, 
-    .cas-anim-spring .cas-description, 
-    .cas-anim-spring .cas-details-wrapper, 
-    .cas-anim-spring .full-start-new__buttons,
-    .cas-anim-spring .cas-bottom-ratings {  
-        transform: scale3d(0.92, 0.92, 1) translate3d(0, 6px, 0);  
-        transition: opacity 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), transform 0.4s var(--cas-curve-spring);  
-    }                        
-    .cas-anim-spring.cas-animated .cas-logo { opacity: 1 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.0s; }  
-    .cas-anim-spring.cas-animated .cas-studios-row { opacity: 0.9 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.03s; }  
-    .cas-anim-spring.cas-animated .cas-tagline { opacity: 0.85 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.06s; }
-    .cas-anim-spring.cas-animated .cas-meta-info { opacity: 0.85 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.09s; }    
-    .cas-anim-spring.cas-animated .cas-description { opacity: 0.75 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.12s; }  
-    .cas-anim-spring.cas-animated .full-start-new__buttons { opacity: 1 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.16s; }  
-    .cas-anim-spring.cas-animated .cas-bottom-ratings { opacity: 1 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.16s; }
-    .cas-anim-spring.cas-animated .cas-quality-row { opacity: 1 !important; transform: scale3d(1, 1, 1) translate3d(0, 0, 0); transition-delay: 0.18s; }
-              
     .full-start-new__details { display: none !important; }  
     .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }  
     
@@ -866,7 +787,7 @@ function installNewCardTemplate() {
         position: relative;  
         overflow: visible;  
         max-width: 100%;  
-        margin-bottom: calc(var(--cas-blocks-gap) * 1.2);  
+        margin-bottom: var(--cas-blocks-gap);  
         max-height: 300px;  
         display: flex;
         flex-direction: column;
@@ -890,7 +811,7 @@ function installNewCardTemplate() {
         font-size: calc(var(--cas-meta-size) * 0.95);
         font-style: italic;
         color: rgba(255, 255, 255, 0.85);
-        margin-bottom: 16px;
+        margin-bottom: 12px;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
         max-width: 650px;
         text-align: left !important;
@@ -911,14 +832,7 @@ function installNewCardTemplate() {
         justify-content: flex-start !important;
         gap: 8px;  
         font-weight: 400; 
-    }  
-    
-    .cas-quality-row {  
-        margin-top: 0 !important;  
-        display: flex;  
-        align-items: center;  
-        justify-content: flex-start !important;
-        gap: 6px;  
+        font-size: var(--cas-meta-size);
     }  
 
     .full-start-new__buttons {
@@ -970,8 +884,6 @@ function installNewCardTemplate() {
         text-align: left !important; 
     }    
     
-    .cas-quality-item img { height: 12px; }    
-    
     .cas-bottom-ratings {
         position: absolute; 
         right: 2.5em; 
@@ -987,15 +899,6 @@ function installNewCardTemplate() {
     .cas-rate-item { display: flex; align-items: center; gap: 6px; }    
     .cas-rate-item img { height: 1.1em; }    
     .left-title .full-start-new__body { height: 85vh; }    
-                          
-    .cas-audio-item {    
-        background: rgba(255, 255, 255, 0.2);    
-        padding: 2px 6px;    
-        border-radius: 4px;    
-        font-size: 0.8em;    
-        font-weight: 600;    
-        color: white;    
-    }    
     </style>`;
     Lampa.Template.add('left_title_css', styles);
     if (!$('#cas-main-styles').length) {
@@ -1083,51 +986,49 @@ function startSlideshow(render, backdrops, currentLang) {
 function applyNewCardSettings() {
     if (!newCardEnabled()) return;
 
-    const root = document.documentElement;          
-    const scale = parseInt(storageGet(S.scale, '100')) / 100;          
-    const gap = storageGet(S.casGap, '20');          
-    const metaSize = storageGet(S.casMetaSize, '1.3');          
-    const animStyle = storageGet(S.casAnimStyle, 'slide');
-    const bgAnim = storageGet(S.casBgAnim, 'kenburns');
-                      
-    root.style.setProperty('--cas-logo-scale', scale);          
-    root.style.setProperty('--cas-blocks-gap', gap + 'px');          
-    root.style.setProperty('--cas-meta-size', metaSize + 'em');          
-                      
-    const bodyEl = $('body');
-    bodyEl.removeClass('cas--zoom-kenburns cas--zoom-panscan cas--zoom-tiltzoom');
-    if (bgAnim !== 'off') {
-        bodyEl.addClass('cas--zoom-' + bgAnim);
-    }
-    
-    const currentCard = $('.full-start-new.left-title');          
-    if (currentCard.length > 0) {          
-        currentCard.removeClass('cas-anim-slide cas-anim-spring').addClass('cas-anim-' + animStyle);
+    try {
+        const root = document.documentElement;          
+        const scale = parseInt(storageGet(S.scale, '100')) / 100;          
+        const gap = storageGet(S.casGap, '20');          
+        const metaSize = storageGet(S.casMetaSize, '1.3');          
+        const bgAnim = storageGet(S.casBgAnim, 'kenburns');
+                          
+        root.style.setProperty('--cas-logo-scale', scale);          
+        root.style.setProperty('--cas-blocks-gap', gap + 'px');          
+        root.style.setProperty('--cas-meta-size', metaSize + 'em');          
+                          
+        const bodyEl = $('body');
+        bodyEl.removeClass('cas--zoom-kenburns cas--zoom-panscan cas--zoom-tiltzoom');
+        if (bgAnim !== 'off') {
+            bodyEl.addClass('cas--zoom-' + bgAnim);
+        }
+        
+        const currentCard = $('.full-start-new.left-title');          
+        if (currentCard.length > 0) {          
+            const showDesc = !!storageGet(S.casDesc);
+            const showTag = !!storageGet(S.casTagline);
 
-        const showDesc = !!storageGet(S.casDesc);
-        const showTag = !!storageGet(S.casTagline);
-
-        currentCard.find('.cas-description').toggle(showDesc);          
-        currentCard.find('.cas-tagline').toggle(showTag);
-        currentCard.find('.cas-studios-row').toggle(!!storageGet(S.casStudios));          
-        currentCard.find('.cas-quality-row').toggle(!!storageGet(S.casQualRow));          
-        currentCard.find('.cas-rate-items, .cas-bottom-ratings').toggle(!!storageGet(S.casRating));
-                    
-        const buttons = currentCard.find('.full-start-new__buttons');          
-        buttons.css('margin-top', showDesc ? '' : '0px');          
-                    
-        stopSlideshow();          
-      
-        if (storageGet(S.casSlideshow)) {          
-            const movieData = currentCard.data('movie');          
-            if (movieData && movieData.id) {          
-                const cached = cached(identity(movieData));          
-                if (cached && cached.backdrops?.length > 1) {          
-                    startSlideshow(currentCard, cached.backdrops, Lampa.Storage.get('tmdb_lang') || 'uk');          
+            currentCard.find('.cas-description').toggle(showDesc);          
+            currentCard.find('.cas-tagline').toggle(showTag);
+            currentCard.find('.cas-studios-row').toggle(!!storageGet(S.casStudios));          
+            currentCard.find('.cas-rate-items, .cas-bottom-ratings').toggle(!!storageGet(S.casRating));
+                        
+            const buttons = currentCard.find('.full-start-new__buttons');          
+            buttons.css('margin-top', showDesc ? '' : '0px');          
+                        
+            stopSlideshow();          
+          
+            if (storageGet(S.casSlideshow)) {          
+                const movieData = currentCard.data('movie');          
+                if (movieData && movieData.id) {          
+                    const cachedData = cached(identity(movieData));          
+                    if (cachedData && cachedData.backdrops?.length > 1) {          
+                        startSlideshow(currentCard, cachedData.backdrops, Lampa.Storage.get('tmdb_lang') || 'uk');          
+                    }          
                 }          
             }          
-        }          
-    }
+        }
+    } catch (e) {}
 }
 
 /* =========================
@@ -1448,7 +1349,7 @@ function showCardLogoInstant(root, d) {
 }
 
 /* =========================
-   NEWCARD LOGIC HELPERS
+   CLEAN NEWCARD LOGIC
 ========================= */
 
 function getRatingColor(val) {                
@@ -1464,47 +1365,49 @@ function formatTime(mins) {
 }
 
 function renderStudioLogosWithColorAnalysis(container, data) {    
-    container.empty();
-    const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 1);  
-        
-    studios.forEach((studio) => {    
-        const logoUrl = Lampa.TMDB.image('/t/p/w200' + studio.logo_path);    
-        const id = 'cas_studio_' + Math.random().toString(36).substr(2, 9);    
+    try {
+        container.empty();
+        const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 1);  
             
-        container.append(`<div class="cas-studio-item cas-wave-studio" id="${id}"><img src="${logoUrl}"></div>`);    
-            
-        const img = new Image();    
-        img.crossOrigin = 'anonymous';    
-        img.onload = function() {    
-            const canvas = document.createElement('canvas');    
-            const ctx = canvas.getContext('2d');    
-            canvas.width = this.width;    
-            canvas.height = this.height;    
-            ctx.drawImage(this, 0, 0);    
+        studios.forEach((studio) => {    
+            const logoUrl = Lampa.TMDB.image('/t/p/w200' + studio.logo_path);    
+            const id = 'cas_studio_' + Math.random().toString(36).substr(2, 9);    
                 
-            try {    
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;    
-                let r = 0, g = 0, b = 0, count = 0;    
-                    
-                for (let i = 0; i < imageData.length; i += 4) {    
-                    if (imageData[i + 3] > 50) {    
-                        r += imageData[i];    
-                        g += imageData[i + 1];    
-                        b += imageData[i + 2];    
-                        count++;    
+            container.append(`<div class="cas-studio-item cas-wave-studio" id="${id}"><img src="${logoUrl}"></div>`);    
+                
+            const img = new Image();    
+            img.crossOrigin = 'anonymous';    
+            img.onload = function() {    
+                try {
+                    const canvas = document.createElement('canvas');    
+                    const ctx = canvas.getContext('2d');    
+                    canvas.width = this.width;    
+                    canvas.height = this.height;    
+                    ctx.drawImage(this, 0, 0);    
+                        
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;    
+                    let r = 0, g = 0, b = 0, count = 0;    
+                        
+                    for (let i = 0; i < imageData.length; i += 4) {    
+                        if (imageData[i + 3] > 50) {    
+                            r += imageData[i];    
+                            g += imageData[i + 1];    
+                            b += imageData[i + 2];    
+                            count++;    
+                        }    
                     }    
-                }    
-                    
-                if (count > 0) {    
-                    const brightness = (0.299 * r + 0.587 * g + 0.114 * b) / count;    
-                    if (brightness < 40) {    
-                        $('#' + id + ' img').css('filter', 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))');    
+                        
+                    if (count > 0) {    
+                        const brightness = (0.299 * r + 0.587 * g + 0.114 * b) / count;    
+                        if (brightness < 40) {    
+                            $('#' + id + ' img').css('filter', 'brightness(0) invert(1) drop-shadow(0 2px 4px rgba(0,0,0,0.8))');    
+                        }    
                     }    
-                }    
-            } catch (e) {}    
-        };    
-        img.src = logoUrl;    
-    });    
+                } catch (e) {}    
+            };    
+            img.src = logoUrl;    
+        });    
+    } catch (e) {}
 }
 
 async function processNewCard(render, data, res) {
@@ -1531,122 +1434,67 @@ async function processNewCard(render, data, res) {
 }
 
 function preloadImagePromise(src) {                
-    return new Promise((resolve, reject) => {                
+    return new Promise((resolve) => {                
         const img = new Image();                
         img.onload = () => resolve(img);                
-        img.onerror = reject;                
+        img.onerror = () => resolve(null);                
         img.src = src;                
     });                
 }
 
 async function loadNewCardMovieDetails(render, data) {
-    if (data.tagline && storageGet(S.casTagline)) {
-        render.find('.cas-tagline').text(`«${data.tagline}»`).show();
-    } else {
-        render.find('.cas-tagline').hide();
-    }
+    try {
+        if (data.tagline && storageGet(S.casTagline)) {
+            render.find('.cas-tagline').text(`«${data.tagline}»`).show();
+        } else {
+            render.find('.cas-tagline').hide();
+        }
 
-    if (storageGet(S.casDesc)) {    
-        render.find('.cas-description').html(data.overview || '').css('opacity','1').show();    
-    } else {
-        render.find('.cas-description').hide();
-    }
-        
-    const year = movieYear(data);    
-    const country = (data.production_countries && data.production_countries.length > 0) ? data.production_countries[0].name : '';
-    const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));    
-    const genres = (data.genres || []).map(g => g.name).join(', ');    
-        
-    let ratings = '';    
-    const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);    
-    if (tmdbV > 0) {    
-        ratings += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;    
-    }    
-        
-    if (data.reactions && data.reactions.result) {    
-        let sum = 0, cnt = 0;    
-        const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };    
-        data.reactions.result.forEach(r => {           
-            if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; }          
-        });    
-        if (cnt >= 1) {    
-            const isTv = !!data.name;    
-            const cubV = (((isTv?7.4:6.5)*(isTv?50:150)+sum)/((isTv?50:150)+cnt)).toFixed(1);    
-            ratings += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;    
+        if (storageGet(S.casDesc)) {    
+            render.find('.cas-description').html(data.overview || '').css('opacity','1').show();    
+        } else {
+            render.find('.cas-description').hide();
+        }
+            
+        const year = movieYear(data);    
+        const country = (data.production_countries && data.production_countries.length > 0) ? data.production_countries[0].name : '';
+        const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));    
+        const genres = (data.genres || []).map(g => g.name).join(', ');    
+            
+        let ratings = '';    
+        const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);    
+        if (tmdbV > 0) {    
+            ratings += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;    
         }    
-    }    
-        
-    let metaParts = [];
-    if (year) metaParts.push(`<span class="cas-wave-year">${year}</span>`);
-    if (country) metaParts.push(`<span class="cas-wave-country">${country}</span>`);
-    if (time) metaParts.push(`<span class="cas-wave-time">${time}</span>`);
-    if (genres) metaParts.push(`<span class="cas-wave-genre">${genres}</span>`);
-        
-    render.find('.cas-meta-info').html(metaParts.join(' &bull; '));    
-    render.find('.cas-bottom-ratings').html(ratings);
-
-    if (storageGet(S.casStudios)) {    
-        renderStudioLogosWithColorAnalysis(render.find('.cas-studios-row'), data);    
-    } else {
-        render.find('.cas-studios-row').hide();
-    }
-        
-    if (storageGet(S.casQualRow) && Lampa.Parser && Lampa.Parser.get) {    
-        let qualityElement = render.find('.cas-quality-row');
-        let buttonsBlock = render.find('.full-start-new__buttons');
-        qualityElement.hide();
-        
-        Lampa.Parser.get({ search: movieTitle(data), movie: data, page: 1 }, (res) => {    
-            try {    
-                const items = res.Results || res;    
-                if (items && Array.isArray(items) && items.length > 0) {    
-                    const b = { res: '', hdr: false, dv: false, ukr: false, audio: '', dub: false };    
-                    items.slice(0, 8).forEach(i => {    
-                        const t = (i.Title || i.title || '').toLowerCase();    
-                        if (t.includes('4k') || t.includes('2160')) b.res = '4K';    
-                        else if (!b.res && (t.includes('1080') || t.includes('fhd'))) b.res = 'FULL HD';    
-                        if (t.includes('hdr')) b.hdr = true;    
-                        if (t.includes('dv') || t.includes('dovi') || t.includes('vision')) b.dv = true;    
-                        if (t.includes('ukr') || t.includes('укр')) b.ukr = true;    
-                        if (t.includes('5.1') || t.includes('5 1')) b.audio = '5.1';    
-                        else if (t.includes('7.1') || t.includes('7 1')) b.audio = '7.1';    
-                        if (t.includes('4.0') || t.includes('4 0')) b.audio = '4.0';    
-                        else if (t.includes('2.0') || t.includes('2 0')) b.audio = '2.0';    
-                        if (t.includes('dub') || t.includes('дубл')) b.dub = true;    
-                    });    
-                        
-                    let qH = '';    
-                    if (b.res) qH += `<div class="cas-quality-item cas-wave-quality"><img src="${QUALITY_ICONS[b.res]}"></div>`;    
-                    if (b.dv) qH += `<div class="cas-quality-item cas-wave-hdr"><img src="${QUALITY_ICONS['Dolby Vision']}"></div>`;    
-                    else if (b.hdr) qH += `<div class="cas-quality-item cas-wave-hdr"><img src="${QUALITY_ICONS['HDR']}"></div>`;    
-                    if (b.audio) qH += `<div class="cas-quality-item cas-wave-quality cas-audio-item">${b.audio}</div>`;    
-                    if (b.dub) qH += `<div class="cas-quality-item cas-wave-quality"><img src="${QUALITY_ICONS['DUB']}"></div>`;    
-                    if (b.ukr) qH += `<div class="cas-quality-item cas-wave-ukr"><img src="${QUALITY_ICONS['UKR']}"></div>`;    
-                        
-                    if (qH) {    
-                        qualityElement.html(qH).show();  
-                        if (buttonsBlock.length) {
-                            buttonsBlock.off('transitionend.casQuality animationend.casQuality');
-                            buttonsBlock.on('transitionend.casQuality animationend.casQuality', function handler(e) {
-                                if (e.target === this) {
-                                    qualityElement.addClass('show-quality');
-                                    buttonsBlock.off('transitionend.casQuality animationend.casQuality', handler);
-                                }
-                            });
-                        } else {
-                            qualityElement.addClass('show-quality');
-                        }
-                    }    
-                }    
-            } catch (error) {    
-                qualityElement.hide();    
+            
+        if (data.reactions && data.reactions.result) {    
+            let sum = 0, cnt = 0;    
+            const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };    
+            data.reactions.result.forEach(r => {           
+                if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; }          
+            });    
+            if (cnt >= 1) {    
+                const isTv = !!data.name;    
+                const cubV = (((isTv?7.4:6.5)*(isTv?50:150)+sum)/((isTv?50:150)+cnt)).toFixed(1);    
+                ratings += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;    
             }    
-        }).fail(() => {    
-            qualityElement.hide();    
-        });    
-    } else {    
-        render.find('.cas-quality-row').hide();    
-    }
+        }    
+            
+        let metaParts = [];
+        if (year) metaParts.push(`<span class="cas-wave-year">${year}</span>`);
+        if (country) metaParts.push(`<span class="cas-wave-country">${country}</span>`);
+        if (time) metaParts.push(`<span class="cas-wave-time">${time}</span>`);
+        if (genres) metaParts.push(`<span class="cas-wave-genre">${genres}</span>`);
+            
+        render.find('.cas-meta-info').html(metaParts.join(' &bull; '));    
+        render.find('.cas-bottom-ratings').html(ratings);
+
+        if (storageGet(S.casStudios)) {    
+            renderStudioLogosWithColorAnalysis(render.find('.cas-studios-row'), data);    
+        } else {
+            render.find('.cas-studios-row').hide();
+        }
+    } catch (e) {}
 }
 
 /* =========================
@@ -1679,27 +1527,19 @@ function startCard(o, override, force) {
         observer: null
     };
 
-    // Перевіряємо, чи увімкнений режим NewCard
     if (newCardEnabled()) {
         installNewCardTemplate();
         applyNewCardSettings();
-        const cardRoot = root.find ? root.find('.full-start-new.left-title') : $(root).find('.full-start-new.left-title');
-        cardRoot.removeClass('cas-animated');
-        root.find('.cas-quality-row').removeClass('show-quality');
 
         loadLogo(d, function (result) {
             if (!cardCurrent(token, key)) return;
             processNewCard(root, d, { logos: result.src ? [{file_path: result.src.replace('https://image.tmdb.org/t/p/' + logoQuality(), ''), iso_639_1: 'uk'}] : [], backdrops: result.backdrops });
-            requestAnimationFrame(() => {
-                cardRoot.addClass('cas-animated');
-            });
         }, !!force);
 
         loadNewCardMovieDetails(root, d);
         return;
     }
 
-    // Стандартний режим картки з логотипом
     if (!cardEnabled()) return;
 
     if (!force && showCardLogoInstant(root, d)) {
@@ -1877,12 +1717,9 @@ function addSettings() {
     add(S.newcard, 'trigger', true, 'Сучасна картка (NewCard)', 'Увімкнути розширений інтерфейс картки фільму', null, function () { refreshCard(true); });
     add(S.card, 'trigger', true, 'Логотип у стандартній картці', 'Працює, якщо NewCard вимкнено', null, function () { refreshCard(true); });
     
-    // NewCard налаштування в єдиному меню
-    add(S.casAnimStyle, 'select', 'slide', 'Стиль анімації NewCard', 'Анімація появи елементів картки', { 'slide': 'Slide from Left', 'spring': 'Elastic Spring' }, applyNewCardSettings);
-    add(S.casBgAnim, 'select', 'kenburns', 'Анімація фону NewCard', 'Динамічний рух постера на задньому плані', { 'off': 'Вимкнено', 'kenburns': 'Ken Burns (Зум + Паралакс)', 'panscan': 'Кінематографічний дрейф', 'tiltzoom': 'Динамічний кут' }, applyNewCardSettings);
+    add(S.casBgAnim, 'select', 'kenburns', 'Анімація фону', 'Динамічний рух постера на задньому плані', { 'off': 'Вимкнено', 'kenburns': 'Ken Burns (Зум + Паралакс)', 'panscan': 'Кінематографічний дрейф', 'tiltzoom': 'Динамічний кут' }, applyNewCardSettings);
     add(S.casSlideshow, 'trigger', true, 'Слайд-шоу фону', 'Зміна кадрів на задньому плані', null, applyNewCardSettings);
     add(S.casStudios, 'trigger', true, 'Показувати студії', 'Логотипи компаній-виробників', null, applyNewCardSettings);
-    add(S.casQualRow, 'trigger', true, 'Показувати якість', 'Іконки 4K, HDR, Audio, UKR', null, applyNewCardSettings);
     add(S.casRating, 'trigger', true, 'Показувати рейтинги', 'Оцінки TMDB та CUB', null, applyNewCardSettings);
     add(S.casDesc, 'trigger', true, 'Опис фільму', 'Показувати текст анотації', null, applyNewCardSettings);
     add(S.casTagline, 'trigger', true, 'Показувати слоган', 'Цитата або слоган фільму', null, applyNewCardSettings);
@@ -1966,7 +1803,7 @@ function init() {
         if (isFull(a)) startCard(a);
     });
 
-    log('TMDB Only + NewCard initialized');
+    log('TMDB Only + Clean NewCard initialized');
 }
 
 /* =========================
