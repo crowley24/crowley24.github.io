@@ -2,13 +2,13 @@
 'use strict';
 
 /*
- * INTERFACE+ 1.6.2 — CLEAN & FIXED NEWCARD
+ * INTERFACE+ 1.6.4 — CLEAN & FIXED NEWCARD
  * Dynamic hero banners + Studios, Tagline, Description + TMDB logos
  * Ukrainian > English > Ukrainian text
  */
 
-var VERSION = '1.6.2';
-var READY_KEY = 'interface_plus_tmdb_only_162';
+var VERSION = '1.6.4';
+var READY_KEY = 'interface_plus_tmdb_only_164';
 
 if (window[READY_KEY]) return;
 window[READY_KEY] = true;
@@ -30,7 +30,7 @@ var S = {
     casMetaSize: 'cas_meta_size'
 };
 
-var CACHE_KEY = P + 'tmdb_only_cache_v162';
+var CACHE_KEY = P + 'tmdb_only_cache_v164';
 var CACHE_LIMIT = 200;
 
 var TTL_LOGO = 24 * 60 * 60 * 1000;
@@ -717,8 +717,19 @@ function installNewCardTemplate() {
     .full-start__background.loaded { opacity: 1 !important; }  
     .full-start__background.dim { opacity: 0.35 !important; }  
 
-    .full-start-new__details { display: none !important; }  
-    .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }  
+    /* Повністю приховуємо стандартні дубльовані метадані та зайві рядки */
+    .full-start-new__head, 
+    .full-start-new__details,
+    .full-start-new__right > div:has(> .full-start-new__head),
+    .full-start-new__right > div:nth-last-child(2):not(.cas-description):not(.cas-meta-line):not(.cas-logo-container):not(.cas-tagline):not(.full-start-new__buttons) { 
+        display: none !important; 
+    }  
+
+    /* Примусово приховуємо текстовий блок з роком і країною під описом, якщо він генерується Lampa */
+    .full-start-new__right > div[style*="font-size"],
+    .full-start-new__right > div:not([class]) {
+        display: none !important;
+    }
     
     .full-start-new__body { display: flex; height: 85vh; position: relative; width: 100%; }  
     .full-start-new__left { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 4em 3em 2em 2em; position: relative; z-index: 2; }  
@@ -1708,7 +1719,7 @@ function init() {
         if (isFull(a)) startCard(a);
     });
 
-    log('TMDB Only + Clean NewCard 1.6.2 initialized');
+    log('TMDB Only + Clean NewCard 1.6.4 initialized');
 }
 
 /* =========================
