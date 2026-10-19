@@ -2,13 +2,13 @@
 'use strict';
 
 /*
- * INTERFACE+ 1.6.1 — TMDB ONLY + CLEAN NEWCARD
+ * INTERFACE+ 1.6.2 — CLEAN & FIXED NEWCARD
  * Dynamic hero banners + Studios, Tagline, Description + TMDB logos
  * Ukrainian > English > Ukrainian text
  */
 
-var VERSION = '1.6.1';
-var READY_KEY = 'interface_plus_tmdb_only_161';
+var VERSION = '1.6.2';
+var READY_KEY = 'interface_plus_tmdb_only_162';
 
 if (window[READY_KEY]) return;
 window[READY_KEY] = true;
@@ -19,21 +19,18 @@ var S = {
     hero: 'banner_hero_enabled',
     size: 'interface_size',
     font: 'fontchanger_selected',
-    card: P + 'card_logo',
     quality: P + 'logo_quality',
     scale: P + 'logo_scale',
     newcard: P + 'newcard_enabled',
-    casBgAnim: 'cas_bg_animation',
     casSlideshow: 'cas_slideshow_enabled',
     casStudios: 'cas_show_studios',
-    casRating: 'cas_show_rating',
     casDesc: 'cas_show_description',
     casTagline: 'cas_show_tagline',
     casGap: 'cas_blocks_gap',
     casMetaSize: 'cas_meta_size'
 };
 
-var CACHE_KEY = P + 'tmdb_only_cache_v161';
+var CACHE_KEY = P + 'tmdb_only_cache_v162';
 var CACHE_LIMIT = 200;
 
 var TTL_LOGO = 24 * 60 * 60 * 1000;
@@ -55,11 +52,6 @@ var lastFocusKey = '';
 var currentFont = '';
 var currentSize = '';
 var currentInterval = null;
-
-const ICONS = {                
-    tmdb: 'https://upload.wikimedia.org/wikipedia/commons/8/89/Tmdb.new.logo.svg',                
-    cub: 'https://raw.githubusercontent.com/yumata/lampa/9381985ad4371d2a7d5eb5ca8e3daf0f32669eb7/img/logo-icon.svg'                
-};
 
 var TITLE_SELECTOR = [
     '.full-start__title',
@@ -242,10 +234,6 @@ function heroEnabled() {
     return enabled(S.hero, true);
 }
 
-function cardEnabled() {
-    return enabled(S.card, true);
-}
-
 function newCardEnabled() {
     return enabled(S.newcard, true);
 }
@@ -321,7 +309,7 @@ function clearCache() {
     refreshAll(true);
 
     try {
-        Lampa.Noty.show('Кеш логотипів та даних TMDB очищено');
+        Lampa.Noty.show('Кеш логотипів очищено');
     } catch (e) {}
 }
 
@@ -638,7 +626,7 @@ function loadLogo(d, callback, force) {
 }
 
 /* =========================
-   CLEAN CSS & TEMPLATE
+   CLEAN TEMPLATE & CSS
 ========================= */
 
 function installNewCardTemplate() {
@@ -692,7 +680,6 @@ function installNewCardTemplate() {
                     </div>                  
                 </div>                  
                 <div class="full-start-new__reactions selector hide"></div>                  
-                <div class="cas-bottom-ratings"></div>
                 <div class="full-start-new__rate-line hide"></div>                  
                 <div class="rating--modss" style="display: none;"></div>                  
             </div>                  
@@ -713,8 +700,8 @@ function installNewCardTemplate() {
     const styles = `<style id="cas-main-styles">  
     :root { 
         --cas-logo-scale: 1; 
-        --cas-blocks-gap: 20px; 
-        --cas-meta-size: 1.3em; 
+        --cas-blocks-gap: 16px; 
+        --cas-meta-size: 1.25em; 
     }  
             
     .full-start__background {  
@@ -729,48 +716,7 @@ function installNewCardTemplate() {
         
     .full-start__background.loaded { opacity: 1 !important; }  
     .full-start__background.dim { opacity: 0.35 !important; }  
-            
-    @keyframes casKenBurnsParallax {  
-        0% { transform: scale(1.02) translate3d(0, 0, 0); }  
-        50% { transform: scale(1.10) translate3d(5px, -15px, 0); }  
-        100% { transform: scale(1.02) translate3d(0, 0, 0); }  
-    }  
 
-    @keyframes casCinematicPanScan {
-        0% { transform: scale(1.06) translate3d(0, 0, 0); }
-        33% { transform: scale(1.12) translate3d(-25px, -12px, 0); }
-        66% { transform: scale(1.10) translate3d(20px, 15px, 0); }
-        100% { transform: scale(1.06) translate3d(0, 0, 0); }
-    }
-
-    @keyframes casDynamicTiltZoom {
-        0% { transform: scale(1.08) rotate(0deg) translate3d(0, 0, 0); }
-        33% { transform: scale(1.14) rotate(-2.2deg) translate3d(-15px, 10px, 0); }
-        66% { transform: scale(1.14) rotate(2.2deg) translate3d(15px, -10px, 0); }
-        100% { transform: scale(1.08) rotate(0deg) translate3d(0, 0, 0); }
-    }
-              
-    body.cas--zoom-kenburns .full-start__background img, 
-    body.cas--zoom-kenburns img.full-start__background {  
-        animation: casKenBurnsParallax 40s ease-in-out infinite !important;  
-        will-change: transform;  
-        transform-origin: center center;  
-    }  
-
-    body.cas--zoom-panscan .full-start__background img, 
-    body.cas--zoom-panscan img.full-start__background {  
-        animation: casCinematicPanScan 35s ease-in-out infinite !important;  
-        will-change: transform;  
-        transform-origin: center center;  
-    }
-
-    body.cas--zoom-tiltzoom .full-start__background img, 
-    body.cas--zoom-tiltzoom img.full-start__background {  
-        animation: casDynamicTiltZoom 25s ease-in-out infinite !important;  
-        will-change: transform;  
-        transform-origin: center center;  
-    }
-      
     .full-start-new__details { display: none !important; }  
     .full-start-new__head { display: block !important; margin: 0 !important; padding: 0 !important; font-size: 0.9em; }  
     
@@ -788,7 +734,6 @@ function installNewCardTemplate() {
         overflow: visible;  
         max-width: 100%;  
         margin-bottom: var(--cas-blocks-gap);  
-        max-height: 300px;  
         display: flex;
         flex-direction: column;
         align-items: flex-start !important;
@@ -813,7 +758,7 @@ function installNewCardTemplate() {
         color: rgba(255, 255, 255, 0.85);
         margin-bottom: 12px;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
-        max-width: 650px;
+        max-width: 700px;
         text-align: left !important;
     }
 
@@ -821,7 +766,7 @@ function installNewCardTemplate() {
         display: flex;
         align-items: center;
         gap: 12px;
-        margin-bottom: 10px;
+        margin-bottom: 12px;
         flex-wrap: wrap;
     }
 
@@ -833,6 +778,7 @@ function installNewCardTemplate() {
         gap: 8px;  
         font-weight: 400; 
         font-size: var(--cas-meta-size);
+        color: rgba(255, 255, 255, 0.9);
     }  
 
     .full-start-new__buttons {
@@ -842,7 +788,7 @@ function installNewCardTemplate() {
         flex-wrap: wrap;
         width: 100%;
         margin-left: 0 !important;
-        margin-top: 0px !important;
+        margin-top: 10px !important;
     }
                         
     .cas-studios-row {  
@@ -850,21 +796,21 @@ function installNewCardTemplate() {
         flex-wrap: wrap;  
         justify-content: flex-start !important;
         gap: 8px;  
-        margin-bottom: 8px;
+        margin-bottom: 10px;
+        min-height: 24px;
     }  
     
     .cas-studio-item {    
-        height: 24px !important;    
+        height: 28px !important;    
         display: flex;    
         align-items: center;    
         justify-content: flex-start;  
-        margin-bottom: 2px;  
     }    
   
     .cas-studio-item img {    
         height: 100%;    
         width: auto;    
-        max-width: 140px;  
+        max-width: 160px;  
         object-fit: contain;    
         filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));    
         opacity: 0.95;    
@@ -872,32 +818,17 @@ function installNewCardTemplate() {
 
     .cas-description { 
         font-size: var(--cas-meta-size) !important; 
-        line-height: 1.35; 
-        color: rgba(255,255,255,0.7); 
+        line-height: 1.4; 
+        color: rgba(255,255,255,0.8); 
         display: -webkit-box; 
         -webkit-line-clamp: 4; 
         -webkit-box-orient: vertical; 
         overflow: hidden; 
-        max-width: 650px; 
-        margin-top: 4px; 
-        margin-bottom: 8px; 
+        max-width: 750px; 
+        margin-top: 6px; 
+        margin-bottom: 14px; 
         text-align: left !important; 
     }    
-    
-    .cas-bottom-ratings {
-        position: absolute; 
-        right: 2.5em; 
-        bottom: 2em; 
-        display: flex; 
-        align-items: center; 
-        gap: 15px; 
-        font-size: var(--cas-meta-size); 
-        font-weight: 600; 
-        z-index: 3;
-    }
-
-    .cas-rate-item { display: flex; align-items: center; gap: 6px; }    
-    .cas-rate-item img { height: 1.1em; }    
     .left-title .full-start-new__body { height: 85vh; }    
     </style>`;
     Lampa.Template.add('left_title_css', styles);
@@ -991,34 +922,23 @@ function applyNewCardSettings() {
         const scale = parseInt(storageGet(S.scale, '100')) / 100;          
         const gap = storageGet(S.casGap, '20');          
         const metaSize = storageGet(S.casMetaSize, '1.3');          
-        const bgAnim = storageGet(S.casBgAnim, 'kenburns');
                           
         root.style.setProperty('--cas-logo-scale', scale);          
         root.style.setProperty('--cas-blocks-gap', gap + 'px');          
         root.style.setProperty('--cas-meta-size', metaSize + 'em');          
-                          
-        const bodyEl = $('body');
-        bodyEl.removeClass('cas--zoom-kenburns cas--zoom-panscan cas--zoom-tiltzoom');
-        if (bgAnim !== 'off') {
-            bodyEl.addClass('cas--zoom-' + bgAnim);
-        }
         
         const currentCard = $('.full-start-new.left-title');          
         if (currentCard.length > 0) {          
-            const showDesc = !!storageGet(S.casDesc);
-            const showTag = !!storageGet(S.casTagline);
+            const showDesc = !!storageGet(S.casDesc, true);
+            const showTag = !!storageGet(S.casTagline, true);
 
             currentCard.find('.cas-description').toggle(showDesc);          
             currentCard.find('.cas-tagline').toggle(showTag);
-            currentCard.find('.cas-studios-row').toggle(!!storageGet(S.casStudios));          
-            currentCard.find('.cas-rate-items, .cas-bottom-ratings').toggle(!!storageGet(S.casRating));
-                        
-            const buttons = currentCard.find('.full-start-new__buttons');          
-            buttons.css('margin-top', showDesc ? '' : '0px');          
+            currentCard.find('.cas-studios-row').toggle(!!storageGet(S.casStudios, true));          
                         
             stopSlideshow();          
           
-            if (storageGet(S.casSlideshow)) {          
+            if (storageGet(S.casSlideshow, true)) {          
                 const movieData = currentCard.data('movie');          
                 if (movieData && movieData.id) {          
                     const cachedData = cached(identity(movieData));          
@@ -1325,8 +1245,7 @@ function cardCurrent(token, key) {
         activeCardToken === token &&
         activeCard.key === key &&
         activeCard.root &&
-        activeCard.root.isConnected &&
-        cardEnabled()
+        activeCard.root.isConnected
     );
 }
 
@@ -1352,11 +1271,6 @@ function showCardLogoInstant(root, d) {
    CLEAN NEWCARD LOGIC
 ========================= */
 
-function getRatingColor(val) {                
-    const n = parseFloat(val);                
-    return n >= 7.5 ? '#2ecc71' : n >= 6 ? '#feca57' : '#ff4d4d';                
-}                
-
 function formatTime(mins) {                
     if (!mins) return '';                
     const h = Math.floor(mins / 60);                
@@ -1367,13 +1281,21 @@ function formatTime(mins) {
 function renderStudioLogosWithColorAnalysis(container, data) {    
     try {
         container.empty();
-        const studios = (data.networks || data.production_companies || []).filter(s => s.logo_path).slice(0, 1);  
+        const list = data.networks || data.production_companies || [];
+        const studios = list.filter(s => s && s.logo_path).slice(0, 1);  
             
+        if (!studios.length) {
+            container.hide();
+            return;
+        }
+
+        container.show();
+
         studios.forEach((studio) => {    
             const logoUrl = Lampa.TMDB.image('/t/p/w200' + studio.logo_path);    
             const id = 'cas_studio_' + Math.random().toString(36).substr(2, 9);    
                 
-            container.append(`<div class="cas-studio-item cas-wave-studio" id="${id}"><img src="${logoUrl}"></div>`);    
+            container.append(`<div class="cas-studio-item" id="${id}"><img src="${logoUrl}"></div>`);    
                 
             const img = new Image();    
             img.crossOrigin = 'anonymous';    
@@ -1424,7 +1346,7 @@ async function processNewCard(render, data, res) {
             render.find('.cas-logo').html(`<div style="font-size: 3em; font-weight: 800; text-transform: uppercase;">${movieTitle(data)}</div>`);  
         }  
         stopSlideshow();  
-        if (storageGet(S.casSlideshow) && res.backdrops && res.backdrops.length > 1) {  
+        if (storageGet(S.casSlideshow, true) && res.backdrops && res.backdrops.length > 1) {  
             let current_lang = Lampa.Storage.get('tmdb_lang') || 'uk';  
             startSlideshow(render, res.backdrops, current_lang);  
         }  
@@ -1442,54 +1364,42 @@ function preloadImagePromise(src) {
     });                
 }
 
-async function loadNewCardMovieDetails(render, data) {
+function loadNewCardMovieDetails(render, data) {
     try {
-        if (data.tagline && storageGet(S.casTagline)) {
-            render.find('.cas-tagline').text(`«${data.tagline}»`).show();
+        if (!render || !data) return;
+
+        // Опис
+        var overviewText = data.overview || (data.movie && data.movie.overview) || '';
+        if (overviewText && storageGet(S.casDesc, true)) {
+            render.find('.cas-description').html(overviewText).show();
+        } else {
+            render.find('.cas-description').hide();
+        }
+
+        // Слоган
+        var taglineText = data.tagline || (data.movie && data.movie.tagline) || '';
+        if (taglineText && storageGet(S.casTagline, true)) {
+            render.find('.cas-tagline').text(`«${taglineText}»`).show();
         } else {
             render.find('.cas-tagline').hide();
         }
 
-        if (storageGet(S.casDesc)) {    
-            render.find('.cas-description').html(data.overview || '').css('opacity','1').show();    
-        } else {
-            render.find('.cas-description').hide();
-        }
-            
+        // Мета-рядок
         const year = movieYear(data);    
         const country = (data.production_countries && data.production_countries.length > 0) ? data.production_countries[0].name : '';
         const time = formatTime(data.runtime || (data.episode_run_time ? data.episode_run_time[0] : 0));    
         const genres = (data.genres || []).map(g => g.name).join(', ');    
             
-        let ratings = '';    
-        const tmdbV = parseFloat(data.vote_average || 0).toFixed(1);    
-        if (tmdbV > 0) {    
-            ratings += `<div class="cas-rate-item"><img src="${ICONS.tmdb}"> <span style="color:${getRatingColor(tmdbV)}">${tmdbV}</span></div>`;    
-        }    
-            
-        if (data.reactions && data.reactions.result) {    
-            let sum = 0, cnt = 0;    
-            const coef = { fire: 10, nice: 7.5, think: 5, bore: 2.5, shit: 0 };    
-            data.reactions.result.forEach(r => {           
-                if (r.counter) { sum += (r.counter * coef[r.type]); cnt += r.counter; }          
-            });    
-            if (cnt >= 1) {    
-                const isTv = !!data.name;    
-                const cubV = (((isTv?7.4:6.5)*(isTv?50:150)+sum)/((isTv?50:150)+cnt)).toFixed(1);    
-                ratings += `<div class="cas-rate-item"><img src="${ICONS.cub}"> <span style="color:${getRatingColor(cubV)}">${cubV}</span></div>`;    
-            }    
-        }    
-            
         let metaParts = [];
-        if (year) metaParts.push(`<span class="cas-wave-year">${year}</span>`);
-        if (country) metaParts.push(`<span class="cas-wave-country">${country}</span>`);
-        if (time) metaParts.push(`<span class="cas-wave-time">${time}</span>`);
-        if (genres) metaParts.push(`<span class="cas-wave-genre">${genres}</span>`);
+        if (year) metaParts.push(`<span>${year}</span>`);
+        if (country) metaParts.push(`<span>${country}</span>`);
+        if (time) metaParts.push(`<span>${time}</span>`);
+        if (genres) metaParts.push(`<span>${genres}</span>`);
             
-        render.find('.cas-meta-info').html(metaParts.join(' &bull; '));    
-        render.find('.cas-bottom-ratings').html(ratings);
+        render.find('.cas-meta-info').html(metaParts.join(' &bull; '));
 
-        if (storageGet(S.casStudios)) {    
+        // Студії
+        if (storageGet(S.casStudios, true)) {    
             renderStudioLogosWithColorAnalysis(render.find('.cas-studios-row'), data);    
         } else {
             render.find('.cas-studios-row').hide();
@@ -1531,16 +1441,19 @@ function startCard(o, override, force) {
         installNewCardTemplate();
         applyNewCardSettings();
 
+        var renderWrap = $(root);
+
         loadLogo(d, function (result) {
             if (!cardCurrent(token, key)) return;
-            processNewCard(root, d, { logos: result.src ? [{file_path: result.src.replace('https://image.tmdb.org/t/p/' + logoQuality(), ''), iso_639_1: 'uk'}] : [], backdrops: result.backdrops });
+            processNewCard(renderWrap, d, { 
+                logos: result.src ? [{file_path: result.src.replace('https://image.tmdb.org/t/p/' + logoQuality(), ''), iso_639_1: 'uk'}] : [], 
+                backdrops: result.backdrops 
+            });
         }, !!force);
 
-        loadNewCardMovieDetails(root, d);
+        loadNewCardMovieDetails(renderWrap, d);
         return;
     }
-
-    if (!cardEnabled()) return;
 
     if (!force && showCardLogoInstant(root, d)) {
         return;
@@ -1590,10 +1503,6 @@ function startCard(o, override, force) {
 }
 
 function refreshCard(force) {
-    if (!cardEnabled() && !newCardEnabled()) {
-        stopCard(true);
-        return;
-    }
     var a = activeActivity();
     if (isFull(a)) startCard(a, null, !!force);
 }
@@ -1714,14 +1623,11 @@ function addSettings() {
     }
 
     add(S.hero, 'trigger', true, 'Динамічні банери', 'Преміальні банери на головній сторінці', null, applyHero);
-    add(S.newcard, 'trigger', true, 'Сучасна картка (NewCard)', 'Увімкнути розширений інтерфейс картки фільму', null, function () { refreshCard(true); });
-    add(S.card, 'trigger', true, 'Логотип у стандартній картці', 'Працює, якщо NewCard вимкнено', null, function () { refreshCard(true); });
+    add(S.newcard, 'trigger', true, 'Сучасна картка (NewCard)', 'Увімкнути новий інтерфейс картки фільму', null, function () { refreshCard(true); });
     
-    add(S.casBgAnim, 'select', 'kenburns', 'Анімація фону', 'Динамічний рух постера на задньому плані', { 'off': 'Вимкнено', 'kenburns': 'Ken Burns (Зум + Паралакс)', 'panscan': 'Кінематографічний дрейф', 'tiltzoom': 'Динамічний кут' }, applyNewCardSettings);
-    add(S.casSlideshow, 'trigger', true, 'Слайд-шоу фону', 'Зміна кадрів на задньому плані', null, applyNewCardSettings);
+    add(S.casSlideshow, 'trigger', true, 'Слайд-шоу фону', 'Зміна кадрів на задньому плані картки', null, applyNewCardSettings);
     add(S.casStudios, 'trigger', true, 'Показувати студії', 'Логотипи компаній-виробників', null, applyNewCardSettings);
-    add(S.casRating, 'trigger', true, 'Показувати рейтинги', 'Оцінки TMDB та CUB', null, applyNewCardSettings);
-    add(S.casDesc, 'trigger', true, 'Опис фільму', 'Показувати текст анотації', null, applyNewCardSettings);
+    add(S.casDesc, 'trigger', true, 'Опис фільму', 'Показувати текст анотації під логотипом', null, applyNewCardSettings);
     add(S.casTagline, 'trigger', true, 'Показувати слоган', 'Цитата або слоган фільму', null, applyNewCardSettings);
 
     add(S.quality, 'select', 'original', 'Якість логотипів TMDB', 'Роздільна здатність зображень', { w300: '300px', w500: '500px', original: 'Original' }, function () { refreshAll(false); });
@@ -1758,7 +1664,6 @@ function installListeners() {
         requestAnimationFrame(function () {
             var a = activeActivity();
             if (isFull(a)) {
-                if (e.data.reactions) d.reactions = e.data.reactions;
                 startCard(a, d || null, true);
             }
         });
@@ -1769,7 +1674,7 @@ function installListeners() {
             Lampa.Storage.listener.follow('change', function (e) {
                 if (!e || !e.name) return;
                 if (e.name === S.hero) applyHero();
-                if (e.name === S.card || e.name === S.newcard) refreshCard(true);
+                if (e.name === S.newcard) refreshCard(true);
                 if (e.name === S.font) { currentFont = ''; applyFont(); }
                 if (e.name === S.size) { currentSize = ''; applySize(); }
                 if (e.name === S.quality || e.name === S.scale) refreshAll(false);
@@ -1803,7 +1708,7 @@ function init() {
         if (isFull(a)) startCard(a);
     });
 
-    log('TMDB Only + Clean NewCard initialized');
+    log('TMDB Only + Clean NewCard 1.6.2 initialized');
 }
 
 /* =========================
