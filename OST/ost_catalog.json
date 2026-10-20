@@ -19,6 +19,7 @@
     {"title":"Batman Begins","year":2005,"aliases":["Бетмен: Початок","Бэтмен: Начало"],"albumId":"105","trackId":"2260","track":"End Credits","artist":"Hans Zimmer","verified":false},
     {"title":"Forrest Gump","year":1994,"aliases":["Форрест Ґамп","Форрест Гамп"],"albumId":"255","trackId":"6068","track":"Alan Silvestri - Forrest Gump Suite","artist":"VA","verified":false},
     {"title":"Back to the Future","year":1985,"aliases":["Назад у майбутнє","Назад в будущее"],"albumId":"90","trackId":"1891","track":"Alan Silvestri - Back To The Future","artist":"VA","verified":false},
+    {"title":"Schindler's List","year":1993,"aliases":["Список Шиндлера"],"albumId":"606","trackId":"14581","track":"Theme From Schindler's List","artist":"John Williams","verified":false},
     {"title":"Gladiator","year":2000,"aliases":["Гладіатор","Гладиатор"],"albumId":"108","trackId":"2332","track":"Now We Are Free","artist":"Hans Zimmer & Lisa Gerrard","verified":false}
   ]
 }
