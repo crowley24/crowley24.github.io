@@ -8,11 +8,5 @@
     {"title":"The Matrix","year":1999,"aliases":["Матриця","Матрица","Matrix"],"albumId":"172","trackId":"4081","track":"Clubbed To Death (kurayamino Mix)","artist":"Rob D","verified":true},
     {"title":"Terminator 2: Judgment Day","year":1991,"aliases":["Terminator 2","Термінатор 2: Судний день","Терминатор 2: Судный день"],"albumId":"23","trackId":"482","track":"Main Title (Terminator 2 Theme","artist":"Brad Fiedel","verified":false},
     {"title":"Titanic","year":1997,"aliases":["Титанік","Титаник"],"albumId":"377","trackId":"8984","track":"My Heart Will Go On - Performed by Celine Dion","artist":"Celine Dion","verified":false}
-    {"title":"Interstellar","year":2014,"aliases":["Інтерстеллар","Интерстеллар"],"albumId":"62","trackId":"1293","track":"Cornfield Chase","artist":"Hans Zimmer","verified":true},
-    {"title":"Inception","year":2010,"aliases":["Початок","Начало"],"albumId":"67","trackId":"1399","track":"Time","artist":"Hans Zimmer","verified":true},
-    {"title":"The Matrix","year":1999,"aliases":["Матриця","Матрица","Matrix"],"albumId":"172","trackId":"4081","track":"Clubbed To Death (kurayamino Mix)","artist":"Rob D","verified":true},
-    {"title":"Terminator 2: Judgment Day","year":1991,"aliases":["Terminator 2","Термінатор 2: Судний день","Терминатор 2: Судный день"],"albumId":"23","trackId":"482","track":"Main Title (Terminator 2 Theme","artist":"Brad Fiedel","verified":false},
-    {"title":"Titanic","year":1997,"aliases":["Титанік","Титаник"],"albumId":"377","trackId":"8984","track":"My Heart Will Go On - Performed by Celine Dion","artist":"Celine Dion","verified":false}
-    ]
+  ]
 }
-
