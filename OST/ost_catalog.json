@@ -29,7 +29,14 @@
 {"title":"Blade Runner 2049","year":2017,"aliases":["Той, хто біжить по лезу 2049"],"albumId":"81","trackId":"1677","track":"2049","artist":"Hans Zimmer","verified":false},
 {"title":"Mad Max: Fury Road","year":2015,"aliases":["Шалений Макс: Дорога гніву","Mad Max Fury Road"],"albumId":"61","trackId":"1277","track":"Brothers In Arms (Extended Version)","artist":"Junkie XL","verified":false},
 {"title":"The Hateful Eight","year":2015,"aliases":["Мерзенна вісімка"],"albumId":"266","trackId":"6381","track":"L'Ultima Diligenza Di Red Rock","artist":"Ennio Morricone","verified":false},
-{"title":"Django Unchained","year":2012,"aliases":["Джанґо вільний","Джанго освобожденный"],"albumId":"630","trackId":"15221","track":"Luis Bacalov & Rocky Roberts - Django","artist":"VA","verified":false}
-
+{"title":"Django Unchained","year":2012,"aliases":["Джанґо вільний","Джанго освобожденный"],"albumId":"630","trackId":"15221","track":"Luis Bacalov & Rocky Roberts - Django","artist":"VA","verified":false},
+{"title":"Alien","year":1979,"aliases":["Чужий","Чужой"],"albumId":"28","trackId":"592","track":"Main Title","artist":"Jerry Goldsmith","verified":false},
+{"title":"Aliens","year":1986,"aliases":["Чужі","Чужие"],"albumId":"37","trackId":"788","track":"Main Title","artist":"James Horner","verified":false},
+{"title":"Alien 3","year":1992,"aliases":["Чужий 3","Чужой 3","Alien³"],"albumId":"290","trackId":"7022","track":"Adagio","artist":"Elliot Goldenthal","verified":false},
+{"title":"Rocky IV","year":1985,"aliases":["Роккі 4","Рокки 4"],"albumId":"469","trackId":"11314","track":"Vince DiCola - Training Montage","artist":"VA","verified":false},
+{"title":"Rambo III","year":1988,"aliases":["Рембо 3","Рэмбо 3"],"albumId":"494","trackId":"11845","track":"Final Battle","artist":"Jerry Goldsmith","verified":false},
+{"title":"Rambo: Last Blood","year":2019,"aliases":["Рембо: Остання кров","Рэмбо: Последняя кровь","Rambo Last Blood"],"albumId":"910","trackId":"21682","track":"Rambo: Last Blood","artist":"Brian Tyler","verified":false},
+{"title":"Halloween","year":2018,"aliases":["Хелловін","Хэллоуин"],"albumId":"443","trackId":"10620","track":"Halloween Theme","artist":"John Carpenter","verified":false},
+{"title":"Halloween Ends","year":2022,"aliases":["Хелловін: Кінець","Хэллоуин заканчивается"],"albumId":"1233","trackId":"29317","track":"Halloween Ends","artist":"John Carpenter","verified":false}
   ]
 }
