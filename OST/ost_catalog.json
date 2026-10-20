@@ -1,6 +1,6 @@
 
 {
-  "version": "1.4.0",
+  "version": "1.4.1",
   "source": "ostmusic.org",
   "movies": [
     {"title":"Interstellar","year":2014,"aliases":["Інтерстеллар","Интерстеллар"],"albumId":"62","trackId":"1293","track":"Cornfield Chase","artist":"Hans Zimmer","verified":true},
@@ -51,11 +51,11 @@
     {"title":"Creed II","year":2018,"aliases":["Крід 2","Крид 2"],"albumId":"469","trackId":"11315","track":"Theme From Rocky","artist":"VA","verified":false},
     {"title":"Creed III","year":2023,"aliases":["Крід 3","Крид 3"],"albumId":"469","trackId":"11315","track":"Theme From Rocky","artist":"VA","verified":false},
 
-    {"title":"First Blood","year":1982,"aliases":["Рембо: Перша кров","Рэмбо: Первая кровь"],"albumId":"494","trackId":"11845","track":"Final Battle","artist":"Jerry Goldsmith","verified":false},
-    {"title":"Rambo: First Blood Part II","year":1985,"aliases":["Рембо: Перша кров 2","Рэмбо: Первая кровь 2"],"albumId":"494","trackId":"11845","track":"Final Battle","artist":"Jerry Goldsmith","verified":false},
-    {"title":"Rambo III","year":1988,"aliases":["Рембо 3","Рэмбо 3"],"albumId":"494","trackId":"11845","track":"Final Battle","artist":"Jerry Goldsmith","verified":false},
-    {"title":"Rambo","year":2008,"aliases":["Рембо 4","Рэмбо 4","John Rambo"],"albumId":"494","trackId":"11845","track":"Final Battle","artist":"Jerry Goldsmith","verified":false},
-    {"title":"Rambo: Last Blood","year":2019,"aliases":["Рембо: Остання кров","Рэмбо: Последняя кровь","Rambo Last Blood"],"albumId":"910","trackId":"21682","track":"Rambo: Last Blood","artist":"Brian Tyler","verified":false},
+    {"title":"First Blood","year":1982,"aliases":["Рембо: Перша кров","Рэмбо: Первая кровь"],"albumId":"494","trackId":"11840","track":"Another Time","artist":"Jerry Goldsmith","verified":false},
+    {"title":"Rambo: First Blood Part II","year":1985,"aliases":["Рембо: Перша кров 2","Рэмбо: Первая кровь 2"],"albumId":"494","trackId":"11840","track":"Another Time","artist":"Jerry Goldsmith","verified":false},
+    {"title":"Rambo III","year":1988,"aliases":["Рембо 3","Рэмбо 3"],"albumId":"494","trackId":"11840","track":"Another Time","artist":"Jerry Goldsmith","verified":true},
+    {"title":"Rambo","year":2008,"aliases":["Рембо 4","Рэмбо 4","John Rambo"],"albumId":"494","trackId":"11840","track":"Another Time","artist":"Jerry Goldsmith","verified":false},
+    {"title":"Rambo: Last Blood","year":2019,"aliases":["Рембо: Остання кров","Рэмбо: Последняя кровь","Rambo Last Blood"],"albumId":"910","trackId":"21682","track":"Rambo: Last Blood","artist":"Brian Tyler","verified":true},
 
     {"title":"Halloween","year":1978,"aliases":["Хелловін","Хэллоуин"],"albumId":"443","trackId":"10620","track":"Halloween Theme","artist":"John Carpenter","verified":false},
     {"title":"Halloween II","year":1981,"aliases":["Хелловін 2","Хэллоуин 2"],"albumId":"443","trackId":"10620","track":"Halloween Theme","artist":"John Carpenter","verified":false},
