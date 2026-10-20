@@ -6,7 +6,6 @@
     {"title":"Interstellar","year":2014,"aliases":["Інтерстеллар","Интерстеллар"],"albumId":"62","trackId":"1293","track":"Cornfield Chase","artist":"Hans Zimmer","verified":true},
     {"title":"Inception","year":2010,"aliases":["Початок","Начало"],"albumId":"67","trackId":"1399","track":"Time","artist":"Hans Zimmer","verified":true},
     {"title":"The Matrix","year":1999,"aliases":["Матриця","Матрица","Matrix"],"albumId":"172","trackId":"4081","track":"Clubbed To Death (kurayamino Mix)","artist":"Rob D","verified":true},
-    {"title":"Terminator 2: Judgment Day","year":1991,"aliases":["Terminator 2","Термінатор 2: Судний день","Терминатор 2: Судный день"],"albumId":"23","trackId":"482","track":"Main Title (Terminator 2 Theme","artist":"Brad Fiedel","verified":true},
     {"title":"Titanic","year":1997,"aliases":["Титанік","Титаник"],"albumId":"377","trackId":"8984","track":"My Heart Will Go On - Performed by Celine Dion","artist":"Celine Dion","verified":true},
     {"title":"The Lord of the Rings: The Fellowship of the Ring","year":2001,"aliases":["Володар перснів: Братство персня","Властелин колец: Братство кольца"],"albumId":"675","trackId":"16290","track":"Concerning Hobbits","artist":"Howard Shore","verified":true},
     {"title":"The Lord of the Rings: The Two Towers","year":2002,"aliases":["Володар перснів: Дві вежі","Властелин колец: Две крепости"],"albumId":"675","trackId":"16294","track":"The Riders of Rohan","artist":"Howard Shore","verified":true},
@@ -69,6 +68,11 @@
     {"title":"Halloween II","year":2009,"aliases":["Хелловін 2","Хэллоуин 2"],"albumId":"443","trackId":"10620","track":"Halloween Theme","artist":"John Carpenter","verified":false},
     {"title":"Halloween","year":2018,"aliases":["Хелловін","Хэллоуин"],"albumId":"443","trackId":"10620","track":"Halloween Theme","artist":"John Carpenter","verified":false},
     {"title":"Halloween Kills","year":2021,"aliases":["Хелловін убиває","Хэллоуин убивает"],"albumId":"443","trackId":"10620","track":"Halloween Theme","artist":"John Carpenter","verified":false},
-    {"title":"Halloween Ends","year":2022,"aliases":["Хелловін: Кінець","Хэллоуин заканчивается"],"albumId":"1233","trackId":"29317","track":"Halloween Ends","artist":"John Carpenter","verified":false}
+    {"title":"Halloween Ends","year":2022,"aliases":["Хелловін: Кінець","Хэллоуин заканчивается"],"albumId":"1233","trackId":"29317","track":"Halloween Ends","artist":"John Carpenter","verified":false},
+    {"title":"The Terminator","year":1984,"aliases":["Термінатор","Терминатор"],"albumId":"22","trackId":"471","track":"The Terminator Theme","artist":"Brad Fiedel","verified":true},
+{"title":"Terminator 2: Judgment Day","year":1991,"aliases":["Термінатор 2: Судний день","Терминатор 2: Судный день","Terminator 2"],"albumId":"23","trackId":"482","track":"Main Title (Terminator 2 Theme)","artist":"Brad Fiedel","verified":true},
+{"title":"Terminator 3: Rise of the Machines","year":2003,"aliases":["Термінатор 3: Повстання машин","Терминатор 3: Восстание машин","Terminator 3"],"albumId":"29","trackId":"620","track":"The Terminator","artist":"Marco Beltrami","verified":true},
+{"title":"Terminator Salvation","year":2009,"aliases":["Термінатор: Спасіння","Терминатор: Да придёт спаситель"],"albumId":"40","trackId":"862","track":"Opening","artist":"Danny Elfman","verified":true},
+{"title":"Terminator: Dark Fate","year":2019,"aliases":["Термінатор: Фатум","Терминатор: Темные судьбы","Terminator Dark Fate"],"albumId":"931","trackId":"22159","track":"Terminator","artist":"Junkie XL","verified":true}
   ]
 }
