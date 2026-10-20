@@ -3,74 +3,61 @@
     'use strict';
 
     /*
-     * ORIGINAL SOUNDTRACK 2.1
-     * For Lampa / Android TV / Mobile
+     * ORIGINAL SOUNDTRACK 2.2
+     * Full Track Edition
      *
-     * Cloudflare Worker:
-     * https://ostmusic-search.unclezhenya24.workers.dev
+     * Lampa / Android TV / Mobile
+     * OSTMusic via Cloudflare Worker 2.4
      *
-     * Features:
-     * - Automatic movie OST search
-     * - Original movie title + release year
-     * - Verified / heuristic theme selection
-     * - 2-second startup delay
-     * - 20% audio volume
-     * - Smooth fade-in
-     * - 30-second repeating segment
-     * - Automatic stop when leaving movie card
-     * - Stop when video playback starts
-     * - Result caching
-     * - Race-condition protection
-     * - Lampa settings
+     * Full-length soundtrack playback
+     * Automatic repeat after track ends
+     * 2-second startup delay
+     * 20% default volume
+     * Smooth fade-in
+     * Automatic stop on leaving card
+     * Automatic stop on player start
+     * Positive-result caching
+     * Race-condition protection
      */
 
-    var PLUGIN_ID = 'crowley_original_soundtrack_v21';
+    var PLUGIN_ID = 'crowley_original_soundtrack_v22';
 
-    if (window[PLUGIN_ID]) {
-        return;
-    }
-
+    if (window[PLUGIN_ID]) return;
     window[PLUGIN_ID] = true;
 
     var WORKER =
         'https://ostmusic-search.unclezhenya24.workers.dev';
 
     var PREFIX = 'crowley_ost_';
+    var CACHE_PREFIX = PREFIX + 'cache_v22_';
+    var CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
 
     var DEFAULTS = {
         enabled: true,
         volume: 20,
         delay: 2,
-        fragment: 30,
         fade: true,
         cache: true,
         verifiedOnly: false
     };
 
-    var CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
-
     var currentAudio = null;
     var currentTimer = null;
     var fadeTimer = null;
-    var loopTimer = null;
-
     var currentRequest = null;
-    var currentToken = 0;
 
+    var currentToken = 0;
     var activeCard = false;
     var currentMovieKey = '';
-
     var memoryCache = {};
 
     var initialized = false;
     var settingsAdded = false;
 
-    /*
-     * Storage
-     */
+    // STORAGE
 
     function getSetting(key) {
-        var defaultValue = DEFAULTS[key];
+        var fallback = DEFAULTS[key];
 
         try {
             if (
@@ -80,17 +67,14 @@
             ) {
                 var value = Lampa.Storage.get(
                     PREFIX + key,
-                    defaultValue
+                    fallback
                 );
 
-                return value === undefined ||
-                    value === null
-                    ? defaultValue
-                    : value;
+                return value == null ? fallback : value;
             }
         } catch (e) {}
 
-        return defaultValue;
+        return fallback;
     }
 
     function setSetting(key, value) {
@@ -100,52 +84,47 @@
                 Lampa.Storage &&
                 typeof Lampa.Storage.set === 'function'
             ) {
-                Lampa.Storage.set(
-                    PREFIX + key,
-                    value
-                );
+                Lampa.Storage.set(PREFIX + key, value);
             }
         } catch (e) {}
-    }
-
-    function isEnabled() {
-        var value = getSetting('enabled');
-
-        return value === true ||
-            value === 'true' ||
-            value === 1 ||
-            value === '1';
     }
 
     function boolSetting(key) {
         var value = getSetting(key);
 
-        return value === true ||
+        return (
+            value === true ||
             value === 'true' ||
             value === 1 ||
-            value === '1';
+            value === '1'
+        );
+    }
+
+    function isEnabled() {
+        return boolSetting('enabled');
     }
 
     function numberSetting(key, fallback) {
         var value = Number(getSetting(key));
-
-        return isFinite(value)
-            ? value
-            : fallback;
+        return isFinite(value) ? value : fallback;
     }
 
-    /*
-     * Helpers
-     */
+    function targetVolume() {
+        return Math.min(
+            1,
+            Math.max(
+                0,
+                numberSetting('volume', 20) / 100
+            )
+        );
+    }
+
+    // HELPERS
 
     function log() {
         try {
-            var args = Array.prototype.slice.call(
-                arguments
-            );
-
-            args.unshift('[Original Soundtrack]');
-
+            var args = Array.prototype.slice.call(arguments);
+            args.unshift('[Original Soundtrack 2.2]');
             console.log.apply(console, args);
         } catch (e) {}
     }
@@ -160,19 +139,17 @@
     function getYear(movie) {
         if (!movie) return 0;
 
-        var date =
+        var value =
             movie.release_date ||
             movie.first_air_date ||
             movie.year ||
             '';
 
-        var match = String(date).match(
+        var match = String(value).match(
             /\b(18|19|20)\d{2}\b/
         );
 
-        return match
-            ? Number(match[0])
-            : 0;
+        return match ? Number(match[0]) : 0;
     }
 
     function getMovieTitle(movie) {
@@ -237,9 +214,7 @@
         return null;
     }
 
-    /*
-     * Cache
-     */
+    // CACHE
 
     function cacheKey(movie) {
         return [
@@ -249,24 +224,28 @@
     }
 
     function getCached(movie) {
-        if (!boolSetting('cache')) {
-            return null;
-        }
+        if (!boolSetting('cache')) return null;
 
         var key = cacheKey(movie);
-
         var entry = memoryCache[key];
 
-        if (
-            entry &&
-            Date.now() - entry.time < CACHE_TTL
-        ) {
-            return entry.data;
+        if (entry) {
+            if (
+                Date.now() - entry.time < CACHE_TTL &&
+                entry.data &&
+                entry.data.found &&
+                entry.data.track &&
+                entry.data.track.file
+            ) {
+                return entry.data;
+            }
+
+            delete memoryCache[key];
         }
 
         try {
             var raw = localStorage.getItem(
-                PREFIX + 'cache_' + key
+                CACHE_PREFIX + key
             );
 
             if (!raw) return null;
@@ -276,25 +255,38 @@
             if (
                 !entry ||
                 !entry.time ||
-                Date.now() - entry.time >= CACHE_TTL
+                Date.now() - entry.time >= CACHE_TTL ||
+                !entry.data ||
+                !entry.data.found ||
+                !entry.data.track ||
+                !entry.data.track.file
             ) {
                 localStorage.removeItem(
-                    PREFIX + 'cache_' + key
+                    CACHE_PREFIX + key
                 );
 
                 return null;
             }
 
             memoryCache[key] = entry;
-
             return entry.data;
+
         } catch (e) {
             return null;
         }
     }
 
     function setCached(movie, data) {
-        if (!boolSetting('cache')) {
+        if (!boolSetting('cache')) return;
+
+        // Never cache negative results.
+        if (
+            !data ||
+            !data.success ||
+            !data.found ||
+            !data.track ||
+            !data.track.file
+        ) {
             return;
         }
 
@@ -309,7 +301,7 @@
 
         try {
             localStorage.setItem(
-                PREFIX + 'cache_' + key,
+                CACHE_PREFIX + key,
                 JSON.stringify(entry)
             );
         } catch (e) {}
@@ -321,18 +313,12 @@
         try {
             var keys = [];
 
-            for (
-                var i = 0;
-                i < localStorage.length;
-                i++
-            ) {
+            for (var i = 0; i < localStorage.length; i++) {
                 var key = localStorage.key(i);
 
                 if (
                     key &&
-                    key.indexOf(
-                        PREFIX + 'cache_'
-                    ) === 0
+                    key.indexOf(PREFIX + 'cache_') === 0
                 ) {
                     keys.push(key);
                 }
@@ -341,58 +327,51 @@
             keys.forEach(function (key) {
                 localStorage.removeItem(key);
             });
+
         } catch (e) {}
 
         log('Cache cleared');
     }
 
-    /*
-     * Audio cleanup
-     */
+    // TIMERS AND CLEANUP
 
     function clearTimers() {
-        if (currentTimer) {
+        if (currentTimer !== null) {
             clearTimeout(currentTimer);
             currentTimer = null;
         }
 
-        if (fadeTimer) {
+        if (fadeTimer !== null) {
             clearInterval(fadeTimer);
             fadeTimer = null;
-        }
-
-        if (loopTimer) {
-            clearInterval(loopTimer);
-            loopTimer = null;
         }
     }
 
     function stopAudio() {
         clearTimers();
 
-        if (currentAudio) {
-            try {
-                currentAudio.pause();
+        var audio = currentAudio;
+        currentAudio = null;
 
-                currentAudio.removeAttribute(
-                    'src'
-                );
+        if (!audio) return;
 
-                currentAudio.load();
-            } catch (e) {}
-
-            currentAudio = null;
-        }
+        try {
+            audio.pause();
+            audio.loop = false;
+            audio.removeAttribute('src');
+            audio.load();
+        } catch (e) {}
     }
 
     function cancelRequest() {
-        if (currentRequest) {
-            try {
-                currentRequest.abort();
-            } catch (e) {}
+        if (!currentRequest) return;
 
-            currentRequest = null;
-        }
+        var xhr = currentRequest;
+        currentRequest = null;
+
+        try {
+            xhr.abort();
+        } catch (e) {}
     }
 
     function stopAll() {
@@ -404,30 +383,20 @@
         currentMovieKey = '';
     }
 
-    /*
-     * Audio playback
-     */
+    // FADE-IN
 
     function startFade(audio, token) {
-        if (!boolSetting('fade')) {
-            audio.volume = Math.min(
-                1,
-                Math.max(
-                    0,
-                    numberSetting('volume', 20) / 100
-                )
-            );
-
-            return;
+        if (fadeTimer !== null) {
+            clearInterval(fadeTimer);
+            fadeTimer = null;
         }
 
-        var target = Math.min(
-            1,
-            Math.max(
-                0,
-                numberSetting('volume', 20) / 100
-            )
-        );
+        var target = targetVolume();
+
+        if (!boolSetting('fade')) {
+            audio.volume = target;
+            return;
+        }
 
         audio.volume = 0;
 
@@ -446,19 +415,20 @@
 
             var progress = Math.min(
                 1,
-                (Date.now() - started) /
-                    duration
+                (Date.now() - started) / duration
             );
 
-            audio.volume =
-                target * progress;
+            audio.volume = target * progress;
 
             if (progress >= 1) {
                 clearInterval(fadeTimer);
                 fadeTimer = null;
             }
+
         }, 60);
     }
+
+    // FULL TRACK PLAYBACK
 
     function playTrack(track, token) {
         if (
@@ -469,24 +439,16 @@
             return;
         }
 
-        if (
-            !track ||
-            !track.file
-        ) {
-            return;
-        }
+        if (!track || !track.file) return;
 
         var fileUrl;
 
         try {
-            fileUrl = new URL(
-                track.file
-            );
+            fileUrl = new URL(track.file);
 
             if (
                 fileUrl.protocol !== 'https:' ||
-                fileUrl.hostname !==
-                    'www.ostmusic.org'
+                fileUrl.hostname !== 'www.ostmusic.org'
             ) {
                 log('Unsupported audio source');
                 return;
@@ -498,153 +460,103 @@
         stopAudio();
 
         var audio = new Audio();
-
         currentAudio = audio;
 
         audio.preload = 'auto';
-        audio.loop = false;
+
+        /*
+         * FULL TRACK MODE
+         *
+         * No 30-second timer.
+         * No forced currentTime reset.
+         * Repeat only after natural completion.
+         */
+
+        audio.loop = true;
         audio.volume = 0;
-
-        var fragment = Math.max(
-            5,
-            numberSetting('fragment', 30)
-        );
-
-        function restartFragment() {
-            if (
-                token !== currentToken ||
-                currentAudio !== audio
-            ) {
-                return;
-            }
-
-            try {
-                audio.currentTime = 0;
-
-                if (audio.paused) {
-                    var retry = audio.play();
-
-                    if (
-                        retry &&
-                        typeof retry.catch ===
-                            'function'
-                    ) {
-                        retry.catch(function () {});
-                    }
-                }
-            } catch (e) {}
-        }
-
-        audio.addEventListener(
-            'ended',
-            restartFragment
-        );
-
-        audio.addEventListener(
-            'error',
-            function () {
-                if (
-                    token === currentToken &&
-                    currentAudio === audio
-                ) {
-                    log(
-                        'Audio playback error',
-                        track.name
-                    );
-                    stopAudio();
-                }
-            }
-        );
 
         audio.addEventListener(
             'playing',
             function () {
                 if (
                     token !== currentToken ||
-                    currentAudio !== audio
+                    audio !== currentAudio
                 ) {
                     return;
                 }
 
-                if (!fadeTimer) {
-                    startFade(audio, token);
-                }
+                startFade(audio, token);
             },
             { once: true }
         );
 
-        audio.src = fileUrl.href;
-
-        loopTimer = setInterval(function () {
-            if (
-                token !== currentToken ||
-                currentAudio !== audio
-            ) {
-                return;
-            }
-
-            try {
+        audio.addEventListener(
+            'error',
+            function () {
                 if (
-                    audio.currentTime >= fragment
+                    token !== currentToken ||
+                    audio !== currentAudio
                 ) {
-                    restartFragment();
+                    return;
                 }
-            } catch (e) {}
-        }, 250);
+
+                log(
+                    'Audio playback error:',
+                    track.name
+                );
+
+                stopAudio();
+            }
+        );
+
+        audio.src = fileUrl.href;
 
         try {
             var promise = audio.play();
 
             if (
                 promise &&
-                typeof promise.catch ===
-                    'function'
+                typeof promise.catch === 'function'
             ) {
                 promise.catch(function (error) {
                     if (
-                        token === currentToken
+                        token === currentToken &&
+                        audio === currentAudio
                     ) {
                         log(
                             'Audio start blocked:',
-                            error &&
-                            error.message
+                            error && error.message
                         );
                     }
                 });
             }
         } catch (e) {
-            log('Playback failed', e);
+            log('Playback failed:', e);
         }
 
         log(
-            'Playing:',
+            'Playing full track:',
             track.name,
             '—',
-            track.artist
+            track.artist,
+            'Duration:',
+            track.duration || 'unknown'
         );
     }
 
-    /*
-     * Worker API
-     */
+    // WORKER API
 
     function requestSoundtrack(movie, token) {
-        var title =
-            getMovieTitle(movie);
-
-        var year =
-            getYear(movie);
+        var title = getMovieTitle(movie);
+        var year = getYear(movie);
 
         if (!title) return;
 
         var cached = getCached(movie);
 
         if (cached) {
-            handleResult(
-                cached,
-                token
-            );
-
+            log('Using cached OST:', title);
+            handleResult(cached, token);
             return;
         }
 
@@ -656,21 +568,13 @@
             encodeURIComponent(year);
 
         var xhr = new XMLHttpRequest();
-
         currentRequest = xhr;
 
-        xhr.open(
-            'GET',
-            url,
-            true
-        );
-
+        xhr.open('GET', url, true);
         xhr.timeout = 15000;
 
         xhr.onreadystatechange = function () {
-            if (xhr.readyState !== 4) {
-                return;
-            }
+            if (xhr.readyState !== 4) return;
 
             if (currentRequest === xhr) {
                 currentRequest = null;
@@ -687,20 +591,14 @@
                 xhr.status < 200 ||
                 xhr.status >= 300
             ) {
-                log(
-                    'Worker HTTP error:',
-                    xhr.status
-                );
-
+                log('Worker HTTP error:', xhr.status);
                 return;
             }
 
             var data;
 
             try {
-                data = JSON.parse(
-                    xhr.responseText
-                );
+                data = JSON.parse(xhr.responseText);
             } catch (e) {
                 log('Invalid Worker JSON');
                 return;
@@ -712,11 +610,7 @@
             }
 
             setCached(movie, data);
-
-            handleResult(
-                data,
-                token
-            );
+            handleResult(data, token);
         };
 
         xhr.onerror = function () {
@@ -734,7 +628,7 @@
         try {
             xhr.send();
         } catch (e) {
-            log('Worker request failed', e);
+            log('Worker request failed:', e);
         }
     }
 
@@ -764,49 +658,37 @@
             boolSetting('verifiedOnly') &&
             data.confidence !== 'verified'
         ) {
-            log(
-                'Skipping unverified theme'
-            );
-
+            log('Skipping unverified theme');
             return;
         }
 
         log(
             'Found:',
             data.track.name,
+            'Selection:',
+            data.selection,
             'Confidence:',
             data.confidence
         );
 
-        playTrack(
-            data.track,
-            token
-        );
+        playTrack(data.track, token);
     }
 
-    /*
-     * Movie card
-     */
+    // MOVIE CARD
 
     function openMovie(movie) {
         if (!isEnabled()) {
+            activeCard = false;
             stopAll();
             return;
         }
 
-        if (!movie) {
-            return;
-        }
+        if (!movie) return;
 
-        var title =
-            getMovieTitle(movie);
+        var title = getMovieTitle(movie);
+        if (!title) return;
 
-        if (!title) {
-            return;
-        }
-
-        var key =
-            movieKey(movie);
+        var key = movieKey(movie);
 
         if (
             activeCard &&
@@ -820,19 +702,14 @@
         activeCard = true;
         currentMovieKey = key;
 
-        var token =
-            currentToken;
+        var token = currentToken;
 
         var delay = Math.max(
             0,
             numberSetting('delay', 2)
         ) * 1000;
 
-        log(
-            'Movie:',
-            title,
-            getYear(movie)
-        );
+        log('Movie:', title, getYear(movie));
 
         currentTimer = setTimeout(function () {
             currentTimer = null;
@@ -844,10 +721,8 @@
                 return;
             }
 
-            requestSoundtrack(
-                movie,
-                token
-            );
+            requestSoundtrack(movie, token);
+
         }, delay);
     }
 
@@ -856,16 +731,14 @@
         stopAll();
     }
 
-    /*
-     * Lampa events
-     */
+    // LAMPA EVENTS
 
     function handleFullEvent(event) {
         if (!event) return;
 
-        var type =
-            String(event.type || '')
-                .toLowerCase();
+        var type = String(
+            event.type || ''
+        ).toLowerCase();
 
         if (
             type === 'destroy' ||
@@ -878,27 +751,14 @@
 
         if (
             type === 'complite' ||
-            type === 'complete'
-        ) {
-            var movie =
-                getMovieFromEvent(event);
-
-            if (movie) {
-                openMovie(movie);
-            }
-
-            return;
-        }
-
-        if (
+            type === 'complete' ||
             type === 'start' ||
             type === 'open'
         ) {
-            var candidate =
-                getMovieFromEvent(event);
+            var movie = getMovieFromEvent(event);
 
-            if (candidate) {
-                openMovie(candidate);
+            if (movie) {
+                openMovie(movie);
             }
         }
     }
@@ -906,9 +766,9 @@
     function handlePlayerEvent(event) {
         if (!event) return;
 
-        var type =
-            String(event.type || '')
-                .toLowerCase();
+        var type = String(
+            event.type || ''
+        ).toLowerCase();
 
         if (
             type === 'start' ||
@@ -921,9 +781,7 @@
         }
     }
 
-    /*
-     * Settings
-     */
+    // SETTINGS
 
     function addSettings() {
         if (
@@ -943,8 +801,7 @@
                 icon:
                     '<svg viewBox="0 0 24 24" ' +
                     'width="24" height="24" ' +
-                    'fill="none" ' +
-                    'stroke="currentColor" ' +
+                    'fill="none" stroke="currentColor" ' +
                     'stroke-width="2" ' +
                     'stroke-linecap="round" ' +
                     'stroke-linejoin="round">' +
@@ -956,21 +813,16 @@
 
             function addParam(name, config) {
                 Lampa.SettingsApi.addParam({
-                    component:
-                        'original_soundtrack',
+                    component: 'original_soundtrack',
                     param: Object.assign(
                         {
-                            name:
-                                PREFIX + name
+                            name: PREFIX + name
                         },
                         config.param
                     ),
                     field: config.field,
                     onChange: function (value) {
-                        setSetting(
-                            name,
-                            value
-                        );
+                        setSetting(name, value);
 
                         if (config.onChange) {
                             config.onChange(value);
@@ -985,15 +837,16 @@
                     default: true
                 },
                 field: {
-                    name:
-                        'Увімкнути Original Soundtrack',
+                    name: 'Увімкнути Original Soundtrack',
                     description:
-                        'Автоматичне відтворення OST у картці фільму'
+                        'Автоматична музика в картці фільму'
                 },
                 onChange: function (value) {
                     if (
                         value === false ||
-                        value === 'false'
+                        value === 'false' ||
+                        value === 0 ||
+                        value === '0'
                     ) {
                         closeMovie();
                     }
@@ -1017,16 +870,16 @@
                 },
                 field: {
                     name: 'Гучність музики',
-                    description:
-                        'Стандартно 20%'
+                    description: 'Стандартно 20%'
                 },
-                onChange: function (value) {
+                onChange: function () {
                     if (currentAudio) {
-                        currentAudio.volume =
-                            Math.min(
-                                1,
-                                Number(value) / 100
-                            );
+                        if (fadeTimer !== null) {
+                            clearInterval(fadeTimer);
+                            fadeTimer = null;
+                        }
+
+                        currentAudio.volume = targetVolume();
                     }
                 }
             });
@@ -1044,30 +897,9 @@
                     }
                 },
                 field: {
-                    name:
-                        'Затримка запуску',
+                    name: 'Затримка запуску',
                     description:
-                        'Час перед пошуком музики'
-                }
-            });
-
-            addParam('fragment', {
-                param: {
-                    type: 'select',
-                    default: '30',
-                    values: {
-                        '15': '15 секунд',
-                        '20': '20 секунд',
-                        '30': '30 секунд',
-                        '45': '45 секунд',
-                        '60': '60 секунд'
-                    }
-                },
-                field: {
-                    name:
-                        'Тривалість фрагмента',
-                    description:
-                        'Після завершення фрагмент повторюється'
+                        'Час перед пошуком композиції'
                 }
             });
 
@@ -1077,8 +909,7 @@
                     default: true
                 },
                 field: {
-                    name:
-                        'Плавне наростання звуку',
+                    name: 'Плавне наростання звуку',
                     description:
                         'Fade-in приблизно 1,8 секунди'
                 }
@@ -1090,10 +921,9 @@
                     default: true
                 },
                 field: {
-                    name:
-                        'Кешувати результати',
+                    name: 'Кешувати результати',
                     description:
-                        'Швидший повторний запуск OST'
+                        'Швидший повторний запуск музики'
                 }
             });
 
@@ -1103,19 +933,16 @@
                     default: false
                 },
                 field: {
-                    name:
-                        'Лише перевірені теми',
+                    name: 'Лише перевірені теми',
                     description:
-                        'Не запускати композиції, обрані автоматичним алгоритмом'
+                        'Відтворювати тільки перевірені композиції'
                 }
             });
 
             Lampa.SettingsApi.addParam({
-                component:
-                    'original_soundtrack',
+                component: 'original_soundtrack',
                 param: {
-                    name:
-                        PREFIX + 'clear_cache',
+                    name: PREFIX + 'clear_cache',
                     type: 'static'
                 },
                 field: {
@@ -1143,28 +970,19 @@
 
         } catch (e) {
             settingsAdded = false;
-
-            log(
-                'Settings error:',
-                e
-            );
+            log('Settings error:', e);
         }
     }
 
-    /*
-     * Initialization
-     */
+    // INITIALIZATION
 
     function initialize() {
-        if (initialized) {
-            return;
-        }
+        if (initialized) return;
 
         if (
             !window.Lampa ||
             !Lampa.Listener ||
-            typeof Lampa.Listener.follow !==
-                'function'
+            typeof Lampa.Listener.follow !== 'function'
         ) {
             return;
         }
@@ -1183,19 +1001,14 @@
             handlePlayerEvent
         );
 
-        /*
-         * Additional protection when Lampa
-         * navigates away from the movie card.
-         */
         Lampa.Listener.follow(
             'activity',
             function (event) {
                 if (!event) return;
 
-                var type =
-                    String(
-                        event.type || ''
-                    ).toLowerCase();
+                var type = String(
+                    event.type || ''
+                ).toLowerCase();
 
                 if (
                     type !== 'start' &&
@@ -1229,7 +1042,7 @@
         );
 
         log(
-            'Original Soundtrack 2.1 initialized'
+            'Original Soundtrack 2.2 initialized'
         );
     }
 
@@ -1240,10 +1053,7 @@
         ) {
             initialize();
         } else {
-            setTimeout(
-                boot,
-                500
-            );
+            setTimeout(boot, 500);
         }
     }
 
