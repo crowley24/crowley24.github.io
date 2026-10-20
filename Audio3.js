@@ -2,325 +2,290 @@
 (function () {
     'use strict';
 
-    if (window.ost_search_diag_100) return;
-    window.ost_search_diag_100 = true;
+    if (window.ost_network_test_100) return;
+    window.ost_network_test_100 = true;
 
-    var BASE = 'https://www.ostmusic.org';
-    var PREFIX = '[OSTMusic Search]';
-    var lastReport = null;
-    var busy = false;
+    var URL = 'https://www.ostmusic.org/album/id/62';
+    var results = [];
+    var running = false;
 
     function notify(message) {
-        console.log(PREFIX, message);
+        console.log('[OST Network]', message);
 
         try {
-            if (window.Lampa &&
-                Lampa.Noty &&
-                Lampa.Noty.show) {
+            if (Lampa.Noty && Lampa.Noty.show) {
                 Lampa.Noty.show(message);
             }
         } catch (e) {}
     }
 
-    function request(url, callback) {
-        var xhr = new XMLHttpRequest();
+    function summarize(html) {
+        var text = typeof html === 'string'
+            ? html
+            : JSON.stringify(html || '');
 
-        xhr.open('GET', url, true);
+        return {
+            length: text.length,
+            isHTML: /<html|<!doctype/i.test(text),
+            interstellar: /interstellar/i.test(text),
+            tracks: (
+                text.match(/view\/track\/id\/\d+/gi) || []
+            ).length,
+            preview: text.substring(0, 150)
+        };
+    }
+
+    function record(name, success, detail) {
+        results.push({
+            method: name,
+            success: success,
+            detail: detail
+        });
+
+        console.log(
+            '[OST Network]',
+            name,
+            success ? 'SUCCESS' : 'FAILED',
+            detail
+        );
+
+        notify(
+            name + ': ' +
+            (success ? 'OK' : 'ПОМИЛКА')
+        );
+    }
+
+    function testXHR(done) {
+        var xhr = new XMLHttpRequest();
+        var finished = false;
+
+        function finish(ok, info) {
+            if (finished) return;
+            finished = true;
+
+            record('XHR', ok, info);
+            done();
+        }
+
+        xhr.open('GET', URL, true);
         xhr.timeout = 12000;
 
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState !== 4) return;
+        xhr.onload = function () {
+            var ok = xhr.status >= 200 &&
+                     xhr.status < 300;
 
-            if (xhr.status >= 200 &&
-                xhr.status < 300) {
-                callback(null, xhr.responseText);
-            } else {
-                callback(
-                    new Error('HTTP ' + xhr.status),
-                    null
-                );
-            }
+            finish(
+                ok,
+                ok
+                    ? summarize(xhr.responseText)
+                    : 'HTTP ' + xhr.status
+            );
         };
 
         xhr.onerror = function () {
-            callback(new Error('Network/CORS'), null);
+            finish(false, 'Network/CORS');
         };
 
         xhr.ontimeout = function () {
-            callback(new Error('Timeout'), null);
+            finish(false, 'Timeout');
         };
 
         try {
             xhr.send();
         } catch (e) {
-            callback(e, null);
+            finish(false, e.message);
         }
     }
 
-    function analyze(html) {
-        var result = {
-            bytes: html.length,
-            tracks: [],
-            albums: [],
-            title: ''
-        };
-
-        var doc = new DOMParser().parseFromString(
-            html,
-            'text/html'
-        );
-
-        result.title = doc.title || '';
-
-        var links = doc.querySelectorAll('a[href]');
-        var seen = {};
-
-        for (var i = 0; i < links.length; i++) {
-            var link = links[i];
-            var href = link.getAttribute('href') || '';
-            var name = (
-                link.textContent || ''
-            ).replace(/\s+/g, ' ').trim();
-
-            var trackMatch = href.match(
-                /(?:view\/track\/id\/|[?&]id=)(\d+)/i
+    function testReguest(done) {
+        if (!Lampa.Reguest) {
+            record(
+                'Lampa.Reguest',
+                false,
+                'API відсутній'
             );
-
-            if (trackMatch &&
-                /track|view=file/i.test(href)) {
-                var trackId = trackMatch[1];
-
-                if (!seen['t' + trackId]) {
-                    seen['t' + trackId] = true;
-
-                    result.tracks.push({
-                        id: trackId,
-                        name: name,
-                        url: href
-                    });
-                }
-            }
-
-            var albumMatch = href.match(
-                /album\/id\/(\d+)/i
-            );
-
-            if (albumMatch) {
-                var albumId = albumMatch[1];
-
-                if (!seen['a' + albumId]) {
-                    seen['a' + albumId] = true;
-
-                    result.albums.push({
-                        id: albumId,
-                        name: name,
-                        url: href
-                    });
-                }
-            }
+            done();
+            return;
         }
 
-        return result;
+        var finished = false;
+        var timeout = null;
+
+        function finish(ok, info) {
+            if (finished) return;
+            finished = true;
+
+            clearTimeout(timeout);
+
+            record('Lampa.Reguest', ok, info);
+            done();
+        }
+
+        timeout = setTimeout(function () {
+            finish(false, 'Timeout');
+        }, 12000);
+
+        try {
+            var request = new Lampa.Reguest();
+
+            request.silent(
+                URL,
+                function (data) {
+                    finish(true, summarize(data));
+                },
+                function (error) {
+                    finish(
+                        false,
+                        error
+                            ? String(error.status ||
+                                     error.message ||
+                                     error)
+                            : 'Request failed'
+                    );
+                },
+                false,
+                {
+                    dataType: 'text',
+                    timeout: 10000
+                }
+            );
+        } catch (e) {
+            finish(false, e.message);
+        }
     }
 
-    function probe(label, url, callback) {
-        notify('Перевірка: ' + label);
+    function testFetch(done) {
+        if (typeof fetch !== 'function') {
+            record('fetch', false, 'API відсутній');
+            done();
+            return;
+        }
 
-        request(url, function (error, html) {
-            if (error) {
-                callback({
-                    label: label,
-                    url: url,
-                    ok: false,
-                    error: error.message
-                });
+        var finished = false;
+        var timeout = setTimeout(function () {
+            finish(false, 'Timeout');
+        }, 12000);
 
-                return;
+        function finish(ok, info) {
+            if (finished) return;
+            finished = true;
+
+            clearTimeout(timeout);
+
+            record('fetch', ok, info);
+            done();
+        }
+
+        fetch(URL).then(function (response) {
+            if (!response.ok) {
+                throw new Error(
+                    'HTTP ' + response.status
+                );
             }
 
-            var parsed = analyze(html);
-
-            callback({
-                label: label,
-                url: url,
-                ok: true,
-                bytes: parsed.bytes,
-                title: parsed.title,
-                tracks: parsed.tracks,
-                albums: parsed.albums
-            });
+            return response.text();
+        }).then(function (html) {
+            finish(true, summarize(html));
+        }).catch(function (error) {
+            finish(false, error.message);
         });
     }
 
     function run() {
-        if (busy) {
-            notify('Перевірка вже виконується');
+        if (running) {
+            notify('Тест уже виконується');
             return;
         }
 
-        busy = true;
+        running = true;
+        results = [];
 
-        var tests = [
-            {
-                label: 'Interstellar — альбом',
-                url: BASE + '/album/id/62'
-            },
-            {
-                label: 'Inception — альбом',
-                url: BASE + '/album/id/67'
-            },
-            {
-                label: 'Каталог фільмів',
-                url: BASE + '/movies'
-            },
-            {
-                label: 'Пошуковий запит',
-                url: BASE +
-                    '/?searchword=Interstellar'
-            }
-        ];
+        notify('Починаємо мережевий тест...');
 
-        var report = [];
-        var index = 0;
+        testXHR(function () {
+            testReguest(function () {
+                testFetch(function () {
+                    running = false;
 
-        function next() {
-            if (index >= tests.length) {
-                busy = false;
-                lastReport = report;
+                    var successful = results.filter(
+                        function (item) {
+                            return item.success;
+                        }
+                    ).length;
 
-                var success = 0;
-                var tracks = 0;
-                var albums = 0;
-
-                report.forEach(function (item) {
-                    if (item.ok) {
-                        success++;
-                        tracks += item.tracks.length;
-                        albums += item.albums.length;
-                    }
+                    notify(
+                        'Готово: ' +
+                        successful +
+                        '/3 способи працюють'
+                    );
 
                     console.log(
-                        PREFIX,
-                        JSON.stringify(item, null, 2)
+                        '[OST Network] FULL REPORT',
+                        JSON.stringify(results, null, 2)
                     );
                 });
-
-                notify(
-                    'Готово: ' + success +
-                    '/4 сторінки; треків: ' +
-                    tracks + '; альбомів: ' +
-                    albums
-                );
-
-                return;
-            }
-
-            var test = tests[index++];
-
-            probe(
-                test.label,
-                test.url,
-                function (result) {
-                    report.push(result);
-
-                    if (result.ok) {
-                        notify(
-                            test.label +
-                            ': OK, треків ' +
-                            result.tracks.length
-                        );
-                    } else {
-                        notify(
-                            test.label +
-                            ': ' + result.error
-                        );
-                    }
-
-                    next();
-                }
-            );
-        }
-
-        next();
+            });
+        });
     }
 
     function showReport() {
-        if (!lastReport) {
-            notify('Спочатку запусти перевірку');
+        if (!results.length) {
+            notify('Спочатку запусти тест');
             return;
         }
 
-        var lines = lastReport.map(function (item) {
-            return item.label + ': ' +
-                (item.ok
-                    ? 'OK, tracks=' +
-                      item.tracks.length +
-                      ', albums=' +
-                      item.albums.length
-                    : item.error);
-        });
+        var message = results.map(function (item) {
+            return item.method + ': ' +
+                (item.success ? 'OK' : 'FAIL');
+        }).join(' | ');
 
-        notify(lines.join(' | '));
+        notify(message);
 
         console.log(
-            PREFIX,
-            'Повний звіт:',
-            lastReport
+            '[OST Network] REPORT',
+            results
         );
     }
 
-    function addSettings() {
-        if (!Lampa.SettingsApi) return;
-
-        Lampa.SettingsApi.addComponent({
-            component: 'ost_search_diag',
-            name: 'OSTMusic Search Diagnostic',
-            icon: 'music'
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'ost_search_diag',
-            param: {
-                name: 'ost_diag_run',
-                type: 'trigger',
-                default: false
-            },
-            field: {
-                name: 'Перевірити OSTMusic',
-                description:
-                    'Доступ до альбомів, треків і каталогу'
-            },
-            onChange: run
-        });
-
-        Lampa.SettingsApi.addParam({
-            component: 'ost_search_diag',
-            param: {
-                name: 'ost_diag_report',
-                type: 'trigger',
-                default: false
-            },
-            field: {
-                name: 'Показати результат'
-            },
-            onChange: showReport
-        });
-    }
-
-    window.OSTMusicDiagnostic = {
-        version: '1.0',
-        run: run,
-        report: function () {
-            return lastReport;
-        }
-    };
-
     function init() {
         try {
-            addSettings();
-            console.log(PREFIX, 'Ready 1.0');
+            Lampa.SettingsApi.addComponent({
+                component: 'ost_network_test',
+                name: 'OSTMusic Network Test',
+                icon: 'music'
+            });
+
+            Lampa.SettingsApi.addParam({
+                component: 'ost_network_test',
+                param: {
+                    name: 'ost_network_run',
+                    type: 'trigger',
+                    default: false
+                },
+                field: {
+                    name: 'Перевірити мережевий доступ',
+                    description:
+                        'XHR / Lampa.Reguest / fetch'
+                },
+                onChange: run
+            });
+
+            Lampa.SettingsApi.addParam({
+                component: 'ost_network_test',
+                param: {
+                    name: 'ost_network_report',
+                    type: 'trigger',
+                    default: false
+                },
+                field: {
+                    name: 'Показати результат'
+                },
+                onChange: showReport
+            });
+
+            console.log('[OST Network] Ready 1.0');
         } catch (e) {
-            console.error(PREFIX, e);
+            console.error('[OST Network]', e);
         }
     }
 
@@ -328,7 +293,6 @@
         init();
     } else {
         var attempts = 0;
-
         var wait = setInterval(function () {
             attempts++;
 
