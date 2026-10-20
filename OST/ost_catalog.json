@@ -8,6 +8,7 @@
     {"title":"The Matrix","year":1999,"aliases":["Матриця","Матрица","Matrix"],"albumId":"172","trackId":"4081","track":"Clubbed To Death (kurayamino Mix)","artist":"Rob D","verified":true},
     {"title":"Terminator 2: Judgment Day","year":1991,"aliases":["Terminator 2","Термінатор 2: Судний день","Терминатор 2: Судный день"],"albumId":"23","trackId":"482","track":"Main Title (Terminator 2 Theme","artist":"Brad Fiedel","verified":true},
     {"title":"Titanic","year":1997,"aliases":["Титанік","Титаник"],"albumId":"377","trackId":"8984","track":"My Heart Will Go On - Performed by Celine Dion","artist":"Celine Dion","verified":true},
+    {"title":"The Lord of the Rings: The Fellowship of the Ring","year":2001,"aliases":["Володар перснів: Братство персня","Властелин колец: Братство кольца"],"albumId":"675","trackId":"16290","track":"Concerning Hobbits","artist":"Howard Shore","verified":true}
     {"title":"Gladiator","year":2000,"aliases":["Гладіатор","Гладиатор"],"albumId":"108","trackId":"2332","track":"Now We Are Free","artist":"Hans Zimmer & Lisa Gerrard","verified":false}
   ]
 }
