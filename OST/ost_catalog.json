@@ -24,6 +24,12 @@
     {"title":"Oppenheimer","year":2023,"aliases":[],"albumId":"1309","trackId":"31516","track":"Can You Hear The Music","artist":"Ludwig Goransson","verified":false},
     {"title":"The Last Samurai","year":2003,"aliases":[],"albumId":"208","trackId":"4928","track":"A Small Measure Of Peace","artist":"Hans Zimmer","verified":false},
     {"title":"The Green Mile","year":1999,"aliases":[],"albumId":"1199","trackId":"28421","track":"The Green Mile","artist":"Thomas Newman","verified":false},
-    {"title":"The Social Network","year":2010,"aliases":[],"albumId":"220","trackId":"5233","track":"Hand Covers Bruise","artist":"Trent Reznor","verified":false}
+    {"title":"The Social Network","year":2010,"aliases":[],"albumId":"220","trackId":"5233","track":"Hand Covers Bruise","artist":"Trent Reznor","verified":false},
+    {"title":"Dune","year":2021,"aliases":["Дюна"],"albumId":"1156","trackId":"27307","track":"Dream Of Arrakis","artist":"Hans Zimmer","verified":false},
+{"title":"Blade Runner 2049","year":2017,"aliases":["Той, хто біжить по лезу 2049"],"albumId":"81","trackId":"1677","track":"2049","artist":"Hans Zimmer","verified":false},
+{"title":"Mad Max: Fury Road","year":2015,"aliases":["Шалений Макс: Дорога гніву","Mad Max Fury Road"],"albumId":"61","trackId":"1277","track":"Brothers In Arms (Extended Version)","artist":"Junkie XL","verified":false},
+{"title":"The Hateful Eight","year":2015,"aliases":["Мерзенна вісімка"],"albumId":"266","trackId":"6381","track":"L'Ultima Diligenza Di Red Rock","artist":"Ennio Morricone","verified":false},
+{"title":"Django Unchained","year":2012,"aliases":["Джанґо вільний","Джанго освобожденный"],"albumId":"630","trackId":"15221","track":"Luis Bacalov & Rocky Roberts - Django","artist":"VA","verified":false}
+
   ]
 }
