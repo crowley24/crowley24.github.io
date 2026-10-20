@@ -11,6 +11,16 @@
     {"title":"The Lord of the Rings: The Fellowship of the Ring","year":2001,"aliases":["Володар перснів: Братство персня","Властелин колец: Братство кольца"],"albumId":"675","trackId":"16290","track":"Concerning Hobbits","artist":"Howard Shore","verified":true},
     {"title":"The Lord of the Rings: The Two Towers","year":2002,"aliases":["Володар перснів: Дві вежі","Властелин колец: Две крепости"],"albumId":"675","trackId":"16294","track":"The Riders of Rohan","artist":"Howard Shore","verified":true},
     {"title":"The Lord of the Rings: The Return of the King","year":2003,"aliases":["Володар перснів: Повернення короля","Властелин колец: Возвращение короля"],"albumId":"675","trackId":"16302","track":"The Return of the King - Finale","artist":"Howard Shore","verified":true}
+   
+{"title":"The Dark Knight","year":2008,"aliases":["Темний лицар","Темный рыцарь"],"albumId":"1","trackId":"1","track":"Why So Serious?","artist":"Hans Zimmer","verified":false},
+{"title":"Braveheart","year":1995,"aliases":["Хоробре серце","Храброе сердце"],"albumId":"72","trackId":"1476","track":"For The Love Of A Princess","artist":"James Horner","verified":false},
+{"title":"Avatar","year":2009,"aliases":["Аватар"],"albumId":"376","trackId":"8970","track":"Leona Lewis - I See You (Theme from Avatar)","artist":"James Horner","verified":false},
+{"title":"Man of Steel","year":2013,"aliases":["Людина зі сталі","Человек из стали"],"albumId":"87","trackId":"1846","track":"Flight","artist":"Hans Zimmer","verified":false},
+{"title":"The Da Vinci Code","year":2006,"aliases":["Код да Вінчі","Код да Винчи"],"albumId":"259","trackId":"6157","track":"Main Title-Sauniere Dies","artist":"Hans Zimmer","verified":false},
+{"title":"Batman Begins","year":2005,"aliases":["Бетмен: Початок","Бэтмен: Начало"],"albumId":"105","trackId":"2260","track":"End Credits","artist":"Hans Zimmer","verified":false},
+{"title":"Forrest Gump","year":1994,"aliases":["Форрест Ґамп","Форрест Гамп"],"albumId":"255","trackId":"6068","track":"Alan Silvestri - Forrest Gump Suite","artist":"VA","verified":false},
+{"title":"Back to the Future","year":1985,"aliases":["Назад у майбутнє","Назад в будущее"],"albumId":"90","trackId":"1891","track":"Alan Silvestri - Back To The Future","artist":"VA","verified":false}
+
     {"title":"Gladiator","year":2000,"aliases":["Гладіатор","Гладиатор"],"albumId":"108","trackId":"2332","track":"Now We Are Free","artist":"Hans Zimmer & Lisa Gerrard","verified":false}
   ]
 }
