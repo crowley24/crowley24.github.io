@@ -1,6 +1,6 @@
 
 {
-  "version": "1.3.0",
+  "version": "1.3.1",
   "source": "ostmusic.org",
   "movies": [
     {"title":"Interstellar","year":2014,"aliases":["Інтерстеллар","Интерстеллар"],"albumId":"62","trackId":"1293","track":"Cornfield Chase","artist":"Hans Zimmer","verified":true},
@@ -21,25 +21,9 @@
     {"title":"Back to the Future","year":1985,"aliases":["Назад у майбутнє","Назад в будущее"],"albumId":"90","trackId":"1891","track":"Alan Silvestri - Back To The Future","artist":"VA","verified":false},
     {"title":"Schindler's List","year":1993,"aliases":["Список Шиндлера"],"albumId":"606","trackId":"14581","track":"Theme From Schindler's List","artist":"John Williams","verified":false},
     {"title":"Gladiator","year":2000,"aliases":["Гладіатор","Гладиатор"],"albumId":"108","trackId":"2332","track":"Now We Are Free","artist":"Hans Zimmer & Lisa Gerrard","verified":false},
-    {
-    "title": "Oppenheimer",
-    "year": 2023,
-    "aliases": [],
-    "albumId": "1309",
-    "trackId": "31516",
-    "track": "Can You Hear The Music",
-    "artist": "Ludwig Goransson",
-    "verified": false
-  },
-  {
-    "title": "The Last Samurai",
-    "year": 2003,
-    "aliases": [],
-    "albumId": "208",
-    "trackId": "4928",
-    "track": "A Small Measure Of Peace",
-    "artist": "Hans Zimmer",
-    "verified": false
-  }
+    {"title":"Oppenheimer","year":2023,"aliases":[],"albumId":"1309","trackId":"31516","track":"Can You Hear The Music","artist":"Ludwig Goransson","verified":false},
+    {"title":"The Last Samurai","year":2003,"aliases":[],"albumId":"208","trackId":"4928","track":"A Small Measure Of Peace","artist":"Hans Zimmer","verified":false},
+    {"title":"The Green Mile","year":1999,"aliases":[],"albumId":"1199","trackId":"28421","track":"The Green Mile","artist":"Thomas Newman","verified":false},
+    {"title":"The Social Network","year":2010,"aliases":[],"albumId":"220","trackId":"5233","track":"Hand Covers Bruise","artist":"Trent Reznor","verified":false}
   ]
 }
