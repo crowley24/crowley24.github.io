@@ -76,6 +76,13 @@
     {"title":"Terminator Salvation","year":2009,"aliases":["Термінатор: Спасіння","Терминатор: Да придёт спаситель"],"albumId":"40","trackId":"862","track":"Opening","artist":"Danny Elfman","verified":true},
     {"title":"Terminator: Dark Fate","year":2019,"aliases":["Термінатор: Фатум","Терминатор: Темные судьбы","Terminator Dark Fate"],"albumId":"931","trackId":"22159","track":"Terminator","artist":"Junkie XL","verified":true},
     
+    {"title":"Scream","year":1996,"aliases":["Крик","Scream 1","Крик 1"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=DdRgmUGHv3Q","track":"Scream Theme","verified":false},
+    {"title":"Scream 2","year":1997,"aliases":["Крик 2","Scream II"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=DdRgmUGHv3Q","track":"Scream Theme","verified":false},
+    {"title":"Scream 3","year":2000,"aliases":["Крик 3","Scream III"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=DdRgmUGHv3Q","track":"Scream Theme","verified":false},
+    {"title":"Scream 4","year":2011,"aliases":["Крик 4","Scre4m","Scream IV"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=DdRgmUGHv3Q","track":"Scream Theme","verified":false},
+    {"title":"Scream","year":2022,"aliases":["Крик","Крик 5","Scream 5"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=DdRgmUGHv3Q","track":"Scream Theme","verified":false},
+    {"title":"Scream VI","year":2023,"aliases":["Крик 6","Scream 6"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=DdRgmUGHv3Q","track":"Scream Theme","verified":false},
+    
     {"title":"Raiders of the Lost Ark","year":1981,"aliases":["Indiana Jones and the Raiders of the Lost Ark","Індіана Джонс: У пошуках втраченого ковчега","Індіана Джонс і шукачі втраченого ковчега"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=ntXJJwEk1NA","track":"The Raiders March","artist":"John Williams","verified":false},
     {"title":"Indiana Jones and the Temple of Doom","year":1984,"aliases":["Індіана Джонс і храм долі","Індіана Джонс: Храм долі"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=ntXJJwEk1NA","track":"The Raiders March","artist":"John Williams","verified":false},
     {"title":"Indiana Jones and the Last Crusade","year":1989,"aliases":["Індіана Джонс і останній хрестовий похід","Індіана Джонс: Останній хрестовий похід"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=ntXJJwEk1NA","track":"The Raiders March","artist":"John Williams","verified":false},
