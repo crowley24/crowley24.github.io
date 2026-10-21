@@ -1421,19 +1421,20 @@
             }
 
             if (index >= titles.length) {
-                status(
-                    'OST не знайдено: ' +
-                    titles.join(' / ') +
-                    ' (' + year + ')' +
-                    (
-                        reasons.length
-                            ? ' — ' + reasons.join('; ')
-                            : ''
-                    ),
-                    true
-                );
+    var message =
+        'OST не знайдено: ' +
+        titles[0] +
+        ' (' + year + ')';
 
-                return;
+    log(message, {
+        titles: titles,
+        reasons: reasons,
+        attempts: lastRequestInfo.attempts
+    });
+
+    status(message, false);
+
+    return;
             }
 
             var title = titles[index++];
