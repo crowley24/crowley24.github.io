@@ -71,9 +71,16 @@
     {"title":"Halloween Kills","year":2021,"aliases":["Хелловін убиває","Хэллоуин убивает"],"albumId":"443","trackId":"10620","track":"Halloween Theme","artist":"John Carpenter","verified":false},
     {"title":"Halloween Ends","year":2022,"aliases":["Хелловін: Кінець","Хэллоуин заканчивается"],"albumId":"1233","trackId":"29317","track":"Halloween Ends","artist":"John Carpenter","verified":false},
     {"title":"The Terminator","year":1984,"aliases":["Термінатор","Терминатор"],"albumId":"22","trackId":"471","track":"The Terminator Theme","artist":"Brad Fiedel","verified":true},
-{"title":"Terminator 2: Judgment Day","year":1991,"aliases":["Термінатор 2: Судний день","Терминатор 2: Судный день","Terminator 2"],"albumId":"23","trackId":"482","track":"Main Title (Terminator 2 Theme)","artist":"Brad Fiedel","verified":true},
-{"title":"Terminator 3: Rise of the Machines","year":2003,"aliases":["Термінатор 3: Повстання машин","Терминатор 3: Восстание машин","Terminator 3"],"albumId":"29","trackId":"620","track":"The Terminator","artist":"Marco Beltrami","verified":true},
-{"title":"Terminator Salvation","year":2009,"aliases":["Термінатор: Спасіння","Терминатор: Да придёт спаситель"],"albumId":"40","trackId":"862","track":"Opening","artist":"Danny Elfman","verified":true},
-{"title":"Terminator: Dark Fate","year":2019,"aliases":["Термінатор: Фатум","Терминатор: Темные судьбы","Terminator Dark Fate"],"albumId":"931","trackId":"22159","track":"Terminator","artist":"Junkie XL","verified":true}
+    {"title":"Terminator 2: Judgment Day","year":1991,"aliases":["Термінатор 2: Судний день","Терминатор 2: Судный день","Terminator 2"],"albumId":"23","trackId":"482","track":"Main Title (Terminator 2 Theme)","artist":"Brad Fiedel","verified":true},
+    {"title":"Terminator 3: Rise of the Machines","year":2003,"aliases":["Термінатор 3: Повстання машин","Терминатор 3: Восстание машин","Terminator 3"],"albumId":"29","trackId":"620","track":"The Terminator","artist":"Marco Beltrami","verified":true},
+    {"title":"Terminator Salvation","year":2009,"aliases":["Термінатор: Спасіння","Терминатор: Да придёт спаситель"],"albumId":"40","trackId":"862","track":"Opening","artist":"Danny Elfman","verified":true},
+    {"title":"Terminator: Dark Fate","year":2019,"aliases":["Термінатор: Фатум","Терминатор: Темные судьбы","Terminator Dark Fate"],"albumId":"931","trackId":"22159","track":"Terminator","artist":"Junkie XL","verified":true},
+    
+    {"title":"Raiders of the Lost Ark","year":1981,"aliases":["Indiana Jones and the Raiders of the Lost Ark","Індіана Джонс: У пошуках втраченого ковчега","Індіана Джонс і шукачі втраченого ковчега"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=ntXJJwEk1NA","track":"The Raiders March","artist":"John Williams","verified":false},
+    {"title":"Indiana Jones and the Temple of Doom","year":1984,"aliases":["Індіана Джонс і храм долі","Індіана Джонс: Храм долі"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=ntXJJwEk1NA","track":"The Raiders March","artist":"John Williams","verified":false},
+    {"title":"Indiana Jones and the Last Crusade","year":1989,"aliases":["Індіана Джонс і останній хрестовий похід","Індіана Джонс: Останній хрестовий похід"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=ntXJJwEk1NA","track":"The Raiders March","artist":"John Williams","verified":false},
+    {"title":"Indiana Jones and the Kingdom of the Crystal Skull","year":2008,"aliases":["Індіана Джонс і королівство кришталевого черепа","Індіана Джонс: Королівство кришталевого черепа"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=ntXJJwEk1NA","track":"The Raiders March","artist":"John Williams","verified":false},
+    {"title":"Indiana Jones and the Dial of Destiny","year":2023,"aliases":["Індіана Джонс і реліквія долі","Індіана Джонс: Реліквія долі"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=ntXJJwEk1NA","track":"The Raiders March","artist":"John Williams","verified":false}
+    
   ]
 }
