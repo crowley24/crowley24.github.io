@@ -1,12 +1,40 @@
 
-// Original Soundtrack Worker 2.8.3
-// Cloudflare Workers — OSTMusic.org + YouTube catalog sources
+/*
+ * ORIGINAL SOUNDTRACK
+ * Cloudflare Worker 2.8.4
+ *
+ * Sources:
+ * - OSTMusic.org
+ * - YouTube entries from JSON catalog
+ *
+ * Catalog:
+ * https://crowley24.github.io/OST/ost_catalog.json
+ *
+ * Compatible with:
+ * - Lampa Original Soundtrack 2.5.1
+ * - Android TV / Mobile
+ *
+ * NEW IN 2.8.4:
+ * - Better punctuation handling
+ * - Abbreviation variants: M.D. / MD
+ * - Automatic short-title search
+ * - Safer alternative-title matching
+ * - Theme Song recognition
+ * - Artist-prefixed track recognition
+ * - Improved diagnostic track ranking
+ *
+ * No automatic catalog modifications.
+ */
 
-const VERSION = '2.8.3';
+const VERSION = '2.8.4';
+
 const BASE = 'https://www.ostmusic.org';
-const CATALOG_URL = 'https://crowley24.github.io/OST/ost_catalog.json';
+
+const CATALOG_URL =
+ 'https://crowley24.github.io/OST/ost_catalog.json';
 
 const TIMEOUT = 12000;
+
 const CATALOG_TTL = 300000;
 const SEARCH_TTL = 600000;
 const TRACK_TTL = 600000;
@@ -25,31 +53,31 @@ const HEADERS = {
 };
 
 const DEFAULT_MOVIES = [
- ['Pirates of the Caribbean: The Curse of the Black Pearl',2003,"He's a Pirate"],
- ["Harry Potter and the Philosopher's Stone",2001,"Hedwig's Theme"],
- ['The Dark Knight',2008,'Why So Serious?'],
- ['Batman Begins',2005,'Molossus'],
- ['The Dark Knight Rises',2012,'Rise'],
- ['Gladiator',2000,'Now We Are Free'],
- ['Braveheart',1995,'For the Love of a Princess'],
- ['The Last of the Mohicans',1992,'Promentory'],
- ['Jurassic Park',1993,'Theme from Jurassic Park'],
- ['Star Wars',1977,'Main Title'],
- ['Star Wars: The Empire Strikes Back',1980,'The Imperial March'],
- ['The Godfather',1972,'Love Theme'],
- ["Schindler's List",1993,"Theme from Schindler's List"],
- ['Forrest Gump',1994,'Feather Theme'],
- ['The Lion King',1994,'Circle of Life'],
- ['Avatar',2009,'I See You'],
- ['Transformers',2007,'Arrival to Earth'],
- ['Man of Steel',2013,'Flight'],
- ['The Avengers',2012,'The Avengers'],
- ['The Da Vinci Code',2006,'Chevaliers de Sangreal'],
- ['Requiem for a Dream',2000,'Lux Aeterna'],
- ['The Good, the Bad and the Ugly',1966,'The Ecstasy of Gold'],
- ['Back to the Future',1985,'Main Title'],
- ['Mission: Impossible',1996,'Theme'],
- ['The Rock',1996,'Hummel Gets the Rockets']
+ ['Pirates of the Caribbean: The Curse of the Black Pearl', 2003, "He's a Pirate"],
+ ["Harry Potter and the Philosopher's Stone", 2001, "Hedwig's Theme"],
+ ['The Dark Knight', 2008, 'Why So Serious?'],
+ ['Batman Begins', 2005, 'Molossus'],
+ ['The Dark Knight Rises', 2012, 'Rise'],
+ ['Gladiator', 2000, 'Now We Are Free'],
+ ['Braveheart', 1995, 'For the Love of a Princess'],
+ ['The Last of the Mohicans', 1992, 'Promentory'],
+ ['Jurassic Park', 1993, 'Theme from Jurassic Park'],
+ ['Star Wars', 1977, 'Main Title'],
+ ['Star Wars: The Empire Strikes Back', 1980, 'The Imperial March'],
+ ['The Godfather', 1972, 'Love Theme'],
+ ["Schindler's List", 1993, "Theme from Schindler's List"],
+ ['Forrest Gump', 1994, 'Feather Theme'],
+ ['The Lion King', 1994, 'Circle of Life'],
+ ['Avatar', 2009, 'I See You'],
+ ['Transformers', 2007, 'Arrival to Earth'],
+ ['Man of Steel', 2013, 'Flight'],
+ ['The Avengers', 2012, 'The Avengers'],
+ ['The Da Vinci Code', 2006, 'Chevaliers de Sangreal'],
+ ['Requiem for a Dream', 2000, 'Lux Aeterna'],
+ ['The Good, the Bad and the Ugly', 1966, 'The Ecstasy of Gold'],
+ ['Back to the Future', 1985, 'Main Title'],
+ ['Mission: Impossible', 1996, 'Theme'],
+ ['The Rock', 1996, 'Hummel Gets the Rockets']
 ];
 
 const SEARCH_ALIASES = {
@@ -61,24 +89,41 @@ const SEARCH_ALIASES = {
   'Harry Potter and the Sorcerers Stone',
   'Harry Potter'
  ],
- 'the dark knight rises': ['Dark Knight Rises'],
+ 'the dark knight rises': [
+  'Dark Knight Rises'
+ ],
  'star wars the empire strikes back': [
   'The Empire Strikes Back',
   'Star Wars Episode V'
  ],
- 'the good the bad and the ugly': ['Good Bad Ugly'],
- 'mission impossible': ['Mission Impossible']
+ 'the good the bad and the ugly': [
+  'Good Bad Ugly'
+ ],
+ 'mission impossible': [
+  'Mission Impossible'
+ ]
 };
 
+/* =========================================================
+   RESPONSES
+========================================================= */
+
 function response(data, status = 200) {
- return new Response(JSON.stringify(data, null, 2), {
-  status,
-  headers: HEADERS
- });
+ return new Response(
+  JSON.stringify(data, null, 2),
+  {
+   status,
+   headers: HEADERS
+  }
+ );
 }
 
-function norm(v) {
- return String(v ?? '')
+/* =========================================================
+   NORMALIZATION
+========================================================= */
+
+function norm(value) {
+ return String(value ?? '')
   .toLowerCase()
   .normalize('NFKD')
   .replace(/[\u0300-\u036f]/g, '')
@@ -88,18 +133,22 @@ function norm(v) {
   .trim();
 }
 
-function yearNum(v) {
- const m = String(v ?? '').match(/\b(?:18|19|20)\d{2}\b/);
- return m ? Number(m[0]) : 0;
+function yearNum(value) {
+ const match = String(value ?? '')
+  .match(/\b(?:18|19|20)\d{2}\b/);
+
+ return match ? Number(match[0]) : 0;
 }
 
 function unique(values) {
  const seen = new Set();
 
- return values.filter(v => {
-  const key = norm(v);
+ return values.filter(value => {
+  const key = norm(value);
 
-  if (!key || seen.has(key)) return false;
+  if (!key || seen.has(key)) {
+   return false;
+  }
 
   seen.add(key);
   return true;
@@ -107,12 +156,9 @@ function unique(values) {
 }
 
 /*
- * NEW 2.8.3
+ * Search terms must preserve punctuation.
  *
- * OSTMusic distinguishes punctuation in search queries.
- *
- * "The X-Files" and "The X Files" must remain
- * separate search terms.
+ * The X-Files != The X Files for OSTMusic API.
  */
 function uniqueSearchTerms(values) {
  const seen = new Set();
@@ -123,11 +169,15 @@ function uniqueSearchTerms(values) {
    .replace(/\s+/g, ' ')
    .trim();
 
-  if (norm(value).length < 3) continue;
+  if (norm(value).length < 3) {
+   continue;
+  }
 
   const key = value.toLowerCase();
 
-  if (seen.has(key)) continue;
+  if (seen.has(key)) {
+   continue;
+  }
 
   seen.add(key);
   result.push(value);
@@ -135,6 +185,100 @@ function uniqueSearchTerms(values) {
 
  return result;
 }
+
+/* =========================================================
+   TITLE MATCHING — NEW 2.8.4
+========================================================= */
+
+/*
+ * Removes common title formatting differences.
+ *
+ * House M.D.
+ * House, M.D.
+ * House MD
+ *
+ * All become:
+ * house md
+ */
+function matchTitle(value) {
+ let s = String(value ?? '')
+  .toLowerCase()
+  .normalize('NFKD')
+  .replace(/[\u0300-\u036f]/g, '');
+
+ s = s.replace(
+  /\b([a-z])\.(?=[a-z]\.)/g,
+  '$1'
+ );
+
+ s = s.replace(
+  /\b([a-z])\.(?=\s|$)/g,
+  '$1'
+ );
+
+ return s
+  .replace(/&/g, ' and ')
+  .replace(/[^a-z0-9\u0400-\u04ff]+/gi, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+}
+
+/*
+ * Removes terminal professional abbreviations.
+ *
+ * House M.D. -> House
+ *
+ * Used only as an alternative search/match,
+ * not as an unconditional album acceptance rule.
+ */
+function stripTitleSuffix(value) {
+ return String(value ?? '')
+  .replace(
+   /[\s,.-]+(?:m\s*\.?\s*d\s*\.?|md)\s*$/i,
+   ''
+  )
+  .trim();
+}
+
+/*
+ * Produces normalized alternatives for album matching.
+ *
+ * Short names are allowed only if sufficiently specific.
+ */
+function titleMatchKeys(title, aliases = []) {
+ const values = [
+  title,
+  ...aliases
+ ];
+
+ const keys = [];
+
+ for (const value of values) {
+  const original = matchTitle(value);
+
+  if (original) {
+   keys.push(original);
+  }
+
+  const stripped = matchTitle(
+   stripTitleSuffix(value)
+  );
+
+  if (
+   stripped &&
+   stripped !== original &&
+   stripped.length >= 5
+  ) {
+   keys.push(stripped);
+  }
+ }
+
+ return unique(keys);
+}
+
+/* =========================================================
+   CACHE
+========================================================= */
 
 const caches = {
  catalog: new Map(),
@@ -144,6 +288,7 @@ const caches = {
 
 function cached(map, key, ttl, fn) {
  const now = Date.now();
+
  const hit = map.get(key);
 
  if (hit && hit.expires > now) {
@@ -164,8 +309,10 @@ function cached(map, key, ttl, fn) {
  });
 
  if (map.size > 250) {
-  for (const [k, v] of map) {
-   if (v.expires <= now) map.delete(k);
+  for (const [k, value] of map) {
+   if (value.expires <= now) {
+    map.delete(k);
+   }
   }
 
   if (map.size > 250) {
@@ -177,19 +324,23 @@ function cached(map, key, ttl, fn) {
 }
 
 async function getJSON(url) {
- const r = await fetch(url, {
+ const result = await fetch(url, {
   headers: {
    Accept: 'application/json'
   },
   signal: AbortSignal.timeout(TIMEOUT)
  });
 
- if (!r.ok) {
-  throw Error('HTTP ' + r.status);
+ if (!result.ok) {
+  throw Error('HTTP ' + result.status);
  }
 
- return r.json();
+ return result.json();
 }
+
+/* =========================================================
+   JSON CATALOG
+========================================================= */
 
 let lastCatalog = null;
 
@@ -206,14 +357,19 @@ async function loadCatalog() {
      Math.floor(Date.now() / CATALOG_TTL)
     );
 
-    if (!data || !Array.isArray(data.movies)) {
+    if (
+     !data ||
+     !Array.isArray(data.movies)
+    ) {
      throw Error('Invalid catalog format');
     }
 
     lastCatalog = {
      version: String(data.version || ''),
      movies: data.movies.filter(
-      m => m && typeof m.title === 'string'
+      movie =>
+       movie &&
+       typeof movie.title === 'string'
      )
     };
 
@@ -226,47 +382,68 @@ async function loadCatalog() {
 }
 
 function catalogMatch(catalog, title, year) {
- if (!catalog) return null;
+ if (!catalog) {
+  return null;
+ }
 
  const wanted = norm(title);
 
- const matches = catalog.movies.filter(m =>
-  [
-   m.title,
-   ...(Array.isArray(m.aliases) ? m.aliases : [])
-  ].some(n => norm(n) === wanted) &&
-  (
+ const matches = catalog.movies.filter(movie => {
+  const names = [
+   movie.title,
+   ...(
+    Array.isArray(movie.aliases)
+     ? movie.aliases
+     : []
+   )
+  ];
+
+  const nameMatches = names.some(
+   name => norm(name) === wanted
+  );
+
+  const yearMatches =
    !year ||
-   !yearNum(m.year) ||
-   year === yearNum(m.year)
-  )
- );
+   !yearNum(movie.year) ||
+   yearNum(movie.year) === year;
+
+  return nameMatches && yearMatches;
+ });
 
  if (year) {
   const exact = matches.filter(
-   m => yearNum(m.year) === year
+   movie => yearNum(movie.year) === year
   );
 
-  if (exact.length === 1) return exact[0];
-  if (exact.length > 1) return null;
+  if (exact.length === 1) {
+   return exact[0];
+  }
+
+  if (exact.length > 1) {
+   return null;
+  }
  }
 
- return matches.length === 1 ? matches[0] : null;
+ return matches.length === 1
+  ? matches[0]
+  : null;
 }
 
-/*
- * YouTube URL validation.
- *
- * Only supported YouTube domains and valid video IDs
- * are accepted.
- */
+/* =========================================================
+   YOUTUBE CATALOG
+========================================================= */
+
 function youtubeURL(value) {
  try {
-  const u = new URL(String(value || '').trim());
+  const url = new URL(
+   String(value || '').trim()
+  );
 
-  if (u.protocol !== 'https:') return '';
+  if (url.protocol !== 'https:') {
+   return '';
+  }
 
-  const host = u.hostname.toLowerCase();
+  const host = url.hostname.toLowerCase();
 
   const allowed = [
    'youtube.com',
@@ -279,7 +456,9 @@ function youtubeURL(value) {
    'www.youtube-nocookie.com'
   ];
 
-  if (!allowed.includes(host)) return '';
+  if (!allowed.includes(host)) {
+   return '';
+  }
 
   let id = '';
 
@@ -287,16 +466,20 @@ function youtubeURL(value) {
    host === 'youtu.be' ||
    host === 'www.youtu.be'
   ) {
-   id = u.pathname.split('/').filter(Boolean)[0] || '';
+   id = url.pathname
+    .split('/')
+    .filter(Boolean)[0] || '';
   } else {
-   id = u.searchParams.get('v') || '';
+   id = url.searchParams.get('v') || '';
 
    if (!id) {
-    const match = u.pathname.match(
+    const match = url.pathname.match(
      /^\/(?:embed|shorts|live)\/([^/?]+)/
     );
 
-    if (match) id = match[1];
+    if (match) {
+     id = match[1];
+    }
    }
   }
 
@@ -304,65 +487,79 @@ function youtubeURL(value) {
    return '';
   }
 
-  return 'https://www.youtube.com/watch?v=' + id;
+  return (
+   'https://www.youtube.com/watch?v=' +
+   id
+  );
  } catch (_) {
   return '';
  }
 }
 
-/*
- * NEW 2.8.3
- *
- * Generate punctuation-sensitive search variants.
- *
- * The X-Files -> The X Files
- * X-Files     -> X Files
- *
- * Both variants are retained.
- */
+/* =========================================================
+   SEARCH VARIANTS — NEW 2.8.4
+========================================================= */
+
 function variants(title, aliases = []) {
- const s = String(title || '').trim();
+ const original = String(title || '').trim();
 
- const stripThe = v =>
-  String(v).replace(/^the\s+/i, '');
+ const withoutThe = value =>
+  String(value).replace(/^the\s+/i, '');
 
- const spaceHyphens = v =>
-  String(v).replace(/[-‐‑‒–—―]+/g, ' ');
+ const spaceHyphens = value =>
+  String(value)
+   .replace(/[-‐-‒–—―]+/g, ' ');
 
- const base = [
-  s,
-  spaceHyphens(s),
-  stripThe(s),
-  spaceHyphens(stripThe(s)),
-  s.split(':')[0],
-  s.replace(/[:;,!?]/g, ' '),
-  s.replace(/\s*[\(\[].*?[\)\]]/g, ''),
+ const noSuffix = stripTitleSuffix(original);
+
+ const candidates = [
+  original,
+  spaceHyphens(original),
+
+  // House M.D. -> House MD
+  original.replace(/\./g, ''),
+
+  // House M.D. -> House M D
+  original.replace(/\./g, ' '),
+
+  // House M.D. -> House
+  noSuffix,
+
+  withoutThe(original),
+  spaceHyphens(withoutThe(original)),
+
+  original.split(':')[0],
+
+  original.replace(/[:;,!?]/g, ' '),
+
+  original.replace(
+   /\s*[\(\[].*?[\)\]]/g,
+   ''
+  ),
+
   ...aliases,
-  ...(SEARCH_ALIASES[norm(s)] || [])
+
+  ...(SEARCH_ALIASES[norm(original)] || [])
  ];
 
  const expanded = [];
 
- for (const item of base) {
+ for (const item of candidates) {
   expanded.push(item);
 
-  if (/[-‐‑‒–—―]/.test(item)) {
+  if (/[-‐-‒–—―]/.test(item)) {
    expanded.push(spaceHyphens(item));
   }
  }
 
- return uniqueSearchTerms(expanded).slice(0, 12);
+ return uniqueSearchTerms(expanded)
+  .slice(0, 12);
 }
 
-/*
- * NEW 2.8.3
- *
- * Cache keys preserve punctuation.
- *
- * Previously norm(term) made:
- * "The X-Files" and "The X Files"
- * share the same cache entry.
- */
+/* =========================================================
+   OSTMusic SEARCH
+========================================================= */
+
 async function searchAlbums(term, budget) {
  const key = String(term)
   .replace(/\s+/g, ' ')
@@ -371,7 +568,10 @@ async function searchAlbums(term, budget) {
 
  const hit = caches.search.get(key);
 
- if (hit && hit.expires > Date.now()) {
+ if (
+  hit &&
+  hit.expires > Date.now()
+ ) {
   return hit.promise;
  }
 
@@ -398,13 +598,15 @@ async function searchAlbums(term, budget) {
     encodeURIComponent(term)
    );
 
-   return Array.isArray(data) ? data : [];
+   return Array.isArray(data)
+    ? data
+    : [];
   }
  );
 }
 
-function cleanTitle(v) {
- return norm(v)
+function cleanTitle(value) {
+ return matchTitle(value)
   .replace(
    /\b(original motion picture soundtrack|original motion picture score|original television soundtrack|original television score|original tv soundtrack|original tv score|original soundtrack|motion picture soundtrack|official soundtrack|soundtrack album|soundtrack|film score|television score|tv series ost|tv series|ost)\b/g,
    ' '
@@ -413,10 +615,27 @@ function cleanTitle(v) {
   .trim();
 }
 
-function scoreAlbum(album, title, year, aliases = []) {
- const wanted = unique(
-  [title, ...aliases].map(cleanTitle)
+/*
+ * NEW 2.8.4
+ *
+ * Match album against original and alternate titles.
+ *
+ * Full exact match is preferred.
+ *
+ * Short suffix-stripped matches require an exact year.
+ */
+function scoreAlbum(
+ album,
+ title,
+ year,
+ aliases = []
+) {
+ const wanted = titleMatchKeys(
+  title,
+  aliases
  );
+
+ const originalKey = cleanTitle(title);
 
  const names = [
   album.subtitle,
@@ -424,16 +643,30 @@ function scoreAlbum(album, title, year, aliases = []) {
   album.name2
  ].map(cleanTitle).filter(Boolean);
 
- if (!names.some(n => wanted.includes(n))) {
+ let score = -1;
+
+ if (names.includes(originalKey)) {
+  score = 140;
+ } else {
+  const matched = names.some(
+   name => wanted.includes(name)
+  );
+
+  if (matched) {
+   score = 125;
+  }
+ }
+
+ if (score < 0) {
   return -1;
  }
 
- let score = 140;
+ const albumYear = yearNum(album.year);
 
- const y = yearNum(album.year);
-
- if (year && y) {
-  const diff = Math.abs(year - y);
+ if (year && albumYear) {
+  const diff = Math.abs(
+   year - albumYear
+  );
 
   if (diff === 0) {
    score += 45;
@@ -453,7 +686,10 @@ async function findAlbum(
  aliases = [],
  budget = null
 ) {
- const terms = variants(title, aliases);
+ const terms = variants(
+  title,
+  aliases
+ );
 
  const found = new Map();
  const searches = [];
@@ -462,10 +698,15 @@ async function findAlbum(
  let failed = false;
 
  for (const term of terms) {
-  if (exhausted) break;
+  if (exhausted) {
+   break;
+  }
 
   try {
-   const albums = await searchAlbums(term, budget);
+   const albums = await searchAlbums(
+    term,
+    budget
+   );
 
    searches.push({
     term,
@@ -473,15 +714,23 @@ async function findAlbum(
     error: null
    });
 
-   for (const a of albums) {
-    if (a && a.id) {
-     found.set(String(a.id), a);
+   for (const album of albums) {
+    if (album && album.id) {
+     found.set(
+      String(album.id),
+      album
+     );
     }
    }
-  } catch (e) {
-   const msg = String(e.message || e);
+  } catch (error) {
+   const message = String(
+    error.message || error
+   );
 
-   if (msg === 'search_budget_exhausted') {
+   if (
+    message ===
+    'search_budget_exhausted'
+   ) {
     exhausted = true;
     break;
    }
@@ -491,38 +740,48 @@ async function findAlbum(
    searches.push({
     term,
     count: 0,
-    error: msg
+    error: message
    });
   }
 
-  const exact = [...found.values()].filter(
-   a => scoreAlbum(a, title, year, aliases) >= 140
+  const matching = [
+   ...found.values()
+  ].filter(
+   album =>
+    scoreAlbum(
+     album,
+     title,
+     year,
+     aliases
+    ) >= 125
   );
 
   if (
-   exact.length === 1 &&
+   matching.length === 1 &&
    year &&
-   yearNum(exact[0].year) === year
+   yearNum(matching[0].year) === year
   ) {
    break;
   }
  }
 
- const candidates = [...found.values()].map(
-  album => ({
+ const candidates = [
+  ...found.values()
+ ].map(album => ({
+  album,
+  score: scoreAlbum(
    album,
-   score: scoreAlbum(
-    album,
-    title,
-    year,
-    aliases
-   )
-  })
- );
+   title,
+   year,
+   aliases
+  )
+ }));
 
  const ranked = candidates
-  .filter(c => c.score >= 140)
-  .sort((a, b) => b.score - a.score);
+  .filter(item => item.score >= 125)
+  .sort(
+   (a, b) => b.score - a.score
+  );
 
  const selected = (
   ranked.length === 1 ||
@@ -536,24 +795,30 @@ async function findAlbum(
   album: selected,
   searches,
 
-  candidates: candidates.map(c => ({
-   id: String(c.album.id || ''),
-   name: String(c.album.name || ''),
-   subtitle: String(c.album.subtitle || ''),
-   year: c.album.year || '',
-   score: c.score
+  candidates: candidates.map(item => ({
+   id: String(item.album.id || ''),
+   name: String(item.album.name || ''),
+   subtitle: String(
+    item.album.subtitle || ''
+   ),
+   year: item.album.year || '',
+   score: item.score
   })),
 
   variantsTried: searches.length,
 
   searchTerm: searches
-   .map(s => s.term)
+   .map(item => item.term)
    .join(' | '),
 
   exhausted,
   failed
  };
 }
+
+/* =========================================================
+   TRACK FETCHING
+========================================================= */
 
 async function getTracks(albumId) {
  return cached(
@@ -569,18 +834,20 @@ async function getTracks(albumId) {
     encodeURIComponent(albumId)
    );
 
-   return Array.isArray(data) ? data : [];
+   return Array.isArray(data)
+    ? data
+    : [];
   }
  );
 }
 
-function audioURL(v) {
+function audioURL(value) {
  try {
-  const u = new URL(v);
+  const url = new URL(value);
 
   return (
-   u.protocol === 'https:' &&
-   u.hostname === 'www.ostmusic.org'
+   url.protocol === 'https:' &&
+   url.hostname === 'www.ostmusic.org'
   );
  } catch (_) {
   return false;
@@ -588,79 +855,117 @@ function audioURL(v) {
 }
 
 function trackInfo(song) {
- const file = String(song.file || '');
+ const file = String(
+  song.file || ''
+ );
 
  return {
   id: String(song.id || ''),
-  albumId: String(song.album_id || ''),
-  name: String(song.name || '').trim(),
-  artist: String(song.artist_name || '').trim(),
-  duration: Number(song.length || 0),
-  position: String(song.position || ''),
-  file: audioURL(file) ? file : '',
-  playable: Number(song.isplayable) === 1
+  albumId: String(
+   song.album_id || ''
+  ),
+  name: String(
+   song.name || ''
+  ).trim(),
+  artist: String(
+   song.artist_name || ''
+  ).trim(),
+  duration: Number(
+   song.length || 0
+  ),
+  position: String(
+   song.position || ''
+  ),
+  file: audioURL(file)
+   ? file
+   : '',
+  playable:
+   Number(song.isplayable) === 1
  };
 }
 
-function isPlayable(t) {
+function isPlayable(track) {
  return Boolean(
-  t &&
-  t.id &&
-  t.file &&
-  t.playable &&
+  track &&
+  track.id &&
+  track.file &&
+  track.playable &&
   (
-   !t.duration ||
-   t.duration >= 35
+   !track.duration ||
+   track.duration >= 35
   )
  );
 }
 
-function isClean(t) {
- return isPlayable(t) &&
+function isClean(track) {
+ return isPlayable(track) &&
   !/\b(remix|cover|karaoke|tribute|trailer|teaser|dialogue|dialog|interview|commentary|demo|unused|live|concert|reprise|instrumental cover)\b/i.test(
-   norm(t.name + ' ' + t.artist)
+   norm(
+    track.name +
+    ' ' +
+    track.artist
+   )
   );
 }
 
-function matchCatalogTrack(songs, movie) {
+function matchCatalogTrack(
+ songs,
+ movie
+) {
  const tracks = songs
   .map(trackInfo)
   .filter(isPlayable);
 
  if (movie.trackId) {
   const found = tracks.find(
-   t => t.id === String(movie.trackId)
+   track =>
+    track.id ===
+    String(movie.trackId)
   );
 
-  if (found) return found;
+  if (found) {
+   return found;
+  }
  }
 
- const wanted = norm(movie.track);
-
- if (!wanted) return null;
-
- const matches = tracks.filter(
-  t => norm(t.name) === wanted
+ const wanted = norm(
+  movie.track
  );
 
- return matches.length === 1 ? matches[0] : null;
+ if (!wanted) {
+  return null;
+ }
+
+ const matches = tracks.filter(
+  track =>
+   norm(track.name) === wanted
+ );
+
+ return matches.length === 1
+  ? matches[0]
+  : null;
 }
 
-/*
- * NEW 2.8.3
- *
- * Improved main-theme scoring.
- *
- * Main Title / Main Titles / Opening Credits
- * are recognized.
- *
- * A Cappella, vocal and end-credit versions
- * receive lower priority.
- */
-function scoreTrack(t, title, preferred) {
- const name = norm(t.name);
- const wanted = norm(preferred);
- const movie = norm(title);
+/* =========================================================
+   TRACK SCORING — NEW 2.8.4
+========================================================= */
+
+function scoreTrack(
+ track,
+ title,
+ preferred
+) {
+ const name = norm(
+  track.name
+ );
+
+ const wanted = norm(
+  preferred
+ );
+
+ const movie = norm(
+  title
+ );
 
  let score = 0;
 
@@ -695,8 +1000,15 @@ function scoreTrack(t, title, preferred) {
   score += 85;
  }
 
- if (/\bopening (?:titles?|credits)\b/.test(name)) {
+ if (
+  /\bopening (?:titles?|credits)\b/.test(name)
+ ) {
   score += 85;
+ }
+
+ // NEW: Theme Song
+ if (/\btheme song\b/.test(name)) {
+  score += 105;
  }
 
  if (/\btheme\b/.test(name)) {
@@ -707,7 +1019,8 @@ function scoreTrack(t, title, preferred) {
   score += 50;
  }
 
- // Bonus when the track contains the movie/series title.
+ // The X-Files Main Title
+ // House M.D. Theme Song
  if (
   movie.length >= 5 &&
   name.includes(movie) &&
@@ -716,31 +1029,47 @@ function scoreTrack(t, title, preferred) {
   score += 35;
  }
 
- // Prefer original score over alternate arrangements.
+ // Artist - Track (Series Theme Song)
  if (
-  /\b(?:a cappella|acapella|vocal|vocals|end credits?|ending credits?|alternate|alternative|version|season)\b/.test(name)
+  /\btheme song\b/.test(name) &&
+  /\s-\s/.test(track.name)
  ) {
-  if (/\ba cappella\b|\bacapella\b/.test(name)) {
-   score -= 85;
-  }
+  score += 15;
+ }
 
-  if (/\bend credits?\b|\bending credits?\b/.test(name)) {
-   score -= 70;
-  }
+ // Penalize alternate versions.
+ if (
+  /\ba cappella\b|\bacapella\b/.test(name)
+ ) {
+  score -= 85;
+ }
 
-  if (/\bvocal\b|\bvocals\b/.test(name)) {
-   score -= 35;
-  }
+ if (
+  /\bend credits?\b|\bending credits?\b/.test(name)
+ ) {
+  score -= 70;
+ }
 
-  if (/\balternate\b|\balternative\b/.test(name)) {
-   score -= 20;
-  }
+ if (
+  /\bvocal\b|\bvocals\b/.test(name)
+ ) {
+  score -= 35;
+ }
+
+ if (
+  /\balternate\b|\balternative\b/.test(name)
+ ) {
+  score -= 20;
  }
 
  return score;
 }
 
-function rankTracks(songs, title, preferred = '') {
+function rankTracks(
+ songs,
+ title,
+ preferred = ''
+) {
  return songs
   .map(trackInfo)
   .filter(isClean)
@@ -752,10 +1081,16 @@ function rankTracks(songs, title, preferred = '') {
     preferred
    )
   }))
-  .sort((a, b) => b.score - a.score);
+  .sort(
+   (a, b) => b.score - a.score
+  );
 }
 
-function selectTrack(songs, title, preferred = '') {
+function selectTrack(
+ songs,
+ title,
+ preferred = ''
+) {
  const ranked = rankTracks(
   songs,
   title,
@@ -767,7 +1102,8 @@ function selectTrack(songs, title, preferred = '') {
   ranked[0].score >= 85 &&
   (
    ranked.length === 1 ||
-   ranked[0].score > ranked[1].score
+   ranked[0].score >
+    ranked[1].score
   )
  ) {
   return {
@@ -782,19 +1118,32 @@ function selectTrack(songs, title, preferred = '') {
  return null;
 }
 
-function albumInfo(album, songs) {
+function albumInfo(
+ album,
+ songs
+) {
  return {
-  id: String(album.id || ''),
+  id: String(
+   album.id || ''
+  ),
   title: String(
    album.subtitle ||
    album.name ||
    ''
   ),
-  year: yearNum(album.year),
-  artist: String(album.artist_name || ''),
+  year: yearNum(
+   album.year
+  ),
+  artist: String(
+   album.artist_name || ''
+  ),
   tracksCount: songs.length
  };
 }
+
+/* =========================================================
+   CATALOG TRACK RESOLUTION
+========================================================= */
 
 async function resolveCatalog(movie) {
  let album;
@@ -805,20 +1154,31 @@ async function resolveCatalog(movie) {
    id: String(movie.albumId),
    subtitle: movie.title,
    year: movie.year,
-   artist_name: movie.artist || ''
+   artist_name:
+    movie.artist || ''
   };
 
-  songs = await getTracks(album.id);
+  songs = await getTracks(
+   album.id
+  );
  } else {
   const search = await findAlbum(
    movie.title,
-   yearNum(movie.year)
+   yearNum(movie.year),
+   Array.isArray(movie.aliases)
+    ? movie.aliases
+    : []
   );
 
-  if (!search.album) return null;
+  if (!search.album) {
+   return null;
+  }
 
   album = search.album;
-  songs = await getTracks(album.id);
+
+  songs = await getTracks(
+   album.id
+  );
  }
 
  const track = matchCatalogTrack(
@@ -826,27 +1186,33 @@ async function resolveCatalog(movie) {
   movie
  );
 
- if (!track) return null;
+ if (!track) {
+  return null;
+ }
 
  return {
-  album: albumInfo(album, songs),
+  album: albumInfo(
+   album,
+   songs
+  ),
   track,
-  confidence: movie.verified === true
-   ? 'verified'
-   : 'catalog_candidate',
+  confidence:
+   movie.verified === true
+    ? 'verified'
+    : 'catalog_candidate',
   selection: 'catalog'
  };
 }
 
-/*
- * Single-title lookup.
- *
- * Priority:
- * 1. YouTube JSON catalog
- * 2. OSTMusic JSON catalog
- * 3. Automatic OSTMusic search
- */
-async function singleSearch(title, year, debug) {
+/* =========================================================
+   SINGLE SEARCH
+========================================================= */
+
+async function singleSearch(
+ title,
+ year,
+ debug
+) {
  const catalog = await loadCatalog();
 
  const existing = catalogMatch(
@@ -855,11 +1221,13 @@ async function singleSearch(title, year, debug) {
   year
  );
 
- // YouTube catalog entry.
+ // YouTube catalog priority.
  if (
   existing &&
   !debug &&
-  String(existing.source || '').toLowerCase() === 'youtube'
+  String(
+   existing.source || ''
+  ).toLowerCase() === 'youtube'
  ) {
   const videoURL = youtubeURL(
    existing.audioUrl ||
@@ -877,8 +1245,10 @@ async function singleSearch(title, year, debug) {
     source: 'youtube',
     reason: 'invalid_youtube_url',
     catalogMatch: true,
-    catalogTitle: existing.title,
-    catalogVersion: catalog?.version || null
+    catalogTitle:
+     existing.title,
+    catalogVersion:
+     catalog?.version || null
    });
   }
 
@@ -888,13 +1258,23 @@ async function singleSearch(title, year, debug) {
    found: true,
    source: 'youtube',
    title,
-   year: yearNum(existing.year) || year || 0,
+   year:
+    yearNum(existing.year) ||
+    year ||
+    0,
 
    album: {
     id: '',
-    title: String(existing.title || title),
-    year: yearNum(existing.year) || year || 0,
-    artist: String(existing.artist || ''),
+    title: String(
+     existing.title || title
+    ),
+    year:
+     yearNum(existing.year) ||
+     year ||
+     0,
+    artist: String(
+     existing.artist || ''
+    ),
     tracksCount: 1
    },
 
@@ -906,7 +1286,9 @@ async function singleSearch(title, year, debug) {
      existing.trackName ||
      'Original Soundtrack'
     ),
-    artist: String(existing.artist || ''),
+    artist: String(
+     existing.artist || ''
+    ),
     duration: 0,
     position: '1',
     file: videoURL,
@@ -914,23 +1296,28 @@ async function singleSearch(title, year, debug) {
     source: 'youtube'
    },
 
-   confidence: existing.verified === true
-    ? 'verified'
-    : 'catalog',
+   confidence:
+    existing.verified === true
+     ? 'verified'
+     : 'catalog',
 
    selection: 'catalog_youtube',
    catalogMatch: true,
-   catalogTitle: existing.title,
-   catalogVersion: catalog?.version || null,
-   searchTerm: existing.title,
+   catalogTitle:
+    existing.title,
+   catalogVersion:
+    catalog?.version || null,
+   searchTerm:
+    existing.title,
    variantsTried: 0
   });
  }
 
- // OSTMusic catalog entry.
+ // OSTMusic catalog priority.
  if (existing && !debug) {
   try {
-   const found = await resolveCatalog(existing);
+   const found =
+    await resolveCatalog(existing);
 
    if (found) {
     return response({
@@ -941,23 +1328,22 @@ async function singleSearch(title, year, debug) {
      title,
      year,
      ...found,
-     catalogVersion: catalog.version,
-     searchTerm: existing.title,
+     catalogVersion:
+      catalog.version,
+     searchTerm:
+      existing.title,
      variantsTried: 0
     });
    }
   } catch (_) {}
  }
 
- // Automatic search.
- const search = await findAlbum(title, year);
+ const search = await findAlbum(
+  title,
+  year
+ );
 
- /*
-  * NEW 2.8.3
-  *
-  * Search diagnostics now include track ranking
-  * for the selected album.
-  */
+ // Search diagnostics.
  if (debug) {
   let tracksDebug = null;
 
@@ -978,24 +1364,39 @@ async function singleSearch(title, year, debug) {
     );
 
     tracksDebug = {
-     albumId: String(search.album.id),
-     tracksCount: songs.length,
-     eligibleCount: ranked.length,
-     selectedTrackId: selected?.track.id || null,
-     selectionReason: selected?.selection ||
+     albumId: String(
+      search.album.id
+     ),
+     tracksCount:
+      songs.length,
+     eligibleCount:
+      ranked.length,
+     selectedTrackId:
+      selected?.track.id || null,
+     selectionReason:
+      selected?.selection ||
       'no_confident_playable_track',
 
-     topTracks: ranked.slice(0, 12).map(x => ({
-      id: x.track.id,
-      name: x.track.name,
-      artist: x.track.artist,
-      duration: x.track.duration,
-      score: x.score
-     }))
+     topTracks: ranked
+      .slice(0, 12)
+      .map(item => ({
+       id:
+        item.track.id,
+       name:
+        item.track.name,
+       artist:
+        item.track.artist,
+       duration:
+        item.track.duration,
+       score:
+        item.score
+      }))
     };
-   } catch (e) {
+   } catch (error) {
     tracksDebug = {
-     error: String(e.message || e)
+     error: String(
+      error.message || error
+     )
     };
    }
   }
@@ -1006,15 +1407,22 @@ async function singleSearch(title, year, debug) {
    mode: 'search_debug',
    title,
    year,
-   catalogVersion: catalog?.version || null,
-   catalogMatch: Boolean(existing),
-   catalogSource: existing?.source || null,
-   variantsTried: search.variantsTried,
-   searches: search.searches,
-   candidates: search.candidates,
-   selectedAlbumId: search.album
-    ? String(search.album.id)
-    : null,
+   catalogVersion:
+    catalog?.version || null,
+   catalogMatch:
+    Boolean(existing),
+   catalogSource:
+    existing?.source || null,
+   variantsTried:
+    search.variantsTried,
+   searches:
+    search.searches,
+   candidates:
+    search.candidates,
+   selectedAlbumId:
+    search.album
+     ? String(search.album.id)
+     : null,
    tracksDebug
   });
  }
@@ -1026,13 +1434,16 @@ async function singleSearch(title, year, debug) {
    found: false,
    title,
    year,
-   reason: search.failed
-    ? 'search_source_error'
-    : search.exhausted
-     ? 'search_budget_exhausted'
-     : 'album_not_found_or_ambiguous',
-   catalogMatch: Boolean(existing),
-   variantsTried: search.variantsTried
+   reason:
+    search.failed
+     ? 'search_source_error'
+     : search.exhausted
+      ? 'search_budget_exhausted'
+      : 'album_not_found_or_ambiguous',
+   catalogMatch:
+    Boolean(existing),
+   variantsTried:
+    search.variantsTried
   });
  }
 
@@ -1052,7 +1463,8 @@ async function singleSearch(title, year, debug) {
    found: false,
    title,
    year,
-   reason: 'no_confident_playable_track',
+   reason:
+    'no_confident_playable_track',
    album: albumInfo(
     search.album,
     songs
@@ -1071,75 +1483,125 @@ async function singleSearch(title, year, debug) {
    search.album,
    songs
   ),
-  track: selected.track,
-  confidence: selected.confidence,
-  selection: selected.selection,
-  catalogMatch: Boolean(existing),
-  searchTerm: search.searchTerm,
-  variantsTried: search.variantsTried
+  track:
+   selected.track,
+  confidence:
+   selected.confidence,
+  selection:
+   selected.selection,
+  catalogMatch:
+   Boolean(existing),
+  searchTerm:
+   search.searchTerm,
+  variantsTried:
+   search.variantsTried
  });
 }
 
-function batchMovie(v) {
- if (typeof v === 'string') {
+/* =========================================================
+   BATCH INPUT
+========================================================= */
+
+function batchMovie(value) {
+ if (typeof value === 'string') {
   return {
-   title: v.trim(),
+   title: value.trim(),
    year: 0,
    preferredTrack: '',
    aliases: []
   };
  }
 
- if (Array.isArray(v)) {
+ if (Array.isArray(value)) {
   return {
-   title: String(v[0] || '').trim(),
-   year: yearNum(v[1]),
-   preferredTrack: String(v[2] || ''),
+   title: String(
+    value[0] || ''
+   ).trim(),
+   year: yearNum(
+    value[1]
+   ),
+   preferredTrack: String(
+    value[2] || ''
+   ),
    aliases: []
   };
  }
 
- if (v && typeof v === 'object') {
+ if (
+  value &&
+  typeof value === 'object'
+ ) {
   return {
-   title: String(v.title || '').trim(),
-   year: yearNum(v.year),
+   title: String(
+    value.title || ''
+   ).trim(),
+   year: yearNum(
+    value.year
+   ),
    preferredTrack: String(
-    v.preferredTrack ||
-    v.track ||
+    value.preferredTrack ||
+    value.track ||
     ''
    ),
-   aliases: Array.isArray(v.aliases)
-    ? v.aliases
-      .filter(a => typeof a === 'string')
+   aliases:
+    Array.isArray(value.aliases)
+     ? value.aliases
+      .filter(
+       alias =>
+        typeof alias === 'string'
+      )
       .slice(0, 10)
-    : []
+     : []
   };
  }
 
  return null;
 }
 
-function makeEntry(movie, albumId, track) {
+function makeEntry(
+ movie,
+ albumId,
+ track
+) {
  return {
-  title: movie.title,
-  year: movie.year,
-  aliases: movie.aliases || [],
-  albumId: String(albumId),
-  trackId: String(track.id),
-  track: track.name,
-  artist: track.artist,
-  verified: false
+  title:
+   movie.title,
+  year:
+   movie.year,
+  aliases:
+   movie.aliases || [],
+  albumId:
+   String(albumId),
+  trackId:
+   String(track.id),
+  track:
+   track.name,
+  artist:
+   track.artist,
+  verified:
+   false
  };
 }
 
-function albumSummary(a) {
+function albumSummary(album) {
  return {
-  id: String(a.id || ''),
-  name: String(a.name || ''),
-  subtitle: String(a.subtitle || ''),
-  year: a.year || ''
+  id: String(
+   album.id || ''
+  ),
+  name: String(
+   album.name || ''
+  ),
+  subtitle: String(
+   album.subtitle || ''
+  ),
+  year:
+   album.year || ''
  };
 }
+
+/* =========================================================
+   BATCH INSPECTION
+========================================================= */
 
 async function inspectMovie(
  movie,
@@ -1153,15 +1615,26 @@ async function inspectMovie(
   movie.year
  );
 
- if (existing && skipExisting) {
+ if (
+  existing &&
+  skipExisting
+ ) {
   return {
    status: 'existing',
-   title: movie.title,
-   year: movie.year,
-   albumId: String(existing.albumId || ''),
-   trackId: String(existing.trackId || ''),
-   track: existing.track || '',
-   verified: existing.verified === true
+   title:
+    movie.title,
+   year:
+    movie.year,
+   albumId: String(
+    existing.albumId || ''
+   ),
+   trackId: String(
+    existing.trackId || ''
+   ),
+   track:
+    existing.track || '',
+   verified:
+    existing.verified === true
   };
  }
 
@@ -1171,12 +1644,17 @@ async function inspectMovie(
 
  if (existing?.albumId) {
   album = {
-   id: String(existing.albumId),
-   subtitle: existing.title,
-   year: existing.year
+   id: String(
+    existing.albumId
+   ),
+   subtitle:
+    existing.title,
+   year:
+    existing.year
   };
 
-  source = 'catalog_candidate';
+  source =
+   'catalog_candidate';
  } else {
   search = await findAlbum(
    movie.title,
@@ -1189,46 +1667,63 @@ async function inspectMovie(
  }
 
  if (!album) {
-  const candidates = search?.candidates || [];
+  const candidates =
+   search?.candidates || [];
 
-  const ambiguous = candidates.some(
-   c => c.score >= 0
-  );
+  const ambiguous =
+   candidates.some(
+    item => item.score >= 0
+   );
 
   return {
-   status: search?.exhausted || search?.failed
-    ? 'deferred'
-    : ambiguous
-     ? 'review'
-     : 'notFound',
-
-   title: movie.title,
-   year: movie.year,
-
-   reason: search?.exhausted
-    ? 'search_budget_exhausted'
-    : search?.failed
-     ? 'search_source_error'
+   status:
+    search?.exhausted ||
+    search?.failed
+     ? 'deferred'
      : ambiguous
-      ? 'ambiguous_album'
-      : 'album_not_found',
+      ? 'review'
+      : 'notFound',
 
-   candidates: candidates.slice(0, 20),
-   searches: search?.searches || []
+   title:
+    movie.title,
+   year:
+    movie.year,
+
+   reason:
+    search?.exhausted
+     ? 'search_budget_exhausted'
+     : search?.failed
+      ? 'search_source_error'
+      : ambiguous
+       ? 'ambiguous_album'
+       : 'album_not_found',
+
+   candidates:
+    candidates.slice(0, 20),
+   searches:
+    search?.searches || []
   };
  }
 
  let songs;
 
  try {
-  songs = await getTracks(album.id);
- } catch (e) {
+  songs = await getTracks(
+   album.id
+  );
+ } catch (error) {
   return {
    status: 'deferred',
-   title: movie.title,
-   year: movie.year,
-   reason: 'tracks_source_error',
-   message: String(e.message || e)
+   title:
+    movie.title,
+   year:
+    movie.year,
+   reason:
+    'tracks_source_error',
+   message:
+    String(
+     error.message || error
+    )
   };
  }
 
@@ -1239,18 +1734,23 @@ async function inspectMovie(
  if (!tracks.length) {
   return {
    status: 'review',
-   title: movie.title,
-   year: movie.year,
-   reason: 'no_playable_tracks',
-   album: albumSummary(album)
+   title:
+    movie.title,
+   year:
+    movie.year,
+   reason:
+    'no_playable_tracks',
+   album:
+    albumSummary(album)
   };
  }
 
  if (existing) {
-  const track = matchCatalogTrack(
-   songs,
-   existing
-  );
+  const track =
+   matchCatalogTrack(
+    songs,
+    existing
+   );
 
   if (track) {
    const entry = makeEntry(
@@ -1259,16 +1759,21 @@ async function inspectMovie(
     track
    );
 
-   entry.aliases = Array.isArray(existing.aliases)
-    ? existing.aliases
-    : [];
+   entry.aliases =
+    Array.isArray(existing.aliases)
+     ? existing.aliases
+     : [];
 
    return {
     status: 'existing',
-    title: movie.title,
-    year: movie.year,
-    verified: existing.verified === true,
-    source: 'catalog',
+    title:
+     movie.title,
+    year:
+     movie.year,
+    verified:
+     existing.verified === true,
+    source:
+     'catalog',
     entry,
     track
    };
@@ -1276,67 +1781,98 @@ async function inspectMovie(
 
   return {
    status: 'review',
-   title: movie.title,
-   year: movie.year,
-   reason: 'existing_catalog_track_missing',
-   album: albumSummary(album),
-   catalogTrackId: String(existing.trackId || '')
+   title:
+    movie.title,
+   year:
+    movie.year,
+   reason:
+    'existing_catalog_track_missing',
+   album:
+    albumSummary(album),
+   catalogTrackId:
+    String(
+     existing.trackId || ''
+    )
   };
  }
 
- const clean = tracks.filter(isClean);
- const preferred = norm(movie.preferredTrack);
+ const clean = tracks.filter(
+  isClean
+ );
+
+ const preferred = norm(
+  movie.preferredTrack
+ );
 
  if (preferred) {
   const exact = clean.filter(
-   t => norm(t.name) === preferred
+   track =>
+    norm(track.name) === preferred
   );
 
   if (exact.length === 1) {
    return {
     status: 'ready',
-    title: movie.title,
-    year: movie.year,
+    title:
+     movie.title,
+    year:
+     movie.year,
     source,
-    reason: 'preferred_track_match',
-    entry: makeEntry(
-     movie,
-     album.id,
+    reason:
+     'preferred_track_match',
+    entry:
+     makeEntry(
+      movie,
+      album.id,
+      exact[0]
+     ),
+    track:
      exact[0]
-    ),
-    track: exact[0]
    };
   }
 
   if (exact.length > 1) {
    return {
     status: 'review',
-    title: movie.title,
-    year: movie.year,
-    reason: 'duplicate_preferred_tracks',
-    album: albumSummary(album),
-    tracks: exact
+    title:
+     movie.title,
+    year:
+     movie.year,
+    reason:
+     'duplicate_preferred_tracks',
+    album:
+     albumSummary(album),
+    tracks:
+     exact
    };
   }
 
-  const partial = clean.filter(t =>
-   preferred.length >= 5 &&
-   norm(t.name).includes(preferred)
+  const partial = clean.filter(
+   track =>
+    preferred.length >= 5 &&
+    norm(track.name).includes(
+     preferred
+    )
   );
 
   if (partial.length === 1) {
    return {
     status: 'ready',
-    title: movie.title,
-    year: movie.year,
+    title:
+     movie.title,
+    year:
+     movie.year,
     source,
-    reason: 'unique_partial_track_match',
-    entry: makeEntry(
-     movie,
-     album.id,
+    reason:
+     'unique_partial_track_match',
+    entry:
+     makeEntry(
+      movie,
+      album.id,
+      partial[0]
+     ),
+    track:
      partial[0]
-    ),
-    track: partial[0]
    };
   }
  }
@@ -1350,72 +1886,112 @@ async function inspectMovie(
     movie.preferredTrack
    )
   }))
-  .filter(x => x.score >= 85)
-  .sort((a, b) => b.score - a.score);
+  .filter(
+   item => item.score >= 85
+  )
+  .sort(
+   (a, b) =>
+    b.score - a.score
+  );
 
  if (
   ranked.length &&
   (
    ranked.length === 1 ||
-   ranked[0].score > ranked[1].score
+   ranked[0].score >
+    ranked[1].score
   )
  ) {
-  const track = ranked[0].track;
+  const track =
+   ranked[0].track;
 
   return {
    status: 'ready',
-   title: movie.title,
-   year: movie.year,
+   title:
+    movie.title,
+   year:
+    movie.year,
    source,
-   reason: 'unique_theme_candidate',
-   entry: makeEntry(
-    movie,
-    album.id,
-    track
-   ),
+   reason:
+    'unique_theme_candidate',
+   entry:
+    makeEntry(
+     movie,
+     album.id,
+     track
+    ),
    track
   };
  }
 
  return {
   status: 'review',
-  title: movie.title,
-  year: movie.year,
-  reason: 'track_selection_required',
-  album: albumSummary(album),
-  preferredTrack: movie.preferredTrack,
+  title:
+   movie.title,
+  year:
+   movie.year,
+  reason:
+   'track_selection_required',
+  album:
+   albumSummary(album),
+  preferredTrack:
+   movie.preferredTrack,
 
-  tracks: tracks.slice(0, 50).map(t => ({
-   id: t.id,
-   name: t.name,
-   artist: t.artist,
-   duration: t.duration,
-   playable: t.playable
-  }))
+  tracks: tracks
+   .slice(0, 50)
+   .map(track => ({
+    id:
+     track.id,
+    name:
+     track.name,
+    artist:
+     track.artist,
+    duration:
+     track.duration,
+    playable:
+     track.playable
+   }))
  };
 }
+
+/* =========================================================
+   CONCURRENT BATCH PROCESSING
+========================================================= */
 
 async function mapLimited(
  items,
  concurrency,
  fn
 ) {
- const results = new Array(items.length);
+ const results = new Array(
+  items.length
+ );
 
  let cursor = 0;
 
  async function run() {
-  while (cursor < items.length) {
-   const i = cursor++;
+  while (
+   cursor < items.length
+  ) {
+   const index = cursor++;
 
    try {
-    results[i] = await fn(items[i], i);
-   } catch (e) {
-    results[i] = {
+    results[index] =
+     await fn(
+      items[index],
+      index
+     );
+   } catch (error) {
+    results[index] = {
      status: 'error',
-     title: items[i].title,
-     year: items[i].year,
-     reason: String(e.message || e)
+     title:
+      items[index].title,
+     year:
+      items[index].year,
+     reason:
+      String(
+       error.message || error
+      )
     };
    }
   }
@@ -1436,6 +2012,10 @@ async function mapLimited(
  return results;
 }
 
+/* =========================================================
+   BATCH CATALOG BUILDER
+========================================================= */
+
 async function batchSearch(
  raw,
  limit,
@@ -1453,17 +2033,22 @@ async function batchSearch(
 
  const movies = raw
   .map(batchMovie)
-  .filter(m => {
+  .filter(movie => {
    if (
-    !m?.title ||
-    m.title.length > 150
+    !movie?.title ||
+    movie.title.length > 150
    ) {
     return false;
    }
 
-   const key = norm(m.title) + '|' + m.year;
+   const key =
+    norm(movie.title) +
+    '|' +
+    movie.year;
 
-   if (seen.has(key)) return false;
+   if (seen.has(key)) {
+    return false;
+   }
 
    seen.add(key);
    return true;
@@ -1473,58 +2058,86 @@ async function batchSearch(
  const catalog = await loadCatalog();
 
  const budget = {
-  remaining: SEARCH_BUDGET,
+  remaining:
+   SEARCH_BUDGET,
   used: 0
  };
 
  const results = await mapLimited(
   movies,
   CONCURRENCY,
-  m => inspectMovie(
-   m,
-   catalog,
-   skipExisting,
-   budget
-  )
+  movie =>
+   inspectMovie(
+    movie,
+    catalog,
+    skipExisting,
+    budget
+   )
  );
 
- const group = s => results.filter(
-  r => r.status === s
- );
+ const group = status =>
+  results.filter(
+   result =>
+    result.status === status
+  );
 
- const ready = group('ready');
- const review = group('review');
- const notFound = group('notFound');
- const existing = group('existing');
- const deferred = group('deferred');
- const errors = group('error');
+ const ready =
+  group('ready');
+
+ const review =
+  group('review');
+
+ const notFound =
+  group('notFound');
+
+ const existing =
+  group('existing');
+
+ const deferred =
+  group('deferred');
+
+ const errors =
+  group('error');
 
  const entries = ready.map(
-  r => r.entry
+  result => result.entry
  );
 
  return response({
   success: true,
   version: VERSION,
-  mode: 'batch_catalog_builder',
-  source: 'OSTMusic.org',
-  catalogVersion: catalog?.version || null,
+  mode:
+   'batch_catalog_builder',
+  source:
+   'OSTMusic.org',
+  catalogVersion:
+   catalog?.version || null,
   skipExisting,
 
   searchBudget: {
-   max: SEARCH_BUDGET,
-   used: budget.used,
-   remaining: budget.remaining
+   max:
+    SEARCH_BUDGET,
+   used:
+    budget.used,
+   remaining:
+    budget.remaining
   },
 
   summary: {
-   requested: movies.length,
-   ready: ready.length,
-   review: review.length,
-   notFound: notFound.length,
-   existing: existing.length,
-   deferred: deferred.length,
-   errors: errors.length
+   requested:
+    movies.length,
+   ready:
+    ready.length,
+   review:
+    review.length,
+   notFound:
+    notFound.length,
+   existing:
+    existing.length,
+   deferred:
+    deferred.length,
+   errors:
+    errors.length
   },
 
   ready,
@@ -1534,99 +2147,141 @@ async function batchSearch(
   deferred,
   errors,
 
-  catalogEntries: entries,
+  catalogEntries:
+   entries,
 
-  catalogLines: entries.map(
-   e => JSON.stringify(e)
-  ),
+  catalogLines:
+   entries.map(
+    entry =>
+     JSON.stringify(entry)
+   ),
 
-  note: 'ready means candidate, not human-verified. Test track identity and playback before setting verified=true.'
+  note:
+   'Ready entries are candidates, not human-verified. Test track identity and playback before setting verified=true.'
  });
 }
 
-/*
- * Read-only track diagnostics.
- */
+/* =========================================================
+   TRACK DIAGNOSTICS
+========================================================= */
+
 async function debugTracks(albumId) {
- if (!/^\d{1,10}$/.test(albumId)) {
+ if (
+  !/^\d{1,10}$/.test(
+   albumId
+  )
+ ) {
   return response({
    success: false,
    version: VERSION,
-   error: 'invalid_album_id'
+   error:
+    'invalid_album_id'
   }, 400);
  }
 
- const songs = await getTracks(albumId);
+ const songs = await getTracks(
+  albumId
+ );
 
- const tracks = songs.map(trackInfo);
+ const tracks = songs.map(
+  trackInfo
+ );
 
  return response({
   success: true,
   version: VERSION,
-  mode: 'tracks_debug',
-  source: 'OSTMusic.org',
+  mode:
+   'tracks_debug',
+  source:
+   'OSTMusic.org',
   albumId,
-  tracksCount: tracks.length,
+  tracksCount:
+   tracks.length,
 
-  playableCount: tracks.filter(
-   isPlayable
-  ).length,
+  playableCount:
+   tracks.filter(
+    isPlayable
+   ).length,
 
-  tracks: tracks.map(t => ({
-   ...t,
-   eligible: isClean(t)
-  })),
+  tracks: tracks.map(
+   track => ({
+    ...track,
+    eligible:
+     isClean(track)
+   })
+  ),
 
-  note: 'playable reflects source metadata, not an independent playback test. No catalog changes are made.'
+  note:
+   'Playable reflects source metadata, not an independent playback test. No catalog changes are made.'
  });
 }
 
-/*
- * Cloudflare Worker entry point.
- */
+/* =========================================================
+   CLOUDFLARE WORKER
+========================================================= */
+
 export default {
  async fetch(request) {
-  if (request.method === 'OPTIONS') {
-   return new Response(null, {
-    status: 204,
-    headers: HEADERS
-   });
+  if (
+   request.method ===
+   'OPTIONS'
+  ) {
+   return new Response(
+    null,
+    {
+     status: 204,
+     headers: HEADERS
+    }
+   );
   }
 
   if (
-   !['GET', 'POST'].includes(request.method)
+   !['GET', 'POST'].includes(
+    request.method
+   )
   ) {
    return response({
     success: false,
-    error: 'method_not_allowed'
+    error:
+     'method_not_allowed'
    }, 405);
   }
 
-  const url = new URL(request.url);
+  const url = new URL(
+   request.url
+  );
 
   try {
-   if (request.method === 'POST') {
+   if (
+    request.method ===
+    'POST'
+   ) {
     let body;
 
     try {
-     body = await request.json();
+     body =
+      await request.json();
     } catch (_) {
      return response({
       success: false,
       version: VERSION,
-      error: 'invalid_json'
+      error:
+       'invalid_json'
      }, 400);
     }
 
-    const raw = Array.isArray(body)
-     ? body
-     : body?.movies;
+    const raw =
+     Array.isArray(body)
+      ? body
+      : body?.movies;
 
     const limit = Math.max(
      1,
      Math.min(
       MAX_BATCH,
-      Number(body?.limit) || DEFAULT_LIMIT
+      Number(
+       body?.limit
+      ) || DEFAULT_LIMIT
      )
     );
 
@@ -1638,25 +2293,36 @@ export default {
    }
 
    if (
-    url.searchParams.get('debug') === 'tracks'
+    url.searchParams.get(
+     'debug'
+    ) === 'tracks'
    ) {
     return debugTracks(
      String(
-      url.searchParams.get('albumId') || ''
+      url.searchParams.get(
+       'albumId'
+      ) || ''
      ).trim()
     );
    }
 
    if (
-    url.searchParams.get('batch') === '1'
+    url.searchParams.get(
+     'batch'
+    ) === '1'
    ) {
-    const titles = url.searchParams.get('titles');
+    const titles =
+     url.searchParams.get(
+      'titles'
+     );
 
     const raw = titles
      ? titles
-       .split('|')
-       .map(s => s.trim())
-       .filter(Boolean)
+      .split('|')
+      .map(
+       value => value.trim()
+      )
+      .filter(Boolean)
      : DEFAULT_MOVIES;
 
     const limit = Math.max(
@@ -1664,7 +2330,9 @@ export default {
      Math.min(
       MAX_BATCH,
       Number(
-       url.searchParams.get('limit')
+       url.searchParams.get(
+        'limit'
+       )
       ) || DEFAULT_LIMIT
      )
     );
@@ -1672,49 +2340,73 @@ export default {
     return batchSearch(
      raw,
      limit,
-     url.searchParams.get('skipExisting') !== '0'
+     url.searchParams.get(
+      'skipExisting'
+     ) !== '0'
     );
    }
 
    const title = String(
-    url.searchParams.get('title') || ''
+    url.searchParams.get(
+     'title'
+    ) || ''
    ).trim();
 
    const year = yearNum(
-    url.searchParams.get('year')
+    url.searchParams.get(
+     'year'
+    )
    );
 
    const debug =
-    url.searchParams.get('debug') === 'search';
+    url.searchParams.get(
+     'debug'
+    ) === 'search';
 
    if (!title) {
-    const catalog = await loadCatalog();
+    const catalog =
+     await loadCatalog();
 
     return response({
      success: true,
-     service: 'Original Soundtrack',
-     version: VERSION,
-     catalogUrl: CATALOG_URL,
-     catalogVersion: catalog?.version || null,
-     catalogMovies: catalog?.movies.length || 0,
+     service:
+      'Original Soundtrack',
+     version:
+      VERSION,
+     catalogUrl:
+      CATALOG_URL,
+     catalogVersion:
+      catalog?.version || null,
+     catalogMovies:
+      catalog?.movies.length || 0,
 
      endpoints: {
-      search: '?title=Interstellar&year=2014',
-      debug: '?title=The%20X-Files&year=1993&debug=search',
-      tracks: '?albumId=871&debug=tracks',
-      batch: '?batch=1&limit=5',
-      includeExisting: '?batch=1&skipExisting=0'
+      search:
+       '?title=House%20M.D.&year=2004',
+      debug:
+       '?title=House%20M.D.&year=2004&debug=search',
+      tracks:
+       '?albumId=370&debug=tracks',
+      batch:
+       '?batch=1&limit=5',
+      includeExisting:
+       '?batch=1&skipExisting=0'
      },
 
-     maxBatch: MAX_BATCH,
-     searchBudget: SEARCH_BUDGET
+     maxBatch:
+      MAX_BATCH,
+     searchBudget:
+      SEARCH_BUDGET
     });
    }
 
-   if (title.length > 150) {
+   if (
+    title.length > 150
+   ) {
     return response({
      success: false,
-     error: 'title_too_long'
+     error:
+      'title_too_long'
     }, 400);
    }
 
@@ -1723,12 +2415,16 @@ export default {
     year,
     debug
    );
-  } catch (e) {
+  } catch (error) {
    return response({
     success: false,
     version: VERSION,
-    error: 'worker_error',
-    message: String(e.message || e)
+    error:
+     'worker_error',
+    message:
+     String(
+      error.message || error
+     )
    }, 502);
   }
  }
