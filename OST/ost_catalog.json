@@ -51,7 +51,7 @@
     {"title":"Creed III","year":2023,"aliases":["Крід 3","Крид 3"],"albumId":"469","trackId":"11315","track":"Theme From Rocky","artist":"VA","verified":false},
 
     
-    {"title":"First Blood","year":1982,"aliases":["Рембо: Перша кров","Rambo: First Blood"],"source":"soundcloud","audioUrl":"https://soundcloud.com/zackscorner/dan-hill-its-a-long-road","track":"It's a Long Road","artist":"Dan Hill","verified":false},
+    {"title":"First Blood","year":1982,"aliases":["Рембо: Перша кров","Rambo: First Blood"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=8DD0mzPhVSU","track":"It's a Long Road","artist":"Dan Hill","verified":true},
     {"title":"Rambo: First Blood Part II","year":1985,"aliases":["Рембо: Перша кров 2","Рэмбо: Первая кровь 2"],"albumId":"494","trackId":"11840","track":"Another Time","artist":"Jerry Goldsmith","verified":false},
     {"title":"Rambo III","year":1988,"aliases":["Рембо 3","Рэмбо 3"],"albumId":"494","trackId":"11840","track":"Another Time","artist":"Jerry Goldsmith","verified":true},
     {"title":"Rambo","year":2008,"aliases":["Рембо 4","Рэмбо 4","John Rambo"],"albumId":"494","trackId":"11840","track":"Another Time","artist":"Jerry Goldsmith","verified":false},
