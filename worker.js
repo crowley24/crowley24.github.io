@@ -1,7 +1,7 @@
-// Automatic deployment test
+
 /*
  * ORIGINAL SOUNDTRACK
- * Cloudflare Worker 2.8.4
+ * Cloudflare Worker 2.8.5
  *
  * Sources:
  * - OSTMusic.org
@@ -11,10 +11,16 @@
  * https://crowley24.github.io/OST/ost_catalog.json
  *
  * Compatible with:
- * - Lampa Original Soundtrack 2.5.1
+ * - Lampa Original Soundtrack 2.5.1 / 2.5.2
  * - Android TV / Mobile
  *
- * NEW IN 2.8.4:
+ * NEW IN 2.8.5:
+ * - First playable track fallback
+ * - Automatic playback when no main theme is identified
+ * - Original OSTMusic track order preserved
+ * - Fallback confidence and selection diagnostics
+ *
+ * Preserved from 2.8.4:
  * - Better punctuation handling
  * - Abbreviation variants: M.D. / MD
  * - Automatic short-title search
@@ -26,7 +32,7 @@
  * No automatic catalog modifications.
  */
 
-const VERSION = '2.8.4';
+const VERSION = '2.8.5';
 
 const BASE = 'https://www.ostmusic.org';
 
@@ -187,7 +193,7 @@ function uniqueSearchTerms(values) {
 }
 
 /* =========================================================
-   TITLE MATCHING — NEW 2.8.4
+   TITLE MATCHING
 ========================================================= */
 
 /*
@@ -497,7 +503,7 @@ function youtubeURL(value) {
 }
 
 /* =========================================================
-   SEARCH VARIANTS — NEW 2.8.4
+   SEARCH VARIANTS
 ========================================================= */
 
 function variants(title, aliases = []) {
@@ -616,8 +622,6 @@ function cleanTitle(value) {
 }
 
 /*
- * NEW 2.8.4
- *
  * Match album against original and alternate titles.
  *
  * Full exact match is preferred.
@@ -947,7 +951,7 @@ function matchCatalogTrack(
 }
 
 /* =========================================================
-   TRACK SCORING — NEW 2.8.4
+   TRACK SCORING
 ========================================================= */
 
 function scoreTrack(
@@ -1006,7 +1010,6 @@ function scoreTrack(
   score += 85;
  }
 
- // NEW: Theme Song
  if (/\btheme song\b/.test(name)) {
   score += 105;
  }
@@ -1019,8 +1022,6 @@ function scoreTrack(
   score += 50;
  }
 
- // The X-Files Main Title
- // House M.D. Theme Song
  if (
   movie.length >= 5 &&
   name.includes(movie) &&
@@ -1029,7 +1030,6 @@ function scoreTrack(
   score += 35;
  }
 
- // Artist - Track (Series Theme Song)
  if (
   /\btheme song\b/.test(name) &&
   /\s-\s/.test(track.name)
@@ -1037,7 +1037,6 @@ function scoreTrack(
   score += 15;
  }
 
- // Penalize alternate versions.
  if (
   /\ba cappella\b|\bacapella\b/.test(name)
  ) {
@@ -1086,6 +1085,10 @@ function rankTracks(
   );
 }
 
+/* =========================================================
+   TRACK SELECTION — NEW 2.8.5
+========================================================= */
+
 function selectTrack(
  songs,
  title,
@@ -1097,13 +1100,15 @@ function selectTrack(
   preferred
  );
 
+ /*
+  * 1. Prefer a confidently identified main theme.
+  */
  if (
   ranked.length &&
   ranked[0].score >= 85 &&
   (
    ranked.length === 1 ||
-   ranked[0].score >
-    ranked[1].score
+   ranked[0].score > ranked[1].score
   )
  ) {
   return {
@@ -1115,6 +1120,28 @@ function selectTrack(
   };
  }
 
+ /*
+  * 2. Fallback:
+  * First playable track in original OSTMusic order.
+  *
+  * Do not use ranked[0], because ranked is sorted
+  * by score rather than original track order.
+  */
+ const first = songs
+  .map(trackInfo)
+  .find(isPlayable);
+
+ if (first) {
+  return {
+   track: first,
+   confidence: 'fallback',
+   selection: 'first_playable_track'
+  };
+ }
+
+ /*
+  * 3. No playable tracks.
+  */
  return null;
 }
 
@@ -1375,7 +1402,7 @@ async function singleSearch(
       selected?.track.id || null,
      selectionReason:
       selected?.selection ||
-      'no_confident_playable_track',
+      'no_playable_track',
 
      topTracks: ranked
       .slice(0, 12)
@@ -1464,7 +1491,7 @@ async function singleSearch(
    title,
    year,
    reason:
-    'no_confident_playable_track',
+    'no_playable_track',
    album: albumInfo(
     search.album,
     songs
@@ -1924,6 +1951,35 @@ async function inspectMovie(
   };
  }
 
+ /*
+  * NEW 2.8.5:
+  * Batch fallback to first playable track.
+  */
+ const fallback = songs
+  .map(trackInfo)
+  .find(isPlayable);
+
+ if (fallback) {
+  return {
+   status: 'ready',
+   title:
+    movie.title,
+   year:
+    movie.year,
+   source,
+   reason:
+    'first_playable_track_fallback',
+   entry:
+    makeEntry(
+     movie,
+     album.id,
+     fallback
+    ),
+   track:
+    fallback
+  };
+ }
+
  return {
   status: 'review',
   title:
@@ -2157,7 +2213,7 @@ async function batchSearch(
    ),
 
   note:
-   'Ready entries are candidates, not human-verified. Test track identity and playback before setting verified=true.'
+   'Ready entries are candidates, not human-verified. First playable track may not be the main theme. Test playback before setting verified=true.'
  });
 }
 
