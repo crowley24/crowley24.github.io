@@ -3,33 +3,42 @@
     'use strict';
 
     /*
-     * ORIGINAL SOUNDTRACK 2.2
-     * Full Track Edition
+     * ORIGINAL SOUNDTRACK 2.5
      *
      * Lampa / Android TV / Mobile
-     * OSTMusic via Cloudflare Worker 2.4
+     * Cloudflare Worker 2.8.2
      *
-     * Full-length soundtrack playback
-     * Automatic repeat after track ends
-     * 2-second startup delay
-     * 20% default volume
-     * Smooth fade-in
-     * Automatic stop on leaving card
-     * Automatic stop on player start
-     * Positive-result caching
-     * Race-condition protection
+     * Sources:
+     * - YouTube IFrame Player
+     * - OSTMusic.org
+     *
+     * Features:
+     * - Automatic soundtrack search
+     * - YouTube and OSTMusic support
+     * - Automatic repeat
+     * - Startup delay
+     * - Volume control
+     * - Smooth fade-in
+     * - Stop when leaving movie card
+     * - Positive-result cache
+     * - Working cache clearing
+     * - YouTube playback diagnostics
+     * - YouTube startup watchdog
+     * - Automatic playback retry
      */
 
-    var PLUGIN_ID = 'crowley_original_soundtrack_v22';
+    var PLUGIN_ID = 'crowley_original_soundtrack_v24';
 
     if (window[PLUGIN_ID]) return;
     window[PLUGIN_ID] = true;
+
+    var VERSION = '2.5';
 
     var WORKER =
         'https://ostmusic-search.unclezhenya24.workers.dev';
 
     var PREFIX = 'crowley_ost_';
-    var CACHE_PREFIX = PREFIX + 'cache_v22_';
+    var CACHE_PREFIX = PREFIX + 'cache_v25_';
     var CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
 
     var DEFAULTS = {
@@ -41,55 +50,94 @@
         verifiedOnly: false
     };
 
-    var currentAudio = null;
-    var currentTimer = null;
+    var audio = null;
+    var ytPlayer = null;
+    var ytContainer = null;
+
+    var timer = null;
     var fadeTimer = null;
-    var currentRequest = null;
+    var watchdog = null;
+    var request = null;
 
-    var currentToken = 0;
-    var activeCard = false;
-    var currentMovieKey = '';
-    var memoryCache = {};
-
+    var token = 0;
+    var active = false;
+    var movieKeyActive = '';
     var initialized = false;
     var settingsAdded = false;
 
-    // STORAGE
+    var memoryCache = {};
+    var ytCallbacks = [];
+    var ytLoading = false;
+    var ytScriptTimeout = null;
 
-    function getSetting(key) {
-        var fallback = DEFAULTS[key];
+    var ytRetry = 0;
+    var ytPlaying = false;
+    var ytFadeDone = false;
+
+    var lastStatus = 'Очікування відкриття картки';
+    var currentMovie = null;
+
+    // --------------------------------------------------
+    // LOGGING
+    // --------------------------------------------------
+
+    function log() {
+        var args = Array.prototype.slice.call(arguments);
+
+        args.unshift(
+            '[Original Soundtrack ' + VERSION + ']'
+        );
 
         try {
-            if (
-                window.Lampa &&
-                Lampa.Storage &&
-                typeof Lampa.Storage.get === 'function'
-            ) {
-                var value = Lampa.Storage.get(
-                    PREFIX + key,
-                    fallback
-                );
+            console.log.apply(console, args);
+        } catch (e) {}
+    }
 
-                return value == null ? fallback : value;
+    function status(message, notify) {
+        lastStatus = message;
+        log(message);
+
+        if (notify) {
+            noty(message);
+        }
+    }
+
+    function noty(message) {
+        try {
+            if (
+                Lampa.Noty &&
+                typeof Lampa.Noty.show === 'function'
+            ) {
+                Lampa.Noty.show(message);
             }
         } catch (e) {}
+    }
 
-        return fallback;
+    // --------------------------------------------------
+    // STORAGE
+    // --------------------------------------------------
+
+    function getSetting(key) {
+        try {
+            return Lampa.Storage.get(
+                PREFIX + key,
+                DEFAULTS[key]
+            );
+        } catch (e) {
+            return DEFAULTS[key];
+        }
     }
 
     function setSetting(key, value) {
         try {
-            if (
-                window.Lampa &&
-                Lampa.Storage &&
-                typeof Lampa.Storage.set === 'function'
-            ) {
-                Lampa.Storage.set(PREFIX + key, value);
-            }
+            Lampa.Storage.set(
+                PREFIX + key,
+                value
+            );
         } catch (e) {}
     }
 
-    function boolSetting(key) {
+    function bool(key) {
         var value = getSetting(key);
 
         return (
@@ -100,89 +148,76 @@
         );
     }
 
-    function isEnabled() {
-        return boolSetting('enabled');
-    }
-
-    function numberSetting(key, fallback) {
+    function num(key, fallback) {
         var value = Number(getSetting(key));
-        return isFinite(value) ? value : fallback;
+
+        return isFinite(value)
+            ? value
+            : fallback;
     }
 
-    function targetVolume() {
-        return Math.min(
-            1,
-            Math.max(
-                0,
-                numberSetting('volume', 20) / 100
-            )
+    function volume() {
+        return Math.max(
+            0,
+            Math.min(100, num('volume', 20))
         );
     }
 
-    // HELPERS
+    // --------------------------------------------------
+    // MOVIE HELPERS
+    // --------------------------------------------------
 
-    function log() {
-        try {
-            var args = Array.prototype.slice.call(arguments);
-            args.unshift('[Original Soundtrack 2.2]');
-            console.log.apply(console, args);
-        } catch (e) {}
-    }
-
-    function normalize(value) {
+    function norm(value) {
         return String(value || '')
             .toLowerCase()
             .replace(/\s+/g, ' ')
             .trim();
     }
 
-    function getYear(movie) {
-        if (!movie) return 0;
+    function titleOf(movie) {
+        return String(
+            movie &&
+            (
+                movie.original_title ||
+                movie.original_name ||
+                movie.title ||
+                movie.name
+            ) ||
+            ''
+        ).trim();
+    }
 
-        var value =
-            movie.release_date ||
-            movie.first_air_date ||
-            movie.year ||
-            '';
+    function yearOf(movie) {
+        var value = String(
+            movie &&
+            (
+                movie.release_date ||
+                movie.first_air_date ||
+                movie.year
+            ) ||
+            ''
+        );
 
-        var match = String(value).match(
-            /\b(18|19|20)\d{2}\b/
+        var match = value.match(
+            /\b(?:18|19|20)\d{2}\b/
         );
 
         return match ? Number(match[0]) : 0;
     }
 
-    function getMovieTitle(movie) {
-        if (!movie) return '';
-
-        return String(
-            movie.original_title ||
-            movie.original_name ||
-            movie.title ||
-            movie.name ||
-            ''
-        ).trim();
-    }
-
-    function getMovieId(movie) {
-        if (!movie) return '';
-
-        return String(
-            movie.id ||
-            movie.tmdb_id ||
-            ''
-        );
-    }
-
-    function movieKey(movie) {
+    function keyOf(movie) {
         return [
-            getMovieId(movie),
-            normalize(getMovieTitle(movie)),
-            getYear(movie)
+            String(
+                movie.id ||
+                movie.tmdb_id ||
+                ''
+            ),
+            norm(titleOf(movie)),
+            yearOf(movie)
         ].join('|');
     }
 
-    function getMovieFromEvent(event) {
+    function movieFromEvent(event) {
         if (!event) return null;
 
         var candidates = [
@@ -194,7 +229,11 @@
             event.data
         ];
 
-        for (var i = 0; i < candidates.length; i++) {
+        for (
+            var i = 0;
+            i < candidates.length;
+            i++
+        ) {
             var item = candidates[i];
 
             if (
@@ -214,72 +253,125 @@
         return null;
     }
 
-    // CACHE
+    // --------------------------------------------------
+    // YOUTUBE URL
+    // --------------------------------------------------
 
-    function cacheKey(movie) {
-        return [
-            normalize(getMovieTitle(movie)),
-            getYear(movie)
-        ].join('|');
+    function youtubeId(value) {
+        try {
+            var url = new URL(
+                String(value || '').trim()
+            );
+
+            if (url.protocol !== 'https:') {
+                return '';
+            }
+
+            var host = url.hostname.toLowerCase();
+
+            var allowed = [
+                'youtube.com',
+                'www.youtube.com',
+                'm.youtube.com',
+                'music.youtube.com',
+                'youtu.be',
+                'www.youtu.be',
+                'youtube-nocookie.com',
+                'www.youtube-nocookie.com'
+            ];
+
+            if (allowed.indexOf(host) < 0) {
+                return '';
+            }
+
+            var id = '';
+
+            if (
+                host === 'youtu.be' ||
+                host === 'www.youtu.be'
+            ) {
+                id = url.pathname
+                    .split('/')
+                    .filter(Boolean)[0];
+            } else {
+                id = url.searchParams.get('v');
+
+                if (!id) {
+                    var match = url.pathname.match(
+                        /^\/(?:embed|shorts|live)\/([^/?]+)/
+                    );
+
+                    id = match && match[1];
+                }
+            }
+
+            return /^[A-Za-z0-9_-]{11}$/.test(id || '')
+                ? id
+                : '';
+
+        } catch (e) {
+            return '';
+        }
+    }
+
+    // --------------------------------------------------
+    // CACHE
+    // --------------------------------------------------
+
+    function cachedKey(movie) {
+        return (
+            CACHE_PREFIX +
+            norm(titleOf(movie)) +
+            '|' +
+            yearOf(movie)
+        );
+    }
+
+    function cacheValid(entry) {
+        return Boolean(
+            entry &&
+            entry.time &&
+            Date.now() - entry.time < CACHE_TTL &&
+            entry.data &&
+            entry.data.success &&
+            entry.data.found &&
+            entry.data.track &&
+            entry.data.track.file
+        );
     }
 
     function getCached(movie) {
-        if (!boolSetting('cache')) return null;
+        if (!bool('cache')) return null;
 
-        var key = cacheKey(movie);
+        var key = cachedKey(movie);
         var entry = memoryCache[key];
 
-        if (entry) {
-            if (
-                Date.now() - entry.time < CACHE_TTL &&
-                entry.data &&
-                entry.data.found &&
-                entry.data.track &&
-                entry.data.track.file
-            ) {
+        if (cacheValid(entry)) {
+            return entry.data;
+        }
+
+        delete memoryCache[key];
+
+        try {
+            entry = JSON.parse(
+                localStorage.getItem(key)
+            );
+
+            if (cacheValid(entry)) {
+                memoryCache[key] = entry;
                 return entry.data;
             }
 
-            delete memoryCache[key];
-        }
+            localStorage.removeItem(key);
 
-        try {
-            var raw = localStorage.getItem(
-                CACHE_PREFIX + key
-            );
+        } catch (e) {}
 
-            if (!raw) return null;
-
-            entry = JSON.parse(raw);
-
-            if (
-                !entry ||
-                !entry.time ||
-                Date.now() - entry.time >= CACHE_TTL ||
-                !entry.data ||
-                !entry.data.found ||
-                !entry.data.track ||
-                !entry.data.track.file
-            ) {
-                localStorage.removeItem(
-                    CACHE_PREFIX + key
-                );
-
-                return null;
-            }
-
-            memoryCache[key] = entry;
-            return entry.data;
-
-        } catch (e) {
-            return null;
-        }
+        return null;
     }
 
-    function setCached(movie, data) {
-        if (!boolSetting('cache')) return;
+    function putCached(movie, data) {
+        if (!bool('cache')) return;
 
-        // Never cache negative results.
         if (
             !data ||
             !data.success ||
@@ -290,7 +382,7 @@
             return;
         }
 
-        var key = cacheKey(movie);
+        var key = cachedKey(movie);
 
         var entry = {
             time: Date.now(),
@@ -301,7 +393,7 @@
 
         try {
             localStorage.setItem(
-                CACHE_PREFIX + key,
+                key,
                 JSON.stringify(entry)
             );
         } catch (e) {}
@@ -310,15 +402,23 @@
     function clearCache() {
         memoryCache = {};
 
+        var count = 0;
+
         try {
             var keys = [];
 
-            for (var i = 0; i < localStorage.length; i++) {
+            for (
+                var i = 0;
+                i < localStorage.length;
+                i++
+            ) {
                 var key = localStorage.key(i);
 
                 if (
                     key &&
-                    key.indexOf(PREFIX + 'cache_') === 0
+                    key.indexOf(
+                        PREFIX + 'cache_'
+                    ) === 0
                 ) {
                     keys.push(key);
                 }
@@ -326,193 +426,246 @@
 
             keys.forEach(function (key) {
                 localStorage.removeItem(key);
+                count++;
             });
 
         } catch (e) {}
 
-        log('Cache cleared');
+        status(
+            'Кеш OST очищено (' + count + ')',
+            true
+        );
     }
 
-    // TIMERS AND CLEANUP
+    // --------------------------------------------------
+    // TIMERS
+    // --------------------------------------------------
 
-    function clearTimers() {
-        if (currentTimer !== null) {
-            clearTimeout(currentTimer);
-            currentTimer = null;
-        }
-
+    function clearFade() {
         if (fadeTimer !== null) {
             clearInterval(fadeTimer);
             fadeTimer = null;
         }
     }
 
+    function clearWatchdog() {
+        if (watchdog !== null) {
+            clearTimeout(watchdog);
+            watchdog = null;
+        }
+    }
+
+    // --------------------------------------------------
+    // CLEANUP
+    // --------------------------------------------------
+
     function stopAudio() {
-        clearTimers();
+        var current = audio;
 
-        var audio = currentAudio;
-        currentAudio = null;
+        audio = null;
+        clearFade();
 
-        if (!audio) return;
+        if (!current) return;
 
         try {
-            audio.pause();
-            audio.loop = false;
-            audio.removeAttribute('src');
-            audio.load();
+            current.pause();
+            current.loop = false;
+            current.removeAttribute('src');
+            current.load();
         } catch (e) {}
     }
 
-    function cancelRequest() {
-        if (!currentRequest) return;
+    function stopYT() {
+        var player = ytPlayer;
+        var container = ytContainer;
 
-        var xhr = currentRequest;
-        currentRequest = null;
+        ytPlayer = null;
+        ytContainer = null;
 
-        try {
-            xhr.abort();
-        } catch (e) {}
+        ytPlaying = false;
+        ytFadeDone = false;
+
+        clearFade();
+        clearWatchdog();
+
+        if (player) {
+            try {
+                player.stopVideo();
+            } catch (e) {}
+
+            try {
+                player.destroy();
+            } catch (e) {}
+        }
+
+        if (
+            container &&
+            container.parentNode
+        ) {
+            try {
+                container.parentNode.removeChild(
+                    container
+                );
+            } catch (e) {}
+        }
     }
 
     function stopAll() {
-        currentToken++;
+        token++;
 
-        cancelRequest();
-        stopAudio();
+        if (request) {
+            try {
+                request.abort();
+            } catch (e) {}
 
-        currentMovieKey = '';
-    }
-
-    // FADE-IN
-
-    function startFade(audio, token) {
-        if (fadeTimer !== null) {
-            clearInterval(fadeTimer);
-            fadeTimer = null;
+            request = null;
         }
 
-        var target = targetVolume();
+        if (timer !== null) {
+            clearTimeout(timer);
+            timer = null;
+        }
 
-        if (!boolSetting('fade')) {
-            audio.volume = target;
+        clearFade();
+        clearWatchdog();
+
+        stopAudio();
+        stopYT();
+
+        movieKeyActive = '';
+        currentMovie = null;
+    }
+
+    // --------------------------------------------------
+    // AUDIO FADE
+    // --------------------------------------------------
+
+    function audioFade(current, currentToken) {
+        clearFade();
+
+        var target = volume() / 100;
+
+        if (!bool('fade')) {
+            current.volume = target;
             return;
         }
 
-        audio.volume = 0;
+        current.volume = 0;
 
         var started = Date.now();
-        var duration = 1800;
 
         fadeTimer = setInterval(function () {
             if (
-                token !== currentToken ||
-                audio !== currentAudio
+                currentToken !== token ||
+                audio !== current
             ) {
-                clearInterval(fadeTimer);
-                fadeTimer = null;
+                clearFade();
                 return;
             }
 
             var progress = Math.min(
                 1,
-                (Date.now() - started) / duration
+                (Date.now() - started) / 1800
             );
 
-            audio.volume = target * progress;
+            current.volume = target * progress;
 
             if (progress >= 1) {
-                clearInterval(fadeTimer);
-                fadeTimer = null;
+                clearFade();
             }
-
         }, 60);
     }
 
-    // FULL TRACK PLAYBACK
+    // --------------------------------------------------
+    // OSTMUSIC PLAYBACK
+    // --------------------------------------------------
 
-    function playTrack(track, token) {
+    function playOST(track, currentToken) {
         if (
-            token !== currentToken ||
-            !activeCard ||
-            !isEnabled()
+            currentToken !== token ||
+            !active ||
+            !bool('enabled')
         ) {
             return;
         }
 
-        if (!track || !track.file) return;
-
-        var fileUrl;
+        var url;
 
         try {
-            fileUrl = new URL(track.file);
+            url = new URL(track.file);
 
             if (
-                fileUrl.protocol !== 'https:' ||
-                fileUrl.hostname !== 'www.ostmusic.org'
+                url.protocol !== 'https:' ||
+                url.hostname !== 'www.ostmusic.org'
             ) {
-                log('Unsupported audio source');
+                status(
+                    'Недозволене джерело OSTMusic'
+                );
                 return;
             }
+
         } catch (e) {
+            status('Некоректний URL OSTMusic');
             return;
         }
 
+        stopYT();
         stopAudio();
 
-        var audio = new Audio();
-        currentAudio = audio;
+        var current = new Audio();
 
-        audio.preload = 'auto';
+        audio = current;
+        current.preload = 'auto';
+        current.loop = true;
+        current.volume = 0;
 
-        /*
-         * FULL TRACK MODE
-         *
-         * No 30-second timer.
-         * No forced currentTime reset.
-         * Repeat only after natural completion.
-         */
-
-        audio.loop = true;
-        audio.volume = 0;
-
-        audio.addEventListener(
+        current.addEventListener(
             'playing',
             function () {
                 if (
-                    token !== currentToken ||
-                    audio !== currentAudio
+                    currentToken !== token ||
+                    audio !== current
                 ) {
                     return;
                 }
 
-                startFade(audio, token);
+                status(
+                    'OSTMusic відтворюється: ' +
+                    track.name
+                );
+
+                audioFade(
+                    current,
+                    currentToken
+                );
             },
             { once: true }
         );
 
-        audio.addEventListener(
+        current.addEventListener(
             'error',
             function () {
                 if (
-                    token !== currentToken ||
-                    audio !== currentAudio
+                    currentToken !== token ||
+                    audio !== current
                 ) {
                     return;
                 }
 
-                log(
-                    'Audio playback error:',
-                    track.name
+                status(
+                    'Помилка OSTMusic: ' +
+                    track.name,
+                    true
                 );
 
                 stopAudio();
             }
         );
 
-        audio.src = fileUrl.href;
+        current.src = url.href;
 
         try {
-            var promise = audio.play();
+            var promise = current.play();
 
             if (
                 promise &&
@@ -520,43 +673,621 @@
             ) {
                 promise.catch(function (error) {
                     if (
-                        token === currentToken &&
-                        audio === currentAudio
+                        currentToken === token &&
+                        audio === current
                     ) {
-                        log(
-                            'Audio start blocked:',
-                            error && error.message
+                        status(
+                            'OSTMusic заблоковано: ' +
+                            (
+                                error.message ||
+                                error
+                            ),
+                            true
                         );
                     }
                 });
             }
+
         } catch (e) {
-            log('Playback failed:', e);
+            status(
+                'OSTMusic: ' + e.message,
+                true
+            );
+        }
+    }
+
+    // --------------------------------------------------
+    // YOUTUBE API
+    // --------------------------------------------------
+
+    function flushYT() {
+        var callbacks = ytCallbacks.slice();
+
+        ytCallbacks = [];
+
+        callbacks.forEach(function (callback) {
+            try {
+                callback();
+            } catch (e) {
+                log('YT callback error:', e);
+            }
+        });
+    }
+
+    function ytReady() {
+        if (
+            !window.YT ||
+            typeof window.YT.Player !== 'function'
+        ) {
+            return;
         }
 
-        log(
-            'Playing full track:',
-            track.name,
-            '—',
-            track.artist,
-            'Duration:',
-            track.duration || 'unknown'
+        ytLoading = false;
+
+        if (ytScriptTimeout) {
+            clearTimeout(ytScriptTimeout);
+            ytScriptTimeout = null;
+        }
+
+        status('YouTube API готовий');
+
+        flushYT();
+    }
+
+    function ensureYT(callback) {
+        if (
+            window.YT &&
+            typeof window.YT.Player === 'function'
+        ) {
+            callback();
+            return;
+        }
+
+        ytCallbacks.push(callback);
+
+        if (ytLoading) return;
+
+        ytLoading = true;
+
+        var previous =
+            window.onYouTubeIframeAPIReady;
+
+        window.onYouTubeIframeAPIReady = function () {
+            try {
+                if (
+                    typeof previous === 'function'
+                ) {
+                    previous();
+                }
+            } catch (e) {}
+
+            ytReady();
+        };
+
+        var script = document.querySelector(
+            'script[src*="youtube.com/iframe_api"]'
+        );
+
+        if (!script) {
+            script = document.createElement('script');
+
+            script.src =
+                'https://www.youtube.com/iframe_api';
+
+            script.async = true;
+
+            script.onerror = function () {
+                ytLoading = false;
+                ytCallbacks = [];
+
+                status(
+                    'Помилка завантаження YouTube API',
+                    true
+                );
+            };
+
+            (
+                document.head ||
+                document.documentElement
+            ).appendChild(script);
+        }
+
+        ytScriptTimeout = setTimeout(
+            function () {
+                if (
+                    window.YT &&
+                    typeof window.YT.Player === 'function'
+                ) {
+                    ytReady();
+                    return;
+                }
+
+                ytLoading = false;
+                ytCallbacks = [];
+
+                status(
+                    'YouTube API не відповідає',
+                    true
+                );
+            },
+            12000
         );
     }
 
-    // WORKER API
+    // --------------------------------------------------
+    // YOUTUBE VOLUME
+    // --------------------------------------------------
 
-    function requestSoundtrack(movie, token) {
-        var title = getMovieTitle(movie);
-        var year = getYear(movie);
+    function setYTVolume(player, value) {
+        try {
+            player.setVolume(
+                Math.max(
+                    0,
+                    Math.min(
+                        100,
+                        Math.round(value)
+                    )
+                )
+            );
+        } catch (e) {}
+    }
+
+    function ytFade(player, currentToken) {
+        if (ytFadeDone) return;
+
+        ytFadeDone = true;
+        clearFade();
+
+        var target = volume();
+
+        if (!bool('fade')) {
+            setYTVolume(player, target);
+            return;
+        }
+
+        setYTVolume(player, 0);
+
+        var started = Date.now();
+
+        fadeTimer = setInterval(function () {
+            if (
+                currentToken !== token ||
+                player !== ytPlayer
+            ) {
+                clearFade();
+                return;
+            }
+
+            var progress = Math.min(
+                1,
+                (Date.now() - started) / 1800
+            );
+
+            setYTVolume(
+                player,
+                target * progress
+            );
+
+            if (progress >= 1) {
+                clearFade();
+            }
+        }, 60);
+    }
+
+    // --------------------------------------------------
+    // YOUTUBE ERRORS
+    // --------------------------------------------------
+
+    function ytErrorDescription(code) {
+        var errors = {
+            2: 'некоректний ID',
+            5: 'HTML5-плеєр не підтримує відео',
+            100: 'відео недоступне',
+            101: 'вбудовування заборонене',
+            150: 'вбудовування заборонене',
+            153: 'відсутня ідентифікація клієнта'
+        };
+
+        return errors[code] || 'невідома помилка';
+    }
+
+    // --------------------------------------------------
+    // YOUTUBE WATCHDOG
+    // --------------------------------------------------
+
+    function ytWatch(
+        player,
+        currentToken,
+        videoId
+    ) {
+        clearWatchdog();
+
+        watchdog = setTimeout(function () {
+            if (
+                currentToken !== token ||
+                player !== ytPlayer ||
+                !active ||
+                ytPlaying
+            ) {
+                return;
+            }
+
+            if (ytRetry < 1) {
+                ytRetry++;
+
+                status(
+                    'YouTube не запустився, ' +
+                    'повторна спроба: ' +
+                    videoId,
+                    true
+                );
+
+                try {
+                    player.loadVideoById(videoId);
+                    player.playVideo();
+                } catch (e) {
+                    status(
+                        'Помилка повторного запуску: ' +
+                        e.message,
+                        true
+                    );
+                }
+
+                ytWatch(
+                    player,
+                    currentToken,
+                    videoId
+                );
+
+            } else {
+                status(
+                    'YouTube не почав відтворення: ' +
+                    videoId,
+                    true
+                );
+            }
+
+        }, 9000);
+    }
+
+    // --------------------------------------------------
+    // YOUTUBE PLAYBACK
+    // --------------------------------------------------
+
+    function playYT(
+        videoUrl,
+        track,
+        currentToken
+    ) {
+        if (
+            currentToken !== token ||
+            !active ||
+            !bool('enabled')
+        ) {
+            return;
+        }
+
+        var videoId = youtubeId(videoUrl);
+
+        if (!videoId) {
+            status(
+                'Некоректне посилання YouTube',
+                true
+            );
+            return;
+        }
+
+        stopAudio();
+        stopYT();
+
+        ytRetry = 0;
+
+        status(
+            'Створення YouTube-плеєра: ' +
+            videoId
+        );
+
+        ensureYT(function () {
+            if (
+                currentToken !== token ||
+                !active ||
+                !bool('enabled')
+            ) {
+                return;
+            }
+
+            var container =
+                document.createElement('div');
+
+            container.id =
+                'crowley-ost-yt-' +
+                currentToken +
+                '-' +
+                Date.now();
+
+            container.style.cssText =
+                'position:fixed;' +
+                'left:-10000px;' +
+                'top:0;' +
+                'width:200px;' +
+                'height:200px;' +
+                'overflow:hidden;' +
+                'opacity:0.01;' +
+                'pointer-events:none;';
+
+            container.setAttribute(
+                'aria-hidden',
+                'true'
+            );
+
+            document.body.appendChild(container);
+
+            ytContainer = container;
+
+            var player;
+
+            try {
+                player = new window.YT.Player(
+                    container.id,
+                    {
+                        width: '200',
+                        height: '200',
+                        videoId: videoId,
+
+                        playerVars: {
+                            autoplay: 1,
+                            controls: 0,
+                            disablekb: 1,
+                            fs: 0,
+                            playsinline: 1,
+                            rel: 0,
+                            loop: 1,
+                            playlist: videoId,
+                            modestbranding: 1
+                        },
+
+                        events: {
+                            onReady: function (event) {
+                                if (
+                                    currentToken !== token ||
+                                    !active ||
+                                    player !== ytPlayer
+                                ) {
+                                    return;
+                                }
+
+                                status(
+                                    'YouTube готовий: ' +
+                                    videoId
+                                );
+
+                                setYTVolume(
+                                    event.target,
+                                    bool('fade')
+                                        ? 0
+                                        : volume()
+                                );
+
+                                try {
+                                    event.target.playVideo();
+                                } catch (error) {
+                                    status(
+                                        'playVideo: ' +
+                                        error.message,
+                                        true
+                                    );
+                                }
+
+                                ytWatch(
+                                    event.target,
+                                    currentToken,
+                                    videoId
+                                );
+                            },
+
+                            onStateChange: function (event) {
+                                if (
+                                    currentToken !== token ||
+                                    player !== ytPlayer
+                                ) {
+                                    return;
+                                }
+
+                                log(
+                                    'YouTube state:',
+                                    event.data,
+                                    'video:',
+                                    videoId
+                                );
+
+                                if (event.data === 1) {
+                                    ytPlaying = true;
+
+                                    clearWatchdog();
+
+                                    status(
+                                        'YouTube відтворюється: ' +
+                                        (
+                                            track.name ||
+                                            videoId
+                                        )
+                                    );
+
+                                    ytFade(
+                                        event.target,
+                                        currentToken
+                                    );
+                                }
+
+                                if (event.data === 0) {
+                                    try {
+                                        event.target.seekTo(
+                                            0,
+                                            true
+                                        );
+
+                                        event.target.playVideo();
+                                    } catch (e) {}
+                                }
+                            },
+
+                            onError: function (event) {
+                                if (
+                                    currentToken !== token ||
+                                    player !== ytPlayer
+                                ) {
+                                    return;
+                                }
+
+                                status(
+                                    'YouTube помилка ' +
+                                    event.data +
+                                    ': ' +
+                                    ytErrorDescription(
+                                        event.data
+                                    ),
+                                    true
+                                );
+
+                                stopYT();
+                            }
+                        }
+                    }
+                );
+
+                ytPlayer = player;
+
+                status(
+                    'YouTube-плеєр створено: ' +
+                    videoId
+                );
+
+                ytWatch(
+                    player,
+                    currentToken,
+                    videoId
+                );
+
+            } catch (e) {
+                status(
+                    'Не вдалося створити ' +
+                    'YouTube-плеєр: ' +
+                    e.message,
+                    true
+                );
+
+                if (container.parentNode) {
+                    container.parentNode.removeChild(
+                        container
+                    );
+                }
+
+                if (ytContainer === container) {
+                    ytContainer = null;
+                }
+            }
+        });
+    }
+
+    // --------------------------------------------------
+    // WORKER RESULT
+    // --------------------------------------------------
+
+    function handleResult(data, currentToken) {
+        if (
+            currentToken !== token ||
+            !active ||
+            !bool('enabled')
+        ) {
+            return;
+        }
+
+        if (
+            !data ||
+            !data.found ||
+            !data.track ||
+            !data.track.file
+        ) {
+            status(
+                'Саундтрек не знайдено: ' +
+                (
+                    data &&
+                    data.reason ||
+                    'невідома причина'
+                )
+            );
+            return;
+        }
+
+        if (
+            bool('verifiedOnly') &&
+            data.confidence !== 'verified'
+        ) {
+            status(
+                'Пропущено неперевірену композицію'
+            );
+            return;
+        }
+
+        status(
+            'Знайдено ' +
+            data.track.name +
+            ' (' +
+            (
+                data.source ||
+                data.track.source ||
+                'ostmusic'
+            ) +
+            ')'
+        );
+
+        if (
+            String(
+                data.source ||
+                data.track.source ||
+                ''
+            ).toLowerCase() === 'youtube'
+        ) {
+            playYT(
+                data.track.file,
+                data.track,
+                currentToken
+            );
+
+        } else {
+            playOST(
+                data.track,
+                currentToken
+            );
+        }
+    }
+
+    // --------------------------------------------------
+    // WORKER API
+    // --------------------------------------------------
+
+    function requestSoundtrack(
+        movie,
+        currentToken
+    ) {
+        var title = titleOf(movie);
+        var year = yearOf(movie);
 
         if (!title) return;
 
         var cached = getCached(movie);
 
         if (cached) {
-            log('Using cached OST:', title);
-            handleResult(cached, token);
+            status(
+                'Композиція з кешу: ' +
+                title
+            );
+
+            handleResult(
+                cached,
+                currentToken
+            );
+
             return;
         }
 
@@ -568,7 +1299,8 @@
             encodeURIComponent(year);
 
         var xhr = new XMLHttpRequest();
-        currentRequest = xhr;
+
+        request = xhr;
 
         xhr.open('GET', url, true);
         xhr.timeout = 15000;
@@ -576,13 +1308,13 @@
         xhr.onreadystatechange = function () {
             if (xhr.readyState !== 4) return;
 
-            if (currentRequest === xhr) {
-                currentRequest = null;
+            if (request === xhr) {
+                request = null;
             }
 
             if (
-                token !== currentToken ||
-                !activeCard
+                currentToken !== token ||
+                !active
             ) {
                 return;
             }
@@ -591,149 +1323,150 @@
                 xhr.status < 200 ||
                 xhr.status >= 300
             ) {
-                log('Worker HTTP error:', xhr.status);
+                status(
+                    'Worker HTTP ' +
+                    xhr.status,
+                    true
+                );
                 return;
             }
 
             var data;
 
             try {
-                data = JSON.parse(xhr.responseText);
+                data = JSON.parse(
+                    xhr.responseText
+                );
             } catch (e) {
-                log('Invalid Worker JSON');
+                status(
+                    'Worker повернув некоректний JSON',
+                    true
+                );
                 return;
             }
 
-            if (!data || !data.success) {
-                log('Worker returned an error');
+            if (
+                !data ||
+                !data.success
+            ) {
+                status(
+                    'Помилка Worker',
+                    true
+                );
                 return;
             }
 
-            setCached(movie, data);
-            handleResult(data, token);
+            putCached(movie, data);
+
+            handleResult(
+                data,
+                currentToken
+            );
         };
 
         xhr.onerror = function () {
-            if (token === currentToken) {
-                log('Worker network error');
+            if (currentToken === token) {
+                status(
+                    'Помилка мережі Worker',
+                    true
+                );
             }
         };
 
         xhr.ontimeout = function () {
-            if (token === currentToken) {
-                log('Worker timeout');
+            if (currentToken === token) {
+                status(
+                    'Таймаут Worker',
+                    true
+                );
             }
         };
 
         try {
             xhr.send();
         } catch (e) {
-            log('Worker request failed:', e);
-        }
-    }
-
-    function handleResult(data, token) {
-        if (
-            token !== currentToken ||
-            !activeCard ||
-            !isEnabled()
-        ) {
-            return;
-        }
-
-        if (
-            !data ||
-            !data.found ||
-            !data.track
-        ) {
-            log(
-                'OST not identified:',
-                data && data.reason
+            status(
+                'Запит Worker: ' +
+                e.message,
+                true
             );
-
-            return;
         }
-
-        if (
-            boolSetting('verifiedOnly') &&
-            data.confidence !== 'verified'
-        ) {
-            log('Skipping unverified theme');
-            return;
-        }
-
-        log(
-            'Found:',
-            data.track.name,
-            'Selection:',
-            data.selection,
-            'Confidence:',
-            data.confidence
-        );
-
-        playTrack(data.track, token);
     }
 
+    // --------------------------------------------------
     // MOVIE CARD
+    // --------------------------------------------------
 
     function openMovie(movie) {
-        if (!isEnabled()) {
-            activeCard = false;
+        if (!bool('enabled')) {
+            active = false;
             stopAll();
             return;
         }
 
-        if (!movie) return;
+        if (
+            !movie ||
+            !titleOf(movie)
+        ) {
+            return;
+        }
 
-        var title = getMovieTitle(movie);
-        if (!title) return;
-
-        var key = movieKey(movie);
+        var key = keyOf(movie);
 
         if (
-            activeCard &&
-            currentMovieKey === key
+            active &&
+            movieKeyActive === key
         ) {
             return;
         }
 
         stopAll();
 
-        activeCard = true;
-        currentMovieKey = key;
+        active = true;
+        currentMovie = movie;
+        movieKeyActive = key;
 
-        var token = currentToken;
+        var currentToken = token;
 
         var delay = Math.max(
             0,
-            numberSetting('delay', 2)
+            num('delay', 2)
         ) * 1000;
 
-        log('Movie:', title, getYear(movie));
+        status(
+            'Картка: ' +
+            titleOf(movie) +
+            ' (' +
+            yearOf(movie) +
+            ')'
+        );
 
-        currentTimer = setTimeout(function () {
-            currentTimer = null;
+        timer = setTimeout(function () {
+            timer = null;
 
             if (
-                token !== currentToken ||
-                !activeCard
+                currentToken === token &&
+                active
             ) {
-                return;
+                requestSoundtrack(
+                    movie,
+                    currentToken
+                );
             }
-
-            requestSoundtrack(movie, token);
 
         }, delay);
     }
 
     function closeMovie() {
-        activeCard = false;
+        active = false;
         stopAll();
     }
 
+    // --------------------------------------------------
     // LAMPA EVENTS
+    // --------------------------------------------------
 
-    function handleFullEvent(event) {
+    function onFull(event) {
         if (!event) return;
 
         var type = String(
@@ -741,21 +1474,25 @@
         ).toLowerCase();
 
         if (
-            type === 'destroy' ||
-            type === 'close' ||
-            type === 'back'
+            [
+                'destroy',
+                'close',
+                'back'
+            ].indexOf(type) >= 0
         ) {
             closeMovie();
             return;
         }
 
         if (
-            type === 'complite' ||
-            type === 'complete' ||
-            type === 'start' ||
-            type === 'open'
+            [
+                'complite',
+                'complete',
+                'start',
+                'open'
+            ].indexOf(type) >= 0
         ) {
-            var movie = getMovieFromEvent(event);
+            var movie = movieFromEvent(event);
 
             if (movie) {
                 openMovie(movie);
@@ -763,7 +1500,7 @@
         }
     }
 
-    function handlePlayerEvent(event) {
+    function onPlayer(event) {
         if (!event) return;
 
         var type = String(
@@ -771,17 +1508,21 @@
         ).toLowerCase();
 
         if (
-            type === 'start' ||
-            type === 'play' ||
-            type === 'open' ||
-            type === 'ready' ||
-            type === 'loading'
+            [
+                'start',
+                'play',
+                'open',
+                'ready',
+                'loading'
+            ].indexOf(type) >= 0
         ) {
             closeMovie();
         }
     }
 
+    // --------------------------------------------------
     // SETTINGS
+    // --------------------------------------------------
 
     function addSettings() {
         if (
@@ -798,6 +1539,7 @@
             Lampa.SettingsApi.addComponent({
                 component: 'original_soundtrack',
                 name: 'Original Soundtrack',
+
                 icon:
                     '<svg viewBox="0 0 24 24" ' +
                     'width="24" height="24" ' +
@@ -811,37 +1553,54 @@
                     '</svg>'
             });
 
-            function addParam(name, config) {
+            function param(
+                name,
+                type,
+                defaultValue,
+                field,
+                values,
+                change
+            ) {
+                var config = {
+                    name: PREFIX + name,
+                    type: type,
+                    default: defaultValue
+                };
+
+                if (values) {
+                    config.values = values;
+                }
+
                 Lampa.SettingsApi.addParam({
                     component: 'original_soundtrack',
-                    param: Object.assign(
-                        {
-                            name: PREFIX + name
-                        },
-                        config.param
-                    ),
-                    field: config.field,
-                    onChange: function (value) {
-                        setSetting(name, value);
+                    param: config,
+                    field: field,
 
-                        if (config.onChange) {
-                            config.onChange(value);
+                    onChange: function (value) {
+                        setSetting(
+                            name,
+                            value
+                        );
+
+                        if (change) {
+                            change(value);
                         }
                     }
                 });
             }
 
-            addParam('enabled', {
-                param: {
-                    type: 'trigger',
-                    default: true
-                },
-                field: {
-                    name: 'Увімкнути Original Soundtrack',
+            param(
+                'enabled',
+                'trigger',
+                true,
+                {
+                    name:
+                        'Увімкнути Original Soundtrack',
                     description:
                         'Автоматична музика в картці фільму'
                 },
-                onChange: function (value) {
+                null,
+                function (value) {
                     if (
                         value === false ||
                         value === 'false' ||
@@ -851,135 +1610,222 @@
                         closeMovie();
                     }
                 }
-            });
+            );
 
-            addParam('volume', {
-                param: {
-                    type: 'select',
-                    default: '20',
-                    values: {
-                        '5': '5%',
-                        '10': '10%',
-                        '15': '15%',
-                        '20': '20%',
-                        '25': '25%',
-                        '30': '30%',
-                        '40': '40%',
-                        '50': '50%'
-                    }
-                },
-                field: {
+            param(
+                'volume',
+                'select',
+                '20',
+                {
                     name: 'Гучність музики',
                     description: 'Стандартно 20%'
                 },
-                onChange: function () {
-                    if (currentAudio) {
-                        if (fadeTimer !== null) {
-                            clearInterval(fadeTimer);
-                            fadeTimer = null;
-                        }
+                {
+                    '5': '5%',
+                    '10': '10%',
+                    '15': '15%',
+                    '20': '20%',
+                    '25': '25%',
+                    '30': '30%',
+                    '40': '40%',
+                    '50': '50%'
+                },
+                function () {
+                    clearFade();
 
-                        currentAudio.volume = targetVolume();
+                    if (audio) {
+                        audio.volume =
+                            volume() / 100;
+                    }
+
+                    if (ytPlayer) {
+                        setYTVolume(
+                            ytPlayer,
+                            volume()
+                        );
                     }
                 }
-            });
+            );
 
-            addParam('delay', {
-                param: {
-                    type: 'select',
-                    default: '2',
-                    values: {
-                        '0': 'Без затримки',
-                        '1': '1 секунда',
-                        '2': '2 секунди',
-                        '3': '3 секунди',
-                        '5': '5 секунд'
-                    }
-                },
-                field: {
+            param(
+                'delay',
+                'select',
+                '2',
+                {
                     name: 'Затримка запуску',
                     description:
                         'Час перед пошуком композиції'
-                }
-            });
-
-            addParam('fade', {
-                param: {
-                    type: 'trigger',
-                    default: true
                 },
-                field: {
+                {
+                    '0': 'Без затримки',
+                    '1': '1 секунда',
+                    '2': '2 секунди',
+                    '3': '3 секунди',
+                    '5': '5 секунд'
+                }
+            );
+
+            param(
+                'fade',
+                'trigger',
+                true,
+                {
                     name: 'Плавне наростання звуку',
                     description:
                         'Fade-in приблизно 1,8 секунди'
-                }
-            });
-
-            addParam('cache', {
-                param: {
-                    type: 'trigger',
-                    default: true
                 },
-                field: {
+                null,
+                function (value) {
+                    if (
+                        value === false ||
+                        value === 'false' ||
+                        value === 0 ||
+                        value === '0'
+                    ) {
+                        clearFade();
+
+                        if (audio) {
+                            audio.volume =
+                                volume() / 100;
+                        }
+
+                        if (ytPlayer) {
+                            setYTVolume(
+                                ytPlayer,
+                                volume()
+                            );
+                        }
+                    }
+                }
+            );
+
+            param(
+                'cache',
+                'trigger',
+                true,
+                {
                     name: 'Кешувати результати',
                     description:
                         'Швидший повторний запуск музики'
                 }
-            });
+            );
 
-            addParam('verifiedOnly', {
-                param: {
-                    type: 'trigger',
-                    default: false
-                },
-                field: {
+            param(
+                'verifiedOnly',
+                'trigger',
+                false,
+                {
                     name: 'Лише перевірені теми',
                     description:
                         'Відтворювати тільки перевірені композиції'
                 }
-            });
+            );
+
+            /*
+             * Cache clearing action.
+             *
+             * Static parameters are not reliably
+             * clickable in Lampa, so use a trigger.
+             */
 
             Lampa.SettingsApi.addParam({
                 component: 'original_soundtrack',
+
                 param: {
-                    name: PREFIX + 'clear_cache',
-                    type: 'static'
+                    name:
+                        PREFIX + 'clear_cache_action',
+                    type: 'trigger',
+                    default: false
                 },
+
                 field: {
                     name: 'Очистити кеш OST',
                     description:
-                        'Видалити збережені результати пошуку'
+                        'Натисни OK, щоб видалити кеш'
                 },
-                onChange: function () {
-                    clearCache();
 
-                    try {
-                        if (
-                            Lampa.Noty &&
-                            Lampa.Noty.show
-                        ) {
-                            Lampa.Noty.show(
-                                'Кеш OST очищено'
+                onChange: function (value) {
+                    if (
+                        value === true ||
+                        value === 'true' ||
+                        value === 1 ||
+                        value === '1'
+                    ) {
+                        clearCache();
+
+                        try {
+                            Lampa.Storage.set(
+                                PREFIX +
+                                'clear_cache_action',
+                                false
                             );
-                        }
-                    } catch (e) {}
+                        } catch (e) {}
+                    }
                 }
             });
 
-            log('Settings registered');
+            /*
+             * Diagnostics action.
+             */
+
+            Lampa.SettingsApi.addParam({
+                component: 'original_soundtrack',
+
+                param: {
+                    name:
+                        PREFIX + 'show_status_action',
+                    type: 'trigger',
+                    default: false
+                },
+
+                field: {
+                    name: 'Показати стан OST',
+                    description:
+                        'Поточний етап пошуку та відтворення'
+                },
+
+                onChange: function (value) {
+                    if (
+                        value === true ||
+                        value === 'true' ||
+                        value === 1 ||
+                        value === '1'
+                    ) {
+                        noty(
+                            'OST: ' +
+                            lastStatus
+                        );
+
+                        try {
+                            Lampa.Storage.set(
+                                PREFIX +
+                                'show_status_action',
+                                false
+                            );
+                        } catch (e) {}
+                    }
+                }
+            });
+
+            log('Налаштування зареєстровані');
 
         } catch (e) {
             settingsAdded = false;
-            log('Settings error:', e);
+
+            log(
+                'Помилка налаштувань',
+                e
+            );
         }
     }
 
+    // --------------------------------------------------
     // INITIALIZATION
+    // --------------------------------------------------
 
     function initialize() {
-        if (initialized) return;
-
         if (
+            initialized ||
             !window.Lampa ||
             !Lampa.Listener ||
             typeof Lampa.Listener.follow !== 'function'
@@ -993,12 +1839,12 @@
 
         Lampa.Listener.follow(
             'full',
-            handleFullEvent
+            onFull
         );
 
         Lampa.Listener.follow(
             'player',
-            handlePlayerEvent
+            onPlayer
         );
 
         Lampa.Listener.follow(
@@ -1017,7 +1863,7 @@
                     return;
                 }
 
-                var activity =
+                var component =
                     event.component ||
                     (
                         event.object &&
@@ -1030,19 +1876,20 @@
                     '';
 
                 if (
-                    activity &&
-                    activity !== 'full' &&
-                    activity !== 'settings'
+                    component &&
+                    component !== 'full' &&
+                    component !== 'settings' &&
+                    active
                 ) {
-                    if (activeCard) {
-                        closeMovie();
-                    }
+                    closeMovie();
                 }
             }
         );
 
-        log(
-            'Original Soundtrack 2.2 initialized'
+        status(
+            'Original Soundtrack ' +
+            VERSION +
+            ' запущено'
         );
     }
 
@@ -1053,7 +1900,10 @@
         ) {
             initialize();
         } else {
-            setTimeout(boot, 500);
+            setTimeout(
+                boot,
+                500
+            );
         }
     }
 
