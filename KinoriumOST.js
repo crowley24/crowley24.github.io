@@ -1,32 +1,34 @@
-
 (function () {
     'use strict';
 
     /*
-     * KINORIUM OST 1.2.1
-     * Activity Grace Fix
+     * KINORIUM OST 1.3.0
+     * Stability & Audio Engine
      *
      * Lampa / Android TV / Mobile
-     * Cloudflare Worker 1.5.1
+     * Cloudflare Worker 1.5.1+
      *
-     * - Automatic movie search
-     * - TV series support
+     * FEATURES:
+     * - Automatic movie and series soundtrack search
      * - Missing-year support
      * - Immediate Worker request
      * - Minimum playback delay
      * - Smooth fade-in
+     * - Live volume adjustment
      * - Adjustable fade duration
-     * - Adjustable volume
      * - Automatic repeat
+     * - Controlled playback retry
+     * - Audio startup timeout
      * - Navigation grace period
      * - Immediate stop on card exit
      * - Stale request protection
+     * - Safe timer and event cleanup
      * - Audio error diagnostics
      *
      * Independent test plugin.
      */
 
-    var VERSION = '1.2.1';
+    var VERSION = '1.3.0';
 
     var WORKER =
         'https://kinorium-ost.unclezhenya24.workers.dev/';
@@ -45,27 +47,50 @@
         debug: false
     };
 
+    var MAX_PLAY_RETRIES = 1;
+    var RETRY_DELAY = 700;
+    var PLAY_START_TIMEOUT = 12000;
+
     var state = {
         initialized: false,
+
         audio: null,
         request: null,
+
         startTimer: null,
         fadeTimer: null,
         navigationTimer: null,
+        retryTimer: null,
+        playTimeoutTimer: null,
 
         movie: null,
         movieKey: '',
         track: null,
 
         token: 0,
+
         cardActive: false,
         openedAt: 0,
         navigationGraceUntil: 0,
         lastActivity: '',
 
         readyResult: null,
-        playbackStarted: false
+
+        playbackStarted: false,
+        playbackState: 'idle',
+
+        playAttempt: 0,
+        audioGeneration: 0,
+
+        fadeStartedAt: 0,
+        fadeStartVolume: 0,
+        fadeTargetVolume: 0,
+        fadeDurationMs: 0
     };
+
+    /*
+     * STORAGE
+     */
 
     function storageGet(key) {
         var name = PREFIX + key;
@@ -77,7 +102,11 @@
                 Lampa.Storage &&
                 typeof Lampa.Storage.get === 'function'
             ) {
-                return Lampa.Storage.get(name, fallback);
+                var value = Lampa.Storage.get(name, fallback);
+
+                return value === undefined || value === null
+                    ? fallback
+                    : value;
             }
         } catch (e) {}
 
@@ -141,9 +170,7 @@
 
         var args = Array.prototype.slice.call(arguments);
 
-        args.unshift(
-            '[Kinorium OST ' + VERSION + ']'
-        );
+        args.unshift('[Kinorium OST ' + VERSION + ']');
 
         console.log.apply(console, args);
     }
@@ -191,6 +218,10 @@
 
         return match ? Number(match[0]) : 0;
     }
+
+    /*
+     * MOVIE DATA
+     */
 
     function movieFromData(data) {
         if (!data || typeof data !== 'object') {
@@ -373,19 +404,48 @@
         return false;
     }
 
+    /*
+     * TIMER MANAGEMENT
+     */
+
     function clearStartTimer() {
-        if (state.startTimer) {
+        if (state.startTimer !== null) {
             clearTimeout(state.startTimer);
             state.startTimer = null;
         }
     }
 
     function clearFadeTimer() {
-        if (state.fadeTimer) {
+        if (state.fadeTimer !== null) {
             clearInterval(state.fadeTimer);
             state.fadeTimer = null;
         }
     }
+
+    function clearRetryTimer() {
+        if (state.retryTimer !== null) {
+            clearTimeout(state.retryTimer);
+            state.retryTimer = null;
+        }
+    }
+
+    function clearPlayTimeout() {
+        if (state.playTimeoutTimer !== null) {
+            clearTimeout(state.playTimeoutTimer);
+            state.playTimeoutTimer = null;
+        }
+    }
+
+    function clearPlaybackTimers() {
+        clearStartTimer();
+        clearFadeTimer();
+        clearRetryTimer();
+        clearPlayTimeout();
+    }
+
+    /*
+     * REQUEST MANAGEMENT
+     */
 
     function abortRequest() {
         var xhr = state.request;
@@ -395,12 +455,22 @@
         if (!xhr) return;
 
         try {
+            xhr.onreadystatechange = null;
+            xhr.onerror = null;
+            xhr.ontimeout = null;
             xhr.abort();
         } catch (e) {}
     }
 
+    /*
+     * AUDIO MANAGEMENT
+     */
+
     function destroyAudio() {
         clearFadeTimer();
+        clearPlayTimeout();
+
+        state.audioGeneration++;
 
         var player = state.audio;
 
@@ -409,6 +479,14 @@
         if (!player) return;
 
         try {
+            player.onplaying = null;
+            player.onplay = null;
+            player.onpause = null;
+            player.onended = null;
+            player.onerror = null;
+            player.onwaiting = null;
+            player.onstalled = null;
+
             player.pause();
             player.loop = false;
             player.removeAttribute('src');
@@ -416,17 +494,35 @@
         } catch (e) {}
     }
 
+    function setPlaybackState(nextState, details) {
+        if (state.playbackState === nextState) return;
+
+        var previous = state.playbackState;
+
+        state.playbackState = nextState;
+
+        log(
+            'Playback state:',
+            previous,
+            '->',
+            nextState,
+            details || ''
+        );
+    }
+
     function stopPlayback(reason) {
         var wasActive = Boolean(
             state.cardActive ||
             state.audio ||
             state.request ||
-            state.startTimer
+            state.startTimer ||
+            state.retryTimer ||
+            state.playTimeoutTimer
         );
 
         state.token++;
 
-        clearStartTimer();
+        clearPlaybackTimers();
         abortRequest();
         destroyAudio();
 
@@ -439,7 +535,15 @@
         state.navigationGraceUntil = 0;
 
         state.readyResult = null;
+
         state.playbackStarted = false;
+        state.playbackState = 'idle';
+        state.playAttempt = 0;
+
+        state.fadeStartedAt = 0;
+        state.fadeStartVolume = 0;
+        state.fadeTargetVolume = 0;
+        state.fadeDurationMs = 0;
 
         if (wasActive) {
             log('Stopped:', reason || 'unknown');
@@ -447,24 +551,48 @@
     }
 
     /*
-     * SMOOTH FADE-IN
+     * FADE ENGINE
+     *
+     * Uses the current volume as the starting point.
+     * Volume and duration can be changed while fading.
      */
 
-    function startFade(player, token) {
+    function startFade(player, token, startVolume) {
         clearFadeTimer();
 
         if (
-            !setting('fade') ||
-            fadeMs() <= 0
+            token !== state.token ||
+            state.audio !== player
         ) {
-            player.volume = targetVolume();
             return;
         }
 
+        var target = targetVolume();
         var duration = fadeMs();
-        var startedAt = Date.now();
 
-        player.volume = 0;
+        if (!setting('fade') || duration <= 0) {
+            player.volume = target;
+
+            state.fadeStartedAt = 0;
+            state.fadeDurationMs = 0;
+            state.fadeStartVolume = target;
+            state.fadeTargetVolume = target;
+
+            return;
+        }
+
+        var initial = typeof startVolume === 'number'
+            ? startVolume
+            : player.volume;
+
+        initial = clamp(initial, 0, 1);
+
+        state.fadeStartedAt = Date.now();
+        state.fadeStartVolume = initial;
+        state.fadeTargetVolume = target;
+        state.fadeDurationMs = duration;
+
+        player.volume = initial;
 
         state.fadeTimer = setInterval(
             function () {
@@ -479,10 +607,10 @@
 
                 if (player.paused) return;
 
-                var elapsed = Date.now() - startedAt;
+                var elapsed = Date.now() - state.fadeStartedAt;
 
                 var progress = clamp(
-                    elapsed / duration,
+                    elapsed / Math.max(1, state.fadeDurationMs),
                     0,
                     1
                 );
@@ -492,19 +620,56 @@
                     progress *
                     (3 - 2 * progress);
 
-                player.volume =
-                    targetVolume() * eased;
+                var volume =
+                    state.fadeStartVolume +
+                    (
+                        state.fadeTargetVolume -
+                        state.fadeStartVolume
+                    ) * eased;
+
+                player.volume = clamp(volume, 0, 1);
 
                 if (progress >= 1) {
-                    player.volume = targetVolume();
+                    player.volume = state.fadeTargetVolume;
+
                     clearFadeTimer();
+
+                    log(
+                        'Fade completed:',
+                        player.volume
+                    );
                 }
             },
             50
         );
     }
 
-    function createAudio() {
+    function retargetFade() {
+        var player = state.audio;
+
+        if (!player) return;
+
+        if (
+            !state.playbackStarted ||
+            player.paused
+        ) {
+            player.volume = setting('fade')
+                ? 0
+                : targetVolume();
+
+            return;
+        }
+
+        var current = player.volume;
+
+        startFade(
+            player,
+            state.token,
+            current
+        );
+    }
+
+    function createAudio(token) {
         var player = new Audio();
 
         player.preload = 'auto';
@@ -513,18 +678,101 @@
             ? 0
             : targetVolume();
 
+        var generation = ++state.audioGeneration;
+
         player.addEventListener(
             'error',
             function () {
+                if (
+                    token !== state.token ||
+                    state.audio !== player ||
+                    generation !== state.audioGeneration
+                ) {
+                    return;
+                }
+
+                clearPlayTimeout();
+
+                var error = player.error;
+
                 log(
                     'Audio playback error:',
-                    player.error
+                    error
                         ? {
-                            code: player.error.code,
-                            message: player.error.message
+                            code: error.code,
+                            message: error.message
                         }
                         : 'unknown'
                 );
+
+                handleAudioFailure(
+                    token,
+                    player,
+                    'media_error',
+                    error ? error.code : 0
+                );
+            }
+        );
+
+        player.addEventListener(
+            'waiting',
+            function () {
+                if (
+                    token === state.token &&
+                    state.audio === player
+                ) {
+                    log('Audio buffering');
+                }
+            }
+        );
+
+        player.addEventListener(
+            'stalled',
+            function () {
+                if (
+                    token === state.token &&
+                    state.audio === player
+                ) {
+                    log('Audio stalled');
+                }
+            }
+        );
+
+        player.addEventListener(
+            'ended',
+            function () {
+                if (
+                    token !== state.token ||
+                    state.audio !== player
+                ) {
+                    return;
+                }
+
+                log('Audio ended');
+
+                if (setting('repeat')) {
+                    try {
+                        player.currentTime = 0;
+
+                        var promise = player.play();
+
+                        if (
+                            promise &&
+                            typeof promise.catch === 'function'
+                        ) {
+                            promise.catch(function (error) {
+                                log(
+                                    'Repeat failed:',
+                                    error && error.name
+                                        ? error.name
+                                        : error
+                                );
+                            });
+                        }
+                    } catch (e) {
+                        log('Repeat exception:', e);
+                    }
+                }
             }
         );
 
@@ -534,11 +782,318 @@
     }
 
     /*
-     * PLAYBACK
+     * PLAYBACK FAILURE HANDLING
      *
-     * Ignore transient non-full activities
-     * during the navigation grace period.
+     * Retry only once, and only for a media failure.
+     * Autoplay permission failures are not retried.
      */
+
+    function handleAudioFailure(token, player, reason, errorCode) {
+        if (
+            token !== state.token ||
+            state.audio !== player ||
+            !state.cardActive
+        ) {
+            return;
+        }
+
+        state.playbackStarted = false;
+
+        clearFadeTimer();
+        clearPlayTimeout();
+
+        var retryable = (
+            reason === 'media_error' &&
+            state.playAttempt < MAX_PLAY_RETRIES &&
+            state.readyResult &&
+            !!state.readyResult.audioUrl
+        );
+
+        if (!retryable) {
+            setPlaybackState('error', reason);
+
+            log(
+                'Playback failed permanently:',
+                reason,
+                'code:',
+                errorCode || 0
+            );
+
+            destroyAudio();
+
+            return;
+        }
+
+        state.playAttempt++;
+
+        setPlaybackState('retry_wait', reason);
+
+        log(
+            'Scheduling retry:',
+            state.playAttempt,
+            'of',
+            MAX_PLAY_RETRIES
+        );
+
+        destroyAudio();
+
+        clearRetryTimer();
+
+        state.retryTimer = setTimeout(
+            function () {
+                state.retryTimer = null;
+
+                if (
+                    token !== state.token ||
+                    !state.cardActive ||
+                    !state.readyResult
+                ) {
+                    return;
+                }
+
+                log('Retrying audio playback');
+
+                startAudioAttempt(
+                    state.readyResult,
+                    token
+                );
+            },
+            RETRY_DELAY
+        );
+    }
+
+    /*
+     * AUDIO STARTUP
+     */
+
+    function onAudioStarted(player, token, attempt) {
+        if (
+            token !== state.token ||
+            !state.cardActive ||
+            state.audio !== player ||
+            attempt !== state.playAttempt ||
+            state.playbackStarted
+        ) {
+            return;
+        }
+
+        clearPlayTimeout();
+        clearRetryTimer();
+
+        state.playbackStarted = true;
+
+        setPlaybackState('playing');
+
+        if (setting('fade')) {
+            startFade(player, token, player.volume);
+        } else {
+            clearFadeTimer();
+            player.volume = targetVolume();
+        }
+
+        log(
+            'Playing:',
+            state.track
+                ? state.track.name
+                : 'Unknown'
+        );
+    }
+
+    function startAudioAttempt(result, token) {
+        if (
+            token !== state.token ||
+            !state.cardActive ||
+            !result ||
+            !result.audioUrl
+        ) {
+            return;
+        }
+
+        clearRetryTimer();
+        clearPlayTimeout();
+        clearFadeTimer();
+
+        destroyAudio();
+
+        state.playbackStarted = false;
+
+        setPlaybackState('starting');
+
+        var player = createAudio(token);
+        var attempt = state.playAttempt;
+
+        var started = false;
+
+        function onStarted() {
+            if (started) return;
+
+            started = true;
+
+            onAudioStarted(
+                player,
+                token,
+                attempt
+            );
+        }
+
+        player.addEventListener(
+            'playing',
+            onStarted
+        );
+
+        player.addEventListener(
+            'play',
+            function () {
+                if (
+                    token === state.token &&
+                    state.audio === player
+                ) {
+                    log('Audio play event');
+                }
+            }
+        );
+
+        player.src = result.audioUrl;
+
+        log(
+            'Starting audio:',
+            state.track
+                ? state.track.name
+                : 'Unknown',
+            'attempt:',
+            attempt + 1,
+            'URL:',
+            result.audioUrl
+        );
+
+        state.playTimeoutTimer = setTimeout(
+            function () {
+                state.playTimeoutTimer = null;
+
+                if (
+                    token !== state.token ||
+                    state.audio !== player ||
+                    state.playbackStarted
+                ) {
+                    return;
+                }
+
+                log(
+                    'Audio startup timeout:',
+                    PLAY_START_TIMEOUT
+                );
+
+                handleAudioFailure(
+                    token,
+                    player,
+                    'startup_timeout',
+                    0
+                );
+            },
+            PLAY_START_TIMEOUT
+        );
+
+        try {
+            player.load();
+
+            var promise = player.play();
+
+            if (
+                promise &&
+                typeof promise.then === 'function'
+            ) {
+                promise.then(function () {
+                    if (
+                        token === state.token &&
+                        state.audio === player &&
+                        !player.paused
+                    ) {
+                        onStarted();
+                    }
+                }).catch(function (error) {
+                    if (
+                        token !== state.token ||
+                        state.audio !== player
+                    ) {
+                        return;
+                    }
+
+                    clearPlayTimeout();
+
+                    state.playbackStarted = false;
+
+                    var name = error && error.name
+                        ? error.name
+                        : 'UnknownError';
+
+                    var message = error && error.message
+                        ? error.message
+                        : '';
+
+                    log(
+                        'Audio play rejected:',
+                        name,
+                        message
+                    );
+
+                    if (
+                        name === 'NotAllowedError' ||
+                        name === 'SecurityError'
+                    ) {
+                        setPlaybackState(
+                            'blocked',
+                            name
+                        );
+
+                        log(
+                            'Playback blocked by browser autoplay policy'
+                        );
+
+                        destroyAudio();
+
+                        return;
+                    }
+
+                    if (
+                        name === 'AbortError' &&
+                        token !== state.token
+                    ) {
+                        return;
+                    }
+
+                    handleAudioFailure(
+                        token,
+                        player,
+                        'play_rejected_' + name,
+                        0
+                    );
+                });
+            } else if (!player.paused) {
+                onStarted();
+            }
+        } catch (e) {
+            clearPlayTimeout();
+
+            state.playbackStarted = false;
+
+            log(
+                'Play exception:',
+                e && e.name
+                    ? e.name
+                    : '',
+                e && e.message
+                    ? e.message
+                    : e
+            );
+
+            handleAudioFailure(
+                token,
+                player,
+                'play_exception',
+                0
+            );
+        }
+    }
 
     function playAudio(result, token) {
         if (
@@ -559,120 +1114,18 @@
             return;
         }
 
-        if (
-            !result ||
-            !result.audioUrl
-        ) {
+        if (!result || !result.audioUrl) {
+            setPlaybackState('error', 'missing_audio_url');
+
             log('Cannot play: audioUrl is missing');
+
             return;
         }
 
-        state.playbackStarted = true;
-
-        destroyAudio();
-
         state.track = result.track || null;
+        state.playAttempt = 0;
 
-        var player = createAudio();
-
-        var started = false;
-
-        function onStarted() {
-            if (
-                started ||
-                token !== state.token ||
-                state.audio !== player ||
-                !state.cardActive
-            ) {
-                return;
-            }
-
-            started = true;
-
-            startFade(player, token);
-
-            log(
-                'Playing:',
-                state.track
-                    ? state.track.name
-                    : 'Unknown'
-            );
-        }
-
-        player.addEventListener(
-            'playing',
-            onStarted
-        );
-
-        player.addEventListener(
-            'error',
-            function () {
-                if (
-                    token === state.token &&
-                    state.audio === player
-                ) {
-                    state.playbackStarted = false;
-                }
-            }
-        );
-
-        player.src = result.audioUrl;
-
-        log(
-            'Starting audio:',
-            state.track
-                ? state.track.name
-                : 'Unknown',
-            'URL:',
-            result.audioUrl
-        );
-
-        try {
-            player.load();
-
-            var promise = player.play();
-
-            if (
-                promise &&
-                typeof promise.then === 'function'
-            ) {
-                promise.then(function () {
-                    if (!player.paused) {
-                        onStarted();
-                    }
-                }).catch(function (error) {
-                    if (
-                        token !== state.token ||
-                        state.audio !== player
-                    ) {
-                        return;
-                    }
-
-                    state.playbackStarted = false;
-
-                    log(
-                        'Autoplay failed:',
-                        error && error.name
-                            ? error.name
-                            : error,
-                        error && error.message
-                            ? error.message
-                            : ''
-                    );
-                });
-            } else if (!player.paused) {
-                onStarted();
-            }
-        } catch (e) {
-            state.playbackStarted = false;
-
-            log(
-                'Play exception:',
-                e && e.message
-                    ? e.message
-                    : e
-            );
-        }
+        startAudioAttempt(result, token);
     }
 
     /*
@@ -685,6 +1138,15 @@
             !state.cardActive ||
             state.playbackStarted ||
             !state.readyResult
+        ) {
+            return;
+        }
+
+        if (
+            state.playbackState === 'starting' ||
+            state.playbackState === 'retry_wait' ||
+            state.playbackState === 'blocked' ||
+            state.playbackState === 'error'
         ) {
             return;
         }
@@ -708,6 +1170,10 @@
 
         playAudio(state.readyResult, token);
     }
+
+    /*
+     * WORKER REQUEST
+     */
 
     function buildWorkerURL(movie) {
         var url =
@@ -746,6 +1212,8 @@
 
         var url = buildWorkerURL(movie);
 
+        setPlaybackState('searching');
+
         log(
             'Worker request:',
             movie.title,
@@ -775,7 +1243,10 @@
                 xhr.status < 200 ||
                 xhr.status >= 300
             ) {
+                setPlaybackState('error', 'worker_http');
+
                 log('Worker HTTP:', xhr.status);
+
                 return;
             }
 
@@ -784,7 +1255,10 @@
             try {
                 result = JSON.parse(xhr.responseText);
             } catch (e) {
+                setPlaybackState('error', 'invalid_json');
+
                 log('Invalid Worker JSON:', e);
+
                 return;
             }
 
@@ -795,6 +1269,8 @@
                 !result.playable ||
                 !result.audioUrl
             ) {
+                setPlaybackState('not_found');
+
                 log(
                     'No playable soundtrack:',
                     movie.title,
@@ -812,6 +1288,8 @@
 
             state.readyResult = result;
 
+            setPlaybackState('ready');
+
             log(
                 'Soundtrack ready:',
                 result.track
@@ -828,12 +1306,16 @@
 
         xhr.onerror = function () {
             if (token === state.token) {
+                setPlaybackState('error', 'network');
+
                 log('Network error');
             }
         };
 
         xhr.ontimeout = function () {
             if (token === state.token) {
+                setPlaybackState('error', 'worker_timeout');
+
                 log('Worker timeout');
             }
         };
@@ -845,15 +1327,14 @@
                 state.request = null;
             }
 
+            setPlaybackState('error', 'xhr_exception');
+
             log('XHR exception:', e);
         }
     }
 
     /*
      * CARD SCHEDULER
-     *
-     * A missing year no longer prevents
-     * soundtrack lookup.
      */
 
     function schedulePlayback(movie) {
@@ -901,9 +1382,10 @@
         state.lastActivity = getActiveActivity();
 
         state.readyResult = null;
-        state.playbackStarted = false;
 
-        var token = state.token;
+        state.playbackStarted = false;
+        state.playbackState = 'idle';
+        state.playAttempt = 0;
 
         log(
             'Card opened:',
@@ -914,7 +1396,7 @@
             state.lastActivity || '(unknown)'
         );
 
-        fetchSoundtrack(movie, token);
+        fetchSoundtrack(movie, state.token);
     }
 
     /*
@@ -1009,10 +1491,19 @@
         }
     }
 
+    /*
+     * LIVE SETTINGS
+     */
+
     function applyVolume() {
         if (!state.audio) return;
 
-        if (!state.fadeTimer) {
+        if (state.fadeTimer) {
+            retargetFade();
+            return;
+        }
+
+        if (state.playbackStarted) {
             state.audio.volume = targetVolume();
         }
     }
@@ -1024,11 +1515,39 @@
     }
 
     function applyFadeSetting() {
-        if (!state.audio) return;
+        var player = state.audio;
 
-        clearFadeTimer();
+        if (!player) return;
 
-        state.audio.volume = targetVolume();
+        if (!state.playbackStarted) {
+            player.volume = setting('fade')
+                ? 0
+                : targetVolume();
+
+            return;
+        }
+
+        retargetFade();
+    }
+
+    function applyFadeDuration() {
+        if (!state.audio || !state.playbackStarted) {
+            return;
+        }
+
+        retargetFade();
+    }
+
+    function applyDelay() {
+        if (
+            state.cardActive &&
+            state.readyResult &&
+            !state.playbackStarted &&
+            state.playbackState === 'ready'
+        ) {
+            clearStartTimer();
+            tryStart(state.token);
+        }
     }
 
     /*
@@ -1206,15 +1725,7 @@
                 '4000': '4 секунди',
                 '5000': '5 секунд'
             },
-            function () {
-                if (
-                    state.cardActive &&
-                    state.readyResult &&
-                    !state.playbackStarted
-                ) {
-                    tryStart(state.token);
-                }
-            }
+            applyDelay
         );
 
         addTrigger(
@@ -1236,13 +1747,14 @@
                 '3000': '3 секунди',
                 '4000': '4 секунди',
                 '5000': '5 секунд'
-            }
+            },
+            applyFadeDuration
         );
 
         addTrigger(
             'debug',
             'Режим діагностики',
-            'Показувати пошук, помилки й причини відсутності аудіо'
+            'Показувати пошук, стани відтворення та помилки'
         );
     }
 
@@ -1266,21 +1778,34 @@
 
         registerSettings();
 
-        Lampa.Listener.follow('full', handleFullEvent);
-        Lampa.Listener.follow('activity', handleActivityEvent);
+        Lampa.Listener.follow(
+            'full',
+            handleFullEvent
+        );
+
+        Lampa.Listener.follow(
+            'activity',
+            handleActivityEvent
+        );
 
         state.navigationTimer = setInterval(
             monitorNavigation,
             250
         );
 
-        window.addEventListener('pagehide', function () {
-            stopPlayback('pagehide');
-        });
+        window.addEventListener(
+            'pagehide',
+            function () {
+                stopPlayback('pagehide');
+            }
+        );
 
-        window.addEventListener('beforeunload', function () {
-            stopPlayback('beforeunload');
-        });
+        window.addEventListener(
+            'beforeunload',
+            function () {
+                stopPlayback('beforeunload');
+            }
+        );
 
         console.log(
             '[Kinorium OST] ' +
