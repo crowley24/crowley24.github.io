@@ -3,5 +3,11 @@
   "name": "kinorium-ost",
   "main": "kinorium_worker.js",
   "compatibility_date": "2026-10-01",
-  "workers_dev": true
+  "workers_dev": true,
+  "kv_namespaces": [
+    {
+      "binding": "KINORIUM_CACHE",
+      "id": "122fce34e9a7486d843522403023d86e"
+    }
+  ]
 }
