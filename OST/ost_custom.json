@@ -2,19 +2,18 @@
 {
   "version": "1.0",
   "movies": [
-/* Rambo */
     {"title":"First Blood","year":1982,"aliases":["Рембо: Перша кров","Rambo: First Blood"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=8DD0mzPhVSU","track":"It's a Long Road","artist":"Dan Hill","verified":true},
     {"title":"Rambo: First Blood Part II","year":1985,"aliases":["Рембо: Перша кров 2","Рембо 2","Rambo II","Rambo: First Blood Part 2"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=ReZwNFFeJQc","track":"Main Title","artist":"Jerry Goldsmith","verified":true},
     {"title":"Rambo","year":2008,"aliases":["Рембо 4","Рембо IV","Rambo 4","Rambo IV","John Rambo"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=eCPksXRxu_k","track":"Rambo IV Main Theme","artist":"Brian Tyler","verified":true},
     {"title":"Rambo: Last Blood","year":2019,"aliases":["Рембо 5","Рембо 5: Остання кров","Рембо: Остання кров","Rambo 5","Rambo V","Rambo: Last Blood (2019)"],"albumId":"910","trackId":"21704","track":"Sunset","artist":"Brian Tyler","verified":true},
-/* Scream */   
+   
     {"title":"Scream","year":1996,"aliases":["Крик","Scream 1","Крик 1"],"source":"youtube","audioUrl":"https://m.youtube.com/watch?v=CNtJuLASyrQ&list=OLAK5uy_lYSQNsvTlb_V4ezDX4PWg8Q2HuGeizocY&index=4","track":"Scream Theme","verified":false},
     {"title":"Scream 2","year":1997,"aliases":["Крик 2","Scream II"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=DdRgmUGHv3Q","track":"Scream Theme","verified":false},
     {"title":"Scream 3","year":2000,"aliases":["Крик 3","Scream III"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=DdRgmUGHv3Q","track":"Scream Theme","verified":false},
     {"title":"Scream 4","year":2011,"aliases":["Крик 4","Scre4m","Scream IV"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=DdRgmUGHv3Q","track":"Scream Theme","verified":false},
     {"title":"Scream","year":2022,"aliases":["Крик","Крик 5","Scream 5"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=DdRgmUGHv3Q","track":"Scream Theme","verified":false},
     {"title":"Scream VI","year":2023,"aliases":["Крик 6","Scream 6"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=DdRgmUGHv3Q","track":"Scream Theme","verified":false},
- /* Halloween */   
+   
     {"title":"Halloween","year":1978,"aliases":["Хелловін","Хэллоуин"],"albumId":"443","trackId":"10620","track":"Halloween Theme","artist":"John Carpenter","verified":false}
   ]
 }
