@@ -3,29 +3,30 @@
     'use strict';
 
     /*
-     * KINORIUM OST 1.2.0
-     * Smooth Audio Edition
+     * KINORIUM OST 1.2.1
+     * Activity Grace Fix
      *
      * Lampa / Android TV / Mobile
-     * Cloudflare Worker 1.5.0
+     * Cloudflare Worker 1.5.1
      *
      * - Automatic movie search
      * - TV series support
+     * - Missing-year support
      * - Immediate Worker request
      * - Minimum playback delay
      * - Smooth fade-in
      * - Adjustable fade duration
      * - Adjustable volume
      * - Automatic repeat
-     * - Navigation monitoring
+     * - Navigation grace period
      * - Immediate stop on card exit
      * - Stale request protection
-     * - Diagnostic logging
+     * - Audio error diagnostics
      *
      * Independent test plugin.
      */
 
-    var VERSION = '1.2.0';
+    var VERSION = '1.2.1';
 
     var WORKER =
         'https://kinorium-ost.unclezhenya24.workers.dev/';
@@ -76,10 +77,7 @@
                 Lampa.Storage &&
                 typeof Lampa.Storage.get === 'function'
             ) {
-                return Lampa.Storage.get(
-                    name,
-                    fallback
-                );
+                return Lampa.Storage.get(name, fallback);
             }
         } catch (e) {}
 
@@ -141,9 +139,7 @@
     function log() {
         if (!setting('debug')) return;
 
-        var args = Array.prototype.slice.call(
-            arguments
-        );
+        var args = Array.prototype.slice.call(arguments);
 
         args.unshift(
             '[Kinorium OST ' + VERSION + ']'
@@ -159,46 +155,26 @@
         );
     }
 
-    function numberSetting(
-        key,
-        minimum,
-        maximum
-    ) {
+    function numberSetting(key, minimum, maximum) {
         var value = Number(setting(key));
 
         if (!isFinite(value)) {
             value = DEFAULTS[key];
         }
 
-        return clamp(
-            value,
-            minimum,
-            maximum
-        );
+        return clamp(value, minimum, maximum);
     }
 
     function targetVolume() {
-        return numberSetting(
-            'volume',
-            0,
-            100
-        ) / 100;
+        return numberSetting('volume', 0, 100) / 100;
     }
 
     function delayMs() {
-        return numberSetting(
-            'delay',
-            0,
-            10000
-        );
+        return numberSetting('delay', 0, 10000);
     }
 
     function fadeMs() {
-        return numberSetting(
-            'fadeDuration',
-            0,
-            10000
-        );
+        return numberSetting('fadeDuration', 0, 10000);
     }
 
     function normalize(value) {
@@ -209,22 +185,15 @@
     }
 
     function extractYear(value) {
-        var match = String(
-            value || ''
-        ).match(
+        var match = String(value || '').match(
             /\b(?:18|19|20)\d{2}\b/
         );
 
-        return match
-            ? Number(match[0])
-            : 0;
+        return match ? Number(match[0]) : 0;
     }
 
     function movieFromData(data) {
-        if (
-            !data ||
-            typeof data !== 'object'
-        ) {
+        if (!data || typeof data !== 'object') {
             return null;
         }
 
@@ -306,9 +275,7 @@
                 )
         );
 
-        if (!title) {
-            return null;
-        }
+        if (!title) return null;
 
         return {
             title: title,
@@ -340,8 +307,7 @@
             if (
                 !window.Lampa ||
                 !Lampa.Activity ||
-                typeof Lampa.Activity.active !==
-                    'function'
+                typeof Lampa.Activity.active !== 'function'
             ) {
                 return '';
             }
@@ -361,17 +327,12 @@
                 active.activity
             ];
 
-            for (
-                var i = 0;
-                i < fields.length;
-                i++
-            ) {
+            for (var i = 0; i < fields.length; i++) {
                 if (
                     typeof fields[i] === 'string' &&
                     fields[i]
                 ) {
-                    return fields[i]
-                        .toLowerCase();
+                    return fields[i].toLowerCase();
                 }
             }
         } catch (e) {
@@ -400,16 +361,10 @@
             'my_list'
         ];
 
-        for (
-            var i = 0;
-            i < known.length;
-            i++
-        ) {
+        for (var i = 0; i < known.length; i++) {
             if (
                 value === known[i] ||
-                value.indexOf(
-                    known[i] + '/'
-                ) === 0
+                value.indexOf(known[i] + '/') === 0
             ) {
                 return true;
             }
@@ -420,20 +375,14 @@
 
     function clearStartTimer() {
         if (state.startTimer) {
-            clearTimeout(
-                state.startTimer
-            );
-
+            clearTimeout(state.startTimer);
             state.startTimer = null;
         }
     }
 
     function clearFadeTimer() {
         if (state.fadeTimer) {
-            clearInterval(
-                state.fadeTimer
-            );
-
+            clearInterval(state.fadeTimer);
             state.fadeTimer = null;
         }
     }
@@ -493,19 +442,12 @@
         state.playbackStarted = false;
 
         if (wasActive) {
-            log(
-                'Stopped:',
-                reason || 'unknown'
-            );
+            log('Stopped:', reason || 'unknown');
         }
     }
 
     /*
      * SMOOTH FADE-IN
-     *
-     * The audio starts at zero volume.
-     * Volume increases only after
-     * playback has actually started.
      */
 
     function startFade(player, token) {
@@ -520,7 +462,6 @@
         }
 
         var duration = fadeMs();
-
         var startedAt = Date.now();
 
         player.volume = 0;
@@ -536,23 +477,15 @@
                     return;
                 }
 
-                if (player.paused) {
-                    return;
-                }
+                if (player.paused) return;
 
-                var elapsed =
-                    Date.now() - startedAt;
+                var elapsed = Date.now() - startedAt;
 
                 var progress = clamp(
                     elapsed / duration,
                     0,
                     1
                 );
-
-                /*
-                 * Smoothstep easing:
-                 * gentle beginning and end.
-                 */
 
                 var eased =
                     progress *
@@ -563,9 +496,7 @@
                     targetVolume() * eased;
 
                 if (progress >= 1) {
-                    player.volume =
-                        targetVolume();
-
+                    player.volume = targetVolume();
                     clearFadeTimer();
                 }
             },
@@ -577,9 +508,7 @@
         var player = new Audio();
 
         player.preload = 'auto';
-
         player.loop = setting('repeat');
-
         player.volume = setting('fade')
             ? 0
             : targetVolume();
@@ -588,8 +517,13 @@
             'error',
             function () {
                 log(
-                    'Audio error:',
+                    'Audio playback error:',
                     player.error
+                        ? {
+                            code: player.error.code,
+                            message: player.error.message
+                        }
+                        : 'unknown'
                 );
             }
         );
@@ -598,6 +532,13 @@
 
         return player;
     }
+
+    /*
+     * PLAYBACK
+     *
+     * Ignore transient non-full activities
+     * during the navigation grace period.
+     */
 
     function playAudio(result, token) {
         if (
@@ -610,11 +551,11 @@
 
         var activity = getActiveActivity();
 
-        if (isNonFullActivity(activity)) {
-            stopPlayback(
-                'navigation_before_play'
-            );
-
+        if (
+            isNonFullActivity(activity) &&
+            Date.now() >= state.navigationGraceUntil
+        ) {
+            stopPlayback('navigation_before_play');
             return;
         }
 
@@ -622,6 +563,7 @@
             !result ||
             !result.audioUrl
         ) {
+            log('Cannot play: audioUrl is missing');
             return;
         }
 
@@ -633,31 +575,21 @@
 
         var player = createAudio();
 
-        player.src = result.audioUrl;
-
-        var promise;
-
-        try {
-            player.load();
-
-            promise = player.play();
-        } catch (e) {
-            log('Play exception:', e);
-            return;
-        }
+        var started = false;
 
         function onStarted() {
             if (
+                started ||
                 token !== state.token ||
-                state.audio !== player
+                state.audio !== player ||
+                !state.cardActive
             ) {
                 return;
             }
 
-            startFade(
-                player,
-                token
-            );
+            started = true;
+
+            startFade(player, token);
 
             log(
                 'Playing:',
@@ -667,56 +599,84 @@
             );
         }
 
-        if (
-            promise &&
-            typeof promise.then === 'function'
-        ) {
-            promise.then(
-                onStarted
-            ).catch(
-                function (error) {
+        player.addEventListener(
+            'playing',
+            onStarted
+        );
+
+        player.addEventListener(
+            'error',
+            function () {
+                if (
+                    token === state.token &&
+                    state.audio === player
+                ) {
+                    state.playbackStarted = false;
+                }
+            }
+        );
+
+        player.src = result.audioUrl;
+
+        log(
+            'Starting audio:',
+            state.track
+                ? state.track.name
+                : 'Unknown',
+            'URL:',
+            result.audioUrl
+        );
+
+        try {
+            player.load();
+
+            var promise = player.play();
+
+            if (
+                promise &&
+                typeof promise.then === 'function'
+            ) {
+                promise.then(function () {
+                    if (!player.paused) {
+                        onStarted();
+                    }
+                }).catch(function (error) {
                     if (
-                        token !== state.token
+                        token !== state.token ||
+                        state.audio !== player
                     ) {
                         return;
                     }
 
+                    state.playbackStarted = false;
+
                     log(
                         'Autoplay failed:',
-                        error
+                        error && error.name
+                            ? error.name
+                            : error,
+                        error && error.message
+                            ? error.message
+                            : ''
                     );
-
-                    state.playbackStarted = false;
-                }
-            );
-        } else {
-            /*
-             * Compatibility fallback for
-             * older Android WebViews.
-             */
-
-            if (!player.paused) {
+                });
+            } else if (!player.paused) {
                 onStarted();
-            } else {
-                player.addEventListener(
-                    'playing',
-                    onStarted,
-                    { once: true }
-                );
             }
+        } catch (e) {
+            state.playbackStarted = false;
+
+            log(
+                'Play exception:',
+                e && e.message
+                    ? e.message
+                    : e
+            );
         }
     }
 
     /*
      * START SCHEDULER
-     *
-     * Network request begins immediately.
-     *
-     * Playback begins when BOTH conditions
-     * are satisfied:
-     *
-     * 1. Worker response is ready.
-     * 2. Minimum delay has elapsed.
      */
 
     function tryStart(token) {
@@ -729,11 +689,8 @@
             return;
         }
 
-        var elapsed =
-            Date.now() - state.openedAt;
-
-        var remaining =
-            delayMs() - elapsed;
+        var elapsed = Date.now() - state.openedAt;
+        var remaining = delayMs() - elapsed;
 
         if (remaining > 0) {
             clearStartTimer();
@@ -741,7 +698,6 @@
             state.startTimer = setTimeout(
                 function () {
                     state.startTimer = null;
-
                     tryStart(token);
                 },
                 remaining
@@ -750,24 +706,21 @@
             return;
         }
 
-        playAudio(
-            state.readyResult,
-            token
-        );
+        playAudio(state.readyResult, token);
     }
 
     function buildWorkerURL(movie) {
         var url =
             WORKER +
             '?title=' +
-            encodeURIComponent(
-                movie.title
-            );
+            encodeURIComponent(movie.title);
 
         if (movie.year) {
-            url +=
-                '&year=' +
-                movie.year;
+            url += '&year=' + encodeURIComponent(movie.year);
+        }
+
+        if (movie.series) {
+            url += '&type=tv';
         }
 
         if (setting('debug')) {
@@ -796,101 +749,82 @@
         log(
             'Worker request:',
             movie.title,
-            movie.year,
-            movie.series ? 'TV' : 'Movie'
+            movie.year || '(year missing)',
+            movie.series ? 'TV' : 'Movie',
+            url
         );
 
-        xhr.open(
-            'GET',
-            url,
-            true
-        );
-
+        xhr.open('GET', url, true);
         xhr.timeout = 20000;
 
-        xhr.onreadystatechange =
-            function () {
-                if (
-                    xhr.readyState !== 4
-                ) {
-                    return;
-                }
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState !== 4) return;
 
-                if (state.request === xhr) {
-                    state.request = null;
-                }
+            if (state.request === xhr) {
+                state.request = null;
+            }
 
-                if (
-                    token !== state.token ||
-                    !state.cardActive
-                ) {
-                    return;
-                }
+            if (
+                token !== state.token ||
+                !state.cardActive
+            ) {
+                return;
+            }
 
-                if (
-                    xhr.status < 200 ||
-                    xhr.status >= 300
-                ) {
-                    log(
-                        'Worker HTTP:',
-                        xhr.status
-                    );
+            if (
+                xhr.status < 200 ||
+                xhr.status >= 300
+            ) {
+                log('Worker HTTP:', xhr.status);
+                return;
+            }
 
-                    return;
-                }
+            var result;
 
-                var result;
+            try {
+                result = JSON.parse(xhr.responseText);
+            } catch (e) {
+                log('Invalid Worker JSON:', e);
+                return;
+            }
 
-                try {
-                    result = JSON.parse(
-                        xhr.responseText
-                    );
-                } catch (e) {
-                    log(
-                        'Invalid Worker JSON:',
-                        e
-                    );
-
-                    return;
-                }
-
-                if (
-                    !result ||
-                    !result.success ||
-                    !result.found ||
-                    !result.playable ||
-                    !result.audioUrl
-                ) {
-                    log(
-                        'No playable soundtrack:',
-                        movie.title,
-                        result
-                            ? result.reason
-                            : 'empty_response',
-                        result &&
-                            result.search
-                            ? result.search.method
-                            : ''
-                    );
-
-                    return;
-                }
-
-                state.readyResult = result;
-
+            if (
+                !result ||
+                !result.success ||
+                !result.found ||
+                !result.playable ||
+                !result.audioUrl
+            ) {
                 log(
-                    'Soundtrack ready:',
-                    result.track
-                        ? result.track.name
-                        : '',
-                    'Search:',
-                    result.search
+                    'No playable soundtrack:',
+                    movie.title,
+                    result
+                        ? result.reason
+                        : 'empty_response',
+                    result && result.search
                         ? result.search.method
-                        : ''
+                        : '',
+                    result
                 );
 
-                tryStart(token);
-            };
+                return;
+            }
+
+            state.readyResult = result;
+
+            log(
+                'Soundtrack ready:',
+                result.track
+                    ? result.track.name
+                    : '',
+                'Search:',
+                result.search
+                    ? result.search.method
+                    : ''
+            );
+
+            tryStart(token);
+        };
 
         xhr.onerror = function () {
             if (token === state.token) {
@@ -907,19 +841,24 @@
         try {
             xhr.send();
         } catch (e) {
-            log(
-                'XHR exception:',
-                e
-            );
+            if (state.request === xhr) {
+                state.request = null;
+            }
+
+            log('XHR exception:', e);
         }
     }
 
+    /*
+     * CARD SCHEDULER
+     *
+     * A missing year no longer prevents
+     * soundtrack lookup.
+     */
+
     function schedulePlayback(movie) {
-        if (
-            !movie ||
-            !movie.title ||
-            !movie.year
-        ) {
+        if (!movie || !movie.title) {
+            log('Card ignored: title missing');
             return;
         }
 
@@ -927,6 +866,7 @@
             !setting('enabled') ||
             !setting('autoplay')
         ) {
+            log('Autoplay disabled');
             return;
         }
 
@@ -934,11 +874,7 @@
             movie.series &&
             !setting('series')
         ) {
-            log(
-                'Series disabled:',
-                movie.title
-            );
-
+            log('Series disabled:', movie.title);
             return;
         }
 
@@ -960,7 +896,9 @@
         state.openedAt = Date.now();
 
         state.navigationGraceUntil =
-            Date.now() + 1200;
+            state.openedAt + 1200;
+
+        state.lastActivity = getActiveActivity();
 
         state.readyResult = null;
         state.playbackStarted = false;
@@ -970,18 +908,13 @@
         log(
             'Card opened:',
             movie.title,
-            movie.year
+            movie.year || '(year missing)',
+            movie.series ? 'TV' : 'Movie',
+            'Activity:',
+            state.lastActivity || '(unknown)'
         );
 
-        /*
-         * The request starts immediately.
-         * No two-second network delay.
-         */
-
-        fetchSoundtrack(
-            movie,
-            token
-        );
+        fetchSoundtrack(movie, token);
     }
 
     /*
@@ -989,17 +922,13 @@
      */
 
     function monitorNavigation() {
-        if (!state.cardActive) {
-            return;
-        }
+        if (!state.cardActive) return;
 
         var activity = getActiveActivity();
 
         if (!activity) return;
 
-        if (
-            activity !== state.lastActivity
-        ) {
+        if (activity !== state.lastActivity) {
             log(
                 'Activity:',
                 state.lastActivity,
@@ -1010,33 +939,31 @@
             state.lastActivity = activity;
         }
 
-        if (
-            Date.now() <
-            state.navigationGraceUntil
-        ) {
+        if (Date.now() < state.navigationGraceUntil) {
             return;
         }
 
         if (isNonFullActivity(activity)) {
-            stopPlayback(
-                'activity_changed_to_' +
-                activity
-            );
+            stopPlayback('activity_changed_to_' + activity);
         }
     }
 
     function handleActivityEvent(event) {
-        if (!state.cardActive) {
+        if (!state.cardActive) return;
+
+        if (Date.now() < state.navigationGraceUntil) {
+            log(
+                'Activity event ignored during grace period:',
+                event && (event.type || event.name || '')
+            );
+
             return;
         }
 
         var activity = getActiveActivity();
 
         if (isNonFullActivity(activity)) {
-            stopPlayback(
-                'activity_event_' +
-                activity
-            );
+            stopPlayback('activity_event_' + activity);
         }
     }
 
@@ -1078,30 +1005,21 @@
             type === 'stop' ||
             type === 'back'
         ) {
-            stopPlayback(
-                'full_event_' + type
-            );
+            stopPlayback('full_event_' + type);
         }
     }
 
     function applyVolume() {
         if (!state.audio) return;
 
-        /*
-         * Do not interrupt an active
-         * fade-in with an abrupt jump.
-         */
-
         if (!state.fadeTimer) {
-            state.audio.volume =
-                targetVolume();
+            state.audio.volume = targetVolume();
         }
     }
 
     function applyRepeat() {
         if (state.audio) {
-            state.audio.loop =
-                setting('repeat');
+            state.audio.loop = setting('repeat');
         }
     }
 
@@ -1110,8 +1028,7 @@
 
         clearFadeTimer();
 
-        state.audio.volume =
-            targetVolume();
+        state.audio.volume = targetVolume();
     }
 
     /*
@@ -1121,8 +1038,7 @@
     function registerSettings() {
         if (
             !Lampa.SettingsApi ||
-            typeof Lampa.SettingsApi.addParam !==
-                'function'
+            typeof Lampa.SettingsApi.addParam !== 'function'
         ) {
             return;
         }
@@ -1156,10 +1072,7 @@
             if (
                 value &&
                 typeof value === 'object' &&
-                Object.prototype.hasOwnProperty.call(
-                    value,
-                    'value'
-                )
+                Object.prototype.hasOwnProperty.call(value, 'value')
             ) {
                 return value.value;
             }
@@ -1167,12 +1080,7 @@
             return value;
         }
 
-        function addTrigger(
-            key,
-            title,
-            description,
-            callback
-        ) {
+        function addTrigger(key, title, description, callback) {
             addParam({
                 param: {
                     name: PREFIX + key,
@@ -1193,55 +1101,33 @@
                         next === 'true'
                     );
 
-                    storageSet(
-                        key,
-                        enabled
-                    );
+                    storageSet(key, enabled);
 
-                    if (callback) {
-                        callback(enabled);
-                    }
+                    if (callback) callback(enabled);
                 }
             });
         }
 
-        function addSelect(
-            key,
-            title,
-            description,
-            values,
-            callback
-        ) {
+        function addSelect(key, title, description, values, callback) {
             addParam({
                 param: {
                     name: PREFIX + key,
                     type: 'select',
                     values: values,
-                    default: String(
-                        DEFAULTS[key]
-                    )
+                    default: String(DEFAULTS[key])
                 },
                 field: {
                     name: title,
                     description: description
                 },
                 onChange: function (value) {
-                    var next = Number(
-                        changedValue(value)
-                    );
+                    var next = Number(changedValue(value));
 
-                    if (!isFinite(next)) {
-                        return;
-                    }
+                    if (!isFinite(next)) return;
 
-                    storageSet(
-                        key,
-                        next
-                    );
+                    storageSet(key, next);
 
-                    if (callback) {
-                        callback(next);
-                    }
+                    if (callback) callback(next);
                 }
             });
         }
@@ -1251,9 +1137,7 @@
             'Увімкнути Kinorium OST',
             'Незалежне джерело саундтреків',
             function (enabled) {
-                if (!enabled) {
-                    stopPlayback('disabled');
-                }
+                if (!enabled) stopPlayback('disabled');
             }
         );
 
@@ -1262,11 +1146,7 @@
             'Автоматичне відтворення',
             'Запускати музику під час відкриття картки',
             function (enabled) {
-                if (!enabled) {
-                    stopPlayback(
-                        'autoplay_disabled'
-                    );
-                }
+                if (!enabled) stopPlayback('autoplay_disabled');
             }
         );
 
@@ -1280,9 +1160,7 @@
                     state.movie &&
                     state.movie.series
                 ) {
-                    stopPlayback(
-                        'series_disabled'
-                    );
+                    stopPlayback('series_disabled');
                 }
             }
         );
@@ -1373,15 +1251,12 @@
      */
 
     function init() {
-        if (state.initialized) {
-            return;
-        }
+        if (state.initialized) return;
 
         if (
             !window.Lampa ||
             !Lampa.Listener ||
-            typeof Lampa.Listener.follow !==
-                'function'
+            typeof Lampa.Listener.follow !== 'function'
         ) {
             setTimeout(init, 500);
             return;
@@ -1391,37 +1266,21 @@
 
         registerSettings();
 
-        Lampa.Listener.follow(
-            'full',
-            handleFullEvent
+        Lampa.Listener.follow('full', handleFullEvent);
+        Lampa.Listener.follow('activity', handleActivityEvent);
+
+        state.navigationTimer = setInterval(
+            monitorNavigation,
+            250
         );
 
-        Lampa.Listener.follow(
-            'activity',
-            handleActivityEvent
-        );
+        window.addEventListener('pagehide', function () {
+            stopPlayback('pagehide');
+        });
 
-        state.navigationTimer =
-            setInterval(
-                monitorNavigation,
-                250
-            );
-
-        window.addEventListener(
-            'pagehide',
-            function () {
-                stopPlayback('pagehide');
-            }
-        );
-
-        window.addEventListener(
-            'beforeunload',
-            function () {
-                stopPlayback(
-                    'beforeunload'
-                );
-            }
-        );
+        window.addEventListener('beforeunload', function () {
+            stopPlayback('beforeunload');
+        });
 
         console.log(
             '[Kinorium OST] ' +
