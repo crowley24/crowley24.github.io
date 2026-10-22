@@ -32,6 +32,12 @@
 'use strict';
 
 const VERSION = '1.6.1';
+const CUSTOM_CATALOG = {
+    url: 'https://crowley24.github.io/OST/ost_custom.json',
+    timeout: 10000,
+    cacheSeconds: 300,
+    maxEntries: 5000
+};
 
 const CONFIG = {
     site: 'https://ua.kinorium.com',
