@@ -1,10 +1,8 @@
-
 /*
  * ORIGINAL SOUNDTRACK
- * KINORIUM WORKER 1.6.0
+ * KINORIUM WORKER 1.6.1
  *
  * Cloudflare Workers + KV
- *
  * Binding: KINORIUM_CACHE
  *
  * Features:
@@ -17,6 +15,7 @@
  * - Short-lived negative soundtrack cache
  * - Audio verification on every verified request
  * - Cache HIT / MISS diagnostics
+ * - HTML inspection mode
  * - Graceful fallback if KV is unavailable
  *
  * Endpoints:
@@ -27,11 +26,12 @@
  * ?id=108983&track=Rose
  * ?id=108983&song_id=205745739
  * ?id=108983&verify=0
+ * ?id=2663934&debug=1&inspect=1&refresh=1
  */
 
 'use strict';
 
-const VERSION = '1.6.0';
+const VERSION = '1.6.1';
 
 const CONFIG = {
     site: 'https://ua.kinorium.com',
@@ -136,6 +136,7 @@ export default {
         ).trim();
 
         const debug = params.get('debug') === '1';
+        const inspect = params.get('inspect') === '1';
         const verify = params.get('verify') !== '0';
 
         const cacheBypass =
@@ -171,7 +172,9 @@ export default {
                     verifyOff:
                         '?id=108983&verify=0',
                     refresh:
-                        '?title=Titanic&year=1997&refresh=1'
+                        '?title=Titanic&year=1997&refresh=1',
+                    inspect:
+                        '?id=2663934&debug=1&inspect=1&refresh=1'
                 }
             });
         }
@@ -319,6 +322,7 @@ export default {
                 songId,
                 verify,
                 debug,
+                inspect,
                 cache,
                 cacheInfo,
                 cacheBypass
@@ -1697,6 +1701,102 @@ function selectTrack(
 }
 
 /*
+ * TEMPORARY HTML INSPECTOR
+ *
+ * Returns limited HTML fragments around soundtrack
+ * and audio-related keywords. This is diagnostic only;
+ * it does not change track extraction.
+ */
+
+function inspectSoundtrackHTML(html) {
+    const source = String(html || '');
+
+    const patterns = [
+        'film-page__soundtrack-control',
+        'data-song',
+        'song_name',
+        'song_id',
+        'preview_url',
+        'soundtrack',
+        'soundtrack-control',
+        'itunes.apple.com',
+        'audio-ssl.itunes.apple.com'
+    ];
+
+    const keywords = {};
+    const fragments = [];
+    const seen = new Set();
+
+    for (const keyword of patterns) {
+        const regex = new RegExp(
+            keyword.replace(
+                /[.*+?^${}()|[\]\\]/g,
+                '\\$&'
+            ),
+            'gi'
+        );
+
+        let match;
+        let count = 0;
+        const positions = [];
+
+        while (
+            (match = regex.exec(source)) &&
+            count < 1000
+        ) {
+            count++;
+
+            if (positions.length < 3) {
+                positions.push(match.index);
+            }
+
+            if (match.index === regex.lastIndex) {
+                regex.lastIndex++;
+            }
+        }
+
+        keywords[keyword] = {
+            count,
+            positions
+        };
+
+        for (const index of positions) {
+            const start = Math.max(
+                0,
+                index - 350
+            );
+
+            const end = Math.min(
+                source.length,
+                index + keyword.length + 550
+            );
+
+            const key = start + ':' + end;
+
+            if (seen.has(key)) continue;
+
+            seen.add(key);
+
+            fragments.push({
+                keyword,
+                position: index,
+                html: source.slice(start, end)
+            });
+
+            if (fragments.length >= 18) break;
+        }
+
+        if (fragments.length >= 18) break;
+    }
+
+    return {
+        htmlLength: source.length,
+        keywords,
+        fragments
+    };
+}
+
+/*
  * AUDIO VERIFICATION
  *
  * Verification is intentionally not stored in KV.
@@ -1791,6 +1891,7 @@ async function getSoundtrack(options) {
         songId,
         verify,
         debug,
+        inspect,
         cache,
         cacheInfo,
         cacheBypass
@@ -1847,7 +1948,7 @@ async function getSoundtrack(options) {
 
     /*
      * STEP 2:
-     * Fetch Kinorium only on a cache miss.
+     * Fetch Kinorium on a cache miss or refresh.
      */
 
     if (!soundtrackData) {
@@ -1867,7 +1968,16 @@ async function getSoundtrack(options) {
                 audioUrl: null,
                 reason: 'page_fetch_failed',
                 httpStatus: page.status,
-                pageURL
+                pageURL,
+                ...(inspect
+                    ? {
+                        inspection: {
+                            htmlLength: page.length,
+                            contentType: page.contentType,
+                            note: 'HTML inspection unavailable because the page fetch failed.'
+                        }
+                    }
+                    : {})
             };
         }
 
@@ -1880,7 +1990,6 @@ async function getSoundtrack(options) {
 
         /*
          * Cache valid page results.
-         *
          * Empty soundtracks expire sooner.
          */
 
@@ -1991,6 +2100,21 @@ async function getSoundtrack(options) {
         reason,
         pageURL
     };
+
+    /*
+     * HTML inspection only works when the page was fetched
+     * during this request. If KV supplied the soundtrack,
+     * refresh=1 is needed to inspect fresh HTML.
+     */
+
+    if (inspect) {
+        result.inspection = page
+            ? inspectSoundtrackHTML(page.html)
+            : {
+                available: false,
+                reason: 'page_not_fetched_use_refresh_1'
+            };
+    }
 
     if (debug) {
         result.debug = {
