@@ -22,6 +22,11 @@
     {"title":"Terminator Salvation","year":2009,"aliases":["Термінатор: Спасіння","Терминатор: Да придёт спаситель"],"albumId":"40","trackId":"862","track":"Opening","artist":"Danny Elfman","verified":true},
     {"title":"Terminator: Dark Fate","year":2019,"aliases":["Термінатор: Фатум","Терминатор: Темные судьбы","Terminator Dark Fate"],"albumId":"931","trackId":"22159","track":"Terminator","artist":"Junkie XL","verified":true},
     
-    {"title":"Halloween","year":1978,"aliases":["Хелловін","Хэллоуин"],"albumId":"443","trackId":"10620","track":"Halloween Theme","artist":"John Carpenter","verified":false}
+    {"title":"Halloween","year":1978,"aliases":["Хелловін","Хэллоуин"],"albumId":"443","trackId":"10620","track":"Halloween Theme","artist":"John Carpenter","verified":false},
+    {"title":"Halloween 4: The Return of Michael Myers","year":1988,"aliases":["Хелловін 4","Хэллоуин 4"],"albumId":"443","trackId":"10620","track":"Halloween Theme","artist":"John Carpenter","verified":false},
+    {"title":"Halloween 5: The Revenge of Michael Myers","year":1989,"aliases":["Хелловін 5","Хэллоуин 5"],"albumId":"443","trackId":"10620","track":"Halloween Theme","artist":"John Carpenter","verified":false},
+    {"title":"Halloween H20: 20 Years Later","year":1998,"aliases":["Хелловін: 20 років потому","Хэллоуин: 20 лет спустя"],"albumId":"443","trackId":"10620","track":"Halloween Theme","artist":"John Carpenter","verified":false},
+    {"title":"Halloween","year":2018,"aliases":["Хелловін","Хэллоуин"],"albumId":"443","trackId":"10620","track":"Halloween Theme","artist":"John Carpenter","verified":false}
+    
   ]
 }
