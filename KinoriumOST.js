@@ -2,8 +2,8 @@
     'use strict';
 
     /*
-     * KINORIUM OST 1.4.0
-     * Premium Diagnostics
+     * KINORIUM OST 1.5.0
+     * Silent & Stable
      *
      * Lampa / Android TV / Mobile
      * Cloudflare Worker 1.5.1+
@@ -11,7 +11,13 @@
      * FEATURES:
      * - Automatic movie and series soundtrack search
      * - Missing-year support
-     * - Immediate Worker request
+     * - Silent soundtrack search
+     * - Track title on successful playback when diagnostics are enabled
+     * - Automatic hiding of diagnostic notifications
+     * - Single audio session
+     * - Stale request and playback protection
+     * - Stop previous soundtrack when opening another card
+     * - Stop playback on navigation away from full screen
      * - Minimum playback delay
      * - Smooth fade-in
      * - Live volume adjustment
@@ -20,17 +26,13 @@
      * - Controlled playback retry
      * - Audio startup timeout
      * - Navigation grace period
-     * - Immediate stop on card exit
-     * - Stale request protection
      * - Safe timer and event cleanup
-     * - On-screen diagnostic notifications
-     * - Track title and playback status
      * - Human-readable error messages
      *
      * Independent test plugin.
      */
 
-    var VERSION = '1.4.0';
+    var VERSION = '1.5.0';
 
     var WORKER =
         'https://kinorium-ost.unclezhenya24.workers.dev/';
@@ -227,11 +229,11 @@
     }
 
     /*
-     * ON-SCREEN DIAGNOSTICS
+     * DIAGNOSTICS
      *
-     * Notifications are displayed only when debug is enabled.
-     * The panel is created once and reused.
-     * All displayed text is inserted using textContent.
+     * No notification is shown during ordinary searching.
+     * Success notifications are shown only after playback starts.
+     * Errors are displayed only when diagnostics are enabled.
      */
 
     function removeNotice() {
@@ -246,9 +248,7 @@
             try {
                 state.notice.remove();
             } catch (e) {
-                if (
-                    state.notice.parentNode
-                ) {
+                if (state.notice.parentNode) {
                     state.notice.parentNode.removeChild(
                         state.notice
                     );
@@ -271,9 +271,9 @@
             return;
         }
 
-        if (!state.cardActive) return;
-
-        if (!document.body) return;
+        if (!state.cardActive || !document.body) {
+            return;
+        }
 
         removeNotice();
 
@@ -382,17 +382,22 @@
 
         state.notice = panel;
 
-        requestAnimationFrame(function () {
-            if (
-                state.notice !== panel ||
-                state.noticeToken !== noticeToken
-            ) {
-                return;
-            }
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(function () {
+                if (
+                    state.notice !== panel ||
+                    state.noticeToken !== noticeToken
+                ) {
+                    return;
+                }
 
+                panel.style.opacity = '1';
+                panel.style.transform = 'translateY(0)';
+            });
+        } else {
             panel.style.opacity = '1';
             panel.style.transform = 'translateY(0)';
-        });
+        }
 
         var visibleFor = typeof duration === 'number'
             ? duration
@@ -410,8 +415,11 @@
                 panel.style.opacity = '0';
                 panel.style.transform = 'translateY(-8px)';
 
-                setTimeout(function () {
-                    if (state.notice === panel) {
+                state.noticeTimer = setTimeout(function () {
+                    if (
+                        state.notice === panel &&
+                        state.noticeToken === noticeToken
+                    ) {
                         removeNotice();
                     }
                 }, 220);
@@ -420,35 +428,76 @@
         );
     }
 
+    /*
+     * Deliberately silent.
+     * Kept as a function to make the search path explicit.
+     */
+
     function diagnosticSearching() {
-        showNotice(
-            'Пошук саундтреку',
-            state.movie
-                ? state.movie.title
-                : 'Шукаю доступне аудіо…',
-            'info',
-            2500
-        );
+        // No notification during search.
     }
 
-    function diagnosticPlaying(result) {
+    function getTrackTitle(result) {
         var track = result && result.track
             ? result.track
             : state.track;
 
-        var title = track && track.name
-            ? String(track.name)
-            : '';
+        if (typeof track === 'string') {
+            return track.trim();
+        }
 
-        var artist = track && track.artist
-            ? String(track.artist)
-            : '';
+        if (track && typeof track === 'object') {
+            var title =
+                track.name ||
+                track.title ||
+                track.track ||
+                track.trackName ||
+                track.track_name ||
+                '';
 
-        var message = title || (
-            state.movie
-                ? state.movie.title
-                : 'Аудіо'
-        );
+            return String(title || '').trim();
+        }
+
+        if (result) {
+            return String(
+                result.trackName ||
+                result.trackTitle ||
+                result.track_title ||
+                result.title ||
+                ''
+            ).trim();
+        }
+
+        return '';
+    }
+
+    function getTrackArtist(result) {
+        var track = result && result.track
+            ? result.track
+            : state.track;
+
+        if (!track || typeof track !== 'object') {
+            return '';
+        }
+
+        return String(
+            track.artist ||
+            track.artistName ||
+            track.artist_name ||
+            track.performer ||
+            ''
+        ).trim();
+    }
+
+    function diagnosticPlaying(result) {
+        if (!setting('debug') || !state.cardActive) {
+            return;
+        }
+
+        var title = getTrackTitle(result);
+        var artist = getTrackArtist(result);
+
+        var message = title || 'Назву композиції не отримано';
 
         if (artist) {
             message += ' — ' + artist;
@@ -503,6 +552,7 @@
             case 'media_error':
                 title = 'Помилка аудіо';
                 message = 'Медіаджерело повернуло помилку.';
+
                 if (errorCode) {
                     message += ' Код: ' + errorCode + '.';
                 }
@@ -805,6 +855,7 @@
             xhr.onreadystatechange = null;
             xhr.onerror = null;
             xhr.ontimeout = null;
+            xhr.onabort = null;
             xhr.abort();
         } catch (e) {}
     }
@@ -826,14 +877,6 @@
         if (!player) return;
 
         try {
-            player.onplaying = null;
-            player.onplay = null;
-            player.onpause = null;
-            player.onended = null;
-            player.onerror = null;
-            player.onwaiting = null;
-            player.onstalled = null;
-
             player.pause();
             player.loop = false;
             player.removeAttribute('src');
@@ -856,6 +899,13 @@
             details || ''
         );
     }
+
+    /*
+     * GLOBAL STOP
+     *
+     * Invalidate the current token before aborting requests or audio.
+     * Every asynchronous callback must verify this token.
+     */
 
     function stopPlayback(reason) {
         var wasActive = Boolean(
@@ -907,6 +957,7 @@
 
         if (
             token !== state.token ||
+            !state.cardActive ||
             state.audio !== player
         ) {
             return;
@@ -1005,12 +1056,10 @@
             return;
         }
 
-        var current = player.volume;
-
         startFade(
             player,
             state.token,
-            current
+            player.volume
         );
     }
 
@@ -1064,7 +1113,8 @@
             function () {
                 if (
                     token === state.token &&
-                    state.audio === player
+                    state.audio === player &&
+                    generation === state.audioGeneration
                 ) {
                     log('Audio buffering');
                 }
@@ -1076,7 +1126,8 @@
             function () {
                 if (
                     token === state.token &&
-                    state.audio === player
+                    state.audio === player &&
+                    generation === state.audioGeneration
                 ) {
                     log('Audio stalled');
                 }
@@ -1088,7 +1139,8 @@
             function () {
                 if (
                     token !== state.token ||
-                    state.audio !== player
+                    state.audio !== player ||
+                    generation !== state.audioGeneration
                 ) {
                     return;
                 }
@@ -1106,6 +1158,13 @@
                             typeof promise.catch === 'function'
                         ) {
                             promise.catch(function (error) {
+                                if (
+                                    token !== state.token ||
+                                    state.audio !== player
+                                ) {
+                                    return;
+                                }
+
                                 log(
                                     'Repeat failed:',
                                     error && error.name
@@ -1161,9 +1220,8 @@
                 errorCode || 0
             );
 
-            diagnosticFailure(reason, errorCode);
-
             destroyAudio();
+            diagnosticFailure(reason, errorCode);
 
             return;
         }
@@ -1244,11 +1302,10 @@
 
         log(
             'Playing:',
-            state.track
-                ? state.track.name
-                : 'Unknown'
+            getTrackTitle(state.readyResult) || 'Unknown'
         );
 
+        // Display the track title only after playback really starts.
         diagnosticPlaying(state.readyResult);
     }
 
@@ -1266,7 +1323,15 @@
         clearPlayTimeout();
         clearFadeTimer();
 
+        // Ensure there can only be one active audio player.
         destroyAudio();
+
+        if (
+            token !== state.token ||
+            !state.cardActive
+        ) {
+            return;
+        }
 
         state.playbackStarted = false;
 
@@ -1274,11 +1339,21 @@
 
         var player = createAudio(token);
         var attempt = state.playAttempt;
+        var generation = state.audioGeneration;
 
         var started = false;
 
+        function isCurrentPlayer() {
+            return (
+                token === state.token &&
+                state.cardActive &&
+                state.audio === player &&
+                generation === state.audioGeneration
+            );
+        }
+
         function onStarted() {
-            if (started) return;
+            if (started || !isCurrentPlayer()) return;
 
             started = true;
 
@@ -1297,10 +1372,7 @@
         player.addEventListener(
             'play',
             function () {
-                if (
-                    token === state.token &&
-                    state.audio === player
-                ) {
+                if (isCurrentPlayer()) {
                     log('Audio play event');
                 }
             }
@@ -1310,13 +1382,9 @@
 
         log(
             'Starting audio:',
-            state.track
-                ? state.track.name
-                : 'Unknown',
+            getTrackTitle(result) || 'Unknown',
             'attempt:',
-            attempt + 1,
-            'URL:',
-            result.audioUrl
+            attempt + 1
         );
 
         state.playTimeoutTimer = setTimeout(
@@ -1324,8 +1392,7 @@
                 state.playTimeoutTimer = null;
 
                 if (
-                    token !== state.token ||
-                    state.audio !== player ||
+                    !isCurrentPlayer() ||
                     state.playbackStarted
                 ) {
                     return;
@@ -1357,17 +1424,13 @@
             ) {
                 promise.then(function () {
                     if (
-                        token === state.token &&
-                        state.audio === player &&
+                        isCurrentPlayer() &&
                         !player.paused
                     ) {
                         onStarted();
                     }
                 }).catch(function (error) {
-                    if (
-                        token !== state.token ||
-                        state.audio !== player
-                    ) {
+                    if (!isCurrentPlayer()) {
                         return;
                     }
 
@@ -1393,26 +1456,15 @@
                         name === 'NotAllowedError' ||
                         name === 'SecurityError'
                     ) {
-                        setPlaybackState(
-                            'blocked',
-                            name
-                        );
+                        setPlaybackState('blocked', name);
 
                         log(
                             'Playback blocked by browser autoplay policy'
                         );
 
+                        destroyAudio();
                         diagnosticFailure('blocked', 0);
 
-                        destroyAudio();
-
-                        return;
-                    }
-
-                    if (
-                        name === 'AbortError' &&
-                        token !== state.token
-                    ) {
                         return;
                     }
 
@@ -1427,18 +1479,16 @@
                 onStarted();
             }
         } catch (e) {
+            if (!isCurrentPlayer()) return;
+
             clearPlayTimeout();
 
             state.playbackStarted = false;
 
             log(
                 'Play exception:',
-                e && e.name
-                    ? e.name
-                    : '',
-                e && e.message
-                    ? e.message
-                    : e
+                e && e.name ? e.name : '',
+                e && e.message ? e.message : e
             );
 
             handleAudioFailure(
@@ -1579,24 +1629,25 @@
             url
         );
 
-        diagnosticSearching();
+        // Intentionally no visible search notification.
 
         xhr.open('GET', url, true);
         xhr.timeout = 20000;
 
+        function isCurrentRequest() {
+            return (
+                token === state.token &&
+                state.cardActive &&
+                state.request === xhr
+            );
+        }
+
         xhr.onreadystatechange = function () {
             if (xhr.readyState !== 4) return;
 
-            if (state.request === xhr) {
-                state.request = null;
-            }
+            if (!isCurrentRequest()) return;
 
-            if (
-                token !== state.token ||
-                !state.cardActive
-            ) {
-                return;
-            }
+            state.request = null;
 
             if (
                 xhr.status < 200 ||
@@ -1637,9 +1688,7 @@
                 log(
                     'No playable soundtrack:',
                     movie.title,
-                    result
-                        ? result.reason
-                        : 'empty_response',
+                    result ? result.reason : 'empty_response',
                     result && result.search
                         ? result.search.method
                         : '',
@@ -1651,15 +1700,16 @@
                 return;
             }
 
+            // A late response can never replace a newer card's result.
+            if (!isCurrentCardToken(token)) return;
+
             state.readyResult = result;
 
             setPlaybackState('ready');
 
             log(
                 'Soundtrack ready:',
-                result.track
-                    ? result.track.name
-                    : '',
+                getTrackTitle(result),
                 'Search:',
                 result.search
                     ? result.search.method
@@ -1670,31 +1720,35 @@
         };
 
         xhr.onerror = function () {
-            if (token === state.token) {
-                setPlaybackState('error', 'network');
+            if (!isCurrentRequest()) return;
 
-                log('Network error');
+            state.request = null;
 
-                diagnosticFailure('network', 0);
-            }
+            setPlaybackState('error', 'network');
+
+            log('Network error');
+
+            diagnosticFailure('network', 0);
         };
 
         xhr.ontimeout = function () {
-            if (token === state.token) {
-                setPlaybackState('error', 'worker_timeout');
+            if (!isCurrentRequest()) return;
 
-                log('Worker timeout');
+            state.request = null;
 
-                diagnosticFailure('worker_timeout', 0);
-            }
+            setPlaybackState('error', 'worker_timeout');
+
+            log('Worker timeout');
+
+            diagnosticFailure('worker_timeout', 0);
         };
 
         try {
             xhr.send();
         } catch (e) {
-            if (state.request === xhr) {
-                state.request = null;
-            }
+            if (!isCurrentRequest()) return;
+
+            state.request = null;
 
             setPlaybackState('error', 'xhr_exception');
 
@@ -1702,6 +1756,14 @@
 
             diagnosticFailure('xhr_exception', 0);
         }
+    }
+
+    function isCurrentCardToken(token) {
+        return (
+            token === state.token &&
+            state.cardActive &&
+            !!state.movie
+        );
     }
 
     /*
@@ -1739,6 +1801,7 @@
             return;
         }
 
+        // Stop audio, invalidate pending requests and remove old notices.
         stopPlayback('new_movie');
 
         state.movie = movie;
@@ -2129,19 +2192,25 @@
             function (enabled) {
                 if (!enabled) {
                     removeNotice();
-                } else if (state.cardActive) {
-                    if (state.playbackStarted) {
-                        diagnosticPlaying(state.readyResult);
-                    } else if (
-                        state.playbackState === 'searching'
-                    ) {
-                        diagnosticSearching();
-                    } else if (
-                        state.playbackState === 'not_found'
-                    ) {
-                        diagnosticNotFound(null);
-                    }
+                    return;
                 }
+
+                if (!state.cardActive) return;
+
+                if (state.playbackStarted) {
+                    diagnosticPlaying(state.readyResult);
+                } else if (
+                    state.playbackState === 'not_found'
+                ) {
+                    diagnosticNotFound(null);
+                } else if (
+                    state.playbackState === 'error'
+                ) {
+                    // Do not generate a misleading new error.
+                    // The next real error will be displayed normally.
+                }
+
+                // No search notification when diagnostics are enabled.
             }
         );
     }
