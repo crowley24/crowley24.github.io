@@ -1,38 +1,31 @@
+
 (function () {
     'use strict';
 
     /*
-     * KINORIUM OST 1.5.0
-     * Silent & Stable
+     * KINORIUM OST 1.5.1
      *
      * Lampa / Android TV / Mobile
-     * Cloudflare Worker 1.5.1+
+     * Cloudflare Worker 1.6.2+
+     *
+     * Sources:
+     * - YouTube IFrame Player API
+     * - OSTMusic and direct audio files
      *
      * FEATURES:
+     * - Custom catalog support
      * - Automatic movie and series soundtrack search
-     * - Missing-year support
-     * - Silent soundtrack search
-     * - Track title on successful playback when diagnostics are enabled
-     * - Automatic hiding of diagnostic notifications
-     * - Single audio session
-     * - Stale request and playback protection
-     * - Stop previous soundtrack when opening another card
-     * - Stop playback on navigation away from full screen
-     * - Minimum playback delay
-     * - Smooth fade-in
-     * - Live volume adjustment
-     * - Adjustable fade duration
+     * - YouTube and HTML5 Audio playback
+     * - Volume control and smooth fade-in
+     * - Adjustable startup delay
      * - Automatic repeat
-     * - Controlled playback retry
-     * - Audio startup timeout
-     * - Navigation grace period
-     * - Safe timer and event cleanup
-     * - Human-readable error messages
-     *
-     * Independent test plugin.
+     * - Playback retry
+     * - Startup timeout
+     * - Track title diagnostics
+     * - Navigation and stale-request protection
      */
 
-    var VERSION = '1.5.0';
+    var VERSION = '1.5.1';
 
     var WORKER =
         'https://kinorium-ost.unclezhenya24.workers.dev/';
@@ -52,8 +45,8 @@
     };
 
     var MAX_PLAY_RETRIES = 1;
-    var RETRY_DELAY = 700;
-    var PLAY_START_TIMEOUT = 12000;
+    var RETRY_DELAY = 1000;
+    var PLAY_START_TIMEOUT = 20000;
     var NOTICE_DURATION = 3500;
 
     var state = {
@@ -61,6 +54,15 @@
 
         audio: null,
         request: null,
+
+        youtubePlayer: null,
+        youtubeContainer: null,
+        youtubeReady: false,
+        youtubeLoading: false,
+        youtubeApiTimer: null,
+        youtubeVolumeTimer: null,
+        youtubeVideoId: '',
+        youtubeGeneration: 0,
 
         startTimer: null,
         fadeTimer: null,
@@ -83,9 +85,7 @@
 
         playbackStarted: false,
         playbackState: 'idle',
-
         playAttempt: 0,
-        audioGeneration: 0,
 
         fadeStartedAt: 0,
         fadeStartVolume: 0,
@@ -122,9 +122,7 @@
         try {
             var raw = localStorage.getItem(name);
 
-            return raw === null
-                ? fallback
-                : JSON.parse(raw);
+            return raw === null ? fallback : JSON.parse(raw);
         } catch (e) {
             return fallback;
         }
@@ -145,10 +143,7 @@
         } catch (e) {}
 
         try {
-            localStorage.setItem(
-                name,
-                JSON.stringify(value)
-            );
+            localStorage.setItem(name, JSON.stringify(value));
         } catch (e) {}
     }
 
@@ -185,24 +180,23 @@
     }
 
     function clamp(value, min, max) {
-        return Math.max(
-            min,
-            Math.min(max, value)
-        );
+        return Math.max(min, Math.min(max, value));
     }
 
     function numberSetting(key, minimum, maximum) {
         var value = Number(setting(key));
 
-        if (!isFinite(value)) {
-            value = DEFAULTS[key];
-        }
+        if (!isFinite(value)) value = DEFAULTS[key];
 
         return clamp(value, minimum, maximum);
     }
 
     function targetVolume() {
-        return numberSetting('volume', 0, 100) / 100;
+        return numberSetting('volume', 0, 100);
+    }
+
+    function targetAudioVolume() {
+        return targetVolume() / 100;
     }
 
     function delayMs() {
@@ -229,11 +223,59 @@
     }
 
     /*
-     * DIAGNOSTICS
-     *
-     * No notification is shown during ordinary searching.
-     * Success notifications are shown only after playback starts.
-     * Errors are displayed only when diagnostics are enabled.
+     * SOURCE DETECTION
+     */
+
+    function getYouTubeVideoId(value) {
+        var url = String(value || '').trim();
+        var match;
+
+        match = url.match(
+            /(?:youtube\.com\/watch\?(?:[^#]*&)?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/
+        );
+
+        if (match) return match[1];
+
+        try {
+            var parsed = new URL(url);
+
+            var host = parsed.hostname.toLowerCase();
+
+            if (
+                host === 'youtube.com' ||
+                host === 'www.youtube.com' ||
+                host === 'm.youtube.com' ||
+                host === 'music.youtube.com'
+            ) {
+                var id = parsed.searchParams.get('v');
+
+                if (id && /^[a-zA-Z0-9_-]{11}$/.test(id)) {
+                    return id;
+                }
+            }
+        } catch (e) {}
+
+        return '';
+    }
+
+    function isYouTubeResult(result) {
+        if (!result) return false;
+
+        var source = String(result.source || '').toLowerCase();
+
+        var trackSource = String(
+            result.track && result.track.source || ''
+        ).toLowerCase();
+
+        if (source === 'youtube' || trackSource === 'youtube') {
+            return true;
+        }
+
+        return !!getYouTubeVideoId(result.audioUrl || '');
+    }
+
+    /*
+     * NOTIFICATIONS
      */
 
     function removeNotice() {
@@ -249,20 +291,12 @@
                 state.notice.remove();
             } catch (e) {
                 if (state.notice.parentNode) {
-                    state.notice.parentNode.removeChild(
-                        state.notice
-                    );
+                    state.notice.parentNode.removeChild(state.notice);
                 }
             }
 
             state.notice = null;
         }
-    }
-
-    function noticeStyle(element, styles) {
-        Object.keys(styles).forEach(function (key) {
-            element.style[key] = styles[key];
-        });
     }
 
     function showNotice(title, message, type, duration) {
@@ -271,9 +305,7 @@
             return;
         }
 
-        if (!state.cardActive || !document.body) {
-            return;
-        }
+        if (!state.cardActive || !document.body) return;
 
         removeNotice();
 
@@ -295,12 +327,9 @@
 
         var panel = document.createElement('div');
 
-        panel.setAttribute(
-            'data-kinorium-ost-notice',
-            'true'
-        );
+        panel.setAttribute('data-kinorium-ost-notice', 'true');
 
-        noticeStyle(panel, {
+        var styles = {
             position: 'fixed',
             top: 'max(18px, env(safe-area-inset-top))',
             right: 'max(18px, env(safe-area-inset-right))',
@@ -309,54 +338,40 @@
             boxSizing: 'border-box',
             padding: '13px 16px',
             borderRadius: '12px',
-            background: 'rgba(20, 22, 27, 0.96)',
+            background: 'rgba(20,22,27,0.96)',
             border: '1px solid rgba(255,255,255,0.13)',
-            borderLeft: '3px solid ' + (
-                colors[type] || colors.info
-            ),
+            borderLeft: '3px solid ' + (colors[type] || colors.info),
             color: '#ffffff',
-            fontFamily: 'Arial, sans-serif',
+            fontFamily: 'Arial,sans-serif',
             fontSize: '14px',
             lineHeight: '1.4',
             boxShadow: '0 6px 24px rgba(0,0,0,0.3)',
             opacity: '0',
             transform: 'translateY(-8px)',
-            transition: 'opacity 180ms ease, transform 180ms ease',
+            transition: 'opacity 180ms ease,transform 180ms ease',
             pointerEvents: 'none',
             overflow: 'hidden'
+        };
+
+        Object.keys(styles).forEach(function (key) {
+            panel.style[key] = styles[key];
         });
 
         var header = document.createElement('div');
 
-        noticeStyle(header, {
-            display: 'flex',
-            alignItems: 'center',
-            gap: '9px',
-            marginBottom: message ? '5px' : '0',
-            fontWeight: '700',
-            fontSize: '14px'
-        });
+        header.style.display = 'flex';
+        header.style.alignItems = 'center';
+        header.style.gap = '9px';
+        header.style.marginBottom = message ? '5px' : '0';
+        header.style.fontWeight = '700';
 
         var icon = document.createElement('span');
-
         icon.textContent = icons[type] || icons.info;
-
-        noticeStyle(icon, {
-            flex: '0 0 auto',
-            color: colors[type] || colors.info,
-            fontSize: '16px'
-        });
+        icon.style.color = colors[type] || colors.info;
 
         var heading = document.createElement('span');
-
         heading.textContent = String(title || 'KINORIUM OST');
-
-        noticeStyle(heading, {
-            minWidth: '0',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            overflowWrap: 'anywhere'
-        });
+        heading.style.overflowWrap = 'anywhere';
 
         header.appendChild(icon);
         header.appendChild(heading);
@@ -364,77 +379,50 @@
 
         if (message) {
             var description = document.createElement('div');
-
             description.textContent = String(message);
-
-            noticeStyle(description, {
-                color: 'rgba(255,255,255,0.78)',
-                fontSize: '13px',
-                lineHeight: '1.4',
-                overflowWrap: 'anywhere',
-                wordBreak: 'break-word'
-            });
-
+            description.style.color = 'rgba(255,255,255,0.78)';
+            description.style.fontSize = '13px';
+            description.style.overflowWrap = 'anywhere';
             panel.appendChild(description);
         }
 
         document.body.appendChild(panel);
-
         state.notice = panel;
 
-        if (typeof requestAnimationFrame === 'function') {
-            requestAnimationFrame(function () {
-                if (
-                    state.notice !== panel ||
-                    state.noticeToken !== noticeToken
-                ) {
-                    return;
-                }
+        var reveal = function () {
+            if (
+                state.notice !== panel ||
+                state.noticeToken !== noticeToken
+            ) return;
 
-                panel.style.opacity = '1';
-                panel.style.transform = 'translateY(0)';
-            });
-        } else {
             panel.style.opacity = '1';
             panel.style.transform = 'translateY(0)';
+        };
+
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(reveal);
+        } else {
+            reveal();
         }
 
-        var visibleFor = typeof duration === 'number'
-            ? duration
-            : NOTICE_DURATION;
+        state.noticeTimer = setTimeout(function () {
+            if (
+                state.notice !== panel ||
+                state.noticeToken !== noticeToken
+            ) return;
 
-        state.noticeTimer = setTimeout(
-            function () {
+            panel.style.opacity = '0';
+            panel.style.transform = 'translateY(-8px)';
+
+            state.noticeTimer = setTimeout(function () {
                 if (
-                    state.notice !== panel ||
-                    state.noticeToken !== noticeToken
+                    state.notice === panel &&
+                    state.noticeToken === noticeToken
                 ) {
-                    return;
+                    removeNotice();
                 }
-
-                panel.style.opacity = '0';
-                panel.style.transform = 'translateY(-8px)';
-
-                state.noticeTimer = setTimeout(function () {
-                    if (
-                        state.notice === panel &&
-                        state.noticeToken === noticeToken
-                    ) {
-                        removeNotice();
-                    }
-                }, 220);
-            },
-            Math.max(500, visibleFor)
-        );
-    }
-
-    /*
-     * Deliberately silent.
-     * Kept as a function to make the search path explicit.
-     */
-
-    function diagnosticSearching() {
-        // No notification during search.
+            }, 220);
+        }, Math.max(500, duration || NOTICE_DURATION));
     }
 
     function getTrackTitle(result) {
@@ -442,43 +430,33 @@
             ? result.track
             : state.track;
 
-        if (typeof track === 'string') {
-            return track.trim();
-        }
+        if (typeof track === 'string') return track.trim();
 
         if (track && typeof track === 'object') {
-            var title =
+            return String(
                 track.name ||
                 track.title ||
                 track.track ||
                 track.trackName ||
                 track.track_name ||
-                '';
-
-            return String(title || '').trim();
-        }
-
-        if (result) {
-            return String(
-                result.trackName ||
-                result.trackTitle ||
-                result.track_title ||
-                result.title ||
                 ''
             ).trim();
         }
 
-        return '';
+        return String(
+            result && (
+                result.trackName ||
+                result.trackTitle ||
+                result.track_title ||
+                result.title
+            ) || ''
+        ).trim();
     }
 
     function getTrackArtist(result) {
-        var track = result && result.track
-            ? result.track
-            : state.track;
+        var track = result && result.track;
 
-        if (!track || typeof track !== 'object') {
-            return '';
-        }
+        if (!track || typeof track !== 'object') return '';
 
         return String(
             track.artist ||
@@ -490,44 +468,18 @@
     }
 
     function diagnosticPlaying(result) {
-        if (!setting('debug') || !state.cardActive) {
-            return;
-        }
+        if (!setting('debug') || !state.cardActive) return;
 
-        var title = getTrackTitle(result);
+        var title = getTrackTitle(result) || 'Назву композиції не отримано';
         var artist = getTrackArtist(result);
 
-        var message = title || 'Назву композиції не отримано';
+        if (artist) title += ' — ' + artist;
 
-        if (artist) {
-            message += ' — ' + artist;
-        }
-
-        showNotice(
-            'Музика відтворюється',
-            message,
-            'success',
-            4000
-        );
+        showNotice('Музика відтворюється', title, 'success', 4000);
     }
 
     function diagnosticNotFound(result) {
         var message = 'Не вдалося знайти відповідний саундтрек.';
-
-        if (result && result.reason) {
-            var reason = String(result.reason).toLowerCase();
-
-            if (
-                reason.indexOf('audio') !== -1 ||
-                reason.indexOf('playable') !== -1
-            ) {
-                message = 'Запис знайдено, але доступного аудіо немає.';
-            } else if (
-                reason.indexOf('network') !== -1
-            ) {
-                message = 'Не вдалося отримати відповідь через мережу.';
-            }
-        }
 
         if (
             result &&
@@ -535,16 +487,18 @@
             (!result.playable || !result.audioUrl)
         ) {
             message = 'Запис знайдено, але доступного аудіо немає.';
+        } else if (result && result.reason) {
+            var reason = String(result.reason).toLowerCase();
+
+            if (reason.indexOf('network') !== -1) {
+                message = 'Не вдалося отримати відповідь через мережу.';
+            }
         }
 
-        showNotice(
-            'Саундтрек недоступний',
-            message,
-            'warning'
-        );
+        showNotice('Саундтрек недоступний', message, 'warning');
     }
 
-    function diagnosticFailure(reason, errorCode) {
+    function diagnosticFailure(reason, code) {
         var title = 'Помилка відтворення';
         var message = 'Не вдалося запустити аудіо.';
 
@@ -552,10 +506,12 @@
             case 'media_error':
                 title = 'Помилка аудіо';
                 message = 'Медіаджерело повернуло помилку.';
+                if (code) message += ' Код: ' + code + '.';
+                break;
 
-                if (errorCode) {
-                    message += ' Код: ' + errorCode + '.';
-                }
+            case 'youtube_error':
+                title = 'Помилка YouTube';
+                message = youtubeErrorText(code);
                 break;
 
             case 'startup_timeout':
@@ -565,12 +521,12 @@
 
             case 'worker_http':
                 title = 'Помилка сервера';
-                message = 'Worker повернув HTTP-помилку.';
+                message = 'Worker повернув HTTP-помилку ' + code + '.';
                 break;
 
             case 'worker_timeout':
                 title = 'Сервер не відповідає';
-                message = 'Перевищено час очікування відповіді Worker.';
+                message = 'Перевищено час очікування Worker.';
                 break;
 
             case 'network':
@@ -580,40 +536,39 @@
 
             case 'invalid_json':
                 title = 'Помилка відповіді';
-                message = 'Worker повернув відповідь невідомого формату.';
-                break;
-
-            case 'xhr_exception':
-                title = 'Помилка запиту';
-                message = 'Не вдалося відправити запит до Worker.';
-                break;
-
-            case 'play_exception':
-                title = 'Помилка запуску';
-                message = 'Під час запуску аудіо виникла помилка.';
+                message = 'Worker повернув JSON невідомого формату.';
                 break;
 
             case 'blocked':
                 title = 'Запуск заблоковано';
-                message = 'Браузер або середовище Lampa заборонили автозапуск.';
+                message = 'Середовище Lampa заборонило автоматичний запуск.';
                 break;
 
-            default:
-                if (
-                    String(reason || '').indexOf('play_rejected_') === 0
-                ) {
-                    title = 'Аудіо не запустилося';
-                    message = 'Плеєр відхилив запит на відтворення.';
-                }
+            case 'youtube_api_timeout':
+                title = 'YouTube недоступний';
+                message = 'Не вдалося завантажити YouTube Player API.';
                 break;
         }
 
-        showNotice(
-            title,
-            message,
-            'error',
-            4500
-        );
+        showNotice(title, message, 'error', 4500);
+    }
+
+    function youtubeErrorText(code) {
+        switch (Number(code)) {
+            case 2:
+                return 'Некоректний ідентифікатор відео.';
+            case 5:
+                return 'Відео не підтримується HTML5-плеєром YouTube.';
+            case 100:
+                return 'Відео видалене або недоступне.';
+            case 101:
+            case 150:
+                return 'Власник відео заборонив вбудоване відтворення.';
+            case 153:
+                return 'YouTube не отримав належний HTTP Referer або ідентифікацію клієнта.';
+            default:
+                return 'YouTube повернув помилку ' + (code || 'невідомо') + '.';
+        }
     }
 
     /*
@@ -621,33 +576,22 @@
      */
 
     function movieFromData(data) {
-        if (!data || typeof data !== 'object') {
-            return null;
-        }
+        if (!data || typeof data !== 'object') return null;
 
         var movie = data;
 
         for (var i = 0; i < 4; i++) {
-            if (
-                movie.data &&
-                typeof movie.data === 'object'
-            ) {
+            if (movie.data && typeof movie.data === 'object') {
                 movie = movie.data;
                 continue;
             }
 
-            if (
-                movie.movie &&
-                typeof movie.movie === 'object'
-            ) {
+            if (movie.movie && typeof movie.movie === 'object') {
                 movie = movie.movie;
                 continue;
             }
 
-            if (
-                movie.card &&
-                typeof movie.card === 'object'
-            ) {
+            if (movie.card && typeof movie.card === 'object') {
                 movie = movie.card;
                 continue;
             }
@@ -655,20 +599,13 @@
             break;
         }
 
-        var type = String(
-            movie.media_type ||
-            movie.type ||
-            ''
-        ).toLowerCase();
+        var type = String(movie.media_type || movie.type || '').toLowerCase();
 
         var series = (
             type === 'tv' ||
             type === 'series' ||
             type === 'serial' ||
-            (
-                !movie.release_date &&
-                !!movie.first_air_date
-            )
+            (!movie.release_date && !!movie.first_air_date)
         );
 
         var title = String(
@@ -709,11 +646,7 @@
             title: title,
             year: year,
             series: series,
-            tmdbId: String(
-                movie.id ||
-                movie.tmdb_id ||
-                ''
-            )
+            tmdbId: String(movie.id || movie.tmdb_id || '')
         };
     }
 
@@ -736,17 +669,13 @@
                 !window.Lampa ||
                 !Lampa.Activity ||
                 typeof Lampa.Activity.active !== 'function'
-            ) {
-                return '';
-            }
+            ) return '';
 
             var active = Lampa.Activity.active();
 
             if (!active) return '';
 
-            if (typeof active === 'string') {
-                return active.toLowerCase();
-            }
+            if (typeof active === 'string') return active.toLowerCase();
 
             var fields = [
                 active.component,
@@ -756,10 +685,7 @@
             ];
 
             for (var i = 0; i < fields.length; i++) {
-                if (
-                    typeof fields[i] === 'string' &&
-                    fields[i]
-                ) {
+                if (typeof fields[i] === 'string' && fields[i]) {
                     return fields[i].toLowerCase();
                 }
             }
@@ -793,23 +719,25 @@
             if (
                 value === known[i] ||
                 value.indexOf(known[i] + '/') === 0
-            ) {
-                return true;
-            }
+            ) return true;
         }
 
         return false;
     }
 
     /*
-     * TIMER MANAGEMENT
+     * TIMERS
      */
 
-    function clearStartTimer() {
-        if (state.startTimer !== null) {
-            clearTimeout(state.startTimer);
-            state.startTimer = null;
+    function clearTimer(name) {
+        if (state[name] !== null) {
+            clearTimeout(state[name]);
+            state[name] = null;
         }
+    }
+
+    function clearStartTimer() {
+        clearTimer('startTimer');
     }
 
     function clearFadeTimer() {
@@ -820,17 +748,11 @@
     }
 
     function clearRetryTimer() {
-        if (state.retryTimer !== null) {
-            clearTimeout(state.retryTimer);
-            state.retryTimer = null;
-        }
+        clearTimer('retryTimer');
     }
 
     function clearPlayTimeout() {
-        if (state.playTimeoutTimer !== null) {
-            clearTimeout(state.playTimeoutTimer);
-            state.playTimeoutTimer = null;
-        }
+        clearTimer('playTimeoutTimer');
     }
 
     function clearPlaybackTimers() {
@@ -846,7 +768,6 @@
 
     function abortRequest() {
         var xhr = state.request;
-
         state.request = null;
 
         if (!xhr) return;
@@ -861,17 +782,407 @@
     }
 
     /*
-     * AUDIO MANAGEMENT
+     * YOUTUBE API LOADER
      */
 
-    function destroyAudio() {
+    function loadYouTubeAPI(callback) {
+        if (window.YT && window.YT.Player) {
+            callback();
+            return;
+        }
+
+        if (typeof state.youtubeApiTimer === 'function') {
+            // No-op: the API loader uses a timer ID below.
+        }
+
+        if (!document.querySelector(
+            'script[src*="youtube.com/iframe_api"]'
+        )) {
+            var script = document.createElement('script');
+
+            script.src = 'https://www.youtube.com/iframe_api';
+            script.async = true;
+
+            var first = document.getElementsByTagName('script')[0];
+
+            if (first && first.parentNode) {
+                first.parentNode.insertBefore(script, first);
+            } else {
+                document.head.appendChild(script);
+            }
+        }
+
+        var started = Date.now();
+
+        if (state.youtubeApiTimer !== null) {
+            clearInterval(state.youtubeApiTimer);
+        }
+
+        state.youtubeApiTimer = setInterval(function () {
+            if (window.YT && window.YT.Player) {
+                clearInterval(state.youtubeApiTimer);
+                state.youtubeApiTimer = null;
+                callback();
+                return;
+            }
+
+            if (Date.now() - started > 15000) {
+                clearInterval(state.youtubeApiTimer);
+                state.youtubeApiTimer = null;
+
+                if (state.cardActive) {
+                    setPlaybackState('error', 'youtube_api_timeout');
+                    diagnosticFailure('youtube_api_timeout', 0);
+                }
+            }
+        }, 200);
+    }
+
+    /*
+     * YOUTUBE PLAYER
+     */
+
+    function removeYouTubePlayer() {
+        state.youtubeGeneration++;
+
+        if (state.youtubeVolumeTimer !== null) {
+            clearInterval(state.youtubeVolumeTimer);
+            state.youtubeVolumeTimer = null;
+        }
+
+        var player = state.youtubePlayer;
+
+        state.youtubePlayer = null;
+        state.youtubeReady = false;
+        state.youtubeLoading = false;
+        state.youtubeVideoId = '';
+
+        if (player) {
+            try {
+                player.stopVideo();
+            } catch (e) {}
+
+            try {
+                player.destroy();
+            } catch (e) {}
+        }
+
+        if (state.youtubeContainer) {
+            try {
+                state.youtubeContainer.remove();
+            } catch (e) {
+                if (state.youtubeContainer.parentNode) {
+                    state.youtubeContainer.parentNode.removeChild(
+                        state.youtubeContainer
+                    );
+                }
+            }
+
+            state.youtubeContainer = null;
+        }
+    }
+
+    function setYouTubeVolume(value) {
+        if (!state.youtubePlayer || !state.youtubeReady) return;
+
+        try {
+            state.youtubePlayer.setVolume(
+                Math.round(clamp(value, 0, 100))
+            );
+        } catch (e) {}
+    }
+
+    function startYouTubeFade(token, generation) {
+        if (state.youtubeVolumeTimer !== null) {
+            clearInterval(state.youtubeVolumeTimer);
+            state.youtubeVolumeTimer = null;
+        }
+
+        var duration = fadeMs();
+        var target = targetVolume();
+
+        if (!setting('fade') || duration <= 0) {
+            setYouTubeVolume(target);
+            return;
+        }
+
+        var startedAt = Date.now();
+
+        setYouTubeVolume(0);
+
+        state.youtubeVolumeTimer = setInterval(function () {
+            if (
+                token !== state.token ||
+                generation !== state.youtubeGeneration ||
+                !state.cardActive ||
+                !state.youtubePlayer
+            ) {
+                clearInterval(state.youtubeVolumeTimer);
+                state.youtubeVolumeTimer = null;
+                return;
+            }
+
+            var progress = clamp(
+                (Date.now() - startedAt) / duration,
+                0,
+                1
+            );
+
+            var eased = progress * progress * (3 - 2 * progress);
+
+            setYouTubeVolume(target * eased);
+
+            if (progress >= 1) {
+                setYouTubeVolume(target);
+
+                clearInterval(state.youtubeVolumeTimer);
+                state.youtubeVolumeTimer = null;
+            }
+        }, 50);
+    }
+
+    function playYouTube(result, token) {
+        var videoId = getYouTubeVideoId(result.audioUrl);
+
+        if (!videoId) {
+            setPlaybackState('error', 'invalid_youtube_url');
+            diagnosticFailure('youtube_error', 2);
+            return;
+        }
+
+        clearPlaybackTimers();
+        destroyAudioOnly();
+
+        removeYouTubePlayer();
+
+        state.playbackStarted = false;
+        state.youtubeLoading = true;
+        state.youtubeVideoId = videoId;
+
+        setPlaybackState('starting');
+
+        var generation = state.youtubeGeneration;
+
+        var container = document.createElement('div');
+
+        container.setAttribute('data-kinorium-ost-youtube', 'true');
+
+        container.style.position = 'fixed';
+        container.style.left = '0';
+        container.style.bottom = '0';
+        container.style.width = '320px';
+        container.style.height = '180px';
+        container.style.opacity = '0.01';
+        container.style.pointerEvents = 'none';
+        container.style.overflow = 'hidden';
+        container.style.zIndex = '-1';
+
+        var playerElement = document.createElement('div');
+
+        playerElement.id = 'kinorium-ost-youtube-' + token + '-' + generation;
+
+        container.appendChild(playerElement);
+        document.body.appendChild(container);
+
+        state.youtubeContainer = container;
+
+        state.playTimeoutTimer = setTimeout(function () {
+            state.playTimeoutTimer = null;
+
+            if (
+                token !== state.token ||
+                generation !== state.youtubeGeneration ||
+                !state.cardActive ||
+                state.playbackStarted
+            ) return;
+
+            setPlaybackState('error', 'startup_timeout');
+            diagnosticFailure('startup_timeout', 0);
+
+            removeYouTubePlayer();
+        }, PLAY_START_TIMEOUT);
+
+        loadYouTubeAPI(function () {
+            if (
+                token !== state.token ||
+                generation !== state.youtubeGeneration ||
+                !state.cardActive
+            ) return;
+
+            try {
+                state.youtubePlayer = new window.YT.Player(
+                    playerElement.id,
+                    {
+                        width: '320',
+                        height: '180',
+                        videoId: videoId,
+                        playerVars: {
+                            autoplay: 1,
+                            controls: 0,
+                            disablekb: 1,
+                            fs: 0,
+                            playsinline: 1,
+                            rel: 0,
+                            enablejsapi: 1
+                        },
+                        events: {
+                            onReady: function (event) {
+                                if (
+                                    token !== state.token ||
+                                    generation !== state.youtubeGeneration ||
+                                    !state.cardActive
+                                ) return;
+
+                                state.youtubeReady = true;
+                                state.youtubeLoading = false;
+
+                                try {
+                                    event.target.setVolume(
+                                        setting('fade') ? 0 : targetVolume()
+                                    );
+
+                                    event.target.playVideo();
+                                } catch (e) {
+                                    log('YouTube play exception:', e);
+                                }
+                            },
+
+                            onStateChange: function (event) {
+                                if (
+                                    token !== state.token ||
+                                    generation !== state.youtubeGeneration ||
+                                    !state.cardActive
+                                ) return;
+
+                                // YT.PlayerState.PLAYING === 1
+                                if (event.data === 1) {
+                                    clearPlayTimeout();
+
+                                    if (!state.playbackStarted) {
+                                        state.playbackStarted = true;
+                                        setPlaybackState('playing');
+
+                                        if (setting('fade')) {
+                                            startYouTubeFade(
+                                                token,
+                                                generation
+                                            );
+                                        } else {
+                                            setYouTubeVolume(targetVolume());
+                                        }
+
+                                        diagnosticPlaying(state.readyResult);
+                                    }
+                                }
+
+                                // YT.PlayerState.ENDED === 0
+                                if (
+                                    event.data === 0 &&
+                                    setting('repeat') &&
+                                    state.youtubePlayer
+                                ) {
+                                    try {
+                                        state.youtubePlayer.seekTo(0, true);
+                                        state.youtubePlayer.playVideo();
+                                    } catch (e) {
+                                        log('YouTube repeat error:', e);
+                                    }
+                                }
+
+                                // YT.PlayerState.PAUSED === 2
+                                if (
+                                    event.data === 2 &&
+                                    state.playbackStarted
+                                ) {
+                                    log('YouTube paused');
+                                }
+                            },
+
+                            onError: function (event) {
+                                if (
+                                    token !== state.token ||
+                                    generation !== state.youtubeGeneration ||
+                                    !state.cardActive
+                                ) return;
+
+                                clearPlayTimeout();
+
+                                log('YouTube error:', event.data);
+
+                                handleYouTubeFailure(
+                                    token,
+                                    generation,
+                                    event.data
+                                );
+                            }
+                        }
+                    }
+                );
+            } catch (e) {
+                log('YouTube Player construction error:', e);
+
+                clearPlayTimeout();
+
+                setPlaybackState('error', 'youtube_error');
+                diagnosticFailure('youtube_error', 0);
+
+                removeYouTubePlayer();
+            }
+        });
+    }
+
+    function handleYouTubeFailure(token, generation, code) {
+        if (
+            token !== state.token ||
+            generation !== state.youtubeGeneration ||
+            !state.cardActive
+        ) return;
+
+        state.playbackStarted = false;
+
+        clearPlayTimeout();
+
+        if (
+            state.playAttempt < MAX_PLAY_RETRIES &&
+            state.readyResult
+        ) {
+            state.playAttempt++;
+
+            setPlaybackState('retry_wait');
+
+            removeYouTubePlayer();
+
+            state.retryTimer = setTimeout(function () {
+                state.retryTimer = null;
+
+                if (
+                    token !== state.token ||
+                    !state.cardActive ||
+                    !state.readyResult
+                ) return;
+
+                playYouTube(state.readyResult, token);
+            }, RETRY_DELAY);
+
+            return;
+        }
+
+        setPlaybackState('error', 'youtube_error');
+
+        diagnosticFailure('youtube_error', code);
+
+        removeYouTubePlayer();
+    }
+
+    /*
+     * HTML5 AUDIO
+     */
+
+    function destroyAudioOnly() {
         clearFadeTimer();
         clearPlayTimeout();
 
-        state.audioGeneration++;
-
         var player = state.audio;
-
         state.audio = null;
 
         if (!player) return;
@@ -884,33 +1195,376 @@
         } catch (e) {}
     }
 
+    function destroyAudio() {
+        destroyAudioOnly();
+    }
+
+    function startAudioFade(player, token, startVolume) {
+        clearFadeTimer();
+
+        if (
+            token !== state.token ||
+            !state.cardActive ||
+            state.audio !== player
+        ) return;
+
+        var target = targetAudioVolume();
+        var duration = fadeMs();
+
+        if (!setting('fade') || duration <= 0) {
+            player.volume = target;
+            return;
+        }
+
+        var initial = typeof startVolume === 'number'
+            ? startVolume
+            : player.volume;
+
+        initial = clamp(initial, 0, 1);
+
+        var startedAt = Date.now();
+
+        state.fadeTimer = setInterval(function () {
+            if (
+                token !== state.token ||
+                !state.cardActive ||
+                state.audio !== player
+            ) {
+                clearFadeTimer();
+                return;
+            }
+
+            if (player.paused) return;
+
+            var progress = clamp(
+                (Date.now() - startedAt) / duration,
+                0,
+                1
+            );
+
+            var eased = progress * progress * (3 - 2 * progress);
+
+            player.volume = clamp(
+                initial + (target - initial) * eased,
+                0,
+                1
+            );
+
+            if (progress >= 1) {
+                player.volume = target;
+                clearFadeTimer();
+            }
+        }, 50);
+    }
+
+    function createAudio(token) {
+        var player = new Audio();
+
+        player.preload = 'auto';
+        player.loop = setting('repeat');
+        player.volume = setting('fade') ? 0 : targetAudioVolume();
+
+        state.audio = player;
+
+        player.addEventListener('playing', function () {
+            if (
+                token !== state.token ||
+                state.audio !== player ||
+                !state.cardActive
+            ) return;
+
+            clearPlayTimeout();
+
+            if (!state.playbackStarted) {
+                state.playbackStarted = true;
+                setPlaybackState('playing');
+
+                if (setting('fade')) {
+                    startAudioFade(player, token, player.volume);
+                } else {
+                    player.volume = targetAudioVolume();
+                }
+
+                diagnosticPlaying(state.readyResult);
+            }
+        });
+
+        player.addEventListener('error', function () {
+            if (
+                token !== state.token ||
+                state.audio !== player ||
+                !state.cardActive
+            ) return;
+
+            clearPlayTimeout();
+
+            var code = player.error ? player.error.code : 0;
+
+            log('Audio error:', code);
+
+            handleAudioFailure(token, player, 'media_error', code);
+        });
+
+        player.addEventListener('ended', function () {
+            if (
+                token !== state.token ||
+                state.audio !== player ||
+                !state.cardActive
+            ) return;
+
+            if (setting('repeat')) {
+                try {
+                    player.currentTime = 0;
+                    player.play();
+                } catch (e) {
+                    log('Audio repeat error:', e);
+                }
+            }
+        });
+
+        return player;
+    }
+
+    function handleAudioFailure(token, player, reason, code) {
+        if (
+            token !== state.token ||
+            state.audio !== player ||
+            !state.cardActive
+        ) return;
+
+        state.playbackStarted = false;
+
+        clearFadeTimer();
+        clearPlayTimeout();
+
+        if (
+            reason === 'media_error' &&
+            state.playAttempt < MAX_PLAY_RETRIES &&
+            state.readyResult
+        ) {
+            state.playAttempt++;
+
+            setPlaybackState('retry_wait');
+
+            destroyAudioOnly();
+
+            state.retryTimer = setTimeout(function () {
+                state.retryTimer = null;
+
+                if (
+                    token !== state.token ||
+                    !state.cardActive ||
+                    !state.readyResult
+                ) return;
+
+                startAudioAttempt(state.readyResult, token);
+            }, RETRY_DELAY);
+
+            return;
+        }
+
+        setPlaybackState('error', reason);
+
+        destroyAudioOnly();
+
+        diagnosticFailure(reason, code);
+    }
+
+    function startAudioAttempt(result, token) {
+        if (
+            token !== state.token ||
+            !state.cardActive ||
+            !result ||
+            !result.audioUrl
+        ) return;
+
+        clearRetryTimer();
+        clearPlayTimeout();
+        clearFadeTimer();
+
+        destroyAudioOnly();
+
+        state.playbackStarted = false;
+
+        setPlaybackState('starting');
+
+        var player = createAudio(token);
+
+        player.src = result.audioUrl;
+
+        state.playTimeoutTimer = setTimeout(function () {
+            state.playTimeoutTimer = null;
+
+            if (
+                token !== state.token ||
+                !state.cardActive ||
+                state.audio !== player ||
+                state.playbackStarted
+            ) return;
+
+            handleAudioFailure(
+                token,
+                player,
+                'startup_timeout',
+                0
+            );
+        }, PLAY_START_TIMEOUT);
+
+        try {
+            player.load();
+
+            var promise = player.play();
+
+            if (promise && typeof promise.catch === 'function') {
+                promise.catch(function (error) {
+                    if (
+                        token !== state.token ||
+                        state.audio !== player ||
+                        !state.cardActive
+                    ) return;
+
+                    clearPlayTimeout();
+
+                    log(
+                        'Audio play rejected:',
+                        error && error.name,
+                        error && error.message
+                    );
+
+                    if (
+                        error &&
+                        (
+                            error.name === 'NotAllowedError' ||
+                            error.name === 'SecurityError'
+                        )
+                    ) {
+                        setPlaybackState('blocked');
+                        destroyAudioOnly();
+                        diagnosticFailure('blocked', 0);
+                        return;
+                    }
+
+                    handleAudioFailure(
+                        token,
+                        player,
+                        'media_error',
+                        player.error ? player.error.code : 0
+                    );
+                });
+            }
+        } catch (e) {
+            log('Audio play exception:', e);
+
+            handleAudioFailure(
+                token,
+                player,
+                'media_error',
+                player.error ? player.error.code : 0
+            );
+        }
+    }
+
+    /*
+     * SHARED PLAYBACK
+     */
+
     function setPlaybackState(nextState, details) {
         if (state.playbackState === nextState) return;
 
-        var previous = state.playbackState;
-
-        state.playbackState = nextState;
-
         log(
             'Playback state:',
-            previous,
+            state.playbackState,
             '->',
             nextState,
             details || ''
         );
+
+        state.playbackState = nextState;
+    }
+
+    function playResult(result, token) {
+        if (
+            token !== state.token ||
+            !state.cardActive ||
+            !result
+        ) return;
+
+        if (
+            !result.audioUrl ||
+            result.playable === false
+        ) {
+            setPlaybackState('error', 'missing_audio_url');
+            diagnosticNotFound(result);
+            return;
+        }
+
+        state.track = result.track || null;
+        state.playAttempt = 0;
+
+        if (isYouTubeResult(result)) {
+            log(
+                'Starting YouTube:',
+                getTrackTitle(result),
+                result.audioUrl
+            );
+
+            playYouTube(result, token);
+        } else {
+            log(
+                'Starting direct audio:',
+                getTrackTitle(result),
+                result.audioUrl
+            );
+
+            startAudioAttempt(result, token);
+        }
+    }
+
+    function playAudio(result, token) {
+        playResult(result, token);
+    }
+
+    function tryStart(token) {
+        if (
+            token !== state.token ||
+            !state.cardActive ||
+            state.playbackStarted ||
+            !state.readyResult
+        ) return;
+
+        if (
+            state.playbackState === 'starting' ||
+            state.playbackState === 'retry_wait' ||
+            state.playbackState === 'blocked' ||
+            state.playbackState === 'error'
+        ) return;
+
+        var elapsed = Date.now() - state.openedAt;
+        var remaining = delayMs() - elapsed;
+
+        if (remaining > 0) {
+            clearStartTimer();
+
+            state.startTimer = setTimeout(function () {
+                state.startTimer = null;
+                tryStart(token);
+            }, remaining);
+
+            return;
+        }
+
+        playAudio(state.readyResult, token);
     }
 
     /*
      * GLOBAL STOP
-     *
-     * Invalidate the current token before aborting requests or audio.
-     * Every asynchronous callback must verify this token.
      */
 
     function stopPlayback(reason) {
         var wasActive = Boolean(
             state.cardActive ||
             state.audio ||
+            state.youtubePlayer ||
             state.request ||
             state.startTimer ||
             state.retryTimer ||
@@ -921,7 +1575,14 @@
 
         clearPlaybackTimers();
         abortRequest();
-        destroyAudio();
+
+        if (state.youtubeApiTimer !== null) {
+            clearInterval(state.youtubeApiTimer);
+            state.youtubeApiTimer = null;
+        }
+
+        destroyAudioOnly();
+        removeYouTubePlayer();
         removeNotice();
 
         state.movie = null;
@@ -938,644 +1599,7 @@
         state.playbackState = 'idle';
         state.playAttempt = 0;
 
-        state.fadeStartedAt = 0;
-        state.fadeStartVolume = 0;
-        state.fadeTargetVolume = 0;
-        state.fadeDurationMs = 0;
-
-        if (wasActive) {
-            log('Stopped:', reason || 'unknown');
-        }
-    }
-
-    /*
-     * FADE ENGINE
-     */
-
-    function startFade(player, token, startVolume) {
-        clearFadeTimer();
-
-        if (
-            token !== state.token ||
-            !state.cardActive ||
-            state.audio !== player
-        ) {
-            return;
-        }
-
-        var target = targetVolume();
-        var duration = fadeMs();
-
-        if (!setting('fade') || duration <= 0) {
-            player.volume = target;
-
-            state.fadeStartedAt = 0;
-            state.fadeDurationMs = 0;
-            state.fadeStartVolume = target;
-            state.fadeTargetVolume = target;
-
-            return;
-        }
-
-        var initial = typeof startVolume === 'number'
-            ? startVolume
-            : player.volume;
-
-        initial = clamp(initial, 0, 1);
-
-        state.fadeStartedAt = Date.now();
-        state.fadeStartVolume = initial;
-        state.fadeTargetVolume = target;
-        state.fadeDurationMs = duration;
-
-        player.volume = initial;
-
-        state.fadeTimer = setInterval(
-            function () {
-                if (
-                    token !== state.token ||
-                    !state.cardActive ||
-                    state.audio !== player
-                ) {
-                    clearFadeTimer();
-                    return;
-                }
-
-                if (player.paused) return;
-
-                var elapsed = Date.now() - state.fadeStartedAt;
-
-                var progress = clamp(
-                    elapsed / Math.max(1, state.fadeDurationMs),
-                    0,
-                    1
-                );
-
-                var eased =
-                    progress *
-                    progress *
-                    (3 - 2 * progress);
-
-                var volume =
-                    state.fadeStartVolume +
-                    (
-                        state.fadeTargetVolume -
-                        state.fadeStartVolume
-                    ) * eased;
-
-                player.volume = clamp(volume, 0, 1);
-
-                if (progress >= 1) {
-                    player.volume = state.fadeTargetVolume;
-
-                    clearFadeTimer();
-
-                    log(
-                        'Fade completed:',
-                        player.volume
-                    );
-                }
-            },
-            50
-        );
-    }
-
-    function retargetFade() {
-        var player = state.audio;
-
-        if (!player) return;
-
-        if (
-            !state.playbackStarted ||
-            player.paused
-        ) {
-            player.volume = setting('fade')
-                ? 0
-                : targetVolume();
-
-            return;
-        }
-
-        startFade(
-            player,
-            state.token,
-            player.volume
-        );
-    }
-
-    function createAudio(token) {
-        var player = new Audio();
-
-        player.preload = 'auto';
-        player.loop = setting('repeat');
-        player.volume = setting('fade')
-            ? 0
-            : targetVolume();
-
-        var generation = ++state.audioGeneration;
-
-        player.addEventListener(
-            'error',
-            function () {
-                if (
-                    token !== state.token ||
-                    state.audio !== player ||
-                    generation !== state.audioGeneration
-                ) {
-                    return;
-                }
-
-                clearPlayTimeout();
-
-                var error = player.error;
-
-                log(
-                    'Audio playback error:',
-                    error
-                        ? {
-                            code: error.code,
-                            message: error.message
-                        }
-                        : 'unknown'
-                );
-
-                handleAudioFailure(
-                    token,
-                    player,
-                    'media_error',
-                    error ? error.code : 0
-                );
-            }
-        );
-
-        player.addEventListener(
-            'waiting',
-            function () {
-                if (
-                    token === state.token &&
-                    state.audio === player &&
-                    generation === state.audioGeneration
-                ) {
-                    log('Audio buffering');
-                }
-            }
-        );
-
-        player.addEventListener(
-            'stalled',
-            function () {
-                if (
-                    token === state.token &&
-                    state.audio === player &&
-                    generation === state.audioGeneration
-                ) {
-                    log('Audio stalled');
-                }
-            }
-        );
-
-        player.addEventListener(
-            'ended',
-            function () {
-                if (
-                    token !== state.token ||
-                    state.audio !== player ||
-                    generation !== state.audioGeneration
-                ) {
-                    return;
-                }
-
-                log('Audio ended');
-
-                if (setting('repeat')) {
-                    try {
-                        player.currentTime = 0;
-
-                        var promise = player.play();
-
-                        if (
-                            promise &&
-                            typeof promise.catch === 'function'
-                        ) {
-                            promise.catch(function (error) {
-                                if (
-                                    token !== state.token ||
-                                    state.audio !== player
-                                ) {
-                                    return;
-                                }
-
-                                log(
-                                    'Repeat failed:',
-                                    error && error.name
-                                        ? error.name
-                                        : error
-                                );
-                            });
-                        }
-                    } catch (e) {
-                        log('Repeat exception:', e);
-                    }
-                }
-            }
-        );
-
-        state.audio = player;
-
-        return player;
-    }
-
-    /*
-     * PLAYBACK FAILURE HANDLING
-     */
-
-    function handleAudioFailure(token, player, reason, errorCode) {
-        if (
-            token !== state.token ||
-            state.audio !== player ||
-            !state.cardActive
-        ) {
-            return;
-        }
-
-        state.playbackStarted = false;
-
-        clearFadeTimer();
-        clearPlayTimeout();
-
-        var retryable = (
-            reason === 'media_error' &&
-            state.playAttempt < MAX_PLAY_RETRIES &&
-            state.readyResult &&
-            !!state.readyResult.audioUrl
-        );
-
-        if (!retryable) {
-            setPlaybackState('error', reason);
-
-            log(
-                'Playback failed permanently:',
-                reason,
-                'code:',
-                errorCode || 0
-            );
-
-            destroyAudio();
-            diagnosticFailure(reason, errorCode);
-
-            return;
-        }
-
-        state.playAttempt++;
-
-        setPlaybackState('retry_wait', reason);
-
-        log(
-            'Scheduling retry:',
-            state.playAttempt,
-            'of',
-            MAX_PLAY_RETRIES
-        );
-
-        showNotice(
-            'Повторна спроба',
-            'Відновлюю відтворення аудіо…',
-            'warning',
-            1800
-        );
-
-        destroyAudio();
-
-        clearRetryTimer();
-
-        state.retryTimer = setTimeout(
-            function () {
-                state.retryTimer = null;
-
-                if (
-                    token !== state.token ||
-                    !state.cardActive ||
-                    !state.readyResult
-                ) {
-                    return;
-                }
-
-                log('Retrying audio playback');
-
-                startAudioAttempt(
-                    state.readyResult,
-                    token
-                );
-            },
-            RETRY_DELAY
-        );
-    }
-
-    /*
-     * AUDIO STARTUP
-     */
-
-    function onAudioStarted(player, token, attempt) {
-        if (
-            token !== state.token ||
-            !state.cardActive ||
-            state.audio !== player ||
-            attempt !== state.playAttempt ||
-            state.playbackStarted
-        ) {
-            return;
-        }
-
-        clearPlayTimeout();
-        clearRetryTimer();
-
-        state.playbackStarted = true;
-
-        setPlaybackState('playing');
-
-        if (setting('fade')) {
-            startFade(player, token, player.volume);
-        } else {
-            clearFadeTimer();
-            player.volume = targetVolume();
-        }
-
-        log(
-            'Playing:',
-            getTrackTitle(state.readyResult) || 'Unknown'
-        );
-
-        // Display the track title only after playback really starts.
-        diagnosticPlaying(state.readyResult);
-    }
-
-    function startAudioAttempt(result, token) {
-        if (
-            token !== state.token ||
-            !state.cardActive ||
-            !result ||
-            !result.audioUrl
-        ) {
-            return;
-        }
-
-        clearRetryTimer();
-        clearPlayTimeout();
-        clearFadeTimer();
-
-        // Ensure there can only be one active audio player.
-        destroyAudio();
-
-        if (
-            token !== state.token ||
-            !state.cardActive
-        ) {
-            return;
-        }
-
-        state.playbackStarted = false;
-
-        setPlaybackState('starting');
-
-        var player = createAudio(token);
-        var attempt = state.playAttempt;
-        var generation = state.audioGeneration;
-
-        var started = false;
-
-        function isCurrentPlayer() {
-            return (
-                token === state.token &&
-                state.cardActive &&
-                state.audio === player &&
-                generation === state.audioGeneration
-            );
-        }
-
-        function onStarted() {
-            if (started || !isCurrentPlayer()) return;
-
-            started = true;
-
-            onAudioStarted(
-                player,
-                token,
-                attempt
-            );
-        }
-
-        player.addEventListener(
-            'playing',
-            onStarted
-        );
-
-        player.addEventListener(
-            'play',
-            function () {
-                if (isCurrentPlayer()) {
-                    log('Audio play event');
-                }
-            }
-        );
-
-        player.src = result.audioUrl;
-
-        log(
-            'Starting audio:',
-            getTrackTitle(result) || 'Unknown',
-            'attempt:',
-            attempt + 1
-        );
-
-        state.playTimeoutTimer = setTimeout(
-            function () {
-                state.playTimeoutTimer = null;
-
-                if (
-                    !isCurrentPlayer() ||
-                    state.playbackStarted
-                ) {
-                    return;
-                }
-
-                log(
-                    'Audio startup timeout:',
-                    PLAY_START_TIMEOUT
-                );
-
-                handleAudioFailure(
-                    token,
-                    player,
-                    'startup_timeout',
-                    0
-                );
-            },
-            PLAY_START_TIMEOUT
-        );
-
-        try {
-            player.load();
-
-            var promise = player.play();
-
-            if (
-                promise &&
-                typeof promise.then === 'function'
-            ) {
-                promise.then(function () {
-                    if (
-                        isCurrentPlayer() &&
-                        !player.paused
-                    ) {
-                        onStarted();
-                    }
-                }).catch(function (error) {
-                    if (!isCurrentPlayer()) {
-                        return;
-                    }
-
-                    clearPlayTimeout();
-
-                    state.playbackStarted = false;
-
-                    var name = error && error.name
-                        ? error.name
-                        : 'UnknownError';
-
-                    var message = error && error.message
-                        ? error.message
-                        : '';
-
-                    log(
-                        'Audio play rejected:',
-                        name,
-                        message
-                    );
-
-                    if (
-                        name === 'NotAllowedError' ||
-                        name === 'SecurityError'
-                    ) {
-                        setPlaybackState('blocked', name);
-
-                        log(
-                            'Playback blocked by browser autoplay policy'
-                        );
-
-                        destroyAudio();
-                        diagnosticFailure('blocked', 0);
-
-                        return;
-                    }
-
-                    handleAudioFailure(
-                        token,
-                        player,
-                        'play_rejected_' + name,
-                        0
-                    );
-                });
-            } else if (!player.paused) {
-                onStarted();
-            }
-        } catch (e) {
-            if (!isCurrentPlayer()) return;
-
-            clearPlayTimeout();
-
-            state.playbackStarted = false;
-
-            log(
-                'Play exception:',
-                e && e.name ? e.name : '',
-                e && e.message ? e.message : e
-            );
-
-            handleAudioFailure(
-                token,
-                player,
-                'play_exception',
-                0
-            );
-        }
-    }
-
-    function playAudio(result, token) {
-        if (
-            token !== state.token ||
-            !state.cardActive ||
-            state.playbackStarted
-        ) {
-            return;
-        }
-
-        var activity = getActiveActivity();
-
-        if (
-            isNonFullActivity(activity) &&
-            Date.now() >= state.navigationGraceUntil
-        ) {
-            stopPlayback('navigation_before_play');
-            return;
-        }
-
-        if (!result || !result.audioUrl) {
-            setPlaybackState('error', 'missing_audio_url');
-
-            log('Cannot play: audioUrl is missing');
-
-            diagnosticNotFound(result);
-
-            return;
-        }
-
-        state.track = result.track || null;
-        state.playAttempt = 0;
-
-        startAudioAttempt(result, token);
-    }
-
-    /*
-     * START SCHEDULER
-     */
-
-    function tryStart(token) {
-        if (
-            token !== state.token ||
-            !state.cardActive ||
-            state.playbackStarted ||
-            !state.readyResult
-        ) {
-            return;
-        }
-
-        if (
-            state.playbackState === 'starting' ||
-            state.playbackState === 'retry_wait' ||
-            state.playbackState === 'blocked' ||
-            state.playbackState === 'error'
-        ) {
-            return;
-        }
-
-        var elapsed = Date.now() - state.openedAt;
-        var remaining = delayMs() - elapsed;
-
-        if (remaining > 0) {
-            clearStartTimer();
-
-            state.startTimer = setTimeout(
-                function () {
-                    state.startTimer = null;
-                    tryStart(token);
-                },
-                remaining
-            );
-
-            return;
-        }
-
-        playAudio(state.readyResult, token);
+        if (wasActive) log('Stopped:', reason || 'unknown');
     }
 
     /*
@@ -1583,10 +1607,8 @@
      */
 
     function buildWorkerURL(movie) {
-        var url =
-            WORKER +
-            '?title=' +
-            encodeURIComponent(movie.title);
+        var url = WORKER +
+            '?title=' + encodeURIComponent(movie.title);
 
         if (movie.year) {
             url += '&year=' + encodeURIComponent(movie.year);
@@ -1607,9 +1629,7 @@
         if (
             token !== state.token ||
             !state.cardActive
-        ) {
-            return;
-        }
+        ) return;
 
         abortRequest();
 
@@ -1629,8 +1649,6 @@
             url
         );
 
-        // Intentionally no visible search notification.
-
         xhr.open('GET', url, true);
         xhr.timeout = 20000;
 
@@ -1644,21 +1662,13 @@
 
         xhr.onreadystatechange = function () {
             if (xhr.readyState !== 4) return;
-
             if (!isCurrentRequest()) return;
 
             state.request = null;
 
-            if (
-                xhr.status < 200 ||
-                xhr.status >= 300
-            ) {
+            if (xhr.status < 200 || xhr.status >= 300) {
                 setPlaybackState('error', 'worker_http');
-
-                log('Worker HTTP:', xhr.status);
-
                 diagnosticFailure('worker_http', xhr.status);
-
                 return;
             }
 
@@ -1668,11 +1678,7 @@
                 result = JSON.parse(xhr.responseText);
             } catch (e) {
                 setPlaybackState('error', 'invalid_json');
-
-                log('Invalid Worker JSON:', e);
-
                 diagnosticFailure('invalid_json', 0);
-
                 return;
             }
 
@@ -1689,18 +1695,13 @@
                     'No playable soundtrack:',
                     movie.title,
                     result ? result.reason : 'empty_response',
-                    result && result.search
-                        ? result.search.method
-                        : '',
                     result
                 );
 
                 diagnosticNotFound(result);
-
                 return;
             }
 
-            // A late response can never replace a newer card's result.
             if (!isCurrentCardToken(token)) return;
 
             state.readyResult = result;
@@ -1710,10 +1711,8 @@
             log(
                 'Soundtrack ready:',
                 getTrackTitle(result),
-                'Search:',
-                result.search
-                    ? result.search.method
-                    : ''
+                'Source:',
+                result.source || 'unknown'
             );
 
             tryStart(token);
@@ -1723,11 +1722,7 @@
             if (!isCurrentRequest()) return;
 
             state.request = null;
-
             setPlaybackState('error', 'network');
-
-            log('Network error');
-
             diagnosticFailure('network', 0);
         };
 
@@ -1735,11 +1730,7 @@
             if (!isCurrentRequest()) return;
 
             state.request = null;
-
             setPlaybackState('error', 'worker_timeout');
-
-            log('Worker timeout');
-
             diagnosticFailure('worker_timeout', 0);
         };
 
@@ -1749,12 +1740,8 @@
             if (!isCurrentRequest()) return;
 
             state.request = null;
-
-            setPlaybackState('error', 'xhr_exception');
-
-            log('XHR exception:', e);
-
-            diagnosticFailure('xhr_exception', 0);
+            setPlaybackState('error', 'network');
+            diagnosticFailure('network', 0);
         }
     }
 
@@ -1771,37 +1758,16 @@
      */
 
     function schedulePlayback(movie) {
-        if (!movie || !movie.title) {
-            log('Card ignored: title missing');
-            return;
-        }
+        if (!movie || !movie.title) return;
 
-        if (
-            !setting('enabled') ||
-            !setting('autoplay')
-        ) {
-            log('Autoplay disabled');
-            return;
-        }
+        if (!setting('enabled') || !setting('autoplay')) return;
 
-        if (
-            movie.series &&
-            !setting('series')
-        ) {
-            log('Series disabled:', movie.title);
-            return;
-        }
+        if (movie.series && !setting('series')) return;
 
         var key = getMovieKey(movie);
 
-        if (
-            state.cardActive &&
-            state.movieKey === key
-        ) {
-            return;
-        }
+        if (state.cardActive && state.movieKey === key) return;
 
-        // Stop audio, invalidate pending requests and remove old notices.
         stopPlayback('new_movie');
 
         state.movie = movie;
@@ -1809,14 +1775,10 @@
         state.cardActive = true;
 
         state.openedAt = Date.now();
-
-        state.navigationGraceUntil =
-            state.openedAt + 1200;
-
+        state.navigationGraceUntil = state.openedAt + 1200;
         state.lastActivity = getActiveActivity();
 
         state.readyResult = null;
-
         state.playbackStarted = false;
         state.playbackState = 'idle';
         state.playAttempt = 0;
@@ -1834,7 +1796,7 @@
     }
 
     /*
-     * NAVIGATION PROTECTION
+     * NAVIGATION
      */
 
     function monitorNavigation() {
@@ -1845,19 +1807,11 @@
         if (!activity) return;
 
         if (activity !== state.lastActivity) {
-            log(
-                'Activity:',
-                state.lastActivity,
-                '->',
-                activity
-            );
-
+            log('Activity:', state.lastActivity, '->', activity);
             state.lastActivity = activity;
         }
 
-        if (Date.now() < state.navigationGraceUntil) {
-            return;
-        }
+        if (Date.now() < state.navigationGraceUntil) return;
 
         if (isNonFullActivity(activity)) {
             stopPlayback('activity_changed_to_' + activity);
@@ -1867,14 +1821,7 @@
     function handleActivityEvent(event) {
         if (!state.cardActive) return;
 
-        if (Date.now() < state.navigationGraceUntil) {
-            log(
-                'Activity event ignored during grace period:',
-                event && (event.type || event.name || '')
-            );
-
-            return;
-        }
+        if (Date.now() < state.navigationGraceUntil) return;
 
         var activity = getActiveActivity();
 
@@ -1892,8 +1839,6 @@
             ''
         ).toLowerCase();
 
-        log('Full event:', type);
-
         if (
             type === 'complite' ||
             type === 'complete' ||
@@ -1908,9 +1853,7 @@
                 event
             );
 
-            if (movie) {
-                schedulePlayback(movie);
-            }
+            if (movie) schedulePlayback(movie);
 
             return;
         }
@@ -1930,15 +1873,27 @@
      */
 
     function applyVolume() {
-        if (!state.audio) return;
-
-        if (state.fadeTimer) {
-            retargetFade();
-            return;
+        if (state.audio && state.playbackStarted) {
+            if (setting('fade') && state.fadeTimer) {
+                startAudioFade(
+                    state.audio,
+                    state.token,
+                    state.audio.volume
+                );
+            } else {
+                state.audio.volume = targetAudioVolume();
+            }
         }
 
-        if (state.playbackStarted) {
-            state.audio.volume = targetVolume();
+        if (state.youtubePlayer && state.youtubeReady) {
+            if (setting('fade') && state.playbackStarted) {
+                startYouTubeFade(
+                    state.token,
+                    state.youtubeGeneration
+                );
+            } else {
+                setYouTubeVolume(targetVolume());
+            }
         }
     }
 
@@ -1949,27 +1904,27 @@
     }
 
     function applyFadeSetting() {
-        var player = state.audio;
-
-        if (!player) return;
-
-        if (!state.playbackStarted) {
-            player.volume = setting('fade')
-                ? 0
-                : targetVolume();
-
-            return;
+        if (state.audio) {
+            if (!state.playbackStarted) {
+                state.audio.volume = setting('fade')
+                    ? 0
+                    : targetAudioVolume();
+            } else {
+                applyVolume();
+            }
         }
 
-        retargetFade();
+        if (state.youtubePlayer && state.youtubeReady) {
+            if (!state.playbackStarted) {
+                setYouTubeVolume(setting('fade') ? 0 : targetVolume());
+            } else {
+                applyVolume();
+            }
+        }
     }
 
     function applyFadeDuration() {
-        if (!state.audio || !state.playbackStarted) {
-            return;
-        }
-
-        retargetFade();
+        applyVolume();
     }
 
     function applyDelay() {
@@ -1992,9 +1947,7 @@
         if (
             !Lampa.SettingsApi ||
             typeof Lampa.SettingsApi.addParam !== 'function'
-        ) {
-            return;
-        }
+        ) return;
 
         try {
             Lampa.SettingsApi.addComponent({
@@ -2013,11 +1966,7 @@
                     onChange: param.onChange
                 });
             } catch (e) {
-                log(
-                    'Settings error:',
-                    param.param.name,
-                    e
-                );
+                log('Settings error:', e);
             }
         }
 
@@ -2121,7 +2070,7 @@
         addTrigger(
             'repeat',
             'Повторювати композицію',
-            'Безперервний повтор аудіофрагмента',
+            'Повторювати композицію після завершення',
             applyRepeat
         );
 
@@ -2148,7 +2097,7 @@
         addSelect(
             'delay',
             'Мінімальна затримка',
-            'Час від відкриття картки до можливого запуску музики',
+            'Час від відкриття картки до запуску музики',
             {
                 '0': 'Без затримки',
                 '500': '0,5 секунди',
@@ -2199,18 +2148,7 @@
 
                 if (state.playbackStarted) {
                     diagnosticPlaying(state.readyResult);
-                } else if (
-                    state.playbackState === 'not_found'
-                ) {
-                    diagnosticNotFound(null);
-                } else if (
-                    state.playbackState === 'error'
-                ) {
-                    // Do not generate a misleading new error.
-                    // The next real error will be displayed normally.
                 }
-
-                // No search notification when diagnostics are enabled.
             }
         );
     }
@@ -2235,40 +2173,23 @@
 
         registerSettings();
 
-        Lampa.Listener.follow(
-            'full',
-            handleFullEvent
-        );
-
-        Lampa.Listener.follow(
-            'activity',
-            handleActivityEvent
-        );
+        Lampa.Listener.follow('full', handleFullEvent);
+        Lampa.Listener.follow('activity', handleActivityEvent);
 
         state.navigationTimer = setInterval(
             monitorNavigation,
             250
         );
 
-        window.addEventListener(
-            'pagehide',
-            function () {
-                stopPlayback('pagehide');
-            }
-        );
+        window.addEventListener('pagehide', function () {
+            stopPlayback('pagehide');
+        });
 
-        window.addEventListener(
-            'beforeunload',
-            function () {
-                stopPlayback('beforeunload');
-            }
-        );
+        window.addEventListener('beforeunload', function () {
+            stopPlayback('beforeunload');
+        });
 
-        console.log(
-            '[Kinorium OST] ' +
-            VERSION +
-            ' initialized'
-        );
+        console.log('[Kinorium OST] ' + VERSION + ' initialized');
     }
 
     init();
