@@ -3,77 +3,75 @@
     'use strict';
 
     /*
-     * KINORIUM OST 1.0.0
-     * Test Edition
+     * KINORIUM OST 1.1.0
+     * Automatic Search Edition
      *
      * Lampa / Android TV / Mobile
      *
-     * Cloudflare Worker:
-     * https://kinorium-ost.unclezhenya24.workers.dev/
-     *
-     * Test movie:
-     * Gladiator (2000)
-     * TMDB: 98
-     * Kinorium: 143897
+     * Cloudflare Worker 1.5.0
      *
      * FEATURES:
-     * - Automatic soundtrack playback
-     * - Apple audio preview
-     * - Three soundtrack themes
+     * - Automatic movie title detection
+     * - Automatic release year detection
+     * - Kinorium movie search
+     * - Featured soundtrack playback
+     * - Apple AudioPreview support
      * - Automatic looping
-     * - Stop when leaving movie card
-     * - Playback delay
-     * - Lampa settings
-     * - Independent from Original Soundtrack
+     * - Delayed playback
+     * - Stop on movie card exit
+     * - Volume control
+     * - Independent settings
+     * - Request cancellation
+     * - Protection against stale responses
+     *
+     * Independent from the production
+     * Original Soundtrack plugin.
      */
 
-    var VERSION = '1.0.0';
+    var VERSION = '1.1.0';
 
     var WORKER =
         'https://kinorium-ost.unclezhenya24.workers.dev/';
 
-    var STORAGE_PREFIX = 'kinorium_ost_';
+    var PREFIX = 'kinorium_ost_';
 
     var DEFAULTS = {
         enabled: true,
         autoplay: true,
-        loop: true,
-        delay: 2000,
         volume: 65,
-        track: 'The Battle'
+        delay: 2000,
+        repeat: true,
+        debug: false
     };
 
-    var TEST_MOVIE = {
-        tmdb: 98,
-        kinorium: '143897',
-        title: 'Gladiator',
-        year: 2000
-    };
+    var audio = null;
+    var timer = null;
+    var request = null;
 
-    var state = {
-        audio: null,
-        timer: null,
-        request: null,
-        cardOpen: false,
-        currentMovie: null,
-        generation: 0,
-        initialized: false,
-        lastError: ''
-    };
+    var currentMovieKey = '';
+    var currentTrack = null;
+
+    var requestToken = 0;
+    var initialized = false;
+
+    var playbackBlocked = false;
 
     function log() {
-        try {
-            console.log.apply(
-                console,
-                ['[Kinorium OST]'].concat(
-                    Array.prototype.slice.call(arguments)
-                )
-            );
-        } catch (e) {}
+        if (!getSetting('debug')) return;
+
+        var args = Array.prototype.slice.call(
+            arguments
+        );
+
+        args.unshift('[Kinorium OST]');
+
+        console.log.apply(console, args);
     }
 
     function getSetting(key) {
-        var storageKey = STORAGE_PREFIX + key;
+        var storageKey = PREFIX + key;
+
+        var fallback = DEFAULTS[key];
 
         try {
             if (
@@ -81,33 +79,30 @@
                 Lampa.Storage &&
                 typeof Lampa.Storage.get === 'function'
             ) {
-                var value = Lampa.Storage.get(
+                return Lampa.Storage.get(
                     storageKey,
-                    DEFAULTS[key]
+                    fallback
                 );
-
-                return value === undefined ||
-                    value === null
-                    ? DEFAULTS[key]
-                    : value;
             }
         } catch (e) {}
 
         try {
-            var stored = localStorage.getItem(
+            var value = localStorage.getItem(
                 storageKey
             );
 
-            return stored === null
-                ? DEFAULTS[key]
-                : JSON.parse(stored);
+            if (value === null) {
+                return fallback;
+            }
+
+            return JSON.parse(value);
         } catch (e) {
-            return DEFAULTS[key];
+            return fallback;
         }
     }
 
     function setSetting(key, value) {
-        var storageKey = STORAGE_PREFIX + key;
+        var storageKey = PREFIX + key;
 
         try {
             if (
@@ -119,6 +114,7 @@
                     storageKey,
                     value
                 );
+
                 return;
             }
         } catch (e) {}
@@ -131,80 +127,53 @@
         } catch (e) {}
     }
 
-    function enabled() {
-        return getSetting('enabled') !== false;
-    }
+    function getVolume() {
+        var value = Number(
+            getSetting('volume')
+        );
 
-    function clearTimer() {
-        if (state.timer) {
-            clearTimeout(state.timer);
-            state.timer = null;
+        if (!isFinite(value)) {
+            value = DEFAULTS.volume;
         }
+
+        return Math.max(
+            0,
+            Math.min(100, value)
+        ) / 100;
     }
 
-    function abortRequest() {
-        if (state.request) {
-            try {
-                state.request.abort();
-            } catch (e) {}
+    function getDelay() {
+        var value = Number(
+            getSetting('delay')
+        );
 
-            state.request = null;
+        if (!isFinite(value)) {
+            value = DEFAULTS.delay;
         }
+
+        return Math.max(
+            0,
+            Math.min(10000, value)
+        );
     }
 
-    function destroyAudio() {
-        if (!state.audio) return;
-
-        var audio = state.audio;
-
-        state.audio = null;
-
-        try {
-            audio.pause();
-        } catch (e) {}
-
-        try {
-            audio.onended = null;
-            audio.onerror = null;
-            audio.oncanplay = null;
-            audio.onloadeddata = null;
-
-            audio.removeAttribute('src');
-            audio.load();
-        } catch (e) {}
-    }
-
-    function stopPlayback(reason) {
-        state.generation++;
-
-        clearTimer();
-        abortRequest();
-        destroyAudio();
-
-        state.lastError = '';
-
-        log('Stopped:', reason || 'manual');
-    }
-
-    function normalizeTitle(value) {
+    function normalize(value) {
         return String(value || '')
             .toLowerCase()
-            .replace(/[^a-z0-9а-яіїєґ]+/gi, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
+            .trim()
+            .replace(/\s+/g, ' ');
     }
 
-    function extractYear(movie) {
-        if (!movie) return 0;
+    function extractYear(value) {
+        if (
+            value === undefined ||
+            value === null
+        ) {
+            return 0;
+        }
 
-        var date =
-            movie.release_date ||
-            movie.first_air_date ||
-            movie.year ||
-            '';
-
-        var match = String(date).match(
-            /\b(19|20)\d{2}\b/
+        var match = String(value).match(
+            /\b(18|19|20)\d{2}\b/
         );
 
         return match
@@ -212,133 +181,311 @@
             : 0;
     }
 
-    function getMovieObject(event) {
-        if (!event) return null;
-
-        var candidates = [
-            event.data && event.data.movie,
-            event.data && event.data.card,
-            event.data && event.data.data,
-            event.movie,
-            event.card,
-            event.data
-        ];
-
-        for (
-            var i = 0;
-            i < candidates.length;
-            i++
-        ) {
-            var candidate = candidates[i];
-
-            if (
-                candidate &&
-                typeof candidate === 'object' &&
-                (
-                    candidate.id ||
-                    candidate.title ||
-                    candidate.name ||
-                    candidate.original_title
-                )
-            ) {
-                return candidate;
-            }
+    function movieFromData(data) {
+        if (!data || typeof data !== 'object') {
+            return null;
         }
 
-        return null;
-    }
+        var movie = data;
 
-    function isTestMovie(movie) {
-        if (!movie) return false;
+        if (
+            data.movie &&
+            typeof data.movie === 'object'
+        ) {
+            movie = data.movie;
+        }
 
-        var id = Number(
-            movie.id ||
-            movie.tmdb_id ||
-            0
-        );
+        if (
+            data.card &&
+            typeof data.card === 'object'
+        ) {
+            movie = data.card;
+        }
 
-        var title = normalizeTitle(
+        if (
+            data.data &&
+            typeof data.data === 'object'
+        ) {
+            movie = data.data;
+        }
+
+        if (
+            movie.movie &&
+            typeof movie.movie === 'object'
+        ) {
+            movie = movie.movie;
+        }
+
+        if (
+            movie.card &&
+            typeof movie.card === 'object'
+        ) {
+            movie = movie.card;
+        }
+
+        if (!movie || typeof movie !== 'object') {
+            return null;
+        }
+
+        /*
+         * TMDB commonly provides:
+         *
+         * original_title
+         * title
+         * release_date
+         *
+         * We prefer the original title because
+         * Kinorium search supports English
+         * original movie titles.
+         */
+
+        var title = String(
             movie.original_title ||
             movie.title ||
             movie.name ||
+            movie.original_name ||
+            ''
+        ).trim();
+
+        var year = extractYear(
+            movie.release_date ||
+            movie.first_air_date ||
+            movie.year ||
+            movie.release_year ||
             ''
         );
 
-        var year = extractYear(movie);
+        var type = String(
+            movie.media_type ||
+            movie.type ||
+            ''
+        ).toLowerCase();
 
-        if (id === TEST_MOVIE.tmdb) {
-            return true;
-        }
-
-        var validTitle =
-            title === 'gladiator' ||
-            title === 'гладіатор' ||
-            title === 'гладиатор';
-
-        return validTitle &&
-            year === TEST_MOVIE.year;
-    }
-
-    function isCardVisible() {
-        try {
-            return Boolean(
-                document.querySelector(
-                    '.full-start'
-                ) ||
-                document.querySelector(
-                    '.full-descr'
-                ) ||
-                document.querySelector(
-                    '.full-review'
-                )
-            );
-        } catch (e) {
-            return false;
-        }
-    }
-
-    function makeWorkerURL() {
-        var url =
-            WORKER +
-            '?id=' +
-            encodeURIComponent(
-                TEST_MOVIE.kinorium
-            );
-
-        var track = String(
-            getSetting('track') ||
-            DEFAULTS.track
+        var tmdbId = String(
+            movie.id ||
+            movie.tmdb_id ||
+            ''
         );
 
-        if (track && track !== 'auto') {
+        if (!title) {
+            return null;
+        }
+
+        return {
+            title: title,
+            year: year,
+            type: type,
+            tmdbId: tmdbId
+        };
+    }
+
+    function getMovieKey(movie) {
+        return [
+            normalize(movie.title),
+            movie.year || 0,
+            movie.tmdbId || ''
+        ].join('|');
+    }
+
+    function isSeries(movie) {
+        if (!movie) return false;
+
+        var type = String(
+            movie.type || ''
+        ).toLowerCase();
+
+        return (
+            type === 'tv' ||
+            type === 'series' ||
+            type === 'serial'
+        );
+    }
+
+    function clearTimer() {
+        if (timer) {
+            clearTimeout(timer);
+            timer = null;
+        }
+    }
+
+    function abortRequest() {
+        if (request) {
+            try {
+                request.abort();
+            } catch (e) {}
+
+            request = null;
+        }
+    }
+
+    function destroyAudio() {
+        if (!audio) return;
+
+        try {
+            audio.pause();
+            audio.loop = false;
+            audio.removeAttribute('src');
+            audio.load();
+        } catch (e) {}
+
+        audio = null;
+    }
+
+    function stopPlayback() {
+        requestToken++;
+
+        clearTimer();
+        abortRequest();
+        destroyAudio();
+
+        currentTrack = null;
+        currentMovieKey = '';
+
+        playbackBlocked = false;
+
+        log('Playback stopped');
+    }
+
+    function createAudio() {
+        if (audio) {
+            return audio;
+        }
+
+        audio = new Audio();
+
+        audio.preload = 'auto';
+
+        audio.volume = getVolume();
+
+        audio.loop = Boolean(
+            getSetting('repeat')
+        );
+
+        audio.addEventListener(
+            'error',
+            function () {
+                log(
+                    'Audio playback error',
+                    audio && audio.error
+                );
+            }
+        );
+
+        return audio;
+    }
+
+    function playAudio(url, track, token) {
+        if (token !== requestToken) {
+            return;
+        }
+
+        if (!url) {
+            log('Audio URL missing');
+            return;
+        }
+
+        destroyAudio();
+
+        currentTrack = track || null;
+
+        var player = createAudio();
+
+        player.volume = getVolume();
+
+        player.loop = Boolean(
+            getSetting('repeat')
+        );
+
+        player.src = url;
+
+        try {
+            player.load();
+        } catch (e) {}
+
+        var promise;
+
+        try {
+            promise = player.play();
+        } catch (error) {
+            log('Playback exception', error);
+            return;
+        }
+
+        if (
+            promise &&
+            typeof promise.catch === 'function'
+        ) {
+            promise.catch(function (error) {
+                if (token !== requestToken) {
+                    return;
+                }
+
+                playbackBlocked = true;
+
+                log(
+                    'Autoplay blocked or failed',
+                    error
+                );
+            });
+        }
+
+        log(
+            'Playing:',
+            track ? track.name : '',
+            url
+        );
+    }
+
+    function buildWorkerURL(movie) {
+        var url = WORKER +
+            '?title=' +
+            encodeURIComponent(movie.title);
+
+        if (movie.year) {
             url +=
-                '&track=' +
-                encodeURIComponent(track);
+                '&year=' +
+                encodeURIComponent(
+                    movie.year
+                );
+        }
+
+        if (getSetting('debug')) {
+            url += '&debug=1';
         }
 
         return url;
     }
 
-    function loadSoundtrack(generation) {
-        if (
-            generation !== state.generation ||
-            !state.cardOpen ||
-            !enabled()
-        ) {
+    function fetchSoundtrack(movie, token) {
+        if (token !== requestToken) {
             return;
         }
+
+        if (!getSetting('enabled')) {
+            return;
+        }
+
+        var url = buildWorkerURL(movie);
+
+        log(
+            'Searching:',
+            movie.title,
+            movie.year,
+            url
+        );
 
         abortRequest();
 
         var xhr = new XMLHttpRequest();
 
-        state.request = xhr;
+        request = xhr;
 
-        var url = makeWorkerURL();
+        xhr.open(
+            'GET',
+            url,
+            true
+        );
 
-        log('Request:', url);
-
-        xhr.open('GET', url, true);
         xhr.timeout = 20000;
 
         xhr.onreadystatechange = function () {
@@ -346,14 +493,11 @@
                 return;
             }
 
-            if (state.request === xhr) {
-                state.request = null;
+            if (request === xhr) {
+                request = null;
             }
 
-            if (
-                generation !== state.generation ||
-                !state.cardOpen
-            ) {
+            if (token !== requestToken) {
                 return;
             }
 
@@ -361,10 +505,11 @@
                 xhr.status < 200 ||
                 xhr.status >= 300
             ) {
-                state.lastError =
-                    'HTTP ' + xhr.status;
+                log(
+                    'Worker HTTP error:',
+                    xhr.status
+                );
 
-                log('Worker error:', state.lastError);
                 return;
             }
 
@@ -374,337 +519,215 @@
                 result = JSON.parse(
                     xhr.responseText
                 );
-            } catch (e) {
-                state.lastError =
-                    'Invalid JSON';
-
-                log(state.lastError);
-                return;
-            }
-
-            if (
-                !result ||
-                !result.found ||
-                !result.audioUrl
-            ) {
-                state.lastError =
-                    result && result.reason ||
-                    'No audio';
-
+            } catch (error) {
                 log(
-                    'No soundtrack:',
-                    state.lastError
+                    'Invalid Worker JSON',
+                    error
                 );
 
                 return;
             }
 
-            log(
-                'Track:',
-                result.track &&
-                result.track.name
-            );
+            log('Worker result:', result);
+
+            if (
+                !result ||
+                !result.success ||
+                !result.found ||
+                !result.playable ||
+                !result.audioUrl
+            ) {
+                log(
+                    'No playable soundtrack',
+                    result && result.reason
+                );
+
+                return;
+            }
 
             playAudio(
                 result.audioUrl,
-                generation
+                result.track,
+                token
             );
         };
 
         xhr.onerror = function () {
-            if (
-                generation !== state.generation
-            ) {
+            if (token !== requestToken) {
                 return;
             }
 
-            state.lastError =
-                'Network error';
-
-            log(state.lastError);
+            log('Network error');
         };
 
         xhr.ontimeout = function () {
-            if (
-                generation !== state.generation
-            ) {
+            if (token !== requestToken) {
                 return;
             }
 
-            state.lastError =
-                'Request timeout';
-
-            log(state.lastError);
+            log('Worker timeout');
         };
 
         try {
             xhr.send();
-        } catch (e) {
-            state.lastError = String(e);
-            log('Request failed:', e);
-        }
-    }
-
-    function playAudio(url, generation) {
-        if (
-            generation !== state.generation ||
-            !state.cardOpen ||
-            !enabled()
-        ) {
-            return;
-        }
-
-        destroyAudio();
-
-        var audio;
-
-        try {
-            audio = new Audio();
-        } catch (e) {
-            state.lastError =
-                'HTML5 Audio unavailable';
-
-            log(state.lastError);
-            return;
-        }
-
-        state.audio = audio;
-
-        audio.preload = 'auto';
-
-        audio.loop =
-            getSetting('loop') !== false;
-
-        audio.volume = Math.max(
-            0,
-            Math.min(
-                1,
-                Number(
-                    getSetting('volume')
-                ) / 100
-            )
-        );
-
-        audio.onended = function () {
-            if (
-                generation !== state.generation ||
-                !state.cardOpen
-            ) {
-                return;
-            }
-
-            if (
-                getSetting('loop') !== false
-            ) {
-                try {
-                    audio.currentTime = 0;
-
-                    var promise =
-                        audio.play();
-
-                    if (
-                        promise &&
-                        typeof promise.catch ===
-                        'function'
-                    ) {
-                        promise.catch(
-                            function (error) {
-                                log(
-                                    'Loop error:',
-                                    error
-                                );
-                            }
-                        );
-                    }
-                } catch (e) {
-                    log('Loop failed:', e);
-                }
-            }
-        };
-
-        audio.onerror = function () {
-            if (
-                generation !== state.generation
-            ) {
-                return;
-            }
-
-            var code =
-                audio.error &&
-                audio.error.code;
-
-            state.lastError =
-                'Audio error ' +
-                (code || 'unknown');
-
+        } catch (error) {
             log(
-                state.lastError,
-                audio.error
+                'Request exception',
+                error
             );
-        };
-
-        audio.src = url;
-
-        try {
-            audio.load();
-
-            var promise = audio.play();
-
-            if (
-                promise &&
-                typeof promise.then ===
-                'function'
-            ) {
-                promise.then(function () {
-                    if (
-                        generation !==
-                        state.generation
-                    ) {
-                        return;
-                    }
-
-                    log('Playback started');
-                }).catch(function (error) {
-                    if (
-                        generation !==
-                        state.generation
-                    ) {
-                        return;
-                    }
-
-                    state.lastError =
-                        String(
-                            error &&
-                            error.message ||
-                            error
-                        );
-
-                    log(
-                        'Playback rejected:',
-                        state.lastError
-                    );
-                });
-            }
-        } catch (e) {
-            state.lastError =
-                String(e);
-
-            log('Audio failed:', e);
         }
     }
 
     function schedulePlayback(movie) {
-        stopPlayback('new_card');
-
-        state.currentMovie = movie;
-        state.cardOpen = true;
-
-        if (!enabled()) return;
-
-        if (
-            getSetting('autoplay') === false
-        ) {
-            log('Autoplay disabled');
+        if (!movie || !movie.title) {
             return;
         }
 
-        if (!isTestMovie(movie)) {
+        if (!getSetting('enabled')) {
+            return;
+        }
+
+        if (!getSetting('autoplay')) {
+            return;
+        }
+
+        if (isSeries(movie)) {
             log(
-                'Not test movie:',
-                movie &&
-                (
-                    movie.title ||
-                    movie.name
-                )
+                'TV series skipped:',
+                movie.title
             );
 
             return;
         }
 
-        var generation =
-            state.generation;
+        /*
+         * Year is required to avoid
+         * confusing remakes with originals.
+         */
 
-        var delay = Math.max(
-            0,
-            Number(
-                getSetting('delay')
-            ) || 0
-        );
+        if (!movie.year) {
+            log(
+                'Release year missing:',
+                movie.title
+            );
+
+            return;
+        }
+
+        var key = getMovieKey(movie);
+
+        if (
+            key === currentMovieKey &&
+            (
+                timer ||
+                request ||
+                audio
+            )
+        ) {
+            return;
+        }
+
+        stopPlayback();
+
+        currentMovieKey = key;
+
+        var token = requestToken;
 
         log(
-            'Gladiator detected. Delay:',
-            delay
+            'Movie detected:',
+            movie.title,
+            movie.year
         );
 
-        state.timer = setTimeout(
+        timer = setTimeout(
             function () {
-                state.timer = null;
+                timer = null;
 
                 if (
-                    generation !==
-                    state.generation ||
-                    !state.cardOpen
+                    token !== requestToken ||
+                    currentMovieKey !== key
                 ) {
                     return;
                 }
 
-                loadSoundtrack(
-                    generation
+                fetchSoundtrack(
+                    movie,
+                    token
                 );
             },
-            delay
+            getDelay()
         );
     }
 
-    function handleCardEvent(event) {
+    function handleFullEvent(event) {
         if (!event) return;
 
         var type = String(
-            event.type || ''
+            event.type ||
+            event.action ||
+            ''
         ).toLowerCase();
+
+        log('Full event:', type);
+
+        /*
+         * Lampa emits different event
+         * names depending on the build.
+         */
 
         if (
             type === 'complite' ||
-            type === 'complete'
+            type === 'complete' ||
+            type === 'ready' ||
+            type === 'open' ||
+            type === 'start'
         ) {
-            var movie =
-                getMovieObject(event);
+            var movie = movieFromData(
+                event.data ||
+                event.movie ||
+                event.card ||
+                event
+            );
 
-            if (!movie) {
-                log(
-                    'Card event without movie'
-                );
-                return;
+            if (movie) {
+                schedulePlayback(movie);
             }
 
-            schedulePlayback(movie);
             return;
         }
 
         if (
             type === 'destroy' ||
             type === 'close' ||
+            type === 'stop' ||
             type === 'back'
         ) {
-            state.cardOpen = false;
-            state.currentMovie = null;
+            stopPlayback();
+        }
+    }
 
-            stopPlayback(
-                'card_' + type
+    function applyVolume() {
+        if (audio) {
+            audio.volume = getVolume();
+        }
+    }
+
+    function applyRepeat() {
+        if (audio) {
+            audio.loop = Boolean(
+                getSetting('repeat')
             );
         }
     }
 
-    function addSettings() {
+    function registerSettings() {
         if (
             !window.Lampa ||
             !Lampa.SettingsApi ||
             typeof Lampa.SettingsApi.addParam !==
-            'function'
+                'function'
         ) {
-            log(
-                'Settings API unavailable'
-            );
+            log('SettingsApi unavailable');
             return;
         }
 
@@ -712,253 +735,220 @@
             Lampa.SettingsApi.addComponent({
                 component: 'kinorium_ost',
                 name: 'Kinorium OST',
-                icon:
-                    '<svg width="24" height="24" ' +
-                    'viewBox="0 0 24 24" ' +
-                    'fill="none" stroke="currentColor" ' +
-                    'stroke-width="2" ' +
-                    'stroke-linecap="round" ' +
-                    'stroke-linejoin="round">' +
-                    '<path d="M9 18V5l12-2v13"/>' +
-                    '<circle cx="6" cy="18" r="3"/>' +
-                    '<circle cx="18" cy="16" r="3"/>' +
-                    '</svg>'
+                icon: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>'
             });
-
-            Lampa.SettingsApi.addParam({
-                component: 'kinorium_ost',
-                param: {
-                    name:
-                        STORAGE_PREFIX + 'enabled',
-                    type: 'trigger',
-                    default: true
-                },
-                field: {
-                    name:
-                        'Увімкнути Kinorium OST',
-                    description:
-                        'Окреме тестове джерело музики'
-                },
-                onChange: function (value) {
-                    setSetting(
-                        'enabled',
-                        value
-                    );
-
-                    stopPlayback(
-                        'settings_enabled'
-                    );
-                }
-            });
-
-            Lampa.SettingsApi.addParam({
-                component: 'kinorium_ost',
-                param: {
-                    name:
-                        STORAGE_PREFIX + 'autoplay',
-                    type: 'trigger',
-                    default: true
-                },
-                field: {
-                    name:
-                        'Автоматичне відтворення',
-                    description:
-                        'Запускати музику при відкритті картки'
-                },
-                onChange: function (value) {
-                    setSetting(
-                        'autoplay',
-                        value
-                    );
-
-                    stopPlayback(
-                        'settings_autoplay'
-                    );
-                }
-            });
-
-            Lampa.SettingsApi.addParam({
-                component: 'kinorium_ost',
-                param: {
-                    name:
-                        STORAGE_PREFIX + 'loop',
-                    type: 'trigger',
-                    default: true
-                },
-                field: {
-                    name:
-                        'Повторювати композицію',
-                    description:
-                        'Зациклити аудіофрагмент'
-                },
-                onChange: function (value) {
-                    setSetting(
-                        'loop',
-                        value
-                    );
-
-                    if (state.audio) {
-                        state.audio.loop =
-                            value !== false;
-                    }
-                }
-            });
-
-            Lampa.SettingsApi.addParam({
-                component: 'kinorium_ost',
-                param: {
-                    name:
-                        STORAGE_PREFIX + 'track',
-                    type: 'select',
-                    values: {
-                        'The Battle':
-                            'The Battle',
-                        'Elysium':
-                            'Elysium',
-                        'Now We Are Free':
-                            'Now We Are Free'
-                    },
-                    default: 'The Battle'
-                },
-                field: {
-                    name:
-                        'Головна композиція',
-                    description:
-                        'Тестові теми фільму Гладіатор'
-                },
-                onChange: function (value) {
-                    setSetting(
-                        'track',
-                        value
-                    );
-
-                    if (
-                        state.cardOpen &&
-                        state.currentMovie &&
-                        isTestMovie(
-                            state.currentMovie
-                        )
-                    ) {
-                        schedulePlayback(
-                            state.currentMovie
-                        );
-                    }
-                }
-            });
-
-            Lampa.SettingsApi.addParam({
-                component: 'kinorium_ost',
-                param: {
-                    name:
-                        STORAGE_PREFIX + 'volume',
-                    type: 'select',
-                    values: {
-                        '20': '20%',
-                        '35': '35%',
-                        '50': '50%',
-                        '65': '65%',
-                        '80': '80%',
-                        '100': '100%'
-                    },
-                    default: '65'
-                },
-                field: {
-                    name:
-                        'Гучність музики',
-                    description:
-                        'Гучність аудіофрагмента'
-                },
-                onChange: function (value) {
-                    setSetting(
-                        'volume',
-                        Number(value)
-                    );
-
-                    if (state.audio) {
-                        state.audio.volume =
-                            Math.max(
-                                0,
-                                Math.min(
-                                    1,
-                                    Number(value) /
-                                    100
-                                )
-                            );
-                    }
-                }
-            });
-
-            Lampa.SettingsApi.addParam({
-                component: 'kinorium_ost',
-                param: {
-                    name:
-                        STORAGE_PREFIX + 'delay',
-                    type: 'select',
-                    values: {
-                        '0': 'Одразу',
-                        '1000': '1 секунда',
-                        '2000': '2 секунди',
-                        '3000': '3 секунди',
-                        '5000': '5 секунд'
-                    },
-                    default: '2000'
-                },
-                field: {
-                    name:
-                        'Затримка запуску',
-                    description:
-                        'Час перед відтворенням музики'
-                },
-                onChange: function (value) {
-                    setSetting(
-                        'delay',
-                        Number(value)
-                    );
-                }
-            });
-
-            log('Settings registered');
         } catch (e) {
-            log(
-                'Settings error:',
-                e
-            );
+            log('Settings component:', e);
         }
+
+        function addParam(param) {
+            try {
+                Lampa.SettingsApi.addParam({
+                    component: 'kinorium_ost',
+                    ...param
+                });
+            } catch (e) {
+                log(
+                    'Settings parameter error:',
+                    param.name,
+                    e
+                );
+            }
+        }
+
+        addParam({
+            param: {
+                name: PREFIX + 'enabled',
+                type: 'trigger',
+                default: DEFAULTS.enabled
+            },
+            field: {
+                name: 'Увімкнути Kinorium OST',
+                description:
+                    'Незалежне тестове джерело саундтреків'
+            },
+            onChange: function (value) {
+                setSetting(
+                    'enabled',
+                    value
+                );
+
+                if (!value) {
+                    stopPlayback();
+                }
+            }
+        });
+
+        addParam({
+            param: {
+                name: PREFIX + 'autoplay',
+                type: 'trigger',
+                default: DEFAULTS.autoplay
+            },
+            field: {
+                name: 'Автоматичне відтворення',
+                description:
+                    'Запускати саундтрек під час відкриття картки фільму'
+            },
+            onChange: function (value) {
+                setSetting(
+                    'autoplay',
+                    value
+                );
+
+                if (!value) {
+                    stopPlayback();
+                }
+            }
+        });
+
+        addParam({
+            param: {
+                name: PREFIX + 'repeat',
+                type: 'trigger',
+                default: DEFAULTS.repeat
+            },
+            field: {
+                name: 'Повторювати композицію',
+                description:
+                    'Автоматичний повтор аудіофрагмента'
+            },
+            onChange: function (value) {
+                setSetting(
+                    'repeat',
+                    value
+                );
+
+                applyRepeat();
+            }
+        });
+
+        addParam({
+            param: {
+                name: PREFIX + 'volume',
+                type: 'select',
+                values: {
+                    '10': '10%',
+                    '20': '20%',
+                    '30': '30%',
+                    '40': '40%',
+                    '50': '50%',
+                    '60': '60%',
+                    '65': '65%',
+                    '70': '70%',
+                    '80': '80%',
+                    '90': '90%',
+                    '100': '100%'
+                },
+                default: String(
+                    DEFAULTS.volume
+                )
+            },
+            field: {
+                name: 'Гучність',
+                description:
+                    'Гучність фонового саундтреку'
+            },
+            onChange: function (value) {
+                setSetting(
+                    'volume',
+                    Number(value)
+                );
+
+                applyVolume();
+            }
+        });
+
+        addParam({
+            param: {
+                name: PREFIX + 'delay',
+                type: 'select',
+                values: {
+                    '0': 'Без затримки',
+                    '1000': '1 секунда',
+                    '2000': '2 секунди',
+                    '3000': '3 секунди',
+                    '4000': '4 секунди',
+                    '5000': '5 секунд'
+                },
+                default: String(
+                    DEFAULTS.delay
+                )
+            },
+            field: {
+                name: 'Затримка запуску',
+                description:
+                    'Час перед пошуком і запуском музики'
+            },
+            onChange: function (value) {
+                setSetting(
+                    'delay',
+                    Number(value)
+                );
+            }
+        });
+
+        addParam({
+            param: {
+                name: PREFIX + 'debug',
+                type: 'trigger',
+                default: DEFAULTS.debug
+            },
+            field: {
+                name: 'Режим діагностики',
+                description:
+                    'Детальна інформація в консолі Lampa'
+            },
+            onChange: function (value) {
+                setSetting(
+                    'debug',
+                    value
+                );
+            }
+        });
     }
 
     function init() {
-        if (state.initialized) return;
+        if (initialized) {
+            return;
+        }
 
         if (
             !window.Lampa ||
             !Lampa.Listener ||
-            !Lampa.Listener.follow
+            typeof Lampa.Listener.follow !==
+                'function'
         ) {
-            setTimeout(init, 500);
+            setTimeout(
+                init,
+                500
+            );
+
             return;
         }
 
-        state.initialized = true;
+        initialized = true;
 
-        addSettings();
+        registerSettings();
 
         Lampa.Listener.follow(
             'full',
-            handleCardEvent
+            handleFullEvent
         );
+
+        /*
+         * Additional protection when
+         * the browser page is unloaded.
+         */
 
         window.addEventListener(
             'pagehide',
-            function () {
-                state.cardOpen = false;
-                stopPlayback('pagehide');
-            }
+            stopPlayback
         );
 
         log(
-            'Kinorium OST ' +
-            VERSION +
-            ' initialized'
+            'Kinorium OST initialized',
+            VERSION
         );
     }
 
