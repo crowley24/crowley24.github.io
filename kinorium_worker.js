@@ -1,6 +1,6 @@
 /*
  * ORIGINAL SOUNDTRACK
- * KINORIUM WORKER 1.5.5
+ * KINORIUM WORKER 1.5.6
  *
  * Cloudflare Workers
  *
@@ -23,22 +23,24 @@
  * Disable audio verification:
  * ?id=108983&verify=0
  *
- * 1.5.5 FIXES:
+ * 1.5.6 FIXES:
+ * - Movie year tolerance: +/- 1 year.
+ * - TV series require exact start year.
+ * - Movie sequel matching supports Roman / Arabic
+ *   numerals, e.g. Rambo IV / Rambo 4.
+ * - Series titles remain strict exact matches.
  * - No hardcoded TV-series IDs.
- * - Search candidates are not discarded solely
- *   because search-result years are missing.
+ * - Search candidates can have missing snippet years.
  * - Candidate pages are verified independently.
- * - Exact page title matching.
  * - Automatic movie / series detection.
  * - Series year is the first year in its date range.
- * - No tolerance-based acceptance of a wrong year.
  * - Candidate pages are cached per request.
  * - Direct ID and iTunes audio verification retained.
  */
 
 'use strict';
 
-const VERSION = '1.5.5';
+const VERSION = '1.5.6';
 
 const CONFIG = {
     site: 'https://ua.kinorium.com',
@@ -535,12 +537,6 @@ function buildSearchTitleVariants(title) {
 
 /*
  * SEARCH RESULT PARSING
- *
- * Important difference from 1.5.4:
- * candidate extraction does not require a year
- * to appear in the surrounding search snippet.
- *
- * The actual Kinorium page is authoritative.
  */
 
 function extractSearchCandidates(html) {
@@ -650,10 +646,6 @@ function extractSearchCandidates(html) {
 
 /*
  * CANDIDATE SCORING
- *
- * This score determines which pages should be
- * checked first. It does not establish a match.
- * Final acceptance requires page title + year.
  */
 
 function scoreCandidate(candidate, title, year) {
@@ -708,12 +700,6 @@ function scoreCandidate(candidate, title, year) {
         score = Math.max(score, 85);
     }
 
-    /*
-     * Search results are already returned for the
-     * requested query. A title mention in context
-     * can raise priority, but cannot prove a match.
-     */
-
     if (
         context.includes(requested) &&
         requested.length >= 3
@@ -734,11 +720,6 @@ function scoreCandidate(candidate, title, year) {
     if (year && candidateYears.includes(year + 1)) {
         score += 2;
     }
-
-    /*
-     * Keep search order useful when the page
-     * provides little title information.
-     */
 
     score += Math.max(
         0,
@@ -875,8 +856,8 @@ function extractMoviePageYear(html) {
     const title = extractTitle(html);
 
     /*
-     * On a series page, the first year in a
-     * title like "(1994–2004)" is the start year.
+     * For a series title like "(1994–2004)",
+     * use the first year as the start year.
      */
 
     const titleMatch = title.match(
@@ -913,12 +894,18 @@ function extractPageType(html) {
         250000
     );
 
+    /*
+     * Detect series first to avoid classifying
+     * a TV series as a movie.
+     */
+
     if (
         /\(\s*(?:серіал|сериал|tv series|television series|series)\b/i.test(title) ||
         /itemprop=["'](?:tvSeries|series)["']/i.test(head) ||
         /"@type"\s*:\s*"(?:TVSeries|TVEpisode)"/i.test(head) ||
         /"@type"\s*:\s*\[[^\]]*"TVSeries"/i.test(head) ||
-        /\b(?:tv series|television series)\b/i.test(title)
+        /\b(?:tv series|television series)\b/i.test(title) ||
+        /\b(?:серіал|сериал)\b/i.test(title)
     ) {
         return 'series';
     }
@@ -942,7 +929,63 @@ function extractPageType(html) {
     return 'unknown';
 }
 
-function titleNameMatches(pageName, requestedTitle) {
+/*
+ * TITLE NORMALIZATION FOR MOVIE SEQUELS
+ *
+ * Allows equivalent sequel numbering:
+ * Rambo IV -> Rambo 4
+ * Rambo 4  -> Rambo IV
+ *
+ * Only used for movie pages.
+ * Series still require an exact title match.
+ */
+
+function normalizeMovieTitle(value) {
+    let result = normalize(
+        cleanPageName(value)
+    );
+
+    if (!result) return '';
+
+    const romanNumbers = {
+        'i': '1',
+        'ii': '2',
+        'iii': '3',
+        'iv': '4',
+        'v': '5',
+        'vi': '6',
+        'vii': '7',
+        'viii': '8',
+        'ix': '9',
+        'x': '10'
+    };
+
+    const parts = result.split(' ');
+
+    if (parts.length > 1) {
+        const last = parts[parts.length - 1];
+
+        if (
+            Object.prototype.hasOwnProperty.call(
+                romanNumbers,
+                last
+            )
+        ) {
+            parts[parts.length - 1] =
+                romanNumbers[last];
+
+            result = parts.join(' ');
+        }
+    }
+
+    return result;
+}
+
+function titleNameMatches(
+    pageName,
+    requestedTitle,
+    pageType
+) {
     const page = normalize(
         cleanPageName(pageName)
     );
@@ -956,22 +999,43 @@ function titleNameMatches(pageName, requestedTitle) {
     }
 
     /*
-     * Exact match only.
-     * "Friends" must not match a different title
-     * just because that title contains the word.
+     * Exact title match is always accepted.
      */
 
-    return page === requested;
+    if (page === requested) {
+        return true;
+    }
+
+    /*
+     * For movies only, support Roman / Arabic
+     * sequel number differences.
+     */
+
+    if (pageType === 'movie') {
+        return normalizeMovieTitle(pageName) ===
+            normalizeMovieTitle(requestedTitle);
+    }
+
+    /*
+     * Series and unknown page types remain strict.
+     * This avoids matching a different title merely
+     * because it contains the same word.
+     */
+
+    return false;
 }
 
 /*
  * PAGE VERIFICATION
  *
- * The requested year must match the actual
- * page year. No ±1 fallback is used here.
+ * Movies:
+ * requested year +/- CONFIG.yearTolerance.
  *
- * This prevents a 1993 movie from being accepted
- * as a 1994 series.
+ * Series:
+ * exact start year only.
+ *
+ * Unknown page types:
+ * exact year only.
  */
 
 function verifyCandidatePage(
@@ -986,7 +1050,11 @@ function verifyCandidatePage(
 
     const matchedTitle =
         pageNames.find(name =>
-            titleNameMatches(name, title)
+            titleNameMatches(
+                name,
+                title,
+                pageType
+            )
         ) || '';
 
     const yearDifference =
@@ -994,11 +1062,17 @@ function verifyCandidatePage(
             ? Math.abs(pageYear - year)
             : null;
 
-    const yearMatches =
-        Boolean(
-            pageYear &&
-            pageYear === year
-        );
+    let yearMatches = false;
+
+    if (pageYear && year) {
+        if (pageType === 'movie') {
+            yearMatches =
+                yearDifference <= CONFIG.yearTolerance;
+        } else {
+            yearMatches =
+                pageYear === year;
+        }
+    }
 
     const titleMatches =
         Boolean(matchedTitle);
@@ -1151,8 +1225,8 @@ async function resolveMovie(title, year) {
     }
 
     /*
-     * Prefer exact title labels and useful search
-     * order, but verify each page before accepting.
+     * Prefer likely matches, but verify every page
+     * before accepting it.
      */
 
     const candidatePairs = [
@@ -1192,8 +1266,8 @@ async function resolveMovie(title, year) {
     }
 
     /*
-     * Check candidates one by one.
-     * Search snippets never determine the final year.
+     * Verify candidates one by one.
+     * Search snippets do not determine the final year.
      */
 
     for (const candidate of candidatePairs) {
@@ -1246,12 +1320,28 @@ async function resolveMovie(title, year) {
                 candidatePage.ok &&
                 verified.matched
             ) {
+                let method;
+
+                if (verified.pageType === 'series') {
+                    method =
+                        'search_verified_exact_title_year_series';
+                } else if (
+                    verified.pageType === 'movie' &&
+                    verified.yearDifference > 0
+                ) {
+                    method =
+                        'search_verified_movie_title_year_tolerance';
+                } else if (verified.pageType === 'movie') {
+                    method =
+                        'search_verified_exact_title_year_movie';
+                } else {
+                    method =
+                        'search_verified_exact_title_year';
+                }
+
                 return {
                     id: candidate.id,
-                    method:
-                        verified.pageType === 'series'
-                            ? 'search_verified_exact_title_year_series'
-                            : 'search_verified_exact_title_year',
+                    method,
                     candidates: allCandidates,
                     diagnostics,
                     searchVariants
