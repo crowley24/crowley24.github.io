@@ -1,31 +1,33 @@
 
 /*
  * ORIGINAL SOUNDTRACK
- * KINORIUM WORKER 1.4.0
+ * KINORIUM WORKER 1.5.0
  *
  * Cloudflare Workers
  *
- * Direct Kinorium ID:
- *   ?id=143897
+ * Automatic search:
+ * ?title=Titanic&year=1997
  *
- * Automatic title search:
- *   ?title=Gladiator&year=2000
+ * Direct Kinorium ID:
+ * ?id=108983
  *
  * Diagnostics:
- *   ?title=Gladiator&year=2000&debug=1
+ * ?title=Titanic&year=1997&debug=1
  *
- * Select soundtrack:
- *   ?id=143897&track=Now%20We%20Are%20Free
+ * Track selection:
+ * ?id=108983&track=Rose
+ * ?id=108983&song_id=205745739
  *
- * Skip audio check:
- *   ?id=143897&verify=0
+ * Disable audio verification:
+ * ?id=108983&verify=0
  *
- * Existing OSTMusic Worker is not affected.
+ * Independent from the production
+ * Original Soundtrack Worker.
  */
 
 'use strict';
 
-const VERSION = '1.4.0';
+const VERSION = '1.5.0';
 
 const CONFIG = {
     site: 'https://ua.kinorium.com',
@@ -33,29 +35,34 @@ const CONFIG = {
     maxHTML: 2000000,
     maxTracks: 30,
     maxCandidates: 30,
+    maxVerifyCandidates: 5,
     cacheSeconds: 300
 };
 
-/*
- * Confirmed film mapping.
- *
- * This is only a safe fallback.
- * Automatic search is attempted first.
- */
 const KNOWN_MOVIES = [
     {
         id: '143897',
         title: 'Gladiator',
+        year: 2000,
         aliases: [
             'Gladiator',
             'Гладіатор',
             'Гладиатор'
-        ],
-        year: 2000
+        ]
+    },
+    {
+        id: '108983',
+        title: 'Titanic',
+        year: 1997,
+        aliases: [
+            'Titanic',
+            'Титанік',
+            'Титаник'
+        ]
     }
 ];
 
-const HEADERS = {
+const JSON_HEADERS = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Range',
@@ -70,7 +77,7 @@ export default {
         if (request.method === 'OPTIONS') {
             return new Response(null, {
                 status: 204,
-                headers: HEADERS
+                headers: JSON_HEADERS
             });
         }
 
@@ -83,36 +90,37 @@ export default {
         }
 
         const url = new URL(request.url);
+        const params = url.searchParams;
 
         const id = String(
-            url.searchParams.get('id') || ''
+            params.get('id') || ''
         ).trim();
 
         const title = String(
-            url.searchParams.get('title') || ''
+            params.get('title') || ''
         ).trim();
 
-        const yearValue = String(
-            url.searchParams.get('year') || ''
+        const yearString = String(
+            params.get('year') || ''
         ).trim();
 
-        const year = yearValue
-            ? Number(yearValue)
+        const year = yearString
+            ? Number(yearString)
             : 0;
 
         const track = String(
-            url.searchParams.get('track') || ''
+            params.get('track') || ''
         ).trim();
 
         const songId = String(
-            url.searchParams.get('song_id') || ''
+            params.get('song_id') || ''
         ).trim();
 
         const debug =
-            url.searchParams.get('debug') === '1';
+            params.get('debug') === '1';
 
         const verify =
-            url.searchParams.get('verify') !== '0';
+            params.get('verify') !== '0';
 
         if (!id && !title) {
             return json({
@@ -121,21 +129,24 @@ export default {
                 version: VERSION,
                 source: 'kinorium',
                 endpoints: {
-                    direct:
-                        '/?id=143897',
                     automatic:
-                        '/?title=Gladiator&year=2000',
-                    searchDebug:
-                        '/?title=Gladiator&year=2000&debug=1',
-                    selectedTrack:
-                        '/?id=143897&track=Elysium',
-                    noVerification:
-                        '/?id=143897&verify=0'
+                        '?title=Titanic&year=1997',
+                    direct:
+                        '?id=108983',
+                    debug:
+                        '?title=Titanic&year=1997&debug=1',
+                    track:
+                        '?id=108983&track=Rose',
+                    verifyOff:
+                        '?id=108983&verify=0'
                 }
             });
         }
 
-        if (id && !/^\d{1,12}$/.test(id)) {
+        if (
+            id &&
+            !/^\d{1,12}$/.test(id)
+        ) {
             return json({
                 success: false,
                 version: VERSION,
@@ -152,9 +163,9 @@ export default {
         }
 
         if (
-            yearValue &&
+            yearString &&
             (
-                !/^\d{4}$/.test(yearValue) ||
+                !/^\d{4}$/.test(yearString) ||
                 year < 1880 ||
                 year > 2200
             )
@@ -167,16 +178,14 @@ export default {
         }
 
         try {
-            let resolved = null;
+            let resolved;
 
             if (id) {
                 resolved = {
                     id,
-                    title: title || '',
-                    year,
                     method: 'direct_id',
                     candidates: [],
-                    searchDebug: []
+                    diagnostics: []
                 };
             } else {
                 resolved = await resolveMovie(
@@ -202,11 +211,12 @@ export default {
                     reason: 'movie_not_resolved',
                     search: {
                         method: resolved.method,
-                        candidates: resolved.candidates,
-                        ...(debug ? {
-                            diagnostics:
-                                resolved.searchDebug
-                        } : {})
+                        candidates: debug
+                            ? resolved.candidates
+                            : [],
+                        diagnostics: debug
+                            ? resolved.diagnostics
+                            : []
                     }
                 });
             }
@@ -227,10 +237,9 @@ export default {
                 candidates: debug
                     ? resolved.candidates
                     : [],
-                ...(debug ? {
-                    diagnostics:
-                        resolved.searchDebug
-                } : {})
+                diagnostics: debug
+                    ? resolved.diagnostics
+                    : []
             };
 
             return json(result);
@@ -251,12 +260,12 @@ export default {
     }
 };
 
-function json(value, status = 200) {
+function json(data, status = 200) {
     return new Response(
-        JSON.stringify(value, null, 2),
+        JSON.stringify(data, null, 2),
         {
             status,
-            headers: HEADERS
+            headers: JSON_HEADERS
         }
     );
 }
@@ -336,17 +345,22 @@ function decodeEntities(value) {
         .replace(/&lt;/gi, '<')
         .replace(/&gt;/gi, '>')
         .replace(/&nbsp;/gi, ' ')
+        .replace(/&ndash;/gi, '–')
+        .replace(/&mdash;/gi, '—')
+        .replace(/&rsquo;/gi, '’')
         .replace(/&#(\d+);/g, (_, n) => {
             const number = Number(n);
 
-            return number <= 0x10ffff
+            return number > 0 &&
+                number <= 0x10ffff
                 ? String.fromCodePoint(number)
                 : '';
         })
         .replace(/&#x([0-9a-f]+);/gi, (_, n) => {
             const number = parseInt(n, 16);
 
-            return number <= 0x10ffff
+            return number > 0 &&
+                number <= 0x10ffff
                 ? String.fromCodePoint(number)
                 : '';
         });
@@ -355,6 +369,8 @@ function decodeEntities(value) {
 function stripTags(value) {
     return decodeEntities(
         String(value || '')
+            .replace(/<script\b[\s\S]*?<\/script>/gi, ' ')
+            .replace(/<style\b[\s\S]*?<\/style>/gi, ' ')
             .replace(/<[^>]*>/g, ' ')
     )
         .replace(/\s+/g, ' ')
@@ -401,57 +417,40 @@ function extractAttribute(tag, name) {
         : '';
 }
 
-function isSameTitle(a, b) {
-    return normalize(a) === normalize(b);
-}
-
 function findKnownMovie(title, year) {
     if (!year) return null;
 
-    return KNOWN_MOVIES.find(movie => {
-        if (movie.year !== year) {
-            return false;
-        }
-
-        return movie.aliases.some(alias =>
-            isSameTitle(alias, title)
-        );
-    }) || null;
+    return KNOWN_MOVIES.find(movie =>
+        movie.year === year &&
+        movie.aliases.some(alias =>
+            normalize(alias) === normalize(title)
+        )
+    ) || null;
 }
 
-function getSearchURLs(title) {
-    /*
-     * Experimental Kinorium search routes.
-     *
-     * Their response structure has not yet
-     * been confirmed. Each is inspected,
-     * not blindly trusted.
-     */
-
-    const encoded = encodeURIComponent(title);
-
-    return [
-        CONFIG.site +
-            '/search/?q=' + encoded,
-
-        CONFIG.site +
-            '/search/?query=' + encoded,
-
-        CONFIG.site +
-            '/?q=' + encoded
-    ];
-}
+/*
+ * Search-result parsing.
+ *
+ * Kinorium places the film title and year
+ * outside the action button that links
+ * to the movie page.
+ *
+ * Therefore we inspect the surrounding
+ * search-result HTML, not the button label.
+ */
 
 function extractSearchCandidates(html) {
     const results = [];
     const seen = new Set();
 
     /*
-     * Find links that point to a Kinorium
-     * movie page: /123456/
+     * A real Kinorium search result contains
+     * a movie link /123456/ and nearby text:
      *
-     * This only produces candidates.
-     * It does not establish a match.
+     * Титанік 1997, Titanic
+     *
+     * The first search-result block is
+     * preferred over unrelated homepage links.
      */
 
     const regex =
@@ -495,6 +494,46 @@ function extractSearchCandidates(html) {
 
         if (seen.has(id)) continue;
 
+        const before = html.slice(
+            Math.max(0, match.index - 800),
+            match.index
+        );
+
+        const after = html.slice(
+            regex.lastIndex,
+            Math.min(
+                html.length,
+                regex.lastIndex + 300
+            )
+        );
+
+        const context = stripTags(
+            before + ' ' + tag + ' ' + after
+        );
+
+        /*
+         * Search cards generally contain
+         * a localized title, year, and
+         * original title in this order.
+         */
+
+        const yearMatches = [
+            ...context.matchAll(
+                /\b(?:18|19|20)\d{2}\b/g
+            )
+        ];
+
+        const years = [
+            ...new Set(
+                yearMatches.map(item =>
+                    Number(item[0])
+                )
+            )
+        ];
+
+        const titleAttribute =
+            extractAttribute(tag, 'title');
+
         const label = stripTags(
             tag.replace(
                 /^<a\b[^>]*>/i,
@@ -502,68 +541,147 @@ function extractSearchCandidates(html) {
             ).replace(/<\/a>$/i, '')
         );
 
-        const titleAttribute =
-            extractAttribute(tag, 'title');
-
-        const surrounding = stripTags(
-            html.slice(
-                Math.max(0, match.index - 200),
-                Math.min(
-                    html.length,
-                    regex.lastIndex + 250
-                )
-            )
-        );
-
         seen.add(id);
 
         results.push({
             id,
-            label:
-                label.slice(0, 180),
-            titleAttribute:
-                titleAttribute.slice(0, 180),
-            context:
-                surrounding.slice(0, 350)
+            label,
+            titleAttribute,
+            context: context.slice(-650),
+            years
         });
     }
 
     return results;
 }
 
-function candidateMatches(candidate, title, year) {
+function extractSearchResultTitle(context, year) {
+    if (!context || !year) {
+        return '';
+    }
+
     /*
-     * Conservative matching:
-     * exact title and year must be visible
-     * in the candidate's search context.
+     * Look for:
      *
-     * Final movie page will be checked too.
+     * Титанік 1997, Titanic
+     * Гладіатор 2000, Gladiator
+     *
+     * The original title follows the
+     * year and comma.
      */
 
-    if (!year) return false;
+    const escapedYear = String(year);
 
-    const fields = [
-        candidate.label,
-        candidate.titleAttribute
-    ];
+    const regex = new RegExp(
+        '\\b' +
+        escapedYear +
+        '\\s*,\\s*([^<\\n]{1,140})',
+        'i'
+    );
 
-    const titleMatched = fields.some(field => {
-        const clean = normalize(field);
+    const match = context.match(regex);
 
-        const expected = normalize(title);
+    if (!match) {
+        return '';
+    }
 
-        return (
-            clean === expected ||
-            clean === expected + ' ' + year ||
-            clean === expected + ' фільм ' + year
+    let value = match[1]
+        .replace(
+            /\s+(?:В улюблених|Буду дивитися).*$/i,
+            ''
+        )
+        .trim();
+
+    /*
+     * HTML stripping can merge unrelated
+     * text. Keep the leading title portion.
+     */
+
+    value = value.split(
+        /\s{2,}/
+    )[0];
+
+    return value.slice(0, 140);
+}
+
+function scoreCandidate(candidate, title, year) {
+    if (!year) return 0;
+
+    const requested = normalize(title);
+
+    if (!requested) return 0;
+
+    const context = candidate.context || '';
+
+    if (
+        !candidate.years.includes(year)
+    ) {
+        return 0;
+    }
+
+    let score = 0;
+
+    const originalTitle =
+        extractSearchResultTitle(
+            context,
+            year
         );
-    });
 
-    if (!titleMatched) return false;
+    const originalNormalized =
+        normalize(originalTitle);
 
-    return new RegExp(
-        '\\b' + year + '\\b'
-    ).test(candidate.context);
+    /*
+     * A verified original-title prefix
+     * is stronger than a generic substring
+     * anywhere in the HTML.
+     */
+
+    if (
+        originalNormalized === requested
+    ) {
+        score += 100;
+    } else if (
+        originalNormalized.startsWith(
+            requested + ' '
+        )
+    ) {
+        score += 70;
+    }
+
+    const labelNormalized =
+        normalize(candidate.label);
+
+    if (
+        labelNormalized === requested
+    ) {
+        score += 80;
+    }
+
+    /*
+     * A matching title next to the year
+     * is useful for localized searches.
+     */
+
+    const normalizedContext =
+        normalize(context);
+
+    if (
+        normalizedContext.includes(
+            requested + ' ' + year
+        )
+    ) {
+        score += 50;
+    }
+
+    if (
+        normalizedContext.includes(
+            year + ' ' + requested
+        )
+    ) {
+        score += 50;
+    }
+
+    return score;
 }
 
 function extractMoviePageYear(html) {
@@ -584,7 +702,7 @@ function extractMoviePageYear(html) {
     const title = extractTitle(html);
 
     const match = title.match(
-        /\b(18|19|20)\d{2}\b/
+        /\b(?:18|19|20)\d{2}\b/
     );
 
     return match
@@ -593,7 +711,9 @@ function extractMoviePageYear(html) {
 }
 
 function moviePageMatches(html, title, year) {
-    if (!html || !year) return false;
+    if (!html || !year) {
+        return false;
+    }
 
     const pageTitle = extractTitle(html);
     const pageYear = extractMoviePageYear(html);
@@ -602,102 +722,155 @@ function moviePageMatches(html, title, year) {
         return false;
     }
 
-    const normalizedTitle = normalize(title);
-    const normalizedPage = normalize(pageTitle);
+    const requested = normalize(title);
+    const pageNormalized =
+        normalize(pageTitle);
+
+    if (
+        pageNormalized === requested ||
+        pageNormalized.startsWith(
+            requested + ' '
+        )
+    ) {
+        return true;
+    }
 
     /*
-     * Allow a full title with a year
-     * and a localized "film" suffix.
+     * English original title can appear
+     * in metadata even when the page title
+     * is localized in Ukrainian.
      */
 
-    return (
-        normalizedPage === normalizedTitle ||
-        normalizedPage.startsWith(
-            normalizedTitle + ' '
-        ) ||
-        normalizedPage.startsWith(
-            normalizedTitle + ' фільм '
-        )
+    const metadata = html.slice(
+        0,
+        150000
+    );
+
+    const escaped = requested
+        .replace(
+            /[.*+?^${}()|[\]\\]/g,
+            '\\$&'
+        );
+
+    const originalTitlePattern =
+        new RegExp(
+            '(?:originalTitle|alternateName)' +
+            '["\\s:>]+[^\\n]{0,150}' +
+            escaped,
+            'i'
+        );
+
+    return originalTitlePattern.test(
+        normalize(metadata)
     );
 }
 
 async function resolveMovie(title, year) {
     const diagnostics = [];
-    const candidates = [];
 
-    const searchURLs = getSearchURLs(title);
+    const searchURL =
+        CONFIG.site +
+        '/search/?q=' +
+        encodeURIComponent(title);
 
-    for (const url of searchURLs) {
-        try {
-            const page = await fetchHTML(url);
+    let page;
 
-            const found = extractSearchCandidates(
-                page.html
-            );
-
-            diagnostics.push({
-                url,
-                finalURL: page.url,
-                status: page.status,
-                htmlLength: page.length,
-                pageTitle:
-                    extractTitle(page.html),
-                candidatesFound:
-                    found.length,
-                possibleBlock:
-                    page.length > 0 &&
-                    page.length < 10000
-            });
-
-            for (const candidate of found) {
-                if (
-                    !candidates.some(
-                        item =>
-                            item.id === candidate.id
-                    )
-                ) {
-                    candidates.push(candidate);
-                }
-            }
-
-        } catch (error) {
-            diagnostics.push({
-                url,
-                error: String(
-                    error && error.message ||
-                    error
-                )
-            });
-        }
+    try {
+        page = await fetchHTML(
+            searchURL
+        );
+    } catch (error) {
+        diagnostics.push({
+            url: searchURL,
+            error: String(
+                error && error.message ||
+                error
+            )
+        });
     }
 
-    const matches = candidates.filter(
-        candidate =>
-            candidateMatches(
+    let candidates = [];
+
+    if (page && page.ok) {
+        candidates = extractSearchCandidates(
+            page.html
+        );
+
+        diagnostics.push({
+            url: searchURL,
+            status: page.status,
+            htmlLength: page.length,
+            pageTitle: extractTitle(
+                page.html
+            ),
+            candidatesFound:
+                candidates.length
+        });
+    }
+
+    const ranked = candidates
+        .map(candidate => ({
+            ...candidate,
+            score: scoreCandidate(
                 candidate,
                 title,
                 year
             )
-    );
+        }))
+        .filter(candidate =>
+            candidate.score >= 50
+        )
+        .sort((a, b) =>
+            b.score - a.score
+        );
 
     /*
-     * Validate candidates by opening
-     * their actual movie pages.
+     * Only candidates with a matching
+     * title and year are opened.
+     *
+     * If validation cannot establish
+     * the correct film, do not guess.
      */
 
-    for (const candidate of matches.slice(0, 5)) {
+    for (
+        const candidate of ranked.slice(
+            0,
+            CONFIG.maxVerifyCandidates
+        )
+    ) {
         try {
-            const page = await fetchHTML(
-                CONFIG.site +
-                '/' +
-                candidate.id +
-                '/'
-            );
+            const moviePage =
+                await fetchHTML(
+                    CONFIG.site +
+                    '/' +
+                    candidate.id +
+                    '/'
+                );
+
+            const pageYear =
+                extractMoviePageYear(
+                    moviePage.html
+                );
+
+            diagnostics.push({
+                candidateId:
+                    candidate.id,
+                candidateScore:
+                    candidate.score,
+                candidateYear:
+                    pageYear,
+                moviePageStatus:
+                    moviePage.status,
+                moviePageTitle:
+                    extractTitle(
+                        moviePage.html
+                    )
+            });
 
             if (
-                page.ok &&
+                moviePage.ok &&
                 moviePageMatches(
-                    page.html,
+                    moviePage.html,
                     title,
                     year
                 )
@@ -706,18 +879,45 @@ async function resolveMovie(title, year) {
                     id: candidate.id,
                     method:
                         'search_verified',
-                    candidates,
-                    searchDebug: diagnostics
+                    candidates: ranked,
+                    diagnostics
                 };
             }
-        } catch (_) {}
-    }
 
-    /*
-     * Preserve the known working test
-     * even if Kinorium search routes
-     * are unavailable.
-     */
+            /*
+             * Localized title fallback:
+             *
+             * If the search result strongly
+             * matches the original title,
+             * and the movie page confirms
+             * the exact year, accept it.
+             */
+
+            if (
+                moviePage.ok &&
+                candidate.score >= 100 &&
+                pageYear === year
+            ) {
+                return {
+                    id: candidate.id,
+                    method:
+                        'search_original_title_verified',
+                    candidates: ranked,
+                    diagnostics
+                };
+            }
+
+        } catch (error) {
+            diagnostics.push({
+                candidateId:
+                    candidate.id,
+                error: String(
+                    error && error.message ||
+                    error
+                )
+            });
+        }
+    }
 
     const known = findKnownMovie(
         title,
@@ -729,8 +929,8 @@ async function resolveMovie(title, year) {
             id: known.id,
             method:
                 'known_movie_fallback',
-            candidates,
-            searchDebug: diagnostics
+            candidates: ranked,
+            diagnostics
         };
     }
 
@@ -738,8 +938,8 @@ async function resolveMovie(title, year) {
         id: null,
         method:
             'search_no_verified_match',
-        candidates,
-        searchDebug: diagnostics
+        candidates: ranked,
+        diagnostics
     };
 }
 
@@ -827,31 +1027,23 @@ function extractFeaturedTracks(html) {
 
         seen.add(key);
 
+        const audioUrl =
+            validateAudioURL(
+                data.preview_url
+            );
+
         tracks.push({
             id,
             name,
             artist: String(
                 data.artist_name || ''
             ),
-            albumId: String(
-                data.album_id || ''
-            ),
             duration: Number(
                 data.duration || 0
             ),
-            trackNumber: Number(
-                data.trackNumber || 0
-            ),
             isMain:
                 Number(data.isMain || 0) === 1,
-            audioUrl: validateAudioURL(
-                data.preview_url
-            ),
-            associationVerified: Boolean(
-                validateAudioURL(
-                    data.preview_url
-                )
-            )
+            audioUrl
         });
     }
 
@@ -871,10 +1063,13 @@ function selectTrack(
     }
 
     if (requestedTrack) {
+        const requested =
+            normalize(requestedTrack);
+
         const exact = tracks.find(
             item =>
                 normalize(item.name) ===
-                normalize(requestedTrack)
+                requested
         );
 
         if (exact) return exact;
@@ -882,7 +1077,7 @@ function selectTrack(
         return tracks.find(
             item =>
                 normalize(item.name).includes(
-                    normalize(requestedTrack)
+                    requested
                 )
         ) || null;
     }
@@ -906,7 +1101,9 @@ async function checkAudio(url) {
     };
 
     if (!url) {
-        result.reason = 'missing_audio_url';
+        result.reason =
+            'missing_audio_url';
+
         return result;
     }
 
@@ -922,7 +1119,8 @@ async function checkAudio(url) {
             }
         );
 
-        result.httpStatus = response.status;
+        result.httpStatus =
+            response.status;
 
         result.contentType =
             response.headers.get(
@@ -934,7 +1132,8 @@ async function checkAudio(url) {
                 'content-range'
             ) || '';
 
-        result.reachable = response.ok;
+        result.reachable =
+            response.ok;
 
         result.playableCandidate =
             response.ok &&
@@ -1042,15 +1241,20 @@ async function getSoundtrack(options) {
     let reason = 'ok';
 
     if (!tracks.length) {
-        reason = 'featured_tracks_not_found';
+        reason =
+            'featured_tracks_not_found';
     } else if (!selected) {
-        reason = 'requested_track_not_found';
+        reason =
+            'requested_track_not_found';
     } else if (!selected.audioUrl) {
-        reason = 'preview_url_missing';
+        reason =
+            'preview_url_missing';
     } else if (!verify) {
-        reason = 'audio_not_checked';
+        reason =
+            'audio_not_checked';
     } else if (!playable) {
-        reason = 'audio_check_failed';
+        reason =
+            'audio_check_failed';
     }
 
     const result = {
@@ -1076,7 +1280,7 @@ async function getSoundtrack(options) {
         audioAssociationVerified:
             Boolean(
                 selected &&
-                selected.associationVerified
+                selected.audioUrl
             ),
         tracksCount: tracks.length,
         tracks: tracks.map(item => ({
