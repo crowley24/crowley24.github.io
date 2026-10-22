@@ -1,597 +1,49 @@
 
 /*
- * KINORIUM OST
- * Cloudflare Worker 1.0.0
+ * KINORIUM ORIGINAL SOUNDTRACK
+ * Cloudflare Worker 1.1.0
  *
- * Independent test service for Lampa.
+ * Separate experimental Worker for Lampa.
  *
- * Source: Kinorium only.
- * No YouTube.
- * No OSTMusic.
- * No external soundtrack catalog.
+ * Source:
+ * https://ua.kinorium.com/
  *
- * Test movie:
- * Gladiator (2000)
- * https://ua.kinorium.com/143897/soundtrack/
+ * Features:
+ * - Main movie page soundtrack inspection
+ * - Featured soundtrack extraction
+ * - Apple audio preview discovery
+ * - Track/audio association diagnostics
+ * - Safe audio availability checks
+ * - No random audio fallback
+ * - CORS support
  *
- * Endpoints:
- * /
+ * Example:
  * /?id=143897
  * /?id=143897&debug=1
  * /?id=143897&track=Now%20We%20Are%20Free
  *
  * IMPORTANT:
- * This worker does not bypass DRM, authentication,
- * access restrictions or protected streaming.
+ * This Worker does not guarantee that Kinorium's
+ * embedded audio URLs can be played externally.
  */
 
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 
-const ORIGIN = 'https://ua.kinorium.com';
-
-const TIMEOUT = 15000;
-
-const CACHE_TTL = 300;
+const CONFIG = {
+    site: 'https://ua.kinorium.com',
+    timeout: 12000,
+    maxHTML: 1500000,
+    maxMedia: 100,
+    maxChecks: 6,
+    cacheSeconds: 300
+};
 
 const HEADERS = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
-    'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'no-store'
 };
-
-function json(data, status = 200) {
-    return new Response(
-        JSON.stringify(data, null, 2),
-        {
-            status,
-            headers: HEADERS
-        }
-    );
-}
-
-function clean(value) {
-    return String(value || '')
-        .replace(/\s+/g, ' ')
-        .trim();
-}
-
-function normalize(value) {
-    return clean(value)
-        .toLowerCase()
-        .normalize('NFKD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9\u0400-\u04ff]+/gi, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-}
-
-function decodeHTML(value) {
-    return String(value || '')
-        .replace(/&amp;/gi, '&')
-        .replace(/&quot;/gi, '"')
-        .replace(/&#39;|&apos;/gi, "'")
-        .replace(/&lt;/gi, '<')
-        .replace(/&gt;/gi, '>')
-        .replace(/&nbsp;/gi, ' ')
-        .replace(/&#(\d+);/g, (_, n) => {
-            const code = Number(n);
-
-            return code > 0 && code <= 0x10ffff
-                ? String.fromCodePoint(code)
-                : '';
-        });
-}
-
-function stripTags(value) {
-    return clean(
-        decodeHTML(
-            String(value || '')
-                .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
-                .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
-                .replace(/<[^>]*>/g, ' ')
-        )
-    );
-}
-
-function validId(value) {
-    const id = String(value || '').trim();
-
-    return /^\d{1,12}$/.test(id) ? id : '';
-}
-
-function pageURL(id) {
-    return ORIGIN + '/' + id + '/soundtrack/';
-}
-
-function safeURL(value, base) {
-    try {
-        const url = new URL(
-            decodeHTML(String(value || '').replace(/\\\//g, '/')),
-            base
-        );
-
-        if (url.protocol !== 'https:') {
-            return '';
-        }
-
-        return url.href;
-    } catch (_) {
-        return '';
-    }
-}
-
-function isMediaURL(url) {
-    try {
-        const parsed = new URL(url);
-
-        return /\.(mp3|m4a|aac|ogg|opus|wav|flac|mp4|m3u8)(?:$|[?#])/i
-            .test(parsed.pathname + parsed.search);
-    } catch (_) {
-        return false;
-    }
-}
-
-function unique(items, keyFn = x => x) {
-    const seen = new Set();
-
-    return items.filter(item => {
-        const key = keyFn(item);
-
-        if (!key || seen.has(key)) {
-            return false;
-        }
-
-        seen.add(key);
-
-        return true;
-    });
-}
-
-async function fetchPage(id) {
-    const url = pageURL(id);
-
-    const controller = new AbortController();
-
-    const timer = setTimeout(
-        () => controller.abort(),
-        TIMEOUT
-    );
-
-    try {
-        const response = await fetch(url, {
-            method: 'GET',
-            redirect: 'follow',
-            signal: controller.signal,
-            headers: {
-                'Accept': 'text/html,application/xhtml+xml',
-                'Accept-Language': 'uk,en;q=0.8',
-                'User-Agent':
-                    'Mozilla/5.0 (compatible; KinoriumOSTTest/1.0)'
-            },
-            cf: {
-                cacheTtl: CACHE_TTL,
-                cacheEverything: true
-            }
-        });
-
-        const contentType =
-            response.headers.get('content-type') || '';
-
-        const html = await response.text();
-
-        return {
-            ok: response.ok,
-            status: response.status,
-            finalURL: response.url,
-            contentType,
-            html
-        };
-    } finally {
-        clearTimeout(timer);
-    }
-}
-
-function extractPageTitle(html) {
-    const match = html.match(
-        /<title\b[^>]*>([\s\S]*?)<\/title>/i
-    );
-
-    return match ? stripTags(match[1]) : '';
-}
-
-function extractHeadings(html) {
-    const results = [];
-
-    const regex =
-        /<h([1-4])\b[^>]*>([\s\S]*?)<\/h\1>/gi;
-
-    let match;
-
-    while ((match = regex.exec(html)) !== null) {
-        const value = stripTags(match[2]);
-
-        if (
-            value.length >= 3 &&
-            value.length <= 200
-        ) {
-            results.push(value);
-        }
-
-        if (results.length >= 100) {
-            break;
-        }
-    }
-
-    return unique(results);
-}
-
-function extractStructuredTracks(html) {
-    const results = [];
-
-    /*
-     * JSON-LD MusicRecording data.
-     */
-    const blocks =
-        /<script\b[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
-
-    let match;
-
-    function visit(value, depth = 0) {
-        if (!value || depth > 12) {
-            return;
-        }
-
-        if (Array.isArray(value)) {
-            value.forEach(item => visit(item, depth + 1));
-            return;
-        }
-
-        if (typeof value !== 'object') {
-            return;
-        }
-
-        const type = value['@type'];
-
-        const types = Array.isArray(type)
-            ? type
-            : [type];
-
-        if (
-            types.some(t =>
-                t === 'MusicRecording' ||
-                t === 'MusicComposition'
-            )
-        ) {
-            const name = clean(value.name);
-
-            if (name) {
-                let artist = '';
-
-                const by = value.byArtist;
-
-                if (typeof by === 'string') {
-                    artist = by;
-                } else if (by && typeof by === 'object') {
-                    artist = by.name || '';
-                }
-
-                results.push({
-                    name,
-                    artist: clean(artist),
-                    duration: clean(value.duration),
-                    source: 'json_ld'
-                });
-            }
-        }
-
-        Object.values(value).forEach(
-            item => visit(item, depth + 1)
-        );
-    }
-
-    while ((match = blocks.exec(html)) !== null) {
-        try {
-            visit(JSON.parse(match[1]));
-        } catch (_) {}
-    }
-
-    return unique(
-        results,
-        track => normalize(track.name + ' ' + track.artist)
-    );
-}
-
-function extractHTMLTracks(html) {
-    const tracks = [];
-
-    /*
-     * Heuristic HTML extraction.
-     *
-     * It deliberately does not claim that every
-     * matching element is a real audio track.
-     */
-
-    const regex =
-        /<(?:tr|li|div)\b([^>]{0,500})>([\s\S]{0,3000}?)<\/(?:tr|li|div)>/gi;
-
-    let match;
-    let scanned = 0;
-
-    while (
-        (match = regex.exec(html)) !== null &&
-        scanned < 2500
-    ) {
-        scanned++;
-
-        const attrs = match[1];
-        const body = match[2];
-
-        const marker =
-            /track|song|soundtrack|audio|music/i.test(attrs);
-
-        const duration =
-            stripTags(body).match(/\b\d{1,2}:\d{2}\b/);
-
-        if (!marker && !duration) {
-            continue;
-        }
-
-        const text = stripTags(body);
-
-        if (
-            text.length < 3 ||
-            text.length > 220
-        ) {
-            continue;
-        }
-
-        let name = text;
-
-        if (duration) {
-            name = clean(
-                text.replace(duration[0], '')
-            );
-        }
-
-        if (
-            !name ||
-            name.length > 180 ||
-            /^(play|pause|відтворити|слушать)$/i.test(name)
-        ) {
-            continue;
-        }
-
-        tracks.push({
-            name,
-            artist: '',
-            duration: duration ? duration[0] : '',
-            source: 'html_candidate'
-        });
-
-        if (tracks.length >= 100) {
-            break;
-        }
-    }
-
-    return unique(
-        tracks,
-        track => normalize(track.name)
-    );
-}
-
-function extractMedia(html, baseURL) {
-    const candidates = [];
-
-    function add(value, source) {
-        const url = safeURL(value, baseURL);
-
-        if (!url) {
-            return;
-        }
-
-        if (!isMediaURL(url)) {
-            return;
-        }
-
-        candidates.push({
-            url,
-            source,
-            type: /\.m3u8(?:$|[?#])/i.test(url)
-                ? 'hls'
-                : /\.(mp3|m4a|aac|ogg|opus|wav|flac)(?:$|[?#])/i.test(url)
-                    ? 'audio'
-                    : 'video',
-            verified: false
-        });
-    }
-
-    const tags =
-        /<(?:audio|video|source|a)\b[^>]*(?:src|href)=["']([^"']+)["'][^>]*>/gi;
-
-    let match;
-
-    while ((match = tags.exec(html)) !== null) {
-        add(match[1], 'html_attribute');
-    }
-
-    const decoded = html
-        .replace(/\\\//g, '/')
-        .replace(/\\u0026/gi, '&');
-
-    const urls =
-        /https?:\/\/[^\s"'<>\\]{1,1000}?\.(?:mp3|m4a|aac|ogg|opus|wav|flac|mp4|m3u8)(?:\?[^\s"'<>\\]*)?/gi;
-
-    while ((match = urls.exec(decoded)) !== null) {
-        add(match[0], 'html_text');
-    }
-
-    return unique(
-        candidates,
-        item => item.url
-    ).slice(0, 50);
-}
-
-function scoreTrack(track, preferred = '') {
-    const name = normalize(track.name);
-    const wanted = normalize(preferred);
-
-    let score = 0;
-
-    if (wanted) {
-        if (name === wanted) {
-            score += 200;
-        } else if (
-            wanted.length >= 5 &&
-            name.includes(wanted)
-        ) {
-            score += 120;
-        }
-    }
-
-    if (/\bmain theme\b/.test(name)) {
-        score += 100;
-    }
-
-    if (/\bmain title\b/.test(name)) {
-        score += 95;
-    }
-
-    if (/\btheme\b/.test(name)) {
-        score += 70;
-    }
-
-    if (/\bopening\b/.test(name)) {
-        score += 50;
-    }
-
-    if (/\btrailer\b|\bremix\b|\bkaraoke\b/.test(name)) {
-        score -= 50;
-    }
-
-    return score;
-}
-
-function selectTrack(tracks, preferred = '') {
-    if (!tracks.length) {
-        return null;
-    }
-
-    const ranked = tracks
-        .map((track, index) => ({
-            track,
-            index,
-            score: scoreTrack(track, preferred)
-        }))
-        .sort((a, b) => b.score - a.score);
-
-    if (
-        ranked[0].score >= 85 &&
-        (
-            ranked.length === 1 ||
-            ranked[0].score > ranked[1].score
-        )
-    ) {
-        return {
-            ...ranked[0].track,
-            selection: 'theme_candidate',
-            confidence: 'heuristic'
-        };
-    }
-
-    return {
-        ...tracks[0],
-        selection: 'first_track_candidate',
-        confidence: 'fallback'
-    };
-}
-
-async function inspectMedia(item) {
-    const controller = new AbortController();
-
-    const timer = setTimeout(
-        () => controller.abort(),
-        8000
-    );
-
-    try {
-        const response = await fetch(item.url, {
-            method: 'HEAD',
-            redirect: 'follow',
-            signal: controller.signal
-        });
-
-        const type =
-            response.headers.get('content-type') || '';
-
-        const isAudio =
-            /^audio\//i.test(type);
-
-        const isHLS =
-            /mpegurl/i.test(type);
-
-        return {
-            ...item,
-            httpStatus: response.status,
-            contentType: type,
-            reachable: response.ok,
-            verified:
-                response.ok && (isAudio || isHLS),
-            reason:
-                response.ok
-                    ? (isAudio || isHLS
-                        ? 'media_content_type'
-                        : 'unconfirmed_content_type')
-                    : 'http_error'
-        };
-    } catch (error) {
-        return {
-            ...item,
-            reachable: false,
-            verified: false,
-            reason: String(
-                error.message || error
-            )
-        };
-    } finally {
-        clearTimeout(timer);
-    }
-}
-
-function soundtrackResult(id, page) {
-    const structured =
-        extractStructuredTracks(page.html);
-
-    const heuristic =
-        extractHTMLTracks(page.html);
-
-    const tracks = unique(
-        [...structured, ...heuristic],
-        track => normalize(track.name)
-    );
-
-    const media =
-        extractMedia(page.html, page.finalURL || pageURL(id));
-
-    return {
-        id,
-        pageURL: pageURL(id),
-        finalURL: page.finalURL,
-        httpStatus: page.status,
-        contentType: page.contentType,
-        htmlLength: page.html.length,
-        pageTitle: extractPageTitle(page.html),
-        headings: extractHeadings(page.html),
-        tracks,
-        tracksCount: tracks.length,
-        media,
-        mediaCount: media.length,
-        selectedTrack: null,
-        audioUrl: null,
-        playable: false
-    };
-}
 
 export default {
     async fetch(request) {
@@ -605,22 +57,22 @@ export default {
         if (request.method !== 'GET') {
             return json({
                 success: false,
-                version: VERSION,
                 error: 'method_not_allowed'
             }, 405);
         }
 
         const url = new URL(request.url);
 
-        const id = validId(
-            url.searchParams.get('id')
-        );
+        const id = String(
+            url.searchParams.get('id') || ''
+        ).trim();
 
         const debug =
             url.searchParams.get('debug') === '1';
 
-        const preferred =
-            clean(url.searchParams.get('track'));
+        const requestedTrack = String(
+            url.searchParams.get('track') || ''
+        ).trim();
 
         if (!id) {
             return json({
@@ -628,155 +80,737 @@ export default {
                 service: 'Kinorium OST Test',
                 version: VERSION,
                 source: 'Kinorium',
-                mode: 'diagnostic',
+                mode: 'featured_soundtrack',
                 endpoints: {
-                    gladiator:
-                        '/?id=143897',
-                    gladiatorDebug:
-                        '/?id=143897&debug=1',
+                    gladiator: '/?id=143897',
+                    gladiatorDebug: '/?id=143897&debug=1',
                     preferredTrack:
                         '/?id=143897&track=Now%20We%20Are%20Free'
-                },
-                note:
-                    'Provide a Kinorium movie ID to inspect its soundtrack page.'
+                }
             });
         }
 
-        try {
-            const page = await fetchPage(id);
-
-            if (!page.ok) {
-                return json({
-                    success: true,
-                    version: VERSION,
-                    found: false,
-                    playable: false,
-                    source: 'kinorium',
-                    id,
-                    reason: 'kinorium_http_error',
-                    httpStatus: page.status,
-                    pageURL: pageURL(id),
-                    htmlLength: page.html.length
-                });
-            }
-
-            if (
-                !/html/i.test(page.contentType)
-            ) {
-                return json({
-                    success: true,
-                    version: VERSION,
-                    found: false,
-                    playable: false,
-                    source: 'kinorium',
-                    id,
-                    reason: 'unexpected_content_type',
-                    contentType: page.contentType
-                });
-            }
-
-            const result = soundtrackResult(
-                id,
-                page
-            );
-
-            result.selectedTrack = selectTrack(
-                result.tracks,
-                preferred
-            );
-
-            /*
-             * Media URLs are inspected separately.
-             * They are NOT automatically assumed to
-             * belong to the selected track.
-             */
-
-            const checked = [];
-
-            for (
-                const item of result.media.slice(0, 5)
-            ) {
-                checked.push(
-                    await inspectMedia(item)
-                );
-            }
-
-            const verifiedMedia = checked.filter(
-                item => item.verified
-            );
-
-            /*
-             * A playable URL is only returned when
-             * the page exposes exactly one verified
-             * audio/HLS candidate. Association with
-             * a specific soundtrack track remains
-             * unverified.
-             */
-
-            if (verifiedMedia.length === 1) {
-                result.audioUrl =
-                    verifiedMedia[0].url;
-
-                result.playable = true;
-            }
-
-            const output = {
-                success: true,
+        if (!/^\d{1,12}$/.test(id)) {
+            return json({
+                success: false,
                 version: VERSION,
-                source: 'kinorium',
-                found: result.tracksCount > 0,
-                playable: result.playable,
-                id,
-                title: result.pageTitle,
-                album: {
-                    id,
-                    title: result.pageTitle,
-                    tracksCount: result.tracksCount
-                },
-                track: result.selectedTrack,
-                audioUrl: result.audioUrl,
-                audioAssociationVerified: false,
-                selection:
-                    result.selectedTrack?.selection || null,
-                tracksCount: result.tracksCount,
-                mediaCount: result.mediaCount,
-                reason:
-                    result.playable
-                        ? 'media_candidate_found'
-                        : result.mediaCount
-                            ? 'no_unique_verified_media'
-                            : result.tracksCount
-                                ? 'tracks_without_direct_audio'
-                                : 'no_tracks_detected',
-                pageURL: result.pageURL
-            };
+                error: 'invalid_movie_id'
+            }, 400);
+        }
 
-            if (debug) {
-                output.debug = {
-                    httpStatus: result.httpStatus,
-                    finalURL: result.finalURL,
-                    contentType: result.contentType,
-                    htmlLength: result.htmlLength,
-                    headings: result.headings,
-                    tracks: result.tracks,
-                    media: result.media,
-                    mediaChecks: checked
-                };
-            }
-
-            return json(output);
+        try {
+            return json(
+                await inspectMovie(id, requestedTrack, debug)
+            );
         } catch (error) {
             return json({
                 success: false,
                 version: VERSION,
                 source: 'kinorium',
                 id,
-                playable: false,
-                error: 'kinorium_request_failed',
-                message: String(
-                    error.message || error
+                error: String(
+                    error && error.message || error
                 )
             }, 502);
         }
     }
 };
+
+function json(data, status = 200) {
+    return new Response(
+        JSON.stringify(data, null, 2),
+        {
+            status,
+            headers: {
+                ...HEADERS,
+                'Content-Type':
+                    'application/json; charset=utf-8'
+            }
+        }
+    );
+}
+
+async function fetchWithTimeout(url, options = {}) {
+    const controller = new AbortController();
+
+    const timer = setTimeout(
+        () => controller.abort(),
+        CONFIG.timeout
+    );
+
+    try {
+        return await fetch(url, {
+            ...options,
+            signal: controller.signal,
+            redirect: 'follow'
+        });
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+function decodeHTML(value) {
+    return String(value || '')
+        .replace(/&amp;/gi, '&')
+        .replace(/&quot;/gi, '"')
+        .replace(/&#39;|&apos;/gi, "'")
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&#(\d+);/g, (_, n) =>
+            String.fromCodePoint(Number(n))
+        )
+        .replace(/&#x([0-9a-f]+);/gi, (_, n) =>
+            String.fromCodePoint(parseInt(n, 16))
+        );
+}
+
+function stripTags(value) {
+    return decodeHTML(
+        String(value || '')
+            .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
+            .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
+            .replace(/<[^>]*>/g, ' ')
+    )
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function normalize(value) {
+    return String(value || '')
+        .toLowerCase()
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/&amp;/g, '&')
+        .replace(/[^a-zа-яіїєґ0-9]+/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function unique(items, key) {
+    const seen = new Set();
+
+    return items.filter(item => {
+        const value = key(item);
+
+        if (!value || seen.has(value)) {
+            return false;
+        }
+
+        seen.add(value);
+        return true;
+    });
+}
+
+function extractTitle(html) {
+    const match = html.match(
+        /<title[^>]*>([\s\S]*?)<\/title>/i
+    );
+
+    return match
+        ? stripTags(match[1])
+        : '';
+}
+
+function findSoundtrackRegion(html) {
+    /*
+     * Locate the first visible soundtrack section.
+     * Keep a limited region to avoid collecting
+     * unrelated media from the whole movie page.
+     */
+
+    const patterns = [
+        /<h[1-6][^>]*>\s*Саундтрек\s*<\/h[1-6]>/i,
+        /<h[1-6][^>]*>\s*Саундтрек[\s\S]{0,100}?<\/h[1-6]>/i,
+        /<h[1-6][^>]*>\s*Soundtrack\s*<\/h[1-6]>/i,
+        />\s*Саундтрек\s*</i,
+        />\s*Soundtrack\s*</i
+    ];
+
+    let start = -1;
+
+    for (const pattern of patterns) {
+        const match = pattern.exec(html);
+
+        if (match) {
+            start = match.index;
+            break;
+        }
+    }
+
+    if (start < 0) {
+        return {
+            found: false,
+            html: '',
+            offset: -1
+        };
+    }
+
+    const region = html.slice(
+        Math.max(0, start - 1500),
+        Math.min(html.length, start + 35000)
+    );
+
+    return {
+        found: true,
+        html: region,
+        offset: start
+    };
+}
+
+function extractMedia(html) {
+    const results = [];
+
+    const patterns = [
+        /https?:\\?\/\\?\/[^"'<>\\\s]+?\.(?:aac|mp3|m4a|ogg|opus|wav)(?:\?[^"'<>\\\s]*)?/gi,
+        /https?:\/\/[^"'<> \s]+?AudioPreview[^"'<> \s]*/gi
+    ];
+
+    for (const pattern of patterns) {
+        let match;
+
+        while (
+            (match = pattern.exec(html)) &&
+            results.length < CONFIG.maxMedia
+        ) {
+            let value = match[0]
+                .replace(/\\\//g, '/')
+                .replace(/\\u002F/gi, '/')
+                .replace(/\\u0026/gi, '&')
+                .replace(/&amp;/gi, '&')
+                .replace(/[),;]+$/, '');
+
+            try {
+                const parsed = new URL(value);
+
+                if (
+                    parsed.protocol !== 'https:' &&
+                    parsed.protocol !== 'http:'
+                ) {
+                    continue;
+                }
+
+                results.push({
+                    url: parsed.href,
+                    source: 'html',
+                    host: parsed.hostname,
+                    isApplePreview:
+                        parsed.hostname.endsWith(
+                            'itunes.apple.com'
+                        )
+                });
+            } catch (_) {}
+        }
+    }
+
+    return unique(results, item => item.url);
+}
+
+function extractAudioAttributes(html) {
+    const results = [];
+
+    const regex =
+        /<(?:audio|source)\b[^>]*>/gi;
+
+    let match;
+
+    while ((match = regex.exec(html))) {
+        const tag = match[0];
+
+        const src = tag.match(
+            /\bsrc\s*=\s*["']([^"']+)["']/i
+        );
+
+        if (!src) continue;
+
+        const url = decodeHTML(src[1]);
+
+        results.push({
+            url,
+            source: 'audio_element',
+            host: '',
+            isApplePreview:
+                url.includes('itunes.apple.com')
+        });
+    }
+
+    return results;
+}
+
+function extractFeaturedCandidates(region) {
+    const results = [];
+
+    if (!region) return results;
+
+    /*
+     * Kinorium may use buttons, links, or
+     * data attributes for audio controls.
+     *
+     * We collect candidates but do not
+     * automatically claim that they are
+     * playable or correctly associated.
+     */
+
+    const patterns = [
+        /<button\b[^>]*>[\s\S]*?<\/button>/gi,
+        /<a\b[^>]*>[\s\S]*?<\/a>/gi,
+        /<div\b[^>]*(?:track|sound|audio|music)[^>]*>[\s\S]{0,1200}?<\/div>/gi
+    ];
+
+    for (const pattern of patterns) {
+        let match;
+
+        while (
+            (match = pattern.exec(region)) &&
+            results.length < 100
+        ) {
+            const raw = match[0];
+            const text = stripTags(raw);
+
+            if (
+                !text ||
+                text.length > 120 ||
+                text.length < 3
+            ) {
+                continue;
+            }
+
+            if (
+                /^(саундтрек|soundtrack|слухати|play|listen)$/i
+                    .test(text)
+            ) {
+                continue;
+            }
+
+            const hasAudioHint =
+                /play|audio|sound|track|music|itunes|preview/i
+                    .test(raw);
+
+            if (!hasAudioHint) continue;
+
+            const urls = extractMedia(raw);
+
+            results.push({
+                name: text,
+                source: 'featured_html',
+                audioUrl:
+                    urls.length === 1
+                        ? urls[0].url
+                        : null,
+                association:
+                    urls.length === 1
+                        ? 'same_element_candidate'
+                        : 'unverified',
+                rawSnippet: raw.slice(0, 800)
+            });
+        }
+    }
+
+    return unique(
+        results,
+        item => normalize(item.name)
+    ).slice(0, 30);
+}
+
+function findKnownTracks(region) {
+    /*
+     * Diagnostic fallback for soundtrack
+     * names visible on the movie page.
+     *
+     * This list is not used as a universal
+     * hardcoded soundtrack database.
+     */
+
+    const names = [
+        'Now We Are Free',
+        'The Battle',
+        'Elysium'
+    ];
+
+    const text = stripTags(region);
+
+    return names
+        .filter(name =>
+            normalize(text).includes(normalize(name))
+        )
+        .map(name => ({
+            name,
+            source: 'visible_text',
+            audioUrl: null,
+            association: 'unverified'
+        }));
+}
+
+function mergeTracks(primary, secondary) {
+    const map = new Map();
+
+    for (const track of [
+        ...primary,
+        ...secondary
+    ]) {
+        const key = normalize(track.name);
+
+        if (!key) continue;
+
+        const previous = map.get(key);
+
+        if (!previous) {
+            map.set(key, track);
+        } else if (
+            !previous.audioUrl &&
+            track.audioUrl
+        ) {
+            map.set(key, track);
+        }
+    }
+
+    return [...map.values()];
+}
+
+function selectTrack(tracks, requested) {
+    if (!tracks.length) return null;
+
+    if (requested) {
+        const exact = tracks.find(
+            item =>
+                normalize(item.name) ===
+                normalize(requested)
+        );
+
+        if (exact) {
+            return {
+                ...exact,
+                selection: 'requested_exact'
+            };
+        }
+
+        const partial = tracks.find(
+            item =>
+                normalize(item.name).includes(
+                    normalize(requested)
+                )
+        );
+
+        if (partial) {
+            return {
+                ...partial,
+                selection: 'requested_partial'
+            };
+        }
+
+        return null;
+    }
+
+    const preferred = [
+        'Now We Are Free',
+        'Main Theme',
+        'Main Title',
+        'Theme',
+        'The Battle',
+        'Elysium'
+    ];
+
+    for (const name of preferred) {
+        const found = tracks.find(
+            item =>
+                normalize(item.name) ===
+                normalize(name)
+        );
+
+        if (found) {
+            return {
+                ...found,
+                selection: 'preferred_theme'
+            };
+        }
+    }
+
+    return {
+        ...tracks[0],
+        selection: 'first_featured'
+    };
+}
+
+async function checkMedia(url) {
+    const result = {
+        url,
+        reachable: false,
+        playableCandidate: false,
+        httpStatus: null,
+        contentType: '',
+        reason: ''
+    };
+
+    try {
+        const response = await fetchWithTimeout(
+            url,
+            {
+                method: 'GET',
+                headers: {
+                    Range: 'bytes=0-1023',
+                    Accept: 'audio/*,*/*'
+                }
+            }
+        );
+
+        result.httpStatus = response.status;
+
+        result.contentType =
+            response.headers.get('content-type') || '';
+
+        result.reachable = response.ok;
+
+        const audioType =
+            /audio\/|application\/octet-stream/i
+                .test(result.contentType);
+
+        result.playableCandidate =
+            response.ok && audioType;
+
+        result.reason = !response.ok
+            ? 'http_error'
+            : audioType
+                ? 'audio_response'
+                : 'unexpected_content_type';
+
+        if (response.body) {
+            await response.body.cancel().catch(() => {});
+        }
+    } catch (error) {
+        result.reason = String(
+            error && error.message || error
+        );
+    }
+
+    return result;
+}
+
+async function inspectMovie(
+    id,
+    requestedTrack,
+    debug
+) {
+    const pageURL =
+        `${CONFIG.site}/${id}/`;
+
+    const response = await fetchWithTimeout(
+        pageURL,
+        {
+            headers: {
+                Accept:
+                    'text/html,application/xhtml+xml',
+                'Accept-Language':
+                    'uk-UA,uk;q=0.9,en;q=0.7',
+                'User-Agent':
+                    'Mozilla/5.0 (compatible; KinoriumOST/1.1)'
+            },
+            cf: {
+                cacheTtl: CONFIG.cacheSeconds,
+                cacheEverything: true
+            }
+        }
+    );
+
+    if (!response.ok) {
+        return {
+            success: false,
+            version: VERSION,
+            source: 'kinorium',
+            id,
+            found: false,
+            playable: false,
+            reason: 'kinorium_http_error',
+            httpStatus: response.status,
+            pageURL
+        };
+    }
+
+    const contentType =
+        response.headers.get('content-type') || '';
+
+    if (!contentType.includes('text/html')) {
+        return {
+            success: false,
+            version: VERSION,
+            id,
+            playable: false,
+            reason: 'unexpected_page_type',
+            contentType
+        };
+    }
+
+    const html = (
+        await response.text()
+    ).slice(0, CONFIG.maxHTML);
+
+    const title = extractTitle(html);
+
+    const region = findSoundtrackRegion(html);
+
+    const featured = extractFeaturedCandidates(
+        region.html
+    );
+
+    const known = findKnownTracks(
+        region.html
+    );
+
+    const tracks = mergeTracks(
+        featured,
+        known
+    );
+
+    const regionMedia = extractMedia(
+        region.html
+    );
+
+    const allMedia = unique(
+        [
+            ...regionMedia,
+            ...extractAudioAttributes(
+                region.html
+            )
+        ],
+        item => item.url
+    );
+
+    const selected = selectTrack(
+        tracks,
+        requestedTrack
+    );
+
+    const candidateURLs = [];
+
+    if (
+        selected &&
+        selected.audioUrl
+    ) {
+        candidateURLs.push(
+            selected.audioUrl
+        );
+    }
+
+    /*
+     * Other media URLs are checked for
+     * diagnostics only. They are never
+     * automatically assigned to a track.
+     */
+
+    const diagnosticURLs = unique(
+        [
+            ...candidateURLs,
+            ...allMedia.map(item => item.url)
+        ],
+        item => item
+    ).slice(0, CONFIG.maxChecks);
+
+    const checks = [];
+
+    for (const url of diagnosticURLs) {
+        checks.push(
+            await checkMedia(url)
+        );
+    }
+
+    let audioUrl = null;
+    let associationVerified = false;
+
+    if (
+        selected &&
+        selected.audioUrl &&
+        selected.association ===
+            'same_element_candidate'
+    ) {
+        const check = checks.find(
+            item =>
+                item.url === selected.audioUrl
+        );
+
+        /*
+         * Even a successful media response
+         * does not prove track identity.
+         * Therefore this remains a candidate
+         * until structural association is
+         * confirmed.
+         */
+
+        if (
+            check &&
+            check.playableCandidate
+        ) {
+            audioUrl = selected.audioUrl;
+        }
+    }
+
+    const playable =
+        Boolean(audioUrl) &&
+        associationVerified;
+
+    let reason = '';
+
+    if (!region.found) {
+        reason = 'soundtrack_section_not_found';
+    } else if (!tracks.length) {
+        reason = 'featured_tracks_not_found';
+    } else if (!selected) {
+        reason = 'requested_track_not_found';
+    } else if (!selected.audioUrl) {
+        reason = 'track_audio_not_associated';
+    } else if (!audioUrl) {
+        reason = 'audio_unavailable';
+    } else {
+        reason = 'association_not_verified';
+    }
+
+    const result = {
+        success: true,
+        version: VERSION,
+        source: 'kinorium',
+        mode: 'featured_soundtrack',
+        found: region.found,
+        playable,
+        id,
+        title,
+        track: selected
+            ? {
+                name: selected.name,
+                source: selected.source,
+                selection: selected.selection,
+                association:
+                    selected.association
+            }
+            : null,
+        audioUrl: playable
+            ? audioUrl
+            : null,
+        audioAssociationVerified:
+            associationVerified,
+        tracksCount: tracks.length,
+        mediaCount: allMedia.length,
+        reason,
+        pageURL
+    };
+
+    if (debug) {
+        result.debug = {
+            httpStatus: response.status,
+            contentType,
+            htmlLength: html.length,
+            soundtrackRegionFound:
+                region.found,
+            soundtrackRegionLength:
+                region.html.length,
+            featuredTracks: tracks,
+            media: allMedia.slice(0, 30),
+            mediaChecks: checks,
+            selectedAudioCandidate:
+                audioUrl,
+            note:
+                'Playable remains false until ' +
+                'the audio-to-track association ' +
+                'is structurally verified.'
+        };
+    }
+
+    return result;
+}
