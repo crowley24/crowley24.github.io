@@ -1,6 +1,6 @@
 /*
  * ORIGINAL SOUNDTRACK
- * KINORIUM WORKER 1.6.3
+ * KINORIUM WORKER 1.6.4
  *
  * Cloudflare Workers + KV
  * Binding: KINORIUM_CACHE
@@ -8,6 +8,7 @@
  * Features:
  * - Custom OST catalog priority
  * - YouTube soundtrack catalog
+ * - Muzofond direct MP3 / track-page resolution
  * - OSTMusic album/track resolution
  * - Kinorium fallback
  * - Automatic movie and TV series search
@@ -39,7 +40,7 @@
 
 'use strict';
 
-const VERSION = '1.6.3';
+const VERSION = '1.6.4';
 
 const CUSTOM_CATALOG = {
     url: 'https://crowley24.github.io/OST/ost_custom.json',
@@ -88,6 +89,7 @@ const JSON_HEADERS = {
  *
  * Supported sources:
  * - youtube
+ * - muzofond
  * - ostmusic
  */
 
@@ -282,6 +284,58 @@ async function findCustomSoundtrack(title, year) {
             };
         }
 
+        if (source === 'muzofond') {
+            const pageURL = validateMuzofondPageURL(
+                entry.pageUrl ||
+                entry.trackUrl ||
+                entry.url ||
+                entry.audioUrl ||
+                entry.audio_url ||
+                ''
+            );
+
+            const directURL = validateMuzofondAudioURL(
+                entry.audioUrl ||
+                entry.audio_url ||
+                entry.url ||
+                entry.directUrl ||
+                entry.direct_url ||
+                ''
+            );
+
+            if (!pageURL && !directURL) {
+                return {
+                    matched: true,
+                    valid: false,
+                    source: 'muzofond',
+                    reason: 'invalid_muzofond_url',
+                    entry
+                };
+            }
+
+            return {
+                matched: true,
+                valid: true,
+                source: 'muzofond',
+                title: entry.title || title,
+                year: Number(entry.year || year || 0),
+                pageURL,
+                audioUrl: directURL || null,
+                track: {
+                    id: String(entry.trackId || entry.track_id || ''),
+                    name: String(
+                        entry.track ||
+                        entry.trackName ||
+                        entry.title ||
+                        'Original soundtrack'
+                    ),
+                    artist: String(entry.artist || ''),
+                    duration: Number(entry.duration || 0)
+                },
+                verified: Boolean(entry.verified)
+            };
+        }
+
         if (source === 'ostmusic') {
             return {
                 matched: true,
@@ -319,6 +373,169 @@ async function findCustomSoundtrack(title, year) {
             catalogError: String(
                 error && error.message || error
             )
+        };
+    }
+}
+
+/* =========================================================
+ * MUZOFOND AUDIO RESOLVER
+ * ========================================================= */
+
+function validateMuzofondPageURL(value) {
+    if (!value) return '';
+
+    try {
+        const url = new URL(String(value).trim());
+
+        if (
+            url.protocol !== 'https:' ||
+            !(
+                url.hostname === 'muzofond.fm' ||
+                url.hostname === 'www.muzofond.fm'
+            ) ||
+            !/^\/track\/\d+\/?$/.test(url.pathname)
+        ) {
+            return '';
+        }
+
+        return url.href;
+    } catch (_) {
+        return '';
+    }
+}
+
+function validateMuzofondAudioURL(value) {
+    if (!value) return '';
+
+    try {
+        const url = new URL(String(value).trim());
+
+        if (
+            url.protocol !== 'https:' ||
+            !/^dl[a-z0-9-]*\.muzofond\.fm$/i.test(url.hostname) ||
+            !url.pathname ||
+            url.pathname === '/'
+        ) {
+            return '';
+        }
+
+        return url.href;
+    } catch (_) {
+        return '';
+    }
+}
+
+function extractMuzofondAudioURL(html) {
+    const source = String(html || '')
+        .replace(/\\\//g, '/')
+        .replace(/&amp;/gi, '&')
+        .replace(/&#x3D;|&#61;/gi, '=');
+
+    const patterns = [
+        /https?:\/\/dl[a-z0-9-]*\.muzofond\.fm\/[a-z0-9_/%+=.-]+/gi,
+        /(?:src|href|data-src|data-url|file|audioUrl|audio_url)\s*[=:]\s*["']([^"']*dl[a-z0-9-]*\.muzofond\.fm\/[^"']+)["']/gi
+    ];
+
+    for (const pattern of patterns) {
+        let match;
+
+        while ((match = pattern.exec(source))) {
+            const candidate = String(
+                match[1] || match[0] || ''
+            )
+                .replace(/\\\//g, '/')
+                .replace(/[\"'<>\)\]\},;]+$/g, '');
+
+            const valid = validateMuzofondAudioURL(candidate);
+            if (valid) return valid;
+        }
+    }
+
+    return '';
+}
+
+async function resolveMuzofondAudio(custom) {
+    if (!custom || custom.source !== 'muzofond') {
+        return null;
+    }
+
+    const directURL = validateMuzofondAudioURL(custom.audioUrl);
+
+    if (directURL) {
+        return {
+            found: true,
+            source: 'muzofond',
+            title: custom.title,
+            year: custom.year,
+            audioUrl: directURL,
+            track: {
+                ...custom.track,
+                playable: true
+            },
+            method: 'direct_audio_url'
+        };
+    }
+
+    const pageURL = validateMuzofondPageURL(custom.pageURL);
+    if (!pageURL) return null;
+
+    try {
+        const response = await fetchTimed(pageURL, {
+            headers: {
+                Accept: 'text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'uk-UA,uk;q=0.9,en;q=0.7',
+                Referer: 'https://muzofond.fm/',
+                Origin: 'https://muzofond.fm',
+                'User-Agent': 'Mozilla/5.0 (compatible; OriginalSoundtrack/1.0)'
+            },
+            cf: {
+                cacheEverything: true,
+                cacheTtl: 60
+            }
+        });
+
+        if (!response.ok) {
+            return {
+                found: false,
+                source: 'muzofond',
+                reason: 'muzofond_page_http_' + response.status,
+                pageURL
+            };
+        }
+
+        const html = (await response.text()).slice(0, 2000000);
+        const audioUrl = extractMuzofondAudioURL(html);
+
+        if (!audioUrl) {
+            return {
+                found: false,
+                source: 'muzofond',
+                reason: 'muzofond_audio_url_not_found',
+                pageURL,
+                htmlLength: html.length
+            };
+        }
+
+        return {
+            found: true,
+            source: 'muzofond',
+            title: custom.title,
+            year: custom.year,
+            audioUrl,
+            track: {
+                ...custom.track,
+                playable: true
+            },
+            method: 'track_page_extraction',
+            pageURL
+        };
+    } catch (error) {
+        return {
+            found: false,
+            source: 'muzofond',
+            reason: 'muzofond_resolve_failed',
+            message: String(error && error.message || error),
+            pageURL
         };
     }
 }
@@ -366,8 +583,7 @@ function extractOstSongs(data) {
     if (Array.isArray(data.tracks)) return data.tracks;
     if (Array.isArray(data.items)) return data.items;
     if (Array.isArray(data.data)) return data.data;
-
-    return [];
+        return [];
 }
 
 async function getCustomOstTracks(albumId) {
@@ -593,7 +809,7 @@ export default {
                 customCatalog: {
                     url: CUSTOM_CATALOG.url,
                     priority: 1,
-                    sources: ['youtube', 'ostmusic']
+                    sources: ['youtube', 'muzofond', 'ostmusic']
                 },
                 endpoints: {
                     automatic: '?title=Titanic&year=1997',
@@ -723,6 +939,50 @@ export default {
                                 fallback: false
                             }
                         });
+                    }
+
+                    /*
+                     * Muzofond:
+                     * Resolve the page URL to a direct MP3 URL,
+                     * or use an MP3 URL already in the catalog.
+                     *
+                     * If resolution fails, continue to Kinorium.
+                     */
+
+                    if (custom.source === 'muzofond') {
+                        const resolvedMuzofond =
+                            await resolveMuzofondAudio(custom);
+
+                        if (
+                            resolvedMuzofond &&
+                            resolvedMuzofond.found &&
+                            resolvedMuzofond.audioUrl
+                        ) {
+                            return json({
+                                success: true,
+                                version: VERSION,
+                                mode: 'custom_catalog',
+                                found: true,
+                                playable: true,
+                                source: 'muzofond',
+                                customCatalog: true,
+                                title: resolvedMuzofond.title || title,
+                                year: Number(
+                                    resolvedMuzofond.year || year || 0
+                                ),
+                                audioUrl: resolvedMuzofond.audioUrl,
+                                track: resolvedMuzofond.track,
+                                audioAssociationVerified: Boolean(custom.verified),
+                                reason: 'custom_muzofond_match',
+                                resolver: resolvedMuzofond.method,
+                                pageURL: resolvedMuzofond.pageURL || custom.pageURL || null,
+                                search: {
+                                    method: 'custom_catalog',
+                                    matched: true,
+                                    fallback: false
+                                }
+                            });
+                        }
                     }
 
                     /*
@@ -1067,7 +1327,7 @@ function siteHeaders() {
         Accept: 'text/html,application/xhtml+xml',
         'Accept-Language': 'uk-UA,uk;q=0.9,en;q=0.7',
         'User-Agent':
-            'Mozilla/5.0 (compatible; KinoriumOST/1.6.3)'
+            'Mozilla/5.0 (compatible; KinoriumOST/1.6.4)'
     };
 }
 
