@@ -5,8 +5,8 @@
     {"title":"Titanic","year":1997,"aliases":["Титанік","Титаник"],"albumId":"377","trackId":"8974","track":"Rose","artist":"James Horner","verified":true},
     
     {"title":"First Blood","year":1982,"aliases":["Рембо: Перша кров","Rambo: First Blood"],"source":"muzofond","audioUrl":"https://dl3s5.muzofond.fm/aHR0cDovL2YubXAzcG9pc2submV0L21wMy8wMDMvODIxLzkxMC8zODIxOTEwLm1wMw==","track":"It's a Long Road","artist":"Dan Hill","verified":true},
-    {"title":"Rambo: First Blood Part II","year":1985,"aliases":["Рембо: Перша кров 2","Рембо 2","Rambo II","Rambo: First Blood Part 2"],"source":"muzofond","audioUrl":"https://dl3s5.muzofond.fm/aHR0cDovL2YubXAzcG9pc2submV0L21wMy8wMDAvODUxLzY1OS84NTE2NTkubXAz","track":"Home Coming","artist":"Jerry Goldsmith","verified":true},
-    {"title":"Rambo","year":2008,"aliases":["Рембо 4","Рембо IV","Rambo 4","Rambo IV","John Rambo"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=eCPksXRxu_k","track":"Rambo IV Main Theme","artist":"Brian Tyler","verified":true},
+    {"title":"Rambo: First Blood Part II","year":1985,"aliases":["Рембо: Перша кров 2","Рембо 2","Rambo II","Rambo: First Blood Part 2"],"source":"muzofond","audioUrl":"https://dl3s5.muzofond.fm/aHR0cDovL2YubXAzcG9pc2submV0L21wMy8wMDUvNDU4LzM4MC81NDU4MzgwLm1wMw==","track":"It's a Long Road","artist":"Hans Zimmer feat Msmd","verified":true},
+    {"title":"Rambo","year":2008,"aliases":["Рембо 4","Рембо IV","Rambo 4","Rambo IV","John Rambo"],"source":"muzofond","audioUrl":"https://dl3s5.muzofond.fm/aHR0cDovL2YubXAzcG9pc2submV0L21wMy8wMDAvODUxLzY1OS84NTE2NTkubXAz","track":"Home Coming","artist":"Jerry Goldsmith","verified":true},
     {"title":"Rambo: Last Blood","year":2019,"aliases":["Рембо 5","Рембо 5: Остання кров","Рембо: Остання кров","Rambo 5","Rambo V","Rambo: Last Blood (2019)"],"albumId":"910","trackId":"21704","track":"Sunset","artist":"Brian Tyler","verified":true},
    
     {"title":"Scream","year":1996,"aliases":["Крик","Scream 1","Крик 1"],"source":"youtube","audioUrl":"https://m.youtube.com/watch?v=CNtJuLASyrQ&list=OLAK5uy_lYSQNsvTlb_V4ezDX4PWg8Q2HuGeizocY&index=4","track":"Scream Theme","verified":false},
