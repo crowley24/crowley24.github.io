@@ -330,6 +330,188 @@ async function findCustomSoundtrack(title, year) {
         };
     }
 }
+/* =========================================================
+ * CUSTOM OSTMusic RESOLVER
+ * KINORIUM WORKER 1.6.2
+ * ========================================================= */
+
+const OSTMUSIC_BASE = 'https://www.ostmusic.org';
+
+function validateOstMusicURL(value) {
+    try {
+        const url = new URL(String(value || ''));
+
+        if (
+            url.protocol !== 'https:' ||
+            url.hostname !== 'www.ostmusic.org'
+        ) {
+            return '';
+        }
+
+        return url.href;
+    } catch (error) {
+        return '';
+    }
+}
+
+function normalizeOstTrackName(value) {
+    return String(value || '')
+        .toLowerCase()
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/&/g, ' and ')
+        .replace(/[^a-z0-9а-яіїєґ]+/gi, ' ')
+        .trim()
+        .replace(/\s+/g, ' ');
+}
+
+function extractOstSongs(data) {
+    if (Array.isArray(data)) return data;
+
+    if (!data || typeof data !== 'object') return [];
+
+    if (Array.isArray(data.songs)) return data.songs;
+    if (Array.isArray(data.tracks)) return data.tracks;
+    if (Array.isArray(data.items)) return data.items;
+    if (Array.isArray(data.data)) return data.data;
+
+    return [];
+}
+
+async function getCustomOstTracks(albumId) {
+    const id = String(albumId || '').trim();
+
+    // OSTMusic album ID must be numeric.
+    if (!/^\d+$/.test(id)) {
+        throw new Error('invalid_ostmusic_album_id');
+    }
+
+    const url =
+        OSTMUSIC_BASE +
+        '/index.php?option=com_muscol&task=get_album_songs&id=' +
+        encodeURIComponent(id);
+
+    const response = await fetchTimed(url, {
+        headers: {
+            'Accept': 'application/json, text/plain, */*'
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error('ostmusic_tracks_http_' + response.status);
+    }
+
+    const data = await response.json();
+
+    return extractOstSongs(data);
+}
+
+function mapCustomOstTrack(song) {
+    if (!song || typeof song !== 'object') return null;
+
+    const id = String(song.id || '').trim();
+    const albumId = String(song.album_id || song.albumId || '').trim();
+    const file = validateOstMusicURL(song.file || song.url || '');
+    const duration = Number(song.length || song.duration || 0);
+    const playableFlag =
+        song.isplayable === 1 ||
+        song.isplayable === '1' ||
+        song.playable === true;
+
+    if (!id || !file || !playableFlag) return null;
+    if (duration > 0 && duration < 35) return null;
+
+    return {
+        id: id,
+        albumId: albumId,
+        name: String(song.name || song.title || '').trim(),
+        artist: String(song.artist_name || song.artist || '').trim(),
+        duration: duration,
+        position: String(song.position || ''),
+        audioUrl: file,
+        playable: true
+    };
+}
+
+function findCustomOstTrack(songs, entry) {
+    const mapped = (Array.isArray(songs) ? songs : [])
+        .map(mapCustomOstTrack)
+        .filter(Boolean);
+
+    const wantedTrackId = String(entry.trackId || '').trim();
+
+    if (wantedTrackId) {
+        const exact = mapped.find(function (track) {
+            return track.id === wantedTrackId;
+        });
+
+        return exact || null;
+    }
+
+    const wantedName = normalizeOstTrackName(
+        entry.track || entry.trackName || ''
+    );
+
+    if (!wantedName) return null;
+
+    const matches = mapped.filter(function (track) {
+        return normalizeOstTrackName(track.name) === wantedName;
+    });
+
+    // Avoid choosing an arbitrary track if names are duplicated.
+    return matches.length === 1 ? matches[0] : null;
+}
+
+async function resolveCustomOstMusic(entry) {
+    if (!entry || !entry.albumId) return null;
+
+    try {
+        const songs = await getCustomOstTracks(entry.albumId);
+        const track = findCustomOstTrack(songs, entry);
+
+        if (!track) {
+            return {
+                found: false,
+                reason: 'custom_ostmusic_track_not_found'
+            };
+        }
+
+        return {
+            found: true,
+            source: 'ostmusic',
+            customCatalog: true,
+            title: String(entry.title || ''),
+            year: Number(entry.year || 0),
+            audioUrl: track.audioUrl,
+            playable: true,
+            track: {
+                id: track.id,
+                name: track.name || String(entry.track || entry.trackName || ''),
+                artist: track.artist || String(entry.artist || ''),
+                duration: track.duration,
+                audioUrl: track.audioUrl,
+                playable: true
+            },
+            album: {
+                id: String(entry.albumId),
+                title: String(entry.albumTitle || entry.title || ''),
+                year: Number(entry.year || 0),
+                artist: String(entry.artist || ''),
+                tracksCount: songs.length
+            },
+            confidence: entry.verified === true
+                ? 'verified'
+                : 'catalog_candidate'
+        };
+    } catch (error) {
+        return {
+            found: false,
+            reason: 'custom_ostmusic_resolve_failed',
+            error: String(error && error.message || error)
+        };
+    }
+}
+
 /*
  * ENTRY POINT
  */
