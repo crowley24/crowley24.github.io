@@ -1,7 +1,6 @@
-
 /*
  * ORIGINAL SOUNDTRACK
- * KINORIUM WORKER 1.5.4
+ * KINORIUM WORKER 1.5.5
  *
  * Cloudflare Workers
  *
@@ -24,29 +23,30 @@
  * Disable audio verification:
  * ?id=108983&verify=0
  *
- * 1.5.4 FIXES:
+ * 1.5.5 FIXES:
  * - No hardcoded TV-series IDs.
- * - Strict title matching using title-like
- *   page metadata instead of arbitrary HTML.
- * - Search more candidates before resolving.
- * - Exact-year matches are preferred.
- * - One-year tolerance is a secondary pass.
- * - Detect film / TV-series page type.
- * - Cache candidate pages during each request.
- * - Preserve direct ID and audio verification.
+ * - Search candidates are not discarded solely
+ *   because search-result years are missing.
+ * - Candidate pages are verified independently.
+ * - Exact page title matching.
+ * - Automatic movie / series detection.
+ * - Series year is the first year in its date range.
+ * - No tolerance-based acceptance of a wrong year.
+ * - Candidate pages are cached per request.
+ * - Direct ID and iTunes audio verification retained.
  */
 
 'use strict';
 
-const VERSION = '1.5.4';
+const VERSION = '1.5.5';
 
 const CONFIG = {
     site: 'https://ua.kinorium.com',
     timeout: 15000,
     maxHTML: 2000000,
     maxTracks: 30,
-    maxCandidates: 50,
-    maxVerifyCandidates: 20,
+    maxCandidates: 80,
+    maxVerifyCandidates: 35,
     maxTotalVerifyCandidates: 35,
     cacheSeconds: 300,
     yearTolerance: 1,
@@ -56,9 +56,8 @@ const CONFIG = {
 /*
  * Legacy known-movie fallbacks.
  *
+ * These are used only after automatic search.
  * No TV-series IDs are hardcoded.
- * Regular automatic search is always attempted
- * before these movie fallbacks are used.
  */
 
 const KNOWN_MOVIES = [
@@ -327,7 +326,7 @@ function siteHeaders() {
         'Accept-Language':
             'uk-UA,uk;q=0.9,en;q=0.7',
         'User-Agent':
-            'Mozilla/5.0 (compatible; KinoriumOST/1.4)'
+            'Mozilla/5.0 (compatible; KinoriumOST/1.5)'
     };
 }
 
@@ -344,9 +343,7 @@ async function fetchHTML(url) {
     );
 
     const contentType =
-        response.headers.get(
-            'content-type'
-        ) || '';
+        response.headers.get('content-type') || '';
 
     const html =
         response.ok &&
@@ -419,7 +416,7 @@ function normalize(value) {
 }
 
 function extractTitle(html) {
-    const match = html.match(
+    const match = String(html || '').match(
         /<title[^>]*>([\s\S]*?)<\/title>/i
     );
 
@@ -441,7 +438,7 @@ function extractAttribute(tag, name) {
         'i'
     );
 
-    const match = tag.match(regex);
+    const match = String(tag || '').match(regex);
 
     return match
         ? decodeEntities(match[2])
@@ -462,7 +459,7 @@ function findKnownMovie(title, year) {
 }
 
 /*
- * TITLE VARIANTS
+ * SEARCH TITLE VARIANTS
  */
 
 function buildSearchTitleVariants(title) {
@@ -488,7 +485,7 @@ function buildSearchTitleVariants(title) {
             !clean ||
             !key ||
             seen.has(key) ||
-            clean.length < 3
+            clean.length < 2
         ) {
             return;
         }
@@ -538,6 +535,12 @@ function buildSearchTitleVariants(title) {
 
 /*
  * SEARCH RESULT PARSING
+ *
+ * Important difference from 1.5.4:
+ * candidate extraction does not require a year
+ * to appear in the surrounding search snippet.
+ *
+ * The actual Kinorium page is authoritative.
  */
 
 function extractSearchCandidates(html) {
@@ -568,8 +571,8 @@ function extractSearchCandidates(html) {
         }
 
         if (
-            candidateURL.hostname !==
-            'ua.kinorium.com'
+            candidateURL.hostname !== 'ua.kinorium.com' &&
+            candidateURL.hostname !== 'www.kinorium.com'
         ) {
             continue;
         }
@@ -586,7 +589,7 @@ function extractSearchCandidates(html) {
         if (seen.has(id)) continue;
 
         const before = html.slice(
-            Math.max(0, match.index - 800),
+            Math.max(0, match.index - 1000),
             match.index
         );
 
@@ -594,12 +597,25 @@ function extractSearchCandidates(html) {
             regex.lastIndex,
             Math.min(
                 html.length,
-                regex.lastIndex + 300
+                regex.lastIndex + 500
             )
         );
 
         const context = stripTags(
             before + ' ' + tag + ' ' + after
+        );
+
+        const titleAttribute =
+            extractAttribute(tag, 'title');
+
+        const ariaLabel =
+            extractAttribute(tag, 'aria-label');
+
+        const label = stripTags(
+            tag.replace(
+                /^<a\b[^>]*>/i,
+                ''
+            ).replace(/<\/a>$/i, '')
         );
 
         const yearMatches = [
@@ -616,189 +632,124 @@ function extractSearchCandidates(html) {
             )
         ];
 
-        const titleAttribute =
-            extractAttribute(tag, 'title');
-
-        const label = stripTags(
-            tag.replace(
-                /^<a\b[^>]*>/i,
-                ''
-            ).replace(/<\/a>$/i, '')
-        );
-
         seen.add(id);
 
         results.push({
             id,
             label,
             titleAttribute,
-            context: context.slice(-650),
-            years
+            ariaLabel,
+            context: context.slice(-900),
+            years,
+            order: results.length
         });
     }
 
     return results;
 }
 
-function extractSearchResultTitle(context, year) {
-    if (!context || !year) {
-        return '';
-    }
+/*
+ * CANDIDATE SCORING
+ *
+ * This score determines which pages should be
+ * checked first. It does not establish a match.
+ * Final acceptance requires page title + year.
+ */
 
-    const regex = new RegExp(
-        '\\b' +
-        String(year) +
-        '\\s*,\\s*([^<\\n]{1,140})',
-        'i'
-    );
-
-    const match = context.match(regex);
-
-    if (!match) {
-        return '';
-    }
-
-    let value = match[1]
-        .replace(
-            /\s+(?:В улюблених|Буду дивитися).*$/i,
-            ''
-        )
-        .trim();
-
-    value = value.split(/\s{2,}/)[0];
-
-    return value.slice(0, 140);
-}
-
-function getCandidateTitleMatch(
-    candidate,
-    title,
-    year
-) {
+function scoreCandidate(candidate, title, year) {
     const requested = normalize(title);
 
-    if (!requested || !year) {
-        return {
-            matched: false,
-            title: '',
-            year: 0,
-            score: 0,
-            yearDifference: 999
-        };
+    if (!requested) return 0;
+
+    const label = normalize(candidate.label || '');
+    const titleAttribute = normalize(
+        candidate.titleAttribute || ''
+    );
+    const ariaLabel = normalize(
+        candidate.ariaLabel || ''
+    );
+    const context = normalize(
+        candidate.context || ''
+    );
+
+    let score = 0;
+
+    if (label === requested) {
+        score = Math.max(score, 150);
+    }
+
+    if (titleAttribute === requested) {
+        score = Math.max(score, 145);
+    }
+
+    if (ariaLabel === requested) {
+        score = Math.max(score, 145);
+    }
+
+    if (
+        label.startsWith(requested + ' ') ||
+        titleAttribute.startsWith(requested + ' ') ||
+        ariaLabel.startsWith(requested + ' ')
+    ) {
+        score = Math.max(score, 115);
+    }
+
+    if (
+        label.includes(requested) &&
+        requested.length >= 4
+    ) {
+        score = Math.max(score, 85);
+    }
+
+    if (
+        titleAttribute.includes(requested) &&
+        requested.length >= 4
+    ) {
+        score = Math.max(score, 85);
     }
 
     /*
-     * Only use years actually found near this
-     * search result. Never invent years that
-     * could belong to a neighboring result.
+     * Search results are already returned for the
+     * requested query. A title mention in context
+     * can raise priority, but cannot prove a match.
      */
 
-    const candidateYears = [
-        ...new Set(candidate.years || [])
-    ].filter(item =>
-        item >= 1880 &&
-        item <= 2200 &&
-        Math.abs(item - year) <=
-            CONFIG.yearTolerance
+    if (
+        context.includes(requested) &&
+        requested.length >= 3
+    ) {
+        score = Math.max(score, 35);
+    }
+
+    const candidateYears = candidate.years || [];
+
+    if (year && candidateYears.includes(year)) {
+        score += 8;
+    }
+
+    if (year && candidateYears.includes(year - 1)) {
+        score += 2;
+    }
+
+    if (year && candidateYears.includes(year + 1)) {
+        score += 2;
+    }
+
+    /*
+     * Keep search order useful when the page
+     * provides little title information.
+     */
+
+    score += Math.max(
+        0,
+        10 - Math.floor((candidate.order || 0) / 5)
     );
-
-    let best = {
-        matched: false,
-        title: '',
-        year: 0,
-        score: 0,
-        yearDifference: 999
-    };
-
-    for (const candidateYear of candidateYears) {
-        const originalTitle =
-            extractSearchResultTitle(
-                candidate.context || '',
-                candidateYear
-            );
-
-        const normalizedOriginal =
-            normalize(originalTitle);
-
-        const normalizedLabel =
-            normalize(candidate.label || '');
-
-        const normalizedTitleAttribute =
-            normalize(candidate.titleAttribute || '');
-
-        let score = 0;
-
-        if (
-            normalizedOriginal === requested
-        ) {
-            score = 120;
-        } else if (
-            normalizedLabel === requested ||
-            normalizedTitleAttribute === requested
-        ) {
-            score = 110;
-        } else if (
-            normalizedOriginal.startsWith(
-                requested + ' '
-            )
-        ) {
-            score = 75;
-        } else if (
-            normalizedOriginal.includes(requested) &&
-            requested.length >= 4
-        ) {
-            score = 45;
-        }
-
-        const yearDifference =
-            Math.abs(candidateYear - year);
-
-        if (yearDifference === 1 && score > 0) {
-            score -= 15;
-        }
-
-        if (score > best.score) {
-            best = {
-                matched: score > 0,
-                title: originalTitle,
-                year: candidateYear,
-                score,
-                yearDifference
-            };
-        }
-    }
-
-    return best;
-}
-
-function scoreCandidate(candidate, title, year) {
-    if (!year) return 0;
-
-    const titleMatch = getCandidateTitleMatch(
-        candidate,
-        title,
-        year
-    );
-
-    if (!titleMatch.matched) {
-        return 0;
-    }
-
-    let score = titleMatch.score;
-
-    if (titleMatch.yearDifference === 0) {
-        score += 20;
-    }
 
     return score;
 }
 
 /*
- * PAGE TITLE AND TYPE EXTRACTION
- *
- * Do not use an arbitrary occurrence of the
- * requested word anywhere in the HTML as proof
- * that the candidate is the requested work.
+ * PAGE TITLE / NAME EXTRACTION
  */
 
 function cleanPageName(value) {
@@ -807,8 +758,14 @@ function cleanPageName(value) {
     result = result
         .replace(/\s*[|–—-]\s*Kinorium.*$/i, '')
         .replace(/\s*[|–—-]\s*Кинориум.*$/i, '')
-        .replace(/\s*\((?:фільм|фильм|серіал|сериал|film|series|tv series)[^)]*\)\s*$/i, '')
-        .replace(/\s*\((?:18|19|20)\d{2}[^)]*\)\s*$/i, '')
+        .replace(
+            /\s*\((?:фільм|фильм|серіал|сериал|film|series|tv series)[^)]*\)\s*$/i,
+            ''
+        )
+        .replace(
+            /\s*\((?:18|19|20)\d{2}[^)]*\)\s*$/i,
+            ''
+        )
         .replace(/\s+/g, ' ')
         .trim();
 
@@ -838,13 +795,10 @@ function extractPageNames(html) {
 
     add(extractTitle(html));
 
-    /*
-     * Read title-like metadata only.
-     * Description text is deliberately excluded
-     * because it often mentions unrelated titles.
-     */
-
-    const head = String(html || '').slice(0, 250000);
+    const head = String(html || '').slice(
+        0,
+        250000
+    );
 
     const metaRegex = /<meta\b[^>]*>/gi;
     let metaMatch;
@@ -877,11 +831,6 @@ function extractPageNames(html) {
         }
     }
 
-    /*
-     * Main visible heading is a useful source
-     * when Kinorium uses a localized page title.
-     */
-
     const h1Regex =
         /<h1\b[^>]*>([\s\S]*?)<\/h1>/gi;
 
@@ -890,11 +839,6 @@ function extractPageNames(html) {
     while ((h1Match = h1Regex.exec(head))) {
         add(h1Match[1]);
     }
-
-    /*
-     * Look for common original/alternate-title
-     * properties in structured page data.
-     */
 
     const propertyPatterns = [
         /["'](?:originalTitle|original_title|title_original|originalName|original_name|nameOriginal|name_original|alternateName|alternativeHeadline)["']\s*:\s*["']([^"'<>]{2,180})["']/gi,
@@ -911,11 +855,6 @@ function extractPageNames(html) {
             add(propertyMatch[1]);
         }
     }
-
-    /*
-     * Extract title values from tags explicitly
-     * marked as original or alternate titles.
-     */
 
     const markedTagRegex =
         /<(?:span|div|p|a|strong|b)\b[^>]*(?:original[_-]?title|alternate[_-]?title|original[_-]?name|alternate[_-]?name)[^>]*>([\s\S]*?)<\/(?:span|div|p|a|strong|b)>/gi;
@@ -936,9 +875,8 @@ function extractMoviePageYear(html) {
     const title = extractTitle(html);
 
     /*
-     * On series pages the first year in the
-     * page title is normally the starting year,
-     * e.g. 1994–2004.
+     * On a series page, the first year in a
+     * title like "(1994–2004)" is the start year.
      */
 
     const titleMatch = title.match(
@@ -950,9 +888,9 @@ function extractMoviePageYear(html) {
     }
 
     const patterns = [
+        /"startDate"\s*:\s*"(\d{4})/i,
         /"datePublished"\s*:\s*"(\d{4})/i,
         /"releaseDate"\s*:\s*"(\d{4})/i,
-        /"startDate"\s*:\s*"(\d{4})/i,
         /<meta[^>]+property=["']video:release_date["'][^>]+content=["'](\d{4})/i
     ];
 
@@ -975,11 +913,6 @@ function extractPageType(html) {
         250000
     );
 
-    const combined = (
-        title + ' ' +
-        head
-    ).toLowerCase();
-
     if (
         /\(\s*(?:серіал|сериал|tv series|television series|series)\b/i.test(title) ||
         /itemprop=["'](?:tvSeries|series)["']/i.test(head) ||
@@ -1000,7 +933,7 @@ function extractPageType(html) {
 
     if (
         /\b(?:season|сезон|episode|епізод|серия)\b/i.test(
-            combined.slice(0, 5000)
+            title
         )
     ) {
         return 'series';
@@ -1023,61 +956,75 @@ function titleNameMatches(pageName, requestedTitle) {
     }
 
     /*
-     * Exact normalized title match only.
-     * For example:
-     * "Friends" matches "Friends".
-     * "Natsu no niwa: The Friends" does not
-     * match "Friends" merely because it contains
-     * the word Friends.
+     * Exact match only.
+     * "Friends" must not match a different title
+     * just because that title contains the word.
      */
 
     return page === requested;
 }
 
-function moviePageMatches(
+/*
+ * PAGE VERIFICATION
+ *
+ * The requested year must match the actual
+ * page year. No ±1 fallback is used here.
+ *
+ * This prevents a 1993 movie from being accepted
+ * as a 1994 series.
+ */
+
+function verifyCandidatePage(
     html,
     title,
-    year,
-    tolerance = 0
+    year
 ) {
-    if (!html || !year) {
-        return false;
-    }
-
+    const pageTitle = extractTitle(html);
     const pageYear = extractMoviePageYear(html);
-
-    if (
-        !pageYear ||
-        Math.abs(pageYear - year) > tolerance
-    ) {
-        return false;
-    }
-
+    const pageType = extractPageType(html);
     const pageNames = extractPageNames(html);
 
-    return pageNames.some(name =>
-        titleNameMatches(name, title)
-    );
+    const matchedTitle =
+        pageNames.find(name =>
+            titleNameMatches(name, title)
+        ) || '';
+
+    const yearDifference =
+        pageYear
+            ? Math.abs(pageYear - year)
+            : null;
+
+    const yearMatches =
+        Boolean(
+            pageYear &&
+            pageYear === year
+        );
+
+    const titleMatches =
+        Boolean(matchedTitle);
+
+    return {
+        matched:
+            yearMatches &&
+            titleMatches,
+        pageTitle,
+        pageYear,
+        pageType,
+        pageNames,
+        matchedTitle,
+        yearDifference,
+        yearMatches,
+        titleMatches
+    };
 }
 
 /*
- * SEARCH AND VERIFY
- *
- * Pass 1:
- *   Verify exact-year candidates.
- *
- * Pass 2:
- *   If no exact-year match is found, allow
- *   the configured year tolerance.
- *
- * Candidate pages are cached within the
- * current request. No series IDs are hardcoded.
+ * AUTOMATIC SEARCH AND RESOLUTION
  */
 
 async function resolveMovie(title, year) {
     const diagnostics = [];
     const allCandidates = [];
-
     const searchVariants =
         buildSearchTitleVariants(title);
 
@@ -1091,12 +1038,21 @@ async function resolveMovie(title, year) {
         };
     }
 
+    if (!searchVariants.length) {
+        return {
+            id: null,
+            method: 'empty_search_title',
+            candidates: [],
+            diagnostics,
+            searchVariants
+        };
+    }
+
     const candidateMap = new Map();
 
     /*
-     * Search all title variants before selecting
-     * a candidate. Keep the best search context
-     * for each distinct Kinorium ID.
+     * Search all title variants and keep candidates
+     * even if their snippets do not contain a year.
      */
 
     for (const searchTitle of searchVariants) {
@@ -1111,6 +1067,7 @@ async function resolveMovie(title, year) {
             page = await fetchHTML(searchURL);
         } catch (error) {
             diagnostics.push({
+                stage: 'search',
                 searchTitle,
                 url: searchURL,
                 error: String(
@@ -1124,6 +1081,7 @@ async function resolveMovie(title, year) {
 
         if (!page.ok) {
             diagnostics.push({
+                stage: 'search',
                 searchTitle,
                 url: searchURL,
                 status: page.status,
@@ -1138,6 +1096,7 @@ async function resolveMovie(title, year) {
             extractSearchCandidates(page.html);
 
         diagnostics.push({
+            stage: 'search',
             searchTitle,
             url: searchURL,
             status: page.status,
@@ -1146,78 +1105,73 @@ async function resolveMovie(title, year) {
             candidatesFound: candidates.length
         });
 
-        const ranked = candidates
-            .map(candidate => {
-                const titleMatch =
-                    getCandidateTitleMatch(
-                        candidate,
-                        searchTitle,
-                        year
-                    );
-
-                return {
-                    ...candidate,
-                    searchTitle,
-                    score: scoreCandidate(
-                        candidate,
-                        searchTitle,
-                        year
-                    ),
-                    titleMatch
-                };
-            })
-            .filter(candidate =>
-                candidate.score > 0
-            )
-            .sort((a, b) =>
-                b.score - a.score
+        for (const candidate of candidates) {
+            const score = scoreCandidate(
+                candidate,
+                searchTitle,
+                year
             );
 
-        for (const candidate of ranked) {
+            const entry = {
+                ...candidate,
+                searchTitle,
+                score
+            };
+
             allCandidates.push({
-                id: candidate.id,
-                label: candidate.label,
-                titleAttribute: candidate.titleAttribute,
-                context: candidate.context,
-                years: candidate.years,
-                score: candidate.score,
-                searchTitle: candidate.searchTitle,
-                titleMatch: candidate.titleMatch
+                id: entry.id,
+                label: entry.label,
+                titleAttribute: entry.titleAttribute,
+                context: entry.context,
+                years: entry.years,
+                score: entry.score,
+                searchTitle: entry.searchTitle
             });
 
             const existing =
-                candidateMap.get(candidate.id);
+                candidateMap.get(entry.id);
 
             if (
                 !existing ||
-                candidate.score > existing.score
+                entry.score > existing.score
             ) {
-                candidateMap.set(candidate.id, {
-                    id: candidate.id,
-                    score: candidate.score,
-                    searchTitle: candidate.searchTitle,
-                    titleMatch: candidate.titleMatch,
-                    label: candidate.label,
-                    context: candidate.context,
-                    years: candidate.years
+                candidateMap.set(entry.id, {
+                    id: entry.id,
+                    score: entry.score,
+                    searchTitle: entry.searchTitle,
+                    label: entry.label,
+                    titleAttribute: entry.titleAttribute,
+                    ariaLabel: entry.ariaLabel,
+                    context: entry.context,
+                    years: entry.years,
+                    order: entry.order
                 });
             }
         }
     }
 
     /*
-     * Verify more than the first few search
-     * results. A series can appear lower in
-     * the results than a similarly named film.
+     * Prefer exact title labels and useful search
+     * order, but verify each page before accepting.
      */
 
     const candidatePairs = [
         ...candidateMap.values()
     ]
-        .sort((a, b) =>
-            b.score - a.score
-        )
-        .slice(0, CONFIG.maxTotalVerifyCandidates);
+        .sort((a, b) => {
+            if (b.score !== a.score) {
+                return b.score - a.score;
+            }
+
+            return (a.order || 0) - (b.order || 0);
+        })
+        .slice(
+            0,
+            Math.min(
+                CONFIG.maxVerifyCandidates,
+                CONFIG.maxTotalVerifyCandidates
+            )
+        );
 
     const pageCache = new Map();
 
@@ -1238,137 +1192,88 @@ async function resolveMovie(title, year) {
     }
 
     /*
-     * Verify exact year first, then tolerance.
+     * Check candidates one by one.
+     * Search snippets never determine the final year.
      */
 
-    const tolerances = [0];
+    for (const candidate of candidatePairs) {
+        try {
+            const candidatePage =
+                await getCandidatePage(candidate.id);
 
-    if (CONFIG.yearTolerance > 0) {
-        tolerances.push(CONFIG.yearTolerance);
-    }
-
-    for (const tolerance of tolerances) {
-        for (const candidate of candidatePairs) {
-            try {
-                const moviePage =
-                    await getCandidatePage(
-                        candidate.id
-                    );
-
-                const pageTitle =
-                    extractTitle(moviePage.html);
-
-                const pageYear =
-                    extractMoviePageYear(
-                        moviePage.html
-                    );
-
-                const pageType =
-                    extractPageType(
-                        moviePage.html
-                    );
-
-                const yearDifference =
-                    pageYear
-                        ? Math.abs(pageYear - year)
-                        : null;
-
-                const yearMatches =
-                    moviePage.ok &&
-                    pageYear > 0 &&
-                    yearDifference <= tolerance;
-
-                /*
-                 * Match the actual requested title
-                 * against title-like metadata.
-                 * Do not accept a random occurrence
-                 * of the word in the whole HTML.
-                 */
-
-                let matchedTitle = '';
-
-                if (yearMatches) {
-                    const pageNames =
-                        extractPageNames(
-                            moviePage.html
-                        );
-
-                    matchedTitle =
-                        pageNames.find(name =>
-                            titleNameMatches(
-                                name,
-                                title
-                            )
-                        ) || '';
-                }
-
-                const titleMatches =
-                    Boolean(matchedTitle);
-
-                diagnostics.push({
-                    searchTitle: candidate.searchTitle,
-                    candidateId: candidate.id,
-                    candidateScore: candidate.score,
-                    candidateContextTitle:
-                        candidate.titleMatch
-                            ? candidate.titleMatch.title
-                            : '',
-                    candidateContextYear:
-                        candidate.titleMatch
-                            ? candidate.titleMatch.year
-                            : 0,
-                    candidateYear: pageYear,
-                    requestedYear: year,
-                    yearDifference,
-                    yearToleranceUsed: tolerance,
-                    moviePageStatus: moviePage.status,
-                    moviePageTitle: pageTitle,
-                    pageType,
-                    pageNames: moviePage.ok
-                        ? extractPageNames(
-                            moviePage.html
-                        ).slice(0, 12)
-                        : [],
-                    matchedTitle,
-                    pageMatches:
-                        Boolean(titleMatches)
-                });
-
-                if (
-                    moviePage.ok &&
-                    yearMatches &&
-                    titleMatches
-                ) {
-                    const method =
-                        tolerance === 0
-                            ? 'search_verified_exact_title'
-                            : 'search_verified_exact_title_year_tolerance';
-
-                    return {
-                        id: candidate.id,
-                        method,
-                        candidates: allCandidates,
-                        diagnostics,
-                        searchVariants
-                    };
-                }
-
-            } catch (error) {
-                diagnostics.push({
-                    searchTitle: candidate.searchTitle,
-                    candidateId: candidate.id,
-                    error: String(
-                        error && error.message ||
-                        error
+            const verified =
+                candidatePage.ok
+                    ? verifyCandidatePage(
+                        candidatePage.html,
+                        title,
+                        year
                     )
-                });
+                    : {
+                        matched: false,
+                        pageTitle: '',
+                        pageYear: 0,
+                        pageType: 'unknown',
+                        pageNames: [],
+                        matchedTitle: '',
+                        yearDifference: null,
+                        yearMatches: false,
+                        titleMatches: false
+                    };
+
+            diagnostics.push({
+                stage: 'candidate_verification',
+                searchTitle: candidate.searchTitle,
+                candidateId: candidate.id,
+                candidateScore: candidate.score,
+                candidateLabel: candidate.label,
+                candidateContext: candidate.context,
+                candidateYears: candidate.years,
+                requestedTitle: title,
+                requestedYear: year,
+                candidatePageStatus: candidatePage.status,
+                candidatePageTitle: verified.pageTitle,
+                pageType: verified.pageType,
+                pageNames: verified.pageNames.slice(0, 12),
+                matchedTitle: verified.matchedTitle,
+                candidateYear: verified.pageYear,
+                yearDifference: verified.yearDifference,
+                yearMatches: verified.yearMatches,
+                titleMatches: verified.titleMatches,
+                pageMatches: verified.matched
+            });
+
+            if (
+                candidatePage.ok &&
+                verified.matched
+            ) {
+                return {
+                    id: candidate.id,
+                    method:
+                        verified.pageType === 'series'
+                            ? 'search_verified_exact_title_year_series'
+                            : 'search_verified_exact_title_year',
+                    candidates: allCandidates,
+                    diagnostics,
+                    searchVariants
+                };
             }
+
+        } catch (error) {
+            diagnostics.push({
+                stage: 'candidate_verification',
+                searchTitle: candidate.searchTitle,
+                candidateId: candidate.id,
+                error: String(
+                    error && error.message ||
+                    error
+                )
+            });
         }
     }
 
     /*
-     * Known movie fallback retained for backward
-     * compatibility. No TV-series fallback IDs.
+     * Backward-compatible movie fallback.
+     * No series IDs or series-specific exceptions.
      */
 
     const knownMovie =
@@ -1376,6 +1281,7 @@ async function resolveMovie(title, year) {
 
     if (knownMovie) {
         diagnostics.push({
+            stage: 'fallback',
             fallback: 'known_movie',
             id: knownMovie.id,
             title: knownMovie.title,
@@ -1651,9 +1557,7 @@ async function getSoundtrack(options) {
     const pageURL =
         CONFIG.site + '/' + id + '/';
 
-    const page = await fetchHTML(
-        pageURL
-    );
+    const page = await fetchHTML(pageURL);
 
     if (!page.ok) {
         return {
@@ -1670,9 +1574,7 @@ async function getSoundtrack(options) {
         };
     }
 
-    const title = extractTitle(
-        page.html
-    );
+    const title = extractTitle(page.html);
 
     const tracks = extractFeaturedTracks(
         page.html
