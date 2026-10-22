@@ -92,7 +92,244 @@ const JSON_HEADERS = {
     'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'no-store'
 };
+/*
+ * CUSTOM SOUNDTRACK CATALOG
+ *
+ * Priority:
+ * 1. ost_custom.json
+ * 2. Existing Kinorium lookup
+ *
+ * Supported sources:
+ * - youtube
+ * - ostmusic
+ */
 
+async function fetchCustomCatalog() {
+    const response = await fetchTimed(
+        CUSTOM_CATALOG.url,
+        {
+            headers: {
+                Accept: 'application/json'
+            },
+            cf: {
+                cacheEverything: true,
+                cacheTtl: CUSTOM_CATALOG.cacheSeconds
+            }
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error(
+            'custom_catalog_http_' + response.status
+        );
+    }
+
+    const data = await response.json();
+
+    const entries = Array.isArray(data)
+        ? data
+        : Array.isArray(data.movies)
+            ? data.movies
+            : Array.isArray(data.entries)
+                ? data.entries
+                : [];
+
+    if (entries.length > CUSTOM_CATALOG.maxEntries) {
+        throw new Error('custom_catalog_too_many_entries');
+    }
+
+    return entries;
+}
+
+function normalizeCustomTitle(value) {
+    return normalize(
+        String(value || '')
+            .replace(/\(\s*\d{4}\s*\)/g, ' ')
+            .replace(/\b(?:film|movie|фільм|фильм)\b/gi, ' ')
+    );
+}
+
+function getYouTubeVideoURL(value) {
+    if (!value) return null;
+
+    try {
+        const url = new URL(String(value).trim());
+
+        if (url.protocol !== 'https:') return null;
+
+        const host = url.hostname.toLowerCase();
+        let videoId = '';
+
+        if (
+            host === 'youtu.be' ||
+            host === 'www.youtu.be'
+        ) {
+            videoId = url.pathname.split('/').filter(Boolean)[0] || '';
+        } else if (
+            host === 'youtube.com' ||
+            host === 'www.youtube.com' ||
+            host === 'm.youtube.com' ||
+            host === 'music.youtube.com'
+        ) {
+            if (url.pathname === '/watch') {
+                videoId = url.searchParams.get('v') || '';
+            } else {
+                const match = url.pathname.match(
+                    /^\/(?:embed|shorts|live)\/([a-zA-Z0-9_-]{11})/
+                );
+
+                videoId = match ? match[1] : '';
+            }
+        }
+
+        if (!/^[a-zA-Z0-9_-]{11}$/.test(videoId)) {
+            return null;
+        }
+
+        return 'https://www.youtube.com/watch?v=' + videoId;
+
+    } catch (_) {
+        return null;
+    }
+}
+
+function customEntryMatches(entry, title, year) {
+    if (!entry || typeof entry !== 'object') {
+        return false;
+    }
+
+    const requestedTitle = normalizeCustomTitle(title);
+
+    if (!requestedTitle) return false;
+
+    const entryYear = Number(entry.year || 0);
+
+    if (
+        year &&
+        entryYear &&
+        entryYear !== Number(year)
+    ) {
+        return false;
+    }
+
+    const names = [
+        entry.title,
+        entry.originalTitle,
+        entry.name,
+        ...(Array.isArray(entry.aliases) ? entry.aliases : [])
+    ]
+        .filter(value => typeof value === 'string')
+        .map(normalizeCustomTitle)
+        .filter(Boolean);
+
+    return names.includes(requestedTitle);
+}
+
+async function findCustomSoundtrack(title, year) {
+    if (!title) return null;
+
+    try {
+        const entries = await fetchCustomCatalog();
+
+        const entry = entries.find(item =>
+            customEntryMatches(item, title, year)
+        );
+
+        if (!entry) return null;
+
+        const source = String(
+            entry.source || 'ostmusic'
+        ).toLowerCase();
+
+        if (source === 'youtube') {
+            const youtubeURL = getYouTubeVideoURL(
+                entry.audioUrl ||
+                entry.youtubeUrl ||
+                entry.url
+            );
+
+            if (!youtubeURL) {
+                return {
+                    matched: true,
+                    valid: false,
+                    source: 'youtube',
+                    reason: 'invalid_custom_youtube_url',
+                    entry
+                };
+            }
+
+            return {
+                matched: true,
+                valid: true,
+                source: 'youtube',
+                title: entry.title || title,
+                year: Number(entry.year || year || 0),
+                audioUrl: youtubeURL,
+                track: {
+                    id: String(entry.trackId || entry.song_id || ''),
+                    name: String(
+                        entry.track ||
+                        entry.trackName ||
+                        entry.title ||
+                        'Original soundtrack'
+                    ),
+                    artist: String(entry.artist || ''),
+                    duration: Number(entry.duration || 0)
+                },
+                verified: Boolean(entry.verified)
+            };
+        }
+
+        if (source === 'ostmusic') {
+            /*
+             * OSTMusic albumId/trackId are identifiers,
+             * not direct audio URLs.
+             *
+             * The entry is returned for the OSTMusic resolver
+             * to convert those IDs into a direct audio URL.
+             */
+            return {
+                matched: true,
+                valid: true,
+                source: 'ostmusic',
+                title: entry.title || title,
+                year: Number(entry.year || year || 0),
+                albumId: String(entry.albumId || ''),
+                trackId: String(entry.trackId || ''),
+                track: {
+                    id: String(entry.trackId || ''),
+                    name: String(
+                        entry.track ||
+                        entry.trackName ||
+                        'Original soundtrack'
+                    ),
+                    artist: String(entry.artist || ''),
+                    duration: Number(entry.duration || 0)
+                },
+                verified: Boolean(entry.verified)
+            };
+        }
+
+        return {
+            matched: true,
+            valid: false,
+            source,
+            reason: 'unsupported_custom_source',
+            entry
+        };
+
+    } catch (error) {
+        /*
+         * A catalog/network error must not disable Kinorium.
+         */
+        return {
+            matched: false,
+            catalogError: String(
+                error && error.message || error
+            )
+        };
+    }
+}
 /*
  * ENTRY POINT
  */
