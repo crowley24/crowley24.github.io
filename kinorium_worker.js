@@ -1,6 +1,6 @@
 /*
  * ORIGINAL SOUNDTRACK
- * KINORIUM WORKER 1.6.2
+ * KINORIUM WORKER 1.6.3
  *
  * Cloudflare Workers + KV
  * Binding: KINORIUM_CACHE
@@ -21,6 +21,7 @@
  * - Cache HIT / MISS diagnostics
  * - HTML inspection mode
  * - Graceful fallback if KV is unavailable
+ * - No hardcoded movie mappings
  *
  * Custom catalog:
  * https://crowley24.github.io/OST/ost_custom.json
@@ -38,7 +39,7 @@
 
 'use strict';
 
-const VERSION = '1.6.2';
+const VERSION = '1.6.3';
 
 const CUSTOM_CATALOG = {
     url: 'https://crowley24.github.io/OST/ost_custom.json',
@@ -67,8 +68,6 @@ const CONFIG = {
         schema: 1
     }
 };
-
-
 
 const JSON_HEADERS = {
     'Access-Control-Allow-Origin': '*',
@@ -1068,7 +1067,7 @@ function siteHeaders() {
         Accept: 'text/html,application/xhtml+xml',
         'Accept-Language': 'uk-UA,uk;q=0.9,en;q=0.7',
         'User-Agent':
-            'Mozilla/5.0 (compatible; KinoriumOST/1.6.2)'
+            'Mozilla/5.0 (compatible; KinoriumOST/1.6.3)'
     };
 }
 
@@ -1183,19 +1182,6 @@ function extractAttribute(tag, name) {
     const match = String(tag || '').match(regex);
 
     return match ? decodeEntities(match[2]) : '';
-}
-
-function findKnownMovie(title, year) {
-    if (!year) return null;
-
-    const normalizedTitle = normalize(title);
-
-    return KNOWN_MOVIES.find(entry =>
-        entry.year === year &&
-        entry.aliases.some(alias =>
-            normalize(alias) === normalizedTitle
-        )
-    ) || null;
 }
 
 /*
@@ -1950,25 +1936,10 @@ async function resolveMovie(title, year) {
         }
     }
 
-    const knownMovie = findKnownMovie(title, year);
-
-    if (knownMovie) {
-        diagnostics.push({
-            stage: 'fallback',
-            fallback: 'known_movie',
-            id: knownMovie.id,
-            title: knownMovie.title,
-            year: knownMovie.year
-        });
-
-        return {
-            id: knownMovie.id,
-            method: 'known_movie_fallback',
-            candidates: allCandidates,
-            diagnostics,
-            searchVariants
-        };
-    }
+    /*
+     * No hardcoded movie fallback.
+     * If Kinorium cannot verify a match, return no result.
+     */
 
     return {
         id: null,
