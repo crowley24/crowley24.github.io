@@ -1,46 +1,37 @@
+
 /*
  * ORIGINAL SOUNDTRACK
- * KINORIUM WORKER 1.5.6
+ * KINORIUM WORKER 1.6.0
  *
- * Cloudflare Workers
+ * Cloudflare Workers + KV
  *
- * Automatic search:
+ * Binding: KINORIUM_CACHE
+ *
+ * Features:
+ * - Automatic movie and TV series search
+ * - Movie year tolerance +/- 1
+ * - Exact start year for TV series
+ * - Roman / Arabic movie sequel numbers
+ * - Shared KV resolution cache
+ * - Shared KV soundtrack cache
+ * - Short-lived negative soundtrack cache
+ * - Audio verification on every verified request
+ * - Cache HIT / MISS diagnostics
+ * - Graceful fallback if KV is unavailable
+ *
+ * Endpoints:
  * ?title=Titanic&year=1997
- *
- * TV series:
  * ?title=Friends&year=1994
- *
- * Direct Kinorium ID:
  * ?id=108983
- *
- * Diagnostics:
- * ?title=Friends&year=1994&debug=1
- *
- * Track selection:
+ * ?title=Titanic&year=1997&debug=1
  * ?id=108983&track=Rose
  * ?id=108983&song_id=205745739
- *
- * Disable audio verification:
  * ?id=108983&verify=0
- *
- * 1.5.6 FIXES:
- * - Movie year tolerance: +/- 1 year.
- * - TV series require exact start year.
- * - Movie sequel matching supports Roman / Arabic
- *   numerals, e.g. Rambo IV / Rambo 4.
- * - Series titles remain strict exact matches.
- * - No hardcoded TV-series IDs.
- * - Search candidates can have missing snippet years.
- * - Candidate pages are verified independently.
- * - Automatic movie / series detection.
- * - Series year is the first year in its date range.
- * - Candidate pages are cached per request.
- * - Direct ID and iTunes audio verification retained.
  */
 
 'use strict';
 
-const VERSION = '1.5.6';
+const VERSION = '1.6.0';
 
 const CONFIG = {
     site: 'https://ua.kinorium.com',
@@ -52,15 +43,16 @@ const CONFIG = {
     maxTotalVerifyCandidates: 35,
     cacheSeconds: 300,
     yearTolerance: 1,
-    maxSearchVariants: 5
-};
+    maxSearchVariants: 5,
 
-/*
- * Legacy known-movie fallbacks.
- *
- * These are used only after automatic search.
- * No TV-series IDs are hardcoded.
- */
+    kv: {
+        prefix: 'kinorium:v160:',
+        resolutionTTL: 7 * 86400,
+        soundtrackTTL: 12 * 3600,
+        emptySoundtrackTTL: 600,
+        schema: 1
+    }
+};
 
 const KNOWN_MOVIES = [
     {
@@ -95,8 +87,12 @@ const JSON_HEADERS = {
     'Cache-Control': 'no-store'
 };
 
+/*
+ * ENTRY POINT
+ */
+
 export default {
-    async fetch(request) {
+    async fetch(request, env, ctx) {
         if (request.method === 'OPTIONS') {
             return new Response(null, {
                 status: 204,
@@ -139,11 +135,13 @@ export default {
             params.get('song_id') || ''
         ).trim();
 
-        const debug =
-            params.get('debug') === '1';
+        const debug = params.get('debug') === '1';
+        const verify = params.get('verify') !== '0';
 
-        const verify =
-            params.get('verify') !== '0';
+        const cacheBypass =
+            params.get('refresh') === '1';
+
+        const cache = createCache(env);
 
         if (!id && !title) {
             return json({
@@ -151,6 +149,14 @@ export default {
                 service: 'Kinorium Original Soundtrack',
                 version: VERSION,
                 source: 'kinorium',
+                kv: {
+                    enabled: cache.enabled,
+                    binding: 'KINORIUM_CACHE',
+                    resolutionTTL:
+                        CONFIG.kv.resolutionTTL,
+                    soundtrackTTL:
+                        CONFIG.kv.soundtrackTTL
+                },
                 endpoints: {
                     automatic:
                         '?title=Titanic&year=1997',
@@ -159,19 +165,18 @@ export default {
                     direct:
                         '?id=108983',
                     debug:
-                        '?title=Friends&year=1994&debug=1',
+                        '?title=Titanic&year=1997&debug=1',
                     track:
                         '?id=108983&track=Rose',
                     verifyOff:
-                        '?id=108983&verify=0'
+                        '?id=108983&verify=0',
+                    refresh:
+                        '?title=Titanic&year=1997&refresh=1'
                 }
             });
         }
 
-        if (
-            id &&
-            !/^\d{1,12}$/.test(id)
-        ) {
+        if (id && !/^\d{1,12}$/.test(id)) {
             return json({
                 success: false,
                 version: VERSION,
@@ -202,6 +207,13 @@ export default {
             }, 400);
         }
 
+        const cacheInfo = {
+            enabled: cache.enabled,
+            resolution: id ? 'DIRECT' : 'MISS',
+            soundtrack: 'MISS',
+            errors: []
+        };
+
         try {
             let resolved;
 
@@ -214,10 +226,60 @@ export default {
                     searchVariants: []
                 };
             } else {
-                resolved = await resolveMovie(
-                    title,
-                    year
-                );
+                const resolutionKey =
+                    makeResolutionKey(title, year);
+
+                let cachedResolution = null;
+
+                if (!cacheBypass) {
+                    cachedResolution = await cache.get(
+                        resolutionKey,
+                        cacheInfo
+                    );
+                }
+
+                if (
+                    cachedResolution &&
+                    cachedResolution.id &&
+                    /^\d{1,12}$/.test(
+                        String(cachedResolution.id)
+                    )
+                ) {
+                    resolved = {
+                        id: String(cachedResolution.id),
+                        method:
+                            cachedResolution.method ||
+                            'kv_resolution',
+                        candidates: [],
+                        diagnostics: [],
+                        searchVariants:
+                            buildSearchTitleVariants(title)
+                    };
+
+                    cacheInfo.resolution = 'HIT';
+                } else {
+                    cacheInfo.resolution =
+                        cacheBypass ? 'BYPASS' : 'MISS';
+
+                    resolved = await resolveMovie(
+                        title,
+                        year
+                    );
+
+                    if (resolved.id) {
+                        await cache.put(
+                            resolutionKey,
+                            {
+                                id: resolved.id,
+                                method: resolved.method,
+                                title,
+                                year
+                            },
+                            CONFIG.kv.resolutionTTL,
+                            cacheInfo
+                        );
+                    }
+                }
             }
 
             if (!resolved.id) {
@@ -235,6 +297,7 @@ export default {
                     tracksCount: 0,
                     tracks: [],
                     reason: 'movie_not_resolved',
+                    cache: cacheInfo,
                     search: {
                         method: resolved.method,
                         variants: debug
@@ -255,8 +318,13 @@ export default {
                 track,
                 songId,
                 verify,
-                debug
+                debug,
+                cache,
+                cacheInfo,
+                cacheBypass
             });
+
+            result.cache = cacheInfo;
 
             result.search = {
                 requestedTitle: title || null,
@@ -284,6 +352,7 @@ export default {
                 found: false,
                 playable: false,
                 audioUrl: null,
+                cache: cacheInfo,
                 error: String(
                     error && error.message || error
                 )
@@ -291,6 +360,10 @@ export default {
         }
     }
 };
+
+/*
+ * JSON RESPONSE
+ */
 
 function json(data, status = 200) {
     return new Response(
@@ -301,6 +374,105 @@ function json(data, status = 200) {
         }
     );
 }
+
+/*
+ * CLOUDFLARE KV
+ */
+
+function createCache(env) {
+    const namespace =
+        env && env.KINORIUM_CACHE;
+
+    const enabled = Boolean(
+        namespace &&
+        typeof namespace.get === 'function' &&
+        typeof namespace.put === 'function'
+    );
+
+    return {
+        enabled,
+
+        async get(key, info) {
+            if (!enabled) return null;
+
+            try {
+                const value = await namespace.get(
+                    key,
+                    'json'
+                );
+
+                if (
+                    !value ||
+                    value.schema !== CONFIG.kv.schema ||
+                    !value.data
+                ) {
+                    return null;
+                }
+
+                return value.data;
+
+            } catch (error) {
+                info.errors.push({
+                    operation: 'get',
+                    message: String(
+                        error && error.message || error
+                    )
+                });
+
+                return null;
+            }
+        },
+
+        async put(key, data, ttl, info) {
+            if (!enabled) return false;
+
+            try {
+                await namespace.put(
+                    key,
+                    JSON.stringify({
+                        schema: CONFIG.kv.schema,
+                        savedAt:
+                            new Date().toISOString(),
+                        data
+                    }),
+                    {
+                        expirationTtl: ttl
+                    }
+                );
+
+                return true;
+
+            } catch (error) {
+                info.errors.push({
+                    operation: 'put',
+                    message: String(
+                        error && error.message || error
+                    )
+                });
+
+                return false;
+            }
+        }
+    };
+}
+
+function makeResolutionKey(title, year) {
+    return CONFIG.kv.prefix +
+        'resolve:' +
+        year +
+        ':' +
+        encodeURIComponent(normalize(title));
+}
+
+function makeSoundtrackKey(id) {
+    return CONFIG.kv.prefix +
+        'soundtrack:' +
+        String(id);
+}
+
+/*
+ * HTTP
+ */
 
 async function fetchTimed(url, options = {}) {
     const controller = new AbortController();
@@ -328,7 +500,7 @@ function siteHeaders() {
         'Accept-Language':
             'uk-UA,uk;q=0.9,en;q=0.7',
         'User-Agent':
-            'Mozilla/5.0 (compatible; KinoriumOST/1.5)'
+            'Mozilla/5.0 (compatible; KinoriumOST/1.6)'
     };
 }
 
@@ -366,6 +538,10 @@ async function fetchHTML(url) {
     };
 }
 
+/*
+ * HTML UTILITIES
+ */
+
 function decodeEntities(value) {
     return String(value || '')
         .replace(/&quot;/gi, '"')
@@ -399,8 +575,14 @@ function decodeEntities(value) {
 function stripTags(value) {
     return decodeEntities(
         String(value || '')
-            .replace(/<script\b[\s\S]*?<\/script>/gi, ' ')
-            .replace(/<style\b[\s\S]*?<\/style>/gi, ' ')
+            .replace(
+                /<script\b[\s\S]*?<\/script>/gi,
+                ' '
+            )
+            .replace(
+                /<style\b[\s\S]*?<\/style>/gi,
+                ' '
+            )
             .replace(/<[^>]*>/g, ' ')
     )
         .replace(/\s+/g, ' ')
@@ -461,7 +643,7 @@ function findKnownMovie(title, year) {
 }
 
 /*
- * SEARCH TITLE VARIANTS
+ * SEARCH VARIANTS
  */
 
 function buildSearchTitleVariants(title) {
@@ -536,7 +718,7 @@ function buildSearchTitleVariants(title) {
 }
 
 /*
- * SEARCH RESULT PARSING
+ * SEARCH CANDIDATES
  */
 
 function extractSearchCandidates(html) {
@@ -567,8 +749,10 @@ function extractSearchCandidates(html) {
         }
 
         if (
-            candidateURL.hostname !== 'ua.kinorium.com' &&
-            candidateURL.hostname !== 'www.kinorium.com'
+            candidateURL.hostname !==
+                'ua.kinorium.com' &&
+            candidateURL.hostname !==
+                'www.kinorium.com'
         ) {
             continue;
         }
@@ -723,22 +907,30 @@ function scoreCandidate(candidate, title, year) {
 
     score += Math.max(
         0,
-        10 - Math.floor((candidate.order || 0) / 5)
+        10 - Math.floor(
+            (candidate.order || 0) / 5
+        )
     );
 
     return score;
 }
 
 /*
- * PAGE TITLE / NAME EXTRACTION
+ * PAGE NAMES
  */
 
 function cleanPageName(value) {
     let result = stripTags(value);
 
     result = result
-        .replace(/\s*[|–—-]\s*Kinorium.*$/i, '')
-        .replace(/\s*[|–—-]\s*Кинориум.*$/i, '')
+        .replace(
+            /\s*[|–—-]\s*Kinorium.*$/i,
+            ''
+        )
+        .replace(
+            /\s*[|–—-]\s*Кинориум.*$/i,
+            ''
+        )
         .replace(
             /\s*\((?:фільм|фильм|серіал|сериал|film|series|tv series)[^)]*\)\s*$/i,
             ''
@@ -852,13 +1044,12 @@ function extractPageNames(html) {
     return names;
 }
 
+/*
+ * PAGE YEAR AND TYPE
+ */
+
 function extractMoviePageYear(html) {
     const title = extractTitle(html);
-
-    /*
-     * For a series title like "(1994–2004)",
-     * use the first year as the start year.
-     */
 
     const titleMatch = title.match(
         /\b(?:18|19|20)\d{2}\b/
@@ -894,11 +1085,6 @@ function extractPageType(html) {
         250000
     );
 
-    /*
-     * Detect series first to avoid classifying
-     * a TV series as a movie.
-     */
-
     if (
         /\(\s*(?:серіал|сериал|tv series|television series|series)\b/i.test(title) ||
         /itemprop=["'](?:tvSeries|series)["']/i.test(head) ||
@@ -930,14 +1116,7 @@ function extractPageType(html) {
 }
 
 /*
- * TITLE NORMALIZATION FOR MOVIE SEQUELS
- *
- * Allows equivalent sequel numbering:
- * Rambo IV -> Rambo 4
- * Rambo 4  -> Rambo IV
- *
- * Only used for movie pages.
- * Series still require an exact title match.
+ * MOVIE SEQUEL NORMALIZATION
  */
 
 function normalizeMovieTitle(value) {
@@ -948,16 +1127,16 @@ function normalizeMovieTitle(value) {
     if (!result) return '';
 
     const romanNumbers = {
-        'i': '1',
-        'ii': '2',
-        'iii': '3',
-        'iv': '4',
-        'v': '5',
-        'vi': '6',
-        'vii': '7',
-        'viii': '8',
-        'ix': '9',
-        'x': '10'
+        i: '1',
+        ii: '2',
+        iii: '3',
+        iv: '4',
+        v: '5',
+        vi: '6',
+        vii: '7',
+        viii: '8',
+        ix: '9',
+        x: '10'
     };
 
     const parts = result.split(' ');
@@ -998,44 +1177,20 @@ function titleNameMatches(
         return false;
     }
 
-    /*
-     * Exact title match is always accepted.
-     */
-
     if (page === requested) {
         return true;
     }
-
-    /*
-     * For movies only, support Roman / Arabic
-     * sequel number differences.
-     */
 
     if (pageType === 'movie') {
         return normalizeMovieTitle(pageName) ===
             normalizeMovieTitle(requestedTitle);
     }
 
-    /*
-     * Series and unknown page types remain strict.
-     * This avoids matching a different title merely
-     * because it contains the same word.
-     */
-
     return false;
 }
 
 /*
- * PAGE VERIFICATION
- *
- * Movies:
- * requested year +/- CONFIG.yearTolerance.
- *
- * Series:
- * exact start year only.
- *
- * Unknown page types:
- * exact year only.
+ * CANDIDATE PAGE VERIFICATION
  */
 
 function verifyCandidatePage(
@@ -1067,7 +1222,8 @@ function verifyCandidatePage(
     if (pageYear && year) {
         if (pageType === 'movie') {
             yearMatches =
-                yearDifference <= CONFIG.yearTolerance;
+                yearDifference <=
+                CONFIG.yearTolerance;
         } else {
             yearMatches =
                 pageYear === year;
@@ -1093,12 +1249,13 @@ function verifyCandidatePage(
 }
 
 /*
- * AUTOMATIC SEARCH AND RESOLUTION
+ * AUTOMATIC RESOLUTION
  */
 
 async function resolveMovie(title, year) {
     const diagnostics = [];
     const allCandidates = [];
+
     const searchVariants =
         buildSearchTitleVariants(title);
 
@@ -1124,11 +1281,6 @@ async function resolveMovie(title, year) {
 
     const candidateMap = new Map();
 
-    /*
-     * Search all title variants and keep candidates
-     * even if their snippets do not contain a year.
-     */
-
     for (const searchTitle of searchVariants) {
         const searchURL =
             CONFIG.site +
@@ -1145,8 +1297,7 @@ async function resolveMovie(title, year) {
                 searchTitle,
                 url: searchURL,
                 error: String(
-                    error && error.message ||
-                    error
+                    error && error.message || error
                 )
             });
 
@@ -1224,11 +1375,6 @@ async function resolveMovie(title, year) {
         }
     }
 
-    /*
-     * Prefer likely matches, but verify every page
-     * before accepting it.
-     */
-
     const candidatePairs = [
         ...candidateMap.values()
     ]
@@ -1237,7 +1383,8 @@ async function resolveMovie(title, year) {
                 return b.score - a.score;
             }
 
-            return (a.order || 0) - (b.order || 0);
+            return (a.order || 0) -
+                (b.order || 0);
         })
         .slice(
             0,
@@ -1264,11 +1411,6 @@ async function resolveMovie(title, year) {
 
         return pageCache.get(candidateId);
     }
-
-    /*
-     * Verify candidates one by one.
-     * Search snippets do not determine the final year.
-     */
 
     for (const candidate of candidatePairs) {
         try {
@@ -1304,16 +1446,25 @@ async function resolveMovie(title, year) {
                 candidateYears: candidate.years,
                 requestedTitle: title,
                 requestedYear: year,
-                candidatePageStatus: candidatePage.status,
-                candidatePageTitle: verified.pageTitle,
+                candidatePageStatus:
+                    candidatePage.status,
+                candidatePageTitle:
+                    verified.pageTitle,
                 pageType: verified.pageType,
-                pageNames: verified.pageNames.slice(0, 12),
-                matchedTitle: verified.matchedTitle,
-                candidateYear: verified.pageYear,
-                yearDifference: verified.yearDifference,
-                yearMatches: verified.yearMatches,
-                titleMatches: verified.titleMatches,
-                pageMatches: verified.matched
+                pageNames:
+                    verified.pageNames.slice(0, 12),
+                matchedTitle:
+                    verified.matchedTitle,
+                candidateYear:
+                    verified.pageYear,
+                yearDifference:
+                    verified.yearDifference,
+                yearMatches:
+                    verified.yearMatches,
+                titleMatches:
+                    verified.titleMatches,
+                pageMatches:
+                    verified.matched
             });
 
             if (
@@ -1331,7 +1482,9 @@ async function resolveMovie(title, year) {
                 ) {
                     method =
                         'search_verified_movie_title_year_tolerance';
-                } else if (verified.pageType === 'movie') {
+                } else if (
+                    verified.pageType === 'movie'
+                ) {
                     method =
                         'search_verified_exact_title_year_movie';
                 } else {
@@ -1354,17 +1507,11 @@ async function resolveMovie(title, year) {
                 searchTitle: candidate.searchTitle,
                 candidateId: candidate.id,
                 error: String(
-                    error && error.message ||
-                    error
+                    error && error.message || error
                 )
             });
         }
     }
-
-    /*
-     * Backward-compatible movie fallback.
-     * No series IDs or series-specific exceptions.
-     */
 
     const knownMovie =
         findKnownMovie(title, year);
@@ -1551,6 +1698,9 @@ function selectTrack(
 
 /*
  * AUDIO VERIFICATION
+ *
+ * Verification is intentionally not stored in KV.
+ * Cached audio URLs are checked again when requested.
  */
 
 async function checkAudio(url) {
@@ -1623,8 +1773,7 @@ async function checkAudio(url) {
 
     } catch (error) {
         result.reason = String(
-            error && error.message ||
-            error
+            error && error.message || error
         );
     }
 
@@ -1632,7 +1781,7 @@ async function checkAudio(url) {
 }
 
 /*
- * SOUNDTRACK ENDPOINT
+ * SOUNDTRACK ENDPOINT WITH KV
  */
 
 async function getSoundtrack(options) {
@@ -1641,40 +1790,131 @@ async function getSoundtrack(options) {
         track,
         songId,
         verify,
-        debug
+        debug,
+        cache,
+        cacheInfo,
+        cacheBypass
     } = options;
 
     const pageURL =
         CONFIG.site + '/' + id + '/';
 
-    const page = await fetchHTML(pageURL);
+    const soundtrackKey =
+        makeSoundtrackKey(id);
 
-    if (!page.ok) {
-        return {
-            success: false,
-            version: VERSION,
-            source: 'kinorium',
-            id,
-            found: false,
-            playable: false,
-            audioUrl: null,
-            reason: 'page_fetch_failed',
-            httpStatus: page.status,
-            pageURL
-        };
+    let soundtrackData = null;
+    let page = null;
+
+    /*
+     * STEP 1:
+     * Read shared soundtrack cache.
+     */
+
+    if (!cacheBypass) {
+        const cached = await cache.get(
+            soundtrackKey,
+            cacheInfo
+        );
+
+        if (
+            cached &&
+            Array.isArray(cached.tracks) &&
+            typeof cached.title === 'string'
+        ) {
+            const validTracks = cached.tracks.every(
+                item =>
+                    item &&
+                    typeof item.id === 'string' &&
+                    typeof item.name === 'string' &&
+                    (
+                        item.audioUrl === null ||
+                        (
+                            typeof item.audioUrl ===
+                                'string' &&
+                            validateAudioURL(
+                                item.audioUrl
+                            ) === item.audioUrl
+                        )
+                    )
+            );
+
+            if (validTracks) {
+                soundtrackData = cached;
+                cacheInfo.soundtrack = 'HIT';
+            }
+        }
     }
 
-    const title = extractTitle(page.html);
+    /*
+     * STEP 2:
+     * Fetch Kinorium only on a cache miss.
+     */
 
-    const tracks = extractFeaturedTracks(
-        page.html
-    );
+    if (!soundtrackData) {
+        cacheInfo.soundtrack =
+            cacheBypass ? 'BYPASS' : 'MISS';
+
+        page = await fetchHTML(pageURL);
+
+        if (!page.ok) {
+            return {
+                success: false,
+                version: VERSION,
+                source: 'kinorium',
+                id,
+                found: false,
+                playable: false,
+                audioUrl: null,
+                reason: 'page_fetch_failed',
+                httpStatus: page.status,
+                pageURL
+            };
+        }
+
+        soundtrackData = {
+            title: extractTitle(page.html),
+            tracks: extractFeaturedTracks(
+                page.html
+            )
+        };
+
+        /*
+         * Cache valid page results.
+         *
+         * Empty soundtracks expire sooner.
+         */
+
+        const ttl =
+            soundtrackData.tracks.length
+                ? CONFIG.kv.soundtrackTTL
+                : CONFIG.kv.emptySoundtrackTTL;
+
+        await cache.put(
+            soundtrackKey,
+            soundtrackData,
+            ttl,
+            cacheInfo
+        );
+    }
+
+    /*
+     * STEP 3:
+     * Select the requested track.
+     */
+
+    const title = soundtrackData.title;
+    const tracks = soundtrackData.tracks;
 
     const selected = selectTrack(
         tracks,
         track,
         songId
     );
+
+    /*
+     * STEP 4:
+     * Verify audio independently of KV.
+     */
 
     let audioCheck = null;
 
@@ -1754,17 +1994,34 @@ async function getSoundtrack(options) {
 
     if (debug) {
         result.debug = {
-            httpStatus: page.status,
-            finalURL: page.url,
-            contentType: page.contentType,
-            htmlLength: page.length,
-            featuredControlsFound: tracks.length,
+            httpStatus: page
+                ? page.status
+                : null,
+            finalURL: page
+                ? page.url
+                : pageURL,
+            contentType: page
+                ? page.contentType
+                : null,
+            htmlLength: page
+                ? page.length
+                : null,
+            featuredControlsFound:
+                tracks.length,
             selectedTrackId:
                 selected ? selected.id : null,
             selectedTrackName:
                 selected ? selected.name : null,
-            previewVerificationEnabled: verify,
-            audioCheck
+            previewVerificationEnabled:
+                verify,
+            audioCheck,
+            kv: {
+                enabled: cache.enabled,
+                resolution:
+                    cacheInfo.resolution,
+                soundtrack:
+                    cacheInfo.soundtrack
+            }
         };
     }
 
