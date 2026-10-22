@@ -2,8 +2,8 @@
     'use strict';
 
     /*
-     * KINORIUM OST 1.3.0
-     * Stability & Audio Engine
+     * KINORIUM OST 1.4.0
+     * Premium Diagnostics
      *
      * Lampa / Android TV / Mobile
      * Cloudflare Worker 1.5.1+
@@ -23,12 +23,14 @@
      * - Immediate stop on card exit
      * - Stale request protection
      * - Safe timer and event cleanup
-     * - Audio error diagnostics
+     * - On-screen diagnostic notifications
+     * - Track title and playback status
+     * - Human-readable error messages
      *
      * Independent test plugin.
      */
 
-    var VERSION = '1.3.0';
+    var VERSION = '1.4.0';
 
     var WORKER =
         'https://kinorium-ost.unclezhenya24.workers.dev/';
@@ -50,6 +52,7 @@
     var MAX_PLAY_RETRIES = 1;
     var RETRY_DELAY = 700;
     var PLAY_START_TIMEOUT = 12000;
+    var NOTICE_DURATION = 3500;
 
     var state = {
         initialized: false,
@@ -85,7 +88,11 @@
         fadeStartedAt: 0,
         fadeStartVolume: 0,
         fadeTargetVolume: 0,
-        fadeDurationMs: 0
+        fadeDurationMs: 0,
+
+        notice: null,
+        noticeTimer: null,
+        noticeToken: 0
     };
 
     /*
@@ -217,6 +224,346 @@
         );
 
         return match ? Number(match[0]) : 0;
+    }
+
+    /*
+     * ON-SCREEN DIAGNOSTICS
+     *
+     * Notifications are displayed only when debug is enabled.
+     * The panel is created once and reused.
+     * All displayed text is inserted using textContent.
+     */
+
+    function removeNotice() {
+        state.noticeToken++;
+
+        if (state.noticeTimer !== null) {
+            clearTimeout(state.noticeTimer);
+            state.noticeTimer = null;
+        }
+
+        if (state.notice) {
+            try {
+                state.notice.remove();
+            } catch (e) {
+                if (
+                    state.notice.parentNode
+                ) {
+                    state.notice.parentNode.removeChild(
+                        state.notice
+                    );
+                }
+            }
+
+            state.notice = null;
+        }
+    }
+
+    function noticeStyle(element, styles) {
+        Object.keys(styles).forEach(function (key) {
+            element.style[key] = styles[key];
+        });
+    }
+
+    function showNotice(title, message, type, duration) {
+        if (!setting('debug')) {
+            removeNotice();
+            return;
+        }
+
+        if (!state.cardActive) return;
+
+        if (!document.body) return;
+
+        removeNotice();
+
+        var noticeToken = state.noticeToken;
+
+        var colors = {
+            info: '#8ab4f8',
+            success: '#81c995',
+            warning: '#fdd663',
+            error: '#f28b82'
+        };
+
+        var icons = {
+            info: '\u25cf',
+            success: '\u266b',
+            warning: '\u26a0',
+            error: '\u2715'
+        };
+
+        var panel = document.createElement('div');
+
+        panel.setAttribute(
+            'data-kinorium-ost-notice',
+            'true'
+        );
+
+        noticeStyle(panel, {
+            position: 'fixed',
+            top: 'max(18px, env(safe-area-inset-top))',
+            right: 'max(18px, env(safe-area-inset-right))',
+            zIndex: '2147483000',
+            width: 'min(360px, calc(100vw - 36px))',
+            boxSizing: 'border-box',
+            padding: '13px 16px',
+            borderRadius: '12px',
+            background: 'rgba(20, 22, 27, 0.96)',
+            border: '1px solid rgba(255,255,255,0.13)',
+            borderLeft: '3px solid ' + (
+                colors[type] || colors.info
+            ),
+            color: '#ffffff',
+            fontFamily: 'Arial, sans-serif',
+            fontSize: '14px',
+            lineHeight: '1.4',
+            boxShadow: '0 6px 24px rgba(0,0,0,0.3)',
+            opacity: '0',
+            transform: 'translateY(-8px)',
+            transition: 'opacity 180ms ease, transform 180ms ease',
+            pointerEvents: 'none',
+            overflow: 'hidden'
+        });
+
+        var header = document.createElement('div');
+
+        noticeStyle(header, {
+            display: 'flex',
+            alignItems: 'center',
+            gap: '9px',
+            marginBottom: message ? '5px' : '0',
+            fontWeight: '700',
+            fontSize: '14px'
+        });
+
+        var icon = document.createElement('span');
+
+        icon.textContent = icons[type] || icons.info;
+
+        noticeStyle(icon, {
+            flex: '0 0 auto',
+            color: colors[type] || colors.info,
+            fontSize: '16px'
+        });
+
+        var heading = document.createElement('span');
+
+        heading.textContent = String(title || 'KINORIUM OST');
+
+        noticeStyle(heading, {
+            minWidth: '0',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            overflowWrap: 'anywhere'
+        });
+
+        header.appendChild(icon);
+        header.appendChild(heading);
+        panel.appendChild(header);
+
+        if (message) {
+            var description = document.createElement('div');
+
+            description.textContent = String(message);
+
+            noticeStyle(description, {
+                color: 'rgba(255,255,255,0.78)',
+                fontSize: '13px',
+                lineHeight: '1.4',
+                overflowWrap: 'anywhere',
+                wordBreak: 'break-word'
+            });
+
+            panel.appendChild(description);
+        }
+
+        document.body.appendChild(panel);
+
+        state.notice = panel;
+
+        requestAnimationFrame(function () {
+            if (
+                state.notice !== panel ||
+                state.noticeToken !== noticeToken
+            ) {
+                return;
+            }
+
+            panel.style.opacity = '1';
+            panel.style.transform = 'translateY(0)';
+        });
+
+        var visibleFor = typeof duration === 'number'
+            ? duration
+            : NOTICE_DURATION;
+
+        state.noticeTimer = setTimeout(
+            function () {
+                if (
+                    state.notice !== panel ||
+                    state.noticeToken !== noticeToken
+                ) {
+                    return;
+                }
+
+                panel.style.opacity = '0';
+                panel.style.transform = 'translateY(-8px)';
+
+                setTimeout(function () {
+                    if (state.notice === panel) {
+                        removeNotice();
+                    }
+                }, 220);
+            },
+            Math.max(500, visibleFor)
+        );
+    }
+
+    function diagnosticSearching() {
+        showNotice(
+            'Пошук саундтреку',
+            state.movie
+                ? state.movie.title
+                : 'Шукаю доступне аудіо…',
+            'info',
+            2500
+        );
+    }
+
+    function diagnosticPlaying(result) {
+        var track = result && result.track
+            ? result.track
+            : state.track;
+
+        var title = track && track.name
+            ? String(track.name)
+            : '';
+
+        var artist = track && track.artist
+            ? String(track.artist)
+            : '';
+
+        var message = title || (
+            state.movie
+                ? state.movie.title
+                : 'Аудіо'
+        );
+
+        if (artist) {
+            message += ' — ' + artist;
+        }
+
+        showNotice(
+            'Музика відтворюється',
+            message,
+            'success',
+            4000
+        );
+    }
+
+    function diagnosticNotFound(result) {
+        var message = 'Не вдалося знайти відповідний саундтрек.';
+
+        if (result && result.reason) {
+            var reason = String(result.reason).toLowerCase();
+
+            if (
+                reason.indexOf('audio') !== -1 ||
+                reason.indexOf('playable') !== -1
+            ) {
+                message = 'Запис знайдено, але доступного аудіо немає.';
+            } else if (
+                reason.indexOf('network') !== -1
+            ) {
+                message = 'Не вдалося отримати відповідь через мережу.';
+            }
+        }
+
+        if (
+            result &&
+            result.found &&
+            (!result.playable || !result.audioUrl)
+        ) {
+            message = 'Запис знайдено, але доступного аудіо немає.';
+        }
+
+        showNotice(
+            'Саундтрек недоступний',
+            message,
+            'warning'
+        );
+    }
+
+    function diagnosticFailure(reason, errorCode) {
+        var title = 'Помилка відтворення';
+        var message = 'Не вдалося запустити аудіо.';
+
+        switch (reason) {
+            case 'media_error':
+                title = 'Помилка аудіо';
+                message = 'Медіаджерело повернуло помилку.';
+                if (errorCode) {
+                    message += ' Код: ' + errorCode + '.';
+                }
+                break;
+
+            case 'startup_timeout':
+                title = 'Аудіо не запустилося';
+                message = 'Минув час очікування початку відтворення.';
+                break;
+
+            case 'worker_http':
+                title = 'Помилка сервера';
+                message = 'Worker повернув HTTP-помилку.';
+                break;
+
+            case 'worker_timeout':
+                title = 'Сервер не відповідає';
+                message = 'Перевищено час очікування відповіді Worker.';
+                break;
+
+            case 'network':
+                title = 'Помилка мережі';
+                message = 'Не вдалося з’єднатися з Worker.';
+                break;
+
+            case 'invalid_json':
+                title = 'Помилка відповіді';
+                message = 'Worker повернув відповідь невідомого формату.';
+                break;
+
+            case 'xhr_exception':
+                title = 'Помилка запиту';
+                message = 'Не вдалося відправити запит до Worker.';
+                break;
+
+            case 'play_exception':
+                title = 'Помилка запуску';
+                message = 'Під час запуску аудіо виникла помилка.';
+                break;
+
+            case 'blocked':
+                title = 'Запуск заблоковано';
+                message = 'Браузер або середовище Lampa заборонили автозапуск.';
+                break;
+
+            default:
+                if (
+                    String(reason || '').indexOf('play_rejected_') === 0
+                ) {
+                    title = 'Аудіо не запустилося';
+                    message = 'Плеєр відхилив запит на відтворення.';
+                }
+                break;
+        }
+
+        showNotice(
+            title,
+            message,
+            'error',
+            4500
+        );
     }
 
     /*
@@ -525,6 +872,7 @@
         clearPlaybackTimers();
         abortRequest();
         destroyAudio();
+        removeNotice();
 
         state.movie = null;
         state.movieKey = '';
@@ -552,9 +900,6 @@
 
     /*
      * FADE ENGINE
-     *
-     * Uses the current volume as the starting point.
-     * Volume and duration can be changed while fading.
      */
 
     function startFade(player, token, startVolume) {
@@ -783,9 +1128,6 @@
 
     /*
      * PLAYBACK FAILURE HANDLING
-     *
-     * Retry only once, and only for a media failure.
-     * Autoplay permission failures are not retried.
      */
 
     function handleAudioFailure(token, player, reason, errorCode) {
@@ -819,6 +1161,8 @@
                 errorCode || 0
             );
 
+            diagnosticFailure(reason, errorCode);
+
             destroyAudio();
 
             return;
@@ -833,6 +1177,13 @@
             state.playAttempt,
             'of',
             MAX_PLAY_RETRIES
+        );
+
+        showNotice(
+            'Повторна спроба',
+            'Відновлюю відтворення аудіо…',
+            'warning',
+            1800
         );
 
         destroyAudio();
@@ -897,6 +1248,8 @@
                 ? state.track.name
                 : 'Unknown'
         );
+
+        diagnosticPlaying(state.readyResult);
     }
 
     function startAudioAttempt(result, token) {
@@ -1049,6 +1402,8 @@
                             'Playback blocked by browser autoplay policy'
                         );
 
+                        diagnosticFailure('blocked', 0);
+
                         destroyAudio();
 
                         return;
@@ -1118,6 +1473,8 @@
             setPlaybackState('error', 'missing_audio_url');
 
             log('Cannot play: audioUrl is missing');
+
+            diagnosticNotFound(result);
 
             return;
         }
@@ -1222,6 +1579,8 @@
             url
         );
 
+        diagnosticSearching();
+
         xhr.open('GET', url, true);
         xhr.timeout = 20000;
 
@@ -1247,6 +1606,8 @@
 
                 log('Worker HTTP:', xhr.status);
 
+                diagnosticFailure('worker_http', xhr.status);
+
                 return;
             }
 
@@ -1258,6 +1619,8 @@
                 setPlaybackState('error', 'invalid_json');
 
                 log('Invalid Worker JSON:', e);
+
+                diagnosticFailure('invalid_json', 0);
 
                 return;
             }
@@ -1282,6 +1645,8 @@
                         : '',
                     result
                 );
+
+                diagnosticNotFound(result);
 
                 return;
             }
@@ -1309,6 +1674,8 @@
                 setPlaybackState('error', 'network');
 
                 log('Network error');
+
+                diagnosticFailure('network', 0);
             }
         };
 
@@ -1317,6 +1684,8 @@
                 setPlaybackState('error', 'worker_timeout');
 
                 log('Worker timeout');
+
+                diagnosticFailure('worker_timeout', 0);
             }
         };
 
@@ -1330,6 +1699,8 @@
             setPlaybackState('error', 'xhr_exception');
 
             log('XHR exception:', e);
+
+            diagnosticFailure('xhr_exception', 0);
         }
     }
 
@@ -1754,7 +2125,24 @@
         addTrigger(
             'debug',
             'Режим діагностики',
-            'Показувати пошук, стани відтворення та помилки'
+            'Показувати назву композиції та причини помилок',
+            function (enabled) {
+                if (!enabled) {
+                    removeNotice();
+                } else if (state.cardActive) {
+                    if (state.playbackStarted) {
+                        diagnosticPlaying(state.readyResult);
+                    } else if (
+                        state.playbackState === 'searching'
+                    ) {
+                        diagnosticSearching();
+                    } else if (
+                        state.playbackState === 'not_found'
+                    ) {
+                        diagnosticNotFound(null);
+                    }
+                }
+            }
         );
     }
 
