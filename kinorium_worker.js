@@ -68,28 +68,7 @@ const CONFIG = {
     }
 };
 
-const KNOWN_MOVIES = [
-    {
-        id: '143897',
-        title: 'Gladiator',
-        year: 2000,
-        aliases: [
-            'Gladiator',
-            'Гладіатор',
-            'Гладиатор'
-        ]
-    },
-    {
-        id: '108983',
-        title: 'Titanic',
-        year: 1997,
-        aliases: [
-            'Titanic',
-            'Титанік',
-            'Титаник'
-        ]
-    }
-];
+
 
 const JSON_HEADERS = {
     'Access-Control-Allow-Origin': '*',
