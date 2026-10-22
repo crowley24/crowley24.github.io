@@ -1,67 +1,67 @@
 
 /*
  * ORIGINAL SOUNDTRACK
- * KINORIUM WORKER 1.3.0
+ * KINORIUM WORKER 1.4.0
  *
  * Cloudflare Workers
- * Lampa / Android TV / Mobile
  *
- * SOURCE:
- * https://ua.kinorium.com/
+ * Direct Kinorium ID:
+ *   ?id=143897
  *
- * FEATURES:
- * - Main movie page soundtrack parsing
- * - Featured soundtrack controls
- * - Exact data-song JSON extraction
- * - Direct Apple audio preview URLs
- * - Track selection by name or song ID
- * - Audio availability verification
- * - Safe response when audio unavailable
- * - CORS support
- * - Diagnostic mode
+ * Automatic title search:
+ *   ?title=Gladiator&year=2000
  *
- * EXAMPLES:
+ * Diagnostics:
+ *   ?title=Gladiator&year=2000&debug=1
  *
- * /
+ * Select soundtrack:
+ *   ?id=143897&track=Now%20We%20Are%20Free
  *
- * /?id=143897
+ * Skip audio check:
+ *   ?id=143897&verify=0
  *
- * /?id=143897&debug=1
- *
- * /?id=143897&track=The%20Battle
- *
- * /?id=143897&track=Elysium
- *
- * /?id=143897&track=Now%20We%20Are%20Free
- *
- * /?id=143897&song_id=1440563164
- *
- * /?id=143897&verify=0
- *
- * NOTE:
- * Preview audio is usually around 30 seconds.
- * Album duration is not preview duration.
+ * Existing OSTMusic Worker is not affected.
  */
 
 'use strict';
 
-const VERSION = '1.3.0';
+const VERSION = '1.4.0';
 
 const CONFIG = {
     site: 'https://ua.kinorium.com',
     timeout: 15000,
     maxHTML: 2000000,
     maxTracks: 30,
+    maxCandidates: 30,
     cacheSeconds: 300
 };
 
-const RESPONSE_HEADERS = {
+/*
+ * Confirmed film mapping.
+ *
+ * This is only a safe fallback.
+ * Automatic search is attempted first.
+ */
+const KNOWN_MOVIES = [
+    {
+        id: '143897',
+        title: 'Gladiator',
+        aliases: [
+            'Gladiator',
+            'Гладіатор',
+            'Гладиатор'
+        ],
+        year: 2000
+    }
+];
+
+const HEADERS = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Access-Control-Allow-Headers':
-        'Content-Type, Range',
+    'Access-Control-Allow-Headers': 'Content-Type, Range',
     'Access-Control-Expose-Headers':
         'Content-Type, Content-Length, Content-Range',
+    'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'no-store'
 };
 
@@ -70,12 +70,12 @@ export default {
         if (request.method === 'OPTIONS') {
             return new Response(null, {
                 status: 204,
-                headers: RESPONSE_HEADERS
+                headers: HEADERS
             });
         }
 
         if (request.method !== 'GET') {
-            return sendJSON({
+            return json({
                 success: false,
                 version: VERSION,
                 error: 'method_not_allowed'
@@ -88,11 +88,23 @@ export default {
             url.searchParams.get('id') || ''
         ).trim();
 
-        const requestedTrack = String(
+        const title = String(
+            url.searchParams.get('title') || ''
+        ).trim();
+
+        const yearValue = String(
+            url.searchParams.get('year') || ''
+        ).trim();
+
+        const year = yearValue
+            ? Number(yearValue)
+            : 0;
+
+        const track = String(
             url.searchParams.get('track') || ''
         ).trim();
 
-        const requestedSongId = String(
+        const songId = String(
             url.searchParams.get('song_id') || ''
         ).trim();
 
@@ -102,54 +114,132 @@ export default {
         const verify =
             url.searchParams.get('verify') !== '0';
 
-        if (!id) {
-            return sendJSON({
+        if (!id && !title) {
+            return json({
                 success: true,
                 service: 'Kinorium Original Soundtrack',
                 version: VERSION,
                 source: 'kinorium',
-                mode: 'featured_soundtrack',
                 endpoints: {
-                    movie:
+                    direct:
                         '/?id=143897',
-                    debug:
-                        '/?id=143897&debug=1',
-                    theBattle:
-                        '/?id=143897&track=The%20Battle',
-                    elysium:
+                    automatic:
+                        '/?title=Gladiator&year=2000',
+                    searchDebug:
+                        '/?title=Gladiator&year=2000&debug=1',
+                    selectedTrack:
                         '/?id=143897&track=Elysium',
-                    nowWeAreFree:
-                        '/?id=143897&track=Now%20We%20Are%20Free',
-                    songId:
-                        '/?id=143897&song_id=1440563164'
+                    noVerification:
+                        '/?id=143897&verify=0'
                 }
             });
         }
 
-        if (!/^\d{1,12}$/.test(id)) {
-            return sendJSON({
+        if (id && !/^\d{1,12}$/.test(id)) {
+            return json({
                 success: false,
                 version: VERSION,
                 error: 'invalid_movie_id'
             }, 400);
         }
 
+        if (title.length > 160) {
+            return json({
+                success: false,
+                version: VERSION,
+                error: 'title_too_long'
+            }, 400);
+        }
+
+        if (
+            yearValue &&
+            (
+                !/^\d{4}$/.test(yearValue) ||
+                year < 1880 ||
+                year > 2200
+            )
+        ) {
+            return json({
+                success: false,
+                version: VERSION,
+                error: 'invalid_year'
+            }, 400);
+        }
+
         try {
+            let resolved = null;
+
+            if (id) {
+                resolved = {
+                    id,
+                    title: title || '',
+                    year,
+                    method: 'direct_id',
+                    candidates: [],
+                    searchDebug: []
+                };
+            } else {
+                resolved = await resolveMovie(
+                    title,
+                    year
+                );
+            }
+
+            if (!resolved.id) {
+                return json({
+                    success: true,
+                    version: VERSION,
+                    source: 'kinorium',
+                    mode: 'automatic_search',
+                    found: false,
+                    playable: false,
+                    id: null,
+                    title,
+                    year,
+                    audioUrl: null,
+                    tracksCount: 0,
+                    tracks: [],
+                    reason: 'movie_not_resolved',
+                    search: {
+                        method: resolved.method,
+                        candidates: resolved.candidates,
+                        ...(debug ? {
+                            diagnostics:
+                                resolved.searchDebug
+                        } : {})
+                    }
+                });
+            }
+
             const result = await getSoundtrack({
-                id,
-                requestedTrack,
-                requestedSongId,
-                debug,
-                verify
+                id: resolved.id,
+                track,
+                songId,
+                verify,
+                debug
             });
 
-            return sendJSON(result);
+            result.search = {
+                requestedTitle: title || null,
+                requestedYear: year || null,
+                resolvedId: resolved.id,
+                method: resolved.method,
+                candidates: debug
+                    ? resolved.candidates
+                    : [],
+                ...(debug ? {
+                    diagnostics:
+                        resolved.searchDebug
+                } : {})
+            };
+
+            return json(result);
+
         } catch (error) {
-            return sendJSON({
+            return json({
                 success: false,
                 version: VERSION,
                 source: 'kinorium',
-                id,
                 found: false,
                 playable: false,
                 audioUrl: null,
@@ -161,16 +251,12 @@ export default {
     }
 };
 
-function sendJSON(data, status = 200) {
+function json(value, status = 200) {
     return new Response(
-        JSON.stringify(data, null, 2),
+        JSON.stringify(value, null, 2),
         {
             status,
-            headers: {
-                ...RESPONSE_HEADERS,
-                'Content-Type':
-                    'application/json; charset=utf-8'
-            }
+            headers: HEADERS
         }
     );
 }
@@ -186,12 +272,59 @@ async function fetchTimed(url, options = {}) {
     try {
         return await fetch(url, {
             ...options,
-            signal: controller.signal,
-            redirect: 'follow'
+            redirect: 'follow',
+            signal: controller.signal
         });
     } finally {
         clearTimeout(timer);
     }
+}
+
+function siteHeaders() {
+    return {
+        Accept:
+            'text/html,application/xhtml+xml',
+        'Accept-Language':
+            'uk-UA,uk;q=0.9,en;q=0.7',
+        'User-Agent':
+            'Mozilla/5.0 (compatible; KinoriumOST/1.1)'
+    };
+}
+
+async function fetchHTML(url) {
+    const response = await fetchTimed(
+        url,
+        {
+            headers: siteHeaders(),
+            cf: {
+                cacheEverything: true,
+                cacheTtl: CONFIG.cacheSeconds
+            }
+        }
+    );
+
+    const contentType =
+        response.headers.get(
+            'content-type'
+        ) || '';
+
+    const html =
+        response.ok &&
+        /text\/html/i.test(contentType)
+            ? (await response.text()).slice(
+                0,
+                CONFIG.maxHTML
+            )
+            : '';
+
+    return {
+        status: response.status,
+        ok: response.ok,
+        url: response.url,
+        contentType,
+        html,
+        length: html.length
+    };
 }
 
 function decodeEntities(value) {
@@ -249,14 +382,14 @@ function extractTitle(html) {
 }
 
 function extractAttribute(tag, name) {
-    const escapedName = name.replace(
+    const escaped = name.replace(
         /[.*+?^${}()|[\]\\]/g,
         '\\$&'
     );
 
     const regex = new RegExp(
         '\\b' +
-        escapedName +
+        escaped +
         '\\s*=\\s*(["\'])([\\s\\S]*?)\\1',
         'i'
     );
@@ -268,19 +401,346 @@ function extractAttribute(tag, name) {
         : '';
 }
 
-function parseSongData(tag) {
-    const raw = extractAttribute(
-        tag,
-        'data-song'
+function isSameTitle(a, b) {
+    return normalize(a) === normalize(b);
+}
+
+function findKnownMovie(title, year) {
+    if (!year) return null;
+
+    return KNOWN_MOVIES.find(movie => {
+        if (movie.year !== year) {
+            return false;
+        }
+
+        return movie.aliases.some(alias =>
+            isSameTitle(alias, title)
+        );
+    }) || null;
+}
+
+function getSearchURLs(title) {
+    /*
+     * Experimental Kinorium search routes.
+     *
+     * Their response structure has not yet
+     * been confirmed. Each is inspected,
+     * not blindly trusted.
+     */
+
+    const encoded = encodeURIComponent(title);
+
+    return [
+        CONFIG.site +
+            '/search/?q=' + encoded,
+
+        CONFIG.site +
+            '/search/?query=' + encoded,
+
+        CONFIG.site +
+            '/?q=' + encoded
+    ];
+}
+
+function extractSearchCandidates(html) {
+    const results = [];
+    const seen = new Set();
+
+    /*
+     * Find links that point to a Kinorium
+     * movie page: /123456/
+     *
+     * This only produces candidates.
+     * It does not establish a match.
+     */
+
+    const regex =
+        /<a\b[^>]*href\s*=\s*(["'])(.*?)\1[^>]*>[\s\S]*?<\/a>/gi;
+
+    let match;
+
+    while (
+        (match = regex.exec(html)) &&
+        results.length < CONFIG.maxCandidates
+    ) {
+        const tag = match[0];
+        const href = decodeEntities(match[2]);
+
+        let candidateURL;
+
+        try {
+            candidateURL = new URL(
+                href,
+                CONFIG.site
+            );
+        } catch (_) {
+            continue;
+        }
+
+        if (
+            candidateURL.hostname !==
+            'ua.kinorium.com'
+        ) {
+            continue;
+        }
+
+        const idMatch =
+            candidateURL.pathname.match(
+                /^\/(\d{1,12})\/?$/
+            );
+
+        if (!idMatch) continue;
+
+        const id = idMatch[1];
+
+        if (seen.has(id)) continue;
+
+        const label = stripTags(
+            tag.replace(
+                /^<a\b[^>]*>/i,
+                ''
+            ).replace(/<\/a>$/i, '')
+        );
+
+        const titleAttribute =
+            extractAttribute(tag, 'title');
+
+        const surrounding = stripTags(
+            html.slice(
+                Math.max(0, match.index - 200),
+                Math.min(
+                    html.length,
+                    regex.lastIndex + 250
+                )
+            )
+        );
+
+        seen.add(id);
+
+        results.push({
+            id,
+            label:
+                label.slice(0, 180),
+            titleAttribute:
+                titleAttribute.slice(0, 180),
+            context:
+                surrounding.slice(0, 350)
+        });
+    }
+
+    return results;
+}
+
+function candidateMatches(candidate, title, year) {
+    /*
+     * Conservative matching:
+     * exact title and year must be visible
+     * in the candidate's search context.
+     *
+     * Final movie page will be checked too.
+     */
+
+    if (!year) return false;
+
+    const fields = [
+        candidate.label,
+        candidate.titleAttribute
+    ];
+
+    const titleMatched = fields.some(field => {
+        const clean = normalize(field);
+
+        const expected = normalize(title);
+
+        return (
+            clean === expected ||
+            clean === expected + ' ' + year ||
+            clean === expected + ' фільм ' + year
+        );
+    });
+
+    if (!titleMatched) return false;
+
+    return new RegExp(
+        '\\b' + year + '\\b'
+    ).test(candidate.context);
+}
+
+function extractMoviePageYear(html) {
+    const patterns = [
+        /"datePublished"\s*:\s*"(\d{4})/i,
+        /"releaseDate"\s*:\s*"(\d{4})/i,
+        /<meta[^>]+property=["']video:release_date["'][^>]+content=["'](\d{4})/i
+    ];
+
+    for (const pattern of patterns) {
+        const match = html.match(pattern);
+
+        if (match) {
+            return Number(match[1]);
+        }
+    }
+
+    const title = extractTitle(html);
+
+    const match = title.match(
+        /\b(18|19|20)\d{2}\b/
     );
 
-    if (!raw) return null;
+    return match
+        ? Number(match[0])
+        : 0;
+}
 
-    try {
-        return JSON.parse(raw);
-    } catch (_) {
-        return null;
+function moviePageMatches(html, title, year) {
+    if (!html || !year) return false;
+
+    const pageTitle = extractTitle(html);
+    const pageYear = extractMoviePageYear(html);
+
+    if (pageYear !== year) {
+        return false;
     }
+
+    const normalizedTitle = normalize(title);
+    const normalizedPage = normalize(pageTitle);
+
+    /*
+     * Allow a full title with a year
+     * and a localized "film" suffix.
+     */
+
+    return (
+        normalizedPage === normalizedTitle ||
+        normalizedPage.startsWith(
+            normalizedTitle + ' '
+        ) ||
+        normalizedPage.startsWith(
+            normalizedTitle + ' фільм '
+        )
+    );
+}
+
+async function resolveMovie(title, year) {
+    const diagnostics = [];
+    const candidates = [];
+
+    const searchURLs = getSearchURLs(title);
+
+    for (const url of searchURLs) {
+        try {
+            const page = await fetchHTML(url);
+
+            const found = extractSearchCandidates(
+                page.html
+            );
+
+            diagnostics.push({
+                url,
+                finalURL: page.url,
+                status: page.status,
+                htmlLength: page.length,
+                pageTitle:
+                    extractTitle(page.html),
+                candidatesFound:
+                    found.length,
+                possibleBlock:
+                    page.length > 0 &&
+                    page.length < 10000
+            });
+
+            for (const candidate of found) {
+                if (
+                    !candidates.some(
+                        item =>
+                            item.id === candidate.id
+                    )
+                ) {
+                    candidates.push(candidate);
+                }
+            }
+
+        } catch (error) {
+            diagnostics.push({
+                url,
+                error: String(
+                    error && error.message ||
+                    error
+                )
+            });
+        }
+    }
+
+    const matches = candidates.filter(
+        candidate =>
+            candidateMatches(
+                candidate,
+                title,
+                year
+            )
+    );
+
+    /*
+     * Validate candidates by opening
+     * their actual movie pages.
+     */
+
+    for (const candidate of matches.slice(0, 5)) {
+        try {
+            const page = await fetchHTML(
+                CONFIG.site +
+                '/' +
+                candidate.id +
+                '/'
+            );
+
+            if (
+                page.ok &&
+                moviePageMatches(
+                    page.html,
+                    title,
+                    year
+                )
+            ) {
+                return {
+                    id: candidate.id,
+                    method:
+                        'search_verified',
+                    candidates,
+                    searchDebug: diagnostics
+                };
+            }
+        } catch (_) {}
+    }
+
+    /*
+     * Preserve the known working test
+     * even if Kinorium search routes
+     * are unavailable.
+     */
+
+    const known = findKnownMovie(
+        title,
+        year
+    );
+
+    if (known) {
+        return {
+            id: known.id,
+            method:
+                'known_movie_fallback',
+            candidates,
+            searchDebug: diagnostics
+        };
+    }
+
+    return {
+        id: null,
+        method:
+            'search_no_verified_match',
+        candidates,
+        searchDebug: diagnostics
+    };
 }
 
 function validateAudioURL(value) {
@@ -293,39 +753,25 @@ function validateAudioURL(value) {
             return null;
         }
 
-        /*
-         * Only known Apple preview domains.
-         * Prevents arbitrary media URLs.
-         */
-
-        const host = url.hostname.toLowerCase();
-
         if (
-            host !== 'audio-ssl.itunes.apple.com' &&
-            host !== 'audio.itunes.apple.com'
+            url.hostname !==
+                'audio-ssl.itunes.apple.com' &&
+            url.hostname !==
+                'audio.itunes.apple.com'
         ) {
             return null;
         }
 
         return url.href;
+
     } catch (_) {
         return null;
     }
 }
 
 function extractFeaturedTracks(html) {
-    const results = [];
-
-    /*
-     * Exact markup found on Kinorium:
-     *
-     * <li class='song isMain
-     * film-page__soundtrack-control'
-     * data-song='{"song_name":"...",
-     * "preview_url":"..."}'>
-     *
-     * Extract only these featured controls.
-     */
+    const tracks = [];
+    const seen = new Set();
 
     const regex = /<li\b[^>]*>/gi;
 
@@ -333,26 +779,37 @@ function extractFeaturedTracks(html) {
 
     while (
         (match = regex.exec(html)) &&
-        results.length < CONFIG.maxTracks
+        tracks.length < CONFIG.maxTracks
     ) {
         const tag = match[0];
 
-        const className = extractAttribute(
+        const classes = extractAttribute(
             tag,
             'class'
-        );
+        ).split(/\s+/);
 
         if (
-            !className.split(/\s+/).includes(
+            !classes.includes(
                 'film-page__soundtrack-control'
             )
         ) {
             continue;
         }
 
-        const data = parseSongData(tag);
+        const raw = extractAttribute(
+            tag,
+            'data-song'
+        );
 
-        if (!data) continue;
+        if (!raw) continue;
+
+        let data;
+
+        try {
+            data = JSON.parse(raw);
+        } catch (_) {
+            continue;
+        }
 
         const name = String(
             data.song_name || ''
@@ -360,14 +817,18 @@ function extractFeaturedTracks(html) {
 
         if (!name) continue;
 
-        const audioURL = validateAudioURL(
-            data.preview_url
+        const id = String(
+            data.song_id || ''
         );
 
-        const track = {
-            id: String(
-                data.song_id || ''
-            ),
+        const key = id || normalize(name);
+
+        if (seen.has(key)) continue;
+
+        seen.add(key);
+
+        tracks.push({
+            id,
             name,
             artist: String(
                 data.artist_name || ''
@@ -383,34 +844,18 @@ function extractFeaturedTracks(html) {
             ),
             isMain:
                 Number(data.isMain || 0) === 1,
-            audioUrl: audioURL,
-            audioSource:
-                audioURL
-                    ? 'apple_preview'
-                    : null,
-            associationVerified:
-                Boolean(audioURL),
-            selectionSource:
-                'featured_data_song'
-        };
-
-        results.push(track);
+            audioUrl: validateAudioURL(
+                data.preview_url
+            ),
+            associationVerified: Boolean(
+                validateAudioURL(
+                    data.preview_url
+                )
+            )
+        });
     }
 
-    const seen = new Set();
-
-    return results.filter(track => {
-        const key =
-            track.id ||
-            normalize(track.name);
-
-        if (seen.has(key)) {
-            return false;
-        }
-
-        seen.add(key);
-        return true;
-    });
+    return tracks;
 }
 
 function selectTrack(
@@ -418,66 +863,35 @@ function selectTrack(
     requestedTrack,
     requestedSongId
 ) {
-    if (!tracks.length) return null;
-
     if (requestedSongId) {
-        const found = tracks.find(
-            track =>
-                track.id === requestedSongId
-        );
-
-        return found
-            ? {
-                ...found,
-                selection: 'requested_song_id'
-            }
-            : null;
+        return tracks.find(
+            item =>
+                item.id === requestedSongId
+        ) || null;
     }
 
     if (requestedTrack) {
         const exact = tracks.find(
-            track =>
-                normalize(track.name) ===
+            item =>
+                normalize(item.name) ===
                 normalize(requestedTrack)
         );
 
-        if (exact) {
-            return {
-                ...exact,
-                selection: 'requested_exact'
-            };
-        }
+        if (exact) return exact;
 
-        const partial = tracks.find(
-            track =>
-                normalize(track.name).includes(
+        return tracks.find(
+            item =>
+                normalize(item.name).includes(
                     normalize(requestedTrack)
                 )
-        );
-
-        return partial
-            ? {
-                ...partial,
-                selection: 'requested_partial'
-            }
-            : null;
+        ) || null;
     }
 
-    /*
-     * Kinorium marks main compositions.
-     * Preserve the site's original order.
-     */
-
-    const preferred = tracks.find(
-        track =>
-            track.isMain &&
-            track.audioUrl
-    );
-
-    return {
-        ...(preferred || tracks[0]),
-        selection: 'first_main_theme'
-    };
+    return tracks.find(
+        item =>
+            item.isMain &&
+            item.audioUrl
+    ) || tracks[0] || null;
 }
 
 async function checkAudio(url) {
@@ -545,73 +959,32 @@ async function checkAudio(url) {
                 await response.body.cancel();
             } catch (_) {}
         }
+
     } catch (error) {
         result.reason = String(
-            error && error.message || error
+            error && error.message ||
+            error
         );
     }
 
     return result;
 }
 
-async function fetchMoviePage(id) {
-    const pageURL =
-        `${CONFIG.site}/${id}/`;
-
-    /*
-     * Keep the User-Agent that returned
-     * the complete movie page in tests.
-     */
-
-    const response = await fetchTimed(
-        pageURL,
-        {
-            headers: {
-                Accept:
-                    'text/html,application/xhtml+xml',
-                'Accept-Language':
-                    'uk-UA,uk;q=0.9,en;q=0.7',
-                'User-Agent':
-                    'Mozilla/5.0 (compatible; KinoriumOST/1.1)'
-            },
-            cf: {
-                cacheEverything: true,
-                cacheTtl: CONFIG.cacheSeconds
-            }
-        }
-    );
-
-    const contentType =
-        response.headers.get(
-            'content-type'
-        ) || '';
-
-    const html = response.ok
-        ? (
-            await response.text()
-        ).slice(0, CONFIG.maxHTML)
-        : '';
-
-    return {
-        ok: response.ok,
-        status: response.status,
-        contentType,
-        html,
-        finalURL: response.url,
-        pageURL
-    };
-}
-
 async function getSoundtrack(options) {
     const {
         id,
-        requestedTrack,
-        requestedSongId,
-        debug,
-        verify
+        track,
+        songId,
+        verify,
+        debug
     } = options;
 
-    const page = await fetchMoviePage(id);
+    const pageURL =
+        CONFIG.site + '/' + id + '/';
+
+    const page = await fetchHTML(
+        pageURL
+    );
 
     if (!page.ok) {
         return {
@@ -624,25 +997,7 @@ async function getSoundtrack(options) {
             audioUrl: null,
             reason: 'page_fetch_failed',
             httpStatus: page.status,
-            pageURL: page.pageURL
-        };
-    }
-
-    if (
-        !/text\/html/i.test(
-            page.contentType
-        )
-    ) {
-        return {
-            success: false,
-            version: VERSION,
-            source: 'kinorium',
-            id,
-            found: false,
-            playable: false,
-            audioUrl: null,
-            reason: 'unexpected_content_type',
-            contentType: page.contentType
+            pageURL
         };
     }
 
@@ -656,8 +1011,8 @@ async function getSoundtrack(options) {
 
     const selected = selectTrack(
         tracks,
-        requestedTrack,
-        requestedSongId
+        track,
+        songId
     );
 
     let audioCheck = null;
@@ -672,27 +1027,19 @@ async function getSoundtrack(options) {
         );
     }
 
-    const associationVerified =
-        Boolean(
-            selected &&
-            selected.associationVerified
-        );
-
-    const playable =
-        Boolean(
-            selected &&
-            selected.audioUrl &&
-            associationVerified &&
+    const playable = Boolean(
+        selected &&
+        selected.audioUrl &&
+        (
+            !verify ||
             (
-                !verify ||
-                (
-                    audioCheck &&
-                    audioCheck.playableCandidate
-                )
+                audioCheck &&
+                audioCheck.playableCandidate
             )
-        );
+        )
+    );
 
-    let reason = '';
+    let reason = 'ok';
 
     if (!tracks.length) {
         reason = 'featured_tracks_not_found';
@@ -700,15 +1047,10 @@ async function getSoundtrack(options) {
         reason = 'requested_track_not_found';
     } else if (!selected.audioUrl) {
         reason = 'preview_url_missing';
-    } else if (
-        verify &&
-        !playable
-    ) {
-        reason = 'audio_check_failed';
     } else if (!verify) {
         reason = 'audio_not_checked';
-    } else {
-        reason = 'ok';
+    } else if (!playable) {
+        reason = 'audio_check_failed';
     }
 
     const result = {
@@ -725,48 +1067,49 @@ async function getSoundtrack(options) {
                 id: selected.id,
                 name: selected.name,
                 artist: selected.artist,
-                duration: selected.duration,
-                selection:
-                    selected.selection
+                duration: selected.duration
             }
             : null,
         audioUrl: selected
             ? selected.audioUrl
             : null,
         audioAssociationVerified:
-            associationVerified,
+            Boolean(
+                selected &&
+                selected.associationVerified
+            ),
         tracksCount: tracks.length,
-        tracks: tracks.map(track => ({
-            id: track.id,
-            name: track.name,
-            artist: track.artist,
-            audioUrl: track.audioUrl,
-            isMain: track.isMain
+        tracks: tracks.map(item => ({
+            id: item.id,
+            name: item.name,
+            artist: item.artist,
+            audioUrl: item.audioUrl,
+            isMain: item.isMain
         })),
         audioCheck,
         reason,
-        pageURL: page.pageURL
+        pageURL
     };
 
     if (debug) {
         result.debug = {
             httpStatus: page.status,
-            finalURL: page.finalURL,
+            finalURL: page.url,
             contentType: page.contentType,
-            htmlLength: page.html.length,
+            htmlLength: page.length,
             featuredControlsFound:
                 tracks.length,
             selectedTrackId:
-                selected ? selected.id : null,
+                selected
+                    ? selected.id
+                    : null,
             selectedTrackName:
-                selected ? selected.name : null,
+                selected
+                    ? selected.name
+                    : null,
             previewVerificationEnabled:
                 verify,
-            audioCheck,
-            note:
-                'Audio URL is extracted from ' +
-                'the exact data-song attribute ' +
-                'of its featured soundtrack control.'
+            audioCheck
         };
     }
 
