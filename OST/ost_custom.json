@@ -15,7 +15,13 @@
     {"title":"Scream 4","year":2011,"aliases":["Крик 4","Scre4m","Scream IV"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=DdRgmUGHv3Q","track":"Scream Theme","verified":false},
     {"title":"Scream","year":2022,"aliases":["Крик","Крик 5","Scream 5"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=DdRgmUGHv3Q","track":"Scream Theme","verified":false},
     {"title":"Scream VI","year":2023,"aliases":["Крик 6","Scream 6"],"source":"youtube","audioUrl":"https://www.youtube.com/watch?v=DdRgmUGHv3Q","track":"Scream Theme","verified":false},
-   
+
+    {"title":"The Terminator","year":1984,"aliases":["Термінатор","Терминатор"],"albumId":"22","trackId":"471","track":"The Terminator Theme","artist":"Brad Fiedel","verified":true},
+    {"title":"Terminator 2: Judgment Day","year":1991,"aliases":["Термінатор 2: Судний день","Терминатор 2: Судный день","Terminator 2"],"albumId":"23","trackId":"482","track":"Main Title (Terminator 2 Theme)","artist":"Brad Fiedel","verified":true},
+    {"title":"Terminator 3: Rise of the Machines","year":2003,"aliases":["Термінатор 3: Повстання машин","Терминатор 3: Восстание машин","Terminator 3"],"albumId":"29","trackId":"620","track":"The Terminator","artist":"Marco Beltrami","verified":true},
+    {"title":"Terminator Salvation","year":2009,"aliases":["Термінатор: Спасіння","Терминатор: Да придёт спаситель"],"albumId":"40","trackId":"862","track":"Opening","artist":"Danny Elfman","verified":true},
+    {"title":"Terminator: Dark Fate","year":2019,"aliases":["Термінатор: Фатум","Терминатор: Темные судьбы","Terminator Dark Fate"],"albumId":"931","trackId":"22159","track":"Terminator","artist":"Junkie XL","verified":true},
+    
     {"title":"Halloween","year":1978,"aliases":["Хелловін","Хэллоуин"],"albumId":"443","trackId":"10620","track":"Halloween Theme","artist":"John Carpenter","verified":false}
   ]
 }
