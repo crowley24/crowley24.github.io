@@ -1,11 +1,15 @@
 /*
  * ORIGINAL SOUNDTRACK
- * KINORIUM WORKER 1.6.1
+ * KINORIUM WORKER 1.6.2
  *
  * Cloudflare Workers + KV
  * Binding: KINORIUM_CACHE
  *
  * Features:
+ * - Custom OST catalog priority
+ * - YouTube soundtrack catalog
+ * - OSTMusic album/track resolution
+ * - Kinorium fallback
  * - Automatic movie and TV series search
  * - Movie year tolerance +/- 1
  * - Exact start year for TV series
@@ -17,6 +21,9 @@
  * - Cache HIT / MISS diagnostics
  * - HTML inspection mode
  * - Graceful fallback if KV is unavailable
+ *
+ * Custom catalog:
+ * https://crowley24.github.io/OST/ost_custom.json
  *
  * Endpoints:
  * ?title=Titanic&year=1997
@@ -31,7 +38,8 @@
 
 'use strict';
 
-const VERSION = '1.6.1';
+const VERSION = '1.6.2';
+
 const CUSTOM_CATALOG = {
     url: 'https://crowley24.github.io/OST/ost_custom.json',
     timeout: 10000,
@@ -92,6 +100,7 @@ const JSON_HEADERS = {
     'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'no-store'
 };
+
 /*
  * CUSTOM SOUNDTRACK CATALOG
  *
@@ -105,18 +114,32 @@ const JSON_HEADERS = {
  */
 
 async function fetchCustomCatalog() {
-    const response = await fetchTimed(
-        CUSTOM_CATALOG.url,
-        {
-            headers: {
-                Accept: 'application/json'
-            },
-            cf: {
-                cacheEverything: true,
-                cacheTtl: CUSTOM_CATALOG.cacheSeconds
-            }
-        }
+    const controller = new AbortController();
+
+    const timer = setTimeout(
+        () => controller.abort(),
+        CUSTOM_CATALOG.timeout
     );
+
+    let response;
+
+    try {
+        response = await fetch(
+            CUSTOM_CATALOG.url,
+            {
+                headers: {
+                    Accept: 'application/json'
+                },
+                cf: {
+                    cacheEverything: true,
+                    cacheTtl: CUSTOM_CATALOG.cacheSeconds
+                },
+                signal: controller.signal
+            }
+        );
+    } finally {
+        clearTimeout(timer);
+    }
 
     if (!response.ok) {
         throw new Error(
@@ -164,7 +187,8 @@ function getYouTubeVideoURL(value) {
             host === 'youtu.be' ||
             host === 'www.youtu.be'
         ) {
-            videoId = url.pathname.split('/').filter(Boolean)[0] || '';
+            videoId =
+                url.pathname.split('/').filter(Boolean)[0] || '';
         } else if (
             host === 'youtube.com' ||
             host === 'www.youtube.com' ||
@@ -281,13 +305,6 @@ async function findCustomSoundtrack(title, year) {
         }
 
         if (source === 'ostmusic') {
-            /*
-             * OSTMusic albumId/trackId are identifiers,
-             * not direct audio URLs.
-             *
-             * The entry is returned for the OSTMusic resolver
-             * to convert those IDs into a direct audio URL.
-             */
             return {
                 matched: true,
                 valid: true,
@@ -319,9 +336,6 @@ async function findCustomSoundtrack(title, year) {
         };
 
     } catch (error) {
-        /*
-         * A catalog/network error must not disable Kinorium.
-         */
         return {
             matched: false,
             catalogError: String(
@@ -330,9 +344,9 @@ async function findCustomSoundtrack(title, year) {
         };
     }
 }
+
 /* =========================================================
  * CUSTOM OSTMusic RESOLVER
- * KINORIUM WORKER 1.6.2
  * ========================================================= */
 
 const OSTMUSIC_BASE = 'https://www.ostmusic.org';
@@ -349,7 +363,7 @@ function validateOstMusicURL(value) {
         }
 
         return url.href;
-    } catch (error) {
+    } catch (_) {
         return '';
     }
 }
@@ -381,7 +395,6 @@ function extractOstSongs(data) {
 async function getCustomOstTracks(albumId) {
     const id = String(albumId || '').trim();
 
-    // OSTMusic album ID must be numeric.
     if (!/^\d+$/.test(id)) {
         throw new Error('invalid_ostmusic_album_id');
     }
@@ -393,12 +406,14 @@ async function getCustomOstTracks(albumId) {
 
     const response = await fetchTimed(url, {
         headers: {
-            'Accept': 'application/json, text/plain, */*'
+            Accept: 'application/json, text/plain, */*'
         }
     });
 
     if (!response.ok) {
-        throw new Error('ostmusic_tracks_http_' + response.status);
+        throw new Error(
+            'ostmusic_tracks_http_' + response.status
+        );
     }
 
     const data = await response.json();
@@ -410,9 +425,18 @@ function mapCustomOstTrack(song) {
     if (!song || typeof song !== 'object') return null;
 
     const id = String(song.id || '').trim();
-    const albumId = String(song.album_id || song.albumId || '').trim();
-    const file = validateOstMusicURL(song.file || song.url || '');
-    const duration = Number(song.length || song.duration || 0);
+    const albumId = String(
+        song.album_id || song.albumId || ''
+    ).trim();
+
+    const file = validateOstMusicURL(
+        song.file || song.url || ''
+    );
+
+    const duration = Number(
+        song.length || song.duration || 0
+    );
+
     const playableFlag =
         song.isplayable === 1 ||
         song.isplayable === '1' ||
@@ -422,11 +446,13 @@ function mapCustomOstTrack(song) {
     if (duration > 0 && duration < 35) return null;
 
     return {
-        id: id,
-        albumId: albumId,
+        id,
+        albumId,
         name: String(song.name || song.title || '').trim(),
-        artist: String(song.artist_name || song.artist || '').trim(),
-        duration: duration,
+        artist: String(
+            song.artist_name || song.artist || ''
+        ).trim(),
+        duration,
         position: String(song.position || ''),
         audioUrl: file,
         playable: true
@@ -438,7 +464,9 @@ function findCustomOstTrack(songs, entry) {
         .map(mapCustomOstTrack)
         .filter(Boolean);
 
-    const wantedTrackId = String(entry.trackId || '').trim();
+    const wantedTrackId = String(
+        entry.trackId || ''
+    ).trim();
 
     if (wantedTrackId) {
         const exact = mapped.find(function (track) {
@@ -458,7 +486,6 @@ function findCustomOstTrack(songs, entry) {
         return normalizeOstTrackName(track.name) === wantedName;
     });
 
-    // Avoid choosing an arbitrary track if names are duplicated.
     return matches.length === 1 ? matches[0] : null;
 }
 
@@ -486,7 +513,9 @@ async function resolveCustomOstMusic(entry) {
             playable: true,
             track: {
                 id: track.id,
-                name: track.name || String(entry.track || entry.trackName || ''),
+                name: track.name || String(
+                    entry.track || entry.trackName || ''
+                ),
                 artist: track.artist || String(entry.artist || ''),
                 duration: track.duration,
                 audioUrl: track.audioUrl,
@@ -494,7 +523,9 @@ async function resolveCustomOstMusic(entry) {
             },
             album: {
                 id: String(entry.albumId),
-                title: String(entry.albumTitle || entry.title || ''),
+                title: String(
+                    entry.albumTitle || entry.title || ''
+                ),
                 year: Number(entry.year || 0),
                 artist: String(entry.artist || ''),
                 tracksCount: songs.length
@@ -578,28 +609,23 @@ export default {
                 kv: {
                     enabled: cache.enabled,
                     binding: 'KINORIUM_CACHE',
-                    resolutionTTL:
-                        CONFIG.kv.resolutionTTL,
-                    soundtrackTTL:
-                        CONFIG.kv.soundtrackTTL
+                    resolutionTTL: CONFIG.kv.resolutionTTL,
+                    soundtrackTTL: CONFIG.kv.soundtrackTTL
+                },
+                customCatalog: {
+                    url: CUSTOM_CATALOG.url,
+                    priority: 1,
+                    sources: ['youtube', 'ostmusic']
                 },
                 endpoints: {
-                    automatic:
-                        '?title=Titanic&year=1997',
-                    series:
-                        '?title=Friends&year=1994',
-                    direct:
-                        '?id=108983',
-                    debug:
-                        '?title=Titanic&year=1997&debug=1',
-                    track:
-                        '?id=108983&track=Rose',
-                    verifyOff:
-                        '?id=108983&verify=0',
-                    refresh:
-                        '?title=Titanic&year=1997&refresh=1',
-                    inspect:
-                        '?id=2663934&debug=1&inspect=1&refresh=1'
+                    automatic: '?title=Titanic&year=1997',
+                    series: '?title=Friends&year=1994',
+                    direct: '?id=108983',
+                    debug: '?title=Titanic&year=1997&debug=1',
+                    track: '?id=108983&track=Rose',
+                    verifyOff: '?id=108983&verify=0',
+                    refresh: '?title=Titanic&year=1997&refresh=1',
+                    inspect: '?id=2663934&debug=1&inspect=1&refresh=1'
                 }
             });
         }
@@ -643,6 +669,143 @@ export default {
         };
 
         try {
+            /*
+             * STEP 0:
+             * Check the custom OST catalog first.
+             *
+             * Direct Kinorium ID requests bypass this step.
+             * If the custom catalog has no usable result,
+             * normal Kinorium lookup continues unchanged.
+             */
+
+            if (!id && title) {
+                const custom = await findCustomSoundtrack(
+                    title,
+                    year
+                );
+
+                if (
+                    custom &&
+                    custom.matched &&
+                    custom.valid
+                ) {
+                    /*
+                     * YouTube:
+                     * Return the canonical video URL.
+                     *
+                     * The Lampa plugin must handle source="youtube"
+                     * with the YouTube IFrame Player.
+                     * Do not pass this URL to new Audio().
+                     */
+
+                    if (
+                        custom.source === 'youtube' &&
+                        custom.audioUrl
+                    ) {
+                        return json({
+                            success: true,
+                            version: VERSION,
+                            mode: 'custom_catalog',
+                            found: true,
+                            playable: true,
+                            source: 'youtube',
+                            customCatalog: true,
+                            title: custom.title || title,
+                            year: Number(
+                                custom.year || year || 0
+                            ),
+                            audioUrl: custom.audioUrl,
+                            track: {
+                                id: String(
+                                    custom.track &&
+                                    custom.track.id || ''
+                                ),
+                                name: String(
+                                    custom.track &&
+                                    custom.track.name ||
+                                    custom.title ||
+                                    title
+                                ),
+                                artist: String(
+                                    custom.track &&
+                                    custom.track.artist || ''
+                                ),
+                                duration: Number(
+                                    custom.track &&
+                                    custom.track.duration || 0
+                                ),
+                                playable: true
+                            },
+                            audioAssociationVerified:
+                                Boolean(custom.verified),
+                            reason: 'custom_youtube_match',
+                            search: {
+                                method: 'custom_catalog',
+                                matched: true,
+                                fallback: false
+                            }
+                        });
+                    }
+
+                    /*
+                     * OSTMusic:
+                     * Resolve albumId and trackId to a direct
+                     * audio URL. If resolution fails, continue
+                     * to the normal Kinorium lookup.
+                     */
+
+                    if (custom.source === 'ostmusic') {
+                        const resolvedCustom =
+                            await resolveCustomOstMusic(custom);
+
+                        if (
+                            resolvedCustom &&
+                            resolvedCustom.found &&
+                            resolvedCustom.audioUrl
+                        ) {
+                            return json({
+                                success: true,
+                                version: VERSION,
+                                mode: 'custom_catalog',
+                                found: true,
+                                playable: true,
+                                source: 'ostmusic',
+                                customCatalog: true,
+                                title:
+                                    resolvedCustom.title ||
+                                    title,
+                                year: Number(
+                                    resolvedCustom.year ||
+                                    year ||
+                                    0
+                                ),
+                                audioUrl:
+                                    resolvedCustom.audioUrl,
+                                track: resolvedCustom.track,
+                                album: resolvedCustom.album,
+                                confidence:
+                                    resolvedCustom.confidence,
+                                audioAssociationVerified: true,
+                                reason: 'custom_ostmusic_match',
+                                search: {
+                                    method: 'custom_catalog',
+                                    matched: true,
+                                    fallback: false
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+
+            /*
+             * STEP 1:
+             * Existing Kinorium resolution.
+             *
+             * This remains the fallback when the custom catalog
+             * does not provide a usable result.
+             */
+
             let resolved;
 
             if (id) {
@@ -860,8 +1023,7 @@ function createCache(env) {
                     key,
                     JSON.stringify({
                         schema: CONFIG.kv.schema,
-                        savedAt:
-                            new Date().toISOString(),
+                        savedAt: new Date().toISOString(),
                         data
                     }),
                     {
@@ -924,12 +1086,10 @@ async function fetchTimed(url, options = {}) {
 
 function siteHeaders() {
     return {
-        Accept:
-            'text/html,application/xhtml+xml',
-        'Accept-Language':
-            'uk-UA,uk;q=0.9,en;q=0.7',
+        Accept: 'text/html,application/xhtml+xml',
+        'Accept-Language': 'uk-UA,uk;q=0.9,en;q=0.7',
         'User-Agent':
-            'Mozilla/5.0 (compatible; KinoriumOST/1.6)'
+            'Mozilla/5.0 (compatible; KinoriumOST/1.6.2)'
     };
 }
 
@@ -986,16 +1146,14 @@ function decodeEntities(value) {
         .replace(/&#(\d+);/g, (_, n) => {
             const number = Number(n);
 
-            return number > 0 &&
-                number <= 0x10ffff
+            return number > 0 && number <= 0x10ffff
                 ? String.fromCodePoint(number)
                 : '';
         })
         .replace(/&#x([0-9a-f]+);/gi, (_, n) => {
             const number = parseInt(n, 16);
 
-            return number > 0 &&
-                number <= 0x10ffff
+            return number > 0 && number <= 0x10ffff
                 ? String.fromCodePoint(number)
                 : '';
         });
@@ -1004,14 +1162,8 @@ function decodeEntities(value) {
 function stripTags(value) {
     return decodeEntities(
         String(value || '')
-            .replace(
-                /<script\b[\s\S]*?<\/script>/gi,
-                ' '
-            )
-            .replace(
-                /<style\b[\s\S]*?<\/style>/gi,
-                ' '
-            )
+            .replace(/<script\b[\s\S]*?<\/script>/gi, ' ')
+            .replace(/<style\b[\s\S]*?<\/style>/gi, ' ')
             .replace(/<[^>]*>/g, ' ')
     )
         .replace(/\s+/g, ' ')
@@ -1033,9 +1185,7 @@ function extractTitle(html) {
         /<title[^>]*>([\s\S]*?)<\/title>/i
     );
 
-    return match
-        ? stripTags(match[1])
-        : '';
+    return match ? stripTags(match[1]) : '';
 }
 
 function extractAttribute(tag, name) {
@@ -1053,9 +1203,7 @@ function extractAttribute(tag, name) {
 
     const match = String(tag || '').match(regex);
 
-    return match
-        ? decodeEntities(match[2])
-        : '';
+    return match ? decodeEntities(match[2]) : '';
 }
 
 function findKnownMovie(title, year) {
@@ -1140,10 +1288,7 @@ function buildSearchTitleVariants(title) {
         );
     }
 
-    return variants.slice(
-        0,
-        CONFIG.maxSearchVariants
-    );
+    return variants.slice(0, CONFIG.maxSearchVariants);
 }
 
 /*
@@ -1169,27 +1314,21 @@ function extractSearchCandidates(html) {
         let candidateURL;
 
         try {
-            candidateURL = new URL(
-                href,
-                CONFIG.site
-            );
+            candidateURL = new URL(href, CONFIG.site);
         } catch (_) {
             continue;
         }
 
         if (
-            candidateURL.hostname !==
-                'ua.kinorium.com' &&
-            candidateURL.hostname !==
-                'www.kinorium.com'
+            candidateURL.hostname !== 'ua.kinorium.com' &&
+            candidateURL.hostname !== 'www.kinorium.com'
         ) {
             continue;
         }
 
-        const idMatch =
-            candidateURL.pathname.match(
-                /^\/(\d{1,12})\/?$/
-            );
+        const idMatch = candidateURL.pathname.match(
+            /^\/(\d{1,12})\/?$/
+        );
 
         if (!idMatch) continue;
 
@@ -1204,40 +1343,28 @@ function extractSearchCandidates(html) {
 
         const after = html.slice(
             regex.lastIndex,
-            Math.min(
-                html.length,
-                regex.lastIndex + 500
-            )
+            Math.min(html.length, regex.lastIndex + 500)
         );
 
         const context = stripTags(
             before + ' ' + tag + ' ' + after
         );
 
-        const titleAttribute =
-            extractAttribute(tag, 'title');
-
-        const ariaLabel =
-            extractAttribute(tag, 'aria-label');
+        const titleAttribute = extractAttribute(tag, 'title');
+        const ariaLabel = extractAttribute(tag, 'aria-label');
 
         const label = stripTags(
-            tag.replace(
-                /^<a\b[^>]*>/i,
-                ''
-            ).replace(/<\/a>$/i, '')
+            tag.replace(/^<a\b[^>]*>/i, '')
+                .replace(/<\/a>$/i, '')
         );
 
         const yearMatches = [
-            ...context.matchAll(
-                /\b(?:18|19|20)\d{2}\b/g
-            )
+            ...context.matchAll(/\b(?:18|19|20)\d{2}\b/g)
         ];
 
         const years = [
             ...new Set(
-                yearMatches.map(item =>
-                    Number(item[0])
-                )
+                yearMatches.map(item => Number(item[0]))
             )
         ];
 
@@ -1267,15 +1394,9 @@ function scoreCandidate(candidate, title, year) {
     if (!requested) return 0;
 
     const label = normalize(candidate.label || '');
-    const titleAttribute = normalize(
-        candidate.titleAttribute || ''
-    );
-    const ariaLabel = normalize(
-        candidate.ariaLabel || ''
-    );
-    const context = normalize(
-        candidate.context || ''
-    );
+    const titleAttribute = normalize(candidate.titleAttribute || '');
+    const ariaLabel = normalize(candidate.ariaLabel || '');
+    const context = normalize(candidate.context || '');
 
     let score = 0;
 
@@ -1299,10 +1420,7 @@ function scoreCandidate(candidate, title, year) {
         score = Math.max(score, 115);
     }
 
-    if (
-        label.includes(requested) &&
-        requested.length >= 4
-    ) {
+    if (label.includes(requested) && requested.length >= 4) {
         score = Math.max(score, 85);
     }
 
@@ -1313,10 +1431,7 @@ function scoreCandidate(candidate, title, year) {
         score = Math.max(score, 85);
     }
 
-    if (
-        context.includes(requested) &&
-        requested.length >= 3
-    ) {
+    if (context.includes(requested) && requested.length >= 3) {
         score = Math.max(score, 35);
     }
 
@@ -1336,9 +1451,7 @@ function scoreCandidate(candidate, title, year) {
 
     score += Math.max(
         0,
-        10 - Math.floor(
-            (candidate.order || 0) / 5
-        )
+        10 - Math.floor((candidate.order || 0) / 5)
     );
 
     return score;
@@ -1352,22 +1465,13 @@ function cleanPageName(value) {
     let result = stripTags(value);
 
     result = result
-        .replace(
-            /\s*[|–—-]\s*Kinorium.*$/i,
-            ''
-        )
-        .replace(
-            /\s*[|–—-]\s*Кинориум.*$/i,
-            ''
-        )
+        .replace(/\s*[|–—-]\s*Kinorium.*$/i, '')
+        .replace(/\s*[|–—-]\s*Кинориум.*$/i, '')
         .replace(
             /\s*\((?:фільм|фильм|серіал|сериал|film|series|tv series)[^)]*\)\s*$/i,
             ''
         )
-        .replace(
-            /\s*\((?:18|19|20)\d{2}[^)]*\)\s*$/i,
-            ''
-        )
+        .replace(/\s*\((?:18|19|20)\d{2}[^)]*\)\s*$/i, '')
         .replace(/\s+/g, ' ')
         .trim();
 
@@ -1397,10 +1501,7 @@ function extractPageNames(html) {
 
     add(extractTitle(html));
 
-    const head = String(html || '').slice(
-        0,
-        250000
-    );
+    const head = String(html || '').slice(0, 250000);
 
     const metaRegex = /<meta\b[^>]*>/gi;
     let metaMatch;
@@ -1414,10 +1515,7 @@ function extractPageNames(html) {
             extractAttribute(tag, 'itemprop')
         ).toLowerCase();
 
-        const content = extractAttribute(
-            tag,
-            'content'
-        );
+        const content = extractAttribute(tag, 'content');
 
         if (
             content &&
@@ -1433,9 +1531,7 @@ function extractPageNames(html) {
         }
     }
 
-    const h1Regex =
-        /<h1\b[^>]*>([\s\S]*?)<\/h1>/gi;
-
+    const h1Regex = /<h1\b[^>]*>([\s\S]*?)<\/h1>/gi;
     let h1Match;
 
     while ((h1Match = h1Regex.exec(head))) {
@@ -1480,9 +1576,7 @@ function extractPageNames(html) {
 function extractMoviePageYear(html) {
     const title = extractTitle(html);
 
-    const titleMatch = title.match(
-        /\b(?:18|19|20)\d{2}\b/
-    );
+    const titleMatch = title.match(/\b(?:18|19|20)\d{2}\b/);
 
     if (titleMatch) {
         return Number(titleMatch[0]);
@@ -1508,11 +1602,7 @@ function extractMoviePageYear(html) {
 
 function extractPageType(html) {
     const title = extractTitle(html);
-
-    const head = String(html || '').slice(
-        0,
-        250000
-    );
+    const head = String(html || '').slice(0, 250000);
 
     if (
         /\(\s*(?:серіал|сериал|tv series|television series|series)\b/i.test(title) ||
@@ -1534,9 +1624,7 @@ function extractPageType(html) {
     }
 
     if (
-        /\b(?:season|сезон|episode|епізод|серия)\b/i.test(
-            title
-        )
+        /\b(?:season|сезон|episode|епізод|серия)\b/i.test(title)
     ) {
         return 'series';
     }
@@ -1549,9 +1637,7 @@ function extractPageType(html) {
  */
 
 function normalizeMovieTitle(value) {
-    let result = normalize(
-        cleanPageName(value)
-    );
+    let result = normalize(cleanPageName(value));
 
     if (!result) return '';
 
@@ -1579,9 +1665,7 @@ function normalizeMovieTitle(value) {
                 last
             )
         ) {
-            parts[parts.length - 1] =
-                romanNumbers[last];
-
+            parts[parts.length - 1] = romanNumbers[last];
             result = parts.join(' ');
         }
     }
@@ -1589,18 +1673,9 @@ function normalizeMovieTitle(value) {
     return result;
 }
 
-function titleNameMatches(
-    pageName,
-    requestedTitle,
-    pageType
-) {
-    const page = normalize(
-        cleanPageName(pageName)
-    );
-
-    const requested = normalize(
-        requestedTitle
-    );
+function titleNameMatches(pageName, requestedTitle, pageType) {
+    const page = normalize(cleanPageName(pageName));
+    const requested = normalize(requestedTitle);
 
     if (!page || !requested) {
         return false;
@@ -1622,11 +1697,7 @@ function titleNameMatches(
  * CANDIDATE PAGE VERIFICATION
  */
 
-function verifyCandidatePage(
-    html,
-    title,
-    year
-) {
+function verifyCandidatePage(html, title, year) {
     const pageTitle = extractTitle(html);
     const pageYear = extractMoviePageYear(html);
     const pageType = extractPageType(html);
@@ -1634,38 +1705,27 @@ function verifyCandidatePage(
 
     const matchedTitle =
         pageNames.find(name =>
-            titleNameMatches(
-                name,
-                title,
-                pageType
-            )
+            titleNameMatches(name, title, pageType)
         ) || '';
 
     const yearDifference =
-        pageYear
-            ? Math.abs(pageYear - year)
-            : null;
+        pageYear ? Math.abs(pageYear - year) : null;
 
     let yearMatches = false;
 
     if (pageYear && year) {
         if (pageType === 'movie') {
             yearMatches =
-                yearDifference <=
-                CONFIG.yearTolerance;
+                yearDifference <= CONFIG.yearTolerance;
         } else {
-            yearMatches =
-                pageYear === year;
+            yearMatches = pageYear === year;
         }
     }
 
-    const titleMatches =
-        Boolean(matchedTitle);
+    const titleMatches = Boolean(matchedTitle);
 
     return {
-        matched:
-            yearMatches &&
-            titleMatches,
+        matched: yearMatches && titleMatches,
         pageTitle,
         pageYear,
         pageType,
@@ -1685,8 +1745,7 @@ async function resolveMovie(title, year) {
     const diagnostics = [];
     const allCandidates = [];
 
-    const searchVariants =
-        buildSearchTitleVariants(title);
+    const searchVariants = buildSearchTitleVariants(title);
 
     if (!year) {
         return {
@@ -1725,9 +1784,7 @@ async function resolveMovie(title, year) {
                 stage: 'search',
                 searchTitle,
                 url: searchURL,
-                error: String(
-                    error && error.message || error
-                )
+                error: String(error && error.message || error)
             });
 
             continue;
@@ -1746,8 +1803,7 @@ async function resolveMovie(title, year) {
             continue;
         }
 
-        const candidates =
-            extractSearchCandidates(page.html);
+        const candidates = extractSearchCandidates(page.html);
 
         diagnostics.push({
             stage: 'search',
@@ -1782,13 +1838,9 @@ async function resolveMovie(title, year) {
                 searchTitle: entry.searchTitle
             });
 
-            const existing =
-                candidateMap.get(entry.id);
+            const existing = candidateMap.get(entry.id);
 
-            if (
-                !existing ||
-                entry.score > existing.score
-            ) {
+            if (!existing || entry.score > existing.score) {
                 candidateMap.set(entry.id, {
                     id: entry.id,
                     score: entry.score,
@@ -1804,16 +1856,13 @@ async function resolveMovie(title, year) {
         }
     }
 
-    const candidatePairs = [
-        ...candidateMap.values()
-    ]
+    const candidatePairs = [...candidateMap.values()]
         .sort((a, b) => {
             if (b.score !== a.score) {
                 return b.score - a.score;
             }
 
-            return (a.order || 0) -
-                (b.order || 0);
+            return (a.order || 0) - (b.order || 0);
         })
         .slice(
             0,
@@ -1830,10 +1879,7 @@ async function resolveMovie(title, year) {
             pageCache.set(
                 candidateId,
                 fetchHTML(
-                    CONFIG.site +
-                    '/' +
-                    candidateId +
-                    '/'
+                    CONFIG.site + '/' + candidateId + '/'
                 )
             );
         }
@@ -1846,24 +1892,23 @@ async function resolveMovie(title, year) {
             const candidatePage =
                 await getCandidatePage(candidate.id);
 
-            const verified =
-                candidatePage.ok
-                    ? verifyCandidatePage(
-                        candidatePage.html,
-                        title,
-                        year
-                    )
-                    : {
-                        matched: false,
-                        pageTitle: '',
-                        pageYear: 0,
-                        pageType: 'unknown',
-                        pageNames: [],
-                        matchedTitle: '',
-                        yearDifference: null,
-                        yearMatches: false,
-                        titleMatches: false
-                    };
+            const verified = candidatePage.ok
+                ? verifyCandidatePage(
+                    candidatePage.html,
+                    title,
+                    year
+                )
+                : {
+                    matched: false,
+                    pageTitle: '',
+                    pageYear: 0,
+                    pageType: 'unknown',
+                    pageNames: [],
+                    matchedTitle: '',
+                    yearDifference: null,
+                    yearMatches: false,
+                    titleMatches: false
+                };
 
             diagnostics.push({
                 stage: 'candidate_verification',
@@ -1875,31 +1920,19 @@ async function resolveMovie(title, year) {
                 candidateYears: candidate.years,
                 requestedTitle: title,
                 requestedYear: year,
-                candidatePageStatus:
-                    candidatePage.status,
-                candidatePageTitle:
-                    verified.pageTitle,
+                candidatePageStatus: candidatePage.status,
+                candidatePageTitle: verified.pageTitle,
                 pageType: verified.pageType,
-                pageNames:
-                    verified.pageNames.slice(0, 12),
-                matchedTitle:
-                    verified.matchedTitle,
-                candidateYear:
-                    verified.pageYear,
-                yearDifference:
-                    verified.yearDifference,
-                yearMatches:
-                    verified.yearMatches,
-                titleMatches:
-                    verified.titleMatches,
-                pageMatches:
-                    verified.matched
+                pageNames: verified.pageNames.slice(0, 12),
+                matchedTitle: verified.matchedTitle,
+                candidateYear: verified.pageYear,
+                yearDifference: verified.yearDifference,
+                yearMatches: verified.yearMatches,
+                titleMatches: verified.titleMatches,
+                pageMatches: verified.matched
             });
 
-            if (
-                candidatePage.ok &&
-                verified.matched
-            ) {
+            if (candidatePage.ok && verified.matched) {
                 let method;
 
                 if (verified.pageType === 'series') {
@@ -1911,9 +1944,7 @@ async function resolveMovie(title, year) {
                 ) {
                     method =
                         'search_verified_movie_title_year_tolerance';
-                } else if (
-                    verified.pageType === 'movie'
-                ) {
+                } else if (verified.pageType === 'movie') {
                     method =
                         'search_verified_exact_title_year_movie';
                 } else {
@@ -1935,15 +1966,12 @@ async function resolveMovie(title, year) {
                 stage: 'candidate_verification',
                 searchTitle: candidate.searchTitle,
                 candidateId: candidate.id,
-                error: String(
-                    error && error.message || error
-                )
+                error: String(error && error.message || error)
             });
         }
     }
 
-    const knownMovie =
-        findKnownMovie(title, year);
+    const knownMovie = findKnownMovie(title, year);
 
     if (knownMovie) {
         diagnostics.push({
@@ -1987,10 +2015,8 @@ function validateAudioURL(value) {
         }
 
         if (
-            url.hostname !==
-                'audio-ssl.itunes.apple.com' &&
-            url.hostname !==
-                'audio.itunes.apple.com'
+            url.hostname !== 'audio-ssl.itunes.apple.com' &&
+            url.hostname !== 'audio.itunes.apple.com'
         ) {
             return null;
         }
@@ -2011,7 +2037,6 @@ function extractFeaturedTracks(html) {
     const seen = new Set();
 
     const regex = /<li\b[^>]*>/gi;
-
     let match;
 
     while (
@@ -2033,10 +2058,7 @@ function extractFeaturedTracks(html) {
             continue;
         }
 
-        const raw = extractAttribute(
-            tag,
-            'data-song'
-        );
+        const raw = extractAttribute(tag, 'data-song');
 
         if (!raw) continue;
 
@@ -2048,38 +2070,25 @@ function extractFeaturedTracks(html) {
             continue;
         }
 
-        const name = String(
-            data.song_name || ''
-        ).trim();
+        const name = String(data.song_name || '').trim();
 
         if (!name) continue;
 
-        const id = String(
-            data.song_id || ''
-        );
-
+        const id = String(data.song_id || '');
         const key = id || normalize(name);
 
         if (seen.has(key)) continue;
 
         seen.add(key);
 
-        const audioUrl =
-            validateAudioURL(
-                data.preview_url
-            );
+        const audioUrl = validateAudioURL(data.preview_url);
 
         tracks.push({
             id,
             name,
-            artist: String(
-                data.artist_name || ''
-            ),
-            duration: Number(
-                data.duration || 0
-            ),
-            isMain:
-                Number(data.isMain || 0) === 1,
+            artist: String(data.artist_name || ''),
+            duration: Number(data.duration || 0),
+            isMain: Number(data.isMain || 0) === 1,
             audioUrl
         });
     }
@@ -2087,50 +2096,34 @@ function extractFeaturedTracks(html) {
     return tracks;
 }
 
-function selectTrack(
-    tracks,
-    requestedTrack,
-    requestedSongId
-) {
+function selectTrack(tracks, requestedTrack, requestedSongId) {
     if (requestedSongId) {
         return tracks.find(
-            item =>
-                item.id === requestedSongId
+            item => item.id === requestedSongId
         ) || null;
     }
 
     if (requestedTrack) {
-        const requested =
-            normalize(requestedTrack);
+        const requested = normalize(requestedTrack);
 
         const exact = tracks.find(
-            item =>
-                normalize(item.name) === requested
+            item => normalize(item.name) === requested
         );
 
         if (exact) return exact;
 
         return tracks.find(
-            item =>
-                normalize(item.name).includes(
-                    requested
-                )
+            item => normalize(item.name).includes(requested)
         ) || null;
     }
 
     return tracks.find(
-        item =>
-            item.isMain &&
-            item.audioUrl
+        item => item.isMain && item.audioUrl
     ) || tracks[0] || null;
 }
 
 /*
  * TEMPORARY HTML INSPECTOR
- *
- * Returns limited HTML fragments around soundtrack
- * and audio-related keywords. This is diagnostic only;
- * it does not change track extraction.
  */
 
 function inspectSoundtrackHTML(html) {
@@ -2154,10 +2147,7 @@ function inspectSoundtrackHTML(html) {
 
     for (const keyword of patterns) {
         const regex = new RegExp(
-            keyword.replace(
-                /[.*+?^${}()|[\]\\]/g,
-                '\\$&'
-            ),
+            keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
             'gi'
         );
 
@@ -2186,11 +2176,7 @@ function inspectSoundtrackHTML(html) {
         };
 
         for (const index of positions) {
-            const start = Math.max(
-                0,
-                index - 350
-            );
-
+            const start = Math.max(0, index - 350);
             const end = Math.min(
                 source.length,
                 index + keyword.length + 550
@@ -2256,28 +2242,20 @@ async function checkAudio(url) {
             }
         );
 
-        result.httpStatus =
-            response.status;
+        result.httpStatus = response.status;
 
         result.contentType =
-            response.headers.get(
-                'content-type'
-            ) || '';
+            response.headers.get('content-type') || '';
 
         result.contentRange =
-            response.headers.get(
-                'content-range'
-            ) || '';
+            response.headers.get('content-range') || '';
 
-        result.reachable =
-            response.ok;
+        result.reachable = response.ok;
 
         result.playableCandidate =
             response.ok &&
             (
-                /^audio\//i.test(
-                    result.contentType
-                ) ||
+                /^audio\//i.test(result.contentType) ||
                 /^application\/octet-stream/i.test(
                     result.contentType
                 )
@@ -2322,11 +2300,8 @@ async function getSoundtrack(options) {
         cacheBypass
     } = options;
 
-    const pageURL =
-        CONFIG.site + '/' + id + '/';
-
-    const soundtrackKey =
-        makeSoundtrackKey(id);
+    const pageURL = CONFIG.site + '/' + id + '/';
+    const soundtrackKey = makeSoundtrackKey(id);
 
     let soundtrackData = null;
     let page = null;
@@ -2355,11 +2330,9 @@ async function getSoundtrack(options) {
                     (
                         item.audioUrl === null ||
                         (
-                            typeof item.audioUrl ===
-                                'string' &&
-                            validateAudioURL(
+                            typeof item.audioUrl === 'string' &&
+                            validateAudioURL(item.audioUrl) ===
                                 item.audioUrl
-                            ) === item.audioUrl
                         )
                     )
             );
@@ -2408,9 +2381,7 @@ async function getSoundtrack(options) {
 
         soundtrackData = {
             title: extractTitle(page.html),
-            tracks: extractFeaturedTracks(
-                page.html
-            )
+            tracks: extractFeaturedTracks(page.html)
         };
 
         /*
@@ -2418,10 +2389,9 @@ async function getSoundtrack(options) {
          * Empty soundtracks expire sooner.
          */
 
-        const ttl =
-            soundtrackData.tracks.length
-                ? CONFIG.kv.soundtrackTTL
-                : CONFIG.kv.emptySoundtrackTTL;
+        const ttl = soundtrackData.tracks.length
+            ? CONFIG.kv.soundtrackTTL
+            : CONFIG.kv.emptySoundtrackTTL;
 
         await cache.put(
             soundtrackKey,
@@ -2452,14 +2422,8 @@ async function getSoundtrack(options) {
 
     let audioCheck = null;
 
-    if (
-        selected &&
-        selected.audioUrl &&
-        verify
-    ) {
-        audioCheck = await checkAudio(
-            selected.audioUrl
-        );
+    if (selected && selected.audioUrl && verify) {
+        audioCheck = await checkAudio(selected.audioUrl);
     }
 
     const playable = Boolean(
@@ -2505,14 +2469,10 @@ async function getSoundtrack(options) {
                 duration: selected.duration
             }
             : null,
-        audioUrl: selected
-            ? selected.audioUrl
-            : null,
-        audioAssociationVerified:
-            Boolean(
-                selected &&
-                selected.audioUrl
-            ),
+        audioUrl: selected ? selected.audioUrl : null,
+        audioAssociationVerified: Boolean(
+            selected && selected.audioUrl
+        ),
         tracksCount: tracks.length,
         tracks: tracks.map(item => ({
             id: item.id,
@@ -2543,33 +2503,19 @@ async function getSoundtrack(options) {
 
     if (debug) {
         result.debug = {
-            httpStatus: page
-                ? page.status
-                : null,
-            finalURL: page
-                ? page.url
-                : pageURL,
-            contentType: page
-                ? page.contentType
-                : null,
-            htmlLength: page
-                ? page.length
-                : null,
-            featuredControlsFound:
-                tracks.length,
-            selectedTrackId:
-                selected ? selected.id : null,
-            selectedTrackName:
-                selected ? selected.name : null,
-            previewVerificationEnabled:
-                verify,
+            httpStatus: page ? page.status : null,
+            finalURL: page ? page.url : pageURL,
+            contentType: page ? page.contentType : null,
+            htmlLength: page ? page.length : null,
+            featuredControlsFound: tracks.length,
+            selectedTrackId: selected ? selected.id : null,
+            selectedTrackName: selected ? selected.name : null,
+            previewVerificationEnabled: verify,
             audioCheck,
             kv: {
                 enabled: cache.enabled,
-                resolution:
-                    cacheInfo.resolution,
-                soundtrack:
-                    cacheInfo.soundtrack
+                resolution: cacheInfo.resolution,
+                soundtrack: cacheInfo.soundtrack
             }
         };
     }
